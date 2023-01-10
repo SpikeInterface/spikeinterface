@@ -1,16 +1,26 @@
-import os, shutil
+import shutil
+import pytest
+from pathlib import Path
 
 import pytest
 import numpy as np
-from numpy.testing import assert_array_equal
 
 from spikeinterface.extractors import NumpySorting, toy_example
 from spikeinterface.comparison import compare_multiple_sorters, MultiSortingComparison
 
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "comparison"
+else:
+    cache_folder = Path("cache_folder") / "comparison"
+
+
+multicomparison_folder = cache_folder / 'saved_multisorting_comparison'
+
 
 def setup_module():
-    if os.path.exists('saved_multisorting_comparison'):
-        shutil.rmtree('saved_multisorting_comparison')
+    if multicomparison_folder.is_dir():
+        shutil.rmtree(multicomparison_folder)
+
 
 def make_sorting(times1, labels1, times2, labels2, times3, labels3):
     sampling_frequency = 30000.
@@ -52,9 +62,9 @@ def test_compare_multiple_sorters():
     agreement_2 = msc.get_agreement_sorting(minimum_agreement_count=2, minimum_agreement_count_only=True)
     assert np.all([agreement_2.get_unit_property(u, 'agreement_number')] == 2 for u in agreement_2.get_unit_ids())
     
-    msc.save_to_folder('saved_multisorting_comparison')
+    msc.save_to_folder(multicomparison_folder)
     
-    msc = MultiSortingComparison.load_from_folder('saved_multisorting_comparison')
+    msc = MultiSortingComparison.load_from_folder(multicomparison_folder)
     
     # import spikeinterface.widgets  as sw
     # import matplotlib.pyplot as plt
