@@ -7,7 +7,8 @@ import zarr
 
 
 from spikeinterface.core import generate_recording, generate_sorting, NumpySorting, ChannelSparsity
-from spikeinterface import WaveformExtractor, BaseRecording, extract_waveforms, load_waveforms, estimate_sparsity
+from spikeinterface import WaveformExtractor, BaseRecording, extract_waveforms, load_waveforms
+from spikeinterface.core.waveform_extractor import estimate_waveforms_sparsity
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -470,9 +471,9 @@ def test_estimate_sparsity():
     job_kwargs = dict(n_jobs=4, chunk_size=30000, progress_bar=False)
 
     for kwargs in [dict(method='radius', radius_um=50.), dict(method='best_channels', num_channels=2)]:
-        sparsity = estimate_sparsity(recording, sorting, num_spikes_for_sparsity=100,
-                                     unit_batch_size=2, ms_before=1., ms_after=1.5,
-                                     **kwargs, **job_kwargs)
+        sparsity = estimate_waveforms_sparsity(recording, sorting, num_spikes_for_sparsity=100,
+                                               unit_batch_size=2, ms_before=1., ms_after=1.5,
+                                               **kwargs, **job_kwargs)
         print(sparsity)
 
 
