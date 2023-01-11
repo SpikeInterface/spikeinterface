@@ -1,7 +1,7 @@
 import pickle
 
 import numpy as np
-from sklearn.decomposition import PCA
+from sklearn.decomposition import IncrementalPCA
 
 from spikeinterface.sortingcomponents.peak_pipeline import  PeakPipelineStep
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -56,7 +56,7 @@ class TemporalPCA(PeakPipelineStep):
         return self._dtype
 
     def fit(self, recording: BaseRecording, n_components: int, detect_peaks_params: dict, 
-            peak_selection_params: dict, whiten: bool = True, **job_kwargs) -> PCA:
+            peak_selection_params: dict, whiten: bool = True, **job_kwargs) -> IncrementalPCA:
         """
         Train a pca model using the data in the recording object and the parameters provided.
         Note that this model returns the pca model from scikit-learn but the model is also saved in the path provided
@@ -79,7 +79,7 @@ class TemporalPCA(PeakPipelineStep):
         
         Returns
         -------
-        PCA: An estimator from scikit-learn.
+        IncrementalPCA: An incremental PCA estimator from scikit-learn.
             The pca model
         """
         
