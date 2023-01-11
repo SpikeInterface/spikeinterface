@@ -3,6 +3,7 @@ This gather some function usefull for some clusetring algos.
 """
 
 import numpy as np
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap
 
 
@@ -489,7 +490,8 @@ def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_ch
 
 
 
-def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels, sparsify_threshold=1, method_kwargs={}, job_kwargs={}, tmp_folder=None):
+def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels, sparsify_threshold=1,
+                                   method_kwargs={}, job_kwargs={}, tmp_folder=None):
 
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface import get_noise_levels 
@@ -501,6 +503,7 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
     import string, random, shutil, os
     from pathlib import Path
 
+    job_kwargs = fix_job_kwargs(job_kwargs)
     templates = waveform_extractor.get_all_templates(mode='median').copy()
     nb_templates = len(templates)
     duration = waveform_extractor.nbefore + waveform_extractor.nafter
@@ -560,7 +563,8 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
         sub_recording = recording.frame_slice(t_start - half_marging, t_stop + half_marging)
 
         method_kwargs.update({'ignored_ids' : ignore_ids + [i]})
-        spikes, computed = find_spikes_from_templates(sub_recording, method='circus-omp', method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs)
+        spikes, computed = find_spikes_from_templates(sub_recording, method='circus-omp', method_kwargs=method_kwargs,
+                                                      extra_outputs=True, **job_kwargs)
         method_kwargs.update({'overlaps' : computed['overlaps'],
                               'templates' : computed['templates'],
                               'norms' : computed['norms'],

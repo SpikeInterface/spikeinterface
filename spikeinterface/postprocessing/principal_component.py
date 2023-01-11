@@ -9,9 +9,8 @@ import numpy as np
 from sklearn.decomposition import IncrementalPCA
 from sklearn.exceptions import NotFittedError
 
-
-from spikeinterface.core import ChannelSparsity
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, ensure_n_jobs, _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import (ChunkRecordingExecutor, ensure_n_jobs,
+                                           _shared_job_kwargs_doc, fix_job_kwargs)
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
 _possible_modes = ['by_channel_local', 'by_channel_global', 'concatenated']
@@ -288,6 +287,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             If None, output is saved in principal_components/all_pcs.npy
         {}
         """
+        job_kwargs = fix_job_kwargs(job_kwargs)
         p = self._params
         we = self.waveform_extractor
         sorting = we.sorting
