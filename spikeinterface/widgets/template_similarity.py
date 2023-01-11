@@ -4,7 +4,6 @@ from typing import Union
 from .base import BaseWidget
 from ..core.waveform_extractor import WaveformExtractor
 from ..core.basesorting import BaseSorting
-from ..postprocessing import compute_template_similarity
 
 
 class TemplateSimilarityWidget(BaseWidget):
