@@ -125,7 +125,7 @@ def detect_bad_channels(recording,
 
     for i, random_chunk in enumerate(random_data):
 
-        channel_labels[:, i], __ = detect_bad_channels_ibl(random_chunk.T,
+        channel_labels[:, i], __ = detect_bad_channels_ibl(random_chunk,
                                                            recording.get_sampling_frequency(),
                                                            psd_hf_threshold,
                                                            similarity_threshold,
@@ -207,65 +207,25 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold, similarity_threshold=(-0.
     :param psd_hf_threshold:
     :return: labels (numpy vector [nc]), xfeats: dictionary of features [nc]
     """
-    raw_T = raw.T
-    scale = 1e6 if scale_for_testing else 1  # TODO: move back
+    __, nc = raw.shape
+    raw = raw - np.mean(raw, axis=0)[np.newaxis, :]
+    xcor = channel_similarity(raw)
 
-    # new
-    __, nc = raw_T.shape
-    raw_T = raw_T - np.mean(raw_T, axis=0)[np.newaxis, :]
-    xcor_T = channel_similarity_T(raw_T)
-    xcor_new_T = channel_simiarlity_new_T(raw_T)
-    assert np.allclose(xcor_T, xcor_new_T, atol=0.0001, rtol=0)
+    xcor_new = channel_simiarlity_new(raw)
+    assert np.allclose(xcor, xcor_new, atol=0.0001, rtol=0)
 
-    fscale_T, psd_T = scipy.signal.welch(raw_T * scale, fs=fs, axis=0)
+    scale = 1e6 if scale_for_testing else 1
+    fscale, psd = scipy.signal.welch(raw * scale, fs=fs, axis=0)
     sos_hp = scipy.signal.butter(**{'N': 3, 'Wn': 300 / fs * 2, 'btype': 'highpass'}, output='sos')  # dupl
-    hf_T = scipy.signal.sosfiltfilt(sos_hp, raw_T, axis=0)
-    xcorf_T = channel_similarity_T(hf_T)
-
-    xfeats_T = ({
-        'ind': np.arange(nc),
-        'rms_raw': rms(raw_T, axis=0),  # very similar to the rms after butterworth filter
-        'xcor_hf': detrend(xcor_T, 11),
-        'xcor_lf': xcorf_T - detrend(xcorf_T, 11) - 1,
-        'psd_hf': np.mean(psd_T[fscale_T > (fs / 2 * 0.8), :], axis=0),  # 80% nyquists
-    })
-
-    # make recommendation
-    ichannels_T = np.zeros(nc)
-    idead_T = np.where(similarity_threshold[0] > xfeats_T['xcor_hf'])[0]
-    inoisy_T = np.where(np.logical_or(xfeats_T['psd_hf'] > psd_hf_threshold, xfeats_T['xcor_hf'] > similarity_threshold[1]))[0]
-
-    # the channels outside of the brains are the contiguous channels below the threshold on the trend coherency
-    ioutside_T = np.where(xfeats_T['xcor_lf'] < -0.75)[0]
-    if ioutside_T.size > 0 and ioutside_T[-1] == (nc - 1):
-        a_T = np.cumsum(np.r_[0, np.diff(ioutside_T) - 1])
-        ioutside = ioutside[a_T == np.max(a_T)]
-        ichannels_T[ioutside_T] = 3
-
-    ichannels_T[idead_T] = 1
-    ichannels_T[inoisy_T] = 2
-
-
-
-
-    # old
-    
-    nc, _ = raw.shape
-    raw = raw - np.mean(raw, axis=-1)[:, np.newaxis]  # removes DC offset
-    xcor = channels_similarity(raw)
-    assert np.array_equal(xcor, channel_similarity_orig(raw))
-
-    fscale, psd = scipy.signal.welch(raw * scale, fs=fs)
-    sos_hp = scipy.signal.butter(**{'N': 3, 'Wn': 300 / fs * 2, 'btype': 'highpass'}, output='sos')  # dupl
-    hf = scipy.signal.sosfiltfilt(sos_hp, raw)
-    xcorf = channels_similarity(hf)
+    hf = scipy.signal.sosfiltfilt(sos_hp, raw, axis=0)
+    xcorf = channel_similarity(hf)
 
     xfeats = ({
         'ind': np.arange(nc),
-        'rms_raw': rms(raw),  # very similar to the rms after butterworth filter
+        'rms_raw': rms(raw, axis=0),  # very similar to the rms after butterworth filter
         'xcor_hf': detrend(xcor, 11),
         'xcor_lf': xcorf - detrend(xcorf, 11) - 1,
-        'psd_hf': np.mean(psd[:, fscale > (fs / 2 * 0.8)], axis=-1),  # 80% nyquists
+        'psd_hf': np.mean(psd[fscale > (fs / 2 * 0.8), :], axis=0),  # 80% nyquists
     })
 
     # make recommendation
@@ -282,26 +242,6 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold, similarity_threshold=(-0.
 
     ichannels[idead] = 1
     ichannels[inoisy] = 2
-
-
-    assert np.array_equal(raw.T, raw_T)
-    assert np.array_equal(xcor.T, xcor_T)
-    assert np.array_equal(fscale.T, fscale_T)
-    assert np.array_equal(psd.T, psd_T)
-    assert np.array_equal(xcor.T, xcor_T)
-    assert np.array_equal(xcorf.T, xcorf_T)
-    assert np.array_equal(hf.T, hf_T)
-
-    assert np.array_equal(xfeats["ind"], xfeats_T["ind"])
-    assert np.array_equal(xfeats["rms_raw"], xfeats_T["rms_raw"])
-    assert np.array_equal(xfeats["xcor_hf"], xfeats_T["xcor_hf"])
-    assert np.array_equal(xfeats["xcor_lf"], xfeats_T["xcor_lf"])
-    assert np.array_equal(xfeats["psd_hf"], xfeats_T["psd_hf"])
-
-    assert np.array_equal(ichannels, ichannels_T)
-    assert np.array_equal(idead, idead_T)
-    assert np.array_equal(inoisy, inoisy_T)
-    assert np.array_equal(ioutside, ioutside_T)
 
     return ichannels, xfeats
 
@@ -332,87 +272,29 @@ def detrend(x, nmed):
     xf = scipy.signal.medfilt(xf, nmed)[ntap:-ntap]
     return x - xf
 
-
-# TODO: return to this!!
-
-def channel_simiarlity_new_T(raw_T):
-    ref_T = np.median(raw_T, axis=1)
-    channel_corr_with_median = np.sum(raw_T * ref_T[:, np.newaxis], axis=0) / np.sum(ref_T ** 2)
+def channel_simiarlity_new(raw):
+    ref = np.median(raw, axis=1)
+    channel_corr_with_median = np.sum(raw * ref[:, np.newaxis], axis=0) / np.sum(ref**2)
     return channel_corr_with_median
 
 
-def channel_similarity_T(raw, nmed=0):
+def channel_similarity(raw, nmed=0):
     """"""
     ref = np.median(raw, axis=1)
-    xcor = nxcor_T(raw, ref)
+    xcor = nxcor(raw, ref)
     alt_comp = np.sum(raw * ref[:, np.newaxis], axis=0) / np.sum(ref ** 2)
     assert np.allclose(xcor, alt_comp, rtol=0, atol=0.01)
 
     return xcor
 
-
-def channels_similarity(raw, nmed=0):
-    """
-    Computes the similarity based on zero-lag crosscorrelation of each channel with the median
-    trace referencing
-    :param raw: [nc, ns]
-    :param nmed:
-    :return:
-    """
-
-    def fxcor(x, y):
-        return scipy.fft.irfft(scipy.fft.rfft(x) * np.conj(scipy.fft.rfft(y)), n=raw.shape[-1])
-
-    def nxcor(x, ref):
-        ref = ref - np.mean(ref)
-        apeak = fxcor(ref, ref)[0]
-        x = x - np.mean(x, axis=-1)[:, np.newaxis]  # remove DC component
-        return fxcor(x, ref)[:, 0] / apeak
-
-    ref = np.median(raw, axis=0)
-    xcor = nxcor(raw, ref)
-    alt_comp = np.sum(raw * ref[np.newaxis, :], axis=1) / np.sum(ref**2)
-
-    assert np.allclose(xcor, alt_comp, rtol=0, atol=0.01)
-
-    if nmed > 0:
-        xcor = detrend(xcor, nmed) + 1
-
-    return xcor
-
-def channel_similarity_orig(raw, nmed=0):
-    """
-    Computes the similarity based on zero-lag crosscorrelation of each channel with the median
-    trace referencing
-    :param raw: [nc, ns]
-    :param nmed:
-    :return:
-    """
-    def fxcor(x, y):
-        return scipy.fft.irfft(scipy.fft.rfft(x) * np.conj(scipy.fft.rfft(y)), n=raw.shape[-1])
-
-    def nxcor(x, ref):
-        ref = ref - np.mean(ref)
-        apeak = fxcor(ref, ref)[0]
-        x = x - np.mean(x, axis=-1)[:, np.newaxis]  # remove DC component
-        return fxcor(x, ref)[:, 0] / apeak
-
-    ref = np.median(raw, axis=0)
-    xcor = nxcor(raw, ref)
-
-    if nmed > 0:
-        xcor = detrend(xcor, nmed) + 1
-    return xcor
-
-
-def fxcor_T(x, y):
+def fxcor(x, y):
     n = x.shape[0]
     return scipy.fft.irfft(scipy.fft.rfft(x, axis=0) * np.conj(scipy.fft.rfft(y, axis=0)), axis=0, n=n)
 
-def nxcor_T(x, ref):
+def nxcor(x, ref):
     ref = ref - np.mean(ref)
-    apeak = fxcor_T(ref, ref)[0] # get the sum of squares in the reference i.e. unnormalised cross correlation with no shift
+    apeak = fxcor(ref, ref)[0] # get the sum of squares in the reference i.e. unnormalised cross correlation with no shift
     x = x - np.mean(x, axis=0)
     np.sum(x[:, 0] * ref) / np.sum(ref**2)
-    return fxcor_T(x, ref[:, np.newaxis])[0, :] / apeak
+    return fxcor(x, ref[:, np.newaxis])[0, :] / apeak
 
