@@ -221,7 +221,7 @@ def estimate_distance_error_with_log(vec, wf_ptp, local_contact_locations, maxpt
 
 
 def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with_log_penality',
-                                    radius_um=50, max_distance_um=1000, return_alpha=False, feature='ptp'):
+                                    radius_um=50, max_distance_um=1000, return_alpha=False):
     '''
     Localize unit with monopolar triangulation.
     This method is from Julien Boussard, Erdem Varol and Charlie Windolf
@@ -251,8 +251,6 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         to make bounddary in x, y, z and also for alpha
     return_alpha: bool default False
         Return or not the alpha value
-    feature: str ('ptp', 'v_origin', 'mean', 'norm')
-        The value to consider to estimate the positions
 
     Returns
     -------
@@ -278,16 +276,8 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
 
         # wf is (nsample, nchan) - chann is only nieghboor
         wf = templates[i, :, :]
-        if feature == 'ptp':
-            wf_data = wf[:, chan_inds].ptp(axis=0)
-        elif feature == 'norm':
-            wf_data = np.linalg.norm(wf[:, chan_inds], axis=0)
-        elif feature == 'mean':
-            wf_data = np.mean(wf[:, chan_inds], axis=0)
-        elif feature == 'v_origin':
-            wf_data = wf[waveform_extractor.nbefore, chan_inds]
-
-        unit_location[i] = solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance_um, optimizer)
+        wf_ptp = wf[:, chan_inds].ptp(axis=0)
+        unit_location[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_um, optimizer)
 
     if not return_alpha:
         unit_location = unit_location[:, :3]
@@ -295,7 +285,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
     return unit_location
 
 
-def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10, feature='ptp'):
+def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10):
     '''
     Computes the center of mass (COM) of a unit based on the template amplitudes.
 
@@ -307,8 +297,6 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10,
         Sign of the template to compute best channels ('neg', 'pos', 'both')
     num_channels: int
         Number of channels used to compute COM
-    feature: str ('ptp', 'v_origin', 'mean', 'norm')
-        The value to consider to estimate the positions
 
     Returns
     -------
@@ -331,17 +319,10 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10,
 
         wf = templates[i, :, :]
 
-        if feature == 'ptp':
-            wf_data = wf[:, chan_inds].ptp(axis=0)
-        elif feature == 'norm':
-            wf_data = np.linalg.norm(wf[:, chan_inds], axis=0)
-        elif feature == 'mean':
-            wf_data = np.mean(wf[:, chan_inds], axis=0)
-        elif feature == 'v_origin':
-            wf_data = wf[waveform_extractor.nbefore, chan_inds]
+        wf_ptp = wf[:, chan_inds].ptp(axis=0)
 
         # center of mass
-        com = np.sum(wf_data[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_data)
+        com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
         unit_location[i, :] = com
 
     return unit_location
