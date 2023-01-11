@@ -4,8 +4,6 @@ from typing import Union
 from .base import BaseWidget
 from .utils import get_unit_colors
 from ..core.waveform_extractor import WaveformExtractor
-from ..core.basesorting import BaseSorting
-from ..postprocessing import compute_spike_locations
 
 
 class SpikeLocationsWidget(BaseWidget):
