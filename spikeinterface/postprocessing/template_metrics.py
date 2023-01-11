@@ -80,12 +80,14 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
             template_metrics = pd.DataFrame(
                 index=multi_index, columns=metric_names)
 
+        all_templates = self.waveform_extractor.get_all_templates()
         for unit_id in unit_ids:
-            template_all_chans = self.waveform_extractor.get_template(unit_id)
+            unit_index = self.waveform_extractor.sorting.id_to_index(unit_id)
+            template_all_chans = all_templates[unit_index]
             chan_ids = np.array(extremum_channels_ids[unit_id])
             if chan_ids.ndim == 0:
                 chan_ids = [chan_ids]
-            chan_ind = self.waveform_extractor.recording.ids_to_indices(chan_ids)
+            chan_ind = self.waveform_extractor.channel_ids_to_indices(chan_ids)
             template = template_all_chans[:, chan_ind]
 
             for i, template_single in enumerate(template.T):
