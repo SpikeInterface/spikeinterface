@@ -9,7 +9,6 @@ from .misc_metrics import (
     compute_refrac_period_violations,
     compute_amplitudes_cutoff,
     compute_amplitudes_median,
-    compute_noise_cutoff,
     compute_drift_metrics
 )
 
