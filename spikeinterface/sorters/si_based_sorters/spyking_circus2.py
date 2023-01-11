@@ -6,7 +6,8 @@ import numpy as np
 import os
 
 from spikeinterface.core import (NumpySorting,  load_extractor, BaseRecording,
-    get_noise_levels, extract_waveforms)
+                                 get_noise_levels, extract_waveforms)
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore
 
 try:
@@ -43,18 +44,16 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         assert HAVE_HDBSCAN, 'spykingcircus2 needs hdbscan to be installed'
     
-        params['job_kwargs']['verbose'] = verbose
-        params['job_kwargs']['progress_bar'] = verbose
-
-        if "n_jobs" in params["job_kwargs"]:
-            if params["job_kwargs"]["n_jobs"] == -1:
-                params["job_kwargs"]["n_jobs"] = os.cpu_count()
-    
         # this is importanted only on demand because numba import are too heavy
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
+
+        job_kwargs = params['job_kwargs'].copy()
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        job_kwargs['verbose'] = verbose
+        job_kwargs['progress_bar'] = verbose
 
         recording = load_extractor(sorter_output_folder.parent / 'spikeinterface_recording.json')
         sampling_rate = recording.get_sampling_frequency()
@@ -74,7 +73,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params['detection'].copy()
-        detection_params.update(params['job_kwargs'])
+        detection_params.update(job_kwargs)
         if 'local_radius_um' not in detection_params:
             detection_params['local_radius_um'] = params['general']['local_radius_um']
         if 'exclude_sweep_ms' not in detection_params:
@@ -106,7 +105,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params.update(params['waveforms'])
         clustering_params.update(params['general'])
         clustering_params.update(dict(shared_memory=params['shared_memory']))
-        clustering_params['job_kwargs'] = params['job_kwargs']
+        clustering_params['job_kwargs'] = job_kwargs
         clustering_params['tmp_folder'] = sorter_output_folder / "clustering"
 
         labels, peak_labels = find_cluster_from_peaks(recording_f, selected_peaks, method='random_projections',
@@ -123,7 +122,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## We get the templates our of such a clustering
         waveforms_params = params['waveforms'].copy()
-        waveforms_params.update(params['job_kwargs'])
+        waveforms_params.update(job_kwargs)
 
         if params['shared_memory']:
             mode = 'memory'

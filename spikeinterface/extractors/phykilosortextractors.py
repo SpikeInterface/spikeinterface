@@ -55,10 +55,10 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             # load properties from cluster_info file
             cluster_info_file = cluster_info_files[0]
             if cluster_info_file.suffix == ".tsv":
-                delimeter = "\t"
+                delimiter = "\t"
             else:
-                delimeter = ","
-            cluster_info = pd.read_csv(cluster_info_file, delimiter=delimeter)
+                delimiter = ","
+            cluster_info = pd.read_csv(cluster_info_file, delimiter=delimiter)
         else:
             # load properties from other tsv/csv files
             all_property_files = [p for p in phy_folder.iterdir() if p.suffix in ['.csv', '.tsv']]
@@ -66,10 +66,10 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             cluster_info = None
             for file in all_property_files:
                 if file.suffix == ".tsv":
-                    delimeter = "\t"
+                    delimiter = "\t"
                 else:
-                    delimeter = ","
-                new_property = pd.read_csv(file, delimiter=delimeter)
+                    delimiter = ","
+                new_property = pd.read_csv(file, delimiter=delimiter)
                 if cluster_info is None:
                     cluster_info = new_property
                 else:

@@ -113,7 +113,7 @@ def setup_dataset(spike_data, score_detection=1):
                                      num_units=4,
                                      score_detection=score_detection,
                                      seed=10)
-    folder = 'waveform_folder2'
+    folder = cache_folder / 'waveform_folder2'
     we = extract_waveforms(recording, sorting, cache_folder / 'toy_waveforms',
                            ms_before=3., ms_after=4., max_spikes_per_unit=1000,
                            n_jobs=1, chunk_size=30000, overwrite=True)

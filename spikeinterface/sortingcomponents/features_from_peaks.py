@@ -1,10 +1,8 @@
 """Sorting components: peak waveform features."""
 import numpy as np
 
-from spikeinterface.core import get_chunk_with_margin, get_channel_distances
-
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass, LocalizeMonopolarTriangulation
-
 from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PeakPipelineStep
 
 
@@ -45,6 +43,7 @@ def compute_features_from_peaks(
     dtype and other dim depends on features.
 
     """
+    job_kwargs = fix_job_kwargs(job_kwargs)
 
     steps = []
     for feature_name in feature_list:

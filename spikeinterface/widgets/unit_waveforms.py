@@ -1,11 +1,11 @@
 import numpy as np
 
 from .base import BaseWidget
-from ..core.waveform_extractor import WaveformExtractor
-from ..core.baserecording import BaseRecording
-from ..core.basesorting import BaseSorting
 from .utils import get_unit_colors
-from ..postprocessing import get_template_channel_sparsity
+
+from ..core import ChannelSparsity
+from ..core.waveform_extractor import WaveformExtractor
+from ..core.basesorting import BaseSorting
 
 
 class UnitWaveformsWidget(BaseWidget):
@@ -21,14 +21,9 @@ class UnitWaveformsWidget(BaseWidget):
         List of unit ids.
     plot_templates: bool
         If True, templates are plotted over the waveforms
-    sparsity: dict or None
-        If given, the channel sparsity for each unit
-    radius_um: None or float
-        If not None, all channels within a circle around the peak waveform will be displayed
-        Ignored is `sparsity` is provided. Incompatible with with `max_channels`
-    max_channels : None or int
-        If not None only max_channels are displayed per units.
-        Ignored is `sparsity` is provided. Incompatible with with `radius_um`
+    sparsity : ChannelSparsity or None
+        Optional ChannelSparsity to apply.
+        If WaveformExtractor is already sparse, the argument is ignored
     set_title: bool
         Create a plot title with the unit number if True.
     plot_channels: bool
@@ -66,11 +61,10 @@ class UnitWaveformsWidget(BaseWidget):
 
     def __init__(self, waveform_extractor: WaveformExtractor, channel_ids=None, unit_ids=None,
                  plot_waveforms=True, plot_templates=True, plot_channels=False,
-                 unit_colors=None, sparsity=None, max_channels=None, radius_um=None,
-                 ncols=5, lw_waveforms=1, lw_templates=2, axis_equal=False, unit_selected_waveforms=None,
-                 max_spikes_per_unit=50, set_title=True, same_axis=False, x_offset_units=False,
-                 alpha_waveforms=0.5, alpha_templates=1, hide_unit_selector=False, plot_legend=True,
-                 backend=None, **backend_kwargs):
+                 unit_colors=None, sparsity=None, ncols=5, lw_waveforms=1, lw_templates=2, axis_equal=False,
+                 unit_selected_waveforms=None, max_spikes_per_unit=50, set_title=True, same_axis=False,
+                 x_offset_units=False, alpha_waveforms=0.5, alpha_templates=1, hide_unit_selector=False,
+                 plot_legend=True, backend=None, **backend_kwargs):
         we = waveform_extractor
         sorting: BaseSorting = we.sorting
 
@@ -83,27 +77,21 @@ class UnitWaveformsWidget(BaseWidget):
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
 
-        if radius_um is not None:
-            assert max_channels is None, 'radius_um and max_channels are mutually exclusive'
-        if max_channels is not None:
-            assert radius_um is None, 'radius_um and max_channels are mutually exclusive'
-
         channel_locations = we.get_channel_locations()[we.channel_ids_to_indices(channel_ids)]
 
-        # sparsity is done on all the units even if unit_ids is a few ones because some backend need then all
-        if sparsity is None:
-            if radius_um is not None:
-                channel_inds = get_template_channel_sparsity(we, method='radius', outputs='index', radius_um=radius_um)
-            elif max_channels is not None:
-                channel_inds = get_template_channel_sparsity(we, method='best_channels', outputs='index',
-                                                             num_channels=max_channels)
-            else:
-                # all channels
-                channel_inds = {unit_id: np.arange(we.get_num_channels()) for unit_id in sorting.unit_ids}
-            sparsity = {u: we.channel_ids[channel_inds[u]] for u in sorting.unit_ids}
+        if waveform_extractor.is_sparse():
+            sparsity = waveform_extractor.sparsity
         else:
-            assert all(u in sparsity for u in sorting.unit_ids), "sparsity must be provided for all units!"
-            channel_inds = {u: we.channel_ids_to_indices(ids) for u, ids in sparsity.items()}
+            if sparsity is None:
+                # in this case, we construct a dense sparsity
+                unit_id_to_channel_ids = {u: we.channel_ids for u in we.unit_ids}
+                sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
+                    unit_id_to_channel_ids=unit_id_to_channel_ids,
+                    unit_ids=we.unit_ids,
+                    channel_ids=we.channel_ids
+                )
+            else:
+                assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
 
         # get templates
         templates = we.get_all_templates(unit_ids=unit_ids)
@@ -112,7 +100,13 @@ class UnitWaveformsWidget(BaseWidget):
         xvectors, y_scale, y_offset, delta_x = get_waveforms_scales(
             waveform_extractor, templates, channel_locations, x_offset_units)
 
-        wfs_by_ids = {unit_id: we.get_waveforms(unit_id) for unit_id in unit_ids}
+        wfs_by_ids = {}
+        for unit_id in unit_ids:
+            if waveform_extractor.is_sparse():
+                wfs = we.get_waveforms(unit_id)
+            else:
+                wfs = we.get_waveforms(unit_id, sparsity=sparsity)
+            wfs_by_ids[unit_id] = wfs
 
         plot_data = dict(
             waveform_extractor=waveform_extractor,
@@ -128,15 +122,12 @@ class UnitWaveformsWidget(BaseWidget):
             plot_templates=plot_templates,
             plot_channels=plot_channels,
             ncols=ncols,
-            radius_um=radius_um,
-            max_channels=max_channels,
             unit_selected_waveforms=unit_selected_waveforms,
             axis_equal=axis_equal,
             max_spikes_per_unit=max_spikes_per_unit,
             xvectors=xvectors,
             y_scale=y_scale,
             y_offset=y_offset,
-            channel_inds=channel_inds,
             wfs_by_ids=wfs_by_ids,
             set_title=set_title,
             same_axis=same_axis,
