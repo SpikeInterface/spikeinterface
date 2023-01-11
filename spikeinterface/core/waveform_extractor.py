@@ -11,7 +11,7 @@ import probeinterface
 
 from .base import load_extractor
 from .core_tools import check_json
-from .job_tools import _shared_job_kwargs_doc, split_job_kwargs
+from .job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 from .recording_tools import check_probe_do_not_overlap
 from .waveform_tools import extract_waveforms_to_buffers
 from .sparsity import ChannelSparsity, compute_sparsity, _sparsity_doc
@@ -1145,6 +1145,7 @@ class WaveformExtractor:
 
 
     def run_extract_waveforms(self, seed=None, **job_kwargs):
+        job_kwargs = fix_job_kwargs(job_kwargs)
         p = self._params
         nbefore = self.nbefore
         nafter = self.nafter

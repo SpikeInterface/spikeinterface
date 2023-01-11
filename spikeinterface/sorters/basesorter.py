@@ -16,7 +16,7 @@ from joblib import Parallel, delayed
 
 from spikeinterface.core import load_extractor, BaseRecordingSnippets
 from spikeinterface.core.core_tools import check_json
-from spikeinterface.core.job_tools import split_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .utils import SpikeSortingError, ShellScript
 
 
@@ -392,6 +392,7 @@ class BaseSorter:
 
 def get_job_kwargs(params, verbose):
     _, job_kwargs = split_job_kwargs(params)
+    job_kwargs = fix_job_kwargs(job_kwargs)
     if not verbose:
         job_kwargs["progress_bar"] = False
     return job_kwargs
