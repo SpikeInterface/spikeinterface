@@ -72,7 +72,7 @@ from .waveform_tools import extract_waveforms_to_buffers
 from .snippets_tools import snippets_from_sorting
 
 # waveform extractor
-from .waveform_extractor import WaveformExtractor, extract_waveforms, load_waveforms
+from .waveform_extractor import WaveformExtractor, extract_waveforms, load_waveforms, precompute_sparsity
 
 # retrieve datasets
 from .datasets import download_dataset
@@ -93,4 +93,4 @@ from .template_tools import (
 )
 
 # channel sparsity
-from .sparsity import ChannelSparsity
+from .sparsity import ChannelSparsity, compute_sparsity
