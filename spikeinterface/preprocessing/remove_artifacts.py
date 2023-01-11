@@ -89,7 +89,8 @@ class RemoveArtifactsRecording(BasePreprocessor):
     name = 'remove_artifacts'
 
     def __init__(self, recording, list_triggers, ms_before=0.5, ms_after=3.0, mode='zeros', fit_sample_spacing=1., list_labels=None,
-                    artefacts=None, sparsity=None, job_kwargs={'n_jobs' : -1, 'chunk_memory' : "10M"}, scale_amplitude=False, time_jitter=0):
+                    artefacts=None, sparsity=None, waveforms_kwargs={'n_jobs' : -1, 'chunk_memory' : "10M", 'allow_unfiltered' : True, 
+                    'mode':'memory'}, scale_amplitude=False, time_jitter=0):
 
         num_seg = recording.get_num_segments()
         if num_seg == 1 and isinstance(list_triggers, list) and np.isscalar(list_triggers[0]):
@@ -149,8 +150,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
                 sorting = sorting.save()
                 waveforms_params = {'ms_before' : ms_before, 'ms_after' : ms_after}
                 assert ('ms_before' != None) and ('ms_after' != None), "ms_before/after should not be None for such a mode"
-                w = extract_waveforms(recording, sorting, None, mode='memory', **waveforms_params,
-                    return_scaled=False, **job_kwargs, allow_unfiltered=True)
+                w = extract_waveforms(recording, sorting, None, **waveforms_kwargs)
                 artefacts = {}
                 sparsity = {}
                 for label in w.sorting.unit_ids:
