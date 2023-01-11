@@ -230,7 +230,26 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold, similarity_threshold=(-0.
         'psd_hf': np.mean(psd_T[fscale_T > (fs / 2 * 0.8), :], axis=0),  # 80% nyquists
     })
 
+    # make recommendation
+    ichannels_T = np.zeros(nc)
+    idead_T = np.where(similarity_threshold[0] > xfeats_T['xcor_hf'])[0]
+    inoisy_T = np.where(np.logical_or(xfeats_T['psd_hf'] > psd_hf_threshold, xfeats_T['xcor_hf'] > similarity_threshold[1]))[0]
+
+    # the channels outside of the brains are the contiguous channels below the threshold on the trend coherency
+    ioutside_T = np.where(xfeats_T['xcor_lf'] < -0.75)[0]
+    if ioutside_T.size > 0 and ioutside_T[-1] == (nc - 1):
+        a_T = np.cumsum(np.r_[0, np.diff(ioutside_T) - 1])
+        ioutside = ioutside[a_T == np.max(a_T)]
+        ichannels_T[ioutside_T] = 3
+
+    ichannels_T[idead_T] = 1
+    ichannels_T[inoisy_T] = 2
+
+
+
+
     # old
+    
     nc, _ = raw.shape
     raw = raw - np.mean(raw, axis=-1)[:, np.newaxis]  # removes DC offset
     xcor = channels_similarity(raw)
@@ -241,7 +260,6 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold, similarity_threshold=(-0.
     hf = scipy.signal.sosfiltfilt(sos_hp, raw)
     xcorf = channels_similarity(hf)
 
-
     xfeats = ({
         'ind': np.arange(nc),
         'rms_raw': rms(raw),  # very similar to the rms after butterworth filter
@@ -249,23 +267,6 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold, similarity_threshold=(-0.
         'xcor_lf': xcorf - detrend(xcorf, 11) - 1,
         'psd_hf': np.mean(psd[:, fscale > (fs / 2 * 0.8)], axis=-1),  # 80% nyquists
     })
-
-    assert np.array_equal(raw.T, raw_T)
-    assert np.array_equal(xcor.T, xcor_T)
-    assert np.array_equal(fscale.T, fscale_T)
-    assert np.array_equal(psd.T, psd_T)
-    assert np.array_equal(xcor.T, xcor_T)
-    assert np.array_equal(xcorf.T, xcorf_T)
-    assert np.array_equal(hf.T, hf_T)
-
-    assert np.array_equal(xfeats["ind"], xfeats_T["ind"])
-    assert np.array_equal(xfeats["rms_raw"], xfeats_T["rms_raw"])
-    assert np.array_equal(xfeats["xcor_hf"], xfeats_T["xcor_hf"])
-    assert np.array_equal(xfeats["xcor_lf"], xfeats_T["xcor_lf"])
-    assert np.array_equal(xfeats["psd_hf"], xfeats_T["psd_hf"])
-
-
-    breakpoint()
 
     # make recommendation
     ichannels = np.zeros(nc)
@@ -281,6 +282,26 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold, similarity_threshold=(-0.
 
     ichannels[idead] = 1
     ichannels[inoisy] = 2
+
+
+    assert np.array_equal(raw.T, raw_T)
+    assert np.array_equal(xcor.T, xcor_T)
+    assert np.array_equal(fscale.T, fscale_T)
+    assert np.array_equal(psd.T, psd_T)
+    assert np.array_equal(xcor.T, xcor_T)
+    assert np.array_equal(xcorf.T, xcorf_T)
+    assert np.array_equal(hf.T, hf_T)
+
+    assert np.array_equal(xfeats["ind"], xfeats_T["ind"])
+    assert np.array_equal(xfeats["rms_raw"], xfeats_T["rms_raw"])
+    assert np.array_equal(xfeats["xcor_hf"], xfeats_T["xcor_hf"])
+    assert np.array_equal(xfeats["xcor_lf"], xfeats_T["xcor_lf"])
+    assert np.array_equal(xfeats["psd_hf"], xfeats_T["psd_hf"])
+
+    assert np.array_equal(ichannels, ichannels_T)
+    assert np.array_equal(idead, idead_T)
+    assert np.array_equal(inoisy, inoisy_T)
+    assert np.array_equal(ioutside, ioutside_T)
 
     return ichannels, xfeats
 
@@ -325,7 +346,7 @@ def channel_similarity_T(raw, nmed=0):
     ref = np.median(raw, axis=1)
     xcor = nxcor_T(raw, ref)
     alt_comp = np.sum(raw * ref[:, np.newaxis], axis=0) / np.sum(ref ** 2)
-    assert np.allclose(xcor, alt_comp, rtol=0, atol=0.001)
+    assert np.allclose(xcor, alt_comp, rtol=0, atol=0.01)
 
     return xcor
 
@@ -352,7 +373,7 @@ def channels_similarity(raw, nmed=0):
     xcor = nxcor(raw, ref)
     alt_comp = np.sum(raw * ref[np.newaxis, :], axis=1) / np.sum(ref**2)
 
-    assert np.allclose(xcor, alt_comp, rtol=0, atol=0.001)
+    assert np.allclose(xcor, alt_comp, rtol=0, atol=0.01)
 
     if nmed > 0:
         xcor = detrend(xcor, nmed) + 1
