@@ -209,16 +209,13 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold, similarity_threshold=(-0.
     """
     __, nc = raw.shape
     raw = raw - np.mean(raw, axis=0)[np.newaxis, :]
-    xcor = channel_similarity(raw)
-
-    xcor_new = channel_simiarlity_new(raw)
-    assert np.allclose(xcor, xcor_new, atol=0.0001, rtol=0)
+    xcor = channels_similarity(raw)
 
     scale = 1e6 if scale_for_testing else 1
     fscale, psd = scipy.signal.welch(raw * scale, fs=fs, axis=0)
     sos_hp = scipy.signal.butter(**{'N': 3, 'Wn': 300 / fs * 2, 'btype': 'highpass'}, output='sos')  # dupl
     hf = scipy.signal.sosfiltfilt(sos_hp, raw, axis=0)
-    xcorf = channel_similarity(hf)
+    xcorf = channels_similarity(hf)
 
     xfeats = ({
         'ind': np.arange(nc),
@@ -272,29 +269,8 @@ def detrend(x, nmed):
     xf = scipy.signal.medfilt(xf, nmed)[ntap:-ntap]
     return x - xf
 
-def channel_simiarlity_new(raw):
+def channels_similarity(raw):
     ref = np.median(raw, axis=1)
     channel_corr_with_median = np.sum(raw * ref[:, np.newaxis], axis=0) / np.sum(ref**2)
     return channel_corr_with_median
-
-
-def channel_similarity(raw, nmed=0):
-    """"""
-    ref = np.median(raw, axis=1)
-    xcor = nxcor(raw, ref)
-    alt_comp = np.sum(raw * ref[:, np.newaxis], axis=0) / np.sum(ref ** 2)
-    assert np.allclose(xcor, alt_comp, rtol=0, atol=0.01)
-
-    return xcor
-
-def fxcor(x, y):
-    n = x.shape[0]
-    return scipy.fft.irfft(scipy.fft.rfft(x, axis=0) * np.conj(scipy.fft.rfft(y, axis=0)), axis=0, n=n)
-
-def nxcor(x, ref):
-    ref = ref - np.mean(ref)
-    apeak = fxcor(ref, ref)[0] # get the sum of squares in the reference i.e. unnormalised cross correlation with no shift
-    x = x - np.mean(x, axis=0)
-    np.sum(x[:, 0] * ref) / np.sum(ref**2)
-    return fxcor(x, ref[:, np.newaxis])[0, :] / apeak
 
