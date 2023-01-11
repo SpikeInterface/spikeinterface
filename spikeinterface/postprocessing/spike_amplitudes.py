@@ -1,7 +1,8 @@
 import numpy as np
 import shutil
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, ensure_n_jobs
+from spikeinterface.core.job_tools import (ChunkRecordingExecutor, _shared_job_kwargs_doc,
+                                           ensure_n_jobs, fix_job_kwargs)
 
 from spikeinterface.core.template_tools import (get_template_extremum_channel,
                                                 get_template_extremum_channel_peak_shift)
@@ -38,6 +39,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         return new_extension_data
         
     def _run(self, **job_kwargs):
+        job_kwargs = fix_job_kwargs(job_kwargs)
         we = self.waveform_extractor
         recording = we.recording
         sorting = we.sorting

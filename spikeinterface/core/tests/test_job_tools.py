@@ -1,9 +1,10 @@
 import pytest
+import os
 
 from spikeinterface.core import generate_recording
 
 from spikeinterface.core.job_tools import divide_segment_into_chunks, ensure_n_jobs, ensure_chunk_size, \
-    ChunkRecordingExecutor
+    ChunkRecordingExecutor, fix_job_kwargs, split_job_kwargs
 
 
 def test_divide_segment_into_chunks():
@@ -119,8 +120,46 @@ def test_ChunkRecordingExecutor():
                                        job_name='job_name')
     processor.run()
 
+
+def test_fix_job_kwargs():
+    # test negative n_jobs
+    job_kwargs = dict(n_jobs=-1, progress_bar=False, chunk_duration="1s")
+    fixed_job_kwargs = fix_job_kwargs(job_kwargs)
+    assert fixed_job_kwargs["n_jobs"] == os.cpu_count()
+
+    # test float n_jobs
+    job_kwargs = dict(n_jobs=0.5, progress_bar=False, chunk_duration="1s")
+    fixed_job_kwargs = fix_job_kwargs(job_kwargs)
+    if int(0.5 * os.cpu_count()) > 1:
+        assert fixed_job_kwargs["n_jobs"] == int(0.5 * os.cpu_count())
+    else:
+        assert fixed_job_kwargs["n_jobs"] == 1
+
+    # test minimum n_jobs
+    job_kwargs = dict(n_jobs=0, progress_bar=False, chunk_duration="1s")
+    fixed_job_kwargs = fix_job_kwargs(job_kwargs)
+    assert fixed_job_kwargs["n_jobs"] == 1
+
+    # test wrong keys
+    with pytest.raises(AssertionError):
+        job_kwargs = dict(n_jobs=0, progress_bar=False, chunk_duration="1s",
+                          other_param="other")
+        fixed_job_kwargs = fix_job_kwargs(job_kwargs)
+
+
+def test_split_job_kwargs():
+    kwargs = dict(n_jobs=2, progress_bar=False, other_param="other")
+    specific_kwargs, job_kwargs = split_job_kwargs(kwargs)
+    assert "other_param" in specific_kwargs and "n_jobs" not in specific_kwargs and \
+        "progress_bar" not in specific_kwargs
+    assert "other_param" not in job_kwargs and "n_jobs" in job_kwargs and \
+        "progress_bar" in job_kwargs
+
+
 if __name__ == '__main__':
     test_divide_segment_into_chunks()
     test_ensure_n_jobs()
     test_ensure_chunk_size()
     test_ChunkRecordingExecutor()
+    test_fix_job_kwargs()
+    test_split_job_kwargs()

@@ -7,7 +7,7 @@ import pandas as pd
 
 import spikeinterface
 from spikeinterface.core import write_binary_recording, BinaryRecordingExtractor, ChannelSparsity
-from spikeinterface.core.job_tools import _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.postprocessing import (compute_spike_amplitudes, compute_template_similarity,
                                            compute_principal_components)
 
@@ -57,13 +57,15 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     num_chans = recording.get_num_channels()
     fs = recording.sampling_frequency
 
+    job_kwargs = fix_job_kwargs(job_kwargs)
+
     # check sparsity
     if (num_chans > 64) and (sparsity is None or not waveform_extractor.is_sparse()):
         print(
             "WARNING: export to Phy with many channels and without sparsity might result in a heavy and less "
             "informative visualization. You can use use a sparse WaveformExtractor or you can use the 'sparsity' "
             "argument to enforce sparsity (see compute_sparsity())"
-            )
+        )
     
     if waveform_extractor.is_sparse():
         used_sparsity = waveform_extractor.sparsity

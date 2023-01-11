@@ -1,6 +1,6 @@
 """Sorting components: peak localization."""
 import numpy as np
-from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 
 from .peak_pipeline import run_peak_pipeline, PeakPipelineStep
 from .tools import make_multi_method_doc
