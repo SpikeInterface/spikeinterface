@@ -69,7 +69,7 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
             template_metrics = pd.DataFrame(
                 index=unit_ids, columns=metric_names)
         else:
-            extremum_channels_ids = sparsity
+            extremum_channels_ids = sparsity.unit_id_to_channel_ids
             unit_ids = []
             channel_ids = []
             for unit_id, sparse_channels in extremum_channels_ids.items():
@@ -160,7 +160,7 @@ def compute_template_metrics(waveform_extractor, load_if_exists=False,
     sparsity: dict or None
         Default is sparsity=None and template metric is computed on extremum channel only.
         If given, the dictionary should contain a unit ids as keys and a channel id or a list of channel ids as values.
-        For more generating a sparsity dict, see the postprocessing.get_template_channel_sparsity() function.
+        For more generating a sparsity dict, see the postprocessing.compute_sparsity() function.
     window_slope_ms: float
         Window in ms after the positiv peak to compute slope, by default 0.7
 

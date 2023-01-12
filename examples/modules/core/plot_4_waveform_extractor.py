@@ -59,7 +59,7 @@ we = extract_waveforms(
     ms_before=1.5,
     ms_after=2.,
     max_spikes_per_unit=500,
-    load_if_exists=True,
+    overwrite=True
 )
 print(we)
 
@@ -73,6 +73,28 @@ we = WaveformExtractor.create(recording, sorting, folder, remove_if_exists=True)
 we.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=1000)
 we.run_extract_waveforms(n_jobs=1, chunk_size=30000, progress_bar=True)
 print(we)
+
+
+###############################################################################
+# To speed up computation, waveforms can also be extracted using parallel 
+# processing (recommended!). We can define some :code:`'job_kwargs'` to pass
+# to the function as extra arguments:
+
+job_kwargs = dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
+
+folder = 'waveform_folder_parallel'
+we = extract_waveforms(
+    recording,
+    sorting,
+    folder,
+    ms_before=3.,
+    ms_after=4.,
+    max_spikes_per_unit=500,
+    overwrite=True,
+    **job_kwargs
+)
+print(we)
+
 
 ###############################################################################
 # The :code:`'waveform_folder'` folder contains:
@@ -100,12 +122,108 @@ for unit_id in unit_ids:
 # We can also get the template for each units either using the median or the
 # average:
 
-
 for unit_id in unit_ids[:3]:
     fig, ax = plt.subplots()
     template = we.get_template(unit_id=unit_id, mode='median')
     print(template.shape)
     ax.plot(template)
     ax.set_title(f'{unit_id}')
+
+
+###############################################################################
+# Or retrieve templates for all units at once:
+
+all_templates = we.get_all_templates()
+print(all_templates.shape)
+
+
+'''
+Sparse Waveform Extractor
+-------------------------
+
+'''
+###############################################################################
+# For high-density probes, such as Neuropixels, we may want to work with sparse 
+# waveforms, i.e., waveforms computed on a subset of channels. To do so, we 
+# two options.
+#
+# Option 1) Save a dense waveform extractor to sparse:
+#
+# In this case, from an existing waveform extractor, we can first estimate a 
+# sparsity (which channels each unit is defined on) and then save to a new
+# folder in sparse mode:
+
+from spikeinterface import compute_sparsity
+
+# define sparsity within a radius of 40um
+sparsity = compute_sparsity(we, method="radius", radius_um=40)
+print(sparsity)
+
+# save sparse waveforms
+folder = 'waveform_folder_sparse'
+we_sparse = we.save(folder=folder, sparsity=sparsity, overwrite=True)
+
+# we_sparse is a sparse WaveformExtractor
+print(we_sparse)
+
+wf_full = we.get_waveforms(we.sorting.unit_ids[0])
+print(f"Dense waveforms shape for unit {we.sorting.unit_ids[0]}: {wf_full.shape}")
+wf_sparse = we_sparse.get_waveforms(we.sorting.unit_ids[0])
+print(f"Sparse waveforms shape for unit {we.sorting.unit_ids[0]}: {wf_sparse.shape}")
+
+
+###############################################################################
+# Option 2) Directly extract sparse waveforms: 
+#
+# We can also directly extract sparse waveforms. To do so, dense waveforms are
+# extracted first using a small number of spikes (:code:`'num_spikes_for_sparsity'`)
+
+folder = 'waveform_folder_sparse_direct'
+we_sparse_direct = extract_waveforms(
+    recording,
+    sorting,
+    folder,
+    ms_before=3.,
+    ms_after=4.,
+    max_spikes_per_unit=500,
+    overwrite=True,
+    sparse=True,
+    num_spikes_for_sparsity=100,
+    method="radius",
+    radius_um=40,
+    **job_kwargs
+)
+print(we_sparse_direct)
+
+template_full = we.get_template(we.sorting.unit_ids[0])
+print(f"Dense template shape for unit {we.sorting.unit_ids[0]}: {template_full.shape}")
+template_sparse = we_sparse_direct.get_template(we.sorting.unit_ids[0])
+print(f"Sparse template shape for unit {we.sorting.unit_ids[0]}: {template_sparse.shape}")
+
+
+###############################################################################
+# As shown above, when retrieving waveforms/template for a unit from a sparse 
+# :code:`'WaveformExtractor'`, the waveforms are returned on a subset of channels.
+# To retrieve which channels each unit is associated with, we can use the sparsity
+# object:
+
+# retrive channel ids for first unit:
+unit_ids = we_sparse.unit_ids
+channel_ids_0 = we_sparse.sparsity.unit_id_to_channel_ids[unit_ids[0]]
+print(f"Channel ids associated to {unit_ids[0]}: {channel_ids_0}")
+
+
+###############################################################################
+# However, when retrieving all templates, a dense shape is returned. This is 
+# because different channels might have a different number of sparse channels!
+# In this case, values on channels not belonging to a unit are filled with 0s.
+
+all_sparse_templates = we_sparse.get_all_templates()
+
+# this is a boolean mask with sparse channels for the 1st unit
+mask0 = we_sparse.sparsity.mask[0]
+# Let's plot values for the first 5 samples inside and outside sparsity mask
+print("Values inside sparsity:\n", all_sparse_templates[0, :5, mask0])
+print("Values outside sparsity:\n", all_sparse_templates[0, :5, ~mask0])
 
 plt.show()

@@ -1,6 +1,7 @@
 from .si_based import ComponentsBasedSorter
 
 from spikeinterface.core import load_extractor, BaseRecording, get_noise_levels, extract_waveforms, NumpySorting
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore
 
 import numpy as np
@@ -31,8 +32,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
-
         job_kwargs = params['job_kwargs'].copy()
+        job_kwargs = fix_job_kwargs(job_kwargs)
         job_kwargs['progress_bar'] = verbose
     
         # this is importanted only on demand because numba import are too heavy
