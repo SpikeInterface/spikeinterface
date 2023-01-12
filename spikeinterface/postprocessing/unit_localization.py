@@ -285,7 +285,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
     return unit_location
 
 
-def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10):
+def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10, feature='ptp'):
     '''
     Computes the center of mass (COM) of a unit based on the template amplitudes.
 
@@ -297,6 +297,8 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10)
         Sign of the template to compute best channels ('neg', 'pos', 'both')
     num_channels: int
         Number of channels used to compute COM
+    feature: str ['ptp', 'mean', 'energy', 'v_origin']
+        Feature to consider for computation. Default is 'ptp'
 
     Returns
     -------
@@ -319,10 +321,17 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10)
 
         wf = templates[i, :, :]
 
-        wf_ptp = wf[:, chan_inds].ptp(axis=0)
+        if self.feature == 'ptp':
+            wf_data = (wf[:, chan_inds]).ptp(axis=0)
+        elif self.feature == 'mean':
+            wf_data = (wf[:, chan_inds]).mean(axis=0)
+        elif self.feature == 'energy':
+            wf_data = np.linalg.norm(wf[:, chan_inds], axis=0)
+        elif self.feature == 'v_origin':
+            wf_data = wf[waveform_extractor.nbefore, chan_inds]
 
         # center of mass
-        com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
+        com = np.sum(wf_data[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_data)
         unit_location[i, :] = com
 
     return unit_location

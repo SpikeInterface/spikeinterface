@@ -101,11 +101,14 @@ class LocalizeCenterOfMass(PeakPipelineStep):
         Time in ms to cut after spike peak
     local_radius_um: float
         Radius in um for channel sparsity.
+    feature: str ['ptp', 'mean', 'energy', 'v_origin']
+        Feature to consider for computation. Default is 'ptp'
     """
-    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150):
+    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150, feature='ptp'):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
                                   ms_after=ms_after, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
+        self.feature = feature
 
     def get_dtype(self):
         return self._dtype
@@ -118,8 +121,16 @@ class LocalizeCenterOfMass(PeakPipelineStep):
             chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
             local_contact_locations = self.contact_locations[chan_inds, :]
 
-            wf_ptp = (waveforms[idx][:, :, chan_inds]).ptp(axis=1)
-            coms = np.dot(wf_ptp, local_contact_locations)/(np.sum(wf_ptp, axis=1)[:,np.newaxis])
+            if self.feature == 'ptp':
+                wf_data = (waveforms[idx][:, :, chan_inds]).ptp(axis=1)
+            elif self.feature == 'mean':
+                wf_data = (waveforms[idx][:, :, chan_inds]).mean(axis=1)
+            elif self.feature == 'energy':
+                wf_data = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
+            elif self.feature == 'v_origin':
+                wf_data = waveforms[idx][:, self.nbefore, chan_inds]
+
+            coms = np.dot(wf_data, local_contact_locations)/(np.sum(wf_data, axis=1)[:,np.newaxis])
             peak_locations['x'][idx] = coms[:, 0]
             peak_locations['y'][idx] = coms[:, 1]
 
