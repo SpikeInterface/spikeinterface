@@ -931,7 +931,6 @@ def noise_cutoff(amplitudes, quantile_length=.25, num_histogram_bins=100,
             # bins to consider in the high quantile (of all non-zero bins)
             indices_bins_high_quantile = np.arange(high_quantile_start_ind, len(n))
             idx_use = np.where(n[indices_bins_high_quantile] >= 1)[0]
-            print(bins_list)
 
             if len(n[indices_bins_high_quantile]) > 0:  # ensure there are amplitudes in these bins
                 # mean of all amp values in high quantile bins

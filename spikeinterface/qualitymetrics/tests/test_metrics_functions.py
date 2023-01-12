@@ -23,7 +23,7 @@ else:
 
 def _simulated_data():
     max_time = 100.0
-
+    sampling_frequency = 30000
     trains = [synthetize_spike_train_bad_isi(max_time, 10, 2),
               synthetize_spike_train_bad_isi(max_time, 5, 4),
               synthetize_spike_train_bad_isi(max_time, 5, 10)]
@@ -34,10 +34,13 @@ def _simulated_data():
     spike_clusters = np.concatenate(labels)
 
     order = np.argsort(spike_times)
-
-    indexes = np.arange(0, max_time + 1, 1 / 30000)
+    max_num_samples = np.floor(max_time * sampling_frequency) - 1
+    indexes = np.arange(0, max_time + 1, 1 / sampling_frequency)
     spike_times = np.searchsorted(indexes, spike_times[order], side="left")
     spike_clusters = spike_clusters[order]
+    mask = spike_times < max_num_samples
+    spike_times = spike_times[mask]
+    spike_clusters = spike_clusters[mask]
 
     return {"duration": max_time, "times": spike_times, "labels": spike_clusters }
 
@@ -143,7 +146,7 @@ def test_calculate_noise_cutoff(simulated_data):
     amps = compute_spike_amplitudes(we)
 
     print(we.get_available_extension_names())
-    amp_cuts = compute_noise_cutoff(we, num_histogram_bins=10)
+    amp_cuts = compute_noise_cutoff(we, num_histogram_bins=100)
     print(amp_cuts)
     # assert amp_cuts == {0: 0.3307144004373338, 1: 0.43482247296942045, 2: 0.43482247296942045}
 
