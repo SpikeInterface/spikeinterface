@@ -9,8 +9,7 @@ from .unit_locations import UnitLocationsWidget
 from .unit_templates import UnitTemplatesWidget
 
 
-from ..core import WaveformExtractor
-from ..postprocessing import get_template_channel_sparsity, compute_template_similarity
+from ..core import WaveformExtractor, ChannelSparsity
 
 
 class SortingSummaryWidget(BaseWidget):
@@ -21,9 +20,9 @@ class SortingSummaryWidget(BaseWidget):
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    sparsity : dict or None
-        Optional dictionary with sparsity with unit ids as keys and 
-        list of channel ids as values.
+    sparsity : ChannelSparsity or None
+        Optional ChannelSparsity to apply.
+        If WaveformExtractor is already sparse, the argument is ignored
     max_amplitudes_per_unit : int or None
         Maximum number of spikes per unit for plotting amplitudes,
         by default None (all spikes)
@@ -39,7 +38,7 @@ class SortingSummaryWidget(BaseWidget):
     
     def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None,
                  sparsity=None, max_amplitudes_per_unit=None, curation=False,
-                 unit_table_properties=None, backend=None, **backend_kwargs):
+                 unit_table_properties=None, label_choices=None, backend=None, **backend_kwargs):
         self.check_extensions(waveform_extractor, ['correlograms', 'spike_amplitudes',
                                                    'unit_locations', 'similarity'])
         we = waveform_extractor
@@ -47,13 +46,7 @@ class SortingSummaryWidget(BaseWidget):
 
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
-        channel_ids = we.channel_ids
-            
-        if sparsity is None:
-            sparsity = {u: channel_ids for u in sorting.unit_ids}
-        else:
-            assert all(u in sparsity for u in sorting.unit_ids), "Sparsity needs to be defined for all units!"
-
+    
         # use other widgets to generate data (except for similarity)
         template_plot_data = UnitTemplatesWidget(we, unit_ids=unit_ids, sparsity=sparsity,
                                                  hide_unit_selector=True).plot_data
@@ -62,7 +55,7 @@ class SortingSummaryWidget(BaseWidget):
                                           hide_unit_selector=True).plot_data
         locs_plot_data = UnitLocationsWidget(we, unit_ids=unit_ids, hide_unit_selector=True).plot_data
         sim_plot_data = TemplateSimilarityWidget(we, unit_ids=unit_ids).plot_data
-        
+
         plot_data = dict(
             waveform_extractor=waveform_extractor,
             unit_ids=unit_ids,
@@ -72,7 +65,8 @@ class SortingSummaryWidget(BaseWidget):
             similarity=sim_plot_data,
             unit_locations=locs_plot_data,
             unit_table_properties=unit_table_properties,
-            curation=curation
+            curation=curation,
+            label_choices=label_choices
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)

@@ -33,22 +33,18 @@ class UnitWaveformPlotter(MplPlotter):
                 ax = self.axes.flatten()[i]
             color = dp.unit_colors[unit_id]
 
-            chan_inds = dp.channel_inds[unit_id]
+            chan_inds = dp.sparsity.unit_id_to_channel_indices[unit_id]
             xvectors_flat = dp.xvectors[:, chan_inds].T.flatten()
 
             # plot waveforms
             if dp.plot_waveforms:
                 wfs = dp.wfs_by_ids[unit_id]
                 if dp.unit_selected_waveforms is not None:
-                    wfs = wfs[dp.unit_selected_waveforms[unit_id]][:, :, chan_inds]
+                    wfs = wfs[dp.unit_selected_waveforms[unit_id]]
                 elif dp.max_spikes_per_unit is not None:
                     if len(wfs) > dp.max_spikes_per_unit:
                         random_idxs = np.random.permutation(len(wfs))[:dp.max_spikes_per_unit]
-                        wfs = wfs[random_idxs][:, :, chan_inds]
-                    else:
-                        wfs = wfs[:, :, chan_inds]
-                else:
-                    wfs = wfs[:, :, chan_inds]
+                        wfs = wfs[random_idxs]
                 wfs = wfs * dp.y_scale + dp.y_offset[None, :, chan_inds]
                 wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1).T
 

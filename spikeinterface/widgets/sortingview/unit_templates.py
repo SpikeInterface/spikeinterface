@@ -13,19 +13,22 @@ class UnitTemplatesPlotter(SortingviewPlotter):
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         
         # ensure serializable for sortingview
-        unit_ids, channel_ids, sparsity = self.make_serializable(dp.unit_ids, dp.channel_ids, dp.sparsity)
-        channel_inds = dp.channel_inds
+        unit_id_to_channel_ids = dp.sparsity.unit_id_to_channel_ids
+        unit_id_to_channel_indices = dp.sparsity.unit_id_to_channel_indices
+        
+        unit_ids, channel_ids, unit_id_to_channel_ids = \
+            self.make_serializable(dp.unit_ids, dp.channel_ids, unit_id_to_channel_ids)
 
         templates_dict = {}
         for u_i, unit in enumerate(unit_ids):
             templates_dict[unit] = {}
-            templates_dict[unit]["mean"] = dp.templates[u_i].T.astype("float32")[channel_inds[unit]]
-            templates_dict[unit]["std"] = dp.template_stds[u_i].T.astype("float32")[channel_inds[unit]]
+            templates_dict[unit]["mean"] = dp.templates[u_i].T.astype("float32")[unit_id_to_channel_indices[unit]]
+            templates_dict[unit]["std"] = dp.template_stds[u_i].T.astype("float32")[unit_id_to_channel_indices[unit]]
 
         aw_items = [
             vv.AverageWaveformItem(
                 unit_id=u,
-                channel_ids=list(sparsity[u]),
+                channel_ids=list(unit_id_to_channel_ids[u]),
                 waveform=t['mean'].astype('float32'),
                 waveform_std_dev=t['std'].astype('float32')
             )

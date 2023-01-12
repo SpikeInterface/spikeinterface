@@ -54,17 +54,13 @@ class MetricsPlotter(SortingviewPlotter):
 
         if not dp.hide_unit_selector:
             if dp.include_metrics_data:
-                # add metrics data as tmp properties
-                tmp_properties = []
+                # make a view of the sorting to add tmp properties
+                sorting_copy = dp.sorting.select_units(unit_ids=dp.sorting.unit_ids)
                 for col in metric_names:
-                    if col not in dp.sorting.get_property_keys():
-                        tmp_properties.append(col)
-                        dp.sorting.set_property(col, metrics[col].values)
+                    if col not in sorting_copy.get_property_keys():
+                        sorting_copy.set_property(col, metrics[col].values)
                 # generate table with properties
-                v_units_table = generate_unit_table_view(dp.sorting, unit_properties=metric_names)
-                # remove added tmp properties
-                for col in tmp_properties:
-                    dp.sorting.delete_property(col)
+                v_units_table = generate_unit_table_view(sorting_copy, unit_properties=metric_names)
             else:
                 v_units_table = generate_unit_table_view(dp.sorting)
 
