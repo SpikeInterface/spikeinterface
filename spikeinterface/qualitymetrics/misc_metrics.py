@@ -593,7 +593,10 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
                       "Use the `postprocessing.compute_spike_locations()` function. "
                       "Drift metrics will be set to NaN")
         empty_dict = {unit_id: np.nan for unit_id in waveform_extractor.unit_ids}
-        return res(empty_dict, empty_dict)
+        if return_positions:
+            return res(empty_dict, empty_dict), np.nan
+        else:
+            return res(empty_dict, empty_dict)
 
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
@@ -629,16 +632,15 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
                 i1 = np.searchsorted(spike_vector['segment_ind'], segment_index + 1)
                 spikes_in_segment = spike_vector[i0:i1]
                 spike_locations_in_segment = spike_locations[i0:i1]
-                i0 = np.searchsorted(spike_vector['sample_ind'], start_frame)
-                i1 = np.searchsorted(spike_vector['sample_ind'], end_frame)
+                i0 = np.searchsorted(spikes_in_segment['sample_ind'], start_frame)
+                i1 = np.searchsorted(spikes_in_segment['sample_ind'], end_frame)
                 spikes_in_bin = spikes_in_segment[i0:i1]
                 spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
 
                 for unit_ind in np.arange(len(unit_ids)):
                     mask = spikes_in_bin['unit_ind'] == unit_ind
                     if np.sum(mask) >= min_spikes_per_interval:
-                        median_positions[unit_ind, bin_index] = np.median(spike_locations_in_bin[mask])                 
-
+                        median_positions[unit_ind, bin_index] = np.median(spike_locations_in_bin[mask])
             # fix median positions if first bin is nan
             for unit_ind, unit_id in enumerate(unit_ids):
                 median_pos = median_positions[unit_ind]
@@ -670,13 +672,11 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
         maximum_drift[unit_id] = max_drift_unit
         cumulative_drift[unit_id] = cum_drift_unit
     
-    res = namedtuple("drift_metrics", ['maximum_drift', 'cumulative_drift'])
-
-    out = (res(maximum_drift, cumulative_drift), )
     if return_positions:
-        out += (median_positions,)
-
-    return out
+        outs = res(maximum_drift, cumulative_drift), median_positions
+    else:
+        outs = res(maximum_drift, cumulative_drift)
+    return outs
 
 
 _default_params["drift"] = dict(

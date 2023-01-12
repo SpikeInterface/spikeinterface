@@ -7,7 +7,6 @@ import numpy as np
 from spikeinterface import (WaveformExtractor, ChannelSparsity, load_extractor, extract_waveforms,
                             split_recording, select_segment_sorting)
 from spikeinterface.extractors import toy_example
-from spikeinterface.core import get_template_channel_sparsity
 
 from spikeinterface.postprocessing import (compute_principal_components, compute_spike_amplitudes,
                                            compute_spike_locations)
@@ -85,9 +84,10 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         assert qm._params["qm_params"]["isi_violations"]["isi_threshold_ms"] == 2
         assert 'snr' in metrics.columns
         assert 'isolation_distance' not in metrics.columns
-        # print(metrics)
+        print(metrics)
 
         # with PCs
+        print("Computing PCA")
         _ = compute_principal_components(we, n_components=5, mode='by_channel_local')
         metrics = self.extension_class.get_extension_function()(we, seed=0)
         assert 'isolation_distance' in metrics.columns
@@ -95,11 +95,11 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         # with PC - parallel
         metrics_par = self.extension_class.get_extension_function()(
             we, n_jobs=2, verbose=True, progress_bar=True, seed=0)
-        # print(metrics)
-        # print(metrics_par)
+        print(metrics)
+        print(metrics_par)
         for metric_name in metrics.columns:
             assert np.allclose(metrics[metric_name], metrics_par[metric_name])
-        # print(metrics)
+        print(metrics)
 
         # with sparsity
         metrics_sparse = self.extension_class.get_extension_function()(
@@ -107,7 +107,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         assert 'isolation_distance' in metrics_sparse.columns
         # for metric_name in metrics.columns:
         #     assert np.allclose(metrics[metric_name], metrics_par[metric_name])
-        # print(metrics_sparse)
+        print(metrics_sparse)
 
     def test_amplitude_cutoff(self):
         we = self.we_short
@@ -160,7 +160,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         _ = compute_spike_locations(we)
         segment_durations = [we.recording.get_num_samples(seg_index) / we.sampling_frequency
                              for seg_index in range(we.get_num_segments())]
-        qm_params=dict(drift=dict(interval_s=max(segment_durations) // 2 + 1))
+        qm_params=dict(drift=dict(interval_s=max(segment_durations) // 2 + 1, min_spikes_per_interval=10))
         with pytest.warns(UserWarning) as w:
             metrics = self.extension_class.get_extension_function()(
                 we, metric_names=['drift'], qm_params=qm_params)
@@ -168,7 +168,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         assert all(np.isnan(cum_drift) for cum_drift in metrics["cumulative_drift"].values)
 
         # finally let's use an interval compatible with segment durations
-        qm_params=dict(drift=dict(interval_s=max(segment_durations) // 10))
+        qm_params=dict(drift=dict(interval_s=max(segment_durations) // 10, min_spikes_per_interval=10))
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             metrics = self.extension_class.get_extension_function()(
@@ -213,5 +213,5 @@ if __name__ == '__main__':
     test = QualityMetricsExtensionTest()
     test.setUp()
     # test.test_extension()
-    test.test_drift_metrics()
+    test.test_metrics()
     # test.test_peak_sign()

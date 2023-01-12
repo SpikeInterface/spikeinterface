@@ -13,9 +13,9 @@ from copy import deepcopy
 
 
 import spikeinterface as si
-from ..core import get_random_data_chunks, WaveformExtractor
+from ..core import get_random_data_chunks, compute_sparsity, WaveformExtractor
 from ..core.job_tools import tqdm_joblib
-from ..core.template_tools import get_template_channel_sparsity, get_template_extremum_channel
+from ..core.template_tools import get_template_extremum_channel
 
 from ..postprocessing import WaveformPrincipalComponent
 
@@ -403,9 +403,8 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
 
         # find units whose signal channels (i.e. channels inside some radius around
         # the channel with largest amplitude) overlap with signal channels of the target unit
-        closest_chans_all = get_template_channel_sparsity(waveform_extractor, method='radius',
-                                                          outputs='index', peak_sign='both',
-                                                          radius_um=radius_um)
+        sparsity = compute_sparsity(waveform_extractor, peak_sign='both', method='radius', radius_um=radius_um)
+        closest_chans_all = sparsity.unit_id_to_channel_indices
         closest_chans_target_unit = closest_chans_all[this_unit_id]
         other_units_ids = [unit_id for unit_id in other_units_ids if
                            np.any(np.in1d(closest_chans_all[unit_id], closest_chans_target_unit))]
@@ -543,9 +542,8 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
             n_snippets = max_spikes
 
         # restrict to channels with significant signal
-        closest_chans_idx = get_template_channel_sparsity(waveform_extractor, method='radius',
-                                                          outputs='index', peak_sign='both',
-                                                          radius_um=radius_um)
+        sparsity = compute_sparsity(waveform_extractor, peak_sign='both', method='radius', radius_um=radius_um)
+        closest_chans_idx = sparsity.unit_id_to_channel_indices
         waveforms = waveforms[:, :, closest_chans_idx[this_unit_id]]
         noise_cluster = noise_cluster[:, :, closest_chans_idx[this_unit_id]]
 
