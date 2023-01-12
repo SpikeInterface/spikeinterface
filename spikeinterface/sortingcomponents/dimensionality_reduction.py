@@ -98,7 +98,7 @@ class TemporalPCA(PeakPipelineStep):
         # compute PCA by_channel_global (with sparsity)
         sparsity = ChannelSparsity.from_radius(we, radius_um=self.local_radius_um)
         pc = compute_principal_components(we, n_components=n_components,  mode='by_channel_global',
-                                        sparsity=sparsity.unit_id_to_channel_ids, whiten=whiten)
+                                        sparsity=sparsity, whiten=whiten)
         pca_model  = pc.get_pca_model()
 
         # model_folder should be an input
