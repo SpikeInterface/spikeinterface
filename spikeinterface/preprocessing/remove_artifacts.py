@@ -148,14 +148,18 @@ class RemoveArtifactsRecording(BasePreprocessor):
             else:
                 sorting = NumpySorting.from_times_labels(list_triggers, list_labels, recording.get_sampling_frequency())
                 sorting = sorting.save()
-                waveforms_params = {'ms_before' : ms_before, 'ms_after' : ms_after}
+                waveforms_kwargs.update({'ms_before' : ms_before, 'ms_after' : ms_after})
                 assert ('ms_before' != None) and ('ms_after' != None), "ms_before/after should not be None for such a mode"
                 w = extract_waveforms(recording, sorting, None, **waveforms_kwargs)
                 artefacts = {}
                 sparsity = {}
                 for label in w.sorting.unit_ids:
                     artefacts[label] = w.get_template(label, mode=mode).astype(recording.dtype)
-                    sparsity[label] = np.ones(w.recording.get_num_channels()).astype(bool)
+                    if w.is_sparse():
+                        unit_ind = w.sorting.id_to_index(label)
+                        sparsity[label] = w.sparsity.mask[unit_ind]
+                    else:
+                        sparsity = None
 
             if sparsity is not None:
                 labels = []
@@ -313,7 +317,10 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                     traces[gap_idx, :] = 0
         elif self.mode in ['average', 'median']:
             for label, trig in zip(labels, triggers):
-                mask = self.sparsity[label]
+                if self.sparsity is not None:
+                    mask = self.sparsity[label]
+                else:
+                    mask = None
                 artefact_duration = len(self.artefacts[label])
                 if self.time_pad > 0:
                     jitters = np.arange(-self.time_pad, self.time_pad, 1)
@@ -339,8 +346,12 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                         duration = (end_frame - start_frame) - (t_trig - pad[0])
                         artefact_slice = slice(0, duration)
 
-                    trace_slice_values = traces[trace_slice][:, mask]
-                    artefact_slice_values = self.artefacts[label][artefact_slice][:, mask]
+
+                    trace_slice_values = traces[trace_slice]
+                    if mask is not None:
+                        trace_slice_values = trace_slice_values[:, mask]
+                    
+                    artefact_slice_values = self.artefacts[label][artefact_slice]
 
                     norm = np.linalg.norm(trace_slice_values)*np.linalg.norm(artefact_slice_values)
                     best_amplitudes[count] = np.dot(trace_slice_values.flatten(), artefact_slice_values.flatten())/norm
@@ -368,7 +379,10 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                 else:
                     best_amp = 1
 
-                traces[trace_slice][:, mask] -= best_amp * self.artefacts[label][artefact_slice][:, mask]
+                if mask is not None:
+                    traces[trace_slice][:, mask] -= best_amp * self.artefacts[label][artefact_slice]
+                else:
+                    traces[trace_slice] -= best_amp * self.artefacts[label][artefact_slice]
 
         return traces
 
