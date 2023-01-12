@@ -36,6 +36,5 @@ _misc_metric_name_to_func = {
     "amplitude_cutoff" : compute_amplitudes_cutoff,
     "amplitude_median" : compute_amplitudes_median,
     "drift" : compute_drift_metrics
-    # TODO "noise_cutoff" : compute_noise_cutoff, # needs DEBUGGING
 }
 
