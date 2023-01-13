@@ -76,15 +76,19 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         new_metrics = self._extension_data['metrics'].loc[np.array(unit_ids)]
         return dict(metrics=new_metrics)
 
-    def _run(self, n_jobs, verbose, progress_bar=False):
+    def _run(self, verbose, **job_kwargs):
         """
         Compute quality metrics.
         """
-
         metric_names = self._params['metric_names']
         qm_params = self._params['qm_params']
         sparsity = self._params['sparsity']
         seed = self._params['seed']
+
+        # update job_kwargs with global ones
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        n_jobs = job_kwargs['n_jobs'] if 'n_jobs' in job_kwargs else 1
+        progress_bar = job_kwargs['progress_bar'] if 'progress_bar' in job_kwargs else False
 
         unit_ids = self.sorting.unit_ids
         metrics = pd.DataFrame(index=unit_ids)
@@ -151,7 +155,7 @@ WaveformExtractor.register_extension(QualityMetricCalculator)
 def compute_quality_metrics(waveform_extractor, load_if_exists=False,
                             metric_names=None, qm_params=None, peak_sign=None, seed=None,
                             sparsity=None, skip_pc_metrics=False, 
-                            n_jobs=1, verbose=False, progress_bar=False):
+                            verbose=False, **job_kwargs):
     """Compute quality metrics on waveform extractor.
 
     Parameters
@@ -189,9 +193,7 @@ def compute_quality_metrics(waveform_extractor, load_if_exists=False,
         qmc = QualityMetricCalculator(waveform_extractor)
         qmc.set_params(metric_names=metric_names, qm_params=qm_params, peak_sign=peak_sign, seed=seed,
                        sparsity=sparsity, skip_pc_metrics=skip_pc_metrics)
-        # update job_kwargs with global ones
-        job_kwargs = fix_job_kwargs(dict(n_jobs=n_jobs, progress_bar=progress_bar))
-        qmc.run(n_jobs=job_kwargs['n_jobs'], progress_bar=job_kwargs['progress_bar'], verbose=verbose)
+        qmc.run(verbose=verbose, **job_kwargs)
 
     metrics = qmc.get_data()
 

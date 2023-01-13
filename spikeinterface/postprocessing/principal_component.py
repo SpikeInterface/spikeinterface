@@ -216,7 +216,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             return self.waveform_extractor.sparsity
         return self._params["sparsity"]
 
-    def _run(self, n_jobs=1, progress_bar=False):
+    def _run(self, **job_kwargs):
         """
         Compute the PCs on waveforms extacted within the WaveformExtarctor.
         Projections are computed only on the waveforms sampled by the WaveformExtractor.
@@ -228,6 +228,11 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         p = self._params
         we = self.waveform_extractor
         num_chans = we.get_num_channels()
+
+        # update job_kwargs with global ones
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        n_jobs = job_kwargs['n_jobs'] if 'n_jobs' in job_kwargs else 1
+        progress_bar = job_kwargs['progress_bar'] if 'progress_bar' in job_kwargs else False
 
         # prepare memmap files with npy
         projection_objects = {}
@@ -630,8 +635,7 @@ WaveformExtractor.register_extension(WaveformPrincipalComponent)
 
 def compute_principal_components(waveform_extractor, load_if_exists=False,
                                  n_components=5, mode='by_channel_local', sparsity=None,
-                                 whiten=True, dtype='float32', n_jobs=1,
-                                 progress_bar=False):
+                                 whiten=True, dtype='float32', **job_kwargs):
     """
     Compute PC scores from waveform extractor. The PCA projections are pre-computed only
     on the sampled waveforms available from the WaveformExtractor.
@@ -686,9 +690,7 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
         pc = WaveformPrincipalComponent.create(waveform_extractor)
         pc.set_params(n_components=n_components, mode=mode, whiten=whiten, dtype=dtype,
                       sparsity=sparsity)
-        # update job_kwargs with global ones
-        job_kwargs = fix_job_kwargs(dict(n_jobs=n_jobs, progress_bar=progress_bar))
-        pc.run(n_jobs=job_kwargs['n_jobs'], progress_bar=job_kwargs['progress_bar'])
+        pc.run(**job_kwargs)
 
     return pc
 
