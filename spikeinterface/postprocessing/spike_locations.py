@@ -127,7 +127,7 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
     method_kwargs : dict 
         Other kwargs depending on the method.
     outputs : str 
-        'numpy' (default) / 'numpy_dtype' / 'dict'
+        'concatenated' (default) / 'by_unit'
     {}
 
     Returns

@@ -47,15 +47,12 @@ class BenchmarkPeakLocalization:
             self.template_positions = compute_center_of_mass(self.waveforms, **method_kwargs)
         elif method == 'monopolar_triangulation':
             self.template_positions = compute_monopolar_triangulation(self.waveforms, **method_kwargs)[:,:2]
-        self.spike_positions = compute_spike_locations(self.waveforms, method, method_kwargs=method_kwargs, **self.job_kwargs)
+        self.spike_positions = compute_spike_locations(self.waveforms, method, method_kwargs=method_kwargs, **self.job_kwargs, outputs='by_unit')
 
         self.raw_templates_results = {}
-        all_times = self.waveforms.sorting.get_all_spike_trains()[0][0]
 
         for unit_ind, unit_id in enumerate(self.waveforms.sorting.unit_ids):
-            times = self.waveforms.sorting.get_unit_spike_train(unit_id)
-            mask = np.in1d(all_times, times)
-            data = self.spike_positions[mask]
+            data = self.spike_positions[0][unit_id]
             self.raw_templates_results[unit_id] = np.sqrt((data['x'] - self.gt_positions[unit_ind, 0])**2 + (data['y'] - self.gt_positions[unit_ind, 1])**2)
 
         self.means_over_templates = np.array([np.mean(self.raw_templates_results[unit_id]) for unit_id in  self.waveforms.sorting.unit_ids])
@@ -73,7 +70,7 @@ def plot_comparison_positions(benchmarks, mode='average'):
     norms = np.linalg.norm(benchmarks[0].waveforms.get_all_templates(mode=mode),  axis=(1, 2))
     idx = np.argsort(norms)
 
-    fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(10, 10))
+    fig, axs = plt.subplots(ncols=3, nrows=2, figsize=(10, 5))
     ax = axs[0, 0]
     #ax.set_title(title)
 
@@ -84,6 +81,7 @@ def plot_comparison_positions(benchmarks, mode='average'):
     ax.legend()
     ax.set_xlabel('norms')
     ax.set_ylabel('error')
+    ymin, ymax = ax.get_ylim()
 
     ax = axs[0, 1]
 
@@ -92,7 +90,19 @@ def plot_comparison_positions(benchmarks, mode='average'):
         ax.plot(np.linalg.norm(bench.gt_positions, axis=1), errors, '.', label=bench.title)
 
     ax.set_xlabel('distance to center')
-    ax.set_ylabel('error')
+    ax.set_yticks([])
+
+    ax = axs[0, 2]
+    #ax.set_title(title)
+
+    for count, bench in enumerate(benchmarks):
+        errors = np.linalg.norm(bench.template_positions - bench.gt_positions, axis=1)
+        ax.bar([count], np.mean(errors), yerr=np.std(errors))
+
+    ax.set_xlabel('norms')
+    ax.set_yticks([])
+    ax.set_ylim(ymin, ymax)
+
 
     ax = axs[1, 0]
 
@@ -105,3 +115,12 @@ def plot_comparison_positions(benchmarks, mode='average'):
 
     ax.set_xlabel('distance to center')
     ax.set_ylabel('error')
+    ymin, ymax = ax.get_ylim()
+
+    ax = axs[1, 1]
+
+    for count, bench in enumerate(benchmarks):
+        ax.bar([count], np.mean(bench.means_over_templates), yerr=np.std(bench.means_over_templates))
+
+    ax.set_yticks([])
+    ax.set_ylim(ymin, ymax)
