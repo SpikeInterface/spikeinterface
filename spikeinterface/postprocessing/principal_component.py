@@ -686,7 +686,9 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
         pc = WaveformPrincipalComponent.create(waveform_extractor)
         pc.set_params(n_components=n_components, mode=mode, whiten=whiten, dtype=dtype,
                       sparsity=sparsity)
-        pc.run(n_jobs=n_jobs, progress_bar=progress_bar)
+        # update job_kwargs with global ones
+        job_kwargs = fix_job_kwargs(dict(n_jobs=n_jobs, progress_bar=progress_bar))
+        pc.run(n_jobs=job_kwargs['n_jobs'], progress_bar=job_kwargs['progress_bar'])
 
     return pc
 

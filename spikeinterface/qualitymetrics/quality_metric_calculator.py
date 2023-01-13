@@ -5,6 +5,7 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
 from .quality_metric_list import (_misc_metric_name_to_func,
@@ -188,7 +189,9 @@ def compute_quality_metrics(waveform_extractor, load_if_exists=False,
         qmc = QualityMetricCalculator(waveform_extractor)
         qmc.set_params(metric_names=metric_names, qm_params=qm_params, peak_sign=peak_sign, seed=seed,
                        sparsity=sparsity, skip_pc_metrics=skip_pc_metrics)
-        qmc.run(n_jobs=n_jobs, verbose=verbose, progress_bar=progress_bar)
+        # update job_kwargs with global ones
+        job_kwargs = fix_job_kwargs(dict(n_jobs=n_jobs, progress_bar=progress_bar))
+        qmc.run(n_jobs=job_kwargs['n_jobs'], progress_bar=job_kwargs['progress_bar'], verbose=verbose)
 
     metrics = qmc.get_data()
 
