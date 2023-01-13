@@ -321,13 +321,13 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10,
 
         wf = templates[i, :, :]
 
-        if self.feature == 'ptp':
+        if feature == 'ptp':
             wf_data = (wf[:, chan_inds]).ptp(axis=0)
-        elif self.feature == 'mean':
+        elif feature == 'mean':
             wf_data = (wf[:, chan_inds]).mean(axis=0)
-        elif self.feature == 'energy':
+        elif feature == 'energy':
             wf_data = np.linalg.norm(wf[:, chan_inds], axis=0)
-        elif self.feature == 'v_origin':
+        elif feature == 'v_origin':
             wf_data = wf[waveform_extractor.nbefore, chan_inds]
 
         # center of mass
