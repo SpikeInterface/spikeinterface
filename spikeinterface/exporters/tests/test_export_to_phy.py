@@ -4,9 +4,10 @@ from pathlib import Path
 
 import numpy as np
 
-from spikeinterface import extract_waveforms, download_dataset
+from spikeinterface import extract_waveforms, download_dataset, ChannelSparsity
 import spikeinterface.extractors as se
 from spikeinterface.exporters import export_to_phy
+from spikeinterface.postprocessing import compute_principal_components
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "exporters"
@@ -33,8 +34,8 @@ def test_export_to_phy():
     export_to_phy(waveform_extractor, output_folder,
                   compute_pc_features=True,
                   compute_amplitudes=True,
-                  max_channels_per_template=8,
-                  n_jobs=1, chunk_size=10000, progress_bar=True)
+                  n_jobs=1, chunk_size=10000,
+                  progress_bar=True)
 
 
 def test_export_to_phy_by_property():
@@ -58,12 +59,11 @@ def test_export_to_phy_by_property():
     sorting = sorting.save(folder=sort_folder)
 
     waveform_extractor = extract_waveforms(recording, sorting, waveform_folder)
-
+    sparsity_group = ChannelSparsity.from_property(waveform_extractor, "group")
     export_to_phy(waveform_extractor, output_folder,
                   compute_pc_features=True,
                   compute_amplitudes=True,
-                  max_channels_per_template=8,
-                  sparsity_dict=dict(method="by_property", by_property="group"),
+                  sparsity=sparsity_group,
                   n_jobs=1, chunk_size=10000, progress_bar=True)
 
     template_inds = np.load(output_folder / "template_ind.npy")
@@ -72,13 +72,14 @@ def test_export_to_phy_by_property():
     # Remove one channel
     recording_rm = recording.channel_slice([0, 2, 3, 4, 5, 6, 7])
     waveform_extractor_rm = extract_waveforms(recording_rm, sorting, waveform_folder_rm)
+    sparsity_group = ChannelSparsity.from_property(waveform_extractor_rm, "group")
 
     export_to_phy(waveform_extractor_rm, output_folder_rm,
                   compute_pc_features=True,
                   compute_amplitudes=True,
-                  max_channels_per_template=8,
-                  sparsity_dict=dict(method="by_property", by_property="group"),
-                  n_jobs=1, chunk_size=10000, progress_bar=True)
+                  sparsity=sparsity_group,
+                  n_jobs=1, chunk_size=10000,
+                  progress_bar=True)
 
     template_inds = np.load(output_folder_rm / "template_ind.npy")
     assert template_inds.shape == (num_units, 4)
@@ -94,37 +95,46 @@ def test_export_to_phy_by_sparsity():
 
     waveform_folder = cache_folder / 'waveforms'
     output_folder_radius = cache_folder / 'phy_output_radius'
-    output_folder_thr = cache_folder / 'phy_output_thr'
+    output_folder_multi_sparse = cache_folder / 'phy_output_multi_sparse'
 
-    for f in (waveform_folder, output_folder_radius, output_folder_thr):
+    for f in (waveform_folder, output_folder_radius, output_folder_multi_sparse):
         if f.is_dir():
             shutil.rmtree(f)
 
     waveform_extractor = extract_waveforms(recording, sorting, waveform_folder)
-
+    sparsity_radius = ChannelSparsity.from_radius(waveform_extractor, 50.)
     export_to_phy(waveform_extractor, output_folder_radius,
                   compute_pc_features=True,
                   compute_amplitudes=True,
-                  max_channels_per_template=None,
-                  sparsity_dict=dict(method="radius", radius_um=50),
+                  sparsity=sparsity_radius,
                   n_jobs=1, chunk_size=10000, progress_bar=True)
 
     template_ind = np.load(output_folder_radius / "template_ind.npy")
+    pc_ind = np.load(output_folder_radius / "pc_feature_ind.npy")
     # templates have different shapes!
     assert -1 in template_ind
+    assert -1 in pc_ind
 
-    export_to_phy(waveform_extractor, output_folder_thr,
+    # pre-compute PC with another sparsity
+    sparsity_radius_small = ChannelSparsity.from_radius(waveform_extractor, 30.)
+    pc = compute_principal_components(waveform_extractor, sparsity=sparsity_radius_small)
+    export_to_phy(waveform_extractor, output_folder_multi_sparse,
                   compute_pc_features=True,
                   compute_amplitudes=True,
-                  max_channels_per_template=None,
-                  sparsity_dict=dict(method="threshold", threshold=2),
-                  n_jobs=1, chunk_size=10000, progress_bar=True)
+                  sparsity=sparsity_radius,
+                  n_jobs=1, chunk_size=10000,
+                  progress_bar=True)
 
-    template_ind = np.load(output_folder_thr / "template_ind.npy")
+    template_ind = np.load(output_folder_multi_sparse / "template_ind.npy")
+    pc_ind = np.load(output_folder_multi_sparse / "pc_feature_ind.npy")
     # templates have different shapes!
     assert -1 in template_ind
+    assert -1 in pc_ind
+    # PC sparsity is more stringent than teplate sparsity
+    assert pc_ind.shape[1] < template_ind.shape[1]
 
 
 if __name__ == '__main__':
+    test_export_to_phy()
     test_export_to_phy_by_property()
     test_export_to_phy_by_sparsity()

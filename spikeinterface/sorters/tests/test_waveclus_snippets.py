@@ -21,5 +21,4 @@ class WaveClusSnippetsCommonTestSuite(SnippetsSorterCommonTestSuite, unittest.Te
 if __name__ == '__main__':
     test = WaveClusSnippetsCommonTestSuite()
     test.setUp()
-    test.test_with_class()
     test.test_with_run()

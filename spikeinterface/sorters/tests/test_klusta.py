@@ -14,5 +14,4 @@ class KlustaCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
 if __name__ == '__main__':
     test = KlustaCommonTestSuite()
     test.setUp()
-    test.test_with_class()
     test.test_with_run()

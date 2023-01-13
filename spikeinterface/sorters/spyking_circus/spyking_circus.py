@@ -75,7 +75,7 @@ class SpykingcircusSorter(BaseSorter):
         return circus.__version__
 
     @classmethod
-    def _check_params(cls, recording, output_folder, params):
+    def _check_params(cls, recording, sorter_output_folder, params):
         # check and re dump params
         p = params
         if p['num_workers'] is None:
@@ -87,7 +87,7 @@ class SpykingcircusSorter(BaseSorter):
         return params['filter']
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         p = params
 
         if p['detect_sign'] < 0:
@@ -105,7 +105,7 @@ class SpykingcircusSorter(BaseSorter):
 
         # save prb file
         # note: only one group here, the split is done in basesorter
-        prb_file = output_folder / 'probe.prb'
+        prb_file = sorter_output_folder / 'probe.prb'
         probegroup = recording.get_probegroup()
         write_prb(prb_file, probegroup,
                   total_nb_channels=recording.get_num_channels(),
@@ -118,7 +118,7 @@ class SpykingcircusSorter(BaseSorter):
         n_chan = recording.get_num_channels()
         n_frames = recording.get_num_frames(segment_index=0)
         chunk_size = 2 ** 24 // n_chan
-        npy_file = str(output_folder / file_name) + '.npy'
+        npy_file = str(sorter_output_folder / file_name) + '.npy'
         data_file = open_memmap(npy_file, shape=(n_frames, n_chan), dtype=np.float32, mode='w+')
         nb_chunks = n_frames // chunk_size
         for i in range(nb_chunks + 1):
@@ -136,11 +136,11 @@ class SpykingcircusSorter(BaseSorter):
                                                       p['detect_threshold'], detect_sign, p['filter'],
                                                       p['whitening_max_elts'],
                                                       p['clustering_max_elts'], auto)
-        with (output_folder / (file_name + '.params')).open('w') as f:
+        with (sorter_output_folder / (file_name + '.params')).open('w') as f:
             f.writelines(circus_config)
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
         sorter_name = cls.sorter_name
 
         num_workers = params['num_workers']
@@ -148,15 +148,15 @@ class SpykingcircusSorter(BaseSorter):
         if 'win' in sys.platform and sys.platform != 'darwin':
             shell_cmd = '''
                         spyking-circus {recording} -c {num_workers}
-                    '''.format(recording=output_folder / 'recording.npy', num_workers=num_workers)
+                    '''.format(recording=sorter_output_folder / 'recording.npy', num_workers=num_workers)
         else:
             shell_cmd = '''
                         #!/bin/bash
                         spyking-circus {recording} -c {num_workers}
-                    '''.format(recording=output_folder / 'recording.npy', num_workers=num_workers)
+                    '''.format(recording=sorter_output_folder / 'recording.npy', num_workers=num_workers)
 
-        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{sorter_name}',
-                                   log_path=output_folder / f'{sorter_name}.log', verbose=verbose)
+        shell_script = ShellScript(shell_cmd, script_path=sorter_output_folder / f'run_{sorter_name}',
+                                   log_path=sorter_output_folder / f'{sorter_name}.log', verbose=verbose)
         shell_script.start()
 
         retcode = shell_script.wait()
@@ -165,6 +165,6 @@ class SpykingcircusSorter(BaseSorter):
             raise Exception('spykingcircus returned a non-zero exit code')
 
     @classmethod
-    def _get_result_from_folder(cls, output_folder):
-        sorting = SpykingCircusSortingExtractor(folder_path=Path(output_folder) / 'recording')
+    def _get_result_from_folder(cls, sorter_output_folder):
+        sorting = SpykingCircusSortingExtractor(folder_path=Path(sorter_output_folder) / 'recording')
         return sorting

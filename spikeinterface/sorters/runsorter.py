@@ -165,9 +165,9 @@ def run_sorter_local(sorter_name, recording, output_folder=None,
         sorting = SorterClass.get_result_from_folder(output_folder)
     else:
         sorting = None
-
+    sorter_output_folder = output_folder / "sorter_output"
     if delete_output_folder:
-        shutil.rmtree(output_folder)
+        shutil.rmtree(sorter_output_folder)
 
     return sorting
 
