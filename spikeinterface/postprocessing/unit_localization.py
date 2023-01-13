@@ -274,7 +274,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         chan_inds = channel_sparsity[unit_id]
         local_contact_locations = contact_locations[chan_inds, :]
 
-        # wf is (nsample, nchan) - chann is only nieghboor
+        # wf is (nsample, nchan) - chann is only neighboor
         wf = templates[i, :, :]
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
         unit_location[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_um, optimizer)
@@ -285,7 +285,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
     return unit_location
 
 
-def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10, feature='ptp'):
+def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=75, feature='ptp'):
     '''
     Computes the center of mass (COM) of a unit based on the template amplitudes.
 
@@ -309,8 +309,8 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', num_channels=10,
     recording = waveform_extractor.recording
     contact_locations = recording.get_channel_locations()
 
-    channel_sparsity = get_template_channel_sparsity(waveform_extractor, method='best_channels',
-                                                     num_channels=num_channels, outputs='index')
+    channel_sparsity = get_template_channel_sparsity(waveform_extractor, method='radius',
+                                                     radius_um=radius_um, outputs='index')
 
     templates = waveform_extractor.get_all_templates(mode='average')
 
