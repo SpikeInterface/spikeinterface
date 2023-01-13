@@ -59,7 +59,7 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
         peak_sign = self._params['peak_sign']
         upsampling_factor = self._params['upsampling_factor']
         unit_ids = self.waveform_extractor.sorting.unit_ids
-        sampling_frequency = self.waveform_extractor.recording.get_sampling_frequency()
+        sampling_frequency = self.waveform_extractor.sampling_frequency
 
         if sparsity is None:
             extremum_channels_ids = get_template_extremum_channel(self.waveform_extractor, 
@@ -80,12 +80,13 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
             template_metrics = pd.DataFrame(
                 index=multi_index, columns=metric_names)
 
-        for unit_id in unit_ids:
-            template_all_chans = self.waveform_extractor.get_template(unit_id)
+        all_templates = self.waveform_extractor.get_all_templates()
+        for unit_index, unit_id in enumerate(unit_ids):
+            template_all_chans = all_templates[unit_index]
             chan_ids = np.array(extremum_channels_ids[unit_id])
             if chan_ids.ndim == 0:
                 chan_ids = [chan_ids]
-            chan_ind = self.waveform_extractor.recording.ids_to_indices(chan_ids)
+            chan_ind = self.waveform_extractor.channel_ids_to_indices(chan_ids)
             template = template_all_chans[:, chan_ind]
 
             for i, template_single in enumerate(template.T):
