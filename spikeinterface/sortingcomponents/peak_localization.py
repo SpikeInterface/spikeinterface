@@ -71,7 +71,7 @@ class LocalizePeakChannel(PeakPipelineStep):
     params_doc = """
     """
 
-    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150):
+    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=75):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
                                   ms_after=ms_after, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
@@ -104,11 +104,12 @@ class LocalizeCenterOfMass(PeakPipelineStep):
     feature: str ['ptp', 'mean', 'energy', 'v_origin']
         Feature to consider for computation. Default is 'ptp'
     """
-    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150, feature='ptp'):
+    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=75, feature='ptp'):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
                                   ms_after=ms_after, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
         self.feature = feature
+        self._kwargs.update(dict(feature=feature))
 
     def get_dtype(self):
         return self._dtype
@@ -156,12 +157,12 @@ class LocalizeMonopolarTriangulation(PeakPipelineStep):
         For channel sparsity.
     max_distance_um: float, default: 1000
         Boundary for distance estimation.
-    enforce_decrese : None or "radial"
-        If+how to enforce spatial decreasingness for PTP vectors.
+    enforce_decrese : False
+        To enforce spatial decreasingness for PTP vectors.
     """
     def __init__(self, recording, 
                         ms_before=1., ms_after=1.,
-                        local_radius_um=150,
+                        local_radius_um=75,
                         max_distance_um=1000,
                         optimizer='minimize_with_log_penality',
                         enforce_decrease=False):
