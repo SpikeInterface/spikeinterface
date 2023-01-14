@@ -376,6 +376,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         for unit_ind, unit_id in units_loop:
             wfs, channel_inds = self._get_sparse_waveforms(unit_id)
+            if len(wfs) < p['n_components']:
+                continue
             if n_jobs in (0, 1):
                 for wf_ind, chan_ind in enumerate(channel_inds):
                     pca = pca_models[chan_ind]
@@ -449,10 +451,10 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         # with 'by_channel_global' we can't parallelize over channels
         for unit_ind, unit_id in units_loop:
             wfs, _ = self._get_sparse_waveforms(unit_id)
-            if wfs.size == 0:
+            shape = wfs.shape
+            if shape[0] * shape[2] < p['n_components']:
                 continue
             # avoid loop with reshape
-            shape = wfs.shape
             wfs_concat = wfs.transpose(0, 2, 1).reshape(shape[0] * shape[2], shape[1])
             pca_model.partial_fit(wfs_concat)
 
@@ -509,6 +511,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         for unit_ind, unit_id in units_loop:
             wfs, _ = self._get_sparse_waveforms(unit_id)
             wfs_flat = wfs.reshape(wfs.shape[0], -1)
+            if len(wfs_flat) < p['n_components']:
+                continue
             pca_model.partial_fit(wfs_flat)
 
         # save
