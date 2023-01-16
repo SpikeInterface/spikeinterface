@@ -4,11 +4,11 @@ import numpy as np
 import time
 from pathlib import Path
 
-from spikeinterface.core import extract_waveforms
+from spikeinterface.core import extract_waveforms, compute_sparsity
+
 from spikeinterface.extractors import read_mearec
 from spikeinterface.preprocessing import bandpass_filter, zscore, common_reference
 from spikeinterface.sorters import run_sorter
-from spikeinterface.postprocessing import get_template_channel_sparsity
 from spikeinterface.widgets import plot_unit_waveforms, plot_gt_performances
 
 from spikeinterface.comparison import GroundTruthComparison
@@ -122,8 +122,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             import sklearn
             nb_templates = len(self.waveforms['static'].unit_ids)
 
-            sparsity = get_template_channel_sparsity(self.waveforms['static'], 
-                        num_channels=num_channels, outputs='index')
+            sparsity = compute_sparsity(self.waveforms['static'],  method="best_channels", num_channels=num_channels)
 
             self._templates_similarities[gkey] = {}
             self._templates_similarities[gkey]['norm'] = np.zeros(nb_templates)
@@ -131,9 +130,9 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 self._templates_similarities[gkey][key] = np.zeros(nb_templates)    
                 for unit_ind, unit_id in enumerate(self.waveforms[key].sorting.unit_ids):
                     template = self.waveforms['static'].get_template(unit_id)
-                    template = template[:, sparsity[unit_id]].reshape(1, -1)
+                    template = template[:, sparsity.mask[unit_ind]].reshape(1, -1)
                     new_template = self.waveforms[key].get_template(unit_id)
-                    new_template = new_template[:, sparsity[unit_id]].reshape(1, -1)
+                    new_template = new_template[:, sparsity.mask[unit_ind]].reshape(1, -1)
                     if metric == 'euclidean':
                         self._templates_similarities[gkey][key][unit_ind] = sklearn.metrics.pairwise_distances(template, new_template)[0]
                     elif metric == 'cosine':
@@ -154,19 +153,18 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             self._snippets_variability[gkey] = {'mean' : {}, 'std' : {}}
             nb_templates = len(self.waveforms['static'].unit_ids)
 
-            sparsity = get_template_channel_sparsity(self.waveforms['static'], 
-                        num_channels=num_channels, outputs='index')
+            sparsity = compute_sparsity(self.waveforms['static'],  method="best_channels", num_channels=num_channels)
 
             for key in self.keys:
                 self._snippets_variability[gkey]['mean'][key] = np.zeros(nb_templates)
                 self._snippets_variability[gkey]['std'][key] = np.zeros(nb_templates)
 
                 for unit_ind, unit_id in enumerate(self.waveforms[key].sorting.unit_ids):
-                    w = self.waveforms[key].get_waveforms(unit_id)[:, :, sparsity[unit_id]]
+                    w = self.waveforms[key].get_waveforms(unit_id)[:, :, sparsity.mask[unit_ind]]
                     nb_waveforms = len(w)
                     flat_w = w.reshape(nb_waveforms, -1)
                     template = self.waveforms['static'].get_template(unit_id)
-                    template = template[:, sparsity[unit_id]].reshape(1, -1)
+                    template = template[:, sparsity.mask[unit_ind]].reshape(1, -1)
                     if metric == 'euclidean':
                         d = sklearn.metrics.pairwise_distances(template, flat_w)[0]
                     elif metric == 'cosine':
@@ -345,8 +343,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     def compare_waveforms(self, unit_id, num_channels=20):
         fig, axes = plt.subplots(1, 3, figsize=(15, 10))
 
-        sparsity = get_template_channel_sparsity(self.waveforms['static'], 
-                        num_channels=num_channels)
+        sparsity = compute_sparsity(self.waveforms['static'],  method="best_channels", num_channels=num_channels)
 
         for count, key in enumerate(self.keys):
 
