@@ -11,7 +11,7 @@ try:
 except ImportError:
     HAVE_NUMBA = False
 
-from spikeinterface.core.template_tools import get_template_channel_sparsity
+from spikeinterface.core.template_tools import get_template_channel_sparsity, get_template_extremum_channel
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
 
@@ -221,7 +221,7 @@ def estimate_distance_error_with_log(vec, wf_ptp, local_contact_locations, maxpt
 
 
 def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with_log_penality',
-                                    radius_um=75, max_distance_um=1000, return_alpha=False):
+                                    radius_um=75, max_distance_um=1000, return_alpha=False, enforce_decrease=False):
     '''
     Localize unit with monopolar triangulation.
     This method is from Julien Boussard, Erdem Varol and Charlie Windolf
@@ -251,6 +251,8 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         to make bounddary in x, y, z and also for alpha
     return_alpha: bool default False
         Return or not the alpha value
+    enforce_decrease : False
+        To enforce spatial decreasingness for PTP vectors.
 
     Returns
     -------
@@ -269,6 +271,13 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
                                                      radius_um=radius_um, outputs='index')
     templates = waveform_extractor.get_all_templates(mode='average')
 
+    #if enforce_decrease:
+    #    neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
+    #    for i, unit_id in enumerate(unit_ids):
+    #        neighbours_mask[i][channel_sparsity[unit_id]] = True
+    #    enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
+    #    best_channels = get_template_extremum_channel(waveform_extractor, outputs='index')
+
     unit_location = np.zeros((unit_ids.size, 4), dtype='float64')
     for i, unit_id in enumerate(unit_ids):
         chan_inds = channel_sparsity[unit_id]
@@ -277,6 +286,12 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         # wf is (nsample, nchan) - chann is only neighboor
         wf = templates[i, :, :]
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
+
+        #if enforce_decrease:
+        #    enforce_decrease_shells_ptp(
+        #        wf_ptp, best_channels[unit_id], enforce_decrease_radial_parents, in_place=True
+        #    )
+
         unit_location[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_um, optimizer)
 
     if not return_alpha:
