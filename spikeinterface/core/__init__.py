@@ -56,21 +56,23 @@ from .segmentutils import (
 )
 
 # default folder
-from .default_folders import (set_global_tmp_folder, get_global_tmp_folder,
-                              is_set_global_tmp_folder, reset_global_tmp_folder,
-                              get_global_dataset_folder, set_global_dataset_folder, is_set_global_dataset_folder)
+from .globals import (set_global_tmp_folder, get_global_tmp_folder,
+                      is_set_global_tmp_folder, reset_global_tmp_folder,
+                      get_global_dataset_folder, set_global_dataset_folder,
+                      is_set_global_dataset_folder,
+                      get_global_job_kwargs, set_global_job_kwargs, reset_global_job_kwargs)
 
 # tools 
 from .core_tools import write_binary_recording, write_to_h5_dataset_format, write_binary_recording, read_python, \
     write_python
-from .job_tools import ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor, split_job_kwargs
+from .job_tools import ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor, split_job_kwargs, fix_job_kwargs
 from .recording_tools import (get_random_data_chunks, get_channel_distances, get_closest_channels,
                               get_noise_levels, get_chunk_with_margin, order_channels_by_depth)
 from .waveform_tools import extract_waveforms_to_buffers
 from .snippets_tools import snippets_from_sorting
 
 # waveform extractor
-from .waveform_extractor import WaveformExtractor, extract_waveforms, load_waveforms
+from .waveform_extractor import WaveformExtractor, extract_waveforms, load_waveforms, precompute_sparsity
 
 # retrieve datasets
 from .datasets import download_dataset
@@ -91,4 +93,4 @@ from .template_tools import (
 )
 
 # channel sparsity
-from .sparsity import ChannelSparsity
+from .sparsity import ChannelSparsity, compute_sparsity

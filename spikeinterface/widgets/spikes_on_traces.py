@@ -1,12 +1,14 @@
 import numpy as np
 
 from .base import BaseWidget
+from .utils import get_unit_colors
 from .timeseries import TimeseriesWidget
+from ..core import ChannelSparsity
+from ..core.template_tools import get_template_extremum_channel
 from ..core.waveform_extractor import WaveformExtractor
 from ..core.baserecording import BaseRecording
 from ..core.basesorting import BaseSorting
-from .utils import get_unit_colors
-from ..postprocessing import get_template_extremum_channel, compute_unit_locations
+from ..postprocessing import compute_unit_locations
 
 
 class SpikesOnTracesWidget(BaseWidget):
@@ -22,14 +24,9 @@ class SpikesOnTracesWidget(BaseWidget):
         List of unit ids.
     plot_templates: bool
         If True, templates are plotted over the waveforms
-    sparsity: dict or None
-        If given, the channel sparsity for each unit
-    radius_um: None or float
-        If not None, all channels within a circle around the peak waveform will be displayed
-        Ignored is `sparsity` is provided. Incompatible with with `max_channels`
-    max_channels : None or int
-        If not None only max_channels are displayed per units.
-        Ignored is `sparsity` is provided. Incompatible with with `radius_um`
+    sparsity : ChannelSparsity or None
+        Optional ChannelSparsity to apply.
+        If WaveformExtractor is already sparse, the argument is ignored
     set_title: bool
         Create a plot title with the unit number if True.
     plot_channels: bool
@@ -83,14 +80,22 @@ class SpikesOnTracesWidget(BaseWidget):
             unit_colors = get_unit_colors(sorting)
 
         # sparsity is done on all the units even if unit_ids is a few ones because some backend need then all
-        if sparsity is None:
-            extremum_channel_ids = get_template_extremum_channel(we)
-            sparsity = {u: [ch] for u, ch in extremum_channel_ids.items()}
+        if waveform_extractor.is_sparse():
+            sparsity = waveform_extractor.sparsity
         else:
-            assert all(u in sparsity for u in sorting.unit_ids), "sparsity must be provided for all units!"
+            if sparsity is None:
+                # in this case, we construct a sparsity dictionary only with the best channel
+                extremum_channel_ids = get_template_extremum_channel(we)
+                unit_id_to_channel_ids = {u: [ch] for u, ch in extremum_channel_ids.items()}
+                sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
+                    unit_id_to_channel_ids=unit_id_to_channel_ids,
+                    unit_ids=we.unit_ids,
+                    channel_ids=we.channel_ids
+                )
+            else:
+                assert isinstance(sparsity, ChannelSparsity)
 
         # get templates
-        templates = we.get_all_templates(unit_ids=unit_ids)
         unit_locations = compute_unit_locations(we, outputs="by_unit")
 
         plot_data = dict(
@@ -103,6 +108,3 @@ class SpikesOnTracesWidget(BaseWidget):
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
-
-
-
