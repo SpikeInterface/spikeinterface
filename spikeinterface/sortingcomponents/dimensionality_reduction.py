@@ -1,4 +1,5 @@
 import pickle
+from pathlib import Path
 
 import numpy as np
 from sklearn.decomposition import IncrementalPCA
@@ -52,6 +53,11 @@ class TemporalPCA(PeakPipelineStep):
         self._kwargs.update(dict(all_channels=all_channels, peak_sign=peak_sign, model_path=model_path))
         self._dtype = recording.get_dtype()
 
+        if model_path is not None and Path(model_path).is_file():
+            with open(model_path, "rb") as f:
+                self.pca_model = pickle.load(f)
+        
+
     def get_dtype(self):
         return self._dtype
 
@@ -99,24 +105,18 @@ class TemporalPCA(PeakPipelineStep):
         sparsity = ChannelSparsity.from_radius(we, radius_um=self.local_radius_um)
         pc = compute_principal_components(we, n_components=n_components,  mode='by_channel_global',
                                         sparsity=sparsity, whiten=whiten)
-        pca_model  = pc.get_pca_model()
+        self.pca_model  = pc.get_pca_model()
 
         # model_folder should be an input
         pca_model_path = self._kwargs["model_path"]
 
         with open(pca_model_path, "wb") as f:
-            pickle.dump(pca_model, f)
+            pickle.dump(self.pca_model, f)
             
-        return pca_model
+        return self.pca_model
     
-    def compute_buffer(self, traces, peaks, waveforms):
-        pca_model_path = self._kwargs["model_path"]
-        
-        self.pca_model = None
-        if pca_model_path is not None:
-            with open(pca_model_path, "rb") as f:
-                self.pca_model = pickle.load(f)
-        
+    def compute_buffer(self, traces, peaks, waveforms):        
+
         if self.pca_model == None:
             exception_string = (
                 f"Pca model not found, "
