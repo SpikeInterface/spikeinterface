@@ -2,10 +2,10 @@ import pytest
 import numpy as np
 import pandas as pd
 import shutil
+from pathlib import Path
+
 from spikeinterface import extract_waveforms, load_extractor, ChannelSparsity
 from spikeinterface.extractors import toy_example
-from spikeinterface.core import get_template_channel_sparsity
-from pathlib import Path
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "postprocessing"
@@ -41,7 +41,7 @@ class WaveformExtensionCommonTestSuite:
                                 ms_before=3., ms_after=4., max_spikes_per_unit=500,
                                 n_jobs=1, chunk_size=30000, overwrite=True)
         self.we1 = we1
-        self.sparsity1 = ChannelSparsity.from_radius(we1, radius_um=30)
+        self.sparsity1 = ChannelSparsity.from_radius(we1, radius_um=50)
 
         # 2-segments
         recording, sorting = toy_example(num_segments=2, num_units=10)
@@ -59,7 +59,7 @@ class WaveformExtensionCommonTestSuite:
                                 ms_before=3., ms_after=4., max_spikes_per_unit=500,
                                 n_jobs=1, chunk_size=30000, overwrite=True)
         self.we2 = we2
-        self.sparsity2 = ChannelSparsity.from_radius(we1, radius_um=30)
+        self.sparsity2 = ChannelSparsity.from_radius(we2, radius_um=30)
         we_memory = extract_waveforms(recording, sorting, mode="memory",
                                       ms_before=3., ms_after=4., max_spikes_per_unit=500,
                                       n_jobs=1, chunk_size=30000)
@@ -69,7 +69,7 @@ class WaveformExtensionCommonTestSuite:
                                        overwrite=True, format="zarr")
         
         # use best channels for PC-concatenated
-        sparsity = ChannelSparsity.from_best_channels(we_memory, num_channels=4)
+        sparsity = ChannelSparsity.from_best_channels(we_memory, num_channels=2)
         self.we_sparse = we_memory.save(folder=cache_folder / 'toy_sorting_2seg_sparse', format="binary",
                                         sparsity=sparsity, overwrite=True)
 

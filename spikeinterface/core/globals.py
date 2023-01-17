@@ -122,7 +122,9 @@ def set_global_job_kwargs(**job_kwargs):
     for k in job_kwargs:
         assert k in job_keys, (f"{k} is not a valid job keyword argument. "
                                f"Available keyword arguments are: {list(job_keys)}")
-    global_job_kwargs = job_kwargs
+    current_global_kwargs = get_global_job_kwargs()
+    current_global_kwargs.update(job_kwargs)
+    global_job_kwargs = current_global_kwargs
     global global_job_kwargs_set
     global_job_kwargs_set = True
 

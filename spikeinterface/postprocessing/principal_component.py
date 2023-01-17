@@ -127,8 +127,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         all_projections: np.array
             The PCA projections (num_all_waveforms, num_components, num_channels)
         """
-        recording = self.waveform_extractor.recording
-
         if unit_ids is None:
             unit_ids = self.waveform_extractor.sorting.unit_ids
 
@@ -137,7 +135,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         for unit_index, unit_id in enumerate(unit_ids):
             proj = self.get_projections(unit_id)
             if channel_ids is not None:
-                chan_inds = recording.ids_to_indices(channel_ids)
+                chan_inds = self.waveform_extractor.channel_ids_to_indices(channel_ids)
                 proj = proj[:, :, chan_inds]
             n = proj.shape[0]
             if outputs == 'id':
@@ -231,8 +229,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         # update job_kwargs with global ones
         job_kwargs = fix_job_kwargs(job_kwargs)
-        n_jobs = job_kwargs['n_jobs'] if 'n_jobs' in job_kwargs else 1
-        progress_bar = job_kwargs['progress_bar'] if 'progress_bar' in job_kwargs else False
+        n_jobs = job_kwargs['n_jobs']
+        progress_bar = job_kwargs['progress_bar']
 
         # prepare memmap files with npy
         projection_objects = {}

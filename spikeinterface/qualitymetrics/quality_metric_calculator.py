@@ -51,9 +51,10 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             metric_names = list(_misc_metric_name_to_func.keys())
             # if PC is available, PC metrics are automatically added to the list
             if self.principal_component is not None:
-                # by default 'nearest_neightbor' is removed because too slow
+                # by default 'nearest_neightbor' metrics are removed because too slow
                 pc_metrics = _possible_pc_metric_names.copy()
-                pc_metrics.remove("nearest_neighbor")
+                pc_metrics.remove("nn_isolation")
+                pc_metrics.remove("nn_noise_overlap")
                 metric_names += pc_metrics
         qm_params_ = get_default_qm_params()
         for k in qm_params_:
@@ -87,8 +88,8 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
 
         # update job_kwargs with global ones
         job_kwargs = fix_job_kwargs(job_kwargs)
-        n_jobs = job_kwargs['n_jobs'] if 'n_jobs' in job_kwargs else 1
-        progress_bar = job_kwargs['progress_bar'] if 'progress_bar' in job_kwargs else False
+        n_jobs = job_kwargs['n_jobs']
+        progress_bar = job_kwargs['progress_bar']
 
         unit_ids = self.sorting.unit_ids
         metrics = pd.DataFrame(index=unit_ids)
@@ -101,7 +102,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             if verbose:
                 if metric_name not in _possible_pc_metric_names:
                     print(f"Computing {metric_name}")
-            
+
             func = _misc_metric_name_to_func[metric_name]
 
             res = func(self.waveform_extractor, **qm_params[metric_name])
