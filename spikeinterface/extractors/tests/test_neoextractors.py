@@ -50,7 +50,11 @@ class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream',
         {'stream_id': '1', 'block_index': 1}),
         ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream',
+        {'stream_id': '1', 'block_index': 1, 'load_sync_timestamps': True}),
+        ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream',
         {'stream_id': '2', 'block_index': 2}),
+        ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream',
+        {'stream_id': '2', 'block_index': 2, 'load_sync_timestamps': True})
     ]
 
 
@@ -281,9 +285,9 @@ if __name__ == '__main__':
     # test = SpikeGLXRecordingTest()
     # test = OpenEphysBinaryRecordingTest()
     # test = SpikeGLXRecordingTest()
-    # test = OpenEphysBinaryRecordingTest()
+    test = OpenEphysBinaryRecordingTest()
     # test = OpenEphysLegacyRecordingTest()
-    test = CellExplorerSortingTest()
+    # test = CellExplorerSortingTest()
     # test = ItanRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()
