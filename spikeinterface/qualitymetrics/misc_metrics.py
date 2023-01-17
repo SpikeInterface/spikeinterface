@@ -532,7 +532,7 @@ def compute_amplitudes_median(waveform_extractor, peak_sign='neg'):
 
         # change amplitudes signs in case peak_sign is pos
         abs_amplitudes = np.abs(amplitudes)
-        all_amplitude_medians[unit_id] = abs_amplitudes
+        all_amplitude_medians[unit_id] = np.median(abs_amplitudes)
 
     return all_amplitude_medians
 

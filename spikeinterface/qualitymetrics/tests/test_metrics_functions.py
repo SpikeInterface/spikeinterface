@@ -211,4 +211,4 @@ if __name__ == '__main__':
     # test_calculate_amplitude_median(sim_data)
     # test_calculate_isi_violations(sim_data)
     # test_calculate_rp_violations(sim_data)
-    test_calculate_drift_metrics(sim_data)
+    test_calculate_amplitude_median(sim_data)
