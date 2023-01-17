@@ -39,9 +39,10 @@ class StreamingIblExtractor(BaseRecording):
         If not then the probe is loaded.
     cache_folder : str, optional
         The location to temporarily store chunks of data during streaming.
-        The default uses the folder designated by one.alyx._par.CACHE_DIR / "cache".
-    remove_cached : bool, default: false
+        The default uses the folder designated by ONE.alyx._par.CACHE_DIR / "cache".
+    remove_cached : bool, default: true
         Whether or not to remove data from the cache after it is read.
+        If you expect to reuse fetched data many times, and have the disk space available, it is recommended to set this to False.
 
     Returns
     -------
@@ -99,7 +100,7 @@ class StreamingIblExtractor(BaseRecording):
         stream_name: str,
         load_sync_channel: bool = False,
         cache_folder: Optional[Union[Path, str]] = None,
-        remove_cached: bool = False,
+        remove_cached: bool = True,
     ):
         from brainbox.io.spikeglx import Streamer
         from one.api import ONE
@@ -148,8 +149,8 @@ class StreamingIblExtractor(BaseRecording):
         self.set_probe(probe, in_place=True)
 
         # set channel properties
-        # Sometimes the metadata files in the IBL side don't have certain fields, so they print a statement to
-        # stderr saying these are defaults
+        # sometimes there are missing metadata files on the IBL side
+        # when this happens a statement is printed to stderr saying these are using default metadata configurations
         with redirect_stderr(StringIO()):
             electrodes_geometry = file_streamer.geometry
 
