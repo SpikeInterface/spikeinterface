@@ -43,12 +43,21 @@ class BenchmarkPeakLocalization:
         t_start = time.time()
         if self.title is None:
             self.title = method
-        if method == 'center_of_mass':
-            self.template_positions = compute_center_of_mass(self.waveforms, **method_kwargs)
-        elif method == 'monopolar_triangulation':
-            self.template_positions = compute_monopolar_triangulation(self.waveforms, **method_kwargs)[:,:2]
 
-        print(method, method_kwargs)
+        unit_params = method_kwargs.copy()
+        if 'local_radius_um' in unit_params:
+            value = unit_params.pop('local_radius_um')
+            unit_params['radius_um'] = value
+
+        for key in ['ms_after', 'ms_before']:
+            if key in unit_params:
+               unit_params.pop(key)
+
+        if method == 'center_of_mass':
+            self.template_positions = compute_center_of_mass(self.waveforms, **unit_params)
+        elif method == 'monopolar_triangulation':
+            self.template_positions = compute_monopolar_triangulation(self.waveforms, **unit_params)[:,:2]
+
         self.spike_positions = compute_spike_locations(self.waveforms, method=method, method_kwargs=method_kwargs, **self.job_kwargs, outputs='by_unit')
 
         self.raw_templates_results = {}
