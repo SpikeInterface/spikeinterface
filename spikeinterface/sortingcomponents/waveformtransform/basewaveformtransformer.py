@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABC
 
 
-class WaveformTransofmer(ABC):
+class WaveformTransformer(ABC):
     
     
     def __init__(self):

@@ -1,10 +1,10 @@
 
 import numpy as np
 
-from .basewaveformtransformer import WaveformTransofmer
+from .basewaveformtransformer import WaveformTransformer
 
 
-class MaxValueNormalization(WaveformTransofmer):
+class MaxValueNormalization(WaveformTransformer):
     
             
     def transform(self, waveforms):

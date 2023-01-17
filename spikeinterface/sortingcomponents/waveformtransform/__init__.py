@@ -1,1 +1,1 @@
-from .basewaveformtransformer import WaveformTransofmer
+from .basewaveformtransformer import WaveformTransformer

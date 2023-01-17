@@ -14,7 +14,7 @@ import numpy as np
 from spikeinterface.core import get_chunk_with_margin, get_channel_distances
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 
-from spikeinterface.sortingcomponents.waveformtransform import WaveformTransofmer
+from spikeinterface.sortingcomponents.waveformtransform import WaveformTransformer
 
 class PeakPipelineStep:
     """
@@ -92,7 +92,7 @@ class PeakPipelineStep:
     def waveform_transformer_pipe(self, pipe):
         assert_message = "waveform_transformer_pipe must be a list of BaseWaveTransformer instances"
         assert isinstance(pipe, list), assert_message
-        assert all([isinstance(wf_step, WaveformTransofmer) for wf_step in pipe]), assert_message
+        assert all([isinstance(wf_step, WaveformTransformer) for wf_step in pipe]), assert_message
         self._waveform_transformer_pipe = pipe
 
     def transform_waveforms(self, waveforms):
