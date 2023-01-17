@@ -625,13 +625,15 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
             bins = np.arange(num_bin_edges) * interval_samples
             spike_vector = sorting.to_spike_vector()
 
+            # retrieve spikes in segment
+            i0 = np.searchsorted(spike_vector['segment_ind'], segment_index)
+            i1 = np.searchsorted(spike_vector['segment_ind'], segment_index + 1)
+            spikes_in_segment = spike_vector[i0:i1]
+            spike_locations_in_segment = spike_locations[i0:i1]
+
             # compute median positions (if less than min_spikes_per_interval, median position is 0)
             median_positions = np.nan * np.zeros((len(unit_ids), num_bin_edges - 1))
             for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
-                i0 = np.searchsorted(spike_vector['segment_ind'], segment_index)
-                i1 = np.searchsorted(spike_vector['segment_ind'], segment_index + 1)
-                spikes_in_segment = spike_vector[i0:i1]
-                spike_locations_in_segment = spike_locations[i0:i1]
                 i0 = np.searchsorted(spikes_in_segment['sample_ind'], start_frame)
                 i1 = np.searchsorted(spikes_in_segment['sample_ind'], end_frame)
                 spikes_in_bin = spikes_in_segment[i0:i1]
@@ -653,12 +655,13 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
                         if np.isnan(median_pos[0]):
                             # set first value to first non-nan value
                             median_pos[0] = median_pos[~np.isnan(median_pos)][0]
+                        position_diff = np.diff(median_pos)
                         max_drift = np.nanmax(position_diff) - np.nanmin(position_diff)
-                        cum_drift = np.nansum(position_diff)
+                        cum_drift = np.nansum(np.abs(position_diff))
                 else:
                     position_diff = np.diff(median_pos)
                     max_drift = np.ptp(position_diff)
-                    cum_drift = np.sum(position_diff)
+                    cum_drift = np.sum(np.abs(position_diff))
                 maximum_drift_segs[unit_id].append(max_drift)
                 cumulative_drift_segs[unit_id].append(cum_drift)
 
