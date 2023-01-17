@@ -63,7 +63,8 @@ class BenchmarkBase:
             pattern = "*.*"
             files = self.folder.glob(pattern)
             for file in files:
-                os.remove(file)
+                if file.is_file():
+                    os.remove(file)
         else:
             self.folder.mkdir(parents=True)
 
@@ -141,7 +142,7 @@ class BenchmarkBase:
                 continue
             waveforms_folder = folder / 'waveforms' / key
             if waveforms_folder.exists():
-                bench.waveforms[key] = load_waveforms(waveforms_folder, with_recording=False)
+                bench.waveforms[key] = load_waveforms(waveforms_folder, with_recording=True)
 
         sorting_folder = folder / 'sortings'
         if sorting_folder.exists():

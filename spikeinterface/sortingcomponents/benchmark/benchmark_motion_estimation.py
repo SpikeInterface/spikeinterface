@@ -40,7 +40,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
                 do_preprocessing=True, 
                 job_kwargs={'chunk_duration' : '1s', 'n_jobs' : -1, 'progress_bar':True, 'verbose' :True}, 
                 overwrite=False,
-                #parent_benchmark=None
+                parent_benchmark=None,
                 ):
         
         BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite,  job_kwargs=job_kwargs, 
