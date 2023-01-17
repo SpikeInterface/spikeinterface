@@ -14,6 +14,7 @@ import numpy as np
 from spikeinterface.core import get_chunk_with_margin, get_channel_distances
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 
+from spikeinterface.sortingcomponents.waveforms import WaveformTransofmer
 
 class PeakPipelineStep:
     """
@@ -26,7 +27,8 @@ class PeakPipelineStep:
        * some features : ptp, ...
     """
     need_waveforms = False
-
+    _waveform_transformer_pipe = None
+    
     def __init__(self, recording, ms_before=None, ms_after=None, local_radius_um=None):
         self._kwargs = dict()
 
@@ -55,13 +57,14 @@ class PeakPipelineStep:
             self.channel_distance = get_channel_distances(recording)
             self.neighbours_mask = self.channel_distance < local_radius_um
 
+    
     @classmethod
     def from_dict(cls, recording, kwargs):
         return cls(recording, **kwargs)
 
-    def to_dict(self):
+    def to_dict(self):        
         return self._kwargs
-
+    
     def get_trace_margin(self):
         # can optionaly be overwritten
         if self.need_waveforms:
@@ -77,6 +80,34 @@ class PeakPipelineStep:
     def compute_buffer(self, traces, peaks, waveforms=None):
         raise NotImplementedError
 
+    @property
+    def waveform_transformer_pipe(self):
+        """
+        A list of BaseWaveTransformer instances. The waveforms are passed through this pipe before the 
+        compute_buffer method. 
+        """
+        return self._waveform_transformer_pipe
+    
+    @waveform_transformer_pipe.setter
+    def waveform_transformer_pipe(self, pipe):
+        assert_message = "waveform_transformer_pipe must be a list of BaseWaveTransformer instances"
+        assert isinstance(pipe, list), assert_message
+        assert all([isinstance(wf_step, WaveformTransofmer) for wf_step in pipe]), assert_message
+        self._waveform_transformer_pipe = pipe
+
+    def transform_waveforms(self, waveforms):
+        if self._waveform_transformer_pipe is None:
+            return waveforms
+        else:
+            for wf_step in self.waveform_transformer_pipe:
+                waveforms = wf_step.transform(waveforms)
+            return waveforms
+
+    def pack_transformer_pipeline(self):
+        packed_pipeline = None
+        if self._waveform_transformer_pipe:
+            packed_pipeline = [(wf_step.__class__, wf_step.to_dict()) for wf_step in self._waveform_transformer_pipe]
+        return packed_pipeline 
 
 def run_peak_pipeline(recording, peaks, steps, job_kwargs, job_name='peak_pipeline', squeeze_output=True):
     """
@@ -89,7 +120,7 @@ def run_peak_pipeline(recording, peaks, steps, job_kwargs, job_name='peak_pipeli
         init_args = (
             recording.to_dict(),
             peaks,  # TODO peaks as shared mem to avoid copy
-            [(step.__class__, step.to_dict()) for step in steps],
+            [(step.__class__, step.to_dict(), step.pack_transformer_pipeline()) for step in steps],
         )
     else:
         init_args = (recording, peaks, steps)
@@ -119,9 +150,18 @@ def _init_worker_peak_pipeline(recording, peaks, steps):
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
         recording = load_extractor(recording)
-
-        steps = [cls.from_dict(recording, kwargs) for cls, kwargs in steps]
-
+        
+        step_instance_list = []
+        for step in steps:
+            step_class, step_initialization_kwargs, packed_pipeline = step
+            step_instance  = step_class.from_dict(recording, step_initialization_kwargs)
+            if packed_pipeline:
+                transformer_pipe = [wf_step_class(**wf_step_kwargs) for wf_step_class, wf_step_kwargs in packed_pipeline]
+                step_instance.waveform_transformer_pipe = transformer_pipe
+            step_instance_list.append(step_instance)    
+        
+        steps = step_instance_list
+    
     max_margin = max(step.get_trace_margin() for step in steps)
 
     # create a local dict per worker
@@ -175,7 +215,7 @@ def _compute_peak_step_chunk(segment_index, start_frame, end_frame, worker_ctx):
     outs = tuple()
     for step in worker_ctx['steps']:
         if step.need_waveforms:
-            # give the waveforms pre extracted when needed
+            waveforms = step.transform_waveforms(waveforms)
             out = step.compute_buffer(traces, local_peaks, waveforms=waveforms)
         else:
             out = step.compute_buffer(traces, local_peaks)
@@ -196,3 +236,25 @@ def get_nbefore_nafter_from_steps(steps):
                 assert nbefore == step.nbefore, f'Step do not have the same nbefore {nbefore}: {step.nbefore}'
                 assert nafter == step.nafter, f'Step do not have the same nbefore {nafter}: {step.nafter}'
     return nbefore, nafter
+
+
+class WaveformStep(PeakPipelineStep):
+    """
+    Return waveforms from the peaks. This step can be used to debug, test or prototype. Use with caution as it can be
+    heavy memory wise.
+    """
+    need_waveforms = True
+
+    def __init__(self, recording, ms_before=1., ms_after=1.,  peak_sign='neg', all_channels=True):
+        PeakPipelineStep.__init__(self, recording, ms_before=ms_before, ms_after=ms_after)
+        self.all_channels = all_channels
+        self.peak_sign = peak_sign
+        self._kwargs.update(dict(all_channels=all_channels, peak_sign=peak_sign))
+        self._dtype = recording.get_dtype()
+        
+        
+    def compute_buffer(self, traces, peaks, waveforms):
+        return waveforms
+
+    def get_dtype(self):
+        return self._dtype4
