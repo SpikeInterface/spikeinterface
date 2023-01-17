@@ -486,8 +486,7 @@ _default_params["amplitude_cutoff"] = dict(
 
 
 def compute_amplitudes_median(waveform_extractor, peak_sign='neg'):
-    """Compute absolute geometric median amplitude.
-    The median is computed in the log domain and scaled back to uthe original scale.
+    """Compute median of the amplitude distributions (in absolute value).
 
     Parameters
     ----------
@@ -533,8 +532,7 @@ def compute_amplitudes_median(waveform_extractor, peak_sign='neg'):
 
         # change amplitudes signs in case peak_sign is pos
         abs_amplitudes = np.abs(amplitudes)
-        log_amps = 20 * np.log10(abs_amplitudes)
-        all_amplitude_medians[unit_id] = 10 ** (np.median(log_amps) / 20)
+        all_amplitude_medians[unit_id] = abs_amplitudes
 
     return all_amplitude_medians
 
@@ -546,12 +544,12 @@ _default_params["amplitude_median"] = dict(
 
 def compute_drift_metrics(waveform_extractor, interval_s=60,
                           min_spikes_per_interval=100, direction="y",
-                          min_fraction_valid_intervals=0.5,
+                          min_fraction_valid_intervals=0.5, min_num_bins=2,
                           return_positions=False):
     """Compute maximum and cumulative drifts in um using estimated spike locations.
     Over the duration of the recording, the drift observed in spike positions for each unit is calculated in intervals, 
-    with respect to the median positions in the first interval.
-    The cumulative drift is the sum of drifts over intervals.
+    with respect to the overall median positions over the entire duration.
+    The cumulative drift is the sum of absolute drifts over intervals.
     The maximum drift is the estimated peak-to-peak of the drift.
 
     In case of multi-segment objects, drift metrics are computed separately for each segment and the 
@@ -570,9 +568,12 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
     direction : str, optional
         The direction along which drift metrics are estimated, by default 'y'
     min_fraction_valid_intervals : float, optional
-        The fraction of valid (not nan) position estimates to estimate drifts.
+        The fraction of valid (not NaN) position estimates to estimate drifts.
         E.g., if 0.5 at least 50% of estimated positions in the intervals need to be valid,
         otherwise drift metrics are set to None, by default 0.5
+    min_num_bins : int, optional
+        Minimum number of bins required to return a valid metric value. In case there are 
+        less bins, the metric values are set to NaN.
     return_positions : bool, optional
         If True, median positions are returned (for debugging), by default False
 
@@ -582,12 +583,18 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
         The maximum drift in um
     cumulative_drift : dict
         The cumulative drift in um
+
+    Notes
+    -----
+    For multi-segment object, segments are concatenated before the computation. This means that if 
+    there are large displacements in between segments, the resulting metric values will be very high.
     """
     res = namedtuple("drift_metrics", ['maximum_drift', 'cumulative_drift'])
 
     if waveform_extractor.is_extension("spike_locations"):
         locs_calculator = waveform_extractor.load_extension("spike_locations")
         spike_locations = locs_calculator.get_data(outputs="concatenated")
+        spike_locations_by_unit = locs_calculator.get_data(outputs="by_unit")
     else:
         warnings.warn("The drift metrics require the `spike_locations` waveform extension. "
                       "Use the `postprocessing.compute_spike_locations()` function. "
@@ -601,79 +608,81 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = waveform_extractor.unit_ids
-    maximum_drift = {}
-    cumulative_drift = {}
-    maximum_drift_segs = {unit_id: [] for unit_id in unit_ids}
-    cumulative_drift_segs = {unit_id: [] for unit_id in unit_ids}
     interval_samples = int(interval_s * waveform_extractor.sampling_frequency)
     assert direction in spike_locations.dtype.names, (
         f"Direction {direction} is invalid. Available directions: "
         f"{spike_locations.dtype.names}"
     )
+    total_duration = recording.get_total_duration()
+    if total_duration < min_num_bins * interval_s:
+        warnings.warn("The recording is too short given the specified 'interval_s' and "
+                      "'min_num_bins'. Drift metrics will be set to NaN")
+        empty_dict = {unit_id: np.nan for unit_id in waveform_extractor.unit_ids}
+        if return_positions:
+            return res(empty_dict, empty_dict), np.nan
+        else:
+            return res(empty_dict, empty_dict)
 
-    # if a segment is shorter than 2 * interval_s, we set the drift metrics to -1
+    # we need 
+    maximum_drift = {}
+    cumulative_drift = {}
+
+    # reference positions are the medians across segments
+    reference_positions = np.zeros(len(unit_ids))
+    for unit_ind, unit_id in enumerate(unit_ids):
+        locs = []
+        for segment_index in range(recording.get_num_segments()):
+            locs.append(spike_locations_by_unit[segment_index][unit_id][direction])
+        reference_positions[unit_ind] = np.median(np.concatenate(locs))
+
+    # now compute median positions and concatenate them over segments
+    median_position_segments = None
     for segment_index in range(recording.get_num_segments()):
         seg_length = recording.get_num_samples(segment_index)
-        if  seg_length <= 2 * interval_samples:
-            warnings.warn(f"Segment {segment_index} is too short to compute drift metrics "
-                          f"with interval_s of {interval_s}. It needs to be at least {2*interval_s}s long")
-            for unit_id in unit_ids:
-                maximum_drift_segs[unit_id].append(-1)
-                cumulative_drift_segs[unit_id].append(-1)
+        num_bin_edges = seg_length // interval_samples + 1
+        bins = np.arange(num_bin_edges) * interval_samples
+        spike_vector = sorting.to_spike_vector()
+
+        # retrieve spikes in segment
+        i0 = np.searchsorted(spike_vector['segment_ind'], segment_index)
+        i1 = np.searchsorted(spike_vector['segment_ind'], segment_index + 1)
+        spikes_in_segment = spike_vector[i0:i1]
+        spike_locations_in_segment = spike_locations[i0:i1]
+
+        # compute median positions (if less than min_spikes_per_interval, median position is 0)
+        median_positions = np.nan * np.zeros((len(unit_ids), num_bin_edges - 1))
+        for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
+            i0 = np.searchsorted(spikes_in_segment['sample_ind'], start_frame)
+            i1 = np.searchsorted(spikes_in_segment['sample_ind'], end_frame)
+            spikes_in_bin = spikes_in_segment[i0:i1]
+            spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
+
+            for unit_ind in np.arange(len(unit_ids)):
+                mask = spikes_in_bin['unit_ind'] == unit_ind
+                if np.sum(mask) >= min_spikes_per_interval:
+                    median_positions[unit_ind, bin_index] = np.median(spike_locations_in_bin[mask])
+        if median_position_segments is None:
+            median_position_segments = median_positions
         else:
-            num_bin_edges = seg_length // interval_samples + 1
-            bins = np.arange(num_bin_edges) * interval_samples
-            spike_vector = sorting.to_spike_vector()
+            median_position_segments = np.hstack((median_position_segments, median_positions))
 
-            # retrieve spikes in segment
-            i0 = np.searchsorted(spike_vector['segment_ind'], segment_index)
-            i1 = np.searchsorted(spike_vector['segment_ind'], segment_index + 1)
-            spikes_in_segment = spike_vector[i0:i1]
-            spike_locations_in_segment = spike_locations[i0:i1]
-
-            # compute median positions (if less than min_spikes_per_interval, median position is 0)
-            median_positions = np.nan * np.zeros((len(unit_ids), num_bin_edges - 1))
-            for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
-                i0 = np.searchsorted(spikes_in_segment['sample_ind'], start_frame)
-                i1 = np.searchsorted(spikes_in_segment['sample_ind'], end_frame)
-                spikes_in_bin = spikes_in_segment[i0:i1]
-                spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
-
-                for unit_ind in np.arange(len(unit_ids)):
-                    mask = spikes_in_bin['unit_ind'] == unit_ind
-                    if np.sum(mask) >= min_spikes_per_interval:
-                        median_positions[unit_ind, bin_index] = np.median(spike_locations_in_bin[mask])
-            # fix median positions if first bin is nan
-            for unit_ind, unit_id in enumerate(unit_ids):
-                median_pos = median_positions[unit_ind]
-                if np.any(np.isnan(median_pos)):
-                    # deal with nans: if more than 50% nans --> set to nan
-                    if np.sum(np.isnan(median_pos)) > min_fraction_valid_intervals * len(median_pos):
-                        max_drift = -1
-                        cum_drift = -1
-                    else:
-                        if np.isnan(median_pos[0]):
-                            # set first value to first non-nan value
-                            median_pos[0] = median_pos[~np.isnan(median_pos)][0]
-                        position_diff = np.diff(median_pos)
-                        max_drift = np.nanmax(position_diff) - np.nanmin(position_diff)
-                        cum_drift = np.nansum(np.abs(position_diff))
-                else:
-                    position_diff = np.diff(median_pos)
-                    max_drift = np.ptp(position_diff)
-                    cum_drift = np.sum(np.abs(position_diff))
-                maximum_drift_segs[unit_id].append(max_drift)
-                cumulative_drift_segs[unit_id].append(cum_drift)
-
-    # now take the maximum values across segments. If all are -1, set to NaN
-    for unit_id in unit_ids:
-        max_drift_unit = np.max(maximum_drift_segs[unit_id])
-        max_drift_unit = max_drift_unit if max_drift_unit != -1 else np.nan
-        cum_drift_unit = np.max(cumulative_drift_segs[unit_id])
-        cum_drift_unit = cum_drift_unit if cum_drift_unit != -1 else np.nan
-
-        maximum_drift[unit_id] = max_drift_unit
-        cumulative_drift[unit_id] = cum_drift_unit
+    # finally, compute deviations and drifts    
+    position_diffs = median_position_segments - reference_positions[:, None]
+    for unit_ind, unit_id in enumerate(unit_ids):
+        position_diff = position_diffs[unit_ind]
+        if np.any(np.isnan(position_diff)):
+            # deal with nans: if more than 50% nans --> set to nan
+            if np.sum(np.isnan(position_diff)) > min_fraction_valid_intervals * len(position_diff):
+                max_drift = np.nan
+                cum_drift = np.nan
+            else:
+                max_drift = np.nanmax(position_diff) - np.nanmin(position_diff)
+                cum_drift = np.nansum(np.abs(position_diff))
+        else:
+            max_drift = np.ptp(position_diff)
+            cum_drift = np.sum(np.abs(position_diff))
+        maximum_drift[unit_id] = max_drift
+        cumulative_drift[unit_id] = cum_drift
     
     if return_positions:
         outs = res(maximum_drift, cumulative_drift), median_positions
@@ -685,7 +694,8 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
 _default_params["drift"] = dict(
     interval_s=60,
     min_spikes_per_interval=100,
-    direction="y"
+    direction="y",
+    min_num_bins=2
 )
 
 
