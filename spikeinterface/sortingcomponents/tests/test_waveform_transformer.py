@@ -6,7 +6,7 @@ from spikeinterface import download_dataset
 
 from spikeinterface.sortingcomponents.peak_pipeline import WaveformStep, run_peak_pipeline
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.waveforms.normalization import MaxValueNormalization
+from spikeinterface.sortingcomponents.waveformtransform.normalization import MaxValueNormalization
 
 
 

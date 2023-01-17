@@ -14,7 +14,7 @@ import numpy as np
 from spikeinterface.core import get_chunk_with_margin, get_channel_distances
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 
-from spikeinterface.sortingcomponents.waveforms import WaveformTransofmer
+from spikeinterface.sortingcomponents.waveformtransform import WaveformTransofmer
 
 class PeakPipelineStep:
     """
