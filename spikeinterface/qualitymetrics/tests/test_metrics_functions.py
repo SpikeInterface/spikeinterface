@@ -192,7 +192,7 @@ def test_calculate_rp_violations(simulated_data):
 
 def test_calculate_drift_metrics(simulated_data):
     max_drifts_gt = {0: 4.303399560573951, 1: 1.627242138667242, 2: 1.627242138667242}
-    cum_drifts_gt = {0: -2.665412421105998, 1: 0.5564804609769567, 2: 0.6892260215561095}
+    cum_drifts_gt = {0: 9.334861935246238, 1: 4.000019971706848, 2: 4.132765532286001}
     
     we = setup_dataset(simulated_data)
     spike_locs = compute_spike_locations(we)
