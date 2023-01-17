@@ -4,7 +4,7 @@ import warnings
 from pathlib import Path
 import numpy as np
 
-from spikeinterface import (WaveformExtractor, ChannelSparsity, load_extractor, extract_waveforms,
+from spikeinterface import (WaveformExtractor, compute_sparsity, load_extractor, extract_waveforms,
                             split_recording, select_segment_sorting)
 from spikeinterface.extractors import toy_example
 from spikeinterface.core import get_template_channel_sparsity
@@ -62,7 +62,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
                                      max_spikes_per_unit=500,
                                      overwrite=True,
                                      seed=0)
-        self.sparsity_long = ChannelSparsity.from_radius(we_long, radius_um=50)
+        self.sparsity_long = compute_sparsity(we_long, method="radius", radius_um=50)
         self.we_long = we_long
         self.we_short = we_short
 

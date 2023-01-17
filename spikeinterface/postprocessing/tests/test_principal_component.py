@@ -4,9 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from spikeinterface import ChannelSparsity
-from spikeinterface.extractors import toy_example
-
+from spikeinterface import compute_sparsity
 from spikeinterface.postprocessing import WaveformPrincipalComponent, compute_principal_components
 from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
 
@@ -61,7 +59,7 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
         assert np.array_equal(all_pc1, all_pc2)
 
         # test with sparsity
-        sparsity = ChannelSparsity.from_radius(we, radius_um=50)
+        sparsity = compute_sparsity(we, method="radius", radius_um=50)
         we_copy = we.save(folder=cache_folder / "we_copy")
         pc_sparse = self.extension_class.get_extension_function()(we_copy, sparsity=sparsity, load_if_exists=False)
         pc_file_sparse = pc.extension_folder / 'all_pc_sparse.npy'
@@ -80,8 +78,8 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
         num_channels = we.get_num_channels()
         pc = self.extension_class(we)
         
-        sparsity_radius = ChannelSparsity.from_radius(we, radius_um=50)
-        sparsity_best = ChannelSparsity.from_best_channels(we, num_channels=2)
+        sparsity_radius = compute_sparsity(we, method="radius", radius_um=50)
+        sparsity_best = compute_sparsity(we, method="best_channels", num_channels=2)
         sparsities = [sparsity_radius, sparsity_best]
         print(sparsities)
 
