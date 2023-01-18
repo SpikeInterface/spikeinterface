@@ -191,16 +191,18 @@ def test_calculate_rp_violations(simulated_data):
 
 
 def test_calculate_drift_metrics(simulated_data):
-    max_drifts_gt = {0: 3.8497035992743918, 1: 1.200316354668118, 2: 1.3330619152472707}
-    cum_drifts_gt = {0: 10.448976614472869, 1: 2.82628135704077, 2: 2.9394501022568136}
-    
+    drift_ptps_gt = {0: 3.8497035992743918, 1: 1.200316354668118, 2: 1.3330619152472707}
+    drift_stds_gt = {0: 1.0907827238707128, 1: 0.3363447300999075, 2: 0.3607988107268864}
+    drift_mads_gt = {0: 0.6769978363913438, 1: 0.2606798893916917, 2: 0.27395444544960695}
+
     we = setup_dataset(simulated_data)
     spike_locs = compute_spike_locations(we)
-    max_drifts, cum_drifts = compute_drift_metrics(we, interval_s=10, min_spikes_per_interval=10)
+    drifts_ptps, drifts_stds, drift_mads = compute_drift_metrics(we, interval_s=10, min_spikes_per_interval=10)
 
-    print(max_drifts, cum_drifts)
-    assert np.allclose(list(max_drifts_gt.values()), list(max_drifts.values()), rtol=0.05)
-    assert np.allclose(list(cum_drifts_gt.values()), list(cum_drifts.values()), rtol=0.05)
+    print(drifts_ptps, drifts_stds, drift_mads)
+    assert np.allclose(list(drift_ptps_gt.values()), list(drifts_ptps.values()), rtol=0.05)
+    assert np.allclose(list(drift_stds_gt.values()), list(drifts_stds.values()), rtol=0.05)
+    assert np.allclose(list(drift_mads_gt.values()), list(drift_mads.values()), rtol=0.05)
 
 
 if __name__ == '__main__':
@@ -211,4 +213,4 @@ if __name__ == '__main__':
     # test_calculate_amplitude_median(sim_data)
     # test_calculate_isi_violations(sim_data)
     # test_calculate_rp_violations(sim_data)
-    test_calculate_amplitude_median(sim_data)
+    test_calculate_drift_metrics(sim_data)

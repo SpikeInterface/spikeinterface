@@ -550,14 +550,16 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
                           min_spikes_per_interval=100, direction="y",
                           min_fraction_valid_intervals=0.5, min_num_bins=2,
                           return_positions=False):
-    """Compute maximum and cumulative drifts in um using estimated spike locations.
-    Over the duration of the recording, the drift observed in spike positions for each unit is calculated in intervals, 
-    with respect to the overall median positions over the entire duration.
-    The cumulative drift is the sum of absolute drifts over intervals.
-    The maximum drift is the estimated peak-to-peak of the drift.
+    """Compute drifts metrics using estimated spike locations.
+    Over the duration of the recording, the drift signal for each unit is calculated as the median 
+    position in an interval with respect to the overall median positions over the entire duration 
+    (reference position).
 
-    In case of multi-segment objects, drift metrics are computed separately for each segment and the 
-    maximum values across segments is returned.
+    The following metrics are computed for each unit (in um):
+
+    * drift_ptp: peak-to-peak of the drift signal
+    * drift_std: standard deviation of the drift signal
+    * drift_mad: median absolute deviation of the drift signal
 
     Requires 'spike_locations' extension. If this is not present, metrics are set to NaN.
 
@@ -583,17 +585,21 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
 
     Returns
     -------
-    maximum_drift : dict
-        The maximum drift in um
-    cumulative_drift : dict
-        The cumulative drift in um
+    drift_ptp : dict
+        The drift signal peak-to-peak in um
+    drift_std : dict
+        The drift signal standard deviation in um
+    drift_mad : dict
+        The drift signal median absolute deviation in um
+    median_positions : np.array (optional)
+        The median positions of each unit over time (only returned if return_positions=True)
 
     Notes
     -----
     For multi-segment object, segments are concatenated before the computation. This means that if 
     there are large displacements in between segments, the resulting metric values will be very high.
     """
-    res = namedtuple("drift_metrics", ['maximum_drift', 'cumulative_drift'])
+    res = namedtuple("drift_metrics", ['drift_ptp', 'drift_std', 'drift_mad'])
 
     if waveform_extractor.is_extension("spike_locations"):
         locs_calculator = waveform_extractor.load_extension("spike_locations")
@@ -605,9 +611,9 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
                       "Drift metrics will be set to NaN")
         empty_dict = {unit_id: np.nan for unit_id in waveform_extractor.unit_ids}
         if return_positions:
-            return res(empty_dict, empty_dict), np.nan
+            return res(empty_dict, empty_dict, empty_dict), np.nan
         else:
-            return res(empty_dict, empty_dict)
+            return res(empty_dict, empty_dict, empty_dict)
 
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
@@ -623,13 +629,14 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
                       "'min_num_bins'. Drift metrics will be set to NaN")
         empty_dict = {unit_id: np.nan for unit_id in waveform_extractor.unit_ids}
         if return_positions:
-            return res(empty_dict, empty_dict), np.nan
+            return res(empty_dict, empty_dict, empty_dict), np.nan
         else:
-            return res(empty_dict, empty_dict)
+            return res(empty_dict, empty_dict, empty_dict)
 
     # we need 
-    maximum_drift = {}
-    cumulative_drift = {}
+    drift_ptps = {}
+    drift_stds = {}
+    drift_mads = {}
 
     # reference positions are the medians across segments
     reference_positions = np.zeros(len(unit_ids))
@@ -677,21 +684,24 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
         if np.any(np.isnan(position_diff)):
             # deal with nans: if more than 50% nans --> set to nan
             if np.sum(np.isnan(position_diff)) > min_fraction_valid_intervals * len(position_diff):
-                max_drift = np.nan
-                cum_drift = np.nan
+                ptp_drift = np.nan
+                std_drift = np.nan
+                mad_drift = np.nan
             else:
-                max_drift = np.nanmax(position_diff) - np.nanmin(position_diff)
-                cum_drift = np.nansum(np.abs(position_diff))
+                ptp_drift = np.nanmax(position_diff) - np.nanmin(position_diff)
+                std_drift = np.nanstd(np.abs(position_diff))
+                mad_drift = np.nanmedian(np.abs(position_diff - np.nanmean(position_diff)))
         else:
-            max_drift = np.ptp(position_diff)
-            cum_drift = np.sum(np.abs(position_diff))
-        maximum_drift[unit_id] = max_drift
-        cumulative_drift[unit_id] = cum_drift
-    
+            ptp_drift = np.ptp(position_diff)
+            std_drift = np.std(position_diff)
+            mad_drift = np.median(np.abs(position_diff - np.mean(position_diff)))
+        drift_ptps[unit_id] = ptp_drift
+        drift_stds[unit_id] = std_drift
+        drift_mads[unit_id] = mad_drift
     if return_positions:
-        outs = res(maximum_drift, cumulative_drift), median_positions
+        outs = res(drift_ptps, drift_stds, drift_mads), median_positions
     else:
-        outs = res(maximum_drift, cumulative_drift)
+        outs = res(drift_ptps, drift_stds, drift_mads)
     return outs
 
 

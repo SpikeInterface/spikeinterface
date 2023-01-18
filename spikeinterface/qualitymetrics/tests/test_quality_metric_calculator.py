@@ -153,10 +153,11 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         with pytest.warns(UserWarning) as w:
             metrics = self.extension_class.get_extension_function()(
                 we, metric_names=['drift'])
-        assert all(np.isnan(max_drift) for max_drift in metrics["maximum_drift"].values)
-        assert all(np.isnan(cum_drift) for cum_drift in metrics["cumulative_drift"].values)
+        assert all(np.isnan(metric) for metric in metrics["drift_ptp"].values)
+        assert all(np.isnan(metric) for metric in metrics["drift_std"].values)
+        assert all(np.isnan(metric) for metric in metrics["drift_mad"].values)
 
-        # now we compute spike amplitudes, but use an interval_s larger than half the total duration
+        # now we compute spike locations, but use an interval_s larger than half the total duration
         _ = compute_spike_locations(we)
         total_duration = we.recording.get_total_duration()
         qm_params=dict(drift=dict(interval_s=total_duration // 2 + 1, min_spikes_per_interval=10,
@@ -164,8 +165,9 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         with pytest.warns(UserWarning) as w:
             metrics = self.extension_class.get_extension_function()(
                 we, metric_names=['drift'], qm_params=qm_params)
-        assert all(np.isnan(max_drift) for max_drift in metrics["maximum_drift"].values)
-        assert all(np.isnan(cum_drift) for cum_drift in metrics["cumulative_drift"].values)
+        assert all(np.isnan(metric) for metric in metrics["drift_ptp"].values)
+        assert all(np.isnan(metric) for metric in metrics["drift_std"].values)
+        assert all(np.isnan(metric) for metric in metrics["drift_mad"].values)
 
         # finally let's use an interval compatible with segment durations
         qm_params=dict(drift=dict(interval_s=total_duration // 10, min_spikes_per_interval=10))
@@ -174,8 +176,9 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
             metrics = self.extension_class.get_extension_function()(
                 we, metric_names=['drift'], qm_params=qm_params)
         print(metrics)
-        assert all(not np.isnan(max_drift) for max_drift in metrics["maximum_drift"].values)
-        assert all(not np.isnan(cum_drift) for cum_drift in metrics["cumulative_drift"].values)
+        assert all(not np.isnan(metric) for metric in metrics["drift_ptp"].values)
+        assert all(not np.isnan(metric) for metric in metrics["drift_std"].values)
+        assert all(not np.isnan(metric) for metric in metrics["drift_mad"].values)
 
 
     def test_peak_sign(self):
