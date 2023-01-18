@@ -48,7 +48,8 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 overwrite=False,
                 parent_benchmark=None):
 
-        BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite, job_kwargs=job_kwargs, parent_benchmark=parent_benchmark)
+        BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite, job_kwargs=job_kwargs,
+                               parent_benchmark=parent_benchmark)
 
         self._args.extend([str(mearec_filename_drifting), str(mearec_filename_static), None, None, None ])
         
@@ -68,10 +69,12 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         
         self.correct_motion_kwargs = correct_motion_kwargs.copy()
         self.comparisons = {}
+        self.accuracies = {}
 
         self._kwargs.update(dict(
                 correct_motion_kwargs=self.correct_motion_kwargs,
                 sorter_cases=self.sorter_cases,
+                do_preprocessing=do_preprocessing,
             )
         )
 
@@ -101,6 +104,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
     def extract_waveforms(self):
         for key in self.keys:
+            
             if self.parent_benchmark is not None and key in self._waveform_names_from_parent:
                 continue
             
@@ -114,6 +118,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     def run_sorters(self):
         for case in self.sorter_cases:
             label = case['label']
+            print('run sorter', label)
             sorter_name = case['sorter_name']
             sorter_params = case['sorter_params']
             recording = self.recordings[case['recording']]
@@ -366,84 +371,95 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             axes[count].spines['bottom'].set_visible(False)
             axes[count].spines['left'].set_visible(False)
     
-    def plot_sortings_comparisons(self, mode='ordered_accuracy', figsize=(15, 5)):
-
+    def compute_accuracies(self):
         for case in self.sorter_cases:
             label = case['label']
             sorting = self.sortings[label]
             if label not in self.comparisons:
-                self.comparisons[label] = GroundTruthComparison(self.sorting_gt, sorting, exhaustive_gt=True)
+                comp = GroundTruthComparison(self.sorting_gt, sorting, exhaustive_gt=True)
+                self.comparisons[label] = comp
+                self.accuracies[label] = comp.get_performance()['accuracy'].values
+
+    def plot_sortings_accuracy(self, mode='ordered_accuracy', figsize=(15, 5)):
+
+        self.compute_accuracies()
 
         n = len(self.sorter_cases)
 
         if mode == 'ordered_accuracy':
             fig, ax = plt.subplots(figsize=figsize)
 
-            # accuracies = pd.DataFrame()
             order = None
             for case in self.sorter_cases:
                 label = case['label']                
                 comp = self.comparisons[label]
-                acc = comp.get_performance()['accuracy'].values
-                # if order is None:
-                #     order = np.argsort(acc)[::-1]
+                acc = self.accuracies[label]
                 order = np.argsort(acc)[::-1]
                 acc = acc[order]
                 ax.plot(acc, label=label)
             ax.legend()
             ax.set_ylabel('accuracy')
             ax.set_xlabel('units ordered by accuracy')
+        
+        elif mode == 'depth_snr':
+            fig, axs = plt.subplots(nrows=n, figsize=figsize, sharey=True, sharex=True)
 
-        # elif mode == 'swarmplot':
-        #     fig, axes = plt.subplots(len(benchmarks), 3, figsize=(15, 5), squeeze=False)
-        #     for count, comparisons in enumerate(all_comparisons):
-        #         for key, comp in comparisons.items():
-        #             idx = ('static', 'drifting', 'corrected').index(key[0])
-        #             ax = axes[count, idx]
-        #             plot_gt_performances(comp, ax=ax)
-        #             if idx > 0:
-        #                 ax.set_yticks([])
-        #                 ax.set_ylabel('')
-        #             ax.set_title(key)
-        #             _simpleaxis(ax)
+            gt_unit_positions, _ = mr.extract_units_drift_vector(self.mearec_filenames['drifting'], time_vector=np.array([0., 1.]))
+            depth = gt_unit_positions[0, :]
 
-        # elif mode == 'snr':
-        #     fig, axes = plt.subplots(len(benchmarks), 2, figsize=(15, 5), squeeze=False)
-        #     metrics = compute_quality_metrics(benchmarks[0].waveforms['static'], metric_names=['snr'], load_if_exists=True)
-        #     for count, comparisons in enumerate(all_comparisons):
-        #         for key, comp in comparisons.items():
-        #             ax = axes[count, 0]
-        #             plot_sorting_performance(comp, metrics, performance_name='accuracy', metric_name='snr', ax=ax, color=colors[key[0]])
-        #             _simpleaxis(ax)
-                
+            chan_locations = self.recordings['drifting'].get_channel_locations()
 
-        #         ax = axes[count, 1]
-        #         perf_static = comparisons[('static', sorter_name)].get_performance()['accuracy']
-        #         perf_drifting = comparisons[('drifting', sorter_name)].get_performance()['accuracy']
-        #         perf_corrected = comparisons[('corrected', sorter_name)].get_performance()['accuracy']
-        #         ax.plot(metrics['snr'], perf_static - perf_drifting, marker='o', markersize=5, ls='', color=colors['drifting'], label='drifting')
-        #         ax.plot(metrics['snr'], perf_static - perf_corrected, marker='o', markersize=5, ls='', color=colors['corrected'], label='corrected')
-        #         ax.set_xlabel('snr')
-        #         ax.legend()
-        #         ax.set_ylabel(r'$\Delta$ accuracy')
+            metrics = compute_quality_metrics(self.waveforms['static'], metric_names=['snr'], load_if_exists=True)
+            snr = metrics['snr'].values
 
-        # elif mode == 'scatter':
-        #     fig, axes = plt.subplots(len(benchmarks), 1, figsize=(15, 5), squeeze=False)
-        #     metrics = compute_quality_metrics(benchmarks[0].waveforms['static'], metric_names=['snr'], load_if_exists=True)
-        #     for count, comparisons in enumerate(all_comparisons):
-                
-        #         ax = axes[count, 0]
-        #         perf_static = comparisons[('static', sorter_name)].get_performance()['accuracy']
-        #         perf_drifting = comparisons[('drifting', sorter_name)].get_performance()['accuracy']
-        #         perf_corrected = comparisons[('corrected', sorter_name)].get_performance()['accuracy']
-        #         ax.plot(perf_static, perf_drifting, marker='o', markersize=5, ls='', color=colors['drifting'], label='drifting')
-        #         ax.plot(perf_static, perf_corrected, marker='o', markersize=5, ls='', color=colors['corrected'], label='corrected')
-        #         ax.plot([0, 1], [0, 1], 'k')
-        #         ax.set_xlim(0.5, 1)
-        #         ax.set_ylim(0.5, 1)
-        #         ax.legend()
-        #         ax.set_xlabel('accuracy static')
-        #         ax.set_xlabel('accuracy recording')
+            for i, case in enumerate(self.sorter_cases):
+                ax = axs[i]
+                label = case['label']
+                acc = self.accuracies[label]
+                s = ax.scatter(depth, snr, c=acc)
+                s.set_clim(0., 1.)
+                ax.set_title(label)
+                ax.axvline(np.min(chan_locations[:, 1]), ls='--', color='k')
+                ax.axvline(np.max(chan_locations[:, 1]), ls='--', color='k')
+            ax.set_xlabel('depth')
+            ax.set_ylabel('snr')
+
+
+        elif mode == 'snr':
+            fig, ax = plt.subplots(figsize=figsize)
+
+            metrics = compute_quality_metrics(self.waveforms['static'], metric_names=['snr'], load_if_exists=True)
+            snr = metrics['snr'].values
+
+            for i, case in enumerate(self.sorter_cases):
+                label = case['label']
+                acc = self.accuracies[label]
+                ax.scatter(snr, acc, label=label)
+            ax.set_xlabel('snr')
+            ax.set_ylabel('accuracy')
+
+            ax.legend()
+
+
+        elif mode == 'depth':
+            fig, ax = plt.subplots(figsize=figsize)
+
+            gt_unit_positions, _ = mr.extract_units_drift_vector(self.mearec_filenames['drifting'], time_vector=np.array([0., 1.]))
+            depth = gt_unit_positions[0, :]
+
+            chan_locations = self.recordings['drifting'].get_channel_locations()
+
+            for i, case in enumerate(self.sorter_cases):
+                label = case['label']
+                acc = self.accuracies[label]
+                ax.scatter(depth, acc, label=label)
+            ax.axvline(np.min(chan_locations[:, 1]), ls='--', color='k')
+            ax.axvline(np.max(chan_locations[:, 1]), ls='--', color='k')
+            ax.legend()
+            ax.set_xlabel('depth')
+            ax.set_ylabel('accuracy')
+
+
 
 
 
@@ -469,7 +485,6 @@ def plot_snippet_comparisons(benchmarks, metric='cosine', num_channels=30):
         ax.set_ylabel(r'$cosine(corrected, static)$')
 
 
-    import MEArec as mr
     recgen = mr.load_recordings(benchmarks[0].mearec_filenames['static'])
     nb_templates, nb_versions, _ = recgen.template_locations.shape
     template_positions = recgen.template_locations[:, nb_versions//2, 1:3]
