@@ -8,6 +8,7 @@ from .misc_metrics import (
     compute_isi_violations,
     compute_refrac_period_violations,
     compute_amplitudes_cutoff,
+    compute_synchrony_metrics,
 )
 
 from .pca_metrics import (
@@ -30,7 +31,8 @@ _misc_metric_name_to_func = {
     "snr" : compute_snrs,
     "isi_violations" : compute_isi_violations,
     "rp_violations" : compute_refrac_period_violations,
-    "amplitude_cutoff" : compute_amplitudes_cutoff
+    "amplitude_cutoff" : compute_amplitudes_cutoff,
+    "synchrony_metrics" : compute_synchrony_metrics,
 }
 
 

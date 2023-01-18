@@ -13,6 +13,10 @@ import math
 import numpy as np
 import warnings
 import scipy.ndimage
+from elephant.spike_train_synchrony import Synchrotool
+import quantities as pq
+import neo
+
 
 from ..core import get_noise_levels
 from ..core.template_tools import (
@@ -103,7 +107,7 @@ def compute_presence_ratio(waveform_extractor, bin_duration_s=60):
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
     bin_duration_s : float, optional, default: 60
-        The duration of each bin in seconds. If the duration is less than this value, 
+        The duration of each bin in seconds. If the duration is less than this value,
         presence_ratio is set to NaN
 
     Returns
@@ -277,12 +281,12 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
             num_spikes += len(spike_train)
             num_violations += np.sum(isis < isi_threshold_samples)
         violation_time = 2 * num_spikes * (isi_threshold_s - min_isi_s)
-        
+
         if num_spikes > 0:
             total_rate = num_spikes / total_duration
             violation_rate = num_violations / violation_time
             isi_violations_ratio[unit_id] = violation_rate / total_rate
-            isi_violations_count[unit_id] = num_violations      
+            isi_violations_count[unit_id] = num_violations
         else:
             isi_violations_ratio[unit_id] = np.nan
             isi_violations_count[unit_id] = np.nan
@@ -294,7 +298,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
 
 
 _default_params["isi_violations"] = dict(
-    isi_threshold_ms=1.5, 
+    isi_threshold_ms=1.5,
     min_isi_ms=0
 )
 
@@ -396,7 +400,7 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         Controls the smoothing applied to the amplitude histogram.
     amplitudes_bins_min_ratio : int, optional, default: 5
         The minimum ratio between number of amplitudes for a unit and the number of bins.
-        If the ratio is less than this threshold, the amplitude_cutoff for the unit is set 
+        If the ratio is less than this threshold, the amplitude_cutoff for the unit is set
         to NaN
 
     Returns
@@ -413,7 +417,7 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
     Notes
     -----
     This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift).
-    If available, amplitudes are extracted from the "spike_amplitude" extension (recommended). 
+    If available, amplitudes are extracted from the "spike_amplitude" extension (recommended).
     If the "spike_amplitude" extension is not available, the amplitudes are extracted from the waveform extractor,
     which usually has waveforms for a small subset of spikes (500 by default).
     """
@@ -462,13 +466,13 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         support = b[:-1]
         bin_size = np.mean(np.diff(support))
         peak_index = np.argmax(pdf)
-        
+
         pdf_above = np.abs(pdf[peak_index:] - pdf[0])
 
         if len(np.where(pdf_above == pdf_above.min())[0]) > 1:
             warnings.warn("Amplitude PDF does not have a unique minimum! More spikes might be required for a correct "
                           "amplitude_cutoff computation!")
-        
+
         G = np.argmin(pdf_above) + peak_index
         fraction_missing = np.sum(pdf[G:]) * bin_size
         fraction_missing = np.min([fraction_missing, 0.5])
@@ -517,3 +521,85 @@ if HAVE_NUMBA:
             spike_train = spike_trains[spike_clusters == i]
             n_v = _compute_nb_violations_numba(spike_train, t_r)
             nb_rp_violations[i] += n_v
+
+
+def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(0, 2), **kwargs):
+    """Compute synchrony metrics for each unit and for each synchrony size.
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveform extractor object.
+    synchrony_sizes : list of int
+        Sizes of synchronous events to consider for synchrony metrics.
+    Returns
+    -------
+    synchrony_metrics : namedtuple
+        Synchrony metrics for each unit and for each synchrony size.
+    Notes
+    -----
+    This function uses the Synchrotool from the elephant library to compute synchrony metrics.
+    """
+
+    sampling_rate=waveform_extractor.sorting.get_sampling_frequency()
+    # get a list of neo.SpikeTrains
+    spiketrains = _create_list_of_neo_spiketrains(waveform_extractor.sorting, sampling_rate)
+    # get spike counts
+    spike_counts = np.array([len(st) for st in spiketrains])
+    # avoid division by zero, for zero spikes we want metric = 0
+    spike_counts[spike_counts == 0] = 1
+
+    # Synchrony
+    synchrotool = Synchrotool(spiketrains, sampling_rate=sampling_rate*pq.Hz)
+    # free some memory
+    synchrotool.complexity_histogram = []
+    synchrotool.time_histogram = []
+    # annotate synchrofacts
+    synchrotool.annotate_synchrofacts()
+
+    # create a dictionary 'synchrony_metrics'
+    synchrony_metrics = {
+        # create a dictionary for each synchrony_size
+        f'syncSpike_{synchrony_size}': {
+            # create a dictionary for each spiketrain
+            spiketrain.annotations['cluster_id']:
+            # count number of occurrences, where 'complexity' >= synchrony_size and divide by spike counts
+            np.count_nonzero(spiketrain.array_annotations['complexity'] >= synchrony_size) / spike_counts[idx]
+            for idx, spiketrain in enumerate(spiketrains)}
+        for synchrony_size in synchrony_sizes}
+
+    # Convert dict to named tuple
+    synchrony_metrics_tuple = namedtuple('SynchronyMetrics', synchrony_metrics.keys())
+    synchrony_metrics = synchrony_metrics_tuple(**synchrony_metrics)
+    return synchrony_metrics
+
+
+_default_params["synchrony_metrics"] = dict(
+    synchrony_sizes=(0, 2)
+)
+
+def _create_list_of_neo_spiketrains(sorting, sampling_rate):
+    """ create a list of neo.SpikeTrains from a SortingExtractor"""
+
+    def _create_neo_spiketrain(unit_id, segment_index):
+        """Create a neo.SpikeTrain object from a unit_id and segment_index."""
+        unit_spiketrain = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+        return neo.SpikeTrain(
+            unit_spiketrain * pq.ms,
+            t_stop=max(unit_spiketrain) * pq.ms if len(unit_spiketrain) != 0 else 1 * pq.ms,
+            sampling_rate=sampling_rate * pq.Hz,
+            cluster_id=unit_id)
+
+    unit_ids = sorting.unit_ids
+    num_segs = sorting.get_num_segments()
+
+    # create a list of neo.SpikeTrain
+    spiketrains = [_create_neo_spiketrain(unit_id, segment_index)
+                   for unit_id in unit_ids for segment_index in range(num_segs)]
+
+    # set common t_start, t_stop for all spiketrains
+    t_start = min(st.t_start for st in spiketrains)
+    t_stop = max(st.t_stop for st in spiketrains) + 1*pq.s
+    for spiketrain in spiketrains:
+        spiketrain.t_start = t_start
+        spiketrain.t_stop = t_stop
+    return spiketrains
