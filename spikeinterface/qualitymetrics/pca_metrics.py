@@ -35,6 +35,7 @@ _default_params = dict(
         n_neighbors=4,
         n_components=10,
         radius_um=100,
+        peak_sign='neg'
     ),
     nn_noise_overlap=dict(
         max_spikes=10000,
@@ -42,6 +43,7 @@ _default_params = dict(
         n_neighbors=4,
         n_components=10,
         radius_um=100,
+        peak_sign='neg'
     )
 )
 
@@ -326,7 +328,7 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_n
 
 def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit_id: int,
                                 max_spikes: int = 1000, min_spikes: int = 10, n_neighbors: int = 5,
-                                n_components: int = 10, radius_um: float = 100,
+                                n_components: int = 10, radius_um: float = 100, peak_sign: str = 'neg',
                                 min_spatial_overlap: float = 0.5, seed=None):
     """Calculates unit isolation based on NearestNeighbors search in PCA space.
 
@@ -347,6 +349,9 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
         The number of PC components to use to project the snippets to.
     radius_um : float, optional, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
+    peak_sign: str, optional, default: 'neg'
+        The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor 
+        is not sparse already.
     min_spatial_overlap : float, optional, default: 100
         In case waveform_extractor is sparse, other units are selected if they share at least 
         `min_spatial_overlap * n_target_unit_channels` with the target unit
@@ -416,7 +421,7 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
         if waveform_extractor.is_sparse():
             sparsity = waveform_extractor.sparsity
         else:
-            sparsity = compute_sparsity(waveform_extractor, method='radius', peak_sign='both',
+            sparsity = compute_sparsity(waveform_extractor, method='radius', peak_sign=peak_sign,
                                         radius_um=radius_um)
         closest_chans_target_unit = sparsity.unit_id_to_channel_indices[this_unit_id]
         n_channels_target_unit = len(closest_chans_target_unit)
@@ -475,7 +480,8 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
 def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor,
                                     this_unit_id: int, max_spikes: int = 1000,
                                     min_spikes: int = 10, n_neighbors: int = 5,
-                                    n_components: int = 10, radius_um: float = 100, seed=None):
+                                    n_components: int = 10, radius_um: float = 100,
+                                    peak_sign: str = 'neg', seed=None):
     """Calculates unit noise overlap based on NearestNeighbors search in PCA space.
 
     Parameters
@@ -495,6 +501,9 @@ def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor,
         The number of PC components to use to project the snippets to.
     radius_um : float, optional, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
+    peak_sign: str, optional, default: 'neg'
+        The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor 
+        is not sparse already.
     seed : int, optional, default: 0
         Random seed for subsampling spikes.
 
@@ -558,7 +567,7 @@ def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor,
         if waveform_extractor.is_sparse():
             sparsity = waveform_extractor.sparsity
         else:
-            sparsity = compute_sparsity(waveform_extractor, method='radius', peak_sign='both',
+            sparsity = compute_sparsity(waveform_extractor, method='radius', peak_sign=peak_sign,
                                         radius_um=radius_um)
         noise_cluster = noise_cluster[:, :, sparsity.unit_id_to_channel_indices[this_unit_id]]
 
