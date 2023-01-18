@@ -145,15 +145,15 @@ class LocalizeMonopolarTriangulation(PeakPipelineStep):
         For channel sparsity.
     max_distance_um: float, default: 1000
         Boundary for distance estimation.
-    enforce_decrese : None or "radial"
-        If+how to enforce spatial decreasingness for PTP vectors.
+    enforce_decrease : bool (default True)
+        Enforce spatial decreasingness for PTP vectors.
     """
     def __init__(self, recording, 
                         ms_before=1., ms_after=1.,
                         local_radius_um=150,
                         max_distance_um=1000,
                         optimizer='minimize_with_log_penality',
-                        enforce_decrease=False):
+                        enforce_decrease=True):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
                                   ms_after=ms_after, local_radius_um=local_radius_um)
         self._kwargs.update(dict(max_distance_um=max_distance_um,

@@ -156,15 +156,15 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
     def plot_true_drift(self, scaling_probe=1.5, figsize=(15, 10)):
                 
         fig = plt.figure(figsize=figsize)
-        gs = fig.add_gridspec(1, 3)
+        gs = fig.add_gridspec(1, 8, wspace=0)
 
-        ax = fig.add_subplot(gs[0])
+        ax = fig.add_subplot(gs[:2])
         plot_probe_map(self.recording, ax=ax)
         _simpleaxis(ax)
 
         mr_recording = mr.load_recordings(self.mearec_filename)
             
-        for loc in mr_recording.template_locations:
+        for loc in mr_recording.template_locations[::2]:
             if len(mr_recording.template_locations.shape) == 3:
                 ax.plot([loc[0, 1], loc[-1, 1]], [loc[0, 2], loc[-1, 2]], alpha=0.7, lw=2)
             else:
@@ -173,24 +173,24 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         # ymin, ymax = ax.get_ylim()
         ax.set_ylabel('depth (um)')
         ax.set_xlabel(None)
+        #ax.set_yticks(np.arange(-600,600,100), np.arange(-600,600,100))
 
 
 
         # ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
 
-        ax = fig.add_subplot(gs[1:3], sharey=ax)
+        ax = fig.add_subplot(gs[2:7])
         for i in range(self.gt_unit_positions.shape[1]):
-            ax.plot(self.temporal_bins, self.gt_unit_positions[:, i], alpha=0.5, ls='--')
+            ax.plot(self.temporal_bins, self.gt_unit_positions[:, i], alpha=0.5, ls='--', c='0.5')
         
         for i in range(self.gt_motion.shape[1]):
             depth = self.spatial_bins[i]
-            ax.plot(self.temporal_bins, self.gt_motion[:, i] + depth, color='green', lw=1.5)
-
+            ax.plot(self.temporal_bins, self.gt_motion[:, i] + depth, color='green', lw=4)
 
         # ax.set_ylim(ymin, ymax)
         ax.set_xlabel('time (s)')
         _simpleaxis(ax)
-        # ax.set_yticks([])
+        ax.set_yticks([])
         ax.spines['left'].set_visible(False)
 
         channel_positions = self.recording.get_channel_locations()
@@ -199,6 +199,15 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         ax.axhline(probe_y_min, color='k', ls='--', alpha=0.5)
         ax.axhline(probe_y_max, color='k', ls='--', alpha=0.5)
+
+        ax = fig.add_subplot(gs[7])
+        # plot_probe_map(self.recording, ax=ax)
+        _simpleaxis(ax)
+
+        ax.hist(self.gt_unit_positions[30,:], 50, orientation='horizontal', color='0.5')
+        ax.set_yticks([])
+        ax.set_xlabel('# neurons')
+
 
     def plot_peaks_probe(self, alpha = 0.05, figsize=(15, 10)):
             
@@ -451,4 +460,27 @@ def plot_motions_several_benchmarks(benchmarks):
     ax.set_ylabel('depth (um)')
     ax.set_xlabel('time (s)')
     _simpleaxis(ax)
+
+def plot_speed_several_benchmarks(benchmarks):
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    
+    for count, benchmark in enumerate(benchmarks):
+        bottom = 0
+        i=0
+        patterns = [ "/" , "\\" , "|" ,  "*" ]
+        for key, value in benchmark.run_times.items():
+            if count == 0:
+                label = key
+            else:
+                label = None
+            ax.bar([count], [value], label=label, bottom=bottom, color=f'C{count}', edgecolor='black', hatch=patterns[i])
+            bottom += value
+            i+=1
+        
+    ax.legend()
+    ax.set_ylabel('speed (s)')
+    _simpleaxis(ax)
+    ax.set_xticks([])
+    #ax.set_xticks(np.arange(len(benchmarks)), [i.title for i in benchmarks])
 
