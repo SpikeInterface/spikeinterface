@@ -206,6 +206,6 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
 if __name__ == '__main__':
     test = QualityMetricsExtensionTest()
     test.setUp()
-    # test.test_extension()
-    test.test_nn_metrics()
+    test.test_extension()
+    # test.test_nn_metrics()
     # test.test_peak_sign()
