@@ -1,12 +1,12 @@
-from typing import Iterable, List, Union
+from typing import List
 from pathlib import Path
 
 import numpy as np
 
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
-from .base import BaseExtractor, BaseSegment
-from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
+from .base import BaseExtractor
+from .core_tools import check_json
 from .recording_tools import check_probe_do_not_overlap
 
 from warnings import warn
@@ -190,11 +190,11 @@ class BaseRecordingSnippets(BaseExtractor):
 
         # add probe annotations to recording
         if len(probegroup.probes) == 1:
-            self.annotate(probe=probegroup.probes[0].annotations)
+            self.annotate(probe=check_json(probegroup.probes[0].annotations))
         else:
             probe_annotations = []
             for probe in probegroup.probes:
-                probe_annotations.append(probe.annotations)
+                probe_annotations.append(check_json(probe.annotations))
             self.annotate(probes=probe_annotations)
 
         return sub_recording
