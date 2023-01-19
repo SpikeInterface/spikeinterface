@@ -24,17 +24,17 @@ default_job_kwargs = {"n_jobs": None,
                       "total_memory": None,
                       "chunk_size": None,
                       "chunk_memory": None,
-                      "chunk_duration": "1s",
-                      "progress_bar": True}
+                      "chunk_duration": None,
+                      "progress_bar": None}
 
 default_job_kwargs_description = {
-    "n_jobs": "Number of jobs (when saving ti binary) - default None (use the globally set n_jobs or 1)",
+    "n_jobs": "Number of jobs (when saving ti binary) - default None (use global)",
     "chunk_size": "Number of samples per chunk (when saving ti binary) - default None",
     "chunk_memory": "Memory usage for each job (e.g. '100M', '1G') (when saving to binary) - default None",
     "total_memory": "Total memory usage (e.g. '500M', '2G') (when saving to binary) - default None",
     "chunk_duration": "Chunk duration in s if float or with units if str (e.g. '1s', '500ms') (when saving to binary)" \
-                      " - default '1s'",
-    "progress_bar": "If True, progress bar is shown (when saving to binary) - default True"}
+                      " - default None (use global)",
+    "progress_bar": "If True, progress bar is shown (when saving to binary) - default None (use global)"}
 
 
 class BaseSorter:

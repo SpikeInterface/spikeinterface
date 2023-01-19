@@ -23,7 +23,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         'selection' : {'n_peaks_per_channel' : 5000, 'min_n_peaks' : 20000},
         'localization' : {'max_distance_um':1000, 'optimizer': 'minimize_with_log_penality'},
         'matching':  {'peak_shift_ms':  0.2,},
-        'job_kwargs' : {'n_jobs' : None, 'chunk_duration' : '1s', 'progress_bar': True}
+        'job_kwargs' : {'n_jobs' : None, 'chunk_duration' : None, 'progress_bar': None}
     }
 
     @classmethod
