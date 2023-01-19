@@ -1,9 +1,9 @@
 from io import StringIO
 from typing import List, Optional, Union
 from contextlib import redirect_stderr
-
 from pathlib import Path
 
+import numpy as np
 import probeinterface as pi
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
@@ -119,12 +119,12 @@ class StreamingIblExtractor(BaseRecording):
         pid = next(insertion["id"] for insertion in insertions if insertion["name"] == probe_label)
 
         cache_folder = Path(cache_folder) if cache_folder is not None else cache_folder
-        file_streamer = Streamer(
+        self._file_streamer = Streamer(
             pid=pid, one=one, typ=stream_type, cache_folder=cache_folder, remove_cached=remove_cached
         )
 
         # get basic metadata
-        meta_file = file_streamer.file_meta_data  # streamer downloads uncompressed metadata files on init
+        meta_file = self._file_streamer.file_meta_data  # streamer downloads uncompressed metadata files on init
         meta = read_meta_file(meta_file)
         info = extract_stream_info(meta_file, meta)
         channel_ids = info["channel_names"]
@@ -136,8 +136,8 @@ class StreamingIblExtractor(BaseRecording):
             offsets = offsets[:-1]
 
         # initialize main extractor
-        sampling_frequency = file_streamer.fs
-        dtype = file_streamer.dtype
+        sampling_frequency = self._file_streamer.fs
+        dtype = self._file_streamer.dtype
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
         self.extra_requirements.append("ONE-api")
         self.extra_requirements.append("ibllib")
@@ -145,28 +145,49 @@ class StreamingIblExtractor(BaseRecording):
         self.set_channel_offsets(offsets)
 
         # set probe
-        probe = pi.read_spikeglx(meta_file)
-        self.set_probe(probe, in_place=True)
+        if not load_sync_channel:
+            probe = pi.read_spikeglx(meta_file)
+
+            if probe.shank_ids is not None:
+                self.set_probe(probe, in_place=True, group_mode="by_shank")
+            else:
+                self.set_probe(probe, in_place=True)
 
         # set channel properties
         # sometimes there are missing metadata files on the IBL side
         # when this happens a statement is printed to stderr saying these are using default metadata configurations
         with redirect_stderr(StringIO()):
-            electrodes_geometry = file_streamer.geometry
+            electrodes_geometry = self._file_streamer.geometry
 
-        self.set_property("shank", electrodes_geometry["shank"])
-        self.set_property("shank_row", electrodes_geometry["row"])
-        self.set_property("shank_col", electrodes_geometry["col"])
-        good_channel = electrodes_geometry["flag"]
+        if not load_sync_channel:
+            shank = electrodes_geometry["shank"]
+            shank_row = electrodes_geometry["row"]
+            shank_col = electrodes_geometry["col"]
+            inter_sample_shift = electrodes_geometry["sample_shift"]
+            adc = electrodes_geometry["adc"]
+            index_on_probe = electrodes_geometry["ind"]
+            good_channel = electrodes_geometry["flag"]
+        else:
+            shank = np.concatenate((electrodes_geometry["shank"], [np.nan]))
+            shank_row = np.concatenate((electrodes_geometry["shank"], [np.nan]))
+            shank_col = np.concatenate((electrodes_geometry["shank"], [np.nan]))
+            inter_sample_shift = np.concatenate((electrodes_geometry["sample_shift"], [np.nan]))
+            adc = np.concatenate((electrodes_geometry["adc"], [np.nan]))
+            index_on_probe = np.concatenate((electrodes_geometry["ind"], [np.nan]))
+            good_channel = np.concatenate((electrodes_geometry["shank"], [1.]))
+
+        self.set_property("shank", shank)
+        self.set_property("shank_row", shank_row)
+        self.set_property("shank_col", shank_col)
+        self.set_property("inter_sample_shift", inter_sample_shift)
+        self.set_property("adc", adc)
+        self.set_property("index_on_probe", index_on_probe)
         if not all(good_channel):
             self.set_property("good_channel", good_channel)
-        self.set_property("inter_sample_shift", electrodes_geometry["sample_shift"])
-        self.set_property("adc", electrodes_geometry["adc"])
-        self.set_property("index_on_probe", electrodes_geometry["ind"])
 
         # init recording segment
         recording_segment = StreamingIblRecordingSegment(
-            file_streamer=file_streamer, load_sync_channel=load_sync_channel
+            file_streamer=self._file_streamer, load_sync_channel=load_sync_channel
         )
         self.add_recording_segment(recording_segment)
 

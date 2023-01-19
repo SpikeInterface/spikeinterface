@@ -70,7 +70,6 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
                 self.set_probe(probe, in_place=True, group_mode="by_shank")
             else:
                 self.set_probe(probe, in_place=True)
-            self.set_probe(probe, in_place=True)
 
             # load num_channels_per_adc depending on probe type
             ptype = probe.annotations["probe_type"]
