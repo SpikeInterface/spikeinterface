@@ -188,6 +188,15 @@ class BaseRecordingSnippets(BaseExtractor):
                 groups[mask] = group
         sub_recording.set_property('group', groups, ids=None)
 
+        # add probe annotations to recording
+        if len(probegroup.probes) == 1:
+            self.annotate(probe=probegroup.probes[0].annotations)
+        else:
+            probe_annotations = []
+            for probe in probegroup.probes:
+                probe_annotations.append(probe.annotations)
+            self.annotate(probes=probe_annotations)
+
         return sub_recording
 
     def get_probe(self):
