@@ -27,7 +27,7 @@ def estimate_motion(recording, peaks, peak_locations,
         Peak vector (complex dtype)
     peak_locations: numpy array
         Complex dtype with 'x', 'y', 'z' fields
-    
+
     {method_doc}
 
     **histogram section**
@@ -78,7 +78,7 @@ def estimate_motion(recording, peaks, peak_locations,
         Display progress bar or not.
     verbose: bool
         If True, output is verbose
-    
+
 
     Returns
     -------
@@ -100,7 +100,6 @@ def estimate_motion(recording, peaks, peak_locations,
     """
     # TODO handle multi segment one day
     assert recording.get_num_segments() == 1
-
 
     if output_extra_check:
         extra_check = {}
@@ -135,14 +134,9 @@ def estimate_motion(recording, peaks, peak_locations,
         motion = clean_motion_vector(motion, temporal_bins, bin_duration_s,
                                      speed_threshold=speed_threshold, sigma_smooth_s=sigma_smooth_s)
 
-    
     if upsample_to_histogram_bin is None:
         upsample_to_histogram_bin = not rigid
-    
     if upsample_to_histogram_bin:
-        # @Charlie this is in fact a quite bad idea because this you do not interpolate between neihbor (which 
-        # would be intuitive) but with windows very far away when the sigma is high. And so the gradient of motion
-        # is hard to catch. I leave this but I will remove it it soon. For me interpolation would be better.
         non_rigid_windows = np.array(non_rigid_windows)
         non_rigid_windows /= non_rigid_windows.sum(axis=0, keepdims=True)
         non_rigid_window_centers = spatial_bin_edges[:-1] + bin_um / 2
@@ -180,39 +174,44 @@ class DecentralizedRegistration:
     name = 'decentralized'
     params_doc = """
     pairwise_displacement_method: 'conv' or 'phase_cross_correlation'
-        How to estimate the displacement in the parwaise matrix.
+        How to estimate the displacement in the pairwise matrix.
     max_displacement_um: float
-        Maximum possible discplacement in  micrometer.
+        Maximum possible discplacement in micrometers.
     weight_scale: 'linear' or 'exp'
-        For parwaise discplacemtn how to to rescale the associated weight matrix.
+        For parwaise displacement, how to to rescale the associated weight matrix.
     error_sigma: float 0.2
-        In case weight_scale='exp' this control the sigma of the exponential.
+        In case weight_scale='exp' this controls the sigma of the exponential.
     conv_engine: 'numpy' or 'torch'
-        In case of pairwise_displacement_method='conv' what library to use to compute the underlying correlation.
+        In case of pairwise_displacement_method='conv', what library to use to compute
+        the underlying correlation.
     torch_device=None
         In case of conv_engine='torch', you can control which device (cpu or gpu)
     batch_size: int
-        Size of batch for the convolution.
+        Size of batch for the convolution. Increasing this will speed things up dramatically
+        on GPUs and sometimes on CPU as well.
     corr_threshold: float
-        minimum correlation to estimate a motion shift for pairwise displacement bellow the value not used.
+        Minimum correlation between pair of time bins in order for these to be
+        considered when optimizing a global displacment vector to align with
+        the pairwise displacements.
     time_horizon_s: None or float
         When not None the parwise discplament matrix is computed in a small time horizon.
         In short only pair of bins close in time.
         So the pariwaise matrix is super sparse and have values only the diagonal.
-    convergence_method='lsqr_robust' or 'gradient_descent'
+    convergence_method='lsmr', 'lsqr_robust', 'gradient_descent'
         Which method to use to compute the global displacement vector from the pairwise matrix.
     robust_regression_sigma: float
         Use for convergence_method='lsqr_robust' for iterative selection of the regression.
-    lsqr_robust_n_iter: int 
+    # TODO: spatial_prior, temporal_prior
+    lsqr_robust_n_iter: int
         Number of iteration for convergence_method='lsqr_robust'.
     """
 
     @classmethod
     def run(cls, recording, peaks, peak_locations, direction, bin_duration_s, bin_um, spatial_bin_edges,
-            non_rigid_windows, verbose, progress_bar, extra_check, 
+            non_rigid_windows, verbose, progress_bar, extra_check,
             pairwise_displacement_method='conv', max_displacement_um=100., weight_scale='linear',
             error_sigma=0.2, conv_engine='numpy', torch_device=None, batch_size=1,
-            corr_threshold=0, time_horizon_s=None, convergence_method='lsqr_robust',
+            corr_threshold=0, time_horizon_s=None, convergence_method='lsmr',
             robust_regression_sigma=2, lsqr_robust_n_iter=20):
 
         # make 2D histogram raster
@@ -229,8 +228,6 @@ class DecentralizedRegistration:
             extra_check['pairwise_displacement_list'] = []
             extra_check['temporal_hist_bin_edges'] = temporal_hist_bin_edges
             extra_check['spatial_hist_bin_edges'] = spatial_hist_bin_edges
-
-
 
         # temporal bins are bin center
         temporal_bins = temporal_hist_bin_edges[:-1] + bin_duration_s // 2.
@@ -260,6 +257,7 @@ class DecentralizedRegistration:
             if verbose:
                 print(f'Computing global displacement: {i + 1} / {len(non_rigid_windows)}')
 
+            # TODO: if spatial_prior, do this after the loop
             motion[:, i] = compute_global_displacement(pairwise_displacement,
                                                        pairwise_displacement_weight=pairwise_displacement_weight,
                                                        convergence_method=convergence_method,
@@ -308,11 +306,11 @@ class IterativeTemplateRegistration:
 
     @classmethod
     def run(cls, recording, peaks, peak_locations, direction, bin_duration_s, bin_um, spatial_bin_edges,
-            non_rigid_windows, verbose, progress_bar, extra_check, 
-            num_amp_bins=20, num_shifts_global=15, num_iterations=10, num_shifts_block=5, 
+            non_rigid_windows, verbose, progress_bar, extra_check,
+            num_amp_bins=20, num_shifts_global=15, num_iterations=10, num_shifts_block=5,
             smoothing_sigma=0.5, kriging_sigma=1, kriging_p=2, kriging_d=2):
 
-        # make a 3D histogram 
+        # make a 3D histogram
         motion_histograms, temporal_hist_bin_edges, spatial_hist_bin_edges = \
             make_3d_motion_histograms(recording, peaks, peak_locations,
                                       direction=direction, num_amp_bins=num_amp_bins, bin_duration_s=bin_duration_s,
@@ -404,11 +402,11 @@ def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_st
     Here by default we use gaussian window.
 
     """
-    bin_centers = spatial_bin_edges[:-1] + bin_um /2.
+    bin_centers = spatial_bin_edges[:-1] + bin_um / 2.
     n = bin_centers.size
 
     if rigid:
-        # win_shape = 'rect' is forced
+        # win_shape = 'rect' is forced
         non_rigid_windows = [np.ones(n, dtype='float64')]
         middle = (spatial_bin_edges[0] + spatial_bin_edges[-1]) / 2.
         non_rigid_window_centers = np.array([middle])
@@ -418,10 +416,10 @@ def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_st
         min_ = np.min(contact_pos) - margin_um
         max_ = np.max(contact_pos) + margin_um
         num_non_rigid_windows = int((max_ - min_) // win_step_um)
-        border = ((max_ - min_)  %  win_step_um) / 2
+        border = ((max_ - min_) % win_step_um) / 2
         non_rigid_window_centers = np.arange(num_non_rigid_windows + 1) * win_step_um + min_ + border
         non_rigid_windows = []
-        
+
         for win_center in non_rigid_window_centers:
             if win_shape == 'gaussian':
                 win = np.exp(-(bin_centers - win_center) ** 2 / (win_sigma_um ** 2))
@@ -430,8 +428,8 @@ def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_st
                 win = win.astype('float64')
 
             non_rigid_windows.append(win)
+
     return non_rigid_windows, non_rigid_window_centers
-    
 
 
 
@@ -544,7 +542,7 @@ def make_3d_motion_histograms(recording, peaks, peak_locations,
     fs = recording.get_sampling_frequency()
     num_samples = recording.get_num_samples(segment_index=0)
     bin_sample_size = int(bin_duration_s * fs)
-    sample_bin_edges = np.arange(0, num_samples+bin_sample_size, bin_sample_size)
+    sample_bin_edges = np.arange(0, num_samples + bin_sample_size, bin_sample_size)
     temporal_bin_edges = sample_bin_edges / fs
     if spatial_bin_edges is None:
         spatial_bin_edges = get_spatial_bin_edges(recording, direction, margin_um, bin_um)
@@ -576,7 +574,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                                   conv_engine='numpy', torch_device=None,
                                   batch_size=1, max_displacement_um=1500,
                                   corr_threshold=0, time_horizon_s=None,
-                                  bin_duration_s=None, progress_bar=False): 
+                                  bin_duration_s=None, progress_bar=False):
     """
     Compute pairwise displacement
     """
@@ -587,7 +585,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
 
     if time_horizon_s is not None:
         band_width = int(np.ceil(time_horizon_s / bin_duration_s))
-    
+
     if conv_engine == 'torch':
         import torch
         if torch_device is None:
@@ -665,7 +663,6 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
 
             if corr_threshold > 0:
                 which = correlation > corr_threshold
-                pairwise_displacement *= which
                 correlation *= which
 
     elif method == 'phase_cross_correlation':
@@ -682,12 +679,12 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
             loop = tqdm(loop)
         for i in loop:
             for j in range(size):
-                shift, error, diffphase = skimage.registration.phase_cross_correlation(motion_hist[i, :], 
+                shift, error, diffphase = skimage.registration.phase_cross_correlation(motion_hist[i, :],
                                                                                        motion_hist[j, :])
-                pairwise_displacement[i, j] = shift * bin_um 
+                pairwise_displacement[i, j] = shift * bin_um
                 errors[i, j] = error
         correlation = 1 - errors
-        
+
     else:
         raise ValueError(f'method do not exists for compute_pairwise_displacement {method}')
 
@@ -695,7 +692,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
         # between 0 and 1
         pairwise_displacement_weight = correlation
     elif weight_scale == 'exp':
-        pairwise_displacement_weight = np.exp((correlation - 1) / error_sigma )
+        pairwise_displacement_weight = np.exp((correlation - 1) / error_sigma)
 
     return pairwise_displacement, pairwise_displacement_weight
 
@@ -704,7 +701,7 @@ def compute_global_displacement(
     pairwise_displacement,
     pairwise_displacement_weight=None,
     sparse_mask=None,
-    convergence_method='lsqr_robust',
+    convergence_method='lsmr',
     robust_regression_sigma=2,
     lsqr_robust_n_iter=20,
     progress_bar=False,
@@ -712,7 +709,14 @@ def compute_global_displacement(
     """
     Compute global displacement
 
-    
+    Arguments
+    ---------
+    pairwise_displacement : time x time array
+    pairwise_displacement_weight : time x time array
+    sparse_mask : time x time array
+    convergence_method : str
+        One of "gradient"
+
     """
     size = pairwise_displacement.shape[0]
 
@@ -779,7 +783,7 @@ def compute_global_displacement(
             if isinstance(pairwise_displacement_weight, scipy.sparse.csr_matrix):
                 W = np.array(pairwise_displacement_weight[I, J]).T
             else:
-                W = pairwise_displacement_weight[I, J][:,None]
+                W = pairwise_displacement_weight[I, J][:, None]
         else:
             W = nnz_ones[:, None]
         if isinstance(pairwise_displacement, scipy.sparse.csr_matrix):
@@ -793,14 +797,24 @@ def compute_global_displacement(
 
         xrange = trange if progress_bar else range
         for i in xrange(lsqr_robust_n_iter):
-            p = lsqr(A[idx].multiply(W[idx]), V[idx] * W[idx][:,0])[0]
+            p = lsqr(A[idx].multiply(W[idx]), V[idx] * W[idx][:, 0])[0]
             idx = np.nonzero(np.abs(zscore(A @ p - V)) <= robust_regression_sigma)
         displacement = p
+
+    elif convergence_method == 'lsmr':
+        raise NotImplementedError
+
+        # TODO: temporal_prior
+        # TODO: initialize at D.mean(axis=1)
+        # TODO: handle spatial_prior, window indices
 
     else:
         raise ValueError(f"Method {convergence_method} doesn't exists for compute_global_displacement")
 
+    # TODO reference_displacement in ("mean", "mode_search")
+
     return displacement
+
 
 
 def iterative_template_registration(spikecounts_hist_images,
