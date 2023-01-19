@@ -32,7 +32,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         'registration' : {},
         'apply_preprocessing': True,
         'shared_memory' : False,
-        'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : False}
+        'job_kwargs' : {'n_jobs' : None, 'chunk_duration' : '1s', 'verbose' : False}
     }
 
     @classmethod

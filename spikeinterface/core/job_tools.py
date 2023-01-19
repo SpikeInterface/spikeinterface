@@ -50,13 +50,14 @@ def fix_job_kwargs(runtime_job_kwargs):
 
     # if n_jobs is -1, set to os.cpu_count()
     if "n_jobs" in job_kwargs:
-        assert isinstance(job_kwargs["n_jobs"], (float, np.integer, int))
-        if isinstance(job_kwargs["n_jobs"], float):
-            n_jobs = int(job_kwargs["n_jobs"] * os.cpu_count())
-        elif job_kwargs["n_jobs"] < 0:            
-            n_jobs = os.cpu_count() + 1 + job_kwargs["n_jobs"]
-        else:
-            n_jobs = job_kwargs["n_jobs"]
+        n_jobs = job_kwargs['n_jobs']
+        if n_jobs is None:
+            n_jobs = 1
+        assert isinstance(n_jobs, (float, np.integer, int))
+        if isinstance(n_jobs, float):
+            n_jobs = int(n_jobs * os.cpu_count())
+        elif n_jobs < 0:
+            n_jobs = os.cpu_count() + 1 + n_jobs
         job_kwargs["n_jobs"] = max(n_jobs, 1)
     return job_kwargs
 

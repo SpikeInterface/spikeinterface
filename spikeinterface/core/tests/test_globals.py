@@ -41,6 +41,9 @@ def test_global_job_kwargs():
     assert job_kwargs_split['n_jobs'] == new_job_kwargs['n_jobs']
     assert job_kwargs_split['chunk_duration'] == job_kwargs['chunk_duration']
     assert job_kwargs_split['progress_bar'] == job_kwargs['progress_bar']
+    none_job_kwargs = dict(n_jobs=None)
+    job_kwargs_split = fix_job_kwargs(none_job_kwargs)
+    assert job_kwargs_split['n_jobs'] == 1
     reset_global_job_kwargs()
 
 
