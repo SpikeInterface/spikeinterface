@@ -11,7 +11,7 @@ There are two ways for using theses "plugins":
 """
 import numpy as np
 
-from spikeinterface.core import get_chunk_with_margin, get_channel_distances
+from spikeinterface.core import get_chunk_with_margin
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 
 #TODO remove this
@@ -206,7 +206,11 @@ def _compute_peak_step_chunk(segment_index, start_frame, end_frame, worker_ctx):
     local_peaks['sample_ind'] -= (start_frame - left_margin)
     
     
+    outs = run_nodes(traces, local_peaks, nodes)
     
+    return outs
+
+def run_nodes(traces, local_peaks, nodes):
     # compute the graph
     outputs = {}
     for node in nodes:
@@ -235,17 +239,3 @@ def _compute_peak_step_chunk(segment_index, start_frame, end_frame, worker_ctx):
             outs += (out, )
     
     return outs
-    
-
-#~ def get_nbefore_nafter_from_steps(steps):
-    #~ # check that all step have the same waveform size
-    #~ # TODO we could enhence this by taking the max before/after and slice it on-the-fly
-    #~ nbefore, nafter = None, None
-    #~ for step in steps:
-        #~ if step.need_waveforms:
-            #~ if nbefore is None:
-                #~ nbefore, nafter = step.nbefore, step.nafter
-            #~ else:
-                #~ assert nbefore == step.nbefore, f'Step do not have the same nbefore {nbefore}: {step.nbefore}'
-                #~ assert nafter == step.nafter, f'Step do not have the same nbefore {nafter}: {step.nafter}'
-    #~ return nbefore, nafter
