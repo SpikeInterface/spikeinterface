@@ -11,7 +11,7 @@ if __name__ != '__main__':
 import matplotlib.pyplot as plt
 
 
-from spikeinterface import extract_waveforms, download_dataset, ChannelSparsity
+from spikeinterface import extract_waveforms, download_dataset, compute_sparsity
 
 from spikeinterface.widgets import HAVE_MPL, HAVE_SV
 
@@ -58,8 +58,8 @@ class TestWidgets(unittest.TestCase):
         _ = compute_template_similarity(cls.we)
 
         # make sparse waveforms
-        cls.sparsity_radius =  ChannelSparsity.from_radius(cls.we, radius_um=50)
-        cls.sparsity_best =  ChannelSparsity.from_best_channels(cls.we, num_channels=5)
+        cls.sparsity_radius =  compute_sparsity(cls.we, method="radius", radius_um=50)
+        cls.sparsity_best =  compute_sparsity(cls.we, method="best_channels", num_channels=5)
         cls.we_sparse = cls.we.save(folder=cache_folder / 'mearec_test_sparse', sparsity=cls.sparsity_radius)
 
         cls.skip_backends = ["ipywidgets"]

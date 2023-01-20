@@ -162,7 +162,8 @@ class ChannelSparsity:
         from .template_tools import get_template_extremum_channel
 
         mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
-        distances = get_channel_distances(we.recording)
+        locations = we.get_channel_locations()
+        distances = np.linalg.norm(locations[:, np.newaxis] - locations[np.newaxis, :], axis=2)
         best_chan = get_template_extremum_channel(we, peak_sign=peak_sign, outputs="index")
         for unit_ind, unit_id in enumerate(we.unit_ids):
             chan_ind = best_chan[unit_id]

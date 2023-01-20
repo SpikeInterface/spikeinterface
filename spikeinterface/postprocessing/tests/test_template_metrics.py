@@ -3,8 +3,7 @@ import unittest
 from spikeinterface import extract_waveforms, WaveformExtractor
 from spikeinterface.extractors import toy_example
 
-from spikeinterface.postprocessing import (compute_template_metrics, get_template_channel_sparsity, 
-                                           TemplateMetricsCalculator)
+from spikeinterface.postprocessing import TemplateMetricsCalculator
 
 from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
 
