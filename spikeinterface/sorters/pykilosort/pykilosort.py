@@ -176,6 +176,7 @@ class PyKilosortSorter(BaseSorter):
         ks_probe.xc = locations[:, 0]
         ks_probe.yc = locations[:, 1]
         ks_probe.shank = None
+        ks_probe.sample2volt = 1e-6
 
         run(
             dat_path,
