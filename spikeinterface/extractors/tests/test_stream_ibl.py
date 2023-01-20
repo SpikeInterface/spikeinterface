@@ -39,6 +39,9 @@ class StreamingIblExtractorTest(TestCase):
         expected_offsets = np.zeros(shape=384)
         assert_array_equal(x=recording.get_channel_offsets(), y=expected_offsets)
 
+        expected_gains = 2.34375 * np.ones(shape=384)
+        assert_array_equal(x=recording.get_property("channel_gain"), y=expected_gains)
+
         probe = recording.get_probe()
         expected_probe_representation = "Probe - 384ch - 1shanks"
         assert repr(probe) == expected_probe_representation
@@ -82,6 +85,9 @@ class StreamingIblExtractorTest(TestCase):
 
         expected_offsets = np.zeros(shape=385)
         assert_array_equal(x=recording.get_channel_offsets(), y=expected_offsets)
+
+        expected_gains = np.concatenate((2.34375 * np.ones(shape=384), [1171.875]))
+        assert_array_equal(x=recording.get_property("channel_gain"), y=expected_gains)
 
         expected_exception = ValueError
         expected_error_message = "There is no Probe attached to this recording. Use set_probe(...) to attach one."
