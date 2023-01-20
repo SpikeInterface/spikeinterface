@@ -176,7 +176,14 @@ class PyKilosortSorter(BaseSorter):
         ks_probe.xc = locations[:, 0]
         ks_probe.yc = locations[:, 1]
         ks_probe.shank = None
-        ks_probe.sample2volt = 1e-6
+        if recording.get_channel_gains() is not None:
+            gains = recording.get_channel_gains()
+            if len(np.unique(gains)) == 1:
+                ks_probe.sample2volt = gains[0] * 1e-6
+            else:
+                ks_probe.sample2volt = np.median(gains) * 1e-6
+        else:
+            ks_probe.sample2volt = 1e-6
 
         run(
             dat_path,
