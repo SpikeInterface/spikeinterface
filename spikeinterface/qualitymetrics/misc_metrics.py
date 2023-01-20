@@ -559,7 +559,7 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(0, 2), **kwar
     # create a dictionary 'synchrony_metrics'
     synchrony_metrics = {
         # create a dictionary for each synchrony_size
-        f'syncSpike_{synchrony_size}': {
+        f'sync_spike_{synchrony_size}': {
             # create a dictionary for each spiketrain
             spiketrain.annotations['cluster_id']:
             # count number of occurrences, where 'complexity' >= synchrony_size and divide by spike counts
