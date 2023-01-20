@@ -181,7 +181,7 @@ class PyKilosortSorter(BaseSorter):
             if len(np.unique(gains)) == 1:
                 ks_probe.sample2volt = gains[0] * 1e-6
             else:
-                UserWarning('Multiple gains detected fir different channels. Median gain will be used')
+                UserWarning('Multiple gains detected for different channels. Median gain will be used')
                 ks_probe.sample2volt = np.median(gains) * 1e-6
         else:
             ks_probe.sample2volt = 1e-6
