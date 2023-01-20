@@ -568,7 +568,7 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(0, 2), **kwar
         for synchrony_size in synchrony_sizes}
 
     # Convert dict to named tuple
-    synchrony_metrics_tuple = namedtuple('SynchronyMetrics', synchrony_metrics.keys())
+    synchrony_metrics_tuple = namedtuple('synchrony_metrics', synchrony_metrics.keys())
     synchrony_metrics = synchrony_metrics_tuple(**synchrony_metrics)
     return synchrony_metrics
 
