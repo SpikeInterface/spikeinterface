@@ -11,8 +11,8 @@ try:
 except ImportError:
     HAVE_NUMBA = False
 
-from spikeinterface.core.template_tools import get_template_channel_sparsity, get_template_extremum_channel
-from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
+from ..core import compute_sparsity
+from ..core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
 
 
@@ -267,8 +267,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
     recording = waveform_extractor.recording
     contact_locations = recording.get_channel_locations()
 
-    channel_sparsity = get_template_channel_sparsity(waveform_extractor, method='radius',
-                                                     radius_um=radius_um, outputs='index')
+    sparsity = compute_sparsity(waveform_extractor, method='radius', radius_um=radius_um)
     templates = waveform_extractor.get_all_templates(mode='average')
 
     #if enforce_decrease:
@@ -280,7 +279,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
 
     unit_location = np.zeros((unit_ids.size, 4), dtype='float64')
     for i, unit_id in enumerate(unit_ids):
-        chan_inds = channel_sparsity[unit_id]
+        chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
         local_contact_locations = contact_locations[chan_inds, :]
 
         # wf is (nsample, nchan) - chann is only neighboor
@@ -324,14 +323,12 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=75, fe
     recording = waveform_extractor.recording
     contact_locations = recording.get_channel_locations()
 
-    channel_sparsity = get_template_channel_sparsity(waveform_extractor, method='radius',
-                                                     radius_um=radius_um, outputs='index')
-
+    sparsity = compute_sparsity(waveform_extractor, peak_sign=peak_sign, method='radius', radius_um=radius_um)
     templates = waveform_extractor.get_all_templates(mode='average')
 
     unit_location = np.zeros((unit_ids.size, 2), dtype='float64')
     for i, unit_id in enumerate(unit_ids):
-        chan_inds = channel_sparsity[unit_id]
+        chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
         local_contact_locations = contact_locations[chan_inds, :]
 
         wf = templates[i, :, :]
