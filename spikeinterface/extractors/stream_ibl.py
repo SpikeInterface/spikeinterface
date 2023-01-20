@@ -11,10 +11,11 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import brainbox
+    from one.api import ONE
 
-    HAVE_BRAINBOX = True
+    HAVE_BRAINBOX_ONE = True
 except ModuleNotFoundError:
-    HAVE_BRAINBOX = False
+    HAVE_BRAINBOX_ONE = False
 
 
 class StreamingIblExtractor(BaseRecording):
@@ -52,7 +53,7 @@ class StreamingIblExtractor(BaseRecording):
 
     extractor_name = "StreamingIbl"
     has_default_locations = True
-    installed = HAVE_BRAINBOX
+    installed = HAVE_BRAINBOX_ONE
     mode = "folder"
     installation_mesg = (
         "To use the StreamingIblExtractor, install ONE-api and ibllib: \n\n pip install ONE-api\npip install ibllib\n"
@@ -74,8 +75,7 @@ class StreamingIblExtractor(BaseRecording):
         stream_names : list of str
             List of stream names as expected by the `stream_name` argument for the class initialization.
         """
-        from one.api import ONE
-
+        assert HAVE_BRAINBOX_ONE, cls.installation_mesg
         one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True)
 
         dataset_contents = one.list_datasets(eid=session, collection="raw_ephys_data/*")
@@ -102,6 +102,7 @@ class StreamingIblExtractor(BaseRecording):
         cache_folder: Optional[Union[Path, str]] = None,
         remove_cached: bool = True,
     ):
+        assert HAVE_BRAINBOX_ONE, self.installation_mesg
         from brainbox.io.spikeglx import Streamer
         from one.api import ONE
         from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
@@ -141,8 +142,11 @@ class StreamingIblExtractor(BaseRecording):
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
         self.extra_requirements.append("ONE-api")
         self.extra_requirements.append("ibllib")
-        self.set_channel_gains(gains)
-        self.set_channel_offsets(offsets)
+        # traces are already scaled
+        self.set_channel_gains(1.)
+        self.set_channel_offsets(0.)
+        self.set_property("channel_gain", gains)
+        self.set_property("channel_offsets", offsets)
 
         # set probe
         if not load_sync_channel:
@@ -187,7 +191,8 @@ class StreamingIblExtractor(BaseRecording):
 
         # init recording segment
         recording_segment = StreamingIblRecordingSegment(
-            file_streamer=self._file_streamer, load_sync_channel=load_sync_channel
+            file_streamer=self._file_streamer,
+            load_sync_channel=load_sync_channel
         )
         self.add_recording_segment(recording_segment)
 
@@ -214,12 +219,14 @@ class StreamingIblRecordingSegment(BaseRecordingSegment):
             start_frame = 0
         if end_frame is None:
             end_frame = self.get_num_samples()
+        if channel_indices is None:
+            channel_indices = slice(None)
 
-        traces = self._file_streamer[start_frame:end_frame]
+        traces = self._file_streamer[start_frame:end_frame] * 1e6
         if not self._load_sync_channel:
             traces = traces[:, :-1]
 
-        return traces
+        return traces[:, channel_indices]
 
 
 read_streaming_ibl = define_function_from_class(source_class=StreamingIblExtractor, name="read_streaming_ibl")
