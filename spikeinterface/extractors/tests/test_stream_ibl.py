@@ -56,6 +56,8 @@ class StreamingIblExtractorTest(TestCase):
             'inter_sample_shift',
             'adc',
             'index_on_probe',
+            'channel_gain',
+            'channel_offset'
         ]
         self.assertCountEqual(first=recording.get_property_keys(), second=expected_property_keys)
 
@@ -75,7 +77,7 @@ class StreamingIblExtractorTest(TestCase):
         expected_channel_ids = [f"AP{index}" for index in range(384)] + ["SY0"]
         self.assertListEqual(list1=list(recording.get_channel_ids()), list2=expected_channel_ids)
 
-        expected_gains = np.concatenate((2.34375 * np.ones(shape=384), [1171.875]))
+        expected_gains = np.ones(shape=385)
         assert_array_equal(x=recording.get_channel_gains(), y=expected_gains)
 
         expected_offsets = np.zeros(shape=385)
@@ -99,6 +101,8 @@ class StreamingIblExtractorTest(TestCase):
             'inter_sample_shift',
             'adc',
             'index_on_probe',
+            'channel_gain',
+            'channel_offset'
         ]
         self.assertCountEqual(first=recording.get_property_keys(), second=expected_property_keys)
 

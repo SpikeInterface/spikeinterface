@@ -131,12 +131,12 @@ class StreamingIblExtractor(BaseRecording):
         meta = read_meta_file(meta_file)
         info = extract_stream_info(meta_file, meta)
         channel_ids = info["channel_names"]
-        gains = info["channel_gains"]
-        offsets = info["channel_offsets"]
+        channel_gains = info["channel_gains"]
+        channel_offsets = info["channel_offsets"]
         if not load_sync_channel:
             channel_ids = channel_ids[:-1]
-            gains = gains[:-1]
-            offsets = offsets[:-1]
+            channel_gains = channel_gains[:-1]
+            channel_offsets = channel_offsets[:-1]
 
         # initialize main extractor
         sampling_frequency = self._file_streamer.fs
@@ -147,8 +147,8 @@ class StreamingIblExtractor(BaseRecording):
         # traces are already scaled
         self.set_channel_gains(1.)
         self.set_channel_offsets(0.)
-        self.set_property("channel_gain", gains)
-        self.set_property("channel_offsets", offsets)
+        self.set_property("channel_gain", channel_gains)
+        self.set_property("channel_offset", channel_offsets)
 
         # set probe
         if not load_sync_channel:
