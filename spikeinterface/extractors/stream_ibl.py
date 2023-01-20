@@ -29,7 +29,9 @@ class StreamingIblExtractor(BaseRecording):
         In ONE, this is sometimes referred to as the 'eid'.
         When doing a session lookup such as
 
-            sessions = one.alyx.rest('sessions', 'list', tag='2022_Q2_IBL_et_al_RepeatedSite')
+        >>> from one.api import ONE
+        >>> one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True)
+        >>> sessions = one.alyx.rest('sessions', 'list', tag='2022_Q2_IBL_et_al_RepeatedSite')
 
         each returned value in `sessions` refers to it as the 'id'.
     stream_name : str
