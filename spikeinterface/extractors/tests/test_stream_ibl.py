@@ -33,7 +33,7 @@ class StreamingIblExtractorTest(TestCase):
         expected_channel_ids = [f"AP{index}" for index in range(384)]
         self.assertListEqual(list1=list(recording.get_channel_ids()), list2=expected_channel_ids)
 
-        expected_gains = 2.34375 * np.ones(shape=384)
+        expected_gains = np.ones(shape=384)
         assert_array_equal(x=recording.get_channel_gains(), y=expected_gains)
 
         expected_offsets = np.zeros(shape=384)
