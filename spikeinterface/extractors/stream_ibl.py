@@ -70,7 +70,15 @@ class StreamingIblExtractor(BaseRecording):
         Parameters
         ----------
         session : str
-          DESCRIPTION.
+            The session ID to extract recordings for.
+            In ONE, this is sometimes referred to as the 'eid'.
+            When doing a session lookup such as
+
+            >>> from one.api import ONE
+            >>> one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True)
+            >>> sessions = one.alyx.rest('sessions', 'list', tag='2022_Q2_IBL_et_al_RepeatedSite')
+
+            each returned value in `sessions` refers to it as the 'id'.
 
         Returns
         -------
@@ -144,11 +152,12 @@ class StreamingIblExtractor(BaseRecording):
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
         self.extra_requirements.append("ONE-api")
         self.extra_requirements.append("ibllib")
-        # traces are already scaled
+
+        # TODO - in the first version, the traces returned by the Streamer are already scaled
+        # can adjust the gains here if they adjust the call to return int16
         self.set_channel_gains(1.)
         self.set_channel_offsets(0.)
-        self.set_property("channel_gain", channel_gains)
-        self.set_property("channel_offset", channel_offsets)
+        self.set_property("int16_gain_to_uV", channel_gains)
 
         # set probe
         if not load_sync_channel:
@@ -216,7 +225,7 @@ class StreamingIblRecordingSegment(BaseRecordingSegment):
     def get_num_samples(self):
         return self._file_streamer.ns
 
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    def get_traces(self, start_frame: int, end_frame: int, channel_indices, return_scaled: bool = False):
         if start_frame is None:
             start_frame = 0
         if end_frame is None:
@@ -224,7 +233,10 @@ class StreamingIblRecordingSegment(BaseRecordingSegment):
         if channel_indices is None:
             channel_indices = slice(None)
 
-        traces = self._file_streamer[start_frame:end_frame] * 1e6
+        if return_scaled:
+            traces = self._file_streamer[start_frame:end_frame] * 1e6
+        else:
+            traces = (self._file_streamer[start_frame:end_frame] / self._file_streamer.sample2volts).astype("int16")
         if not self._load_sync_channel:
             traces = traces[:, :-1]
 
