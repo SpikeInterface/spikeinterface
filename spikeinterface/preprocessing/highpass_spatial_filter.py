@@ -4,7 +4,7 @@ from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, Base
 from spikeinterface.core.core_tools import define_function_from_class
 
 
-class HighpassSpatialFilter(BasePreprocessor):
+class HighpassSpatialFilterRecording(BasePreprocessor):
     """
     Perform destriping with high-pass spatial filtering. Uses
     the kfilt() function of the International Brain Laboratory.
@@ -18,29 +18,33 @@ class HighpassSpatialFilter(BasePreprocessor):
 
     Parameters
     ----------
-
-    n_channel_pad: Number of channels to pad prior to filtering. Channels
-                   are padded with mirroring.
-
-    n_channel_taper: Number of channels to perform cosine tapering on
-                     prior to filtering. If None and n_channel_pad is set,
-                     n_channel_taper will be set to the number of
-                     padded channels. Otherwise, the passed value will be used.
-
-    agc_options: Options for automatic gain control. By default, gain control
-                 is applied prior to filtering to improve filter performance.
-                 "default" will use the IBL pipeline defaults (agc on). Setting to
-                 None will turn off gain control. To customise, pass a
-                 dictionary with the fields:
-                    agc_options["window_length_s"] - window length in seconds
-                    agc_options["sampling_interval"] - recording sampling interval
-
-    butter_kwargs: Dictionary with fields "N", "Wn", "btype" to be passed to
-                   scipy.signal.butter
+    recording : BaseRecording
+        The parent recording
+    n_channel_pad : int
+        Number of channels to pad prior to filtering. 
+        Channels are padded with mirroring. 
+        If None, no padding is applied, by default None
+    n_channel_taper : int
+        Number of channels to perform cosine tapering on
+        prior to filtering. If None and n_channel_pad is set,
+        n_channel_taper will be set to the number of padded channels.
+        Otherwise, the passed value will be used, by default None
+    agc_options: dict or None
+        Options for automatic gain control. By default, gain control
+        is applied prior to filtering to improve filter performance.
+        When the argument is "ibl", the function will use the IBL pipeline defaults (agc on).
+        Setting to None will turn off gain control, by default None.
+        To customize, pass a dictionary with the fields:
+            * agc_options["window_length_s"] - window length in seconds
+            * agc_options["sampling_interval"] - recording sampling interval
+    butter_kwargs: dict
+        Dictionary with fields "N" and "Wn" to be passed to
+        scipy.signal.butter, by default N=3 and Wn=0.01
     """
     name = 'highpass_spatial_filter'
 
-    def __init__(self, recording, n_channel_pad=None, n_channel_taper=None, agc_options="default", butter_kwargs=None):
+    def __init__(self, recording, n_channel_pad=None, n_channel_taper=None,
+                 agc_options=None, butter_kwargs=None):
         BasePreprocessor.__init__(self, recording)
 
         n_channel_pad, agc_options, butter_kwargs = self.handle_args(recording,
@@ -80,34 +84,33 @@ class HighpassSpatialFilter(BasePreprocessor):
         if n_channel_pad in [None, False]:
             n_channel_pad = 0
 
-        if agc_options == "default":
-            sampling_interval = 1 / recording.get_sampling_frequency()
-            agc_options = {"window_length_s": self.get_default_agc_window_length(sampling_interval),
-                           "sampling_interval": sampling_interval}
+        if agc_options is not None:
+            sampling_interval = 1 / recording.sampling_frequency
+            if isinstance(agc_options, str):
+                assert agc_options == "ibl", "agc_options can be 'ibl', a dictionary, or None"
+                # default IBL value is 300 * sampling_interval
+                default_window_length = 300 * sampling_interval 
+                agc_options = {"window_length_s": default_window_length,
+                               "sampling_interval": sampling_interval}
+            elif isinstance(agc_options, dict):
+                assert "window_length_s" in agc_options, \
+                    "The agc_options dict must contain both the 'window_length_s' field"
+                agc_options["sampling_interval"] = sampling_interval
+            else:
+                raise ValueError(f"agc_options can be 'ibl', a dictionary, or None, not {type(agc_options)}")
 
-        elif agc_options in [None, False, 0]:
-            agc_options = None
+        butter_kwargs_ = {'btype': 'highpass', 'N': 3, 'Wn': 0.01}
+        if butter_kwargs is not None:
+            assert all(k in ("N", "Wn") for k in butter_kwargs), \
+                "butter_kwargs can only specify filter order 'N' and critical frequency 'Wn' (1 is Nyquist)"
+            butter_kwargs_.update(butter_kwargs)
 
-        if butter_kwargs is None:
-            butter_kwargs = {'N': 3, 'Wn': 0.01, 'btype': 'highpass'}
+        assert n_channel_pad <= recording.get_num_channels(), \
+            "'n_channel_pad' must be less than the number of channels in recording."
+        assert n_channel_taper <= recording.get_num_channels(), \
+            "'n_channel_taper' must be less than the number of channels in recording."
 
-        self.check_length(n_channel_pad, recording, "n_channel_pad")
-        self.check_length(n_channel_taper, recording, "n_channel_taper")
-
-        return n_channel_pad, agc_options, butter_kwargs
-
-    def check_length(self, variable, recording, label):
-
-        if variable and variable > recording.get_num_channels():
-            raise ValueError(f"{label} must be less "
-                             "than the number of channels in recording.")
-
-
-    def get_default_agc_window_length(self, sampling_interval):
-        """
-        300 samples default based on the IBL implementation
-        """
-        return 300 * sampling_interval
+        return n_channel_pad, agc_options, butter_kwargs_
 
 
 class HighPassSpatialFilterSegment(BasePreprocessorSegment):
@@ -119,7 +122,6 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
                  agc_options,
                  butter_kwargs,
                  ):
-
         self.parent_recording_segment = parent_recording_segment
         self.n_channel_pad = n_channel_pad
         self.n_channel_taper = n_channel_taper
@@ -127,11 +129,11 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         self.butter_kwargs = butter_kwargs
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-
+        if channel_indices is None:
+            channel_indices = slice(None)
         traces = self.parent_recording_segment.get_traces(start_frame,
                                                           end_frame,
-                                                          channel_indices)
-
+                                                          slice(None))
         traces = traces.copy()
 
         traces = kfilt(traces,
@@ -140,10 +142,11 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
                        self.agc_options,
                        self.butter_kwargs)
 
-        return traces
+        return traces[:, channel_indices]
 
 # function for API
-highpass_spatial_filter = define_function_from_class(source_class=HighpassSpatialFilter, name="highpass_spatial_filter")
+highpass_spatial_filter = define_function_from_class(source_class=HighpassSpatialFilterRecording,
+                                                     name="highpass_spatial_filter")
 
 # -----------------------------------------------------------------------------------------------
 # IBL KFilt Function
