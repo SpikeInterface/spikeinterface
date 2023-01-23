@@ -1,7 +1,6 @@
 import os
 import shutil
-import time
-import pickle
+from pathlib import Path
 
 import pytest
 
@@ -10,11 +9,17 @@ from spikeinterface.comparison.studytools import (setup_comparison_study,
                                                   iter_computed_names, iter_computed_sorting,
                                                   get_rec_names, get_ground_truths, get_recordings)
 
-study_folder = 'test_studytools/'
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "comparison"
+else:
+    cache_folder = Path("cache_folder") / "comparison"
+
+
+study_folder = cache_folder / 'test_studytools'
 
 
 def setup_module():
-    if os.path.exists(study_folder):
+    if study_folder.is_dir():
         shutil.rmtree(study_folder)
 
 

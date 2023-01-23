@@ -50,7 +50,11 @@ class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream',
         {'stream_id': '1', 'block_index': 1}),
         ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream',
+        {'stream_id': '1', 'block_index': 1, 'load_sync_timestamps': True}),
+        ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream',
         {'stream_id': '2', 'block_index': 2}),
+        ('openephysbinary/v0.6.x_neuropixels_multiexp_multistream',
+        {'stream_id': '2', 'block_index': 2, 'load_sync_timestamps': True})
     ]
 
 
@@ -129,7 +133,6 @@ class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         'neuralynx/Cheetah_v5.6.3/original_data',
         'neuralynx/Cheetah_v5.7.4/original_data',
     ]
-
 
 class NeuralynxSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuralynxSortingExtractor
@@ -266,14 +269,25 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = ['edf/edf+C.edf']
 
 
+class CellExplorerSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = CellExplorerSortingExtractor
+    downloads = ['cellexplorer']
+    entities = [
+        'cellexplorer/dataset_1/20170311_684um_2088um_170311_134350.spikes.cellinfo.mat',
+        ('cellexplorer/dataset_2/20170504_396um_0um_merge.spikes.cellinfo.mat', 
+        {'session_info_matfile_path': 
+            local_folder / 'cellexplorer/dataset_2/20170504_396um_0um_merge.sessionInfo.mat'})
+    ]
+
+
 if __name__ == '__main__':
     # test = MearecSortingTest()
     # test = SpikeGLXRecordingTest()
     # test = OpenEphysBinaryRecordingTest()
     # test = SpikeGLXRecordingTest()
-    # test = OpenEphysBinaryRecordingTest()
+    test = OpenEphysBinaryRecordingTest()
     # test = OpenEphysLegacyRecordingTest()
-    test = OpenEphysBinaryEventTest()
+    # test = CellExplorerSortingTest()
     # test = ItanRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()

@@ -67,7 +67,6 @@ class PeakActivityMapWidget(BaseWidget):
         peaks = self.peaks
         if peaks is None:
             from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-            self.detect_peaks_kwargs['outputs'] = 'numpy_compact'
             peaks = detect_peaks(rec, **self.detect_peaks_kwargs)
 
         fs = rec.get_sampling_frequency()

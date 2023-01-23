@@ -1,19 +1,23 @@
-import os
 import shutil
-import time
-import pickle
-
 import pytest
+from pathlib import Path
 
 from spikeinterface.extractors import toy_example
 from spikeinterface.sorters import installed_sorters
 from spikeinterface.comparison import GroundTruthStudy
 
-study_folder = 'test_groundtruthstudy/'
+
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "comparison"
+else:
+    cache_folder = Path("cache_folder") / "comparison"
+    cache_folder.mkdir(exist_ok=True, parents=True)
+
+study_folder = cache_folder / 'test_groundtruthstudy/'
 
 
 def setup_module():
-    if os.path.exists(study_folder):
+    if study_folder.is_dir():
         shutil.rmtree(study_folder)
     _setup_comparison_study()
 

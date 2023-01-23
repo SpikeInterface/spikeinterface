@@ -89,26 +89,25 @@ def test_run_sorters_with_dict():
     
     recording_dict = {'toy_tetrode': rec0, 'toy_octotrode': rec1}
 
-    sorter_list = ['tridesclous', 'spykingcircus']
+    sorter_list = ['tridesclous', 'tridesclous2']
 
     sorter_params = {
         'tridesclous': dict(detect_threshold=5.6),
-        'spykingcircus': dict(detect_threshold=5.6),
+        'tridesclous2':dict()
     }
 
     # simple loop
     t0 = time.perf_counter()
     results = run_sorters(sorter_list, recording_dict, working_folder,
                           engine='loop', sorter_params=sorter_params,
-                          with_output=True,
-                          mode_if_folder_exists='raise')
+                          with_output=True, mode_if_folder_exists='raise')
 
     t1 = time.perf_counter()
     print(t1 - t0)
     print(results)
 
-    shutil.rmtree(working_folder / 'toy_tetrode' / 'tridesclous')
-    run_sorters(sorter_list, recording_dict, working_folder/'by_dict',
+    shutil.rmtree(working_folder / 'toy_tetrode' / 'tridesclous2')
+    run_sorters(sorter_list, recording_dict, working_folder / 'by_dict',
                 engine='loop', sorter_params=sorter_params,
                 with_output=False,
                 mode_if_folder_exists='keep')
@@ -195,7 +194,8 @@ def test_run_sorters_slurm():
                     'cpus_per_task': 32,
                     'mem': '32G',
                     },
-                with_output=False, mode_if_folder_exists='keep')
+                with_output=False, mode_if_folder_exists='keep',
+                verbose=True)
 
 
 def test_collect_sorting_outputs():
@@ -207,17 +207,17 @@ def test_collect_sorting_outputs():
 def test_sorter_installation():
     # This import is to get error on github when import fails
     import tridesclous
-    import circus
+    # import circus
 
 
 if __name__ == '__main__':
-    # setup_module()
-    pass
+    setup_module()
+    # pass
     # test_run_sorters_with_list()
 
     # test_run_sorter_by_property()
 
-    # test_run_sorters_with_dict()
+    test_run_sorters_with_dict()
 
     # test_run_sorters_joblib()
 

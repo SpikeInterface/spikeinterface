@@ -1,6 +1,6 @@
 """Sorting components: peak localization."""
 import numpy as np
-from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 
 from .peak_pipeline import run_peak_pipeline, PeakPipelineStep
 from .tools import make_multi_method_doc
@@ -48,7 +48,8 @@ def localize_peaks(recording, peaks, method='center_of_mass', **kwargs):
     elif method == "peak_channel":
         step = LocalizePeakChannel(recording,  **method_kwargs)
     
-    peak_locations = run_peak_pipeline(recording, peaks, [step], job_kwargs, job_name='localize peaks', squeeze_output=True)
+    peak_locations = run_peak_pipeline(recording, peaks, [step], job_kwargs, job_name='localize peaks',
+                                       squeeze_output=True)
     
     return peak_locations
 

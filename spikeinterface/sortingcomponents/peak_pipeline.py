@@ -12,7 +12,7 @@ There are two ways for using theses "plugins":
 import numpy as np
 
 from spikeinterface.core import get_chunk_with_margin, get_channel_distances
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 
 
 class PeakPipelineStep:
@@ -82,6 +82,7 @@ def run_peak_pipeline(recording, peaks, steps, job_kwargs, job_name='peak_pipeli
     """
     Run one or several PeakPipelineStep on already detected peaks.
     """
+    job_kwargs = fix_job_kwargs(job_kwargs)
     assert all(isinstance(step, PeakPipelineStep) for step in steps)
 
     if job_kwargs.get('n_jobs', 1) > 1:
@@ -93,9 +94,8 @@ def run_peak_pipeline(recording, peaks, steps, job_kwargs, job_name='peak_pipeli
     else:
         init_args = (recording, peaks, steps)
     
-    processor = ChunkRecordingExecutor(recording, 
-                        _compute_peak_step_chunk, _init_worker_peak_pipeline,
-                        init_args, handle_returns=True, job_name=job_name, **job_kwargs)
+    processor = ChunkRecordingExecutor(recording, _compute_peak_step_chunk, _init_worker_peak_pipeline,
+                                       init_args, handle_returns=True, job_name=job_name, **job_kwargs)
 
     outputs = processor.run()
     # outputs is a list of tuple

@@ -1,4 +1,3 @@
-from spikeinterface.postprocessing import spike_locations
 from ..base import to_attr
 from ..spike_locations import SpikeLocationsWidget, estimate_axis_lims
 from .base_sortingview import SortingviewPlotter, generate_unit_table_view
