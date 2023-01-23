@@ -159,3 +159,7 @@ def plot_comparison_positions(benchmarks, mode='average'):
     ax.set_ylabel('individual variances')
     #ax.set_yticks([])
     #ax.set_ylim(ymin, ymax)
+
+
+def plot_comparison_inferences(benchmarks, mode='average'):
+    

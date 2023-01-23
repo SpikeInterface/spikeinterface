@@ -71,7 +71,7 @@ class LocalizePeakChannel(PeakPipelineStep):
     params_doc = """
     """
 
-    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=75):
+    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=50):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
                                   ms_after=ms_after, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
@@ -104,7 +104,7 @@ class LocalizeCenterOfMass(PeakPipelineStep):
     feature: str ['ptp', 'mean', 'energy', 'v_origin']
         Feature to consider for computation. Default is 'ptp'
     """
-    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=75, feature='ptp'):
+    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=50, feature='ptp'):
         PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
                                   ms_after=ms_after, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
@@ -162,7 +162,7 @@ class LocalizeMonopolarTriangulation(PeakPipelineStep):
     """
     def __init__(self, recording, 
                         ms_before=1., ms_after=1.,
-                        local_radius_um=75,
+                        local_radius_um=50,
                         max_distance_um=1000,
                         optimizer='minimize_with_log_penality',
                         enforce_decrease=True):

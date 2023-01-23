@@ -221,7 +221,7 @@ def estimate_distance_error_with_log(vec, wf_ptp, local_contact_locations, maxpt
 
 
 def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with_log_penality',
-                                    radius_um=75, max_distance_um=1000, return_alpha=False, enforce_decrease=False):
+                                    radius_um=50, max_distance_um=1000, return_alpha=False, enforce_decrease=False):
     '''
     Localize unit with monopolar triangulation.
     This method is from Julien Boussard, Erdem Varol and Charlie Windolf
@@ -299,7 +299,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
     return unit_location
 
 
-def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=75, feature='ptp'):
+def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=50, feature='ptp'):
     '''
     Computes the center of mass (COM) of a unit based on the template amplitudes.
 

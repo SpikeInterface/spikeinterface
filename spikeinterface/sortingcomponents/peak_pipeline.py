@@ -170,7 +170,7 @@ def _compute_peak_step_chunk(segment_index, start_frame, end_frame, worker_ctx):
         waveforms = None
 
     #import scipy
-    #waveforms = scipy.signal.savgol_filter(waveforms, 11, 3 , axis=1)
+    #waveforms = scipy.signal.savgol_filter(waveforms, 11, 3, axis=1)
 
     outs = tuple()
     for step in worker_ctx['steps']:
