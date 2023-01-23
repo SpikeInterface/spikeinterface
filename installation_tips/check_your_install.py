@@ -91,6 +91,7 @@ if __name__ == '__main__':
     ]
 
     if platform.system() == "Windows":
+        pass
         # steps.insert(3, ('Run spykingcircus', run_spykingcircus))
     elif platform.system() == "Darwin":
         steps.insert(3, ('Run herdingspikes', run_herdingspikes))
