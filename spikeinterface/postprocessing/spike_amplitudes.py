@@ -1,12 +1,13 @@
 import numpy as np
 import shutil
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, ensure_n_jobs
+from spikeinterface.core.job_tools import (ChunkRecordingExecutor, _shared_job_kwargs_doc,
+                                           ensure_n_jobs, fix_job_kwargs)
+
+from spikeinterface.core.template_tools import (get_template_extremum_channel,
+                                                get_template_extremum_channel_peak_shift)
 
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
-
-from .template_tools import (get_template_extremum_channel,
-                             get_template_extremum_channel_peak_shift)
 
 
 class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
@@ -38,6 +39,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         return new_extension_data
         
     def _run(self, **job_kwargs):
+        job_kwargs = fix_job_kwargs(job_kwargs)
         we = self.waveform_extractor
         recording = we.recording
         sorting = we.sorting
@@ -69,6 +71,11 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         if n_jobs == 1:
             init_args = (recording, sorting)
         else:
+            # TODO: avoid dumping sorting and use spike vector and peak pipeline instead
+            assert sorting.check_if_dumpable(), (
+                "The soring object is not dumpable and cannot be processed in parallel. You can use the "
+                "`sorting.save()` function to make it dumpable"
+            )
             init_args = (recording.to_dict(), sorting.to_dict())
         init_args = init_args + (extremum_channels_index, peak_shifts, return_scaled)
         processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
@@ -78,7 +85,6 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         amps = np.concatenate(amps)
         segments = np.concatenate(segments)
 
-        amplitudes = []
         for segment_index in range(recording.get_num_segments()):
             mask = segments == segment_index
             amps_seg = amps[mask]

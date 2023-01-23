@@ -1,4 +1,5 @@
 import shutil
+import pytest
 from pathlib import Path
 import numpy as np
 
@@ -7,9 +8,17 @@ from spikeinterface.extractors import toy_example
 from spikeinterface.comparison import compare_templates, compare_multiple_templates
 
 
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "comparison"
+else:
+    cache_folder = Path("cache_folder") / "comparison"
+
+
+test_dir = cache_folder / "temp_comp_test"
+
+
 def setup_module():
-    test_dir = Path("temp_comp_test")
-    if test_dir.exists():
+    if test_dir.is_dir():
         shutil.rmtree(test_dir)
     test_dir.mkdir(exist_ok=True)
 

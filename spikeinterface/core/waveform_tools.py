@@ -14,6 +14,7 @@ import numpy as np
 
 from .job_tools import ChunkRecordingExecutor, ensure_n_jobs, _shared_job_kwargs_doc
 from .core_tools import make_shared_array
+from .job_tools import fix_job_kwargs
 
 
 
@@ -68,7 +69,8 @@ def extract_waveforms_to_buffers(recording, spikes, unit_ids, nbefore, nafter,
         Optionally return in case of shared_memory if copy=False.
         Dictionary to "construct" array in workers process (memmap file or sharemem info)
     """
-    
+    job_kwargs = fix_job_kwargs(job_kwargs)
+
     if dtype is None:
         if return_scaled:
             dtype = recording.get_dtype()
@@ -212,7 +214,7 @@ def distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info
     {}
 
     """
-
+    job_kwargs = fix_job_kwargs(job_kwargs)
     n_jobs = ensure_n_jobs(recording, job_kwargs.get('n_jobs', None))
 
     inds_by_unit = {}

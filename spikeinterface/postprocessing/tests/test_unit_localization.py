@@ -9,8 +9,8 @@ class UnitLocationsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Test
     extension_class = UnitLocationsCalculator
     extension_data_names = ["unit_locations"]
     extension_function_kwargs_list = [
-        dict(method='center_of_mass',  num_channels=4),
-        dict(method='center_of_mass',  num_channels=4, outputs='by_unit'),
+        dict(method='center_of_mass', radius_um=100),
+        dict(method='center_of_mass', radius_um=100, outputs='by_unit'),
         dict(method='monopolar_triangulation', radius_um=150),
         dict(method='monopolar_triangulation', radius_um=150, outputs='by_unit'),
         dict(method='monopolar_triangulation', radius_um=150, outputs='by_unit',
@@ -19,6 +19,6 @@ class UnitLocationsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Test
 
 
 if __name__ == '__main__':
-    test = UnitLocationsExtensionTest
+    test = UnitLocationsExtensionTest()
     test.setUp()
     test.test_extension()

@@ -20,6 +20,7 @@ import os
 import pandas as pd
 
 from spikeinterface.core import load_extractor
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.extractors import NpzSortingExtractor
 from spikeinterface.sorters import sorter_dict
 from spikeinterface.sorters.launcher import iter_working_folder, iter_sorting_output
@@ -39,7 +40,7 @@ def setup_comparison_study(study_folder, gt_dict, **job_kwargs):
     gt_dict : a dict of tuple (recording, sorting_gt)
         Dict of tuple that contain recording and sorting ground truth
     """
-
+    job_kwargs = fix_job_kwargs(job_kwargs)
     study_folder = Path(study_folder)
     assert not study_folder.is_dir(), "'study_folder' already exists. Please remove it"
 

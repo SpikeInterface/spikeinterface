@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 
 from spikeinterface import NumpyRecording, set_global_tmp_folder
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import resample
 
 

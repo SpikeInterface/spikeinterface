@@ -2,7 +2,7 @@ import platform
 import pytest
 from pathlib import Path
 
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core import generate_recording
 
 from spikeinterface.core.core_tools import write_binary_recording, write_memory_recording, recursive_path_modifier
 

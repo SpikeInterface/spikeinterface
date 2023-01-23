@@ -6,10 +6,10 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
     """
     Compute the spatial kernel for linear spatial interpolation.
     
-    This is used for interpolation of bad channel or to correct the drift
-    by interpolating inbetween contact.
+    This is used for interpolation of bad channels or to correct the drift
+    by interpolating between contacts.
 
-    here asimple overview on spatial interpolation:
+    For reference, here is a simple overview on spatial interpolation:
     https://www.aspexit.com/spatial-data-interpolation-tin-idw-kriging-block-kriging-co-kriging-what-are-the-differences/
 
     Parameters
@@ -47,7 +47,7 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
     
     
     if method == 'kriging':
-        # this is an adaptation of  pykilosort implementation by Kush Benga
+        # this is an adaptation of the pykilosort implementation by Kush Benga
         # https://github.com/int-brain-lab/pykilosort/blob/ibl_prod/pykilosort/datashift2.py#L352
 
         Kxx = get_kriging_kernel_distance(source_location, source_location, sigma_um, p)
