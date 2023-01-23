@@ -5,7 +5,8 @@ from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.preprocessing import preprocessing_tools
 import scipy.stats
 
-class InterpolateBadChannels(BasePreprocessor):
+
+class InterpolateBadChannelsRecording(BasePreprocessor):
     """
     Interpolate the channel labeled as bad channels using linear interpolation.
     This is based on the distance (Gaussian kernel) from the bad channel,
@@ -19,7 +20,8 @@ class InterpolateBadChannels(BasePreprocessor):
 
     Parameters
     ----------
-
+    recording: BaseRecording
+        The parent recording
     bad_channel_ids : list or 1d np.array
         Channel ids of the bad channels to interpolate.
     sigma_um : float
@@ -31,6 +33,11 @@ class InterpolateBadChannels(BasePreprocessor):
     weights : np.array
         The weights to give to bad_channel_ids at interpolation.
         If None, weights are automatically computed, by default None
+
+    Returns
+    -------
+    interpolated_recording: InterpolateBadChannelsRecording
+        The recording object with interpolated bad channels
     """
     name = 'interpolate_bad_channels'
 
@@ -109,4 +116,5 @@ def estimate_recommended_sigma_um(recording):
     return scipy.stats.mode(np.diff(np.unique(y)), keepdims=False)[0]
 
 
-interpolate_bad_channels = define_function_from_class(source_class=InterpolateBadChannels, name='interpolate_bad_channels')
+interpolate_bad_channels = define_function_from_class(source_class=InterpolateBadChannelsRecording,
+                                                      name='interpolate_bad_channels')
