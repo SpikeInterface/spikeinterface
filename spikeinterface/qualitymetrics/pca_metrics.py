@@ -2,8 +2,6 @@
 
 from cmath import nan
 import numpy as np
-from spikeinterface.core.waveform_extractor import WaveformExtractor
-from spikeinterface.core.template_tools import get_template_extremum_channel
 from tqdm.auto import tqdm
 import scipy.stats
 import scipy.spatial.distance
@@ -12,16 +10,15 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.decomposition import IncrementalPCA
 from joblib import delayed, Parallel
 from copy import deepcopy
-
-
-import spikeinterface as si
-from ..core import get_random_data_chunks
-from ..core.job_tools import tqdm_joblib
-from ..core.template_tools import get_template_channel_sparsity
-
-from ..postprocessing import WaveformPrincipalComponent
+import warnings
 
 from .misc_metrics import compute_num_spikes
+
+from ..core import get_random_data_chunks, load_waveforms, compute_sparsity, WaveformExtractor
+from ..core.job_tools import tqdm_joblib
+from ..core.template_tools import get_template_extremum_channel
+from ..postprocessing import WaveformPrincipalComponent
+
 
 _possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime',
                              'nearest_neighbor', 'nn_isolation', 'nn_noise_overlap']
@@ -30,8 +27,7 @@ _possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime',
 _default_params = dict(
     nearest_neighbor=dict(
         max_spikes=10000,
-        min_spikes=10,
-        n_neighbors=4,
+        n_neighbors=5,
     ),
     nn_isolation=dict(
         max_spikes=10000,
@@ -39,6 +35,7 @@ _default_params = dict(
         n_neighbors=4,
         n_components=10,
         radius_um=100,
+        peak_sign='neg'
     ),
     nn_noise_overlap=dict(
         max_spikes=10000,
@@ -46,13 +43,13 @@ _default_params = dict(
         n_neighbors=4,
         n_components=10,
         radius_um=100,
+        peak_sign='neg'
     )
 )
 
 
 def get_quality_pca_metric_list():
     """Get a list of the available PCA-based quality metrics."""
-
     return deepcopy(_possible_pc_metric_names)
 
 
@@ -67,8 +64,8 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, qm_params=None,
     metric_names : list of str, optional
         The list of PC metrics to compute.
         If not provided, defaults to all PC metrics.
-    sparsity: dict or None
-        If given, the sparse channel_ids for each unit. This is used also to identify neighbor
+    sparsity: ChannelSparsity or None
+        The sparsity object. This is used also to identify neighbor
         units and speed up computations. If None (default) all channels and all units are used
         for each unit.
     qm_params : dict or None
@@ -85,7 +82,6 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, qm_params=None,
     pc_metrics : dict
         The computed PC metrics.
     """
-
     if metric_names is None:
         metric_names = _possible_pc_metric_names
     if qm_params is None:
@@ -114,20 +110,26 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, qm_params=None,
     if run_in_parallel:
         parallel_functions = []
 
-    neighbor_unit_ids = unit_ids
-    neighbor_channel_ids = channel_ids
+    all_labels, all_pcs = pca.get_all_projections()
     for unit_ind, unit_id in units_loop:        
-        if sparsity is None:
-            neighbor_channel_ids = channel_ids
-            neighbor_unit_ids = unit_ids
-        else:
-            neighbor_channel_ids = sparsity[unit_id]
+        if we.is_sparse():
+            neighbor_channel_ids = we.sparsity.unit_id_to_channel_ids[unit_id]
+            neighbor_unit_ids = [other_unit for other_unit in unit_ids
+                                 if extremum_channels[other_unit] in neighbor_channel_ids]
+        elif sparsity is not None:
+            neighbor_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
             neighbor_unit_ids = [other_unit for other_unit in unit_ids 
                                  if extremum_channels[other_unit] in neighbor_channel_ids]
-        
-        func_args = (we.folder, metric_names, unit_id, neighbor_channel_ids, neighbor_unit_ids, unit_ids, 
-                     qm_params, seed,)
-            
+        else:
+            neighbor_channel_ids = channel_ids
+            neighbor_unit_ids = unit_ids
+        neighbor_channel_indices = we.channel_ids_to_indices(neighbor_channel_ids)
+
+        labels = all_labels[np.in1d(all_labels, neighbor_unit_ids)]
+        pcs = all_pcs[np.in1d(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
+        pcs_flat = pcs.reshape(pcs.shape[0], -1)
+
+        func_args = (pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params, seed, we.folder)
 
         if not run_in_parallel:
             pca_metrics_unit = pca_metrics_one_unit(*func_args)
@@ -135,7 +137,7 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, qm_params=None,
                 pc_metrics[metric_name][unit_id] = metric
         else:
             parallel_functions.append(delayed(pca_metrics_one_unit)(*func_args))
-            
+
     if run_in_parallel:
         if progress_bar:
             units_loop = tqdm(units_loop, desc="Computing PCA metrics", total=len(unit_ids))
@@ -293,34 +295,41 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_n
 
     total_spikes = all_pcs.shape[0]
     ratio = max_spikes / total_spikes
+
+    # if no other units in the vicinity, return best possible option
+    if len(np.unique(all_labels)) == 1:
+        warnings.warn(f"No other units found in the vicinity of {this_unit}. Setting nn_hit_rate=1 and nn_miss_rate=0")
+        return 1.0, 0.0
+
     this_unit = all_labels == this_unit_id
+    this_unit_pcs = all_pcs[this_unit, :]
+    other_units_pcs = all_pcs[np.invert(this_unit), :]
+    X = np.concatenate((this_unit_pcs, other_units_pcs), 0)
 
-    X = np.concatenate(
-        (all_pcs[this_unit, :], all_pcs[np.invert(this_unit), :]), 0)
-
-    n = np.sum(this_unit)
+    num_obs_this_unit = np.sum(this_unit)
 
     if ratio < 1:
         inds = np.arange(0, X.shape[0] - 1, 1 / ratio).astype('int')
         X = X[inds, :]
-        n = int(n * ratio)
+        num_obs_this_unit = int(num_obs_this_unit * ratio)
 
     nbrs = NearestNeighbors(n_neighbors=n_neighbors,
                             algorithm='ball_tree').fit(X)
     distances, indices = nbrs.kneighbors(X)
 
-    this_cluster_nearest = indices[:n, 1:].flatten()
-    other_cluster_nearest = indices[n:, 1:].flatten()
+    this_cluster_nearest = indices[:num_obs_this_unit, 1:].flatten()
+    other_cluster_nearest = indices[num_obs_this_unit:, 1:].flatten()
 
-    hit_rate = np.mean(this_cluster_nearest < n)
-    miss_rate = np.mean(other_cluster_nearest < n)
+    hit_rate = np.mean(this_cluster_nearest < num_obs_this_unit)
+    miss_rate = np.mean(other_cluster_nearest < num_obs_this_unit)
 
     return hit_rate, miss_rate
 
 
-def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_unit_id: int,
+def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit_id: int,
                                 max_spikes: int = 1000, min_spikes: int = 10, n_neighbors: int = 5,
-                                n_components: int = 10, radius_um: float = 100, seed=None):
+                                n_components: int = 10, radius_um: float = 100, peak_sign: str = 'neg',
+                                min_spatial_overlap: float = 0.5, seed=None):
     """Calculates unit isolation based on NearestNeighbors search in PCA space.
 
     Parameters
@@ -340,6 +349,12 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
         The number of PC components to use to project the snippets to.
     radius_um : float, optional, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
+    peak_sign: str, optional, default: 'neg'
+        The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor 
+        is not sparse already.
+    min_spatial_overlap : float, optional, default: 100
+        In case waveform_extractor is sparse, other units are selected if they share at least 
+        `min_spatial_overlap * n_target_unit_channels` with the target unit
     seed : int, optional, default: None
         Seed for random subsampling of spikes.
 
@@ -376,7 +391,6 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
     ---------
     Based on isolation metric described in Chung et al. (2017) Neuron 95: 1381-1394.
     """
-
     rng = np.random.default_rng(seed=seed)
 
     sorting = waveform_extractor.sorting
@@ -385,9 +399,9 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
 
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
-        print(f'Warning: unit {this_unit_id} has fewer spikes than ',
-              f'specified by `min_spikes` ({min_spikes}); ',
-              'returning NaN as the quality metric...')
+        warnings.warn(f'Warning: unit {this_unit_id} has fewer spikes than ',
+                      f'specified by `min_spikes` ({min_spikes}); ',
+                      f'returning NaN as the quality metric...')
         return np.nan
     else:
         # first remove the units with too few spikes
@@ -399,46 +413,52 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
         other_units_ids = np.setdiff1d(all_units_ids, this_unit_id)
 
         # get waveforms of target unit
-        waveforms_target_unit = waveform_extractor.get_waveforms(
-            unit_id=this_unit_id)
+        waveforms_target_unit = waveform_extractor.get_waveforms(unit_id=this_unit_id)
         n_spikes_target_unit = waveforms_target_unit.shape[0]
 
         # find units whose signal channels (i.e. channels inside some radius around
         # the channel with largest amplitude) overlap with signal channels of the target unit
-        closest_chans_all = get_template_channel_sparsity(waveform_extractor, method='radius',
-                                                          outputs='index', peak_sign='both',
-                                                          radius_um=radius_um)
-        closest_chans_target_unit = closest_chans_all[this_unit_id]
+        if waveform_extractor.is_sparse():
+            sparsity = waveform_extractor.sparsity
+        else:
+            sparsity = compute_sparsity(waveform_extractor, method='radius', peak_sign=peak_sign,
+                                        radius_um=radius_um)
+        closest_chans_target_unit = sparsity.unit_id_to_channel_indices[this_unit_id]
+        n_channels_target_unit = len(closest_chans_target_unit)
+        # select other units that have a minimum spatial overlap with target unit
         other_units_ids = [unit_id for unit_id in other_units_ids if
-                           np.any(np.in1d(closest_chans_all[unit_id], closest_chans_target_unit))]
+                           np.sum(np.in1d(sparsity.unit_id_to_channel_indices[unit_id], closest_chans_target_unit))
+                           >= (n_channels_target_unit * min_spatial_overlap)]
 
         # if no unit is within neighborhood of target unit, then just say isolation is 1 (best possible)
         if not other_units_ids:
             nn_isolation = 1
-
         # if there are units to compare, then compute isolation with each
         else:
             isolation = np.zeros(len(other_units_ids),)
             for other_unit_id in other_units_ids:
-                waveforms_other_unit = waveform_extractor.get_waveforms(
-                    unit_id=other_unit_id)
+                waveforms_other_unit = waveform_extractor.get_waveforms(unit_id=other_unit_id)
                 n_spikes_other_unit = waveforms_other_unit.shape[0]
-
-                n_snippets = np.min(
-                    [n_spikes_target_unit, n_spikes_other_unit, max_spikes])
+                closest_chans_other_unit = sparsity.unit_id_to_channel_indices[other_unit_id]
+                n_snippets = np.min([n_spikes_target_unit, n_spikes_other_unit, max_spikes])
 
                 # make the two clusters equal in terms of: number of spikes & channels with signal
-                waveforms_target_unit_idx = rng.choice(
-                    n_spikes_target_unit, size=n_snippets, replace=False)
+                waveforms_target_unit_idx = rng.choice(n_spikes_target_unit, size=n_snippets, replace=False)
                 waveforms_target_unit_sampled = waveforms_target_unit[waveforms_target_unit_idx]
-                waveforms_target_unit_sampled = waveforms_target_unit_sampled[:,
-                                                                              :, closest_chans_target_unit]
-
-                waveforms_other_unit_idx = rng.choice(
-                    n_spikes_other_unit, size=n_snippets, replace=False)
+                waveforms_other_unit_idx = rng.choice(n_spikes_other_unit, size=n_snippets, replace=False)
                 waveforms_other_unit_sampled = waveforms_other_unit[waveforms_other_unit_idx]
-                waveforms_other_unit_sampled = waveforms_other_unit_sampled[:,
-                                                                            :, closest_chans_target_unit]
+
+                # project this unit and other unit waveforms on common subspace
+                common_channel_idxs = np.intersect1d(closest_chans_target_unit, closest_chans_other_unit)
+                if waveform_extractor.is_sparse():
+                    # in this case, waveforms are sparse so we need to do some smart indexing
+                    waveforms_target_unit_sampled = \
+                        waveforms_target_unit_sampled[:, :, np.in1d(closest_chans_target_unit, common_channel_idxs)]
+                    waveforms_other_unit_sampled = \
+                        waveforms_other_unit_sampled[:, :, np.in1d(closest_chans_other_unit, common_channel_idxs)]
+                else:
+                    waveforms_target_unit_sampled = waveforms_target_unit_sampled[:, :, common_channel_idxs]
+                    waveforms_other_unit_sampled = waveforms_other_unit_sampled[:, :, common_channel_idxs]
 
                 # compute principal components after concatenation
                 all_snippets = np.concatenate([waveforms_target_unit_sampled.reshape((n_snippets, -1)),
@@ -457,10 +477,11 @@ def nearest_neighbors_isolation(waveform_extractor: si.WaveformExtractor, this_u
         return nn_isolation
 
 
-def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
+def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor,
                                     this_unit_id: int, max_spikes: int = 1000,
                                     min_spikes: int = 10, n_neighbors: int = 5,
-                                    n_components: int = 10, radius_um: float = 100, seed=None):
+                                    n_components: int = 10, radius_um: float = 100,
+                                    peak_sign: str = 'neg', seed=None):
     """Calculates unit noise overlap based on NearestNeighbors search in PCA space.
 
     Parameters
@@ -480,6 +501,9 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
         The number of PC components to use to project the snippets to.
     radius_um : float, optional, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
+    peak_sign: str, optional, default: 'neg'
+        The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor 
+        is not sparse already.
     seed : int, optional, default: 0
         Random seed for subsampling spikes.
 
@@ -508,14 +532,13 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
     """
     rng = np.random.default_rng(seed=seed)
 
-    sorting = waveform_extractor.sorting
     n_spikes_all_units = compute_num_spikes(waveform_extractor)
 
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
-        print(f'Warning: unit {this_unit_id} has fewer spikes than ',
-              f'specified by `min_spikes` ({min_spikes}); ',
-              'returning NaN as the quality metric...')
+        warnings.warn(f'Warning: unit {this_unit_id} has fewer spikes than ',
+                      f'specified by `min_spikes` ({min_spikes}); ',
+                      f'returning NaN as the quality metric...')
         return np.nan
     else:
         # get random snippets from the recording to create a noise cluster
@@ -523,52 +546,51 @@ def nearest_neighbors_noise_overlap(waveform_extractor: si.WaveformExtractor,
         noise_cluster = get_random_data_chunks(recording, return_scaled=waveform_extractor.return_scaled,
                                                num_chunks_per_segment=max_spikes,
                                                chunk_size=waveform_extractor.nsamples, seed=seed)
-
-        noise_cluster = np.reshape(
-            noise_cluster, (max_spikes, waveform_extractor.nsamples, -1))
+        noise_cluster = np.reshape(noise_cluster, (max_spikes, waveform_extractor.nsamples, -1))
 
         # get waveforms for target cluster
-        waveforms = waveform_extractor.get_waveforms(unit_id=this_unit_id)
+        waveforms = waveform_extractor.get_waveforms(unit_id=this_unit_id).copy()
 
         # adjust the size of the target and noise clusters to be equal
         if waveforms.shape[0] > max_spikes:
-            wf_ind = rng.choice(
-                waveforms.shape[0], max_spikes, replace=False)
+            wf_ind = rng.choice(waveforms.shape[0], max_spikes, replace=False)
             waveforms = waveforms[wf_ind]
             n_snippets = max_spikes
         elif waveforms.shape[0] < max_spikes:
-            noise_ind = rng.choice(
-                noise_cluster.shape[0], waveforms.shape[0], replace=False)
+            noise_ind = rng.choice(noise_cluster.shape[0], waveforms.shape[0], replace=False)
             noise_cluster = noise_cluster[noise_ind]
             n_snippets = waveforms.shape[0]
         else:
             n_snippets = max_spikes
 
         # restrict to channels with significant signal
-        closest_chans_idx = get_template_channel_sparsity(waveform_extractor, method='radius',
-                                                          outputs='index', peak_sign='both',
-                                                          radius_um=radius_um)
-        waveforms = waveforms[:, :, closest_chans_idx[this_unit_id]]
-        noise_cluster = noise_cluster[:, :, closest_chans_idx[this_unit_id]]
+        if waveform_extractor.is_sparse():
+            sparsity = waveform_extractor.sparsity
+        else:
+            sparsity = compute_sparsity(waveform_extractor, method='radius', peak_sign=peak_sign,
+                                        radius_um=radius_um)
+        noise_cluster = noise_cluster[:, :, sparsity.unit_id_to_channel_indices[this_unit_id]]
 
         # compute weighted noise snippet (Z)
-        median_waveform = waveform_extractor.get_template(
-            unit_id=this_unit_id, mode='median')
-        median_waveform = median_waveform[:, closest_chans_idx[this_unit_id]]
-        tmax, chmax = np.unravel_index(
-            np.argmax(np.abs(median_waveform)), median_waveform.shape)
+        median_waveform = waveform_extractor.get_template(unit_id=this_unit_id, mode='median')
+
+        # in case waveform_extractor is sparse, waveforms and templates are already sparse
+        if not waveform_extractor.is_sparse():
+            waveforms = waveforms[:, :, sparsity.unit_id_to_channel_indices[this_unit_id]]
+            median_waveform = median_waveform[:, sparsity.unit_id_to_channel_indices[this_unit_id]]
+
+        tmax, chmax = np.unravel_index(np.argmax(np.abs(median_waveform)), median_waveform.shape)
         weights = [noise_clip[tmax, chmax] for noise_clip in noise_cluster]
         weights = np.asarray(weights)
         weights = weights / np.sum(weights)
-        weighted_noise_snippet = np.sum(
-            weights * noise_cluster.swapaxes(0, 2), axis=2).swapaxes(0, 1)
+        weighted_noise_snippet = np.sum(weights * noise_cluster.swapaxes(0, 2), axis=2).swapaxes(0, 1)
 
         # subtract projection onto weighted noise snippet
         for snippet in range(n_snippets):
-            waveforms[snippet, :, :] = _subtract_clip_component(
-                waveforms[snippet, :, :], weighted_noise_snippet)
-            noise_cluster[snippet, :, :] = _subtract_clip_component(
-                noise_cluster[snippet, :, :], weighted_noise_snippet)
+            waveforms[snippet, :, :] = \
+                _subtract_clip_component(waveforms[snippet, :, :], weighted_noise_snippet)
+            noise_cluster[snippet, :, :] = \
+                _subtract_clip_component(noise_cluster[snippet, :, :], weighted_noise_snippet)
 
         # compute principal components after concatenation
         all_snippets = np.concatenate([waveforms.reshape((n_snippets, -1)),
@@ -628,8 +650,7 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
 
     # concatenate
     pcs_concat = np.concatenate((pcs_target_unit, pcs_other_unit), axis=0)
-    label_concat = np.concatenate(
-        (np.zeros(n_spikes_target), np.ones(n_spikes_other)))
+    label_concat = np.concatenate((np.zeros(n_spikes_target), np.ones(n_spikes_other)))
 
     # if n_neighbors is greater than the number of spikes in both clusters, set it to max possible
     if n_neighbors > len(label_concat):
@@ -640,29 +661,20 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
     _, membership_ind = NearestNeighbors(
         n_neighbors=n_neighbors_adjusted, algorithm='auto').fit(pcs_concat).kneighbors()
 
-    target_nn_in_target = np.sum(
-        label_concat[membership_ind[:n_spikes_target]] == 0)
-    other_nn_in_other = np.sum(
-        label_concat[membership_ind[n_spikes_target:]] == 1)
+    target_nn_in_target = np.sum(label_concat[membership_ind[:n_spikes_target]] == 0)
+    other_nn_in_other = np.sum(label_concat[membership_ind[n_spikes_target:]] == 1)
 
-    isolation = (target_nn_in_target + other_nn_in_other) / \
-        (n_spikes_target+n_spikes_other) / n_neighbors_adjusted
+    isolation = (target_nn_in_target + other_nn_in_other) / (n_spikes_target+n_spikes_other) / n_neighbors_adjusted
 
     return isolation
 
 
-def pca_metrics_one_unit(we_folder, metric_names, unit_id, neighbor_channel_ids, neighbor_unit_ids,
-                         unit_ids, qm_params, seed):
-    we = WaveformExtractor.load(we_folder)
-    pca = WaveformPrincipalComponent.load(we_folder)
-
-    labels, pcs = pca.get_all_projections(
-        channel_ids=neighbor_channel_ids, unit_ids=neighbor_unit_ids)
-
-    pcs_flat = pcs.reshape(pcs.shape[0], -1)
+def pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id,
+                         unit_ids, qm_params, seed, we_folder):
+    if 'nn_isolation' in metric_names or 'nn_noise_overlap' in metric_names:
+        we = load_waveforms(we_folder)
 
     pc_metrics = {}
-
     # metrics
     if 'isolation_distance' in metric_names or 'l_ratio' in metric_names:
         try:

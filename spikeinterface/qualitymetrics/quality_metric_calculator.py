@@ -5,6 +5,7 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
 from .quality_metric_list import (_misc_metric_name_to_func,
@@ -50,9 +51,10 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             metric_names = list(_misc_metric_name_to_func.keys())
             # if PC is available, PC metrics are automatically added to the list
             if self.principal_component is not None:
-                # by default 'nearest_neightbor' is removed because too slow
+                # by default 'nearest_neightbor' metrics are removed because too slow
                 pc_metrics = _possible_pc_metric_names.copy()
-                pc_metrics.remove("nearest_neighbor")
+                pc_metrics.remove("nn_isolation")
+                pc_metrics.remove("nn_noise_overlap")
                 metric_names += pc_metrics
         qm_params_ = get_default_qm_params()
         for k in qm_params_:
@@ -75,15 +77,19 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         new_metrics = self._extension_data['metrics'].loc[np.array(unit_ids)]
         return dict(metrics=new_metrics)
 
-    def _run(self, n_jobs, verbose, progress_bar=False):
+    def _run(self, verbose, **job_kwargs):
         """
         Compute quality metrics.
         """
-
         metric_names = self._params['metric_names']
         qm_params = self._params['qm_params']
         sparsity = self._params['sparsity']
         seed = self._params['seed']
+
+        # update job_kwargs with global ones
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        n_jobs = job_kwargs['n_jobs']
+        progress_bar = job_kwargs['progress_bar']
 
         unit_ids = self.sorting.unit_ids
         metrics = pd.DataFrame(index=unit_ids)
@@ -96,7 +102,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             if verbose:
                 if metric_name not in _possible_pc_metric_names:
                     print(f"Computing {metric_name}")
-            
+
             func = _misc_metric_name_to_func[metric_name]
 
             res = func(self.waveform_extractor, **qm_params[metric_name])
@@ -150,7 +156,7 @@ WaveformExtractor.register_extension(QualityMetricCalculator)
 def compute_quality_metrics(waveform_extractor, load_if_exists=False,
                             metric_names=None, qm_params=None, peak_sign=None, seed=None,
                             sparsity=None, skip_pc_metrics=False, 
-                            n_jobs=1, verbose=False, progress_bar=False):
+                            verbose=False, **job_kwargs):
     """Compute quality metrics on waveform extractor.
 
     Parameters
@@ -188,7 +194,7 @@ def compute_quality_metrics(waveform_extractor, load_if_exists=False,
         qmc = QualityMetricCalculator(waveform_extractor)
         qmc.set_params(metric_names=metric_names, qm_params=qm_params, peak_sign=peak_sign, seed=seed,
                        sparsity=sparsity, skip_pc_metrics=skip_pc_metrics)
-        qmc.run(n_jobs=n_jobs, verbose=verbose, progress_bar=progress_bar)
+        qmc.run(verbose=verbose, **job_kwargs)
 
     metrics = qmc.get_data()
 

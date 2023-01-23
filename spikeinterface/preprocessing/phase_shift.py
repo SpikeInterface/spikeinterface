@@ -47,17 +47,19 @@ class PhaseShiftRecording(BasePreprocessor):
         
         margin = int(margin_ms * recording.get_sampling_frequency() / 1000.)
         
-        force_dtype_back = None
         if dtype is None:
-            if recording.get_dtype().kind in ('i', 'u'):
-                # because of the tapper on margin we need to force the computation to float32
-                # and then go back to the original buffer unless dtype is explicitly forced
-                dtype = np.dtype('float32')
-                force_dtype_back = recording.get_dtype()
- 
+            dtype = recording.get_dtype()
+        # the "apply_shift" function returns a float64 buffer. In case the dtype is different
+        # than float64, we need a temporary casting and to force the buffer back to the original dtype
+        if str(dtype) != "float64":
+            tmp_dtype = np.dtype('float64')
+        else:
+            tmp_dtype = None
+
+
         BasePreprocessor.__init__(self, recording, dtype=dtype)
         for parent_segment in recording._recording_segments:
-            rec_segment = PhaseShiftRecordingSegment(parent_segment, sample_shifts, margin, dtype, force_dtype_back)
+            rec_segment = PhaseShiftRecordingSegment(parent_segment, sample_shifts, margin, dtype, tmp_dtype)
             self.add_recording_segment(rec_segment)
         
         # for dumpability
@@ -68,12 +70,12 @@ class PhaseShiftRecording(BasePreprocessor):
 
 
 class PhaseShiftRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, sample_shifts, margin, dtype, force_dtype_back):
+    def __init__(self, parent_recording_segment, sample_shifts, margin, dtype, tmp_dtype):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.sample_shifts = sample_shifts
         self.margin = margin
         self.dtype = dtype
-        self.force_dtype_back = force_dtype_back
+        self.tmp_dtype = tmp_dtype
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:
@@ -83,15 +85,16 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         
         # this return a copy with margin  + taper on border always
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment,
-                                                                        start_frame, end_frame, channel_indices, self.margin, 
-                                                                         dtype=self.dtype, add_zeros=True, window_on_margin=True)
+                                                                        start_frame, end_frame, channel_indices,
+                                                                        self.margin, dtype=self.tmp_dtype,
+                                                                        add_zeros=True, window_on_margin=True)
         
         traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts, axis=0)
         # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
-        if self.force_dtype_back:
-            traces_shift = traces_shift.astype(self.force_dtype_back)
+        if self.tmp_dtype is not None:
+            traces_shift = traces_shift.astype(self.dtype)
         
         return traces_shift
 

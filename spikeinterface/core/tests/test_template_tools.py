@@ -85,8 +85,6 @@ def test_get_template_channel_sparsity():
     print(sparsity)
     sparsity = get_template_channel_sparsity(we, method='best_channels', outputs='index', num_channels=5)
     print(sparsity)
-    sparsity = get_template_channel_sparsity(we, method='best_channels', outputs='object', num_channels=5)
-    print(sparsity)
 
     sparsity = get_template_channel_sparsity(we, method='radius', outputs='id', radius_um=50)
     print(sparsity)

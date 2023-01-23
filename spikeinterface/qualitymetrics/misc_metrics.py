@@ -442,7 +442,10 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         if spike_amplitudes is None:
             waveforms = waveform_extractor.get_waveforms(unit_id)
             chan_id = extremum_channels_ids[unit_id]
-            chan_ind = recording.id_to_index(chan_id)
+            if waveform_extractor.is_sparse():
+                chan_ind = np.where(waveform_extractor.sparsity.unit_id_to_channel_ids[unit_id] == chan_id)[0]
+            else:
+                chan_ind = recording.id_to_index(chan_id)
             amplitudes = waveforms[:, before, chan_ind]
         else:
             amplitudes = np.concatenate([spike_amps[unit_id] for spike_amps in spike_amplitudes])

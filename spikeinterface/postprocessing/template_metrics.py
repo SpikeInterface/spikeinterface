@@ -11,7 +11,7 @@ import scipy.stats
 from scipy.signal import resample_poly
 
 from ..core import WaveformExtractor
-from ..core.template_tools import get_template_extremum_channel, get_template_channel_sparsity
+from ..core.template_tools import get_template_extremum_channel
 from ..core.waveform_extractor import BaseWaveformExtractorExtension
 import warnings
 
@@ -59,7 +59,7 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
         peak_sign = self._params['peak_sign']
         upsampling_factor = self._params['upsampling_factor']
         unit_ids = self.waveform_extractor.sorting.unit_ids
-        sampling_frequency = self.waveform_extractor.recording.get_sampling_frequency()
+        sampling_frequency = self.waveform_extractor.sampling_frequency
 
         if sparsity is None:
             extremum_channels_ids = get_template_extremum_channel(self.waveform_extractor, 
@@ -69,23 +69,24 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
             template_metrics = pd.DataFrame(
                 index=unit_ids, columns=metric_names)
         else:
-            extremum_channels_ids = sparsity
-            unit_ids = []
-            channel_ids = []
+            extremum_channels_ids = sparsity.unit_id_to_channel_ids
+            index_unit_ids = []
+            index_channel_ids = []
             for unit_id, sparse_channels in extremum_channels_ids.items():
-                unit_ids += [unit_id] * len(sparse_channels)
-                channel_ids += list(sparse_channels)
-            multi_index = pd.MultiIndex.from_tuples(list(zip(unit_ids, channel_ids)),
+                index_unit_ids += [unit_id] * len(sparse_channels)
+                index_channel_ids += list(sparse_channels)
+            multi_index = pd.MultiIndex.from_tuples(list(zip(index_unit_ids, index_channel_ids)),
                                                     names=["unit_id", "channel_id"])
             template_metrics = pd.DataFrame(
                 index=multi_index, columns=metric_names)
 
-        for unit_id in unit_ids:
-            template_all_chans = self.waveform_extractor.get_template(unit_id)
+        all_templates = self.waveform_extractor.get_all_templates()
+        for unit_index, unit_id in enumerate(unit_ids):
+            template_all_chans = all_templates[unit_index]
             chan_ids = np.array(extremum_channels_ids[unit_id])
             if chan_ids.ndim == 0:
                 chan_ids = [chan_ids]
-            chan_ind = self.waveform_extractor.recording.ids_to_indices(chan_ids)
+            chan_ind = self.waveform_extractor.channel_ids_to_indices(chan_ids)
             template = template_all_chans[:, chan_ind]
 
             for i, template_single in enumerate(template.T):
@@ -160,7 +161,7 @@ def compute_template_metrics(waveform_extractor, load_if_exists=False,
     sparsity: dict or None
         Default is sparsity=None and template metric is computed on extremum channel only.
         If given, the dictionary should contain a unit ids as keys and a channel id or a list of channel ids as values.
-        For more generating a sparsity dict, see the postprocessing.get_template_channel_sparsity() function.
+        For more generating a sparsity dict, see the postprocessing.compute_sparsity() function.
     window_slope_ms: float
         Window in ms after the positiv peak to compute slope, by default 0.7
 

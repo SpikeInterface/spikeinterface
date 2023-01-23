@@ -4,7 +4,8 @@ import warnings
 from pathlib import Path
 import numpy as np
 
-from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms, split_recording, select_segment_sorting
+from spikeinterface import (WaveformExtractor, compute_sparsity, load_extractor, extract_waveforms,
+                            split_recording, select_segment_sorting)
 from spikeinterface.extractors import toy_example
 from spikeinterface.core import get_template_channel_sparsity
 
@@ -61,8 +62,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
                                      max_spikes_per_unit=500,
                                      overwrite=True,
                                      seed=0)
-        self.sparsity_long = get_template_channel_sparsity(we_long, method="radius",
-                                                           radius_um=50)
+        self.sparsity_long = compute_sparsity(we_long, method="radius", radius_um=50)
         self.we_long = we_long
         self.we_short = we_short
 
@@ -174,10 +174,38 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         assert np.allclose(metrics["amplitude_cutoff"].values,
                            metrics_inv["amplitude_cutoff"].values, atol=1e-5)
 
+    def test_nn_metrics(self):
+        we_dense = self.we1
+        we_sparse = self.we_sparse
+        sparsity = self.sparsity1
+        print(sparsity)
+
+        metric_names = ['nearest_neighbor', 'nn_isolation', 'nn_noise_overlap']
+
+        # with external sparsity on dense waveforms
+        _ = compute_principal_components(we_dense, n_components=5, mode='by_channel_local')
+        metrics = self.extension_class.get_extension_function()(we_dense, metric_names=metric_names,
+                                                                sparsity=sparsity, seed=0)
+        print(metrics)
+
+        # with sparse waveforms
+        _ = compute_principal_components(we_sparse, n_components=5, mode='by_channel_local')
+        metrics = self.extension_class.get_extension_function()(we_sparse, metric_names=metric_names,
+                                                                sparsity=None, seed=0)
+        print(metrics)
+
+        # with 2 jobs
+        # with sparse waveforms
+        _ = compute_principal_components(we_sparse, n_components=5, mode='by_channel_local')
+        metrics_par = self.extension_class.get_extension_function()(we_sparse, metric_names=metric_names,
+                                                                    sparsity=None, seed=0, n_jobs=2)
+        for metric_name in metrics.columns:
+            assert np.allclose(metrics[metric_name], metrics_par[metric_name])
+
 
 if __name__ == '__main__':
     test = QualityMetricsExtensionTest()
     test.setUp()
-    # test.test_extension()
-    test.test_presence_ratio()
+    test.test_extension()
+    # test.test_nn_metrics()
     # test.test_peak_sign()
