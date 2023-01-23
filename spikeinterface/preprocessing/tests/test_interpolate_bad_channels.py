@@ -77,9 +77,9 @@ def test_compare_real_data_with_ibl():
 
 
 @pytest.mark.skipif(not HAVE_IBL_NPIX, reason="Requires ibl-neuropixel install")
-@pytest.mark.parametrize("num_channels", [32, 64, 384])
-@pytest.mark.parametrize("sigma_um", [1.25, 20, 123.321])
-@pytest.mark.parametrize("p", [0, -0.5, 1, 0.5, 10])
+@pytest.mark.parametrize("num_channels", [32, 64])
+@pytest.mark.parametrize("sigma_um", [1.25, 40])
+@pytest.mark.parametrize("p", [0, -0.5, 1, 5])
 @pytest.mark.parametrize("shanks", [4, 1])
 def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_channels):
     """

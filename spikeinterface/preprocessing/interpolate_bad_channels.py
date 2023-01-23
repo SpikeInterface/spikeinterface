@@ -55,10 +55,10 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
             sigma_um = estimate_recommended_sigma_um(recording)
 
         if weights is None:
-            weights = preprocessing_tools.get_kriging_bad_channel_weights(recording.get_channel_locations(),
-                                                                          self._bad_channel_idxs,
-                                                                          sigma_um,
-                                                                          p)
+            weights = preprocessing_tools.get_kriging_channel_weights(recording.get_channel_locations(),
+                                                                      self._bad_channel_idxs,
+                                                                      sigma_um,
+                                                                      p)
 
         for parent_segment in recording._recording_segments:
             rec_segment = InterpolateBadChannelsSegment(parent_segment,

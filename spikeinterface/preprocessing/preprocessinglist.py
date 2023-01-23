@@ -53,7 +53,7 @@ preprocessers_full_list = [
     ZeroChannelPaddedRecording,
     DeepInterpolatedRecording,
     ResampleRecording,
-    InterpolateBadChannels
+    InterpolateBadChannelsRecording
 ]
 
 installed_preprocessers_list = [pp for pp in preprocessers_full_list if pp.installed]
