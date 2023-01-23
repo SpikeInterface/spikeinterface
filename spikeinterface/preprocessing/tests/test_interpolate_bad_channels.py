@@ -44,11 +44,12 @@ def test_compare_real_data_with_ibl():
     num_channels = si_recording.get_num_channels()
     bad_channel_indexes = np.random.choice(num_channels,
                                            10, replace=False)
+    bad_channel_ids = si_recording.channel_ids[bad_channel_indexes]
     si_recording = spre.scale(si_recording, dtype="float32")
 
     # interpolate SI
     si_interpolated_recording = spre.interpolate_bad_channels(si_recording,
-                                                              bad_channel_indexes)
+                                                              bad_channel_ids)
 
     # interpolate IBL
     ibl_bad_channel_labels = get_ibl_bad_channel_labels(num_channels,
@@ -85,7 +86,8 @@ def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_chan
     Perform an extended test across a range of function inputs to check
     IBL and SI interpolation results match.
     """
-    __, recording = get_test_recording(num_channels)
+    recording = generate_recording(num_channels=num_channels,
+                                   durations=[1])
 
     # distribute default probe locations across 4 shanks if set
     x = np.random.choice(shanks, num_channels)
@@ -94,11 +96,12 @@ def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_chan
 
     # generate random bad channel locations
     bad_channel_indexes = np.random.choice(num_channels, np.random.randint(1, int(num_channels / 5)), replace=False)
+    bad_channel_ids = recording.channel_ids[bad_channel_indexes]
 
     # Run SI and IBL interpolation and check against eachother
     recording = spre.scale(recording, dtype="float32")
     si_interpolated_recording = spre.interpolate_bad_channels(recording,
-                                                              bad_channel_indexes,
+                                                              bad_channel_ids,
                                                               sigma_um=sigma_um,
                                                               p=p)
     si_interpolated = si_interpolated_recording.get_traces()
@@ -130,12 +133,13 @@ def test_output_values():
     the non-interpolated channels is also an implicit test
     these were not accidently changed.
     """
+    recording = generate_recording(num_channels=5,
+                                   durations=[1])
+    bad_channel_indexes = np.array([0])
+    bad_channel_ids = recording.channel_ids[bad_channel_indexes]
+
     new_probe_locs = [[5, 7, 3, 5, 5],  # 5 channels, a in the center ('bad channel', zero index)
                       [5, 5, 5, 7, 3]]  # all others equal distance away.
-    bad_channel_indexes = np.array([0])
-
-    __, recording = get_test_recording(num_channels=5)
-
     # Overwrite the probe information with the new locations
     for idx, (x, y) in enumerate(zip(*new_probe_locs)):
         recording._properties["contact_vector"][idx][1] = x
@@ -145,7 +149,7 @@ def test_output_values():
     # 0 is a linear combination of other channels
     recording = spre.scale(recording, dtype="float32")
     si_interpolated_recording = spre.interpolate_bad_channels(recording,
-                                                              bad_channel_indexes,
+                                                              bad_channel_ids,
                                                               sigma_um=5,
                                                               p=2)
     si_interpolated = si_interpolated_recording.get_traces()
@@ -176,18 +180,12 @@ def test_output_values():
 # -------------------------------------------------------------------------------
 
 def get_ibl_bad_channel_labels(num_channels, bad_channel_indexes):
-
     ibl_bad_channel_labels = np.zeros(num_channels)
     ibl_bad_channel_labels[bad_channel_indexes] = 1
     return ibl_bad_channel_labels
 
-def get_test_recording(num_channels=32):
-
-    recording = generate_recording(num_channels=num_channels,
-                                   durations=[1])
-    return num_channels, recording
 
 if __name__ == '__main__':
     test_compare_real_data_with_ibl()
-    test_compare_input_argument_ranges_against_ibl()
+    test_compare_input_argument_ranges_against_ibl(shanks=4, p=1, sigma_um=1.25, num_channels=32)
     test_output_values()

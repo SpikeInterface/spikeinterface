@@ -11,7 +11,7 @@ class InterpolateBadChannels(BasePreprocessor):
     This is based on the distance (Gaussian kernel) from the bad channel,
     as determined from x,y channel coordinates.
 
-    Details of the interpolation function (Olivier Winter) used in the IBL pipeline
+    Details of the interpolation function (written by Olivier Winter) used in the IBL pipeline
     can be found at:
 
     International Brain Laboratory et al. (2022). Spike sorting pipeline for the
@@ -20,69 +20,55 @@ class InterpolateBadChannels(BasePreprocessor):
     Parameters
     ----------
 
-    bad_channel_indexes : numpy array, indexes of the bad channels to interpolate.
-
-    sigma_um : distance between sequential channels in um. If None, will use
-               the most common distance between y-axis channels.
-
-    p : exponent of the Gaussian kernel. Determines rate of decay
-        for distance weightings.
-
+    bad_channel_ids : list or 1d np.array
+        Channel ids of the bad channels to interpolate.
+    sigma_um : float
+        Distance between sequential channels in um. If None, will use
+        the most common distance between y-axis channels, by default None
+    p : float
+        Exponent of the Gaussian kernel. Determines rate of decay
+        for distance weightings, by default 1.3
+    weights : np.array
+        The weights to give to bad_channel_ids at interpolation.
+        If None, weights are automatically computed, by default None
     """
     name = 'interpolate_bad_channels'
 
-    def __init__(self, recording, bad_channel_indexes, sigma_um=None, p=1.3, ):
+    def __init__(self, recording, bad_channel_ids, sigma_um=None, p=1.3, weights=None):
         BasePreprocessor.__init__(self, recording)
 
-        self.check_inputs(recording, bad_channel_indexes)
+        bad_channel_ids = np.array(bad_channel_ids)
+        self.check_inputs(recording, bad_channel_ids)
 
-        self.bad_channel_indexes = bad_channel_indexes
-        contact_positions = recording.get_probe().contact_positions
+        self.bad_channel_ids = bad_channel_ids
+        self._bad_channel_idxs = recording.ids_to_indices(self.bad_channel_ids)
+        self._bad_channel_idxs.setflags(write=False)
 
         if sigma_um is None:
-            sigma_um = self.get_recommended_sigma_um(recording, contact_positions)
+            sigma_um = estimate_recommended_sigma_um(recording)
 
-        weights = self.calculate_weights_and_lock_channel_idxs(contact_positions,
-                                                               sigma_um,
-                                                               p)
+        if weights is None:
+            weights = preprocessing_tools.get_kriging_bad_channel_weights(recording.get_channel_locations(),
+                                                                          self._bad_channel_idxs,
+                                                                          sigma_um,
+                                                                          p)
 
         for parent_segment in recording._recording_segments:
             rec_segment = InterpolateBadChannelsSegment(parent_segment,
-                                                        bad_channel_indexes,
+                                                        self._bad_channel_idxs,
                                                         weights)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording.to_dict(),
-                            bad_channel_indexes=bad_channel_indexes,
+                            bad_channel_ids=bad_channel_ids,
                             p=p,
-                            sigma_um=sigma_um)
+                            sigma_um=sigma_um,
+                            weights=weights)
 
-    def get_recommended_sigma_um(self, recording, contact_positions):
-        """
-        Get the most common distance between channels on the y-axis
-        """
-        y = contact_positions[:, 1]
+    def check_inputs(self, recording, bad_channel_ids):
 
-        return scipy.stats.mode(np.diff(np.unique(y)), keepdims=False)[0]
-
-    def calculate_weights_and_lock_channel_idxs(self, contact_positions, sigma_um, p):
-        """
-        Pre-compute the channel weights for this InterpolateBadChannels
-        instance.
-        """
-        weights = preprocessing_tools.get_kriging_bad_channel_weights(contact_positions,
-                                                                      self.bad_channel_indexes,
-                                                                      sigma_um,
-                                                                      p)
-
-        self.bad_channel_indexes.setflags(write=False)
-
-        return weights
-
-    def check_inputs(self, recording, bad_channel_indexes):
-
-        if type(bad_channel_indexes) != np.ndarray:
-            raise TypeError("Bad channel indexes must be a numpy array.")
+        if bad_channel_ids.ndim != 1:
+            raise TypeError("'bad_channel_ids' must be a 1d array or list.")
 
         if recording.get_property('contact_vector') is None:
             raise ValueError('A probe must be attached to use bad channel interpolation. Use set_probe(...)')
@@ -100,6 +86,8 @@ class InterpolateBadChannelsSegment(BasePreprocessorSegment):
         self._weights = weights
 
     def get_traces(self, start_frame, end_frame, channel_indices):
+        if channel_indices is None:
+            channel_indices = slice(None)
 
         traces = self.parent_recording_segment.get_traces(start_frame,
                                                           end_frame,
@@ -109,6 +97,16 @@ class InterpolateBadChannelsSegment(BasePreprocessorSegment):
 
         traces[:, self._bad_channel_indexes] = traces @ self._weights
 
-        return traces
+        return traces[:, channel_indices]
+
+
+def estimate_recommended_sigma_um(recording):
+    """
+    Get the most common distance between channels on the y-axis
+    """
+    y = recording.get_channel_locations()[:, 1]
+
+    return scipy.stats.mode(np.diff(np.unique(y)), keepdims=False)[0]
+
 
 interpolate_bad_channels = define_function_from_class(source_class=InterpolateBadChannels, name='interpolate_bad_channels')
