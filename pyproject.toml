@@ -123,6 +123,9 @@ test = [
     "pymde",
     "torch",
     "pynndescent",
+
+    ## IBL
+    "ibl-neuropixel",
     
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
