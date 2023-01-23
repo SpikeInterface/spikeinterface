@@ -82,10 +82,12 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             start_frame = 0
         if end_frame is None:
             end_frame = self.get_num_samples()
-        
+        if channel_indices is None:
+            channel_indices = slice(None)
+
         # this return a copy with margin  + taper on border always
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment,
-                                                                        start_frame, end_frame, channel_indices,
+                                                                        start_frame, end_frame, slice(None),
                                                                         self.margin, dtype=self.tmp_dtype,
                                                                         add_zeros=True, window_on_margin=True)
         
@@ -96,7 +98,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         if self.tmp_dtype is not None:
             traces_shift = traces_shift.astype(self.dtype)
         
-        return traces_shift
+        return traces_shift[:, channel_indices]
 
 
 # function for API

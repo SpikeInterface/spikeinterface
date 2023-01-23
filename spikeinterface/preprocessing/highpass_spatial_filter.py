@@ -23,13 +23,15 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
     n_channel_pad : int
         Number of channels to pad prior to filtering. 
         Channels are padded with mirroring. 
-        If None, no padding is applied, by default None
+        If None, no padding is applied, by default 5
     n_channel_taper : int
         Number of channels to perform cosine tapering on
         prior to filtering. If None and n_channel_pad is set,
         n_channel_taper will be set to the number of padded channels.
         Otherwise, the passed value will be used, by default None
-    agc_options: dict or None
+    direction : str
+        The direction in which the spatial filter is applied, by default "y"
+    agc_options: dict, str, or None
         Options for automatic gain control. By default, gain control
         is applied prior to filtering to improve filter performance.
         When the argument is "ibl", the function will use the IBL pipeline defaults (agc on).
@@ -43,48 +45,40 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
     """
     name = 'highpass_spatial_filter'
 
-    def __init__(self, recording, n_channel_pad=None, n_channel_taper=None,
+    def __init__(self, recording, n_channel_pad=None, n_channel_taper=5, direction="y",
                  agc_options=None, butter_kwargs=None):
         BasePreprocessor.__init__(self, recording)
 
-        n_channel_pad, agc_options, butter_kwargs = self.handle_args(recording,
-                                                                     n_channel_taper,
-                                                                     n_channel_pad,
-                                                                     agc_options,
-                                                                     butter_kwargs)
+        # Check single group
+        channel_groups = recording.get_channel_groups()
+        assert len(np.unique(channel_groups)) == 1, \
+            ("The recording contains multiple groups! It is recommended to apply spatial filtering "
+             "separately for each group. You can split by group with: "
+             ">>> recording_split = recording.split_by(property='group')")
+        # If location are not sorted, estimate forward and reverse sorting
+        channel_locations = recording.get_channel_locations()
+        dim = ["x", "y", "z"].index(direction)
+        assert dim < channel_locations.ndim, f"Direction {direction} is wrong"
+        locs_mono = channel_locations[:, dim]
+        if np.array_equal(np.sort(locs_mono), locs_mono):
+            order_f = None
+            order_r = None
+        else:
+            order_f = np.argsort(locs_mono)
+            order_r = np.argsort(order_f)
 
-        for parent_segment in recording._recording_segments:
-            rec_segment = HighPassSpatialFilterSegment(parent_segment,
-                                                       n_channel_pad,
-                                                       n_channel_taper,
-                                                       agc_options,
-                                                       butter_kwargs)
-            self.add_recording_segment(rec_segment)
+        # Fix channel padding and tapering
+        n_channel_pad = 0 if n_channel_pad is None else int(n_channel_pad)
+        assert n_channel_pad <= recording.get_num_channels(), \
+            "'n_channel_pad' must be less than the number of channels in recording."
+        n_channel_taper = n_channel_pad if n_channel_taper is None else int(n_channel_taper)
+        assert n_channel_taper <= recording.get_num_channels(), \
+            "'n_channel_taper' must be less than the number of channels in recording."
 
-        self._kwargs = dict(recording=recording.to_dict(),
-                            n_channel_pad=n_channel_pad,
-                            n_channel_taper=n_channel_taper,
-                            agc_options=agc_options,
-                            butter_kwargs=butter_kwargs)
-
-    def handle_args(self,
-                    recording,
-                    n_channel_taper,
-                    n_channel_pad,
-                    agc_options,
-                    butter_kwargs):
-        """
-        Make arguments well-defined before passing to kfilt.
-
-        Use "default" argument for agc_options to make clear
-        that they are on, then None / False / 0 are all clearly off.
-
-        Default butter_kwargs are based on the IBL white paper .
-        """
-        if n_channel_pad in [None, False]:
-            n_channel_pad = 0
-
+        # Fix Automatic Gain Control options
         if agc_options is not None:
+            assert isinstance(agc_options, (str, dict)), \
+                f"agc_options can be 'ibl', a dictionary, or None, not {type(agc_options)}"
             sampling_interval = 1 / recording.sampling_frequency
             if isinstance(agc_options, str):
                 assert agc_options == "ibl", "agc_options can be 'ibl', a dictionary, or None"
@@ -96,22 +90,31 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
                 assert "window_length_s" in agc_options, \
                     "The agc_options dict must contain both the 'window_length_s' field"
                 agc_options["sampling_interval"] = sampling_interval
-            else:
-                raise ValueError(f"agc_options can be 'ibl', a dictionary, or None, not {type(agc_options)}")
 
-        butter_kwargs_ = {'btype': 'highpass', 'N': 3, 'Wn': 0.01}
+        # Pre-compute spatial filtering parameters
+        butter_kwargs_default = {'btype': 'highpass', 'N': 3, 'Wn': 0.01}
         if butter_kwargs is not None:
             assert all(k in ("N", "Wn") for k in butter_kwargs), \
                 "butter_kwargs can only specify filter order 'N' and critical frequency 'Wn' (1 is Nyquist)"
-            butter_kwargs_.update(butter_kwargs)
+            butter_kwargs_default.update(butter_kwargs)
+        sos_filter = scipy.signal.butter(**butter_kwargs_default, output='sos')
 
-        assert n_channel_pad <= recording.get_num_channels(), \
-            "'n_channel_pad' must be less than the number of channels in recording."
-        assert n_channel_taper <= recording.get_num_channels(), \
-            "'n_channel_taper' must be less than the number of channels in recording."
+        for parent_segment in recording._recording_segments:
+            rec_segment = HighPassSpatialFilterSegment(parent_segment,
+                                                       n_channel_pad,
+                                                       n_channel_taper,
+                                                       agc_options,
+                                                       sos_filter,
+                                                       order_f,
+                                                       order_r)
+            self.add_recording_segment(rec_segment)
 
-        return n_channel_pad, agc_options, butter_kwargs_
-
+        self._kwargs = dict(recording=recording.to_dict(),
+                            n_channel_pad=n_channel_pad,
+                            n_channel_taper=n_channel_taper,
+                            direction=direction,
+                            agc_options=agc_options,
+                            butter_kwargs=butter_kwargs)
 
 class HighPassSpatialFilterSegment(BasePreprocessorSegment):
 
@@ -120,13 +123,18 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
                  n_channel_pad,
                  n_channel_taper,
                  agc_options,
-                 butter_kwargs,
+                 sos_filter,
+                 order_f,
+                 order_r
                  ):
         self.parent_recording_segment = parent_recording_segment
         self.n_channel_pad = n_channel_pad
         self.n_channel_taper = n_channel_taper
         self.agc_options = agc_options
-        self.butter_kwargs = butter_kwargs
+        self.order_f = order_f
+        self.order_r = order_r
+        # get filter params
+        self.sos_filter = sos_filter
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if channel_indices is None:
@@ -134,13 +142,19 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         traces = self.parent_recording_segment.get_traces(start_frame,
                                                           end_frame,
                                                           slice(None))
-        traces = traces.copy()
+        if self.order_f is not None:
+            traces = traces[:, self.order_f]
+        else:
+            traces = traces.copy()
 
         traces = kfilt(traces,
                        self.n_channel_pad,
                        self.n_channel_taper,
                        self.agc_options,
-                       self.butter_kwargs)
+                       self.sos_filter)
+
+        if self.order_r is not None:
+            traces = traces[:, self.order_r]
 
         return traces[:, channel_indices]
 
@@ -152,29 +166,45 @@ highpass_spatial_filter = define_function_from_class(source_class=HighpassSpatia
 # IBL KFilt Function
 # -----------------------------------------------------------------------------------------------
 
-def kfilt(traces, n_channel_pad, n_channel_taper, agc_options, butter_kwargs):
+def kfilt(traces, n_channel_pad, n_channel_taper, agc_options, sos_filter):
     """
     Alternative to median filtering across channels, in which the cut-band is
     extended from 0 to the 0.01 Nyquist corner frequency using butterworth filter.
-    This allows removal of  contaminating stripes that are not constant across channels.
+    This allows removal of contaminating stripes that are not constant across channels.
 
     Performs filtering on the 0 axis (across channels), with optional
     padding (mirrored) and tapering (cosine taper) prior to filtering.
-    Applies a butterworth filter on the 0-axis with tapering / padding
+    Applies a butterworth filter on the 0-axis with tapering / padding.
 
-    Details of the high-pass spatial filter function (Olivier Winter)
+    Details of the high-pass spatial filter function (written by Olivier Winter)
     used in the IBL pipeline can be found at:
 
     International Brain Laboratory et al. (2022). Spike sorting pipeline for the
     International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
 
     traces: (num_channels x num_samples) numpy array
+
+    Parameters
+    ----------
+    traces : 2D np.array
+        (num_channels x num_samples) numpy array with the signals
+    n_channel_pad : int
+        Number of channels to pad
+    n_channel_taper : int
+        Number of channels to taper
+    agc_options : dict
+        Automatic Gain Control options
+    sos_filter : sos filter
+        Butterworth filter in second-order sections format
+
+    Returns
+    -------
+    traces_kfilt : 2D np.array
+        The spatially filtered traces
     """
     num_channels = traces.shape[1]
 
     # lateral padding left and right
-    n_channel_pad = int(n_channel_pad)
-    n_channel_taper = n_channel_pad if n_channel_taper is None else n_channel_taper
     num_channels_padded = num_channels + n_channel_pad * 2
 
     # apply agc and keep the gain in handy
@@ -196,8 +226,7 @@ def kfilt(traces, n_channel_pad, n_channel_taper, agc_options, butter_kwargs):
         taper *= 1 - fcn_cosine([num_channels_padded - n_channel_taper, num_channels_padded])(np.arange(num_channels_padded))   # taper down
         traces = traces * taper[np.newaxis, :]
 
-    sos = scipy.signal.butter(**butter_kwargs, output='sos')
-    traces = scipy.signal.sosfiltfilt(sos, traces, axis=1)
+    traces = scipy.signal.sosfiltfilt(sos_filter, traces, axis=1)
 
     if n_channel_pad > 0:
         traces = traces[:, n_channel_pad:-n_channel_pad]
