@@ -352,12 +352,9 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
         _compute_rp_violations_numba(nb_rp_violations, spikes[seg_index][0].astype(np.int64),
                                      spikes[seg_index][1].astype(np.int32), t_c, t_r)
 
-    if num_segments == 1:
-        T = recording.get_num_frames()
-    else:
-        T = 0
-        for segment_idx in range(num_segments):
-            T += recording.get_num_frames(segment_idx)
+    T = 0
+    for segment_idx in range(num_segments):
+        T += recording.get_num_frames(segment_idx)
 
     nb_violations = {}
     rp_contamination = {}
