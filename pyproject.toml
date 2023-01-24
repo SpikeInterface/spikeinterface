@@ -26,6 +26,7 @@ dependencies = [
     "threadpoolctl",
     "tqdm",
     "probeinterface>=0.2.14",
+    "huggingface_hub",
 ]
 
 [build-system]

@@ -6,6 +6,8 @@ from scipy import signal
 import torch 
 from torch import nn
 import torch.utils.data as Data
+from huggingface_hub import hf_hub_url, cached_download
+
 
 from .basewaveformtransformer import WaveformTransformer
 
@@ -23,8 +25,11 @@ class SingleChannelToyDenoiser(WaveformTransformer):
         
     def check_peak_interval_match(self, ms_before: float, ms_after: float, sampling_frequency: float):
 
-        json_file_path = Path("/home/heberto/development/spikeinterface/bin/mearec_peak_interval.json")
-        print(json_file_path.is_file())
+        # Temporary
+        REPO_ID = "h-mayorquin/testing_repo"
+        FILENAME = "toy_model_peak_interval.json"
+
+        json_file_path = cached_download(hf_hub_url(REPO_ID, FILENAME))
         # Load the json file in the json_file_path_variable
         with open(json_file_path, "r") as json_file:
             peak_interval_dict = json.load(json_file)        
@@ -34,8 +39,11 @@ class SingleChannelToyDenoiser(WaveformTransformer):
         assert peak_interval_dict["sampling_frequency"] == sampling_frequency
         
     def load_model(self):
-            
-        model_path = Path("/home/heberto/development/spikeinterface/bin/.marec.pt")
+        
+        REPO_ID = "h-mayorquin/testing_repo"
+        FILENAME = "toy_model_marec.pt"
+        
+        model_path = cached_download(hf_hub_url(REPO_ID, FILENAME))
         denoiser = SingleChanDenoiser(pretrained_path=str(model_path), spike_size=128)
         denoiser = denoiser.load()
 
