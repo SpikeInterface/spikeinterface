@@ -1,259 +1,268 @@
 import warnings
-
 import numpy as np
-
-from spikeinterface.core.channelslice import ChannelSliceRecording
-from spikeinterface.core.core_tools import define_function_from_class
-
-from .basepreprocessor import BasePreprocessor
-
-from ..core import get_random_data_chunks
-
 import scipy.stats
 
-class RemoveBadChannelsRecording(BasePreprocessor, ChannelSliceRecording):
+from .filter import highpass_filter
+from ..core import get_random_data_chunks
+
+
+def detect_bad_channels(recording,
+                        method="coherence+psd",
+                        std_threshold=5,
+                        psd_hf_threshold=0.02,
+                        dead_channel_threshold=-0.5,
+                        noisy_channel_threshold=1.,
+                        outside_channel_threshold=-0.75,
+                        n_neighbors=11,
+                        nyquist_threshold=0.8,
+                        direction='y',
+                        n_seconds_for_random_chunks=0.3,
+                        n_random_chunks=10,
+                        highpass_filter_cutoff=300,
+                        seed=None):
     """
-    Remove bad channels from the recording extractor given a thershold
-    on standard deviation.
+    Perform bad channel detection.
+    The recording is assumed to be filtered. If not, a highpass filter is applied on the fly.
+
+    Different methods are implemented:
+
+    - std : threhshold on channel standard deviations
+        If the standard deviation of a channel is greater than `std_threshold` times the median of all
+        channels standard deviations, the channel is flagged as noisy
+    - coeherence+psd : method developed by the International Brain Laboratory that detects bad channels of three types:
+        * Dead channels are those with low similarity to the surrounding channels (n=`n_neighbors` median)
+        * Noise channels are those with power at >80% Nyquist above the psd_hf_threshold (default 0.02 uV^2 / Hz) 
+          and a high coherence with "far away" channels"
+        * Out of brain channels are contigious regions of channels dissimilar to the median of all channels 
+          at the top end of the probe (i.e. large channel number)
 
     Parameters
     ----------
-    recording: RecordingExtractor
-        The recording extractor object
-    bad_threshold: float
-        If automatic is used, the threshold for the standard deviation over which channels are removed
-    **random_chunk_kwargs
+    recording : BaseRecording
+        The recording for which bad channels are detected
+    method : str
+        * coeherence+psd (default, developed by IBL)
+        * std
+    std_threshold (mstd) : float
+        (method std)
+        The standard deviation multiplier threshold
+    psd_hf_threshold (coeherence+psd) : float
+        An absolute threshold (uV^2/Hz) used as a cutoff for noise channels.
+        Channels with average power at >80% Nyquist larger than this threshold 
+        will be labeled as noise, by default 0.02
+    dead_channel_threshold (coeherence+psd) : float, optional
+        Threshold for channel coherence below which channels are labeled as dead, by default -0.5
+    noisy_channel_threshold (coeherence+psd) : float
+        Threshold for channel coherence above which channels are labeled as noisy (together with psd condition),
+        by default 1
+    outside_channel_threshold (coeherence+psd) : float
+        Threshold for channel coherence above which channels at the edge of the recording are marked as outside
+        of the brain, by default -0.75
+    n_neighbors (coeherence+psd) : int
+        Number of channel neighbors to compute median filter (needs to be odd), by default 11
+    nyquist_threshold (coeherence+psd) : float
+        Frequency with respect to Nyquist (Fn=1) above which the mean of the PSD is calculated and compared
+        with psd_hf_threshold, by default 0.8
+    direction (coeherence+psd): str
+        'x', 'y', 'z', the depth dimension, by default 'y'
+    highpass_filter_cutoff : float
+        If the recording is not filtered, the cutoff frequency of the highpass filter, by default 300
+    n_seconds_for_random_chunks : float
+        Duration of each chunk, by default 0.3
+    n_random_chunks : int
+        Number of random chunks, by default 10
+    seed : int or None
+        The random seed to extract chunks, by default None
 
     Returns
     -------
-    remove_bad_channels_recording: RemoveBadChannelsRecording
-        The recording extractor without bad channels
+    bad_channel_ids : np.array
+        The identified bad channel ids
+    bad_channel_labels : np.array
+        Channels labels depending on the method:
+          * (coeherence+psd) 0: good, 1: dead, 2: noisy, 3: outside of the brain
+          * (std) 0: good, 1 bad
+
+    Examples
+    --------
+
+    >>> import spikeinterface.preprocessing as spre
+    >>> bad_channel_ids, bad_channel_labels = spre.detect_bad_channels(recording, method="coherence+psd")
+    >>> # remove bad channels
+    >>> recording_clean = recording.remove_channels(bad_channel_ids)
+
+    Notes
+    -----
+    For details refer to:
+    International Brain Laboratory et al. (2022). Spike sorting pipeline for the International Brain Laboratory.
+    https://www.internationalbrainlab.com/repro-ephys
     """
-    name = 'remove_bad_channels'
-
-    def __init__(self, recording, bad_threshold=5, **random_chunk_kwargs):
-        random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
-
-        stds = np.std(random_data, axis=0)
-        thresh = bad_threshold * np.median(stds)
-        keep_inds, = np.nonzero(stds < thresh)
-
-        parents_chan_ids = recording.get_channel_ids()
-        channel_ids = parents_chan_ids[keep_inds]
-        self._parent_channel_indices = recording.ids_to_indices(channel_ids)
-
-        BasePreprocessor.__init__(self, recording)
-        ChannelSliceRecording.__init__(self, recording, channel_ids=channel_ids)
-
-        self._kwargs = dict(recording=recording.to_dict(), bad_threshold=bad_threshold)
-        self._kwargs.update(random_chunk_kwargs)
-
-
-# function for API
-remove_bad_channels = define_function_from_class(source_class=RemoveBadChannelsRecording, name="remove_bad_channels")
-
-# ------------------------------------------------------------------------------------------
-# SpikeInterface Detect Bad Channels
-# ------------------------------------------------------------------------------------------
-
-def detect_bad_channels(recording,
-                        psd_hf_threshold=None,
-                        similarity_threshold=(-0.5, 1),
-                        random_chunk_kwargs=None):
-    """
-    Perform bad channel detection using the detect_bad_channels
-    algorithm of the IBL.
-
-    Detects bad channels of three types:
-        Dead channels are those with low similarity to the surrounding channels
-            (n=11 median)
-        Noise channels are those with power at >80% Nyquist above the
-            psd_hf_threshold (default 0.02 uV^2 / Hz)
-        Out of brain channels are contigious regions of channels
-            dissimilar to the median of all channels at the top end
-            of the probe (i.e. large channel number)
-
-    Parameters
-    ----------
-
-    psd_hf_threshold: an absolute threshold (uV^2/Hz) used as a cutoff for
-                      noise channels. Channels with average power at >80%
-                      Nyquist larger than this threshold will be labelled
-                      as noise.
-
-    similarity_threshold: absolute threshold for channel similarity,
-                          in the form for a tuple (threshold1, threshold2).
-                          In dead channel detection, the median filtered
-                          cross-correlation (N=11) is subtracted from the
-                          cross-correlation. When a channel is not similar
-                          from the surrounding channels, there are large
-                          residuals (negative when a channel has a
-                          negative cross-correlation with all other channels,
-                          positive when it has a positive cross-correlation.
-                          This is termed the 'similarity' measure.
-
-                          threshold1 (default -0.5) tags any channel with
-                          a similarity measure < -0.05 (i.e., there is a
-                          large negative-direction different between the
-                          xcor of this channel with all other channels,
-                          and the nearest 11 channels.
-
-                          threshold2 is used in noise detection, channels
-                          with similarity measure > threshold2 are tagged
-                          as noise (i.e. the channel is much more strongly
-                          correlated with all other channels than the surrounding
-                          11 channels).
-
-    random_chunk_kwargs: a dictionary with keys passed to get_random_data_chunks()
-
-    see for details:
-        International Brain Laboratory et al. (2022). Spike sorting pipeline for the
-        International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
-    """
-    if psd_hf_threshold is None:
-        psd_hf_threshold = 1.4 if fs < 5000 else 0.02
+    method_list = ("std", "coherence+psd")
+    assert method in method_list, f"{method} is not a valid method. Available methods are {method_list}"
 
     # Get random subset of data to estimate from
-    random_chunk_kwargs, scale_for_testing = handle_random_chunk_kwargs(recording,
-                                                                        random_chunk_kwargs)
-    random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
+    random_chunk_kwargs = dict(
+        num_chunks_per_segment=n_random_chunks,
+        chunk_size=int(n_seconds_for_random_chunks * recording.sampling_frequency),
+        seed=seed
+    )
 
-    # Create empty channel labels and fill with bad-channel detection
-    # estimate for each chunk
-    channel_labels = np.zeros((recording.get_num_channels(),
-                               recording.get_num_segments() * random_chunk_kwargs["num_chunks_per_segment"]))
-
-    for i, random_chunk in enumerate(random_data):
-
-        channel_labels[:, i], __ = detect_bad_channels_ibl(random_chunk,
-                                                           recording.get_sampling_frequency(),
-                                                           psd_hf_threshold,
-                                                           similarity_threshold,
-                                                           scale_for_testing)
-
-    # Take the mode of the chunk estimates as final result. Convert to
-    # binary good / bad channel output.
-    channel_flags, __ = scipy.stats.mode(channel_labels, axis=1, keepdims=False)
-
-    bad_inds, = np.where(channel_flags != 0)
-    bad_channel_ids = recording.get_channel_ids()[bad_inds]
-
-    if bad_channel_ids.size > recording.get_num_channels() * 0.333:
-        warnings.warn("Over 1/3 of channels are detected as bad. In the precense of a high"
-                      "number of dead / noisy channels, bad channel detection may fail "
-                      "(erroneously label good channels as dead).")
-
-    return bad_inds, bad_channel_ids, channel_flags
-
-
-def handle_random_chunk_kwargs(recording, user_random_chunk_kwargs):
-    """
-    Here we want to overwrite the default random_chunk_kwargs,
-    but allow the user to overwrite these with their own options.
-    Make default random chunk kwargs and overwrite with any user-specified.
-
-    The default chunk size of 0.3 s, 10 chunks is taken
-    from IBL implementation.
-
-    To add scaling in detect_bad_channels_ibl() to match IBL
-    original function for testing against, a hidden flag on
-    the kwargs is used, "scale_for_testing".
-    """
-    if ("concatenated" in user_random_chunk_kwargs and
-        user_random_chunk_kwargs["concatenated"]):
-        raise AttributeError("Custom random_chunk_kwargs cannot included data concatenation")
-
-    chunk_size = int(0.3 * recording.get_sampling_frequency())
-    random_chunk_kwargs = {"return_scaled": True,
-                           "num_chunks_per_segment": 10,
-                           "chunk_size": chunk_size,
-                           "concatenated": False,
-                           "seed": 0}
-
-    if user_random_chunk_kwargs is not None:
-        random_chunk_kwargs.update(user_random_chunk_kwargs)
-
-    scale_for_testing = handle_test_case(random_chunk_kwargs)
-
-    return random_chunk_kwargs, scale_for_testing
-
-def handle_test_case(scale_for_testing):
-    """
-    see test_remove_bad_channels() for logic
-    """
-    if "scale_for_testing" in scale_for_testing:
-        scale_for_testing.pop("scale_for_testing")
-        scale_for_testing = True
+    # If recording is not filtered, apply a highpass filter
+    if not recording.is_filtered():
+        recording_hp = highpass_filter(recording, freq_min=highpass_filter_cutoff)
     else:
-        scale_for_testing = False
+        recording_hp = recording
 
-    return scale_for_testing
+    # Adjust random chunk kwargs based on method
+    if method == "std":
+        random_chunk_kwargs["return_scaled"] = False
+        random_chunk_kwargs["concatenated"] = True
+    else:
+        random_chunk_kwargs["return_scaled"] = True
+        random_chunk_kwargs["concatenated"] = False
+
+    random_data = get_random_data_chunks(recording_hp, **random_chunk_kwargs)
+
+    if method == "std":
+        stds = np.std(random_data, axis=0)
+        thresh = std_threshold * np.median(stds)
+        bad_channel_labels = stds > thresh
+        bad_channel_ids = recording.channel_ids[bad_channel_labels]
+        bad_channel_labels = bad_channel_labels.astype(int)
+    elif method == "coherence+psd":
+        # some checks
+        assert recording.has_scaled(), \
+            ("The 'coherence+psd' method uses thresholds assuming the traces are in uV, "
+             "but the recording does not have scaled traces. If the recording is already scaled, "
+             "you need to set gains and offsets: "
+             ">>> recording.set_channel_gains(1); recording.set_channel_offsets(0)")
+        assert 0 < nyquist_threshold < 1, "nyquist_threshold must be between 0 and 1"
+
+        # If location are not sorted, estimate forward and reverse sorting
+        channel_locations = recording.get_channel_locations()
+        dim = ["x", "y", "z"].index(direction)
+        assert dim < channel_locations.ndim, f"Direction {direction} is wrong"
+        locs_mono = channel_locations[:, dim]
+        if np.array_equal(np.sort(locs_mono), locs_mono):
+            order_f = None
+            order_r = None
+        else:
+            order_f = np.argsort(locs_mono)
+            order_r = np.argsort(order_f)
+
+        # Create empty channel labels and fill with bad-channel detection estimate for each chunk
+        channel_labels = np.zeros((recording.get_num_channels(),
+                                  recording.get_num_segments() * random_chunk_kwargs["num_chunks_per_segment"]),
+                                  dtype=int)
+
+        for i, random_chunk in enumerate(random_data):
+            random_chunk_sorted = random_chunk[order_f] if order_f is not None else random_chunk
+            channel_labels[:, i] = detect_bad_channels_ibl(raw=random_chunk_sorted,
+                                                           fs=recording.get_sampling_frequency(),
+                                                           psd_hf_threshold=psd_hf_threshold,
+                                                           dead_channel_thr=dead_channel_threshold,
+                                                           noisy_channel_thr=noisy_channel_threshold,
+                                                           outside_channel_thr=outside_channel_threshold,
+                                                           n_neighbors=n_neighbors,
+                                                           nyquist_threshold=nyquist_threshold)
+
+        # Take the mode of the chunk estimates as final result. Convert to binary good / bad channel output.
+        bad_channel_labels, _ = scipy.stats.mode(channel_labels, axis=1, keepdims=False)
+        if order_r is not None:
+            bad_channel_labels = bad_channel_labels[order_r]
+
+        bad_inds, = np.where(bad_channel_labels != 0)
+        bad_channel_ids = recording.channel_ids[bad_inds]
+
+        if bad_channel_ids.size > recording.get_num_channels() / 3:
+            warnings.warn("Over 1/3 of channels are detected as bad. In the precense of a high"
+                          "number of dead / noisy channels, bad channel detection may fail "
+                          "(erroneously label good channels as dead).")
+
+    return bad_channel_ids, bad_channel_labels
+
 
 # ----------------------------------------------------------------------------------------------
 # IBL Detect Bad Channels
 # ----------------------------------------------------------------------------------------------
 
-def detect_bad_channels_ibl(raw, fs, psd_hf_threshold, similarity_threshold=(-0.5, 1), scale_for_testing=False):
+def detect_bad_channels_ibl(raw, fs, psd_hf_threshold,
+                            dead_channel_thr=-0.5,
+                            noisy_channel_thr=1.,
+                            outside_channel_thr=-0.75,
+                            n_neighbors=11,
+                            nyquist_threshold=0.8):
     """
-    Bad channels detection for Neuropixel probes
-    Labels channels
-     0: all clear
-     1: dead low coherence / amplitude
-     2: noisy
-     3: outside of the brain
-    :param raw: [nc, ns]
-    :param fs: sampling frequency
-    :param similarity_threshold:
-    :param psd_hf_threshold:
-    :return: labels (numpy vector [nc]), xfeats: dictionary of features [nc]
+    Bad channels detection for Neuropixel probes developed by IBL
+
+    Parameters
+    ----------
+    raw : traces
+        (num_samples, n_channels) raw traces
+    fs : float
+        sampling frequency
+    psd_hf_threshold : float
+        Threshold for high frequency PSD. If mean PSD above `nyquist_threshold` * fn is greater than this 
+        value, channels are flagged as noisy (together with channel coherence condition).
+    dead_channel_thr : float, optional
+        Threshold for channel coherence below which channels are labeled as dead, by default -0.5
+    noisy_channel_thr : float
+        Threshold for channel coherence above which channels are labeled as noisy (together with psd condition),
+        by default -0.5
+    outside_channel_thr : float
+        Threshold for channel coherence above which channels
+    n_neighbors : int, optional
+        Number of neighbors to compute median fitler, by default 11
+    nyquist_threshold : float, optional
+        Threshold on Nyquist frequency to calculate HF noise band, by default 0.8
+
+    Returns
+    -------
+    1d array
+        Channels labels: 0: good,  1: dead low coherence / amplitude, 2: noisy, 3: outside of the brain
     """
-    __, nc = raw.shape
+    _, nc = raw.shape
     raw = raw - np.mean(raw, axis=0)[np.newaxis, :]
-    xcor = channels_similarity(raw)
+    fscale, psd = scipy.signal.welch(raw, fs=fs, axis=0)
+    # sos_hp = scipy.signal.butter(**{'N': 3, 'Wn': 300 / fs * 2, 'btype': 'highpass'}, output='sos')
+    # raw_hf = scipy.signal.sosfiltfilt(sos_hp, raw)
 
-    scale = 1e6 if scale_for_testing else 1
-    fscale, psd = scipy.signal.welch(raw * scale, fs=fs, axis=0)
-    sos_hp = scipy.signal.butter(**{'N': 3, 'Wn': 300 / fs * 2, 'btype': 'highpass'}, output='sos')  # dupl
-    hf = scipy.signal.sosfiltfilt(sos_hp, raw, axis=0)
-    xcorf = channels_similarity(hf)
-
-    xfeats = ({
-        'ind': np.arange(nc),
-        'rms_raw': rms(raw, axis=0),  # very similar to the rms after butterworth filter
-        'xcor_hf': detrend(xcor, 11),
-        'xcor_lf': xcorf - detrend(xcorf, 11) - 1,
-        'psd_hf': np.mean(psd[fscale > (fs / 2 * 0.8), :], axis=0),  # 80% nyquists
-    })
+    xcor, xcorr_neighbors, xcorr_distant = compute_correlations(raw, n_neighbors)
+    psd_hf = np.mean(psd[fscale > (fs / 2 * nyquist_threshold), :], axis=0)
 
     # make recommendation
-    ichannels = np.zeros(nc)
-    idead = np.where(similarity_threshold[0] > xfeats['xcor_hf'])[0]
-    inoisy = np.where(np.logical_or(xfeats['psd_hf'] > psd_hf_threshold, xfeats['xcor_hf'] > similarity_threshold[1]))[0]
-
-    # the channels outside of the brains are the contiguous channels below the threshold on the trend coherency
-    ioutside = np.where(xfeats['xcor_lf'] < -0.75)[0]
-    if ioutside.size > 0 and ioutside[-1] == (nc - 1):
-        a = np.cumsum(np.r_[0, np.diff(ioutside) - 1])
-        ioutside = ioutside[a == np.max(a)]
-        ichannels[ioutside] = 3
+    ichannels = np.zeros(nc, dtype=int)
+    idead = np.where(xcorr_neighbors < dead_channel_thr)[0]
+    inoisy = np.where(np.logical_or(psd_hf > psd_hf_threshold,
+                                    xcorr_neighbors > noisy_channel_thr))[0]
 
     ichannels[idead] = 1
     ichannels[inoisy] = 2
 
-    return ichannels, xfeats
+    # the channels outside of the brains are the contiguous channels below the threshold on the trend coherency
+    # the chanels outide need to be at either extremes of the probe
+    ioutside = np.where(xcorr_distant < outside_channel_thr)[0]
+    if ioutside.size > 0 and (ioutside[-1] == (nc - 1) or ioutside[0] == 0):
+        a = np.cumsum(np.r_[0, np.diff(ioutside) - 1])
+        ioutside = ioutside[a == np.max(a)]
+        ichannels[ioutside] = 3
+
+    return ichannels
+
 
 # ----------------------------------------------------------------------------------------------
 # IBL Helpers
 # ----------------------------------------------------------------------------------------------
 
-def rms(x, axis=-1):
-    """
-    Root mean square of array along axis
-    :param x: array on which to compute RMS
-    :param axis: (optional, -1)
-    :return: numpy array
-    """
-    return np.sqrt(np.mean(x ** 2, axis=axis))
+def compute_correlations(raw, n_neighbors):
+    if raw_hf is None:
+        raw_hf = raw
+    xcorr = channels_similarity(raw)
+    xcorrf = channels_similarity(raw_hf)
+    xcorr_neighbors = detrend(xcorr, n_neighbors)
+    xcorr_distant = xcorrf - detrend(xcorrf, n_neighbors) - 1
+
+    return xcorr, xcorr_neighbors, xcorr_distant
 
 def detrend(x, nmed):
     """
@@ -269,8 +278,8 @@ def detrend(x, nmed):
     xf = scipy.signal.medfilt(xf, nmed)[ntap:-ntap]
     return x - xf
 
+
 def channels_similarity(raw):
     ref = np.median(raw, axis=1)
     channel_corr_with_median = np.sum(raw * ref[:, np.newaxis], axis=0) / np.sum(ref**2)
     return channel_corr_with_median
-

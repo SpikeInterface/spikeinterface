@@ -16,13 +16,12 @@ from .clip import (
     ClipRecording, clip)
 from .common_reference import CommonReferenceRecording, common_reference
 from .remove_artifacts import RemoveArtifactsRecording, remove_artifacts
-from .remove_bad_channels import RemoveBadChannelsRecording, remove_bad_channels
 from .resample import ResampleRecording, resample
 from .phase_shift import PhaseShiftRecording, phase_shift
 from .zero_channel_pad import ZeroChannelPaddedRecording, zero_channel_pad
 # not importing deepinterpolation by default
 from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate
-from .remove_bad_channels import  detect_bad_channels
+from .remove_bad_channels import detect_bad_channels
 
 
 preprocessers_full_list = [
@@ -51,7 +50,6 @@ preprocessers_full_list = [
     ClipRecording,
     BlankSaturationRecording,
     RemoveArtifactsRecording,
-    RemoveBadChannelsRecording,
     ZeroChannelPaddedRecording,
     DeepInterpolatedRecording,
     ResampleRecording
