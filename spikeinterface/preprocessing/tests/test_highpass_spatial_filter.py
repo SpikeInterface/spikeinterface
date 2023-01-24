@@ -15,7 +15,7 @@ try:
 except ImportError:
     HAVE_IBL_NPIX = False
 
-DEBUG = True
+DEBUG = False
 if DEBUG:
     import matplotlib.pyplot as plt
     plt.ion()
@@ -76,64 +76,11 @@ def test_highpass_spatial_filter_real_data(lagc):
                        atol=1e-01,
                        rtol=0)  # the differences are entired due to scaling on data load.
 
-@pytest.mark.skip("Something wrong with the generation of the data")
-@pytest.mark.parametrize("num_channels", [32, 64, 384])
-def test_add_trend_and_check_deleted(num_channels):
-    """
-    Nice example to see what the funcntion is doing sanity check it performs
-    as expected. Create a dataset (data_no_trend) with high spatial frequency
-    in both x and y. Create a trend with low spatial frequency in y only. Add
-    them together, filter and check only the low-frequency trend is y is removed.
-
-    use DEBUG = true to visualise.
-
-    the frequency response of the butter filter at the tested frequencies is:
-    Wn 0.2 = -0.06 dB, Wn 0.01 is = -60dB
-    """
-    recording = generate_recording(num_channels=num_channels,
-                                   durations=[0.5])
-    trend, data_no_trend = make_trend_and_data_no_trend(recording,
-                                                        trend_nyq=0.01,
-                                                        data_no_trend_nyq=0.2)
-
-    data = data_no_trend + trend
-    recording._recording_segments[0]._traces = data
-
-    __, si_highpass_spatial_filter = run_si_highpass_filter(recording,
-                                                            ntr_pad=10, ntr_tap=10, lagc=None,
-                                                            butter_kwargs=dict(N=3, Wn=0.1),
-                                                            get_traces=False)
-    si_filtered = si_highpass_spatial_filter.get_traces()
-
-    if DEBUG:
-        fig, ax = plt.subplots(ncols=1)
-        ax.plot(trend[num_channels // 2], label="trend")
-        ax.plot(data_no_trend[num_channels // 2], label="data no trend")
-        ax.plot(data[num_channels // 2], label="trend + data_no_trend")
-        ax.plot(si_filtered[num_channels // 2], label="filtered")
-        ax.legend()
-
-        # axs[0].imshow(trend)
-        # axs[0].set_title("trend")
-        # axs[1].imshow(data_no_trend)
-        # axs[1].set_title("data_no_trend")
-        # axs[1].imshow(data)
-        # axs[2].set_title("trend + data_no_trend")
-        # axs[3].imshow(si_filtered)
-        # axs[3].set_title("filtered")
-
-    corr_filtered_data_with_trend = np.corrcoef(si_filtered.ravel(), trend.ravel())
-    assert corr_filtered_data_with_trend[0,1] < 0.01
-
-    corr_filtered_data_with_original = np.corrcoef(si_filtered.ravel(), data_no_trend.ravel())
-    assert corr_filtered_data_with_original[0,1] > 0.99
-
 
 @pytest.mark.parametrize("ntr_pad", [None, 0, 31])
 @pytest.mark.parametrize("ntr_tap", [None, 5])
 @pytest.mark.parametrize("lagc", ["ibl", None, 1232])
-@pytest.mark.parametrize("butter_kwargs", [None,
-                                           {'N': 5, 'Wn': 0.12}])
+@pytest.mark.parametrize("butter_kwargs", [None, {'N': 5, 'Wn': 0.12}])
 @pytest.mark.parametrize("num_channels", [32, 64])
 def test_highpass_spatial_filter_synthetic_data(num_channels, ntr_pad, ntr_tap, lagc, butter_kwargs):
     """
@@ -144,6 +91,7 @@ def test_highpass_spatial_filter_synthetic_data(num_channels, ntr_pad, ntr_tap, 
     options = dict(lagc=lagc, ntr_pad=ntr_pad, ntr_tap=ntr_tap, butter_kwargs=butter_kwargs)
 
     durations = [0.5, 0.8]
+    rng = np.random.RandomState(seed=100)
     si_recording = generate_recording(num_channels=num_channels,
                                       durations=durations)
 
@@ -174,31 +122,6 @@ def get_ibl_si_data():
     si_recording = spre.scale(si_recording, dtype="float32")
 
     return ibl_data, si_recording
-
-
-def make_trend_and_data_no_trend(recording, trend_nyq, data_no_trend_nyq):
-    """
-    Make a 2D image, with a DC trend across 'channels' (y axis), the
-    other a high-frequency change in x and y, that should not be much
-    affected by removal of slow-frequency trend.
-    """
-    num_channels = recording.get_num_channels()
-    magnitude = 0.5 * num_channels * recording.get_num_samples()
-
-    y_dc_trend = np.zeros((recording.get_num_samples(), num_channels))
-    nyq_samples = np.ceil((num_channels / 2) * trend_nyq).astype("int")
-    y_dc_trend[0, nyq_samples] = magnitude
-    y_dc_trend[0, -nyq_samples] = magnitude
-
-    high_freq_x_and_y = np.zeros((recording.get_num_samples(), num_channels))
-    nyq_samples = np.floor((num_channels / 2) * data_no_trend_nyq).astype("int")
-    high_freq_x_and_y[nyq_samples, nyq_samples] = magnitude
-    high_freq_x_and_y[-nyq_samples, -nyq_samples] = magnitude
-
-    trend = np.abs(np.fft.ifft2(y_dc_trend))
-    data_no_trend = np.abs(np.fft.ifft2(high_freq_x_and_y))
-
-    return trend, data_no_trend
 
 
 def process_args_for_si(si_recording, lagc):
@@ -263,6 +186,5 @@ def run_ibl_highpass_filter(ibl_data, ntr_pad, ntr_tap, lagc, butter_kwargs):
 
 
 if __name__ == '__main__':
-    test_highpass_spatial_filter_real_data(lagc="ibl")  # TODO: this will fail with fixtures...
-    test_add_trend_and_check_deleted(num_channels=384)
-    test_highpass_spatial_filter_synthetic_data()
+    test_highpass_spatial_filter_real_data(lagc="ibl")
+    test_highpass_spatial_filter_synthetic_data(64, None, None, 1232, None)
