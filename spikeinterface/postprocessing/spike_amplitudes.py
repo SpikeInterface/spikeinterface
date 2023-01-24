@@ -55,7 +55,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         
         # put extremum_channels_index and peak_shifts in vector way
         extremum_channels_index = np.array([extremum_channels_index[unit_id] for unit_id in sorting.unit_ids], 
-                                           dtype='int64')
+                                            dtype='int64')
         peak_shifts = np.array([peak_shifts[unit_id] for unit_id in sorting.unit_ids], dtype='int64')
         
         if return_scaled:
