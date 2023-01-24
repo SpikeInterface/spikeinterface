@@ -53,17 +53,16 @@ Other resources
 
 To get started with SpikeInterface, you can take a look at the following additional resources:
 
-- `spiketutorials <https://github.com/SpikeInterface/spiketutorials>`_ is a collection of basic and advanced tutorials, 
-It includes links to videos to dive into the SpikeInterface framework.
+- | `spiketutorials <https://github.com/SpikeInterface/spiketutorials>`_ is a collection of basic and advanced 
+  | tutorials. It includes links to videos to dive into the SpikeInterface framework.
 
-- `SpikeInterface Reports <https://spikeinterface.github.io/>`_ contains several notebooks to reproduce analysis figures 
-of SpikeInterface-based papers and to showcase the latest features of SpikeInterface.
+- | `SpikeInterface Reports <https://spikeinterface.github.io/>`_ contains several notebooks to reproduce analysis 
+  | figures of SpikeInterface-based papers and to showcase the latest features of SpikeInterface.
 
-- The `2020 eLife paper <https://elifesciences.org/articles/61834>`_ introduces the concept and motivation and performs 
-an in-depth comparison of multiple sorters (spolier alert: they strongly disagree between each other!). **Note**: the 
-code-base and implementation have changed a lot since the "paper" version in published in 2020. 
-For detailed documentation we therefore suggest more recent resources, like this documentation and 
-:code:`spiketutorials`.
+- | The `2020 eLife paper <https://elifesciences.org/articles/61834>`_ introduces the concept and motivation and 
+  | performs an in-depth comparison of multiple sorters (spolier alert: they strongly disagree between each other!). 
+  | **Note**: the code-base and implementation have changed a lot since the "paper" version in published in 2020. 
+  | For detailed documentation we therefore suggest more recent resources, like this documentation and :code:`spiketutorials`.
 
 
 Versions and compatibility
