@@ -202,6 +202,7 @@ class DecentralizedRegistration:
     robust_regression_sigma: float
         Use for convergence_method='lsqr_robust' for iterative selection of the regression.
     # TODO: spatial_prior, temporal_prior
+    # TODO: reference_displacement
     lsqr_robust_n_iter: int
         Number of iteration for convergence_method='lsqr_robust'.
     """
@@ -212,11 +213,15 @@ class DecentralizedRegistration:
             pairwise_displacement_method='conv', max_displacement_um=100., weight_scale='linear',
             error_sigma=0.2, conv_engine='numpy', torch_device=None, batch_size=1,
             corr_threshold=0, time_horizon_s=None, convergence_method='lsmr',
+            temporal_prior=True, spatial_prior=True, reference_displacement="mode_search",
             robust_regression_sigma=2, lsqr_robust_n_iter=20):
 
         # make 2D histogram raster
         if verbose:
             print('Computing motion histogram')
+        if (temporal_prior or spatial_prior) and not convergence_method == 'lsmr':
+            raise ValueError("Use LSMR when using the priors in DecentralizedRegistration.")
+
         motion_histogram, temporal_hist_bin_edges, spatial_hist_bin_edges = \
             make_2d_motion_histogram(recording, peaks,
                                      peak_locations,
@@ -232,10 +237,17 @@ class DecentralizedRegistration:
         # temporal bins are bin center
         temporal_bins = temporal_hist_bin_edges[:-1] + bin_duration_s // 2.
 
-        motion = np.zeros((temporal_bins.size, len(non_rigid_windows)), dtype='float64')
+        motion = np.zeros((temporal_bins.size, len(non_rigid_windows)), dtype=np.float64)
         windows_iter = non_rigid_windows
         if progress_bar:
-            windows_iter = tqdm(windows_iter, desc="windows")
+            windows_iter = tqdm(windows_iter, desc="Windows")
+        if spatial_prior:
+            all_pairwise_displacements = np.empty(
+                (len(non_rigid_windows, temporal_bins.size, temporal_bins.size)),
+                dtype=np.float64)
+            all_pairwise_displacement_weights = np.empty(
+                (len(non_rigid_windows, temporal_bins.size, temporal_bins.size)),
+                dtype=np.float64)
         for i, win in enumerate(windows_iter):
             window_slice = np.flatnonzero(win > 1e-5)
             window_slice = slice(window_slice[0], window_slice[-1])
@@ -251,6 +263,11 @@ class DecentralizedRegistration:
                                                   max_displacement_um=max_displacement_um,
                                                   corr_threshold=corr_threshold, time_horizon_s=time_horizon_s,
                                                   bin_duration_s=bin_duration_s, progress_bar=False)
+
+            if spatial_prior:
+                all_pairwise_displacements[i] = pairwise_displacement
+                all_pairwise_displacement_weights[i] = pairwise_displacement_weight
+
             if extra_check:
                 extra_check['pairwise_displacement_list'].append(pairwise_displacement)
 
@@ -258,11 +275,31 @@ class DecentralizedRegistration:
                 print(f'Computing global displacement: {i + 1} / {len(non_rigid_windows)}')
 
             # TODO: if spatial_prior, do this after the loop
-            motion[:, i] = compute_global_displacement(pairwise_displacement,
-                                                       pairwise_displacement_weight=pairwise_displacement_weight,
-                                                       convergence_method=convergence_method,
-                                                       robust_regression_sigma=robust_regression_sigma,
-                                                       lsqr_robust_n_iter=lsqr_robust_n_iter, progress_bar=False)
+            if not spatial_prior:
+                motion[:, i] = compute_global_displacement(
+                    pairwise_displacement,
+                    pairwise_displacement_weight=pairwise_displacement_weight,
+                    convergence_method=convergence_method,
+                    robust_regression_sigma=robust_regression_sigma,
+                    lsqr_robust_n_iter=lsqr_robust_n_iter,
+                    reference_displacement=reference_displacement,
+                    temporal_prior=temporal_prior,
+                    spatial_prior=spatial_prior,
+                    progress_bar=False,
+                )
+
+        if spatial_prior:
+            motion = compute_global_displacement(
+                pairwise_displacement,
+                pairwise_displacement_weight=pairwise_displacement_weight,
+                convergence_method=convergence_method,
+                robust_regression_sigma=robust_regression_sigma,
+                lsqr_robust_n_iter=lsqr_robust_n_iter,
+                reference_displacement=reference_displacement,
+                temporal_prior=temporal_prior,
+                spatial_prior=spatial_prior,
+                progress_bar=False,
+            )
 
         return motion, temporal_bins
 
@@ -701,7 +738,10 @@ def compute_global_displacement(
     pairwise_displacement,
     pairwise_displacement_weight=None,
     sparse_mask=None,
+    temporal_prior=True,
+    spatial_prior=True,
     convergence_method='lsmr',
+    reference_displacement='mode_search',
     robust_regression_sigma=2,
     lsqr_robust_n_iter=20,
     progress_bar=False,
@@ -718,9 +758,11 @@ def compute_global_displacement(
         One of "gradient"
 
     """
-    size = pairwise_displacement.shape[0]
+    if (temporal_prior or spatial_prior) and convergence_method != "lsmr":
+        raise ValueError("Use LSMR when using the priors in DecentralizedRegistration.")
 
     if convergence_method == 'gradient_descent':
+        size = pairwise_displacement.shape[0]
         from scipy.optimize import minimize
         from scipy.sparse import csr_matrix
 
@@ -802,19 +844,130 @@ def compute_global_displacement(
         displacement = p
 
     elif convergence_method == 'lsmr':
-        raise NotImplementedError
+        from scipy import sparse
 
-        # TODO: temporal_prior
-        # TODO: initialize at D.mean(axis=1)
-        # TODO: handle spatial_prior, window indices
+        D = pairwise_displacement
 
+        # weighted problem
+        if pairwise_displacement_weight is None:
+            pairwise_displacement_weight = np.ones_like(D)
+        if sparse_mask is None:
+            sparse_mask = np.ones_like(D)
+        W = pairwise_displacement_weight * sparse_mask
+
+        assert D.shape == W.shape
+
+        # first dimension is the windows dim, which could be empty in rigid case
+        # we expand dims so that below we can consider only the nonrigid case
+        if D.ndim == 2:
+            W = W[None]
+            D = D[None]
+        assert D.ndim == W.ndim == 3
+        B, T, T_ = D
+        assert T == T_
+
+        # sparsify the problem
+        # we will make a list of temporal problems and then
+        # stack over the windows axis to finish.
+        # each matrix in coefficients will be (sparse_dim, T)
+        coefficients = []
+        # each vector in targets will be (T,)
+        targets = []
+        # we want to solve for a vector of shape BT, which we will reshape
+        # into a (B, T) matrix.
+        # after the loop below, we will stack a coefts matrix (sparse_dim, B, T)
+        # and a target vector of shape (B, T), both to be vectorized on last two axes,
+        # so that the target p is indexed by i = bT + t (block/window major).
+
+        # calculate coefficients matrices and target vector
+        for Wb, Db in zip(W, D):
+            # indices of active temporal pairs in this window
+            I, J = np.nonzero(W > 0)
+            n_sampled = I.size
+
+            # construct Kroneckers and sparse objective in this window
+            ones = np.ones(n_sampled)
+            Mb = sparse.csr_matrix((ones, (range(n_sampled), I)), shape=(n_sampled, T))
+            Nb = sparse.csr_matrix((ones, (range(n_sampled), J)), shape=(n_sampled, T))
+            block_sparse_kron = Mb - Nb
+            block_disp_pairs = Db[I, J]
+
+            # add the temporal smoothness prior in this window
+            if temporal_prior:
+                temporal_diff_operator = sparse.diags(
+                    (
+                        np.full(T - 1, -1, dtype=block_sparse_kron.dtype),
+                        np.full(T - 1, 1, dtype=block_sparse_kron.dtype),
+                    ),
+                    offsets=(0, 1),
+                    shape=(T - 1, T),
+                )
+                block_sparse_kron = sparse.vstack(
+                    (block_sparse_kron, temporal_diff_operator),
+                    format="csr",
+                )
+                block_disp_pairs = np.concatenate(
+                    (block_disp_pairs, np.zeros(T - 1)),
+                )
+
+            coefficients.append(block_sparse_kron)
+            targets.append(block_disp_pairs)
+        coefficients = sparse.hstack(coefficients)
+        targets = np.concatenate(targets, axis=0)
+
+        # spatial smoothness prior: penalize difference of each block's
+        # displacement with the next.
+        # only if B > 1, and not in the last window.
+        # this is a (BT, BT) sparse matrix D such that:
+        # entry at (i, j) is:
+        #  {   1 if i = j, i.e., i = j = bT + t for b = 0,...,B-2
+        #  {  -1 if i = bT + t and j = (b+1)T + t for b = 0,...,B-2
+        #  {   0 otherwise.
+        # put more simply, the first (B-1)T diagonal entries are 1,
+        # and entries (i, j) such that i = j - T are -1.
+        if B > 1 and spatial_prior:
+            one_then_zero = np.zeros(B * T, dtype=block_sparse_kron.dtype)
+            one_then_zero[:(B - 1) * T] = 1
+            spatial_diff_operator = sparse.diags(
+                (
+                    one_then_zero,
+                    np.full((B - 1) * T, -1, dtype=block_sparse_kron.dtype),
+                ),
+                offsets=(0, T),
+                shape=(B * T, B * T),
+            )
+            coefficients = sparse.vstack((coefficients, spatial_diff_operator))
+            targets = np.concatenate((targets, np.zeros(B * T, dtype=targets.dtype)))
+
+        # initialize at the column mean of pairwise displacements (in each window)
+        p0 = D.mean(axis=2).reshape(B * T)
+
+        # use LSMR to solve the whole problem
+        p, *_ = sparse.linalg.lsmr(coefficients, targets, x0=p0)
+
+        # TODO: do we need to weight the upsampling somehow?
     else:
-        raise ValueError(f"Method {convergence_method} doesn't exists for compute_global_displacement")
+        raise ValueError(f"Method {convergence_method} doesn't exist for compute_global_displacement")
 
-    # TODO reference_displacement in ("mean", "mode_search")
+    # try to avoid spurious constant offsets
+    # let the user choose how to do this. here are some ideas.
+    # (one can also -= their own number on the result of this function.)
+    if reference_displacement == "mean":
+        displacement -= displacement.mean()
+    elif reference_displacement == "median":
+        displacement -= np.median(displacement)
+    elif reference_displacement == "mode_search":
+        step_size = 0.1
+        best_ref = np.median(displacement)
+        max_zeros = np.sum(np.floor(displacement - best_ref) == 0)
+        for ref in np.arange(np.floor(displacement.min()), np.ceil(displacement.max()), step_size):
+            n_zeros = np.sum(np.floor(displacement - ref) == 0)
+            if n_zeros > max_zeros:
+                max_zeros = n_zeros
+                best_ref = ref
+        displacement -= best_ref
 
     return displacement
-
 
 
 def iterative_template_registration(spikecounts_hist_images,
@@ -1044,7 +1197,7 @@ def scipy_conv1d(input, weights, padding="valid"):
         length_out = length - 2 * (kernel_size // 2)
     elif isinstance(padding, int):
         mode = "valid"
-        input = np.pad(input, [*[(0,0)] * (input.ndim - 1), (padding, padding)])
+        input = np.pad(input, [*[(0, 0)] * (input.ndim - 1), (padding, padding)])
         length_out = length - (kernel_size - 1) + 2 * padding
     else:
         raise ValueError(f"Unknown padding {padding}")
