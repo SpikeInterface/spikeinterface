@@ -24,7 +24,8 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     installation_mesg = "To use the PhySortingExtractor install pandas: \n\n pip install pandas\n\n"  # error message when not installed
     name = "phykilosort"
 
-    def __init__(self, folder_path, exclude_cluster_groups=None, keep_good_only=False):
+    def __init__(self, folder_path, exclude_cluster_groups=None, keep_good_only=False,
+                 load_all_cluster_properties=True):
         try:
             import pandas as pd
             HAVE_PD = True
@@ -43,7 +44,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         clust_id = np.unique(spike_clusters)
         unit_ids = list(clust_id)
-        spike_times.astype(int)
+        spike_times = spike_times.astype(int)
         params = read_python(str(phy_folder / 'params.py'))
         sampling_frequency = params['sample_rate']
 
@@ -55,10 +56,10 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             # load properties from cluster_info file
             cluster_info_file = cluster_info_files[0]
             if cluster_info_file.suffix == ".tsv":
-                delimeter = "\t"
+                delimiter = "\t"
             else:
-                delimeter = ","
-            cluster_info = pd.read_csv(cluster_info_file, delimiter=delimeter)
+                delimiter = ","
+            cluster_info = pd.read_csv(cluster_info_file, delimiter=delimiter)
         else:
             # load properties from other tsv/csv files
             all_property_files = [p for p in phy_folder.iterdir() if p.suffix in ['.csv', '.tsv']]
@@ -66,10 +67,10 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             cluster_info = None
             for file in all_property_files:
                 if file.suffix == ".tsv":
-                    delimeter = "\t"
+                    delimiter = "\t"
                 else:
-                    delimeter = ","
-                new_property = pd.read_csv(file, delimiter=delimeter)
+                    delimiter = ","
+                new_property = pd.read_csv(file, delimiter=delimiter)
                 if cluster_info is None:
                     cluster_info = new_property
                 else:
@@ -97,7 +98,8 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             del cluster_info["id"]
 
         # update spike clusters and times values
-        spike_clusters_clean_idxs = np.in1d(spike_clusters, cluster_info["cluster_id"].values).nonzero()[0]
+        bad_clusters = [clust for clust in clust_id if clust not in cluster_info['cluster_id'].values]
+        spike_clusters_clean_idxs = ~np.isin(spike_clusters, bad_clusters)
         spike_clusters_clean = spike_clusters[spike_clusters_clean_idxs]
         spike_times_clean = spike_times[spike_clusters_clean_idxs]
 
@@ -109,7 +111,6 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             else:
                 max_si_unit_id = int(np.nanmax(unit_ids))
 
-            spike_clusters_new = np.zeros_like(spike_clusters_clean)
             for i, (phy_id, si_id) in enumerate(zip(cluster_info["cluster_id"].values,
                                                     cluster_info["si_unit_id"].values)):
                 if np.isnan(si_id):
@@ -119,7 +120,12 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                     new_si_id = si_id
                 unit_ids[i] = new_si_id
 
-                spike_clusters_new[spike_clusters_clean == phy_id] = new_si_id
+            # Little hack to replace values in spike_clusters_clean to spike_clusters_new very efficiently.
+            from_values = cluster_info['cluster_id'].values
+            sort_idx = np.argsort(from_values)
+            idx = np.searchsorted(from_values, spike_clusters_clean, sorter=sort_idx)
+            spike_clusters_new = unit_ids[sort_idx][idx]
+
             unit_ids = unit_ids.astype(int)
             spike_clusters_clean = spike_clusters_new
             del cluster_info["si_unit_id"]
@@ -138,6 +144,9 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             elif prop_name == "group":
                 # rename group property to 'quality'
                 self.set_property(key="quality", values=cluster_info[prop_name])
+            else:
+                if load_all_cluster_properties:
+                    self.set_property(key=prop_name, values=cluster_info[prop_name])
 
         self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
 
@@ -149,11 +158,10 @@ class PhySortingSegment(BaseSortingSegment):
         self._all_clusters = all_clusters
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
-        spike_times = self._all_spikes[self._all_clusters == unit_id]
-        if start_frame is not None:
-            spike_times = spike_times[spike_times >= start_frame]
-        if end_frame is not None:
-            spike_times = spike_times[spike_times < end_frame]
+        start = 0 if start_frame is None else np.searchsorted(self._all_spikes, start_frame, side="left")
+        end = len(self._all_spikes) if end_frame is None else np.searchsorted(self._all_spikes, end_frame, side="right")
+
+        spike_times = self._all_spikes[start:end][self._all_clusters[start:end] == unit_id]
         return np.atleast_1d(spike_times.copy().squeeze())
 
 

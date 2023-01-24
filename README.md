@@ -41,16 +41,15 @@
 		</a>
 	</td>
 </tr>
-<tr>
-	<td>Twitter</td>
-	<td>
-		<a href="https://twitter.com/spikeinterface?ref_src=twsrc%5Etfw" class="twitter-follow-button" data-show-count="false">@spikeinterface
-    </a>
-	</td>
-</tr>
 </table>
 
+[![Twitter](https://img.shields.io/badge/@spikeinterface-%231DA1F2.svg?style=for-the-badge&logo=Twitter&logoColor=white)](https://twitter.com/spikeinterface) [![Mastodon](https://img.shields.io/badge/-@spikeinterface-%232B90D9?style=for-the-badge&logo=mastodon&logoColor=white)](https://fosstodon.org/@spikeinterface)
+
+
 SpikeInterface is a Python framework designed to unify preexisting spike sorting technologies into a single code base.
+
+Please [Star](https://github.com/SpikeInterface/spikeinterface/stargazers) the project to support us and [Watch](https://github.com/SpikeInterface/spikeinterface/subscription) to always stay up-to-date!
+
 
 With SpikeInterface, users can:
 
@@ -62,22 +61,20 @@ With SpikeInterface, users can:
 - compute quality metrics to validate and curate spike sorting outputs.
 - visualize recordings and spike sorting outputs in several ways (matplotlib, sortingview, in jupyter)
 - export report and export to phy
-- offer a powerful Qt-based viewer in separate package [spikeinterface-gui](https://https://github.com/SpikeInterface/spikeinterface-gui)
+- offer a powerful Qt-based viewer in separate package [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui)
 - have some powerful sorting components to build your own sorter.
 
 
-
-**Please have a look at the [eLife paper](https://elifesciences.org/articles/61834) that describes in detail this project**
-
-You can also have a look at the [spikeinterface-gui](https://https://github.com/SpikeInterface/spikeinterface-gui).
-
 ## Documentation
 
-All documentation for spikeinterface can be found [here](https://spikeinterface.readthedocs.io/en/latest).
+Detailed documentation for spikeinterface can be found [here](https://spikeinterface.readthedocs.io/en/latest).
 
-Some useful jupyter notebook tutorials can be found in [spiketutorials](https://github.com/SpikeInterface/spiketutorials).
+Several tutorials to get started can be found in [spiketutorials](https://github.com/SpikeInterface/spiketutorials).
 
-There are also some useful notebooks [on our blog](https://spikeinterface.github.io) that cover advanced benchmarking and sorting components.
+There are also some useful notebooks [on our blog](https://spikeinterface.github.io) that cover advanced benchmarking 
+and sorting components.
+
+You can also have a look at the [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui).
 
 
 ## How to install spikeinteface

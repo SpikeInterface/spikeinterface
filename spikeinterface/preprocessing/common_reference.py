@@ -120,7 +120,10 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         # need input trace
         all_traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
         self.temp = np.zeros((all_traces.shape[0],),dtype=all_traces.dtype)
-        _channel_indices = np.arange(all_traces.shape[1])[channel_indices]
+        _channel_indices = np.arange(all_traces.shape[1])
+        if channel_indices is not None:
+            _channel_indices = _channel_indices[channel_indices]
+
         
         if self.reference == 'global':
             out_traces = np.zeros((all_traces.shape[0], _channel_indices.size), dtype=all_traces.dtype)

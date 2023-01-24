@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.core.testing_tools import generate_snippets
+from spikeinterface.core import generate_snippets
 from spikeinterface.preprocessing.align_snippets import AlignSnippets
 
 if hasattr(pytest, "global_test_folder"):

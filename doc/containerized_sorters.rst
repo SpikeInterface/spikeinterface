@@ -31,6 +31,14 @@ or
 Some sorters are GPU required or optional. To run containerized sorters with GPU capabilities, CUDA and `nvidia-container-toolkit <https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html>`_ needs to be installed.
 Only NVIDIA GPUs are supported for now.
 
+For Docker users, you can either install `Docker Desktop <https://www.docker.com/products/docker-desktop/>`_ 
+(recommended for Windows and MacOS) or the `Docker Engine  <https://docs.docker.com/engine/install/ubuntu/>`_ 
+(recommended for Linux). 
+To enable :code:`Docker Desktop` to download the containers, you need to create an account on 
+`DockerHub <https://hub.docker.com/>`_ (free) and perform the login in :code:`Docker Desktop`.
+For :code:`Docker Engine`, you also need to enable Docker to run without :code:`sudo` priviledges 
+following `this post-install guide <https://docs.docker.com/engine/install/linux-postinstall/>`_
+
 The containers are built with Docker, but Singularity has an internal mechanism to convert docker images.
 Using Singularity is often prefered due to its simpler approach with regard to root privilege.
 
@@ -46,6 +54,7 @@ The following code creates a test recording and runs a containerized spike sorte
         num_channels=64,
         num_segments=1
     )
+    test_recording = test_recording.save(folder="test-docker-folder")
 
     sorting = ss.run_kilosort3(
         recording=test_recording,
@@ -71,6 +80,13 @@ To use a specific image, set either ``docker_image`` or ``singularity_image`` to
         recording=test_recording,
         output_folder="kilosort3",
         singularity_image="spikeinterface/kilosort3-compiled-base:0.1.0")
+
+
+**NOTE:** the :code:`toy_example()` returns in-memory objects, which are not bound to a file on disk. 
+In order to run spike sorting in a container, the recording object MUST be persistent on disk, so that the 
+container can reload it. The :code:`save()` function makes the recording persistent on disk, by saving the in-memory 
+:code:`test_recording` object to a binary file in the :code:`test-docker-folder` folder.
+
 
 Contributing
 ------------

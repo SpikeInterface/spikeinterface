@@ -4,16 +4,17 @@ Some utils to handle parallel jobs on top of job and/or loky
 from pathlib import Path
 import numpy as np
 import platform
+import os
 
 import joblib
 import sys
 import contextlib
 from tqdm.auto import tqdm
 
-
-# import loky
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
+from threadpoolctl import threadpool_limits
+
 
 _shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel processing:
             * chunk_duration or chunk_size or chunk_memory or total_memory
@@ -34,8 +35,47 @@ _shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel process
                 Note that "fork" is only available on UNIX systems
     """
     
-job_keys = ['n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_duration', 'progress_bar', 
-            'mp_context', 'verbose']
+job_keys = ('n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_duration', 'progress_bar', 
+            'mp_context', 'verbose', 'max_threads_per_process')
+
+
+def fix_job_kwargs(runtime_job_kwargs):
+    from .globals import get_global_job_kwargs
+    job_kwargs = get_global_job_kwargs()
+    
+    for k in runtime_job_kwargs:
+        assert k in job_keys, (f"{k} is not a valid job keyword argument. "
+                               f"Available keyword arguments are: {list(job_keys)}")
+    job_kwargs.update(runtime_job_kwargs)
+
+    # if n_jobs is -1, set to os.cpu_count()
+    if "n_jobs" in job_kwargs:
+        assert isinstance(job_kwargs["n_jobs"], (float, np.integer, int))
+        if isinstance(job_kwargs["n_jobs"], float):
+            n_jobs = int(job_kwargs["n_jobs"] * os.cpu_count())
+        elif job_kwargs["n_jobs"] < 0:            
+            n_jobs = os.cpu_count() + 1 + job_kwargs["n_jobs"]
+        else:
+            n_jobs = job_kwargs["n_jobs"]
+        job_kwargs["n_jobs"] = max(n_jobs, 1)
+    return job_kwargs
+
+
+def split_job_kwargs(mixed_kwargs):
+    """
+    This function splits mixed kwargs into job_kwargs and specific_kwargs.
+    This can be useful for some function with generic signature
+    mixing specific and job kwargs.
+    """
+    job_kwargs = {}
+    specific_kwargs = {}
+    for k, v in mixed_kwargs.items():
+        if k in job_keys:
+            job_kwargs[k] = v
+        else:
+            specific_kwargs[k] = v
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    return specific_kwargs, job_kwargs
 
 
 # from https://stackoverflow.com/questions/24983493/tracking-progress-of-joblib-parallel-execution
@@ -110,10 +150,12 @@ def ensure_n_jobs(recording, n_jobs=1):
         print(f"Python {sys.version} does not support parallel processing")
         n_jobs = 1
 
-    if not recording.is_dumpable:
-        if n_jobs > 1:
-            n_jobs = 1
-            print("RecordingExtractor is not dumpable and can't be processed in parallel")
+    if not recording.check_if_dumpable():
+        if n_jobs != 1:
+            raise RuntimeError(
+                "Recording is not dumpable and can't be processed in parallel. "
+                "You can use the `recording.save()` function to make it dumpable or set 'n_jobs' to 1."
+            )
 
     return n_jobs
 
@@ -226,6 +268,10 @@ class ChunkRecordingExecutor:
         "fork" is only available on UNIX systems.
     job_name: str
         Job name
+    max_threads_per_process: int or None
+        Limit the number of thread per process using threadpoolctl modules.
+        This used only when n_jobs>1
+        If None, no limits.
 
     Returns
     -------
@@ -235,7 +281,7 @@ class ChunkRecordingExecutor:
 
     def __init__(self, recording, func, init_func, init_args, verbose=False, progress_bar=False, handle_returns=False,
                  n_jobs=1, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None,
-                 mp_context=None, job_name=''):        
+                 mp_context=None, job_name='', max_threads_per_process=1):
         self.recording = recording
         self.func = func
         self.init_func = init_func
@@ -259,7 +305,8 @@ class ChunkRecordingExecutor:
                                             chunk_memory=chunk_memory, chunk_duration=chunk_duration,
                                             n_jobs=self.n_jobs)
         self.job_name = job_name
-
+        self.max_threads_per_process = max_threads_per_process
+        
         if verbose:
             print(self.job_name, 'with n_jobs =', self.n_jobs, 'and chunk_size =', self.chunk_size)
 
@@ -298,7 +345,7 @@ class ChunkRecordingExecutor:
             with ProcessPoolExecutor(max_workers=n_jobs,
                                      initializer=worker_initializer,
                                      mp_context=mp.get_context(self.mp_context),
-                                     initargs=(self.func, self.init_func, self.init_args)) as executor:
+                                     initargs=(self.func, self.init_func, self.init_args, self.max_threads_per_process)) as executor:
 
                 results = executor.map(function_wrapper, all_chunks)
 
@@ -323,9 +370,14 @@ global _worker_ctx
 global _func
 
 
-def worker_initializer(func, init_func, init_args):
+def worker_initializer(func, init_func, init_args, max_threads_per_process):
     global _worker_ctx
-    _worker_ctx = init_func(*init_args)
+    if max_threads_per_process is None:
+        _worker_ctx = init_func(*init_args)
+    else:
+        with threadpool_limits(limits=max_threads_per_process):
+            _worker_ctx = init_func(*init_args)
+    _worker_ctx['max_threads_per_process'] = max_threads_per_process
     global _func
     _func = func
 
@@ -334,4 +386,9 @@ def function_wrapper(args):
     segment_index, start_frame, end_frame = args
     global _func
     global _worker_ctx
-    return _func(segment_index, start_frame, end_frame, _worker_ctx)
+    max_threads_per_process = _worker_ctx['max_threads_per_process']
+    if max_threads_per_process is None:
+        return _func(segment_index, start_frame, end_frame, _worker_ctx)
+    else:
+        with threadpool_limits(limits=max_threads_per_process):
+            return _func(segment_index, start_frame, end_frame, _worker_ctx)

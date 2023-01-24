@@ -10,8 +10,6 @@ Welcome to SpikeInterface's documentation!
 Spikeinterface is a Python module designed to improve the accessibility, reliability, and reproducibility
 of spike sorting and all its associated computations.
 
-
-
 With SpikeInterface, users can:
 
 - read/write many extracellular file formats.
@@ -32,7 +30,7 @@ Overview of SpikeInterface modules
   :align: center
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
     :caption: Contents:
 
     overview
@@ -50,21 +48,29 @@ Overview of SpikeInterface modules
     authors
 
 
-For more information, please have a look at:
+Other resources
+---------------
 
-- The `eLife paper <https://elifesciences.org/articles/61834>`_
+To get started with SpikeInterface, you can take a look at the following additional resources:
 
-- 1-hour `video tutorial <https://www.youtube.com/watch?v=fvKG_-xQ4D8&t=3364s&ab_channel=NeurodataWithoutBorders>`_, recorded for the NWB User Days (Sep 2020)
+- | `spiketutorials <https://github.com/SpikeInterface/spiketutorials>`_ is a collection of basic and advanced 
+  | tutorials. It includes links to videos to dive into the SpikeInterface framework.
 
-- A collection of analysis notebook `SpikeInterface Reports <https://spikeinterface.github.io/>`_
+- | `SpikeInterface Reports <https://spikeinterface.github.io/>`_ contains several notebooks to reproduce analysis 
+  | figures of SpikeInterface-based papers and to showcase the latest features of SpikeInterface.
+
+- | The `2020 eLife paper <https://elifesciences.org/articles/61834>`_ introduces the concept and motivation and 
+  | performs an in-depth comparison of multiple sorters (spolier alert: they strongly disagree between each other!). 
+  | **Note**: the code-base and implementation have changed a lot since the "paper" version in published in 2020. 
+  | For detailed documentation we therefore suggest more recent resources, like this documentation and :code:`spiketutorials`.
 
 
 Versions and compatibility
 --------------------------
 
-We released a major version of SpikeInterface in July 2021 (version 0.90.0)
+We released a major version of SpikeInterface (referred to as **new API**) in July 2021 (version>=0.90) which:
 
-  * breaks backward compatibility with 0.10/0.11/0.12/0.13 series
+  * breaks backward compatibility with 0.10/0.11/0.12/0.13 series (**old API**)
   * is not a metapackage anymore
   * doesn't depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets sub-packages
 
@@ -72,7 +78,7 @@ Please see the release notes here: :ref:`release0.90.0`.
 
 For other version release notes check the :ref:`releasenotes`.
   
-See the documentation for the version 0.13.0 (old API) `here <https://spikeinterface.readthedocs.io/en/0.13.0/>`_.
+See the documentation for the version **old API** (version<=0.13) `here <https://spikeinterface.readthedocs.io/en/0.13.0/>`_.
 
 
 .. Indices and tables

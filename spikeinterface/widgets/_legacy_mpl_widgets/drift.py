@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pylab as plt
+import scipy.sparse
 
 from .basewidget import BaseWidget
 
@@ -184,6 +185,8 @@ class PairwiseDisplacementWidget(BaseWidget):
             ax = self.axes.flatten()[i]
 
             pairwise_displacement = self.extra_check['pairwise_displacement_list'][i]
+            if isinstance(pairwise_displacement, scipy.sparse.csr_matrix):
+                pairwise_displacement = pairwise_displacement.toarray()
             im = ax.imshow(
                 pairwise_displacement,
                 interpolation='nearest',
