@@ -113,7 +113,7 @@ def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipe
     worker_ctx['pipeline_nodes'] = pipeline_nodes
     
     if pipeline_nodes is not None:
-        check_graph(nodes)
+        check_graph(pipeline_nodes)
 
     return worker_ctx
 
@@ -155,7 +155,7 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     peaks['segment_ind'] = segment_index
 
     if pipeline_nodes is not None:
-        outs = run_nodes(traces, local_peaks, nodes)
+        outs = run_nodes(traces, peaks, pipeline_nodes)
 
     # make absolute sample index
     peaks['sample_ind'] += (start_frame - left_margin)

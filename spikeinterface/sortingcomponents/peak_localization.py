@@ -43,8 +43,6 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.3, ms_
 
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
     
-    node0 = ExtractDenseWaveforms(recording, name='extract_waveforms', ms_before=.5, ms_after=1.,  have_global_output=False),
-    
     if method == 'center_of_mass':
         pipeline_nodes = [
             ExtractDenseWaveforms(recording, name='extract_waveforms', ms_before=ms_before, ms_after=ms_after,  have_global_output=False),

@@ -30,6 +30,9 @@ class PipelineNode:
         self.recording = recording
         self.name = name
         self.have_global_output = have_global_output
+        if isinstance(parents, str):
+            # only one parents is allowed
+            parents = [parents]
         self.parents = parents
         
         self._kwargs = dict(
