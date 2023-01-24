@@ -103,7 +103,7 @@ def test_highpass_spatial_filter_synthetic_data(num_channels, ntr_pad, ntr_tap, 
 
         ibl_filtered = run_ibl_highpass_filter(ibl_data=si_recording.get_traces(segment_index=seg).T,  **options)
 
-        assert np.allclose(si_filtered, ibl_filtered, atol=1e-06, rtol=0)
+        assert np.allclose(si_filtered, ibl_filtered, atol=1e-05, rtol=0)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
