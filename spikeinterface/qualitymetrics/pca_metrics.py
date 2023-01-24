@@ -10,6 +10,13 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.decomposition import IncrementalPCA
 from joblib import delayed, Parallel
 from copy import deepcopy
+
+import spikeinterface as si
+from ..core import get_random_data_chunks, compute_sparsity, WaveformExtractor
+from ..core.job_tools import tqdm_joblib
+from ..core.template_tools import get_template_extremum_channel
+
+from ..postprocessing import WaveformPrincipalComponent
 import warnings
 
 from .misc_metrics import compute_num_spikes
