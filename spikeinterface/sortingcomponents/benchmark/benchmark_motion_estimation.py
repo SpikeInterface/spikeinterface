@@ -153,12 +153,16 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
                 f = scipy.interpolate.interp1d(unit_positions, unit_motions[t, :], fill_value="extrapolate")
                 self.gt_motion[t, :] = f(self.spatial_bins)
 
-    def plot_true_drift(self, scaling_probe=1.5, figsize=(15, 10)):
+    def plot_true_drift(self, scaling_probe=1.5, figsize=(15, 10), axes=None):
                 
-        fig = plt.figure(figsize=figsize)
-        gs = fig.add_gridspec(1, 8, wspace=0)
-
-        ax = fig.add_subplot(gs[:2])
+        if axes is None:
+            fig = plt.figure(figsize=figsize)
+            gs = fig.add_gridspec(1, 8, wspace=0)
+        
+        if axes is None:
+            ax = fig.add_subplot(gs[:2])
+        else:
+            ax = axes[0]
         plot_probe_map(self.recording, ax=ax)
         _simpleaxis(ax)
 
@@ -178,8 +182,11 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
 
         # ax.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
-
-        ax = fig.add_subplot(gs[2:7])
+        if axes is None:
+            ax = fig.add_subplot(gs[2:7])
+        else:
+            ax = axes[1]
+        
         for i in range(self.gt_unit_positions.shape[1]):
             ax.plot(self.temporal_bins, self.gt_unit_positions[:, i], alpha=0.5, ls='--', c='0.5')
         
@@ -200,7 +207,10 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         ax.axhline(probe_y_min, color='k', ls='--', alpha=0.5)
         ax.axhline(probe_y_max, color='k', ls='--', alpha=0.5)
 
-        ax = fig.add_subplot(gs[7])
+        if axes is None:
+            ax = fig.add_subplot(gs[7])
+        else:
+            ax = axes[2]
         # plot_probe_map(self.recording, ax=ax)
         _simpleaxis(ax)
 
@@ -295,20 +305,27 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         ax1.sharey(ax0)
 
-    def plot_motion_corrected_peaks(self, scaling_probe=1.5, alpha=0.05, figsize=(15, 10)):
+    def plot_motion_corrected_peaks(self, scaling_probe=1.5, alpha=0.05, figsize=(15, 10), show_probe=True, axes=None):
 
-        fig = plt.figure(figsize=figsize)
-        gs = fig.add_gridspec(1, 5)
+        if axes is None:
+            fig = plt.figure(figsize=figsize)
+            if show_probe:
+                gs = fig.add_gridspec(1, 5)
+            else:
+                gs = fig.add_gridspec(1, 4)
         # Create the Axes.
 
-        ax0 = ax = fig.add_subplot(gs[0])
-        plot_probe_map(self.recording, ax=ax)
-        _simpleaxis(ax)
+        if show_probe:
+            if axes is None:
+                ax0 = ax = fig.add_subplot(gs[0])
+            else:
+                ax0 = ax = axes[0]
+            plot_probe_map(self.recording, ax=ax)
+            _simpleaxis(ax)
         
-
-        ymin, ymax = ax.get_ylim()
-        ax.set_ylabel('depth (um)')
-        ax.set_xlabel(None)
+            ymin, ymax = ax.get_ylim()
+            ax.set_ylabel('depth (um)')
+            ax.set_xlabel(None)
 
         channel_positions = self.recording.get_channel_locations()
         probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
@@ -317,8 +334,17 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         peak_locations_corrected = correct_motion_on_peaks(self.selected_peaks, self.peak_locations, times,
                                     self.motion, self.temporal_bins, self.spatial_bins, direction='y')
-        
-        ax1 = ax = fig.add_subplot(gs[1:3])
+        if axes is None:
+            if show_probe:
+                ax1 = ax = fig.add_subplot(gs[1:3])
+            else:
+                ax1 = ax = fig.add_subplot(gs[0:2])
+        else:
+            if show_probe:
+                ax1 = ax = axes[1]
+            else:
+                ax1 = ax = axes[0]
+
         _simpleaxis(ax)
 
         x = self.selected_peaks['sample_ind']/self.recording.get_sampling_frequency()
@@ -332,7 +358,17 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         ax.set_xlabel('time (s)')
 
-        ax2 = ax = fig.add_subplot(gs[3:5])
+        if axes is None:
+            if show_probe:
+                ax2 = ax = fig.add_subplot(gs[3:5])
+            else:
+                ax2 = ax = fig.add_subplot(gs[2:4])
+        else:
+            if show_probe:
+                ax2 = ax = axes[2]
+            else:
+                ax2 = ax = axes[1]
+        
         _simpleaxis(ax)
         y = peak_locations_corrected['y']
         ax.scatter(x, y, s=1, color='k', alpha=alpha)
@@ -343,10 +379,13 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         ax.set_xlabel('time (s)')
 
-
-        ax0.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
-        ax1.sharey(ax0)
-        ax2.sharey(ax0)
+        if show_probe:
+            ax0.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
+            ax1.sharey(ax0)
+            ax2.sharey(ax0)
+        else:
+            ax1.set_ylim(scaling_probe*probe_y_min, scaling_probe*probe_y_max)
+            ax2.sharey(ax1)
 
     def estimation_vs_depth(self, show_only=8, figsize=(15,10)):
         fig, axs = plt.subplots(ncols=2, figsize=figsize, sharey=True)
@@ -409,9 +448,10 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         _simpleaxis(ax)
 
 
-def plot_errors_several_benchmarks(benchmarks):
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+def plot_errors_several_benchmarks(benchmarks, axes=None):
 
+    if axes is None:
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
     for count, benchmark in enumerate(benchmarks):
         errors = benchmark.gt_motion - benchmark.motion
@@ -428,24 +468,25 @@ def plot_errors_several_benchmarks(benchmarks):
     ax.legend()
     _simpleaxis(ax)
 
-    ax1 = ax = axes[1]
-    ax.set_ylabel('error')
-    ax.set_xticks([])
-    _simpleaxis(ax)
+    ax1 = axes[1]
+    #ax.set_ylabel('error')
+    ax1.set_yticks([])
+    ax1.set_xticks([])
+    _simpleaxis(ax1)
 
-    ax2 = ax = axes[2]
-    ax.set_xlabel('depth (um)')
-    ax.set_ylabel('error')
+    ax2 =  axes[2]
+    ax2.set_yticks([])
+    ax2.set_xlabel('depth (um)')
+    #ax.set_ylabel('error')
     channel_positions = benchmark.recording.get_channel_locations()
     probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
-    ax.axvline(probe_y_min, color='k', ls='--', alpha=0.5)
-    ax.axvline(probe_y_max, color='k', ls='--', alpha=0.5)
+    ax2.axvline(probe_y_min, color='k', ls='--', alpha=0.5)
+    ax2.axvline(probe_y_max, color='k', ls='--', alpha=0.5)
 
-
-    _simpleaxis(ax)
+    _simpleaxis(ax2)
 
     ax1.sharey(ax0)
-    #ax2.sharey(ax0)
+    ax2.sharey(ax0)
 
 def plot_motions_several_benchmarks(benchmarks):
     fig, ax = plt.subplots(figsize=(15, 5))
@@ -461,8 +502,9 @@ def plot_motions_several_benchmarks(benchmarks):
     ax.set_xlabel('time (s)')
     _simpleaxis(ax)
 
-def plot_speed_several_benchmarks(benchmarks):
-    fig, ax = plt.subplots(figsize=(5, 5))
+def plot_speed_several_benchmarks(benchmarks, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(5, 5))
 
     
     for count, benchmark in enumerate(benchmarks):
@@ -484,3 +526,30 @@ def plot_speed_several_benchmarks(benchmarks):
     ax.set_xticks([])
     #ax.set_xticks(np.arange(len(benchmarks)), [i.title for i in benchmarks])
 
+
+
+def plot_figure(benchmarks):
+    fig = plt.figure(figsize=(15,15))
+    gs = fig.add_gridspec(4, 6)
+
+
+    ax_1 = fig.add_subplot(gs[0:3, 0])
+    ax_2 = fig.add_subplot(gs[0:3, 1:3])
+    ax_3 = fig.add_subplot(gs[0:3, 3])
+
+    benchmarks[0].plot_true_drift(axes=[ax_1, ax_2, ax_3])
+
+    ax_1 = fig.add_subplot(gs[0, 4:6])
+    ax_2 = fig.add_subplot(gs[1, 4:6])
+    benchmarks[0].plot_motion_corrected_peaks(show_probe=False, axes=[ax_1, ax_2])
+    #_simpleaxis(ax)
+
+    ax_1 = fig.add_subplot(gs[3, 0:2])
+    ax_2 = fig.add_subplot(gs[3, 2:4])
+    ax_3 = fig.add_subplot(gs[3, 4:6])
+
+
+    plot_errors_several_benchmarks(benchmarks, axes=[ax_1, ax_2, ax_3])
+
+    ax = fig.add_subplot(gs[2, 4:6])
+    plot_speed_several_benchmarks(benchmarks, ax=ax)
