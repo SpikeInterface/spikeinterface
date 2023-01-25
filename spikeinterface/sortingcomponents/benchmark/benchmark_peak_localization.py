@@ -157,9 +157,48 @@ def plot_comparison_positions(benchmarks, mode='average'):
         ax.bar([count], np.mean(bench.stds_over_templates), yerr=np.std(bench.stds_over_templates))
 
     ax.set_ylabel('individual variances')
-    #ax.set_yticks([])
-    #ax.set_ylim(ymin, ymax)
+    #ax.set_yticks([]
+    ymin, ymax = ax.get_ylim()
+    ax.set_ylim(0, 25)
 
 
 def plot_comparison_inferences(benchmarks, mode='average'):
-    
+    pass
+
+
+def plot_figure_1(benchmark, mode='average', cell_ind='auto'):
+
+    if cell_ind == 'auto':
+        norms = np.linalg.norm(benchmark.gt_positions, axis=1)
+        cell_ind = np.argsort(norms)[0]
+
+    fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(15, 10))
+    plot_probe_map(benchmark.recording, ax=axs[0, 0])
+    axs[0, 0].scatter(benchmark.gt_positions[:, 0], benchmark.gt_positions[:, 1], c='k')
+    axs[0, 0].scatter(benchmark.gt_positions[cell_ind, 0], benchmark.gt_positions[cell_ind, 1], c='r')
+
+
+    import spikeinterface.full as si
+    si.plot_timeseries(benchmark.recording, mode='line', time_range=(0.2,0.3), channel_ids=benchmark.recording.channel_ids[:20], ax=axs[0, 1])
+
+    waveforms = extract_waveforms(benchmark.recording, benchmark.gt_sorting, None, mode='memory',
+                                   ms_before=2.5, ms_after=2.5, max_spikes_per_unit=500, return_scaled=False,
+                                   **benchmark.job_kwargs, sparse=True, method='radius', radius_um=100)
+
+    unit_id = waveforms.sorting.unit_ids[cell_ind]
+    si.plot_unit_templates(waveforms, unit_ids=[unit_id], ax=axs[1, 0], same_axis=True, unit_colors = {unit_id : 'r'})
+    ylim, 
+    si.plot_unit_waveforms(waveforms, unit_ids=[unit_id], ax=axs[1, 1], same_axis=True, unit_colors = {unit_id : 'r'})
+
+    for i in [0, 1]:
+        for j in [0, 1]:
+            axs[i, j].spines['top'].set_visible(False)
+            axs[i, j].spines['right'].set_visible(False)
+
+    for i in [1]:
+        for j in [0, 1]:
+            axs[i, j].spines['left'].set_visible(False)
+            axs[i, j].spines['bottom'].set_visible(False)
+            axs[i, j].set_xticks([])
+            axs[i, j].set_yticks([])
+            axs[i, j].set_title('')
