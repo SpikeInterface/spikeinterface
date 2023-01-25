@@ -224,8 +224,6 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold,
     _, nc = raw.shape
     raw = raw - np.mean(raw, axis=0)[np.newaxis, :]
     fscale, psd = scipy.signal.welch(raw, fs=fs, axis=0)
-    # sos_hp = scipy.signal.butter(**{'N': 3, 'Wn': 300 / fs * 2, 'btype': 'highpass'}, output='sos')
-    # raw_hf = scipy.signal.sosfiltfilt(sos_hp, raw)
 
     xcor, xcorr_neighbors, xcorr_distant = compute_correlations(raw, n_neighbors)
     psd_hf = np.mean(psd[fscale > (fs / 2 * nyquist_threshold), :], axis=0)
@@ -255,12 +253,9 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold,
 # ----------------------------------------------------------------------------------------------
 
 def compute_correlations(raw, n_neighbors):
-    if raw_hf is None:
-        raw_hf = raw
     xcorr = channels_similarity(raw)
-    xcorrf = channels_similarity(raw_hf)
     xcorr_neighbors = detrend(xcorr, n_neighbors)
-    xcorr_distant = xcorrf - detrend(xcorrf, n_neighbors) - 1
+    xcorr_distant = xcorr - detrend(xcorr, n_neighbors) - 1
 
     return xcorr, xcorr_neighbors, xcorr_distant
 
