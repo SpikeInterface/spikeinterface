@@ -153,10 +153,10 @@ class WaveClusSorter(BaseSorter):
         return (params['enable_detect_filter'] or params['enable_sort_filter'])
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         # Generate mat files in the dataset directory
         for nch, id in enumerate(recording.get_channel_ids()):
-            vcFile_h5 = str(output_folder / ('raw' + str(nch + 1) + '.h5'))
+            vcFile_h5 = str(sorter_output_folder / ('raw' + str(nch + 1) + '.h5'))
             with h5py.File(vcFile_h5, mode='w') as f:
                 f.create_dataset(
                     "sr", data=[recording.get_sampling_frequency()], dtype='float32')
@@ -174,55 +174,58 @@ class WaveClusSorter(BaseSorter):
                 num_channels, num_timepoints, duration_minutes))
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
-        output_folder = output_folder.absolute()
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
+        sorter_output_folder = sorter_output_folder.absolute()
 
-        cls._generate_par_file(params, output_folder)
+        cls._generate_par_file(params, sorter_output_folder)
         if verbose:
-            print(f'Running waveclus in {output_folder}...')
+            print(f'Running waveclus in {sorter_output_folder}...')
 
         if cls.check_compiled():
             shell_cmd = f'''
                 #!/bin/bash
-                {cls.compiled_name} {output_folder}
+                {cls.compiled_name} {sorter_output_folder}
             '''
         else:
             source_dir = Path(__file__).parent
-            shutil.copy(str(source_dir / f'waveclus_master.m'), str(output_folder))
+            shutil.copy(str(source_dir / f'waveclus_master.m'), str(sorter_output_folder))
 
             sorter_path = Path(cls.waveclus_path).absolute()
             if 'win' in sys.platform and sys.platform != 'darwin':
-                disk_move = str(output_folder.absolute())[:2]
+                disk_move = str(sorter_output_folder.absolute())[:2]
                 shell_cmd = f'''
                     {disk_move}
-                    cd {output_folder}
-                    matlab -nosplash -wait -log -r "waveclus_master('{output_folder}', '{sorter_path}')"
+                    cd {sorter_output_folder}
+                    matlab -nosplash -wait -log -r "waveclus_master('{sorter_output_folder}', '{sorter_path}')"
                 '''
             else:
                 shell_cmd = f'''
                     #!/bin/bash
-                    cd "{output_folder}"
-                    matlab -nosplash -nodisplay -log -r "waveclus_master('{output_folder}', '{sorter_path}')"
+                    cd "{sorter_output_folder}"
+                    matlab -nosplash -nodisplay -log -r "waveclus_master('{sorter_output_folder}', '{sorter_path}')"
                 '''
-        shell_cmd = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
-                                log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
+        shell_cmd = ShellScript(shell_cmd, script_path=sorter_output_folder / f'run_{cls.sorter_name}',
+                                log_path=sorter_output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_cmd.start()
         retcode = shell_cmd.wait()
 
         if retcode != 0:
             raise Exception('waveclus returned a non-zero exit code')
 
-        result_fname = output_folder / 'times_results.mat'
+        result_fname = sorter_output_folder / 'times_results.mat'
         if not result_fname.is_file():
             raise Exception(f'Result file does not exist: {result_fname}')
 
     @classmethod
-    def _get_result_from_folder(cls, output_folder):
-        output_folder = Path(output_folder)
-        result_fname = str(output_folder / 'times_results.mat')
-
-        output_folder = Path(output_folder)
-        with (output_folder / 'spikeinterface_params.json').open('r') as f:
+    def _get_result_from_folder(cls, sorter_output_folder):
+        sorter_output_folder = Path(sorter_output_folder)
+        result_fname = str(sorter_output_folder / 'times_results.mat')
+        if (sorter_output_folder.parent / 'spikeinterface_params.json').is_file():
+            params_file = sorter_output_folder.parent / 'spikeinterface_params.json'
+        else:
+            # back-compatibility
+            params_file = sorter_output_folder / 'spikeinterface_params.json'
+        with params_file.open('r') as f:
             sorter_params = json.load(f)['sorter_params']
         keep_good_only = sorter_params.get('keep_good_only', True)
         sorting = WaveClusSortingExtractor(
@@ -230,18 +233,18 @@ class WaveClusSorter(BaseSorter):
         return sorting
 
     @staticmethod
-    def _generate_par_file(params, output_folder):
+    def _generate_par_file(params, sorter_output_folder):
         """
         This function generates parameters data for waveclus and saves as `par_input.mat`
 
         Loading example in Matlab (shouldn't be assigned to a variable):
-        >> load('/output_folder/par_input.mat');
+        >> load('/sorter_output_folder/par_input.mat');
 
         Parameters
         ----------
         params: dict
             Custom parameters dictionary for waveclus
-        output_folder: pathlib.Path
+        sorter_output_folder: pathlib.Path
             Path object to save `par_input.mat`
         """
         p = params.copy()
@@ -285,4 +288,4 @@ class WaveClusSorter(BaseSorter):
                 par_input[k] = float(v)
 
         par_input = {'par_input': par_input}
-        scipy.io.savemat(str(output_folder / 'par_input.mat'), par_input)
+        scipy.io.savemat(str(sorter_output_folder / 'par_input.mat'), par_input)

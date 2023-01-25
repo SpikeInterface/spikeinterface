@@ -1,6 +1,6 @@
 from pathlib import Path
 import importlib
-from copy import deepcopy
+import warnings
 import weakref
 import json
 import pickle
@@ -8,10 +8,11 @@ import os
 import random
 import string
 from packaging.version import parse
+from copy import deepcopy
 
 import numpy as np
 
-from .default_folders import get_global_tmp_folder, is_set_global_tmp_folder
+from .globals import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import check_json, is_dict_extractor, recursive_path_modifier
 from .job_tools import _shared_job_kwargs_doc
 
@@ -280,7 +281,7 @@ class BaseExtractor:
         if self._preferred_mp_context is not None:
             other._preferred_mp_context = self._preferred_mp_context
 
-    def to_dict(self, include_annotations=False, include_properties=False, include_features=False,
+    def to_dict(self, include_annotations=False, include_properties=False,
                 relative_to=None, folder_metadata=None):
         """
         Make a nested serialized dictionary out of the extractor. The dictionary be used to re-initialize an
@@ -289,13 +290,11 @@ class BaseExtractor:
         Parameters
         ----------
         include_annotations: bool
-            If True, all annotations are added to the dict
+            If True, all annotations are added to the dict, by default False
         include_properties: bool
-            If True, all properties are added to the dict
-        include_features: bool
-            If True, all features are added to the dict
+            If True, all properties are added to the dict, by default False
         relative_to: str, Path, or None
-            If not None, file_paths are serialized relative to this path
+            If not None, file_paths are serialized relative to this path, by default None
 
         Returns
         -------
@@ -406,7 +405,7 @@ class BaseExtractor:
         """
         Clones an existing extractor into a new instance.
         """
-        d = self.to_dict(include_annotations=True, include_properties=True, include_features=True)
+        d = self.to_dict(include_annotations=True, include_properties=True)
         clone = BaseExtractor.from_dict(d)
         return clone
 
@@ -433,10 +432,6 @@ class BaseExtractor:
         -------
         Path
             Path object with file path to the file
-
-        Raises
-        ------
-        NotDumpableExtractorError
         """
         ext = extensions[0]
         file_path = Path(file_path)
@@ -482,7 +477,6 @@ class BaseExtractor:
         assert self.check_if_dumpable()
         dump_dict = self.to_dict(include_annotations=True,
                                  include_properties=False,
-                                 include_features=False,
                                  relative_to=relative_to,
                                  folder_metadata=folder_metadata)
         file_path = self._get_file_path(file_path, ['.json'])
@@ -491,7 +485,7 @@ class BaseExtractor:
             encoding='utf8'
         )
 
-    def dump_to_pickle(self, file_path=None, include_properties=True, include_features=True,
+    def dump_to_pickle(self, file_path=None, include_properties=True,
                        relative_to=None, folder_metadata=None):
         """
         Dump recording extractor to a pickle file.
@@ -503,15 +497,12 @@ class BaseExtractor:
             Path of the json file
         include_properties: bool
             If True, all properties are dumped
-        include_features: bool
-            If True, all features are dumped
         relative_to: str, Path, or None
             If not None, file_paths are serialized relative to this path
         """
         assert self.check_if_dumpable()
         dump_dict = self.to_dict(include_annotations=True,
-                                 include_properties=False,
-                                 include_features=False,
+                                 include_properties=include_properties,
                                  relative_to=relative_to,
                                  folder_metadata=folder_metadata)
         file_path = self._get_file_path(file_path, ['.pkl', '.pickle'])
@@ -709,8 +700,8 @@ class BaseExtractor:
 
         return cached
 
-    def save_to_zarr(self, name=None, zarr_path=None, storage_options=None, 
-                     channel_chunk_size=None, verbose=True, **save_kwargs):
+    def save_to_zarr(self, name=None, folder=None, storage_options=None, 
+                     channel_chunk_size=None, verbose=True, zarr_path=None, **save_kwargs):
         """
         Save extractor to zarr.
 
@@ -724,20 +715,33 @@ class BaseExtractor:
         name: str or None
             Name of the subfolder in get_global_tmp_folder()
             If 'name' is given, 'folder' must be None.
-        zarr_path: str, Path, or None
-            Name of the zarr folder (.zarr).
+        folder: str, Path, or None
+            The folder used to save the zarr output. If the folder does not have a '.zarr' suffix, 
+            it will be automatically appended.
         storage_options: dict or None
             Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
             For cloud storage locations, this should not be None (in case of default values, use an empty dict)
         channel_chunk_size: int or None
             Channels per chunk. Default None (chunking in time only)
+        verbose: bool
+            If True (default), the output is verbose.
+        zarr_path: str, Path, or None
+            (Deprecated) Name of the zarr folder (.zarr). 
         
         Returns
         -------
-        cached: saved copy of the extractor.
+        cached: ZarrRecordingExtractor
+            Saved copy of the extractor.
         """
         import zarr
-        if zarr_path is None:
+
+        if zarr_path is not None:
+            warnings.warn("The 'zarr_path' argument is deprecated. "
+                          "Use 'folder' instead",
+                          DeprecationWarning, stacklevel=2)
+            folder = zarr_path
+
+        if folder is None:
             cache_folder = get_global_tmp_folder()
             if name is None:
                 name = ''.join(random.choices(
@@ -752,12 +756,13 @@ class BaseExtractor:
                         print(f'Use zarr_path={zarr_path}')
         else:
             if storage_options is None:
-                if isinstance(zarr_path, str):
-                    zarr_path_init = zarr_path
-                    zarr_path = Path(zarr_path)
-                else:
-                    zarr_path_init = str(zarr_path)
+                folder = Path(folder)
+                if folder.suffix != ".zarr":
+                    folder = folder.parent / f"{folder.stem}.zarr"
+                zarr_path = folder
+                zarr_path_init = str(zarr_path)
             else:
+                zarr_path = folder
                 zarr_path_init = zarr_path
 
         if isinstance(zarr_path, Path):
@@ -775,7 +780,7 @@ class BaseExtractor:
         save_kwargs['zarr_path'] = zarr_path
         save_kwargs['storage_options'] = storage_options
         save_kwargs['channel_chunk_size'] = channel_chunk_size
-        cached = self._save(folder=None, verbose=verbose, **save_kwargs)
+        cached = self._save(verbose=verbose, **save_kwargs)
         cached_annotations = deepcopy(cached._annotations)
 
         # save properties

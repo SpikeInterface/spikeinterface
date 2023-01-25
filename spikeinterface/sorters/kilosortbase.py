@@ -25,18 +25,18 @@ class KilosortBase:
     requires_binary_data = True
 
     @staticmethod
-    def _generate_channel_map_file(recording, output_folder):
+    def _generate_channel_map_file(recording, sorter_output_folder):
         """
         This function generates channel map data for kilosort and saves as `chanMap.mat`
 
         Loading example in Matlab (shouldn't be assigned to a variable):
-        >> load('/path/to/output_folder/chanMap.mat');
+        >> load('/path/to/sorter_output_folder/chanMap.mat');
 
         Parameters
         ----------
         recording: BaseRecording
             The recording to generate the channel map file
-        output_folder: pathlib.Path
+        sorter_output_folder: pathlib.Path
             Path object to save `chanMap.mat` file
         """
         # prepare electrode positions for this group (only one group, the split is done in basesorter)
@@ -62,15 +62,15 @@ class KilosortBase:
 
         sample_rate = recording.get_sampling_frequency()
         channel_map['fs'] = float(sample_rate)
-        scipy.io.savemat(str(output_folder / 'chanMap.mat'), channel_map)
+        scipy.io.savemat(str(sorter_output_folder / 'chanMap.mat'), channel_map)
 
     @classmethod
-    def _generate_ops_file(cls, recording, params, output_folder, binary_file_path):
+    def _generate_ops_file(cls, recording, params, sorter_output_folder, binary_file_path):
         """
         This function generates ops (configs) data for kilosort and saves as `ops.mat`
 
         Loading example in Matlab (shouldn't be assigned to a variable):
-        >> load('/output_folder/ops.mat');
+        >> load('/sorter_output_folder/ops.mat');
 
         Parameters
         ----------
@@ -78,7 +78,7 @@ class KilosortBase:
             The recording to generate the channel map file
         params: dict
             Custom parameters dictionary for kilosort
-        output_folder: pathlib.Path
+        sorter_output_folder: pathlib.Path
             Path object to save `ops.mat`
         """
         ops = {}
@@ -89,10 +89,10 @@ class KilosortBase:
 
         ops['datatype'] = 'dat'  # binary ('dat', 'bin') or 'openEphys'
         ops['fbinary'] = str(binary_file_path.absolute())  # will be created for 'openEphys'
-        ops['fproc'] = str((output_folder / 'temp_wh.dat').absolute())  # residual from RAM of preprocessed data
-        ops['root'] = str(output_folder.absolute())  # 'openEphys' only: where raw files are
+        ops['fproc'] = str((sorter_output_folder / 'temp_wh.dat').absolute())  # residual from RAM of preprocessed data
+        ops['root'] = str(sorter_output_folder.absolute())  # 'openEphys' only: where raw files are
         ops['trange'] = [0, np.Inf] #  time range to sort
-        ops['chanMap'] = str((output_folder / 'chanMap.mat').absolute())
+        ops['chanMap'] = str((sorter_output_folder / 'chanMap.mat').absolute())
 
         ops['fs'] = recording.get_sampling_frequency() # sample rate
         ops['CAR'] = 1.0 if params['car'] else 0.0
@@ -106,7 +106,7 @@ class KilosortBase:
                 ops[k] = float(v)
 
         ops = {'ops': ops}
-        scipy.io.savemat(str(output_folder / 'ops.mat'), ops)
+        scipy.io.savemat(str(sorter_output_folder / 'ops.mat'), ops)
 
     @classmethod
     def _get_specific_options(cls, ops, params):
@@ -114,8 +114,8 @@ class KilosortBase:
         return ops
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
-        cls._generate_channel_map_file(recording, output_folder)
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
+        cls._generate_channel_map_file(recording, sorter_output_folder)
         
         if recording.binary_compatible_with(dtype='int16', time_axis=0, file_paths_lenght=1):
             # no copy
@@ -123,34 +123,34 @@ class KilosortBase:
             binary_file_path = Path(d['file_paths'][0])
         else:
             # local copy needed
-            binary_file_path = output_folder / 'recording.dat'
+            binary_file_path = sorter_output_folder / 'recording.dat'
             write_binary_recording(recording, file_paths=[binary_file_path],
                                    dtype='int16', verbose=False, **get_job_kwargs(params, verbose))
 
-        cls._generate_ops_file(recording, params, output_folder, binary_file_path)
+        cls._generate_ops_file(recording, params, sorter_output_folder, binary_file_path)
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
-        output_folder = output_folder.absolute()
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
+        sorter_output_folder = sorter_output_folder.absolute()
         if cls.check_compiled():
             shell_cmd = f'''
                 #!/bin/bash
-                {cls.compiled_name} "{output_folder}"
+                {cls.compiled_name} "{sorter_output_folder}"
             '''
         else:
             source_dir = Path(Path(__file__).parent)
-            shutil.copy(str(source_dir / cls.sorter_name / f'{cls.sorter_name}_master.m'), str(output_folder))
-            shutil.copy(str(source_dir / 'utils' / 'writeNPY.m'), str(output_folder))
-            shutil.copy(str(source_dir / 'utils' / 'constructNPYheader.m'), str(output_folder))
+            shutil.copy(str(source_dir / cls.sorter_name / f'{cls.sorter_name}_master.m'), str(sorter_output_folder))
+            shutil.copy(str(source_dir / 'utils' / 'writeNPY.m'), str(sorter_output_folder))
+            shutil.copy(str(source_dir / 'utils' / 'constructNPYheader.m'), str(sorter_output_folder))
 
             sorter_path = getattr(cls, f'{cls.sorter_name}_path')
             sorter_path = Path(sorter_path).absolute()
             if 'win' in sys.platform and sys.platform != 'darwin':
-                disk_move = str(output_folder)[:2]
+                disk_move = str(sorter_output_folder)[:2]
                 shell_cmd = f'''
                     {disk_move}
-                    cd {output_folder}
-                    matlab -nosplash -wait -r "{cls.sorter_name}_master('{output_folder}', '{sorter_path}')"
+                    cd {sorter_output_folder}
+                    matlab -nosplash -wait -r "{cls.sorter_name}_master('{sorter_output_folder}', '{sorter_path}')"
                 '''
             else:
                 if get_matlab_shell_name() == 'fish':
@@ -166,11 +166,11 @@ class KilosortBase:
                 shell_cmd = f'''
                     #!/bin/bash
                     {matlab_shell_str}
-                    cd "{output_folder}"
-                    matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{output_folder}', '{sorter_path}')"
+                    cd "{sorter_output_folder}"
+                    matlab -nosplash -nodisplay -r "{cls.sorter_name}_master('{sorter_output_folder}', '{sorter_path}')"
                 '''
-        shell_script = ShellScript(shell_cmd, script_path=output_folder / f'run_{cls.sorter_name}',
-                                   log_path=output_folder / f'{cls.sorter_name}.log', verbose=verbose)
+        shell_script = ShellScript(shell_cmd, script_path=sorter_output_folder / f'run_{cls.sorter_name}',
+                                   log_path=sorter_output_folder / f'{cls.sorter_name}.log', verbose=verbose)
         shell_script.start()
         retcode = shell_script.wait()
 
@@ -178,10 +178,15 @@ class KilosortBase:
             raise Exception(f'{cls.sorter_name} returned a non-zero exit code')
 
     @classmethod
-    def _get_result_from_folder(cls, output_folder):
-        output_folder = Path(output_folder)
-        with (output_folder / 'spikeinterface_params.json').open('r') as f:
+    def _get_result_from_folder(cls, sorter_output_folder):
+        sorter_output_folder = Path(sorter_output_folder)
+        if (sorter_output_folder.parent / 'spikeinterface_params.json').is_file():
+            params_file = sorter_output_folder.parent / 'spikeinterface_params.json'
+        else:
+            # back-compatibility
+            params_file = sorter_output_folder / 'spikeinterface_params.json'
+        with params_file.open('r') as f:
             sorter_params = json.load(f)['sorter_params']
         keep_good_only = sorter_params.get('keep_good_only', False)
-        sorting = KiloSortSortingExtractor(folder_path=output_folder, keep_good_only=keep_good_only)
+        sorting = KiloSortSortingExtractor(folder_path=sorter_output_folder, keep_good_only=keep_good_only)
         return sorting

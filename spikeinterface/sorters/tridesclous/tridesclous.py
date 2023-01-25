@@ -72,16 +72,16 @@ class TridesclousSorter(BaseSorter):
         return tdc.__version__
 
     @classmethod
-    def _check_params(cls, recording, output_folder, params):
+    def _check_params(cls, recording, sorter_output_folder, params):
         return params
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         import tridesclous as tdc
 
         # save prb file
         probegroup = recording.get_probegroup()
-        prb_file = output_folder / 'probe.prb'
+        prb_file = sorter_output_folder / 'probe.prb'
         write_prb(prb_file, probegroup)
 
         num_seg = recording.get_num_segments()
@@ -100,13 +100,13 @@ class TridesclousSorter(BaseSorter):
             # save binary file (chunk by chunk) into a new file
             num_chan = recording.get_num_channels()
             dtype = recording.get_dtype().str
-            file_paths = [str(output_folder / f'raw_signals_{i}.raw') for i in range(num_seg)]
+            file_paths = [str(sorter_output_folder / f'raw_signals_{i}.raw') for i in range(num_seg)]
             write_binary_recording(recording, file_paths=file_paths,
                                    dtype=dtype, verbose=False, **get_job_kwargs(params, verbose))
             file_offset = 0
 
         # initialize source and probe file
-        tdc_dataio = tdc.DataIO(dirname=str(output_folder))
+        tdc_dataio = tdc.DataIO(dirname=str(sorter_output_folder))
 
         tdc_dataio.set_data_source(type='RawData', filenames=file_paths,
                                    dtype=dtype, sample_rate=float(sr),
@@ -116,10 +116,10 @@ class TridesclousSorter(BaseSorter):
             print(tdc_dataio)
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
         import tridesclous as tdc
 
-        tdc_dataio = tdc.DataIO(dirname=str(output_folder))
+        tdc_dataio = tdc.DataIO(dirname=str(sorter_output_folder))
 
         params = params.copy()
 
@@ -156,8 +156,8 @@ class TridesclousSorter(BaseSorter):
                 print('peeler.tun', t1 - t0)
 
     @classmethod
-    def _get_result_from_folder(cls, output_folder):
-        sorting = TridesclousSortingExtractor(folder_path=output_folder)
+    def _get_result_from_folder(cls, sorter_output_folder):
+        sorting = TridesclousSortingExtractor(folder_path=sorter_output_folder)
         return sorting
 
 

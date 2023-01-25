@@ -2,7 +2,7 @@ import numpy as np
 
 from probeinterface import Probe
 
-from spikeinterface.extractors import NumpyRecording, NumpySorting
+from spikeinterface.core import NumpyRecording, NumpySorting, synthesize_random_firings
 
 
 def toy_example(duration=10, num_channels=4, num_units=10,
@@ -10,7 +10,7 @@ def toy_example(duration=10, num_channels=4, num_units=10,
                 average_peak_amplitude=-100, upsample_factor=13,
                 contact_spacing_um=40, num_columns=1,
                 spike_times=None, spike_labels=None,
-                score_detection=1, seed=None):
+                score_detection=1, firing_rate=3., seed=None):
     """
     Creates a toy recording and sorting extractors.
 
@@ -32,6 +32,8 @@ def toy_example(duration=10, num_channels=4, num_units=10,
         Cluster label for each spike time (needs to specified both together).
     score_detection: int (between 0 and 1)
         Generate the sorting based on a subset of spikes compare with the trace generation.
+    firing_rate: float
+        The firing rate for the units (in Hz).
     seed: int
         Seed for random initialization.
 
@@ -76,7 +78,7 @@ def toy_example(duration=10, num_channels=4, num_units=10,
     for segment_index in range(num_segments):
         if spike_times is None:
             times, labels = synthesize_random_firings(num_units=num_units, duration=durations[segment_index],
-                                                  sampling_frequency=sampling_frequency, seed=seed)
+                                                  sampling_frequency=sampling_frequency, firing_rates=firing_rate, seed=seed)
         else:
             times = spike_times[segment_index]
             labels = spike_labels[segment_index]
@@ -104,71 +106,7 @@ def toy_example(duration=10, num_channels=4, num_units=10,
     return recording, sorting
 
 
-def synthesize_random_firings(num_units=20, sampling_frequency=30000.0, duration=60, seed=None):
-    if seed is not None:
-        np.random.seed(seed)
-        seeds = np.random.RandomState(seed=seed).randint(0, 2147483647, num_units)
-    else:
-        seeds = np.random.randint(0, 2147483647, num_units)
 
-    firing_rates = 3 * np.ones((num_units))
-    refr = 4
-
-    N = np.int64(duration * sampling_frequency)
-
-    # events/sec * sec/timepoint * N
-    populations = np.ceil(firing_rates / sampling_frequency * N).astype('int')
-    times = []
-    labels = []
-    for unit_id in range(num_units):
-        refr_timepoints = refr / 1000 * sampling_frequency
-
-        times0 = np.random.rand(populations[unit_id]) * (N - 1) + 1
-
-        ## make an interesting autocorrelogram shape
-        times0 = np.hstack(
-            (times0, times0 + rand_distr2(refr_timepoints, refr_timepoints * 20, times0.size, seeds[unit_id])))
-        times0 = times0[np.random.RandomState(seed=seeds[unit_id]).choice(times0.size, int(times0.size / 2))]
-        times0 = times0[(0 <= times0) & (times0 < N)]
-
-        times0 = enforce_refractory_period(times0, refr_timepoints)
-        labels0 = np.ones(times0.size, dtype='int64') * unit_id
-
-        times.append(times0.astype('int64'))
-        labels.append(labels0)
-
-    times = np.concatenate(times)
-    labels = np.concatenate(labels)
-
-    sort_inds = np.argsort(times)
-    times = times[sort_inds]
-    labels = labels[sort_inds]
-
-    return (times, labels)
-
-
-def rand_distr2(a, b, num, seed):
-    X = np.random.RandomState(seed=seed).rand(num)
-    X = a + (b - a) * X ** 2
-    return X
-
-
-def enforce_refractory_period(times_in, refr):
-    if (times_in.size == 0): return times_in
-
-    times0 = np.sort(times_in)
-    done = False
-    while not done:
-        diffs = times0[1:] - times0[:-1]
-        diffs = np.hstack((diffs, np.inf))  # hack to make sure we handle the last one
-        inds0 = np.where((diffs[:-1] <= refr) & (diffs[1:] >= refr))[0]  # only first violator in every group
-        if len(inds0) > 0:
-            times0[inds0] = -1  # kind of a hack, what's the better way?
-            times0 = times0[np.where(times0 >= 0)]
-        else:
-            done = True
-
-    return times0
 
 
 def synthesize_random_waveforms(num_channels=5, num_units=20, width=500,
@@ -335,33 +273,7 @@ def synthesize_timeseries(spike_times, spike_labels, unit_ids, waveforms, sampli
     return traces
 
 
-def synthetize_spike_train(duration, baseline_rate, num_violations, violation_delta=1e-5):
-    """Create a spike train. Has uniform inter-spike intervals, except where isis violations occur.
 
-    Parameters
-    ----------
-    duration : float
-        Length of simulated recording (in seconds).
-    baseline_rate : float
-        Firing rate for 'true' spikes.
-    num_violations : int
-        Number of contaminating spikes.
-    violation_delta : float, optional
-        Temporal offset of contaminating spikes (in seconds), by default 1e-5.
-
-    Returns
-    -------
-    spike_train : np.array
-        Array of monotonically increasing spike times.
-    """
-
-    isis = np.ones((int(duration*baseline_rate),)) / baseline_rate
-    spike_train = np.cumsum(isis)
-    viol_times = spike_train[:int(num_violations)] + violation_delta
-    viol_times = viol_times[viol_times<duration]
-    spike_train = np.sort(np.concatenate((spike_train, viol_times)))
-
-    return spike_train
 
 
 

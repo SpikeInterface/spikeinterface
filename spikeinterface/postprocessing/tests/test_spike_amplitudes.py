@@ -6,7 +6,7 @@ from spikeinterface.postprocessing import SpikeAmplitudesCalculator
 from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
 
 
-class SpikeLocationsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
+class SpikeAmplitudesExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
     extension_class = SpikeAmplitudesCalculator
     extension_data_names = ["amplitude_segment_0"]
     extension_function_kwargs_list = [
@@ -36,8 +36,8 @@ class SpikeLocationsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
 
 
 if __name__ == '__main__':
-    test = SpikeLocationsExtensionTest
+    test = SpikeAmplitudesExtensionTest()
     test.setUp()
     test.test_extension()
-    test.test_scaled()
-    test.test_parallel()
+    # test.test_scaled()
+    # test.test_parallel()
