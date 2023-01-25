@@ -448,7 +448,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         _simpleaxis(ax)
 
 
-def plot_errors_several_benchmarks(benchmarks, axes=None):
+def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True):
 
     if axes is None:
         fig, axes = plt.subplots(1, 3, figsize=(15, 5))
@@ -465,7 +465,8 @@ def plot_errors_several_benchmarks(benchmarks, axes=None):
     ax0 = ax = axes[0]
     ax.set_xlabel('time (s)')
     ax.set_ylabel('error')
-    ax.legend()
+    if show_legend:
+        ax.legend()
     _simpleaxis(ax)
 
     ax1 = axes[1]
@@ -525,31 +526,3 @@ def plot_speed_several_benchmarks(benchmarks, ax=None):
     _simpleaxis(ax)
     ax.set_xticks([])
     #ax.set_xticks(np.arange(len(benchmarks)), [i.title for i in benchmarks])
-
-
-
-def plot_figure(benchmarks):
-    fig = plt.figure(figsize=(15,15))
-    gs = fig.add_gridspec(4, 6)
-
-
-    ax_1 = fig.add_subplot(gs[0:3, 0])
-    ax_2 = fig.add_subplot(gs[0:3, 1:3])
-    ax_3 = fig.add_subplot(gs[0:3, 3])
-
-    benchmarks[0].plot_true_drift(axes=[ax_1, ax_2, ax_3])
-
-    ax_1 = fig.add_subplot(gs[0, 4:6])
-    ax_2 = fig.add_subplot(gs[1, 4:6])
-    benchmarks[0].plot_motion_corrected_peaks(show_probe=False, axes=[ax_1, ax_2])
-    #_simpleaxis(ax)
-
-    ax_1 = fig.add_subplot(gs[3, 0:2])
-    ax_2 = fig.add_subplot(gs[3, 2:4])
-    ax_3 = fig.add_subplot(gs[3, 4:6])
-
-
-    plot_errors_several_benchmarks(benchmarks, axes=[ax_1, ax_2, ax_3])
-
-    ax = fig.add_subplot(gs[2, 4:6])
-    plot_speed_several_benchmarks(benchmarks, ax=ax)
