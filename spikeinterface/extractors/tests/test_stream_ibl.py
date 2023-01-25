@@ -37,17 +37,12 @@ class TestDefaultStreamingIblExtractorApBand(TestCase):
         self.assertListEqual(list1=list(self.recording.get_channel_ids()), list2=expected_channel_ids)
 
     def test_gains(self):
-        expected_gains = np.ones(shape=384)
+        expected_gains = 2.34375 * np.ones(shape=384)
         assert_array_equal(x=self.recording.get_channel_gains(), y=expected_gains)
         
     def test_offsets(self):
         expected_offsets = np.zeros(shape=384)
         assert_array_equal(x=self.recording.get_channel_offsets(), y=expected_offsets)
-
-    def test_int16_gain_to_uV(self):
-        """A temporary property to maintain information of how to scale source int16 data to uV."""
-        expected_int16_gain_to_uV = 2.34375 * np.ones(shape=384)
-        assert_array_equal(x=self.recording.get_property("int16_gain_to_uV"), y=expected_int16_gain_to_uV)
         
     def test_probe_representation(self):
         probe = self.recording.get_probe()
@@ -68,7 +63,6 @@ class TestDefaultStreamingIblExtractorApBand(TestCase):
             'inter_sample_shift',
             'adc',
             'index_on_probe',
-            'int16_gain_to_uV',
         ]
         self.assertCountEqual(first=self.recording.get_property_keys(), second=expected_property_keys)
 
@@ -106,17 +100,12 @@ class TestStreamingIblExtractorApBandWithLoadSyncChannel(TestCase):
         self.assertListEqual(list1=list(self.recording.get_channel_ids()), list2=expected_channel_ids)
 
     def test_gains(self):
-        expected_gains = np.ones(shape=385)
+        expected_gains = np.concatenate([2.34375 * np.ones(shape=384), [1171.875]])
         assert_array_equal(x=self.recording.get_channel_gains(), y=expected_gains)
 
     def test_offsets(self):
         expected_offsets = np.zeros(shape=385)
         assert_array_equal(x=self.recording.get_channel_offsets(), y=expected_offsets)
-
-    def test_int16_gain_to_uV(self):
-        """A temporary property to maintain information of how to scale source int16 data to uV."""
-        expected_int16_gain_to_uV = np.concatenate((2.34375 * np.ones(shape=384), [1171.875]))
-        assert_array_equal(x=self.recording.get_property("int16_gain_to_uV"), y=expected_int16_gain_to_uV)
         
     def test_probe_representation(self):
         expected_exception = ValueError
@@ -138,7 +127,6 @@ class TestStreamingIblExtractorApBandWithLoadSyncChannel(TestCase):
             'inter_sample_shift',
             'adc',
             'index_on_probe',
-            'int16_gain_to_uV',
         ]
         self.assertCountEqual(first=self.recording.get_property_keys(), second=expected_property_keys)
 

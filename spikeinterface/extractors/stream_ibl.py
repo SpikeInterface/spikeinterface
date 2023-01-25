@@ -145,19 +145,15 @@ class StreamingIblExtractor(BaseRecording):
             channel_ids = channel_ids[:-1]
             channel_gains = channel_gains[:-1]
             channel_offsets = channel_offsets[:-1]
-
+            
         # initialize main extractor
         sampling_frequency = self._file_streamer.fs
-        dtype = self._file_streamer.dtype
+        dtype = "int16"  # self._file_streamer.dtype is also 'int16', but always returns 'float32' Volts on read
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
+        self.set_channel_gains(channel_gains)
+        self.set_channel_offsets(channel_offsets)
         self.extra_requirements.append("ONE-api")
         self.extra_requirements.append("ibllib")
-
-        # TODO - in the first version, the traces returned by the Streamer are already scaled
-        # can adjust the gains here if they adjust the call to return int16
-        self.set_channel_gains(1.)
-        self.set_channel_offsets(0.)
-        self.set_property("int16_gain_to_uV", channel_gains)
 
         # set probe
         if not load_sync_channel:
@@ -225,7 +221,7 @@ class StreamingIblRecordingSegment(BaseRecordingSegment):
     def get_num_samples(self):
         return self._file_streamer.ns
 
-    def get_traces(self, start_frame: int, end_frame: int, channel_indices, return_scaled: bool = False):
+    def get_traces(self, start_frame: int, end_frame: int, channel_indices):
         if start_frame is None:
             start_frame = 0
         if end_frame is None:
@@ -233,10 +229,7 @@ class StreamingIblRecordingSegment(BaseRecordingSegment):
         if channel_indices is None:
             channel_indices = slice(None)
 
-        if return_scaled:
-            traces = self._file_streamer[start_frame:end_frame] * 1e6
-        else:
-            traces = (self._file_streamer[start_frame:end_frame] / self._file_streamer.sample2volts).astype("int16")
+        traces = (self._file_streamer[start_frame:end_frame] / self._file_streamer.sample2volts).astype("int16")
         if not self._load_sync_channel:
             traces = traces[:, :-1]
 
