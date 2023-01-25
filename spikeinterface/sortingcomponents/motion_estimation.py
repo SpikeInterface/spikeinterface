@@ -723,7 +723,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
         correlation = 1 - errors
 
     else:
-        raise ValueError(f'method do not exists for compute_pairwise_displacement {method}')
+        raise ValueError(f'method does not exist for compute_pairwise_displacement {method}')
 
     if weight_scale == 'linear':
         # between 0 and 1
@@ -926,15 +926,13 @@ def compute_global_displacement(
         # put more simply, the first (B-1)T diagonal entries are 1,
         # and entries (i, j) such that i = j - T are -1.
         if B > 1 and spatial_prior:
-            one_then_zero = np.zeros(B * T, dtype=block_sparse_kron.dtype)
-            one_then_zero[:(B - 1) * T] = 1
             spatial_diff_operator = sparse.diags(
                 (
-                    one_then_zero,
+                    np.ones((B - 1) * T, dtype=block_sparse_kron.dtype),
                     np.full((B - 1) * T, -1, dtype=block_sparse_kron.dtype),
                 ),
                 offsets=(0, T),
-                shape=(B * T, B * T),
+                shape=((B - 1) * T, B * T),
             )
             coefficients = sparse.vstack((coefficients, spatial_diff_operator))
             targets = np.concatenate((targets, np.zeros(B * T, dtype=targets.dtype)))
