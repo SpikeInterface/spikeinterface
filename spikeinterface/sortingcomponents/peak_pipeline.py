@@ -277,6 +277,3 @@ def run_nodes(traces, local_peaks, nodes):
             outs += (out, )
     
     return outs
-
-
-# Another small changeJ
