@@ -123,7 +123,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             
             waveforms_folder = self.folder / "waveforms" / key
             we = WaveformExtractor.create(self.recordings[key], self.sorting_gt, waveforms_folder, mode='folder',
-                                          sparsity=sparsity)
+                                          sparsity=sparsity, remove_if_exists=True)
             we.set_params(ms_before=2., ms_after=3., max_spikes_per_unit=500., return_scaled=True)
             we.run_extract_waveforms(seed=22051977, **self.job_kwargs)
             self.waveforms[key] = we
@@ -399,9 +399,9 @@ def plot_residuals_comparisons(benchmarks):
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     for count, bench in enumerate(benchmarks):
-        residuals, (t_start, t_stop) = bench.compute_residuals(force=False)['corrected']
+        residuals, (t_start, t_stop) = bench.compute_residuals(force=False)
         time_axis = np.arange(t_start, t_stop)
-        axes[0].plot(time_axis, residuals.mean(0), label=bench.title)
+        axes[0].plot(time_axis, residuals['corrected'].mean(0), label=bench.title)
     axes[0].legend()
     axes[0].set_xlabel('time (s)')
     axes[0].set_ylabel(r'$|S_{corrected} - S_{static}|$')
@@ -412,17 +412,17 @@ def plot_residuals_comparisons(benchmarks):
     idx = np.argsort(distances_to_center)
 
     for count, bench in enumerate(benchmarks):
-        residuals, (t_start, t_stop) = bench.compute_residuals(force=False)['corrected']
+        residuals, (t_start, t_stop) = bench.compute_residuals(force=False)
         time_axis = np.arange(t_start, t_stop)
-        axes[1].plot(distances_to_center[idx], residuals.mean(1)[idx], label=bench.title, lw=2, c=f'C{count}')
+        axes[1].plot(distances_to_center[idx], residuals['corrected'].mean(1)[idx], label=bench.title, lw=2, c=f'C{count}')
         axes[1].fill_between(distances_to_center[idx], residuals.mean(1)[idx]-residuals.std(1)[idx], 
                     residuals.mean(1)[idx]+residuals.std(1)[idx], color=f'C{count}', alpha=0.25)
     axes[1].set_xlabel('depth (um)')
     _simpleaxis(axes[1])
 
     for count, bench in enumerate(benchmarks):
-        residuals, (t_start, t_stop) = bench.compute_residuals(force=False)['corrected']
-        axes[2].bar([count], [residuals.mean()], yerr=[residuals.std()], color=f'C{count}')
+        residuals, (t_start, t_stop) = bench.compute_residuals(force=False)
+        axes[2].bar([count], [residuals['corrected'].mean()], yerr=[residuals['corrected'].std()], color=f'C{count}')
 
     _simpleaxis(axes[2])
     axes[2].set_xticks(np.arange(len(benchmarks)), [i.title for i in benchmarks])
