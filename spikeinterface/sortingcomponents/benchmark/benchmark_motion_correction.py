@@ -110,9 +110,12 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     def extract_waveforms(self):
 
         # the sparsity is estimated on the static recording and propagated to all of then
-        sparsity = precompute_sparsity(self.recordings['static'], self.sorting_gt,
+        if self.parent_benchmark is None:
+            sparsity = precompute_sparsity(self.recordings['static'], self.sorting_gt,
                                        ms_before=2., ms_after=3., num_spikes_for_sparsity=200., unit_batch_size=10000,
                                        **self.sparse_kwargs, **self.job_kwargs)
+        else:
+            sparsity = self.waveforms['static'].sparsity
 
         for key in self.keys:
             if self.parent_benchmark is not None and key in self._waveform_names_from_parent:
