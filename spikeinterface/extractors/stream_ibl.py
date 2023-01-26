@@ -42,9 +42,11 @@ class StreamingIblExtractor(BaseRecording):
         If not then the probe is loaded.
     cache_folder : str, optional
         The location to temporarily store chunks of data during streaming.
-        The default uses the folder designated by ONE.alyx._par.CACHE_DIR / "cache".
-    remove_cached : bool, default: true
-        Whether or not to remove data from the cache after it is read.
+        The default uses the folder designated by ONE.alyx._par.CACHE_DIR / "cache", which is typically the designated
+        'Downloads' folder on your operating system. As long as `remove_cached` is set to True, the only files that will
+        persist in this folder are the metadata header files and the chunk of data being actively streamed and used in RAM.
+    remove_cached : bool, default: True
+        Whether or not to remove streamed data from the cache immediately after it is read.
         If you expect to reuse fetched data many times, and have the disk space available, it is recommended to set this to False.
 
     Returns
