@@ -12,8 +12,8 @@ from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, Pi
 
 
 class MyStep(PipelineNode):
-    def __init__(self, recording, name='my_step', have_global_output=True, param0=5.5):
-        PipelineNode.__init__(self, recording, name, have_global_output)
+    def __init__(self, recording, name='my_step', return_ouput=True, param0=5.5):
+        PipelineNode.__init__(self, recording, name, return_ouput)
         self.param0 = param0
         
         self._kwargs.update(dict(param0=param0))
@@ -32,8 +32,8 @@ class MyStep(PipelineNode):
 
 class WaveformDenoiser(PipelineNode):
     # waveform smoother
-    def __init__(self, recording, name='my_step_with_waveforms', have_global_output=True, parents=[]):
-        PipelineNode.__init__(self, recording, name, have_global_output, parents=parents)
+    def __init__(self, recording, name='my_step_with_waveforms', return_ouput=True, parents=[]):
+        PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
 
     def get_dtype(self):
         return np.dtype('float32')
@@ -45,8 +45,8 @@ class WaveformDenoiser(PipelineNode):
     
 
 class MyStepWithWaveforms(PipelineNode):
-    def __init__(self, recording, name='step_on_waveforms', have_global_output=True, parents=[]):
-        PipelineNode.__init__(self, recording, name, have_global_output, parents=parents)
+    def __init__(self, recording, name='step_on_waveforms', return_ouput=True, parents=[]):
+        PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
 
     def get_dtype(self):
         return np.dtype('float32')
@@ -80,8 +80,8 @@ def test_run_peak_pipeline():
     
     # 3 nodes two have outputs
     nodes = [
-        ExtractDenseWaveforms(recording, name='extract_waveforms', ms_before=.5, ms_after=1.,  have_global_output=False),
-        WaveformDenoiser(recording, name='denoiser', parents=['extract_waveforms'], have_global_output=False),
+        ExtractDenseWaveforms(recording, name='extract_waveforms', ms_before=.5, ms_after=1.,  return_ouput=False),
+        WaveformDenoiser(recording, name='denoiser', parents=['extract_waveforms'], return_ouput=False),
         MyStep(recording, name='simple_step', param0=5.5),
         MyStepWithWaveforms(recording, name='step_on_raw_wf', parents=['extract_waveforms']),
         MyStepWithWaveforms(recording, name='step_on_denoised_wf', parents=['denoiser'])

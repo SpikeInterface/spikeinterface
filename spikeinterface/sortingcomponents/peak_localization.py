@@ -45,12 +45,12 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.3, ms_
     
     if method == 'center_of_mass':
         pipeline_nodes = [
-            ExtractDenseWaveforms(recording, name='extract_waveforms', ms_before=ms_before, ms_after=ms_after,  have_global_output=False),
+            ExtractDenseWaveforms(recording, name='extract_waveforms', ms_before=ms_before, ms_after=ms_after,  return_ouput=False),
             LocalizeCenterOfMass(recording,  name='monopolar_triangulation', parents=['extract_waveforms'], **method_kwargs)
         ]
     elif method == 'monopolar_triangulation':
         pipeline_nodes = [
-            ExtractDenseWaveforms(recording, name='extract_waveforms', ms_before=ms_before, ms_after=ms_after,  have_global_output=False),
+            ExtractDenseWaveforms(recording, name='extract_waveforms', ms_before=ms_before, ms_after=ms_after,  return_ouput=False),
             LocalizeMonopolarTriangulation(recording, name='monopolar_triangulation', parents=['extract_waveforms'], **method_kwargs)
         ]
     elif method == "peak_channel":
@@ -62,8 +62,8 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.3, ms_
 
 
 class LocalizeBase(PipelineNode):
-    def __init__(self, recording, name='', have_global_output=True, parents=None, local_radius_um=75.):
-        PipelineNode.__init__(self, recording, name, have_global_output, parents=parents)
+    def __init__(self, recording, name='', return_ouput=True, parents=None, local_radius_um=75.):
+        PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
         
         self.local_radius_um = local_radius_um
         self.contact_locations = recording.get_channel_locations()
@@ -81,8 +81,8 @@ class LocalizePeakChannel(PipelineNode):
     params_doc = """
     """
 
-    def __init__(self, recording,  name='localize_peak_channel', have_global_output=True):
-        PipelineNode.__init__(self, recording, name, have_global_output, parents=None)
+    def __init__(self, recording,  name='localize_peak_channel', return_ouput=True):
+        PipelineNode.__init__(self, recording, name, return_ouput, parents=None)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
         
         self.contact_locations = recording.get_channel_locations()
@@ -109,8 +109,8 @@ class LocalizeCenterOfMass(LocalizeBase):
     local_radius_um: float
         Radius in um for channel sparsity.
     """
-    def __init__(self, recording, name='center_of_mass', have_global_output=True, parents=['extract_waveforms'], local_radius_um=75.):
-        LocalizeBase.__init__(self, recording, name=name, have_global_output=have_global_output, parents=parents, local_radius_um=local_radius_um)
+    def __init__(self, recording, name='center_of_mass', return_ouput=True, parents=['extract_waveforms'], local_radius_um=75.):
+        LocalizeBase.__init__(self, recording, name=name, return_ouput=return_ouput, parents=parents, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
 
     def get_dtype(self):
@@ -150,12 +150,12 @@ class LocalizeMonopolarTriangulation(PipelineNode):
     enforce_decrese : None or "radial"
         If+how to enforce spatial decreasingness for PTP vectors.
     """
-    def __init__(self, recording, name='monopolar_triangulation', have_global_output=True, parents=['extract_waveforms'],
+    def __init__(self, recording, name='monopolar_triangulation', return_ouput=True, parents=['extract_waveforms'],
                             local_radius_um=75.,
                             max_distance_um=150.,
                             optimizer='minimize_with_log_penality',
                             enforce_decrease=False):
-        LocalizeBase.__init__(self, recording, name=name, have_global_output=have_global_output, parents=parents, local_radius_um=local_radius_um)
+        LocalizeBase.__init__(self, recording, name=name, return_ouput=return_ouput, parents=parents, local_radius_um=local_radius_um)
 
         self._kwargs.update(dict(max_distance_um=max_distance_um,
                                  optimizer=optimizer,

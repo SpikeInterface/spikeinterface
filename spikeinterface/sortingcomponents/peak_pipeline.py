@@ -26,10 +26,10 @@ class PipelineNode:
     
     A Node can optionally connect to other nodes with the parents and receive inputs from others.
     """
-    def __init__(self, recording, name, have_global_output, parents=None):
+    def __init__(self, recording, name, return_ouput, parents=None):
         self.recording = recording
         self.name = name
-        self.have_global_output = have_global_output
+        self.return_ouput = return_ouput
         if isinstance(parents, str):
             # only one parents is allowed
             parents = [parents]
@@ -37,7 +37,7 @@ class PipelineNode:
         
         self._kwargs = dict(
             name=name,
-            have_global_output=have_global_output,
+            return_ouput=return_ouput,
         )
         if parents is not None:
             self._kwargs['parents'] = parents
@@ -69,9 +69,9 @@ class PipelineNode:
 
 
 class ExtractDenseWaveforms(PipelineNode):
-    def __init__(self, recording, name='extract_dense_waveforms', have_global_output=False,
+    def __init__(self, recording, name='extract_dense_waveforms', return_ouput=False,
                          ms_before=None, ms_after=None):
-        PipelineNode.__init__(self, recording, name=name, have_global_output=have_global_output)
+        PipelineNode.__init__(self, recording, name=name, return_ouput=return_ouput)
 
         self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
         self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
@@ -243,7 +243,7 @@ def run_nodes(traces, local_peaks, nodes):
     # propagate the output
     outs = tuple()
     for node in nodes:
-        if node.have_global_output:
+        if node.return_ouput:
             out = outputs[node.name]
             outs += (out, )
     
