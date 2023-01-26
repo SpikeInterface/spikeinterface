@@ -228,7 +228,7 @@ class StreamingIblRecordingSegment(BaseRecordingSegment):
             end_frame = self.get_num_samples()
         if channel_indices is None:
             channel_indices = slice(None)
-
+# This is a temporary fixed to mimic the correct behavior to get the none scaled traces:
         traces = np.rint(self._file_streamer[start_frame:end_frame] / self._file_streamer.sample2volts).astype("int16")
         if not self._load_sync_channel:
             traces = traces[:, :-1]
