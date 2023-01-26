@@ -24,9 +24,10 @@ spikeinterface.core
     .. autofunction:: append_recordings
     .. autofunction:: concatenate_recordings
     .. autofunction:: append_sortings
+    .. autofunction:: load_extractor
     .. autofunction:: extract_waveforms
+    .. autofunction:: load_waveforms
     .. autoclass:: WaveformExtractor
-
         .. automethod:: set_params
     .. autofunction:: download_dataset
     .. autofunction:: write_binary_recording
@@ -38,6 +39,11 @@ spikeinterface.core
     .. autofunction:: get_closest_channels
     .. autofunction:: get_noise_levels
     .. autofunction:: get_chunk_with_margin
+    .. autofunction:: get_template_amplitudes
+    .. autofunction:: get_template_extremum_channel
+    .. autofunction:: get_template_extremum_channel_peak_shift
+    .. autofunction:: get_template_extremum_amplitude
+    .. autofunction:: get_template_channel_sparsity
     
 
 
@@ -156,17 +162,18 @@ spikeinterface.postprocessing
 
 .. automodule:: spikeinterface.postprocessing
 
-    .. autofunction:: get_template_amplitudes
-    .. autofunction:: get_template_extremum_channel
-    .. autofunction:: get_template_extremum_channel_peak_shift
-    .. autofunction:: get_template_extremum_amplitude
-    .. autofunction:: get_template_channel_sparsity
     .. autofunction:: localize_units
     .. autofunction:: get_template_metric_names
-    .. autofunction:: calculate_template_metrics
+    .. autofunction:: compute_template_metrics
     .. autofunction:: compute_principal_components
     .. autofunction:: compute_spike_amplitudes
+    .. autofunction:: compute_unit_locations
+    .. autofunction:: compute_spike_locations
     .. autofunction:: compute_correlograms
+    .. autofunction:: compute_template_similarity
+    .. autofunction:: compute_correlograms
+    .. autofunction:: compute_isi_histograms
+    .. autofunction:: align_sorting
 
 
 spikeinterface.qualitymetrics
@@ -189,6 +196,7 @@ spikeinterface.sorters
     .. autofunction:: get_sorter_description
     .. autofunction:: run_sorter
     .. autofunction:: run_sorters
+    .. autofunction:: run_sorter_by_property
 
 Low level
 ~~~~~~~~~
@@ -204,7 +212,11 @@ spikeinterface.comparison
     .. autofunction:: compare_two_sorters
     .. autofunction:: compare_multiple_sorters
     .. autofunction:: compare_sorter_to_ground_truth
+    .. autofunction:: compare_templates
+    .. autofunction:: compare_multiple_templates
     .. autofunction:: aggregate_performances_table
+    .. autofunction:: create_hybrid_units_recording
+    .. autofunction:: create_hybrid_spikes_recording
 
     .. autoclass:: GroundTruthComparison
         :members:
@@ -263,7 +275,7 @@ spikeinterface.exporters
 
 
 spikeinterface.sortingcomponents
------------------
+--------------------------------
 
 Peak Localization
 ~~~~~~~~~~~~~~~~~
