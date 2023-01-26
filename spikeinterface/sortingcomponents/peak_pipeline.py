@@ -13,10 +13,7 @@ import numpy as np
 
 from spikeinterface.core import get_chunk_with_margin
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs, _shared_job_kwargs_doc
-
-#TODO remove this
-class PeakPipelineStep:
-    pass
+from spikeinterface.core import get_channel_distances
 
 class PipelineNode:
     """
@@ -85,6 +82,38 @@ class ExtractDenseWaveforms(PipelineNode):
     def compute(self, traces, peaks):
         waveforms = traces[peaks['sample_ind'][:, None] + np.arange(-self.nbefore, self.nafter)]
         return waveforms
+
+
+class ExtractSparseWaveforms(PipelineNode):
+    def __init__(self, recording, name='extract_sparse_waveforms', return_ouput=False,
+                         ms_before=None, ms_after=None, local_radius_um=100.,):
+        PipelineNode.__init__(self, recording, name=name, return_ouput=return_ouput)
+
+        self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
+        self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
+
+        self.contact_locations = recording.get_channel_locations()
+        self.channel_distance = get_channel_distances(recording)
+        self.neighbours_mask = self.channel_distance < local_radius_um
+        self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
+        
+        self._kwargs['ms_before'] = float(ms_before)
+        self._kwargs['ms_after'] = float(ms_after)
+        self._kwargs['local_radius_um'] = float(local_radius_um)
+
+    def get_trace_margin(self):
+        return max(self.nbefore, self.nafter)
+    
+    def compute(self, traces, peaks):
+        sparse_wfs = np.zeros((peaks.shape[0], self.nbefore + self.nafter, self.max_num_chans), dtype=traces.dtype)
+        
+        for i, peak in enumerate(peaks):
+            chans, = np.nonzero(self.neighbours_mask[peak['channel_ind']])
+            sparse_wfs[i, :, :len(chans)] = traces[peak['sample_ind'] - self.nbefore: peak['sample_ind'] + self.nafter, :][:, chans]
+
+        return sparse_wfs
+
+
 
 
 def check_graph(nodes):

@@ -7,7 +7,7 @@ from spikeinterface import download_dataset, BaseSorting
 from spikeinterface.extractors import MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PipelineNode, ExtractDenseWaveforms
+from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PipelineNode, ExtractDenseWaveforms, ExtractSparseWaveforms
 
 
 
@@ -80,22 +80,24 @@ def test_run_peak_pipeline():
     
     # 3 nodes two have outputs
     nodes = [
-        ExtractDenseWaveforms(recording, name='extract_waveforms', ms_before=.5, ms_after=1.,  return_ouput=False),
-        WaveformDenoiser(recording, name='denoiser', parents=['extract_waveforms'], return_ouput=False),
+        ExtractDenseWaveforms(recording, name='extract_dense_waveforms', ms_before=.5, ms_after=1.,  return_ouput=False),
+        WaveformDenoiser(recording, name='denoiser', parents=['extract_dense_waveforms'], return_ouput=False),
         MyStep(recording, name='simple_step', param0=5.5),
-        MyStepWithWaveforms(recording, name='step_on_raw_wf', parents=['extract_waveforms']),
-        MyStepWithWaveforms(recording, name='step_on_denoised_wf', parents=['denoiser'])
+        MyStepWithWaveforms(recording, name='step_on_raw_wf', parents=['extract_dense_waveforms']),
+        MyStepWithWaveforms(recording, name='step_on_denoised_wf', parents=['denoiser']),
+        ExtractSparseWaveforms(recording, name='extract_sparse_waveforms', ms_before=.5, ms_after=1.,   local_radius_um=40.,return_ouput=True),
     ]
 
     for node in nodes:
         cls, kwargs = node.__class__, node.to_dict()
         node2 = cls.from_dict(recording, kwargs)
     
-    node2, node3, node4 = run_peak_pipeline(recording, peaks, nodes, job_kwargs)
+    node2, node3, node4, node5 = run_peak_pipeline(recording, peaks, nodes, job_kwargs)
     assert np.allclose(np.abs(peaks['amplitude']), node2['abs_amplitude'])
     assert node3.shape[0] == peaks.shape[0]
     assert node4.shape[1] == recording.get_num_channels()
-
+    assert node5.shape[0] == peaks.shape[0]
+    assert node5.shape[2] == nodes[5].max_num_chans
 
 if __name__ == '__main__':
     test_run_peak_pipeline()
