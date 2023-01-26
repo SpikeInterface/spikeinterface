@@ -103,8 +103,8 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     def run(self):
         self.extract_waveforms()
         self.save_to_folder()
-        self.run_sorters()
-        self.save_to_folder()
+        #self.run_sorters()
+        #self.save_to_folder()
 
 
     def extract_waveforms(self):
@@ -119,7 +119,6 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 continue
             
             waveforms_folder = self.folder / "waveforms" / key
-
             we = WaveformExtractor.create(self.recordings[key], self.sorting_gt, waveforms_folder, mode='folder',
                                           sparsity=sparsity)
             we.set_params(ms_before=2., ms_after=3., max_spikes_per_unit=500., return_scaled=True)
@@ -192,7 +191,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
     # def _get_residuals(self, key, time_range):
     #     gkey = key, time_range
-        
+
     #     if not hasattr(self, '_residuals'):
     #         self._residuals = {}
         
@@ -373,6 +372,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
 def plot_distances_to_static(benchmarks, metric='euclidean', figsize=(15, 10)):
 
+
     fig = plt.figure(figsize=figsize)
     gs = fig.add_gridspec(4, 2)
 
@@ -407,11 +407,13 @@ def plot_distances_to_static(benchmarks, metric='euclidean', figsize=(15, 10)):
     ax_4 = fig.add_subplot(gs[2:, 0])
 
     for count, bench in enumerate(benchmarks):
+
         # results = bench._compute_snippets_variability(metric=metric, num_channels=num_channels)
         distances = bench.compute_distances_to_static(force=False)
 
         m_differences = distances['corrected'][f'wf_{metric}_mean']/distances['static'][f'wf_{metric}_mean']
         s_differences = distances['corrected'][f'wf_{metric}_std']/distances['static'][f'wf_{metric}_std']
+
         ax_3.bar([count], [m_differences.mean()], yerr=[m_differences.std()], color=f'C{count}')
         ax_4.bar([count], [s_differences.mean()], yerr=[s_differences.std()], color=f'C{count}')
         idx = np.argsort(distances_to_center)
