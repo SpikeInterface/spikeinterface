@@ -192,16 +192,19 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         return self.distances
 
     def compute_residuals(self, force=True):
-        if hasattr(self, 'residuals') and not force:
-            return self.residuals
-        
-        self.residuals = {}
-        
+
         fr = int(self.recordings['static'].get_sampling_frequency())
         duration = int(self.recordings['static'].get_total_duration())
 
         t_start = 0
         t_stop = duration
+
+        if hasattr(self, 'residuals') and not force:
+            return self.residuals, (t_start, t_stop)
+        
+        self.residuals = {}
+        
+        
 
         for key in ['corrected']:
             difference = ResidualRecording(self.recordings['static'], self.recordings[key])
@@ -415,8 +418,8 @@ def plot_residuals_comparisons(benchmarks):
         residuals, (t_start, t_stop) = bench.compute_residuals(force=False)
         time_axis = np.arange(t_start, t_stop)
         axes[1].plot(distances_to_center[idx], residuals['corrected'].mean(1)[idx], label=bench.title, lw=2, c=f'C{count}')
-        axes[1].fill_between(distances_to_center[idx], residuals.mean(1)[idx]-residuals.std(1)[idx], 
-                    residuals.mean(1)[idx]+residuals.std(1)[idx], color=f'C{count}', alpha=0.25)
+        axes[1].fill_between(distances_to_center[idx], residuals['corrected'].mean(1)[idx]-residuals['corrected'].std(1)[idx], 
+                    residuals['corrected'].mean(1)[idx]+residuals['corrected'].std(1)[idx], color=f'C{count}', alpha=0.25)
     axes[1].set_xlabel('depth (um)')
     _simpleaxis(axes[1])
 
