@@ -90,19 +90,26 @@ class ExtractDenseWaveforms(PipelineNode):
 def check_graph(nodes):
     """
     Check that node list is orderd in a good (parents are before children)
-    
-    This also would distribute all node instance to everyone.
-    And then optionally make a check per Node.
     """
     names = [node.name for node in nodes]
     assert np.unique(names).size == len(names), 'PipelineNonde names are not unique'
-    dict_nodes = {node.name : node for node in nodes}
     for i, node in enumerate(nodes):
+        assert isinstance(node, PipelineNode)
         # check that parents exists and are before in chain
         if node.parents is not None:
             for parent_name in node.parents:
                 assert parent_name in names, f'The node {node.name} do not have parent {parent_name}'
                 assert names.index(parent_name) < i, 'Node are ordered incorrectly {node.name} before {parent_name}'
+
+    return nodes
+
+
+def propagate_node_instances(nodes):
+    """
+    This istribute all node instance to everyone.
+    And then optionally make a check per Node.
+    """
+    dict_nodes = {node.name : node for node in nodes}
 
     for node in nodes:
         # give the the instances from all nodes.
@@ -111,9 +118,7 @@ def check_graph(nodes):
 
     for node in nodes:
         node.post_check()
-
-    return nodes
-
+    
 
 def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeline', squeeze_output=True):
     """
@@ -129,7 +134,8 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
         i1 = np.searchsorted(peaks['segment_ind'], segment_index + 1)
         segment_slices.append(slice(i0, i1))
 
-    
+    check_graph(nodes)
+
     if job_kwargs['n_jobs'] > 1:
         init_args = (
             recording.to_dict(),
@@ -170,8 +176,8 @@ def _init_worker_peak_pipeline(recording, peaks, nodes, segment_slices):
 
         nodes = [cls.from_dict(recording, kwargs) for cls, kwargs in nodes]
     
-    # this is done in every worker to get the instance of the Nonde in the worker.
-    check_graph(nodes)
+    # this is done in every worker to get the instance of the Node in the worker.
+    propagate_node_instances(nodes)
     
     max_margin = max(node.get_trace_margin() for node in nodes)
 
