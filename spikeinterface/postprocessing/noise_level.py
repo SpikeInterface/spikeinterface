@@ -1,16 +1,14 @@
-import numpy as np
-
 from spikeinterface.core.waveform_extractor import BaseWaveformExtractorExtension, WaveformExtractor
 from spikeinterface.core import get_noise_levels
 
 
 class NoiseLevelsCalculator(BaseWaveformExtractorExtension):
     extension_name = 'noise_levels'
+
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
-    def _set_params(self, num_chunks_per_segment=20, 
-                           chunk_size=10000, seed=None):
+    def _set_params(self, num_chunks_per_segment=20, chunk_size=10000, seed=None):
         params = dict(num_chunks_per_segment=num_chunks_per_segment, chunk_size=chunk_size, seed=seed)
         return params
 
@@ -24,6 +22,14 @@ class NoiseLevelsCalculator(BaseWaveformExtractorExtension):
                                                                 return_scaled=return_scaled, **self._params)
     
     def get_data(self):
+        """
+        Get computed noise levels.
+
+        Returns
+        -------
+        noise_levels : np.array
+            The noise levels associated to each channel.
+        """
         return self._extension_data['noise_levels']
 
     @staticmethod
@@ -36,16 +42,15 @@ WaveformExtractor.register_extension(NoiseLevelsCalculator)
 
 def compute_noise_levels(waveform_extractor, load_if_exists=False, **params):
     """
-    This wrap the 
-    `noise_levels = get_noise_levels(recording)`
-    into 
-    `noise_levels = compute_noise_levels(waveform_extractor)`
+    Computes the noise level associated to each recording channel.
 
-    This is done with the BaseWaveformExtractorExtension machinery so the results is persistent on disk (folder or zarr).
+    This function will wraps the `get_noise_levels(recording)` to make the noise levels persistent 
+    on disk (folder or zarr) as a `WaveformExtension`.
+    The noise levels do not depend on the unit list, only the recording, but it is a convenient way to 
+    retrieve the noise levels directly ine the WaveformExtractor.
 
-    The reults do not depend on the unit list, only the recording, but it is a convinient way to retrieve the noise directly ine the WaveformExtractor.
-    
-    The result can be scaled or not, this depends if the waveform_extractor itself is scaled or not.
+    Note that the noise levels can be scaled or not, depending on the `return_scaled` parameter 
+    of the `WaveformExtractor.
 
     
     Parameters
@@ -72,6 +77,3 @@ def compute_noise_levels(waveform_extractor, load_if_exists=False, **params):
         ext.run()
 
     return ext.get_data()
-
-
-
