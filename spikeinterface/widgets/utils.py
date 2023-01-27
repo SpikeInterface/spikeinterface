@@ -19,6 +19,23 @@ except ImportError:
 def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGBA', shuffle=False):
     """
     Return a dict of colors for given keys
+    
+    Params
+    ------
+    color_engine: str 'auto' / 'matplotlib' / 'colorsys' / 'distinctipy'
+        The engine to generate colors
+    map_name: str
+        Used for matplotlib
+    format: 'RGBA'
+        The output fomrats
+    shuffle: bool
+        Shuffle or not.
+    
+    Returns
+    -------
+    dict_colors: dict
+        A dict of colors for given keys.
+    
     """
     assert color_engine in ('auto', 'distinctipy', 'matplotlib', 'colorsys')
 
@@ -27,10 +44,11 @@ def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGB
 
     # select the colormap engine
     if color_engine == 'auto':
-        if HAVE_DISTINCTIPY:
-            color_engine = 'distinctipy'
-        elif HAVE_MPL:
+        if HAVE_MPL:
             color_engine = 'matplotlib'
+        elif HAVE_DISTINCTIPY:
+            # this is the third choice because this is very slow
+            color_engine = 'distinctipy'
         else:
             color_engine = 'colorsys'
 
@@ -46,12 +64,13 @@ def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGB
         margin = max(4, N // 20) // 2
         cmap = plt.get_cmap(map_name, N + 2 * margin)
         colors = [cmap(i+margin) for i, key in enumerate(keys)]
-        if shuffle:
-            random.shuffle(colors)
 
     elif color_engine == 'colorsys':
         import colorsys
         colors = [colorsys.hsv_to_rgb(x * 1.0 / N, 0.5, 0.5) + (1., ) for x in range(N)]
+
+    if shuffle:
+        random.shuffle(colors)
 
     dict_colors = dict(zip(keys, colors))
 
