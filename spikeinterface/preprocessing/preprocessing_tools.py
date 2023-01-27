@@ -3,7 +3,8 @@ import scipy.spatial
 
 
 def get_spatial_interpolation_kernel(source_location, target_location, method='kriging',
-                                     sigma_um=20., p=1, num_closest=3, dtype='float32', force_extrapolate=False):
+                                     sigma_um=20., p=1, num_closest=3, dtype='float32',
+                                     force_extrapolate=False):
     """
     Compute the spatial kernel for linear spatial interpolation.
     
@@ -126,7 +127,7 @@ def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p):
     return kernal_dist
 
 
-def get_kriging_channel_weights(contact_positions, channel_indexes, sigma_um, p,
+def get_kriging_channel_weights(contact_positions1, contact_positions2, sigma_um, p,
                                 weight_threshold=0.005):
     """
     Calculate weights for kriging interpolation. Weights below weight_threshold are set to 0.
@@ -136,11 +137,10 @@ def get_kriging_channel_weights(contact_positions, channel_indexes, sigma_um, p,
     International Brain Laboratory et al. (2022). Spike sorting pipeline for the
     International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
     """
-    weights = get_kriging_kernel_distance(contact_positions,
-                                          contact_positions[channel_indexes],
+    weights = get_kriging_kernel_distance(contact_positions1,
+                                          contact_positions2,
                                           sigma_um,
                                           p)
-    weights[channel_indexes, :] = 0
     weights[weights < weight_threshold] = 0
 
     with np.errstate(divide='ignore', invalid='ignore'):

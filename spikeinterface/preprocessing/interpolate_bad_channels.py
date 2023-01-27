@@ -49,19 +49,24 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
 
         self.bad_channel_ids = bad_channel_ids
         self._bad_channel_idxs = recording.ids_to_indices(self.bad_channel_ids)
+        self._good_channel_idxs = ~np.in1d(np.arange(recording.get_num_channels()), self._bad_channel_idxs)
         self._bad_channel_idxs.setflags(write=False)
 
         if sigma_um is None:
             sigma_um = estimate_recommended_sigma_um(recording)
 
         if weights is None:
-            weights = preprocessing_tools.get_kriging_channel_weights(recording.get_channel_locations(),
-                                                                      self._bad_channel_idxs,
+            locations = recording.get_channel_locations()
+            locations_good = locations[self._good_channel_idxs]
+            locations_bad = locations[self._bad_channel_idxs]
+            weights = preprocessing_tools.get_kriging_channel_weights(locations_good,
+                                                                      locations_bad,
                                                                       sigma_um,
                                                                       p)
 
         for parent_segment in recording._recording_segments:
             rec_segment = InterpolateBadChannelsSegment(parent_segment,
+                                                        self._good_channel_idxs,
                                                         self._bad_channel_idxs,
                                                         weights)
             self.add_recording_segment(rec_segment)
@@ -86,10 +91,11 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
 
 class InterpolateBadChannelsSegment(BasePreprocessorSegment):
 
-    def __init__(self, parent_recording_segment, bad_channel_indexes, weights):
+    def __init__(self, parent_recording_segment, good_channel_indices, bad_channel_indices, weights):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
-        self._bad_channel_indexes = bad_channel_indexes
+        self._good_channel_indices = good_channel_indices
+        self._bad_channel_indices = bad_channel_indices
         self._weights = weights
 
     def get_traces(self, start_frame, end_frame, channel_indices):
@@ -102,7 +108,7 @@ class InterpolateBadChannelsSegment(BasePreprocessorSegment):
 
         traces = traces.copy()
 
-        traces[:, self._bad_channel_indexes] = traces @ self._weights
+        traces[:, self._bad_channel_indices] = traces[:, self._good_channel_indices] @ self._weights
 
         return traces[:, channel_indices]
 

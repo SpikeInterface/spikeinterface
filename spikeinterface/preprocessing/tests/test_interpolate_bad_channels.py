@@ -1,8 +1,10 @@
+import pytest
+import numpy as np
+import os
+
 import spikeinterface as si
 import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
-import pytest
-import numpy as np
 from spikeinterface.core.testing_tools import generate_recording
 
 try:
@@ -11,6 +13,8 @@ try:
     HAVE_IBL_NPIX = True
 except ImportError:
     HAVE_IBL_NPIX = False
+
+ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
 
 DEBUG = False
 if DEBUG:
@@ -23,7 +27,7 @@ if DEBUG:
 # Tests
 # -------------------------------------------------------------------------------
 
-@pytest.mark.skipif(not HAVE_IBL_NPIX, reason="Requires ibl-neuropixel install")
+@pytest.mark.skipif(not HAVE_IBL_NPIX or ON_GITHUB, reason="Only local. Requires ibl-neuropixel install")
 def test_compare_real_data_with_ibl():
     """
     Test SI implementation of bad channel interpolation against native IBL.
