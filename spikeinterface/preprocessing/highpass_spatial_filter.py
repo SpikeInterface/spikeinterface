@@ -64,10 +64,12 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
             order_f = None
             order_r = None
         else:
-            order_f = np.argsort(locs_mono)
+            # use stable sort (mergesort) to avoid randomness when non-unique values
+            order_f = np.argsort(locs_mono, kind='mergesort')
             order_r = np.argsort(order_f)
 
         # Fix channel padding and tapering
+        n_channels = recording.get_num_channels()
         n_channel_pad = 0 if n_channel_pad is None else int(n_channel_pad)
         assert n_channel_pad <= recording.get_num_channels(), \
             "'n_channel_pad' must be less than the number of channels in recording."
@@ -103,6 +105,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
             rec_segment = HighPassSpatialFilterSegment(parent_segment,
                                                        n_channel_pad,
                                                        n_channel_taper,
+                                                       n_channels,
                                                        agc_options,
                                                        sos_filter,
                                                        order_f,
@@ -122,6 +125,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
                  parent_recording_segment,
                  n_channel_pad,
                  n_channel_taper,
+                 n_channels,
                  agc_options,
                  sos_filter,
                  order_f,
@@ -129,7 +133,12 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
                  ):
         self.parent_recording_segment = parent_recording_segment
         self.n_channel_pad = n_channel_pad
-        self.n_channel_taper = n_channel_taper
+        if n_channel_taper > 0:
+            num_channels_padded = n_channels + n_channel_pad * 2
+            self.taper = fcn_cosine([0, n_channel_taper])(np.arange(num_channels_padded))  # taper up
+            self.taper *= 1 - fcn_cosine([num_channels_padded - n_channel_taper, num_channels_padded])(np.arange(num_channels_padded))   # taper down
+        else:
+            self.taper = None
         self.agc_options = agc_options
         self.order_f = order_f
         self.order_r = order_r
@@ -149,7 +158,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
 
         traces = kfilt(traces,
                        self.n_channel_pad,
-                       self.n_channel_taper,
+                       self.taper,
                        self.agc_options,
                        self.sos_filter)
 
@@ -166,7 +175,7 @@ highpass_spatial_filter = define_function_from_class(source_class=HighpassSpatia
 # IBL KFilt Function
 # -----------------------------------------------------------------------------------------------
 
-def kfilt(traces, n_channel_pad, n_channel_taper, agc_options, sos_filter):
+def kfilt(traces, n_channel_pad, taper, agc_options, sos_filter):
     """
     Alternative to median filtering across channels, in which the cut-band is
     extended from 0 to the 0.01 Nyquist corner frequency using butterworth filter.
@@ -211,6 +220,7 @@ def kfilt(traces, n_channel_pad, n_channel_taper, agc_options, sos_filter):
     if not agc_options:
         gain = 1
     else:
+        # pr-compute gains?
         traces, gain = agc(traces,
                            window_length=agc_options["window_length_s"],
                            sampling_interval=agc_options["sampling_interval"])
@@ -221,9 +231,7 @@ def kfilt(traces, n_channel_pad, n_channel_taper, agc_options, sos_filter):
                        traces,
                        np.fliplr(traces[:, -n_channel_pad:])]
 
-    if n_channel_taper > 0:
-        taper = fcn_cosine([0, n_channel_taper])(np.arange(num_channels_padded))  # taper up
-        taper *= 1 - fcn_cosine([num_channels_padded - n_channel_taper, num_channels_padded])(np.arange(num_channels_padded))   # taper down
+    if taper is not None:
         traces = traces * taper[np.newaxis, :]
 
     traces = scipy.signal.sosfiltfilt(sos_filter, traces, axis=1)
