@@ -8,6 +8,8 @@ from .misc_metrics import (
     compute_isi_violations,
     compute_refrac_period_violations,
     compute_amplitudes_cutoff,
+    compute_amplitudes_median,
+    compute_drift_metrics
 )
 
 from .pca_metrics import (
@@ -16,7 +18,8 @@ from .pca_metrics import (
     lda_metrics,
     nearest_neighbors_metrics,
     nearest_neighbors_isolation,
-    nearest_neighbors_noise_overlap)
+    nearest_neighbors_noise_overlap
+)
 
 from .pca_metrics import _possible_pc_metric_names
 
@@ -30,12 +33,8 @@ _misc_metric_name_to_func = {
     "snr" : compute_snrs,
     "isi_violations" : compute_isi_violations,
     "rp_violations" : compute_refrac_period_violations,
-    "amplitude_cutoff" : compute_amplitudes_cutoff
+    "amplitude_cutoff" : compute_amplitudes_cutoff,
+    "amplitude_median" : compute_amplitudes_median,
+    "drift" : compute_drift_metrics
 }
 
-
-# TODO
-# @Cole @ Alessio
-# "silhouette_score",
-# "max_drift",
-# "cumulative_drift",
