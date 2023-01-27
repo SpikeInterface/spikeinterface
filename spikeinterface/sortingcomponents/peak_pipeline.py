@@ -128,7 +128,7 @@ def check_graph(nodes):
         if node.parents is not None:
             for parent_name in node.parents:
                 assert parent_name in names, f'The node {node.name} do not have parent {parent_name}'
-                assert names.index(parent_name) < i, 'Node are ordered incorrectly {node.name} before {parent_name}'
+                assert names.index(parent_name) < i, 'Node are ordered incorrectly: {node.name} before {parent_name} in pipeline definition.'
 
     return nodes
 
