@@ -110,9 +110,12 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     def extract_waveforms(self):
 
         # the sparsity is estimated on the static recording and propagated to all of then
-        sparsity = precompute_sparsity(self.recordings['static'], self.sorting_gt,
+        if self.parent_benchmark is None:
+            sparsity = precompute_sparsity(self.recordings['static'], self.sorting_gt,
                                        ms_before=2., ms_after=3., num_spikes_for_sparsity=200., unit_batch_size=10000,
                                        **self.sparse_kwargs, **self.job_kwargs)
+        else:
+            sparsity = self.waveforms['static'].sparsity
 
         for key in self.keys:
             if self.parent_benchmark is not None and key in self._waveform_names_from_parent:
@@ -120,7 +123,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             
             waveforms_folder = self.folder / "waveforms" / key
             we = WaveformExtractor.create(self.recordings[key], self.sorting_gt, waveforms_folder, mode='folder',
-                                          sparsity=sparsity)
+                                          sparsity=sparsity, remove_if_exists=True)
             we.set_params(ms_before=2., ms_after=3., max_spikes_per_unit=500., return_scaled=True)
             we.run_extract_waveforms(seed=22051977, **self.job_kwargs)
             self.waveforms[key] = we
@@ -188,98 +191,30 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
         return self.distances
 
+    def compute_residuals(self, force=True):
 
-    # def _get_residuals(self, key, time_range):
-    #     gkey = key, time_range
+        fr = int(self.recordings['static'].get_sampling_frequency())
+        duration = int(self.recordings['static'].get_total_duration())
 
-    #     if not hasattr(self, '_residuals'):
-    #         self._residuals = {}
+        t_start = 0
+        t_stop = duration
+
+        if hasattr(self, 'residuals') and not force:
+            return self.residuals, (t_start, t_stop)
         
-    #     fr = int(self.recordings['static'].get_sampling_frequency())
-    #     duration = int(self.recordings['static'].get_total_duration())
+        self.residuals = {}
+        
+        
 
-    #     if time_range is None:
-    #         t_start = 0
-    #         t_stop = duration
-    #     else:
-    #         t_start, t_stop = time_range
-
-    #     if gkey not in self._residuals:
-    #         difference = ResidualRecording(self.recordings['static'], self.recordings[key])
-    #         self._residuals[gkey] = np.zeros((self.recordings['static'].get_num_channels(), 0))
+        for key in ['corrected']:
+            difference = ResidualRecording(self.recordings['static'], self.recordings[key])
+            self.residuals[key] = np.zeros((self.recordings['static'].get_num_channels(), 0))
             
-    #         for i in np.arange(t_start*fr, t_stop*fr, fr):
-    #             data = np.linalg.norm(difference.get_traces(start_frame=i, end_frame=i+fr), axis=0)/np.sqrt(fr)
-    #             self._residuals[gkey] = np.hstack((self._residuals[gkey], data[:,np.newaxis]))
+            for i in np.arange(t_start*fr, t_stop*fr, fr):
+                data = np.linalg.norm(difference.get_traces(start_frame=i, end_frame=i+fr), axis=0)/np.sqrt(fr)
+                self.residuals[key] = np.hstack((self.residuals[key], data[:,np.newaxis]))
         
-    #     return self._residuals[gkey], (t_start, t_stop)
-
-    # def compare_residuals(self, time_range=None):
-
-    #     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-
-    #     residuals = {}
-
-    #     for key in ['drifting', 'corrected']:
-    #         residuals[key], (t_start, t_stop) = self._get_residuals(key, time_range)
-
-    #     time_axis = np.arange(t_start, t_stop)
-    #     axes[0 ,0].plot(time_axis, residuals['drifting'].mean(0), label=r'$|S_{drifting} - S_{static}|$')
-    #     axes[0 ,0].plot(time_axis, residuals['corrected'].mean(0), label=r'$|S_{corrected} - S_{static}|$')
-    #     axes[0 ,0].legend()
-    #     axes[0, 0].set_xlabel('time (s)')
-    #     axes[0, 0].set_ylabel('mean residual')
-    #     _simpleaxis(axes[0, 0])
-
-    #     channel_positions = self.recordings['static'].get_channel_locations()
-    #     distances_to_center = channel_positions[:, 1]
-    #     idx = np.argsort(distances_to_center)
-
-    #     axes[0, 1].plot(distances_to_center[idx], residuals['drifting'].mean(1)[idx], label=r'$|S_{drift} - S_{static}|$')
-    #     axes[0, 1].plot(distances_to_center[idx], residuals['corrected'].mean(1)[idx], label=r'$|S_{corrected} - S_{static}|$')
-    #     axes[0, 1].legend()
-    #     axes[0 ,1].set_xlabel('depth (um)')
-    #     axes[0, 1].set_ylabel('mean residual')
-    #     _simpleaxis(axes[0, 1])
-
-    #     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-    #     peaks = detect_peaks(self.recordings['static'], method='by_channel', **self.job_kwargs)
-
-    #     fr = int(self.recordings['static'].get_sampling_frequency())
-    #     duration = int(self.recordings['static'].get_total_duration())
-    #     mask = (peaks['sample_ind'] >= t_start*fr) & (peaks['sample_ind'] <= t_stop*fr)
-
-    #     _, counts = np.unique(peaks['channel_ind'][mask], return_counts=True)
-    #     counts = counts.astype(np.float64) / (t_stop - t_start)
-
-    #     axes[1, 0].plot(distances_to_center[idx],(fr*residuals['drifting'].mean(1)/counts)[idx], label='drifting')
-    #     axes[1, 0].plot(distances_to_center[idx],(fr*residuals['corrected'].mean(1)/counts)[idx], label='corrected')
-    #     axes[1, 0].set_ylabel('mean residual / rate')
-    #     axes[1, 0].set_xlabel('depth of the channel [um]')
-    #     axes[1, 0].legend()
-    #     _simpleaxis(axes[1, 0])
-
-    #     axes[1, 1].scatter(counts, residuals['drifting'].mean(1), label='drifting')
-    #     axes[1, 1].scatter(counts, residuals['corrected'].mean(1), label='corrected')
-    #     axes[1, 1].legend()
-    #     axes[1, 1].set_xlabel('rate per channel (Hz)')
-    #     axes[1, 1].set_ylabel('Mean residual')
-    #     _simpleaxis(axes[1,1])
-
-    # def compare_waveforms(self, unit_id, num_channels=20):
-    #     fig, axes = plt.subplots(1, 3, figsize=(15, 10))
-
-    #     sparsity = compute_sparsity(self.waveforms['static'],  method="best_channels", num_channels=num_channels)
-    #     for count, key in enumerate(self.keys):
-
-    #         plot_unit_waveforms(self.waveforms[key], unit_ids=[unit_id], ax=axes[count], 
-    #             unit_colors={unit_id : 'k'}, same_axis=True, alpha_waveforms=0.05, sparsity=sparsity)
-    #         axes[count].set_title(f'unit {unit_id} {key}')
-    #         axes[count].set_xticks([])
-    #         axes[count].set_yticks([])
-    #         _simpleaxis(axes[count])
-    #         axes[count].spines['bottom'].set_visible(False)
-    #         axes[count].spines['left'].set_visible(False)
+        return self.residuals, (t_start, t_stop)
     
     def compute_accuracies(self):
         for case in self.sorter_cases:
@@ -463,66 +398,65 @@ def plot_snr_decrease(benchmarks, figsize=(15, 10)):
     ax.legend()
 
 
+def plot_residuals_comparisons(benchmarks):
 
-# def plot_residuals_comparisons(benchmarks):
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    for count, bench in enumerate(benchmarks):
+        residuals, (t_start, t_stop) = bench.compute_residuals(force=False)
+        time_axis = np.arange(t_start, t_stop)
+        axes[0].plot(time_axis, residuals['corrected'].mean(0), label=bench.title)
+    axes[0].legend()
+    axes[0].set_xlabel('time (s)')
+    axes[0].set_ylabel(r'$|S_{corrected} - S_{static}|$')
+    _simpleaxis(axes[0])
 
-#     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-#     for count, bench in enumerate(benchmarks):
-#         residuals, (t_start, t_stop) = bench._get_residuals('corrected', None)
-#         time_axis = np.arange(t_start, t_stop)
-#         axes[0].plot(time_axis, residuals.mean(0), label=bench.title)
-#     axes[0].legend()
-#     axes[0].set_xlabel('time (s)')
-#     axes[0].set_ylabel(r'$|S_{corrected} - S_{static}|$')
-#     _simpleaxis(axes[0])
+    channel_positions = benchmarks[0].recordings['static'].get_channel_locations()
+    distances_to_center = channel_positions[:, 1]
+    idx = np.argsort(distances_to_center)
 
-#     channel_positions = benchmarks[0].recordings['static'].get_channel_locations()
-#     distances_to_center = channel_positions[:, 1]
-#     idx = np.argsort(distances_to_center)
+    for count, bench in enumerate(benchmarks):
+        residuals, (t_start, t_stop) = bench.compute_residuals(force=False)
+        time_axis = np.arange(t_start, t_stop)
+        axes[1].plot(distances_to_center[idx], residuals['corrected'].mean(1)[idx], label=bench.title, lw=2, c=f'C{count}')
+        axes[1].fill_between(distances_to_center[idx], residuals['corrected'].mean(1)[idx]-residuals['corrected'].std(1)[idx], 
+                    residuals['corrected'].mean(1)[idx]+residuals['corrected'].std(1)[idx], color=f'C{count}', alpha=0.25)
+    axes[1].set_xlabel('depth (um)')
+    _simpleaxis(axes[1])
 
-#     for count, bench in enumerate(benchmarks):
-#         residuals, (t_start, t_stop) = bench._get_residuals('corrected', None)
-#         time_axis = np.arange(t_start, t_stop)
-#         axes[1].plot(distances_to_center[idx], residuals.mean(1)[idx], label=bench.title, lw=2, c=f'C{count}')
-#         axes[1].fill_between(distances_to_center[idx], residuals.mean(1)[idx]-residuals.std(1)[idx], 
-#                     residuals.mean(1)[idx]+residuals.std(1)[idx], color=f'C{count}', alpha=0.25)
-#     axes[1].set_xlabel('depth (um)')
-#     _simpleaxis(axes[1])
+    for count, bench in enumerate(benchmarks):
+        residuals, (t_start, t_stop) = bench.compute_residuals(force=False)
+        axes[2].bar([count], [residuals['corrected'].mean()], yerr=[residuals['corrected'].std()], color=f'C{count}')
 
-#     for count, bench in enumerate(benchmarks):
-#         residuals, (t_start, t_stop) = bench._get_residuals('corrected', None)
-#         axes[2].bar([count], [residuals.mean()], yerr=[residuals.std()], color=f'C{count}')
-
-#     _simpleaxis(axes[2])
-#     axes[2].set_xticks(np.arange(len(benchmarks)), [i.title for i in benchmarks])
-
-
-# from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-# class ResidualRecording(BasePreprocessor):
-#     name = 'residual_recording'
-#     def __init__(self, recording_1, recording_2):
-#         assert recording_1.get_num_segments() == recording_2.get_num_segments()
-#         BasePreprocessor.__init__(self, recording_1)
-
-#         for parent_recording_segment_1, parent_recording_segment_2 in zip(recording_1._recording_segments, recording_2._recording_segments):
-#             rec_segment = DifferenceRecordingSegment(parent_recording_segment_1, parent_recording_segment_2)
-#             self.add_recording_segment(rec_segment)
-
-#         self._kwargs = dict(recording_1=recording_1.to_dict(), recording_2=recording_2.to_dict())
+    _simpleaxis(axes[2])
+    axes[2].set_xticks(np.arange(len(benchmarks)), [i.title for i in benchmarks])
 
 
-# class DifferenceRecordingSegment(BasePreprocessorSegment):
-#     def __init__(self, parent_recording_segment_1, parent_recording_segment_2):
-#         BasePreprocessorSegment.__init__(self, parent_recording_segment_1)
-#         self.parent_recording_segment_1 = parent_recording_segment_1
-#         self.parent_recording_segment_2 = parent_recording_segment_2
+from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+class ResidualRecording(BasePreprocessor):
+    name = 'residual_recording'
+    def __init__(self, recording_1, recording_2):
+        assert recording_1.get_num_segments() == recording_2.get_num_segments()
+        BasePreprocessor.__init__(self, recording_1)
 
-#     def get_traces(self, start_frame, end_frame, channel_indices):
+        for parent_recording_segment_1, parent_recording_segment_2 in zip(recording_1._recording_segments, recording_2._recording_segments):
+            rec_segment = DifferenceRecordingSegment(parent_recording_segment_1, parent_recording_segment_2)
+            self.add_recording_segment(rec_segment)
 
-#         traces_1 = self.parent_recording_segment_1.get_traces(start_frame, end_frame, channel_indices)
-#         traces_2 = self.parent_recording_segment_2.get_traces(start_frame, end_frame, channel_indices)
+        self._kwargs = dict(recording_1=recording_1.to_dict(), recording_2=recording_2.to_dict())
 
-#         return traces_2 - traces_1
 
-# colors = {'static' : 'C0', 'drifting' : 'C1', 'corrected' : 'C2'}
+class DifferenceRecordingSegment(BasePreprocessorSegment):
+    def __init__(self, parent_recording_segment_1, parent_recording_segment_2):
+        BasePreprocessorSegment.__init__(self, parent_recording_segment_1)
+        self.parent_recording_segment_1 = parent_recording_segment_1
+        self.parent_recording_segment_2 = parent_recording_segment_2
+
+    def get_traces(self, start_frame, end_frame, channel_indices):
+
+        traces_1 = self.parent_recording_segment_1.get_traces(start_frame, end_frame, channel_indices)
+        traces_2 = self.parent_recording_segment_2.get_traces(start_frame, end_frame, channel_indices)
+
+        return traces_2 - traces_1
+
+colors = {'static' : 'C0', 'drifting' : 'C1', 'corrected' : 'C2'}
 
