@@ -1,16 +1,16 @@
 import unittest
 
-from spikeinterface.postprocessing import compute_noise_levels, NoiseLevelCalculator
+from spikeinterface.postprocessing import compute_noise_levels, NoiseLevelsCalculator
 from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
 
 
 
-class NoiseLevelCalculatorExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
-    extension_class = NoiseLevelCalculator
+class NoiseLevelsCalculatorExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
+    extension_class = NoiseLevelsCalculator
     extension_data_names = ["noise_levels"]
 
 
 if __name__ == '__main__':
-    test = NoiseLevelCalculatorExtensionTest()
+    test = NoiseLevelsCalculatorExtensionTest()
     test.setUp()
     test.test_extension()

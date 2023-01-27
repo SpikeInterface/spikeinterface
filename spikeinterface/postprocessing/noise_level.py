@@ -4,8 +4,8 @@ from spikeinterface.core.waveform_extractor import BaseWaveformExtractorExtensio
 from spikeinterface.core import get_noise_levels
 
 
-class NoiseLevelCalculator(BaseWaveformExtractorExtension):
-    extension_name = 'noise_level'
+class NoiseLevelsCalculator(BaseWaveformExtractorExtension):
+    extension_name = 'noise_levels'
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
@@ -19,7 +19,6 @@ class NoiseLevelCalculator(BaseWaveformExtractorExtension):
         return  self._extension_data
         
     def _run(self):
-        print('compute noise level')
         return_scaled = self.waveform_extractor.return_scaled
         self._extension_data['noise_levels'] = get_noise_levels(self.waveform_extractor.recording,
                                                                 return_scaled=return_scaled, **self._params)
@@ -32,7 +31,7 @@ class NoiseLevelCalculator(BaseWaveformExtractorExtension):
         return compute_noise_levels            
 
 
-WaveformExtractor.register_extension(NoiseLevelCalculator)
+WaveformExtractor.register_extension(NoiseLevelsCalculator)
 
 
 def compute_noise_levels(waveform_extractor, load_if_exists=False, **params):
@@ -65,10 +64,10 @@ def compute_noise_levels(waveform_extractor, load_if_exists=False, **params):
     noise_levels: np.array
         noise level vector.
     """
-    if load_if_exists and waveform_extractor.is_extension(NoiseLevelCalculator.extension_name):
-        ext = waveform_extractor.load_extension(NoiseLevelCalculator.extension_name)
+    if load_if_exists and waveform_extractor.is_extension(NoiseLevelsCalculator.extension_name):
+        ext = waveform_extractor.load_extension(NoiseLevelsCalculator.extension_name)
     else:
-        ext = NoiseLevelCalculator(waveform_extractor)
+        ext = NoiseLevelsCalculator(waveform_extractor)
         ext.set_params(**params)
         ext.run()
 
