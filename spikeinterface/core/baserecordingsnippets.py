@@ -215,7 +215,7 @@ class BaseRecordingSnippets(BaseExtractor):
             positions = self.get_property('location')
             if positions is None:
                 raise ValueError(
-                    'There is not Probe attached to recording. use set_probe(...)')
+                    'There is no Probe attached to this recording. Use set_probe(...) to attach one.')
             else:
                 warn(
                     'There is no Probe attached to this recording. Creating a dummy one with contact positions')

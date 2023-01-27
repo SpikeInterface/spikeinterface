@@ -67,7 +67,10 @@ extractors = [
     "lxml",
     # hdf5storage and scipy for cellexplorer
     "hdf5storage",
-    "scipy"
+    "scipy",
+    # ONE-api and ibllib for streaming IBL
+    "ONE-api>=1.16.3",
+    "ibllib>=2.19.0",
 ]
 
 full = [
