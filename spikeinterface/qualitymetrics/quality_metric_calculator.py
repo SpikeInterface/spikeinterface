@@ -8,8 +8,9 @@ import pandas as pd
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
-from .quality_metric_list import (_misc_metric_name_to_func,
-                                  calculate_pc_metrics, _possible_pc_metric_names)
+from .quality_metric_list import (calculate_pc_metrics,
+                                  _misc_metric_name_to_func,
+                                  _possible_pc_metric_names)
 from .misc_metrics import _default_params as misc_metrics_params
 from .pca_metrics import _default_params as pca_metrics_params
 
@@ -33,11 +34,6 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
-        if waveform_extractor.is_extension('principal_components'):
-            self.principal_component = waveform_extractor.load_extension('principal_components')
-        else:
-            self.principal_component = None
-
         if waveform_extractor.has_recording():
             self.recording = waveform_extractor.recording
         else:
@@ -50,12 +46,17 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         if metric_names is None:
             metric_names = list(_misc_metric_name_to_func.keys())
             # if PC is available, PC metrics are automatically added to the list
-            if self.principal_component is not None:
-                # by default 'nearest_neightbor' metrics are removed because too slow
+            if self.waveform_extractor.is_extension('principal_components'):
+                # by default 'nearest_neightbor' is removed because too slow
                 pc_metrics = _possible_pc_metric_names.copy()
                 pc_metrics.remove("nn_isolation")
                 pc_metrics.remove("nn_noise_overlap")
                 metric_names += pc_metrics
+            # if spike_locations are not available, drift is removed from the list
+            if not self.waveform_extractor.is_extension('spike_locations'):
+                if "drift" in metric_names:
+                    metric_names.remove("drift")
+
         qm_params_ = get_default_qm_params()
         for k in qm_params_:
             if qm_params is not None and k in qm_params:
@@ -118,9 +119,10 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         # metrics based on PCs
         pc_metric_names = [k for k in metric_names if k in _possible_pc_metric_names]
         if len(pc_metric_names) > 0 and not self._params['skip_pc_metrics']:
-            if self.principal_component is None:
+            if not self.waveform_extractor.is_extension('principal_components'):
                 raise ValueError('waveform_principal_component must be provied')
-            pc_metrics = calculate_pc_metrics(self.principal_component,
+            pc_extension = self.waveform_extractor.load_extension('principal_components')
+            pc_metrics = calculate_pc_metrics(pc_extension,
                                               metric_names=pc_metric_names, 
                                               sparsity=sparsity,
                                               progress_bar=progress_bar, 
