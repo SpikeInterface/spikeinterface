@@ -87,18 +87,18 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
 
         # this return a copy with margin  + taper on border always
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment,
-                                                                        start_frame, end_frame, slice(None),
+                                                                        start_frame, end_frame, channel_indices,
                                                                         self.margin, dtype=self.tmp_dtype,
                                                                         add_zeros=True, window_on_margin=True)
         
-        traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts, axis=0)
+        traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts[channel_indices], axis=0)
         # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
         if self.tmp_dtype is not None:
             traces_shift = traces_shift.astype(self.dtype)
         
-        return traces_shift[:, channel_indices]
+        return traces_shift
 
 
 # function for API

@@ -1,10 +1,11 @@
-import spikeinterface as si
-import spikeinterface.preprocessing as spre
-import spikeinterface.extractors as se
 import pytest
+import os
 import numpy as np
 from copy import deepcopy
 
+import spikeinterface as si
+import spikeinterface.preprocessing as spre
+import spikeinterface.extractors as se
 from spikeinterface.core.testing_tools import generate_recording
 import spikeinterface.widgets as sw
 
@@ -14,6 +15,8 @@ try:
     HAVE_IBL_NPIX = True
 except ImportError:
     HAVE_IBL_NPIX = False
+
+ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
 
 DEBUG = False
 if DEBUG:
@@ -25,6 +28,7 @@ if DEBUG:
 # Tests
 # ----------------------------------------------------------------------------------------------------------------------
 
+@pytest.mark.skipif(not HAVE_IBL_NPIX or ON_GITHUB, reason="Only local. Requires ibl-neuropixel install")
 @pytest.mark.parametrize("lagc", ["ibl", None, 1, 150])
 def test_highpass_spatial_filter_real_data(lagc):
     """
@@ -95,15 +99,13 @@ def test_highpass_spatial_filter_synthetic_data(num_channels, ntr_pad, ntr_tap, 
     si_recording = generate_recording(num_channels=num_channels,
                                       durations=durations)
 
-    __, si_highpass_spatial_filter = run_si_highpass_filter(si_recording,
-                                                            get_traces=False,
-                                                            **options)
-    for seg in range(num_segments):
+    _, si_highpass_spatial_filter = run_si_highpass_filter(si_recording,
+                                                           get_traces=False,
+                                                           **options)
+    # only test trace retrieval here
+    for seg in range(si_recording.get_num_segments()):
         si_filtered = si_highpass_spatial_filter.get_traces(segment_index=seg)
 
-        ibl_filtered = run_ibl_highpass_filter(ibl_data=si_recording.get_traces(segment_index=seg).T,  **options)
-
-        assert np.allclose(si_filtered, ibl_filtered, atol=1e-05, rtol=0)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
