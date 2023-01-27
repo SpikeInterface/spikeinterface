@@ -16,7 +16,7 @@ except ImportError:
     HAVE_MPL = False
 
 
-def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGBA', shuffle=False):
+def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGBA', shuffle=None, seed=None):
     """
     Return a dict of colors for given keys
     
@@ -28,9 +28,14 @@ def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGB
         Used for matplotlib
     format: 'RGBA'
         The output fomrats
-    shuffle: bool
+    shuffle: bool or None
         Shuffle or not.
-    
+        If None then
+          * set to True for matplotlib and colorsys
+          * set to False for distinctipy
+    seed: int or None
+        Eventually a seed
+
     Returns
     -------
     dict_colors: dict
@@ -52,6 +57,11 @@ def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGB
         else:
             color_engine = 'colorsys'
 
+    if shuffle is None:
+        # distinctipy then False
+        shuffle = color_engine != 'distinctipy'
+        seed = 91
+
     N = len(keys)
 
     if color_engine == 'distinctipy':
@@ -61,7 +71,7 @@ def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGB
 
     elif color_engine == 'matplotlib':
         # some map have black or white at border so +10
-        margin = max(4, N // 20) // 2
+        margin = max(4, int(N * 0.08))
         cmap = plt.get_cmap(map_name, N + 2 * margin)
         colors = [cmap(i+margin) for i, key in enumerate(keys)]
 
@@ -70,19 +80,22 @@ def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGB
         colors = [colorsys.hsv_to_rgb(x * 1.0 / N, 0.5, 0.5) + (1., ) for x in range(N)]
 
     if shuffle:
-        random.shuffle(colors)
+        rng = np.random.RandomState(seed=seed)
+        inds = np.arange(N)
+        rng.shuffle(inds)
+        colors = [colors[i] for i in inds]
 
     dict_colors = dict(zip(keys, colors))
 
     return dict_colors
 
 
-def get_unit_colors(sorting, color_engine='auto', map_name='gist_ncar', format='RGBA', shuffle=False):
+def get_unit_colors(sorting, color_engine='auto', map_name='gist_ncar', format='RGBA', shuffle=None, seed=None):
     """
     Return a dict colors per units.
     """
-    colors = get_some_colors(sorting.unit_ids, color_engine=color_engine,
-                             map_name=map_name, format=format, shuffle=shuffle)
+    colors = get_some_colors(sorting.unit_ids, color_engine=color_engine, map_name=map_name, format=format, 
+                             shuffle=shuffle, seed=seed)
     return colors
 
 
