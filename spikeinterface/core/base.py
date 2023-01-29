@@ -562,10 +562,14 @@ class BaseExtractor:
         else:
             raise ValueError('spikeinterface.Base.load() file_path must be an existing folder or file')
 
+    def __reduce__(self):
+        
+        return (self.from_dict, (self.to_dict(), ))
+
     @staticmethod
     def load_from_folder(folder):
         return BaseExtractor.load(folder)
-
+    
     def _save(self, folder, **save_kwargs):
         # This implemented in BaseRecording or baseSorting
         # this is internally call by cache(...) main function
@@ -861,6 +865,7 @@ def _load_extractor_from_dict(dic):
 
     return extractor
 
+    
 
 def _get_class_from_string(class_string):
     class_name = class_string.split('.')[-1]
