@@ -19,7 +19,7 @@ from spikeinterface.sortingcomponents.motion_correction import CorrectMotionReco
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import BenchmarkBase, _simpleaxis
 from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.widgets import plot_sorting_performance
-from spikeinterface.qualitymetrics import compute_quality_metrics
+
 
 import sklearn
 
@@ -103,27 +103,25 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     def run(self):
         self.extract_waveforms()
         self.save_to_folder()
-        #self.run_sorters()
-        #self.save_to_folder()
+        self.run_sorters()
+        self.save_to_folder()
 
 
     def extract_waveforms(self):
 
         # the sparsity is estimated on the static recording and propagated to all of then
-        if self.parent_benchmark is None:
-            sparsity = precompute_sparsity(self.recordings['static'], self.sorting_gt,
+        sparsity = precompute_sparsity(self.recordings['static'], self.sorting_gt,
                                        ms_before=2., ms_after=3., num_spikes_for_sparsity=200., unit_batch_size=10000,
                                        **self.sparse_kwargs, **self.job_kwargs)
-        else:
-            sparsity = self.waveforms['static'].sparsity
 
         for key in self.keys:
             if self.parent_benchmark is not None and key in self._waveform_names_from_parent:
                 continue
             
             waveforms_folder = self.folder / "waveforms" / key
+
             we = WaveformExtractor.create(self.recordings[key], self.sorting_gt, waveforms_folder, mode='folder',
-                                          sparsity=sparsity, remove_if_exists=True)
+                                          sparsity=sparsity)
             we.set_params(ms_before=2., ms_after=3., max_spikes_per_unit=500., return_scaled=True)
             we.run_extract_waveforms(seed=22051977, **self.job_kwargs)
             self.waveforms[key] = we
@@ -191,30 +189,98 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
         return self.distances
 
-    def compute_residuals(self, force=True):
 
-        fr = int(self.recordings['static'].get_sampling_frequency())
-        duration = int(self.recordings['static'].get_total_duration())
-
-        t_start = 0
-        t_stop = duration
-
-        if hasattr(self, 'residuals') and not force:
-            return self.residuals, (t_start, t_stop)
+    # def _get_residuals(self, key, time_range):
+    #     gkey = key, time_range
         
-        self.residuals = {}
+    #     if not hasattr(self, '_residuals'):
+    #         self._residuals = {}
         
-        
+    #     fr = int(self.recordings['static'].get_sampling_frequency())
+    #     duration = int(self.recordings['static'].get_total_duration())
 
-        for key in ['corrected']:
-            difference = ResidualRecording(self.recordings['static'], self.recordings[key])
-            self.residuals[key] = np.zeros((self.recordings['static'].get_num_channels(), 0))
+    #     if time_range is None:
+    #         t_start = 0
+    #         t_stop = duration
+    #     else:
+    #         t_start, t_stop = time_range
+
+    #     if gkey not in self._residuals:
+    #         difference = ResidualRecording(self.recordings['static'], self.recordings[key])
+    #         self._residuals[gkey] = np.zeros((self.recordings['static'].get_num_channels(), 0))
             
-            for i in np.arange(t_start*fr, t_stop*fr, fr):
-                data = np.linalg.norm(difference.get_traces(start_frame=i, end_frame=i+fr), axis=0)/np.sqrt(fr)
-                self.residuals[key] = np.hstack((self.residuals[key], data[:,np.newaxis]))
+    #         for i in np.arange(t_start*fr, t_stop*fr, fr):
+    #             data = np.linalg.norm(difference.get_traces(start_frame=i, end_frame=i+fr), axis=0)/np.sqrt(fr)
+    #             self._residuals[gkey] = np.hstack((self._residuals[gkey], data[:,np.newaxis]))
         
-        return self.residuals, (t_start, t_stop)
+    #     return self._residuals[gkey], (t_start, t_stop)
+
+    # def compare_residuals(self, time_range=None):
+
+    #     fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+
+    #     residuals = {}
+
+    #     for key in ['drifting', 'corrected']:
+    #         residuals[key], (t_start, t_stop) = self._get_residuals(key, time_range)
+
+    #     time_axis = np.arange(t_start, t_stop)
+    #     axes[0 ,0].plot(time_axis, residuals['drifting'].mean(0), label=r'$|S_{drifting} - S_{static}|$')
+    #     axes[0 ,0].plot(time_axis, residuals['corrected'].mean(0), label=r'$|S_{corrected} - S_{static}|$')
+    #     axes[0 ,0].legend()
+    #     axes[0, 0].set_xlabel('time (s)')
+    #     axes[0, 0].set_ylabel('mean residual')
+    #     _simpleaxis(axes[0, 0])
+
+    #     channel_positions = self.recordings['static'].get_channel_locations()
+    #     distances_to_center = channel_positions[:, 1]
+    #     idx = np.argsort(distances_to_center)
+
+    #     axes[0, 1].plot(distances_to_center[idx], residuals['drifting'].mean(1)[idx], label=r'$|S_{drift} - S_{static}|$')
+    #     axes[0, 1].plot(distances_to_center[idx], residuals['corrected'].mean(1)[idx], label=r'$|S_{corrected} - S_{static}|$')
+    #     axes[0, 1].legend()
+    #     axes[0 ,1].set_xlabel('depth (um)')
+    #     axes[0, 1].set_ylabel('mean residual')
+    #     _simpleaxis(axes[0, 1])
+
+    #     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+    #     peaks = detect_peaks(self.recordings['static'], method='by_channel', **self.job_kwargs)
+
+    #     fr = int(self.recordings['static'].get_sampling_frequency())
+    #     duration = int(self.recordings['static'].get_total_duration())
+    #     mask = (peaks['sample_ind'] >= t_start*fr) & (peaks['sample_ind'] <= t_stop*fr)
+
+    #     _, counts = np.unique(peaks['channel_ind'][mask], return_counts=True)
+    #     counts = counts.astype(np.float64) / (t_stop - t_start)
+
+    #     axes[1, 0].plot(distances_to_center[idx],(fr*residuals['drifting'].mean(1)/counts)[idx], label='drifting')
+    #     axes[1, 0].plot(distances_to_center[idx],(fr*residuals['corrected'].mean(1)/counts)[idx], label='corrected')
+    #     axes[1, 0].set_ylabel('mean residual / rate')
+    #     axes[1, 0].set_xlabel('depth of the channel [um]')
+    #     axes[1, 0].legend()
+    #     _simpleaxis(axes[1, 0])
+
+    #     axes[1, 1].scatter(counts, residuals['drifting'].mean(1), label='drifting')
+    #     axes[1, 1].scatter(counts, residuals['corrected'].mean(1), label='corrected')
+    #     axes[1, 1].legend()
+    #     axes[1, 1].set_xlabel('rate per channel (Hz)')
+    #     axes[1, 1].set_ylabel('Mean residual')
+    #     _simpleaxis(axes[1,1])
+
+    # def compare_waveforms(self, unit_id, num_channels=20):
+    #     fig, axes = plt.subplots(1, 3, figsize=(15, 10))
+
+    #     sparsity = compute_sparsity(self.waveforms['static'],  method="best_channels", num_channels=num_channels)
+    #     for count, key in enumerate(self.keys):
+
+    #         plot_unit_waveforms(self.waveforms[key], unit_ids=[unit_id], ax=axes[count], 
+    #             unit_colors={unit_id : 'k'}, same_axis=True, alpha_waveforms=0.05, sparsity=sparsity)
+    #         axes[count].set_title(f'unit {unit_id} {key}')
+    #         axes[count].set_xticks([])
+    #         axes[count].set_yticks([])
+    #         _simpleaxis(axes[count])
+    #         axes[count].spines['bottom'].set_visible(False)
+    #         axes[count].spines['left'].set_visible(False)
     
     def compute_accuracies(self):
         for case in self.sorter_cases:
@@ -305,14 +371,15 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             ax.set_ylabel('accuracy')
 
 
-def plot_distances_to_static(benchmarks, metric='euclidean', figsize=(15, 10)):
+def plot_distances_to_static(benchmarks, metric='cosine'):
 
-
-    fig = plt.figure(figsize=figsize)
+    fig = plt.figure(figsize=(15, 10))
     gs = fig.add_gridspec(4, 2)
 
     ax = fig.add_subplot(gs[0:2, 0])
     for count, bench in enumerate(benchmarks):
+
+        print(bench)
         distances = bench.compute_distances_to_static(force=False)
         print(distances.keys())
         ax.scatter(distances['drifting'][f'template_{metric}'], distances['corrected'][f'template_{metric}'], c=f'C{count}', alpha=0.5, label=bench.title)
@@ -342,13 +409,11 @@ def plot_distances_to_static(benchmarks, metric='euclidean', figsize=(15, 10)):
     ax_4 = fig.add_subplot(gs[2:, 0])
 
     for count, bench in enumerate(benchmarks):
-
         # results = bench._compute_snippets_variability(metric=metric, num_channels=num_channels)
         distances = bench.compute_distances_to_static(force=False)
 
         m_differences = distances['corrected'][f'wf_{metric}_mean']/distances['static'][f'wf_{metric}_mean']
         s_differences = distances['corrected'][f'wf_{metric}_std']/distances['static'][f'wf_{metric}_std']
-
         ax_3.bar([count], [m_differences.mean()], yerr=[m_differences.std()], color=f'C{count}')
         ax_4.bar([count], [s_differences.mean()], yerr=[s_differences.std()], color=f'C{count}')
         idx = np.argsort(distances_to_center)
@@ -381,30 +446,14 @@ def plot_distances_to_static(benchmarks, metric='euclidean', figsize=(15, 10)):
     ax_2.plot([xmin, xmax], [1, 1], 'k--')
     plt.tight_layout()
 
-def plot_snr_decrease(benchmarks, figsize=(15, 10)):
-    
-    fig, ax = plt.subplots(figsize=figsize)
-    for count, bench in enumerate(benchmarks):
-        snr_static = bench.waveforms['static']
-
-        snr_static = compute_quality_metrics(bench.waveforms['static'], metric_names=['snr'], load_if_exists=True)
-        snr_corrected = compute_quality_metrics(bench.waveforms['corrected'], metric_names=['snr'], load_if_exists=True)
-
-        m = np.max(snr_static)
-        ax.scatter(snr_static.values, snr_corrected, label=bench.title)
-        ax.plot([0, m], [0, m], color='k')
-    ax.set_xlabel('units SNR for static')
-    ax.set_ylabel('units SNR for corrected')
-    ax.legend()
-
 
 def plot_residuals_comparisons(benchmarks):
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     for count, bench in enumerate(benchmarks):
-        residuals, (t_start, t_stop) = bench.compute_residuals(force=False)
+        residuals, (t_start, t_stop) = bench._get_residuals('corrected', None)
         time_axis = np.arange(t_start, t_stop)
-        axes[0].plot(time_axis, residuals['corrected'].mean(0), label=bench.title)
+        axes[0].plot(time_axis, residuals.mean(0), label=bench.title)
     axes[0].legend()
     axes[0].set_xlabel('time (s)')
     axes[0].set_ylabel(r'$|S_{corrected} - S_{static}|$')
@@ -415,20 +464,23 @@ def plot_residuals_comparisons(benchmarks):
     idx = np.argsort(distances_to_center)
 
     for count, bench in enumerate(benchmarks):
-        residuals, (t_start, t_stop) = bench.compute_residuals(force=False)
+        residuals, (t_start, t_stop) = bench._get_residuals('corrected', None)
         time_axis = np.arange(t_start, t_stop)
-        axes[1].plot(distances_to_center[idx], residuals['corrected'].mean(1)[idx], label=bench.title, lw=2, c=f'C{count}')
-        axes[1].fill_between(distances_to_center[idx], residuals['corrected'].mean(1)[idx]-residuals['corrected'].std(1)[idx], 
-                    residuals['corrected'].mean(1)[idx]+residuals['corrected'].std(1)[idx], color=f'C{count}', alpha=0.25)
+        axes[1].plot(distances_to_center[idx], residuals.mean(1)[idx], label=bench.title, lw=2, c=f'C{count}')
+        axes[1].fill_between(distances_to_center[idx], residuals.mean(1)[idx]-residuals.std(1)[idx], 
+                    residuals.mean(1)[idx]+residuals.std(1)[idx], color=f'C{count}', alpha=0.25)
+    #axes[1].legend()
     axes[1].set_xlabel('depth (um)')
+    #axes[1].set_ylabel(r'$|S_{corrected} - S_{static}|$')
     _simpleaxis(axes[1])
 
     for count, bench in enumerate(benchmarks):
-        residuals, (t_start, t_stop) = bench.compute_residuals(force=False)
-        axes[2].bar([count], [residuals['corrected'].mean()], yerr=[residuals['corrected'].std()], color=f'C{count}')
+        residuals, (t_start, t_stop) = bench._get_residuals('corrected', None)
+        axes[2].bar([count], [residuals.mean()], yerr=[residuals.std()], color=f'C{count}')
 
     _simpleaxis(axes[2])
     axes[2].set_xticks(np.arange(len(benchmarks)), [i.title for i in benchmarks])
+    #axes[2].set_ylabel(r'$|S_{corrected} - S_{static}|$')
 
 
 from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -458,5 +510,5 @@ class DifferenceRecordingSegment(BasePreprocessorSegment):
 
         return traces_2 - traces_1
 
-colors = {'static' : 'C0', 'drifting' : 'C1', 'corrected' : 'C2'}
+# colors = {'static' : 'C0', 'drifting' : 'C1', 'corrected' : 'C2'}
 
