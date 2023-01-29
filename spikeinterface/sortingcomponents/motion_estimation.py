@@ -290,8 +290,8 @@ class DecentralizedRegistration:
 
         if spatial_prior:
             motion = compute_global_displacement(
-                pairwise_displacement,
-                pairwise_displacement_weight=pairwise_displacement_weight,
+                all_pairwise_displacements,
+                pairwise_displacement_weight=all_pairwise_displacement_weights,
                 convergence_method=convergence_method,
                 robust_regression_sigma=robust_regression_sigma,
                 lsqr_robust_n_iter=lsqr_robust_n_iter,
@@ -935,13 +935,13 @@ def compute_global_displacement(
                 shape=((B - 1) * T, B * T),
             )
             coefficients = sparse.vstack((coefficients, spatial_diff_operator))
-            targets = np.concatenate((targets, np.zeros(B * T, dtype=targets.dtype)))
+            targets = np.concatenate((targets, np.zeros((B - 1) * T, dtype=targets.dtype)))
 
         # initialize at the column mean of pairwise displacements (in each window)
         p0 = D.mean(axis=2).reshape(B * T)
 
         # use LSMR to solve the whole problem
-        p, *_ = sparse.linalg.lsmr(coefficients, targets, x0=p0)
+        displacement, *_ = sparse.linalg.lsmr(coefficients, targets, x0=p0)
 
         # TODO: do we need to weight the upsampling somehow?
     else:
@@ -955,17 +955,19 @@ def compute_global_displacement(
     elif reference_displacement == "median":
         displacement -= np.median(displacement)
     elif reference_displacement == "mode_search":
+        # just a sketch of an idea -- things might want to change.
         step_size = 0.1
+        round_mode = np.round  # floor?
         best_ref = np.median(displacement)
-        max_zeros = np.sum(np.floor(displacement - best_ref) == 0)
+        max_zeros = np.sum(round_mode(displacement - best_ref) == 0)
         for ref in np.arange(np.floor(displacement.min()), np.ceil(displacement.max()), step_size):
-            n_zeros = np.sum(np.floor(displacement - ref) == 0)
+            n_zeros = np.sum(round_mode(displacement - ref) == 0)
             if n_zeros > max_zeros:
                 max_zeros = n_zeros
                 best_ref = ref
         displacement -= best_ref
 
-    return displacement
+    return np.squeeze(displacement)
 
 
 def iterative_template_registration(spikecounts_hist_images,
@@ -981,8 +983,8 @@ def iterative_template_registration(spikecounts_hist_images,
     spikecounts_hist_images : np.ndarray
         Spike count histogram images (num_temporal_bins, num_spatial_bins, num_amps_bins)
     non_rigid_windows : list, optional
-        If num_non_rigid_windows > 1, this argument is required and it is a list of windows to 
-        taper spatial bins in different blocks, by default None
+        If num_non_rigid_windows > 1, this argument is required and it is a list of
+        windows to taper spatial bins in different blocks, by default None
     num_shifts_global : int, optional
         Number of spatial bin shifts to consider for global alignment, by default 15
     num_iterations : int, optional
