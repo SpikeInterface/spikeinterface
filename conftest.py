@@ -1,6 +1,10 @@
 import pytest
 import shutil
+import os
 from pathlib import Path
+
+
+ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
 
 
 # define marks
@@ -46,5 +50,5 @@ def pytest_collection_modifyitems(config, items):
 def pytest_sessionfinish(session, exitstatus):
     # teardown_stuff only if tests passed
     if exitstatus == 0:
-        if pytest.global_test_folder.is_dir():
+        if pytest.global_test_folder.is_dir() and not ON_GITHUB:
             shutil.rmtree(pytest.global_test_folder)
