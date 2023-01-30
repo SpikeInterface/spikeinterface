@@ -11,8 +11,10 @@ def test_get_some_colors():
     colors = get_some_colors(keys, color_engine='distinctipy')
     # print(colors)
 
-    colors = get_some_colors(keys, color_engine='matplotlib')
+    colors = get_some_colors(keys, color_engine='matplotlib', shuffle=None)
     # print(colors)
+    colors = get_some_colors(keys, color_engine='matplotlib', shuffle=False)
+    colors = get_some_colors(keys, color_engine='matplotlib', shuffle=True)
 
     colors = get_some_colors(keys, color_engine='colorsys')
     # print(colors)

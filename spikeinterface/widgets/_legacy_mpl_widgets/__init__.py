@@ -1,4 +1,3 @@
-from .utils import get_unit_colors
 
 # basics
 # from .timeseries import plot_timeseries, TimeseriesWidget
