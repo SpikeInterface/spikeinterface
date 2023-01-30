@@ -107,14 +107,16 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             func = _misc_metric_name_to_func[metric_name]
 
             res = func(self.waveform_extractor, **qm_params[metric_name])
-            if isinstance(res, dict):
-                # res is a dict convert to series
-                metrics[metric_name] = pd.Series(res)
-            else:
-                # res is a namedtuple with several dict
-                # so several columns
-                for i, col in enumerate(res._fields):
-                    metrics[col] = pd.Series(res[i])
+            # QM with uninstall dependencies might return None
+            if res is not None:
+                if isinstance(res, dict):
+                    # res is a dict convert to series
+                    metrics[metric_name] = pd.Series(res)
+                else:
+                    # res is a namedtuple with several dict
+                    # so several columns
+                    for i, col in enumerate(res._fields):
+                        metrics[col] = pd.Series(res[i])
 
         # metrics based on PCs
         pc_metric_names = [k for k in metric_names if k in _possible_pc_metric_names]
