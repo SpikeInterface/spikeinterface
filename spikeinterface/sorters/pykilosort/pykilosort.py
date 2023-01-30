@@ -1,5 +1,6 @@
 from pathlib import Path
 import numpy as np
+import warnings
 
 from spikeinterface.core import load_extractor
 from spikeinterface.extractors import KiloSortSortingExtractor
@@ -176,6 +177,15 @@ class PyKilosortSorter(BaseSorter):
         ks_probe.xc = locations[:, 0]
         ks_probe.yc = locations[:, 1]
         ks_probe.shank = None
+        if recording.get_channel_gains() is not None:
+            gains = recording.get_channel_gains()
+            if len(np.unique(gains)) == 1:
+                ks_probe.sample2volt = gains[0] * 1e-6
+            else:
+                warnings.warn('Multiple gains detected for different channels. Median gain will be used')
+                ks_probe.sample2volt = np.median(gains) * 1e-6
+        else:
+            ks_probe.sample2volt = 1e-6
 
         run(
             dat_path,
