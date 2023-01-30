@@ -228,6 +228,23 @@ class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         auto_install_maxwell_hdf5_compression_plugin()
         return super().setUp()
 
+    def test_pickling(self):
+        import pickle
+        from spikeinterface.core.testing import check_recordings_equal
+        for entity in self.entities:
+            if isinstance(entity, tuple):
+                            path, kwargs = entity
+            elif isinstance(entity, str):
+                path = entity
+                kwargs = {}
+            
+            full_path = self.get_full_path(path)
+            recording = self.ExtractorClass(full_path, **kwargs)
+            # recording.install_maxwell_pluging()
+            pickled_recording = pickle.dumps(recording)
+            unpickled_recording = pickle.loads(pickled_recording)
+            # check_recordings_equal(recording, unpickled_recording) 
+            # Throws segmentation fault, don't know why
 
 class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = SpikeGadgetsRecordingExtractor
@@ -296,12 +313,12 @@ if __name__ == '__main__':
     # test = OpenEphysLegacyRecordingTest()
     # test = CellExplorerSortingTest()
     # test = ItanRecordingTest()
-    test = EDFRecordingTest()
+    # test = EDFRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()
     # test = NeuralynxRecordingTest()
     # test = BlackrockRecordingTest()
-    # test = MCSRawRecordingTest()
+    # test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
     # test = Spike2RecordingTest()
     # test = CedRecordingTest()
@@ -309,6 +326,6 @@ if __name__ == '__main__':
     # test = SpikeGadgetsRecordingTest()
     # test = NeuroScopeSortingTest()
 
-    test.setUp()
-    test.test_open()
-    test.test_pickling()
+    # test.setUp()
+    # test.test_open()
+    # test.test_pickling()

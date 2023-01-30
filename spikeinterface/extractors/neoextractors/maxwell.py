@@ -61,6 +61,12 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename': str(file_path), 'rec_name': rec_name}
         return neo_kwargs
 
+    def install_maxwell_pluging(self, force_download=False):
+        from neo.rawio.maxwellrawio import auto_install_maxwell_hdf5_compression_plugin
+        auto_install_maxwell_hdf5_compression_plugin(force_download=False)
+
+
+
 _maxwell_event_dtype = np.dtype([("frame", "int64"), ("state", "int8"), ("time", "float64")])
 
 
