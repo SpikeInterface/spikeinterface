@@ -309,7 +309,7 @@ if __name__ == '__main__':
     # test = SpikeGLXRecordingTest()
     # test = OpenEphysBinaryRecordingTest()
     # test = SpikeGLXRecordingTest()
-    # test = OpenEphysBinaryRecordingTest()
+    test = OpenEphysBinaryRecordingTest()
     # test = OpenEphysLegacyRecordingTest()
     # test = CellExplorerSortingTest()
     # test = ItanRecordingTest()
@@ -326,6 +326,6 @@ if __name__ == '__main__':
     # test = SpikeGadgetsRecordingTest()
     # test = NeuroScopeSortingTest()
 
-    # test.setUp()
-    # test.test_open()
+    test.setUp()
+    test.test_open()
     # test.test_pickling()
