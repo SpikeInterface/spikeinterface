@@ -43,7 +43,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 spatial_bins,
                 do_preprocessing=True,
                 correct_motion_kwargs={},
-                sparse_kwargs=dict( method="radius", peak_sign="neg", radius_um=100.,),
+                sparse_kwargs=dict( method="radius", radius_um=100.,),
                 sorter_cases={},
                 folder=None,
                 title='',
@@ -98,6 +98,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             rec = self._recordings['drifting']
             self._recordings['corrected'] = CorrectMotionRecording(rec, self.motion, 
                         self.temporal_bins, self.spatial_bins, **self.correct_motion_kwargs)
+
         return self._recordings
 
     def run(self):
@@ -305,7 +306,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             ax.set_ylabel('accuracy')
 
 
-def plot_distances_to_static(benchmarks, metric='euclidean', figsize=(15, 10)):
+def plot_distances_to_static(benchmarks, metric='cosine', figsize=(15, 10)):
 
 
     fig = plt.figure(figsize=figsize)
@@ -383,19 +384,49 @@ def plot_distances_to_static(benchmarks, metric='euclidean', figsize=(15, 10)):
 
 def plot_snr_decrease(benchmarks, figsize=(15, 10)):
     
-    fig, ax = plt.subplots(figsize=figsize)
+    fig, axes = plt.subplots(2, 2, figsize=figsize, squeeze=False)
+
+    recgen = mr.load_recordings(benchmarks[0].mearec_filenames['static'])
+    nb_templates, nb_versions, _ = recgen.template_locations.shape
+    template_positions = recgen.template_locations[:, nb_versions//2, 1:3]
+    distances_to_center = template_positions[:, 1]
+    idx = np.argsort(distances_to_center)
+    _simpleaxis(axes[0, 0])
+
+    snr_static = compute_quality_metrics(benchmarks[0].waveforms['static'], metric_names=['snr'], load_if_exists=True)
+    snr_drifting = compute_quality_metrics(benchmarks[0].waveforms['drifting'], metric_names=['snr'], load_if_exists=True)
+
+    m = np.max(snr_static)
+    axes[0, 0].scatter(snr_static.values, snr_drifting.values, c='0.5')
+    axes[0, 0].plot([0, m], [0, m], color='k')
+    
+    axes[0, 0].set_ylabel('units SNR for drifting')
+    _simpleaxis(axes[0, 0])
+
+    axes[0, 1].plot(distances_to_center[idx], (snr_drifting.values/snr_static.values)[idx], c='0.5')
+    axes[0, 1].plot(distances_to_center[idx], np.ones(len(idx)), 'k--')
+    _simpleaxis(axes[0, 1])
+    axes[0, 1].set_xticks([])
+    axes[0, 0].set_xticks([])
+
     for count, bench in enumerate(benchmarks):
-        snr_static = bench.waveforms['static']
 
-        snr_static = compute_quality_metrics(bench.waveforms['static'], metric_names=['snr'], load_if_exists=True)
         snr_corrected = compute_quality_metrics(bench.waveforms['corrected'], metric_names=['snr'], load_if_exists=True)
+        axes[1, 0].scatter(snr_static.values, snr_corrected.values, label=bench.title)
+        axes[1, 0].plot([0, m], [0, m], color='k')
 
-        m = np.max(snr_static)
-        ax.scatter(snr_static.values, snr_corrected, label=bench.title)
-        ax.plot([0, m], [0, m], color='k')
-    ax.set_xlabel('units SNR for static')
-    ax.set_ylabel('units SNR for corrected')
-    ax.legend()
+        axes[1, 1].plot(distances_to_center[idx], (snr_corrected.values/snr_static.values)[idx], c=f'C{count}')
+
+    axes[1, 0].set_xlabel('units SNR for static')
+    axes[1, 0].set_ylabel('units SNR for corrected')
+    axes[1, 1].plot(distances_to_center[idx], np.ones(len(idx)), 'k--')
+    axes[1, 0].legend()
+    _simpleaxis(axes[1, 0])
+    _simpleaxis(axes[1, 1])
+    axes[1, 1].set_ylabel(r'$\Delta(SNR)$')
+    axes[0, 1].set_ylabel(r'$\Delta(SNR)$')
+
+    axes[1, 1].set_xlabel('depth (um)')
 
 
 def plot_residuals_comparisons(benchmarks):
