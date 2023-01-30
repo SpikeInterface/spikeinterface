@@ -103,7 +103,9 @@ class RecordingCommonTestSuite(CommonTestSuite):
             
             full_path = self.get_full_path(path)
             recording = self.ExtractorClass(full_path, **kwargs)
-            check_recordings_equal(recording, pickle.loads(pickle.dumps(recording)))
+            pickled_recording = pickle.dumps(recording)
+            unpickled_recording = pickle.loads(pickled_recording)
+            check_recordings_equal(recording, unpickled_recording)
 
 
 class SortingCommonTestSuite(CommonTestSuite):
@@ -140,7 +142,9 @@ class SortingCommonTestSuite(CommonTestSuite):
                 kwargs = entity
                 sorting = self.ExtractorClass(**kwargs)
 
-            check_sortings_equal(sorting, pickle.loads(pickle.dumps(sorting)))
+            pickled_sorting = pickle.dumps(sorting)
+            unpickled_sorting = pickle.loads(pickled_sorting)
+            check_sortings_equal(sorting, unpickled_sorting)
 
 
 class EventCommonTestSuite(CommonTestSuite):
