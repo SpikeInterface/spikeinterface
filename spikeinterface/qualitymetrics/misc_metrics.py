@@ -64,7 +64,7 @@ def compute_num_spikes(waveform_extractor, **kwargs):
 _default_params["num_spikes"] = dict()
 
 
-def compute_firing_rate(waveform_extractor):
+def compute_firing_rates(waveform_extractor):
     """Compute the firing rate across segments.
 
     Parameters
@@ -97,7 +97,7 @@ def compute_firing_rate(waveform_extractor):
 _default_params["firing_rate"] = dict()
 
 
-def compute_presence_ratio(waveform_extractor, bin_duration_s=60):
+def compute_presence_ratios(waveform_extractor, bin_duration_s=60):
     """Calculate the presence ratio, representing the fraction of time the unit is firing.
 
     Parameters
@@ -167,7 +167,7 @@ def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "e
     peak_mode: {'extremum', 'at_index'}
         How to compute the amplitude.
         Extremum takes the maxima/minima
-        At_index takes the value at t=0
+        At_index takes the value at t=waveform_extractor.nbefore
     random_chunk_kwarg_dict: dict or None
         Dictionary to control the get_random_data_chunks() function.
         If None, default values are used
@@ -234,9 +234,9 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
 
     Returns
     -------
-    isi_violations_ratio : float
+    isi_violations_ratio : dict
         The isi violation ratio described in [1].
-    isi_violation_count : int
+    isi_violation_count : dict
         Number of violations.
 
     Notes
@@ -252,6 +252,8 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     Originally written in Matlab by Nick Steinmetz (https://github.com/cortex-lab/sortingQuality)
     and converted to Python by Daniel Denman.
     """
+    res = namedtuple('isi_violation',
+                     ['isi_violations_ratio', 'isi_violations_count'])
 
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
@@ -278,13 +280,10 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
             spike_trains.append(spike_train / fs)
 
         ratio, _, count = isi_violations(spike_trains, total_duration_s,
-                                            isi_threshold_s, min_isi_s)
+                                         isi_threshold_s, min_isi_s)
 
         isi_violations_ratio[unit_id] = ratio
         isi_violations_count[unit_id] = count
-
-    res = namedtuple('isi_violation',
-                     ['isi_violations_ratio', 'isi_violations_count'])
 
     return res(isi_violations_ratio, isi_violations_count)
 
@@ -316,9 +315,9 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
 
     Returns
     -------
-    rp_contamination : float
+    rp_contamination : dict
         The refactory period contamination described in [1].
-    rp_violations : int
+    rp_violations : dict
         Number of refractory period violations.
 
     Reference
@@ -326,6 +325,7 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
     [1] Llobet & Wyngaard (2022) bioRxiv
 
     """
+    res = namedtuple("rp_violations", ['rp_contamination', 'rp_violations'])
 
     if not HAVE_NUMBA:
         print("Error: numba is not installed.")
@@ -348,12 +348,9 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
         _compute_rp_violations_numba(nb_rp_violations, spikes[seg_index][0].astype(np.int64),
                                      spikes[seg_index][1].astype(np.int32), t_c, t_r)
 
-    if num_segments == 1:
-        T = recording.get_num_frames()
-    else:
-        T = 0
-        for segment_idx in range(num_segments):
-            T += recording.get_num_frames(segment_idx)
+    T = 0
+    for segment_idx in range(num_segments):
+        T += recording.get_num_frames(segment_idx)
 
     nb_violations = {}
     rp_contamination = {}
@@ -364,14 +361,12 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
         D = 1 - n_v * (T - 2*N*t_c) / (N**2 * (t_r - t_c))
         rp_contamination[unit_id] = 1 - math.sqrt(D) if D >= 0 else 1.0
 
-    res = namedtuple("rp_violations", ['rp_contamination', 'rp_violations'])
-
     return res(rp_contamination, nb_violations)
 
 
-def compute_amplitude_cutoff(waveform_extractor, peak_sign='neg',
-                             num_histogram_bins=500, histogram_smoothing_value=3,
-                             amplitudes_bins_min_ratio=5):
+def compute_amplitude_cutoffs(waveform_extractor, peak_sign='neg',
+                              num_histogram_bins=500, histogram_smoothing_value=3,
+                              amplitudes_bins_min_ratio=5):
     """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
     Parameters
@@ -379,7 +374,7 @@ def compute_amplitude_cutoff(waveform_extractor, peak_sign='neg',
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
     peak_sign : {'neg', 'pos', 'both'}
-        The sign of the template to compute best channels.
+        The sign of the peaks.
     num_histogram_bins : int, optional, default: 100
         The number of bins to use to compute the amplitude histogram.
     histogram_smoothing_value : int, optional, default: 3
@@ -412,7 +407,6 @@ def compute_amplitude_cutoff(waveform_extractor, peak_sign='neg',
     unit_ids = sorting.unit_ids
 
     before = waveform_extractor.nbefore
-
     extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
 
     spike_amplitudes = None
@@ -432,7 +426,10 @@ def compute_amplitude_cutoff(waveform_extractor, peak_sign='neg',
         if spike_amplitudes is None:
             waveforms = waveform_extractor.get_waveforms(unit_id)
             chan_id = extremum_channels_ids[unit_id]
-            chan_ind = recording.id_to_index(chan_id)
+            if waveform_extractor.is_sparse():
+                chan_ind = np.where(waveform_extractor.sparsity.unit_id_to_channel_ids[unit_id] == chan_id)[0]
+            else:
+                chan_ind = recording.id_to_index(chan_id)
             amplitudes = waveforms[:, before, chan_ind]
         else:
             amplitudes = np.concatenate([spike_amps[unit_id] for spike_amps in spike_amplitudes])
@@ -463,68 +460,29 @@ _default_params["amplitude_cutoff"] = dict(
 )
 
 
-def compute_noise_cutoff(waveform_extractor, peak_sign='neg', quantile_length=.25, 
-                         num_histogram_bins=100, amplitudes_bins_min_ratio=5):
-    """
-    A metric developed by IBL to determine whether a unit's amplitude distribution is cut off
-    (at floor), without assuming a Gaussian distribution. This metric takes the amplitude distribution, computes the mean and std of an upper quartile of the distribution, and determines how many standard
-    deviations away from that mean a lower quartile lies.
 
-    For a unit to pass this metric, it must meet two requirements:
-
-    1. The noise_cutoff must be greater than a threshold (default = 5)
-    2. The first_low_quantile must be greater than a fraction of the peak bin height (default = 0.1)
-
-    Example:
-    ```
-    nc_threshold = 5
-    percent_threshold = 0.1
-    fail_criteria = (noise_cutoff > nc_threshold) \
-            & (first_low_quantile > percent_threshold * peak_bin_height)
-    ```
+def compute_amplitude_medians(waveform_extractor, peak_sign='neg'):
+    """Compute median of the amplitude distributions (in absolute value).
 
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
     peak_sign : {'neg', 'pos', 'both'}
-        The sign of the template to compute best channels.
-    quantile_length : float
-        The size of the upper quartile of the amplitude distribution.
-    num_histogram_bins : int
-        The number of bins used to compute a histogram of the amplitude
-        distribution.
-    amplitudes_bins_min_ratio : int, optional, default: 5
-        The minimum ratio between number of amplitudes for a unit and the number of bins.
-        If the ratio is less than this threshold, the amplitude_cutoff for the unit is set 
-        to NaN.
+        The sign of the peaks.
 
     Returns
     -------
-    Named tuple with the following properties:
-
-    all_noise_cutoffs : dict of floats
-        Number of standard deviations that the lower mean is outside of the
-        mean of the upper quartile, for each unit ID.
-
-    all_first_low_quantiles : dict of floats
-        The value of the first low quantile, for each unit ID.
-
-    all_peak_bin_height : dict of floats
-        The value of the peak bin height, for each unit ID.
+    all_amplitude_medians : dict
+        Estimated amplitude median for each unit ID.
 
     Reference
     ---------
-    This code was adapted from https://github.com/int-brain-lab/ibllib/blob/master/brainbox/metrics/single_units.py
-
-    Notes
-    -----
-    This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift).
-    If available, amplitudes are extracted from the "spike_amplitude" extension (recommended). 
-    If the "spike_amplitude" extension is not available, the amplitudes are extracted from the waveform extractor,
-    which usually has waveforms for a small subset of spikes (500 by default).
+    Inspired by metric described in:
+    International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022. 9 Jun 2022.
+    This code is ported from:
+    https://github.com/int-brain-lab/ibllib/blob/master/brainbox/metrics/single_units.py
     """
-
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
@@ -538,45 +496,195 @@ def compute_noise_cutoff(waveform_extractor, peak_sign='neg', quantile_length=.2
         amp_calculator = waveform_extractor.load_extension("spike_amplitudes")
         spike_amplitudes = amp_calculator.get_data(outputs="by_unit")
 
-    all_noise_cutoffs = {}
-    all_first_low_quantiles = {}
-    all_peak_bin_heights = {}
-    nan_units = []
+    all_amplitude_medians = {}
     for unit_id in unit_ids:
         if spike_amplitudes is None:
             waveforms = waveform_extractor.get_waveforms(unit_id)
             chan_id = extremum_channels_ids[unit_id]
-            chan_ind = recording.id_to_index(chan_id)
+            if waveform_extractor.is_sparse():
+                chan_ind = np.where(waveform_extractor.sparsity.unit_id_to_channel_ids[unit_id] == chan_id)[0]
+            else:
+                chan_ind = recording.id_to_index(chan_id)
             amplitudes = waveforms[:, before, chan_ind]
         else:
             amplitudes = np.concatenate([spike_amps[unit_id] for spike_amps in spike_amplitudes])
 
         # change amplitudes signs in case peak_sign is pos
-        amplitudes = np.abs(amplitudes)
-        cutoff, first_low_quantile, peak_bin_height = noise_cutoff(amplitudes, quantile_length, num_histogram_bins,
-                                                                   amplitudes_bins_min_ratio)
-        if np.isnan(cutoff) :
-            nan_units.append(unit_id)
+        abs_amplitudes = np.abs(amplitudes)
+        all_amplitude_medians[unit_id] = np.median(abs_amplitudes)
 
-        all_noise_cutoffs[unit_id] = cutoff
-        all_first_low_quantiles[unit_id] = first_low_quantile
-        all_peak_bin_heights[unit_id] = peak_bin_height
-
-    if len(nan_units) > 0:
-        warnings.warn(f"Units {nan_units} have too few spikes and "
-                       "amplitude_cutoff is set to NaN")
-
-    res = namedtuple('noise_cutoff',
-                     ['all_noise_cutoffs', 'all_first_low_quantiles', 'all_peak_bin_heights'])
-
-    return res(all_noise_cutoffs, all_first_low_quantiles, all_peak_bin_heights)
+    return all_amplitude_medians
 
 
-_default_params["noise_cutoff"] = dict(
-    peak_sign='neg',
-    num_histogram_bins=100,
-    quantile_length=0.25,
-    amplitudes_bins_min_ratio=5
+_default_params["amplitude_median"] = dict(
+    peak_sign='neg'
+)
+
+
+def compute_drift_metrics(waveform_extractor, interval_s=60,
+                          min_spikes_per_interval=100, direction="y",
+                          min_fraction_valid_intervals=0.5, min_num_bins=2,
+                          return_positions=False):
+    """Compute drifts metrics using estimated spike locations.
+    Over the duration of the recording, the drift signal for each unit is calculated as the median 
+    position in an interval with respect to the overall median positions over the entire duration 
+    (reference position).
+
+    The following metrics are computed for each unit (in um):
+
+    * drift_ptp: peak-to-peak of the drift signal
+    * drift_std: standard deviation of the drift signal
+    * drift_mad: median absolute deviation of the drift signal
+
+    Requires 'spike_locations' extension. If this is not present, metrics are set to NaN.
+
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveform extractor object.
+    interval_s : int, optional
+        Interval length is seconds for computing spike depth, by default 60
+    min_spikes_per_interval : int, optional
+        Minimum number of spikes for computing depth in an interval, by default 100
+    direction : str, optional
+        The direction along which drift metrics are estimated, by default 'y'
+    min_fraction_valid_intervals : float, optional
+        The fraction of valid (not NaN) position estimates to estimate drifts.
+        E.g., if 0.5 at least 50% of estimated positions in the intervals need to be valid,
+        otherwise drift metrics are set to None, by default 0.5
+    min_num_bins : int, optional
+        Minimum number of bins required to return a valid metric value. In case there are 
+        less bins, the metric values are set to NaN.
+    return_positions : bool, optional
+        If True, median positions are returned (for debugging), by default False
+
+    Returns
+    -------
+    drift_ptp : dict
+        The drift signal peak-to-peak in um
+    drift_std : dict
+        The drift signal standard deviation in um
+    drift_mad : dict
+        The drift signal median absolute deviation in um
+    median_positions : np.array (optional)
+        The median positions of each unit over time (only returned if return_positions=True)
+
+    Notes
+    -----
+    For multi-segment object, segments are concatenated before the computation. This means that if 
+    there are large displacements in between segments, the resulting metric values will be very high.
+    """
+    res = namedtuple("drift_metrics", ['drift_ptp', 'drift_std', 'drift_mad'])
+
+    if waveform_extractor.is_extension("spike_locations"):
+        locs_calculator = waveform_extractor.load_extension("spike_locations")
+        spike_locations = locs_calculator.get_data(outputs="concatenated")
+        spike_locations_by_unit = locs_calculator.get_data(outputs="by_unit")
+    else:
+        warnings.warn("The drift metrics require the `spike_locations` waveform extension. "
+                      "Use the `postprocessing.compute_spike_locations()` function. "
+                      "Drift metrics will be set to NaN")
+        empty_dict = {unit_id: np.nan for unit_id in waveform_extractor.unit_ids}
+        if return_positions:
+            return res(empty_dict, empty_dict, empty_dict), np.nan
+        else:
+            return res(empty_dict, empty_dict, empty_dict)
+
+    recording = waveform_extractor.recording
+    sorting = waveform_extractor.sorting
+    unit_ids = waveform_extractor.unit_ids
+    interval_samples = int(interval_s * waveform_extractor.sampling_frequency)
+    assert direction in spike_locations.dtype.names, (
+        f"Direction {direction} is invalid. Available directions: "
+        f"{spike_locations.dtype.names}"
+    )
+    total_duration = recording.get_total_duration()
+    if total_duration < min_num_bins * interval_s:
+        warnings.warn("The recording is too short given the specified 'interval_s' and "
+                      "'min_num_bins'. Drift metrics will be set to NaN")
+        empty_dict = {unit_id: np.nan for unit_id in waveform_extractor.unit_ids}
+        if return_positions:
+            return res(empty_dict, empty_dict, empty_dict), np.nan
+        else:
+            return res(empty_dict, empty_dict, empty_dict)
+
+    # we need 
+    drift_ptps = {}
+    drift_stds = {}
+    drift_mads = {}
+
+    # reference positions are the medians across segments
+    reference_positions = np.zeros(len(unit_ids))
+    for unit_ind, unit_id in enumerate(unit_ids):
+        locs = []
+        for segment_index in range(recording.get_num_segments()):
+            locs.append(spike_locations_by_unit[segment_index][unit_id][direction])
+        reference_positions[unit_ind] = np.median(np.concatenate(locs))
+
+    # now compute median positions and concatenate them over segments
+    median_position_segments = None
+    for segment_index in range(recording.get_num_segments()):
+        seg_length = recording.get_num_samples(segment_index)
+        num_bin_edges = seg_length // interval_samples + 1
+        bins = np.arange(num_bin_edges) * interval_samples
+        spike_vector = sorting.to_spike_vector()
+
+        # retrieve spikes in segment
+        i0 = np.searchsorted(spike_vector['segment_ind'], segment_index)
+        i1 = np.searchsorted(spike_vector['segment_ind'], segment_index + 1)
+        spikes_in_segment = spike_vector[i0:i1]
+        spike_locations_in_segment = spike_locations[i0:i1]
+
+        # compute median positions (if less than min_spikes_per_interval, median position is 0)
+        median_positions = np.nan * np.zeros((len(unit_ids), num_bin_edges - 1))
+        for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
+            i0 = np.searchsorted(spikes_in_segment['sample_ind'], start_frame)
+            i1 = np.searchsorted(spikes_in_segment['sample_ind'], end_frame)
+            spikes_in_bin = spikes_in_segment[i0:i1]
+            spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
+
+            for unit_ind in np.arange(len(unit_ids)):
+                mask = spikes_in_bin['unit_ind'] == unit_ind
+                if np.sum(mask) >= min_spikes_per_interval:
+                    median_positions[unit_ind, bin_index] = np.median(spike_locations_in_bin[mask])
+        if median_position_segments is None:
+            median_position_segments = median_positions
+        else:
+            median_position_segments = np.hstack((median_position_segments, median_positions))
+
+    # finally, compute deviations and drifts    
+    position_diffs = median_position_segments - reference_positions[:, None]
+    for unit_ind, unit_id in enumerate(unit_ids):
+        position_diff = position_diffs[unit_ind]
+        if np.any(np.isnan(position_diff)):
+            # deal with nans: if more than 50% nans --> set to nan
+            if np.sum(np.isnan(position_diff)) > min_fraction_valid_intervals * len(position_diff):
+                ptp_drift = np.nan
+                std_drift = np.nan
+                mad_drift = np.nan
+            else:
+                ptp_drift = np.nanmax(position_diff) - np.nanmin(position_diff)
+                std_drift = np.nanstd(np.abs(position_diff))
+                mad_drift = np.nanmedian(np.abs(position_diff - np.nanmean(position_diff)))
+        else:
+            ptp_drift = np.ptp(position_diff)
+            std_drift = np.std(position_diff)
+            mad_drift = np.median(np.abs(position_diff - np.mean(position_diff)))
+        drift_ptps[unit_id] = ptp_drift
+        drift_stds[unit_id] = std_drift
+        drift_mads[unit_id] = mad_drift
+    if return_positions:
+        outs = res(drift_ptps, drift_stds, drift_mads), median_positions
+    else:
+        outs = res(drift_ptps, drift_stds, drift_mads)
+    return outs
+
+
+_default_params["drift"] = dict(
+    interval_s=60,
+    min_spikes_per_interval=100,
+    direction="y",
+    min_num_bins=2
 )
 
 
@@ -591,7 +699,6 @@ def compute_sliding_rp_violations(waveform_extractor, bin_size=0.25, thresh=0.1,
     refractory period, the unit passes. A neuron will always fail this metric for very 
     low firing rates, and thus this metric takes into account both firing rate and refractory period
     violations.
-
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
@@ -607,9 +714,8 @@ def compute_sliding_rp_violations(waveform_extractor, bin_size=0.25, thresh=0.1,
 
     Returns
     -------
-    all_didpass : dict of ints
-        0 if unit didn't pass
-        1 if unit did pass
+    contamination : dict of floats
+        
 
     Reference
     ----------
@@ -634,101 +740,11 @@ def compute_sliding_rp_violations(waveform_extractor, bin_size=0.25, thresh=0.1,
             spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
             spike_trains.append(spike_train)
 
+        # concatenating is wrong
         all_didpass[unit_id] = slidingRP_viol(np.concatenate(spike_trains), fs, bin_size, thresh,
                                               acceptThresh)
 
     return all_didpass
-
-
-def slidingRP_viol(spike_samples, sample_rate, bin_size_ms=0.25, window_size=2, thresh=0.1, acceptThresh=0.1):
-    """
-    A binary metric developed by IBL which determines whether there is an acceptable level of
-    refractory period violations by using a sliding refractory period.
-    
-    See compute_slidingRP_viol for additional documentation
-
-    Parameters
-    ----------
-    spike_samples : ndarray_like
-        The spike times in samples
-    sample_rate : float
-        The acquisition sampling rate
-    bin_size_ms : float
-        The size (in ms) of binning for the autocorrelogram.
-    window_size : float
-        The size (in s) of the window for the autocorrelogram
-    thresh : float
-        Spike rate used to generate poisson distribution (to compute maximum
-              acceptable contamination, see _max_acceptable_cont)
-    acceptThresh : float
-        The fraction of contamination we are willing to accept (default value
-              set to 0.1, or 10% contamination)
-
-    Returns
-    -------
-    didpass : int
-        0 if unit didn't pass
-        1 if unit did pass
-
-    """
-
-    b = np.arange(0, 10.25, bin_size_ms) / 1000 + 1e-6  # bins in seconds
-    bTestIdx = [5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40]
-    bTest = [b[i] for i in bTestIdx]
-
-    if len(spike_samples) > 0 and spike_samples[-1] > spike_samples[0]:  # only do this for units with samples
-        
-        recDur = (spike_samples[-1] - spike_samples[0]) / sample_rate
-        
-        # compute acg
-        c0 = correlogram_for_one_segment(spike_samples, np.zeros(len(spike_samples), dtype='int8'),
-                          bin_size=int(bin_size_ms / 1000 * sample_rate), # convert to sample counts
-                          window_size=int(window_size*sample_rate))
-        
-        acg = c0[0,0,:]
-        half_acg = acg[acg.size//2:]
-        
-        # cumulative sum of acg, i.e. number of total spikes occuring from 0
-        # to end of that bin
-        cumsumc0 = np.cumsum(half_acg)
-        
-        # cumulative sum at each of the testing bins
-        res = cumsumc0[bTestIdx]
-        total_spike_count = len(spike_samples)
-
-        # divide each bin's count by the total spike count and the bin size
-        bin_count_normalized = half_acg / total_spike_count / bin_size_ms * 1000
-        num_bins_2s = len(half_acg)  # number of total bins that equal 2 secs
-        num_bins_1s = int(num_bins_2s / 2)  # number of bins that equal 1 sec
-        
-        # compute fr based on the mean of bin_count_normalized from 1 to 2 s
-        # instead of as before (len(ts)/recDur) for a better estimate
-        fr = np.sum(bin_count_normalized[num_bins_1s:num_bins_2s]) / num_bins_1s
-        mfunc = np.vectorize(_max_acceptable_cont)
-        
-        # compute the maximum allowed number of spikes per testing bin
-        m = mfunc(fr, bTest, recDur, fr * acceptThresh, thresh)
-        
-        # did the unit pass (resulting number of spikes less than maximum
-        # allowed spikes) at any of the testing bins?
-        didpass = int(np.any(np.less_equal(res, m)))
-    else:
-        didpass = 0
-
-    return didpass
-
-def _max_acceptable_cont(FR, RP, rec_duration, acceptableCont, thresh):
-    """
-    Function to compute the maximum acceptable refractory period contamination
-        called during slidingRP_viol
-    """
-
-    time_for_viol = RP * 2 * FR * rec_duration
-    expected_count_for_acceptable_limit = acceptableCont * time_for_viol
-    max_acceptable = poisson.ppf(thresh, expected_count_for_acceptable_limit)
-    if max_acceptable == 0 and poisson.pmf(0, expected_count_for_acceptable_limit) > 0:
-        max_acceptable = -1
-    return max_acceptable
 
 
 ### LOW-LEVEL FUNCTIONS ###
@@ -862,7 +878,7 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
 
         if len(np.where(pdf_above == pdf_above.min())[0]) > 1:
             warnings.warn("Amplitude PDF does not have a unique minimum! More spikes might be required for a correct "
-                        "amplitude_cutoff computation!")
+                          "amplitude_cutoff computation!")
         
         G = np.argmin(pdf_above) + peak_index
         fraction_missing = np.sum(pdf[G:]) * bin_size
@@ -871,79 +887,225 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
         return fraction_missing
 
 
-def noise_cutoff(amplitudes, quantile_length=.25, num_histogram_bins=100,
-                 amplitudes_bins_min_ratio=5):
+def slidingRP_viol(spike_samples, sample_rate, duration, bin_size_ms=0.25, window_size=2, thresh=0.1, acceptThresh=0.1):
     """
-
-    Computes the noise_cutoff metric for one unit
-
-    See compute_noise_cutoff function for additional documentation
+    A binary metric developed by IBL which determines whether there is an acceptable level of
+    refractory period violations by using a sliding refractory period.
+    
+    See compute_slidingRP_viol for additional documentation
 
     Parameters
     ----------
-    amplitudes : ndarray_like
-        The amplitudes (in uV) of the spikes for one unit.
-    quantile_length : float
-        The size of the upper quartile of the amplitude distribution.
-    num_histogram_bins : int
-        The number of bins used to compute a histogram of the amplitude
-        distribution.
-    amplitudes_bins_min_ratio : int, optional, default: 5
-        The minimum ratio between number of amplitudes for a unit and the number of bins.
-        If the ratio is less than this threshold, the amplitude_cutoff for the unit is set 
-        to NaN.
+    spike_samples : ndarray_like or list (for multi-segment)
+        The spike times in samples
+    sample_rate : float
+        The acquisition sampling rate
+    bin_size_ms : float
+        The size (in ms) of binning for the autocorrelogram.
+    window_size : float
+        The size (in s) of the window for the autocorrelogram
+    thresh : float
+        Spike rate used to generate poisson distribution (to compute maximum
+              acceptable contamination, see _max_acceptable_cont)
+    acceptThresh : float
+        The fraction of contamination we are willing to accept (default value
+              set to 0.1, or 10% contamination)
 
     Returns
     -------
-    noise_cutoff : float
-        Number of standard deviations that the lower mean is outside of the
-        mean of the upper quartile; defaults to np.nan
-
-    first_low_quantile : float
-        The value of the first low quantile; defaults to np.nan
-
-    peak_bin_height : float
-        The value of the peak bin height; defaults to np.nan
-
-    Reference
-    ---------
-    This code was adapted from https://github.com/int-brain-lab/ibllib/blob/master/brainbox/metrics/single_units.py
+    didpass : int
+        0 if unit didn't pass
+        1 if unit did pass
 
     """
-    if len(amplitudes) / num_histogram_bins < amplitudes_bins_min_ratio:
-        return np.nan, np.nan, np.nan
+    
+    '''
+    if params is None:
+        params = {}
+        params['sampleRate'] = 30000
+        params['binSizeCorr'] = 1 / params['sampleRate']
+        params['returnMatrix'] = True
+        params['verbose'] = True
+        params['cidx'] = [0]
+
+
+    seconds_start = time.time()
+    [confMatrix, cont, rp, nACG, firingRate] = computeMatrix(spikeTimes, params)
+    # matrix is [nCont x nRP]
+    
+    testTimes = rp>0.0005 # (in seconds) 
+    #only test for refractory period durations greater than 0.5 ms
+    
+    maxConfidenceAt10Cont = max(confMatrix[cont==10,testTimes]) #TODO check behavior if no max
+    
+    
+    indsConf90 = np.row_stack(np.where(confMatrix[:,testTimes]>90))
+    ii = indsConf90[0] #row inds
+    jj = indsConf90[1] #col inds
+    
+
+    try:
+        minI = np.min(ii)
+        idx = np.argmin(ii)
+        minContWith90Confidence = cont[minI]
+        minRP = np.argmax(confMatrix[minI,testTimes])
+
+
+    except:    
+        minContWith90Confidence = np.nan
+    
+        minRP = np.nan
+
+    try:
+        timeOfLowestCont = rp[minRP+np.where(testTimes)[0][0]+1]
+    except: 
+        timeOfLowestCont = np.nan
+        
+    
+    nSpikesBelow2 = sum(nACG[0:np.where(rp>0.002)[0][0]+1])
+    
+    ### confMAtrix
+    cont = np.arange(0.5, 35, 0.5)  # vector of contamination values to test
+    rpBinSize = 1 / 30000  
+    rpEdges = np.arange(0, 10/1000, rpBinSize)  # in s
+    rp = rpEdges + np.mean(np.diff(rpEdges)[0]) / 2 # vector of refractory period durations to test
+    
+    #compute firing rate and spike count
+    n_spikes = len(spikeTimes)
+    #setup for acg
+    clustersIds = [0]  # call the cluster id 0 (not used, but required input for correlograms)
+    spikeClustersACG = np.zeros(n_spikes, dtype=np.int8)  # each spike time gets cluster id 0
+
+    # compute an acg in 1s bins to compute the firing rate  
+    nACG = correlograms(spikeTimes, spikeClustersACG, cluster_ids = clustersIds, bin_size = 1, sample_rate = params['sampleRate'], window_size=2,symmetrize=False)[0][0] #compute acg
+    firingRate = nACG[1] / n_spikes
+        
+    nACG = correlograms(spikeTimes, spikeClustersACG, cluster_ids=clustersIds, bin_size=params['binSizeCorr'], sample_rate=params['sampleRate'], window_size=2, symmetrize=False)[0][0]  # compute acg
+
+    # confMatrix = np.zeros((cont.size, rp.size)) * np.nan
+    # for ir in np.arange(confMatrix.shape[1]):
+    #     # compute observed violations
+    #     obsViol = np.sum(nACG[0:ir + 1])  # TODO this is off slightly (half-bin) from matlab...
+    #     for cidx in np.arange(confMatrix.shape[0]):
+    #         confMatrix[cidx, ir] = 100 * computeViol(obsViol, firingRate, n_spikes, rp[ir] + rpBinSize / 2, cont[cidx] / 100)  # TODO FIX RP BIN
+
+    confMatrix = 100 * computeViol(np.cumsum(nACG[0:rp.size])[np.newaxis, :], firingRate, n_spikes, rp[np.newaxis, :] + rpBinSize / 2, cont[:, np.newaxis] / 100)
+
+
+    ### computeViol
+    contaminationRate = firingRate * contaminationProp 
+    expectedViol = contaminationRate * refDur * 2 * spikeCount
+    confidenceScore = 1 - stats.poisson.cdf(obsViol, expectedViol)
+    '''
+    contaminations = np.arange(0.5, 35, 0.5)  # vector of contamination values to test
+    rp_bin_size = 1 / sample_rate  
+    rp_edges = np.arange(0, 0.01, rp_bin_size)  # in s
+    rp_centers = rp_bin_size + np.mean(np.diff(rp_edges)[0]) / 2 # vector of refractory period durations to test
+    
+    # compute firing rate and spike count
+    n_spikes = len(spike_samples)
+    firing_rate = n_spikes / duration
+
+    if np.isscalar(spike_samples[0]):
+        spike_samples_list = [spike_samples]
     else:
-        cutoff = np.float64(np.nan)
-        first_low_quantile = np.float64(np.nan)
-        peak_bin_height = np.float64(np.nan)
+        spike_samples_list = spike_samples
+    # compute correlograms
+    correlograms = None
+    for spike_samples in spike_samples_list:
+        c0 = correlogram_for_one_segment(spike_samples, np.zeros(len(spike_samples), dtype='int8'),
+                                         bin_size=int(bin_size_ms / 1000 * sample_rate), # convert to sample counts
+                                         window_size=int(window_size*sample_rate))
+        if correlograms is None:
+            correlograms = c0
+        else:
+            correlograms += c0
 
-        if amplitudes.size > 1:  # ensure there are amplitudes available to analyze
-            
-            bins_list = np.linspace(0, np.max(amplitudes), num_histogram_bins)  # list of bins to compute the amplitude histogram
-            n, bins = np.histogram(amplitudes, bins=bins_list)  # construct amplitude histogram
-            idx_peak = np.argmax(n)  # peak of amplitude distribution
-            # don't count zeros #len(n) - idx_peak, compute the length of the top half of the distribution -- ignoring zero bins
-            length_top_half = len(np.where(n[idx_peak:-1] > 0)[0])
-            # the remaining part of the distribution, which we will compare the low quantile to
-            high_quantile = 2 * quantile_length
-            # the first bin (index) of the high quantile part of the distribution
-            high_quantile_start_ind = int(np.ceil(high_quantile * length_top_half + idx_peak))
-            # bins to consider in the high quantile (of all non-zero bins)
-            indices_bins_high_quantile = np.arange(high_quantile_start_ind, len(n))
-            idx_use = np.where(n[indices_bins_high_quantile] >= 1)[0]
 
-            if len(n[indices_bins_high_quantile]) > 0:  # ensure there are amplitudes in these bins
-                # mean of all amp values in high quantile bins
-                mean_high_quantile = np.mean(n[indices_bins_high_quantile][idx_use])
-                std_high_quantile = np.std(n[indices_bins_high_quantile][idx_use])
-                
-                if std_high_quantile > 0:
-                    first_low_quantile = n[(n != 0)][1]  # take the second bin
-                    cutoff = (first_low_quantile - mean_high_quantile) / std_high_quantile
-                    peak_bin_height = np.max(n)
+    # #setup for acg
+    # clustersIds = [0]  # call the cluster id 0 (not used, but required input for correlograms)
+    # spikeClustersACG = np.zeros(n_spikes, dtype=np.int8)  # each spike time gets cluster id 0
 
-    return cutoff, first_low_quantile, peak_bin_height
+    # # compute an acg in 1s bins to compute the firing rate
+    # c0 = correlogram_for_one_segment(spike_samples, np.zeros(len(spike_samples), dtype='int8'),
+    #                                  bin_size=int(bin_size_ms / 1000 * sample_rate), # convert to sample counts
+    #                                  window_size=int(window_size*sample_rate))
+    # firing_rate = len(spike_samples) / duration
+    # # nACG = correlograms(spikeTimes, spikeClustersACG, cluster_ids = clustersIds, bin_size = 1, sample_rate = params['sampleRate'], window_size=2,symmetrize=False)[0][0] #compute acg
+    # # firingRate = nACG[1] / n_spikes
+        
+    # nACG = correlograms(spikeTimes, spikeClustersACG, cluster_ids=clustersIds,
+    #                     bin_size=params['binSizeCorr'], sample_rate=params['sampleRate'],
+    #                     window_size=2, symmetrize=False)[0][0]  # compute acg
 
+    # # confMatrix = np.zeros((cont.size, rp.size)) * np.nan
+    # # for ir in np.arange(confMatrix.shape[1]):
+    # #     # compute observed violations
+    # #     obsViol = np.sum(nACG[0:ir + 1])  # TODO this is off slightly (half-bin) from matlab...
+    # #     for cidx in np.arange(confMatrix.shape[0]):
+    # #         confMatrix[cidx, ir] = 100 * computeViol(obsViol, firingRate, n_spikes, rp[ir] + rpBinSize / 2, cont[cidx] / 100)  # TODO FIX RP BIN
+
+    # confMatrix = 100 * computeViol(np.cumsum(nACG[0:rp.size])[np.newaxis, :], firingRate, n_spikes, rp[np.newaxis, :] + rpBinSize / 2, cont[:, np.newaxis] / 100)
+
+
+
+    # b = np.arange(0, 10.25, bin_size_ms) / 1000 + 1e-6  # bins in seconds
+    # bTestIdx = [5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40]
+    # bTest = [b[i] for i in bTestIdx]
+
+    # if len(spike_samples) > 0 and spike_samples[-1] > spike_samples[0]:  # only do this for units with samples
+        
+    #     recDur = (spike_samples[-1] - spike_samples[0]) / sample_rate
+        
+    #     # compute acg
+    #     c0 = correlogram_for_one_segment(spike_samples, np.zeros(len(spike_samples), dtype='int8'),
+    #                                      bin_size=int(bin_size_ms / 1000 * sample_rate), # convert to sample counts
+    #                                      window_size=int(window_size*sample_rate))
+        
+    #     acg = c0[0,0,:]
+    #     half_acg = acg[acg.size//2:]
+        
+    #     # cumulative sum of acg, i.e. number of total spikes occuring from 0
+    #     # to end of that bin
+    #     cumsumc0 = np.cumsum(half_acg)
+        
+    #     # cumulative sum at each of the testing bins
+    #     res = cumsumc0[bTestIdx]
+    #     total_spike_count = len(spike_samples)
+
+    #     # divide each bin's count by the total spike count and the bin size
+    #     bin_count_normalized = half_acg / total_spike_count / bin_size_ms * 1000
+    #     num_bins_2s = len(half_acg)  # number of total bins that equal 2 secs
+    #     num_bins_1s = int(num_bins_2s / 2)  # number of bins that equal 1 sec
+        
+    #     # compute fr based on the mean of bin_count_normalized from 1 to 2 s
+    #     # instead of as before (len(ts)/recDur) for a better estimate
+    #     fr = np.sum(bin_count_normalized[num_bins_1s:num_bins_2s]) / num_bins_1s
+    #     mfunc = np.vectorize(_max_acceptable_cont)
+        
+    #     # compute the maximum allowed number of spikes per testing bin
+    #     m = mfunc(fr, bTest, recDur, fr * acceptThresh, thresh)
+        
+    #     # did the unit pass (resulting number of spikes less than maximum
+    #     # allowed spikes) at any of the testing bins?
+    #     didpass = int(np.any(np.less_equal(res, m)))
+    # else:
+    #     didpass = 0
+
+    # return didpass
+
+def _max_acceptable_cont(FR, RP, rec_duration, acceptableCont, thresh):
+    """
+    Function to compute the maximum acceptable refractory period contamination
+        called during slidingRP_viol
+    """
+
+    time_for_viol = RP * 2 * FR * rec_duration
+    expected_count_for_acceptable_limit = acceptableCont * time_for_viol
+    max_acceptable = poisson.ppf(thresh, expected_count_for_acceptable_limit)
+    if max_acceptable == 0 and poisson.pmf(0, expected_count_for_acceptable_limit) > 0:
+        max_acceptable = -1
+    return max_acceptable
 
 
 if HAVE_NUMBA:

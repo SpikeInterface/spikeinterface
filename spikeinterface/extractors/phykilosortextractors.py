@@ -24,7 +24,8 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     installation_mesg = "To use the PhySortingExtractor install pandas: \n\n pip install pandas\n\n"  # error message when not installed
     name = "phykilosort"
 
-    def __init__(self, folder_path, exclude_cluster_groups=None, keep_good_only=False):
+    def __init__(self, folder_path, exclude_cluster_groups=None, keep_good_only=False,
+                 load_all_cluster_properties=True):
         try:
             import pandas as pd
             HAVE_PD = True
@@ -143,6 +144,9 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             elif prop_name == "group":
                 # rename group property to 'quality'
                 self.set_property(key="quality", values=cluster_info[prop_name])
+            else:
+                if load_all_cluster_properties:
+                    self.set_property(key=prop_name, values=cluster_info[prop_name])
 
         self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
 

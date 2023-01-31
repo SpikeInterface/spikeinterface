@@ -5,7 +5,7 @@ import scipy.spatial
 
 from ..core.template_tools import get_template_extremum_channel
 from ..postprocessing import compute_correlograms
-from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rate
+from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rates
 
 from .mergeunitssorting import MergeUnitsSorting
 
@@ -119,8 +119,6 @@ def get_potential_auto_merge(
     
     if steps is None:
         steps = ['min_spikes', 'remove_contaminated', 'unit_positions', 'correlogram', 'template_similarity', 'check_increase_score']
-    
-    print(f'Running steps: {steps}')
 
     n = unit_ids.size
     pair_mask = np.ones((n, n), dtype='bool')
