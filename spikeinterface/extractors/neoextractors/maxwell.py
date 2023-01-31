@@ -41,7 +41,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     def __init__(self, file_path, stream_id=None, stream_name=None, block_index=None, 
                  all_annotations=False, rec_name=None, install_maxwell_plugin=False):
         if install_maxwell_plugin:
-            self.install_maxwell_pluging()
+            self.install_maxwell_plugin()
         
         neo_kwargs = self.map_to_neo_kwargs(file_path, rec_name)
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
@@ -66,7 +66,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         neo_kwargs = {'filename': str(file_path), 'rec_name': rec_name}
         return neo_kwargs
 
-    def install_maxwell_pluging(self, force_download=False):
+    def install_maxwell_plugin(self, force_download=False):
         from neo.rawio.maxwellrawio import auto_install_maxwell_hdf5_compression_plugin
         auto_install_maxwell_hdf5_compression_plugin(force_download=False)
 
