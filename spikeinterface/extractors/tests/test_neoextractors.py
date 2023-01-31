@@ -225,20 +225,6 @@ class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
          {'stream_id': 'well000', 'rec_name': 'rec0000', 'install_mawell_plugin': True})
     ]
 
-    # def test_pickling(self):
-    #     for entity in self.entities:
-    #         if isinstance(entity, tuple):
-    #                         path, kwargs = entity
-    #         elif isinstance(entity, str):
-    #             path = entity
-    #             kwargs = {}
-            
-    #         full_path = self.get_full_path(path)
-    #         recording = self.ExtractorClass(full_path, **kwargs)
-    #         pickled_recording = pickle.dumps(recording)
-    #         unpickled_recording = pickle.loads(pickled_recording)
-    #         check_recordings_equal(recording, unpickled_recording) 
-    #         # Throws segmentation fault, don't know why
 
 class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = SpikeGadgetsRecordingExtractor
