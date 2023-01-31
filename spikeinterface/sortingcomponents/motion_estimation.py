@@ -118,7 +118,7 @@ def estimate_motion(recording, peaks, peak_locations,
     non_rigid_windows, non_rigid_window_centers = get_windows(rigid, bin_um, contact_pos, spatial_bin_edges,
                                                               margin_um, win_step_um, win_sigma_um, win_shape)
 
-    if extra_check:
+    if output_extra_check:
         extra_check['non_rigid_windows'] = non_rigid_windows
 
     # run method
@@ -228,7 +228,7 @@ class DecentralizedRegistration:
                                      direction=direction,
                                      bin_duration_s=bin_duration_s,
                                      spatial_bin_edges=spatial_bin_edges)
-        if extra_check:
+        if extra_check is not None:
             extra_check['motion_histogram'] = motion_histogram
             extra_check['pairwise_displacement_list'] = []
             extra_check['temporal_hist_bin_edges'] = temporal_hist_bin_edges
@@ -268,7 +268,7 @@ class DecentralizedRegistration:
                 all_pairwise_displacements[i] = pairwise_displacement
                 all_pairwise_displacement_weights[i] = pairwise_displacement_weight
 
-            if extra_check:
+            if extra_check is not None:
                 extra_check['pairwise_displacement_list'].append(pairwise_displacement)
 
             if verbose:
