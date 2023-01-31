@@ -243,10 +243,10 @@ class DecentralizedRegistration:
             windows_iter = tqdm(windows_iter, desc="Windows")
         if spatial_prior:
             all_pairwise_displacements = np.empty(
-                (len(non_rigid_windows, temporal_bins.size, temporal_bins.size)),
+                (len(non_rigid_windows), temporal_bins.size, temporal_bins.size),
                 dtype=np.float64)
             all_pairwise_displacement_weights = np.empty(
-                (len(non_rigid_windows, temporal_bins.size, temporal_bins.size)),
+                (len(non_rigid_windows), temporal_bins.size, temporal_bins.size),
                 dtype=np.float64)
         for i, win in enumerate(windows_iter):
             window_slice = np.flatnonzero(win > 1e-5)
@@ -448,7 +448,7 @@ def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_st
         middle = (spatial_bin_edges[0] + spatial_bin_edges[-1]) / 2.
         non_rigid_window_centers = np.array([middle])
     else:
-        assert win_sigma_um > win_step_um, f'win_sigma_um too low {win_sigma_um} compared to win_step_um {win_step_um}'
+        assert win_sigma_um >= win_step_um, f'win_sigma_um too low {win_sigma_um} compared to win_step_um {win_step_um}'
 
         min_ = np.min(contact_pos) - margin_um
         max_ = np.max(contact_pos) + margin_um
@@ -886,7 +886,7 @@ def compute_global_displacement(
             W = W[None]
             D = D[None]
         assert D.ndim == W.ndim == 3
-        B, T, T_ = D
+        B, T, T_ = D.shape
         assert T == T_
 
         # sparsify the problem
@@ -905,7 +905,7 @@ def compute_global_displacement(
         # calculate coefficients matrices and target vector
         for Wb, Db in zip(W, D):
             # indices of active temporal pairs in this window
-            I, J = np.nonzero(W > 0)
+            I, J = np.nonzero(Wb > 0)
             n_sampled = I.size
 
             # construct Kroneckers and sparse objective in this window
@@ -935,7 +935,7 @@ def compute_global_displacement(
 
             coefficients.append(block_sparse_kron)
             targets.append(block_disp_pairs)
-        coefficients = sparse.hstack(coefficients)
+        coefficients = sparse.block_diag(coefficients)
         targets = np.concatenate(targets, axis=0)
 
         # spatial smoothness prior: penalize difference of each block's
@@ -965,6 +965,7 @@ def compute_global_displacement(
 
         # use LSMR to solve the whole problem
         displacement, *_ = sparse.linalg.lsmr(coefficients, targets, x0=p0)
+        displacement = displacement.reshape(B, T).T
 
         # TODO: do we need to weight the upsampling somehow?
     else:
