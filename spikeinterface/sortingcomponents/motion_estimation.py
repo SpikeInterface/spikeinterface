@@ -1108,15 +1108,20 @@ def iterative_template_registration(spikecounts_hist_images,
     return optimal_shift_indices, target_spikecount_hist, shift_covs_block
 
 
-def normxcorr1d(template, x, padding="same", conv_engine="torch"):
-    """normxcorr1d: 1-D normalized cross-correlation
+def normxcorr1d(template, x, weights=None, padding="same", conv_engine="torch"):
+    """normxcorr1d: Normalized cross-correlation, optionally weighted
 
     Returns the cross-correlation of `template` and `x` at spatial lags
     determined by `mode`. Useful for estimating the location of `template`
     within `x`.
+
     This might not be the most efficient implementation -- ideas welcome.
     It uses a direct convolutional translation of the formula
         corr = (E[XY] - EX EY) / sqrt(var X * var Y)
+
+    This also supports weights! In that case, the usual adaptation of
+    the above formula is made to the weighted case -- and all of the
+    normalizations are done per block in the same way.
 
     Arguments
     ---------
@@ -1124,6 +1129,8 @@ def normxcorr1d(template, x, padding="same", conv_engine="torch"):
         The reference template signal
     x : tensor, 1d shape (length,) or 2d shape (num_inputs, length)
         The signal in which to find `template`
+    weights : tensor, shape (length,)
+        Will use weighted means + variances in this case.
     padding : int, optional
         How far to look? if unset, we'll use half the length
     assume_centered : bool
@@ -1149,33 +1156,49 @@ def normxcorr1d(template, x, padding="same", conv_engine="torch"):
     num_inputs, length_ = template.shape
     assert length == length_
 
-    # compute expectations
-    if conv_engine == "torch":
-        ones = npx.ones((1, 1, length), dtype=x.dtype, device=x.device)
+    # generalize over weighted / unweighted case
+    device_kw = {} if conv_engine == "numpy" else dict(device=x.device)
+    ones = npx.ones((1, 1, length), dtype=x.dtype, **device_kw)
+    no_weights = weights is None
+    if no_weights:
+        weights = ones
+        wt = template[:, None, :]
+        wt2 = npx.square(template[:, None, :])
     else:
-        ones = npx.ones((1, 1, length), dtype=x.dtype)
+        assert weights.shape == (length,)
+        weights = weights[None, None]
+        wt = template[:, None, :] * weights
+        wt2 = npx.square(template)[:, None, :] * weights
+
+    # conv1d valid rule:
+    # (B,1,L),(O,1,L)->(B,O,L)
+
+    # compute expectations
     # how many points in each window? seems necessary to normalize
     # for numerical stability.
-    N = conv1d(ones, ones, padding=padding)
-    Et = conv1d(ones, template[:, None, :], padding=padding) / N
-    Ex = conv1d(x[:, None, :], ones, padding=padding) / N
+    N = conv1d(ones, weights, padding=padding)
+    Et = conv1d(ones, wt, padding=padding) / N
+    Ex = conv1d(x[:, None, :], weights, padding=padding) / N
 
-    # compute covariance
-    corr = conv1d(x[:, None, :], template[:, None, :], padding=padding) / N
-    corr -= Ex * Et
+    # compute (weighted) covariance
+    # important: the formula E[XY] - EX EY is well-suited here,
+    # because the means are naturally subtracted correctly
+    # patch-wise. you couldn't pre-subtract them!
+    cov = conv1d(x[:, None, :], wt, padding=padding) / N
+    cov -= Ex * Et
 
     # compute variances for denominator, using var X = E[X^2] - (EX)^2
     var_template = conv1d(
-        ones, npx.square(template)[:, None, :], padding=padding
-    )
-    var_template = var_template / N - npx.square(Et)
+        ones, wt2, padding=padding
+    ) / N - npx.square(Et)
     var_x = conv1d(
-        npx.square(x)[:, None, :], ones, padding=padding
-    )
-    var_x = var_x / N - npx.square(Ex)
+        npx.square(x)[:, None, :], weights, padding=padding
+    ) / N - npx.square(Ex)
 
-    # now find the final normxcorr and get rid of NaNs in zero-variance areas
+    # now find the final normxcorr
+    corr = cov  # renaming for clarity
     corr /= npx.sqrt(var_x * var_template)
+    # get rid of NaNs in zero-variance areas
     corr[~npx.isfinite(corr)] = 0
 
     return corr
