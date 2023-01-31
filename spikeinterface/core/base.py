@@ -569,7 +569,6 @@ class BaseExtractor:
     @staticmethod
     def load_from_folder(folder):
         return BaseExtractor.load(folder)
- 
     def _save(self, folder, **save_kwargs):
         # This implemented in BaseRecording or baseSorting
         # this is internally call by cache(...) main function
