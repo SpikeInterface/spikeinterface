@@ -724,27 +724,27 @@ def compute_sliding_rp_violations(waveform_extractor, bin_size=0.25, thresh=0.1,
     """
 
     recording = waveform_extractor.recording
+    duration = recording.get_total_duration()
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
     num_segs = sorting.get_num_segments()
     fs = recording.get_sampling_frequency()
 
-    all_didpass = {}
+    contamination_90 = {}
 
     # all units converted to seconds
     for unit_id in unit_ids:
 
-        spike_trains = []
+        spike_train_list = []
 
         for segment_index in range(num_segs):
             spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            spike_trains.append(spike_train)
+            spike_train_list.append(spike_train)
 
         # concatenating is wrong
-        all_didpass[unit_id] = slidingRP_viol(np.concatenate(spike_trains), fs, bin_size, thresh,
-                                              acceptThresh)
+        contamination_90[unit_id] = slidingRP_viol(spike_train_list, fs, duration, bin_size)
 
-    return all_didpass
+    return contamination_90
 
 
 ### LOW-LEVEL FUNCTIONS ###
@@ -887,10 +887,11 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
         return fraction_missing
 
 
-def slidingRP_viol(spike_samples, sample_rate, duration, bin_size_ms=0.25, window_size=2, thresh=0.1, acceptThresh=0.1):
+def slidingRP_viol(spike_samples, sample_rate, duration, bin_size_ms=0.25, window_size=2,
+                   exclude_ref_period_below_ms=0.5, contamination_values=None):
     """
-    A binary metric developed by IBL which determines whether there is an acceptable level of
-    refractory period violations by using a sliding refractory period.
+    A metric developed by IBL which determines whether the refractory period violations 
+    by using sliding refractory periods.
     
     See compute_slidingRP_viol for additional documentation
 
@@ -911,94 +912,16 @@ def slidingRP_viol(spike_samples, sample_rate, duration, bin_size_ms=0.25, windo
         The fraction of contamination we are willing to accept (default value
               set to 0.1, or 10% contamination)
 
+    See: https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
+
     Returns
     -------
-    didpass : int
-        0 if unit didn't pass
-        1 if unit did pass
-
+    min_cont_with_90_confidence : dict of floats
+        The minimum contamination with confidence > 90%
     """
-    
-    '''
-    if params is None:
-        params = {}
-        params['sampleRate'] = 30000
-        params['binSizeCorr'] = 1 / params['sampleRate']
-        params['returnMatrix'] = True
-        params['verbose'] = True
-        params['cidx'] = [0]
-
-
-    seconds_start = time.time()
-    [confMatrix, cont, rp, nACG, firingRate] = computeMatrix(spikeTimes, params)
-    # matrix is [nCont x nRP]
-    
-    testTimes = rp>0.0005 # (in seconds) 
-    #only test for refractory period durations greater than 0.5 ms
-    
-    maxConfidenceAt10Cont = max(confMatrix[cont==10,testTimes]) #TODO check behavior if no max
-    
-    
-    indsConf90 = np.row_stack(np.where(confMatrix[:,testTimes]>90))
-    ii = indsConf90[0] #row inds
-    jj = indsConf90[1] #col inds
-    
-
-    try:
-        minI = np.min(ii)
-        idx = np.argmin(ii)
-        minContWith90Confidence = cont[minI]
-        minRP = np.argmax(confMatrix[minI,testTimes])
-
-
-    except:    
-        minContWith90Confidence = np.nan
-    
-        minRP = np.nan
-
-    try:
-        timeOfLowestCont = rp[minRP+np.where(testTimes)[0][0]+1]
-    except: 
-        timeOfLowestCont = np.nan
-        
-    
-    nSpikesBelow2 = sum(nACG[0:np.where(rp>0.002)[0][0]+1])
-    
-    ### confMAtrix
-    cont = np.arange(0.5, 35, 0.5)  # vector of contamination values to test
-    rpBinSize = 1 / 30000  
-    rpEdges = np.arange(0, 10/1000, rpBinSize)  # in s
-    rp = rpEdges + np.mean(np.diff(rpEdges)[0]) / 2 # vector of refractory period durations to test
-    
-    #compute firing rate and spike count
-    n_spikes = len(spikeTimes)
-    #setup for acg
-    clustersIds = [0]  # call the cluster id 0 (not used, but required input for correlograms)
-    spikeClustersACG = np.zeros(n_spikes, dtype=np.int8)  # each spike time gets cluster id 0
-
-    # compute an acg in 1s bins to compute the firing rate  
-    nACG = correlograms(spikeTimes, spikeClustersACG, cluster_ids = clustersIds, bin_size = 1, sample_rate = params['sampleRate'], window_size=2,symmetrize=False)[0][0] #compute acg
-    firingRate = nACG[1] / n_spikes
-        
-    nACG = correlograms(spikeTimes, spikeClustersACG, cluster_ids=clustersIds, bin_size=params['binSizeCorr'], sample_rate=params['sampleRate'], window_size=2, symmetrize=False)[0][0]  # compute acg
-
-    # confMatrix = np.zeros((cont.size, rp.size)) * np.nan
-    # for ir in np.arange(confMatrix.shape[1]):
-    #     # compute observed violations
-    #     obsViol = np.sum(nACG[0:ir + 1])  # TODO this is off slightly (half-bin) from matlab...
-    #     for cidx in np.arange(confMatrix.shape[0]):
-    #         confMatrix[cidx, ir] = 100 * computeViol(obsViol, firingRate, n_spikes, rp[ir] + rpBinSize / 2, cont[cidx] / 100)  # TODO FIX RP BIN
-
-    confMatrix = 100 * computeViol(np.cumsum(nACG[0:rp.size])[np.newaxis, :], firingRate, n_spikes, rp[np.newaxis, :] + rpBinSize / 2, cont[:, np.newaxis] / 100)
-
-
-    ### computeViol
-    contaminationRate = firingRate * contaminationProp 
-    expectedViol = contaminationRate * refDur * 2 * spikeCount
-    confidenceScore = 1 - stats.poisson.cdf(obsViol, expectedViol)
-    '''
-    contaminations = np.arange(0.5, 35, 0.5)  # vector of contamination values to test
-    rp_bin_size = 1 / sample_rate  
+    if contamination_values is None:
+        contamination_values = np.arange(0.5, 35, 0.5)  # vector of contamination values to test
+    rp_bin_size = bin_size_ms / 1000
     rp_edges = np.arange(0, 0.01, rp_bin_size)  # in s
     rp_centers = rp_bin_size + np.mean(np.diff(rp_edges)[0]) / 2 # vector of refractory period durations to test
     
@@ -1015,97 +938,34 @@ def slidingRP_viol(spike_samples, sample_rate, duration, bin_size_ms=0.25, windo
     for spike_samples in spike_samples_list:
         c0 = correlogram_for_one_segment(spike_samples, np.zeros(len(spike_samples), dtype='int8'),
                                          bin_size=int(bin_size_ms / 1000 * sample_rate), # convert to sample counts
-                                         window_size=int(window_size*sample_rate))
+                                         window_size=int(window_size*sample_rate))[0, 0]
         if correlograms is None:
             correlograms = c0
         else:
             correlograms += c0
 
+    conf_matrix = 100 * _compute_violations(np.cumsum(correlograms[0:rp_centers.size])[np.newaxis, :],
+                                            firing_rate, n_spikes, rp_centers[np.newaxis, :] + rp_bin_size / 2,
+                                            contamination_values[:, np.newaxis] / 100)
+    test_rp_centers_mask = rp_centers > exclude_ref_period_below_ms / 1000. # (in seconds)
+    #only test for refractory period durations greater thanexclude_ref_period_below_ms
+    inds_confidence90 = np.row_stack(np.where(conf_matrix[:, test_rp_centers_mask] > 90))
 
-    # #setup for acg
-    # clustersIds = [0]  # call the cluster id 0 (not used, but required input for correlograms)
-    # spikeClustersACG = np.zeros(n_spikes, dtype=np.int8)  # each spike time gets cluster id 0
+    try:
+        minI = np.min(inds_confidence90[0])
+        min_cont_with_90_confidence = contamination_values[minI]
+    except:
+        min_cont_with_90_confidence = np.nan
 
-    # # compute an acg in 1s bins to compute the firing rate
-    # c0 = correlogram_for_one_segment(spike_samples, np.zeros(len(spike_samples), dtype='int8'),
-    #                                  bin_size=int(bin_size_ms / 1000 * sample_rate), # convert to sample counts
-    #                                  window_size=int(window_size*sample_rate))
-    # firing_rate = len(spike_samples) / duration
-    # # nACG = correlograms(spikeTimes, spikeClustersACG, cluster_ids = clustersIds, bin_size = 1, sample_rate = params['sampleRate'], window_size=2,symmetrize=False)[0][0] #compute acg
-    # # firingRate = nACG[1] / n_spikes
-        
-    # nACG = correlograms(spikeTimes, spikeClustersACG, cluster_ids=clustersIds,
-    #                     bin_size=params['binSizeCorr'], sample_rate=params['sampleRate'],
-    #                     window_size=2, symmetrize=False)[0][0]  # compute acg
-
-    # # confMatrix = np.zeros((cont.size, rp.size)) * np.nan
-    # # for ir in np.arange(confMatrix.shape[1]):
-    # #     # compute observed violations
-    # #     obsViol = np.sum(nACG[0:ir + 1])  # TODO this is off slightly (half-bin) from matlab...
-    # #     for cidx in np.arange(confMatrix.shape[0]):
-    # #         confMatrix[cidx, ir] = 100 * computeViol(obsViol, firingRate, n_spikes, rp[ir] + rpBinSize / 2, cont[cidx] / 100)  # TODO FIX RP BIN
-
-    # confMatrix = 100 * computeViol(np.cumsum(nACG[0:rp.size])[np.newaxis, :], firingRate, n_spikes, rp[np.newaxis, :] + rpBinSize / 2, cont[:, np.newaxis] / 100)
+    return min_cont_with_90_confidence
 
 
+def _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, contamination_prop):
+    contamination_rate = firing_rate * contamination_prop 
+    expected_viol = contamination_rate * ref_period_dur * 2 * spike_count
+    confidence_score = 1 - poisson.cdf(obs_viol, expected_viol)
 
-    # b = np.arange(0, 10.25, bin_size_ms) / 1000 + 1e-6  # bins in seconds
-    # bTestIdx = [5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40]
-    # bTest = [b[i] for i in bTestIdx]
-
-    # if len(spike_samples) > 0 and spike_samples[-1] > spike_samples[0]:  # only do this for units with samples
-        
-    #     recDur = (spike_samples[-1] - spike_samples[0]) / sample_rate
-        
-    #     # compute acg
-    #     c0 = correlogram_for_one_segment(spike_samples, np.zeros(len(spike_samples), dtype='int8'),
-    #                                      bin_size=int(bin_size_ms / 1000 * sample_rate), # convert to sample counts
-    #                                      window_size=int(window_size*sample_rate))
-        
-    #     acg = c0[0,0,:]
-    #     half_acg = acg[acg.size//2:]
-        
-    #     # cumulative sum of acg, i.e. number of total spikes occuring from 0
-    #     # to end of that bin
-    #     cumsumc0 = np.cumsum(half_acg)
-        
-    #     # cumulative sum at each of the testing bins
-    #     res = cumsumc0[bTestIdx]
-    #     total_spike_count = len(spike_samples)
-
-    #     # divide each bin's count by the total spike count and the bin size
-    #     bin_count_normalized = half_acg / total_spike_count / bin_size_ms * 1000
-    #     num_bins_2s = len(half_acg)  # number of total bins that equal 2 secs
-    #     num_bins_1s = int(num_bins_2s / 2)  # number of bins that equal 1 sec
-        
-    #     # compute fr based on the mean of bin_count_normalized from 1 to 2 s
-    #     # instead of as before (len(ts)/recDur) for a better estimate
-    #     fr = np.sum(bin_count_normalized[num_bins_1s:num_bins_2s]) / num_bins_1s
-    #     mfunc = np.vectorize(_max_acceptable_cont)
-        
-    #     # compute the maximum allowed number of spikes per testing bin
-    #     m = mfunc(fr, bTest, recDur, fr * acceptThresh, thresh)
-        
-    #     # did the unit pass (resulting number of spikes less than maximum
-    #     # allowed spikes) at any of the testing bins?
-    #     didpass = int(np.any(np.less_equal(res, m)))
-    # else:
-    #     didpass = 0
-
-    # return didpass
-
-def _max_acceptable_cont(FR, RP, rec_duration, acceptableCont, thresh):
-    """
-    Function to compute the maximum acceptable refractory period contamination
-        called during slidingRP_viol
-    """
-
-    time_for_viol = RP * 2 * FR * rec_duration
-    expected_count_for_acceptable_limit = acceptableCont * time_for_viol
-    max_acceptable = poisson.ppf(thresh, expected_count_for_acceptable_limit)
-    if max_acceptable == 0 and poisson.pmf(0, expected_count_for_acceptable_limit) > 0:
-        max_acceptable = -1
-    return max_acceptable
+    return confidence_score
 
 
 if HAVE_NUMBA:

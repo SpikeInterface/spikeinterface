@@ -313,6 +313,7 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
 
     return correlograms
 
+
 def compute_correlograms_numba(sorting, window_size, bin_size):
     """
     Computes several cross-correlogram in one course
