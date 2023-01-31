@@ -865,7 +865,6 @@ def _load_extractor_from_dict(dic):
 
     return extractor
 
-    
 
 def _get_class_from_string(class_string):
     class_name = class_string.split('.')[-1]

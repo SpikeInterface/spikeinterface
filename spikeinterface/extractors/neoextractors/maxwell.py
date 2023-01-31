@@ -37,7 +37,10 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     has_default_locations = True
 
     def __init__(self, file_path, stream_id=None, stream_name=None, block_index=None, 
-                 all_annotations=False, rec_name=None):
+                 all_annotations=False, rec_name=None, install_mawell_plugin=False):
+        if install_mawell_plugin:
+            self.install_maxwell_pluging()
+        
         neo_kwargs = self.map_to_neo_kwargs(file_path, rec_name)
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
                                            stream_name=stream_name,
