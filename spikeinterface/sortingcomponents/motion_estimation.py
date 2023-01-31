@@ -464,11 +464,12 @@ def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_st
                 win = np.abs(bin_centers - win_center) < (win_sigma_um / 2.)
                 win = win.astype('float64')
             elif win_shape == 'triangle':
-                win = np.abs(bin_centers - win_center)
-                win[win > (win_sigma_um / 2.)] = 0
-                win = -win
-                win -= win.min()
-                win /= win.max()
+                center_dist = np.abs(bin_centers - win_center)
+                in_window = center_dist <= (win_sigma_um / 2.)
+                win = -center_dist
+                win[~in_window] = 0
+                win[in_window] -= win[in_window].min()
+                win[in_window] /= win[in_window].max()
 
             non_rigid_windows.append(win)
 
