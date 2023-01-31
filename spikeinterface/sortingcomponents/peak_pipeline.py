@@ -73,6 +73,9 @@ class ExtractDenseWaveforms(PipelineNode):
         self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
         self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
         
+        # this is a bad hack to differentiate in the child if the parents is dense or not.
+        self.neighbours_mask = None
+        
         self._kwargs['ms_before'] = float(ms_before)
         self._kwargs['ms_after'] = float(ms_after)
 
