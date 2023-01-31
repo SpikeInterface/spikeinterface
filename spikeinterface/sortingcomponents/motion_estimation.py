@@ -251,12 +251,12 @@ class DecentralizedRegistration:
         for i, win in enumerate(windows_iter):
             window_slice = np.flatnonzero(win > 1e-5)
             window_slice = slice(window_slice[0], window_slice[-1])
-            motion_hist = win[np.newaxis, window_slice] * motion_histogram[:, window_slice]
             if verbose:
                 print(f'Computing pairwise displacement: {i + 1} / {len(non_rigid_windows)}')
 
             pairwise_displacement, pairwise_displacement_weight = \
-                    compute_pairwise_displacement(motion_hist, bin_um,
+                    compute_pairwise_displacement(motion_histogram[:, window_slice], bin_um,
+                                                  window=win[window_slice],
                                                   method=pairwise_displacement_method, weight_scale=weight_scale,
                                                   error_sigma=error_sigma, conv_engine=conv_engine,
                                                   torch_device=torch_device, batch_size=batch_size,
@@ -617,7 +617,8 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                                   conv_engine='numpy', torch_device=None,
                                   batch_size=1, max_displacement_um=1500,
                                   corr_threshold=0, time_horizon_s=None,
-                                  bin_duration_s=None, progress_bar=False):
+                                  bin_duration_s=None, progress_bar=False,
+                                  window=None):
     """
     Compute pairwise displacement
     """
@@ -664,6 +665,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                     corr = normxcorr1d(
                         hist_i,
                         motion_hist_engine[None, j],
+                        weights=window,
                         padding=possible_displacement.size // 2,
                         conv_engine=conv_engine,
                     )
@@ -690,6 +692,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                 corr = normxcorr1d(
                     motion_hist_engine,
                     motion_hist_engine[i : i + batch_size],
+                    weights=window,
                     padding=possible_displacement.size // 2,
                     conv_engine=conv_engine,
                 )
