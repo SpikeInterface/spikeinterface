@@ -30,7 +30,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     rec_name: str, optional
         When the file contains several recordings you need to specify the one
         you want to extract. (rec_name='rec0000').
-    install_mawell_plugin: bool, optional, default: False
+    install_maxwell_plugin: bool, optional, default: False
         If True, install the maxwell plugin for neo.
     """
     mode = 'file'
@@ -39,8 +39,8 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     has_default_locations = True
 
     def __init__(self, file_path, stream_id=None, stream_name=None, block_index=None, 
-                 all_annotations=False, rec_name=None, install_mawell_plugin=False):
-        if install_mawell_plugin:
+                 all_annotations=False, rec_name=None, install_maxwell_plugin=False):
+        if install_maxwell_plugin:
             self.install_maxwell_pluging()
         
         neo_kwargs = self.map_to_neo_kwargs(file_path, rec_name)

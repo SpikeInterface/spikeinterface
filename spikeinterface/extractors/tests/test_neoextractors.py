@@ -222,7 +222,7 @@ class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         'maxwell/MaxOne_data/Record/000011/data.raw.h5',
         ('maxwell/MaxTwo_data/Network/000028/data.raw.h5',
-         {'stream_id': 'well000', 'rec_name': 'rec0000', 'install_mawell_plugin': True})
+         {'stream_id': 'well000', 'rec_name': 'rec0000', 'install_maxwell_plugin': True})
     ]
 
 
