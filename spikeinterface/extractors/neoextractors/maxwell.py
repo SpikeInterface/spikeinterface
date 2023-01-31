@@ -30,6 +30,8 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     rec_name: str, optional
         When the file contains several recordings you need to specify the one
         you want to extract. (rec_name='rec0000').
+    install_mawell_plugin: bool, optional, default: False
+        If True, install the maxwell plugin for neo.
     """
     mode = 'file'
     NeoRawIOClass = 'MaxwellRawIO'

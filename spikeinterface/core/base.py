@@ -563,12 +563,17 @@ class BaseExtractor:
             raise ValueError('spikeinterface.Base.load() file_path must be an existing folder or file')
 
     def __reduce__(self):
-        
-        return (self.from_dict, (self.to_dict(), ))
+        """
+        This function is used by pickle to serialize the object.
+        """
+        instance_constructor = self.from_dict
+        intialization_args = (self.to_dict(), )
+        return (instance_constructor, intialization_args)
 
     @staticmethod
     def load_from_folder(folder):
         return BaseExtractor.load(folder)
+    
     def _save(self, folder, **save_kwargs):
         # This implemented in BaseRecording or baseSorting
         # this is internally call by cache(...) main function
