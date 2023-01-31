@@ -123,7 +123,6 @@ class NwbRecordingExtractor(BaseRecording):
         self._electrical_series_name = electrical_series_name
 
         if stream_mode == "fsspec":
-            check_nwb_install()
             import fsspec
             from fsspec.implementations.cached import CachingFileSystem
             import h5py
