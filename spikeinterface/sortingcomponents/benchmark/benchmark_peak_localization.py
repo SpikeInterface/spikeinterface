@@ -9,6 +9,7 @@ from spikeinterface.widgets import plot_probe_map, plot_agreement_matrix, plot_c
 from spikeinterface.postprocessing import compute_spike_locations
 from spikeinterface.postprocessing.unit_localization import compute_center_of_mass, compute_monopolar_triangulation
 from spikeinterface.core import get_noise_levels
+from spikeinterface.sortingcomponents.benchmark.benchmark_tools import BenchmarkBase, _simpleaxis
 
 import time
 import string, random
@@ -197,7 +198,7 @@ def plot_comparison_positions(benchmarks, mode='average'):
         y_stds += [np.std(bench.stds_over_templates)]
 
     colors = [f'C{i}' for i in range(len(x_means))]
-    ax.errorbar(x_means, y_means, xerr=x_stds, yerr=y_stds, fmt='.', c='0.5')
+    ax.errorbar(x_means, y_means, xerr=x_stds, yerr=y_stds, fmt='.', c='0.5', alpha=0.5)
     ax.scatter(x_means, y_means, c=colors, s=200)
     
     ax.set_ylabel('error variances (um)')
@@ -335,34 +336,71 @@ def plot_comparison_inferences(benchmarks, bin_size=np.arange(0.1, 10, 0.1)):
     ax2.set_ylabel('# spikes')
 
 
-        # errors = []
-        # cosines = []
-        # for b in bin_size:
-        #     bins = np.arange(gt_positions.min(), gt_positions.max(), b)
-        #     res = np.histogram2d(all_x, all_y, bins=bins)
-        #     res2 = np.histogram2d(real_x, real_y, bins=bins)
 
-        #     errors += [np.linalg.norm(res[0] - res2[0])]
-        #     cosines += [sklearn.metrics.pairwise.cosine_similarity(res[0].reshape(1, -1), res2[0].reshape(1, -1))[0]]
+def plot_comparison_precision(benchmarks):
 
-        # bins = np.arange(gt_positions.min(), gt_positions.max(), 10)
-        # res = np.histogram2d(real_x, real_y, bins=bins)
-        # axs[0, 0].imshow(res[0])
+    import pylab as plt
+    fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(15, 10), squeeze=False)
 
-        # axs[0, 1].plot(bin_size, errors, label=benchmark.title)
-        # axs[0, 1].set_ylabel('error')
-        # axs[0, 1].legend()
-        # axs[0, 1].set_xticks([])
+    for bench in benchmarks:
 
+        # gt_positions = bench.gt_positions
+        # template_positions = bench.template_positions
+        # dx = np.abs(gt_positions[:, 0] - template_positions[:, 0])
+        # dy = np.abs(gt_positions[:, 1] - template_positions[:, 1])
+        # dz = np.abs(gt_positions[:, 2] - template_positions[:, 2])
+        # ax = axes[0, 0]
+        # ax.errorbar(np.arange(3), [dx.mean(), dy.mean(), dz.mean()], yerr=[dx.std(), dy.std(), dz.std()], label=bench.title)
 
-        # axs[1, 1].plot(bin_size, cosines, label=benchmark.title)
-        # axs[1, 1].set_ylabel('cosine')
-        # axs[1, 1].set_xlabel('bin size (um)')
-        
-        # for ax in [axs[0, 1], axs[1, 1]]:
-        #     ax.spines['right'].set_visible(False)
-        #     ax.spines['top'].set_visible(False)
+        spikes = bench.spike_positions[0]
+        units = bench.waveforms.sorting.unit_ids
+        all_x = np.concatenate([spikes[unit_id]['x'] for unit_id in units])
+        all_y = np.concatenate([spikes[unit_id]['y'] for unit_id in units])
+        all_z = np.concatenate([spikes[unit_id]['z'] for unit_id in units])
 
+        gt_positions = bench.gt_positions
+        real_x = np.concatenate([gt_positions[c, 0]*np.ones(len(spikes[i]['x'])) for c, i in enumerate(units)])
+        real_y = np.concatenate([gt_positions[c, 1]*np.ones(len(spikes[i]['y'])) for c, i in enumerate(units)])
+        real_z = np.concatenate([gt_positions[c, 2]*np.ones(len(spikes[i]['z'])) for c, i in enumerate(units)])
+
+        dx = np.abs(all_x - real_x)
+        dy = np.abs(all_y - real_y)
+        dz = np.abs(all_z - real_z)
+        ax = axes[0, 0]
+        ax.errorbar(np.arange(3), [dx.mean(), dy.mean(), dz.mean()], yerr=[dx.std(), dy.std(), dz.std()], label=bench.title)
+    ax.legend()
+    ax.set_ylabel('error (um)')
+    ax.set_xticks(np.arange(3), ['x', 'y', 'z'])
+    _simpleaxis(ax)
+
+    x_means = []
+    x_stds = []
+    for count, bench in enumerate(benchmarks):
+        x_means += [np.mean(bench.means_over_templates)]
+        x_stds += [np.std(bench.means_over_templates)]
+
+    #ax.set_yticks([])
+    #ax.set_ylim(ymin, ymax)
+  
+    ax = axes[0, 1]
+    _simpleaxis(ax)
+
+    y_means = []
+    y_stds = []
+    for count, bench in enumerate(benchmarks):
+        y_means += [np.mean(bench.stds_over_templates)]
+        y_stds += [np.std(bench.stds_over_templates)]
+
+    colors = [f'C{i}' for i in range(len(x_means))]
+    ax.errorbar(x_means, y_means, xerr=x_stds, yerr=y_stds, fmt='.', c='0.5', alpha=0.5)
+    ax.scatter(x_means, y_means, c=colors, s=200)
+    
+    ax.set_ylabel('error variances (um)')
+    ax.set_xlabel('error means (um)')
+  #ax.set_yticks([]
+    ymin, ymax = ax.get_ylim()
+    #ax.set_ylim(0, 25)
+    ax.legend()
 
 
 def plot_figure_1(benchmark, mode='average', cell_ind='auto'):
