@@ -200,6 +200,7 @@ def test_calculate_drift_metrics(simulated_data):
     drifts_ptps, drifts_stds, drift_mads = compute_drift_metrics(we, interval_s=10, min_spikes_per_interval=10)
 
     print(drifts_ptps, drifts_stds, drift_mads)
+    # This is a small change to trigger tests
     assert np.allclose(list(drift_ptps_gt.values()), list(drifts_ptps.values()), rtol=0.05)
     assert np.allclose(list(drift_stds_gt.values()), list(drifts_stds.values()), rtol=0.05)
     assert np.allclose(list(drift_mads_gt.values()), list(drift_mads.values()), rtol=0.05)
