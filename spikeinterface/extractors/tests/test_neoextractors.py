@@ -1,6 +1,5 @@
 import unittest
 from platform import python_version
-from sys import platform
 from packaging import version
 
 import pytest
@@ -205,8 +204,8 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 @pytest.mark.skipif(
-        version.parse(python_version()) >= version.parse("3.8"),
-        reason="Sonpy only testing with Python < 3.8!",
+        version.parse(python_version()) >= version.parse("3.10"),
+        reason="Sonpy only testing with Python < 3.10!",
 )
 class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = CedRecordingExtractor
