@@ -49,7 +49,7 @@ def estimate_motion(recording, peaks, peak_locations,
     rigid : bool (default True)
         Compute rigid (one motion for the entire probe) or non rigid motion
         Rigid computation is equivalent to non-rigid with only one window with rectangular shape.
-    win_shape: 'gaussian' or 'rect'
+    win_shape: 'gaussian' or 'rect' or 'triangle'
         The shape of the windows for non rigid.
         When rigid this is force to 'rect'
     win_step_um: float (default 50.)
@@ -463,6 +463,12 @@ def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_st
             elif win_shape == 'rect':
                 win = np.abs(bin_centers - win_center) < (win_sigma_um / 2.)
                 win = win.astype('float64')
+            elif win_shape == 'triangle':
+                win = np.abs(bin_centers - win_center)
+                win[win > (win_sigma_um / 2.)] = 0
+                win = -win
+                win -= win.min()
+                win /= win.max()
 
             non_rigid_windows.append(win)
 
@@ -645,6 +651,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
             motion_hist_engine = torch.as_tensor(motion_hist, dtype=torch.float32, device=torch_device)
 
         if time_horizon_s is not None and time_horizon_s > 0:
+            #TODO: if using torch, we need to speed this up.
             pairwise_displacement = sparse.dok_matrix((size, size), dtype=np.float32)
             correlation = sparse.dok_matrix((size, size), dtype=motion_hist.dtype)
 
