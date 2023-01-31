@@ -623,6 +623,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
     Compute pairwise displacement
     """
     from scipy import sparse
+    from scipy import linalg
     assert conv_engine in ("torch", "numpy")
     size = motion_hist.shape[0]
     pairwise_displacement = np.zeros((size, size), dtype='float32')
@@ -651,8 +652,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
         if conv_engine == "torch":
             motion_hist_engine = torch.as_tensor(motion_hist, dtype=torch.float32, device=torch_device)
 
-        if time_horizon_s is not None and time_horizon_s > 0:
-            #TODO: if using torch, we need to speed this up.
+        if conv_engine == "numpy" and time_horizon_s is not None and time_horizon_s > 0:
             pairwise_displacement = sparse.dok_matrix((size, size), dtype=np.float32)
             correlation = sparse.dok_matrix((size, size), dtype=motion_hist.dtype)
 
@@ -740,6 +740,19 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
         pairwise_displacement_weight = correlation
     elif weight_scale == 'exp':
         pairwise_displacement_weight = np.exp((correlation - 1) / error_sigma)
+
+    # In torch case, handle the time horizon by multiplying the weights by a
+    # matrix with the time horizon on its diagonal bands.
+    if (
+        conv_engine == "torch" and method == "conv"
+        and time_horizon_s is not None and time_horizon_s > 0
+    ):
+        horizon_matrix = linalg.toeplitz(
+            np.r_[
+                np.ones(band_width, dtype=bool), np.zeros(size - band_width, dtype=bool)
+            ]
+        )
+        pairwise_displacement_weight *= horizon_matrix
 
     return pairwise_displacement, pairwise_displacement_weight
 
