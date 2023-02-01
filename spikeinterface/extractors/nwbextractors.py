@@ -137,7 +137,9 @@ class NwbRecordingExtractor(BaseRecording):
             self.io = NWBHDF5IO(file=f, mode='r', load_namespaces=True)
         
         elif stream_mode == "ros3":
-            assert self.stream_cache_path is None, "'stream_cache_path' is only used with 'fsspec' stream_mode"
+            drivers = h5py.registered_drivers()
+            assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
+            assert "ros3" in drivers, assertion_msg
             self._file_path = str(file_path)
             self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True, driver="ros3")
 
