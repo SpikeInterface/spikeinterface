@@ -11,7 +11,7 @@ from spikeinterface.qualitymetrics import calculate_pc_metrics
 from spikeinterface.postprocessing import compute_principal_components, compute_spike_locations, compute_spike_amplitudes
 
 from spikeinterface.qualitymetrics import (mahalanobis_metrics, lda_metrics, nearest_neighbors_metrics, 
-        compute_amplitude_cutoffs, compute_presence_ratio, compute_isi_violations, compute_firing_rate, 
+        compute_amplitude_cutoffs, compute_presence_ratios, compute_isi_violations, compute_firing_rates, 
         compute_num_spikes, compute_snrs, compute_refrac_period_violations, compute_sliding_rp_violations,
         compute_drift_metrics, compute_amplitude_medians)
 
@@ -128,7 +128,7 @@ def test_calculate_firing_rate_num_spikes(simulated_data):
     num_spikes_gt = {0: 1001,  1: 503,  2: 509}
 
     we = setup_dataset(simulated_data)
-    firing_rates = compute_firing_rate(we)
+    firing_rates = compute_firing_rates(we)
     num_spikes = compute_num_spikes(we)
 
     assert np.allclose(list(firing_rates_gt.values()), list(firing_rates.values()), rtol=0.05)
@@ -163,7 +163,7 @@ def test_calculate_snrs(simulated_data):
 def test_calculate_presence_ratio(simulated_data):
     ratios_gt = {0: 1.0, 1: 1.0, 2: 1.0}
     we = setup_dataset(simulated_data)
-    ratios = compute_presence_ratio(we, bin_duration_s=10)
+    ratios = compute_presence_ratios(we, bin_duration_s=10)
     print(ratios)
     np.testing.assert_array_equal(list(ratios_gt.values()), list(ratios.values()))
 
@@ -178,6 +178,15 @@ def test_calculate_isi_violations(simulated_data):
     assert np.allclose(list(isi_viol_gt.values()), list(isi_viol.values()), rtol=0.05)
     np.testing.assert_array_equal(list(counts_gt.values()), list(counts.values()))
 
+
+def test_calculate_sliding_rp_violations(simulated_data):
+    contaminations_gt = {0: 0.10534956502609294, 1: 1.0, 2: 1.0}
+    counts_gt = {0: 2, 1: 4, 2: 10}
+    we = setup_dataset(simulated_data)
+    contaminations = compute_sliding_rp_violations(we, 1, 0.0)
+
+    print(contaminations)
+    assert np.allclose(list(contaminations_gt.values()), list(contaminations_gt.values()), rtol=0.05)
 
 def test_calculate_rp_violations(simulated_data):
     rp_contamination_gt = {0: 0.10534956502609294, 1: 1.0, 2: 1.0}
@@ -212,5 +221,5 @@ if __name__ == '__main__':
     # test_calculate_presence_ratio(sim_data)
     # test_calculate_amplitude_median(sim_data)
     # test_calculate_isi_violations(sim_data)
-    # test_calculate_rp_violations(sim_data)
+    test_calculate_sliding_rp_violations(sim_data)
     test_calculate_drift_metrics(sim_data)
