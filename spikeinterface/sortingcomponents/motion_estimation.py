@@ -674,7 +674,9 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
     pairwise_displacement = np.zeros((size, size), dtype='float32')
 
     if time_horizon_s is not None:
-        band_width = min(size, int(np.ceil(time_horizon_s / bin_duration_s)))
+        band_width = int(np.ceil(time_horizon_s / bin_duration_s))
+        if band_width >= size:
+            time_horizon_s = None
 
     if conv_engine == 'torch':
         import torch
@@ -699,60 +701,32 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
             motion_hist_engine = torch.as_tensor(motion_hist, dtype=torch.float32, device=torch_device)
             window_engine = torch.as_tensor(window, dtype=torch.float32, device=torch_device)
 
-        if conv_engine == "numpy" and time_horizon_s is not None and time_horizon_s > 0:
-            pairwise_displacement = sparse.dok_matrix((size, size), dtype=np.float32)
-            correlation = sparse.dok_matrix((size, size), dtype=motion_hist.dtype)
+        pairwise_displacement = np.empty((size, size), dtype=np.float32)
+        correlation = np.empty((size, size), dtype=motion_hist.dtype)
 
-            for i in xrange(size):
-                hist_i = motion_hist_engine[None, i]
-                pairwise_displacement[i, i] = 0
-                correlation[i, i] = 1
-                j_max = size if time_horizon_s is None else min(size, i + band_width)
-                for j in range(i + 1, j_max):
-                    corr = normxcorr1d(
-                        hist_i,
-                        motion_hist_engine[None, j],
-                        weights=window_engine,
-                        padding=possible_displacement.size // 2,
-                        conv_engine=conv_engine,
-                    )
-                    ind_max = np.argmax(corr, axis=2)
-                    max_corr = corr[0, 0, ind_max]
-                    if max_corr > corr_threshold:
-                        pairwise_displacement[i, j] = -possible_displacement[ind_max]
-                        pairwise_displacement[j, i] = possible_displacement[ind_max]
-                        correlation[i, j] = correlation[j, i] = max_corr
+        for i in xrange(0, size, batch_size):
+            corr = normxcorr1d(
+                motion_hist_engine,
+                motion_hist_engine[i : i + batch_size],
+                weights=window_engine,
+                padding=possible_displacement.size // 2,
+                conv_engine=conv_engine,
+            )
+            if conv_engine == "torch":
+                max_corr, best_disp_inds = torch.max(corr, dim=2)
+                best_disp = possible_displacement[best_disp_inds.cpu()]
+                pairwise_displacement[i : i + batch_size] = best_disp
+                correlation[i : i + batch_size] = max_corr.cpu()
+            elif conv_engine == "numpy":
+                best_disp_inds = np.argmax(corr, axis=2)
+                max_corr = np.take_along_axis(corr, best_disp_inds[..., None], 2).squeeze()
+                best_disp = possible_displacement[best_disp_inds]
+                pairwise_displacement[i : i + batch_size] = best_disp
+                correlation[i : i + batch_size] = max_corr
 
-            pairwise_displacement = pairwise_displacement.tocsr()
-            correlation = correlation.tocsr()
-
-        else:
-            pairwise_displacement = np.empty((size, size), dtype=np.float32)
-            correlation = np.empty((size, size), dtype=motion_hist.dtype)
-
-            for i in xrange(0, size, batch_size):
-                corr = normxcorr1d(
-                    motion_hist_engine,
-                    motion_hist_engine[i : i + batch_size],
-                    weights=window_engine,
-                    padding=possible_displacement.size // 2,
-                    conv_engine=conv_engine,
-                )
-                if conv_engine == "torch":
-                    max_corr, best_disp_inds = torch.max(corr, dim=2)
-                    best_disp = possible_displacement[best_disp_inds.cpu()]
-                    pairwise_displacement[i : i + batch_size] = best_disp
-                    correlation[i : i + batch_size] = max_corr.cpu()
-                elif conv_engine == "numpy":
-                    best_disp_inds = np.argmax(corr, axis=2)
-                    max_corr = np.take_along_axis(corr, best_disp_inds[..., None], 2).squeeze()
-                    best_disp = possible_displacement[best_disp_inds]
-                    pairwise_displacement[i : i + batch_size] = best_disp
-                    correlation[i : i + batch_size] = max_corr
-
-            if corr_threshold > 0:
-                which = correlation > corr_threshold
-                correlation *= which
+        if corr_threshold > 0:
+            which = correlation > corr_threshold
+            correlation *= which
 
     elif method == 'phase_cross_correlation':
         # this 'phase_cross_correlation' is an old idea from Julien/Charlie/Erden that is kept for testing
@@ -783,10 +757,10 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
     elif weight_scale == 'exp':
         pairwise_displacement_weight = np.exp((correlation - 1) / error_sigma)
 
-    # In torch case, handle the time horizon by multiplying the weights by a
+    # handle the time horizon by multiplying the weights by a
     # matrix with the time horizon on its diagonal bands.
     if (
-        conv_engine == "torch" and method == "conv"
+        method == "conv"
         and time_horizon_s is not None and time_horizon_s > 0
     ):
         horizon_matrix = linalg.toeplitz(
@@ -795,6 +769,13 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
             ]
         )
         pairwise_displacement_weight *= horizon_matrix
+    
+    if time_horizon_s is not None:
+        print("-" * 20)
+        print(f"{conv_engine=}")
+        print(f"{band_width=} {size=}")
+        print(f"{np.ones(band_width, dtype=bool).size=} {np.zeros(size - band_width, dtype=bool).size=}")
+        print(f"{pairwise_displacement_weight.nonzero()[0].shape=}")
 
     return pairwise_displacement, pairwise_displacement_weight
 
