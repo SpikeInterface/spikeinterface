@@ -311,7 +311,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=50, fe
         Sign of the template to compute best channels ('neg', 'pos', 'both')
     num_channels: int
         Number of channels used to compute COM
-    feature: str ['ptp', 'mean', 'energy', 'v_origin']
+    feature: str ['ptp', 'mean', 'energy', 'v_peak']
         Feature to consider for computation. Default is 'ptp'
 
     Returns
@@ -339,7 +339,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=50, fe
             wf_data = (wf[:, chan_inds]).mean(axis=0)
         elif feature == 'energy':
             wf_data = np.linalg.norm(wf[:, chan_inds], axis=0)
-        elif feature == 'v_origin':
+        elif feature == 'v_peak':
             wf_data = wf[waveform_extractor.nbefore, chan_inds]
 
         # center of mass

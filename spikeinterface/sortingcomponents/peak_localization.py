@@ -14,7 +14,7 @@ from ..postprocessing.unit_localization import (dtype_localize_by_method,
                                                 enforce_decrease_shells_ptp)
 
 
-def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.3, ms_after=.5, **kwargs):
+def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.5, ms_after=.5, **kwargs):
     """Localize peak (spike) in 2D or 3D depending the method.
 
     When a probe is 2D then:
@@ -108,11 +108,11 @@ class LocalizeCenterOfMass(LocalizeBase):
     params_doc = """
     local_radius_um: float
         Radius in um for channel sparsity.
-    feature: str ['ptp', 'mean', 'energy', 'v_origin']
+    feature: str ['ptp', 'mean', 'energy', 'v_peak']
         Feature to consider for computation. Default is 'ptp'
     """
 
-    def __init__(self, recording, name='center_of_mass', return_ouput=True, parents=['extract_waveforms'], local_radius_um=50..):
+    def __init__(self, recording, name='center_of_mass', return_ouput=True, parents=['extract_waveforms'], local_radius_um=50., feature='ptp'):
         LocalizeBase.__init__(self, recording, name=name, return_ouput=return_ouput, parents=parents, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
         self.feature = feature
@@ -135,8 +135,9 @@ class LocalizeCenterOfMass(LocalizeBase):
                 wf_data = (waveforms[idx][:, :, chan_inds]).mean(axis=1)
             elif self.feature == 'energy':
                 wf_data = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
-            elif self.feature == 'v_origin':
-                wf_data = waveforms[idx][:, self.nbefore, chan_inds]
+            elif self.feature == 'v_peak':
+                nbefore = waveforms[idx].shape[1] // 2
+                wf_data = waveforms[idx][:, nbefore, chan_inds]
 
             coms = np.dot(wf_data, local_contact_locations)/(np.sum(wf_data, axis=1)[:,np.newaxis])
             peak_locations['x'][idx] = coms[:, 0]
