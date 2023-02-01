@@ -650,8 +650,10 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
         xrange = trange if progress_bar else range
 
         motion_hist_engine = motion_hist
+        wndow_engine = window
         if conv_engine == "torch":
             motion_hist_engine = torch.as_tensor(motion_hist, dtype=torch.float32, device=torch_device)
+            window_engine = torch.as_tensor(window, dtype=torch.float32, device=torch_device)
 
         if conv_engine == "numpy" and time_horizon_s is not None and time_horizon_s > 0:
             pairwise_displacement = sparse.dok_matrix((size, size), dtype=np.float32)
@@ -666,7 +668,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                     corr = normxcorr1d(
                         hist_i,
                         motion_hist_engine[None, j],
-                        weights=window,
+                        weights=window_engine,
                         padding=possible_displacement.size // 2,
                         conv_engine=conv_engine,
                     )
@@ -693,7 +695,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                 corr = normxcorr1d(
                     motion_hist_engine,
                     motion_hist_engine[i : i + batch_size],
-                    weights=window,
+                    weights=window_engine,
                     padding=possible_displacement.size // 2,
                     conv_engine=conv_engine,
                 )
