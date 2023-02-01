@@ -1,9 +1,15 @@
+from pathlib import Path
+
 import pytest
 import numpy as np
 import h5py
 
 from spikeinterface.extractors import NwbRecordingExtractor
 
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "extractors"
+else:
+    cache_folder = Path("cache_folder") / "extractors"
 
 @pytest.mark.skipif("ros3" not in h5py.registered_drivers(), reason="ROS3 driver not installed")
 def test_s3_nwb_ros3():
@@ -33,7 +39,7 @@ def test_s3_nwb_ros3():
 
 def test_s3_nwb_fsspec():
     file_path = "https://dandi-api-staging-dandisets.s3.amazonaws.com/blobs/5f4/b7a/5f4b7a1f-7b95-4ad8-9579-4df6025371cc"
-    rec = NwbRecordingExtractor(file_path, stream_mode="fsspec")
+    rec = NwbRecordingExtractor(file_path, stream_mode="fsspec", stream_cache_path=cache_folder)
     
     start_frame = 0
     end_frame = 300
