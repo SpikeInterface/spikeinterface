@@ -214,7 +214,7 @@ class DecentralizedRegistration:
             error_sigma=0.2, conv_engine='numpy', torch_device=None, batch_size=1,
             corr_threshold=0, time_horizon_s=None, convergence_method='lsmr',
             temporal_prior=True, spatial_prior=True, reference_displacement="median",
-            robust_regression_sigma=2, lsqr_robust_n_iter=20):
+            reference_displacement_time=0, robust_regression_sigma=2, lsqr_robust_n_iter=20):
 
         # make 2D histogram raster
         if verbose:
@@ -311,6 +311,10 @@ class DecentralizedRegistration:
             motion -= motion.mean()
         elif reference_displacement == "median":
             motion -= np.median(motion)
+        elif reference_displacement == "time":
+            # reference the motion to 0 at a specific time, independently in each window
+            reference_displacement_bin = np.digitize(reference_displacement_time, temporal_hist_bin_edges) - 1
+            motion -= motion[reference_displacement_bin, :]
         elif reference_displacement == "mode_search":
             # just a sketch of an idea
             # things might want to change, should have a configurable bin size,
