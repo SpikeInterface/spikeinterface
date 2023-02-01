@@ -15,6 +15,9 @@ jobs:
         python-version: ["3.9"]
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
       - run: git fetch --prune --unshallow --tags
       - name: Install pytest
         run: |
