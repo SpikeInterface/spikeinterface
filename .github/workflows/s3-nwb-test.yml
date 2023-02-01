@@ -24,9 +24,10 @@ jobs:
       - run: git fetch --prune --unshallow --tags
       - name: Install pytest
         run: |
-          pwd
+          python -m pip install -U pip  # Official recommended way
+          git config --global user.email "CI@example.com"
+          git config --global user.name "CI Almighty"
           pip install pytest
-          pip install pytest-cov
       - name: Install package
         run: |
           pip install -e .
