@@ -30,6 +30,8 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     rec_name: str, optional
         When the file contains several recordings you need to specify the one
         you want to extract. (rec_name='rec0000').
+    install_maxwell_plugin: bool, optional, default: False
+        If True, install the maxwell plugin for neo.
     """
     mode = 'file'
     NeoRawIOClass = 'MaxwellRawIO'
@@ -37,7 +39,10 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     has_default_locations = True
 
     def __init__(self, file_path, stream_id=None, stream_name=None, block_index=None, 
-                 all_annotations=False, rec_name=None):
+                 all_annotations=False, rec_name=None, install_maxwell_plugin=False):
+        if install_maxwell_plugin:
+            self.install_maxwell_plugin()
+        
         neo_kwargs = self.map_to_neo_kwargs(file_path, rec_name)
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
                                            stream_name=stream_name,
@@ -60,6 +65,10 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     def map_to_neo_kwargs(cls, file_path, rec_name=None):
         neo_kwargs = {'filename': str(file_path), 'rec_name': rec_name}
         return neo_kwargs
+
+    def install_maxwell_plugin(self, force_download=False):
+        from neo.rawio.maxwellrawio import auto_install_maxwell_hdf5_compression_plugin
+        auto_install_maxwell_hdf5_compression_plugin(force_download=False)
 
 _maxwell_event_dtype = np.dtype([("frame", "int64"), ("state", "int8"), ("time", "float64")])
 

@@ -220,13 +220,8 @@ class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         'maxwell/MaxOne_data/Record/000011/data.raw.h5',
         ('maxwell/MaxTwo_data/Network/000028/data.raw.h5',
-         {'stream_id': 'well000', 'rec_name': 'rec0000'})
+         {'stream_id': 'well000', 'rec_name': 'rec0000', 'install_maxwell_plugin': True})
     ]
-
-    def setUp(self):
-        from neo.rawio.maxwellrawio import auto_install_maxwell_hdf5_compression_plugin
-        auto_install_maxwell_hdf5_compression_plugin()
-        return super().setUp()
 
 
 class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
