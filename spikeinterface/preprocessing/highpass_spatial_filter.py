@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.signal
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from ..core import order_channels_by_depth
+from ..core import order_channels_by_depth, get_chunk_with_margin
 from ..core.core_tools import define_function_from_class
 
 
@@ -37,24 +37,14 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
         Otherwise, the passed value will be used, by default None
     direction : str
         The direction in which the spatial filter is applied, by default "y"
-    agc : bool
-        True / False
+    apply_agc : bool
+        It True, Automatic Gain Control is applied, by default True
     agc_window_length_s : float
-        0.01
-    highpass_butter_order : int (3)
-
+        Window in seconds to compute Hanning window for AGC, by default 0.01
+    highpass_butter_order : int
+        Order of spatial butterworth filter, by default 3
     highpass_butter_wn : float
-        0.01
-    agc_options: dict, str, or None
-        Options for automatic gain control. By default, gain control
-        is applied prior to filtering to improve filter performance.
-        When the argument is "ibl", the function will use the IBL pipeline defaults (agc on).
-        Setting to None will turn off gain control, by default None.
-        To customize, pass a dictionary with the fields:
-            * agc_options["window_length_s"] - window length in seconds (default 300 / sampling_frequency)
-    butter_kwargs: dict
-        Dictionary with fields "N" and "Wn" to be passed to
-        scipy.signal.butter, by default N=3 and Wn=0.01
+        Critical frequency (with respect to Nyquist) of spatial butterworth filter, by default 0.01
 
     Returns
     -------
@@ -71,7 +61,8 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
     name = 'highpass_spatial_filter'
 
     def __init__(self, recording, n_channel_pad=None, n_channel_taper=5, direction="y",
-                 agc_options=None, butter_kwargs=None):
+                 apply_agc=True, agc_window_length_s=0.01, highpass_butter_order=3,
+                 highpass_butter_wn=0.01):
         BasePreprocessor.__init__(self, recording)
 
         # Check single group
@@ -102,35 +93,25 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
             "'n_channel_taper' must be less than the number of channels in recording."
 
         # Fix Automatic Gain Control options
-        if agc_options is not None:
-            assert isinstance(agc_options, (str, dict)), \
-                f"agc_options can be 'ibl', a dictionary, or None, not {type(agc_options)}"
-            sampling_interval = 1 / recording.sampling_frequency
-            if isinstance(agc_options, str):
-                assert agc_options == "ibl", "agc_options can be 'ibl', a dictionary, or None"
-                # default IBL value is 300 * sampling_interval
-                default_window_length = 300 * sampling_interval 
-                agc_options = {"window_length_s": default_window_length,
-                               "sampling_interval": sampling_interval}
-            elif isinstance(agc_options, dict):
-                assert "window_length_s" in agc_options, \
-                    "The agc_options dict must contain both the 'window_length_s' field"
-                agc_options["sampling_interval"] = sampling_interval
+        sampling_interval = 1 / recording.sampling_frequency
+        if not apply_agc:
+            agc_window_length_s = None
 
         # Pre-compute spatial filtering parameters
-        butter_kwargs_default = {'btype': 'highpass', 'N': 3, 'Wn': 0.01}
-        if butter_kwargs is not None:
-            assert all(k in ("N", "Wn") for k in butter_kwargs), \
-                "butter_kwargs can only specify filter order 'N' and critical frequency 'Wn' (1 is Nyquist)"
-            butter_kwargs_default.update(butter_kwargs)
-        sos_filter = scipy.signal.butter(**butter_kwargs_default, output='sos')
+        butter_kwargs = dict(
+            btype='highpass',
+            N=highpass_butter_order,
+            Wn=highpass_butter_wn
+        )
+        sos_filter = scipy.signal.butter(**butter_kwargs, output='sos')
 
         for parent_segment in recording._recording_segments:
             rec_segment = HighPassSpatialFilterSegment(parent_segment,
                                                        n_channel_pad,
                                                        n_channel_taper,
                                                        n_channels,
-                                                       agc_options,
+                                                       agc_window_length_s,
+                                                       sampling_interval,
                                                        sos_filter,
                                                        order_f,
                                                        order_r)
@@ -140,13 +121,15 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
                             n_channel_pad=n_channel_pad,
                             n_channel_taper=n_channel_taper,
                             direction=direction,
-                            agc_options=agc_options,
-                            butter_kwargs=butter_kwargs)
+                            apply_agc=apply_agc,
+                            agc_window_length_s=agc_window_length_s,
+                            highpass_butter_order=highpass_butter_order,
+                            highpass_butter_wn=highpass_butter_wn)
 
 
 class HighPassSpatialFilterSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment, n_channel_pad, n_channel_taper,
-                 n_channels, agc_options, sos_filter, order_f, order_r):
+                 n_channels, agc_window_length_s, sampling_interval, sos_filter, order_f, order_r):
         self.parent_recording_segment = parent_recording_segment
         self.n_channel_pad = n_channel_pad
         if n_channel_taper > 0:
@@ -155,7 +138,13 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
             self.taper *= 1 - fcn_cosine([num_channels_padded - n_channel_taper, num_channels_padded])(np.arange(num_channels_padded))   # taper down
         else:
             self.taper = None
-        self.agc_options = agc_options
+        if agc_window_length_s is not None:
+            num_samples_window = int(np.round(agc_window_length_s / sampling_interval / 2) * 2 + 1)
+            window = np.hanning(num_samples_window)
+            window /= np.sum(window)
+            self.window = window
+        else:
+            self.window = None
         self.order_f = order_f
         self.order_r = order_r
         # get filter params
@@ -164,10 +153,13 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices):
         if channel_indices is None:
             channel_indices = slice(None)
-        traces = self.parent_recording_segment.get_traces(start_frame,
-                                                          end_frame,
-                                                          slice(None))
-
+        if self.window is not None:
+            margin = len(self.window) // 2
+        else:
+            margin = 0
+        traces, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment,
+                                                                  start_frame=start_frame, end_frame=end_frame,
+                                                                  channel_indices=slice(None), margin=margin)
         # apply sorting by depth
         if self.order_f is not None:
             traces = traces[:, self.order_f]
@@ -175,12 +167,10 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
             traces = traces.copy()
 
         # apply AGC and keep the gains
-        if not self.agc_options:
-            agc_gains = None
+        if self.window is not None:
+            traces, agc_gains = agc(traces, window=self.window)
         else:
-            traces, agc_gains = agc(traces,
-                                    window_length=self.agc_options["window_length_s"],
-                                    sampling_interval=self.agc_options["sampling_interval"])
+            agc_gains = None
         # pad the array with a mirrored version of itself and apply a cosine taper
         if self.n_channel_pad > 0:
             traces = np.c_[np.fliplr(traces[:, :self.n_channel_pad]),
@@ -201,86 +191,26 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         if agc_gains is not None:
             traces = traces * agc_gains
 
-        # reverse sorting by depth, if needed
+        # reverse sorting by depth
         if self.order_r is not None:
             traces = traces[:, self.order_r]
-
-        return traces[:, channel_indices]
+        # remove margin and slice channels
+        if right_margin > 0:
+            traces = traces[left_margin:-right_margin, channel_indices]
+        else:
+            traces = traces[left_margin:, channel_indices]
+        return traces
 
 # function for API
 highpass_spatial_filter = define_function_from_class(source_class=HighpassSpatialFilterRecording,
                                                      name="highpass_spatial_filter")
 
-# # -----------------------------------------------------------------------------------------------
-# # IBL KFilt Function
-# # -----------------------------------------------------------------------------------------------
-
-# def kfilt(traces, n_channel_pad, taper, agc_options, sos_filter):
-#     """
-#     Alternative to median filtering across channels, in which the cut-band is
-#     extended from 0 to the 0.01 Nyquist corner frequency using butterworth filter.
-#     This allows removal of contaminating stripes that are not constant across channels.
-
-#     Performs filtering on the 0 axis (across channels), with optional
-#     padding (mirrored) and tapering (cosine taper) prior to filtering.
-#     Applies a butterworth filter on the 0-axis with tapering / padding.
-
-#     Details of the high-pass spatial filter function (written by Olivier Winter)
-#     used in the IBL pipeline can be found at:
-
-#     International Brain Laboratory et al. (2022). Spike sorting pipeline for the
-#     International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
-
-#     traces: (num_channels x num_samples) numpy array
-
-#     Parameters
-#     ----------
-#     traces : 2D np.array
-#         (num_channels x num_samples) numpy array with the signals
-#     n_channel_pad : int
-#         Number of channels to pad
-#     n_channel_taper : int
-#         Number of channels to taper
-#     agc_options : dict
-#         Automatic Gain Control options
-#     sos_filter : sos filter
-#         Butterworth filter in second-order sections format
-
-#     Returns
-#     -------
-#     traces_kfilt : 2D np.array
-#         The spatially filtered traces
-#     """
-#     # apply agc and keep the gain in handy
-#     if not agc_options:
-#         gain = 1
-#     else:
-#         # pr-compute gains?
-#         traces, gain = agc(traces,
-#                            window_length=agc_options["window_length_s"],
-#                            sampling_interval=agc_options["sampling_interval"])
-
-#     if n_channel_pad > 0:
-#         # pad the array with a mirrored version of itself and apply a cosine taper
-#         traces = np.c_[np.fliplr(traces[:, :n_channel_pad]),
-#                        traces,
-#                        np.fliplr(traces[:, -n_channel_pad:])]
-
-#     if taper is not None:
-#         traces = traces * taper[np.newaxis, :]
-
-#     traces = scipy.signal.sosfiltfilt(sos_filter, traces, axis=1)
-
-#     if n_channel_pad > 0:
-#         traces = traces[:, n_channel_pad:-n_channel_pad]
-
-#     return traces * gain
 
 # -----------------------------------------------------------------------------------------------
 # IBL Helper Functions
 # -----------------------------------------------------------------------------------------------
 
-def agc(traces, window_length, sampling_interval, epsilon=1e-8):
+def agc(traces, window, epsilon=1e-8):
     """
     Automatic gain control
     w_agc, gain = agc(w, window_length=.5, si=.002, epsilon=1e-8)
@@ -291,10 +221,6 @@ def agc(traces, window_length, sampling_interval, epsilon=1e-8):
     :param epsilon: whitening (useful mainly for synthetic data)
     :return: AGC data array, gain applied to data
     """
-    num_samples_window = int(np.round(window_length / sampling_interval / 2) * 2 + 1)
-    window = np.hanning(num_samples_window)
-    window /= np.sum(window)
-
     gain = scipy.signal.fftconvolve(np.abs(traces), window[:, None], mode='same', axes=0)
 
     gain += (np.sum(gain, axis=0) * epsilon / traces.shape[0])[np.newaxis, :]

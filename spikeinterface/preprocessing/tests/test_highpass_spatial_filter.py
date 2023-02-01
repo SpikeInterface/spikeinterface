@@ -29,7 +29,7 @@ if DEBUG:
 # ----------------------------------------------------------------------------------------------------------------------
 
 @pytest.mark.skipif(not HAVE_IBL_NPIX or ON_GITHUB, reason="Only local. Requires ibl-neuropixel install")
-@pytest.mark.parametrize("lagc", ["ibl", None, 1, 150])
+@pytest.mark.parametrize("lagc", [False, 1, 300])
 def test_highpass_spatial_filter_real_data(lagc):
     """
     Test highpass spatial filter IBL vs. SI implimentations. Download
@@ -58,8 +58,8 @@ def test_highpass_spatial_filter_real_data(lagc):
 
     ibl_data, si_recording = get_ibl_si_data()
 
-    si_filtered, __ = run_si_highpass_filter(si_recording,
-                                             **options)
+    si_filtered, _ = run_si_highpass_filter(si_recording,
+                                            **options)
 
     ibl_filtered = run_ibl_highpass_filter(ibl_data.copy(),
                                            **options)
@@ -83,7 +83,7 @@ def test_highpass_spatial_filter_real_data(lagc):
 
 @pytest.mark.parametrize("ntr_pad", [None, 0, 31])
 @pytest.mark.parametrize("ntr_tap", [None, 5])
-@pytest.mark.parametrize("lagc", ["ibl", None, 1232])
+@pytest.mark.parametrize("lagc", [False, 300, 1232])
 @pytest.mark.parametrize("butter_kwargs", [None, {'N': 5, 'Wn': 0.12}])
 @pytest.mark.parametrize("num_channels", [32, 64])
 def test_highpass_spatial_filter_synthetic_data(num_channels, ntr_pad, ntr_tap, lagc, butter_kwargs):
@@ -91,10 +91,9 @@ def test_highpass_spatial_filter_synthetic_data(num_channels, ntr_pad, ntr_tap, 
     Generate a short recording, run it through SI and IBL version, check outputs match. Used to
     check many combinations of possible inputs.
     """
-    num_segments = 2
     options = dict(lagc=lagc, ntr_pad=ntr_pad, ntr_tap=ntr_tap, butter_kwargs=butter_kwargs)
 
-    durations = [0.5, 0.8]
+    durations = [2, 2]
     rng = np.random.RandomState(seed=100)
     si_recording = generate_recording(num_channels=num_channels,
                                       durations=durations)
@@ -102,9 +101,17 @@ def test_highpass_spatial_filter_synthetic_data(num_channels, ntr_pad, ntr_tap, 
     _, si_highpass_spatial_filter = run_si_highpass_filter(si_recording,
                                                            get_traces=False,
                                                            **options)
+    frames = [(0, 500), (30000, 33000), (57000, 60000)]
     # only test trace retrieval here
     for seg in range(si_recording.get_num_segments()):
-        si_filtered = si_highpass_spatial_filter.get_traces(segment_index=seg)
+        for frame in frames:
+            raw_traces = si_recording.get_traces(segment_index=seg,
+                                                 start_frame=frame[0],
+                                                 end_frame=frame[1])
+            si_filtered = si_highpass_spatial_filter.get_traces(segment_index=seg,
+                                                                start_frame=frame[0],
+                                                                end_frame=frame[1])
+            assert raw_traces.shape == si_filtered.shape
 
 
 
@@ -128,15 +135,21 @@ def get_ibl_si_data():
 
 def process_args_for_si(si_recording, lagc):
     """"""
-    if isinstance(lagc, int):
-        ts = 1 / si_recording.get_sampling_frequency()
-        window_s = lagc * ts
-        si_lagc = {"window_length_s": window_s,
-                   "sampling_interval": ts}
+    if isinstance(lagc, bool) and not lagc:
+        agc_window_length_s = None
+        apply_agc = False
     else:
-        si_lagc = lagc
+        assert lagc > 0
+        ts = 1 / si_recording.sampling_frequency
+        window_s = lagc * ts
+        agc_window_length_s = window_s
+        apply_agc = True
+    si_agc_params = {
+        'apply_agc': apply_agc,
+        'agc_window_length_s': agc_window_length_s
+    }
 
-    return si_lagc
+    return si_agc_params
 
 
 def process_args_for_ibl(butter_kwargs, ntr_pad, lagc):
@@ -150,8 +163,7 @@ def process_args_for_ibl(butter_kwargs, ntr_pad, lagc):
 
     if ntr_pad is None:
         ntr_pad = 0
-    if lagc == "ibl":
-        lagc = 300
+
     if lagc in [None, False]:
         lagc = 0
 
@@ -161,12 +173,20 @@ def process_args_for_ibl(butter_kwargs, ntr_pad, lagc):
 def run_si_highpass_filter(si_recording, ntr_pad, ntr_tap, lagc, butter_kwargs, get_traces=True):
     """"""
     si_lagc = process_args_for_si(si_recording, lagc)
+    if butter_kwargs is not None:
+        highpass_butter_order = butter_kwargs["N"]
+        highpass_butter_wn = butter_kwargs["Wn"]
+        butter_kwargs = dict(
+            highpass_butter_order=highpass_butter_order,
+            highpass_butter_wn=highpass_butter_wn
+        )
+    else:
+        butter_kwargs = {}
 
     si_highpass_spatial_filter = spre.highpass_spatial_filter(si_recording,
                                                               n_channel_pad=ntr_pad,
                                                               n_channel_taper=ntr_tap,
-                                                              agc_options=si_lagc,
-                                                              butter_kwargs=butter_kwargs)
+                                                              **si_lagc, **butter_kwargs)
 
     if get_traces:
         si_filtered = si_highpass_spatial_filter.get_traces(return_scaled=True)
@@ -188,5 +208,5 @@ def run_ibl_highpass_filter(ibl_data, ntr_pad, ntr_tap, lagc, butter_kwargs):
 
 
 if __name__ == '__main__':
-    test_highpass_spatial_filter_real_data(lagc="ibl")
+    test_highpass_spatial_filter_real_data(lagc=False)
     test_highpass_spatial_filter_synthetic_data(64, None, None, 1232, None)
