@@ -88,7 +88,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
                 # need slice because not all channel are saved
                 chans = pi.get_saved_channel_indices_from_spikeglx_meta(meta_filename)
                 # lets clip to 384 because this contains also the synchro channel
-                chans = chans[meta_filename<total_channels]
+                chans = chans[chans<total_channels]
                 sample_shifts = sample_shifts[chans]
             
             self.set_property("inter_sample_shift", sample_shifts)
