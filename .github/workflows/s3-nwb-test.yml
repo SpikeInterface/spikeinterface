@@ -29,7 +29,9 @@ jobs:
       - name: Uninstall h5py
         run: pip uninstall -y h5py
       - name: Install ROS3
-        run: conda install -c conda-forge h5py
+        run: |
+          pip install conda
+          conda install -c conda-forge h5py
       - name: Install fsspec, aiohttp and requests
         run: pip install fsspec aiohttp requests
       - name: run tests
