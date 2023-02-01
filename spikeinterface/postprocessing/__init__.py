@@ -35,3 +35,5 @@ from .unit_localization import (compute_unit_locations, UnitLocationsCalculator,
                                 localize_units, compute_center_of_mass)
 
 from .alignsorting import align_sorting, AlignSortingExtractor
+
+from .noise_level import compute_noise_levels, NoiseLevelsCalculator

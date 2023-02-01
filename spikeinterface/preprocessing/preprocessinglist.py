@@ -23,6 +23,7 @@ from .zero_channel_pad import ZeroChannelPaddedRecording, zero_channel_pad
 # not importing deepinterpolation by default
 from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate
 from .highpass_spatial_filter import HighpassSpatialFilterRecording, highpass_spatial_filter
+from .interpolate_bad_channels import InterpolateBadChannelsRecording, interpolate_bad_channels
 
 preprocessers_full_list = [
     # filter stuff
@@ -55,6 +56,7 @@ preprocessers_full_list = [
     DeepInterpolatedRecording,
     ResampleRecording,
     HighpassSpatialFilterRecording,
+    InterpolateBadChannelsRecording
 ]
 
 installed_preprocessers_list = [pp for pp in preprocessers_full_list if pp.installed]
