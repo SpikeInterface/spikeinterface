@@ -33,8 +33,8 @@ _misc_metric_name_to_func = {
     "presence_ratio" : compute_presence_ratios,
     "snr" : compute_snrs,
     "isi_violation" : compute_isi_violations,
-    "rp_violations" : compute_refrac_period_violations,
-    "sliding_rp_violations" : compute_sliding_rp_violations,
+    "rp_violation" : compute_refrac_period_violations,
+    "sliding_rp_violation" : compute_sliding_rp_violations,
     "amplitude_cutoff" : compute_amplitude_cutoffs,
     "amplitude_median" : compute_amplitude_medians,
     "drift" : compute_drift_metrics

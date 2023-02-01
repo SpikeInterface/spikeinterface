@@ -61,9 +61,6 @@ def compute_num_spikes(waveform_extractor, **kwargs):
     return num_spikes
 
 
-_default_params["num_spikes"] = dict()
-
-
 def compute_firing_rates(waveform_extractor):
     """Compute the firing rate across segments.
 
@@ -92,9 +89,6 @@ def compute_firing_rates(waveform_extractor):
     for unit_id in unit_ids:
         firing_rates[unit_id] = num_spikes[unit_id]/total_duration
     return firing_rates
-
-
-_default_params["firing_rate"] = dict()
 
 
 def compute_presence_ratios(waveform_extractor, bin_duration_s=60):
@@ -134,7 +128,7 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60):
     if total_length < bin_duration_samples:
         warnings.warn(f"Bin duration of {bin_duration_s}s is larger than recording duration. "
                       f"Presence ratios are set to NaN.")
-        presence_ratio = {unit_id: np.nan for unit_id in sorting.unit_ids}
+        presence_ratios = {unit_id: np.nan for unit_id in sorting.unit_ids}
     else:
         for unit_id in unit_ids:
             spike_train = []
@@ -288,7 +282,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     return res(isi_violations_ratio, isi_violations_count)
 
 
-_default_params["isi_violations"] = dict(
+_default_params["isi_violation"] = dict(
     isi_threshold_ms=1.5, 
     min_isi_ms=0
 )
@@ -364,6 +358,12 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
     return res(rp_contamination, nb_violations)
 
 
+_default_params["rp_violation"] = dict(
+    refractory_period_ms=1.0,
+    censored_period_ms=0.0
+)
+
+
 def compute_sliding_rp_violations(waveform_extractor, bin_size_ms=0.25, window_size_s=1,
                                   exclude_ref_period_below_ms=0.5, max_ref_period_ms=10,
                                   contamination_values=None):
@@ -421,7 +421,7 @@ def compute_sliding_rp_violations(waveform_extractor, bin_size_ms=0.25, window_s
     return contamination
 
 
-_default_params["sliding_rp"] = dict(
+_default_params["sliding_rp_violation"] = dict(
     bin_size_ms=0.25,
     window_size_s=1,
     exclude_ref_period_below_ms=0.5,
@@ -780,9 +780,10 @@ def presence_ratio(spike_train, total_length, bin_edges=None, num_bin_edges=None
     assert bin_edges is not None or num_bin_edges is not None, "Use either bin_edges or num_bin_edges"
     if bin_edges is not None:
         bins = bin_edges
+        num_bin_edges = len(bin_edges)
     else:
         bins = num_bin_edges
-    h, _ = np.histogram(spike_train, np.linspace(0, total_length, bins=bins))
+    h, _ = np.histogram(spike_train, bins=bins)
     
     return np.sum(h > 0) / (num_bin_edges - 1)
 

@@ -106,7 +106,8 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
 
             func = _misc_metric_name_to_func[metric_name]
 
-            res = func(self.waveform_extractor, **qm_params[metric_name])
+            params = qm_params[metric_name] if metric_name in qm_params else {}
+            res = func(self.waveform_extractor, **params)
             # QM with uninstall dependencies might return None
             if res is not None:
                 if isinstance(res, dict):
