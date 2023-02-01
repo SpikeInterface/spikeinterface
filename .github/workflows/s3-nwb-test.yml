@@ -3,7 +3,6 @@ on:
   pull_request:
     branches: [master]
     types: [synchronize, opened, reopened, ready_for_review]
-
 jobs:
   build-and-test:
     name: Testing using ${{ matrix.os }} with ${{ matrix.python-version }}
@@ -16,8 +15,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v4
+      - uses: s-weigand/setup-conda@v1
         with:
+          update-conda: true
+          activate-conda: false
           python-version: ${{ matrix.python-version }}
+          conda-channels: conda-forge
+      - uses: actions/checkout@v2
       - run: git fetch --prune --unshallow --tags
       - name: Install pytest
         run: |
@@ -30,15 +34,8 @@ jobs:
       - name: Uninstall h5py
         run: pip uninstall -y h5py
       - name: Install ROS3
-        uses: s-weigand/setup-conda@v1
-        with:
-          update-conda: true
-          activate-conda: false
-          python-version: ${{ matrix.python-version }}
-          conda-channels: conda-forge
         run: conda install -c conda-forge h5py
       - name: Install fsspec, aiohttp and requests
         run: pip install fsspec aiohttp requests
       - name: run tests
         run: pytest spikeinterface/extractors/tests/test_nwb_s3_extractor.py
-# change
