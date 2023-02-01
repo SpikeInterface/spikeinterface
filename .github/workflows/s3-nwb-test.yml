@@ -18,12 +18,13 @@ jobs:
       - uses: s-weigand/setup-conda@v1
         with:
           update-conda: true
-          activate-conda: false
+          activate-conda: true
           python-version: ${{ matrix.python-version }}
           conda-channels: conda-forge
       - run: git fetch --prune --unshallow --tags
       - name: Install pytest
         run: |
+          pwd
           pip install pytest
           pip install pytest-cov
       - name: Install package
