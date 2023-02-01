@@ -220,10 +220,18 @@ class DecentralizedRegistration:
     def run(cls, recording, peaks, peak_locations, direction, bin_duration_s, bin_um, spatial_bin_edges,
             non_rigid_windows, verbose, progress_bar, extra_check,
             pairwise_displacement_method='conv', max_displacement_um=100., weight_scale='linear',
-            error_sigma=0.2, conv_engine='numpy', torch_device=None, batch_size=1,
+            error_sigma=0.2, conv_engine=None, torch_device=None, batch_size=1,
             corr_threshold=0.3, time_horizon_s=None, convergence_method='lsmr',
             temporal_prior=True, spatial_prior=False, reference_displacement="median",
             reference_displacement_time=0, robust_regression_sigma=2, lsqr_robust_n_iter=20):
+
+        # use torch if installed
+        if conv_engine is None:
+            try:
+                import torch
+                conv_engine = "torch"
+            except ImportError:
+                conv_engine = "numpy"
 
         # make 2D histogram raster
         if verbose:
