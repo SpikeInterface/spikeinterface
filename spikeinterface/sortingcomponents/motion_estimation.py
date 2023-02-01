@@ -201,8 +201,17 @@ class DecentralizedRegistration:
         Which method to use to compute the global displacement vector from the pairwise matrix.
     robust_regression_sigma: float
         Use for convergence_method='lsqr_robust' for iterative selection of the regression.
-    # TODO: spatial_prior, temporal_prior
-    # TODO: reference_displacement
+    temporal_prior : bool=True
+        Ensures continuity across time, unless there is evidence in the recording for jumps.
+    spatial_prior : bool, False
+        Ensures continuity across space. Not usually necessary except in recordings with
+        glitches across space.
+    reference_displacement : string, one of: "mean", "median", "time", "mode_search"
+        Strategy for picking what is considered displacement=0.
+         - "mean" : the mean displacement is subtracted
+         - "median" : the median displacement is subtracted
+         - "time" : the displacement at a given time (in seconds) is subtracted
+         - "mode_search" : an attempt is made to guess the mode. needs work.
     lsqr_robust_n_iter: int
         Number of iteration for convergence_method='lsqr_robust'.
     """
@@ -212,8 +221,8 @@ class DecentralizedRegistration:
             non_rigid_windows, verbose, progress_bar, extra_check,
             pairwise_displacement_method='conv', max_displacement_um=100., weight_scale='linear',
             error_sigma=0.2, conv_engine='numpy', torch_device=None, batch_size=1,
-            corr_threshold=0, time_horizon_s=None, convergence_method='lsmr',
-            temporal_prior=True, spatial_prior=True, reference_displacement="median",
+            corr_threshold=0.3, time_horizon_s=None, convergence_method='lsmr',
+            temporal_prior=True, spatial_prior=False, reference_displacement="median",
             reference_displacement_time=0, robust_regression_sigma=2, lsqr_robust_n_iter=20):
 
         # make 2D histogram raster
