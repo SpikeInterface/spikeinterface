@@ -236,8 +236,6 @@ class DecentralizedRegistration:
         # make 2D histogram raster
         if verbose:
             print('Computing motion histogram')
-        if (temporal_prior or spatial_prior) and not convergence_method == 'lsmr':
-            raise ValueError("Use LSMR when using the priors in DecentralizedRegistration.")
 
         motion_histogram, temporal_hist_bin_edges, spatial_hist_bin_edges = \
             make_2d_motion_histogram(recording, peaks,
@@ -676,7 +674,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
     pairwise_displacement = np.zeros((size, size), dtype='float32')
 
     if time_horizon_s is not None:
-        band_width = int(np.ceil(time_horizon_s / bin_duration_s))
+        band_width = min(size, int(np.ceil(time_horizon_s / bin_duration_s)))
 
     if conv_engine == 'torch':
         import torch
@@ -824,9 +822,6 @@ def compute_global_displacement(
         One of "gradient"
 
     """
-    if (temporal_prior or spatial_prior) and convergence_method != "lsmr":
-        raise ValueError("Use LSMR when using the priors in DecentralizedRegistration.")
-
     if convergence_method == 'gradient_descent':
         size = pairwise_displacement.shape[0]
         from scipy.optimize import minimize
