@@ -11,7 +11,7 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "extractors"
 
-@pytest.mark.skipif("ros3" not in h5py.registered_drivers(), reason="ROS3 driver not installed") TODO: Figure why conda is breaking scipy
+@pytest.mark.skipif("ros3" not in h5py.registered_drivers(), reason="ROS3 driver not installed")
 def test_s3_nwb_ros3():
     drivers = h5py.registered_drivers()
     assert "ros3" in drivers, f"ROS3 driver not installed, registered drivers are {drivers}"
