@@ -103,6 +103,20 @@ def test_estimate_motion():
             conv_engine='numpy',
             time_horizon_s=None,
         ),
+        'non-rigid / decentralized / torch / spatial_prior': dict(
+            rigid=False,
+            method='decentralized',
+            conv_engine='torch',
+            time_horizon_s=None,
+            spatial_prior=True,
+        ),
+        'non-rigid / decentralized / numpy / spatial_prior': dict(
+            rigid=False,
+            method='decentralized',
+            conv_engine='numpy',
+            time_horizon_s=None,
+            spatial_prior=True,
+        ),
         'non-rigid / decentralized / torch / time_horizon_s': dict(
             rigid=False,
             method='decentralized',
@@ -191,6 +205,9 @@ def test_estimate_motion():
     assert (motion0 == motion1).all()
 
     motion0, motion1 = motions['non-rigid / decentralized / torch / time_horizon_s'], motions['non-rigid / decentralized / numpy / time_horizon_s']
+    assert (motion0 == motion1).all()
+
+    motion0, motion1 = motions['non-rigid / decentralized / torch / spatial_prior'], motions['non-rigid / decentralized / numpy / spatial_prior']
     assert (motion0 == motion1).all()
 
 if __name__ == '__main__':
