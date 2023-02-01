@@ -12,8 +12,10 @@ from collections import namedtuple
 import math
 import numpy as np
 import warnings
-import scipy.ndimage
+from scipy.ndimage import gaussian_filter1d
+from scipy.stats import poisson
 
+from ..postprocessing import correlogram_for_one_segment
 from ..core import get_noise_levels
 from ..core.template_tools import (
     get_template_extremum_channel,
@@ -59,10 +61,7 @@ def compute_num_spikes(waveform_extractor, **kwargs):
     return num_spikes
 
 
-_default_params["num_spikes"] = dict()
-
-
-def compute_firing_rate(waveform_extractor):
+def compute_firing_rates(waveform_extractor):
     """Compute the firing rate across segments.
 
     Parameters
@@ -72,7 +71,7 @@ def compute_firing_rate(waveform_extractor):
 
     Returns
     -------
-    firing_rates : dict
+    firing_rates : dict of floats
         The firing rate, across all segments, for each unit ID.
     """
 
@@ -92,10 +91,7 @@ def compute_firing_rate(waveform_extractor):
     return firing_rates
 
 
-_default_params["firing_rate"] = dict()
-
-
-def compute_presence_ratio(waveform_extractor, bin_duration_s=60):
+def compute_presence_ratios(waveform_extractor, bin_duration_s=60):
     """Calculate the presence ratio, representing the fraction of time the unit is firing.
 
     Parameters
@@ -108,13 +104,13 @@ def compute_presence_ratio(waveform_extractor, bin_duration_s=60):
 
     Returns
     -------
-    presence_ratio : dict
+    presence_ratio : dict of flaots
         The presence ratio for each unit ID.
 
     Notes
     -----
-    The total duration, across all segments, is divide into "num_bins".
-    To do so, spiketrains across segments are concatenated to mimic a continuous segment.
+    The total duration, across all segments, is divided into "num_bins".
+    To do so, spike trains across segments are concatenated to mimic a continuous segment.
     """
 
     recording = waveform_extractor.recording
@@ -126,25 +122,25 @@ def compute_presence_ratio(waveform_extractor, bin_duration_s=60):
     total_length = np.sum(seg_length)
     bin_duration_samples = int((bin_duration_s * recording.sampling_frequency))
     num_bin_edges = total_length // bin_duration_samples + 1
-    bins = np.arange(num_bin_edges) * bin_duration_samples
+    bin_edges = np.arange(num_bin_edges) * bin_duration_samples
 
+    presence_ratios = {}
     if total_length < bin_duration_samples:
         warnings.warn(f"Bin duration of {bin_duration_s}s is larger than recording duration. "
                       f"Presence ratios are set to NaN.")
-        presence_ratio = {unit_id: np.nan for unit_id in sorting.unit_ids}
+        presence_ratios = {unit_id: np.nan for unit_id in sorting.unit_ids}
     else:
-        presence_ratio = {}
         for unit_id in unit_ids:
-            spiketrain = []
+            spike_train = []
             for segment_index in range(num_segs):
                 st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 st = st + np.sum(seg_length[:segment_index])
-                spiketrain.append(st)
-            spiketrain = np.concatenate(spiketrain)
-            h, _ = np.histogram(spiketrain, bins=bins)
-            presence_ratio[unit_id] = np.sum(h > 0) / (num_bin_edges - 1)
+                spike_train.append(st)
+            spike_train = np.concatenate(spike_train)
 
-    return presence_ratio
+            presence_ratios[unit_id] = presence_ratio(spike_train, total_length, bin_edges=bin_edges)
+
+    return presence_ratios
 
 
 _default_params["presence_ratio"] = dict(
@@ -260,39 +256,33 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     fs = recording.get_sampling_frequency()
 
     seg_durations = [recording.get_num_samples(i) / fs for i in range(num_segs)]
-    total_duration = np.sum(seg_durations)
+    total_duration_s = np.sum(seg_durations)
 
     isi_threshold_s = isi_threshold_ms / 1000
     min_isi_s = min_isi_ms / 1000
-    isi_threshold_samples = int(isi_threshold_s * fs)
 
     isi_violations_count = {}
     isi_violations_ratio = {}
 
     # all units converted to seconds
     for unit_id in unit_ids:
-        num_violations = 0
-        num_spikes = 0
+
+        spike_trains = []
+
         for segment_index in range(num_segs):
             spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-            isis = np.diff(spike_train)
-            num_spikes += len(spike_train)
-            num_violations += np.sum(isis < isi_threshold_samples)
-        violation_time = 2 * num_spikes * (isi_threshold_s - min_isi_s)
-        
-        if num_spikes > 0:
-            total_rate = num_spikes / total_duration
-            violation_rate = num_violations / violation_time
-            isi_violations_ratio[unit_id] = violation_rate / total_rate
-            isi_violations_count[unit_id] = num_violations      
-        else:
-            isi_violations_ratio[unit_id] = np.nan
-            isi_violations_count[unit_id] = np.nan
+            spike_trains.append(spike_train / fs)
+
+        ratio, _, count = isi_violations(spike_trains, total_duration_s,
+                                         isi_threshold_s, min_isi_s)
+
+        isi_violations_ratio[unit_id] = ratio
+        isi_violations_count[unit_id] = count
 
     return res(isi_violations_ratio, isi_violations_count)
 
 
-_default_params["isi_violations"] = dict(
+_default_params["isi_violation"] = dict(
     isi_threshold_ms=1.5, 
     min_isi_ms=0
 )
@@ -326,7 +316,8 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
 
     Reference
     ---------
-    [1] Llobet & Wyngaard (2022) BioRxiv
+    [1] Llobet & Wyngaard (2022) bioRxiv
+
     """
     res = namedtuple("rp_violations", ['rp_contamination', 'rp_violations'])
 
@@ -334,7 +325,6 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
         print("Error: numba is not installed.")
         print("compute_refrac_period_violations cannot run without numba.")
         return None
-
 
     recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
@@ -368,14 +358,80 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
     return res(rp_contamination, nb_violations)
 
 
-_default_params["rp_violations"] = dict(
-    refractory_period_ms=1,
+_default_params["rp_violation"] = dict(
+    refractory_period_ms=1.0,
     censored_period_ms=0.0
 )
 
 
-def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
-                              num_histogram_bins=100, histogram_smoothing_value=3,
+def compute_sliding_rp_violations(waveform_extractor, bin_size_ms=0.25, window_size_s=1,
+                                  exclude_ref_period_below_ms=0.5, max_ref_period_ms=10,
+                                  contamination_values=None):
+    """Compute sliding refractory period violations, a metric developed by IBL which computes 
+    contamination by using a sliding refractory period.
+    This metric computes the minimum contamination with at least 90% confidence.
+
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveform extractor object.
+    bin_size_ms : float
+        The size of binning for the autocorrelogram in ms, by default 0.25
+    window_size_s : float
+        Window in seconds to compute correlogram, by default 1
+    exclude_ref_period_below_ms : float
+        Refractory periods below this value are excluded, by default 0.5
+    max_ref_period_ms : float
+        Maximum refractory period to test in ms, by default 10 ms
+    contamination_values : 1d array or None
+        The contamination values to test, by default np.arange(0.5, 35, 0.5) %
+
+    Returns
+    -------
+    contamination : dict of floats
+        The minimum contamination at 90% confidence
+
+    Reference
+    ----------
+    This code was adapted from https://github.com/SteinmetzLab/slidingRefractory/blob/1.0.0/python/slidingRP/metrics.py
+    """
+
+    recording = waveform_extractor.recording
+    duration = recording.get_total_duration()
+    sorting = waveform_extractor.sorting
+    unit_ids = sorting.unit_ids
+    num_segs = sorting.get_num_segments()
+    fs = recording.get_sampling_frequency()
+
+    contamination = {}
+
+    # all units converted to seconds
+    for unit_id in unit_ids:
+
+        spike_train_list = []
+
+        for segment_index in range(num_segs):
+            spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+            spike_train_list.append(spike_train)
+
+        contamination[unit_id] = slidingRP_violations(spike_train_list, fs, duration, bin_size_ms, window_size_s,
+                                                      exclude_ref_period_below_ms, max_ref_period_ms,
+                                                      contamination_values)
+
+    return contamination
+
+
+_default_params["sliding_rp_violation"] = dict(
+    bin_size_ms=0.25,
+    window_size_s=1,
+    exclude_ref_period_below_ms=0.5,
+    max_ref_period_ms=10,
+    contamination_values=None
+)
+
+
+def compute_amplitude_cutoffs(waveform_extractor, peak_sign='neg',
+                              num_histogram_bins=500, histogram_smoothing_value=3,
                               amplitudes_bins_min_ratio=5):
     """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
@@ -392,18 +448,18 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
     amplitudes_bins_min_ratio : int, optional, default: 5
         The minimum ratio between number of amplitudes for a unit and the number of bins.
         If the ratio is less than this threshold, the amplitude_cutoff for the unit is set 
-        to NaN
+        to NaN.
 
     Returns
     -------
-    all_fraction_missing : dict
+    all_fraction_missing : dict of floats
         Estimated fraction of missing spikes, based on the amplitude distribution, for each unit ID.
 
     Reference
     ---------
     Inspired by metric described in Hill et al. (2011) J Neurosci 31: 8699-8705
-    This code come from
-    https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
+    
+    This code was adapted from https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
 
     Notes
     -----
@@ -444,31 +500,15 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
         else:
             amplitudes = np.concatenate([spike_amps[unit_id] for spike_amps in spike_amplitudes])
 
-        if len(amplitudes) / num_histogram_bins < amplitudes_bins_min_ratio:
-            nan_units.append(unit_id)
-            all_fraction_missing[unit_id] = np.nan
-            continue
-
         # change amplitudes signs in case peak_sign is pos
         if invert_amplitudes:
             amplitudes = -amplitudes
-        h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
 
-        # TODO : change with something better scipy.ndimage.gaussian_filter1d
-        pdf = scipy.ndimage.gaussian_filter1d(h, histogram_smoothing_value)
-        support = b[:-1]
-        bin_size = np.mean(np.diff(support))
-        peak_index = np.argmax(pdf)
-        
-        pdf_above = np.abs(pdf[peak_index:] - pdf[0])
+        fraction_missing = amplitude_cutoff(amplitudes, num_histogram_bins, histogram_smoothing_value,
+                                            amplitudes_bins_min_ratio)
+        if np.isnan(fraction_missing) :
+            nan_units.append(unit_id)
 
-        if len(np.where(pdf_above == pdf_above.min())[0]) > 1:
-            warnings.warn("Amplitude PDF does not have a unique minimum! More spikes might be required for a correct "
-                          "amplitude_cutoff computation!")
-        
-        G = np.argmin(pdf_above) + peak_index
-        fraction_missing = np.sum(pdf[G:]) * bin_size
-        fraction_missing = np.min([fraction_missing, 0.5])
         all_fraction_missing[unit_id] = fraction_missing
 
     if len(nan_units) > 0:
@@ -481,11 +521,13 @@ def compute_amplitudes_cutoff(waveform_extractor, peak_sign='neg',
 _default_params["amplitude_cutoff"] = dict(
     peak_sign='neg',
     num_histogram_bins=100,
-    histogram_smoothing_value=3
+    histogram_smoothing_value=3,
+    amplitudes_bins_min_ratio=5
 )
 
 
-def compute_amplitudes_median(waveform_extractor, peak_sign='neg'):
+
+def compute_amplitude_medians(waveform_extractor, peak_sign='neg'):
     """Compute median of the amplitude distributions (in absolute value).
 
     Parameters
@@ -710,6 +752,235 @@ _default_params["drift"] = dict(
     direction="y",
     min_num_bins=2
 )
+
+
+
+### LOW-LEVEL FUNCTIONS ###
+def presence_ratio(spike_train, total_length, bin_edges=None, num_bin_edges=None):
+    """Calculate the presence ratio for a single unit
+
+    Parameters
+    ----------
+    spike_train : np.ndarray
+        Spike times for this unit, in samples
+    total_length : int
+        Total length of the recording in samples
+    bin_edges : np.array
+        Pre-computed bin edges (mutually exclusive with num_bin_edges).
+    num_bin_edges : int, optional, default: 101
+        The number of bins edges to use to compute the presence ratio.
+        (mutually exclusive with bin_edges).
+
+    Returns
+    -------
+    presence_ratio : float
+        The presence ratio for one unit
+
+    """
+    assert bin_edges is not None or num_bin_edges is not None, "Use either bin_edges or num_bin_edges"
+    if bin_edges is not None:
+        bins = bin_edges
+        num_bin_edges = len(bin_edges)
+    else:
+        bins = num_bin_edges
+    h, _ = np.histogram(spike_train, bins=bins)
+    
+    return np.sum(h > 0) / (num_bin_edges - 1)
+
+
+def isi_violations(spike_trains, total_duration_s,
+                   isi_threshold_s=0.0015, 
+                   min_isi_s=0):
+    """Calculate Inter-Spike Interval (ISI) violations.
+
+    See compute_isi_violations for additional documentation
+
+    Parameters
+    ----------
+    spike_trains : list of np.ndarrays
+        The spike times for each recording segment for one unit, in seconds
+    total_duration_s : float
+        The total duration of the recording (in seconds)
+    isi_threshold_s : float, optional, default: 0.0015
+        Threshold for classifying adjacent spikes as an ISI violation, in seconds.
+        This is the biophysical refractory period (default=1.5).
+    min_isi_s : float, optional, default: 0
+        Minimum possible inter-spike interval, in seconds.
+        This is the artificial refractory period enforced
+        by the data acquisition system or post-processing algorithms.
+
+    Returns
+    -------
+    isi_violations_ratio : float
+        The isi violation ratio described in [1]
+    isi_violations_rate : float
+        Rate of contaminating spikes as a fraction of overall rate.
+        Higher values indicate more contamination.
+    isi_violation_count : int
+        Number of violations
+    """
+
+    num_violations = 0
+    num_spikes = 0
+
+    isi_violations_ratio = np.float64(np.nan)
+    isi_violations_rate = np.float64(np.nan)
+    isi_violations_count = np.float64(np.nan)
+
+    for spike_train in spike_trains:
+        isis = np.diff(spike_train)
+        num_spikes += len(spike_train)
+        num_violations += np.sum(isis < isi_threshold_s)
+
+    violation_time = 2 * num_spikes * (isi_threshold_s - min_isi_s)
+    
+    if num_spikes > 0:
+        total_rate = num_spikes / total_duration_s
+        violation_rate = num_violations / violation_time
+        isi_violations_ratio = violation_rate / total_rate
+        isi_violations_rate = num_violations / total_duration_s
+        isi_violations_count = num_violations      
+    
+    return isi_violations_ratio, isi_violations_rate, isi_violations_count
+
+
+def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_value=3,
+                     amplitudes_bins_min_ratio=5):
+    """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
+
+
+    See compute_amplitude_cutoffs for additional documentation
+
+    Parameters
+    ----------
+    amplitudes : ndarray_like
+        The amplitudes (in uV) of the spikes for one unit.
+    peak_sign : {'neg', 'pos', 'both'}
+        The sign of the template to compute best channels.
+    num_histogram_bins : int, optional, default: 500
+        The number of bins to use to compute the amplitude histogram.
+    histogram_smoothing_value : int, optional, default: 3
+        Controls the smoothing applied to the amplitude histogram.
+    amplitudes_bins_min_ratio : int, optional, default: 5
+        The minimum ratio between number of amplitudes for a unit and the number of bins.
+        If the ratio is less than this threshold, the amplitude_cutoff for the unit is set 
+        to NaN.
+
+    Returns
+    -------
+    fraction_missing : float
+        Estimated fraction of missing spikes, based on the amplitude distribution.
+
+    """
+    if len(amplitudes) / num_histogram_bins < amplitudes_bins_min_ratio:
+        return np.nan
+    else:
+        h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
+
+        # TODO : use something better than scipy.ndimage.gaussian_filter1d
+        pdf = gaussian_filter1d(h, histogram_smoothing_value)
+        support = b[:-1]
+        bin_size = np.mean(np.diff(support))
+        peak_index = np.argmax(pdf)
+        
+        pdf_above = np.abs(pdf[peak_index:] - pdf[0])
+
+        if len(np.where(pdf_above == pdf_above.min())[0]) > 1:
+            warnings.warn("Amplitude PDF does not have a unique minimum! More spikes might be required for a correct "
+                          "amplitude_cutoff computation!")
+        
+        G = np.argmin(pdf_above) + peak_index
+        fraction_missing = np.sum(pdf[G:]) * bin_size
+        fraction_missing = np.min([fraction_missing, 0.5])
+
+        return fraction_missing
+
+
+def slidingRP_violations(spike_samples, sample_rate, duration, bin_size_ms=0.25, window_size_s=1,
+                         exclude_ref_period_below_ms=0.5, max_ref_period_ms=10,
+                         contamination_values=None, return_conf_matrix=False):
+    """
+    A metric developed by IBL which determines whether the refractory period violations 
+    by using sliding refractory periods.
+
+    See compute_slidingRP_viol for additional documentation
+
+    Parameters
+    ----------
+    spike_samples : ndarray_like or list (for multi-segment)
+        The spike times in samples
+    sample_rate : float
+        The acquisition sampling rate
+    bin_size_ms : float
+        The size (in ms) of binning for the autocorrelogram.
+    window_size_s : float
+        Window in seconds to compute correlogram, by default 2
+    exclude_ref_period_below_ms : float
+        Refractory periods below this value are excluded, by default 0.5
+    max_ref_period_ms : float
+        Maximum refractory period to test in ms, by default 10 ms
+    contamination_values : 1d array or None
+        The contamination values to test, by default np.arange(0.5, 35, 0.5) / 100
+    return_conf_matrix : bool
+        If True, the confidence matrix (n_contaminations, n_ref_periods) is returned, by default False
+
+    See: https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
+
+    Returns
+    -------
+    min_cont_with_90_confidence : dict of floats
+        The minimum contamination with confidence > 90%
+    """
+    if contamination_values is None:
+        contamination_values = np.arange(0.5, 35, 0.5) / 100 # vector of contamination values to test
+    rp_bin_size = bin_size_ms / 1000
+    rp_edges = np.arange(0, max_ref_period_ms / 1000, rp_bin_size)  # in s
+    rp_centers = rp_edges + ((rp_edges[1] - rp_edges[0]) / 2) # vector of refractory period durations to test
+    
+    # compute firing rate and spike count (concatenate for multi-segments)
+    n_spikes = len(np.concatenate(spike_samples))
+    firing_rate = n_spikes / duration
+    if np.isscalar(spike_samples[0]):
+        spike_samples_list = [spike_samples]
+    else:
+        spike_samples_list = spike_samples
+    # compute correlograms
+    correlogram = None
+    for spike_samples in spike_samples_list:
+        c0 = correlogram_for_one_segment(spike_samples, np.zeros(len(spike_samples), dtype='int8'),
+                                         bin_size=max(int(bin_size_ms / 1000 * sample_rate), 1), # convert to sample counts
+                                         window_size=int(window_size_s * sample_rate))[0, 0]
+        if correlogram is None:
+            correlogram = c0
+        else:
+            correlogram += c0
+    correlogram_positive = correlogram[len(correlogram)//2:]
+
+    conf_matrix = _compute_violations(np.cumsum(correlogram_positive[0:rp_centers.size])[np.newaxis, :],
+                                      firing_rate, n_spikes, rp_centers[np.newaxis, :] + rp_bin_size / 2,
+                                      contamination_values[:, np.newaxis])
+    test_rp_centers_mask = rp_centers > exclude_ref_period_below_ms / 1000. # (in seconds)
+
+    # only test for refractory period durations greater than 'exclude_ref_period_below_ms'
+    inds_confidence90 = np.row_stack(np.where(conf_matrix[:, test_rp_centers_mask] > 0.9))
+
+    if len(inds_confidence90[0]) > 0:
+        minI = np.min(inds_confidence90[0][0])
+        min_cont_with_90_confidence = contamination_values[minI]
+    else:
+        min_cont_with_90_confidence = np.nan
+    if return_conf_matrix:
+        return min_cont_with_90_confidence, conf_matrix
+    else:
+        return min_cont_with_90_confidence
+
+
+def _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, contamination_prop):
+    contamination_rate = firing_rate * contamination_prop 
+    expected_viol = contamination_rate * ref_period_dur * 2 * spike_count
+    confidence_score = 1 - poisson.cdf(obs_viol, expected_viol)
+
+    return confidence_score
 
 
 if HAVE_NUMBA:
