@@ -414,7 +414,7 @@ def check_improve_contaminations_score(we, pair_mask, contaminations,
     sorting = we.sorting
     pair_mask = pair_mask.copy()
 
-    firing_rates = list(compute_firing_rate(we).values())
+    firing_rates = list(compute_firing_rates(we).values())
 
     inds1, inds2 = np.nonzero(pair_mask)
     for i in range(inds1.size):
@@ -435,7 +435,7 @@ def check_improve_contaminations_score(we, pair_mask, contaminations,
         new_contaminations, _ = compute_refrac_period_violations(we_new, refractory_period_ms=refractory_period_ms,
                                     censored_period_ms=censored_period_ms)
         c_new = new_contaminations[unit_id1]
-        f_new = compute_firing_rate(we_new)[unit_id1]
+        f_new = compute_firing_rates(we_new)[unit_id1]
 
         # old and new scores
         k = 1 + firing_contamination_balance

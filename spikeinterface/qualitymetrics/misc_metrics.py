@@ -849,7 +849,7 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
     """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
 
-    See compute_amplitude_cutoff for additional documentation
+    See compute_amplitude_cutoffs for additional documentation
 
     Parameters
     ----------
