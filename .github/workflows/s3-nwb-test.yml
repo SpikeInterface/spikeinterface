@@ -31,3 +31,5 @@ jobs:
         run: pip install fsspec aiohttp requests
       - name: run tests
         run: pytest spikeinterface/extractors/tests/test_nwb_s3_extractor.py
+
+# Note that in a previuos version conda was required to install h5py
