@@ -300,8 +300,13 @@ class DecentralizedRegistration:
                 spatial_prior=spatial_prior,
                 progress_bar=False,
             )
+        elif len(non_rigid_windows) > 1:
+            # if spatial_prior is False, we still want keep the spatial bins
+            # correctly offset from each other
+            for i in range(len(non_rigid_windows)):
+                motion[:, i + 1] -= np.median(motion[:, i + 1] - motion[:, i])
         
-        # try to avoid spurious constant offsets
+        # try to avoid constant offset
         # let the user choose how to do this. here are some ideas.
         # (one can also -= their own number on the result of this function.)
         if reference_displacement == "mean":
@@ -309,7 +314,9 @@ class DecentralizedRegistration:
         elif reference_displacement == "median":
             displacement -= np.median(displacement)
         elif reference_displacement == "mode_search":
-            # just a sketch of an idea -- things might want to change.
+            # just a sketch of an idea
+            # things might want to change, should have a configurable bin size,
+            # should use a call to histogram instead of the loop, ...
             step_size = 0.1
             round_mode = np.round  # floor?
             best_ref = np.median(displacement)
