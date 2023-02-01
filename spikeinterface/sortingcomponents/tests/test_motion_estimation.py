@@ -9,7 +9,7 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.motion_estimation import (estimate_motion, make_2d_motion_histogram,
                                                                 compute_pairwise_displacement, 
                                                                 compute_global_displacement)
-
+from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 
 repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
@@ -37,12 +37,15 @@ def setup_module():
     cache_folder.mkdir(parents=True, exist_ok=True)
 
     # detect and localize
+    pipeline_nodes = [
+        ExtractDenseWaveforms(recording, name='waveforms',ms_before=0.1, ms_after=0.3),
+        LocalizeCenterOfMass(recording,  parents='waveforms', local_radius_um=60.)
+    ]
     peaks, peak_locations = detect_peaks(recording,
                                          method='locally_exclusive',
                                          peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
                                          chunk_size=10000, verbose=1, progress_bar=True,
-                                         pipeline_steps = [LocalizeCenterOfMass(recording, ms_before=0.1,
-                                                                                ms_after=0.3, local_radius_um=150.)]
+                                         pipeline_nodes = pipeline_nodes
                          )
     np.save(cache_folder / 'mearec_peaks.npy', peaks)
     np.save(cache_folder / 'mearec_peak_locations.npy', peak_locations)
@@ -164,6 +167,6 @@ def test_estimate_motion():
 
 
 if __name__ == '__main__':
-    # setup_module()
+    setup_module()
     test_estimate_motion()
 

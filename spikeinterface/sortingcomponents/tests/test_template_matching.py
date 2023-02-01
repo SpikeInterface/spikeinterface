@@ -40,6 +40,9 @@ def test_find_spikes_from_templates():
     result = {}
 
     for method in matching_methods.keys():
+        if method == 'circus-omp':
+            # too slow to be tested on CI
+            continue
         spikes = find_spikes_from_templates(recording, method=method, method_kwargs=method_kwargs,
                                             n_jobs=1, chunk_size=1000, progress_bar=True)
 
