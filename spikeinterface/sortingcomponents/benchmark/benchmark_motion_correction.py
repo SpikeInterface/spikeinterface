@@ -92,7 +92,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 if self.do_preprocessing:
                     rec = bandpass_filter(rec)
                     rec = common_reference(rec)
-                    rec = zscore(rec)
+                    # rec = zscore(rec)
                 self._recordings[key] = rec
 
             rec = self._recordings['drifting']
@@ -104,8 +104,8 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     def run(self):
         self.extract_waveforms()
         self.save_to_folder()
-        #self.run_sorters()
-        #self.save_to_folder()
+        self.run_sorters()
+        self.save_to_folder()
 
 
     def extract_waveforms(self):
@@ -304,6 +304,18 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             ax.legend()
             ax.set_xlabel('depth')
             ax.set_ylabel('accuracy')
+
+    def plot_sorting_units_categories(self):
+        
+        # self.compute_accuracies()
+        for i, case in enumerate(self.sorter_cases):
+            label = case['label']
+            comp = self.comparisons[label]
+            count = comp.count_units_categories()
+            if i == 0:
+                df = pd.DataFrame(columns=count.index)
+            df.loc[label, :] = count
+        df.plot.bar()
 
 
 def plot_distances_to_static(benchmarks, metric='cosine', figsize=(15, 10)):
