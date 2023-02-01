@@ -769,13 +769,6 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
             ]
         )
         pairwise_displacement_weight *= horizon_matrix
-    
-    if time_horizon_s is not None:
-        print("-" * 20)
-        print(f"{conv_engine=}")
-        print(f"{band_width=} {size=}")
-        print(f"{np.ones(band_width, dtype=bool).size=} {np.zeros(size - band_width, dtype=bool).size=}")
-        print(f"{pairwise_displacement_weight.nonzero()[0].shape=}")
 
     return pairwise_displacement, pairwise_displacement_weight
 
