@@ -239,6 +239,13 @@ class CorrectMotionRecording(BasePreprocessor):
                  sigma_um=20., p=1, num_closest=3):
         assert recording.get_num_segments() == 1, 'correct_motion() is only available for single-segment recordings'
         
+        # force as arrays
+        temporal_bins = np.asarray(temporal_bins)
+        motion = np.asarray(motion)
+        if spatial_bins is not None:
+            spatial_bins = np.asarray(spatial_bins)
+
+
         channel_locations = recording.get_channel_locations()
         assert channel_locations.ndim >= direction, (f"'direction' {direction} not available. "
                                                      f"Channel locations have {channel_locations.ndim} dimensions.")
