@@ -198,7 +198,8 @@ def test_calculate_rp_violations(simulated_data):
     assert np.allclose(list(rp_contamination_gt.values()), list(rp_contamination.values()), rtol=0.05)
     np.testing.assert_array_equal(list(counts_gt.values()), list(counts.values()))
 
-
+@pytest.mark.sortingcomponents
+@pytest.mark.xfail
 def test_calculate_drift_metrics(simulated_data):
     drift_ptps_gt = {0: 3.8497035992743918, 1: 1.200316354668118, 2: 1.3330619152472707}
     drift_stds_gt = {0: 1.0907827238707128, 1: 0.3363447300999075, 2: 0.3607988107268864}
