@@ -221,9 +221,9 @@ class DecentralizedRegistration:
             non_rigid_windows, verbose, progress_bar, extra_check,
             pairwise_displacement_method='conv', max_displacement_um=100., weight_scale='linear',
             error_sigma=0.2, conv_engine=None, torch_device=None, batch_size=1,
-            corr_threshold=0.3, time_horizon_s=None, convergence_method='lsmr',
+            corr_threshold=0.3, time_horizon_s=1000, convergence_method='lsmr',
             temporal_prior=True, spatial_prior=False, reference_displacement="median",
-            reference_displacement_time=0, robust_regression_sigma=2, lsqr_robust_n_iter=20):
+            reference_displacement_time_s=0, robust_regression_sigma=2, lsqr_robust_n_iter=20):
 
         # use torch if installed
         if conv_engine is None:
@@ -330,7 +330,7 @@ class DecentralizedRegistration:
             motion -= np.median(motion)
         elif reference_displacement == "time":
             # reference the motion to 0 at a specific time, independently in each window
-            reference_displacement_bin = np.digitize(reference_displacement_time, temporal_hist_bin_edges) - 1
+            reference_displacement_bin = np.digitize(reference_displacement_time_s, temporal_hist_bin_edges) - 1
             motion -= motion[reference_displacement_bin, :]
         elif reference_displacement == "mode_search":
             # just a sketch of an idea
@@ -696,7 +696,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
         xrange = trange if progress_bar else range
 
         motion_hist_engine = motion_hist
-        wndow_engine = window
+        window_engine = window
         if conv_engine == "torch":
             motion_hist_engine = torch.as_tensor(motion_hist, dtype=torch.float32, device=torch_device)
             window_engine = torch.as_tensor(window, dtype=torch.float32, device=torch_device)
@@ -718,13 +718,8 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                         padding=possible_displacement.size // 2,
                         conv_engine=conv_engine,
                     )
-                    if conv_engine == "torch":
-                        max_corr, ind_max = torch.max(corr, dim=2)
-                        max_corr = max_corr.cpu()
-                        ind_max = ind_max.cpu()
-                    elif conv_engine == "numpy":
-                        ind_max = np.argmax(corr, axis=2)
-                        max_corr = corr[0, 0, ind_max]
+                    ind_max = np.argmax(corr, axis=2)
+                    max_corr = corr[0, 0, ind_max]
                     if max_corr > corr_threshold:
                         pairwise_displacement[i, j] = -possible_displacement[ind_max]
                         pairwise_displacement[j, i] = possible_displacement[ind_max]
@@ -925,6 +920,9 @@ def compute_global_displacement(
         if sparse_mask is None:
             sparse_mask = np.ones_like(D)
         W = pairwise_displacement_weight * sparse_mask
+        if isinstance(W, scipy.sparse.csr_matrix):
+            W = W.astype(np.float32).toarray()
+            D = D.astype(np.float32).toarray()
 
         assert D.shape == W.shape
 
@@ -1011,7 +1009,7 @@ def compute_global_displacement(
         # initialize at the column mean of pairwise displacements (in each window)
         p0 = D.mean(axis=2).reshape(B * T)
 
-        # use LSMR to solve the whole problem
+        # use LSMR to solve the whole problem || targets - coefficients @ motion ||^2
         displacement, *_ = sparse.linalg.lsmr(coefficients, targets, x0=p0)
         displacement = displacement.reshape(B, T).T
 
