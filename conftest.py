@@ -50,5 +50,6 @@ def pytest_collection_modifyitems(config, items):
 def pytest_sessionfinish(session, exitstatus):
     # teardown_stuff only if tests passed
     if exitstatus == 0:
+        # Why not erease on github?
         if pytest.global_test_folder.is_dir() and not ON_GITHUB:
             shutil.rmtree(pytest.global_test_folder)
