@@ -22,7 +22,7 @@ from .phase_shift import PhaseShiftRecording, phase_shift
 from .zero_channel_pad import ZeroChannelPaddedRecording, zero_channel_pad
 # not importing deepinterpolation by default
 from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate
-
+from .interpolate_bad_channels import InterpolateBadChannelsRecording, interpolate_bad_channels
 preprocessers_full_list = [
     # filter stuff
     FilterRecording,
@@ -52,8 +52,8 @@ preprocessers_full_list = [
     RemoveBadChannelsRecording,
     ZeroChannelPaddedRecording,
     DeepInterpolatedRecording,
-    ResampleRecording
-
+    ResampleRecording,
+    InterpolateBadChannelsRecording
 ]
 
 installed_preprocessers_list = [pp for pp in preprocessers_full_list if pp.installed]
