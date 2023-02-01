@@ -59,7 +59,7 @@ recording_extractor_full_list = [
 
     # others
     CompressedBinaryIblExtractor,
-    StreamingIblExtractor,
+    IblStreamingRecordingExtractor,
     MCSH5RecordingExtractor,
 ]
 recording_extractor_full_list += neo_recording_extractors_list
