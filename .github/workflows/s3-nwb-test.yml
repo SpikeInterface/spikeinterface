@@ -31,12 +31,8 @@ jobs:
         run: |
           pip install -e .
           pip install pynwb
-      # - name: Uninstall h5py
-      #   run: pip uninstall -y h5py
       - name: Install h5py with ROS3 support
-        run: |
-#          conda install -c conda-forge "h5py>=3.2"
-          python -c "import h5py; assert 'ros3' in h5py.registered_drivers(), f'ros3 suppport not available, failed to install'"
+        run: python -c "import h5py; assert 'ros3' in h5py.registered_drivers(), f'ros3 suppport not available, failed to install'"
       - name: Install fsspec, aiohttp and requests
         run: pip install fsspec aiohttp requests
       - name: run tests
