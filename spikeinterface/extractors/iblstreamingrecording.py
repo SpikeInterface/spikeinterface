@@ -18,7 +18,7 @@ except ModuleNotFoundError:
     HAVE_BRAINBOX_ONE = False
 
 
-class StreamingIblExtractor(BaseRecording):
+class IblStreamingRecordingExtractor(BaseRecording):
     """
     Stream IBL data as an extractor object.
 
@@ -51,18 +51,18 @@ class StreamingIblExtractor(BaseRecording):
 
     Returns
     -------
-    recording : StreamingIblExtractor
+    recording : IblStreamingRecordingExtractor
         The recording extractor which allows access to the traces.
     """
 
-    extractor_name = "StreamingIbl"
+    extractor_name = "IblStreamingRecording"
     has_default_locations = True
     installed = HAVE_BRAINBOX_ONE
     mode = "folder"
     installation_mesg = (
-        "To use the StreamingIblExtractor, install ONE-api and ibllib: \n\n pip install ONE-api\npip install ibllib\n"
+        "To use the IblStreamingRecordingSegment, install ONE-api and ibllib: \n\n pip install ONE-api\npip install ibllib\n"
     )
-    name = "stream_ibl"
+    name = "ibl_streaming_recording"
 
     @classmethod
     def get_stream_names(cls, session: str, cache_folder: Optional[Union[Path, str]] = None) -> List[str]:
@@ -97,7 +97,7 @@ class StreamingIblExtractor(BaseRecording):
         stream_names = list()
         for probe_label in probe_labels:
             raw_suffixes_by_probe = set(
-                [Path(raw_content).suffixes[-2] for raw_content in raw_contents if "probe00" in raw_content]
+                [Path(raw_content).suffixes[-2] for raw_content in raw_contents if probe_label in raw_content]
             )
             if ".ap" in raw_suffixes_by_probe:
                 stream_names.append(probe_label + ".ap")
@@ -199,7 +199,7 @@ class StreamingIblExtractor(BaseRecording):
             self.set_property("good_channel", good_channel)
 
         # init recording segment
-        recording_segment = StreamingIblRecordingSegment(
+        recording_segment = IblStreamingRecordingSegment(
             file_streamer=self._file_streamer,
             load_sync_channel=load_sync_channel
         )
@@ -214,7 +214,7 @@ class StreamingIblExtractor(BaseRecording):
         }
 
 
-class StreamingIblRecordingSegment(BaseRecordingSegment):
+class IblStreamingRecordingSegment(BaseRecordingSegment):
     def __init__(self, file_streamer, load_sync_channel: bool = False):
         BaseRecordingSegment.__init__(self, sampling_frequency=file_streamer.fs)
         self._file_streamer = file_streamer
@@ -238,4 +238,4 @@ class StreamingIblRecordingSegment(BaseRecordingSegment):
         return traces[:, channel_indices]
 
 
-read_streaming_ibl = define_function_from_class(source_class=StreamingIblExtractor, name="read_streaming_ibl")
+read_ibl_streaming_recording = define_function_from_class(source_class=IblStreamingRecordingExtractor, name="read_ibl_streaming_recording")
