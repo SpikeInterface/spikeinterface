@@ -17,7 +17,7 @@ from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor,
                             read_nwb, read_nwb_recording, read_nwb_sorting)
 
 from .cbin_ibl import CompressedBinaryIblExtractor, read_cbin_ibl
-from .stream_ibl import StreamingIblExtractor, read_streaming_ibl
+from .iblstreamingrecording import IblStreamingRecordingExtractor, read_ibl_streaming_recording
 from .mcsh5extractors import MCSH5RecordingExtractor, read_mcsh5
 
 # sorting extractors in relation with a sorter
