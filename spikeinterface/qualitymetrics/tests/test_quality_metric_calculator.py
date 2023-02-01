@@ -78,10 +78,10 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         assert 'snr' in metrics.columns
         assert 'isolation_distance' not in metrics.columns
         metrics = self.extension_class.get_extension_function()(we, metric_names=['snr'],
-                                                                qm_params=dict(isi_violations=dict(isi_threshold_ms=2)))
+                                                                qm_params=dict(isi_violation=dict(isi_threshold_ms=2)))
         # check that parameters are correctly set
         qm = we.load_extension("quality_metrics")
-        assert qm._params["qm_params"]["isi_violations"]["isi_threshold_ms"] == 2
+        assert qm._params["qm_params"]["isi_violation"]["isi_threshold_ms"] == 2
         assert 'snr' in metrics.columns
         assert 'isolation_distance' not in metrics.columns
         print(metrics)
