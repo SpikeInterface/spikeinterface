@@ -6,6 +6,7 @@ from spikeinterface.extractors import MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
+from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.features_from_peaks import PeakToPeakFeature
 
@@ -33,13 +34,14 @@ def test_detect_peaks():
     
 
     # locally_exclusive + pipeline steps LocalizeCenterOfMass + PeakToPeakFeature
-    pipeline_steps = [
-        PeakToPeakFeature(recording, ms_before=1., ms_after=1., all_channels=False),
-        LocalizeCenterOfMass(recording, ms_before=1., ms_after=1., local_radius_um=150.),
+    pipeline_nodes = [
+        ExtractDenseWaveforms(recording, name='waveforms',ms_before=1., ms_after=1.,),
+        PeakToPeakFeature(recording,  all_channels=False, parents='waveforms'),
+        LocalizeCenterOfMass(recording, local_radius_um=50.,parents='waveforms'),
     ]
     peaks, ptp, peak_locations = detect_peaks(recording, method='locally_exclusive',
                          peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                         pipeline_steps=pipeline_steps, **job_kwargs)
+                         pipeline_nodes=pipeline_nodes, **job_kwargs)
     assert peaks.shape[0] == ptp.shape[0]
     assert peaks.shape[0] == peak_locations.shape[0]
     assert 'x' in peak_locations.dtype.fields
