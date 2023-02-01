@@ -27,16 +27,6 @@ jobs:
         run: |
           pip install -e .
           pip install pynwb
-      - name: Uninstall h5py
-        run: pip uninstall -y h5py
-      - uses: s-weigand/setup-conda@v1
-        with:
-          update-conda: true
-          activate-conda: false
-          python-version: ${{ matrix.python-version }}
-          conda-channels: conda-forge
-      - name: Install ROS3
-        run: conda install -c conda-forge h5py
       - name: Install fsspec, aiohttp and requests
         run: pip install fsspec aiohttp requests
       - name: run tests
