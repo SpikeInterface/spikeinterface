@@ -1,5 +1,6 @@
 import unittest
-import pickle
+from platform import python_version
+from packaging import version
 
 import pytest
 import numpy as np
@@ -203,7 +204,10 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('spike2/130322-1LY.smr', {'stream_id': '1'}),
     ]
 
-
+@pytest.mark.skipif(
+        version.parse(python_version()) >= version.parse("3.10"),
+        reason="Sonpy only testing with Python < 3.10!",
+)
 class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = CedRecordingExtractor
     downloads = [
