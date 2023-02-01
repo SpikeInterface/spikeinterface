@@ -75,7 +75,7 @@ class CurationSorting:
         else:
             assert new_unit_id not in current_sorting.unit_ids, f"new_unit_id already exists!"
         new_sorting = MergeUnitsSorting(parent_sorting=current_sorting, units_to_merge=units_to_merge, 
-                new_unit_id=new_unit_id, delta_time_ms=delta_time_ms, properties_policy=self._properties_policy)
+                new_unit_ids=[new_unit_id], delta_time_ms=delta_time_ms, properties_policy=self._properties_policy)
         if self._make_graph:
             units = current_sorting.get_unit_ids()
             i = self._sorting_stages_i
