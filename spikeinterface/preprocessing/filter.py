@@ -93,7 +93,7 @@ class FilterRecording(BasePreprocessor):
 
         self._kwargs = dict(recording=recording.to_dict(), band=band, btype=btype,
                             filter_order=filter_order, ftype=ftype, filter_mode=filter_mode, coeff=coeff,
-                            margin_ms=margin_ms)
+                            margin_ms=margin_ms, dtype=dtype.str)
 
 
 class FilterRecordingSegment(BasePreprocessorSegment):
@@ -155,7 +155,8 @@ class BandpassFilterRecording(FilterRecording):
     def __init__(self, recording, freq_min=300., freq_max=6000., margin_ms=5.0, dtype=None, **filter_kwargs):
         FilterRecording.__init__(self, recording, band=[freq_min, freq_max], margin_ms=margin_ms, dtype=dtype,
                                  **filter_kwargs)
-        self._kwargs = dict(recording=recording.to_dict(), freq_min=freq_min, freq_max=freq_max, margin_ms=margin_ms)
+        dtype = fix_dtype(recording, dtype)
+        self._kwargs = dict(recording=recording.to_dict(), freq_min=freq_min, freq_max=freq_max, margin_ms=margin_ms, dtype=dtype.str)
         self._kwargs.update(filter_kwargs)
 
 
@@ -184,7 +185,8 @@ class HighpassFilterRecording(FilterRecording):
     def __init__(self, recording, freq_min=300., margin_ms=5.0, dtype=None, **filter_kwargs):
         FilterRecording.__init__(self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype,
                                  btype='highpass', **filter_kwargs)
-        self._kwargs = dict(recording=recording.to_dict(), freq_min=freq_min, margin_ms=margin_ms)
+        dtype = fix_dtype(recording, dtype)
+        self._kwargs = dict(recording=recording.to_dict(), freq_min=freq_min, margin_ms=margin_ms, dtype=dtype.str)
         self._kwargs.update(filter_kwargs)
 
 
@@ -228,7 +230,7 @@ class NotchFilterRecording(BasePreprocessor):
         for parent_segment in recording._recording_segments:
             self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, 'ba', margin, dtype))
 
-        self._kwargs = dict(recording=recording.to_dict(), freq=freq, q=q, margin_ms=margin_ms)
+        self._kwargs = dict(recording=recording.to_dict(), freq=freq, q=q, margin_ms=margin_ms, dtype=dtype.str)
 
 
 # functions for API
