@@ -273,7 +273,9 @@ class DisplacementWidget(BaseWidget):
                 origin='lower',
                 aspect='auto',
                 extent=extent,
-                cmap='inferno'
+                cmap='inferno',
+                vmin=0.0,
+                vmax=np.percentile(motion_histogram.ravel(), 95),
             )
 
         if self.spatial_bins is None:
