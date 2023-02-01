@@ -13,7 +13,7 @@ jobs:
         os: ["ubuntu-latest"]
         python-version: ["3.9"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
       - uses: s-weigand/setup-conda@v1
         with:
@@ -21,7 +21,6 @@ jobs:
           activate-conda: false
           python-version: ${{ matrix.python-version }}
           conda-channels: conda-forge
-      - uses: actions/checkout@v2
       - run: git fetch --prune --unshallow --tags
       - name: Install pytest
         run: |
