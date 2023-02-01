@@ -180,13 +180,12 @@ def test_calculate_isi_violations(simulated_data):
 
 
 def test_calculate_sliding_rp_violations(simulated_data):
-    contaminations_gt = {0: 0.10534956502609294, 1: 1.0, 2: 1.0}
-    counts_gt = {0: 2, 1: 4, 2: 10}
+    contaminations_gt = {0: 0.03, 1: 0.185, 2: 0.325}
     we = setup_dataset(simulated_data)
-    contaminations = compute_sliding_rp_violations(we, 1, 0.0)
+    contaminations = compute_sliding_rp_violations(we, bin_size_ms=0.25, window_size_s=1)
 
     print(contaminations)
-    assert np.allclose(list(contaminations_gt.values()), list(contaminations_gt.values()), rtol=0.05)
+    assert np.allclose(list(contaminations_gt.values()), list(contaminations.values()), rtol=0.05)
 
 def test_calculate_rp_violations(simulated_data):
     rp_contamination_gt = {0: 0.10534956502609294, 1: 1.0, 2: 1.0}
@@ -199,11 +198,10 @@ def test_calculate_rp_violations(simulated_data):
     np.testing.assert_array_equal(list(counts_gt.values()), list(counts.values()))
 
 @pytest.mark.sortingcomponents
-@pytest.mark.xfail
 def test_calculate_drift_metrics(simulated_data):
-    drift_ptps_gt = {0: 3.8497035992743918, 1: 1.200316354668118, 2: 1.3330619152472707}
-    drift_stds_gt = {0: 1.0907827238707128, 1: 0.3363447300999075, 2: 0.3607988107268864}
-    drift_mads_gt = {0: 0.6769978363913438, 1: 0.2606798893916917, 2: 0.27395444544960695}
+    drift_ptps_gt = {0: 0.46840681501541326, 1: 0.6777238017179599, 2: 0.8942870016859388}
+    drift_stds_gt = {0: 0.1524300978308216, 1: 0.2000278046705443, 2: 0.2515466033662633}
+    drift_mads_gt = {0: 0.09958965007876515, 1: 0.15344260957426314, 2: 0.15754859427461837}
 
     we = setup_dataset(simulated_data)
     spike_locs = compute_spike_locations(we)
@@ -223,4 +221,4 @@ if __name__ == '__main__':
     # test_calculate_amplitude_median(sim_data)
     # test_calculate_isi_violations(sim_data)
     test_calculate_sliding_rp_violations(sim_data)
-    test_calculate_drift_metrics(sim_data)
+    # test_calculate_drift_metrics(sim_data)

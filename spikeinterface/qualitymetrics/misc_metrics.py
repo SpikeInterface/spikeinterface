@@ -364,24 +364,21 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
     return res(rp_contamination, nb_violations)
 
 
-def compute_sliding_rp_violations(waveform_extractor, bin_size=0.25, window_size_s=2,
+def compute_sliding_rp_violations(waveform_extractor, bin_size_ms=0.25, window_size_s=1,
                                   exclude_ref_period_below_ms=0.5, max_ref_period_ms=10,
                                   contamination_values=None):
     """Compute sliding refractory period violations, a metric developed by IBL which computes 
     contamination by using a sliding refractory period.
-
     This metric computes the minimum contamination with at least 90% confidence.
-    A neuron will always fail this metric for very low firing rates, and thus this metric takes into account both 
-    firing rate and refractory period violations.
 
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    bin_size : float
+    bin_size_ms : float
         The size of binning for the autocorrelogram in ms, by default 0.25
     window_size_s : float
-        Window in seconds to compute correlogram, by default 2
+        Window in seconds to compute correlogram, by default 1
     exclude_ref_period_below_ms : float
         Refractory periods below this value are excluded, by default 0.5
     max_ref_period_ms : float
@@ -417,17 +414,18 @@ def compute_sliding_rp_violations(waveform_extractor, bin_size=0.25, window_size
             spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
             spike_train_list.append(spike_train)
 
-        contamination[unit_id] = slidingRP_viol(spike_train_list, fs, duration, bin_size, window_size_s,
-                                                exclude_ref_period_below_ms, max_ref_period_ms,
-                                                contamination_values)
+        contamination[unit_id] = slidingRP_violations(spike_train_list, fs, duration, bin_size_ms, window_size_s,
+                                                      exclude_ref_period_below_ms, max_ref_period_ms,
+                                                      contamination_values)
 
     return contamination
 
 
 _default_params["sliding_rp"] = dict(
-    bin_size=0.25,
-    window_size_s=2,
+    bin_size_ms=0.25,
+    window_size_s=1,
     exclude_ref_period_below_ms=0.5,
+    max_ref_period_ms=10,
     contamination_values=None
 )
 
@@ -897,9 +895,9 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
         return fraction_missing
 
 
-def slidingRP_viol(spike_samples, sample_rate, duration, bin_size_ms=0.25, window_size_s=1,
-                   exclude_ref_period_below_ms=0.5, max_ref_period_ms=10,
-                   contamination_values=None, return_conf_matrix=False):
+def slidingRP_violations(spike_samples, sample_rate, duration, bin_size_ms=0.25, window_size_s=1,
+                         exclude_ref_period_below_ms=0.5, max_ref_period_ms=10,
+                         contamination_values=None, return_conf_matrix=False):
     """
     A metric developed by IBL which determines whether the refractory period violations 
     by using sliding refractory periods.
@@ -938,10 +936,9 @@ def slidingRP_viol(spike_samples, sample_rate, duration, bin_size_ms=0.25, windo
     rp_edges = np.arange(0, max_ref_period_ms / 1000, rp_bin_size)  # in s
     rp_centers = rp_edges + ((rp_edges[1] - rp_edges[0]) / 2) # vector of refractory period durations to test
     
-    # compute firing rate and spike count
-    n_spikes = len(spike_samples)
+    # compute firing rate and spike count (concatenate for multi-segments)
+    n_spikes = len(np.concatenate(spike_samples))
     firing_rate = n_spikes / duration
-
     if np.isscalar(spike_samples[0]):
         spike_samples_list = [spike_samples]
     else:
@@ -950,7 +947,7 @@ def slidingRP_viol(spike_samples, sample_rate, duration, bin_size_ms=0.25, windo
     correlogram = None
     for spike_samples in spike_samples_list:
         c0 = correlogram_for_one_segment(spike_samples, np.zeros(len(spike_samples), dtype='int8'),
-                                         bin_size=int(bin_size_ms / 1000 * sample_rate), # convert to sample counts
+                                         bin_size=max(int(bin_size_ms / 1000 * sample_rate), 1), # convert to sample counts
                                          window_size=int(window_size_s * sample_rate))[0, 0]
         if correlogram is None:
             correlogram = c0
@@ -972,7 +969,7 @@ def slidingRP_viol(spike_samples, sample_rate, duration, bin_size_ms=0.25, windo
     else:
         min_cont_with_90_confidence = np.nan
     if return_conf_matrix:
-        return min_cont_with_90_confidence, conf_matrix, correlogram_positive
+        return min_cont_with_90_confidence, conf_matrix
     else:
         return min_cont_with_90_confidence
 
