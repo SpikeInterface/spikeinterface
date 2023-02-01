@@ -1,7 +1,8 @@
 import numpy as np
 import scipy.signal
-from spikeinterface.preprocessing.basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from spikeinterface.core.core_tools import define_function_from_class
+from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from ..core import order_channels_by_depth
+from ..core.core_tools import define_function_from_class
 
 
 class HighpassSpatialFilterRecording(BasePreprocessor):
@@ -13,8 +14,13 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
     channels, assumes noise is constant across all channels. However,
     noise have exhibit low-frequency changes across nearby channels.
 
-    This function extends the cut-band from 0 to 0.01 Nyquist to
-    remove these low-frequency changes during destriping.
+    Alternative to median filtering across channels, in which the cut-band is
+    extended from 0 to the 0.01 Nyquist corner frequency using butterworth filter.
+    This allows removal of contaminating stripes that are not constant across channels.
+
+    Performs filtering on the 0 axis (across channels), with optional
+    padding (mirrored) and tapering (cosine taper) prior to filtering.
+    Applies a butterworth filter on the 0-axis with tapering / padding.
 
     Parameters
     ----------
@@ -31,17 +37,36 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
         Otherwise, the passed value will be used, by default None
     direction : str
         The direction in which the spatial filter is applied, by default "y"
+    agc : bool
+        True / False
+    agc_window_length_s : float
+        0.01
+    highpass_butter_order : int (3)
+
+    highpass_butter_wn : float
+        0.01
     agc_options: dict, str, or None
         Options for automatic gain control. By default, gain control
         is applied prior to filtering to improve filter performance.
         When the argument is "ibl", the function will use the IBL pipeline defaults (agc on).
         Setting to None will turn off gain control, by default None.
         To customize, pass a dictionary with the fields:
-            * agc_options["window_length_s"] - window length in seconds
-            * agc_options["sampling_interval"] - recording sampling interval
+            * agc_options["window_length_s"] - window length in seconds (default 300 / sampling_frequency)
     butter_kwargs: dict
         Dictionary with fields "N" and "Wn" to be passed to
         scipy.signal.butter, by default N=3 and Wn=0.01
+
+    Returns
+    -------
+    highpass_recording : HighpassSpatialFilterRecording
+        The recording with highpass spatial filtered traces
+
+    References
+    ----------
+    Details of the high-pass spatial filter function (written by Olivier Winter)
+    used in the IBL pipeline can be found at:
+    International Brain Laboratory et al. (2022). Spike sorting pipeline for the International Brain Laboratory.
+    https://www.internationalbrainlab.com/repro-ephys
     """
     name = 'highpass_spatial_filter'
 
@@ -59,14 +84,13 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
         channel_locations = recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)
         assert dim < channel_locations.ndim, f"Direction {direction} is wrong"
-        locs_mono = channel_locations[:, dim]
-        if np.array_equal(np.sort(locs_mono), locs_mono):
+        locs_depth = channel_locations[:, dim]
+        if np.array_equal(np.sort(locs_depth), locs_depth):
             order_f = None
             order_r = None
         else:
-            # use stable sort (mergesort) to avoid randomness when non-unique values
-            order_f = np.argsort(locs_mono, kind='mergesort')
-            order_r = np.argsort(order_f)
+            # sort by x, y to avoid ambiguity
+            order_f, order_r = order_channels_by_depth(recording=recording, dimensions=('x', 'y'))
 
         # Fix channel padding and tapering
         n_channels = recording.get_num_channels()
@@ -119,18 +143,10 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
                             agc_options=agc_options,
                             butter_kwargs=butter_kwargs)
 
-class HighPassSpatialFilterSegment(BasePreprocessorSegment):
 
-    def __init__(self,
-                 parent_recording_segment,
-                 n_channel_pad,
-                 n_channel_taper,
-                 n_channels,
-                 agc_options,
-                 sos_filter,
-                 order_f,
-                 order_r
-                 ):
+class HighPassSpatialFilterSegment(BasePreprocessorSegment):
+    def __init__(self, parent_recording_segment, n_channel_pad, n_channel_taper,
+                 n_channels, agc_options, sos_filter, order_f, order_r):
         self.parent_recording_segment = parent_recording_segment
         self.n_channel_pad = n_channel_pad
         if n_channel_taper > 0:
@@ -151,17 +167,41 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         traces = self.parent_recording_segment.get_traces(start_frame,
                                                           end_frame,
                                                           slice(None))
+
+        # apply sorting by depth
         if self.order_f is not None:
             traces = traces[:, self.order_f]
         else:
             traces = traces.copy()
 
-        traces = kfilt(traces,
-                       self.n_channel_pad,
-                       self.taper,
-                       self.agc_options,
-                       self.sos_filter)
+        # apply AGC and keep the gains
+        if not self.agc_options:
+            agc_gains = None
+        else:
+            traces, agc_gains = agc(traces,
+                                    window_length=self.agc_options["window_length_s"],
+                                    sampling_interval=self.agc_options["sampling_interval"])
+        # pad the array with a mirrored version of itself and apply a cosine taper
+        if self.n_channel_pad > 0:
+            traces = np.c_[np.fliplr(traces[:, :self.n_channel_pad]),
+                           traces,
+                           np.fliplr(traces[:, -self.n_channel_pad:])]
+        # apply tapering
+        if self.taper is not None:
+            traces = traces * self.taper[np.newaxis, :]
 
+        # apply actual HP filter
+        traces = scipy.signal.sosfiltfilt(self.sos_filter, traces, axis=1)
+
+        # remove padding
+        if self.n_channel_pad > 0:
+            traces = traces[:, self.n_channel_pad:-self.n_channel_pad]
+
+        # remove AGC gains
+        if agc_gains is not None:
+            traces = traces * agc_gains
+
+        # reverse sorting by depth, if needed
         if self.order_r is not None:
             traces = traces[:, self.order_r]
 
@@ -171,75 +211,70 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
 highpass_spatial_filter = define_function_from_class(source_class=HighpassSpatialFilterRecording,
                                                      name="highpass_spatial_filter")
 
-# -----------------------------------------------------------------------------------------------
-# IBL KFilt Function
-# -----------------------------------------------------------------------------------------------
+# # -----------------------------------------------------------------------------------------------
+# # IBL KFilt Function
+# # -----------------------------------------------------------------------------------------------
 
-def kfilt(traces, n_channel_pad, taper, agc_options, sos_filter):
-    """
-    Alternative to median filtering across channels, in which the cut-band is
-    extended from 0 to the 0.01 Nyquist corner frequency using butterworth filter.
-    This allows removal of contaminating stripes that are not constant across channels.
+# def kfilt(traces, n_channel_pad, taper, agc_options, sos_filter):
+#     """
+#     Alternative to median filtering across channels, in which the cut-band is
+#     extended from 0 to the 0.01 Nyquist corner frequency using butterworth filter.
+#     This allows removal of contaminating stripes that are not constant across channels.
 
-    Performs filtering on the 0 axis (across channels), with optional
-    padding (mirrored) and tapering (cosine taper) prior to filtering.
-    Applies a butterworth filter on the 0-axis with tapering / padding.
+#     Performs filtering on the 0 axis (across channels), with optional
+#     padding (mirrored) and tapering (cosine taper) prior to filtering.
+#     Applies a butterworth filter on the 0-axis with tapering / padding.
 
-    Details of the high-pass spatial filter function (written by Olivier Winter)
-    used in the IBL pipeline can be found at:
+#     Details of the high-pass spatial filter function (written by Olivier Winter)
+#     used in the IBL pipeline can be found at:
 
-    International Brain Laboratory et al. (2022). Spike sorting pipeline for the
-    International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
+#     International Brain Laboratory et al. (2022). Spike sorting pipeline for the
+#     International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
 
-    traces: (num_channels x num_samples) numpy array
+#     traces: (num_channels x num_samples) numpy array
 
-    Parameters
-    ----------
-    traces : 2D np.array
-        (num_channels x num_samples) numpy array with the signals
-    n_channel_pad : int
-        Number of channels to pad
-    n_channel_taper : int
-        Number of channels to taper
-    agc_options : dict
-        Automatic Gain Control options
-    sos_filter : sos filter
-        Butterworth filter in second-order sections format
+#     Parameters
+#     ----------
+#     traces : 2D np.array
+#         (num_channels x num_samples) numpy array with the signals
+#     n_channel_pad : int
+#         Number of channels to pad
+#     n_channel_taper : int
+#         Number of channels to taper
+#     agc_options : dict
+#         Automatic Gain Control options
+#     sos_filter : sos filter
+#         Butterworth filter in second-order sections format
 
-    Returns
-    -------
-    traces_kfilt : 2D np.array
-        The spatially filtered traces
-    """
-    num_channels = traces.shape[1]
+#     Returns
+#     -------
+#     traces_kfilt : 2D np.array
+#         The spatially filtered traces
+#     """
+#     # apply agc and keep the gain in handy
+#     if not agc_options:
+#         gain = 1
+#     else:
+#         # pr-compute gains?
+#         traces, gain = agc(traces,
+#                            window_length=agc_options["window_length_s"],
+#                            sampling_interval=agc_options["sampling_interval"])
 
-    # lateral padding left and right
-    num_channels_padded = num_channels + n_channel_pad * 2
+#     if n_channel_pad > 0:
+#         # pad the array with a mirrored version of itself and apply a cosine taper
+#         traces = np.c_[np.fliplr(traces[:, :n_channel_pad]),
+#                        traces,
+#                        np.fliplr(traces[:, -n_channel_pad:])]
 
-    # apply agc and keep the gain in handy
-    if not agc_options:
-        gain = 1
-    else:
-        # pr-compute gains?
-        traces, gain = agc(traces,
-                           window_length=agc_options["window_length_s"],
-                           sampling_interval=agc_options["sampling_interval"])
+#     if taper is not None:
+#         traces = traces * taper[np.newaxis, :]
 
-    if n_channel_pad > 0:
-        # pad the array with a mirrored version of itself and apply a cosine taper
-        traces = np.c_[np.fliplr(traces[:, :n_channel_pad]),
-                       traces,
-                       np.fliplr(traces[:, -n_channel_pad:])]
+#     traces = scipy.signal.sosfiltfilt(sos_filter, traces, axis=1)
 
-    if taper is not None:
-        traces = traces * taper[np.newaxis, :]
+#     if n_channel_pad > 0:
+#         traces = traces[:, n_channel_pad:-n_channel_pad]
 
-    traces = scipy.signal.sosfiltfilt(sos_filter, traces, axis=1)
-
-    if n_channel_pad > 0:
-        traces = traces[:, n_channel_pad:-n_channel_pad]
-
-    return traces * gain
+#     return traces * gain
 
 # -----------------------------------------------------------------------------------------------
 # IBL Helper Functions
