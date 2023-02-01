@@ -13,9 +13,13 @@ jobs:
         os: ["ubuntu-latest"]
         python-version: ["3.9"]
     steps:
-      - uses: s-weigand/setup-conda@v1
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
+      - uses: s-weigand/setup-conda@v1
+        with:
+          update-conda: true
+          python-version: ${{ matrix.python-version }}
+          conda-channels: conda-forge
       - run: git fetch --prune --unshallow --tags
       - name: Install openblas
         run: sudo apt install libopenblas-dev liblapack-dev
