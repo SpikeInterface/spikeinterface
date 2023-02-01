@@ -62,7 +62,7 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.3, ms_
 
 
 class LocalizeBase(PipelineNode):
-    def __init__(self, recording, name='', return_ouput=True, parents=None, local_radius_um=75.):
+    def __init__(self, recording, name='', return_ouput=True, parents=None, local_radius_um=50.):
         PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
         
         self.local_radius_um = local_radius_um
