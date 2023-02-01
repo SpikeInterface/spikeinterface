@@ -9,6 +9,8 @@ def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12):
     This information is needed to perform the preprocessing.phase_shift operation.
 
     See https://github.com/int-brain-lab/ibllib/blob/master/ibllib/ephys/neuropixel.py
+    
+    
     for the original implementation.
 
     Parameters
