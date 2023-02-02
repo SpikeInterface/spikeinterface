@@ -32,7 +32,7 @@ _misc_metric_name_to_func = {
     "firing_rate" : compute_firing_rates,
     "presence_ratio" : compute_presence_ratios,
     "snr" : compute_snrs,
-    "isi_violations" : compute_isi_violations,
+    "isi_violation" : compute_isi_violations,
     "rp_violation" : compute_refrac_period_violations,
     "sliding_rp_violation" : compute_sliding_rp_violations,
     "amplitude_cutoff" : compute_amplitude_cutoffs,
