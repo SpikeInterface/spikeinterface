@@ -3,6 +3,7 @@ import numpy as np
 import scipy.signal
 import scipy.spatial
 
+from ..core import WaveformExtractor
 from ..core.template_tools import get_template_extremum_channel
 from ..postprocessing import compute_correlograms
 from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rates
@@ -143,7 +144,7 @@ def get_potential_auto_merge(
 
     # STEP 3 : unit positions are estimated roughly with channel
     if 'unit_positions' in steps:
-        chan_loc = we.recording.get_channel_locations()
+        chan_loc = we.get_channel_locations()
         unit_max_chan = get_template_extremum_channel(we, peak_sign=peak_sign, mode="extremum", outputs="index")
         unit_max_chan = list(unit_max_chan.values())
         unit_locations = chan_loc[unit_max_chan, :]
@@ -392,10 +393,11 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
     return templates_diff
 
 
-class MockWaveformExtractor:
-    def __init__(self, recording, sorting):
-        self.recording = recording
-        self.sorting = sorting
+class MockWaveformExtractor(WaveformExtractor):
+    def __init__(self, we, sorting):
+        WaveformExtractor.__init__(self, recording=None, sorting=sorting, folder=None,
+                                   rec_attributes=we._rec_attributes, allow_unfiltered=True,
+                                   sparsity=None)
 
 
 def check_improve_contaminations_score(we, pair_mask, contaminations,
@@ -410,7 +412,6 @@ def check_improve_contaminations_score(we, pair_mask, contaminations,
     Check that the contamination score is improved (decrease)  after 
     a potential merge
     """
-    recording = we.recording
     sorting = we.sorting
     pair_mask = pair_mask.copy()
 
@@ -430,7 +431,7 @@ def check_improve_contaminations_score(we, pair_mask, contaminations,
         unit_id1, unit_id2 = sorting.unit_ids[ind1], sorting.unit_ids[ind2]
         sorting_merged = MergeUnitsSorting(sorting, [unit_id1, unit_id2], new_unit_id=unit_id1).select_units([unit_id1])
         # make a lazy fake WaveformExtractor to compute contamination and firing rate
-        we_new = MockWaveformExtractor(recording, sorting_merged)
+        we_new = MockWaveformExtractor(we, sorting_merged)
 
         new_contaminations, _ = compute_refrac_period_violations(we_new, refractory_period_ms=refractory_period_ms,
                                     censored_period_ms=censored_period_ms)

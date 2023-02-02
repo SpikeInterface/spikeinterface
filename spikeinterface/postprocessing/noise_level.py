@@ -17,6 +17,8 @@ class NoiseLevelsCalculator(BaseWaveformExtractorExtension):
         return  self._extension_data
         
     def _run(self):
+        assert self.waveform_extractor.has_recording(), \
+            (f"The '{self.extension_name}' is not available for recordingless waveform extractors")
         return_scaled = self.waveform_extractor.return_scaled
         self._extension_data['noise_levels'] = get_noise_levels(self.waveform_extractor.recording,
                                                                 return_scaled=return_scaled, **self._params)

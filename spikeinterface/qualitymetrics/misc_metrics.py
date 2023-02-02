@@ -75,14 +75,9 @@ def compute_firing_rates(waveform_extractor):
         The firing rate, across all segments, for each unit ID.
     """
 
-    recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
-    num_segs = sorting.get_num_segments()
-    fs = recording.get_sampling_frequency()
-
-    seg_durations = [recording.get_num_samples(i) / fs for i in range(num_segs)]
-    total_duration = np.sum(seg_durations)
+    total_duration = waveform_extractor.get_total_duration()
 
     firing_rates = {}
     num_spikes = compute_num_spikes(waveform_extractor)
@@ -112,15 +107,13 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60):
     The total duration, across all segments, is divided into "num_bins".
     To do so, spike trains across segments are concatenated to mimic a continuous segment.
     """
-
-    recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
     num_segs = sorting.get_num_segments()
 
-    seg_length = [recording.get_num_samples(i) for i in range(num_segs)]
-    total_length = np.sum(seg_length)
-    bin_duration_samples = int((bin_duration_s * recording.sampling_frequency))
+    seg_lengths = [waveform_extractor.get_num_samples(i) for i in range(num_segs)]
+    total_length = waveform_extractor.get_total_samples()
+    bin_duration_samples = int((bin_duration_s * waveform_extractor.sampling_frequency))
     num_bin_edges = total_length // bin_duration_samples + 1
     bin_edges = np.arange(num_bin_edges) * bin_duration_samples
 
@@ -134,7 +127,7 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60):
             spike_train = []
             for segment_index in range(num_segs):
                 st = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                st = st + np.sum(seg_length[:segment_index])
+                st = st + np.sum(seg_lengths[:segment_index])
                 spike_train.append(st)
             spike_train = np.concatenate(spike_train)
 
@@ -171,20 +164,27 @@ def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "e
     snrs : dict
         Computed signal to noise ratio for each unit.
     """
+    if waveform_extractor.is_extension("noise_levels"):
+        noise_levels = waveform_extractor.load_extension("noise_levels").get_data()
+    else:
+        assert waveform_extractor.has_recording(), \
+            ("SNR cannot be computed because waveform_extractor is recordingless and "
+             "'noise_levels' extension is not available")
+        if random_chunk_kwargs_dict is None:
+            random_chunk_kwargs_dict = {}
+        noise_levels = get_noise_levels(waveform_extractor.recording,
+                                        return_scaled=waveform_extractor.return_scaled,
+                                        **random_chunk_kwargs_dict)
+
     assert peak_sign in ("neg", "pos", "both")
     assert peak_mode in ("extremum", "at_index")
 
-    recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
-    channel_ids = recording.channel_ids
+    channel_ids = waveform_extractor.channel_ids
 
     extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign, mode=peak_mode)
     unit_amplitudes = get_template_extremum_amplitude(waveform_extractor, peak_sign=peak_sign, mode=peak_mode)
-    return_scaled = waveform_extractor.return_scaled
-    if random_chunk_kwargs_dict is None:
-        random_chunk_kwargs_dict = {}
-    noise_levels = get_noise_levels(recording, return_scaled=return_scaled, **random_chunk_kwargs_dict)
 
     # make a dict to access by chan_id
     noise_levels = dict(zip(channel_ids, noise_levels))
@@ -249,14 +249,12 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     res = namedtuple('isi_violation',
                      ['isi_violations_ratio', 'isi_violations_count'])
 
-    recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
     num_segs = sorting.get_num_segments()
-    fs = recording.get_sampling_frequency()
 
-    seg_durations = [recording.get_num_samples(i) / fs for i in range(num_segs)]
-    total_duration_s = np.sum(seg_durations)
+    total_duration_s = waveform_extractor.get_total_duration()
+    fs = waveform_extractor.sampling_frequency
 
     isi_threshold_s = isi_threshold_ms / 1000
     min_isi_s = min_isi_ms / 1000
@@ -326,7 +324,6 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
         print("compute_refrac_period_violations cannot run without numba.")
         return None
 
-    recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     fs = sorting.get_sampling_frequency()
     num_units = len(sorting.unit_ids)
@@ -342,9 +339,7 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
         _compute_rp_violations_numba(nb_rp_violations, spikes[seg_index][0].astype(np.int64),
                                      spikes[seg_index][1].astype(np.int32), t_c, t_r)
 
-    T = 0
-    for segment_idx in range(num_segments):
-        T += recording.get_num_frames(segment_idx)
+    T = waveform_extractor.get_total_samples()
 
     nb_violations = {}
     rp_contamination = {}
@@ -395,13 +390,11 @@ def compute_sliding_rp_violations(waveform_extractor, bin_size_ms=0.25, window_s
     ----------
     This code was adapted from https://github.com/SteinmetzLab/slidingRefractory/blob/1.0.0/python/slidingRP/metrics.py
     """
-
-    recording = waveform_extractor.recording
-    duration = recording.get_total_duration()
+    duration = waveform_extractor.get_total_duration()
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
     num_segs = sorting.get_num_segments()
-    fs = recording.get_sampling_frequency()
+    fs = waveform_extractor.sampling_frequency
 
     contamination = {}
 
@@ -468,7 +461,6 @@ def compute_amplitude_cutoffs(waveform_extractor, peak_sign='neg',
     If the "spike_amplitude" extension is not available, the amplitudes are extracted from the waveform extractor,
     which usually has waveforms for a small subset of spikes (500 by default).
     """
-    recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
 
@@ -495,7 +487,7 @@ def compute_amplitude_cutoffs(waveform_extractor, peak_sign='neg',
             if waveform_extractor.is_sparse():
                 chan_ind = np.where(waveform_extractor.sparsity.unit_id_to_channel_ids[unit_id] == chan_id)[0]
             else:
-                chan_ind = recording.id_to_index(chan_id)
+                chan_ind = waveform_extractor.channel_ids_to_indices([chan_id])[0]
             amplitudes = waveforms[:, before, chan_ind]
         else:
             amplitudes = np.concatenate([spike_amps[unit_id] for spike_amps in spike_amplitudes])
@@ -549,7 +541,6 @@ def compute_amplitude_medians(waveform_extractor, peak_sign='neg'):
     This code is ported from:
     https://github.com/int-brain-lab/ibllib/blob/master/brainbox/metrics/single_units.py
     """
-    recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
 
@@ -570,7 +561,7 @@ def compute_amplitude_medians(waveform_extractor, peak_sign='neg'):
             if waveform_extractor.is_sparse():
                 chan_ind = np.where(waveform_extractor.sparsity.unit_id_to_channel_ids[unit_id] == chan_id)[0]
             else:
-                chan_ind = recording.id_to_index(chan_id)
+                chan_ind = waveform_extractor.channel_ids_to_indices([chan_id])[0]
             amplitudes = waveforms[:, before, chan_ind]
         else:
             amplitudes = np.concatenate([spike_amps[unit_id] for spike_amps in spike_amplitudes])
@@ -656,7 +647,6 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
         else:
             return res(empty_dict, empty_dict, empty_dict)
 
-    recording = waveform_extractor.recording
     sorting = waveform_extractor.sorting
     unit_ids = waveform_extractor.unit_ids
     interval_samples = int(interval_s * waveform_extractor.sampling_frequency)
@@ -664,7 +654,7 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
         f"Direction {direction} is invalid. Available directions: "
         f"{spike_locations.dtype.names}"
     )
-    total_duration = recording.get_total_duration()
+    total_duration = waveform_extractor.get_total_duration()
     if total_duration < min_num_bins * interval_s:
         warnings.warn("The recording is too short given the specified 'interval_s' and "
                       "'min_num_bins'. Drift metrics will be set to NaN")
@@ -683,14 +673,14 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
     reference_positions = np.zeros(len(unit_ids))
     for unit_ind, unit_id in enumerate(unit_ids):
         locs = []
-        for segment_index in range(recording.get_num_segments()):
+        for segment_index in range(waveform_extractor.get_num_segments()):
             locs.append(spike_locations_by_unit[segment_index][unit_id][direction])
         reference_positions[unit_ind] = np.median(np.concatenate(locs))
 
     # now compute median positions and concatenate them over segments
     median_position_segments = None
-    for segment_index in range(recording.get_num_segments()):
-        seg_length = recording.get_num_samples(segment_index)
+    for segment_index in range(waveform_extractor.get_num_segments()):
+        seg_length = waveform_extractor.get_num_samples(segment_index)
         num_bin_edges = seg_length // interval_samples + 1
         bins = np.arange(num_bin_edges) * interval_samples
         spike_vector = sorting.to_spike_vector()

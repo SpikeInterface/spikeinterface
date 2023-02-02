@@ -49,6 +49,8 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         spike locations.
         """
         from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+        assert self.waveform_extractor.has_recording(), \
+            (f"The '{self.extension_name}' is not available for recordingless waveform extractors")
         job_kwargs = fix_job_kwargs(job_kwargs)
 
         we = self.waveform_extractor
@@ -75,7 +77,6 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
             as a dict with units as key and spike locations as values.
         """
         we = self.waveform_extractor
-        recording = we.recording
         sorting = we.sorting
 
         if outputs == 'concatenated':
@@ -83,7 +84,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 
         elif outputs == 'by_unit':
             locations_by_unit = []
-            for segment_index in range(recording.get_num_segments()):
+            for segment_index in range(self.waveform_extractor.get_num_segments()):
                 i0 =np.searchsorted(self.spikes['segment_ind'], segment_index, side="left")
                 i1 =np.searchsorted(self.spikes['segment_ind'], segment_index, side="right")
                 spikes = self.spikes[i0: i1]

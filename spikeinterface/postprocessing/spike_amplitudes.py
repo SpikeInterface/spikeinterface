@@ -39,6 +39,8 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         return new_extension_data
         
     def _run(self, **job_kwargs):
+        assert self.waveform_extractor.has_recording(), \
+            (f"The '{self.extension_name}' is not available for recordingless waveform extractors")
         job_kwargs = fix_job_kwargs(job_kwargs)
         we = self.waveform_extractor
         recording = we.recording

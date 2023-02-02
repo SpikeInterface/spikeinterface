@@ -65,6 +65,8 @@ class SpikesOnTracesWidget(BaseWidget):
                  color_groups=False, color=None, clim=None, tile_size=512, seconds_per_row=0.2, 
                  with_colorbar=True, backend=None, **backend_kwargs):
         we = waveform_extractor
+        assert waveform_extractor.has_recording(), \
+            "SpikesOnTraces is not available with recordingless waveform extractor"
         recording: BaseRecording = we.recording
         sorting: BaseSorting = we.sorting
         
