@@ -3,7 +3,6 @@ import numpy as np
 import scipy.signal
 import scipy.spatial
 
-from ..core import WaveformExtractor
 from ..core.template_tools import get_template_extremum_channel
 from ..postprocessing import compute_correlograms
 from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rates
@@ -135,7 +134,7 @@ def get_potential_auto_merge(
     # STEP 2 : remove contaminated auto corr
     if 'remove_contaminated' in steps:
         contaminations, nb_violations = compute_refrac_period_violations(we, refractory_period_ms=refractory_period_ms,
-                                        censored_period_ms=censored_period_ms)
+                                                                         censored_period_ms=censored_period_ms)
         nb_violations = np.array(list(nb_violations.values()))
         contaminations = np.array(list(contaminations.values()))
         to_remove = contaminations > contamination_threshold
@@ -163,8 +162,8 @@ def get_potential_auto_merge(
             win_size = get_unit_adaptive_window(auto_corr, thresh)
             win_sizes[unit_ind] = win_size
         correlogram_diff = compute_correlogram_diff(sorting, correlograms_smoothed, bins, win_sizes,
-                                        adaptative_window_threshold=adaptative_window_threshold,
-                                        pair_mask=pair_mask)
+                                                    adaptative_window_threshold=adaptative_window_threshold,
+                                                    pair_mask=pair_mask)
         # print(correlogram_diff)
         pair_mask = pair_mask & (correlogram_diff  < corr_diff_thresh)
 
@@ -393,11 +392,21 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
     return templates_diff
 
 
-class MockWaveformExtractor(WaveformExtractor):
-    def __init__(self, we, sorting):
-        WaveformExtractor.__init__(self, recording=None, sorting=sorting, folder=None,
-                                   rec_attributes=we._rec_attributes, allow_unfiltered=True,
-                                   sparsity=None)
+class MockWaveformExtractor:
+    """
+    Mock WaveformExtractor to be able to run compute_refrac_period_violations() 
+    needed for the auto_merge() function.
+    """
+    def __init__(self, waveform_extractor, sorting):
+        self.waveform_extractor = waveform_extractor
+        self._recording = None
+        self.sorting = sorting
+
+    def get_total_samples(self):
+        return self.waveform_extractor.get_total_samples()
+
+    def get_total_duration(self):
+        return self.waveform_extractor.get_total_duration()
 
 
 def check_improve_contaminations_score(we, pair_mask, contaminations,
