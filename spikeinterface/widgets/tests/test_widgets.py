@@ -11,7 +11,7 @@ if __name__ != '__main__':
 import matplotlib.pyplot as plt
 
 
-from spikeinterface import extract_waveforms, download_dataset, compute_sparsity
+from spikeinterface import extract_waveforms, load_waveforms, download_dataset, compute_sparsity
 
 from spikeinterface.widgets import HAVE_MPL, HAVE_SV
 
@@ -44,7 +44,10 @@ class TestWidgets(unittest.TestCase):
         cls.sorting = se.MEArecSortingExtractor(local_path)
 
         cls.num_units = len(cls.sorting.get_unit_ids())
-        cls.we = extract_waveforms(cls.recording, cls.sorting, cache_folder / 'mearec_test', load_if_exists=True)
+        if (cache_folder / 'mearec_test').is_dir():
+            cls.we = load_waveforms(cache_folder / 'mearec_test')
+        else:
+            cls.we = extract_waveforms(cls.recording, cls.sorting, cache_folder / 'mearec_test')
         
         sw.set_default_plotter_backend('matplotlib')
 
