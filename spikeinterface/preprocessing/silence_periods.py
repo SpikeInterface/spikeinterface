@@ -4,6 +4,8 @@ import scipy.interpolate
 from spikeinterface.core.core_tools import define_function_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
+from ..core import get_random_data_chunks, get_noise_levels
+
 class SilencedPeriodsRecording(BasePreprocessor):
     """
     Silence user-defined periods from recording extractor traces. By default, 
@@ -38,11 +40,11 @@ class SilencedPeriodsRecording(BasePreprocessor):
         available_modes = ('zeros', 'noise')
         num_seg = recording.get_num_segments()
 
+
         if num_seg == 1:
-            if isinstance(list_periods, (list, np.ndarray)) and (len(list_periods[0]) == 2):
+            if isinstance(list_periods, (list, np.ndarray)) and not np.isscalar(list_periods[0]):
                 # when unique segment accept list instead of of list of list/arrays
                 list_periods = [list_periods]
-
 
         # some checks
         assert isinstance(list_periods, list), "'list_periods' must be a list (one per segment)"
@@ -53,7 +55,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
         assert mode in available_modes, f"mode {mode} is not an available mode: {available_modes}"
 
         if mode in ['noise']:
-            noise_levels = get_noise_levels(recording, **random_chunk_kwargs)
+            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
         else:
             noise_levels = None
 
@@ -62,10 +64,8 @@ class SilencedPeriodsRecording(BasePreprocessor):
             periods = list_periods[seg_index]
             rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods, mode, noise_levels)
             self.add_recording_segment(rec_segment)
-
-        list_triggers_ = [[int(trig) for trig in trig_seg] for period_seg in list_periods]
         
-        self._kwargs = dict(recording=recording.to_dict(), list_periods=list_periods_,
+        self._kwargs = dict(recording=recording.to_dict(), list_periods=list_periods,
                             mode=mode, noise_levels=noise_levels)
 
 
@@ -76,6 +76,7 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.periods = np.asarray(periods, dtype='int64')
+        self.periods = np.sort(self.periods, axis=0)
         self.mode = mode
         self.noise_levels = noise_levels
 
@@ -83,19 +84,31 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
 
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
+        nb_channels = traces.shape[1]
 
         if start_frame is None:
             start_frame = 0
         if end_frame is None:
             end_frame = self.get_num_samples()
 
-        mask = (self.periods[:, 0] >= start_frame) & (self.periods < end_frame)
-        triggers = self.triggers[mask] - start_frame
-        labels = self.labels[mask]
+        if len(self.periods) > 0:
+            new_interval = np.array([start_frame, end_frame])
+            lower_index = np.searchsorted(self.periods[:,1], new_interval[0])
+            upper_index = np.searchsorted(self.periods[:,0], new_interval[1])
 
-        pad = self.pad
+            if upper_index > lower_index:
 
-        if self.mode == 'zeros':
+                intersection = self.periods[lower_index:upper_index]
+
+                for i in intersection:
+
+                    onset = max(0, i[0] - start_frame)
+                    offset = min(i[1] - start_frame, end_frame)
+
+                    if self.mode == 'zeros':
+                        traces[onset:offset, :] = 0
+                    elif self.mode == 'noise':
+                        traces[onset:offset, :] = self.noise_levels[channel_indices] * np.random.randn(offset-onset, nb_channels)
 
         return traces
 

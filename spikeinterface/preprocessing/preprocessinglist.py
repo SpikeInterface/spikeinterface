@@ -16,6 +16,7 @@ from .clip import (
     ClipRecording, clip)
 from .common_reference import CommonReferenceRecording, common_reference
 from .remove_artifacts import RemoveArtifactsRecording, remove_artifacts
+from .silence_periods import silence_periods
 from .remove_bad_channels import RemoveBadChannelsRecording, remove_bad_channels
 from .resample import ResampleRecording, resample
 from .phase_shift import PhaseShiftRecording, phase_shift
