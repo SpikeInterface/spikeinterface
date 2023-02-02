@@ -121,12 +121,11 @@ test = [
     ## herdingspikes
     "herdingspikes<=0.3.99",
 
-
     ## sliding_nn
     "pymde",
     "torch",
     "pynndescent",
-    
+
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",

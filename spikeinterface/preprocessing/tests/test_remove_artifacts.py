@@ -1,12 +1,23 @@
+import pytest
+from pathlib import Path
 import numpy as np
 
+from spikeinterface import set_global_tmp_folder
 from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import remove_artifacts
+
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "preprocessing"
+else:
+    cache_folder = Path("cache_folder") / "preprocessing"
+
+set_global_tmp_folder(cache_folder)
 
 
 def test_remove_artifacts():
     # one segment only
     rec = generate_recording(durations=[10.])
+    rec = rec.save(folder=cache_folder / "recording")
     rec.annotate(is_filtered=True)
 
     triggers = [15000, 30000]
@@ -63,12 +74,17 @@ def test_remove_artifacts():
     rec_rmart_cub = remove_artifacts(rec, triggers, ms_before=None, ms_after=None, mode="cubic")
 
 
-    # test removing several artefact types at once
+    # test removing several artifact types at once
     triggers = [15000, 20000, 25000, 30000]
     labels = ['stim_1', 'stim_2', 'stim_1', 'stim_2']
     list_triggers = [triggers]
     list_labels = [labels]
-    rec_rmart = remove_artifacts(rec, triggers, ms_before=10, ms_after=10, mode="median", list_labels=list_labels)
+    rec_rmart = remove_artifacts(rec, list_triggers, ms_before=10, ms_after=10, mode="median",
+                                 list_labels=list_labels)
+    rec_rmart = remove_artifacts(rec, list_triggers, ms_before=10, ms_after=10, mode="median",
+                                 list_labels=list_labels, time_jitter=0.2)
+    rec_rmart = remove_artifacts(rec, list_triggers, ms_before=10, ms_after=10, mode="median",
+                                 list_labels=list_labels, time_jitter=0.2, scale_amplitude=True)
 
 
 if __name__ == '__main__':

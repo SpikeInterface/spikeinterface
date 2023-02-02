@@ -1,6 +1,10 @@
 import pytest
 import shutil
+import os
 from pathlib import Path
+
+
+ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
 
 
 # define marks
@@ -22,6 +26,12 @@ def pytest_sessionstart(session):
 
 
 def pytest_collection_modifyitems(config, items):
+    """
+    This function marks (in the pytest sense) the tests according to their name and file_path location
+    Marking them in turn allows the tests to be run by using the pytest -m marker_name option.    
+    """
+
+    
     # python 3.4/3.5 compat: rootdir = pathlib.Path(str(config.rootdir))
     rootdir = Path(config.rootdir)
 
@@ -39,6 +49,7 @@ def pytest_collection_modifyitems(config, items):
 
 def pytest_sessionfinish(session, exitstatus):
     # teardown_stuff only if tests passed
+    # We don't delete the test folder in the CI because it was causing problems with the code coverage.
     if exitstatus == 0:
-        if pytest.global_test_folder.is_dir():
+        if pytest.global_test_folder.is_dir() and not ON_GITHUB:
             shutil.rmtree(pytest.global_test_folder)

@@ -771,6 +771,12 @@ def recursive_path_modifier(d, func, target='path', copy=True):
             if isinstance(v, dict) and is_dict_extractor(v):
                 nested_extractor_dict = v
                 recursive_path_modifier(nested_extractor_dict, func, copy=False)
+            # deal with list of extractor objects (e.g. concatenate_recordings)
+            elif isinstance(v, list):
+                for vl in v:
+                    if isinstance(vl, dict) and is_dict_extractor(vl):
+                        nested_extractor_dict = vl
+                        recursive_path_modifier(nested_extractor_dict, func, copy=False)
 
         return dc
     else:
