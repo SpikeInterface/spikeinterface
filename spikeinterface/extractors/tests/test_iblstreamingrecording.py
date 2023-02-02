@@ -88,7 +88,7 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
         cls.small_unscaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26)  # return_scaled=False is SI default
 
     def test_representation(self):
-        expected_recording_representation = "StreamingIblExtractor: 385 channels - 1 segments - 30.0kHz - 5812.311s"
+        expected_recording_representation = "IblStreamingRecordingExtractor: 385 channels - 1 segments - 30.0kHz - 5812.311s"
         assert repr(self.recording) == expected_recording_representation
 
     def test_dtype(self):
