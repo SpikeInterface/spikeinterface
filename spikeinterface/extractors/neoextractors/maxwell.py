@@ -70,10 +70,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         from neo.rawio.maxwellrawio import auto_install_maxwell_hdf5_compression_plugin
         auto_install_maxwell_hdf5_compression_plugin(force_download=False)
 
-
-
 _maxwell_event_dtype = np.dtype([("frame", "int64"), ("state", "int8"), ("time", "float64")])
-
 
 class MaxwellEventExtractor(BaseEvent):
     """
