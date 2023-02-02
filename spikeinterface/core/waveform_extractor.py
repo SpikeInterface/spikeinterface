@@ -464,14 +464,14 @@ class WaveformExtractor:
 
     def get_recording_property(self, key):
         if self.has_recording():
-            return self.recording.get_proeprty(key)
+            return self.recording.get_property(key)
         else:
             assert "properties" in self._rec_attributes, "'properties' are not available"
             values = np.array(self._rec_attributes['properties'].get(key, None))
             return values
 
     def get_sorting_property(self, key):
-        return self.sorting.get_proeprty(key)
+        return self.sorting.get_property(key)
 
     def get_extension_class(self, extension_name):
         """
