@@ -2,18 +2,16 @@ from pathlib import Path
 from typing import Union, List
 
 import numpy as np
+import h5py
 
 from spikeinterface import get_global_tmp_folder
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 try:
-    import pandas as pd
     import pynwb
-    from pynwb import NWBHDF5IO
-    from pynwb import NWBFile
-    from pynwb.ecephys import ElectricalSeries, FilteredEphys, LFP
-    from pynwb.ecephys import ElectrodeGroup
+    from pynwb import NWBHDF5IO, NWBFile
+    from pynwb.ecephys import ElectricalSeries, FilteredEphys, LFP, ElectrodeGroup
     from hdmf.data_utils import DataChunkIterator
     from hdmf.backends.hdf5.h5_utils import H5DataIO
     HAVE_NWB = True
@@ -125,7 +123,6 @@ class NwbRecordingExtractor(BaseRecording):
         if stream_mode == "fsspec":
             import fsspec
             from fsspec.implementations.cached import CachingFileSystem
-            import h5py
             
             self.stream_cache_path = stream_cache_path if stream_cache_path is not None else get_global_tmp_folder()
             self.cfs = CachingFileSystem(
@@ -137,7 +134,9 @@ class NwbRecordingExtractor(BaseRecording):
             self.io = NWBHDF5IO(file=f, mode='r', load_namespaces=True)
         
         elif stream_mode == "ros3":
-            assert self.stream_cache_path is None, "'stream_cache_path' is only used with 'fsspec' stream_mode"
+            drivers = h5py.registered_drivers()
+            assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
+            assert "ros3" in drivers, assertion_msg
             self._file_path = str(file_path)
             self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True, driver="ros3")
 
