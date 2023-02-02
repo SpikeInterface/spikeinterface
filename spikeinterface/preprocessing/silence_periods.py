@@ -25,8 +25,9 @@ class SilencedPeriodsRecording(BasePreprocessor):
             
         - 'zeros' (default): Artifacts are replaced by zeros.
 
-        - 'noise': The median over all artifacts is computed and subtracted for 
-            each occurence of an artifact
+        - 'noise': The periods are filled with a gaussion noise that has the
+                   same variance that the one in the recordings, on a per channel
+                   basis
 
     Returns
     -------
