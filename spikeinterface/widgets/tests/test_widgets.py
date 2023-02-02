@@ -48,7 +48,7 @@ class TestWidgets(unittest.TestCase):
         
         sw.set_default_plotter_backend('matplotlib')
 
-        metric_names = ["snr", "isi_violations", "num_spikes"]
+        metric_names = ["snr", "isi_violation", "num_spikes"]
         _ = compute_spike_amplitudes(cls.we)
         _ = compute_unit_locations(cls.we)
         _ = compute_spike_locations(cls.we)
