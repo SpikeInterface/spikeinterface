@@ -88,7 +88,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
             List of stream names as expected by the `stream_name` argument for the class initialization.
         """
         assert HAVE_BRAINBOX_ONE, cls.installation_mesg
-        one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True, cache_dir=cache_folder)
+        one = ONE(cache_dir=cache_folder)
 
         dataset_contents = one.list_datasets(eid=session, collection="raw_ephys_data/*")
         raw_contents = [dataset_content for dataset_content in dataset_contents if not dataset_content.endswith(".npy")]
@@ -119,7 +119,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
         from one.api import ONE
         from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
 
-        one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True, cache_dir=cache_folder)
+        one = ONE(cache_dir=cache_folder)
 
         session_names = self.get_stream_names(session=session, cache_folder=cache_folder)
         assert stream_name in session_names, (
