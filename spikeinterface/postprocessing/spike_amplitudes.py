@@ -106,18 +106,17 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
             as a dict with units as key and spike amplitudes as values.
         """
         we = self.waveform_extractor
-        recording = we.recording
         sorting = we.sorting
         all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
 
         if outputs == 'concatenated':
             amplitudes = []
-            for segment_index in range(recording.get_num_segments()):
+            for segment_index in range(we.get_num_segments()):
                 amplitudes.append(self._extension_data[f'amplitude_segment_{segment_index}'])
             return amplitudes
         elif outputs == 'by_unit':
             amplitudes_by_unit = []
-            for segment_index in range(recording.get_num_segments()):
+            for segment_index in range(we.get_num_segments()):
                 amplitudes_by_unit.append({})
                 for unit_index, unit_id in enumerate(sorting.unit_ids):
                     _, spike_labels = all_spikes[segment_index]

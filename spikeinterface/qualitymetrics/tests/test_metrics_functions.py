@@ -11,9 +11,10 @@ from spikeinterface.qualitymetrics import calculate_pc_metrics
 from spikeinterface.postprocessing import compute_principal_components, compute_spike_locations, compute_spike_amplitudes
 
 from spikeinterface.qualitymetrics import (mahalanobis_metrics, lda_metrics, nearest_neighbors_metrics, 
-        compute_amplitudes_cutoff, compute_presence_ratio, compute_isi_violations, compute_firing_rate, 
-        compute_num_spikes, compute_snrs, compute_refrac_period_violations, compute_amplitudes_median,
-        compute_drift_metrics)
+        compute_amplitude_cutoffs, compute_presence_ratios, compute_isi_violations, compute_firing_rates, 
+        compute_num_spikes, compute_snrs, compute_refrac_period_violations, compute_sliding_rp_violations,
+        compute_drift_metrics, compute_amplitude_medians)
+
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "qualitymetrics"
@@ -58,7 +59,6 @@ def setup_module():
                            ms_before=3., ms_after=4., max_spikes_per_unit=500,
                            n_jobs=1, chunk_size=30000)
     pca = compute_principal_components(we, n_components=5, mode='by_channel_local')
-
 
 def test_calculate_pc_metrics():
     we = load_waveforms(cache_folder / 'toy_waveforms')
@@ -128,7 +128,7 @@ def test_calculate_firing_rate_num_spikes(simulated_data):
     num_spikes_gt = {0: 1001,  1: 503,  2: 509}
 
     we = setup_dataset(simulated_data)
-    firing_rates = compute_firing_rate(we)
+    firing_rates = compute_firing_rates(we)
     num_spikes = compute_num_spikes(we)
 
     assert np.allclose(list(firing_rates_gt.values()), list(firing_rates.values()), rtol=0.05)
@@ -139,7 +139,7 @@ def test_calculate_amplitude_cutoff(simulated_data):
     amp_cuts_gt = {0: 0.33067210050787543, 1: 0.43482247296942045, 2: 0.43482247296942045}
     we = setup_dataset(simulated_data, score_detection=0.5)
     spike_amps = compute_spike_amplitudes(we)
-    amp_cuts = compute_amplitudes_cutoff(we, num_histogram_bins=10)
+    amp_cuts = compute_amplitude_cutoffs(we, num_histogram_bins=10)
     assert np.allclose(list(amp_cuts_gt.values()), list(amp_cuts.values()), rtol=0.05)
 
 
@@ -147,7 +147,7 @@ def test_calculate_amplitude_median(simulated_data):
     amp_medians_gt = {0: 130.77323354628675, 1: 130.7461997791725, 2: 130.7461997791725}
     we = setup_dataset(simulated_data, score_detection=0.5)
     spike_amps = compute_spike_amplitudes(we)
-    amp_medians = compute_amplitudes_median(we)
+    amp_medians = compute_amplitude_medians(we)
     print(amp_medians)
     assert np.allclose(list(amp_medians_gt.values()), list(amp_medians.values()), rtol=0.05)
 
@@ -163,7 +163,7 @@ def test_calculate_snrs(simulated_data):
 def test_calculate_presence_ratio(simulated_data):
     ratios_gt = {0: 1.0, 1: 1.0, 2: 1.0}
     we = setup_dataset(simulated_data)
-    ratios = compute_presence_ratio(we, bin_duration_s=10)
+    ratios = compute_presence_ratios(we, bin_duration_s=10)
     print(ratios)
     np.testing.assert_array_equal(list(ratios_gt.values()), list(ratios.values()))
 
@@ -179,6 +179,14 @@ def test_calculate_isi_violations(simulated_data):
     np.testing.assert_array_equal(list(counts_gt.values()), list(counts.values()))
 
 
+def test_calculate_sliding_rp_violations(simulated_data):
+    contaminations_gt = {0: 0.03, 1: 0.185, 2: 0.325}
+    we = setup_dataset(simulated_data)
+    contaminations = compute_sliding_rp_violations(we, bin_size_ms=0.25, window_size_s=1)
+
+    print(contaminations)
+    assert np.allclose(list(contaminations_gt.values()), list(contaminations.values()), rtol=0.05)
+
 def test_calculate_rp_violations(simulated_data):
     rp_contamination_gt = {0: 0.10534956502609294, 1: 1.0, 2: 1.0}
     counts_gt = {0: 2, 1: 4, 2: 10}
@@ -189,11 +197,11 @@ def test_calculate_rp_violations(simulated_data):
     assert np.allclose(list(rp_contamination_gt.values()), list(rp_contamination.values()), rtol=0.05)
     np.testing.assert_array_equal(list(counts_gt.values()), list(counts.values()))
 
-
+@pytest.mark.sortingcomponents
 def test_calculate_drift_metrics(simulated_data):
-    drift_ptps_gt = {0: 3.8497035992743918, 1: 1.200316354668118, 2: 1.3330619152472707}
-    drift_stds_gt = {0: 1.0907827238707128, 1: 0.3363447300999075, 2: 0.3607988107268864}
-    drift_mads_gt = {0: 0.6769978363913438, 1: 0.2606798893916917, 2: 0.27395444544960695}
+    drift_ptps_gt = {0: 0.46840681501541326, 1: 0.6777238017179599, 2: 0.8942870016859388}
+    drift_stds_gt = {0: 0.1524300978308216, 1: 0.2000278046705443, 2: 0.2515466033662633}
+    drift_mads_gt = {0: 0.09958965007876515, 1: 0.15344260957426314, 2: 0.15754859427461837}
 
     we = setup_dataset(simulated_data)
     spike_locs = compute_spike_locations(we)
@@ -212,5 +220,5 @@ if __name__ == '__main__':
     # test_calculate_presence_ratio(sim_data)
     # test_calculate_amplitude_median(sim_data)
     # test_calculate_isi_violations(sim_data)
-    # test_calculate_rp_violations(sim_data)
-    test_calculate_drift_metrics(sim_data)
+    test_calculate_sliding_rp_violations(sim_data)
+    # test_calculate_drift_metrics(sim_data)

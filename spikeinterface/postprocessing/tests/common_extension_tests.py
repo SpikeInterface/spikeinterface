@@ -12,6 +12,7 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "postprocessing"
 
+
 class WaveformExtensionCommonTestSuite:
     """
     This class runs common tests for extensions.
