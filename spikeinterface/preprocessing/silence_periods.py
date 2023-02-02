@@ -18,7 +18,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
     recording: RecordingExtractor
         The recording extractor to remove artifacts from
     list of lists/arrays
-        One list per segment of tuples (frame_start, rame_stop) to silence
+        One list per segment of tuples (start_frame, end_frame) to silence
 
     mode: str
         Determines what periods are replaced by. Can be one of the following:
