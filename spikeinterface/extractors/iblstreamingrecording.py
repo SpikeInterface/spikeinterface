@@ -88,7 +88,9 @@ class IblStreamingRecordingExtractor(BaseRecording):
             List of stream names as expected by the `stream_name` argument for the class initialization.
         """
         assert HAVE_BRAINBOX_ONE, cls.installation_mesg
-        one = ONE(cache_dir=cache_folder)
+
+        cache_folder = Path(cache_folder) if cache_folder is not None else cache_folder
+        one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True, cache_dir=cache_folder)
 
         dataset_contents = one.list_datasets(eid=session, collection="raw_ephys_data/*")
         raw_contents = [dataset_content for dataset_content in dataset_contents if not dataset_content.endswith(".npy")]
@@ -115,11 +117,13 @@ class IblStreamingRecordingExtractor(BaseRecording):
         remove_cached: bool = True,
     ):
         assert HAVE_BRAINBOX_ONE, self.installation_mesg
+
         from brainbox.io.spikeglx import Streamer
         from one.api import ONE
         from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
 
-        one = ONE(cache_dir=cache_folder)
+        cache_folder = Path(cache_folder) if cache_folder is not None else cache_folder
+        one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True, cache_dir=cache_folder)
 
         session_names = self.get_stream_names(session=session, cache_folder=cache_folder)
         assert stream_name in session_names, (
@@ -131,7 +135,6 @@ class IblStreamingRecordingExtractor(BaseRecording):
         insertions = one.alyx.rest("insertions", "list", session=session)
         pid = next(insertion["id"] for insertion in insertions if insertion["name"] == probe_label)
 
-        cache_folder = Path(cache_folder) if cache_folder is not None else cache_folder
         self._file_streamer = Streamer(
             pid=pid, one=one, typ=stream_type, cache_folder=cache_folder, remove_cached=remove_cached
         )
