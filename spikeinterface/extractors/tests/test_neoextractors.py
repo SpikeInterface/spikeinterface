@@ -1,4 +1,6 @@
 import unittest
+from platform import python_version
+from packaging import version
 
 import pytest
 import numpy as np
@@ -201,7 +203,10 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ('spike2/130322-1LY.smr', {'stream_id': '1'}),
     ]
 
-
+@pytest.mark.skipif(
+        version.parse(python_version()) >= version.parse("3.10"),
+        reason="Sonpy only testing with Python < 3.10!",
+)
 class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = CedRecordingExtractor
     downloads = [
@@ -220,13 +225,8 @@ class MaxwellRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         'maxwell/MaxOne_data/Record/000011/data.raw.h5',
         ('maxwell/MaxTwo_data/Network/000028/data.raw.h5',
-         {'stream_id': 'well000', 'rec_name': 'rec0000'})
+         {'stream_id': 'well000', 'rec_name': 'rec0000', 'install_maxwell_plugin': True})
     ]
-
-    def setUp(self):
-        from neo.rawio.maxwellrawio import auto_install_maxwell_hdf5_compression_plugin
-        auto_install_maxwell_hdf5_compression_plugin()
-        return super().setUp()
 
 
 class SpikeGadgetsRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
