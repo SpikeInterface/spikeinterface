@@ -183,7 +183,7 @@ jobs:
           source ~/test_env/bin/activate
           pytest -v -s -m curation
       - name: Test widgets
-        if: ${{ steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
+        if: ${{ steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' ||  steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true'}}
         run: |
           source ~/test_env/bin/activate
           pytest -v -s -m widgets
