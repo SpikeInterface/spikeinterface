@@ -130,13 +130,6 @@ def compute_unit_locations(waveform_extractor,
     return unit_locations
 
 
-def localize_units(*args, **kwargs):
-    warnings.warn("The 'localize_units' function is deprecated. "
-                  "Use 'compute_unit_locations' instead",
-                  DeprecationWarning, stacklevel=2)
-    return compute_unit_locations(*args, **kwargs)
-
-
 def make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um, initial_z=20):
 
     # constant for initial guess and bounds
