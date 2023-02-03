@@ -2,9 +2,14 @@ import numpy as np
 from tqdm.auto import tqdm, trange
 import scipy.interpolate
 
+try:
+    import torch
+    import torch.nn.functional as F
+    HAVE_TORCH = True
+except ImportError:
+    HAVE_TORCH = False
+
 from .tools import make_multi_method_doc
-
-
 
 
 def estimate_motion(recording, peaks, peak_locations,
@@ -227,11 +232,7 @@ class DecentralizedRegistration:
 
         # use torch if installed
         if conv_engine is None:
-            try:
-                import torch
-                conv_engine = "torch"
-            except ImportError:
-                conv_engine = "numpy"
+            conv_engine = "torch" if HAVE_TORCH else "numpy"
 
         # make 2D histogram raster
         if verbose:
@@ -679,7 +680,6 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
             time_horizon_s = None
 
     if conv_engine == 'torch':
-        import torch
         if torch_device is None:
             torch_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -1127,8 +1127,20 @@ def iterative_template_registration(spikecounts_hist_images,
     return optimal_shift_indices, target_spikecount_hist, shift_covs_block
 
 
-def normxcorr1d(template, x, weights=None, padding="same", conv_engine="torch"):
+def normxcorr1d(
+    template,
+    x,
+    weights=None,
+    centered=True,
+    normalized=True,
+    padding="same",
+    conv_engine="torch",
+):
     """normxcorr1d: Normalized cross-correlation, optionally weighted
+
+    The API is like torch's F.conv1d, except I have accidentally
+    changed the position of input/weights -- template acts like weights,
+    and x acts like input.
 
     Returns the cross-correlation of `template` and `x` at spatial lags
     determined by `mode`. Useful for estimating the location of `template`
@@ -1149,19 +1161,23 @@ def normxcorr1d(template, x, weights=None, padding="same", conv_engine="torch"):
     x : tensor, 1d shape (length,) or 2d shape (num_inputs, length)
         The signal in which to find `template`
     weights : tensor, shape (length,)
-        Will use weighted means + variances in this case.
+        Will use weighted means, variances, covariances if supplied.
+    centered : bool
+        If true, means will be subtracted (per weighted patch).
+    normalized : bool
+        If true, normalize by the variance (per weighted patch).
     padding : int, optional
         How far to look? if unset, we'll use half the length
-    assume_centered : bool
-        Avoid a copy if your data is centered already.
+    conv_engine : string, one of "torch", "numpy"
+        What library to use for computing cross-correlations.
+        If numpy, falls back to the scipy correlate function.
 
     Returns
     -------
     corr : tensor
     """
     if conv_engine == "torch":
-        import torch
-        import torch.nn.functional as F
+        assert HAVE_TORCH
         conv1d = F.conv1d
         npx = torch
     elif conv_engine == "numpy":
@@ -1182,12 +1198,10 @@ def normxcorr1d(template, x, weights=None, padding="same", conv_engine="torch"):
     if no_weights:
         weights = ones
         wt = template[:, None, :]
-        wt2 = npx.square(template[:, None, :])
     else:
         assert weights.shape == (length,)
         weights = weights[None, None]
         wt = template[:, None, :] * weights
-        wt2 = npx.square(template)[:, None, :] * weights
 
     # conv1d valid rule:
     # (B,1,L),(O,1,L)->(B,O,L)
@@ -1196,29 +1210,42 @@ def normxcorr1d(template, x, weights=None, padding="same", conv_engine="torch"):
     # how many points in each window? seems necessary to normalize
     # for numerical stability.
     N = conv1d(ones, weights, padding=padding)
-    Et = conv1d(ones, wt, padding=padding) / N
-    Ex = conv1d(x[:, None, :], weights, padding=padding) / N
+    if centered:
+        Et = conv1d(ones, wt, padding=padding)
+        Et /= N
+        Ex = conv1d(x[:, None, :], weights, padding=padding)
+        Ex /= N
 
     # compute (weighted) covariance
     # important: the formula E[XY] - EX EY is well-suited here,
     # because the means are naturally subtracted correctly
     # patch-wise. you couldn't pre-subtract them!
-    cov = conv1d(x[:, None, :], wt, padding=padding) / N
-    cov -= Ex * Et
+    cov = conv1d(x[:, None, :], wt, padding=padding)
+    cov /= N
+    if centered:
+        cov -= Ex * Et
 
     # compute variances for denominator, using var X = E[X^2] - (EX)^2
-    var_template = conv1d(
-        ones, wt2, padding=padding
-    ) / N - npx.square(Et)
-    var_x = conv1d(
-        npx.square(x)[:, None, :], weights, padding=padding
-    ) / N - npx.square(Ex)
+    if normalized:
+        var_template = conv1d(
+            ones, wt * template[:, None, :], padding=padding
+        )
+        var_template /= N
+        var_x = conv1d(
+            npx.square(x)[:, None, :], weights, padding=padding
+        )
+        var_x /= N
+        if centered:
+            var_template -= npx.square(Et)
+            var_x -= npx.square(Ex)
 
     # now find the final normxcorr
     corr = cov  # renaming for clarity
-    corr /= npx.sqrt(var_x * var_template)
-    # get rid of NaNs in zero-variance areas
-    corr[~npx.isfinite(corr)] = 0
+    if normalized:
+        corr /= npx.sqrt(var_x)
+        corr /= npx.sqrt(var_template)
+        # get rid of NaNs in zero-variance areas
+        corr[~npx.isfinite(corr)] = 0
 
     return corr
 
