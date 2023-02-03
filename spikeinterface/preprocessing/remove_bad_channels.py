@@ -133,7 +133,7 @@ def detect_bad_channels(recording,
         thresh = std_mad_threshold * np.median(deviations)
         bad_channel_labels = deviations > thresh
         bad_channel_ids = recording.channel_ids[bad_channel_labels]
-        bad_channel_labels = bad_channel_labels.astype(int)
+        bad_channel_labels = bad_channel_labels.astype(np.int8)
     elif method == "coherence+psd":
         # some checks
         assert recording.has_scaled(), \
@@ -156,9 +156,7 @@ def detect_bad_channels(recording,
             order_f, order_r = order_channels_by_depth(recording=recording, dimensions=('x', 'y'))
 
         # Create empty channel labels and fill with bad-channel detection estimate for each chunk
-        channel_labels = np.zeros((recording.get_num_channels(),
-                                  recording.get_num_segments() * random_chunk_kwargs["num_chunks_per_segment"]),
-                                  dtype=int)
+        channel_labels = np.zeros((recording.get_num_channels(), len(random_data)), dtype=np.int8)
 
         for i, random_chunk in enumerate(random_data):
             random_chunk_sorted = random_chunk[order_f] if order_f is not None else random_chunk
