@@ -3,12 +3,12 @@ import numpy as np
 import scipy.stats
 
 from .filter import highpass_filter
-from ..core import get_random_data_chunks
+from ..core import get_random_data_chunks, order_channels_by_depth
 
 
 def detect_bad_channels(recording,
                         method="coherence+psd",
-                        std_threshold=5,
+                        std_mad_threshold=5,
                         psd_hf_threshold=0.02,
                         dead_channel_threshold=-0.5,
                         noisy_channel_threshold=1.,
@@ -27,8 +27,9 @@ def detect_bad_channels(recording,
     Different methods are implemented:
 
     - std : threhshold on channel standard deviations
-        If the standard deviation of a channel is greater than `std_threshold` times the median of all
+        If the standard deviation of a channel is greater than `std_mad_threshold` times the median of all
         channels standard deviations, the channel is flagged as noisy
+    - mad : same as std, but using median absolute deviations instead
     - coeherence+psd : method developed by the International Brain Laboratory that detects bad channels of three types:
         * Dead channels are those with low similarity to the surrounding channels (n=`n_neighbors` median)
         * Noise channels are those with power at >80% Nyquist above the psd_hf_threshold (default 0.02 uV^2 / Hz) 
@@ -42,10 +43,11 @@ def detect_bad_channels(recording,
         The recording for which bad channels are detected
     method : str
         * coeherence+psd (default, developed by IBL)
+        * mad
         * std
-    std_threshold (mstd) : float
-        (method std)
-        The standard deviation multiplier threshold
+    std_mad_threshold (mstd) : float
+        (method std, mad)
+        The standard deviation/mad multiplier threshold
     psd_hf_threshold (coeherence+psd) : float
         An absolute threshold (uV^2/Hz) used as a cutoff for noise channels.
         Channels with average power at >80% Nyquist larger than this threshold 
@@ -81,7 +83,7 @@ def detect_bad_channels(recording,
     bad_channel_labels : np.array
         Channels labels depending on the method:
           * (coeherence+psd) 0: good, 1: dead, 2: noisy, 3: outside of the brain
-          * (std) 0: good, 1 bad
+          * (std, mad) 0: good, 1 bad
 
     Examples
     --------
@@ -97,7 +99,7 @@ def detect_bad_channels(recording,
     International Brain Laboratory et al. (2022). Spike sorting pipeline for the International Brain Laboratory.
     https://www.internationalbrainlab.com/repro-ephys
     """
-    method_list = ("std", "coherence+psd")
+    method_list = ("std", "mad", "coherence+psd")
     assert method in method_list, f"{method} is not a valid method. Available methods are {method_list}"
 
     # Get random subset of data to estimate from
@@ -114,7 +116,7 @@ def detect_bad_channels(recording,
         recording_hp = recording
 
     # Adjust random chunk kwargs based on method
-    if method == "std":
+    if method in ("std", "mad"):
         random_chunk_kwargs["return_scaled"] = False
         random_chunk_kwargs["concatenated"] = True
     else:
@@ -123,10 +125,13 @@ def detect_bad_channels(recording,
 
     random_data = get_random_data_chunks(recording_hp, **random_chunk_kwargs)
 
-    if method == "std":
-        stds = np.std(random_data, axis=0)
-        thresh = std_threshold * np.median(stds)
-        bad_channel_labels = stds > thresh
+    if method in ("std", "mad"):
+        if method == "std":
+            deviations = np.std(random_data, axis=0)
+        else:
+            deviations = scipy.stats.median_abs_deviation(random_data, axis=0)
+        thresh = std_mad_threshold * np.median(deviations)
+        bad_channel_labels = deviations > thresh
         bad_channel_ids = recording.channel_ids[bad_channel_labels]
         bad_channel_labels = bad_channel_labels.astype(int)
     elif method == "coherence+psd":
@@ -142,13 +147,13 @@ def detect_bad_channels(recording,
         channel_locations = recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)
         assert dim < channel_locations.ndim, f"Direction {direction} is wrong"
-        locs_mono = channel_locations[:, dim]
-        if np.array_equal(np.sort(locs_mono), locs_mono):
+        locs_depth = channel_locations[:, dim]
+        if np.array_equal(np.sort(locs_depth), locs_depth):
             order_f = None
             order_r = None
         else:
-            order_f = np.argsort(locs_mono)
-            order_r = np.argsort(order_f)
+            # sort by x, y to avoid ambiguity
+            order_f, order_r = order_channels_by_depth(recording=recording, dimensions=('x', 'y'))
 
         # Create empty channel labels and fill with bad-channel detection estimate for each chunk
         channel_labels = np.zeros((recording.get_num_channels(),
@@ -158,7 +163,7 @@ def detect_bad_channels(recording,
         for i, random_chunk in enumerate(random_data):
             random_chunk_sorted = random_chunk[order_f] if order_f is not None else random_chunk
             channel_labels[:, i] = detect_bad_channels_ibl(raw=random_chunk_sorted,
-                                                           fs=recording.get_sampling_frequency(),
+                                                           fs=recording.sampling_frequency,
                                                            psd_hf_threshold=psd_hf_threshold,
                                                            dead_channel_thr=dead_channel_threshold,
                                                            noisy_channel_thr=noisy_channel_threshold,
@@ -225,10 +230,17 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold,
     raw = raw - np.mean(raw, axis=0)[np.newaxis, :]
     fscale, psd = scipy.signal.welch(raw, fs=fs, axis=0)
 
-    xcor, xcorr_neighbors, xcorr_distant = compute_correlations(raw, n_neighbors)
-    psd_hf = np.mean(psd[fscale > (fs / 2 * nyquist_threshold), :], axis=0)
+    # compute similarities
+    ref = np.median(raw, axis=1)
+    xcorr = np.sum(raw * ref[:, np.newaxis], axis=0) / np.sum(ref**2)
+
+    # compute coherence
+    xcorr_neighbors = detrend(xcorr, n_neighbors)
+    xcorr_distant = xcorr - detrend(xcorr, n_neighbors) - 1
 
     # make recommendation
+    psd_hf = np.mean(psd[fscale > (fs / 2 * nyquist_threshold), :], axis=0)
+
     ichannels = np.zeros(nc, dtype=int)
     idead = np.where(xcorr_neighbors < dead_channel_thr)[0]
     inoisy = np.where(np.logical_or(psd_hf > psd_hf_threshold,
@@ -252,13 +264,6 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold,
 # IBL Helpers
 # ----------------------------------------------------------------------------------------------
 
-def compute_correlations(raw, n_neighbors):
-    xcorr = channels_similarity(raw)
-    xcorr_neighbors = detrend(xcorr, n_neighbors)
-    xcorr_distant = xcorr - detrend(xcorr, n_neighbors) - 1
-
-    return xcorr, xcorr_neighbors, xcorr_distant
-
 def detrend(x, nmed):
     """
     Subtract the trend from a vector
@@ -272,9 +277,3 @@ def detrend(x, nmed):
 
     xf = scipy.signal.medfilt(xf, nmed)[ntap:-ntap]
     return x - xf
-
-
-def channels_similarity(raw):
-    ref = np.median(raw, axis=1)
-    channel_corr_with_median = np.sum(raw * ref[:, np.newaxis], axis=0) / np.sum(ref**2)
-    return channel_corr_with_median

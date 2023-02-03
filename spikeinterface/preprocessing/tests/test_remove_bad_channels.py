@@ -16,7 +16,7 @@ except:  # Catch relevant exception
     HAVE_NPIX = False
 
 
-def test_remove_bad_channels_std():
+def test_remove_bad_channels_std_mad():
     num_channels = 4
     sampling_frequency = 30000.
     durations = [10.325, 3.5]
@@ -38,8 +38,10 @@ def test_remove_bad_channels_std():
     probe.set_device_channel_indices(np.arange(num_channels))
     rec.set_probe(probe, in_place=True)
 
-    bad_channels, bad_labels = detect_bad_channels(rec, method="std")
-    rec2 = rec.remove_channels(bad_channels)
+    bad_channels_std, bad_labels_std = detect_bad_channels(rec, method="std")
+    bad_channels_mad, bad_labels_mad = detect_bad_channels(rec, method="std")
+    np.testing.assert_array_equal(bad_channels_std, bad_channels_mad)
+    rec2 = rec.remove_channels(bad_channels_std)
 
     # Check that the noisy channel is taken out
     assert np.array_equal(rec2.get_channel_ids(), [0, 2, 3]), "wrong channel detected."
