@@ -9,7 +9,7 @@ if __name__ != '__main__':
     matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-from spikeinterface import extract_waveforms, download_dataset
+from spikeinterface import extract_waveforms, load_waveforms, download_dataset
 import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
@@ -32,7 +32,10 @@ class TestWidgets(unittest.TestCase):
 
         self.num_units = len(self._sorting.get_unit_ids())
         #  self._we = extract_waveforms(self._rec, self._sorting, './toy_example', load_if_exists=True)
-        self._we = extract_waveforms(self._rec, self._sorting, cache_folder / 'mearec_test', load_if_exists=True)
+        if (cache_folder / 'mearec_test').is_dir():
+            self._we = load_waveforms(cache_folder / 'mearec_test')
+        else:
+            self._we = extract_waveforms(self._rec, self._sorting, cache_folder / 'mearec_test')
 
         self._amplitudes = compute_spike_amplitudes(self._we, peak_sign='neg', outputs='by_unit')
         self._gt_comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
