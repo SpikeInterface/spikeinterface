@@ -226,7 +226,7 @@ class DecentralizedRegistration:
             non_rigid_windows, verbose, progress_bar, extra_check,
             pairwise_displacement_method='conv', max_displacement_um=100., weight_scale='linear',
             error_sigma=0.2, conv_engine=None, torch_device=None, batch_size=1,
-            corr_threshold=0.3, time_horizon_s=1000, convergence_method='lsmr',
+            corr_threshold=0.0, time_horizon_s=None, convergence_method='lsqr_robust', soft_weights=False,
             temporal_prior=True, spatial_prior=False, reference_displacement="median",
             reference_displacement_time_s=0, robust_regression_sigma=2, lsqr_robust_n_iter=20):
 
@@ -300,6 +300,7 @@ class DecentralizedRegistration:
                     lsqr_robust_n_iter=lsqr_robust_n_iter,
                     temporal_prior=temporal_prior,
                     spatial_prior=spatial_prior,
+                    soft_weights=soft_weights,
                     progress_bar=False,
                 )
 
@@ -312,6 +313,7 @@ class DecentralizedRegistration:
                 lsqr_robust_n_iter=lsqr_robust_n_iter,
                 temporal_prior=temporal_prior,
                 spatial_prior=spatial_prior,
+                soft_weights=soft_weights,
                 progress_bar=False,
             )
         elif len(non_rigid_windows) > 1:
@@ -319,7 +321,7 @@ class DecentralizedRegistration:
             # correctly offset from each other
             for i in range(len(non_rigid_windows) - 1):
                 motion[:, i + 1] -= np.median(motion[:, i + 1] - motion[:, i])
-        
+
         # try to avoid constant offset
         # let the user choose how to do this. here are some ideas.
         # (one can also -= their own number on the result of this function.)
@@ -724,7 +726,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                 pairwise_displacement[i : i + batch_size] = best_disp
                 correlation[i : i + batch_size] = max_corr
 
-        if corr_threshold > 0:
+        if corr_threshold is not None and corr_threshold > 0:
             which = correlation > corr_threshold
             correlation *= which
 
@@ -779,6 +781,7 @@ def compute_global_displacement(
     sparse_mask=None,
     temporal_prior=True,
     spatial_prior=True,
+    soft_weights=False,
     convergence_method='lsmr',
     robust_regression_sigma=2,
     lsqr_robust_n_iter=20,
@@ -872,6 +875,7 @@ def compute_global_displacement(
         A = M - N
         idx = np.ones(A.shape[0], dtype=bool)
 
+        #TODO: this is already soft_weights
         xrange = trange if progress_bar else range
         for i in xrange(lsqr_robust_n_iter):
             p = lsqr(A[idx].multiply(W[idx]), V[idx] * W[idx][:, 0])[0]
@@ -924,9 +928,11 @@ def compute_global_displacement(
             n_sampled = I.size
 
             # construct Kroneckers and sparse objective in this window
-            ones = np.ones(n_sampled)
-            Mb = sparse.csr_matrix((ones, (range(n_sampled), I)), shape=(n_sampled, T))
-            Nb = sparse.csr_matrix((ones, (range(n_sampled), J)), shape=(n_sampled, T))
+            pair_weights = np.ones(n_sampled)
+            if soft_weights:
+                pair_weights = Wb[I, J]
+            Mb = sparse.csr_matrix((pair_weights, (range(n_sampled), I)), shape=(n_sampled, T))
+            Nb = sparse.csr_matrix((pair_weights, (range(n_sampled), J)), shape=(n_sampled, T))
             block_sparse_kron = Mb - Nb
             block_disp_pairs = Db[I, J]
 
@@ -1279,7 +1285,7 @@ def scipy_conv1d(input, weights, padding="valid"):
     return output
 
 
-def clean_motion_vector(motion, temporal_bins, bin_duration_s, 
+def clean_motion_vector(motion, temporal_bins, bin_duration_s,
                         speed_threshold=30, sigma_smooth_s=None):
     """
     Simple machinery to remove spurious fast bump in the motion vector.
@@ -1307,15 +1313,15 @@ def clean_motion_vector(motion, temporal_bins, bin_duration_s,
 
     """
     motion_clean = motion.copy()
-    
-    # STEP 1 : 
-    #   * detect long plateau or small peak corssing the speed thresh
-    #   * mask the period and interpolate
+
+    # STEP 1 :
+    #  * detect long plateau or small peak corssing the speed thresh
+    #  * mask the period and interpolate
     for i in range(motion.shape[1]):
         one_motion = motion_clean[:, i]
         speed = np.diff(one_motion, axis=0) / bin_duration_s
         inds,  = np.nonzero(np.abs(speed) > speed_threshold)
-        inds +=1 
+        inds +=1
         if inds.size % 2 == 1:
             # more compicated case: number of of inds is odd must remove first or last
             # take the smallest duration sum
@@ -1330,7 +1336,7 @@ def clean_motion_vector(motion, temporal_bins, bin_duration_s,
             mask[inds[i*2]:inds[i*2+1]] = False
         f = scipy.interpolate.interp1d(temporal_bins[mask], one_motion[mask])
         one_motion[~mask] = f(temporal_bins[~mask])
-    
+
     # Step 2 : gaussian smooth
     if sigma_smooth_s is not None:
         half_size = motion_clean.shape[0] // 2
@@ -1343,7 +1349,7 @@ def clean_motion_vector(motion, temporal_bins, bin_duration_s,
         smooth_kernel /= np.sum(smooth_kernel)
         smooth_kernel = smooth_kernel[:, None]
         motion_clean = scipy.signal.fftconvolve(motion_clean, smooth_kernel, mode='same', axes=0)
-    
+
     return motion_clean
 
 
