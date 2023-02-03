@@ -2,9 +2,14 @@ import numpy as np
 from tqdm.auto import tqdm, trange
 import scipy.interpolate
 
+try:
+    import torch
+    import torch.nn.functional as F
+    HAVE_TORCH = True
+except ImportError:
+    HAVE_TORCH = False
+
 from .tools import make_multi_method_doc
-
-
 
 
 def estimate_motion(recording, peaks, peak_locations,
@@ -223,18 +228,14 @@ class DecentralizedRegistration:
             non_rigid_windows, verbose, progress_bar, extra_check,
             pairwise_displacement_method='conv', max_displacement_um=100., weight_scale='linear',
             error_sigma=0.2, conv_engine=None, torch_device=None, batch_size=1,
-            corr_threshold=0.3, time_horizon_s=1000, convergence_method='lsmr',
+            corr_threshold=0.0, time_horizon_s=None, convergence_method='lsqr_robust', soft_weights=False,
             temporal_prior=True, spatial_prior=False, reference_displacement="median",
             reference_displacement_time_s=0, robust_regression_sigma=2, lsqr_robust_n_iter=20,
             weight_with_amplitude=True,):
 
         # use torch if installed
         if conv_engine is None:
-            try:
-                import torch
-                conv_engine = "torch"
-            except ImportError:
-                conv_engine = "numpy"
+            conv_engine = "torch" if HAVE_TORCH else "numpy"
 
         # make 2D histogram raster
         if verbose:
@@ -303,6 +304,7 @@ class DecentralizedRegistration:
                     lsqr_robust_n_iter=lsqr_robust_n_iter,
                     temporal_prior=temporal_prior,
                     spatial_prior=spatial_prior,
+                    soft_weights=soft_weights,
                     progress_bar=False,
                 )
 
@@ -315,6 +317,7 @@ class DecentralizedRegistration:
                 lsqr_robust_n_iter=lsqr_robust_n_iter,
                 temporal_prior=temporal_prior,
                 spatial_prior=spatial_prior,
+                soft_weights=soft_weights,
                 progress_bar=False,
             )
         elif len(non_rigid_windows) > 1:
@@ -322,7 +325,7 @@ class DecentralizedRegistration:
             # correctly offset from each other
             for i in range(len(non_rigid_windows) - 1):
                 motion[:, i + 1] -= np.median(motion[:, i + 1] - motion[:, i])
-        
+
         # try to avoid constant offset
         # let the user choose how to do this. here are some ideas.
         # (one can also -= their own number on the result of this function.)
@@ -683,7 +686,6 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
             time_horizon_s = None
 
     if conv_engine == 'torch':
-        import torch
         if torch_device is None:
             torch_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -728,7 +730,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                 pairwise_displacement[i : i + batch_size] = best_disp
                 correlation[i : i + batch_size] = max_corr
 
-        if corr_threshold > 0:
+        if corr_threshold is not None and corr_threshold > 0:
             which = correlation > corr_threshold
             correlation *= which
 
@@ -783,6 +785,7 @@ def compute_global_displacement(
     sparse_mask=None,
     temporal_prior=True,
     spatial_prior=True,
+    soft_weights=False,
     convergence_method='lsmr',
     robust_regression_sigma=2,
     lsqr_robust_n_iter=20,
@@ -876,6 +879,7 @@ def compute_global_displacement(
         A = M - N
         idx = np.ones(A.shape[0], dtype=bool)
 
+        #TODO: this is already soft_weights
         xrange = trange if progress_bar else range
         for i in xrange(lsqr_robust_n_iter):
             p = lsqr(A[idx].multiply(W[idx]), V[idx] * W[idx][:, 0])[0]
@@ -928,9 +932,11 @@ def compute_global_displacement(
             n_sampled = I.size
 
             # construct Kroneckers and sparse objective in this window
-            ones = np.ones(n_sampled)
-            Mb = sparse.csr_matrix((ones, (range(n_sampled), I)), shape=(n_sampled, T))
-            Nb = sparse.csr_matrix((ones, (range(n_sampled), J)), shape=(n_sampled, T))
+            pair_weights = np.ones(n_sampled)
+            if soft_weights:
+                pair_weights = Wb[I, J]
+            Mb = sparse.csr_matrix((pair_weights, (range(n_sampled), I)), shape=(n_sampled, T))
+            Nb = sparse.csr_matrix((pair_weights, (range(n_sampled), J)), shape=(n_sampled, T))
             block_sparse_kron = Mb - Nb
             block_disp_pairs = Db[I, J]
 
@@ -1131,8 +1137,20 @@ def iterative_template_registration(spikecounts_hist_images,
     return optimal_shift_indices, target_spikecount_hist, shift_covs_block
 
 
-def normxcorr1d(template, x, weights=None, padding="same", conv_engine="torch"):
+def normxcorr1d(
+    template,
+    x,
+    weights=None,
+    centered=True,
+    normalized=True,
+    padding="same",
+    conv_engine="torch",
+):
     """normxcorr1d: Normalized cross-correlation, optionally weighted
+
+    The API is like torch's F.conv1d, except I have accidentally
+    changed the position of input/weights -- template acts like weights,
+    and x acts like input.
 
     Returns the cross-correlation of `template` and `x` at spatial lags
     determined by `mode`. Useful for estimating the location of `template`
@@ -1153,19 +1171,23 @@ def normxcorr1d(template, x, weights=None, padding="same", conv_engine="torch"):
     x : tensor, 1d shape (length,) or 2d shape (num_inputs, length)
         The signal in which to find `template`
     weights : tensor, shape (length,)
-        Will use weighted means + variances in this case.
+        Will use weighted means, variances, covariances if supplied.
+    centered : bool
+        If true, means will be subtracted (per weighted patch).
+    normalized : bool
+        If true, normalize by the variance (per weighted patch).
     padding : int, optional
         How far to look? if unset, we'll use half the length
-    assume_centered : bool
-        Avoid a copy if your data is centered already.
+    conv_engine : string, one of "torch", "numpy"
+        What library to use for computing cross-correlations.
+        If numpy, falls back to the scipy correlate function.
 
     Returns
     -------
     corr : tensor
     """
     if conv_engine == "torch":
-        import torch
-        import torch.nn.functional as F
+        assert HAVE_TORCH
         conv1d = F.conv1d
         npx = torch
     elif conv_engine == "numpy":
@@ -1186,12 +1208,10 @@ def normxcorr1d(template, x, weights=None, padding="same", conv_engine="torch"):
     if no_weights:
         weights = ones
         wt = template[:, None, :]
-        wt2 = npx.square(template[:, None, :])
     else:
         assert weights.shape == (length,)
         weights = weights[None, None]
         wt = template[:, None, :] * weights
-        wt2 = npx.square(template)[:, None, :] * weights
 
     # conv1d valid rule:
     # (B,1,L),(O,1,L)->(B,O,L)
@@ -1200,29 +1220,42 @@ def normxcorr1d(template, x, weights=None, padding="same", conv_engine="torch"):
     # how many points in each window? seems necessary to normalize
     # for numerical stability.
     N = conv1d(ones, weights, padding=padding)
-    Et = conv1d(ones, wt, padding=padding) / N
-    Ex = conv1d(x[:, None, :], weights, padding=padding) / N
+    if centered:
+        Et = conv1d(ones, wt, padding=padding)
+        Et /= N
+        Ex = conv1d(x[:, None, :], weights, padding=padding)
+        Ex /= N
 
     # compute (weighted) covariance
     # important: the formula E[XY] - EX EY is well-suited here,
     # because the means are naturally subtracted correctly
     # patch-wise. you couldn't pre-subtract them!
-    cov = conv1d(x[:, None, :], wt, padding=padding) / N
-    cov -= Ex * Et
+    cov = conv1d(x[:, None, :], wt, padding=padding)
+    cov /= N
+    if centered:
+        cov -= Ex * Et
 
     # compute variances for denominator, using var X = E[X^2] - (EX)^2
-    var_template = conv1d(
-        ones, wt2, padding=padding
-    ) / N - npx.square(Et)
-    var_x = conv1d(
-        npx.square(x)[:, None, :], weights, padding=padding
-    ) / N - npx.square(Ex)
+    if normalized:
+        var_template = conv1d(
+            ones, wt * template[:, None, :], padding=padding
+        )
+        var_template /= N
+        var_x = conv1d(
+            npx.square(x)[:, None, :], weights, padding=padding
+        )
+        var_x /= N
+        if centered:
+            var_template -= npx.square(Et)
+            var_x -= npx.square(Ex)
 
     # now find the final normxcorr
     corr = cov  # renaming for clarity
-    corr /= npx.sqrt(var_x * var_template)
-    # get rid of NaNs in zero-variance areas
-    corr[~npx.isfinite(corr)] = 0
+    if normalized:
+        corr /= npx.sqrt(var_x)
+        corr /= npx.sqrt(var_template)
+        # get rid of NaNs in zero-variance areas
+        corr[~npx.isfinite(corr)] = 0
 
     return corr
 
@@ -1256,7 +1289,7 @@ def scipy_conv1d(input, weights, padding="valid"):
     return output
 
 
-def clean_motion_vector(motion, temporal_bins, bin_duration_s, 
+def clean_motion_vector(motion, temporal_bins, bin_duration_s,
                         speed_threshold=30, sigma_smooth_s=None):
     """
     Simple machinery to remove spurious fast bump in the motion vector.
@@ -1284,15 +1317,15 @@ def clean_motion_vector(motion, temporal_bins, bin_duration_s,
 
     """
     motion_clean = motion.copy()
-    
-    # STEP 1 : 
-    #   * detect long plateau or small peak corssing the speed thresh
-    #   * mask the period and interpolate
+
+    # STEP 1 :
+    #  * detect long plateau or small peak corssing the speed thresh
+    #  * mask the period and interpolate
     for i in range(motion.shape[1]):
         one_motion = motion_clean[:, i]
         speed = np.diff(one_motion, axis=0) / bin_duration_s
         inds,  = np.nonzero(np.abs(speed) > speed_threshold)
-        inds +=1 
+        inds +=1
         if inds.size % 2 == 1:
             # more compicated case: number of of inds is odd must remove first or last
             # take the smallest duration sum
@@ -1307,7 +1340,7 @@ def clean_motion_vector(motion, temporal_bins, bin_duration_s,
             mask[inds[i*2]:inds[i*2+1]] = False
         f = scipy.interpolate.interp1d(temporal_bins[mask], one_motion[mask])
         one_motion[~mask] = f(temporal_bins[~mask])
-    
+
     # Step 2 : gaussian smooth
     if sigma_smooth_s is not None:
         half_size = motion_clean.shape[0] // 2
@@ -1320,7 +1353,7 @@ def clean_motion_vector(motion, temporal_bins, bin_duration_s,
         smooth_kernel /= np.sum(smooth_kernel)
         smooth_kernel = smooth_kernel[:, None]
         motion_clean = scipy.signal.fftconvolve(motion_clean, smooth_kernel, mode='same', axes=0)
-    
+
     return motion_clean
 
 
