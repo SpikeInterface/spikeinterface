@@ -137,6 +137,8 @@ def estimate_motion(recording, peaks, peak_locations,
     if upsample_to_histogram_bin is None:
         upsample_to_histogram_bin = not rigid
     if upsample_to_histogram_bin:
+        extra_check["motion"] = motion
+        extra_check["non_rigid_window_centers"] = non_rigid_window_centers
         non_rigid_windows = np.array(non_rigid_windows)
         non_rigid_windows /= non_rigid_windows.sum(axis=0, keepdims=True)
         non_rigid_window_centers = spatial_bin_edges[:-1] + bin_um / 2
@@ -223,7 +225,8 @@ class DecentralizedRegistration:
             error_sigma=0.2, conv_engine=None, torch_device=None, batch_size=1,
             corr_threshold=0.3, time_horizon_s=1000, convergence_method='lsmr',
             temporal_prior=True, spatial_prior=False, reference_displacement="median",
-            reference_displacement_time_s=0, robust_regression_sigma=2, lsqr_robust_n_iter=20):
+            reference_displacement_time_s=0, robust_regression_sigma=2, lsqr_robust_n_iter=20,
+            weight_with_amplitude=True,):
 
         # use torch if installed
         if conv_engine is None:
@@ -242,7 +245,8 @@ class DecentralizedRegistration:
                                      peak_locations,
                                      direction=direction,
                                      bin_duration_s=bin_duration_s,
-                                     spatial_bin_edges=spatial_bin_edges)
+                                     spatial_bin_edges=spatial_bin_edges,
+                                     weight_with_amplitude=weight_with_amplitude,)
         if extra_check is not None:
             extra_check['motion_histogram'] = motion_histogram
             extra_check['pairwise_displacement_list'] = []
@@ -570,7 +574,7 @@ def make_2d_motion_histogram(recording, peaks, peak_locations,
     arr = np.zeros((peaks.size, 2), dtype='float64')
     arr[:, 0] = peaks['sample_ind']
     arr[:, 1] = peak_locations[direction]
-
+    
     if weight_with_amplitude:
         weights = np.abs(peaks['amplitude'])
     else:
