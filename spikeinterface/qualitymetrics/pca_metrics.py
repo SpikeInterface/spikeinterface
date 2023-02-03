@@ -549,8 +549,6 @@ def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor,
         return np.nan
     else:
         # get random snippets from the recording to create a noise cluster
-        assert waveform_extractor.has_recording(), \
-            ("'nn_noise_overlap' metric is not available for recordingless waveform extractors")
         recording = waveform_extractor.recording
         noise_cluster = get_random_data_chunks(recording, return_scaled=waveform_extractor.return_scaled,
                                                num_chunks_per_segment=max_spikes,

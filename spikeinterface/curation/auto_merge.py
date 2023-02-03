@@ -118,7 +118,8 @@ def get_potential_auto_merge(
 
     
     if steps is None:
-        steps = ['min_spikes', 'remove_contaminated', 'unit_positions', 'correlogram', 'template_similarity', 'check_increase_score']
+        steps = ['min_spikes', 'remove_contaminated', 'unit_positions', 'correlogram', 'template_similarity',
+                 'check_increase_score']
 
     n = unit_ids.size
     pair_mask = np.ones((n, n), dtype='bool')
@@ -175,8 +176,9 @@ def get_potential_auto_merge(
 
     # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
     if 'check_increase_score' in steps:
-        pair_mask = check_improve_contaminations_score(we, pair_mask, contaminations, 
-            firing_contamination_balance, refractory_period_ms, censored_period_ms)
+        pair_mask = check_improve_contaminations_score(we, pair_mask, contaminations,
+                                                       firing_contamination_balance, refractory_period_ms,
+                                                       censored_period_ms)
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
@@ -397,20 +399,19 @@ class MockWaveformExtractor:
     Mock WaveformExtractor to be able to run compute_refrac_period_violations() 
     needed for the auto_merge() function.
     """
-    def __init__(self, waveform_extractor, sorting):
-        self.waveform_extractor = waveform_extractor
-        self._recording = None
+    def __init__(self, recording, sorting):
+        self.recording = recording
         self.sorting = sorting
 
     def get_total_samples(self):
-        return self.waveform_extractor.get_total_samples()
+        return self.recording.get_total_samples()
 
     def get_total_duration(self):
-        return self.waveform_extractor.get_total_duration()
+        return self.recording.get_total_duration()
 
 
-def check_improve_contaminations_score(we, pair_mask, contaminations,
-        firing_contamination_balance, refractory_period_ms, censored_period_ms):
+def check_improve_contaminations_score(we, pair_mask, contaminations, firing_contamination_balance,
+                                       refractory_period_ms, censored_period_ms):
     """
     Check that the score is improve afeter a potential merge
 
@@ -421,6 +422,7 @@ def check_improve_contaminations_score(we, pair_mask, contaminations,
     Check that the contamination score is improved (decrease)  after 
     a potential merge
     """
+    recording = we.recording
     sorting = we.sorting
     pair_mask = pair_mask.copy()
 
@@ -440,7 +442,7 @@ def check_improve_contaminations_score(we, pair_mask, contaminations,
         unit_id1, unit_id2 = sorting.unit_ids[ind1], sorting.unit_ids[ind2]
         sorting_merged = MergeUnitsSorting(sorting, [unit_id1, unit_id2], new_unit_id=unit_id1).select_units([unit_id1])
         # make a lazy fake WaveformExtractor to compute contamination and firing rate
-        we_new = MockWaveformExtractor(we, sorting_merged)
+        we_new = MockWaveformExtractor(recording, sorting_merged)
 
         new_contaminations, _ = compute_refrac_period_violations(we_new, refractory_period_ms=refractory_period_ms,
                                     censored_period_ms=censored_period_ms)

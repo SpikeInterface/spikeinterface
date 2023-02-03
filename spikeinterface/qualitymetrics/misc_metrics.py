@@ -167,9 +167,6 @@ def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "e
     if waveform_extractor.is_extension("noise_levels"):
         noise_levels = waveform_extractor.load_extension("noise_levels").get_data()
     else:
-        assert waveform_extractor.has_recording(), \
-            ("SNR cannot be computed because waveform_extractor is recordingless and "
-             "'noise_levels' extension is not available")
         if random_chunk_kwargs_dict is None:
             random_chunk_kwargs_dict = {}
         noise_levels = get_noise_levels(waveform_extractor.recording,
