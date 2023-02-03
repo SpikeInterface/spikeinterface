@@ -161,8 +161,8 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         For channel sparsity.
     max_distance_um: float, default: 1000
         Boundary for distance estimation.
-    enforce_decrease : False
-        To enforce spatial decreasingness for PTP vectors.
+    enforce_decrease : bool (default True)
+        Enforce spatial decreasingness for PTP vectors.
     """
 
     def __init__(self, recording, name='monopolar_triangulation', return_ouput=True, parents=['extract_waveforms'],
