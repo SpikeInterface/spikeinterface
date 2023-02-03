@@ -90,7 +90,7 @@ class TimeseriesWidget(BaseWidget):
 
         if order_channel_by_depth:
             if channel_locations is not None:
-                order = order_channels_by_depth(rec0, channel_ids)
+                order, _ = order_channels_by_depth(rec0, channel_ids)
         else:
             order = None
 
