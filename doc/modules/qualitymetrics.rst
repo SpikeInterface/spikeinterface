@@ -26,7 +26,7 @@ For more details about each metric and it's availability and use within SpikeInt
   :maxdepth: 1
   :glob:
 
-  quality_metrics/*
+  qualitymetrics/*
 
 
 This code snippet shows how to compute quality metrics (with or without principal components) in SpikeInterface:

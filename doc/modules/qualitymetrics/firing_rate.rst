@@ -41,7 +41,7 @@ With SpikeInterface:
 
     # Make recording, sorting and wvf_extractor object for your data.
     
-    firing_rate = qm.compute_firing_rate(wvf_extractor)
+    firing_rate = qm.compute_firing_rates(wvf_extractor)
     # firing_rate is a dict containing the units' ID as keys,
     # and their firing rate across segments as values (in Hz).
 
@@ -50,7 +50,7 @@ References
 
 .. automodule:: spikeinterface.qualitymetrics.misc_metrics
 
-    .. autofunction:: compute_firing_rate
+    .. autofunction:: compute_firing_rates
 
 
 Links to source code

@@ -27,7 +27,7 @@ Example code
 	# It is also recommended to run `compute_spike_amplitudes(wvf_extractor)`
     # in order to use amplitude values from all spikes.
 
-	fraction_missing = qm.compute_amplitudes_cutoff(wvf_extractor, peak_sign="neg")
+	fraction_missing = qm.compute_amplitude_cutoffs(wvf_extractor, peak_sign="neg")
 	# fraction_missing is a dict containing the units' ID as keys,
 	# and their estimated fraction of missing spikes as values.
 
@@ -36,7 +36,7 @@ Reference
 
 .. automodule:: spikeinterface.qualitymetrics.misc_metrics
 
-	.. autofunction:: compute_amplitudes_cutoff
+	.. autofunction:: compute_amplitude_cutoffs
 
 
 Links to source code
