@@ -32,6 +32,8 @@ TODO more example
 
 TODO more about probeinterface and auto probe
 
+
+
 Read one Sorting
 ----------------
 
@@ -70,6 +72,12 @@ Given the standardized, modular design of our recording and sorting extractors,
 adding new file formats is straightforward so we expect this list to grow in future versions.
 
 Most of format are supported on top on `NEO <https://github.com/NeuralEnsemble/python-neo>`_
+
+dependencies
+------------
+
+TODO concept
+TODO pip install []
 
 Raw Data Formats
 ----------------
@@ -121,60 +129,7 @@ For sorted data formats, we currently support:
 * **Trideclous** - TridesclousSortingExtractor
 * **YASS** - YassSortingExtractor
 
-Installed Extractors
---------------------
 
-To check which extractors are useable in a given python environment, one can print the installed recording extractor
-list and the installed sorting extractor list. An example from a newly installed miniconda3 environment is shown below,
-
-First, import the spikeextractors package,
-
-.. code:: python
-
-  import spikeinterface.extractors as se
-
-Then you can check the installed RecordingExtractor list,
-
-.. code:: python
-
-  se.installed_recording_extractor_list
-
-which outputs,
-
-.. parsed-literal::
-  [spikeinterface.extractors.MdaRecordingExtractor,
-   spikeinterface.extractorsBiocamRecordingExtractor,
-   spikeinterface.core..BinaryRecordingExtractor,
-   ...
-
-and the installed SortingExtractors list,
-
-.. code:: python
-
-  se.installed_sorting_extractor_list
-
-which outputs,
-
-.. parsed-literal::
-  [spikeinterface.extractors.SpykingCircusSortingExtractor,
-   spikeinterface.extractors.HerdingspikesSortingExtractor,
-   ...
-
-When trying to use an extractor that has not been installed in your environment, an installation message will appear indicating which python packages must be installed as a prerequisite to using the extractor,
-
-.. code:: python
-
-  mearec_file = 'path_to_exdir_file.h5'
-  recording = se.MEArecRecordingExtractor(mearec_file)
-
-throws the error,
-
-.. parsed-literal::
-  ----> 1 se.MEArecRecordingExtractor(mearec_file)
-
-  AssertionError: To use the MEArecRecordingExtractor run:
-
-  pip install MEARec
 
 
 Dealing with Non-Supported File Formats

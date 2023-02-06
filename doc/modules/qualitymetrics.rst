@@ -33,16 +33,15 @@ This code snippet shows how to compute quality metrics (with or without principa
 
 .. code-block:: python
 
-    we = WaveformExtractor.load_from_folder(...) # start from a waveform extractor
+    we = si.load_waveforms(...) # start from a waveform extractor
 
     # without PC
     metrics = compute_quality_metrics(we, metric_names=['snr'])
     assert 'snr' in metrics.columns
 
     # with PCs
-    pca = WaveformPrincipalComponent(we)
-    pca.set_params(n_components=5, mode='by_channel_local')
-    pca.run()
+    from spikeinterface.postprocessing import compute_principal_components
+    pca = compute_principal_components(we, n_components=5, mode='by_channel_local')
     metrics = compute_quality_metrics(we)
     assert 'isolation_distance' in metrics.columns
 

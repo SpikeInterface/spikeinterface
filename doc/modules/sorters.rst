@@ -15,6 +15,11 @@ TODO add a world about the installation and docker/singularity
 Sorter wrappers concept
 -----------------------
 
+TODO explain the concept 
+
+
+TODO move this maybe:
+
 Each spike sorter wrapper includes:
 
 * a list of default parameters

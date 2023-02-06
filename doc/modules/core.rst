@@ -10,6 +10,11 @@ Several Base classes are implemented here and inherited throughout the SI code-b
 
 All classes support multiple segments. Each segment is a contiguous piece of data (recording, sorting, events).
 
+import rules
+------------
+
+TODO import story
+
 
 Recording
 ---------
@@ -55,6 +60,8 @@ It allows to:
 * compute templates (i.e. average extracellular waveforms)
 * save waveforms in a folder for easy retrieval
 
+TODO backends
+
 Snippets
 --------
 
@@ -88,13 +95,15 @@ This saving/loading features enables to store SI objects efficiently and to dist
 
 TODO:
   * explain binary folder
-  * explain zarr
+  * explain zarr  compression
   * explain NPZ
+
 
 Object in in-memory
 -------------------
 
 TODO numpy object
+
 
 Parallel processing and job_kwargs
 ----------------------------------
@@ -110,7 +119,7 @@ Slicing / aggragating
 ---------------------
 
 TODO time slice
-TODO frame slice
+TODO channel slice
 TODO sorting slice
 TODO aggragate channels
 
@@ -144,5 +153,12 @@ TODO
 
 sparsity
 --------
+
+TODO
+
+
+
+probe
+-----
 
 TODO
