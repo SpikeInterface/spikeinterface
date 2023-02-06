@@ -1,3 +1,5 @@
+.. _drift_metrics:
+
 Drift metrics (:code:`drift_ptp`, :code:`drift_std`, :code:`drift_mad`)
 =======================================================================
 
@@ -43,7 +45,7 @@ Example code
 	# It is also required to run `compute_spike_locations(wvf_extractor)`
     # (if missing, values will be NaN)
 
-	drift_ptps, drift_stds, drift_mads = qm.compute_amplitudes_cutoff(wvf_extractor, peak_sign="neg")
+	drift_ptps, drift_stds, drift_mads = qm.compute_drift_metrics(wvf_extractor, peak_sign="neg")
 	# drift_ptps, drift_stds, and drift_mads are dict containing the units' ID as keys,
 	# and their metrics as values.
 

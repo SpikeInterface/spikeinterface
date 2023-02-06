@@ -654,8 +654,8 @@ class WaveformExtractor:
         new_folder : Path or None
             The new folder where selected waveforms are copied
             
-        Return
-        ------
+        Returns
+        -------
         we :  WaveformExtractor
             The newly create waveform extractor with the selected units
         """
