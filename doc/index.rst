@@ -40,7 +40,7 @@ SpikeInterface is made of several modules to deal with different aspects of the 
 
     overview
     installation
-    modules_doc
+    modules/index
     supported_formats_and_sorters
     containerized_sorters
     install_sorters
