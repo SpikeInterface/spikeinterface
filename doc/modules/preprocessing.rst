@@ -133,9 +133,9 @@ For instance this is the case for Neuropixels devices.
 Applying :code:`common_reference()` on this data does not correctly remove artifacts, since we first need to compensate 
 for these small delays! This is exactly what :code:`phase_shift()` does.
 
-This function relies on an internal property of the recording called :code:`"inter_sample_shift"`:code:`"inter_sample_shift"`. 
-For Neuropixels recordings (read with the :py:func:`spikeinterface.extractors.read_spikeglx` or the 
-:py:func:`spikeinterface.extractors.read_openephys`functions), the :code:`"inter_sample_shift"` is automatically loaded 
+This function relies on an internal property of the recording called :code:`inter_sample_shift`. 
+For Neuropixels recordings (read with the :py:func:`~spikeinterface.extractors.read_spikeglx` or the 
+:py:func:`~spikeinterface.extractors.read_openephys` functions), the :code:`inter_sample_shift` is automatically loaded 
 from the metadata and set.
 
 Calling :code:`phase_shift()` alone has almost no effect, but combined with :code:`common_reference()` it makes a real 
@@ -213,7 +213,7 @@ It applies a filter in the spatial axis of the tarces after ordering the channel
 It is similar to common reference, but it can deal with "stripes" that are uneven across depth. 
 This preprocessing step can be super useful for long probes like Neuropixels.
 
-This is part of the "destripe" from IBL see :ref:`ibl_destripe`..
+This is part of the "destriping" from IBL (see :ref:`ibl_destripe`).
 
 :py:func:`~spikeinterface.preprocessing.highpass_spatial_filter()`
 
@@ -251,6 +251,7 @@ remove_artifacts()
 
 Given an external list of trigger times,  :code:`remove_artifacts()` function can remove artifacts with several 
 strategies:
+
 * replace with zeros (blank)
 * make a linear or cubic interpolation
 * remove the median or average template (with optional time jitter and amplitude scaling correction)
@@ -291,12 +292,9 @@ How to implement "IBL destriping" or "SpikeGLX CatGT" in SpikeInterface
 -----------------------------------------------------------------------
 
 
-<https://billkarsh.github.io/SpikeGLX/help/dmx_vs_gbl/dmx_vs_gbl/>`_
-
-SpikeGLX have a built-in function called `**CatGT**<https://billkarsh.github.io/SpikeGLX/help/dmx_vs_gbl/dmx_vs_gbl/>`_ 
+SpikeGLX have a built-in function called `CatGT <https://billkarsh.github.io/SpikeGLX/help/dmx_vs_gbl/dmx_vs_gbl/>`_ 
 to apply some preprocessing on the traces to remove noise and artifacts.
-IBL also have a standardized pipeline to preprocessed traces a bit similar to CatGT which is called **"destriping"** 
-[IBL]_.
+IBL also have a standardized pipeline to preprocessed traces a bit similar to CatGT which is called "destriping" [IBL]_.
 In these both cases, the traces are entiely read, processed and written back to a file.
 
 SpikeInterface can reproduce similar results without the need to write back to a file by building a *lazy* 
