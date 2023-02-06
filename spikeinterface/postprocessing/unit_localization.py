@@ -255,8 +255,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
 
     unit_ids = waveform_extractor.sorting.unit_ids
 
-    recording = waveform_extractor.recording
-    contact_locations = recording.get_channel_locations()
+    contact_locations = waveform_extractor.get_channel_locations()
 
     sparsity = compute_sparsity(waveform_extractor, method='radius', radius_um=radius_um)
     templates = waveform_extractor.get_all_templates(mode='average')
