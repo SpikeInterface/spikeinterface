@@ -62,7 +62,7 @@ author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Ma
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx_gallery.gen_gallery',
+    # 'sphinx_gallery.gen_gallery',
     'numpydoc',
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
@@ -101,27 +101,27 @@ except ImportError:
 # html_static_path = ['_static']
 
 
-from sphinx_gallery.sorting import ExplicitOrder
-from sphinx_gallery.sorting import FileNameSortKey
+# from sphinx_gallery.sorting import ExplicitOrder
+# from sphinx_gallery.sorting import FileNameSortKey
 
-# for sphinx gallery plugin
-sphinx_gallery_conf = {
-    'only_warn_on_example_error': True,
-    'examples_dirs': ['../examples/getting_started', '../examples/modules'],   # path to your example scripts
-    'gallery_dirs': ['getting_started', 'modules', 'usage', 'contribute'],  # path where to save gallery generated examples
-    'subsection_order': ExplicitOrder([
-                                       '../examples/modules/core/',
-                                       '../examples/modules/extractors/',
-                                       '../examples/modules/preprocessing',
-                                       '../examples/modules/sorters',
-                                       '../examples/modules/postprocessing',
-                                       '../examples/modules/qualitymetrics',
-                                       '../examples/modules/comparison',
-                                       '../examples/modules/widgets',
-                                       ]),
-    'within_subsection_order': FileNameSortKey,
-    'ignore_pattern': '/generate_',
-}
+# # for sphinx gallery plugin
+# sphinx_gallery_conf = {
+#     'only_warn_on_example_error': True,
+#     'examples_dirs': ['../examples/modules'],   # path to your example scripts
+#     'gallery_dirs': ['modules', 'usage', 'contribute'],  # path where to save gallery generated examples
+#     'subsection_order': ExplicitOrder([
+#                                        '../examples/modules/core/',
+#                                     #    '../examples/modules/extractors/',
+#                                        '../examples/modules/preprocessing',
+#                                     #    '../examples/modules/sorters',
+#                                        '../examples/modules/postprocessing',
+#                                        '../examples/modules/qualitymetrics',
+#                                     #    '../examples/modules/comparison',
+#                                        '../examples/modules/widgets',
+#                                        ]),
+#     'within_subsection_order': FileNameSortKey,
+#     'ignore_pattern': '/generate_',
+# }
 
 intersphinx_mapping = {
     "neo": ("https://neo.readthedocs.io/en/stable/", None),
