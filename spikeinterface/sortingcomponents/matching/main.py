@@ -32,6 +32,7 @@ def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extr
         Spikes found from templates.
     method_kwargs: 
         Optionaly returns for debug purpose.
+
     Notes
     -----
     Templates are represented as WaveformExtractor so statistics can be extracted.
