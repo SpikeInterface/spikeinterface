@@ -42,15 +42,6 @@ It represents a spike sorted output and has the following features:
 * handle time information
 
 
-Event
------
-
-The :py:class:`~spikeinterface.core.BaseEvent` class serves as basis for all :code:`Event` classes.
-It represents a events during the recording (e.g. TTL pulses) and has the following features:
-
-* retrieve events and/or epochs from files
-* enable grouping, splitting, and slicing (TODO)
-* handle segment operations (e.g. concatenation) (TODO)
 
 WaveformExtractor
 -----------------
@@ -63,6 +54,21 @@ It allows to:
 * control spike subsampling for waveforms
 * compute templates (i.e. average extracellular waveforms)
 * save waveforms in a folder for easy retrieval
+
+Snippets
+--------
+
+TODO
+
+Event
+-----
+
+The :py:class:`~spikeinterface.core.BaseEvent` class serves as basis for all :code:`Event` classes.
+It represents a events during the recording (e.g. TTL pulses) and has the following features:
+
+* retrieve events and/or epochs from files
+* enable grouping, splitting, and slicing (TODO)
+* handle segment operations (e.g. concatenation) (TODO)
 
 
 Saving and loading
@@ -80,9 +86,63 @@ From a saved SI folder, an SI object can be reloaded with the :code:`si.load_ext
 
 This saving/loading features enables to store SI objects efficiently and to distribute processing.
 
+TODO:
+  * explain binary folder
+  * explain zarr
+  * explain NPZ
 
-Parallel processing
+Object in in-memory
 -------------------
+
+TODO numpy object
+
+Parallel processing and job_kwargs
+----------------------------------
+
+TODO explain job_kwargs
+
 
 The :py:mod:`~spikeinterface.core` module also contains the basic tools used throughout SI for parallel processing.
 To discover more about it, checkout the :py:class:`~spikeinterface.core.ChunkRecordingExecutor` class.
+
+
+Slicing / aggragating
+---------------------
+
+TODO time slice
+TODO frame slice
+TODO sorting slice
+TODO aggragate channels
+
+recording tools
+---------------
+
+TODO
+
+
+template tools
+--------------
+
+TODO
+
+
+generate fake recording and sorting
+-----------------------------------
+
+TODO
+
+working with multi segments
+---------------------------
+
+TODO
+
+download dataset
+----------------
+
+TODO
+
+
+sparsity
+--------
+
+TODO

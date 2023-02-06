@@ -1,6 +1,8 @@
 .. _modulewidgets:
 
 
+TODO restart this page from scratch
+
 Widgets module
 ==============
 

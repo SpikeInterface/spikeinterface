@@ -15,6 +15,53 @@ Most of the :code:`SortingExtractor` are instead directly implemented in SpikeIn
 
 Although SI is object-oriented (class-based), each object can also be loaded with  a convenient :code:`read()` function:
 
+
+
+
+Read one Recording
+------------------
+
+TODO more example
+
+.. code-block:: python
+
+    import spikeinterface.extractors as se
+
+    recording_OE = se.read_openephys("open-ephys-folder")
+
+
+TODO more about probeinterface and auto probe
+
+Read one Sorting
+----------------
+
+.. code-block:: python
+
+    import spikeinterface.extractors as se
+
+    sorting_KS = se.read_kilosort("kilosort-folder")
+
+
+Read one Event
+--------------
+
+.. code-block:: python
+
+    import spikeinterface.extractors as se
+
+    events_OE = se.read_openephys_event("open-ephys-folder")
+
+For a comprehensive list of compatible technologies, see :ref:`compatible-tech`.
+
+
+Lazy read
+---------
+
+
+TODO explain
+
+
+
 Supported File Formats
 ----------------------
 
@@ -148,33 +195,3 @@ an actual extractor, please leave an issue in the spikeextractors repository.
 
 
 
-Read one Recording
-------------------
-
-.. code-block:: python
-
-    import spikeinterface.extractors as se
-
-    recording_OE = se.read_openephys("open-ephys-folder")
-
-
-Read one Sorting
-----------------
-
-.. code-block:: python
-
-    import spikeinterface.extractors as se
-
-    sorting_KS = se.read_kilosort("kilosort-folder")
-
-
-Read one Event
---------------
-
-.. code-block:: python
-
-    import spikeinterface.extractors as se
-
-    events_OE = se.read_openephys_event("open-ephys-folder")
-
-For a comprehensive list of compatible technologies, see :ref:`compatible-tech`.
