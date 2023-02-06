@@ -99,10 +99,10 @@ Importants:
     rec_f = bandpass_filter(rec, freq_min=300, freq_max=6000)
 
 
-:py:func: `spikeinterface.preprocessing.filter()`
-:py:func: `spikeinterface.preprocessing.bandpass_filter()`
-:py:func: `spikeinterface.preprocessing.notch_filter()`
-:py:func: `spikeinterface.preprocessing.highpass_filter()`
+:py:func:`~spikeinterface.preprocessing.filter()`
+:py:func:`~spikeinterface.preprocessing.bandpass_filter()`
+:py:func:`~spikeinterface.preprocessing.notch_filter()`
+:py:func:`~spikeinterface.preprocessing.highpass_filter()`
 
 
 common_reference()
@@ -119,7 +119,7 @@ There are some various usages when combining `operator` and `reference`:
 
     rec_cmr = common_reference(rec, operator="median", reference="global")
 
-:py:func: `spikeinterface.preprocessing.common_reference()`
+:py:func:`~spikeinterface.preprocessing.common_reference()`
 
 phase_shift()
 ^^^^^^^^^^^^^^
@@ -147,7 +147,7 @@ on artifact removal.
 CatGT and IBL destripe are based on this idea of fft data shifting see  :ref:`ibl_destripe`.
 
 
-:py:func: `spikeinterface.preprocessing.phase_shift()`
+:py:func:`~spikeinterface.preprocessing.phase_shift()`
 
 
 normalize_by_quantile() /scale() / center() / zscore()
@@ -165,10 +165,10 @@ every channels.
 
     rec_normed = zscore(rec)
 
-:py:func: `spikeinterface.preprocessing.normalize_by_quantile()`
-:py:func: `spikeinterface.preprocessing.scale()`
-:py:func: `spikeinterface.preprocessing.center()`
-:py:func: `spikeinterface.preprocessing.zscore()`
+:py:func:`~spikeinterface.preprocessing.normalize_by_quantile()`
+:py:func:`~spikeinterface.preprocessing.scale()`
+:py:func:`~spikeinterface.preprocessing.center()`
+:py:func:`~spikeinterface.preprocessing.zscore()`
 
 whiten()
 ^^^^^^^^
@@ -184,7 +184,7 @@ the whiten traces are then the dot product of traces by this W matrix.
     rec_w = whiten(rec)
 
 
-:py:func: `spikeinterface.preprocessing.whiten()`
+:py:func:`~spikeinterface.preprocessing.whiten()`
 
 clip() / blank_staturation()
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -196,8 +196,8 @@ We can limit traces between min and max using `clip()`.
 
     rec_w = clip(rec, a_min=-250., a_max=260)
 
-:py:func: `spikeinterface.preprocessing.clip()`
-:py:func: `spikeinterface.preprocessing.blank_staturation()`
+:py:func:`~spikeinterface.preprocessing.clip()`
+:py:func:`~spikeinterface.preprocessing.blank_staturation()`
 
 highpass_spatial_filter()
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -208,7 +208,7 @@ It is some kind of spatial detending. This can be usefull for big probe like neu
 
 This is part of the "destripe" from IBL see :ref:`ibl_destripe`..
 
-:py:func: `spikeinterface.preprocessing.highpass_spatial_filter()`
+:py:func:`~spikeinterface.preprocessing.highpass_spatial_filter()`
 
 detect_bad_channels() / interpolate_bad_channels()
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -228,15 +228,15 @@ or to interpolate then.
     rec_clean = interpolate_bad_channels(rec, bad_channel_ids)
 
 
-:py:func: `spikeinterface.preprocessing.detect_bad_channels()`
-:py:func: `spikeinterface.preprocessing.interpolate_bad_channels()`
+:py:func:`~spikeinterface.preprocessing.detect_bad_channels()`
+:py:func:`~spikeinterface.preprocessing.interpolate_bad_channels()`
 
 rectify()
 ^^^^^^^^^
 
 To make traces absolute we can use the `rectify()` function.
 
-:py:func: `spikeinterface.preprocessing.rectify()`
+:py:func:`~spikeinterface.preprocessing.rectify()`
 
 remove_artifacts()
 ^^^^^^^^^^^^^^
@@ -250,7 +250,7 @@ put zeros, remove median or average, make linear or cubic interpolation.
     rec_clean = remove_artifacts(rec, list_triggers)
 
 
-:py:func: `spikeinterface.preprocessing.remove_artifacts()`
+:py:func:`~spikeinterface.preprocessing.remove_artifacts()`
 
 
 zero_channel_pad()
@@ -269,7 +269,7 @@ deepinterpolation() (experimental)
 
 Very experimental port of the deep interpolation denoiser publish by Jerome Lecoq in 2021
 
-:py:func: `spikeinterface.preprocessing.deepinterpolation()`
+:py:func:`~spikeinterface.preprocessing.deepinterpolation()`
 
 
 
@@ -329,4 +329,4 @@ Some preprocessing work on top of snippet object.
 align_snippets()
 ^^^^^^^^^^^^^^
 
-:py:func: `spikeinterface.preprocessing.align_snippets()`
+:py:func:`~spikeinterface.preprocessing.align_snippets()`
