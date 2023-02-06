@@ -84,13 +84,13 @@ Requirements
 
 Sub-modules have more dependencies, so you should also install:
 
+  * zarr
   * scipy
-  * h5py
   * pandas
+  * xarray
   * sklearn
-  * matplotlib
   * networkx
-  * datalad
-  * MEArec
+  * matplotlib
+
 
 All sorters must installed independently.
