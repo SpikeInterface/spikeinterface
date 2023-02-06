@@ -8,7 +8,7 @@ from spikeinterface.core.recording_tools import get_noise_levels, get_channel_di
 
 from ..core import get_chunk_with_margin
 
-from .peak_pipeline import PipelineNode, check_graph, propagate_node_instances, run_nodes
+from .peak_pipeline import PipelineNode, check_graph, run_nodes
 from .tools import make_multi_method_doc
 
 try:
@@ -103,7 +103,6 @@ def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipe
 
         if pipeline_nodes is not None:
             pipeline_nodes = [cls.from_dict(recording, kwargs) for cls, kwargs in pipeline_nodes]
-            propagate_node_instances(pipeline_nodes)
 
     # create a local dict per worker
     worker_ctx = {}
