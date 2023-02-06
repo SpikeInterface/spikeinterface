@@ -1,6 +1,9 @@
 Preprocessing module
 ====================
 
+Overview : chain concept
+------------------------
+
 The :py:mod:`~spikeinterface.preprocessing` module includes preprocessing steps to apply before spike
 sorting. Preprocessors are *lazy*, meaning that no computation is performed until it is required (usually at the
 spike sorting step). This enables one to build preprocessing chains to be applied in sequence to a
@@ -31,7 +34,16 @@ In this case, the :code:`save()` function will process in parallel our original 
 CMR and save it to a binary file in the "preprocessed" folder. The :code:`recording_saved` is yet another
 :code:`RecordignExtractor` which maps directly to the newly created binary file, for very quick access.
 
+Available preprocessing
+-----------------------
 
+TODO make list and explanation
+
+
+IBL destripe or spikeglx CatGT in spiekinetrface
+------------------------------------------------
+
+TODO concept and code example
 
 
 

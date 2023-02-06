@@ -13,6 +13,10 @@ Even if the three comparison cases share the same underlying idea (they compare 
 implementations are slightly different.
 
 
+TODO explain collision
+TODO hybrid
+TODO compare template
+
 
 1. Comparison with ground truth
 -------------------------------

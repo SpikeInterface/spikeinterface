@@ -15,6 +15,55 @@ Most of the :code:`SortingExtractor` are instead directly implemented in SpikeIn
 
 Although SI is object-oriented (class-based), each object can also be loaded with  a convenient :code:`read()` function:
 
+
+
+
+Read one Recording
+------------------
+
+TODO more example
+
+.. code-block:: python
+
+    import spikeinterface.extractors as se
+
+    recording_OE = se.read_openephys("open-ephys-folder")
+
+
+TODO more about probeinterface and auto probe
+
+
+
+Read one Sorting
+----------------
+
+.. code-block:: python
+
+    import spikeinterface.extractors as se
+
+    sorting_KS = se.read_kilosort("kilosort-folder")
+
+
+Read one Event
+--------------
+
+.. code-block:: python
+
+    import spikeinterface.extractors as se
+
+    events_OE = se.read_openephys_event("open-ephys-folder")
+
+For a comprehensive list of compatible technologies, see :ref:`compatible-tech`.
+
+
+Lazy read
+---------
+
+
+TODO explain
+
+
+
 Supported File Formats
 ----------------------
 
@@ -23,6 +72,12 @@ Given the standardized, modular design of our recording and sorting extractors,
 adding new file formats is straightforward so we expect this list to grow in future versions.
 
 Most of format are supported on top on `NEO <https://github.com/NeuralEnsemble/python-neo>`_
+
+dependencies
+------------
+
+TODO concept
+TODO pip install []
 
 Raw Data Formats
 ----------------
@@ -74,60 +129,7 @@ For sorted data formats, we currently support:
 * **Trideclous** - TridesclousSortingExtractor
 * **YASS** - YassSortingExtractor
 
-Installed Extractors
---------------------
 
-To check which extractors are useable in a given python environment, one can print the installed recording extractor
-list and the installed sorting extractor list. An example from a newly installed miniconda3 environment is shown below,
-
-First, import the spikeextractors package,
-
-.. code:: python
-
-  import spikeinterface.extractors as se
-
-Then you can check the installed RecordingExtractor list,
-
-.. code:: python
-
-  se.installed_recording_extractor_list
-
-which outputs,
-
-.. parsed-literal::
-  [spikeinterface.extractors.MdaRecordingExtractor,
-   spikeinterface.extractorsBiocamRecordingExtractor,
-   spikeinterface.core..BinaryRecordingExtractor,
-   ...
-
-and the installed SortingExtractors list,
-
-.. code:: python
-
-  se.installed_sorting_extractor_list
-
-which outputs,
-
-.. parsed-literal::
-  [spikeinterface.extractors.SpykingCircusSortingExtractor,
-   spikeinterface.extractors.HerdingspikesSortingExtractor,
-   ...
-
-When trying to use an extractor that has not been installed in your environment, an installation message will appear indicating which python packages must be installed as a prerequisite to using the extractor,
-
-.. code:: python
-
-  mearec_file = 'path_to_exdir_file.h5'
-  recording = se.MEArecRecordingExtractor(mearec_file)
-
-throws the error,
-
-.. parsed-literal::
-  ----> 1 se.MEArecRecordingExtractor(mearec_file)
-
-  AssertionError: To use the MEArecRecordingExtractor run:
-
-  pip install MEARec
 
 
 Dealing with Non-Supported File Formats
@@ -148,33 +150,3 @@ an actual extractor, please leave an issue in the spikeextractors repository.
 
 
 
-Read one Recording
-------------------
-
-.. code-block:: python
-
-    import spikeinterface.extractors as se
-
-    recording_OE = se.read_openephys("open-ephys-folder")
-
-
-Read one Sorting
-----------------
-
-.. code-block:: python
-
-    import spikeinterface.extractors as se
-
-    sorting_KS = se.read_kilosort("kilosort-folder")
-
-
-Read one Event
---------------
-
-.. code-block:: python
-
-    import spikeinterface.extractors as se
-
-    events_OE = se.read_openephys_event("open-ephys-folder")
-
-For a comprehensive list of compatible technologies, see :ref:`compatible-tech`.
