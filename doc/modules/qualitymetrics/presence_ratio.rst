@@ -44,7 +44,7 @@ References
 
 .. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
 
-    .. autofunction:: compute_presence_ratio
+    .. autofunction:: compute_presence_ratios
 
 Literature
 ----------

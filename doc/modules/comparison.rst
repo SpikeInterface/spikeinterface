@@ -47,7 +47,7 @@ Given:
 
     This gives a matrix called **match_event_count** of size *(n_gt X n_tested)*. This is an example of such matrices:
 
-    .. image:: images/spikecomparison_match_count.png
+    .. image:: ../images/spikecomparison_match_count.png
         :scale: 100 %
 
     Note that this matrix represents the number of **true positive** (TP) spikes
@@ -78,12 +78,12 @@ Given:
 
     Here is an example of the agreement matrix, in which only scores > 0.5 are displayed:
 
-    .. image:: images/spikecomparison_agreement_unordered.png
+    .. image:: ../images/spikecomparison_agreement_unordered.png
         :scale: 100 %
 
     This matrix can be ordered for a better visualization:
 
-    .. image:: images/spikecomparison_agreement.png
+    .. image:: ../images/spikecomparison_agreement.png
         :scale: 100 %
 
 
@@ -142,7 +142,7 @@ Given:
       The overall performances can be visualised with the **confusion matrix**, where
       the last columns counts **FN** and the last row counts **FP**.
 
-    .. image:: images/spikecomparison_confusion.png
+    .. image:: ../images/spikecomparison_confusion.png
         :scale: 100 %
 
 
