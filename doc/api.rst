@@ -107,6 +107,10 @@ Non-NEO-based
     .. autofunction:: read_yass
 
 
+
+
+.. _api_preprocessing:
+
 spikeinterface.preprocessing
 ----------------------------
 
