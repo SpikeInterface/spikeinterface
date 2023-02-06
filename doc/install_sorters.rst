@@ -1,3 +1,5 @@
+.. _installsorters:
+
 Installing Spike Sorters
 ========================
 

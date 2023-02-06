@@ -40,9 +40,7 @@ SpikeInterface is made of several modules to deal with different aspects of the 
 
     overview
     installation
-    getting_started/plot_getting_started.rst
     modules_doc
-    modules/index.rst
     supported_formats_and_sorters
     containerized_sorters
     install_sorters

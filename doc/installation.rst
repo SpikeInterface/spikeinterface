@@ -93,4 +93,5 @@ Sub-modules have more dependencies, so you should also install:
   * matplotlib
 
 
-All sorters must installed independently.
+All external spike sorters can be either run inside containers (Docker or Singularity - see :ref:`containerizedsorters`) 
+or must installed independently (see :ref:`installsorters`).
