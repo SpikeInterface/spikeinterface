@@ -10,30 +10,32 @@ spikeinterface.core
         :members:
     .. autoclass:: BaseSorting
         :members:
-    .. autoclass:: BaseSortingSegment
+    .. autoclass:: BaseSnippets
         :members:
     .. autoclass:: BaseEvent
-    .. autoclass:: BinaryRecordingExtractor
+        :members:
     .. autofunction:: read_binary
-    .. autoclass:: NpzSortingExtractor
-    .. autoclass:: NumpyRecording
-    .. autoclass:: NumpySorting
-    .. autoclass:: ChannelSliceRecording
-    .. autoclass:: UnitsSelectionSorting
-    .. autoclass:: FrameSliceRecording
-    .. autofunction:: append_recordings
-    .. autofunction:: concatenate_recordings
-    .. autofunction:: append_sortings
-    .. autofunction:: load_extractor
+    .. autofunction:: read_zarr
+    .. autoclass:: WaveformExtractor
+        :members:
     .. autofunction:: extract_waveforms
     .. autofunction:: load_waveforms
-    .. autoclass:: WaveformExtractor
-        .. automethod:: set_params
+    .. autofunction:: compute_sparsity
+    .. autoclass:: NumpyRecording
+    .. autoclass:: NumpySorting
+    .. autoclass:: NumpySorting
+    .. autofunction:: append_recordings
+    .. autofunction:: concatenate_recordings
+    .. autofunction:: split_recording
+    .. autofunction:: select_segment_recording
+    .. autofunction:: append_sortings
+    .. autofunction:: split_sorting
+    .. autofunction:: select_segment_sorting
     .. autofunction:: download_dataset
     .. autofunction:: write_binary_recording
     .. autofunction:: set_global_tmp_folder
     .. autofunction:: set_global_dataset_folder
-    .. autoclass:: ChunkRecordingExecutor
+    .. autofunction:: set_global_job_kwargs
     .. autofunction:: get_random_data_chunks
     .. autofunction:: get_channel_distances
     .. autofunction:: get_closest_channels
@@ -43,9 +45,12 @@ spikeinterface.core
     .. autofunction:: get_template_extremum_channel
     .. autofunction:: get_template_extremum_channel_peak_shift
     .. autofunction:: get_template_extremum_amplitude
-    .. autofunction:: get_template_channel_sparsity
-    
 
+Low-level
+~~~~~~~~~
+    .. autoclass:: BaseWaveformExtractorExtension
+    .. autoclass:: ChannelSparsity
+    .. autoclass:: ChunkRecordingExecutor
 
 spikeinterface.extractors
 -------------------------
@@ -101,39 +106,6 @@ Non-NEO-based
     .. autofunction:: read_waveclust
     .. autofunction:: read_yass
 
-Low-level classes
-~~~~~~~~~~~~~~~~~
-
-.. automodule:: spikeinterface.extractors
-
-    .. autoclass:: AlphaOmegaRecordingExtractor
-    .. autoclass:: AlphaOmegaEventExtractor
-    .. autoclass:: AxonaRecordingExtractor
-    .. autoclass:: BiocamRecordingExtractor
-    .. autoclass:: BlackrockRecordingExtractor
-    .. autoclass:: BlackrockSortingExtractor
-    .. autoclass:: CedRecordingExtractor
-    .. autoclass:: EDFRecordingExtractor
-    .. autoclass:: IntanRecordingExtractor
-    .. autoclass:: MaxwellRecordingExtractor
-    .. autoclass:: MaxwellEventExtractor
-    .. autoclass:: MaxwellEventSegment
-    .. autoclass:: MEArecRecordingExtractor
-    .. autoclass:: MEArecSortingExtractor
-    .. autoclass:: MCSRawRecordingExtractor
-    .. autoclass:: NeuralynxRecordingExtractor
-    .. autoclass:: NeuralynxSortingExtractor
-    .. autoclass:: NeuroScopeRecordingExtractor
-    .. autoclass:: NeuroScopeSortingExtractor
-    .. autoclass:: NixRecordingExtractor
-    .. autoclass:: OpenEphysLegacyRecordingExtractor
-    .. autoclass:: OpenEphysBinaryRecordingExtractor
-    .. autoclass:: OpenEphysBinaryEventExtractor
-    .. autoclass:: PlexonRecordingExtractor
-    .. autoclass:: Spike2RecordingExtractor
-    .. autoclass:: SpikeGadgetsRecordingExtractor
-    .. autoclass:: SpikeGLXRecordingExtractor
-    .. autoclass:: TdtRecordingExtractor
 
 spikeinterface.preprocessing
 ----------------------------
@@ -162,7 +134,6 @@ spikeinterface.postprocessing
 
 .. automodule:: spikeinterface.postprocessing
 
-    .. autofunction:: localize_units
     .. autofunction:: get_template_metric_names
     .. autofunction:: compute_template_metrics
     .. autofunction:: compute_principal_components
@@ -183,6 +154,8 @@ spikeinterface.qualitymetrics
 
     .. autofunction:: compute_quality_metrics
     .. autofunction:: get_quality_metric_list
+    .. autofunction:: get_quality_pca_metric_list
+    .. autofunction:: get_default_qm_params
 
 
 spikeinterface.sorters

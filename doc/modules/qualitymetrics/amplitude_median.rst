@@ -1,5 +1,5 @@
-Amplitude median
-================
+Amplitude median (:code:`amplitude_median`)
+===========================================
 
 Calculation
 -----------
@@ -24,7 +24,7 @@ Example code
     # It is also recommended to run `compute_spike_amplitudes(wvf_extractor)`
     # in order to use amplitude values from all spikes.
 
-	amplitude_medians = qm.compute_amplitudes_median(wvf_extractor)
+	amplitude_medians = qm.compute_amplitude_medians(wvf_extractor)
 	# amplitude_medians is a dict containing the units' ID as keys,
 	# and their estimated amplitude medians as values.
 
