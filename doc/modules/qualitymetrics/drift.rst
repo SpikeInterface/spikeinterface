@@ -1,3 +1,5 @@
+.. _drift_metrics:
+
 Drift metrics (:code:`drift_ptp`, :code:`drift_std`, :code:`drift_mad`)
 =======================================================================
 
