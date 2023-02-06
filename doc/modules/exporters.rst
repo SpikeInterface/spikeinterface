@@ -7,6 +7,9 @@ The :py:mod:`spikeinterface.exporters` module includes functions to export SI ob
 Exporting to Phy
 ----------------
 
+TODO explain sparsity
+TODO explain WE extension
+
 The :py:func:`~spikeinterface.exporters.export_to_phy()` function allows you to use the
 `Phy template GUI <https://github.com/cortex-lab/phy>`_ for visual inspection and manual curation of spike sorting
 results.
@@ -27,6 +30,10 @@ The input of the :py:func:`~spikeinterface.exporters.export_to_phy()` is a :code
 
 Export a spike sorting report
 -----------------------------
+
+TODO explain sparsity
+TODO explain WE extension
+
 
 The **SI report** provides an overview of the spike sorting output. It is designed to be a common and shareable report
 to assess spike sorting quality with students, collaborators, and journals.

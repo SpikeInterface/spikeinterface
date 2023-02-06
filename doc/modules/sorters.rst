@@ -3,13 +3,22 @@ Sorters module
 
 The :py:mod:`spikeinterface.sorters` module is where spike sorting happens!
 
+TODO : exaplain external vs internal
+
 SpikeInterface provides wrapper classes to many commonly used spike sorters (see :ref:`compatible-sorters`).
 All sorter classes inherit from the :py:class:`~spikeinterface.sorters.BaseSorter` class, which provides the
 common tools to run spike sorters.
 
+TODO add a world about the installation and docker/singularity
+
 
 Sorter wrappers concept
 -----------------------
+
+TODO explain the concept 
+
+
+TODO move this maybe:
 
 Each spike sorter wrapper includes:
 
@@ -109,6 +118,8 @@ throws the error,
 
 
 
+.. _containerizedsorters:
+
 Running sorters in container docker/singularity
 -----------------------------------------------
 
@@ -118,38 +129,7 @@ maintain containerized versions of several popular spike sorters on the `SpikeIn
 
 See full documentation here: :ref:`containerizedsorters`
 
-Run several sorting jobs in parallel
-------------------------------------
 
-The :py:mod:`spikeinterface.sorters` includes also includes tools to run several spike sorting jobs in parallel. This
-can be done with the :py:func:`spikeinterface.sorters.run_sorters()` function by specifying an :code:`engine` that
-supports parallel processing (e.g. joblib or dask).
-
-In this code example, 3 sorters are run on 2 recordings using 6 jobs:
-
-.. code-block:: python
-
-    import spikeinterface.sorters as ss
-
-    # recording1 and recording2 are RecordingExtractor objects
-    recording_dict = {"rec1": recording1, "rec2": recording2}
-
-    sorting_outputs = ss.run_sorters(
-        sorter_list=["tridesclous", "herdingspikes", "ironclust"],
-        recording_dict_or_list=recording_dict,
-        working_folder="all_sorters",
-        verbose=False,
-        engine="joblib",
-        engine_kwargs={'n_jobs': 6},
-    )
-
-After the jobs are run, the :code:`sorting_outputs` is a dictionary with :code:`(rec_name, sorter_name)` as key (e.g.
-:code:`('rec1', 'tridesclous')` in this example), and the corresponding :code:`SortingExtractor` as value.
-
-.. _containerizedsorters:
-
-Containerized Sorters
----------------------
 
 One of the biggest bottlenecks for users is installing spike sorting software. To alleviate this, we build and
 maintain containerized versions for most spike sorters.
@@ -163,8 +143,6 @@ The containerized approach has several advantages:
 
 The containers can be run in Docker or Singularity, so having Docker or Singularity installed is a prerequisite.
 
-Running sorters in container docker/singularity
------------------------------------------------
 
 Running spike sorting in a docker container container just requires to:
 
@@ -234,6 +212,57 @@ To use a specific image, set either ``docker_image`` or ``singularity_image`` to
 In order to run spike sorting in a container, the recording object MUST be persistent on disk, so that the 
 container can reload it. The :code:`save()` function makes the recording persistent on disk, by saving the in-memory 
 :code:`test_recording` object to a binary file in the :code:`test-docker-folder` folder.
+
+
+Run several sorting jobs in parallel
+------------------------------------
+
+The :py:mod:`spikeinterface.sorters` includes also includes tools to run several spike sorting jobs in parallel. This
+can be done with the :py:func:`spikeinterface.sorters.run_sorters()` function by specifying an :code:`engine` that
+supports parallel processing (e.g. joblib or dask).
+
+In this code example, 3 sorters are run on 2 recordings using 6 jobs:
+
+.. code-block:: python
+
+    import spikeinterface.sorters as ss
+
+    # recording1 and recording2 are RecordingExtractor objects
+    recording_dict = {"rec1": recording1, "rec2": recording2}
+
+    sorting_outputs = ss.run_sorters(
+        sorter_list=["tridesclous", "herdingspikes", "ironclust"],
+        recording_dict_or_list=recording_dict,
+        working_folder="all_sorters",
+        verbose=False,
+        engine="joblib",
+        engine_kwargs={'n_jobs': 6},
+    )
+
+After the jobs are run, the :code:`sorting_outputs` is a dictionary with :code:`(rec_name, sorter_name)` as key (e.g.
+:code:`('rec1', 'tridesclous')` in this example), and the corresponding :code:`SortingExtractor` as value.
+
+
+run sorter on separate groups
+-----------------------------
+
+TODO concept
+
+TODO example
+
+TODO agglomerate back several sortings
+
+
+
+Internal sorters
+----------------
+
+TODO concept
+
+TODO example
+
+TODO dependencies
+
 
 
 Contributing
