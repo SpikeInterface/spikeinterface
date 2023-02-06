@@ -6,7 +6,7 @@ import numpy as np
 import spikeinterface as si
 import spikeinterface.extractors as se
 from spikeinterface.sortingcomponents.waveforms.pca import PCAProjection, PCBaseNode
-from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, ExtractDenseWaveforms
+from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms, ExtractSparseWaveforms
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 
@@ -90,11 +90,11 @@ def test_pca_dimensionality_reduction_sparsity(tmp_path):
     model_path = tmp_path / "buffer_pca.pkl"
 
     # Node initialization
-    extract_waveforms = ExtractDenseWaveforms(recording=recording, name='extract_dense_waveforms',ms_before=ms_before,
-                                              ms_after=ms_after, return_ouput=False)
+    extract_waveforms = ExtractSparseWaveforms(recording=recording, name='extract_dense_waveforms',ms_before=ms_before,
+                                              ms_after=ms_after, return_ouput=True)
     temporal_pca = PCAProjection(recording=recording, model_path=model_path, parents=["extract_dense_waveforms"],
                                  local_radius_um=local_radius_um)
-    pipeline_nodes = [extract_waveforms, temporal_pca]
+    pipeline_nodes = [extract_waveforms, temporal_pca]   
 
     # Fit the model
     n_components = 8
@@ -104,22 +104,11 @@ def test_pca_dimensionality_reduction_sparsity(tmp_path):
     temporal_pca.fit(recording, n_components, detect_peaks_params, peak_selection_params, job_kwargs)
 
     # Extract features and compare
-    peaks, projected_waveforms = detect_peaks(recording, pipeline_nodes=pipeline_nodes, **job_kwargs)
+    peaks, sparse_waveforms, projected_waveforms = detect_peaks(recording, pipeline_nodes=pipeline_nodes, **job_kwargs)
     extracted_n_peaks, extracted_n_components, extracted_n_channels =  projected_waveforms.shape    
+    n_peaks = peaks.shape[0]
+    max_num_chans = sparse_waveforms.shape[2]
     
-    # We represent sparsity with a dict where the key is the channel and the value is a list of `valid_channels`
-    sparsity_dict = dict()
-    channel_array, valid_channel_array = np.nonzero(temporal_pca.neighbours_mask)
-    for channel, valid_channel in zip(channel_array, valid_channel_array):
-        sparsity_dict.setdefault(channel, []).append(valid_channel)
-    
-    for peak_index in range(extracted_n_peaks):
-        main_peak_channel = peaks[peak_index]['channel_ind']
-        expected_sparsity = sparsity_dict[main_peak_channel]
-        projected_waveform  = projected_waveforms[peak_index, 0, :]
-        # All the channels that are invalid should be NaN
-        invalid_channels = ~np.isnan(projected_waveform)
-        waveform_sparsity, = np.nonzero(invalid_channels)    
-        # Assert sparsity    
-        np.testing.assert_array_equal(waveform_sparsity, expected_sparsity)
-
+    assert extracted_n_peaks == n_peaks
+    assert extracted_n_components == n_components
+    assert extracted_n_channels == max_num_chans

@@ -13,6 +13,8 @@ from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface import extract_waveforms, NumpySorting
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.core.recording_tools import get_channel_distances
+from .waveform_utils import to_channelless_representation, from_channelless_representation
+
 
 class PCBaseNode(PipelineNode):
     
@@ -136,15 +138,10 @@ class PCAProjection(PCBaseNode):
             )
             raise AttributeError(exception_string)
         
-        n_waveforms, n_samples , n_channels = waveforms.shape
-        n_components = self.pca_model.n_components
+        num_waveforms, num_samples , num_channels = waveforms.shape
         
-        # Initializing non-valid channels with nan (sparsity is used to indicate valid channels)
-        projected_waveforms = np.full(shape =(n_waveforms, n_components, n_channels), fill_value=np.nan)
-
-        for waveform_index, main_channel in enumerate(peaks['channel_ind']):
-            channel_indexes_sparsified,  = np.nonzero(self.neighbours_mask[main_channel])
-            sparsified_waveform = waveforms[waveform_index, :, channel_indexes_sparsified]
-            projected_waveforms[waveform_index, :, channel_indexes_sparsified] = self.pca_model.transform(sparsified_waveform)
+        channeless_waveform = to_channelless_representation(waveforms)
+        projected_chaneless_waveforms = self.pca_model.transform(channeless_waveform)
+        projected_waveforms = from_channelless_representation(projected_chaneless_waveforms, num_channels)
 
         return projected_waveforms
