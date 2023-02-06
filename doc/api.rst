@@ -134,7 +134,7 @@ spikeinterface.postprocessing
 
 .. automodule:: spikeinterface.postprocessing
 
-    .. autofunction:: get_template_metric_names
+    .. autofunction:: compute_noise_levels
     .. autofunction:: compute_template_metrics
     .. autofunction:: compute_principal_components
     .. autofunction:: compute_spike_amplitudes
@@ -144,6 +144,7 @@ spikeinterface.postprocessing
     .. autofunction:: compute_template_similarity
     .. autofunction:: compute_correlograms
     .. autofunction:: compute_isi_histograms
+    .. autofunction:: get_template_metric_names
     .. autofunction:: align_sorting
 
 

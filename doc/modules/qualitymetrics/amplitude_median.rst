@@ -1,3 +1,5 @@
+.. _amp_median:
+
 Amplitude median (:code:`amplitude_median`)
 ===========================================
 
