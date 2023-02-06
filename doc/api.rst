@@ -135,6 +135,10 @@ Low-level classes
     .. autoclass:: SpikeGLXRecordingExtractor
     .. autoclass:: TdtRecordingExtractor
 
+
+
+.. _api_preprocessing:
+
 spikeinterface.preprocessing
 ----------------------------
 
