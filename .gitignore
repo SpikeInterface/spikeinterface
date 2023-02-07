@@ -230,6 +230,6 @@ toy_waveforms/
 toy_waveforms_1seg/
 toy_waveforms_2seg/
 tridesclous_output/
-waveforms/
+# waveforms/
 waveforms_mearec/
 waveforms_rm/
