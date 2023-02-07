@@ -1,6 +1,6 @@
 from spikeinterface.core.core_tools import define_function_from_class
 
-from .neobaseextractor import NeoBaseRecordingExtractor
+from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
 class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
@@ -38,4 +38,36 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
+class PlexonSortingExtractor(NeoBaseSortingExtractor):
+    """
+    Class for reading plexon spiking data (.plx files).
+
+    Based on :py:class:`neo.rawio.PlexonRawIO`
+
+    Parameters
+    ----------
+    file_path: str
+        The file path to load the recordings from.
+    sampling_frequency: float
+        The sampling frequency for the spiking channels.
+    """
+
+    mode = "file"
+    NeoRawIOClass = "PlexonRawIO"
+    handle_spike_frame_directly = False
+    name = "plexon"
+
+    def __init__(self, file_path, sampling_frequency=None):
+        neo_kwargs = self.map_to_neo_kwargs(file_path)
+        NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency,
+                                         **neo_kwargs)
+        self._kwargs.update({"file_path": str(file_path)})
+
+    @classmethod
+    def map_to_neo_kwargs(cls, file_path):
+        neo_kwargs = {"filename": str(file_path)}
+        return neo_kwargs
+
+
 read_plexon = define_function_from_class(source_class=PlexonRecordingExtractor, name="read_plexon")
+read_plexon_sorting = define_function_from_class(source_class=PlexonSortingExtractor, name="read_plexon_sorting")
