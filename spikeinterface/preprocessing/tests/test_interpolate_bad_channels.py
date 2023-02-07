@@ -5,7 +5,7 @@ import os
 import spikeinterface as si
 import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core.generate import generate_recording
 
 try:
     import spikeglx
