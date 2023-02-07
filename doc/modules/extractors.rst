@@ -4,16 +4,18 @@ Extractors module
 Overview
 --------
 
-The :py:mod:`~spikeinterface.extractors` module contains :code:`RecordingExtractor` and :code:`SortingExtractor` classes
-to interface with a large variety of acquisition systems and spike sorting outputs.
+The :py:mod:`~spikeinterface.extractors` module allows you to load :py:class:`~spikeinterface.core.BaseRecording`, 
+:py:class:`~spikeinterface.core.BaseSorting`, and :py:class:`~spikeinterface.core.BaseEvent` objects from 
+a large variety of acquisition systems and spike sorting outputs.
 
-Most of the :code:`RecordingExtractor` classes are implemented by wrapping the
+Most of the :code:`Recording` classes are implemented by wrapping the
 `NEO rawio implementation <https://github.com/NeuralEnsemble/python-neo/tree/master/neo/rawio>`_.
 
-Most of the :code:`SortingExtractor` are instead directly implemented in SpikeInterface.
+Most of the :code:`Sorting` are instead directly implemented in SpikeInterface.
 
 
-Although SI is object-oriented (class-based), each object can also be loaded with  a convenient :code:`read()` function:
+Although SI is object-oriented (class-based), each object can also be loaded with  a convenient
+:code:`read_XXXXX()` function.
 
 
 
@@ -21,17 +23,28 @@ Although SI is object-oriented (class-based), each object can also be loaded wit
 Read one Recording
 ------------------
 
-TODO more example
+Every format can be read with a simple function:
 
 .. code-block:: python
 
-    import spikeinterface.extractors as se
+    recording_oe = read_openephys("open-ephys-folder")
 
-    recording_OE = se.read_openephys("open-ephys-folder")
+    recording_spikeglx = read_spikeglx("spikeglx-folder")
+
+    recording_blackrock = read_blackrock("blackrock-folder")
+
+    recording_mearec = read_mearec("mearec_file.h5")
 
 
-TODO more about probeinterface and auto probe
+Importantly, some formats directly handle the probe information:
 
+.. code-block:: python
+
+    recording_spikeglx = read_spikeglx("spikeglx-folder")
+    print(recording_spikeglx.get_probe())
+
+    recording_mearec = read_mearec("mearec_file.h5")
+    print(recording_mearec.get_probe())
 
 
 Read one Sorting
@@ -39,9 +52,7 @@ Read one Sorting
 
 .. code-block:: python
 
-    import spikeinterface.extractors as se
-
-    sorting_KS = se.read_kilosort("kilosort-folder")
+    sorting_KS = read_kilosort("kilosort-folder")
 
 
 Read one Event
@@ -49,20 +60,31 @@ Read one Event
 
 .. code-block:: python
 
-    import spikeinterface.extractors as se
-
-    events_OE = se.read_openephys_event("open-ephys-folder")
-
-For a comprehensive list of compatible technologies, see :ref:`compatible-tech`.
+    events_OE = read_openephys_event("open-ephys-folder")
 
 
-Lazy read
----------
+For a comprehensive list of compatible technologies, see :ref:`compatible_formats`.
 
 
-TODO explain
+Lazy loading
+------------
+
+An important concept is that all :code:`read_XXXX()` functions are lazy.
+Traces are not read from the disk, but only the relevant metadata, like channel_ids, sampling frequency, etc.
+
+The actual reading will be done on demand using the :py:meth:`~spikeinterface.core.BaseRecording.get_traces` method:
+
+.. code-block:: python
+
+    # open a 40GB SpikeGLX dataset is fast
+    recording_spikeglx = read_spikeglx("spikeglx-folder")
+
+    # this really does the full 40GB loading in memory : not recommended!!!!!
+    traces = recording_spikeglx.get_traces(start_frame=None, end_frame=None, return_scaled=False)
 
 
+
+.. _compatible_formats
 
 Supported File Formats
 ----------------------
@@ -73,80 +95,84 @@ adding new file formats is straightforward so we expect this list to grow in fut
 
 Most of format are supported on top on `NEO <https://github.com/NeuralEnsemble/python-neo>`_
 
-dependencies
+Dependencies
 ------------
 
-TODO concept
-TODO pip install []
+The :code:`neo` package is a hard dependency of spiekinterface. So all formats handle by neo directly will be handled
+also in spikeinterface.
+
+However, some format are handle directly by spikeinterface and need extra installation.
+
+You can install all extractors dependeicies with:
+
+.. code-block:: python
+
+    pip install spikeinterface[extractor]
+
 
 Raw Data Formats
 ----------------
 
-For raw data formats, we currently support:
+For raw recording formats, we currently support:
 
-* **BlackRock** - BlackRockRecordingExtractor
-* **Binary** - BinaryRecordingExtractor
-* **Biocam HDF5** - BiocamRecordingExtractor
-* **CED** - CEDRecordingExtractor
-* **Intan** - IntanRecordingExtractor
-* **Klusta** - KlustaRecordingExtractor
-* **MaxOne** - MaxOneRecordingExtractor
-* **MCSH5** - MCSH5RecordingExtractor
-* **MEArec** - MEArecRecordingExtractor
-* **Mountainsort MDA** - MdaRecordingExtractor
-* **Neurodata Without Borders** - NwbRecordingExtractor
-* **Neuroscope** - NeuroscopeRecordingExtractor
-* **NIX** - NIXIORecordingExtractor
-* **Neuralynx** - NeuralynxRecordingExtractor
-* **Open Ephys Legacy** - OpenEphysLegacyRecordingExtractor
-* **Open Ephys Binary** - OpenEphysBinaryRecordingExtractor
-* **Phy/Kilosort** - PhyRecordingExtractor/KilosortRecordingExtractor
-* **Plexon** - PlexonRecordingExtractor
-* **Shybrid** - SHYBRIDRecordingExtractor
-* **SpikeGLX** - SpikeGLXRecordingExtractor
-* **Spyking Circus** - SpykingCircusRecordingExtractor
+* **AlphaOmega** :py:func:`~spikeinterface.extractors.read_alphaomega()`
+* **Axona** :py:func:`~spikeinterface.extractors.read_axona()`
+* **BlackRock** :py:func:`~spikeinterface.extractors.read_blackrock()`
+* **Binary** :py:func:`~spikeinterface.core.read_binary()`
+* **Biocam HDF5** :py:func:`~spikeinterface.extractors.read_biocam()` 
+* **CED** :py:func:`~spikeinterface.extractors.read_ced()`
+* **EDF** :py:func:`~spikeinterface.extractors.read_edf()`
+* **Intan** :py:func:`~spikeinterface.extractors.read_intan()` 
+* **MaxWell** :py:func:`~spikeinterface.extractors.read_maxwell()` 
+* **MCS H5** :py:func:`~spikeinterface.extractors.read_mcsh5()`
+* **MCS RAW** :py:func:`~spikeinterface.extractors.read_mcsraw()`
+* **MEArec** :py:func:`~spikeinterface.extractors.read_mearec()` 
+* **Mountainsort MDA** :py:func:`~spikeinterface.extractors.read_mda_recording()` 
+* **Neurodata Without Borders** :py:func:`~spikeinterface.extractors.read_nwb_recording()` 
+* **Neuroscope** :py:func:`~spikeinterface.coextractorsre.read_neuroscope_recording()` 
+* **NIX** :py:func:`~spikeinterface.extractors.read_nix()` 
+* **Neuralynx** :py:func:`~spikeinterface.extractors.read_neuralynx()` 
+* **Open Ephys Legacy** :py:func:`~spikeinterface.extractors.read_openephys()` 
+* **Open Ephys Binary** :py:func:`~spikeinterface.extractors.read_openephys()` 
+* **Plexon** :py:func:`~spikeinterface.corextractorse.read_plexon()` 
+* **Shybrid** :py:func:`~spikeinterface.extractors.read_shybrid_recording()` 
+* **SpikeGLX** :py:func:`~spikeinterface.extractors.read_spikeglx()`
+* **SpikeGLX IBL compressed** :py:func:`~spikeinterface.extractors.read_cbin_ibl()`
+* **SpikeGLX IBL stream** :py:func:`~spikeinterface.extractors.read_streaming_ibl()`
+* **Spike 2** :py:func:`~spikeinterface.extractors.read_spike2()`
+* **TDT** :py:func:`~spikeinterface.extractors.read_tdt()`
+
+
 
 Sorted Data Formats
 -------------------
 
 For sorted data formats, we currently support:
 
-* **BlackRock** - BlackRockSortingExtractor
-* **Combinato** - CombinatoSortingExtractor
-* **Experimental Directory Structure (Exdir)** - ExdirSortingExtractor
-* **HerdingSpikes2** - HS2SortingExtractor
-* **JRClust** - JRCSortingExtractor
-* **Kilosort/Kilosort2** - KiloSortSortingExtractor
-* **Klusta** - KlustaSortingExtractor
-* **MEArec** - MEArecSortingExtractor
-* **Mountainsort MDA** - MdaSortingExtractor
-* **Neurodata Without Borders** - NwbSortingExtractor
-* **Neuroscope** - NeuroscopeSortingExtractor
-* **NPZ (created by SpikeInterface)** - NpzSortingExtractor
-* **Open Ephys** - OpenEphysSortingExtractor
-* **Shybrid** - SHYBRIDSortingExtractor
-* **Spyking Circus** - SpykingCircusSortingExtractor
-* **Trideclous** - TridesclousSortingExtractor
-* **YASS** - YassSortingExtractor
-
-
+* **BlackRock** :py:func:`~spikeinterface.extractors.read_blackrock_sorting()`
+* **Combinato** :py:func:`~spikeinterface.extractors.read_combinato()`
+* **Cell explorer** :py:func:`~spikeinterface.extractors.read_cellexplorer()`
+* **HerdingSpikes2** :py:func:`~spikeinterface.extractors.read_herdingspikes()`
+* **HDsort** :py:func:`~spikeinterface.extractors.read_hdsort()`
+* **Kilosort1/2/2.5/3** :py:func:`~spikeinterface.extractors.read_kilosort()`
+* **Klusta** :py:func:`~spikeinterface.extractors.read_klusta()`
+* **MClust** :py:func:`~spikeinterface.extractors.read_mclust()`
+* **MEArec** :py:func:`~spikeinterface.extractors.read_mearec()`
+* **Mountainsort MDA** :py:func:`~spikeinterface.extractors.read_mda_sorting()`
+* **Neurodata Without Borders** :py:func:`~spikeinterface.extractors.read_nwb_sorting()`
+* **Neuroscope** :py:func:`~spikeinterface.extractors.read_neuroscope_sorting()`
+* **Neuralynx spikes** :py:func:`~spikeinterface.extractors.read_neuralynx_sorting()`
+* **NPZ (created by SpikeInterface)** :py:func:`~spikeinterface.core.read_npz_sorting()`
+* **Shybrid**  :py:func:`~spikeinterface.core.read_shybrid_sorting()`
+* **Spyking Circus** :py:func:`~spikeinterface.extractors.read_spykingcircus()`
+* **Trideclous** :py:func:`~spikeinterface.extractors.read_tridesclous()`
+* **Wave Clus** :py:func:`~spikeinterface.extractors.read_waveclus()`
+* **YASS** :py:func:`~spikeinterface.extractors.read_yass()`
 
 
 Dealing with Non-Supported File Formats
 ---------------------------------------
 
-Many users store their datasets in custom file formats that are not general enough to create new extractors. To allow these users to still utilize SpikeInterface with their data,
-we built two in-memory Extractors: the **NumpyRecordingExtractor** and the **NumpySortingExtractor**.
-
-The NumpyRecordingExtractor can be instantiated with a numpy array that contains the underlying extracellular traces (channels x frames), the sampling frequency, and the probe geometry (optional).
-Once instantiated, the NumpyRecordingExtractor can be used like any other RecordingExtractor.
-
-The NumpySortingExtractor does not need any data during instantiation. However, after instantiation, it can be filled with data using its built-in functions (load_from_extractor, set_times_labels, and add_unit).
-After sorted data is added to the NumpySortingExtractor, it can be used like any other SortingExtractor.
-
-With these two objects, we hope that any user can access SpikeInterface regardless of the nature of their underlying file format. If you feel like a non-supported file format should be included in SpikeInterface as
-an actual extractor, please leave an issue in the spikeextractors repository.
-
-
-
-
+With recording and sorting objects, we hope that any user can access SpikeInterface regardless of the nature of their
+underlying file format. If you feel like a non-supported file format should be included in SpikeInterface as an
+actual extractor, please open an issue.
