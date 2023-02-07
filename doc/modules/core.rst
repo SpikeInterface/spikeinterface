@@ -15,7 +15,11 @@ There are additional classes to allow to retrieve events (:py:class:`~spikeinter
 handle unsorted waveform cutouts, or *snippets*, which are recorded by some acquisition systems 
 (:py:class:`~spikeinterface.core.BaseSnippets`).
 
-All classes support multiple segments, where each segment is a contiguous piece of data (recording, sorting, events).
+
+All classes support:
+  * metadata handling
+  * data on-demand (lazy loading)
+  * multiple segments, where each segment is a contiguous piece of data (recording, sorting, events).
 
 
 Import rules
@@ -32,6 +36,9 @@ will only import the :code:`core` module. Other submodules must be imported sepa
 .. code-block:: python
 
     import spikeinterface.extractors as se
+    import spikeinterface.sorters as ss
+    import spikeinterface.widgets as sw
+
 
 A second option is to import the SpikeInterface package in :code:`full` mode:
 
@@ -190,10 +197,10 @@ The :py:class:`~spikeinterface.core.WaveformExtractor` allows to:
 * compute templates (i.e. average extracellular waveforms) with different modes
 * save waveforms in a folder (in numpy / `Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`_) for easy retrieval
 * save sparse waveforms or *sparsify* dense waveforms
-* select units anf associated waveforms
+* select units and associated waveforms
 
 The default format (:code:`mode='folder'`) which waveforms are saved to is a folder structure with waveforms as 
-:code:`.npy` files. 
+:code:`.npy` files.
 In addition, waveforms can also be extracted in-memory for fast computations (:code:`mode='memory'`). 
 Note that this mode can quickly fill up your RAM... Use it wisely!
 Finally, an existing :py:class:`~spikeinterface.core.WaveformExtractor` can be saved also in :code:`zarr` format.
@@ -481,7 +488,8 @@ These are a set of keyword arguments which are common to all functions that supp
     - chunk_duration : str or float or None
         Chunk duration in s if float or with units if str (e.g. '1s', '500ms')
 * n_jobs: int
-    Number of jobs to use. With -1 the number of jobs is the same as number of cores
+    Number of jobs to use. With -1 the number of jobs is the same as number of cores.
+    A float like 0.5 means half of the availables core.
 * progress_bar: bool
     If True, a progress bar is printed
 * mp_context: str or None
@@ -523,8 +531,8 @@ In this example, we create a recording and a sorting object from numpy objects:
     import numpy as np
 
     # in-memory recording
-    sampling_frequency = 30_000
-    duration = 10
+    sampling_frequency = 30_000.
+    duration = 10.
     num_samples = int(duration * sampling_frequency)
     num_channels = 16
     random_traces = np.random.randn(num_samples, num_channels)
@@ -549,6 +557,55 @@ In this example, we create a recording and a sorting object from numpy objects:
 
 .. _multi_seg:
 
+
+
+
+Manipulating objects: slicing, aggregating
+-------------------------------------------
+
+Recording and also sorting objects can be slice on time axis or channel/unit axis.
+
+This operation are transparently lazy for the user.
+There is no data export with less channels or recording tuncated in time.
+
+.. code-block:: python
+    
+    # here an enormous recording and sorting
+    rec = read_spikeglx('/np_folder')
+    sorting =read_kilosrt('/ks_folder')
+
+    # keep one channel every ten channels
+    keep_ids = rec.channel_ids[::10]
+    sub_rec = rec.channel_slice(channel_ids=keep_ids)
+
+    # keep between 5min and 12min
+    sf = rec.sampling_frequency
+    sub_re = recording.frame_slice(start_frame=int(sf * 60 * 5), end_frame=int(sf * 60 * 12))
+    sub_sorting = sorting.frame_slice(start_frame=int(sf * 60 * 5), end_frame=int(sf * 60 * 12))
+
+    # keep only some units
+    sub_sorting = sorting.select_units(unit_ids=sorting.unit_ids[:4])
+
+
+We can also aggregate (aka stack) recording on channel axis using :py:func:`~spikeinterface.core.aggregate_channels()`
+
+.. code-block:: python
+    
+    recA_4_chans = read_binray('fileA.raw')
+    recB_4_chans = read_binray('fileB.raw')
+    rec_8_chans = aggregate_channels([recA_4_chans, recB_4_chans])
+
+
+    aggregate_units
+
+We can also aggregate (aka stack) sorting on units axis using :py:func:`~spikeinterface.core.aggregate_units()`
+
+.. code-block:: python
+
+    sortingA = read_npz('sortingA.npz')
+    sortingB = read_npz('sortingB.npz')
+    sorting_20_units = aggregate_units([sortingA, sortingB])
+
 Working with multiple segments
 ------------------------------
 
@@ -557,35 +614,98 @@ without moving the underlying probe (e.g., just clicking play/pause on the acqui
 segments are assumed to record from the same set of neurons.
 
 
-Manipulating objects: slicing, aggregating
--------------------------------------------
+.. code-block:: python
 
-TODO time slice
-TODO channel slice
-TODO sorting slice
-TODO aggragate channels
+    TODO
+
+:py:func:`~spikeinterface.core.append_recordings()`
+:py:func:`~spikeinterface.core.concatenate_recordings()`
+:py:func:`~spikeinterface.core.split_recording()`
+:py:func:`~spikeinterface.core.select_segment_recording()`
+
+:py:func:`~spikeinterface.core.append_sortings()`
+:py:func:`~spikeinterface.core.split_sorting()`
+:py:func:`~spikeinterface.core.select_segment_sorting()`
 
 
 Recording tools
 ---------------
 
-TODO
+The :py:mod:`spikeinterface.core.recording_tools` offer some utils function to on top of the recording object:
+
+  * Get some random chunk 
+  * Estimate the noise :py:func:`~spikeinterface.core.get_noise_levels()`
+  * Get trace with margin :py:func:`~spikeinterface.core.get_chunk_with_margin()`
+  * Get channel in depth for instance :py:func:`~spikeinterface.core.order_channels_by_depth()`
+
 
 
 Template tools
 --------------
 
-TODO
+
+We also have some utils function on top of the WaveformExtarctor object to retrieve the maximum channels, the 
+maximum amplitudes
+
+  * :py:func:`~spikeinterface.core.get_template_amplitudes()`
+  * :py:func:`~spikeinterface.core.get_template_extremum_channel()`
+  * :py:func:`~spikeinterface.core.get_template_extremum_channel_peak_shift()`
+  * :py:func:`~spikeinterface.core.get_template_extremum_amplitude()`
+
 
 
 Generate toy recording and sorting
 ----------------------------------
 
-TODO
+The core also offer some function to generate fake data.
+They are usefull to make example and small demo.
 
+
+.. code-block:: python
+
+    # recording with 2 segments and 4 channels
+    rec = generate_recording(generate_recording(num_channels=4, sampling_frequency=30000.,
+                            durations=[10.325, 3.5], set_probe=True)
+    
+    # sorting with 2 segments and 5 units
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.,
+                               durations=[10.325, 3.5],
+                               firing_rate=15,  # in Hz
+                               refractory_period=1.5  # in ms
+                            )
+
+
+Also some more advanced function to generate sorting with mistakes:
+
+  * :py:func:`~spikeinterface.core.synthesize_random_firings()`
+  * :py:func:`~spikeinterface.core.clean_refractory_period()`
+  * :py:func:`~spikeinterface.core.inject_some_duplicate_units()`
+  * :py:func:`~spikeinterface.core.inject_some_split_units()`
+  * :py:func:`~spikeinterface.core.synthetize_spike_train_bad_isi()`
 
 
 Downloading test datasets
 -------------------------
 
-TODO
+The :code:`neo` is maintaining a collection a file of many format here `https://gin.g-node.org/NeuralEnsemble/ephy_testing_data`_
+
+
+We have a function  :py:func:`~spikeinterface.core.download_dataset()` to download and cache localy dataset from this repo 
+
+This depend on :code:`datalad` python package with internally depend on :code:`git` and :code:`git-annex`.
+
+This is usefull to localy test some formats.
+
+.. code-block:: python
+
+    local_file_path = download_dataset(remote_path='spike2/130322-1LY.smr')
+    rec = read_spike2(local_file_path)
+
+    local_file_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
+    rec, sorting = read_mearec(local_file_path)
+
+    local_folder_path = download_dataset(remote_path='/spikeglx/multi_trigger_multi_gate')
+    rec = read_spikeglx(local_folder_path)
+
+
+
