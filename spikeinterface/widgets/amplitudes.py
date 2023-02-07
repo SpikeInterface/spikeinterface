@@ -59,7 +59,7 @@ class AmplitudesWidget(BaseWidget):
             segment_index = 0
         amplitudes_segment = amplitudes[segment_index]
         total_duration = waveform_extractor.recording.get_num_samples(segment_index) / \
-            waveform_extractor.recording.get_sampling_frequency()
+            waveform_extractor.sampling_frequency
         
         spiketrains_segment = {}
         for i, unit_id in enumerate(sorting.unit_ids):
