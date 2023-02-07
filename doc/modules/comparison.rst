@@ -13,9 +13,6 @@ Even if the three comparison cases share the same underlying idea (they compare 
 implementations are slightly different.
 
 
-TODO explain collision
-TODO hybrid
-TODO compare template
 
 
 1. Comparison with ground truth
@@ -488,4 +485,30 @@ Example : compare many sorters
     sorter_unit_ids = agr_3.get_property('unit_ids')[0]
     print(unit_id0, ':', sorter_unit_ids)
 
+
+
+
+Benchmark collision
+-------------------
+
+spikeinterface also have a specific toolset to benchmark how good sorter are to recover spikes in "collision".
+
+A paper have been publish using this.
+
+We have 2 classes to handle this kind of benchmark: 
+
+  * :py:func:`~spikeinterface.comparison.CollisionGTComparison()`
+  * :py:func:`~spikeinterface.comparison.CollisionGTStudy()`
+
+
+generate hybrid recording
+-------------------------
+
+To benchmark sorter we need ground truth recording.
+You can use some external tools like `MEArec <https://mearec.readthedocs.io/>`_ for this.
+
+But you also generate "hybrid" recording. Injecting new spikes or new units inside an already existing recording.
+
+  * :py:func:`~spikeinterface.comparison.create_hybrid_units_recording()`
+  * :py:func:`~spikeinterface.comparison.create_hybrid_spikes_recording()` 
 
