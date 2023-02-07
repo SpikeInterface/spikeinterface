@@ -125,6 +125,14 @@ class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+class PlexonSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = PlexonSortingExtractor
+    downloads = ["plexon"]
+    entities = [
+        ("plexon/File_plexon_1.plx", {'sampling_frequency': 30000.0}),
+    ]
+
+
 class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuralynxRecordingExtractor
     downloads = ['neuralynx']
