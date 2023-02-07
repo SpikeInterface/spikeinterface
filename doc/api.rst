@@ -48,6 +48,9 @@ spikeinterface.core
 
 Low-level
 ~~~~~~~~~
+
+.. automodule:: spikeinterface.core
+
     .. autoclass:: BaseWaveformExtractorExtension
     .. autoclass:: ChannelSparsity
     .. autoclass:: ChunkRecordingExecutor
@@ -103,7 +106,7 @@ Non-NEO-based
     .. autofunction:: read_spykingcircus
     .. autofunction:: toy_example
     .. autofunction:: read_tridesclous
-    .. autofunction:: read_waveclust
+    .. autofunction:: read_waveclus
     .. autofunction:: read_yass
 
 

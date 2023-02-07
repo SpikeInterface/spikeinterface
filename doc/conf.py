@@ -62,11 +62,15 @@ author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Ma
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     # 'sphinx_gallery.gen_gallery',
     'numpydoc',
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
 ]
+
+numpydoc_show_class_members = False 
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

@@ -188,7 +188,7 @@ The :py:class:`~spikeinterface.core.WaveformExtractor` allows to:
 * extract and waveforms
 * sub-sample spikes for waveform extraction
 * compute templates (i.e. average extracellular waveforms) with different modes
-* save waveforms in a folder (in numpy/zarr) for easy retrieval
+* save waveforms in a folder (in numpy / `Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`_) for easy retrieval
 * save sparse waveforms or *sparsify* dense waveforms
 * select units anf associated waveforms
 
@@ -363,50 +363,202 @@ and MEArec).
 Sparsity
 --------
 
-TODO
+In several cases, it is not necessary to have waveforms on all channels. This is especially true for high-density 
+probes, such as Neuropixels, because the waveforms of a unit will only appear on a small set of channels. 
+Sparsity is defined as the subset of channels on which waveforms (and related information) are defined. Of course, the 
+sparsity is not global, but it is unit-specific.
+
+Sparsity can be computed from a :py:class:`~spikeinterface.core.WaveformExtractor` object with the 
+:py:func:`~spikeinterface.core.compute_sparsity` function:
+
+.. code-block:: python
+
+    sparsity = si.compute_sparsity(we, method="radius", radius_um=40)
+
+The returned :code:`sparsity` is a :py:class:`~spikeinterface.core.ChannelSparsity` object, which has convenient 
+methods to access the sparsity information in several ways:
+
+* | :code:`sparsity.unit_id_to_channel_ids` returns a dictionary with unit ids as keys and the list of associated 
+  |channel_ids as values 
+* | :code:`sparsity.unit_id_to_channel_indices` returns a similar dictionary, but instead with channel indices as 
+  | values (which can be used to slice arrays)
+
+There are several methods to compute sparsity, including:
+
+* | :code:`method="radius"`: selects the channels based on the channel locations. For example, using a 
+  | :code:`radius_um=40`, will select, for each unit, the channels which are whithin 40um of the channel with the 
+  | largest amplitude (*extremum channel*). **This is the recommended method for high-density probes**
+* | :code:`method="best_channels"`:  selects the best :code:`num_channels` channels based on their amplitudes. Note that 
+  | in this case the selected channels might not be close to each other.
+* | :code:`method="threshold"`: selects channels based on an SNR threshold (:code:`threshold` argument)
+* | :code:`method="by_property"`: selects channels based on a property, such as :code:`group`. This method is recommended 
+  | when working with tetrodes.
+
+The computed sparsity can be used in several postprocessing and visualization functions. In addition, a "dense" 
+:py:class:`~spikeinterface.core.WaveformExtractor` can be saved as "sparse" as follows:
+
+.. code-block:: python
+
+    we_sparse = we.save(we, sparsity=sparsity, folder="waveforms_sparse")
+
+The :code:`we_sparse` object will now have an associated sparsity (:code:`we.sparsity`), which is automatically taken 
+into consideration for downstream analysis (with the :py:meth:`~spikeinterface.core.WaveformExtractor.is_sparse` 
+method). Importantly, saving sparse waveforms, especially for high-density probes, dramatically reduces the size of the 
+waveforms folder.
+
+.. _save_load:
 
 
+Saving, loading, and compression
+--------------------------------
 
-
-Saving and loading
-------------------
-
-All SI objects hold full information about their history to endure provenance. Each object is in fact internally
-represented as a dictionary (:code:`si_object.to_dict()`) which can be used to reload the object from scratch.
+The Base SpikeInterface objects (:py:class:`~spikeinterface.core.BaseRecording`, 
+:py:class:`~spikeinterface.core.BaseSorting`, and 
+:py:class:`~spikeinterface.core.BaseSnippets`) hold full information about their history to endure provenance. 
+Each object is in fact internally represented as a dictionary (:code:`si_object.to_dict()`) which can be used to 
+re-instantiate the object from scratch (this is true for all objects except in-memory ones, see :ref:`in_memory`).
 
 The :code:`save()` function allows to easily store SI objects to a folder on disk.
-:py:class:`~spikeinterface.core.BaseRecording` objects are stored in binary (.raw) format  and
-:py:class:`~spikeinterface.core.BaseSorting` object in numpy (.npz) format. With the actual data, the :code:`save()`
-function also stores the provenance dictionary and all the properties and annotations associated to the object.
+:py:class:`~spikeinterface.core.BaseRecording` objects are stored in binary (.raw) or 
+`Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`_ (.zarr) format and
+:py:class:`~spikeinterface.core.BaseSorting` and :py:class:`~spikeinterface.core.BaseSnippets` object in numpy (.npz) 
+format. With the actual data, the :code:`save()` function also stores the provenance dictionary and all the properties 
+and annotations associated to the object.
+The save function also supports parallel processing to speed up the writing process.
 
-From a saved SI folder, an SI object can be reloaded with the :code:`si.load_extractor()` function.
+From a SpikeInterface folder, the saved object can be reloaded with the :code:`si.load_extractor()` function.
+This saving/loading features enables to store SpikeInterface objects efficiently and to distribute processing.
 
-This saving/loading features enables to store SI objects efficiently and to distribute processing.
+.. code-block:: python
 
-TODO:
-  * explain binary folder
-  * explain zarr compression
-  * explain NPZ
+    job_kwargs = dict(n_jobs=8, chunk_duration="1s")
+    # save recording to folder in binary (default) format
+    recording_bin = recording.save(folder="recording", **job_kwargs)
+    # save recording to folder in zarr format (.zarr is appended automatically)
+    recording_zarr = recording.save(folder="recording", format="zarr", **job_kwargs)
+    # save snippets to NPZ
+    snippets_saved = snippets.save(folder="snippets")
+    # save sorting to NPZ
+    sorting_saved = sorting.save(folder="sorting")
+
+**NOTE:** the Zarr format by default applies data compression with :code:`Blosc.Zstandard` codec with BIT shuffling. 
+Any other Zarr-compatible compressor and filters can be applied using the :code:`compressor` and :code:`filters` 
+arguments. For example, in this case we apply `LZMA <https://numcodecs.readthedocs.io/en/stable/lzma.html>`_ 
+and use a `Delta <https://numcodecs.readthedocs.io/en/stable/delta.html>`_ filter:
 
 
-Object in in-memory
--------------------
+.. code-block:: python
 
-TODO numpy object
+    from numcodecs import LZMA, Delta
+
+    compressor = LZMA()
+    filters = [Delta(dtype="int16")]
+
+    recording_custom_comp = recording.save(folder="recording", format="zarr",
+                                           compressor=compressor, filters=filters,
+                                           **job_kwargs)
 
 
 Parallel processing and job_kwargs
 ----------------------------------
 
-TODO explain job_kwargs (global)
+The :py:mod:`~spikeinterface.core` module also contains the basic tools used throughout SpikeInterface for parallel 
+processing of recordings. 
+In general, parallelization is achieved by splitting the recording in many small time chunks and process 
+them in parallel (for more details, see the :py:class:`~spikeinterface.core.ChunkRecordingExecutor` class).
+
+Many functions support parallel processing (e.g., :py:func:`~spikeinterface.core.extract_waveforms`, :code:`save`, 
+and many more). All of this functions, in addition to other arguments, also accept the so-called **job_kwargs**.
+These are a set of keyword arguments which are common to all functions that support parallelization:
+
+* chunk_duration or chunk_size or chunk_memory or total_memory
+    - chunk_size: int
+        Number of samples per chunk
+    - chunk_memory: str
+        Memory usage for each job (e.g. '100M', '1G')
+    - total_memory: str
+        Total memory usage (e.g. '500M', '2G')
+    - chunk_duration : str or float or None
+        Chunk duration in s if float or with units if str (e.g. '1s', '500ms')
+* n_jobs: int
+    Number of jobs to use. With -1 the number of jobs is the same as number of cores
+* progress_bar: bool
+    If True, a progress bar is printed
+* mp_context: str or None
+    Context for multiprocessing. It can be None (default), "fork" or "spawn". 
+    Note that "fork" is only available on UNIX systems
+
+The default **job_kwargs** are :code:`n_jobs=1, chunk_duration="1s", progress_bar=True`.
+
+Any of these argument, can be overridden by manually passing the argument to a function 
+(e.g., :code:`si.extract_waveforms(..., n_jobs=16)`). Alternatively, **job_kwargs** can be set globally 
+(for each SpikeInterface session), with the :py:func:`~spikeinterface.core.set_global_job_kwargs` function:
+
+.. code-block:: python
+
+    global_job_kwargs = dict(n_jobs=16, chunk_duration="5s", progress_bar=False)
+    si.set_global_job_kwargs(**global_job_kwargs)
+    print(si.get_global_job_kwargs())
+    # >>> {'n_jobs': 16, 'chunk_duration': '5s', 'progress_bar': False}
+
+.. _in_memory:
+
+Object "in-memory"
+------------------
+
+While most of the times SpikeInterface objects will be loaded from a file, sometimes is convenient to construct 
+in-memory objects (for example, for testing a new method) or "manually" add some information to the pipeline 
+workflow.
+
+In order to do this, one can use the :code:`Numpy*` classes, :py:class:`~spikeinterface.core.NumpyRecording`,
+:py:class:`~spikeinterface.core.NumpySorting`, :py:class:`~spikeinterface.core.NumpyEvent`, and 
+:py:class:`~spikeinterface.core.NumpySnippets`. These object behave exactly like normal SpikeInterface objects, 
+but they are not bound to a file. This makes these objects *not dumpable*, so parallel processing is not supported.
+In order to make them *dumpable*, one can simply :code:`save()` them (see :ref:`save_load`).
+
+In this example, we create a recording and a sorting object from numpy objects:
+
+.. code-block:: python
+
+    import numpy as np
+
+    # in-memory recording
+    sampling_frequency = 30_000
+    duration = 10
+    num_samples = int(duration * sampling_frequency)
+    num_channels = 16
+    random_traces = np.random.randn(num_samples, num_channels)
+
+    recording_memory = si.NumpyRecording(traces_list=[random_traces])
+    # with more elements in `traces_list` we can make multi-segment objects
+
+    # in-memory sorting
+    num_units = 10
+    num_spikes_unit = 1000
+    spike_trains = []
+    labels = []
+    for i in range(num_units):
+        spike_trains_i = np.random.randint(low=0, high=num_samples, size=num_spikes_unit)
+        labels_i = [i] * num_spikes_unit
+        spike_trains += spike_trains_i
+        labels += labels_i
+
+    sorting_memory = si.NumpySorting.from_times_labels(times=spike_trains, labels=labels,
+                                                       sampling_frequency=sampling_frequency)
 
 
-The :py:mod:`~spikeinterface.core` module also contains the basic tools used throughout SI for parallel processing.
-To discover more about it, checkout the :py:class:`~spikeinterface.core.ChunkRecordingExecutor` class.
+.. _multi_seg:
+
+Working with multiple segments
+------------------------------
+
+Multi-segment objects can result from running different recording phases (e.g., baseline, stimulation, post-stimulation) 
+without moving the underlying probe (e.g., just clicking play/pause on the acquisition software). Therefore, multiple 
+segments are assumed to record from the same set of neurons.
 
 
-Slicing / aggragating
----------------------
+Manipulating objects: slicing, aggregating
+-------------------------------------------
 
 TODO time slice
 TODO channel slice
@@ -431,16 +583,9 @@ Generate toy recording and sorting
 
 TODO
 
-.. _multi_seg:
 
-Working with multiple segments
-------------------------------
 
-Multi-segment objects can result from running different recording phases (e.g., baseline, stimulation, post-stimulation) 
-without moving the underlying probe (e.g., just clicking play/pause on the acquisition software). Therefore, multiple 
-segments are assumed to record from the same set of neurons.
-
-download dataset
-----------------
+Downloading test datasets
+-------------------------
 
 TODO
