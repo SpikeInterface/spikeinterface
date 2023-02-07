@@ -7,21 +7,51 @@ Overview
 The :py:mod:`spikeinterface.core` module provides the basic classes and tools of the SpikeInterface ecosystem.
 
 Several Base classes are implemented here and inherited throughout the SI code-base.
+The core classes are: :py:class:`~spikeinterface.core.BaseRecording` (for raw data), 
+:py:class:`~spikeinterface.core.BaseSorting` (for spike-sorted data), and 
+:py:class:`~spikeinterface.core.WaveformExtarctor` (for waveform extraction and postprocessing).
 
-All classes support multiple segments. Each segment is a contiguous piece of data (recording, sorting, events).
+There are additional classes to allow to retrieve events (:py:class:`~spikeinterface.core.BaseEvent`) and to 
+handle unsorted waveform cutouts, or *snippets*, which are recorded by some acquisition systems 
+(:py:class:`~spikeinterface.core.BaseSnippets`).
 
-import rules
+All classes support multiple segments, where each segment is a contiguous piece of data (recording, sorting, events).
+
+
+Import rules
 ------------
 
-TODO import story
+Importing the SpikeInterface module
+
+.. code-block:: python
+
+    import spikeinterface as si
+
+will only import the :code:`core` module. Other submodules must be imported separately:
+
+.. code-block:: python
+
+    import spikeinterface.extractors as se
+
+A second option is to import the SpikeInterface package in :code:`full` mode:
+
+.. code-block:: python
+
+    import spikeinterface.full as si
+
+This import statement will import all of SpikeInterface modules as a flattened module.
+Note that importing :code:`spikeinterface.full` will take a few extra seconds, because some modules use 
+just-in-time :code:`numba` compilation performed at the time of import.
+We recommend this approach to advanced users, since it requires a deeper knowledge of the API.
+
 
 
 Recording
 ---------
 
 The :py:class:`~spikeinterface.core.BaseRecording` class serves as basis for all
-:code:`RecordingExtractors`.
-It represents an extracellular recording and has the following features:
+:code:`Recording` classes.
+It interfaces with the raw traces and has the following features:
 
 * retrieve raw and scaled traces from each segment
 * keep info about channel_ids VS channel indices
@@ -29,53 +59,313 @@ It represents an extracellular recording and has the following features:
 * store channel properties
 * store object annotations
 * enable grouping, splitting, and slicing
-* handle segment operations (e.g. concatenation)
 * handle time information
+
+Here we assume :code:`recording` is a :py:class:`~spikeinterface.core.BaseRecording` object 
+with 16 channels:
+
+.. code-block:: python
+
+    channel_ids = recording.channel_ids 
+    num_channels = recording.get_num_channels()
+    sampling_frequency = recording.sampling_frequency
+
+    # get number of samples/duration
+    num_samples_segment = recording.get_num_samples(segment_index=0)
+    ### NOTE ###
+    # 'segment_index' is required for multi-segment objects
+    num_total_samples = recording.get_total_samples()
+    total_duration = recording.get_total_duration()
+
+    # retrieve raw traces between frames 100 and 200
+    traces = recording.get_traces(start_frame=100, end_frame=200, segment_index=0)
+    # retrieve raw traces only for the first 4 of the channels
+    traces_slice = recording.get_traces(start_frame=100, end_frame=200, segment_index=0,
+                                        channel_ids=channel_ids[:4])
+    # retrieve traces after scaling to uV
+    # (requires 'gain_to_uV' and 'offset_to_uV' properties)
+    traces_uV = recording.get_traces(start_frame=100, end_frame=200, segment_index=0,
+                                     return_scaled=True)
+    # set/get a new channel property (e.g. "quality")
+    recording.set_property(key="quality", values=["good"] * num_channels)
+    quality_values = recording.get_property("quality")
+    # get all available properties
+    property_keys = recording.get_property_keys()
+
+    # set/get an annotation
+    recording.annotate(date="Recording acquired today")
+    recording.get_annotation(key="date")
+
+    # get new recording with the first 10s of the traces
+    recording_slice_frames = recording.frame_slice(start_frame=0,
+                                                   end_frame=int(10*sampling_frequency))
+    # get new recording with the first 4 channels
+    recording_slice_chans = recording.channel_slice(channel_ids=channel_ids[:4])
+    # remove last two channels
+    recording_rm_chans = recording.remove_channels(channel_ids=channel_ids[-2:])
+
+    # set channel grouping (assume we have 4 groups of 4 channels, e.g. tetrodes)
+    groups = [0] * 4 + [1] * 4 + [2] * 4 + [3] * 4
+    recording.set_channel_groups(groups)
+    # split by property
+    recording_by_group = recording.split_by("group")
+    # 'recording_by_group' is a dict with group as keys (0,1,2,3) and channel
+    # sliced recordings as values
+
+    # set times (for synchronization) - assume out times start at 300 seconds
+    timestamps = np.arange(num_samples) / sampling_frequency + 300
+    recording.set_times(timestamps, segment_index=0)
 
 
 Sorting
 -------
 
-The :py:class:`~spikeinterface.core.BaseSorting` class serves as basis for all :code:`SortingExtractors`.
-It represents a spike sorted output and has the following features:
+The :py:class:`~spikeinterface.core.BaseSorting` class serves as basis for all :code:`Sorting` classes.
+It interfaces with a spike-sorted output and has the following features:
 
-* retrieve spike trains for different units
+* retrieve spike trains of different units
 * keep info about unit_ids VS unit indices
 * store channel properties
 * store object annotations
 * enable selection of sub-units
 * handle time information
 
+Here we assume :code:`sorting` is a :py:class:`~spikeinterface.core.BaseSorting` object 
+with 10 units:
+
+.. code-block:: python
+
+    unit_ids = sorting.channel_ids 
+    num_channels = sorting.get_num_units()
+    sampling_frequency = sorting.sampling_frequency
+
+    # retrieve spike trains for a unit (returned as sample indices)
+    unit0 = unit_ids[0]
+    spike_train = sorting.get_unit_spike_train(unit_id=unit0, segment_index=0)
+    # retrieve spikes between 100 and 200
+    spike_train_slice = sorting.get_unit_spike_train(unit_id=unit0, 
+                                                     start_frame=100, end_frame=200,
+                                                     segment_index=0)
+    ### NOTE ###
+    # 'segment_index' is required for multi-segment objects
+    
+    # set/get a new unit property (e.g. "quality")
+    sorting.set_property(key="quality", values=["good"] * num_units)
+    quality_values = sorting.get_property("quality")
+    # get all available properties
+    property_keys = sorting.get_property_keys()
+
+    # set/get an annotation
+    sorting.annotate(date="Spike sorted today")
+    sorting.get_annotation(key="date")
+
+    # get new sorting with the first 10s of spike trains
+    sorting_slice_frames = sorting.frame_slice(start_frame=0,
+                                               end_frame=int(10*sampling_frequency))
+    # get new sorting with the first 4 units
+    sorting_select_units = sorting.select_units(unit_ids=unit_ids[:4])
+
+    # register 'recording' from previous and get spike trains in seconds
+    sorting.register_recording(recording)
+    spike_train_s = sorting.get_unit_spike_train(unit_id=unit0, segment_index=0,
+                                                 return_times=True)
+    ### NOTE ###
+    # When running spike sorting in SpikeInterface, the recording is  automatically registered. If 
+    # times are not set, the samples are divided by the sampling frequency
+
 
 
 WaveformExtractor
 -----------------
 
-The :py:class:`~spikeinterface.core.WaveformExtractor` class is the core of postprocessing a spike sorting output.
-It combines a paired recording-sorting objects to extract waveforms.
-It allows to:
+The :py:class:`~spikeinterface.core.WaveformExtractor` class is the core object to combine a 
+:py:class:`~spikeinterface.core.BaseRecording` and a :py:class:`~spikeinterface.core.BaseSorting` object. 
+Waveforms are very important for additional analysis, and the basis of several postprocessing and quality metrics 
+computations.
 
-* retrieve waveforms
-* control spike subsampling for waveforms
-* compute templates (i.e. average extracellular waveforms)
-* save waveforms in a folder for easy retrieval
+The :py:class:`~spikeinterface.core.WaveformExtractor` allows to:
 
-TODO backends
+* extract and waveforms
+* sub-sample spikes for waveform extraction
+* compute templates (i.e. average extracellular waveforms) with different modes
+* save waveforms in a folder (in numpy/zarr) for easy retrieval
+* save sparse waveforms or *sparsify* dense waveforms
+* select units anf associated waveforms
 
-Snippets
---------
+The default format (:code:`mode='folder'`) which waveforms are saved to is a folder structure with waveforms as 
+:code:`.npy` files. 
+In addition, waveforms can also be extracted in-memory for fast computations (:code:`mode='memory'`). 
+Note that this mode can quickly fill up your RAM... Use it wisely!
+Finally, an existing :py:class:`~spikeinterface.core.WaveformExtractor` can be saved also in :code:`zarr` format.
 
-TODO
+
+.. code-block:: python
+
+    # extract dense waveforms on 500 spikes per unit
+    we = si.extract_waveforms(recording, sorting, folder="waveforms",
+                              max_spikes_per_unit=500)
+    # same, but with parallel processing! (1s chunks processed by 8 jobs)
+    job_kwargs = dict(n_jobs=8, chunk_duration="1s")
+    we = si.extract_waveforms(recording, sorting, folder="waveforms_par",
+                              max_spikes_per_unit=500, overwrite=True,
+                              **job_kwargs)
+    # same, but in-memory
+    we_mem = si.extract_waveforms(recording, sorting, folder=None,
+                                  mode="memory", max_spikes_per_unit=500,
+                                  **job_kwargs)
+    
+    # load pre-computed waveforms
+    we_loaded = si.load_waveforms(folder="waveforms")
+    
+    # retrieve waveforms and templates for a unit
+    waveforms0 = we.get_waveforms(unit0)
+    template0 = we.get_template(unit0)
+
+    # compute template standard deviations (average is computed by default)
+    # (this can also be done within the 'extract_waveforms')
+    we.precompute_templates(modes=("std",))
+
+    # retrieve all template means and standard devs
+    template_means = we.get_all_templates(mode="average")
+    template_stds = we.get_all_templates(mode="std")
+
+    # save to Zarr
+    we_zarr = we.save(folder="waveforms.zarr", format="zarr")
+
+    # extract sparse waveforms (see Sparsity section)
+    # this will use 50 spike per unit to estimate the sparsity of 40um radius for each unit
+    we_sparse = si.extract_waveforms(recording, sorting, folder="waveforms_sparse",
+                                     max_spikes_per_unit=500, sparse=True, 
+                                     method="radius", radius_um=40,
+                                     num_spikes_for_sparsity=50)
 
 Event
 -----
 
 The :py:class:`~spikeinterface.core.BaseEvent` class serves as basis for all :code:`Event` classes.
-It represents a events during the recording (e.g. TTL pulses) and has the following features:
+It allows one to retrieve events and epochs (e.g. TTL pulses).
+Internally, events are represented as numpy arrays with a structured dtype. The structured dtype 
+must contain the :code:`time` field, which represent the event times in seconds. Other fields are 
+optional.
 
-* retrieve events and/or epochs from files
-* enable grouping, splitting, and slicing (TODO)
-* handle segment operations (e.g. concatenation) (TODO)
+Here we assume :code:`event` is a :py:class:`~spikeinterface.core.BaseEvent` object 
+with events from two channels:
+
+.. code-block:: python
+
+    channel_ids = event.channel_ids 
+    num_channels = event.get_num_channels()
+    # get structured dtype for the first channel
+    event_dtype = event.get_dtype(channel_ids[0])
+    print(event_dtype)
+    # >>> dtype([('time', '<f8'), ('duration', '<f8'), ('label', '<U100')])
+
+    # retrieve events (with structured dtype)
+    events = event.get_events(channel_id=channel_ids[0], segment_index=0)
+    # retrieve event times
+    event_times = event.get_event_times(channel_id=channel_ids[0], segment_index=0)
+    ### NOTE ###
+    # 'segment_index' is required for multi-segment objects
+
+
+Snippets
+--------
+
+The :py:class:`~spikeinterface.core.BaseSnippets` class serves as basis for all :code:`Snippets` 
+classes (currently only :py:class:`~spikeinterface.core.NumpySnippets` and 
+:code:`WaveClusSnippetsExtractor` are implemented).
+
+It represents unsorted waveform cutouts. Some acquisition systems, in fact, allow users to set a 
+threshold and only record the times and which a peak was detected and the waveform cut out around 
+the peak. 
+
+**NOTE**: while we support this class (mainly for legacy formats), this approach is a bad practice 
+and highly discouraged! Most of modern spike sorters, in fact, require the raw traces to perform 
+template matching to recover spikes!
+
+Here we assume :code:`snippets` is a :py:class:`~spikeinterface.core.BaseSnippets` object 
+with 16 channels:
+
+.. code-block:: python
+
+    channel_ids = snippets.channel_ids 
+    num_channels = snippets.get_num_channels()
+    # retrieve number of snippets
+    num_snippets = snippets.get_num_snippets(segment_index=0)
+    ### NOTE ###
+    # 'segment_index' is required for multi-segment objects 
+    # retrieve total number of snippets across segments
+    total_snippets = snippets.get_total_snippets()
+
+    # retrieve snippet size
+    nbefore = snippets.nbefore # samples before peak
+    nsamples_per_snippet = snippets.snippet_len # total 
+    nafter = nsamples_per_snippet - nbefore # samples after peak
+
+    # retrieve sample/frame indices
+    frames = snippets.get_frames(segment_index=0)
+    # retrieve snippet cutouts
+    snippet_cutouts = snippets.get_snippets(segment_index=0)
+    # retrieve snippet cutouts on first 4 channels
+    snippet_cutouts_slice = snippets.get_snippets(channel_ids=channel_ids[:4],
+                                                  segment_index=0)
+
+
+Handling probes
+---------------
+
+In order to handle probe information, SpikeInterface relies on the 
+`probeinterface <https://probeinterface.readthedocs.io/en/main/>`_ package.
+Either a :py:class:`~probeinterface.Probe` or a  :py:class:`~probeinterface.ProbeGroup` object can 
+be attached to a recording and it loads probe information (particularly channel locations and 
+sometimes groups). 
+ProbeInterface also has a library of available probes, so that you can download 
+and attach an existing probe to a recording with a few lines of code. When a probe is attached to 
+a recording, the :code:`location` property is automatically set. In addition, the 
+:code:`contact_vector` property will carry detailed information of the probe design.
+
+
+Here we assume that :code:`recording` has 64 channels and it has been recorded by a 
+`ASSY-156-P-1 <https://gin.g-node.org/spikeinterface/probeinterface_library/src/master/cambridgeneurotech/ASSY-156-P-1/ASSY-156-P-1.png>`_ probe from 
+`Cambridge Neurotech <https://www.cambridgeneurotech.com/>`_ and wired via an Intan RHD2164 chip to the acquisition device.
+The probe has 4 shanks, which can be loaded as separate groups (and spike sorted separately):
+
+.. code-block:: python
+
+    import probeinterface as pi
+
+    # download probe
+    probe = pi.get_probe(manufacturer='cambridgeneurotech', probe_name='ASSY-156-P-1')
+    # add wiring
+    probe.wiring_to_device('ASSY-156>RHD2164')
+
+    # set probe
+    recording_w_probe = recording.set_probe(probe)
+    # set probe with group info
+    recording_w_probe = recording.set_probe(probe, group_mode="by_shank")
+    # set probe in place
+    recording.set_probe(probe, group_mode="by_shank", in_place=True)
+
+    # retrieve probe
+    probe_from_recording = recording.get_probe()
+    # retrieve channel locations
+    locations = recording.get_channel_locations()
+    # equivalent to recording.get_property("location")
+
+Probe information is automatically propagated in SpikeInterface, for example when slicing a recording by channels or 
+applying preprocessing.
+
+Note that several :code:`read_***` functions in the :py:mod:`~spikeinterface.extractors` module 
+automatically load the probe from the files (including, SpikeGLX, Open Ephys - only NPIX plugin, Maxwell, Biocam, 
+and MEArec).
+
+
+Sparsity
+--------
+
+TODO
+
+
 
 
 Saving and loading
@@ -95,7 +385,7 @@ This saving/loading features enables to store SI objects efficiently and to dist
 
 TODO:
   * explain binary folder
-  * explain zarr  compression
+  * explain zarr compression
   * explain NPZ
 
 
@@ -108,7 +398,7 @@ TODO numpy object
 Parallel processing and job_kwargs
 ----------------------------------
 
-TODO explain job_kwargs
+TODO explain job_kwargs (global)
 
 
 The :py:mod:`~spikeinterface.core` module also contains the basic tools used throughout SI for parallel processing.
@@ -123,42 +413,34 @@ TODO channel slice
 TODO sorting slice
 TODO aggragate channels
 
-recording tools
+
+Recording tools
 ---------------
 
 TODO
 
 
-template tools
+Template tools
 --------------
 
 TODO
 
 
-generate fake recording and sorting
------------------------------------
+Generate toy recording and sorting
+----------------------------------
 
 TODO
 
-working with multi segments
----------------------------
+.. _multi_seg:
 
-TODO
+Working with multiple segments
+------------------------------
+
+Multi-segment objects can result from running different recording phases (e.g., baseline, stimulation, post-stimulation) 
+without moving the underlying probe (e.g., just clicking play/pause on the acquisition software). Therefore, multiple 
+segments are assumed to record from the same set of neurons.
 
 download dataset
 ----------------
-
-TODO
-
-
-sparsity
---------
-
-TODO
-
-
-
-probe
------
 
 TODO
