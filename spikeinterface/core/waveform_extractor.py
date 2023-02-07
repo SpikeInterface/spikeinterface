@@ -91,6 +91,7 @@ class WaveformExtractor:
 
         self._recording = recording
         self.sorting = sorting
+        self.allow_unfiltered = allow_unfiltered
 
         # cache in memory
         self._waveforms = {}

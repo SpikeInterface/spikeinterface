@@ -84,7 +84,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     if empty_flag:
         warnings.warn('Empty units have been removed when being exported to Phy')
 
-    if not waveform_extractor.is_filtered():
+    if not waveform_extractor.is_filtered() and not waveform_extractor.allow_unfiltered:
         warnings.warn("Recording is not filtered! It's recommended to filter the recording before exporting to phy.\n"
                       "You can run spikeinterface.preprocessing.bandpass_filter(recording)")
 
