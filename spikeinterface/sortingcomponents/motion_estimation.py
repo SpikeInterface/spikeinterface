@@ -227,11 +227,11 @@ class DecentralizedRegistration:
     def run(cls, recording, peaks, peak_locations, direction, bin_duration_s, bin_um, spatial_bin_edges,
             non_rigid_windows, verbose, progress_bar, extra_check,
             pairwise_displacement_method='conv', max_displacement_um=100., weight_scale='linear',
-            error_sigma=0.2, conv_engine=None, torch_device=None, batch_size=1,
-            corr_threshold=0.0, time_horizon_s=None, convergence_method='lsqr_robust', soft_weights=False,
-            temporal_prior=True, spatial_prior=False, reference_displacement="median",
-            reference_displacement_time_s=0, robust_regression_sigma=2, lsqr_robust_n_iter=20,
-            weight_with_amplitude=True,):
+            error_sigma=0.2, conv_engine=None, torch_device=None, batch_size=1, corr_threshold=0.0,
+            time_horizon_s=None, convergence_method='lsqr_robust', soft_weights=False, 
+            normalized_xcorr=True, centered_xcorr=True, temporal_prior=True, spatial_prior=False,
+            reference_displacement="median", reference_displacement_time_s=0,
+            robust_regression_sigma=2, lsqr_robust_n_iter=20, weight_with_amplitude=True):
 
         # use torch if installed
         if conv_engine is None:
@@ -281,6 +281,7 @@ class DecentralizedRegistration:
                                                   error_sigma=error_sigma, conv_engine=conv_engine,
                                                   torch_device=torch_device, batch_size=batch_size,
                                                   max_displacement_um=max_displacement_um,
+                                                  normalized_xcorr=normalized_xcorr, centered_xcorr=centered_xcorr,
                                                   corr_threshold=corr_threshold, time_horizon_s=time_horizon_s,
                                                   bin_duration_s=bin_duration_s, progress_bar=False)
 
@@ -669,6 +670,7 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                                   conv_engine='numpy', torch_device=None,
                                   batch_size=1, max_displacement_um=1500,
                                   corr_threshold=0, time_horizon_s=None,
+                                  normalized_xcorr=True, centered_xcorr=True,
                                   bin_duration_s=None, progress_bar=False,
                                   window=None):
     """
@@ -717,6 +719,8 @@ def compute_pairwise_displacement(motion_hist, bin_um, method='conv',
                 weights=window_engine,
                 padding=possible_displacement.size // 2,
                 conv_engine=conv_engine,
+                normalized=normalized_xcorr,
+                centered=centered_xcorr,
             )
             if conv_engine == "torch":
                 max_corr, best_disp_inds = torch.max(corr, dim=2)
@@ -938,7 +942,7 @@ def compute_global_displacement(
             Mb = sparse.csr_matrix((pair_weights, (range(n_sampled), I)), shape=(n_sampled, T))
             Nb = sparse.csr_matrix((pair_weights, (range(n_sampled), J)), shape=(n_sampled, T))
             block_sparse_kron = Mb - Nb
-            block_disp_pairs = Db[I, J]
+            block_disp_pairs = pair_weights * Db[I, J]
 
             # add the temporal smoothness prior in this window
             if temporal_prior:
