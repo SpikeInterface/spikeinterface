@@ -4,13 +4,14 @@ Extractors module
 Overview
 --------
 
-The :py:mod:`~spikeinterface.extractors` module contains :code:`RecordingExtractor` and :code:`SortingExtractor` classes
-to interface with a large variety of acquisition systems and spike sorting outputs.
+The :py:mod:`~spikeinterface.extractors` module allows you to load :py:class:`~spikeinterface.core.BaseRecording`, 
+:py:class:`~spikeinterface.core.BaseSorting`, and :py:class:`~spikeinterface.core.BaseEvent` objects from 
+a large variety of acquisition systems and spike sorting outputs.
 
-Most of the :code:`RecordingExtractor` classes are implemented by wrapping the
+Most of the :code:`Recording` classes are implemented by wrapping the
 `NEO rawio implementation <https://github.com/NeuralEnsemble/python-neo/tree/master/neo/rawio>`_.
 
-Most of the :code:`SortingExtractor` are instead directly implemented in SpikeInterface.
+Most of the :code:`Sorting` are instead directly implemented in SpikeInterface.
 
 
 Although SI is object-oriented (class-based), each object can also be loaded with  a convenient
@@ -22,7 +23,7 @@ Although SI is object-oriented (class-based), each object can also be loaded wit
 Read one Recording
 ------------------
 
-Every format a a simple function to read it.
+Every format can be read with a simple function:
 
 .. code-block:: python
 
@@ -35,7 +36,7 @@ Every format a a simple function to read it.
     recording_mearec = read_mearec("mearec_file.h5")
 
 
-Important some format also handle directly the probe:
+Importantly, some formats directly handle the probe information:
 
 .. code-block:: python
 
@@ -44,7 +45,6 @@ Important some format also handle directly the probe:
 
     recording_mearec = read_mearec("mearec_file.h5")
     print(recording_mearec.get_probe())
-
 
 
 Read one Sorting
@@ -62,24 +62,24 @@ Read one Event
 
     events_OE = read_openephys_event("open-ephys-folder")
 
+
 For a comprehensive list of compatible technologies, see :ref:`compatible_formats`.
 
 
-Lazy read
----------
+Lazy loading
+------------
 
+An important concept is that all :code:`read_XXXX()` functions are lazy.
+Traces are not read from the disk, but only the relevant metadata, like channel_ids, sampling frequency, etc.
 
-An important concept is that all the :code:`read_XXXX()` are lazy.
-Traces are not read form the disk but main metadata : channel_ids, sampling frequency, ...
-
-The real reading will be done on demand using the :code:`get_traces()` method of the recording.
+The actual reading will be done on demand using the :py:meth:`~spikeinterface.core.BaseRecording.get_traces` method:
 
 .. code-block:: python
 
-    # open a 40Go of spikeglx is fast
+    # open a 40GB SpikeGLX dataset is fast
     recording_spikeglx = read_spikeglx("spikeglx-folder")
 
-    # this really do the full 40Go loading in memory : not recommended!!!!!
+    # this really does the full 40GB loading in memory : not recommended!!!!!
     traces = recording_spikeglx.get_traces(start_frame=None, end_frame=None, return_scaled=False)
 
 
@@ -95,7 +95,7 @@ adding new file formats is straightforward so we expect this list to grow in fut
 
 Most of format are supported on top on `NEO <https://github.com/NeuralEnsemble/python-neo>`_
 
-dependencies
+Dependencies
 ------------
 
 The :code:`neo` package is a hard dependency of spiekinterface. So all formats handle by neo directly will be handled
@@ -103,7 +103,7 @@ also in spikeinterface.
 
 However, some format are handle directly by spikeinterface and need extra installation.
 
-You can have then all at once doing this
+You can install all extractors dependeicies with:
 
 .. code-block:: python
 
@@ -175,4 +175,4 @@ Dealing with Non-Supported File Formats
 
 With recording and sorting objects, we hope that any user can access SpikeInterface regardless of the nature of their
 underlying file format. If you feel like a non-supported file format should be included in SpikeInterface as an
-actual extractor, please leave an issue.
+actual extractor, please open an issue.

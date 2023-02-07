@@ -2,21 +2,23 @@ Comparison module
 =================
 
 
-SpikeInterface has a :py:mod:`spikeinterface.comparison` module that can be used for three distinct use cases:
+SpikeInterface has a :py:mod:`~spikeinterface.comparison` module contains functions and tools to compare 
+spike trains and templates (useful for tracking units over multiple sessions).
+
+In addition, the :py:mod:`~spikeinterface.comparison` module contains advanced benchmarking tools to evaluate 
+the effects of spike collisions on spike sorting results, and to construct hybrid recordings for comparison.
+
+Spike train comparison
+----------------------
+
+For spike train comparison, there are three use cases:
 
   1. compare a spike sorting output with a ground-truth dataset
   2. compare the output of two spike sorters (symmetric comparison)
   3. compare the output of multiple spike sorters
 
-
-Even if the three comparison cases share the same underlying idea (they compare spike trains!) the internal
-implementations are slightly different.
-
-
-
-
 1. Comparison with ground truth
--------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A ground-truth dataset can be a paired recording, in which a neuron is recorded both extracellularly and with
 a patch or juxtacellular electrode (either **in vitro** or **in vivo**), or it can be a simulated dataset
@@ -145,7 +147,7 @@ Given:
 
 
 More information about **hungarian** or **best** match methods
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
     * **Hungarian**:
@@ -184,7 +186,7 @@ More information about **hungarian** or **best** match methods
 
 
 Classification of identified units
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 Tested units are classified depending on their performance. We identify three different classes:
@@ -204,8 +206,8 @@ it could either be an oversplit unit or a duplicate unit.
 
 An **over-merged** unit has a relatively high agreement (>= 0.2 by default) for more than one GT unit.
 
-Example : compare one sorter to ground-truth
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Example: compare one sorter to ground-truth**
 
 .. code-block:: python
 
@@ -241,8 +243,7 @@ Example : compare one sorter to ground-truth
     cmp_gt_HS.get_redundant_units(redundant_score=0.2)
 
 
-Example : compare many using GroundTruthStudy()
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+**Example: compare many sorters with a Ground Truth Study**
 
 We also have a high level class to compare many sorter against ground truth : 
 :py:func:`~spiekinterface.comparison.GroundTruthStudy()`
@@ -348,9 +349,10 @@ binary (for recordings) and npz (for sortings).
     ax2.set_ylim(-0.1, 1.1)
 
 
+.. _symmetric:
 
 2. Compare the output of two spike sorters (symmetric comparison)
-------------------------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The comparison of two sorter is a quite similar to the procedure of **compare to ground truth**.
 The difference is that no assumption is done on which is the units are ground-truth.
@@ -367,8 +369,7 @@ However, the confusion and agreement matrices can be visualised to assess the le
 The :py:func:`~spikeinterface.comparison.compare_two_sorters()` return the comparison object to handle this.
 
 
-Example : compare 2 sorters
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+**Example: compare 2 sorters**
 
 .. code-block:: python
 
@@ -407,9 +408,10 @@ Example : compare 2 sorters
     print(tdc_to_sc)
 
 
+.. _multiple:
 
 3. Compare the output of multiple spike sorters
-------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 With 3 or more spike sorters, the comparison is implemented with a graph-based method. The multiple sorter comparison
 also allows to clean the output by applying a consensus-based method which only selects spike trains and spikes
@@ -424,8 +426,7 @@ Comparison of multiple sorters uses the following procedure:
      highest agreement score
 
 
-Example : compare many sorters
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+**Example: compare many sorters**
 
 .. code-block:: python
 
@@ -486,29 +487,58 @@ Example : compare many sorters
     print(unit_id0, ':', sorter_unit_ids)
 
 
-
-
-Benchmark collision
+Template comparison
 -------------------
 
-spikeinterface also have a specific toolset to benchmark how good sorter are to recover spikes in "collision".
+For template comparisons, the underlying ideaa are very similar to :ref:`symmetric` and :ref:`multiple`, for 
+pairwise and multiple comparisons, respectively. Differently than spike trains comparisons, however, in this case the 
+agreement is not the matching of spiking events, but rather the similarity between templates. 
+This enables us to use exatly the same tools for both types of comparisons, just by changing the way that agreement 
+scores are computed.
 
-A paper have been publish using this.
+The functions to compare templates take a list of :py:class:`~spikeinterface.core.WaveformExtractor` objects as input, 
+which are assumed to be from different sessions of the same animal over time. In this case, let's assume we have 5 
+waveform extractors from day 1 (:code:`we_day1`) to day 5 (:code:`we_day5`):
 
-We have 2 classes to handle this kind of benchmark: 
+.. code-block:: python
 
-  * :py:func:`~spikeinterface.comparison.CollisionGTComparison()`
-  * :py:func:`~spikeinterface.comparison.CollisionGTStudy()`
+    we_list = [we_day1, we_day2, we_day3, we_day4, we_day5]
+
+    # match only day 1 and 2
+    p_tcmp = sc.compare_templates(we_day1, we_day2, we1_name="Day1", we2_name="Day2")
+
+    # match all
+    m_tcmp = sc.compare_multiple_templates(we_list, 
+                                           name_list=["D1", "D2", "D3", "D4", "D5"])
+    
 
 
-generate hybrid recording
--------------------------
+Benchmark spike collisions
+--------------------------
 
-To benchmark sorter we need ground truth recording.
-You can use some external tools like `MEArec <https://mearec.readthedocs.io/>`_ for this.
+SpikeInterface also have a specific toolset to benchmark how good sorter are to recover spikes in "collision".
 
-But you also generate "hybrid" recording. Injecting new spikes or new units inside an already existing recording.
+We have three classes to handle collision-specific comparisons, and also to quantify the effects on correlogram 
+estimation: 
 
-  * :py:func:`~spikeinterface.comparison.create_hybrid_units_recording()`
-  * :py:func:`~spikeinterface.comparison.create_hybrid_spikes_recording()` 
+  * :py:class:`~spikeinterface.comparison.CollisionGTComparison`
+  * :py:class:`~spikeinterface.comparison.CorrelogramGTComparison`
+  * :py:class:`~spikeinterface.comparison.CollisionGTStudy`
+  * :py:class:`~spikeinterface.comparison.CorrelogramGTStudy`
 
+For more details, checkout the following paper:
+
+`Samuel Garcia, Alessio P. Buccino and Pierre Yger. "How Do Spike Collisions Affect Spike Sorting Performance?" <https://doi.org/10.1523/ENEURO.0105-22.2022>`_
+
+
+Hybrid recording
+----------------
+
+To benchmark spike sorting results, we need ground-truth spiking activity.
+This can be generated with artificial simulations, e.g., using `MEArec <https://mearec.readthedocs.io/>`_, or 
+alternatively by generating so-called "hybrid" recordings.
+
+The :py:mod:`~spikeinterface.comparison` module includes functions to generate such "hybrid" recordings:
+
+  * :py:func:`~spikeinterface.comparison.create_hybrid_units_recording`: add new units to an existing recording
+  * :py:func:`~spikeinterface.comparison.create_hybrid_spikes_recording`: add new spikes to existing units in a recording

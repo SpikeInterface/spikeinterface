@@ -209,6 +209,12 @@ spikeinterface.comparison
 
     .. autoclass:: MultiSortingComparison
         :members:
+    
+    .. autoclass:: CollisionGTComparison
+    .. autoclass:: CorrelogramGTComparison
+    .. autoclass:: CollisionGTStudy
+    .. autoclass:: CorrelogramGTStudy
+
 
 
 spikeinterface.widgets

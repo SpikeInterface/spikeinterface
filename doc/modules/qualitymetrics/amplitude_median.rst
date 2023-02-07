@@ -33,9 +33,9 @@ Example code
 Literature
 ----------
 
-Metric introduced by IBL_.
+Metric introduced by [IBL]_.
 
-.. [IBL] International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022. 9 Jun 2022. 
+.. [IBL] International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022.
 
 
 Links to source code
