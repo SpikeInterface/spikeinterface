@@ -223,25 +223,39 @@ spikeinterface.comparison
 
 spikeinterface.widgets
 ----------------------
+
 .. automodule:: spikeinterface.widgets
 
+    .. autofunction:: set_default_plotter_backend
     .. autofunction:: plot_timeseries
-    .. autofunction:: plot_rasters
-    .. autofunction:: plot_probe_map
-    .. autofunction:: plot_isi_distribution
     .. autofunction:: plot_crosscorrelograms
     .. autofunction:: plot_autocorrelograms
-    .. autofunction:: plot_drift_over_time
-    .. autofunction:: plot_peak_activity_map
     .. autofunction:: plot_unit_waveforms
     .. autofunction:: plot_unit_templates
     .. autofunction:: plot_unit_waveforms_density_map
     .. autofunction:: plot_amplitudes
     .. autofunction:: plot_all_amplitudes_distributions
-    .. autofunction:: plot_principal_component
     .. autofunction:: plot_unit_locations
-    .. autofunction:: plot_unit_probe_map
     .. autofunction:: plot_unit_depths
+    .. autofunction:: plot_unit_summary
+    .. autofunction:: plot_sorting_summary
+
+
+
+Legacy widgets
+~~~~~~~~~~~~~~
+
+These widgets are only available with the "matplotlib" backend
+
+.. automodule:: spikeinterface.widgets
+
+    .. autofunction:: plot_rasters
+    .. autofunction:: plot_probe_map
+    .. autofunction:: plot_isi_distribution
+    .. autofunction:: plot_drift_over_time
+    .. autofunction:: plot_peak_activity_map
+    .. autofunction:: plot_principal_component
+    .. autofunction:: plot_unit_probe_map
     .. autofunction:: plot_confusion_matrix
     .. autofunction:: plot_agreement_matrix
     .. autofunction:: plot_multicomp_graph
@@ -250,8 +264,6 @@ spikeinterface.widgets
     .. autofunction:: plot_comparison_collision_pair_by_pair
     .. autofunction:: plot_comparison_collision_by_similarity
     .. autofunction:: plot_sorting_performance
-    .. autofunction:: plot_unit_summary
-    .. autofunction:: plot_sorting_summary
 
 
 spikeinterface.exporters

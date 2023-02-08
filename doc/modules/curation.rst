@@ -78,7 +78,7 @@ merges. Therefore, it has many parameters and options.
 Manual curation with sorting view
 ---------------------------------
 
-Within the :code:`sortingview` widgets backend (see :ref:`sortingview`), the 
+Within the :code:`sortingview` widgets backend (see :ref:`sorting_view`), the 
 :py:func:`~spikeinterface.widgets.plot_sorting_summary` produces a powerful web-based GUI that enables manual curation 
 of the spike sorting output.
 
