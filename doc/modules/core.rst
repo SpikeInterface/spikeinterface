@@ -612,7 +612,7 @@ Multi-segment objects can result from running different recording phases (e.g., 
 without moving the underlying probe (e.g., just clicking play/pause on the acquisition software). Therefore, multiple 
 segments are assumed to record from the same set of neurons.
 
-We have several functions to manupulate segments of SpikeInterface objects:
+We have several functions to manipulate segments of SpikeInterface objects. All this manipulations are lazy.
 
 
 .. code-block:: python
@@ -637,9 +637,18 @@ We have several functions to manupulate segments of SpikeInterface objects:
     recording_select2 = select_segment_recording(recording5, segment_indices=[0, 4])
     # `recording_select2` will have 2 segments (the 1st and last one)
 
+
+
 The same functions, except for the :code:`concatenate_*` one, are also available for 
 :py:class:`~spikeinterface.core.BaseSorting` objects (:py:func:`~spikeinterface.core.append_sortings`, 
 :py:func:`~spikeinterface.core.split_sorting`, :py:func:`~spikeinterface.core.select_segment_sorting`).
+
+
+**Note** :py:func:`~spikeinterface.core.append_recordings` and:py:func:`~spikeinterface.core.concatenate_recordings`
+have the same goal, aggregate recording piece on the time axis but with 2 differents strategy! One is keeping the
+multi segments concept, the other one is breaking it!
+Ses this example for more detail :ref:`example_segments`.
+
 
 
 Recording tools
