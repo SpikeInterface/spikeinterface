@@ -1,4 +1,6 @@
 """
+.. _example_segments:
+
 Append and/or concatenate segments
 ===================================
 
