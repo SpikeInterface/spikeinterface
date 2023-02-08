@@ -48,28 +48,21 @@ With SpikeInterface:
     SNRs = qm.compute_snrs(wvf_extractor)
     # SNRs is a dict containing the units' ID as keys and their SNR as values.
 
-Links to source code
---------------------
-
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/misc_metrics.py#L130>`_
-
+Links to original implementations
+---------------------------------
+* 
 From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#SNR>`_
 
 
 References
 ----------
 
-.. automodule:: spikeinterface.qualitymetrics.misc_metrics
-
-    .. autofunction:: compute_snrs
+.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_snrs
 
 Literature
 ----------
 
-Presented by Lemon_ and useful initial discussion by Jackson_.
-
-Citations
----------
+Presented by [Lemon]_ and useful initial discussion by [Jackson]_.
 
 .. [Jackson] Jadin Jackson, Neil Schmitzer-Torbert, K.D. Harris, and A.D. Redish. Quantitative assessment of extracellular multichannel recording quality using measures of cluster separation. Soc Neurosci Abstr, 518, 01 2005.
 

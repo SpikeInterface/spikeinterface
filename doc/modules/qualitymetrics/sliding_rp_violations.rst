@@ -36,23 +36,20 @@ With SpikeInterface:
 References
 ----------
 
-.. automodule:: spikeinterface.qualitymetrics.misc_metrics
+.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_sliding_rp_violations
 
-    .. autofunction:: compute_sliding_rp_violations
+
+Links to original implementations
+---------------------------------
+
+* From `IBL <https://github.com/int-brain-lab/ibllib/blob/2e1f91c622ba8dbd04fc53946c185c99451ce5d6/brainbox/metrics/single_units.py>`_
+
+* From `Steinmetz Lab <https://github.com/SteinmetzLab/slidingRefractory/blob/1.0.0/python/slidingRP/metrics.py>`_
 
 Literature
 ----------
 
-Metric introduced by IBL_.
+Metric introduced by [IBL]_.
 
 .. [IBL] International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022. 9 Jun 2022.
-
-
-Links to source code
---------------------
-
-From `IBL <https://github.com/int-brain-lab/ibllib/blob/2e1f91c622ba8dbd04fc53946c185c99451ce5d6/brainbox/metrics/single_units.py>`_
-
-From `Steinmetz Lab <https://github.com/SteinmetzLab/slidingRefractory/blob/1.0.0/python/slidingRP/metrics.py>`_
-
 

@@ -308,6 +308,10 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
         The refactory period contamination described in [1].
     rp_violations : dict
         Number of refractory period violations.
+    
+    Note
+    ----
+    Requires "numba" package
 
     Reference
     ---------

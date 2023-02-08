@@ -32,24 +32,15 @@ Example code
 
 .. code-block:: python
 
-	import spikeinterface.qualitymetrics as qm
+    import spikeinterface.qualitymetrics as qm
 
     d_prime = qm.lda_metrics(all_pcs, all_labels, 0)
 
-Links to source code
---------------------
-
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/pca_metrics.py#L188>`_
 
 Reference
 ---------
 
-.. automodule:: spikeinterface.qualitymetrics.pca_metrics
-
-    .. autofunction:: lda_metrics
-
-Used to measure cluster separation.
-The magnitude of D-prime will be higher in well separated clusters, and is therefore expected to be higher in true positive units.
+.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.lda_metrics
 
 
 Literature

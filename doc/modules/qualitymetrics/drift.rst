@@ -41,10 +41,8 @@ Example code
 
 	import spikeinterface.qualitymetrics as qm
 
-	# Make recording, sorting and wvf_extractor objects for your data.
-	# It is also required to run `compute_spike_locations(wvf_extractor)`
-    # (if missing, values will be NaN)
-
+	# It is required to run `compute_spike_locations(wvf_extractor)`
+	# (if missing, values will be NaN)
 	drift_ptps, drift_stds, drift_mads = qm.compute_drift_metrics(wvf_extractor, peak_sign="neg")
 	# drift_ptps, drift_stds, and drift_mads are dict containing the units' ID as keys,
 	# and their metrics as values.
@@ -53,24 +51,17 @@ Example code
 Reference
 ---------
 
-.. automodule:: spikeinterface.qualitymetrics.misc_metrics
+.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_drift_metrics
 
-	.. autofunction:: compute_drift_metrics
+Links to original implementations
+---------------------------------
 
-Links to source code
---------------------
-
-From the `AllenInstitute <https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/quality_metrics/metrics.py#L548/>`_
-
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/misc_metrics.py#L259/>`_
+* From the `AllenInstitute <https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/quality_metrics/metrics.py#L548/>`_
 
 
 Literature
 ----------
 
-First introduced in Siegle_ and modified by the SpikeInterface Team.
-
-Citations
----------
+First introduced in [Siegle]_ and modified by the SpikeInterface Team.
 
 .. [Siegle] Siegle, Joshua H., et al. “Survey of spiking in the mouse visual system reveals functional hierarchy.” Nature 592.7852 (2021): 86-92.

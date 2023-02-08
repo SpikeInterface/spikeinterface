@@ -1,8 +1,7 @@
 .. _ISI:
 
-Inter-spike-interval (ISI) violations (:code:`isi_violation`)
-=============================================================
-
+Inter-spike-interval (ISI) violations (:code:`isi_violation`, :code:`rp_violation`)
+===================================================================================
 
 
 Calculation
@@ -15,8 +14,8 @@ The calculation works under the assumption that the contaminant events happen ra
 
 Different formulas were developped over the years.
 
-Calculation from the Hill_ paper
---------------------------------
+Calculation from the [Hill]_ paper
+----------------------------------
 
 The following quantities are required:
 
@@ -33,8 +32,8 @@ For a recording with a duration of :math:`T_r` seconds, and a unit with :math:`N
 
     \textrm{ISI violations} = \frac{ \#( ISI_s < ISI_t) T_r  }{ 2  N_s^2  (ISI_t - ISI_{min}) }
 
-Calculation from the Llobet_ paper
-----------------------------------
+Calculation from the [Llobet]_ paper
+------------------------------------
 
 The following quantities are required:
 
@@ -58,7 +57,7 @@ Expectation and use
 -------------------
 
 ISI violations identifies unit contamination - a high value indicates a highly contaminated unit.
-Despite being a ratio, ISI violations can exceed 1 (or become a complex number in the Llobet_ formula). This is usually due to the contaminant events being correlated with our neuron, and their number are greater than a purely random spike train.
+Despite being a ratio, ISI violations can exceed 1 (or become a complex number in the [Llobet]_ formula). This is usually due to the contaminant events being correlated with our neuron, and their number are greater than a purely random spike train.
 
 Example code
 ------------
@@ -86,19 +85,16 @@ With SpikeInterface:
 References
 ----------
 
-.. automodule:: spikeinterface.qualitymetrics.misc_metrics
+Hill implementation (:code:`isi_violation`)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    .. autofunction:: compute_isi_violations
+.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_isi_violations
 
+LLobet implementation (:code:`rp_violation`)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Links to source code
---------------------
+.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_refrac_period_violations
 
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/misc_metrics.py#L169>`_
-
-From `Lussac <https://github.com/BarbourLab/lussac/blob/main/postprocessing/utils.pyx#L365>`_
-
-From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#ISI-violations>`_
 
 Examples with plots
 -------------------
@@ -151,14 +147,20 @@ This figure can be generated with the following code:
 
     fig.show()
 
+
+Links to original implementations
+---------------------------------
+
+* From `Lussac <https://github.com/BarbourLab/lussac/blob/main/postprocessing/utils.pyx#L365>`_
+
+* From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#ISI-violations>`_
+
+
 Literature
 ----------
 
 Introduced by [Hill]_ (2011).
-
-.. [Hill] Hill, Daniel N., Samar B. Mehta, and David Kleinfeld. “Quality Metrics to Accompany Spike Sorting of Extracellular Signals.” The Journal of neuroscience 31.24 (2011): 8699–8705. Web.
-
-
 Also described by [Llobet]_ (2022)
 
+.. [Hill] Hill, Daniel N., Samar B. Mehta, and David Kleinfeld. “Quality Metrics to Accompany Spike Sorting of Extracellular Signals.” The Journal of neuroscience 31.24 (2011): 8699–8705. Web.
 .. [Llobet] Llobet Victor, Wyngaard Aurélien and Barbour Boris. “Automatic post-processing and merging of multiple spike-sorting analyses with Lussac“. BioRxiv (2022).

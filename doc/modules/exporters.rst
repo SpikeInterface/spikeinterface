@@ -15,7 +15,7 @@ results.
 **Note** : :py:func:`~spikeinterface.exporters.export_to_phy` speed and the size of the folder will highly depend
 on the sparsity of the :code:`WaveformExtractor` itself or the external specified sparsity.
 The Phy viewer enables one to explore PCA projections, spike amplitudes, waveforms and quality of the results. 
-So if these pieces of information have already been computed as extensions as already (see :ref:`waveform_extensions``), 
+So if these pieces of information have already been computed as extensions as already (see :ref:`waveform_extensions`), 
 then exporting to Phy should be fast (and the user has better control on the parameters for the extensions).
 If not pre-computed, then the required extensions (e.g., :code:`spike_amplitudes`, :code:`principal_components`) 
 can be computed direcly at export time.

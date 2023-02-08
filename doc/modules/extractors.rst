@@ -84,7 +84,7 @@ The actual reading will be done on demand using the :py:meth:`~spikeinterface.co
 
 
 
-.. _compatible_formats
+.. _compatible_formats:
 
 Supported File Formats
 ----------------------
