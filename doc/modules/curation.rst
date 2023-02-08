@@ -35,19 +35,15 @@ Internaly this class keep the history as a graph. Also internally split and merg
     cs.merge(['#11', '#21'])
 
     # make a split
-    split_index = ... # some creteria 
+    split_index = ... # some creteria on spikes
     cs.split('#20', split_index)
 
     # here the final clean sorting
     clean_sorting = cs.sorting
 
 
-CurationSorting
-MergeUnitsSorting
 
 
-
-remove_duplicated_spikes
 
 Automatic curation tools
 ------------------------
@@ -98,4 +94,33 @@ and apply it a to a sorting to clean it.
 .. code-block:: python
 
 
-apply_sortingview_curation
+    from spikeinterface.curation import apply_sortingview_curation
+    from spikeinterface.widgets import plot_sorting_summary
+
+    # run a sorter and export waveforms
+    sorting = run_sorter('kilosort', recording)
+    we = extract_waveforms(recording, sorting, folder='/wf_folder')    
+
+    # this push the cloud data for plot
+    url = plot_sorting_summary(we, backend='sortingview')
+    # we open the url in firefox
+    # make manual merges/split/remove
+    # On the curation box click on "Save as snapshot (sha1://)"
+
+    # we copy back the uri
+    sha_uri = "sha1://59feb326204cf61356f1a2eb31f04d8e0177c4f1"
+    clean_sorting = apply_sortingview_curation(sorting, uri_or_json=sha_uri)
+
+    # Note : this could be done done with a json file
+
+
+
+Other curation tools
+--------------------
+
+We have other tools for manual action of curation
+
+ * :py:func:`~spikeinterface.curation.find_duplicated_spikes` : find duplicated spike train on one spiketrain
+ * :py:func:`~spikeinterface.curation.remove_duplicated_spikes` : remove all duplicated spike from a sorting
+   using inetrnaly the previous function
+
