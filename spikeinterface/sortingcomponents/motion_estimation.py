@@ -510,7 +510,7 @@ def get_windows(rigid, bin_um, contact_pos, spatial_bin_edges, margin_um, win_st
 
         for win_center in non_rigid_window_centers:
             if win_shape == 'gaussian':
-                win = np.exp(-(bin_centers - win_center) ** 2 / (win_sigma_um ** 2))
+                win = np.exp(-(bin_centers - win_center) ** 2 / (2 * win_sigma_um ** 2))
             elif win_shape == 'rect':
                 win = np.abs(bin_centers - win_center) < (win_sigma_um / 2.)
                 win = win.astype('float64')

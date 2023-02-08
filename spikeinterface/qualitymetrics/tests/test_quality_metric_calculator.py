@@ -5,11 +5,11 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface import (WaveformExtractor, compute_sparsity, load_extractor, extract_waveforms,
-                            split_recording, select_segment_sorting)
+                            split_recording, select_segment_sorting, load_waveforms)
 from spikeinterface.extractors import toy_example
 
 from spikeinterface.postprocessing import (compute_principal_components, compute_spike_amplitudes,
-                                           compute_spike_locations)
+                                           compute_spike_locations, compute_noise_levels)
 from spikeinterface.preprocessing import scale
 from spikeinterface.qualitymetrics import QualityMetricCalculator, get_default_qm_params
 
@@ -78,10 +78,10 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         assert 'snr' in metrics.columns
         assert 'isolation_distance' not in metrics.columns
         metrics = self.extension_class.get_extension_function()(we, metric_names=['snr'],
-                                                                qm_params=dict(isi_violations=dict(isi_threshold_ms=2)))
+                                                                qm_params=dict(isi_violation=dict(isi_threshold_ms=2)))
         # check that parameters are correctly set
         qm = we.load_extension("quality_metrics")
-        assert qm._params["qm_params"]["isi_violations"]["isi_threshold_ms"] == 2
+        assert qm._params["qm_params"]["isi_violation"]["isi_threshold_ms"] == 2
         assert 'snr' in metrics.columns
         assert 'isolation_distance' not in metrics.columns
         print(metrics)
@@ -130,7 +130,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
     def test_presence_ratio(self):
         we = self.we_long
 
-        total_duration = we.recording.get_total_duration()
+        total_duration = we.get_total_duration()
         # If bin_duration_s is larger than total duration, should raise a warning and set presence ratios to nans
         qm_params=dict(presence_ratio=dict(bin_duration_s=total_duration+1))
         with pytest.warns(UserWarning) as w:
@@ -159,7 +159,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
 
         # now we compute spike locations, but use an interval_s larger than half the total duration
         _ = compute_spike_locations(we)
-        total_duration = we.recording.get_total_duration()
+        total_duration = we.get_total_duration()
         qm_params=dict(drift=dict(interval_s=total_duration // 2 + 1, min_spikes_per_interval=10,
                                   min_num_bins=2))
         with pytest.warns(UserWarning) as w:
@@ -240,6 +240,23 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
                                                                     sparsity=None, seed=0, n_jobs=2)
         for metric_name in metrics.columns:
             assert np.allclose(metrics[metric_name], metrics_par[metric_name])
+
+
+    def test_recordingless(self):
+        we = self.we_long
+        # pre-compute needed extensions
+        _ = compute_noise_levels(we)
+        _ = compute_spike_amplitudes(we)
+        _ = compute_spike_locations(we)
+
+        # load in recordingless mode
+        we_no_rec = load_waveforms(we.folder, with_recording=False)
+        qm_rec = self.extension_class.get_extension_function()(we)
+        qm_no_rec = self.extension_class.get_extension_function()(we_no_rec)
+
+        # check metrics are the same
+        for metric_name in qm_rec.columns:
+            assert np.allclose(qm_rec[metric_name], qm_no_rec[metric_name])
 
 
 if __name__ == '__main__':

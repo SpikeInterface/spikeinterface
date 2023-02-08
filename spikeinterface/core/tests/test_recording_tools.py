@@ -96,10 +96,14 @@ def test_order_channels_by_depth():
     locations_copy = locations_copy[::-1]
     rec.set_channel_locations(locations_copy)
 
-    order = order_channels_by_depth(rec)
+    order_1d, order_r1d = order_channels_by_depth(rec, dimensions="y")
+    order_2d, order_r2d = order_channels_by_depth(rec, dimensions=("x", "y"))
+    locations_rev = locations_copy[order_1d][order_r1d]
 
-    assert np.array_equal(locations, locations_copy[order])
-
+    assert np.array_equal(locations[:, 1], locations_copy[order_1d][:, 1])
+    assert np.array_equal(locations_copy[order_1d][:, 1], locations_copy[order_2d][:, 1])
+    assert np.array_equal(locations, locations_copy[order_2d])
+    assert np.array_equal(locations_copy, locations_copy[order_2d][order_r2d])
 
 
 if __name__ == '__main__':
