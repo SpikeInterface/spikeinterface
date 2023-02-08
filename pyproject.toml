@@ -18,11 +18,10 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 
-
 dependencies = [
     "numpy",
     "neo>=0.11.1",
-    "joblib!=1.2",
+    "joblib",
     "threadpoolctl",
     "tqdm",
     "probeinterface>=0.2.14",
@@ -59,17 +58,11 @@ extractors = [
     "MEArec>=1.7.1",
     "pynwb>=2.1.0",
     "pyedflib>=0.1.30",
-    # "nixio>=1.5.0",
-    # "shybrid>=0.4.2",
-    # "pyyaml>=5.4.1 for shybrid",
     "sonpy;python_version>'3.7'",
-    # lxml for neuroscope
-    "lxml",
-    # hdf5storage and scipy for cellexplorer
-    "hdf5storage",
+    "lxml", # lxml for neuroscope
+    "hdf5storage", # hdf5storage and scipy for cellexplorer
     "scipy",
-    # ONE-api and ibllib for streaming IBL
-    "ONE-api>=1.16.3",
+    "ONE-api>=1.16.3", # ONE-api and ibllib for streaming IBL
     "ibllib>=2.19.0",
 ]
 
@@ -89,7 +82,7 @@ widgets = [
     "matplotlib",
     "ipympl",
     "ipywidgets",
-    "sortingview>=0.11.0,<0.12",
+    "sortingview>=0.11.0",
     "figurl-jupyter"
 ]
 
@@ -111,7 +104,6 @@ test = [
 
     # recent datalad need a too recent version for git-annex
     # so we use an old one here
-    # datalad ==0.14.4
     "datalad==0.16.2",
 
     ## install sorters ##
