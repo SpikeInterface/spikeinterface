@@ -49,10 +49,18 @@ class MergeUnitsSorting(BaseSorting):
             dtype = parents_unit_ids.dtype
             #select new_units_ids grater that the max id, event greater than the numerical str ids 
             if np.issubdtype(dtype, np.character):
-                new_unit_ids = [ f'merge{i}' for i in range(num_merge)]
-                if np.any(np.in1d(new_unit_ids, keep_unit_ids)):
-                    raise VlueError('Unable to find new_unit_ids because it is a string and parents already contain merges')
+                # dtype str
+                if all(p.isdigit() for p in parents_unit_ids):
+                    # All str are digit : we can generate a max
+                    m = max(int(p) for p in parents_unit_ids) + 1
+                    new_unit_ids = [str(m + i ) for i in range(num_merge)]
+                else:
+                    # we cannot
+                    new_unit_ids = [ f'merge{i}' for i in range(num_merge)]
+                    if np.any(np.in1d(new_unit_ids, keep_unit_ids)):
+                        raise VlueError('Unable to find new_unit_ids because it is a string and parents already contain merges')
             else:
+                # dtype int
                 new_unit_ids = list(max(parents_unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
         else:
             if np.any(np.in1d(new_unit_ids, keep_unit_ids)):
