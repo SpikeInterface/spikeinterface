@@ -43,7 +43,7 @@ class ChannelSparsity:
     >>> sparsity = ChannelSparsity.from_unit_id_to_channel_ids(unit_id_to_channel_ids, unit_ids, channel_ids)
 
     The class can also be used to construct/estimate the sparsity from a Waveformextractor
-    with several methods::
+    with several methods:
 
     - Using the N best channels (largest template amplitude):
     >>> sparsity = ChannelSparsity.from_best_channels(we, num_channels, peak_sign='neg')
