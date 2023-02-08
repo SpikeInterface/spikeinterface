@@ -209,20 +209,20 @@ Finally, an existing :py:class:`~spikeinterface.core.WaveformExtractor` can be s
 .. code-block:: python
 
     # extract dense waveforms on 500 spikes per unit
-    we = si.extract_waveforms(recording, sorting, folder="waveforms",
-                              max_spikes_per_unit=500)
+    we = extract_waveforms(recording, sorting, folder="waveforms",
+                           max_spikes_per_unit=500)
     # same, but with parallel processing! (1s chunks processed by 8 jobs)
     job_kwargs = dict(n_jobs=8, chunk_duration="1s")
-    we = si.extract_waveforms(recording, sorting, folder="waveforms_par",
-                              max_spikes_per_unit=500, overwrite=True,
-                              **job_kwargs)
+    we = extract_waveforms(recording, sorting, folder="waveforms_par",
+                           max_spikes_per_unit=500, overwrite=True,
+                           **job_kwargs)
     # same, but in-memory
-    we_mem = si.extract_waveforms(recording, sorting, folder=None,
-                                  mode="memory", max_spikes_per_unit=500,
-                                  **job_kwargs)
+    we_mem = extract_waveforms(recording, sorting, folder=None,
+                               mode="memory", max_spikes_per_unit=500,
+                               **job_kwargs)
     
     # load pre-computed waveforms
-    we_loaded = si.load_waveforms(folder="waveforms")
+    we_loaded = load_waveforms(folder="waveforms")
     
     # retrieve waveforms and templates for a unit
     waveforms0 = we.get_waveforms(unit0)
@@ -241,10 +241,10 @@ Finally, an existing :py:class:`~spikeinterface.core.WaveformExtractor` can be s
 
     # extract sparse waveforms (see Sparsity section)
     # this will use 50 spike per unit to estimate the sparsity of 40um radius for each unit
-    we_sparse = si.extract_waveforms(recording, sorting, folder="waveforms_sparse",
-                                     max_spikes_per_unit=500, sparse=True, 
-                                     method="radius", radius_um=40,
-                                     num_spikes_for_sparsity=50)
+    we_sparse = extract_waveforms(recording, sorting, folder="waveforms_sparse",
+                                  max_spikes_per_unit=500, sparse=True, 
+                                  method="radius", radius_um=40,
+                                  num_spikes_for_sparsity=50)
 
 Event
 -----
@@ -380,7 +380,7 @@ Sparsity can be computed from a :py:class:`~spikeinterface.core.WaveformExtracto
 
 .. code-block:: python
 
-    sparsity = si.compute_sparsity(we, method="radius", radius_um=40)
+    sparsity = compute_sparsity(we, method="radius", radius_um=40)
 
 The returned :code:`sparsity` is a :py:class:`~spikeinterface.core.ChannelSparsity` object, which has convenient 
 methods to access the sparsity information in several ways:
@@ -433,7 +433,7 @@ format. With the actual data, the :code:`save()` function also stores the proven
 and annotations associated to the object.
 The save function also supports parallel processing to speed up the writing process.
 
-From a SpikeInterface folder, the saved object can be reloaded with the :code:`si.load_extractor()` function.
+From a SpikeInterface folder, the saved object can be reloaded with the :code:`load_extractor()` function.
 This saving/loading features enables to store SpikeInterface objects efficiently and to distribute processing.
 
 .. code-block:: python
@@ -499,14 +499,14 @@ These are a set of keyword arguments which are common to all functions that supp
 The default **job_kwargs** are :code:`n_jobs=1, chunk_duration="1s", progress_bar=True`.
 
 Any of these argument, can be overridden by manually passing the argument to a function 
-(e.g., :code:`si.extract_waveforms(..., n_jobs=16)`). Alternatively, **job_kwargs** can be set globally 
+(e.g., :code:`extract_waveforms(..., n_jobs=16)`). Alternatively, **job_kwargs** can be set globally 
 (for each SpikeInterface session), with the :py:func:`~spikeinterface.core.set_global_job_kwargs` function:
 
 .. code-block:: python
 
     global_job_kwargs = dict(n_jobs=16, chunk_duration="5s", progress_bar=False)
-    si.set_global_job_kwargs(**global_job_kwargs)
-    print(si.get_global_job_kwargs())
+    set_global_job_kwargs(**global_job_kwargs)
+    print(get_global_job_kwargs())
     # >>> {'n_jobs': 16, 'chunk_duration': '5s', 'progress_bar': False}
 
 .. _in_memory:
@@ -537,7 +537,7 @@ In this example, we create a recording and a sorting object from numpy objects:
     num_channels = 16
     random_traces = np.random.randn(num_samples, num_channels)
 
-    recording_memory = si.NumpyRecording(traces_list=[random_traces])
+    recording_memory = NumpyRecording(traces_list=[random_traces])
     # with more elements in `traces_list` we can make multi-segment objects
 
     # in-memory sorting
@@ -551,43 +551,43 @@ In this example, we create a recording and a sorting object from numpy objects:
         spike_trains += spike_trains_i
         labels += labels_i
 
-    sorting_memory = si.NumpySorting.from_times_labels(times=spike_trains, labels=labels,
-                                                       sampling_frequency=sampling_frequency)
+    sorting_memory = NumpySorting.from_times_labels(times=spike_trains, labels=labels,
+                                                    sampling_frequency=sampling_frequency)
 
 
 .. _multi_seg:
 
-
-
-
 Manipulating objects: slicing, aggregating
 -------------------------------------------
 
-Recording and also sorting objects can be slice on time axis or channel/unit axis.
+:py:class:`~spikeinterface.core.BaseRecording` (and :py:class:`~spikeinterface.core.BaseSnippets`) 
+and :py:class:`~spikeinterface.core.BaseSorting` objects can be sliced in the time or channel/unit axis.
 
-This operation are transparently lazy for the user.
-There is no data export with less channels or recording tuncated in time.
+This operations are completely lazy, as there is no data duplication. After slicing or aggregating,
+the new objects will be a *view* of the original ones.
 
 .. code-block:: python
     
-    # here an enormous recording and sorting
-    rec = read_spikeglx('/np_folder')
-    sorting =read_kilosrt('/ks_folder')
+    # here we load a very long recording and sorting
+    recording = read_spikeglx('np_folder')
+    sorting =read_kilosrt('ks_folder')
 
     # keep one channel every ten channels
     keep_ids = rec.channel_ids[::10]
-    sub_rec = rec.channel_slice(channel_ids=keep_ids)
+    sub_recording = rec.channel_slice(channel_ids=keep_ids)
 
     # keep between 5min and 12min
-    sf = rec.sampling_frequency
-    sub_re = recording.frame_slice(start_frame=int(sf * 60 * 5), end_frame=int(sf * 60 * 12))
-    sub_sorting = sorting.frame_slice(start_frame=int(sf * 60 * 5), end_frame=int(sf * 60 * 12))
+    fs = recording.sampling_frequency
+    sub_recording = recording.frame_slice(start_frame=int(fs * 60 * 5), end_frame=int(fs * 60 * 12))
+    sub_sorting = sorting.frame_slice(start_frame=int(fs * 60 * 5), end_frame=int(fs * 60 * 12))
 
-    # keep only some units
+    # keep only the first 4 units
     sub_sorting = sorting.select_units(unit_ids=sorting.unit_ids[:4])
 
 
-We can also aggregate (aka stack) recording on channel axis using :py:func:`~spikeinterface.core.aggregate_channels()`
+We can also aggregate (or stack) multiple recordings on on the channel axis using 
+the :py:func:`~spikeinterface.core.aggregate_channels`. Note that for this operation the recordings need to have the 
+same sampling frequency, number of segments, and number of samples:
 
 .. code-block:: python
     
@@ -595,16 +595,15 @@ We can also aggregate (aka stack) recording on channel axis using :py:func:`~spi
     recB_4_chans = read_binray('fileB.raw')
     rec_8_chans = aggregate_channels([recA_4_chans, recB_4_chans])
 
-
-    aggregate_units
-
-We can also aggregate (aka stack) sorting on units axis using :py:func:`~spikeinterface.core.aggregate_units()`
+We can also aggregate (or stack) multiple sortings on unit axis using the 
+:py:func:`~spikeinterface.core.aggregate_units` function:
 
 .. code-block:: python
 
     sortingA = read_npz('sortingA.npz')
     sortingB = read_npz('sortingB.npz')
     sorting_20_units = aggregate_units([sortingA, sortingB])
+
 
 Working with multiple segments
 ------------------------------
@@ -613,99 +612,122 @@ Multi-segment objects can result from running different recording phases (e.g., 
 without moving the underlying probe (e.g., just clicking play/pause on the acquisition software). Therefore, multiple 
 segments are assumed to record from the same set of neurons.
 
+We have several functions to manupulate segments of SpikeInterface objects:
+
 
 .. code-block:: python
 
-    TODO
+    # recording2: recording with 2 segments
+    # recording3: recording with 3 segments
 
-:py:func:`~spikeinterface.core.append_recordings()`
-:py:func:`~spikeinterface.core.concatenate_recordings()`
-:py:func:`~spikeinterface.core.split_recording()`
-:py:func:`~spikeinterface.core.select_segment_recording()`
+    # `append_recordings` will append all segments of multiple recordings
+    recording5 = append_recordings([recording2, recording3])
+    # `recording5` will have 5 segments
 
-:py:func:`~spikeinterface.core.append_sortings()`
-:py:func:`~spikeinterface.core.split_sorting()`
-:py:func:`~spikeinterface.core.select_segment_sorting()`
+    # `concatenate_recordings` will make a mono-segment recording by virtual concatenation
+    recording_mono = concatenate_recordings([recording2, recording5])
+
+    # `split_recording` will return a list of mono-segment recordings out of a multi-segment one
+    recording_mono_list = split_recording(recording5)
+    # `recording_mono_list` will have 5 elements with 1 segment
+
+    # `select_segment_recording` will return a user-defined subset of segments
+    recording_select1 = select_segment_recording(recording5, segment_indices=3)
+    # `recording_select1` will have 1 segment (the 4th one)
+    recording_select2 = select_segment_recording(recording5, segment_indices=[0, 4])
+    # `recording_select2` will have 2 segments (the 1st and last one)
+
+The same functions, except for the :code:`concatenate_*` one, are also available for 
+:py:class:`~spikeinterface.core.BaseSorting` objects (:py:func:`~spikeinterface.core.append_sortings`, 
+:py:func:`~spikeinterface.core.split_sorting`, :py:func:`~spikeinterface.core.select_segment_sorting`).
 
 
 Recording tools
 ---------------
 
-The :py:mod:`spikeinterface.core.recording_tools` offer some utils function to on top of the recording object:
+The :py:mod:`spikeinterface.core.recording_tools` submodule offers some utility functions to on top of the recording 
+object:
 
-  * Get some random chunk 
-  * Estimate the noise :py:func:`~spikeinterface.core.get_noise_levels()`
-  * Get trace with margin :py:func:`~spikeinterface.core.get_chunk_with_margin()`
-  * Get channel in depth for instance :py:func:`~spikeinterface.core.order_channels_by_depth()`
-
+  * :py:func:`~spikeinterface.core.get_random_data_chunks`: retrieves some random chunks of data: 
+  * :py:func:`~spikeinterface.core.get_noise_levels`: estimates the channel noise levels
+  * :py:func:`~spikeinterface.core.get_chunk_with_margin`: gets traces with a left and right margin
+  * :py:func:`~spikeinterface.core.get_closest_channels`: returns the :code:`num_channels` closest channels to each specified channel 
+  * :py:func:`~spikeinterface.core.get_channel_distances`: returns a square matrix with channel distances
+  * :py:func:`~spikeinterface.core.order_channels_by_depth`: gets channel order in depth: 
 
 
 Template tools
 --------------
 
+The :py:mod:`spikeinterface.core.template_tools` submodule includes functionalities on top of the 
+:py:class:`~spikeinterface.core.WaveformExtractor` object to retrieve important information about the *templates*:
 
-We also have some utils function on top of the WaveformExtarctor object to retrieve the maximum channels, the 
-maximum amplitudes
+  * | :py:func:`~spikeinterface.core.get_template_amplitudes`: returns the amplitude of the template for each unit on 
+    | every channel
+  * | :py:func:`~spikeinterface.core.get_template_extremum_channel`: returns the channel id (or index) where the 
+    | template has the largest amplitude
+  * | :py:func:`~spikeinterface.core.get_template_extremum_channel_peak_shift`: returnes the misalignment in samples 
+    | (peak shift) of each template with respect to the center of the waveforms (:py:attr:`~spikeinterface.core.WaveformExtractor.nbefore`)
+  * | :py:func:`~spikeinterface.core.get_template_extremum_amplitude`: returns the amplitude of the template for each 
+    | unit on the extremum channel
 
-  * :py:func:`~spikeinterface.core.get_template_amplitudes()`
-  * :py:func:`~spikeinterface.core.get_template_extremum_channel()`
-  * :py:func:`~spikeinterface.core.get_template_extremum_channel_peak_shift()`
-  * :py:func:`~spikeinterface.core.get_template_extremum_amplitude()`
 
 
+Generate toy objects
+--------------------
 
-Generate toy recording and sorting
-----------------------------------
-
-The core also offer some function to generate fake data.
-They are usefull to make example and small demo.
-
+The The :py:mod:`~spikeinterface.core` module also offers some functions to generate tow/fake data.
+They are useful to make examples, tests, and small demos:
 
 .. code-block:: python
 
     # recording with 2 segments and 4 channels
-    rec = generate_recording(generate_recording(num_channels=4, sampling_frequency=30000.,
-                            durations=[10.325, 3.5], set_probe=True)
+    recording = generate_recording(generate_recording(num_channels=4, sampling_frequency=30000.,
+                                   durations=[10.325, 3.5], set_probe=True)
     
     # sorting with 2 segments and 5 units
-    sorting = generate_sorting(num_units=5, sampling_frequency=30000.,
-                               durations=[10.325, 3.5],
-                               firing_rate=15,  # in Hz
-                               refractory_period=1.5  # in ms
-                            )
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000., durations=[10.325, 3.5],
+                               firing_rate=15, refractory_period=1.5)
+
+    # snippets of 60 samples on 2 channels from 5 units
+    snippets = generate_snippets(nbefore=20, nafter=40, num_channels=2,
+                                 sampling_frequency=30000., durations=[10.325, 3.5], 
+                                 set_probe=True,  num_units=5)
 
 
-Also some more advanced function to generate sorting with mistakes:
+There are also some more advanced functions to generate sorting objects with varioues "mistakes" 
+(mainly for testing purposes):
 
-  * :py:func:`~spikeinterface.core.synthesize_random_firings()`
-  * :py:func:`~spikeinterface.core.clean_refractory_period()`
-  * :py:func:`~spikeinterface.core.inject_some_duplicate_units()`
-  * :py:func:`~spikeinterface.core.inject_some_split_units()`
-  * :py:func:`~spikeinterface.core.synthetize_spike_train_bad_isi()`
+  * :py:func:`~spikeinterface.core.synthesize_random_firings`
+  * :py:func:`~spikeinterface.core.clean_refractory_period`
+  * :py:func:`~spikeinterface.core.inject_some_duplicate_units`
+  * :py:func:`~spikeinterface.core.inject_some_split_units`
+  * :py:func:`~spikeinterface.core.synthetize_spike_train_bad_isi`
 
 
 Downloading test datasets
 -------------------------
 
-The :code:`neo` is maintaining a collection a file of many format here `https://gin.g-node.org/NeuralEnsemble/ephy_testing_data`_
+The `NEO <https://github.com/NeuralEnsemble/python-neo>`_ package is maintaining a collection a files of many 
+electrophysiology file formats: https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
 
+The :py:func:`~spikeinterface.core.download_dataset` function is capable of downloading and caching locally dataset 
+from this repository. The function depends on the :code:`datalad` python package, which internally depends on 
+:code:`git` and :code:`git-annex`.
 
-We have a function  :py:func:`~spikeinterface.core.download_dataset()` to download and cache localy dataset from this repo 
-
-This depend on :code:`datalad` python package with internally depend on :code:`git` and :code:`git-annex`.
-
-This is usefull to localy test some formats.
+The :py:func:`~spikeinterface.core.download_dataset`  is very useful to perform local tests on small files from 
+various formats:
 
 .. code-block:: python
 
+    # Spike" format
     local_file_path = download_dataset(remote_path='spike2/130322-1LY.smr')
     rec = read_spike2(local_file_path)
 
+    # MEArec format
     local_file_path = download_dataset(remote_path='mearec/mearec_test_10s.h5')
     rec, sorting = read_mearec(local_file_path)
 
+    # SpikeGLX format
     local_folder_path = download_dataset(remote_path='/spikeglx/multi_trigger_multi_gate')
     rec = read_spikeglx(local_folder_path)
-
-
-

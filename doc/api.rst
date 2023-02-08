@@ -41,6 +41,7 @@ spikeinterface.core
     .. autofunction:: get_closest_channels
     .. autofunction:: get_noise_levels
     .. autofunction:: get_chunk_with_margin
+    .. autofunction:: order_channels_by_depth
     .. autofunction:: get_template_amplitudes
     .. autofunction:: get_template_extremum_channel
     .. autofunction:: get_template_extremum_channel_peak_shift
