@@ -12,7 +12,7 @@ class MergeUnitsSorting(BaseSorting):
     parent_sorting: Recording
         The sorting object
     units_to_merge: list of list
-        A list of list for evry merge group.
+        A list of list for every merge group.
     new_unit_ids: None or list
         A new unit_id for merge group
     properties_policy: str ('keep', 'remove')
@@ -108,8 +108,10 @@ class MergeUnitsSorting(BaseSorting):
 
         if parent_sorting.has_recording():
             self.register_recording(parent_sorting._recording)
-
-        self._kwargs = dict(parent_sorting=parent_sorting.to_dict(), units_to_merge=list(units_to_merge),
+        
+        # make it jsonable
+        units_to_merge = [list(e) for e in units_to_merge]
+        self._kwargs = dict(parent_sorting=parent_sorting.to_dict(), units_to_merge=units_to_merge,
                             new_unit_id=new_unit_ids, properties_policy=properties_policy, delta_time_ms=delta_time_ms)
 
 
