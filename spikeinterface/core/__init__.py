@@ -72,7 +72,8 @@ from .waveform_tools import extract_waveforms_to_buffers
 from .snippets_tools import snippets_from_sorting
 
 # waveform extractor
-from .waveform_extractor import WaveformExtractor, extract_waveforms, load_waveforms, precompute_sparsity
+from .waveform_extractor import (WaveformExtractor, BaseWaveformExtractorExtension,
+                                 extract_waveforms, load_waveforms, precompute_sparsity)
 
 # retrieve datasets
 from .datasets import download_dataset

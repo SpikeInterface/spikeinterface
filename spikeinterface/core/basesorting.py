@@ -33,6 +33,10 @@ class BaseSorting(BaseExtractor):
     def unit_ids(self):
         return self._main_ids
 
+    @property
+    def sampling_frequency(self):
+        return self._sampling_frequency
+
     def get_unit_ids(self) -> List:
         return self._main_ids
 

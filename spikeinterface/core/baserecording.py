@@ -162,6 +162,12 @@ class BaseRecording(BaseRecordingSnippets):
         a time_vector is constructed on the fly with sampling frequency.
         If t_start is defined and the time vector is constructed on the fly,
         the first time will be t_start. Otherwise it will start from 0.
+
+        Returns
+        -------
+        times : 1d np.array
+            The times array
+
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self._recording_segments[segment_index]

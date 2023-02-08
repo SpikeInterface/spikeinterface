@@ -51,6 +51,7 @@ We also restrict the waveforms to channels with significant signal.
 The pairwise isolation between clusters A and B is then:
 
 .. math::
+
     NN_{\textrm{isolation}}(A, B) = \frac{1}{k} \sum_{i=1}^{k} \frac{ | \{x \in A \cup B  : \rho(n_i(x)) = \rho(x) \} |}{ | A \cup B | }
 
 
@@ -65,38 +66,23 @@ noise overlap is then :math:`1 - NN_{\textrm{isolation}}`.
 
 This metric gives an indication of the contamination present in the unit cluster.
 
-Example code
-------------
-
-Links to source code
---------------------
-
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/pca_metrics.py#L228>`_ (nearest neighbors metrics).
-
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/pca_metrics.py#L287>`_ (nearest neighbors isolation).
-
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/pca_metrics.py#L419>`_ (nearest neighbors noise overlap).
 
 
 References
 ----------
 
-.. automodule:: spikeinterface.qualitymetrics.pca_metrics
+.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.nearest_neighbors_metrics
 
-    .. autofunction:: nearest_neighbors_metrics
+.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.nearest_neighbors_isolation
 
-    .. autofunction:: nearest_neighbors_isolation
-
-    .. autofunction:: nearest_neighbors_noise_overlap
+.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.nearest_neighbors_noise_overlap
 
 
 Literature
 ----------
 
-Introduced by Chung_ and adapted by Siegle_ and Kyu Hyun Lee.
+Introduced by [Chung]_ and adapted by [Siegle]_ and Kyu Hyun Lee.
 
-Citations
----------
 
 .. [Chung] Chung, Jason E et al. “A Fully Automated Approach to Spike Sorting.” Neuron (Cambridge, Mass.) 95.6 (2017): 1381–1394.e6. Web.
 

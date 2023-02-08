@@ -23,10 +23,8 @@ Example code
 
 	import spikeinterface.qualitymetrics as qm
 
-	# Make recording, sorting and wvf_extractor objects for your data.
 	# It is also recommended to run `compute_spike_amplitudes(wvf_extractor)`
-    # in order to use amplitude values from all spikes.
-
+	# in order to use amplitudes from all spikes
 	fraction_missing = qm.compute_amplitude_cutoffs(wvf_extractor, peak_sign="neg")
 	# fraction_missing is a dict containing the units' ID as keys,
 	# and their estimated fraction of missing spikes as values.
@@ -34,26 +32,19 @@ Example code
 Reference
 ---------
 
-.. automodule:: spikeinterface.qualitymetrics.misc_metrics
-
-	.. autofunction:: compute_amplitude_cutoffs
+.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_amplitude_cutoffs
 
 
-Links to source code
---------------------
+Links to original implementations
+---------------------------------
 
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/misc_metrics.py#L259/>`_
+* From the `AllenInstitute <https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/quality_metrics/metrics.py#L219/>`_
 
-From the `AllenInstitute <https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/quality_metrics/metrics.py#L219/>`_
-
-From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#Amplitude-cutoff>`_
+* From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#Amplitude-cutoff>`_
 
 Literature
 ----------
 
 Introduced by [Hill]_.
-
-Citations
----------
 
 .. [Hill] Hill, Daniel N., Samar B. Mehta, and David Kleinfeld. “Quality Metrics to Accompany Spike Sorting of Extracellular Signals.” The Journal of neuroscience 31.24 (2011): 8699–8705. Web.
