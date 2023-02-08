@@ -79,7 +79,7 @@ sw.plot_unit_locations(we)
 # This is your best friend to check over merge
 
 unit_ids = sorting.unit_ids[:4]
-sw.plot_unit_waveforms_density_map(we, unit_ids=unit_ids, max_channels=5)
+sw.plot_unit_waveforms_density_map(we, unit_ids=unit_ids)
 
 
 

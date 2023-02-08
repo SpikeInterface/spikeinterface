@@ -29,18 +29,17 @@ if not os.path.isdir('sources'):
 
 # clean some folder
 folders =  [
-    '../examples/getting_started/herdingspikes_output',
-    '../examples/getting_started/phy_folder_for_TDC',
-    '../examples/getting_started/redringspikes_output2',
-    '../examples/getting_started/tridesclous_output',
-    '../examples/getting_started/waveforms',
-    '../examples/modules/comparison/herdingspikes_output',
-    '../examples/modules/comparison/mountainsort4_output',
-    '../examples/modules/comparison/tridesclous_output',
-    '../examples/modules/core/waveform_folder',
-    '../examples/modules/core/waveform_folder2',
-    '../examples/modules/sorters/tridesclous_output',
-    '../examples/modules/widgets/waveforms_mearec',
+    '../examples/modules_gallery/core/my_recording',
+    '../examples/modules_gallery/core/my_sorting',
+    '../examples/modules_gallery/core/waveform_folder',
+    '../examples/modules_gallery/core/waveform_folder_parallel',
+    '../examples/modules_gallery/core/waveform_folder_sparse',
+    '../examples/modules_gallery/core/waveform_folder_sparse_direct',
+    '../examples/modules_gallery/core/waveform_folder2',
+    '../examples/modules_gallery/core/waveform_folder',
+    '../examples/modules_gallery/widgets/waveforms_mearec',
+    '../examples/modules_gallery/widgets/wfs_mearec',
+    
 ]
 
 for folder in folders:
@@ -63,7 +62,7 @@ author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Ma
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
-    # 'sphinx_gallery.gen_gallery',
+    'sphinx_gallery.gen_gallery',
     'numpydoc',
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
@@ -105,27 +104,24 @@ except ImportError:
 # html_static_path = ['_static']
 
 
-# from sphinx_gallery.sorting import ExplicitOrder
-# from sphinx_gallery.sorting import FileNameSortKey
+from sphinx_gallery.sorting import ExplicitOrder
+from sphinx_gallery.sorting import FileNameSortKey
 
-# # for sphinx gallery plugin
-# sphinx_gallery_conf = {
-#     'only_warn_on_example_error': True,
-#     'examples_dirs': ['../examples/modules'],   # path to your example scripts
-#     'gallery_dirs': ['modules', 'usage', 'contribute'],  # path where to save gallery generated examples
-#     'subsection_order': ExplicitOrder([
-#                                        '../examples/modules/core/',
-#                                     #    '../examples/modules/extractors/',
-#                                        '../examples/modules/preprocessing',
-#                                     #    '../examples/modules/sorters',
-#                                        '../examples/modules/postprocessing',
-#                                        '../examples/modules/qualitymetrics',
-#                                     #    '../examples/modules/comparison',
-#                                        '../examples/modules/widgets',
-#                                        ]),
-#     'within_subsection_order': FileNameSortKey,
-#     'ignore_pattern': '/generate_',
-# }
+# for sphinx gallery plugin
+sphinx_gallery_conf = {
+    'only_warn_on_example_error': True,
+    'examples_dirs': ['../examples/modules_gallery'],
+    'gallery_dirs': ['modules_gallery', ],  # path where to save gallery generated examples
+    'subsection_order': ExplicitOrder([
+                                       '../examples/modules_gallery/core/',
+                                       '../examples/modules_gallery/extractors/',
+                                       '../examples/modules_gallery/qualitymetrics',
+                                       '../examples/modules_gallery/comparison',
+                                       '../examples/modules_gallery/widgets',
+                                       ]),
+    'within_subsection_order': FileNameSortKey,
+    'ignore_pattern': '/generate_',
+}
 
 intersphinx_mapping = {
     "neo": ("https://neo.readthedocs.io/en/stable/", None),

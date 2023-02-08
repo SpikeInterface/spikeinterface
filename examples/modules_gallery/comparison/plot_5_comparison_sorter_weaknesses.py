@@ -38,13 +38,11 @@ We duplicate the results and modify it a bit to inject some "errors":
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 
-import spikeinterface.extractors as se
-import spikeinterface.sorters as ss
-import spikeinterface.comparison as sc
+from spikeinterface.comparison import compare_sorter_to_ground_truth
 import spikeinterface.widgets as sw
 
+# local file
 from generate_erroneous_sorting import generate_erroneous_sorting
 
 
@@ -52,7 +50,7 @@ from generate_erroneous_sorting import generate_erroneous_sorting
 # Here the agreement matrix
 
 sorting_true, sorting_err = generate_erroneous_sorting()
-comp = sc.compare_sorter_to_ground_truth(sorting_true, sorting_err, exhaustive_gt=True)
+comp = compare_sorter_to_ground_truth(sorting_true, sorting_err, exhaustive_gt=True)
 sw.plot_agreement_matrix(comp, ordered=False)
 
 ##############################################################################

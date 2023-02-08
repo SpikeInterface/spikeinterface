@@ -9,6 +9,7 @@ quality metrics.
 
 import spikeinterface as si
 import spikeinterface.extractors as se
+
 from spikeinterface.postprocessing import compute_principal_components
 from spikeinterface.qualitymetrics import compute_quality_metrics
 
@@ -28,16 +29,14 @@ print(sorting)
 ##############################################################################
 # First, we extract waveforms and compute their PC scores:
 
-folder = 'waveforms_mearec'
+folder = 'wfs_mearec'
 we = si.extract_waveforms(recording, sorting, folder,
-                          load_if_exists=True,
                           ms_before=1, ms_after=2., max_spikes_per_unit=500,
                           n_jobs=1, chunk_size=30000)
 print(we)
 
-pc = compute_principal_components(we, load_if_exists=True,
-                                     n_components=3, mode='by_channel_local')
-print(pc)
+pc = compute_principal_components(we, load_if_exists=True, n_components=3, mode='by_channel_local')
+
 
 ##############################################################################
 # Then we compute some quality metrics:
@@ -50,7 +49,7 @@ print(metrics)
 #
 # The easiest and most intuitive way is to use boolean masking with dataframe:
 
-keep_mask = (metrics['snr'] > 7.5) & (metrics['isi_violations_rate'] < 0.05) & (metrics['nn_hit_rate'] > 0.90)
+keep_mask = (metrics['snr'] > 7.5) & (metrics['isi_violations_ratio'] < 0.2) & (metrics['nn_hit_rate'] > 0.90)
 print(keep_mask)
 
 keep_unit_ids = keep_mask[keep_mask].index.values

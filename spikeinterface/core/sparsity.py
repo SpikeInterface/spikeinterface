@@ -12,6 +12,7 @@ _sparsity_doc = """
                        to specify the SNR threshold.
         * "by_property": sparsity is given by a property of the recording and sorting(e.g. 'group').
                          Use the 'by_property' argument to specify the property name.
+
     peak_sign: str
         Sign of the template to compute best channels ('neg', 'pos', 'both')
     num_channels: int
@@ -233,6 +234,7 @@ def compute_sparsity(
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor
+
 {}
 
     Returns
