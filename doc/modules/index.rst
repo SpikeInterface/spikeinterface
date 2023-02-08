@@ -13,4 +13,5 @@ Modules documentation
     comparison
     exporters
     widgets
+    curation
     sortingcomponents

@@ -41,7 +41,14 @@ print(mearec_folder_path)
 # a :py:class:`~spikeinterface.core.BaseRecording`.
 #
 # Note that internally this file contains 2 data streams ('0' and '1'), so we need to specify which one we
-# want to retrieve ('0' in our case):
+# want to retrieve ('0' in our case).
+# the stream information can be retrieve using :py:func:`~spikeinterface.extractors.get_neo_streams` function
+
+stream_names, stream_ids = se.get_neo_streams('spike2', spike2_file_path)
+print(stream_names)
+print(stream_ids)
+stream_id = stream_ids[0]
+print('stream_id', stream_id)
 
 recording = se.read_spike2(spike2_file_path, stream_id='0')
 print(recording)
