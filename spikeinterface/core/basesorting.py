@@ -117,6 +117,7 @@ class BaseSorting(BaseExtractor):
         If a recording is registered:
             * if the segment has a time_vector, then it is returned
             * if not, a time_vector is constructed on the fly with sampling frequency
+
         If there is no registered recording it returns None
         """
         segment_index = self._check_segment_index(segment_index)

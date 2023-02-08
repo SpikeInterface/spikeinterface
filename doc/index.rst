@@ -41,6 +41,7 @@ SpikeInterface is made of several modules to deal with different aspects of the 
     overview
     installation
     modules/index
+    modules_gallery/index
     install_sorters
     viewers
     contribute

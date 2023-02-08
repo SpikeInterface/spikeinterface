@@ -23,7 +23,6 @@ spikeinterface.core
     .. autofunction:: compute_sparsity
     .. autoclass:: NumpyRecording
     .. autoclass:: NumpySorting
-    .. autoclass:: NumpySorting
     .. autofunction:: append_recordings
     .. autofunction:: concatenate_recordings
     .. autofunction:: split_recording

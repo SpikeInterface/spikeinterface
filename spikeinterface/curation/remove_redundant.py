@@ -23,6 +23,7 @@ def remove_redundant_units(sorting_or_waveform_extractor,
        * 'highest_amplitude'
        * 'max_spikes'
 
+
     Parameters
     ----------
     sorting_or_waveform_extractor : BaseSorting or WaveformExtractor

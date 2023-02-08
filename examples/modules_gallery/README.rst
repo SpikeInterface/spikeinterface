@@ -1,4 +1,7 @@
-Modules tutorials
-=================
+Modules example gallery
+=======================
 
-Spike interface is split in several modules. Here are tutorials for each one.
+Here some generated examples.
+
+They are downloadable as notebooks or python scripts.
+
