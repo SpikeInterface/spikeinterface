@@ -212,9 +212,10 @@ class CorrectMotionRecording(BasePreprocessor):
         'kriging' or 'idw' or 'nearest'.
         See `spikeinterface.preprocessing.get_spatial_interpolation_kernel()` for more details.
         Choice of the method:
-            'kriging' : the same one used in kilosort
-            'idw' : inverse  distance weighted
-            'nearest' : use nereast channel
+            * 'kriging' : the same one used in kilosort
+            * 'idw' : inverse  distance weighted
+            * 'nearest' : use nereast channel
+
     sigma_um: float (default 20.)
         Used in the 'kriging' formula
     p: int (default 1)
@@ -222,10 +223,11 @@ class CorrectMotionRecording(BasePreprocessor):
     num_closest: int (default 3)
         Number of closest channels used by 'idw' method for interpolation.
     border_mode: 'remove_channels', 'force_extrapolate', 'force_zeros'
-        Control how channels are handled on border
-        * 'remove_channels': remove channels on the border, the recording has less channels
-        * 'force_extrapolate': keep all channel and force extrapolation (can lead to strange signal)
-        * 'force_zeros': keep all channel but set zeros when outside (force_extrapolate=False)
+        Control how channels are handled on border:
+            * 'remove_channels': remove channels on the border, the recording has less channels
+            * 'force_extrapolate': keep all channel and force extrapolation (can lead to strange signal)
+            * 'force_zeros': keep all channel but set zeros when outside (force_extrapolate=False)
+
 
     Returns
     -------
