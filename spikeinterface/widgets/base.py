@@ -77,7 +77,6 @@ class BackendPlotter():
     
     @classmethod
     def register(cls, widget_cls):
-        #~ print('BackendPlotter.register', print(cls), isinstance(cls, BackendPlotter))
         widget_cls.register_backend(cls)
 
     def update_backend_kwargs(self, **backend_kwargs):
