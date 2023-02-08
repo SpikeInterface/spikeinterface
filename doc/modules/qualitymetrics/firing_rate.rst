@@ -60,5 +60,3 @@ Literature
 
 Unknown origin.
 Widely discussed eg: [Buzsáki]_.
-
-.. [Buzsáki] Buzsáki, György, and Kenji Mizuseki. “The Log-Dynamic Brain: How Skewed Distributions Affect Network Operations.” Nature reviews. Neuroscience 15.4 (2014): 264–278. Web.

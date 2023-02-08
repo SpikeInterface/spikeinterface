@@ -45,4 +45,3 @@ Literature
 
 Introduced by [IBL]_.
 
-.. [IBL] International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022.

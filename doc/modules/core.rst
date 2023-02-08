@@ -386,7 +386,7 @@ The returned :code:`sparsity` is a :py:class:`~spikeinterface.core.ChannelSparsi
 methods to access the sparsity information in several ways:
 
 * | :code:`sparsity.unit_id_to_channel_ids` returns a dictionary with unit ids as keys and the list of associated 
-  |channel_ids as values 
+  | channel_ids as values
 * | :code:`sparsity.unit_id_to_channel_indices` returns a similar dictionary, but instead with channel indices as 
   | values (which can be used to slice arrays)
 

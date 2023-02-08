@@ -17,8 +17,7 @@ SpikeInterface has tools to manipulate these segments. There are two ways:
 Here is the difference. Imagine we have 2 recordings with 2 and 3 segments respectively:
 
   1. In case 1. (append) we will end up with one recording with 5 segments.
-  2. In case 2. (concatenate) we will end up with one recording with 1 "big" segment
-  that virtually concatenates all segments.
+  2. In case 2. (concatenate) we will end up with one recording with 1 "big" segment that virtually concatenates all segments.
 
 Here is a short example.
 """

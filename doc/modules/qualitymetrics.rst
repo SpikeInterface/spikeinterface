@@ -24,7 +24,20 @@ For more details about each metric and it's availability and use within SpikeInt
   :maxdepth: 1
   :glob:
 
-  qualitymetrics/*
+  qualitymetrics/amplitude_cutoff
+  qualitymetrics/amplitude_median
+  qualitymetrics/d_prime
+  qualitymetrics/drift
+  qualitymetrics/firing_rate
+  qualitymetrics/isi_violations
+  qualitymetrics/isolation_distance
+  qualitymetrics/l_ratio
+  qualitymetrics/nearest_neighbor
+  qualitymetrics/presence_ratio
+  qualitymetrics/sliding_rp_violations
+  qualitymetrics/snr
+  qualitymetrics/noise_cutoff
+  qualitymetrics/silhouette_score
 
 
 This code snippet shows how to compute quality metrics (with or without principal components) in SpikeInterface:
@@ -46,4 +59,12 @@ This code snippet shows how to compute quality metrics (with or without principa
 For more information about quality metrics, check out this excellent
 `documentation <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html>`_
 from the Allen Institute.
- 
+
+
+Quality Metrics References
+--------------------------
+
+.. toctree::
+  :maxdepth: 1
+
+  qualitymetrics/references

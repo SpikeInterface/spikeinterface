@@ -293,7 +293,9 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_n
     -----
     A is a (hopefully) representative subset of cluster X
 
-    NN_hit(X) = 1/k \\sum_i=1^k |{{x in A such that ith closest neighbor is in X}}| / |A|
+    .. math::
+
+        NN_hit(X) = 1/k \\sum_i=1^k |{{x in A such that ith closest neighbor is in X}}| / \|A\|
 
     Reference
     ---------
@@ -361,7 +363,7 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
         is not sparse already.
     min_spatial_overlap : float, optional, default: 100
         In case waveform_extractor is sparse, other units are selected if they share at least 
-        `min_spatial_overlap * n_target_unit_channels` with the target unit
+        `min_spatial_overlap` times `n_target_unit_channels` with the target unit
     seed : int, optional, default: None
         Seed for random subsampling of spikes.
 
@@ -374,19 +376,22 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
     Notes
     -----
     The overall logic of this approach is:
-    1) Choose a cluster
-    2) Compute the isolation score with every other cluster
-    3) Isolation score is defined as the min of (2) (i.e. 'worst-case measure')
+
+    #. Choose a cluster
+    #. Compute the isolation score with every other cluster
+    #. Isolation score is defined as the min of 2. (i.e. 'worst-case measure')
 
     The implementation of this approach is:
 
     Let A and B be two clusters from sorting.
 
-    We set |A| = |B|:
-        If max_spikes < |A| and max_spikes < |B|:
-            Then randomly subsample max_spikes samples from A and B.
-        If max_spikes > min(|A|, |B|) (e.g. |A| > max_spikes > |B|):
-            Then randomly subsample min(|A|, |B|) samples from A and B.
+    We set \|A\| = \|B\|:
+
+        * | If max_spikes < \|A\| and max_spikes < \|B\|:
+          |     Then randomly subsample max_spikes samples from A and B.
+        * | If max_spikes > min(\|A\|, \|B\|) (e.g. \|A\| > max_spikes > \|B\|):
+          |     Then randomly subsample min(\|A\|, \|B\|) samples from A and B.
+
     This is because the metric is affected by the size of the clusters being compared
     independently of how well-isolated they are.
 
@@ -523,6 +528,7 @@ def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor,
     Notes
     -----
     The general logic of this measure is:
+
     1. Generate a noise cluster by randomly sampling voltage snippets from recording.
     2. Subtract projection onto the weighted average of noise snippets
        of both the target and noise clusters to correct for bias in sampling.

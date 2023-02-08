@@ -6,7 +6,7 @@ from .neobaseextractor import NeoBaseRecordingExtractor
 class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading data from "Raw" Multi Channel System (MCS) format.
-    This format is NOT the native MCS format (*.mcd).
+    This format is NOT the native MCS format (.mcd).
     This format is a raw format with an internal binary header exported by the
     "MC_DataTool binary conversion" with the option header selected.
 

@@ -8,7 +8,7 @@ Calculation
 -----------
 
 Neurons have a refractory period after a spiking event during which they cannot fire again.
-Inter-spike-interval (ISI) violations refers to the rate of refractory period violations (as described by Hill_).
+Inter-spike-interval (ISI) violations refers to the rate of refractory period violations (as described by [Hill]_).
 
 The calculation works under the assumption that the contaminant events happen randomly, or comes from another neuron that is not correlated with our unit. A correlation will lead to an over-estimation of the contamination, whereas an anti-correlation will lead to an under-estimation.
 
@@ -161,6 +161,3 @@ Literature
 
 Introduced by [Hill]_ (2011).
 Also described by [Llobet]_ (2022)
-
-.. [Hill] Hill, Daniel N., Samar B. Mehta, and David Kleinfeld. “Quality Metrics to Accompany Spike Sorting of Extracellular Signals.” The Journal of neuroscience 31.24 (2011): 8699–8705. Web.
-.. [Llobet] Llobet Victor, Wyngaard Aurélien and Barbour Boris. “Automatic post-processing and merging of multiple spike-sorting analyses with Lussac“. BioRxiv (2022).

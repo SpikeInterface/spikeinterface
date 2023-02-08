@@ -8,7 +8,7 @@ Compute maximum allowed refractory period violations for all possible refractory
 Bins of 0.25ms are used in the [IBL]_ implementation.
 For each bin, this maximum value is compared with that observed in the recording.
 
-In the IBL_ implementation, a threshold is imposed and a binary value returned (based on whether the unit 'passes' the metric).
+In the [IBL]_ implementation, a threshold is imposed and a binary value returned (based on whether the unit 'passes' the metric).
 The SpikeInterface implementation, instead, returns the minimum contamination with at least 90% confidence. 
 This contamination value is between 0 and 1.
 
@@ -50,6 +50,3 @@ Literature
 ----------
 
 Metric introduced by [IBL]_.
-
-.. [IBL] International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022. 9 Jun 2022.
-

@@ -14,22 +14,25 @@ spikeinterface.core
         :members:
     .. autoclass:: BaseEvent
         :members:
-    .. autofunction:: read_binary
-    .. autofunction:: read_zarr
     .. autoclass:: WaveformExtractor
         :members:
     .. autofunction:: extract_waveforms
     .. autofunction:: load_waveforms
     .. autofunction:: compute_sparsity
+    .. autoclass:: BinaryRecordingExtractor
+    .. autoclass:: ZarrRecordingExtractor
+    .. autoclass:: BinaryFolderRecording
+    .. autoclass:: NpzFolderSorting
+    .. autoclass:: NpyFolderSnippets
     .. autoclass:: NumpyRecording
     .. autoclass:: NumpySorting
-    .. autofunction:: append_recordings
-    .. autofunction:: concatenate_recordings
-    .. autofunction:: split_recording
-    .. autofunction:: select_segment_recording
-    .. autofunction:: append_sortings
-    .. autofunction:: split_sorting
-    .. autofunction:: select_segment_sorting
+    .. autoclass:: NumpySnippets
+    .. autoclass:: AppendSegmentRecording
+    .. autoclass:: ConcatenateSegmentRecording
+    .. autoclass:: SelectSegmentRecording
+    .. autoclass:: AppendSegmentSorting
+    .. autoclass:: SplitSegmentSorting
+    .. autoclass:: SelectSegmentSorting
     .. autofunction:: download_dataset
     .. autofunction:: write_binary_recording
     .. autofunction:: set_global_tmp_folder
@@ -46,10 +49,22 @@ spikeinterface.core
     .. autofunction:: get_template_extremum_channel_peak_shift
     .. autofunction:: get_template_extremum_amplitude
 
+.. 
+    .. autofunction:: read_binary
+    .. autofunction:: read_zarr
+    .. autofunction:: append_recordings
+    .. autofunction:: concatenate_recordings
+    .. autofunction:: split_recording
+    .. autofunction:: select_segment_recording
+    .. autofunction:: append_sortings
+    .. autofunction:: split_sorting
+    .. autofunction:: select_segment_sorting
+
 Low-level
 ~~~~~~~~~
 
 .. automodule:: spikeinterface.core
+    :noindex:
 
     .. autoclass:: BaseWaveformExtractorExtension
     .. autoclass:: ChannelSparsity
@@ -58,10 +73,12 @@ Low-level
 spikeinterface.extractors
 -------------------------
 
+
 NEO-based
 ~~~~~~~~~
-.. automodule:: spikeinterface.extractors
 
+.. automodule:: spikeinterface.extractors
+ 
     .. autofunction:: read_alphaomega
     .. autofunction:: read_alphaomega_event
     .. autofunction:: read_axona
@@ -69,7 +86,6 @@ NEO-based
     .. autofunction:: read_blackrock
     .. autofunction:: read_ced
     .. autofunction:: read_intan
-    .. autofunction:: read_kilosort
     .. autofunction:: read_maxwell
     .. autofunction:: read_mearec
     .. autofunction:: read_mcsraw
@@ -84,10 +100,10 @@ NEO-based
     .. autofunction:: read_spikeglx
     .. autofunction:: read_tdt
 
-
 Non-NEO-based
 ~~~~~~~~~~~~~
 .. automodule:: spikeinterface.extractors
+    :noindex:
 
     .. autofunction:: read_alf_sorting
     .. autofunction:: read_bids
@@ -95,6 +111,7 @@ Non-NEO-based
     .. autofunction:: read_combinato
     .. autofunction:: read_hdsort
     .. autofunction:: read_herdingspikes
+    .. autofunction:: read_kilosort
     .. autofunction:: read_klusta
     .. autofunction:: read_mcsh5
     .. autofunction:: read_mda_recording
@@ -113,6 +130,7 @@ Non-NEO-based
 
 
 .. _api_preprocessing:
+
 
 spikeinterface.preprocessing
 ----------------------------
@@ -135,7 +153,6 @@ spikeinterface.preprocessing
     .. autofunction:: whiten
 
 
-
 spikeinterface.postprocessing
 -----------------------------
 
@@ -147,7 +164,6 @@ spikeinterface.postprocessing
     .. autofunction:: compute_spike_amplitudes
     .. autofunction:: compute_unit_locations
     .. autofunction:: compute_spike_locations
-    .. autofunction:: compute_correlograms
     .. autofunction:: compute_template_similarity
     .. autofunction:: compute_correlograms
     .. autofunction:: compute_isi_histograms
@@ -172,7 +188,8 @@ spikeinterface.sorters
 
     .. autofunction:: available_sorters
     .. autofunction:: installed_sorters
-    .. autofunction:: get_default_params
+    .. autofunction:: get_default_sorter_params
+    .. autofunction:: get_sorter_params_description
     .. autofunction:: print_sorter_versions
     .. autofunction:: get_sorter_description
     .. autofunction:: run_sorter
@@ -182,6 +199,7 @@ spikeinterface.sorters
 Low level
 ~~~~~~~~~
 .. automodule:: spikeinterface.sorters
+    :noindex:
 
     .. autoclass:: BaseSorter
 
@@ -249,6 +267,7 @@ Legacy widgets
 These widgets are only available with the "matplotlib" backend
 
 .. automodule:: spikeinterface.widgets
+    :noindex:
 
     .. autofunction:: plot_rasters
     .. autofunction:: plot_probe_map

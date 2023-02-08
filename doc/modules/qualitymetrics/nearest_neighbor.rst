@@ -9,8 +9,8 @@ There are several implementations of nearest neighbor metrics which can be used 
 When calling the :code:`compute_quality_metrics()` function, the following options are available to calculate NN metrics:
 
 - The :code:`nearest_neighbor` option will return :code:`nn_hit_rate` and :code:`nn_miss_rate` (based on [Siegle]_ inspired by [Chung]_).
-- The :code:`nn_isolation` option will return the nearest neighbor isolation metric (adapted from Chung_).
-- The :code:`nn_noise_overlap` option will return the nearest neighbor isolation metric (adapted from Chung_).
+- The :code:`nn_isolation` option will return the nearest neighbor isolation metric (adapted from [Chung]_).
+- The :code:`nn_noise_overlap` option will return the nearest neighbor isolation metric (adapted from [Chung]_).
 
 All options involve non-parametric calculations in PCA space.
 
@@ -82,9 +82,4 @@ Literature
 ----------
 
 Introduced by [Chung]_ and adapted by [Siegle]_ and Kyu Hyun Lee.
-
-
-.. [Chung] Chung, Jason E et al. “A Fully Automated Approach to Spike Sorting.” Neuron (Cambridge, Mass.) 95.6 (2017): 1381–1394.e6. Web.
-
-.. [Siegle] Siegle, Joshua H. et al. “Survey of Spiking in the Mouse Visual System Reveals Functional Hierarchy.” Nature (London) 592.7852 (2021): 86–. Web.
 

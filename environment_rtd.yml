@@ -4,10 +4,9 @@ channels:
 dependencies:
   - python=3.8
   - pip<21
-  #- git-annex
   - datalad
   - pyqt=5
-  - numpy=1.21
+  - numpy=1.23
   - pip:
     - joblib
     - tqdm
@@ -22,13 +21,9 @@ dependencies:
     - neo>=0.10.0
     - probeinterface
     - MEArec>=1.7.1
-    - isosplit5
-    - mountainsort4>=1.0.0    
-    - tridesclous>=1.6.4
-    - herdingspikes<=0.3.99
     - sphinx-gallery
     - numpydoc
-    - numpy<1.22
+    - numpy<1.24
     - hdbscan
     - numba
     - git+https://github.com/SpikeInterface/spikeinterface.git

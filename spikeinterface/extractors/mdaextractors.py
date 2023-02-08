@@ -87,6 +87,7 @@ class MdaRecordingExtractor(BaseRecording):
             If True, output is verbose.
         **job_kwargs:
             Use by job_tools modules to set:
+
                 * chunk_size or chunk_memory, or total_memory
                 * n_jobs
                 * progress_bar
