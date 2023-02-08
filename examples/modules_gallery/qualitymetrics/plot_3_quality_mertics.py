@@ -10,7 +10,7 @@ After spike sorting, you might want to validate the goodness of the sorted units
 import spikeinterface as si
 import spikeinterface.extractors as se
 from spikeinterface.postprocessing import compute_principal_components
-from spikeinterface.qualitymetrics import (compute_snrs, compute_firing_rate, 
+from spikeinterface.qualitymetrics import (compute_snrs, compute_firing_rates, 
     compute_isi_violations, calculate_pc_metrics, compute_quality_metrics)
 
 ##############################################################################
@@ -31,9 +31,8 @@ print(sorting)
 
 folder = 'waveforms_mearec'
 we = si.extract_waveforms(recording, sorting, folder,
-                          load_if_exists=True,
                           ms_before=1, ms_after=2., max_spikes_per_unit=500,
-                          n_jobs=1, chunk_size=30000)
+                          n_jobs=1, chunk_durations='1s')
 print(we)
 
 ##############################################################################
@@ -41,9 +40,9 @@ print(we)
 # metrics in a compact and easy way. To compute a single metric, one can simply run one of the
 # quality metric functions as shown below. Each function has a variety of adjustable parameters that can be tuned.
 
-firing_rates = compute_firing_rate(we)
+firing_rates = compute_firing_rates(we)
 print(firing_rates)
-isi_violation_ratio, isi_violations_rate, isi_violations_count = compute_isi_violations(we)
+isi_violation_ratio, isi_violations_count = compute_isi_violations(we)
 print(isi_violation_ratio)
 snrs = compute_snrs(we)
 print(snrs)

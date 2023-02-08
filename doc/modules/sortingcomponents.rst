@@ -24,7 +24,7 @@ For now, we have methods for:
  * clustering
  * template matching
 
-For some of theses steps, implementations are in avery early stage and are still a bit *drafty*.
+For some of theses steps, implementations are in a very early stage and are still a bit *drafty*.
 Signature and behavior may change from time to time in this alpha period development.
 
 You can also have a look `spikeinterface blog <https://spikeinterface.github.io>`_ where there are more detailled 
@@ -91,7 +91,7 @@ follows:
     job_kwargs = dict(chunk_duration='1s', n_jobs=8, progress_bar=True)
 
     peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
-                                    local_radius_um=150, ms_before=0.3, ms_after=0.6,
+                                    local_radius_um=70., ms_before=0.3, ms_after=0.6,
                                     **job_kwargs)
 
                                         
@@ -188,14 +188,10 @@ Here is an example with non-rigid motion estimation
     from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
     motion, temporal_bins, spatial_bins,
                 extra_check = estimate_motion(recording, peaks, peak_locations=peak_locations,
-                                              direction='y', bin_duration_s=1., bin_um=10., 
-                                              margin_um=5,
-                                              method='decentralized_registration', 
-                                              method_kwargs={},
-                                              non_rigid_kwargs={'bin_step_um': 50},
-                                              output_extra_check=True,
-                                              progress_bar=True, 
-                                              verbose=True)    
+                                              direction='y', bin_duration_s=10., bin_um=10., margin_um=0.,
+                                              method='decentralized_registration',
+                                              rigid=False, win_shape='gaussian', win_step_um=50., win_sigma_um=150.,
+                                              progress_bar=True, verbose=True)
 
 In this example, because it is a non-rigid estimation, :code:`motion` is a 2d array (num_time_bins, num_spatial_bins).
 
@@ -217,12 +213,17 @@ Here is a short example the depends on the output of "Motion estimation":
 
   from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
   
-  recording_corrected = CorrectMotionRecording(recording_with_drift, motion, temporal_bins, spatial_bins)
+  recording_corrected = CorrectMotionRecording(recording_with_drift, motion, temporal_bins, spatial_bins
+                                              spatial_interpolation_method='kriging,
+                                              border_mode='remove_channels')
 
-**Important note**: currently, the borders of the probe in the y direction are NOT handled properly.
-Therefore, it is safer to remove channel on the border after this step.
-We plan to handle this directly in the class but this is NOT implemented yet.
-Use this class carefully.
+**Notes**:
+  * :code:`spatial_interpolation_method` "krigging" or "iwd" fot not play a big role.
+  * :code:`border_mode` is very imprtant details. How to deal with the border because with motion untis on the border
+    by nature are not present on the entire recording. We higly recommend the :code:`border_mode='remove_channels'`
+    because this remove channel on th border that will be impact by the drift. Of course the the large the motion is
+    the more channels are removed.
+
 
 Clustering
 ----------
