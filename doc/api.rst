@@ -226,6 +226,8 @@ spikeinterface.widgets
 .. automodule:: spikeinterface.widgets
 
     .. autofunction:: set_default_plotter_backend
+    .. autofunction:: get_default_plotter_backend
+
     .. autofunction:: plot_timeseries
     .. autofunction:: plot_crosscorrelograms
     .. autofunction:: plot_autocorrelograms
