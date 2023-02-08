@@ -1,13 +1,26 @@
 Postprocessing module
 =====================
 
+.. _extensions:
 
 After spike sorting, we can use the :py:mod:`~spikeinterface.postprocessing` module to further post-process
 the spike sorting output. Most of the post-processing functions require a
-:py:class:`~spikeinterface.core.WaveformExtractor` as input. There are several postprocessing tools available, and all 
-of them are implemented as a :py:class:`~spikeinterface.core.BaseWaveformExtractorExtension`. These objects are tightly 
-connected to the parent :code:`WaveformExtractor` object, so that operations done on the :code:`WaveformExtractor`,
-such as saving, loading, or selecting units, will be automatically applied to all extensions.
+:py:class:`~spikeinterface.core.WaveformExtractor` as input.
+
+.. _waveform_extensions:
+
+WaveformExtractor extensions
+----------------------------
+
+There are several postprocessing tools available, and all 
+of them are implemented as a :py:class:`~spikeinterface.core.BaseWaveformExtractorExtension`. All computations on top
+of a WaveformExtractor will be saved along side the WaveformExtractor itself (sub  folder, zarr path or sub dict).
+This workflow is convinient to retrieve long computation (such as pca or spike amplitudes) when reloading  
+WaveformExtractor.
+
+:py:class:`~spikeinterface.core.BaseWaveformExtractorExtension`  objects are tightly  connected to the
+parent :code:`WaveformExtractor` object, so that operations done onc the :code:`WaveformExtractor`, such as saving,
+loading, or selecting units, will be automatically applied to all extensions.
 
 To check what extensions are available for a :code:`WaveformExtractor` named :code:`we`, you can use:
 
@@ -33,6 +46,13 @@ To load the extension object you can run:
 Here :code:`ext` is the extension object (in this case the :code:`SpikeAmplitudeCalculator`), and :code:`ext_data` will 
 contain the actual amplitude data. Note that different extensions might have different ways to return the extension.
 You can use :code:`ext.get_data?` for documentation.
+
+
+We can also delete an extension
+
+.. code-block:: python
+
+    we.delete_extension("spike_amplitudes")
 
 
 
