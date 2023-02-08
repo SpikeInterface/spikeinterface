@@ -262,6 +262,20 @@ spikeinterface.exporters
     .. autofunction:: export_report
 
 
+spikeinterface.curation
+------------------------
+.. automodule:: spikeinterface.curation
+
+    .. autoclass:: CurationSorting
+    .. autoclass:: MergeUnitsSorting
+    .. autoclass:: SplitUnitSorting
+    .. autofunction:: get_potential_auto_merge
+    .. autofunction:: find_redundant_units
+    .. autofunction:: remove_redundant_units
+    .. autofunction:: remove_duplicated_spikes
+    .. autofunction:: apply_sortingview_curation
+
+
 spikeinterface.sortingcomponents
 --------------------------------
 

@@ -168,8 +168,8 @@ venv.bak/
 .mypy_cache/
 
 doc/_build/*
-doc/getting_started/*
-doc/modules/*
+doc/how_to/*
+doc/modules_gallery/*
 doc/sources/*
 
 examples/getting_started/tmp_*
