@@ -37,8 +37,8 @@ folders =  [
     '../examples/modules_gallery/core/waveform_folder_sparse_direct',
     '../examples/modules_gallery/core/waveform_folder2',
     '../examples/modules_gallery/core/waveform_folder',
-    '../examples/modules/widgets/waveforms_mearec',
-    '../examples/modules/widgets/wfs_mearec',
+    '../examples/modules_gallery/widgets/waveforms_mearec',
+    '../examples/modules_gallery/widgets/wfs_mearec',
     
 ]
 
