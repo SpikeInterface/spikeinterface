@@ -62,7 +62,7 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.5, ms_
 
 
 class LocalizeBase(PipelineNode):
-    def __init__(self, recording, name='', return_ouput=True, parents=None, local_radius_um=50.):
+    def __init__(self, recording, name='', return_ouput=True, parents=None, local_radius_um=75.):
         PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
         
         self.local_radius_um = local_radius_um
@@ -112,7 +112,7 @@ class LocalizeCenterOfMass(LocalizeBase):
         Feature to consider for computation. Default is 'ptp'
     """
 
-    def __init__(self, recording, name='center_of_mass', return_ouput=True, parents=['extract_waveforms'], local_radius_um=50., feature='ptp'):
+    def __init__(self, recording, name='center_of_mass', return_ouput=True, parents=['extract_waveforms'], local_radius_um=75., feature='ptp'):
         LocalizeBase.__init__(self, recording, name=name, return_ouput=return_ouput, parents=parents, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
         self.feature = feature
@@ -166,7 +166,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
     """
 
     def __init__(self, recording, name='monopolar_triangulation', return_ouput=True, parents=['extract_waveforms'],
-                            local_radius_um=50.,
+                            local_radius_um=75.,
                             max_distance_um=150.,
                             optimizer='minimize_with_log_penality',
                             enforce_decrease=True):

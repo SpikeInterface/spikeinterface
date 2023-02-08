@@ -221,7 +221,7 @@ def estimate_distance_error_with_log(vec, wf_ptp, local_contact_locations, maxpt
 
 
 def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with_log_penality',
-                                    radius_um=50, max_distance_um=1000, return_alpha=False, enforce_decrease=False):
+                                    local_radius_um=75, max_distance_um=1000, return_alpha=False, enforce_decrease=False):
     '''
     Localize unit with monopolar triangulation.
     This method is from Julien Boussard, Erdem Varol and Charlie Windolf
@@ -245,7 +245,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         A waveform extractor object
     method: str  ('least_square', 'minimize_with_log_penality')
        2 variants of the method
-    radius_um: float
+    local_radius_um: float
         For channel sparsity
     max_distance_um: float
         to make bounddary in x, y, z and also for alpha
@@ -267,7 +267,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
     recording = waveform_extractor.recording
     contact_locations = recording.get_channel_locations()
 
-    sparsity = compute_sparsity(waveform_extractor, method='radius', radius_um=radius_um)
+    sparsity = compute_sparsity(waveform_extractor, method='radius', radius_um=local_radius_um)
     templates = waveform_extractor.get_all_templates(mode='average')
 
     #if enforce_decrease:
@@ -299,7 +299,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
     return unit_location
 
 
-def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=50, feature='ptp'):
+def compute_center_of_mass(waveform_extractor, peak_sign='neg', local_radius_um=75, feature='ptp'):
     '''
     Computes the center of mass (COM) of a unit based on the template amplitudes.
 
@@ -323,7 +323,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=50, fe
     recording = waveform_extractor.recording
     contact_locations = recording.get_channel_locations()
 
-    sparsity = compute_sparsity(waveform_extractor, peak_sign=peak_sign, method='radius', radius_um=radius_um)
+    sparsity = compute_sparsity(waveform_extractor, peak_sign=peak_sign, method='radius', radius_um=local_radius_um)
     templates = waveform_extractor.get_all_templates(mode='average')
 
     unit_location = np.zeros((unit_ids.size, 2), dtype='float64')
