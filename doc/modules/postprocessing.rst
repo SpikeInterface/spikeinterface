@@ -48,7 +48,7 @@ contain the actual amplitude data. Note that different extensions might have dif
 You can use :code:`ext.get_data?` for documentation.
 
 
-We can also delete an extension
+We can also delete an extension:
 
 .. code-block:: python
 
