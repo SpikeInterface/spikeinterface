@@ -26,18 +26,12 @@ A well isolated unit should have a large isolation distance.
 References
 ----------
 
-.. automodule:: spikeinterface.qualitymetrics.pca_metrics
-
-    .. autofunction:: mahalanobis_metrics
-
+.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.mahalanobis_metrics
 
 
 Literature
 ----------
 
 Introduced by [Harris]_.
-
-Citations
----------
 
 .. [Harris] Kenneth D Harris, Hajime Hirase, Xavier Leinekugel, Darrell A Henze, and Gy ̈orgy Buzs ́aki. Temporal interaction between single spikes and complex spike bursts in hippocampal pyramidal cells. Neuron (Cambridge, Mass.), 32(1):141–149, 2001.

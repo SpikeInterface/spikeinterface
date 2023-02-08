@@ -216,7 +216,7 @@ concatenate_recordings = define_function_from_class(source_class=ConcatenateSegm
 
 class SelectSegmentRecording(BaseRecording):
     """
-    Return a new recording with a single segment from a multi-segment recording.
+    Return a new recording with a subset of segments from a multi-segment recording.
 
     Parameters
     ----------

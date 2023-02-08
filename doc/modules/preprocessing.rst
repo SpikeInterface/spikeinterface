@@ -247,7 +247,7 @@ This step returns traces in absolute values. It could be used to compute a proxy
 :py:func:`~spikeinterface.preprocessing.rectify()`
 
 remove_artifacts()
-^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
 
 Given an external list of trigger times,  :code:`remove_artifacts()` function can remove artifacts with several 
 strategies:

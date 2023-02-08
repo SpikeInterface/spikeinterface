@@ -41,6 +41,7 @@ spikeinterface.core
     .. autofunction:: get_closest_channels
     .. autofunction:: get_noise_levels
     .. autofunction:: get_chunk_with_margin
+    .. autofunction:: order_channels_by_depth
     .. autofunction:: get_template_amplitudes
     .. autofunction:: get_template_extremum_channel
     .. autofunction:: get_template_extremum_channel_peak_shift
@@ -48,6 +49,9 @@ spikeinterface.core
 
 Low-level
 ~~~~~~~~~
+
+.. automodule:: spikeinterface.core
+
     .. autoclass:: BaseWaveformExtractorExtension
     .. autoclass:: ChannelSparsity
     .. autoclass:: ChunkRecordingExecutor
@@ -103,7 +107,7 @@ Non-NEO-based
     .. autofunction:: read_spykingcircus
     .. autofunction:: toy_example
     .. autofunction:: read_tridesclous
-    .. autofunction:: read_waveclust
+    .. autofunction:: read_waveclus
     .. autofunction:: read_yass
 
 

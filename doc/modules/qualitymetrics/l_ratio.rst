@@ -31,39 +31,22 @@ This yields L-ratio, which can be expressed as:
 Expectation and use
 -------------------
 
-Since this metric identifies unit separation, a high value indicates a highly contaminated unit (type I error) ([Schmitzer-Torbert]_ et al.).
-[Jackson]_ et al. suggests that this measure is also correlated with type II errors (although more strongly with type I errors).
+Since this metric identifies unit separation, a high value indicates a highly contaminated unit (type I error) 
+([Schmitzer-Torbert]_ et al.). [Jackson]_ et al. suggests that this measure is also correlated with type II errors 
+(although more strongly with type I errors).
 
-Example code
-------------
-
-Links to source code
---------------------
-
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/pca_metrics.py#L128>`_
-
+A well separated unit should have a low L-ratio ([Schmitzer-Torbert]_ et al.).
 
 References
 ----------
 
-.. automodule:: spikeinterface.qualitymetrics.pca_metrics
-
-    .. autofunction:: mahalanobis_metrics
-
-
-A well separated unit should have a low L-ratio (Schmitzer-Torbert_ et al.).
-Since this metric identifies unit separation, a high value indicates a highly contaminated unit (type I error) (Schmitzer-Torbert_ et al.).
-Jackson et al. suggests that this measure is also correlated with type II errors (although more strongly with type I errors) (Jackson_ et al.).
-
+.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.mahalanobis_metrics
 
 Literature
 ----------
 
-Introduced by Schmitzer-Torbert_ et al..
-Early discussion and comparison with isolation distance by Jackson_ et al..
-
-Citations
----------
+Introduced by [Schmitzer-Torbert]_ et al..
+Early discussion and comparison with isolation distance by [Jackson]_ et al..
 
 .. [Schmitzer-Torbert]  Schmitzer-Torbert, Neil, and A. David Redish. “Neuronal Activity in the Rodent Dorsal Striatum in Sequential Navigation: Separation of Spatial and Reward Responses on the Multiple T Task.” Journal of neurophysiology 91.5 (2004): 2259–2272. Web.
 .. [Jackson] Jadin Jackson, Neil Schmitzer-Torbert, K.D. Harris, and A.D. Redish. “Quantitative Measures of Cluster Quality for Use in Extracellular Recordings.” Neuroscience 131.1 (2005): 1–11. Web.

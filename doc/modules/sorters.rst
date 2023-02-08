@@ -409,7 +409,7 @@ Here the list of external sorters using wrapper:
 * **Wave clus** :code:`run_sorter('waveclus')`
 * **Combinato** :code:`run_sorter('combinato')`
 * **HDSort** :code:`run_sorter('hdsort')`
-* **yass** :code:`run_sorter('yass')`
+* **YASS** :code:`run_sorter('yass')`
 
 
 Here a list of internal sorter based on `spikeinterface.sortingcomponents`, they are totally
@@ -484,8 +484,6 @@ From the user's perspective, they behave exactly like "normal" sorters:
 .. code-block:: python
 
     sorting = run_sorter("spykingcircus2", recording, "/tmp/folder")
-
-
 
 
 Contributing

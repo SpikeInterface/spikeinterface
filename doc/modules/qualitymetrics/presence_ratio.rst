@@ -27,30 +27,22 @@ Example code
 
     # Make recording, sorting and wvf_extractor object for your data.
 
-    presence_ratio = qm.compute_presence_ratio(wvf_extractor)
+    presence_ratio = qm.compute_presence_ratios(wvf_extractor)
     # presence_ratio is a dict containing the units' ID as keys
     # and their presence ratio (between 0 and 1) as values.
 
-Links to source code
---------------------
+Links to original implementations
+---------------------------------
 
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/misc_metrics.py#L87>`_
-
-From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#Presence-ratio>`_
+* From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#Presence-ratio>`_
 
 
 References
 ----------
 
-.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
-
-    .. autofunction:: compute_presence_ratios
+.. autofunction:: spikeinterface.toolkit.qualitymetrics.misc_metrics.compute_presence_ratios
 
 Literature
 ----------
 
 Unknown origin.
-
-Citations
----------
-

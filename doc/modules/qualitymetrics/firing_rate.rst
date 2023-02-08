@@ -40,7 +40,6 @@ With SpikeInterface:
     import spikeinterface.qualitymetrics as qm
 
     # Make recording, sorting and wvf_extractor object for your data.
-    
     firing_rate = qm.compute_firing_rates(wvf_extractor)
     # firing_rate is a dict containing the units' ID as keys,
     # and their firing rate across segments as values (in Hz).
@@ -48,25 +47,18 @@ With SpikeInterface:
 References
 ----------
 
-.. automodule:: spikeinterface.qualitymetrics.misc_metrics
-
-    .. autofunction:: compute_firing_rates
+.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_firing_rates
 
 
-Links to source code
---------------------
+Links to original implementations
+---------------------------------
 
-From `SpikeInterface <https://github.com/SpikeInterface/spikeinterface/blob/master/spikeinterface/qualitymetrics/misc_metrics.py#L52>`_
-
-From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#Firing-rate>`_
+* From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#Firing-rate>`_
 
 Literature
 ----------
 
 Unknown origin.
-Widely discussed eg: Buzsáki_.
-
-Citations
----------
+Widely discussed eg: [Buzsáki]_.
 
 .. [Buzsáki] Buzsáki, György, and Kenji Mizuseki. “The Log-Dynamic Brain: How Skewed Distributions Affect Network Operations.” Nature reviews. Neuroscience 15.4 (2014): 264–278. Web.
