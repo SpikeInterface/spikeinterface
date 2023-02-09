@@ -9,6 +9,7 @@ from ..core import get_chunk_with_margin
 
 _common_filter_docs = \
     """**filter_kwargs: keyword arguments for parallel processing:
+
             * filter_order: order
                 The order of the filter
             * filter_mode: 'sos or 'ba'
@@ -21,8 +22,10 @@ _common_filter_docs = \
 class FilterRecording(BasePreprocessor):
     """
     Generic filter class based on:
+
       * scipy.signal.iirfilter
       * scipy.signal.filtfilt or scipy.signal.sosfilt
+
     BandpassFilterRecording is built on top of it.
 
     Parameters

@@ -6,7 +6,7 @@ from probeinterface import ProbeGroup
 import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
-
+from .core_tools import define_function_from_class
 
 try:
     import zarr
@@ -152,12 +152,7 @@ class ZarrRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-def read_zarr(*args, **kwargs):
-    recording = ZarrRecordingExtractor(*args, **kwargs)
-    return recording
-
-
-read_zarr.__doc__ = ZarrRecordingExtractor.__doc__
+read_zarr = define_function_from_class(source_class=ZarrRecordingExtractor, name="read_zarr")
 
 
 def get_default_zarr_compressor(clevel=5):

@@ -1,14 +1,3 @@
-"""
-Implementation of utils class to manipulate segments with 2 different concept:
-  * append_recordings / append_sortings / append_events
-  * concatenate_recordings
-
-
-Example:
-  * append_recording: given one recording with 2 segments and one recording with 3 segments, returns one recording with 5 segments
-  * concatenate_recording: given a list of several recordings (each with possibly multiple segments), returns one recording with one segment that is a concatenation of all the segments
-
-"""
 import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
@@ -43,8 +32,8 @@ class AppendSegmentRecording(BaseRecording):
     returns a single multi-segment recording that "appends" all segments from
     all parent recordings.
 
-    For instance, given one recording with 2 segments and one recording with
-    3 segments, this class will give one recording with 5 segments
+    For instance, given one recording with 2 segments and one recording with 3 segments, 
+    this class will give one recording with 5 segments
 
     Parameters
     ----------
@@ -109,6 +98,7 @@ class ConcatenateSegmentRecording(BaseRecording):
 
     Time information is lost upon concatenation. By default `ignore_times` is True.
     If it is False, you get an error unless:
+
       * all segments DO NOT have times, AND
       * all segment have t_start=None
 
@@ -216,7 +206,7 @@ concatenate_recordings = define_function_from_class(source_class=ConcatenateSegm
 
 class SelectSegmentRecording(BaseRecording):
     """
-    Return a new recording with a single segment from a multi-segment recording.
+    Return a new recording with a subset of segments from a multi-segment recording.
 
     Parameters
     ----------
