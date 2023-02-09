@@ -142,7 +142,7 @@ For raw recording formats, we currently support:
 * **SpikeGLX IBL stream** :py:func:`~spikeinterface.extractors.read_streaming_ibl()`
 * **Spike 2** :py:func:`~spikeinterface.extractors.read_spike2()`
 * **TDT** :py:func:`~spikeinterface.extractors.read_tdt()`
-
+* **Zarr** :py:func:`~spikeinterface.core.read_zarr()`
 
 
 Sorted Data Formats
@@ -164,7 +164,8 @@ For sorted data formats, we currently support:
 * **Neuroscope** :py:func:`~spikeinterface.extractors.read_neuroscope_sorting()`
 * **Neuralynx spikes** :py:func:`~spikeinterface.extractors.read_neuralynx_sorting()`
 * **NPZ (created by SpikeInterface)** :py:func:`~spikeinterface.core.read_npz_sorting()`
-* **Shybrid**  :py:func:`~spikeinterface.core.read_shybrid_sorting()`
+* **Plexon spikes** :py:func:`~spikeinterface.extractors.read_plexon_sorting()`
+* **Shybrid**  :py:func:`~spikeinterface.extractors.read_shybrid_sorting()`
 * **Spyking Circus** :py:func:`~spikeinterface.extractors.read_spykingcircus()`
 * **Trideclous** :py:func:`~spikeinterface.extractors.read_tridesclous()`
 * **Wave Clus** :py:func:`~spikeinterface.extractors.read_waveclus()`
