@@ -26,4 +26,9 @@ jobs:
           pip install -e .
       - name: Test core with pytest
         run: |
-          pytest -v spikeinterface/core
+          pytest -vv spikeinterface/core --durations=0 --durations-min=0.001 > "test_output.txt"
+          cat test_output.txt
+      - name: produce test summary
+        run: | 
+        python ./github/build_job_summary.py
+        cat test_markdown.txt >> $GITHUB_STEP_SUMMARY 
