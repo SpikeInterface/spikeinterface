@@ -568,6 +568,21 @@ class GroundTruthComparison(BasePairSorterComparison):
         """
         return len(self.get_bad_units())
 
+    def count_units_categories(self, well_detected_score=None, overmerged_score=None, redundant_score=None, ):
+        count = pd.Series(dtype='int64')
+
+        count['num_gt'] = len(self.sorting1.get_unit_ids())
+        count['num_sorter'] = len(self.sorting2.get_unit_ids())
+        count['num_well_detected'] = self.count_well_detected_units(well_detected_score)
+        if self.exhaustive_gt:
+            count['num_overmerged'] = self.count_overmerged_units(overmerged_score)
+            count['num_redundant'] = self.count_redundant_units(redundant_score)
+            count['num_false_positive'] = self.count_false_positive_units(redundant_score)
+            count['num_bad'] = self.count_bad_units()
+
+        return count
+
+
 
 # usefull also for gathercomparison
 
