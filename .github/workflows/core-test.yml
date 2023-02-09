@@ -30,5 +30,5 @@ jobs:
           cat test_output.txt
       - name: produce test summary
         run: | 
-        python ./github/build_job_summary.py
-        cat test_markdown.txt >> $GITHUB_STEP_SUMMARY 
+          python ./github/build_job_summary.py
+          cat test_markdown.txt >> $GITHUB_STEP_SUMMARY 
