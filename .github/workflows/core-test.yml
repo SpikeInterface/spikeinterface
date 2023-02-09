@@ -32,5 +32,6 @@ jobs:
       - name: produce test summary
         run: | 
           pip install pandas
+          pip install tabulate
           python ./.github/build_job_summary.py
           cat test_markdown.txt >> $GITHUB_STEP_SUMMARY 
