@@ -12,7 +12,7 @@ from .collisioncomparison import CollisionGTComparison
 from .correlogramcomparison import CorrelogramGTComparison
 from .groundtruthstudy import GroundTruthStudy
 from .collisionstudy import CollisionGTStudy
-from .correlogramstudy import CorrelogramGtStudy
+from .correlogramstudy import CorrelogramGTStudy
 from .studytools import aggregate_performances_table
 from .hybrid import (HybridSpikesRecording, HybridUnitsRecording, generate_injected_sorting,
                      create_hybrid_units_recording, create_hybrid_spikes_recording)

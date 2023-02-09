@@ -62,8 +62,9 @@ extractors = [
     "lxml", # lxml for neuroscope
     "hdf5storage", # hdf5storage and scipy for cellexplorer
     "scipy",
-    "ONE-api>=1.16.3", # ONE-api and ibllib for streaming IBL
-    "ibllib>=2.19.0",
+    # ONE-api and ibllib for streaming IBL
+    "ONE-api>=1.19.1",
+    "ibllib>=2.20.0",
 ]
 
 full = [
@@ -79,9 +80,11 @@ full = [
 ]
 
 widgets = [
+    "matplotlib",
     "ipympl",
     "ipywidgets",
     "sortingview>=0.11.0",
+    "figurl-jupyter"
 ]
 
 test = [

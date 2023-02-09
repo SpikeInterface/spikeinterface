@@ -18,6 +18,7 @@ class NpyFolderSnippets(NpySnippetsExtractor):
     Parameters
     ----------
     folder_path: str or Path
+        The path to the folder
 
     Returns
     -------
