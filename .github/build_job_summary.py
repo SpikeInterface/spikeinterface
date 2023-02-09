@@ -1,5 +1,5 @@
 """
-This function builds a summary from the pytest output in markdown to be used by . 
+This function builds a summary from the pytest output in markdown to be used by GITHUB_STEP_SUMMARY. 
 The input file is the output of the following command:
 pytest -vv --durations=0 --durations-min=0.001 > report.txt
 """
@@ -33,13 +33,12 @@ total_test_time = data_frame["test_time"].sum()
 data_frame["%of_total_time"] = (100 * data_frame["test_time"] / total_test_time).round(2)
 data_frame["%cum_total_time"] = (100 *  data_frame["test_time"].cumsum() / total_test_time).round(2)
 
-# Build markdown string
+# Build markdown strings
 data_frame_to_display = data_frame[["test_name", "type", "test_time", "%of_total_time", "%cum_total_time", "long_name"]]
-
 data_frame_header_markdown = data_frame_to_display.head(10).to_markdown()
 data_frame_markdown = data_frame_to_display.to_markdown()
     
-# Build github file
+# Build GITHUB_STEP_SUMMARY markdown file
 sys.stdout.write("## Pytest summary")
 sys.stdout.write("\n \n")
 sys.stdout.write(all_lines[-1])
