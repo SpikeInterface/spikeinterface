@@ -1,4 +1,4 @@
-name: spikeinterface.core with conda
+name: Testing core
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-test:
-    name: Test on (${{ matrix.os }})
+    name: Test on ${{ matrix.os }} OS
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -27,12 +27,13 @@ jobs:
           pip install -e .
       - name: Test core with pytest
         run: |
-          pytest -vv spikeinterface/core --durations=0 --durations-min=0.001 > test_output.txt
-          cat test_output.txt
+          echo "testing_report_file=test_output.txt" >> $GITHUB_ENV
+          pytest -vv spikeinterface/core --durations=0 --durations-min=0.001 > ${{ env.testing_report_file}}
+          cat ${{ env.testing_report_file}}
       - name: produce test summary
         run: | 
           pip install pandas
           pip install tabulate
-          python ./.github/build_job_summary.py test_output.txt
+          python ./.github/build_job_summary.py ${{ env.testing_report_file}}
           echo "# Times in ${{matrix.os}}" >> $GITHUB_STEP_SUMMARY 
           cat test_output.md >> $GITHUB_STEP_SUMMARY 
