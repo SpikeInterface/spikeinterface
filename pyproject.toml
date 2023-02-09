@@ -80,9 +80,11 @@ full = [
 ]
 
 widgets = [
+    "matplotlib",
     "ipympl",
     "ipywidgets",
     "sortingview>=0.11.0",
+    "figurl-jupyter"
 ]
 
 test = [
