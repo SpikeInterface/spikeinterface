@@ -90,11 +90,13 @@ NEO-based
     .. autofunction:: read_mearec
     .. autofunction:: read_mcsraw
     .. autofunction:: read_neuralynx
+    .. autofunction:: read_neuralynx_sorting
     .. autofunction:: read_neuroscope
     .. autofunction:: read_nix
     .. autofunction:: read_openephys
     .. autofunction:: read_openephys_event
     .. autofunction:: read_plexon
+    .. autofunction:: read_plexon_sorting
     .. autofunction:: read_spike2
     .. autofunction:: read_spikegadgets
     .. autofunction:: read_spikeglx
