@@ -92,7 +92,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     experiment_name: str, list, or None
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
-        E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
+        E.g. 'experiment_names="experiment2"', 'experiment_names=["experiment1", "experiment2"]'
     stream_id: str, optional
         If there are several streams, specify the stream id you want to load.
     stream_name: str, optional

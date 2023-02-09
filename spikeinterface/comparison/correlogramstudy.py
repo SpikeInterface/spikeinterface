@@ -5,7 +5,7 @@ from .correlogramcomparison import CorrelogramGTComparison
 
 import numpy as np
 
-class CorrelogramGtStudy(GroundTruthStudy):
+class CorrelogramGTStudy(GroundTruthStudy):
 
     def run_comparisons(self, exhaustive_gt=True, window_ms=100.0, bin_ms=1.0, well_detected_score=0.8, **kwargs):
         self.comparisons = {}
