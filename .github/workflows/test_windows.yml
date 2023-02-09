@@ -1,0 +1,14 @@
+name: Testing windows summaries
+
+on:
+  pull_request:
+    branches: [master]
+    types: [synchronize, opened, reopened, ready_for_review]
+
+jobs:
+  build-and-test:
+    name: Test
+    runs-on: "windows-latest"
+    steps:
+    - name: Adding markdown
+      run: echo '### Hello world! ' >> $GITHUB_STEP_SUMMARY

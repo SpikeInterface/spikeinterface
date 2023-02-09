@@ -27,9 +27,15 @@ data_frame = pd.DataFrame(dict(test_time=timing_column, test_name=short_name_col
 data_frame["%of_total_time"] = (100 * data_frame["test_time"] / data_frame["test_time"].sum()).round(2)
 data_frame["%cum_total_time"] = (100 *  data_frame["test_time"].cumsum() / data_frame["test_time"].sum()).round(2)
 
-# Display
+# Build markdown string
 data_frame_to_display = data_frame[["test_name", "test_time", "%of_total_time", "%cum_total_time"]]
-data_frame_to_display.to_markdown(file_path_out)
-
+markdown_string = data_frame_to_display.to_markdown()
+    
 # Output sort test summary info
+sys.stdout.write("## Pytest summary of tests")
+sys.stdout.write("\n")
 sys.stdout.write(all_lines[-1])
+sys.stdout.write("\n")
+sys.stdout.write("## Dataframe of test timing")
+sys.stdout.write("\n")
+sys.stdout.write(markdown_string)
