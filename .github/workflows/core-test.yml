@@ -20,7 +20,8 @@ jobs:
           python-version: 3.9
       - name: Install dependencies
         run: |
-          conda install pytest
+          python -m pip install -U pip  # Official recommended way
+          pip install pytest
           # zarr is needed to test core
           pip install zarr  
           pip install -e .
@@ -30,5 +31,6 @@ jobs:
           cat test_output.txt
       - name: produce test summary
         run: | 
+          pip install pandas
           python ./.github/build_job_summary.py
           cat test_markdown.txt >> $GITHUB_STEP_SUMMARY 
