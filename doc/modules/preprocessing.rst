@@ -1,8 +1,8 @@
 Preprocessing module
 ====================
 
-Overview : chain concept
-------------------------
+Overview: the "chain" concept
+-----------------------------
 
 The :py:mod:`~spikeinterface.preprocessing` module includes preprocessing steps to apply before running a sorter.
 Example processing to run are filtering, removing noise, removing bad channels, etc.
@@ -101,10 +101,10 @@ Important aspects of filtering functions:
     rec_f = bandpass_filter(rec, freq_min=300, freq_max=6000)
 
 
-:py:func:`~spikeinterface.preprocessing.filter()`
-:py:func:`~spikeinterface.preprocessing.bandpass_filter()`
-:py:func:`~spikeinterface.preprocessing.notch_filter()`
-:py:func:`~spikeinterface.preprocessing.highpass_filter()`
+* :py:func:`~spikeinterface.preprocessing.filter()`
+* :py:func:`~spikeinterface.preprocessing.bandpass_filter()`
+* :py:func:`~spikeinterface.preprocessing.notch_filter()`
+* :py:func:`~spikeinterface.preprocessing.highpass_filter()`
 
 
 common_reference()
@@ -121,7 +121,7 @@ There are various options when combining :code:`operator` and :code:`reference` 
 
     rec_cmr = common_reference(rec, operator="median", reference="global")
 
-:py:func:`~spikeinterface.preprocessing.common_reference()`
+* :py:func:`~spikeinterface.preprocessing.common_reference()`
 
 phase_shift()
 ^^^^^^^^^^^^^^
@@ -152,7 +152,7 @@ differences on artifact removal.
 CatGT and IBL destriping are both based on this idea (see :ref:`ibl_destripe`).
 
 
-:py:func:`~spikeinterface.preprocessing.phase_shift()`
+* :py:func:`~spikeinterface.preprocessing.phase_shift()`
 
 
 normalize_by_quantile() /scale() / center() / zscore()
@@ -170,10 +170,10 @@ centered with unitary variance on each channel.
 
     rec_normed = zscore(rec)
 
-:py:func:`~spikeinterface.preprocessing.normalize_by_quantile()`
-:py:func:`~spikeinterface.preprocessing.scale()`
-:py:func:`~spikeinterface.preprocessing.center()`
-:py:func:`~spikeinterface.preprocessing.zscore()`
+* :py:func:`~spikeinterface.preprocessing.normalize_by_quantile()`
+* :py:func:`~spikeinterface.preprocessing.scale()`
+* :py:func:`~spikeinterface.preprocessing.center()`
+* :py:func:`~spikeinterface.preprocessing.zscore()`
 
 whiten()
 ^^^^^^^^
@@ -189,7 +189,7 @@ The whitened traces are then the dot product between the traces and :code:`W` ma
     rec_w = whiten(rec)
 
 
-:py:func:`~spikeinterface.preprocessing.whiten()`
+* :py:func:`~spikeinterface.preprocessing.whiten()`
 
 clip() / blank_staturation()
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -201,8 +201,8 @@ The :code:`blank_staturation()` function is similar, but it automatically estima
 
     rec_w = clip(rec, a_min=-250., a_max=260)
 
-:py:func:`~spikeinterface.preprocessing.clip()`
-:py:func:`~spikeinterface.preprocessing.blank_staturation()`
+* :py:func:`~spikeinterface.preprocessing.clip()`
+* :py:func:`~spikeinterface.preprocessing.blank_staturation()`
 
 
 highpass_spatial_filter()
@@ -215,36 +215,41 @@ This preprocessing step can be super useful for long probes like Neuropixels.
 
 This is part of the "destriping" from IBL (see :ref:`ibl_destripe`).
 
-:py:func:`~spikeinterface.preprocessing.highpass_spatial_filter()`
+* :py:func:`~spikeinterface.preprocessing.highpass_spatial_filter()`
 
 
 detect_bad_channels() / interpolate_bad_channels()
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The :code:`detect_bad_channels()` can be used to detect bad channels with several methods.
+The :code:`detect_bad_channels()` can be used to detect bad channels with several methods, including an :code:`std`- or :code:`mad`-based 
+approach to detect bad channels with abnormal high power and the :code:`coherence+psd` method (introduced by [IBL_spikesorting]_), 
+which detects bad channels looking at both coherence with other channels and PSD power in the high-frequency range.
 
-Bad channels can then either be removed from the recording using `recording.remove_channels(bad_channel_ids)` or be 
-interpolated:
+The function returns both the :code:`bad_channel_ids` and :code:`channel_labels`, which can be :code:`good`, :code:`noise`, :code:`dead`, 
+or :code:`out` (outside of the brain). Note that the :code:`dead` and :code:`out` are only available with the :code:`coherence+psd` method.
+
+Bad channels can then either be removed from the recording using :code:`recording.remove_channels(bad_channel_ids)` or be 
+interpolated with the :code:`interpolate_bad_channels()` function (channels labeled as :code:`out` should always be removed):
 
 .. code-block:: python
 
     # detect
-    bad_channel_ids = detect_bad_channels(rec)
+    bad_channel_ids, channel_labels = detect_bad_channels(rec)
     # Case 1 : remove then
     rec_clean = recording.remove_channels(bad_channel_ids)
     # Case 2 : interpolate then
     rec_clean = interpolate_bad_channels(rec, bad_channel_ids)
 
 
-:py:func:`~spikeinterface.preprocessing.detect_bad_channels()`
-:py:func:`~spikeinterface.preprocessing.interpolate_bad_channels()`
+* :py:func:`~spikeinterface.preprocessing.detect_bad_channels()`
+* :py:func:`~spikeinterface.preprocessing.interpolate_bad_channels()`
 
 rectify()
 ^^^^^^^^^
 
 This step returns traces in absolute values. It could be used to compute a proxy signal of multi-unit activity (MUA).
 
-:py:func:`~spikeinterface.preprocessing.rectify()`
+* :py:func:`~spikeinterface.preprocessing.rectify()`
 
 remove_artifacts()
 ^^^^^^^^^^^^^^^^^^
@@ -261,7 +266,7 @@ strategies:
     rec_clean = remove_artifacts(rec, list_triggers)
 
 
-:py:func:`~spikeinterface.preprocessing.remove_artifacts()`
+* :py:func:`~spikeinterface.preprocessing.remove_artifacts()`
 
 
 zero_channel_pad()
@@ -274,7 +279,7 @@ required.
 
     rec_with_more_channels = zero_channel_pad(rec, 128)
 
-:py:func:`~spikeinterface.preprocessing.zero_channel_pad()`
+* :py:func:`~spikeinterface.preprocessing.zero_channel_pad()`
 
 
 deepinterpolation() (experimental)
@@ -282,8 +287,7 @@ deepinterpolation() (experimental)
 
 The step (experimental) applies the inference step of a DeepInterpolation denoiser model [DeepInterpolation]_.
 
-:py:func:`~spikeinterface.preprocessing.deepinterpolation()`
-
+* :py:func:`~spikeinterface.preprocessing.deepinterpolation()`
 
 
 .. _ibl_destripe:
@@ -341,7 +345,9 @@ Some preprocessing steps are available also for :py:class:`~spikeinterface.core.
 align_snippets()
 ^^^^^^^^^^^^^^^^
 
-:py:func:`~spikeinterface.preprocessing.align_snippets()`
+This function aligns waveform snippets.
+
+* :py:func:`~spikeinterface.preprocessing.align_snippets()`
 
 
 

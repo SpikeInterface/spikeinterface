@@ -28,11 +28,12 @@ def detect_bad_channels(recording,
 
     Different methods are implemented:
 
-    - std : threhshold on channel standard deviations
+    * std : threhshold on channel standard deviations
         If the standard deviation of a channel is greater than `std_mad_threshold` times the median of all
         channels standard deviations, the channel is flagged as noisy
-    - mad : same as std, but using median absolute deviations instead
-    - coeherence+psd : method developed by the International Brain Laboratory that detects bad channels of three types:
+    * mad : same as std, but using median absolute deviations instead
+    * coeherence+psd : method developed by the International Brain Laboratory that detects bad channels of three types:
+
         * Dead channels are those with low similarity to the surrounding channels (n=`n_neighbors` median)
         * Noise channels are those with power at >80% Nyquist above the psd_hf_threshold (default 0.02 uV^2 / Hz) 
           and a high coherence with "far away" channels"
@@ -44,6 +45,8 @@ def detect_bad_channels(recording,
     recording : BaseRecording
         The recording for which bad channels are detected
     method : str
+        The method to be used:
+
         * coeherence+psd (default, developed by IBL)
         * mad
         * std

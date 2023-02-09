@@ -15,7 +15,7 @@ class TemplateMetricsWidget(MetricsBaseWidget):
     skip_metrics: list or None
         If given, a list of quality metrics to skip
     compute_kwargs : dict or None
-        If given, dictionary with keyword arguments for `compute_template_metrics` function
+        If given, dictionary with keyword arguments for "compute_template_metrics" function
     unit_colors :  dict or None
         If given, a dictionary with unit ids as keys and colors as values
     hide_unit_selector : bool
