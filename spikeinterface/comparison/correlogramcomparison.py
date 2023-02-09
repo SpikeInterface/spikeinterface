@@ -28,7 +28,7 @@ class CorrelogramGTComparison(GroundTruthComparison):
         self.window_ms = window_ms
         self.bin_ms = bin_ms
         self.well_detected_score = well_detected_score
-        self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms, symmetrize=True)
+        self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms)
         self.correlograms = {}
         self.compute_correlograms()
 

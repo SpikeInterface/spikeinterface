@@ -69,6 +69,9 @@ def test_phase_shift():
                 assert traces2.dtype == original_traces.dtype
                 traces3 = rec3.get_traces()
                 assert traces3.dtype == original_traces.dtype
+
+                traces_slice = rec3.get_traces(channel_ids=[rec3.channel_ids[0]])
+                assert traces_slice.shape[1] == 1
                 
                 # error between full and chunked
                 error_mean = np.sqrt(np.mean((traces2 - traces3)**2))

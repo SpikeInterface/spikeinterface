@@ -25,11 +25,10 @@ class CorrelogramsCalculator(BaseWaveformExtractorExtension):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
     def _set_params(self, window_ms: float = 100.0,
-                    bin_ms: float = 5.0, symmetrize=None,
-                    method: str = "auto"):
+                    bin_ms: float = 5.0, method: str = "auto"):
 
         params = dict(window_ms=window_ms, bin_ms=bin_ms, 
-                      symmetrize=symmetrize, method=method)
+                      method=method)
 
         return params
 
@@ -146,7 +145,7 @@ def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_
 def compute_correlograms(waveform_or_sorting_extractor, 
                          load_if_exists=False,
                          window_ms: float = 100.0,
-                         bin_ms: float = 5.0, symmetrize=None,
+                         bin_ms: float = 5.0,
                          method: str = "auto"):
     """Compute auto and cross correlograms.
 
@@ -160,8 +159,6 @@ def compute_correlograms(waveform_or_sorting_extractor,
         The window in ms, by default 100.0.
     bin_ms : float, optional
         The bin size in ms, by default 5.0.
-    symmetrize : None
-        Keep for back compatibility. Always True now.
     method : str, optional
         "auto" | "numpy" | "numba". If _auto" and numba is installed, numba is used, by default "auto"
 
@@ -180,29 +177,19 @@ def compute_correlograms(waveform_or_sorting_extractor,
             ccc = waveform_or_sorting_extractor.load_extension(CorrelogramsCalculator.extension_name)
         else:
             ccc = CorrelogramsCalculator(waveform_or_sorting_extractor)
-            ccc.set_params(window_ms=window_ms, bin_ms=bin_ms,
-                           symmetrize=symmetrize, method=method)
+            ccc.set_params(window_ms=window_ms, bin_ms=bin_ms, method=method)
             ccc.run()
         ccgs, bins = ccc.get_data()
         return ccgs, bins
     else:
         return _compute_correlograms(waveform_or_sorting_extractor, window_ms=window_ms,
-                                     bin_ms=bin_ms, symmetrize=symmetrize,
-                                     method=method)
+                                     bin_ms=bin_ms, method=method)
 
 
-def _compute_correlograms(sorting, window_ms, bin_ms, symmetrize=None, method="auto"):
+def _compute_correlograms(sorting, window_ms, bin_ms, method="auto"):
     """
     Computes several cross-correlogram in one course from several clusters.
-    """
-    
-    if symmetrize is not None:
-        if symmetrize:
-            warnings.warn("symmetrize is deprecated. It will always be True soon.", DeprecationWarning, stacklevel=2)        
-        else:
-            raise ValueError('symmetrize is deprecated. It will always be True')
-        
-
+    """ 
     assert method in ("auto", "numba", "numpy")
 
     if method == "auto":
