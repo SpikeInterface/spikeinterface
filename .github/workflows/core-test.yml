@@ -38,3 +38,4 @@ jobs:
           python ./.github/build_job_summary.py report.txt >> $GITHUB_STEP_SUMMARY 
           cat $GITHUB_STEP_SUMMARY 
           rm report.txt
+        shell: bash  # Necessary for pipeline to work on windows
