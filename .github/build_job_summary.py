@@ -24,8 +24,9 @@ timing_column = [float(line.split("s")[0].rstrip()) for line in timing_info]
 short_name_column = [line.rpartition('::')[2] for line in timing_info]
 
 data_frame = pd.DataFrame(dict(test_time=timing_column, test_name=short_name_column))
-data_frame["%of_total_time"] = (100 * data_frame["test_time"] / data_frame["test_time"].sum()).round(2)
-data_frame["%cum_total_time"] = (100 *  data_frame["test_time"].cumsum() / data_frame["test_time"].sum()).round(2)
+total_test_time = data_frame["test_time"].sum()
+data_frame["%of_total_time"] = (100 * data_frame["test_time"] / total_test_time).round(2)
+data_frame["%cum_total_time"] = (100 *  data_frame["test_time"].cumsum() / total_test_time).round(2)
 
 # Build markdown string
 data_frame_to_display = data_frame[["test_name", "test_time", "%of_total_time", "%cum_total_time"]]
@@ -37,5 +38,7 @@ sys.stdout.write("\n")
 sys.stdout.write(all_lines[-1])
 sys.stdout.write("\n")
 sys.stdout.write("## Dataframe of test timing")
+sys.stdout.write("\n")
+sys.stdout.write(f"{total_test_time=}")
 sys.stdout.write("\n")
 sys.stdout.write(markdown_string)
