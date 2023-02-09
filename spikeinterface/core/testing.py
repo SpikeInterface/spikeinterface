@@ -60,7 +60,7 @@ def check_sortings_equal(SX1, SX2):
         # get_unit_ids
         ids1 = np.sort(np.array(SX1.get_unit_ids()))
         ids2 = np.sort(np.array(SX2.get_unit_ids()))
-        assert_array_equal(ids1, ids2)        
+        assert_array_equal(ids1, ids2)
         for id in ids1:
             train1 = np.sort(SX1.get_unit_spike_train(id, segment_index=segment_idx))
             train2 = np.sort(SX2.get_unit_spike_train(id, segment_index=segment_idx))

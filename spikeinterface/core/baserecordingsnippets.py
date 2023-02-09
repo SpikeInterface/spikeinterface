@@ -189,13 +189,10 @@ class BaseRecordingSnippets(BaseExtractor):
         sub_recording.set_property('group', groups, ids=None)
 
         # add probe annotations to recording
-        if len(probegroup.probes) == 1:
-            self.annotate(probe=check_json(probegroup.probes[0].annotations))
-        else:
-            probe_annotations = []
-            for probe in probegroup.probes:
-                probe_annotations.append(check_json(probe.annotations))
-            self.annotate(probes=probe_annotations)
+        probes_info = []
+        for probe in probegroup.probes:
+            probes_info.append(check_json(probe.annotations))
+        self.annotate(probes_info=probes_info)
 
         return sub_recording
 

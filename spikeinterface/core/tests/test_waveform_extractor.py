@@ -306,10 +306,17 @@ def test_recordingless():
     assert np.array_equal(we.recording.get_channel_locations(),
                           np.array(we_loaded.get_channel_locations()))
     assert we.get_num_channels() == we_loaded.get_num_channels()
+    assert all(we.recording.get_num_samples(seg) == we_loaded.get_num_samples(seg)
+               for seg in range(we_loaded.get_num_segments()))
+    assert we.recording.get_total_duration() == we_loaded.get_total_duration()
+
+    for key in we.recording.get_property_keys():
+        if key != 'contact_vector': # contact vector is saved as probe
+            np.testing.assert_array_equal(we.recording.get_property(key),
+                                          we_loaded.get_recording_property(key))
     
     probe = we_loaded.get_probe()
     probegroup = we_loaded.get_probegroup()
-    
 
     # delete original recording and rely on rec_attributes
     if platform.system() != "Windows":
@@ -478,9 +485,9 @@ def test_compute_sparsity():
 
 
 if __name__ == '__main__':
-    test_WaveformExtractor()
+    # test_WaveformExtractor()
     # test_extract_waveforms()
     # test_sparsity()
     # test_portability()
-    # test_recordingless()
+    test_recordingless()
     # test_compute_sparsity()

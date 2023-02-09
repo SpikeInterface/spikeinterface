@@ -72,7 +72,6 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
 
 _maxwell_event_dtype = np.dtype([("frame", "int64"), ("state", "int8"), ("time", "float64")])
 
-
 class MaxwellEventExtractor(BaseEvent):
     """
     Class for reading TTL events from Maxwell files.

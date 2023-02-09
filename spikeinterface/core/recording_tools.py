@@ -199,7 +199,7 @@ def get_chunk_with_margin(rec_segment, start_frame, end_frame,
     return traces_chunk, left_margin, right_margin
 
 
-def order_channels_by_depth(recording, channel_ids=None):
+def order_channels_by_depth(recording, channel_ids=None, dimensions=('x', 'y')):
     """
     Order channels by depth, by first ordering the x-axis, and then the y-axis.
 
@@ -209,19 +209,38 @@ def order_channels_by_depth(recording, channel_ids=None):
         The input recording
     channel_ids : list/array or None
         If given, a subset of channels to order locations for
+    dimensions : str or tuple
+        If str, it needs to be 'x', 'y', 'z'.
+        If tuple, it sorts the locations in two dimensions using lexsort. 
+        This approach is recommended since there is less ambiguity, by default ('x', 'y')
 
     Returns
     -------
-    order : np.array
+    order_f : np.array
         Array with sorted indices
+    order_r : np.array
+        Array with indices to revert sorting
     """
     locations = recording.get_channel_locations()
+    ndim = locations.shape[1]
     channel_inds = recording.ids_to_indices(channel_ids)
     locations = locations[channel_inds, :]
 
-    order = np.lexsort((locations[:, 0], locations[:, 1]))
+    if isinstance(dimensions, str):
+        dim = ['x', 'y', 'z'].index(dimensions)
+        assert dim < ndim, "Invalid dimensions!"
+        order_f = np.argsort(locations[:, dim])
+    else:
+        assert isinstance(dimensions, tuple), "dimensions can be a str or a tuple"
+        locations_to_sort = ()
+        for dim in dimensions:
+            dim = ['x', 'y', 'z'].index(dim)
+            assert dim < ndim, "Invalid dimensions!"
+            locations_to_sort += (locations[:, dim], )
+        order_f = np.lexsort(locations_to_sort)
+    order_r = np.argsort(order_f)
 
-    return order
+    return order_f, order_r
 
 
 def check_probe_do_not_overlap(probes):
