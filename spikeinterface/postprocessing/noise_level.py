@@ -50,8 +50,7 @@ def compute_noise_levels(waveform_extractor, load_if_exists=False, **params):
     retrieve the noise levels directly ine the WaveformExtractor.
 
     Note that the noise levels can be scaled or not, depending on the `return_scaled` parameter 
-    of the `WaveformExtractor.
-
+    of the `WaveformExtractor`.
     
     Parameters
     ----------

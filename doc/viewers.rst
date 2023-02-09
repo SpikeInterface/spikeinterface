@@ -16,7 +16,7 @@ spikeinterface.widgets
 
 The easiest way to visualize :code:`spikeinterface` objects is to use the :code:`widgets` module for plotting.
 You can find an extensive description in the module documentation and :ref:`modulewidgets`
-many examples in this tutorial :ref:`sphx_glr_modules_widgets`.
+many examples in this tutorial :ref:`sphx_glr_modules_gallery_widgets`.
 
 spikeinterface-gui
 ------------------
