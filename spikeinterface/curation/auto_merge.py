@@ -37,17 +37,19 @@ def get_potential_auto_merge(
 
 
     The merges are proposed when the following criteria are met:
-      * STEP 1: enough spikes are found in each units for computing the correlogram (`minimum_spikes`)
-      * STEP 2: each unit is not contaminated (by checking auto-correlogram - `contamination_threshold`)
-      * STEP 3: estimated unit locations are close enough (`maximum_distance_um`)
-      * STEP 4: the cross-correlograms of the two units are similar to each auto-corrleogram (`corr_diff_thresh`)
-      * STEP 5: the templates of the two units are similar (`template_diff_thresh`)
-      * STEP 6: the unit "quality score" is increased after the merge.
+
+        * STEP 1: enough spikes are found in each units for computing the correlogram (`minimum_spikes`)
+        * STEP 2: each unit is not contaminated (by checking auto-correlogram - `contamination_threshold`)
+        * STEP 3: estimated unit locations are close enough (`maximum_distance_um`)
+        * STEP 4: the cross-correlograms of the two units are similar to each auto-corrleogram (`corr_diff_thresh`)
+        * STEP 5: the templates of the two units are similar (`template_diff_thresh`)
+        * STEP 6: the unit "quality score" is increased after the merge.
 
     The "quality score" factors in the increase in firing rate (**f**) due to the merge and a possible increase in 
     contamination (**C**), wheighted by a factor **k** (`firing_contamination_balance`).
 
     .. math::
+
         Q = f(1 - (k + 1)C)
 
 
@@ -95,7 +97,7 @@ def get_potential_auto_merge(
         which steps to run (gives flexibility to running just some steps)
         If None all steps are done.
         Pontential steps: 'min_spikes', 'remove_contaminated', 'unit_positions', 'correlogram', 'template_similarity',
-                          'check_increase_score'. Please check steps explanations above!
+        'check_increase_score'. Please check steps explanations above!
         
     Returns
     -------
@@ -440,7 +442,7 @@ def check_improve_contaminations_score(we, pair_mask, contaminations, firing_con
 
         # make a merged sorting and tale one unit (unit_id1 is used)
         unit_id1, unit_id2 = sorting.unit_ids[ind1], sorting.unit_ids[ind2]
-        sorting_merged = MergeUnitsSorting(sorting, [unit_id1, unit_id2], new_unit_id=unit_id1).select_units([unit_id1])
+        sorting_merged = MergeUnitsSorting(sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1]).select_units([unit_id1])
         # make a lazy fake WaveformExtractor to compute contamination and firing rate
         we_new = MockWaveformExtractor(recording, sorting_merged)
 

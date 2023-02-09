@@ -24,7 +24,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
     Contrary to older verion this reader is folder based.
     So if the folder contain several streams ('imec0.ap' 'nidq' 'imec0.lf')
-    then it has to be specified with `stream_id`.
+    then it has to be specified with 'stream_id'.
 
     Parameters
     ----------

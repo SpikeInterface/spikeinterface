@@ -24,12 +24,12 @@ def test_split_merge():
     # %%
     split_index = [v[4]%2 for v in spikestimes] #spit class 4 in even and odds
     splited = SplitUnitSorting(parent_sort, split_unit_id=4, indices_list=split_index,new_unit_ids= [8, 10],properties_policy='keep')
-    merged = MergeUnitsSorting(splited, new_unit_id=4, units_to_merge=[8, 10],properties_policy='keep')
+    merged = MergeUnitsSorting(splited, units_to_merge=[[8, 10]], new_unit_ids=[4],  properties_policy='keep')
     for i in range(len(spikestimes)):
         assert all(parent_sort.get_unit_spike_train(4,segment_index=i)==merged.get_unit_spike_train(4,segment_index=i))==True, 'splir or merge error'
     assert parent_sort.get_unit_property(4,'someprop')==merged.get_unit_property(4,'someprop'), 'property wasn''t kept'
 
-    merged_with_dups = MergeUnitsSorting(parent_sort, new_unit_id=8, units_to_merge=[0, 1], properties_policy='remove', delta_time_ms=0.5)
+    merged_with_dups = MergeUnitsSorting(parent_sort, new_unit_ids=[8], units_to_merge=[[0, 1]], properties_policy='remove', delta_time_ms=0.5)
     for i in range(len(spikestimes)):
         assert all(merged_with_dups.get_unit_spike_train(8,segment_index=i)==parent_sort.get_unit_spike_train(1,segment_index=i)), 'error removing duplications'
     assert np.isnan(merged_with_dups.get_unit_property(8,'someprop')), 'error creating empty property'

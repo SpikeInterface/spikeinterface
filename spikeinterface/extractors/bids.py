@@ -14,6 +14,7 @@ def read_bids(folder_path):
     """Load a BIDS folder of data into extractor objects.
 
     The following files are considered:
+
       * _channels.tsv
       * _contacts.tsv
       * _ephys.nwb

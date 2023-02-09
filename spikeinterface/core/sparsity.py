@@ -12,6 +12,7 @@ _sparsity_doc = """
                        to specify the SNR threshold.
         * "by_property": sparsity is given by a property of the recording and sorting(e.g. 'group').
                          Use the 'by_property' argument to specify the property name.
+
     peak_sign: str
         Sign of the template to compute best channels ('neg', 'pos', 'both')
     num_channels: int
@@ -32,6 +33,7 @@ class ChannelSparsity:
     Internally, sparsity is stored as a boolean mask.
 
     The ChannelSparsity object can also provide other sparsity representations:
+
         * ChannelSparsity.unit_id_to_channel_ids : unit_id to channel_ids
         * ChannelSparsity.unit_id_to_channel_indices : unit_id channel_inds
 
@@ -41,22 +43,6 @@ class ChannelSparsity:
     But can be also constructed from a dictionary:
     >>> sparsity = ChannelSparsity.from_unit_id_to_channel_ids(unit_id_to_channel_ids, unit_ids, channel_ids)
 
-    The class can also be used to construct/estimate the sparsity from a Waveformextractor
-    with several methods::
-
-    - Using the N best channels (largest template amplitude):
-    >>> sparsity = ChannelSparsity.from_best_channels(we, num_channels, peak_sign='neg')
-
-    - Using a neighborhood by radius:
-    >>> sparsity = ChannelSparsity.from_radius(we, radius_um, peak_sign='neg')
-
-    - Using a SNR threshold:
-    >>> sparsity = ChannelSparsity.from_threshold(we, threshold, peak_sign='neg')
-
-    - Using a recording/sorting property (e.g. 'group'):
-    >>> sparsity = ChannelSparsity.from_property(we, by_property="group")
-
-
     Parameters
     ----------
     mask: np.array of bool
@@ -65,6 +51,25 @@ class ChannelSparsity:
         Unit ids vector or list
     channel_ids: list or array
         Channel ids vector or list
+
+    Examples
+    --------
+    
+    The class can also be used to construct/estimate the sparsity from a Waveformextractor
+    with several methods:
+
+    Using the N best channels (largest template amplitude):
+    >>> sparsity = ChannelSparsity.from_best_channels(we, num_channels, peak_sign='neg')
+
+    Using a neighborhood by radius:
+    >>> sparsity = ChannelSparsity.from_radius(we, radius_um, peak_sign='neg')
+
+    Using a SNR threshold:
+    >>> sparsity = ChannelSparsity.from_threshold(we, threshold, peak_sign='neg')
+
+    Using a recording/sorting property (e.g. 'group'):
+    >>> sparsity = ChannelSparsity.from_property(we, by_property="group")
+
     """
     def __init__(self, mask, unit_ids, channel_ids):
         self.unit_ids = np.asarray(unit_ids)
@@ -233,6 +238,7 @@ def compute_sparsity(
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor
+
 {}
 
     Returns
