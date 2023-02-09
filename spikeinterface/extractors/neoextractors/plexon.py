@@ -48,8 +48,6 @@ class PlexonSortingExtractor(NeoBaseSortingExtractor):
     ----------
     file_path: str
         The file path to load the recordings from.
-    sampling_frequency: float
-        The sampling frequency for the spiking channels.
     """
 
     mode = "file"
@@ -57,8 +55,12 @@ class PlexonSortingExtractor(NeoBaseSortingExtractor):
     handle_spike_frame_directly = False
     name = "plexon"
 
-    def __init__(self, file_path, sampling_frequency=None):
+    def __init__(self, file_path):
+        from neo.rawio import PlexonRawIO
         neo_kwargs = self.map_to_neo_kwargs(file_path)
+        neo_reader = PlexonRawIO(**neo_kwargs)
+        neo_reader.parse_header()
+        sampling_frequency = neo_reader._global_ssampling_rate
         NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency,
                                          **neo_kwargs)
         self._kwargs.update({"file_path": str(file_path)})
