@@ -33,8 +33,10 @@ jobs:
         run: | 
           pip install pandas
           pip install tabulate
-          python ./.github/build_job_summary.py report.txt  # Produces a file named report.md with timings in markdown
           echo "# Times in ${{matrix.os}}" >> $GITHUB_STEP_SUMMARY 
+          # Produces a file named report.md with timings in markdown and also outputs summary to standard output
+          python ./.github/build_job_summary.py report.txt >> $GITHUB_STEP_SUMMARY 
           cat report.md >> $GITHUB_STEP_SUMMARY 
+          cat report.md
           rm report.txt
           rm report.md

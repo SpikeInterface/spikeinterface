@@ -30,3 +30,6 @@ data_frame["%cum_total_time"] = (100 *  data_frame["test_time"].cumsum() / data_
 # Display
 data_frame_to_display = data_frame[["test_name", "test_time", "%of_total_time", "%cum_total_time"]]
 data_frame_to_display.to_markdown(file_path_out)
+
+# Output sort test summary info
+sys.stdout.write(all_lines[-1])
