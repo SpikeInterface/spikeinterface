@@ -5,16 +5,17 @@ from copy import deepcopy
 
 class MergeUnitsSorting(BaseSorting):
     """
-    Class that handles several merge of units from a Sorting object based on a list of list of unit_ids.
+    Class that handles several merges of units from a Sorting object based on a list of list of unit_ids.
 
     Parameters
     ----------
     parent_sorting: Recording
         The sorting object
-    units_to_merge: list of list
-        A list of list for evry merge group.
+    units_to_merge: list of lists
+        A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
+        but it can also have more (merge multiple units at once).
     new_unit_ids: None or list
-        A new unit_id for merge group
+        A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`
     properties_policy: str ('keep', 'remove')
         Policy used to propagate propierties. If 'keep' the properties will be pass to the new units
          (if the units_to_merge have the same value). If 'remove' the new units will have an empty 
@@ -49,14 +50,23 @@ class MergeUnitsSorting(BaseSorting):
             dtype = parents_unit_ids.dtype
             #select new_units_ids grater that the max id, event greater than the numerical str ids 
             if np.issubdtype(dtype, np.character):
-                new_unit_ids = [ f'merge{i}' for i in range(num_merge)]
-                if np.any(np.in1d(new_unit_ids, keep_unit_ids)):
-                    raise VlueError('Unable to find new_unit_ids because it is a string and parents already contain merges')
+                # dtype str
+                if all(p.isdigit() for p in parents_unit_ids):
+                    # All str are digit : we can generate a max
+                    m = max(int(p) for p in parents_unit_ids) + 1
+                    new_unit_ids = [str(m + i ) for i in range(num_merge)]
+                else:
+                    # we cannot automatically find new names
+                    new_unit_ids = [ f'merge{i}' for i in range(num_merge)]
+                    if np.any(np.in1d(new_unit_ids, keep_unit_ids)):
+                        raise ValueError("Unable to find 'new_unit_ids' because it is a string and parents "
+                                         "already contain merges. Pass a list of 'new_unit_ids' as an argument.")
             else:
+                # dtype int
                 new_unit_ids = list(max(parents_unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
         else:
             if np.any(np.in1d(new_unit_ids, keep_unit_ids)):
-                raise VlueError('new_unit_ids are already exesting in the sorting.unit_ids')
+                raise ValueError("'new_unit_ids' are already exesting in the sorting.unit_ids. Provide new ones")
         
         assert len(new_unit_ids) == num_merge, 'new_unit_ids must have the same size as units_to_merge'
 
@@ -108,8 +118,10 @@ class MergeUnitsSorting(BaseSorting):
 
         if parent_sorting.has_recording():
             self.register_recording(parent_sorting._recording)
-
-        self._kwargs = dict(parent_sorting=parent_sorting.to_dict(), units_to_merge=list(units_to_merge),
+        
+        # make it jsonable
+        units_to_merge = [list(e) for e in units_to_merge]
+        self._kwargs = dict(parent_sorting=parent_sorting.to_dict(), units_to_merge=units_to_merge,
                             new_unit_id=new_unit_ids, properties_policy=properties_policy, delta_time_ms=delta_time_ms)
 
 

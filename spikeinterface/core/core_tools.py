@@ -100,6 +100,8 @@ def check_json(d):
             dc[k] = int(v)
         elif isinstance(v, np.floating):
             dc[k] = float(v)
+        elif isinstance(v, bytes):
+            dc[k] = v.decode()
         elif isinstance(v, datetime.datetime):
             dc[k] = v.isoformat()
         elif isinstance(v, (np.ndarray, list)):
