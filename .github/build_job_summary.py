@@ -24,21 +24,23 @@ last_index = next(index for index, line in enumerate(all_lines[start_index:]) if
 
 timing_info = all_lines[start_index:last_index]
 timing_column = [float(line.split("s")[0].rstrip()) for line in timing_info]
-short_name_column = [line.rpartition('::')[2] for line in timing_info]
+type = [line.split("s")[1].rstrip() for line in timing_info]
+short_name = [line.rpartition('::')[2] for line in timing_info]
+long_name = [line.rpartition('/')[2] for line in timing_info]
 
-data_frame = pd.DataFrame(dict(test_time=timing_column, test_name=short_name_column))
+data_frame = pd.DataFrame(dict(test_time=timing_column, test_name=short_name, long_name=long_name, type=type))
 total_test_time = data_frame["test_time"].sum()
 data_frame["%of_total_time"] = (100 * data_frame["test_time"] / total_test_time).round(2)
 data_frame["%cum_total_time"] = (100 *  data_frame["test_time"].cumsum() / total_test_time).round(2)
 
 # Build markdown string
-data_frame_to_display = data_frame[["test_name", "test_time", "%of_total_time", "%cum_total_time"]]
+data_frame_to_display = data_frame[["test_name", "type", "test_time", "%of_total_time", "%cum_total_time", "long_name"]]
 
 data_frame_header_markdown = data_frame_to_display.head(10).to_markdown()
 data_frame_markdown = data_frame_to_display.to_markdown()
     
 # Build github file
-sys.stdout.write("## Pytest summary of tests")
+sys.stdout.write("## Pytest summary")
 sys.stdout.write("\n \n")
 sys.stdout.write(all_lines[-1])
 sys.stdout.write("\n \n")
