@@ -5,12 +5,14 @@ import scipy.stats
 from spikeinterface import NumpyRecording, get_random_data_chunks
 from probeinterface import generate_linear_probe
 
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import detect_bad_channels, highpass_filter
 
 try:
-    import spikeglx
-    import neurodsp.voltage as voltage
+    # WARNING : this is not this package https://pypi.org/project/neurodsp/
+    # BUT this one https://github.com/int-brain-lab/ibl-neuropixel 
+    # pip install ibl-neuropixel
+    import neurodsp.voltage
     HAVE_NPIX = True
 except:  # Catch relevant exception
     HAVE_NPIX = False
@@ -115,7 +117,7 @@ def test_remove_bad_channels_ibl(num_channels):
     for i, random_chunk in enumerate(random_data):
         traces_uV = random_chunk.T
         traces_V = traces_uV * 1e-6
-        channel_flags, _ = voltage.detect_bad_channels(traces_V,
+        channel_flags, _ = neurodsp.voltage.detect_bad_channels(traces_V,
                                                        recording.get_sampling_frequency(),
                                                        psd_hf_threshold=psd_cutoff)
         channel_flags_ibl[:, i] = channel_flags
@@ -195,5 +197,5 @@ def add_dead_channels(recording, is_dead):
 
 
 if __name__ == '__main__':
-    test_remove_bad_channels_std()
+    test_remove_bad_channels_std_mad()
     test_remove_bad_channels_ibl(num_channels=384)

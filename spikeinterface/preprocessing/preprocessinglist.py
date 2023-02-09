@@ -24,7 +24,7 @@ from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate
 from .highpass_spatial_filter import HighpassSpatialFilterRecording, highpass_spatial_filter
 from .interpolate_bad_channels import InterpolateBadChannelsRecording, interpolate_bad_channels
 
-from .remove_bad_channels import detect_bad_channels
+
 
 preprocessers_full_list = [
     # filter stuff

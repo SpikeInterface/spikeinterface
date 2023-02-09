@@ -16,8 +16,9 @@ def detect_bad_channels(recording,
                         n_neighbors=11,
                         nyquist_threshold=0.8,
                         direction='y',
-                        n_seconds_for_random_chunks=0.3,
-                        n_random_chunks=10,
+                        chunk_duration_s=0.3,
+                        num_random_chunks=10,
+                        welch_window_ms=10.,
                         highpass_filter_cutoff=300,
                         seed=None):
     """
@@ -69,10 +70,12 @@ def detect_bad_channels(recording,
         'x', 'y', 'z', the depth dimension, by default 'y'
     highpass_filter_cutoff : float
         If the recording is not filtered, the cutoff frequency of the highpass filter, by default 300
-    n_seconds_for_random_chunks : float
+    chunk_duration_s : float
         Duration of each chunk, by default 0.3
-    n_random_chunks : int
+    num_random_chunks : int
         Number of random chunks, by default 10
+    welch_window_ms : float
+        Window size for the scipy.signal.welch that will be converted to nperseg, by default 10ms
     seed : int or None
         The random seed to extract chunks, by default None
 
@@ -104,8 +107,8 @@ def detect_bad_channels(recording,
 
     # Get random subset of data to estimate from
     random_chunk_kwargs = dict(
-        num_chunks_per_segment=n_random_chunks,
-        chunk_size=int(n_seconds_for_random_chunks * recording.sampling_frequency),
+        num_chunks_per_segment=num_random_chunks,
+        chunk_size=int(chunk_duration_s * recording.sampling_frequency),
         seed=seed
     )
 
@@ -167,7 +170,8 @@ def detect_bad_channels(recording,
                                                            noisy_channel_thr=noisy_channel_threshold,
                                                            outside_channel_thr=outside_channel_threshold,
                                                            n_neighbors=n_neighbors,
-                                                           nyquist_threshold=nyquist_threshold)
+                                                           nyquist_threshold=nyquist_threshold,
+                                                           welch_window_ms=welch_window_ms)
 
         # Take the mode of the chunk estimates as final result. Convert to binary good / bad channel output.
         bad_channel_labels, _ = scipy.stats.mode(channel_labels, axis=1, keepdims=False)
@@ -194,7 +198,8 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold,
                             noisy_channel_thr=1.,
                             outside_channel_thr=-0.75,
                             n_neighbors=11,
-                            nyquist_threshold=0.8):
+                            nyquist_threshold=0.8, 
+                            welch_window_ms=0.3):
     """
     Bad channels detection for Neuropixel probes developed by IBL
 
@@ -218,7 +223,8 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold,
         Number of neighbors to compute median fitler, by default 11
     nyquist_threshold : float, optional
         Threshold on Nyquist frequency to calculate HF noise band, by default 0.8
-
+    welch_window_ms: float
+        Window size for the scipy.signal.welch that will be converted to nperseg, by default 10ms
     Returns
     -------
     1d array
@@ -226,7 +232,8 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold,
     """
     _, nc = raw.shape
     raw = raw - np.mean(raw, axis=0)[np.newaxis, :]
-    fscale, psd = scipy.signal.welch(raw, fs=fs, axis=0)
+    nperseg = int(welch_window_ms * fs / 1000)
+    fscale, psd = scipy.signal.welch(raw, fs=fs, axis=0, window='hann', nperseg=nperseg)
 
     # compute similarities
     ref = np.median(raw, axis=1)
