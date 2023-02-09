@@ -6,6 +6,7 @@ from .filter import highpass_filter
 from ..core import get_random_data_chunks, order_channels_by_depth
 
 
+
 def detect_bad_channels(recording,
                         method="coherence+psd",
                         std_mad_threshold=5,
@@ -83,16 +84,16 @@ def detect_bad_channels(recording,
     -------
     bad_channel_ids : np.array
         The identified bad channel ids
-    bad_channel_labels : np.array
+    channel_labels : np.array of str
         Channels labels depending on the method:
-          * (coeherence+psd) 0: good, 1: dead, 2: noisy, 3: outside of the brain
-          * (std, mad) 0: good, 1 bad
+          * (coeherence+psd) good/dead/noise/out
+          * (std, mad) good/noise
 
     Examples
     --------
 
     >>> import spikeinterface.preprocessing as spre
-    >>> bad_channel_ids, bad_channel_labels = spre.detect_bad_channels(recording, method="coherence+psd")
+    >>> bad_channel_ids, channel_labels = spre.detect_bad_channels(recording, method="coherence+psd")
     >>> # remove bad channels
     >>> recording_clean = recording.remove_channels(bad_channel_ids)
 
@@ -128,15 +129,19 @@ def detect_bad_channels(recording,
 
     random_data = get_random_data_chunks(recording_hp, **random_chunk_kwargs)
 
+    channel_labels = np.zeros(recording.get_num_channels(), dtype='U5')
+    channel_labels[:] = 'good'
+
     if method in ("std", "mad"):
         if method == "std":
             deviations = np.std(random_data, axis=0)
         else:
             deviations = scipy.stats.median_abs_deviation(random_data, axis=0)
         thresh = std_mad_threshold * np.median(deviations)
-        bad_channel_labels = deviations > thresh
-        bad_channel_ids = recording.channel_ids[bad_channel_labels]
-        bad_channel_labels = bad_channel_labels.astype(np.int8)
+        mask = deviations > thresh
+        bad_channel_ids = recording.channel_ids[mask]
+        channel_labels[mask] = 'noise'
+
     elif method == "coherence+psd":
         # some checks
         assert recording.has_scaled(), \
@@ -159,34 +164,38 @@ def detect_bad_channels(recording,
             order_f, order_r = order_channels_by_depth(recording=recording, dimensions=('x', 'y'))
 
         # Create empty channel labels and fill with bad-channel detection estimate for each chunk
-        channel_labels = np.zeros((recording.get_num_channels(), len(random_data)), dtype=np.int8)
+        chunk_channel_labels = np.zeros((recording.get_num_channels(), len(random_data)), dtype=np.int8)
 
         for i, random_chunk in enumerate(random_data):
             random_chunk_sorted = random_chunk[order_f] if order_f is not None else random_chunk
-            channel_labels[:, i] = detect_bad_channels_ibl(raw=random_chunk_sorted,
-                                                           fs=recording.sampling_frequency,
-                                                           psd_hf_threshold=psd_hf_threshold,
-                                                           dead_channel_thr=dead_channel_threshold,
-                                                           noisy_channel_thr=noisy_channel_threshold,
-                                                           outside_channel_thr=outside_channel_threshold,
-                                                           n_neighbors=n_neighbors,
-                                                           nyquist_threshold=nyquist_threshold,
-                                                           welch_window_ms=welch_window_ms)
+            chunk_channel_labels[:, i] = detect_bad_channels_ibl(raw=random_chunk_sorted,
+                                                                 fs=recording.sampling_frequency,
+                                                                 psd_hf_threshold=psd_hf_threshold,
+                                                                 dead_channel_thr=dead_channel_threshold,
+                                                                 noisy_channel_thr=noisy_channel_threshold,
+                                                                 outside_channel_thr=outside_channel_threshold,
+                                                                 n_neighbors=n_neighbors,
+                                                                 nyquist_threshold=nyquist_threshold,
+                                                                 welch_window_ms=welch_window_ms)
 
         # Take the mode of the chunk estimates as final result. Convert to binary good / bad channel output.
-        bad_channel_labels, _ = scipy.stats.mode(channel_labels, axis=1, keepdims=False)
+        mode_channel_labels, _ = scipy.stats.mode(chunk_channel_labels, axis=1, keepdims=False)
         if order_r is not None:
-            bad_channel_labels = bad_channel_labels[order_r]
+            mode_channel_labels = mode_channel_labels[order_r]
 
-        bad_inds, = np.where(bad_channel_labels != 0)
+        bad_inds, = np.where(mode_channel_labels != 0)
         bad_channel_ids = recording.channel_ids[bad_inds]
+
+        channel_labels[mode_channel_labels == 1] = 'dead'
+        channel_labels[mode_channel_labels == 2] = 'noise'
+        channel_labels[mode_channel_labels == 3] = 'out'
 
         if bad_channel_ids.size > recording.get_num_channels() / 3:
             warnings.warn("Over 1/3 of channels are detected as bad. In the precense of a high"
                           "number of dead / noisy channels, bad channel detection may fail "
                           "(erroneously label good channels as dead).")
 
-    return bad_channel_ids, bad_channel_labels
+    return bad_channel_ids, channel_labels
 
 
 # ----------------------------------------------------------------------------------------------
