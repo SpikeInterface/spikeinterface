@@ -27,13 +27,14 @@ jobs:
           pip install -e .
       - name: Test core with pytest
         run: |
-          echo "testing_report_file=test_output.txt" >> $GITHUB_ENV
-          pytest -vv spikeinterface/core --durations=0 --durations-min=0.001 > ${{ env.testing_report_file}}
-          cat ${{ env.testing_report_file}}
-      - name: produce test summary
+          pytest -vv spikeinterface/core --durations=0 --durations-min=0.001 > report.txt
+          cat report.txt
+      - name: Build test summary
         run: | 
           pip install pandas
           pip install tabulate
-          python ./.github/build_job_summary.py ${{ env.testing_report_file}}
+          python ./.github/build_job_summary.py report.txt  # Produces a file named report.md with timings in markdown
           echo "# Times in ${{matrix.os}}" >> $GITHUB_STEP_SUMMARY 
-          cat test_output.md >> $GITHUB_STEP_SUMMARY 
+          cat report.md >> $GITHUB_STEP_SUMMARY 
+          rm report.txt
+          rm report.md
