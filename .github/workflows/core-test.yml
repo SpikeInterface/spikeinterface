@@ -27,12 +27,12 @@ jobs:
           pip install -e .
       - name: Test core with pytest
         run: |
-          pytest -vv spikeinterface/core --durations=0 --durations-min=0.001 > "test_output.txt"
+          pytest -vv spikeinterface/core --durations=0 --durations-min=0.001 > test_output.txt
           cat test_output.txt
       - name: produce test summary
         run: | 
           pip install pandas
           pip install tabulate
-          python ./.github/build_job_summary.py
-          echo "# Times in {{matrix.os}}" >> $GITHUB_STEP_SUMMARY 
-          cat test_markdown.md >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py test_output.txt
+          echo "# Times in ${{matrix.os}}" >> $GITHUB_STEP_SUMMARY 
+          cat test_output.md >> $GITHUB_STEP_SUMMARY 

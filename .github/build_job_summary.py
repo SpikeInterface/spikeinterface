@@ -1,8 +1,11 @@
 from pathlib import Path
 import pandas as pd
+import sys
 
-file_path = Path("test_output.txt")
-assert file_path.is_file(), "file not found"
+
+file_path = Path(sys.argv[1])
+assert file_path.is_file(), "Input file not found"
+file_path_out = Path(file_path).with_suffix(".md")
 
 all_text = file_path.read_text()
 all_lines = all_text.splitlines()
@@ -20,7 +23,7 @@ timing_info = all_lines[start_index:last_index]
 timing_column = [float(line.split("s")[0].rstrip()) for line in timing_info]
 short_name_column = [line.rpartition('::')[2] for line in timing_info]
 
-data_frame = pd.DataFrame(dict(time=timing_column, test_name=short_name_column))
-data_frame["%time"] = 100 * data_frame["time"] / data_frame["time"].sum()
-data_frame["%cum_total_time"] = 100 *  data_frame["time"].cumsum() / data_frame["time"].sum()
-data_frame[["time", "test_name", "%time", "%cum_total_time"]].to_markdown("test_markdown.md")
+data_frame = pd.DataFrame(dict(test_time=timing_column, test_name=short_name_column))
+data_frame["%of_total_time"] = 100 * data_frame["test_time"] / data_frame["test_time"].sum()
+data_frame["%cum_total_time"] = 100 *  data_frame["test_time"].cumsum() / data_frame["test_time"].sum()
+data_frame[["test_time", "test_name", "%of_total_time", "%cum_total_time"]].to_markdown(file_path_out)
