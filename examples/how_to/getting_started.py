@@ -3,8 +3,8 @@ Getting started tutorial
 ========================
 
 In this introductory example, you will see how to use the SpikeInterface to perform a full electrophysiology analysis.
-We will first create some simulated data, and we will then perform some pre-processing, run a couple of spike sorting
-algorithms, inspect and validate the results, export to Phy, and compare spike sorters.
+We will download simulated dataset, and we will then perform some pre-processing, run a spike sorting
+algorithm, inspect and validate the results, and export the results.
 
 """
 
@@ -20,17 +20,20 @@ import spikeinterface
 # We need to import one by one different submodules separately (preferred).
 # There several modules:
 #
-# - :code:`extractors` : file IO
-# - :code:`preprocessing` : preprocessing 
-# - :code:`sorters` : Python wrappers of spike sorters
-# - :code:`postprocessing` : postprocessing
-# - :code:`qualitymetrics` : quality metrics on units found by sorter 
-# - :code:`comparison` : comparison of spike sorting output
-# - :code:`widgets` : visualization
+# - `extractors` : file IO
+# - `preprocessing` : preprocessing 
+# - `sorters` : Python wrappers of spike sorters
+# - `postprocessing` : postprocessing
+# - `qualitymetrics` : quality metrics on units found by sorter 
+# - `curation` : automatic curation of spike sorting output
+# - `comparison` : comparison of spike sorting output
+# - `widgets` : visualization
 
 import spikeinterface as si  # import core only
 import spikeinterface.extractors as se
+import spikeinterface.preprocessing as spre
 import spikeinterface.sorters as ss
+import spikeinterface.postprocessing as spost
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
 
@@ -39,16 +42,16 @@ import spikeinterface.widgets as sw
 #  this internally import core+extractors+preprocessing+sorters+postprocessing+
 #  qualitymetrics+comparison+widgets+exporters
 #
-# This is useful for notebooks but this is a more heavy import because internally many more dependency
+# This is useful for notebooks, but it is a heavier import because internally many more dependencies
 # are imported (scipy/sklearn/networkx/matplotlib/h5py...)
 
 import spikeinterface.full as si
 
 ##############################################################################
 # First, let's download a simulated dataset from the
-# 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data' repo
+# https://gin.g-node.org/NeuralEnsemble/ephy_testing_data repo
 #
-# Then we can open it. Note that `MEArec <https://mearec.readthedocs.io>`_ simulated file
+# Then we can open it. Note that [MEArec](https://mearec.readthedocs.io>) simulated file
 # contains both "recording" and a "sorting" object.
 
 local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
@@ -57,19 +60,19 @@ print(recording)
 print(sorting_true)
 
 ##############################################################################
-# :code:`recording` is a :py:class:`~spikeinterface.core.BaseRecording` object, which extracts information about
+# `recording` is a `BaseRecording` object, which extracts information about
 # channel ids,  channel locations (if present), the sampling frequency of the recording, and the extracellular
-# traces. :code:`sorting_true` is a :py:class:`~spikeinterface.core.BaseSorting` object, which contains information
+# traces. `sorting_true` is a :`BaseSorting` object, which contains information
 # about spike-sorting related information,  including unit ids, spike trains, etc. Since the data are simulated,
-# :code:`sorting_true` has ground-truth information of the spiking activity of each unit.
+# `sorting_true` has ground-truth information of the spiking activity of each unit.
 #
-# Let's use the :py:mod:`spikeinterface.widgets` module to visualize the traces and the raster plots.
+# Let's use the `spikeinterface.widgets` module to visualize the traces and the raster plots.
 
 w_ts = sw.plot_timeseries(recording, time_range=(0, 5))
 w_rs = sw.plot_rasters(sorting_true, time_range=(0, 5))
 
 ##############################################################################
-# This is how you retrieve info from a :py:class:`~spikeinterface.core.BaseRecording`...
+# This is how you retrieve info from a `BaseRecording`...
 
 channel_ids = recording.get_channel_ids()
 fs = recording.get_sampling_frequency()
@@ -82,7 +85,7 @@ print('Number of channels:', num_chan)
 print('Number of segments:', num_seg)
 
 ##############################################################################
-# ...and a :py:class:`~spikeinterface.core.BaseSorting`
+# ...and a `BaseSorting`
 
 num_seg = recording.get_num_segments()
 unit_ids = sorting_true.get_unit_ids()
@@ -93,20 +96,20 @@ print('Unit ids:', unit_ids)
 print('Spike train of first unit:', spike_train)
 
 ##################################################################
-# SpikeInterface internally uses the :probeinterface:`ProbeInterface <>` to handle :py:class:`~probeinterface.Probe` and
-# :py:class:`~probeinterface.ProbeGroup`. So any probe in the probeinterface collections can be download and set to a
-# Recording object. In this case, the MEArec dataset already handles a Probe and we don't need to set it.
+# SpikeInterface internally uses the [`ProbeInterface`](https://probeinterface.readthedocs.io/en/main/) to handle `probeinterface.Probe` and
+# `probeinterface.ProbeGroup`. So any probe in the probeinterface collections can be downloaded and set to a
+# `Recording` object. In this case, the MEArec dataset already handles a `Probe` and we don't need to set it *manually*.
 
 probe = recording.get_probe()
 print(probe)
 
 from probeinterface.plotting import plot_probe
 
-plot_probe(probe)
+_ = plot_probe(probe)
 
 ##############################################################################
-# Using the :py:mod:`spikeinterface.preprocessing`, you can perform preprocessing on the recordings.
-# Each pre-processing function also returns a :py:class:`~spikeinterface.core.BaseRecording`,
+# Using the :`spikeinterface.preprocessing`, you can perform preprocessing on the recordings.
+# Each pre-processing function also returns a `BaseRecording`,
 # which makes it easy to build pipelines. Here, we filter the recording and apply common median reference (CMR).
 # All these preprocessing steps are "lazy". The computation is done on demand when we call
 # `recording.get_traces(...)` or when we save the object to disk.
@@ -122,7 +125,7 @@ recording_preprocessed = recording_cmr.save(format='binary')
 print(recording_preprocessed)
 
 ##############################################################################
-# Now you are ready to spike sort using the :py:mod:`spikeinterface.sorters` module!
+# Now you are ready to spike sort using the `spikeinterface.sorters` module!
 # Let's first check which sorters are implemented and which are installed
 
 print('Available sorters', ss.available_sorters())
@@ -200,6 +203,7 @@ export_to_phy(we_TDC, './phy_folder_for_TDC',
 ##############################################################################
 # Then you can run the template-gui with: :code:`phy template-gui phy/params.py`
 # and manually curate the results.
+
 
 
 ##############################################################################
