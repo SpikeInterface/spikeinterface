@@ -17,7 +17,6 @@ from .clip import (
     ClipRecording, clip)
 from .common_reference import CommonReferenceRecording, common_reference
 from .remove_artifacts import RemoveArtifactsRecording, remove_artifacts
-from .remove_bad_channels import RemoveBadChannelsRecording, remove_bad_channels
 from .resample import ResampleRecording, resample
 from .phase_shift import PhaseShiftRecording, phase_shift
 from .zero_channel_pad import ZeroChannelPaddedRecording, zero_channel_pad
@@ -25,8 +24,6 @@ from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate
 from .highpass_spatial_filter import HighpassSpatialFilterRecording, highpass_spatial_filter
 from .interpolate_bad_channels import InterpolateBadChannelsRecording, interpolate_bad_channels
 
-### FUNCTIONS ###
-from .correct_lsb import correct_lsb
 
 preprocessers_full_list = [
     # filter stuff
@@ -54,7 +51,6 @@ preprocessers_full_list = [
     ClipRecording,
     BlankSaturationRecording,
     RemoveArtifactsRecording,
-    RemoveBadChannelsRecording,
     ZeroChannelPaddedRecording,
     DeepInterpolatedRecording,
     ResampleRecording,
