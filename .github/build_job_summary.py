@@ -1,3 +1,8 @@
+"""
+This function builds a summary from the pytest output in markdown to be used by . 
+The input file is the output of the following command:
+pytest -vv --durations=0 --durations-min=0.001 > report.txt
+"""
 from pathlib import Path
 import pandas as pd
 import sys
@@ -13,8 +18,6 @@ all_lines = all_text.splitlines()
 # find the line with the line with slowest in text
 start_line = next(line for line in all_lines if "slowest" in line)
 start_index = all_lines.index(start_line) + 1
-# last_index = all_lines.index(next(line for line in all_lines if line in ['\n', '\r\n']))
-# last_index = next(index for index, line in enumerate(all_lines[start_index:]) if len(line)==0) + start_index
 
 last_index = next(index for index, line in enumerate(all_lines[start_index:]) if "===" in line) + start_index
 #last_index = all_lines.index(last_line)
@@ -48,8 +51,10 @@ sys.stdout.write("\n \n")
 sys.stdout.write(data_frame_header_markdown)
 sys.stdout.write("\n \n")
 sys.stdout.write("\n \n")
+sys.stdout.write("\n \n")
+sys.stdout.write("\n \n")
 sys.stdout.write("<details>")
-sys.stdout.write("<summary> click to see the full table </summary>")
+sys.stdout.write("<summary> click here to see the full table </summary>")
 sys.stdout.write("\n \n")
 sys.stdout.write(data_frame_markdown)
 sys.stdout.write("\n \n")
