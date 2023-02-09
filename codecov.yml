@@ -1,0 +1,18 @@
+ignore:
+  - "**/test_*.py"
+  - "./setup.py"
+  - "./docs/"
+  # ignore skipped sorters
+  - "./spikeinterface/sorters/combinato/"
+  - "./spikeinterface/sorters/hdsort/"
+  - "./spikeinterface/sorters/ironclust/"
+  - "./spikeinterface/sorters/kilosort/"
+  - "./spikeinterface/sorters/kilosort2/"
+  - "./spikeinterface/sorters/kilosort2_5/"
+  - "./spikeinterface/sorters/kilosort3/"
+  - "./spikeinterface/sorters/klusta/"
+  - "./spikeinterface/sorters/mountainsort4/"
+  - "./spikeinterface/sorters/pykilosort/"
+  - "./spikeinterface/sorters/spykingcircus/"
+  - "./spikeinterface/sorters/waveclus/"
+  - "./spikeinterface/sorters/yass/"

@@ -24,7 +24,8 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     installation_mesg = "To use the PhySortingExtractor install pandas: \n\n pip install pandas\n\n"  # error message when not installed
     name = "phykilosort"
 
-    def __init__(self, folder_path, exclude_cluster_groups=None, keep_good_only=False):
+    def __init__(self, folder_path, exclude_cluster_groups=None, keep_good_only=False,
+                 load_all_cluster_properties=True):
         try:
             import pandas as pd
             HAVE_PD = True
@@ -55,10 +56,10 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             # load properties from cluster_info file
             cluster_info_file = cluster_info_files[0]
             if cluster_info_file.suffix == ".tsv":
-                delimeter = "\t"
+                delimiter = "\t"
             else:
-                delimeter = ","
-            cluster_info = pd.read_csv(cluster_info_file, delimiter=delimeter)
+                delimiter = ","
+            cluster_info = pd.read_csv(cluster_info_file, delimiter=delimiter)
         else:
             # load properties from other tsv/csv files
             all_property_files = [p for p in phy_folder.iterdir() if p.suffix in ['.csv', '.tsv']]
@@ -66,10 +67,10 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             cluster_info = None
             for file in all_property_files:
                 if file.suffix == ".tsv":
-                    delimeter = "\t"
+                    delimiter = "\t"
                 else:
-                    delimeter = ","
-                new_property = pd.read_csv(file, delimiter=delimeter)
+                    delimiter = ","
+                new_property = pd.read_csv(file, delimiter=delimiter)
                 if cluster_info is None:
                     cluster_info = new_property
                 else:
@@ -143,6 +144,9 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             elif prop_name == "group":
                 # rename group property to 'quality'
                 self.set_property(key="quality", values=cluster_info[prop_name])
+            else:
+                if load_all_cluster_properties:
+                    self.set_property(key=prop_name, values=cluster_info[prop_name])
 
         self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
 

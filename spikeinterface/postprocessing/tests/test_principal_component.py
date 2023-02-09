@@ -4,11 +4,8 @@ from pathlib import Path
 
 import numpy as np
 
-from spikeinterface import extract_waveforms, WaveformExtractor
-from spikeinterface.extractors import toy_example
-
-from spikeinterface.postprocessing import (WaveformPrincipalComponent, compute_principal_components,
-                                           get_template_channel_sparsity)
+from spikeinterface import compute_sparsity
+from spikeinterface.postprocessing import WaveformPrincipalComponent, compute_principal_components
 from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
 
 if hasattr(pytest, "global_test_folder"):
@@ -52,28 +49,25 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
         print(pc)
 
         pc_file1 = pc.extension_folder / 'all_pc1.npy'
-        pc.run_for_all_spikes(
-            pc_file1, sparsity=None, chunk_size=10000, n_jobs=1)
+        pc.run_for_all_spikes(pc_file1, chunk_size=10000, n_jobs=1)
         all_pc1 = np.load(pc_file1)
 
         pc_file2 = pc.extension_folder / 'all_pc2.npy'
-        pc.run_for_all_spikes(
-            pc_file2, sparsity=None, chunk_size=10000, n_jobs=2)
+        pc.run_for_all_spikes(pc_file2, chunk_size=10000, n_jobs=2)
         all_pc2 = np.load(pc_file2)
 
         assert np.array_equal(all_pc1, all_pc2)
 
         # test with sparsity
-        sparsity = get_template_channel_sparsity(we, method="radius",
-                                                 radius_um=50)
+        sparsity = compute_sparsity(we, method="radius", radius_um=50)
         we_copy = we.save(folder=cache_folder / "we_copy")
         pc_sparse = self.extension_class.get_extension_function()(we_copy, sparsity=sparsity, load_if_exists=False)
         pc_file_sparse = pc.extension_folder / 'all_pc_sparse.npy'
-        pc_sparse.run_for_all_spikes(pc_file_sparse, sparsity=sparsity, chunk_size=10000, n_jobs=1)
+        pc_sparse.run_for_all_spikes(pc_file_sparse, chunk_size=10000, n_jobs=1)
         all_pc_sparse = np.load(pc_file_sparse)
         all_spikes = we_copy.sorting.get_all_spike_trains(outputs='unit_id')
         _, spike_labels = all_spikes[0]
-        for unit_id, sparse_channel_ids in sparsity.items():
+        for unit_id, sparse_channel_ids in sparsity.unit_id_to_channel_ids.items():
             # check dimensions
             pc_unit = all_pc_sparse[spike_labels == unit_id]
             assert np.allclose(pc_unit[:, :, len(sparse_channel_ids):], 0)
@@ -83,11 +77,9 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
         unit_ids = we.unit_ids
         num_channels = we.get_num_channels()
         pc = self.extension_class(we)
-
-        sparsity_radius = get_template_channel_sparsity(we, method="radius",
-                                                        radius_um=50)
-        sparsity_best = get_template_channel_sparsity(we, method="best_channels",
-                                                    num_channels=2)
+        
+        sparsity_radius = compute_sparsity(we, method="radius", radius_um=50)
+        sparsity_best = compute_sparsity(we, method="best_channels", num_channels=2)
         sparsities = [sparsity_radius, sparsity_best]
         print(sparsities)
 
@@ -98,6 +90,12 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
                 for i, unit_id in enumerate(unit_ids):
                     proj = pc.get_projections(unit_id)
                     assert proj.shape[1:] == (5, 4)
+
+                # test project_new
+                unit_id = 3
+                new_wfs = we.get_waveforms(unit_id)
+                new_proj = pc.project_new(new_wfs, unit_id=unit_id)
+                assert new_proj.shape == (new_wfs.shape[0], 5, 4)
 
                 if DEBUG:
                     import matplotlib.pyplot as plt
@@ -110,7 +108,7 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
                         for chan_ind in range(num_channels):
                             ax = axs[i, chan_ind]
                             ax.scatter(comp[:, 0, chan_ind], comp[:, 1, chan_ind], color=cmap(i))
-                            ax.set_title(f"{mode}-{sparsity[unit_id]}")
+                            ax.set_title(f"{mode}-{sparsity.unit_id_to_channel_ids[unit_id]}")
                             if i == 0:
                                 ax.set_xlabel(f"Ch{chan_ind}")
                     plt.show()
@@ -123,6 +121,12 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
             for i, unit_id in enumerate(unit_ids):
                 proj = pc.get_projections(unit_id)
                 assert proj.shape[1] == 5
+            
+            # test project_new
+            unit_id = 3
+            new_wfs = we.get_waveforms(unit_id)
+            new_proj = pc.project_new(new_wfs, unit_id)
+            assert new_proj.shape == (len(new_wfs), 5)
 
     def test_project_new(self):
         from sklearn.decomposition import IncrementalPCA
@@ -192,8 +196,8 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
 if __name__ == '__main__':
     test = PrincipalComponentsExtensionTest()
     test.setUp()
-    test.test_extension()
-    test.test_shapes()
-    test.test_compute_for_all_spikes()
-    test.test_sparse()
+    # test.test_extension()
+    # test.test_shapes()
+    # test.test_compute_for_all_spikes()
+    # test.test_sparse()
     test.test_project_new()

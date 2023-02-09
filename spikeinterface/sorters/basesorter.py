@@ -16,25 +16,20 @@ from joblib import Parallel, delayed
 
 from spikeinterface.core import load_extractor, BaseRecordingSnippets
 from spikeinterface.core.core_tools import check_json
-from spikeinterface.core.job_tools import split_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .utils import SpikeSortingError, ShellScript
 
 
-default_job_kwargs = {"n_jobs": 1, 
-                      "total_memory": None,
-                      "chunk_size": None,
-                      "chunk_memory": None,
-                      "chunk_duration": "1s",
-                      "progress_bar": True}
+default_job_kwargs = {"n_jobs": -1}
 
 default_job_kwargs_description = {
-    "n_jobs": "Number of jobs (when saving ti binary) - default 1", 
-    "chunk_size": "Number of samples per chunk (when saving ti binary) - default None",
-    "chunk_memory": "Memory usage for each job (e.g. '100M', '1G') (when saving to binary) - default None",
-    "total_memory": "Total memory usage (e.g. '500M', '2G') (when saving to binary) - default None",
+    "n_jobs": "Number of jobs (when saving ti binary) - default -1 (all cores)",
+    "chunk_size": "Number of samples per chunk (when saving ti binary) - default global",
+    "chunk_memory": "Memory usage for each job (e.g. '100M', '1G') (when saving to binary) - default global",
+    "total_memory": "Total memory usage (e.g. '500M', '2G') (when saving to binary) - default global",
     "chunk_duration": "Chunk duration in s if float or with units if str (e.g. '1s', '500ms') (when saving to binary)" \
-                      " - default '1s'",
-    "progress_bar": "If True, progress bar is shown (when saving to binary) - default True"}
+                      " - default global",
+    "progress_bar": "If True, progress bar is shown (when saving to binary) - default global"}
 
 
 class BaseSorter:
@@ -147,7 +142,8 @@ class BaseSorter:
     def default_params(cls):
         p = copy.deepcopy(cls._default_params)
         if cls.requires_binary_data:
-            p.update(default_job_kwargs)
+            job_kwargs = fix_job_kwargs(default_job_kwargs)
+            p.update(job_kwargs)
         return p
 
     @classmethod
@@ -392,6 +388,7 @@ class BaseSorter:
 
 def get_job_kwargs(params, verbose):
     _, job_kwargs = split_job_kwargs(params)
+    job_kwargs = fix_job_kwargs(job_kwargs)
     if not verbose:
         job_kwargs["progress_bar"] = False
     return job_kwargs

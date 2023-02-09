@@ -22,7 +22,7 @@ from .spike_amplitudes import compute_spike_amplitudes, SpikeAmplitudesCalculato
 from .correlograms import (CorrelogramsCalculator,
                            compute_autocorrelogram_from_spiketrain,
                            compute_crosscorrelogram_from_spiketrain,
-                           compute_correlograms,
+                           compute_correlograms, correlogram_for_one_segment,
                            compute_correlograms_numba, compute_correlograms_numpy)
 
 from .isi import (ISIHistogramsCalculator,
@@ -32,6 +32,8 @@ from .isi import (ISIHistogramsCalculator,
 from .spike_locations import compute_spike_locations, SpikeLocationsCalculator
 
 from .unit_localization import (compute_unit_locations, UnitLocationsCalculator,
-                                localize_units, compute_center_of_mass)
+                                compute_center_of_mass)
 
 from .alignsorting import align_sorting, AlignSortingExtractor
+
+from .noise_level import compute_noise_levels, NoiseLevelsCalculator

@@ -100,8 +100,7 @@ def test_run_sorters_with_dict():
     t0 = time.perf_counter()
     results = run_sorters(sorter_list, recording_dict, working_folder,
                           engine='loop', sorter_params=sorter_params,
-                          with_output=True,
-                          mode_if_folder_exists='raise')
+                          with_output=True, mode_if_folder_exists='raise')
 
     t1 = time.perf_counter()
     print(t1 - t0)

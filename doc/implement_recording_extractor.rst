@@ -1,5 +1,0 @@
-Build a RecordingExtractor
-----------------------------
-
-
-TODO

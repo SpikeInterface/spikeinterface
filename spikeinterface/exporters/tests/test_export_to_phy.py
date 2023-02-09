@@ -4,10 +4,10 @@ from pathlib import Path
 
 import numpy as np
 
-from spikeinterface import extract_waveforms, download_dataset
+from spikeinterface import extract_waveforms, download_dataset, compute_sparsity
 import spikeinterface.extractors as se
 from spikeinterface.exporters import export_to_phy
-from spikeinterface.postprocessing import get_template_channel_sparsity, compute_principal_components
+from spikeinterface.postprocessing import compute_principal_components
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "exporters"
@@ -59,7 +59,8 @@ def test_export_to_phy_by_property():
     sorting = sorting.save(folder=sort_folder)
 
     waveform_extractor = extract_waveforms(recording, sorting, waveform_folder)
-    sparsity_group = get_template_channel_sparsity(waveform_extractor, method="by_property", by_property="group")
+    sparsity_group = compute_sparsity(waveform_extractor, method="by_property",
+                                      by_property="group")
     export_to_phy(waveform_extractor, output_folder,
                   compute_pc_features=True,
                   compute_amplitudes=True,
@@ -72,7 +73,8 @@ def test_export_to_phy_by_property():
     # Remove one channel
     recording_rm = recording.channel_slice([0, 2, 3, 4, 5, 6, 7])
     waveform_extractor_rm = extract_waveforms(recording_rm, sorting, waveform_folder_rm)
-    sparsity_group = get_template_channel_sparsity(waveform_extractor_rm, method="by_property", by_property="group")
+    sparsity_group = compute_sparsity(waveform_extractor_rm, method="by_property",
+                                      by_property="group")
 
     export_to_phy(waveform_extractor_rm, output_folder_rm,
                   compute_pc_features=True,
@@ -102,7 +104,7 @@ def test_export_to_phy_by_sparsity():
             shutil.rmtree(f)
 
     waveform_extractor = extract_waveforms(recording, sorting, waveform_folder)
-    sparsity_radius = get_template_channel_sparsity(waveform_extractor, method="radius", radius_um=50)
+    sparsity_radius = compute_sparsity(waveform_extractor, method="radius", radius_um=50.)
     export_to_phy(waveform_extractor, output_folder_radius,
                   compute_pc_features=True,
                   compute_amplitudes=True,
@@ -115,8 +117,8 @@ def test_export_to_phy_by_sparsity():
     assert -1 in template_ind
     assert -1 in pc_ind
 
-    # pre-compute PC with sparsity
-    sparsity_radius_small = get_template_channel_sparsity(waveform_extractor, method="radius", radius_um=30)
+    # pre-compute PC with another sparsity
+    sparsity_radius_small = compute_sparsity(waveform_extractor, method="radius", radius_um=30.)
     pc = compute_principal_components(waveform_extractor, sparsity=sparsity_radius_small)
     export_to_phy(waveform_extractor, output_folder_multi_sparse,
                   compute_pc_features=True,
@@ -135,5 +137,6 @@ def test_export_to_phy_by_sparsity():
 
 
 if __name__ == '__main__':
+    test_export_to_phy()
     test_export_to_phy_by_property()
     test_export_to_phy_by_sparsity()
