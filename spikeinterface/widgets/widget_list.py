@@ -79,12 +79,10 @@ for wcls in widget_list:
     wcls_doc = wcls.__doc__
     
     wcls_doc += """
-    Backends
-    --------
     
-    backends: str
+    backend: str
     {backends}
-    backend_kwargs: kwargs
+    **backend_kwargs: kwargs
     {backend_kwargs}
     """
     backend_str = f"    {list(wcls.possible_backends.keys())}"
@@ -92,9 +90,9 @@ for wcls in widget_list:
     for backend, backend_plotter in wcls.possible_backends.items():
         backend_kwargs_desc = backend_plotter.backend_kwargs_desc
         if len(backend_kwargs_desc) > 0:
-            backend_kwargs_str += f"\n        {backend}:"
+            backend_kwargs_str += f"\n        {backend}:\n\n"
             for bk, bk_dsc in backend_kwargs_desc.items():
-                backend_kwargs_str += f"\n        - {bk}: {bk_dsc}"
+                backend_kwargs_str += f"        * {bk}: {bk_dsc}\n"
     wcls.__doc__ = wcls_doc.format(backends=backend_str, backend_kwargs=backend_kwargs_str)
 
 

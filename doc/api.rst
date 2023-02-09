@@ -109,6 +109,7 @@ Non-NEO-based
     .. autofunction:: read_bids
     .. autofunction:: read_cbin_ibl
     .. autofunction:: read_combinato
+    .. autofunction:: read_ibl_streaming_recording
     .. autofunction:: read_hdsort
     .. autofunction:: read_herdingspikes
     .. autofunction:: read_kilosort
