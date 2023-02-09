@@ -440,7 +440,7 @@ def check_improve_contaminations_score(we, pair_mask, contaminations, firing_con
 
         # make a merged sorting and tale one unit (unit_id1 is used)
         unit_id1, unit_id2 = sorting.unit_ids[ind1], sorting.unit_ids[ind2]
-        sorting_merged = MergeUnitsSorting(sorting, [unit_id1, unit_id2], new_unit_id=unit_id1).select_units([unit_id1])
+        sorting_merged = MergeUnitsSorting(sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1]).select_units([unit_id1])
         # make a lazy fake WaveformExtractor to compute contamination and firing rate
         we_new = MockWaveformExtractor(recording, sorting_merged)
 
