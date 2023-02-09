@@ -8,8 +8,7 @@ from spikeinterface import (WaveformExtractor, load_extractor, extract_waveforms
 from spikeinterface.core import (get_template_amplitudes,
                                  get_template_extremum_channel,
                                  get_template_extremum_channel_peak_shift,
-                                 get_template_extremum_amplitude,
-                                 get_template_channel_sparsity)
+                                 get_template_extremum_amplitude)
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -77,46 +76,12 @@ def test_get_template_extremum_amplitude():
     extremum_channels_ids = get_template_extremum_amplitude(we, peak_sign='both')
     print(extremum_channels_ids)
 
-
-def test_get_template_channel_sparsity():
-    we = WaveformExtractor.load(cache_folder / 'toy_waveforms')
-
-    sparsity = get_template_channel_sparsity(we, method='best_channels', outputs='id', num_channels=5)
-    print(sparsity)
-    sparsity = get_template_channel_sparsity(we, method='best_channels', outputs='index', num_channels=5)
-    print(sparsity)
-
-    sparsity = get_template_channel_sparsity(we, method='radius', outputs='id', radius_um=50)
-    print(sparsity)
-    sparsity = get_template_channel_sparsity(we, method='radius', outputs='index', radius_um=50)
-    print(sparsity)
-    sparsity = get_template_channel_sparsity(we, method='threshold', outputs='id', threshold=3)
-    print(sparsity)
-    sparsity = get_template_channel_sparsity(we, method='threshold', outputs='index', threshold=3)
-    print(sparsity)
-
-    # load from folder because sorting properties must be loaded
-    rec = load_extractor(cache_folder / 'toy_rec')
-    sort = load_extractor(cache_folder / 'toy_sort')
-    sort.set_property("group", [0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
-
-    we = extract_waveforms(rec, sort, cache_folder / 'toy_waveforms_1')
-    sparsity = get_template_channel_sparsity(we, method='by_property', outputs='id', by_property="group")
-    print(sparsity)
-    sparsity = get_template_channel_sparsity(we, method='by_property', outputs='index', by_property="group")
-
-    print(sparsity)
-
-
-
-
-
 if __name__ == '__main__':
     setup_module()
 
-    # test_get_template_amplitudes()
+    test_get_template_amplitudes()
     # test_get_template_extremum_channel()
     # test_get_template_extremum_channel_peak_shift()
     # test_get_template_extremum_amplitude()
-    test_get_template_channel_sparsity()
+    # test_get_template_channel_sparsity()
     

@@ -18,7 +18,7 @@ except ModuleNotFoundError:
     HAVE_BRAINBOX_ONE = False
 
 
-class StreamingIblExtractor(BaseRecording):
+class IblStreamingRecordingExtractor(BaseRecording):
     """
     Stream IBL data as an extractor object.
 
@@ -51,18 +51,18 @@ class StreamingIblExtractor(BaseRecording):
 
     Returns
     -------
-    recording : StreamingIblExtractor
+    recording : IblStreamingRecordingExtractor
         The recording extractor which allows access to the traces.
     """
 
-    extractor_name = "StreamingIbl"
+    extractor_name = "IblStreamingRecording"
     has_default_locations = True
     installed = HAVE_BRAINBOX_ONE
     mode = "folder"
     installation_mesg = (
-        "To use the StreamingIblExtractor, install ONE-api and ibllib: \n\n pip install ONE-api\npip install ibllib\n"
+        "To use the IblStreamingRecordingSegment, install ONE-api and ibllib: \n\n pip install ONE-api\npip install ibllib\n"
     )
-    name = "stream_ibl"
+    name = "ibl_streaming_recording"
 
     @classmethod
     def get_stream_names(cls, session: str, cache_folder: Optional[Union[Path, str]] = None) -> List[str]:
@@ -88,6 +88,8 @@ class StreamingIblExtractor(BaseRecording):
             List of stream names as expected by the `stream_name` argument for the class initialization.
         """
         assert HAVE_BRAINBOX_ONE, cls.installation_mesg
+
+        cache_folder = Path(cache_folder) if cache_folder is not None else cache_folder
         one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True, cache_dir=cache_folder)
 
         dataset_contents = one.list_datasets(eid=session, collection="raw_ephys_data/*")
@@ -97,7 +99,7 @@ class StreamingIblExtractor(BaseRecording):
         stream_names = list()
         for probe_label in probe_labels:
             raw_suffixes_by_probe = set(
-                [Path(raw_content).suffixes[-2] for raw_content in raw_contents if "probe00" in raw_content]
+                [Path(raw_content).suffixes[-2] for raw_content in raw_contents if probe_label in raw_content]
             )
             if ".ap" in raw_suffixes_by_probe:
                 stream_names.append(probe_label + ".ap")
@@ -115,10 +117,12 @@ class StreamingIblExtractor(BaseRecording):
         remove_cached: bool = True,
     ):
         assert HAVE_BRAINBOX_ONE, self.installation_mesg
+
         from brainbox.io.spikeglx import Streamer
         from one.api import ONE
         from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
 
+        cache_folder = Path(cache_folder) if cache_folder is not None else cache_folder
         one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True, cache_dir=cache_folder)
 
         session_names = self.get_stream_names(session=session, cache_folder=cache_folder)
@@ -131,7 +135,6 @@ class StreamingIblExtractor(BaseRecording):
         insertions = one.alyx.rest("insertions", "list", session=session)
         pid = next(insertion["id"] for insertion in insertions if insertion["name"] == probe_label)
 
-        cache_folder = Path(cache_folder) if cache_folder is not None else cache_folder
         self._file_streamer = Streamer(
             pid=pid, one=one, typ=stream_type, cache_folder=cache_folder, remove_cached=remove_cached
         )
@@ -199,7 +202,7 @@ class StreamingIblExtractor(BaseRecording):
             self.set_property("good_channel", good_channel)
 
         # init recording segment
-        recording_segment = StreamingIblRecordingSegment(
+        recording_segment = IblStreamingRecordingSegment(
             file_streamer=self._file_streamer,
             load_sync_channel=load_sync_channel
         )
@@ -214,7 +217,7 @@ class StreamingIblExtractor(BaseRecording):
         }
 
 
-class StreamingIblRecordingSegment(BaseRecordingSegment):
+class IblStreamingRecordingSegment(BaseRecordingSegment):
     def __init__(self, file_streamer, load_sync_channel: bool = False):
         BaseRecordingSegment.__init__(self, sampling_frequency=file_streamer.fs)
         self._file_streamer = file_streamer
@@ -238,4 +241,4 @@ class StreamingIblRecordingSegment(BaseRecordingSegment):
         return traces[:, channel_indices]
 
 
-read_streaming_ibl = define_function_from_class(source_class=StreamingIblExtractor, name="read_streaming_ibl")
+read_ibl_streaming_recording = define_function_from_class(source_class=IblStreamingRecordingExtractor, name="read_ibl_streaming_recording")

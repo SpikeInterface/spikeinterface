@@ -4,28 +4,28 @@ from unittest import TestCase
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from spikeinterface.extractors import StreamingIblExtractor
+from spikeinterface.extractors import IblStreamingRecordingExtractor
 
 
 from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite, SortingCommonTestSuite
 
 
-class TestDefaultStreamingIblExtractorApBand(TestCase):
+class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.session = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
-        cls.recording = StreamingIblExtractor(session=cls.session, stream_name="probe00.ap")
+        cls.recording = IblStreamingRecordingExtractor(session=cls.session, stream_name="probe00.ap")
         cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
         cls.small_unscaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26)  # return_scaled=False is SI default
 
     def test_get_stream_names(self):
-        stream_names = StreamingIblExtractor.get_stream_names(session=self.session)
+        stream_names = IblStreamingRecordingExtractor.get_stream_names(session=self.session)
 
         expected_stream_names = ['probe01.ap', 'probe01.lf', 'probe00.ap', 'probe00.lf']
         self.assertCountEqual(first=stream_names, second=expected_stream_names)
 
     def test_representation(self):
-        expected_recording_representation = "StreamingIblExtractor: 384 channels - 1 segments - 30.0kHz - 5812.311s"
+        expected_recording_representation = "IblStreamingRecordingExtractor: 384 channels - 1 segments - 30.0kHz - 5812.311s"
         assert repr(self.recording) == expected_recording_representation
 
     def test_dtype(self):
@@ -79,16 +79,16 @@ class TestDefaultStreamingIblExtractorApBand(TestCase):
         assert self.small_unscaled_trace.dtype == expected_dtype
 
 
-class TestStreamingIblExtractorApBandWithLoadSyncChannel(TestCase):
+class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.session = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
-        cls.recording = StreamingIblExtractor(session=cls.session, stream_name="probe00.ap", load_sync_channel=True)
+        cls.recording = IblStreamingRecordingExtractor(session=cls.session, stream_name="probe00.ap", load_sync_channel=True)
         cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
         cls.small_unscaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26)  # return_scaled=False is SI default
 
     def test_representation(self):
-        expected_recording_representation = "StreamingIblExtractor: 385 channels - 1 segments - 30.0kHz - 5812.311s"
+        expected_recording_representation = "IblStreamingRecordingExtractor: 385 channels - 1 segments - 30.0kHz - 5812.311s"
         assert repr(self.recording) == expected_recording_representation
 
     def test_dtype(self):
@@ -144,8 +144,8 @@ class TestStreamingIblExtractorApBandWithLoadSyncChannel(TestCase):
 
 
 if __name__ == '__main__':
-    TestDefaultStreamingIblExtractorApBand.setUpClass()
-    test1 = TestDefaultStreamingIblExtractorApBand()
+    TestDefaultIblStreamingRecordingExtractorApBand.setUpClass()
+    test1 = TestDefaultIblStreamingRecordingExtractorApBand()
     test1.setUp()
     test1.test_get_stream_names()
     test1.test_representation()
@@ -160,8 +160,8 @@ if __name__ == '__main__':
     test1.test_scaled_trace_dtype()
     test1.test_unscaled_trace_dtype()
 
-    TestStreamingIblExtractorApBandWithLoadSyncChannel.setUpClass()
-    test2 = TestStreamingIblExtractorApBandWithLoadSyncChannel()
+    TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel.setUpClass()
+    test2 = TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel()
     test2.setUp()
     test2.test_get_stream_names()
     test2.test_get_stream_names()

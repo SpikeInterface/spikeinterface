@@ -219,7 +219,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices):
 
         if self.mode in ['average', 'median']:
-            traces = self.parent_recording_segment.get_traces(start_frame, end_frame)
+            traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
         else:
             traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
