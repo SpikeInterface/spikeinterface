@@ -34,4 +34,5 @@ jobs:
           pip install pandas
           pip install tabulate
           python ./.github/build_job_summary.py
+          echo "# Times in {{matrix.os}}" >> $GITHUB_STEP_SUMMARY 
           cat test_markdown.md >> $GITHUB_STEP_SUMMARY 
