@@ -18,6 +18,3 @@ Literature
 ----------
 
 Introduced by [Rousseeuw]_.
-
-.. [Rousseeuw] Peter J Rousseeuw. Silhouettes: A graphical aid to the interpretation and validation of cluster analysis. Journal of computational and applied mathematics, 20(C):53–65, 1987.
-

@@ -24,6 +24,7 @@ import spikeinterface.extractors as se
 ##############################################################################
 # Let's download some datasets in different formats from the
 # `ephy_testing_data <https://gin.g-node.org/NeuralEnsemble/ephy_testing_data>`_ repo:
+#
 #   * MEArec: an simulator format which is hdf5-based. It contains both a "recording" and a "sorting" in the same file.
 #   * Spike2: file from spike2 devices. It contains "recording" information only.
 

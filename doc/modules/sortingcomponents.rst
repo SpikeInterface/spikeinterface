@@ -240,11 +240,11 @@ a label for every peak.
 At the moment, the implemenation is quite experimental.
 These methods have been implemented:
 
-  * "position_clustering": use HDBSCAN on peak locations.
-  * "sliding_hdbscan": clustering approach from tridesclous, with sliding spatial windows. PCA and HDBSCAN are run 
-    on local/sparse waveforms.
-  * "position_pca_clustering": this method tries to use peak locations for a first clustering step and then perform 
-  further splits using PCA + HDBSCAN
+  * | "position_clustering": use HDBSCAN on peak locations.
+  * | "sliding_hdbscan": clustering approach from tridesclous, with sliding spatial windows. PCA and HDBSCAN are run 
+    | on local/sparse waveforms.
+  * | "position_pca_clustering": this method tries to use peak locations for a first clustering step and then perform 
+    | further splits using PCA + HDBSCAN
 
 Different methods may need different inputs (for instance some of them require need peak locations and some do not).
     

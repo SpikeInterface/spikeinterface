@@ -237,7 +237,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     In cases of highly contaminated units, the ISI violations ratio can sometimes be greater than 1.
 
     Reference
-    ---------
+    ^^^^^^^^^
     [1] Hill et al. (2011) J Neurosci 31: 8699-8705
 
     Originally written in Matlab by Nick Steinmetz (https://github.com/cortex-lab/sortingQuality)
@@ -314,7 +314,7 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
     Requires "numba" package
 
     Reference
-    ---------
+    ^^^^^^^^^
     [1] Llobet & Wyngaard (2022) bioRxiv
 
     """
@@ -449,11 +449,6 @@ def compute_amplitude_cutoffs(waveform_extractor, peak_sign='neg',
     all_fraction_missing : dict of floats
         Estimated fraction of missing spikes, based on the amplitude distribution, for each unit ID.
 
-    Reference
-    ---------
-    Inspired by metric described in Hill et al. (2011) J Neurosci 31: 8699-8705
-    
-    This code was adapted from https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
 
     Notes
     -----
@@ -461,6 +456,13 @@ def compute_amplitude_cutoffs(waveform_extractor, peak_sign='neg',
     If available, amplitudes are extracted from the "spike_amplitude" extension (recommended). 
     If the "spike_amplitude" extension is not available, the amplitudes are extracted from the waveform extractor,
     which usually has waveforms for a small subset of spikes (500 by default).
+
+    Reference
+    ^^^^^^^^^
+    Inspired by metric described in Hill et al. (2011) J Neurosci 31: 8699-8705
+    
+    This code was adapted from https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
+
     """
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
@@ -536,7 +538,7 @@ def compute_amplitude_medians(waveform_extractor, peak_sign='neg'):
         Estimated amplitude median for each unit ID.
 
     Reference
-    ---------
+    ^^^^^^^^^
     Inspired by metric described in:
     International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022. 9 Jun 2022.
     This code is ported from:

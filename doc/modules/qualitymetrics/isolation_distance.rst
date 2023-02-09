@@ -33,5 +33,3 @@ Literature
 ----------
 
 Introduced by [Harris]_.
-
-.. [Harris] Kenneth D Harris, Hajime Hirase, Xavier Leinekugel, Darrell A Henze, and Gy ̈orgy Buzs ́aki. Temporal interaction between single spikes and complex spike bursts in hippocampal pyramidal cells. Neuron (Cambridge, Mass.), 32(1):141–149, 2001.

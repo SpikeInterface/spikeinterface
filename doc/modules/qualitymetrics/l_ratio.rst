@@ -41,12 +41,10 @@ References
 ----------
 
 .. autofunction:: spikeinterface.qualitymetrics.pca_metrics.mahalanobis_metrics
+    :noindex:
 
 Literature
 ----------
 
 Introduced by [Schmitzer-Torbert]_ et al..
 Early discussion and comparison with isolation distance by [Jackson]_ et al..
-
-.. [Schmitzer-Torbert]  Schmitzer-Torbert, Neil, and A. David Redish. “Neuronal Activity in the Rodent Dorsal Striatum in Sequential Navigation: Separation of Spatial and Reward Responses on the Multiple T Task.” Journal of neurophysiology 91.5 (2004): 2259–2272. Web.
-.. [Jackson] Jadin Jackson, Neil Schmitzer-Torbert, K.D. Harris, and A.D. Redish. “Quantitative Measures of Cluster Quality for Use in Extracellular Recordings.” Neuroscience 131.1 (2005): 1–11. Web.

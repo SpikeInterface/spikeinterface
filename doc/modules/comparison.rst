@@ -22,7 +22,7 @@ For spike train comparison, there are three use cases:
 
 A ground-truth dataset can be a paired recording, in which a neuron is recorded both extracellularly and with
 a patch or juxtacellular electrode (either **in vitro** or **in vivo**), or it can be a simulated dataset
-(**in silico**) using spiking activity simulators such as `MEArec <https://mearec.readthedocs.io>`_.
+(**in silico**) using spiking activity simulators such as `MEArec`_.
 
 The comparison to ground-truth datasets is useful to benchmark spike sorting algorithms.
 

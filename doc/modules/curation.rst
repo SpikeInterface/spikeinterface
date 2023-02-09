@@ -9,6 +9,7 @@ Manual curation
 
 SpikeInterface offer a machinery to manually curate a sorting and keep track of the curation history.
 The curation have several "steps" that can be be repeated and chained:
+
   * remove/select units
   * split units
   * merge units

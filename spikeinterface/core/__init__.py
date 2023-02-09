@@ -12,7 +12,8 @@ from .npzsortingextractor import NpzSortingExtractor, read_npz_sorting
 from .numpyextractors import NumpyRecording, NumpySorting, NumpyEvent, NumpySnippets
 from .zarrrecordingextractor import ZarrRecordingExtractor, read_zarr, get_default_zarr_compressor
 from .binaryfolder import BinaryFolderRecording, read_binary_folder
-from .npysnippetsextractor import NpySnippetsExtractor
+from .npzfolder import NpzFolderSorting, read_npz_folder
+from .npysnippetsextractor import NpySnippetsExtractor, read_npy_snippets
 from .npyfoldersnippets import NpyFolderSnippets, read_npy_snippets_folder
 
 # utility extractors (equivalent to OLD subrecording/subsorting)

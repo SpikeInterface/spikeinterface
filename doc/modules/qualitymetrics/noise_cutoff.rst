@@ -28,10 +28,3 @@ Literature
 ----------
 
 Metric introduced by [IBL]_ (adapted from [Hill]_'s amplitude cutoff metric).
-
-.. [Hill] Hill, Daniel N., Samar B. Mehta, and David Kleinfeld. “Quality Metrics to Accompany Spike Sorting of Extracellular Signals.” The Journal of neuroscience 31.24 (2011): 8699–8705. Web.
-
-.. [IBL] International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022.
-
-
-

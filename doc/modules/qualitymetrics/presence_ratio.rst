@@ -40,7 +40,7 @@ Links to original implementations
 References
 ----------
 
-.. autofunction:: spikeinterface.toolkit.qualitymetrics.misc_metrics.compute_presence_ratios
+.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_presence_ratios
 
 Literature
 ----------

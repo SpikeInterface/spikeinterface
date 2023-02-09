@@ -63,7 +63,3 @@ Literature
 ----------
 
 Presented by [Lemon]_ and useful initial discussion by [Jackson]_.
-
-.. [Jackson] Jadin Jackson, Neil Schmitzer-Torbert, K.D. Harris, and A.D. Redish. Quantitative assessment of extracellular multichannel recording quality using measures of cluster separation. Soc Neurosci Abstr, 518, 01 2005.
-
-.. [Lemon] R. Lemon. Methods for neuronal recording in conscious animals. IBRO Handbook Series, 4:56–60, 1984.

@@ -56,8 +56,9 @@ si.plot_peak_activity_map(rec_filtred, bin_duration_s=1.)
 
 
 ##############################################################################
-# plot_drift_over_time'()
-# ~~~~~~~~~~~~~~~~~~~~~~~
+# plot_drift_over_time()
+# ----------------------
+# 
 # heatmap mode
 # here bin_duration_s=1. because the rec is short (10s).
 # a better value could 60s
@@ -66,8 +67,9 @@ si.plot_drift_over_time(rec_filtred, peaks=peaks, bin_duration_s=1.,
         weight_with_amplitudes=True, mode='heatmap')
 
 ##############################################################################
-# plot_drift_over_time'()
-# ~~~~~~~~~~~~~~~~~~~~~~~
+# plot_drift_over_time()
+# ----------------------
+# 
 # in scatter mode
 
 si.plot_drift_over_time(rec_filtred, peaks=peaks, weight_with_amplitudes=False, mode='scatter')

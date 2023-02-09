@@ -22,6 +22,7 @@ In addition the Allen Institute implementation assumes linear and equally spaced
 
 Finally, the original "cumulative_drift" and "max_drift" metrics have been refactored/modified 
 for the following reasons:
+
 - "max_drift" is calculated with the the peak-to-peak, so it's been renamed "drift_ptp"
 - | "cumulative_drift" sums the absolute value of the drift signal for each interval. This makes it very sensitive to 
   | the number of bins (and hence the recording duration)! The "drift_std" and "drift_mad", instead, are measures of 
@@ -63,5 +64,3 @@ Literature
 ----------
 
 First introduced in [Siegle]_ and modified by the SpikeInterface Team.
-
-.. [Siegle] Siegle, Joshua H., et al. “Survey of spiking in the mouse visual system reveals functional hierarchy.” Nature 592.7852 (2021): 86-92.

@@ -208,7 +208,7 @@ The :code:`blank_staturation()` function is similar, but it automatically estima
 highpass_spatial_filter()
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-:code:`highpass_spatial_filter()` is a preprocessing step introduced by the International Brain Laboratory [IBL]_.
+:code:`highpass_spatial_filter()` is a preprocessing step introduced by the International Brain Laboratory [IBL_spikesorting]_.
 It applies a filter in the spatial axis of the tarces after ordering the channels by depth.
 It is similar to common reference, but it can deal with "stripes" that are uneven across depth. 
 This preprocessing step can be super useful for long probes like Neuropixels.
@@ -280,7 +280,7 @@ required.
 deepinterpolation() (experimental)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The step (experimental) applies the inference step of a DeepInterpolation denoiser model [DI]_.
+The step (experimental) applies the inference step of a DeepInterpolation denoiser model [DeepInterpolation]_.
 
 :py:func:`~spikeinterface.preprocessing.deepinterpolation()`
 
@@ -294,7 +294,7 @@ How to implement "IBL destriping" or "SpikeGLX CatGT" in SpikeInterface
 
 SpikeGLX have a built-in function called `CatGT <https://billkarsh.github.io/SpikeGLX/help/dmx_vs_gbl/dmx_vs_gbl/>`_ 
 to apply some preprocessing on the traces to remove noise and artifacts.
-IBL also have a standardized pipeline to preprocessed traces a bit similar to CatGT which is called "destriping" [IBL]_.
+IBL also have a standardized pipeline to preprocessed traces a bit similar to CatGT which is called "destriping" [IBL_spikesorting]_.
 In these both cases, the traces are entiely read, processed and written back to a file.
 
 SpikeInterface can reproduce similar results without the need to write back to a file by building a *lazy* 
@@ -348,6 +348,6 @@ align_snippets()
 References
 ----------
 
-.. [IBL] International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022. 9 Jun 2022. 
+.. [IBL_spikesorting] International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022. 9 Jun 2022. 
 
-.. [DI] Lecoq, Jérôme, et al. "Removing independent noise in systems neuroscience data using DeepInterpolation." Nature methods 18.11 (2021): 1401-1408.
+.. [DeepInterpolation] Lecoq, Jérôme, et al. "Removing independent noise in systems neuroscience data using DeepInterpolation." Nature methods 18.11 (2021): 1401-1408.
