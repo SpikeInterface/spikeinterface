@@ -18,6 +18,7 @@ class SpikesOnTracesWidget(BaseWidget):
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
+        The waveform extractor
     channel_ids: list
         The channel ids to display
     unit_ids: list

@@ -220,7 +220,7 @@ Available plotting functions
 ----------------------------
 
 * :py:func:`~spikeinterface.widgets.plot_all_amplitudes_distributions` (backends: :code:`matplotlib`)
-* :py:func:`~spikeinterface.widgets.plot_mplitudes` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
+* :py:func:`~spikeinterface.widgets.plot_amplitudes` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_autocorrelograms` (backends: :code:`matplotlib`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_crosscorrelograms` (backends: :code:`matplotlib`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_quality_metrics` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
