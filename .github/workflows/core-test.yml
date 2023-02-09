@@ -14,7 +14,7 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: s-weigand/setup-conda@v1
         with:
           python-version: 3.9
@@ -34,6 +34,4 @@ jobs:
           pip install pandas
           pip install tabulate
           python ./.github/build_job_summary.py
-          echo "### Time summary here ! :rocket:" >> $GITHUB_STEP_SUMMARY
-          cat test_markdown.md
           cat test_markdown.md >> $GITHUB_STEP_SUMMARY 
