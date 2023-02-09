@@ -30,15 +30,28 @@ data_frame["%cum_total_time"] = (100 *  data_frame["test_time"].cumsum() / total
 
 # Build markdown string
 data_frame_to_display = data_frame[["test_name", "test_time", "%of_total_time", "%cum_total_time"]]
-markdown_string = data_frame_to_display.to_markdown()
+
+data_frame_header_markdown = data_frame_to_display.head(10).to_markdown()
+data_frame_markdown = data_frame_to_display.to_markdown()
     
-# Output sort test summary info
+# Build github file
 sys.stdout.write("## Pytest summary of tests")
-sys.stdout.write("\n")
+sys.stdout.write("\n \n")
 sys.stdout.write(all_lines[-1])
-sys.stdout.write("\n")
+sys.stdout.write("\n \n")
 sys.stdout.write("## Disaggregated information")
-sys.stdout.write("\n")
-sys.stdout.write(f"\t Total running time (sum(test_time)) = {total_test_time}")
-sys.stdout.write("\n")
-sys.stdout.write(markdown_string)
+sys.stdout.write("\n \n")
+sys.stdout.write(f"\t Total running time (sum(test_time)) = {total_test_time:.2f} s")
+sys.stdout.write("\n \n")
+sys.stdout.write("### Top 10 slowest tests")
+sys.stdout.write("\n \n")
+sys.stdout.write(data_frame_header_markdown)
+sys.stdout.write("\n \n")
+sys.stdout.write("\n \n")
+sys.stdout.write("<details>")
+sys.stdout.write("<summary> click to see the full table </summary>")
+sys.stdout.write("\n \n")
+sys.stdout.write(data_frame_markdown)
+sys.stdout.write("\n \n")
+sys.stdout.write("</details>")
+sys.stdout.write("\n \n")
