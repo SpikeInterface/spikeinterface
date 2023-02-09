@@ -1,0 +1,26 @@
+name: Build documentation
+on: workflow_dispatch
+
+jobs:
+  build-and-test:
+    name: Docs
+    runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Python version
+        run: |
+          python --version
+      - name: Install dependencies
+        run: |
+          conda env create --quiet --name rtd --file environment_rtd.yml
+      - name: Build docs
+        run: |
+          conda activate rtd
+          cd doc
+          make html

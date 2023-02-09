@@ -19,6 +19,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
     IBL have a custom format - compressed binary with spikeglx meta.
 
     The format is like spikeglx (have a meta file) but contains:
+
       * "cbin" file (instead of "bin")
       * "ch" file used by mtscomp for compression info
 

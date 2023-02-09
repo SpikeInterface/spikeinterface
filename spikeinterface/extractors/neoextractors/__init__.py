@@ -27,8 +27,8 @@ from .nix import (NixRecordingExtractor,
 from .openephys import (OpenEphysLegacyRecordingExtractor,
                         OpenEphysBinaryRecordingExtractor, OpenEphysBinaryEventExtractor, 
                         read_openephys, read_openephys_event)
-from .plexon import (PlexonRecordingExtractor, 
-                     read_plexon)
+from .plexon import (PlexonRecordingExtractor, PlexonSortingExtractor,
+                     read_plexon, read_plexon_sorting)
 from .spike2 import (Spike2RecordingExtractor, 
                      read_spike2)
 from .spikegadgets import (SpikeGadgetsRecordingExtractor, 
