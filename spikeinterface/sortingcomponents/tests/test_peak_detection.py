@@ -34,10 +34,12 @@ def test_detect_peaks():
     
 
     # locally_exclusive + pipeline steps LocalizeCenterOfMass + PeakToPeakFeature
+    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1., ms_after=1.,)
+
     pipeline_nodes = [
-        ExtractDenseWaveforms(recording, name='waveforms',ms_before=1., ms_after=1.,),
-        PeakToPeakFeature(recording,  all_channels=False, parents='waveforms'),
-        LocalizeCenterOfMass(recording, local_radius_um=50.,parents='waveforms'),
+        extract_dense_waveforms,
+        PeakToPeakFeature(recording,  all_channels=False, parents=[extract_dense_waveforms]),
+        LocalizeCenterOfMass(recording, local_radius_um=50., parents=[extract_dense_waveforms]),
     ]
     peaks, ptp, peak_locations = detect_peaks(recording, method='locally_exclusive',
                          peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
