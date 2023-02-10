@@ -13,19 +13,24 @@ Main change:
     * Add waveform extractor :code:`save()` function and Zarr backend (#1079)
     * Dense waveforms can be saved as sparse with the :code:`save()` function
     * Sparse waveforms can be extracted directly with :code:`sparse=True`
+
   * Added IBL preprocessing tools for Neuropixels (#1025, #1059, #1070):
 
     * Bad channel detection 
     * Channel interpolation
     * High-pass spatial filter 
+
   * | Add subfolder for sorter output ("output_folder/sorter_output") and :code:`sorting_info` field to Sorting, 
     | so that "sorter_output" can be deleted without deleting metadata and :code:`sorting_info` (#1149, #1150)
+
   * Refactor Quality Metrics module (#1155, #1177, #1197):
   
     * Improve parameter handling
     * Unified naming and conventions
     * Add missing metrics: drift, amp medians, sliding_rp_violations
+
   * Extended Motion estimation and motion correction, which is now ready to use (#1129, #1108, #1183)
+
   * Removed deprecated functions/modules (#1261):
   
     * :code:`toolkit` module
@@ -50,6 +55,7 @@ core:
   * Propagate probe annotations to recording (#1208)
   * Serialization for recording and sorting objects (#1227)
   * Extend WaveformExtractor rec_attributes and propagate recordingless mode (#1258)
+  * Improve serialization (#1227, #1272)
 
 extractors:
   * NWBRecordingExtractor offset extraction (#1057)
@@ -113,7 +119,8 @@ sortingcomponents:
   * Refactor detect_peak() and refactor method_kwargs in components (#1105)
   * Port kilosort motion estimation (iterative_template registration) (#1108)
   * Refactor motion estimation (#1183)
-  * Initial refactoring for node pipeline (#1209)
+  * Initial refactoring for node pipeline (#1209, #1271)
+  * Fix gaussian computation in motion (#1257)
 
 docs:
   * Fix broken spikeinterface-gui links (#1072)
@@ -123,4 +130,4 @@ docs:
 ci:
   * Fix CI python version (#1141)
   * Fix code coverage and ignore skipped sorters (#1220)
-  * Fix gaussian computation in motion (#1257)
+  * Time report for full tests (#1297, #1299)
