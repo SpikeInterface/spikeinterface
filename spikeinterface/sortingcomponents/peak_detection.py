@@ -59,19 +59,13 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None, **kwargs):
 
     if pipeline_nodes is not None:
         check_graph(pipeline_nodes)
-        
-        if job_kwargs['n_jobs'] > 1:
-            pipeline_nodes_ = [(node.__class__, node.to_dict()) for node in pipeline_nodes]
-        else:
-            pipeline_nodes_ = pipeline_nodes
         extra_margin = max(node.get_trace_margin() for node in pipeline_nodes)
     else:
-        pipeline_nodes_ = None
         extra_margin = 0
 
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
-    init_args = (recording, method, method_args, extra_margin, pipeline_nodes_)
+    init_args = (recording, method, method_args, extra_margin, pipeline_nodes)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
                                        handle_returns=True, job_name='detect peaks',
                                        **job_kwargs)
