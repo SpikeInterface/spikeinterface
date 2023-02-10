@@ -183,10 +183,9 @@ def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
     l_ratio : float
         L-ratio for this unit.
 
-    Reference
-    ^^^^^^^^^
-    
-    Based on metrics described in Schmitzer-Torbert et al. (2005) Neurosci 131: 1-11
+    References
+    ----------
+    Based on metrics described in [Schmitzer-Torbert]_
     """
 
     pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
@@ -242,9 +241,9 @@ def lda_metrics(all_pcs, all_labels, this_unit_id):
     d_prime : float
         D prime measure of this unit.
 
-    Reference
-    ^^^^^^^^^
-    Based on metric described in Hill et al. (2011) J Neurosci 31: 8699-8705
+    References
+    ----------
+    Based on metric described in [Hill]_
     """
 
     X = all_pcs
@@ -298,9 +297,9 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_n
 
         NN_hit(X) = 1/k \\sum_i=1^k |{{x in A such that ith closest neighbor is in X}}| / \\|A\\|
 
-    Reference
-    ^^^^^^^^^
-    Based on metrics described in Chung, Magland et al. (2017) Neuron 95: 1381-1394
+    References
+    ----------
+    Based on metrics described in [Chung]_
     """
 
     total_spikes = all_pcs.shape[0]
@@ -400,9 +399,9 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
 
     See docstring for `_compute_isolation` for the definition of isolation score.
 
-    Reference
-    ^^^^^^^^^
-    Based on isolation metric described in Chung et al. (2017) Neuron 95: 1381-1394.
+    References
+    ----------
+    Based on isolation metric described in [Chung]_
     """
     rng = np.random.default_rng(seed=seed)
 
@@ -540,9 +539,9 @@ def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor,
 
     See docstring for `_compute_isolation` for the definition of isolation score.
 
-    Reference
-    ^^^^^^^^^
-    Based on noise overlap metric described in Chung et al. (2017) Neuron 95: 1381-1394.
+    References
+    ----------
+    Based on noise overlap metric described in [Chung]_
     """
     rng = np.random.default_rng(seed=seed)
 

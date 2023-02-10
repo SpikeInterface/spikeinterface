@@ -126,9 +126,9 @@ def test_remove_bad_channels_ibl(num_channels):
     bad_channel_labels_ibl, _ = scipy.stats.mode(channel_flags_ibl, axis=1, keepdims=False)
 
     # Compare
-    assert np.array_equal(bad_channel_labels_si == 0, bad_channel_labels_ibl == 0)
-    assert np.array_equal(bad_channel_labels_si == 1, bad_channel_labels_ibl == 1)
-    assert np.array_equal(bad_channel_labels_si == 2, bad_channel_labels_ibl == 2)
+    assert np.array_equal(bad_channel_labels_si == 'good', bad_channel_labels_ibl == 0)
+    assert np.array_equal(bad_channel_labels_si == 'dead', bad_channel_labels_ibl == 1)
+    assert np.array_equal(bad_channel_labels_si == 'noise', bad_channel_labels_ibl == 2)
     assert np.array_equal(recording.ids_to_indices(bad_channel_ids), np.where(bad_channel_labels_ibl != 0)[0])
 
     # Test on randomly sorted channels
