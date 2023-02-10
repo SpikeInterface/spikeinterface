@@ -79,12 +79,10 @@ for wcls in widget_list:
     wcls_doc = wcls.__doc__
     
     wcls_doc += """
-    Backends
-    --------
     
-    backends: str
+    backend: str
     {backends}
-    backend_kwargs: kwargs
+    **backend_kwargs: kwargs
     {backend_kwargs}
     """
     backend_str = f"    {list(wcls.possible_backends.keys())}"
@@ -92,9 +90,9 @@ for wcls in widget_list:
     for backend, backend_plotter in wcls.possible_backends.items():
         backend_kwargs_desc = backend_plotter.backend_kwargs_desc
         if len(backend_kwargs_desc) > 0:
-            backend_kwargs_str += f"\n        {backend}:"
+            backend_kwargs_str += f"\n        {backend}:\n\n"
             for bk, bk_dsc in backend_kwargs_desc.items():
-                backend_kwargs_str += f"\n        - {bk}: {bk_dsc}"
+                backend_kwargs_str += f"        * {bk}: {bk_dsc}\n"
     wcls.__doc__ = wcls_doc.format(backends=backend_str, backend_kwargs=backend_kwargs_str)
 
 
@@ -114,7 +112,5 @@ plot_unit_templates = define_widget_function_from_class(UnitTemplatesWidget, 'pl
 plot_unit_waveforms = define_widget_function_from_class(UnitWaveformsWidget, 'plot_unit_waveforms')
 plot_unit_waveforms_density_map = define_widget_function_from_class(UnitWaveformDensityMapWidget, 'plot_unit_waveforms_density_map')
 plot_unit_depths = define_widget_function_from_class(UnitDepthsWidget, 'plot_unit_depths')
-
-
 plot_unit_summary = define_widget_function_from_class(UnitSummaryWidget, "plot_unit_summary")
 plot_sorting_summary = define_widget_function_from_class(SortingSummaryWidget, "plot_sorting_summary")
