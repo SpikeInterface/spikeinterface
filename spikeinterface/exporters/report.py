@@ -4,12 +4,10 @@ import pandas as pd
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 import spikeinterface.widgets as sw
+from spikeinterface.core import get_template_extremum_channel, get_template_extremum_amplitude
 from spikeinterface.postprocessing import (compute_spike_amplitudes,
-                                           compute_principal_components,
                                            compute_unit_locations,
-                                           compute_correlograms,
-                                           get_template_extremum_channel, 
-                                           get_template_extremum_amplitude)
+                                           compute_correlograms)
 from spikeinterface.qualitymetrics import compute_quality_metrics
 
 import matplotlib.pyplot as plt
