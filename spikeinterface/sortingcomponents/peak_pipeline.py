@@ -168,15 +168,8 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
 
     check_graph(nodes)
 
-    if job_kwargs['n_jobs'] > 1:
-        init_args = (
-            recording.to_dict(),
-            peaks,  # TODO peaks as shared mem to avoid copy
-            [(node.__class__, node.to_dict()) for node in nodes],
-            segment_slices,
-        )
-    else:
-        init_args = (recording, peaks, nodes, segment_slices)
+    nodes = [(node.__class__, node.to_dict()) for node in nodes]
+    init_args = (recording, peaks, nodes, segment_slices)
     
 
     
@@ -202,11 +195,7 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
 def _init_worker_peak_pipeline(recording, peaks, nodes, segment_slices):
     """Initialize worker for localizing peaks."""
 
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-        recording = load_extractor(recording)
-
-        nodes = [cls.from_dict(recording, kwargs) for cls, kwargs in nodes]
+    nodes = [cls.from_dict(recording, kwargs) for cls, kwargs in nodes]
     
     # this is done in every worker to get the instance of the Node in the worker.
     propagate_node_instances(nodes)
