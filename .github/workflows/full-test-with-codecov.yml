@@ -1,6 +1,9 @@
 name: Full spikeinterface tests codecov
 
-on: workflow_dispatch
+on: 
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * *"  # Daily at noon UCT
 
 env:
   KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
@@ -39,7 +42,7 @@ jobs:
           # create an environement (better for caching)
           python -m venv ~/test_env
           source ~/test_env/bin/activate
-          python -m pip install --upgrade pip
+          python -m pip install -U pip  # Official recommended way
           pip install setuptools wheel twine
           ## clean some cache to avoid using old cache
           pip cache remove numpy
@@ -48,6 +51,7 @@ jobs:
           # herdingspikes need numpy to installed first, this numpy pre install will be removed when HS remove from testing
           pip install numpy==1.22
           pip install -e .[test,extractors,full]
+          pip install tabulate
       - name: git-annex install
         run: |
           wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
@@ -78,11 +82,15 @@ jobs:
       - name: run tests
         run: |
           source ~/test_env/bin/activate
-          pytest --cov=./ --cov-report xml:./coverage.xml
-      - uses: codecov/codecov-action@v2
+          pytest --cov=./ --cov-report xml:./coverage.xml -vv --durations=0 --durations-min=0.001 > report_full.txt
+          cat report_full.txt 
+          echo "# Timing profile of full tests" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_full.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY
+          rm report_full.txt
+      - uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          version: "v0.1.15"
           fail_ci_if_error: true
           file: ./coverage.xml
           flags: unittests
