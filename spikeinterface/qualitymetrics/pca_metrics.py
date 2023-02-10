@@ -296,7 +296,7 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_n
 
     .. math::
 
-        NN_hit(X) = 1/k \\sum_i=1^k |{{x in A such that ith closest neighbor is in X}}| / \|A\|
+        NN_hit(X) = 1/k \\sum_i=1^k |{{x in A such that ith closest neighbor is in X}}| / \\|A\\|
 
     Reference
     ^^^^^^^^^
@@ -386,12 +386,12 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
 
     Let A and B be two clusters from sorting.
 
-    We set \|A\| = \|B\|:
+    We set \\|A\\| = \\|B\\|:
 
-        * | If max_spikes < \|A\| and max_spikes < \|B\|:
+        * | If max_spikes < \\|A\\| and max_spikes < \\|B\\|:
           |     Then randomly subsample max_spikes samples from A and B.
-        * | If max_spikes > min(\|A\|, \|B\|) (e.g. \|A\| > max_spikes > \|B\|):
-          |     Then randomly subsample min(\|A\|, \|B\|) samples from A and B.
+        * | If max_spikes > min(\\|A\\|, \\|B\\|) (e.g. \\|A\\| > max_spikes > \\|B\\|):
+          |     Then randomly subsample min(\\|A\\|, \\|B\\|) samples from A and B.
 
     This is because the metric is affected by the size of the clusters being compared
     independently of how well-isolated they are.

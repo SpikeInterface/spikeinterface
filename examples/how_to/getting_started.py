@@ -1,6 +1,22 @@
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     formats: ipynb,py:sphinx
+#     text_representation:
+#       extension: .py
+#       format_name: sphinx
+#       format_version: '1.1'
+#       jupytext_version: 1.14.4
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
 """
-Getting started tutorial
-========================
+How to "get started"
+====================
 
 In this introductory example, you will see how to use the SpikeInterface to perform a full electrophysiology analysis.
 We will download simulated dataset, and we will then perform some pre-processing, run a spike sorting
@@ -9,6 +25,7 @@ algorithm, inspect and validate the results, and export the results.
 """
 
 import matplotlib.pyplot as plt
+from pprint import pprint
 
 ##############################################################################
 # The spikeinterface module by itself import only the spikeinterface.core submodule
@@ -34,7 +51,10 @@ import spikeinterface.extractors as se
 import spikeinterface.preprocessing as spre
 import spikeinterface.sorters as ss
 import spikeinterface.postprocessing as spost
+import spikeinterface.qualitymetrics as sqm
 import spikeinterface.comparison as sc
+import spikeinterface.exporters as sexp
+import spikeinterface.curation as scur
 import spikeinterface.widgets as sw
 
 ##############################################################################
@@ -46,6 +66,12 @@ import spikeinterface.widgets as sw
 # are imported (scipy/sklearn/networkx/matplotlib/h5py...)
 
 import spikeinterface.full as si
+
+###############################################################################
+# Before getting started, we can set some global arguments for parallel processing. For this example, let's use 4 jobs and time chunks of 1s:
+
+global_job_kwargs = dict(n_jobs=4, chunk_duration="1s")
+si.set_global_job_kwargs(**global_job_kwargs)
 
 ##############################################################################
 # First, let's download a simulated dataset from the
@@ -132,52 +158,58 @@ print('Available sorters', ss.available_sorters())
 print('Installed sorters', ss.installed_sorters())
 
 ##############################################################################
-# The :code:`ss.installed_sorters()` will list the sorters installed in the machine.
+# The `ss.installed_sorters()` will list the sorters installed in the machine.
 # We can see we have HerdingSpikes and Tridesclous installed.
 # Spike sorters come with a set of parameters that users can change.
 # The available parameters are dictionaries and can be accessed with:
 
-print(ss.get_default_params('herdingspikes'))
-print(ss.get_default_params('tridesclous'))
+print("Tridesclous params:")
+pprint(ss.get_default_sorter_params('tridesclous'))
+print("SpykingCircus2 params:")
+pprint(ss.get_default_sorter_params('spykingcircus2'))
 
 ##############################################################################
-# Let's run herdingspikes and change one of the parameter, say, the detect_threshold:
+# Let's run `tridesclous` and change one of the parameter, say, the `detect_threshold`:
 
-sorting_HS = ss.run_herdingspikes(recording=recording_preprocessed, detect_threshold=4)
-print(sorting_HS)
+sorting_TDC = ss.run_sorter(sorter_name="tridesclous", recording=recording_preprocessed, detect_threshold=4)
+print(sorting_TDC)
 
 ##############################################################################
 # Alternatively we can pass full dictionary containing the parameters:
 
-other_params = ss.get_default_params('herdingspikes')
-other_params['detect_threshold'] = 5
+other_params = ss.get_default_sorter_params('tridesclous')
+other_params['detect_threshold'] = 6
 
 # parameters set by params dictionary
-sorting_HS_2 = ss.run_herdingspikes(recording=recording_preprocessed, output_folder="redringspikes_output2",
-                                    **other_params)
-print(sorting_HS_2)
+sorting_TDC_2 = ss.run_sorter(sorter_name="tridesclous", recording=recording_preprocessed, 
+                              output_folder="tdc_output2", **other_params)
+print(sorting_TDC_2)
 
 ##############################################################################
-# Let's run tridesclous as well, with default parameters:
+# Let's run `spykingcircus2` as well, with default parameters:
 
-sorting_TDC = ss.run_tridesclous(recording=recording_preprocessed)
+sorting_SC2 = ss.run_sorter(sorter_name="spykingcircus2", recording=recording_preprocessed)
+print(sorting_SC2)
 
 ##############################################################################
-# The :code:`sorting_HS` and :code:`sorting_TDC` are :py:class:`~spikeinterface.core.BaseSorting`
-# objects. We can print the units found using:
+# The `sorting_TDC` and `sorting_SC2` are `BaseSorting` objects. We can print the units found using:
 
-print('Units found by herdingspikes:', sorting_HS.get_unit_ids())
 print('Units found by tridesclous:', sorting_TDC.get_unit_ids())
+print('Units found by spyking-circus2:', sorting_SC2.get_unit_ids())
+
+###############################################################################
+# If a sorter is not installed locally, we can also avoid to install it and run it anyways, using a container (Docker or Singularity). For example, let's run `Kilosort2` using Docker:
+
+sorting_KS2 = ss.run_sorter(sorter_name="kilosort2", recording=recording_preprocessed,
+                            docker_image=True, verbose=True)
+print(sorting_KS2)
 
 ##############################################################################
-# SpikeInterface provides a efficient way to extractor waveform snippets from paired recording/sorting objects.
-# The :py:class:`~spikeinterface.core.WaveformExtractor` class samples some spikes (:code:`max_spikes_per_unit=500`)
-# for each cluster and stores them on disk. These waveforms per cluster are helpful to compute the average waveform,
-# or "template", for each unit and then to compute, for example, quality metrics.
+# SpikeInterface provides a efficient way to extract waveforms from paired recording/sorting objects.
+# The `extract_waveforms` function samples some spikes (by default `max_spikes_per_unit=500`)
+# for each unit, extracts, their waveforms, and stores them to disk. These waveforms are helpful to compute the average waveform, or "template", for each unit and then to compute, for example, quality metrics.
 
-we_TDC = si.WaveformExtractor.create(recording_preprocessed, sorting_TDC, 'waveforms', remove_if_exists=True)
-we_TDC.set_params(ms_before=3., ms_after=4., max_spikes_per_unit=500)
-we_TDC.run_extract_waveforms(n_jobs=-1, chunk_size=30000)
+we_TDC = si.extract_waveforms(recording_preprocessed, sorting_TDC, 'waveforms_folder', overwrite=True)
 print(we_TDC)
 
 unit_id0 = sorting_TDC.unit_ids[0]
@@ -188,97 +220,146 @@ template = we_TDC.get_template(unit_id0)
 print(template.shape)
 
 ##############################################################################
-# Once we have the  `WaveformExtractor` object
+# `we_TDC` is a have the  `WaveformExtractor` object
 # we can post-process, validate, and curate the results. With
-# the :py:mod:`spikeinterface.postprocessing` submodule, one can, for example,
-# get waveforms, templates, maximum channels, PCA scores, or export the data
-# to Phy. `Phy <https://github.com/cortex-lab/phy>`_ is a GUI for manual
+# the `spikeinterface.postprocessing` submodule, one can, for example,
+# compute spike amplitudes, PCA projections, unit locations, and more.
+#
+# Let's compute some postprocessing information that will be needed later for computing quality metrics, exporting, and visualization:
+
+amplitudes = spost.compute_spike_amplitudes(we_TDC)
+unit_locations = spost.compute_unit_locations(we_TDC)
+spike_locations = spost.compute_spike_locations(we_TDC)
+correlograms, bins = spost.compute_correlograms(we_TDC)
+similarity = spost.compute_template_similarity(we_TDC)
+
+###############################################################################
+# All of this postprocessing functions are saved in the waveforms folder as extensions:
+
+print(we_TDC.get_available_extension_names())
+
+###############################################################################
+# Importantly, waveform extractors (and all extensions) can be reloaded at later times:
+
+we_loaded = si.load_waveforms('waveforms_folder')
+print(we_loaded.get_available_extension_names())
+
+###############################################################################
+# Once we have computed all these postprocessing information, we can compute quality metrics (different quality metrics require different extensions - e.g., drift metrics resuire `spike_locations`):
+
+qm_params = sqm.get_default_qm_params()
+pprint(qm_params)
+
+###############################################################################
+# Since the recording is very short, let's change some parameters to accomodate the duration:
+
+qm_params["presence_ratio"]["bin_duration_s"] = 1
+qm_params["amplitude_cutoff"]["num_histogram_bins"] = 5
+qm_params["drift"]["interval_s"] = 2
+qm_params["drift"]["min_spikes_per_interval"] = 2
+
+""
+qm = sqm.compute_quality_metrics(we_TDC, qm_params=qm_params)
+display(qm)
+
+###############################################################################
+# Quality metrics are also extensions (and become part of the waveform folder):
+
+###############################################################################
+# Next, we can use some of the powerful tools for spike sorting visualization.
+#
+# We can export a sorting summary and quality metrics plot using the `sortingview` backend. This will generate shareble links for web-based visualization.
+
+w1 = sw.plot_quality_metrics(we_TDC, display=False, backend="sortingview")
+
+""
+w2 = sw.plot_sorting_summary(we_TDC, display=False, curation=True, backend="sortingview")
+
+###############################################################################
+# The sorting summary plot can also be used for manual labeling and curation. In the example above, we manually merged two units (0, 4) and added accept labels (2, 6, 7). After applying our curation, we can click on the "Save as snapshot (sha://)" and copy the URI:
+
+uri = "sha1://68cb54a9aaed2303fb82dedbc302c853e818f1b6"
+
+sorting_curated_sv = scur.apply_sortingview_curation(sorting_TDC, uri_or_json=uri)
+print(sorting_curated_sv)
+print(sorting_curated_sv.get_property("accept"))
+
+###############################################################################
+# Alternatively, we can export the data locally to Phy. [`Phy`](<https://github.com/cortex-lab/phy>) is a GUI for manual
 # curation of the spike sorting output. To export to phy you can run:
 
-from spikeinterface.exporters import export_to_phy
-
-export_to_phy(we_TDC, './phy_folder_for_TDC',
-              compute_pc_features=False, compute_amplitudes=True)
+sexp.export_to_phy(we_TDC, 'phy_folder_for_TDC', verbose=True)
 
 ##############################################################################
-# Then you can run the template-gui with: :code:`phy template-gui phy/params.py`
+# Then you can run the template-gui with: `phy template-gui phy_folder_for_TDC/params.py`
 # and manually curate the results.
 
+###############################################################################
+# After curating with Phy, the curated sorting can be reloaded to SpikeInterface. In this case, we exclude the units that have been labeled as "noise":
 
-
-##############################################################################
-# Quality metrics for the spike sorting output are very important to asses the spike sorting performance.
-# The :py:mod:`spikeinterface.qualitymetrics` module implements several quality metrics
-# to assess the goodness of sorted units. Among those, for example,
-# are signal-to-noise ratio, ISI violation ratio, isolation distance, and many more.
-# Theses metrics are built on top of WaveformExtractor class and return a dictionary with the unit ids as keys:
-
-snrs = si.compute_snrs(we_TDC)
-print(snrs)
-si_violations_ratio, isi_violations_rate, isi_violations_count = si.compute_isi_violations(we_TDC, isi_threshold_ms=1.5)
-print(si_violations_ratio)
-print(isi_violations_rate)
-print(isi_violations_count)
-
-##############################################################################
-# All theses quality metrics can be computed in one shot and returned as
-# a :code:`pandas.Dataframe`
-
-metrics = si.compute_quality_metrics(we_TDC, metric_names=['snr', 'isi_violation', 'amplitude_cutoff'])
-print(metrics)
+sorting_curated_phy = se.read_phy('phy_folder_for_TDC', exclude_cluster_groups=["noise"])
 
 ##############################################################################
 # Quality metrics can be also used to automatically curate the spike sorting
 # output. For example, you can select sorted units with a SNR above a
 # certain threshold:
 
-keep_mask = (metrics['snr'] > 7.5) & (metrics['isi_violations_rate'] < 0.01)
-print(keep_mask)
+keep_mask = (qm['snr'] > 10) & (qm['isi_violations_ratio'] < 0.01)
+print("Mask:", keep_mask.values)
 
-keep_unit_ids = keep_mask[keep_mask].index.values
-print(keep_unit_ids)
-
-curated_sorting = sorting_TDC.select_units(keep_unit_ids)
-print(curated_sorting)
+sorting_curated_auto = sorting_TDC.select_units(sorting_TDC.unit_ids[keep_mask])
+print(sorting_curated_auto)
 
 ##############################################################################
 # The final part of this tutorial deals with comparing spike sorting outputs.
-# We can either (1) compare the spike sorting results with the ground-truth
-# sorting :code:`sorting_true`, (2) compare the output of two (HerdingSpikes
-# and Tridesclous), or (3) compare the output of multiple sorters:
+# We can either:
+#
+# 1. compare the spike sorting results with the ground-truth
+# sorting `sorting_true`
+#
+# 2. compare the output of two (Tridesclous and SpykingCircus2)
+#
+# 3. compare the output of multiple sorters (Tridesclous, SpykingCircus2, Kilosort2)
 
-comp_gt_TDC = sc.compare_sorter_to_ground_truth(gt_sorting=sorting_true, tested_sorting=sorting_TDC)
-comp_TDC_HS = sc.compare_two_sorters(sorting1=sorting_TDC, sorting2=sorting_HS)
-comp_multi = sc.compare_multiple_sorters(sorting_list=[sorting_TDC, sorting_HS],
-                                         name_list=['tdc', 'hs'])
+comp_gt = sc.compare_sorter_to_ground_truth(gt_sorting=sorting_true, tested_sorting=sorting_TDC)
+comp_pair = sc.compare_two_sorters(sorting1=sorting_TDC, sorting2=sorting_SC2)
+comp_multi = sc.compare_multiple_sorters(sorting_list=[sorting_TDC, sorting_SC2, sorting_KS2],
+                                         name_list=['tdc', 'sc2', 'ks2'])
 
 ##############################################################################
-# When comparing with a ground-truth sorting extractor (1), you can get the sorting performance and plot a confusion
+# When comparing with a ground-truth sorting (1,), you can get the sorting performance and plot a confusion
 # matrix
 
-comp_gt_TDC.get_performance()
-w_conf = sw.plot_confusion_matrix(comp_gt_TDC)
-w_agr = sw.plot_agreement_matrix(comp_gt_TDC)
+print(comp_gt.get_performance())
+w_conf = sw.plot_confusion_matrix(comp_gt)
+w_agr = sw.plot_agreement_matrix(comp_gt)
 
 ##############################################################################
-# When comparing two sorters (2), we can see the matching of units between sorters.
+# When comparing two sorters (2.), we can see the matching of units between sorters.
 # Units which are not matched has -1 as unit id:
 
-comp_TDC_HS.hungarian_match_12
+comp_pair.hungarian_match_12
 
 ##############################################################################
 # or the reverse:
 
-comp_TDC_HS.hungarian_match_21
+comp_pair.hungarian_match_21
 
 ##############################################################################
-# When comparing multiple sorters (3), you can extract a :code:`SortingExtractor` object with units in agreement
+# When comparing multiple sorters (3.), you can extract a `BaseSorting` object with units in agreement
 # between sorters. You can also plot a graph showing how the units are matched between the sorters.
 
 sorting_agreement = comp_multi.get_agreement_sorting(minimum_agreement_count=2)
 
-print('Units in agreement between Klusta and Mountainsort4:', sorting_agreement.get_unit_ids())
+print('Units in agreement between TDC, SC2, and KS2:', sorting_agreement.get_unit_ids())
 
-w_multi = sw.plot_multicomp_graph(comp_multi)
+w_multi = sw.plot_multicomp_agreement(comp_multi)
+w_multi = sw.plot_multicomp_agreement_by_sorter(comp_multi)
 
-plt.show()
+###############################################################################
+# We see that 10 unit were found by all sorters (note that this simulated dataset is a very simple example, and usually sorters do not do such a great job)!
+#
+# However, Kilosort2 found 9 additional units that are not matched to ground-truth!
+
+###############################################################################
+# **That's all for this "How to get started" tutorial! Enjoy SpikeInterface!**
