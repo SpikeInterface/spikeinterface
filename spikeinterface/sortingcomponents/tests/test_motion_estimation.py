@@ -37,9 +37,10 @@ def setup_module():
     cache_folder.mkdir(parents=True, exist_ok=True)
 
     # detect and localize
+    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=0.1, ms_after=0.3)
     pipeline_nodes = [
-        ExtractDenseWaveforms(recording, name='waveforms',ms_before=0.1, ms_after=0.3),
-        LocalizeCenterOfMass(recording,  parents='waveforms', local_radius_um=60.)
+        extract_dense_waveforms,
+        LocalizeCenterOfMass(recording,  parents=[extract_dense_waveforms], local_radius_um=60.)
     ]
     peaks, peak_locations = detect_peaks(recording,
                                          method='locally_exclusive',

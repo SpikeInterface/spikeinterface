@@ -79,10 +79,9 @@ jobs:
         run: |
           source ~/test_env/bin/activate
           pytest --cov=./ --cov-report xml:./coverage.xml
-      - uses: codecov/codecov-action@v2
+      - uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          version: "v0.1.15"
           fail_ci_if_error: true
           file: ./coverage.xml
           flags: unittests
