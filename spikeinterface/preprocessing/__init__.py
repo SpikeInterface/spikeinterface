@@ -1,6 +1,6 @@
 from .preprocessinglist import *
 
-from .motion import esimate_and_correct_motion
+from .motion import estimate_and_correct_motion
 
 from .preprocessing_tools import get_spatial_interpolation_kernel
 from .detect_bad_channels import detect_bad_channels

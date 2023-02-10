@@ -3,18 +3,41 @@ import time
 from pathlib import Path
 
 import numpy as np
+import json
 
 from spikeinterface.core import get_noise_levels, fix_job_kwargs
 
 
-def esimate_and_correct_motion(recording,
+motion_options_preset = {
+    'rigid_simple': {
+        'detect_kwargs': {},
+        'select_kwargs': None,
+        'localize_peaks_kwargs': {},
+        'estimate_motion_kwargs': {},
+        'correct_motion_kwargs': {},    
+    },
+    'kilosort_like': {
+        'detect_kwargs': {},
+        'select_kwargs': None,
+        'localize_peaks_kwargs': {},
+        'estimate_motion_kwargs': {},
+        'correct_motion_kwargs': {},
+    },
+
+
+}
+
+
+def estimate_and_correct_motion(recording,
+                                preset='',
+                                folder=None,  
                               detect_kwargs={},
                               select_kwargs=None,
                               localize_peaks_kwargs={},
                               estimate_motion_kwargs={},
                               correct_motion_kwargs={},
                               job_kwargs={},
-                              folder=None,
+                              
                               ):
     """
     Top level function that estimate and correct the motion for a recording.
@@ -42,6 +65,21 @@ def esimate_and_correct_motion(recording,
       * :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks'
       * :py:func:`~spikeinterface.sortingcomponents.motion_estimation.estimate_motion'
       * :py:func:`~spikeinterface.sortingcomponents.motion_correction.CorrectMotionRecording'
+
+
+
+    Parameters
+    ----------
+    recording: RecordingExtractor
+        The recording extractor to be transformed
+    
+    Returns
+    -------
+    recording_corrected: Recording
+        The motion corrected recording
+
+
+
     """
 
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -56,36 +94,39 @@ def esimate_and_correct_motion(recording,
 
     noise_levels = get_noise_levels(recording, return_scaled=False)
 
-    if select_kwargs is not None:
+    if select_kwargs is None:
         # localize is done during detect_peaks()
         method = localize_peaks_kwargs.pop('method', 'center_of_mass')
         method_class = localize_peak_methods[method]
         node0 = ExtractDenseWaveforms(recording, name='waveforms',ms_before=0.1, ms_after=0.3)
-        node1 = method_class(recording, parents='waveforms', **localize_peaks_kwargs)
+        node1 = method_class(recording, parents='waveforms', return_ouput=True, **localize_peaks_kwargs)
         pipeline_nodes = [node0, node1]
     else:
         # lcalization is done after select_peaks()
         pipeline_nodes = None
 
+    print(pipeline_nodes)
 
     t0 = time.perf_counter()
     peaks = detect_peaks(recording, noise_levels=noise_levels, pipeline_nodes=pipeline_nodes,
                          **detect_kwargs, **job_kwargs)
     t1 = time.perf_counter()
 
-    if select_kwargs is not None:
-        # salect some peaks
-        selected_peaks = select_peaks(peaks, **select_kwargs, **job_kwargs)
-        t2 = time.perf_counter()
-        peak_locations = localize_peaks(recording, selected_peaks,
-                                        **localize_peaks_kwargs, **job_kwargs)
-        t3 = time.perf_counter()
-    else:
+    if select_kwargs is None:
         # computed during detect_peaks()
         t3 = t2 = time.perf_counter()
         peaks, peak_locations = peaks
 
-    motion, temporal_bins, spatial_bins = estimate_motion(recording, selected_peaks, peak_locations, 
+    else:
+        # salect some peaks
+        peaks = select_peaks(peaks, **select_kwargs, **job_kwargs)
+        t2 = time.perf_counter()
+        peak_locations = localize_peaks(recording, peaks,
+                                        **localize_peaks_kwargs, **job_kwargs)
+        t3 = time.perf_counter()
+      
+
+    motion, temporal_bins, spatial_bins = estimate_motion(recording, peaks, peak_locations, 
                                                           **estimate_motion_kwargs)
     t4 = time.perf_counter()
 
@@ -101,13 +142,14 @@ def esimate_and_correct_motion(recording,
 
     if folder is not None:
         folder = Path(folder)
+        folder.mkdir(exist_ok=True, parents=True)
 
         # params and run times
         parameters = dict(detect_kwargs=detect_kwargs, select_kwargs=select_kwargs, 
                           localize_peaks_kwargs=localize_peaks_kwargs, estimate_motion_kwargs=estimate_motion_kwargs,
                           correct_motion_kwargs=correct_motion_kwargs, job_kwargs=job_kwargs)
-        (folder / 'parameters.json').write_text(parameters.dumps(info, indent=4), encoding='utf8')
-        (folder / 'run_times.json').write_text(run_times.dumps(info, indent=4), encoding='utf8')
+        (folder / 'parameters.json').write_text(json.dumps(parameters, indent=4), encoding='utf8')
+        (folder / 'run_times.json').write_text(json.dumps(run_times, indent=4), encoding='utf8')
 
 
         np.save(folder / 'peaks.npy', peaks)
