@@ -18,37 +18,17 @@ from .waveform_utils import to_channelless_representation, from_channelless_repr
 
 class PCBaseNode(PipelineNode):
     
-    def __init__(self, recording: BaseRecording, name="pca_node", parents: list = None, ms_before: float = 1., ms_after: float = 1.,
+    def __init__(self, recording: BaseRecording, parents: list = list[PipelineNode], ms_before: float = 1., ms_after: float = 1.,
             peak_sign: str = 'neg', all_channels: bool = True, model_path: str = None, local_radius_um: float = None,
             return_ouput=True,
             ):
         """
-        A step that performs a PCA projection on the waveforms extracted by a peak_detection function.
-        
-        This class can work in two ways:
-        1) The class can receive the path of a previously trained model with the `model_path` argument.
-        2) The class can be trained with the fit method after instantiating the class. The model will be stored in 
-        `model_path`.
-
-
-        Parameters
-        ----------
-        recording : BaseRecording
-            The recording object.
-        ms_before : float, optional
-            The number of milliseconds to include before the peak of the spike, by default 1.
-        ms_after : float, optional
-            The number of milliseconds to include after the peak of the spike, by default 1.
-        peak_sign : str, optional
-            The sign of the peak, either 'neg' or 'pos', by default 'neg'.
-        all_channels : bool, optional
-            Whether to extract spikes from all channels or only the channels with spikes, by default True.
-        model_path : str, optional
-            The path to the pca model, by default None.
-        local_radius_um : float, optional
-            The radius (in micrometers) to use for definint sparsity, by default None.
+        Base class for PCA projection nodes. Contains the logic of the fit method that should be inherited by all the 
+        child classess. The child should implement a compute method that does a specific operation 
+        (e.g. project, denoise, etc)
         """
-        PipelineNode.__init__(self, recording=recording, name=name, parents=parents, return_ouput=return_ouput)
+        
+        PipelineNode.__init__(self, recording=recording, parents=parents, return_ouput=return_ouput)
         self.all_channels = all_channels
         self.peak_sign = peak_sign
         self.local_radius_um = local_radius_um
@@ -119,17 +99,65 @@ class PCBaseNode(PipelineNode):
     
                 
 class PCAProjection(PCBaseNode):
-    
-    def __init__(self, recording: BaseRecording, name="pca_projection", parents: list = None, ms_before: float = 1., ms_after: float = 1.,
+    """
+    A step that performs a PCA projection on the waveforms extracted by a peak_detection function.
+        
+    This class can work in two ways:
+    1) The class can receive the path of a previously trained model with the `model_path` argument.
+    2) The class can be trained with the fit method after instantiating the class. The model will be stored in 
+    `model_path`.
+
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording object.
+    parents: list
+        The parent nodes of this node. This should contain a mechanism to extract waveforms.
+    ms_before : float, optional
+        The number of milliseconds to include before the peak of the spike, by default 1.
+    ms_after : float, optional
+        The number of milliseconds to include after the peak of the spike, by default 1.
+    peak_sign : str, optional
+        The sign of the peak, either 'neg' or 'pos', by default 'neg'.
+    all_channels : bool, optional
+        Whether to extract spikes from all channels or only the channels with spikes, by default True.
+    model_path : str, optional
+        The path to the pca model, by default None.
+    local_radius_um : float, optional
+        The radius (in micrometers) to use for definint sparsity, by default None.
+        
+    """    
+
+
+    def __init__(self, recording: BaseRecording, parents: list = list[PipelineNode], ms_before: float = 1., ms_after: float = 1.,
         peak_sign: str = 'neg', all_channels: bool = True, model_path: str = None, local_radius_um: float = None,
         return_ouput=True,
         ):
         
-        PCBaseNode.__init__(self, recording=recording, name=name, parents=parents, ms_before=ms_before, ms_after=ms_after,
+        PCBaseNode.__init__(self, recording=recording, parents=parents, ms_before=ms_before, ms_after=ms_after,
                             peak_sign=peak_sign, all_channels=all_channels, model_path=model_path, 
                             local_radius_um=local_radius_um, return_ouput=return_ouput)
             
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
+        """
+        Projects the waveforms using the PCA model trained in the fit method or loaded from the model_path.
+
+        Parameters
+        ----------
+        traces : np.ndarray
+            The traces of the recording.
+        peaks : np.ndarray
+            The peaks resulting from a peak_detection step.
+        waveforms : np.ndarray
+            Waveforms extracted from the recording using a WavefomExtractor node.
+
+        Returns
+        -------
+        np.ndarray
+            The projected waveforms.
+
+        """
 
         if self.pca_model == None:
             exception_string = (

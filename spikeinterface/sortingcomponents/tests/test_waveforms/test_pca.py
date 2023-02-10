@@ -22,9 +22,9 @@ def test_pca_dimensionality_reduction(tmp_path):
     model_path = tmp_path / "buffer_pca.pkl"
 
     # Node initialization
-    extract_waveforms = ExtractDenseWaveforms(recording=recording, name='extract_dense_waveforms',ms_before=ms_before,
+    extract_waveforms = ExtractDenseWaveforms(recording=recording,ms_before=ms_before,
                                               ms_after=ms_after, return_ouput=False)
-    temporal_pca = PCAProjection(recording=recording, model_path=model_path, parents=["extract_dense_waveforms"],
+    temporal_pca = PCAProjection(recording=recording, model_path=model_path, parents=[extract_waveforms],
                                  local_radius_um=local_radius_um)
     pipeline_nodes = [extract_waveforms, temporal_pca]
 
@@ -55,9 +55,9 @@ def test_pca_dimensionality_reduction_parallel(tmp_path):
     model_path = tmp_path / "buffer_pca.pkl"
 
     # Node initialization
-    extract_waveforms = ExtractDenseWaveforms(recording=recording, name='extract_dense_waveforms',ms_before=ms_before,
+    extract_waveforms = ExtractDenseWaveforms(recording=recording,ms_before=ms_before,
                                               ms_after=ms_after, return_ouput=False)
-    temporal_pca = PCAProjection(recording=recording, model_path=model_path, parents=["extract_dense_waveforms"],
+    temporal_pca = PCAProjection(recording=recording, model_path=model_path, parents=[extract_waveforms],
                                  local_radius_um=local_radius_um)
     pipeline_nodes = [extract_waveforms, temporal_pca]
 
@@ -90,9 +90,9 @@ def test_pca_dimensionality_reduction_sparsity(tmp_path):
     model_path = tmp_path / "buffer_pca.pkl"
 
     # Node initialization
-    extract_waveforms = ExtractSparseWaveforms(recording=recording, name='extract_dense_waveforms',ms_before=ms_before,
+    extract_waveforms = ExtractSparseWaveforms(recording=recording, ms_before=ms_before,
                                               ms_after=ms_after, return_ouput=True)
-    temporal_pca = PCAProjection(recording=recording, model_path=model_path, parents=["extract_dense_waveforms"],
+    temporal_pca = PCAProjection(recording=recording, model_path=model_path, parents=[extract_waveforms],
                                  local_radius_um=local_radius_um)
     pipeline_nodes = [extract_waveforms, temporal_pca]   
 
