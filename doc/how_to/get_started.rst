@@ -217,18 +217,6 @@ object to disk.
 
     BandpassFilterRecording: 32 channels - 1 segments - 32.0kHz - 10.000s
     CommonReferenceRecording: 32 channels - 1 segments - 32.0kHz - 10.000s
-    Use cache_folder=/tmp/spikeinterface_cache/tmpiw_tdcll/YGEFGP0P
-    write_binary_recording with n_jobs = 4 and chunk_size = 32000
-
-
-
-.. parsed-literal::
-
-    write_binary_recording:   0%|          | 0/10 [00:00<?, ?it/s]
-
-
-.. parsed-literal::
-
     BinaryFolderRecording: 32 channels - 1 segments - 32.0kHz - 10.000s
 
 
@@ -365,13 +353,12 @@ example, let’s run ``Kilosort2`` using Docker:
     Starting container
     Installing spikeinterface from sources in spikeinterface/kilosort2-compiled-base
     Installing dev spikeinterface from local machine
-
-
-.. parsed-literal::
-
     Installing extra requirements: ['neo', 'mearec']
     Running kilosort2 sorter inside spikeinterface/kilosort2-compiled-base
     Stopping container
+
+.. parsed-literal::
+    
     KiloSortSortingExtractor: 19 units - 1 segments - 32.0kHz
 
 
@@ -394,12 +381,6 @@ and then to compute, for example, quality metrics.
     
     template = we_TDC.get_template(unit_id0)
     print(template.shape)
-
-
-
-.. parsed-literal::
-
-    extract waveforms memmap:   0%|          | 0/10 [00:00<?, ?it/s]
 
 
 .. parsed-literal::
@@ -425,19 +406,6 @@ for computing quality metrics, exporting, and visualization:
     spike_locations = spost.compute_spike_locations(we_TDC)
     correlograms, bins = spost.compute_correlograms(we_TDC)
     similarity = spost.compute_template_similarity(we_TDC)
-
-
-
-.. parsed-literal::
-
-    extract amplitudes:   0%|          | 0/10 [00:00<?, ?it/s]
-
-
-
-.. parsed-literal::
-
-    localize peaks:   0%|          | 0/10 [00:00<?, ?it/s]
-
 
 
 All of this postprocessing functions are saved in the waveforms folder
@@ -804,35 +772,6 @@ curation of the spike sorting output. To export to phy you can run:
 
 .. parsed-literal::
 
-    write_binary_recording with n_jobs = 4 and chunk_size = 32000
-
-
-
-.. parsed-literal::
-
-    write_binary_recording:   0%|          | 0/10 [00:00<?, ?it/s]
-
-
-
-.. parsed-literal::
-
-    Fitting PCA:   0%|          | 0/10 [00:00<?, ?it/s]
-
-
-
-.. parsed-literal::
-
-    Projecting waveforms:   0%|          | 0/10 [00:00<?, ?it/s]
-
-
-
-.. parsed-literal::
-
-    extract PCs:   0%|          | 0/10 [00:00<?, ?it/s]
-
-
-.. parsed-literal::
-
     Run:
     phy template-gui  /home/alessio/Documents/codes/spike_sorting/spikeinterface/spikeinterface/examples/how_to/phy_folder_for_TDC/params.py
 
@@ -932,17 +871,16 @@ between sorters. Units which are not matched has -1 as unit id:
 
 .. parsed-literal::
 
-    0    0.0
-    1    6.0
-    2    2.0
-    3    7.0
-    4    5.0
-    5    8.0
-    6    1.0
-    7    4.0
-    8    3.0
-    9    9.0
-    dtype: float64
+    0    0
+    1    6
+    2    2
+    3    7
+    4    5
+    5    8
+    6    1
+    7    4
+    8    3
+    9    9
 
 
 
@@ -957,17 +895,16 @@ or the reverse:
 
 .. parsed-literal::
 
-    0    0.0
-    1    6.0
-    2    2.0
-    3    8.0
-    4    7.0
-    5    4.0
-    6    1.0
-    7    3.0
-    8    5.0
-    9    9.0
-    dtype: float64
+    0    0
+    1    6
+    2    2
+    3    8
+    4    7
+    5    4
+    6    1
+    7    3
+    8    5
+    9    9
 
 
 
