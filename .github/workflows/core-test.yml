@@ -5,6 +5,10 @@ on:
     branches: [master]
     types: [synchronize, opened, reopened, ready_for_review]
 
+concurrency: # Cancels previous jobs
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     name: Test on ${{ matrix.os }} OS
