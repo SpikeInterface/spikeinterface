@@ -16,7 +16,6 @@ from .globals import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import check_json, is_dict_extractor, recursive_path_modifier
 from .job_tools import _shared_job_kwargs_doc
 
-
 class BaseExtractor:
     """
     Base class for Recording/Sorting
@@ -284,8 +283,8 @@ class BaseExtractor:
     def to_dict(self, include_annotations=False, include_properties=False,
                 relative_to=None, folder_metadata=None):
         """
-        Make a nested serialized dictionary out of the extractor. The dictionary be used to re-initialize an
-        extractor with load_extractor_from_dict(dump_dict)
+        Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize 
+        an extractor using load_extractor_from_dict(dump_dict)
 
         Parameters
         ----------
