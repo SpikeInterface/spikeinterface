@@ -98,8 +98,8 @@ def estimate_and_correct_motion(recording,
         # localize is done during detect_peaks()
         method = localize_peaks_kwargs.pop('method', 'center_of_mass')
         method_class = localize_peak_methods[method]
-        node0 = ExtractDenseWaveforms(recording, name='waveforms',ms_before=0.1, ms_after=0.3)
-        node1 = method_class(recording, parents='waveforms', return_ouput=True, **localize_peaks_kwargs)
+        node0 = ExtractDenseWaveforms(recording, ms_before=0.1, ms_after=0.3)
+        node1 = method_class(recording, parents=[node0], return_ouput=True, **localize_peaks_kwargs)
         pipeline_nodes = [node0, node1]
     else:
         # lcalization is done after select_peaks()
