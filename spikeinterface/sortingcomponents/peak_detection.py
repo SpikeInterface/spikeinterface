@@ -69,15 +69,9 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None, **kwargs):
         pipeline_nodes_ = None
         extra_margin = 0
 
-    # and run
-    if job_kwargs['n_jobs'] > 1:
-        recording_ = recording.to_dict()
-    else:
-        recording_ = recording
-
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
-    init_args = (recording_, method, method_args, extra_margin, pipeline_nodes_)
+    init_args = (recording, method, method_args, extra_margin, pipeline_nodes_)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
                                        handle_returns=True, job_name='detect peaks',
                                        **job_kwargs)

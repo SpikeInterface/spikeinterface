@@ -129,6 +129,8 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
     """
     Run one or several PeakPipelineStep on already detected peaks.
     """
+    check_graph(nodes)
+
     job_kwargs = fix_job_kwargs(job_kwargs)
     assert all(isinstance(node, PipelineNode) for node in nodes)
 
@@ -139,17 +141,8 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
         i1 = np.searchsorted(peaks['segment_ind'], segment_index + 1)
         segment_slices.append(slice(i0, i1))
 
-    check_graph(nodes)
 
-    if job_kwargs['n_jobs'] > 1:
-        init_args = (
-            recording.to_dict(),
-            peaks,  # TODO peaks as shared mem to avoid copy
-            nodes,
-            segment_slices,
-        )
-    else:
-        init_args = (recording, peaks, nodes, segment_slices)
+    init_args = (recording, peaks, nodes, segment_slices)
         
     processor = ChunkRecordingExecutor(recording, _compute_peak_step_chunk, _init_worker_peak_pipeline,
                                        init_args, handle_returns=True, job_name=job_name, **job_kwargs)
@@ -172,10 +165,6 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
 
 def _init_worker_peak_pipeline(recording, peaks, nodes, segment_slices):
     """Initialize worker for localizing peaks."""
-
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-        recording = load_extractor(recording)
     
     max_margin = max(node.get_trace_margin() for node in nodes)
 
