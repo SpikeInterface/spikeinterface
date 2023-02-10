@@ -22,7 +22,7 @@ jobs:
         # "macos-latest", "windows-latest"
         os: ["ubuntu-latest", ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
@@ -50,8 +50,9 @@ jobs:
           # create an environement (better for caching)
           python -m venv ~/test_env
           source ~/test_env/bin/activate
-          python -m pip install --upgrade pip
+          python -m pip install -U pip  # Official recommended way
           pip install setuptools wheel twine
+          pip install tabulate  # This produces summaries at the end
           ## clean some cache to avoid using old cache
           pip cache remove numpy
           pip cache remove hdbscan
@@ -67,7 +68,7 @@ jobs:
       - name: git-annex version
         run: |
           git-annex version
-      - name: pip list
+      - name: Packages installed
         run: |
           source ~/test_env/bin/activate
           pip list
@@ -93,7 +94,7 @@ jobs:
           fi
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v17.2
+        uses: tj-actions/changed-files@v35
       - name: Module changes
         id: modules-changed
         run: |
@@ -150,59 +151,118 @@ jobs:
       - name: Test core
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m core
+          pytest -vv -m core --durations=0 --durations-min=0.001 > report_core.txt
+          cat report_core.txt
+          echo "# Timing profile of core tests" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_core.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
+          rm report_core.txt
       - name: Test extractors
         if: ${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -s -m extractors
+          pytest -vv -s -m extractors --durations=0 --durations-min=0.001 > report_extractors.txt
+          cat report_extractors.txt
+          echo "# Timing profile of extractors" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_extractors.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
+          rm report_extractors.txt
       - name: Test preprocessing
         if: ${{ steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m preprocessing
+          pytest -vv -s -m preprocessing --durations=0 --durations-min=0.001 > report_preprocessing.txt
+          cat report_preprocessing.txt
+          echo "# Timing profile of preprocessing" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_preprocessing.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
+          rm report_preprocessing.txt
       - name: Test postprocessing
         if: ${{ steps.modules-changed.outputs.POSTPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m postprocessing
+          pytest -vv -s -m postprocessing --durations=0 --durations-min=0.001 > report_postprocessing.txt
+          cat report_postprocessing.txt
+          echo "# Timing profile of postprocessing" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_postprocessing.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
+          rm report_postprocessing.txt
       - name: Test quality metrics
         if: ${{ steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m qualitymetrics
+          pytest -vv -s -m qualitymetrics --durations=0 --durations-min=0.001 > report_qualitymetrics.txt
+          cat report_qualitymetrics.txt
+          echo "# Timing profile of qualitymetrics" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_qualitymetrics.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
+          rm report_qualitymetrics.txt
       - name: Test sorters
         if: ${{ steps.modules-changed.outputs.SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m sorters
+          pytest -vv -s -m sorters --durations=0 --durations-min=0.001 > report_sorters.txt
+          cat report_sorters.txt
+          echo "# Timing profile of sorters" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_sorters.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
+          rm report_sorters.txt
       - name: Test comparison
         if: ${{ steps.modules-changed.outputs.COMPARISON_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m comparison
+          pytest -vv -s -m comparison --durations=0 --durations-min=0.001 > report_comparison.txt
+          cat report_comparison.txt
+          echo "# Timing profile of comparison" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_comparison.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
+          rm report_comparison.txt
       - name: Test curation
         if: ${{ steps.modules-changed.outputs.CURATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -s -m curation
+          pytest -vv -s -m curation --durations=0 --durations-min=0.001 > report_curation.txt
+          cat report_curation.txt
+          echo "# Timing profile of curation" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_curation.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
+          rm report_curation.txt
       - name: Test widgets
         if: ${{ steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' ||  steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true'}}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -s -m widgets
+          pytest -vv -s -m widgets --durations=0 --durations-min=0.001 > report_widgets.txt
+          cat report_widgets.txt
+          echo "# Timing profile of widgets" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_widgets.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
+          rm report_widgets.txt
       - name: Test exporters
         if: ${{ steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m exporters
+          pytest -vv -s -m exporters --durations=0 --durations-min=0.001 > report_exporters.txt
+          cat report_exporters.txt
+          echo "# Timing profile of exporters" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_exporters.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
+          rm report_exporters.txt
       - name: Test sortingcomponents
         if: ${{ steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m sortingcomponents
+          pytest -vv -s -m sortingcomponents --durations=0 --durations-min=0.001 > report_sortingcomponents.txt
+          cat report_sortingcomponents.txt
+          echo "# Timing profile of sortingcomponents" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_sortingcomponents.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
+          rm report_sortingcomponents.txt
       - name: Test SI sorters
         if: ${{ steps.modules-changed.outputs.SI_SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m si_sorters
+          pytest -vv -s -m si_sorters --durations=0 --durations-min=0.001 > report_si_sorters.txt
+          cat report_si_sorters.txt
+          echo "# Timing profile of si_sorters" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_si_sorters.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
