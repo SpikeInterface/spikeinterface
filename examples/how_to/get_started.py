@@ -274,7 +274,7 @@ print(sorting_curated_sv)
 print(sorting_curated_sv.get_property("accept"))
 # -
 
-# Alternatively, we can export the data locally to Phy. [`Phy`](<https://github.com/cortex-lab/phy>) is a GUI for manual
+# Alternatively, we can export the data locally to Phy. [Phy](<https://github.com/cortex-lab/phy>) is a GUI for manual
 # curation of the spike sorting output. To export to phy you can run:
 
 sexp.export_to_phy(we_TDC, 'phy_folder_for_TDC', verbose=True)

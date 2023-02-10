@@ -726,9 +726,7 @@ visualization.
     w1 = sw.plot_quality_metrics(we_TDC, display=False, backend="sortingview")
 
 
-.. parsed-literal::
-
-    https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://901a11ba31ae9ab512a99bdf36a3874173249d87&label=SpikeInterface%20-%20Quality%20Metrics
+https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://901a11ba31ae9ab512a99bdf36a3874173249d87&label=SpikeInterface%20-%20Quality%20Metrics
 
 
 .. code:: ipython3
@@ -736,9 +734,7 @@ visualization.
     w2 = sw.plot_sorting_summary(we_TDC, display=False, curation=True, backend="sortingview")
 
 
-.. parsed-literal::
-
-    https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://cd190c64eeea6a0ceaf57d1153b6ab4eac351d70&label=SpikeInterface%20-%20Sorting%20Summary
+https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://cd190c64eeea6a0ceaf57d1153b6ab4eac351d70&label=SpikeInterface%20-%20Sorting%20Summary
 
 
 The sorting summary plot can also be used for manual labeling and
@@ -762,7 +758,7 @@ on the “Save as snapshot (sha://)” and copy the URI:
 
 
 Alternatively, we can export the data locally to Phy.
-```Phy`` <https://github.com/cortex-lab/phy>`__ is a GUI for manual
+`Phy <https://github.com/cortex-lab/phy>`_ is a GUI for manual
 curation of the spike sorting output. To export to phy you can run:
 
 .. code:: ipython3
