@@ -20,6 +20,7 @@ from spikeinterface.sortingcomponents.benchmark.benchmark_tools import Benchmark
 from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.widgets import plot_sorting_performance
 from spikeinterface.qualitymetrics import compute_quality_metrics
+from spikeinterface.curation import MergeUnitsSorting
 
 import sklearn
 
@@ -92,7 +93,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 if self.do_preprocessing:
                     rec = bandpass_filter(rec)
                     rec = common_reference(rec)
-                    rec = zscore(rec)
+                    # rec = zscore(rec)
                 self._recordings[key] = rec
 
             rec = self._recordings['drifting']
@@ -104,8 +105,8 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     def run(self):
         self.extract_waveforms()
         self.save_to_folder()
-        #self.run_sorters()
-        #self.save_to_folder()
+        self.run_sorters()
+        self.save_to_folder()
 
 
     def extract_waveforms(self):
@@ -226,9 +227,10 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 self.comparisons[label] = comp
                 self.accuracies[label] = comp.get_performance()['accuracy'].values
 
-    def plot_sortings_accuracy(self, mode='ordered_accuracy', figsize=(15, 5)):
+    def _plot_accuracy(self, accuracies, mode='ordered_accuracy', figsize=(15, 5), ls='-'):
 
-        self.compute_accuracies()
+        if len(self.accuracies) != len(self.sorter_cases):
+            self.compute_accuracies()
 
         n = len(self.sorter_cases)
 
@@ -238,11 +240,11 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             order = None
             for case in self.sorter_cases:
                 label = case['label']                
-                comp = self.comparisons[label]
-                acc = self.accuracies[label]
+                # comp = self.comparisons[label]
+                acc = accuracies[label]
                 order = np.argsort(acc)[::-1]
                 acc = acc[order]
-                ax.plot(acc, label=label)
+                ax.plot(acc, label=label, ls=ls)
             ax.legend()
             ax.set_ylabel('accuracy')
             ax.set_xlabel('units ordered by accuracy')
@@ -261,14 +263,14 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             for i, case in enumerate(self.sorter_cases):
                 ax = axs[i]
                 label = case['label']
-                acc = self.accuracies[label]
+                acc = accuracies[label]
                 s = ax.scatter(depth, snr, c=acc)
                 s.set_clim(0., 1.)
                 ax.set_title(label)
                 ax.axvline(np.min(chan_locations[:, 1]), ls='--', color='k')
                 ax.axvline(np.max(chan_locations[:, 1]), ls='--', color='k')
+                ax.set_ylabel('snr')
             ax.set_xlabel('depth')
-            ax.set_ylabel('snr')
 
 
         elif mode == 'snr':
@@ -297,13 +299,80 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
             for i, case in enumerate(self.sorter_cases):
                 label = case['label']
-                acc = self.accuracies[label]
+                acc = accuracies[label]
                 ax.scatter(depth, acc, label=label)
             ax.axvline(np.min(chan_locations[:, 1]), ls='--', color='k')
             ax.axvline(np.max(chan_locations[:, 1]), ls='--', color='k')
             ax.legend()
             ax.set_xlabel('depth')
             ax.set_ylabel('accuracy')
+
+    def plot_sortings_accuracy(self, mode='ordered_accuracy', figsize=(15, 5)):
+
+        if len(self.accuracies) != len(self.sorter_cases):
+            self.compute_accuracies()
+        
+        self._plot_accuracy(self.accuracies, mode=mode, figsize=figsize, ls='-')
+
+    def plot_best_merges_accuracy(self, mode='ordered_accuracy', figsize=(15, 5)):
+
+        self._plot_accuracy(self.merged_accuracies, mode=mode, figsize=figsize, ls='--')
+
+
+
+    def plot_sorting_units_categories(self):
+        
+        if len(self.accuracies) != len(self.sorter_cases):
+            self.compute_accuracies()
+
+        for i, case in enumerate(self.sorter_cases):
+            label = case['label']
+            comp = self.comparisons[label]
+            count = comp.count_units_categories()
+            if i == 0:
+                df = pd.DataFrame(columns=count.index)
+            df.loc[label, :] = count
+        df.plot.bar()
+    
+    def find_best_merges(self, merging_score = 0.2):
+        # this find best merges having the ground truth
+
+        self.merged_sortings = {}
+        self.merged_comparisons = {}
+        self.merged_accuracies = {}
+        self.units_to_merge = {}
+        for i, case in enumerate(self.sorter_cases):
+            label = case['label']
+            print()
+            print(label)
+            gt_unit_ids = self.sorting_gt.unit_ids
+            sorting = self.sortings[label]
+            unit_ids = sorting.unit_ids
+            
+            comp = self.comparisons[label]
+            scores = comp.agreement_scores
+            
+            
+            to_merge = []
+            for gt_unit_id in gt_unit_ids:
+                inds,  = np.nonzero(scores.loc[gt_unit_id, :].values > merging_score)
+                merge_ids = unit_ids[inds]
+                if merge_ids.size > 1:
+                    to_merge.append(list(merge_ids))
+
+            self.units_to_merge[label] = to_merge
+            merged_sporting = MergeUnitsSorting(sorting, to_merge)
+            print(sorting)
+            print(merged_sporting)
+            comp_merged = GroundTruthComparison(self.sorting_gt, merged_sporting, exhaustive_gt=True)
+            
+            self.merged_sortings[label] = merged_sporting
+            self.merged_comparisons[label] = comp_merged
+            self.merged_accuracies[label] = comp_merged.get_performance()['accuracy'].values
+
+            
+
+
 
 
 def plot_distances_to_static(benchmarks, metric='cosine', figsize=(15, 10)):

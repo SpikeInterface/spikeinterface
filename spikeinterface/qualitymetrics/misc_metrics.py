@@ -236,9 +236,9 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     occurring at roughly half the rate of "true" spikes for that unit.
     In cases of highly contaminated units, the ISI violations ratio can sometimes be greater than 1.
 
-    Reference
-    ^^^^^^^^^
-    [1] Hill et al. (2011) J Neurosci 31: 8699-8705
+    References
+    ----------
+    Based on metrics described in [Hill]_
 
     Originally written in Matlab by Nick Steinmetz (https://github.com/cortex-lab/sortingQuality)
     and converted to Python by Daniel Denman.
@@ -309,13 +309,13 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
     rp_violations : dict
         Number of refractory period violations.
     
-    Note
-    ----
+    Notes
+    -----
     Requires "numba" package
 
-    Reference
-    ^^^^^^^^^
-    [1] Llobet & Wyngaard (2022) bioRxiv
+    References
+    ----------
+    Based on metrics described in [Llobet]_
 
     """
     res = namedtuple("rp_violations", ['rp_contamination', 'rp_violations'])
@@ -387,8 +387,9 @@ def compute_sliding_rp_violations(waveform_extractor, bin_size_ms=0.25, window_s
     contamination : dict of floats
         The minimum contamination at 90% confidence
 
-    Reference
+    References
     ----------
+    Based on metrics described in [IBL]_
     This code was adapted from https://github.com/SteinmetzLab/slidingRefractory/blob/1.0.0/python/slidingRP/metrics.py
     """
     duration = waveform_extractor.get_total_duration()
@@ -457,9 +458,9 @@ def compute_amplitude_cutoffs(waveform_extractor, peak_sign='neg',
     If the "spike_amplitude" extension is not available, the amplitudes are extracted from the waveform extractor,
     which usually has waveforms for a small subset of spikes (500 by default).
 
-    Reference
-    ^^^^^^^^^
-    Inspired by metric described in Hill et al. (2011) J Neurosci 31: 8699-8705
+    References
+    ----------
+    Inspired by metric described in [Hill]_
     
     This code was adapted from https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
 
@@ -537,10 +538,9 @@ def compute_amplitude_medians(waveform_extractor, peak_sign='neg'):
     all_amplitude_medians : dict
         Estimated amplitude median for each unit ID.
 
-    Reference
-    ^^^^^^^^^
-    Inspired by metric described in:
-    International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022. 9 Jun 2022.
+    References
+    ----------
+    Inspired by metric described in [IBL]_
     This code is ported from:
     https://github.com/int-brain-lab/ibllib/blob/master/brainbox/metrics/single_units.py
     """
