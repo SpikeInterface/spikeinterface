@@ -5,3 +5,4 @@ How to guides
     :maxdepth: 1
 
     get_started
+    analyse_neuropixels
