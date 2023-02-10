@@ -4,8 +4,8 @@ on:
     branches: [master]
     types: [synchronize, opened, reopened, ready_for_review]
 
-concurrency: # Cancels previous jobs
-  group: ${{ github.ref }}
+concurrency:  # Cancel previous workflows on the same pull request
+  group: ${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
