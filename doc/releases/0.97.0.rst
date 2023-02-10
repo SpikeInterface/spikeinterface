@@ -1,0 +1,133 @@
+.. _release0.97.0:
+
+SpikeInterface 0.97.0 release notes
+-----------------------------------
+
+10th February 2023
+
+   
+Main change:
+  
+  * Implemented "sparse" waveforms in core and propagated to all modules (#1079, #1136, #1152):
+  
+    * Add waveform extractor :code:`save()` function and Zarr backend (#1079)
+    * Dense waveforms can be saved as sparse with the :code:`save()` function
+    * Sparse waveforms can be extracted directly with :code:`sparse=True`
+
+  * Added IBL preprocessing tools for Neuropixels (#1025, #1059, #1070):
+
+    * Bad channel detection 
+    * Channel interpolation
+    * High-pass spatial filter 
+
+  * | Add subfolder for sorter output ("output_folder/sorter_output") and :code:`sorting_info` field to Sorting, 
+    | so that "sorter_output" can be deleted without deleting metadata and :code:`sorting_info` (#1149, #1150)
+
+  * Refactor Quality Metrics module (#1155, #1177, #1197):
+  
+    * Improve parameter handling
+    * Unified naming and conventions
+    * Add missing metrics: drift, amp medians, sliding_rp_violations
+
+  * Extended Motion estimation and motion correction, which is now ready to use (#1129, #1108, #1183)
+
+  * Removed deprecated functions/modules (#1261):
+  
+    * :code:`toolkit` module
+    * :code:`symmetrize` argument from compute_correlograms
+    * :code:`localize_units` from postprocessing
+
+  * Major rewrite of the docs, with extensive module-specific documentation (#1264, #1265, #1267, #1268, #1269, #1273, #1275, #1276, #1277, #1281, #1284, #1285, #1287, #1288, #1291)
+
+core:
+  * Added possibility of extracting unfiltered waveforms (#1046)
+  * Prefer :code:`folder`` argument and make :code:`zarr_path`` deprecated in :code:`save()` function (#1049)
+  * Fix bug 'int16' is not a JSON serializable (#1069)
+  * Add waveform extractor :code:`save()` function and Zarr backend (#1079)
+  * :code:`ChunkRecordingExecutor`: add max_thread_per_process to limit the number of thread using the module threadpool_limits (#1086) 
+  * Correct channel selection in tests when mono-channel recording (#1096)
+  * Add :code:`split_job_kwargs()` function (#1110)
+  * Improve handling of not dumpable objects (#1131)
+  * Implement ChannelSparsity object in core (#1136)
+  * Handle sparsity inside WaveformExtractor (#1152)
+  * Use absolute folder in NpySnippetsFolder (#1171)
+  * Add global_job_kwargs functions (#1176)
+  * Propagate probe annotations to recording (#1208)
+  * Serialization for recording and sorting objects (#1227)
+  * Extend WaveformExtractor rec_attributes and propagate recordingless mode (#1258)
+  * Improve serialization (#1227, #1272)
+
+extractors:
+  * NWBRecordingExtractor offset extraction (#1057)
+  * fsspec for streaming NWB data (#1090) 
+  * Optimizing Phy-based extractors (#1153)
+  * Add CellExplorerSortingExtractor (#1158)
+  * Fix neuralynx sorting function and NeoBaseSorting when no streams (#1171)
+  * Add option to load synchronized timestamps in OpenEphys (#1198)
+  * Streaming IBL recordings (#1204, #1251)
+  * Load phy properties from cluster_info.csv (#1210)
+  * Fix the sample_shifts for spikeglx when not all channel are saved (#1232)
+
+preprocessing:
+  * Add IBL channel interpolation to preprocessing (#1025)
+  * Add IBL high pass spatial filter to preprocessing (#1059)
+  * Add IBL bad channel detection (#1070)
+  * Add get_spatial_interpolation_kernel in preprocessing (#1074)
+  * Add median/average artefact modes to :code:`remove_artifacts` (#1106, #1143, #1250)
+  * Fix phase-shift dtype (#1172)
+  * Add correct_lsb function (#1262)
+
+sorters:
+  * Refactor sorter_output folder to keep sorting metadata (#1149)
+  * Add sorting_info property to Sorting object (#1150)
+  * Set n_jobs to -1 for sorters to propagate global job kwargs (#1207)
+  * Added sample2volt for IBL version of pykilosort (#1211)
+  * Correctly find parent folders for concatenate recording/sorting objects (#1230)
+
+postprocessing:
+  * Fix template_metrics :code:`select_units()` and extend postprocessing tests (#1112)
+  * Support recordingless mode for PCA (#1132)
+  * Improve Phy+PCA sparsity handling (#1133)
+  * More flexibility to auto merge function (#1135)
+  * Fix template metrics for sparse waveforms (#1196)
+  * Noise level as a waveform extractor extension (#1221)
+
+qualitymetrics:
+  * Refactor amplitude_cutoff and presence_ratio metrics (#1142)
+  * Refactor QM parameter handling (#1155)
+  * Implement missing metrics (amplitude median, drift metrics) (#1177)
+  * Add sliding RP violations IBL metric (#1197)
+  * Quality metrics and postprocessing fixes for sparsity and global job_kwargs (#1199)
+  * Protect against QM returning None (#1224)
+
+comparison:
+  * Fix networkx deprecation and clean up comparison tests cache (#1189)
+
+curation:
+  * Fixed bug in remove_duplicated_spikes with 'random' method (#1061)
+  * Added metadata copy from parent in :code:`RemoveDuplicatedSpikesSorting` and :code:`AlignSortingExtractor` (#1067)
+  * Add option to return redundant pairs in :code:`remove_redundant_units` (#1078)
+  * Allow apply_sortingview_curation to load json curation files directly (#1104)
+  * Improve MergeUnitsSorting to have several merge at the same time (#1244)
+
+widgets: 
+  * Increase sv timeresies tile-size (#1101)
+  * Updates for SV sorting summmary (#1165)
+  * Promote distinctipy color as a second choice because it is slow (#1222)
+
+sortingcomponents:
+  * Refactor detect_peak() and refactor method_kwargs in components (#1105)
+  * Port kilosort motion estimation (iterative_template registration) (#1108)
+  * Refactor motion estimation (#1183)
+  * Initial refactoring for node pipeline (#1209, #1271)
+  * Fix gaussian computation in motion (#1257)
+
+docs:
+  * Fix broken spikeinterface-gui links (#1072)
+  * Enhance docker docs (#1081, #1087)
+  * Refactor docs (#1264, #1265, #1267, #1268, #1269, #1273, #1275, #1276, #1277, #1281, #1284, #1285, #1287, #1288, #1291)
+
+ci:
+  * Fix CI python version (#1141)
+  * Fix code coverage and ignore skipped sorters (#1220)
+  * Time report for full tests (#1297, #1299)

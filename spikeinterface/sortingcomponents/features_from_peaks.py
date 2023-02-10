@@ -46,13 +46,14 @@ def compute_features_from_peaks(
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
 
+    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_ouput=False)
     nodes = [
-        ExtractDenseWaveforms(recording, name='extract_waveforms', ms_before=ms_before, ms_after=ms_after,  return_ouput=False),
+        extract_dense_waveforms,
     ]
     for feature_name in feature_list:
         Class = _features_class[feature_name]
         params = feature_params.get(feature_name, {}).copy()
-        node = Class(recording, parents=['extract_waveforms'], **params)
+        node = Class(recording, parents=[extract_dense_waveforms], **params)
         nodes.append(node)
 
     features = run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='features_from_peaks', squeeze_output=False)
@@ -63,7 +64,7 @@ def compute_features_from_peaks(
 class AmplitudeFeature(PipelineNode):
     def __init__(self, recording,  name='amplitude_feature', return_ouput=True, parents=None, 
                         all_channels=False, peak_sign='neg'):
-        PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
+        PipelineNode.__init__(self, recording, name=name, return_ouput=return_ouput, parents=parents)
 
         self.all_channels = all_channels
         self.peak_sign = peak_sign
@@ -94,7 +95,7 @@ class AmplitudeFeature(PipelineNode):
 class PeakToPeakFeature(PipelineNode):
     def __init__(self, recording,  name='ptp_feature', return_ouput=True, parents=None,
                    local_radius_um=150., all_channels=True):
-        PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
+        PipelineNode.__init__(self, recording, name=name, return_ouput=return_ouput, parents=parents)
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
@@ -122,7 +123,7 @@ class PeakToPeakFeature(PipelineNode):
 class PeakToPeakLagsFeature(PipelineNode):
     def __init__(self, recording,  name='ptp_lag_feature', return_ouput=True, parents=None,
                    local_radius_um=150., all_channels=True):
-        PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
+        PipelineNode.__init__(self, recording, name=name, return_ouput=return_ouput, parents=parents)
 
         self.all_channels = all_channels
         self.local_radius_um = local_radius_um
@@ -160,7 +161,7 @@ class RandomProjectionsFeature(PipelineNode):
 
     def __init__(self, recording,  name='random_projections_feature', return_ouput=True, parents=None,
                    projections=None, local_radius_um=150., min_values=None):
-        PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
+        PipelineNode.__init__(self, recording, name=name, return_ouput=return_ouput, parents=parents)
 
         self.projections = projections
         self.local_radius_um = local_radius_um
@@ -198,7 +199,7 @@ class RandomProjectionsFeature(PipelineNode):
 class RandomProjectionsEnergyFeature(PipelineNode):
     def __init__(self, recording,  name='random_projections_energy_feature', return_ouput=True, parents=None,
                    projections=None, local_radius_um=150., min_values=None):
-        PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
+        PipelineNode.__init__(self, recording, name=name, return_ouput=return_ouput, parents=parents)
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
@@ -234,7 +235,7 @@ class RandomProjectionsEnergyFeature(PipelineNode):
 class StdPeakToPeakFeature(PipelineNode):
     def __init__(self, recording,  name='std_ptp_feature', return_ouput=True, parents=None,
                    local_radius_um=150.):
-        PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
+        PipelineNode.__init__(self, recording, name=name, return_ouput=return_ouput, parents=parents)
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
@@ -260,7 +261,7 @@ class StdPeakToPeakFeature(PipelineNode):
 class GlobalPeakToPeakFeature(PipelineNode):
     def __init__(self, recording,  name='global_ptp_feature', return_ouput=True, parents=None,
                    local_radius_um=150.):
-        PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
+        PipelineNode.__init__(self, recording, name=name, return_ouput=return_ouput, parents=parents)
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
@@ -285,7 +286,7 @@ class GlobalPeakToPeakFeature(PipelineNode):
 class KurtosisPeakToPeakFeature(PipelineNode):
     def __init__(self, recording,  name='kurtosis_ptp_feature', return_ouput=True, parents=None,
                    local_radius_um=150.):
-        PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
+        PipelineNode.__init__(self, recording, name=name, return_ouput=return_ouput, parents=parents)
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
@@ -312,7 +313,7 @@ class KurtosisPeakToPeakFeature(PipelineNode):
 class EnergyFeature(PipelineNode):
     def __init__(self, recording,  name='energy_feature', return_ouput=True, parents=None,
                    local_radius_um=50.):
-        PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
+        PipelineNode.__init__(self, recording, name=name, return_ouput=return_ouput, parents=parents)
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
