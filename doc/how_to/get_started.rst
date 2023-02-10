@@ -8,8 +8,8 @@ How to “get started”
 In this introductory example, you will see how to use the SpikeInterface
 to perform a full electrophysiology analysis. We will download simulated
 dataset, and we will then perform some pre-processing, run a spike
-sorting algorithm, inspect and validate the results, and export the
-results.
+sorting algorithm, post-process the spike sorting output, perform
+curation (manual and automatic), and compare spike sorting results.
 
 .. code:: ipython3
 
@@ -109,11 +109,11 @@ and the raster plots.
 
 
 
-.. image:: getting_started_files/getting_started_14_0.png
+.. image:: get_started_files/get_started_14_0.png
 
 
 
-.. image:: getting_started_files/getting_started_14_1.png
+.. image:: get_started_files/get_started_14_1.png
 
 
 This is how you retrieve info from a ``BaseRecording``\ …
@@ -189,7 +189,7 @@ a ``Probe`` and we don’t need to set it *manually*.
 
 
 
-.. image:: getting_started_files/getting_started_20_1.png
+.. image:: get_started_files/get_started_20_1.png
 
 
 Using the :``spikeinterface.preprocessing``, you can perform
@@ -328,6 +328,7 @@ Let’s run ``spykingcircus2`` as well, with default parameters:
     print(sorting_SC2)
 
 
+
 .. parsed-literal::
 
     NpzFolderSorting: 10 units - 1 segments - 32.0kHz
@@ -374,6 +375,7 @@ example, let’s run ``Kilosort2`` using Docker:
     KiloSortSortingExtractor: 19 units - 1 segments - 32.0kHz
 
 
+
 SpikeInterface provides a efficient way to extract waveforms from paired
 recording/sorting objects. The ``extract_waveforms`` function samples
 some spikes (by default ``max_spikes_per_unit=500``) for each unit,
@@ -398,6 +400,7 @@ and then to compute, for example, quality metrics.
 .. parsed-literal::
 
     extract waveforms memmap:   0%|          | 0/10 [00:00<?, ?it/s]
+
 
 .. parsed-literal::
 
@@ -434,6 +437,7 @@ for computing quality metrics, exporting, and visualization:
 .. parsed-literal::
 
     localize peaks:   0%|          | 0/10 [00:00<?, ?it/s]
+
 
 
 All of this postprocessing functions are saved in the waveforms folder
@@ -909,11 +913,11 @@ performance and plot a confusion matrix
 
 
 
-.. image:: getting_started_files/getting_started_66_1.png
+.. image:: get_started_files/get_started_66_1.png
 
 
 
-.. image:: getting_started_files/getting_started_66_2.png
+.. image:: get_started_files/get_started_66_2.png
 
 
 When comparing two sorters (2.), we can see the matching of units
@@ -987,11 +991,11 @@ graph showing how the units are matched between the sorters.
 
 
 
-.. image:: getting_started_files/getting_started_72_1.png
+.. image:: get_started_files/get_started_72_1.png
 
 
 
-.. image:: getting_started_files/getting_started_72_2.png
+.. image:: get_started_files/get_started_72_2.png
 
 
 We see that 10 unit were found by all sorters (note that this simulated

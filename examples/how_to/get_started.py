@@ -20,7 +20,7 @@ How to "get started"
 
 In this introductory example, you will see how to use the SpikeInterface to perform a full electrophysiology analysis.
 We will download simulated dataset, and we will then perform some pre-processing, run a spike sorting
-algorithm, inspect and validate the results, and export the results.
+algorithm, post-process the spike sorting output, perform curation (manual and automatic), and compare spike sorting results.
 
 """
 
