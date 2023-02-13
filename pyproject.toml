@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.96.2.dev0"
+version = "0.98.0.dev0"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -24,7 +24,7 @@ dependencies = [
     "joblib",
     "threadpoolctl",
     "tqdm",
-    "probeinterface>=0.2.14",
+    "probeinterface>=0.2.16",
 ]
 
 [build-system]
@@ -55,7 +55,7 @@ changelog = "https://spikeinterface.readthedocs.io/en/latest/whatisnew.html"
 [project.optional-dependencies]
 
 extractors = [
-    "MEArec>=1.7.1",
+    "MEArec>=1.8",
     "pynwb>=2.1.0",
     "pyedflib>=0.1.30",
     "sonpy;python_version>'3.7'",
