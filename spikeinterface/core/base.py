@@ -16,7 +16,6 @@ from .globals import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import check_json, is_dict_extractor, recursive_path_modifier
 from .job_tools import _shared_job_kwargs_doc
 
-
 class BaseExtractor:
     """
     Base class for Recording/Sorting
@@ -284,8 +283,8 @@ class BaseExtractor:
     def to_dict(self, include_annotations=False, include_properties=False,
                 relative_to=None, folder_metadata=None):
         """
-        Make a nested serialized dictionary out of the extractor. The dictionary be used to re-initialize an
-        extractor with load_extractor_from_dict(dump_dict)
+        Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize 
+        an extractor using load_extractor_from_dict(dump_dict)
 
         Parameters
         ----------
@@ -562,10 +561,18 @@ class BaseExtractor:
         else:
             raise ValueError('spikeinterface.Base.load() file_path must be an existing folder or file')
 
+    def __reduce__(self):
+        """
+        This function is used by pickle to serialize the object.
+        """
+        instance_constructor = self.from_dict
+        intialization_args = (self.to_dict(), )
+        return (instance_constructor, intialization_args)
+
     @staticmethod
     def load_from_folder(folder):
         return BaseExtractor.load(folder)
-
+    
     def _save(self, folder, **save_kwargs):
         # This implemented in BaseRecording or baseSorting
         # this is internally call by cache(...) main function

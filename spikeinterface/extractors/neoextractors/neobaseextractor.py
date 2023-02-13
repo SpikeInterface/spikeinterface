@@ -1,4 +1,3 @@
-from copy import copy
 from typing import Union, List
 
 import numpy as np
@@ -57,7 +56,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         if stream_id is None and stream_name is None:
             if stream_channels.size > 1:
                 raise ValueError(f"This reader have several streams: \nNames: {stream_names}\nIDs: {stream_ids}. "
-                                 f"Specify it with the 'stram_name' or 'stream_id' arguments")
+                                 f"Specify it with the 'stream_name' or 'stream_id' arguments")
             else:
                 stream_id = stream_ids[0]
                 stream_name = stream_names[0]

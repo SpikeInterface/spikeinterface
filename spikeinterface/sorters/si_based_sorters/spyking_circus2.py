@@ -138,7 +138,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         matching_params['waveform_extractor'] = we
         matching_params.update({'noise_levels' : noise_levels})
 
-        matching_job_params = params['job_kwargs'].copy()
+        matching_job_params = job_kwargs.copy()
         matching_job_params['chunk_duration'] = '100ms'
 
         spikes = find_spikes_from_templates(recording_f, method='circus-omp', 

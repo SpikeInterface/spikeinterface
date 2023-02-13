@@ -24,7 +24,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
     Contrary to older verion this reader is folder based.
     So if the folder contain several streams ('imec0.ap' 'nidq' 'imec0.lf')
-    then it has to be specified with `stream_id`.
+    then it has to be specified with 'stream_id'.
 
     Parameters
     ----------
@@ -76,10 +76,21 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
             if ptype in [21, 24]: # NP2.0
                 num_channels_per_adc = 16
+                total_channels = 384
             else: # NP1.0
                 num_channels_per_adc = 12
-
-            sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_channels_per_adc)
+                total_channels = 384
+            
+            # sample_shifts is generated from total channels (384) channels
+            # when only some channels are saved we need to slice this vector (like we do for the probe)
+            sample_shifts = get_neuropixels_sample_shifts(total_channels, num_channels_per_adc)
+            if self.get_num_channels() != total_channels:
+                # need slice because not all channel are saved
+                chans = pi.get_saved_channel_indices_from_spikeglx_meta(meta_filename)
+                # lets clip to 384 because this contains also the synchro channel
+                chans = chans[chans<total_channels]
+                sample_shifts = sample_shifts[chans]
+            
             self.set_property("inter_sample_shift", sample_shifts)
 
         self._kwargs.update(dict(folder_path=str(folder_path), load_sync_channel=load_sync_channel))

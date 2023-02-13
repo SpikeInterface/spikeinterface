@@ -20,18 +20,15 @@ class CrossCorrelogramsWidget(BaseWidget):
         bins duration in ms
     window_ms: float
         Window duration in ms
-    symmetrize: bool default False
-        Make symmetric CCG
     """
 
     def __init__(self, sorting, unit_ids=None,
-                 window_ms=100.0, bin_ms=1.0, symmetrize=False,
-                 axes=None):
+                 window_ms=100.0, bin_ms=1.0, axes=None):
 
         if unit_ids is not None:
             sorting = sorting.select_units(unit_ids)
         self.sorting = sorting
-        self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms, symmetrize=symmetrize)
+        self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms)
 
         if axes is None:
             n = len(sorting.unit_ids)
@@ -79,18 +76,16 @@ class AutoCorrelogramsWidget(BaseWidget):
         bins duration in ms
     window_ms: float
         Window duration in ms
-    symmetrize: bool default False
-        Make symetric CCG
     """
 
     def __init__(self, sorting, unit_ids=None,
-                 window_ms=100.0, bin_ms=1.0, symmetrize=False,
+                 window_ms=100.0, bin_ms=1.0,
                  ncols=5, axes=None):
 
         if unit_ids is not None:
             sorting = sorting.select_units(unit_ids)
         self.sorting = sorting
-        self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms, symmetrize=symmetrize)
+        self.compute_kwargs = dict(window_ms=window_ms, bin_ms=bin_ms)
 
         if axes is None:
             num_axes = len(sorting.unit_ids)
