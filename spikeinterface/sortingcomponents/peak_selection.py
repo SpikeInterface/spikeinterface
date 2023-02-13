@@ -72,6 +72,12 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
         params.update(method_kwargs)
 
         assert params['n_peaks'] is not None, "n_peaks should be defined!"
+        try:
+            assert params['n_peaks'] < peaks.size
+        except AssertionError:
+            msg = "n_peaks ({}) must be less than the number of elements in peaks ({})".format(
+                params['n_peaks'], peaks.size)
+            raise ValueError(msg)
 
         if params['select_per_channel']:
 
@@ -105,6 +111,12 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
 
             assert params['n_peaks'] is not None, "n_peaks should be defined!"
             assert params['noise_levels'] is not None, "Noise levels should be provided"
+            try:
+                assert params['n_peaks'] < peaks.size
+            except AssertionError:
+                msg = "n_peaks ({}) must be less than the number of elements in peaks ({})".format(
+                    params['n_peaks'], peaks.size)
+                raise ValueError(msg)
 
             histograms = {}
 
@@ -165,7 +177,13 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
             params.update(method_kwargs)
 
             assert params['n_peaks'] is not None, "n_peaks should be defined!"
-            assert params['peaks_locations'] is not None, "peaks_locations should be d96efined!"
+            assert params['peaks_locations'] is not None, "peaks_locations should be defined!"
+            try:
+                assert params['n_peaks'] < peaks.size
+            except AssertionError:
+                msg = "n_peaks ({}) must be less than the number of elements in peaks ({})".format(
+                    params['n_peaks'], peaks.size)
+                raise ValueError(msg)
 
             nb_spikes = len(params['peaks_locations']['x'])
 
@@ -211,6 +229,12 @@ def select_peaks(peaks, method='uniform', seed=None, **method_kwargs):
 
             assert params['n_peaks'] is not None, "n_peaks should be defined!"
             assert params['peaks_locations'] is not None, "peaks_locations should be defined!"
+            try:
+                assert params['n_peaks'] < peaks.size
+            except AssertionError:
+                msg = "n_peaks ({}) must be less than the number of elements in peaks ({})".format(
+                    params['n_peaks'], peaks.size)
+                raise ValueError(msg)
 
             nb_spikes = len(params['peaks_locations']['x'])
 
