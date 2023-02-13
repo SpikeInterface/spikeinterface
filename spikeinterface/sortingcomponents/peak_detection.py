@@ -8,7 +8,7 @@ from spikeinterface.core.recording_tools import get_noise_levels, get_channel_di
 
 from ..core import get_chunk_with_margin
 
-from .peak_pipeline import PeakPipelineStep, get_nbefore_nafter_from_steps
+from .peak_pipeline import PipelineNode, check_graph, run_nodes
 from .tools import make_multi_method_doc
 
 try:
@@ -21,7 +21,7 @@ base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
                    ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 
-def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
+def detect_peaks(recording, method='by_channel', pipeline_nodes=None, **kwargs):
     """Peak detection based on threshold crossing in term of k x MAD.
 
     In 'by_channel' : peak are detected in each channel independently
@@ -32,8 +32,8 @@ def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
     ----------
     recording: RecordingExtractor
         The recording extractor object.
-    pipeline_steps: None or list[PeakPipelineStep]
-        Optional additional PeakPipelineStep need to computed just after detection time.
+    pipeline_nodes: None or list[PipelineNode]
+        Optional additional PipelineNode need to computed just after detection time.
         This avoid reading the recording multiple times.
     {method_doc}
     {job_doc}
@@ -57,54 +57,46 @@ def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
     # prepare args
     method_args = method_class.check_params(recording, **method_kwargs)
 
-    if pipeline_steps is not None:
-        assert all(isinstance(step, PeakPipelineStep)
-                   for step in pipeline_steps)
-        if job_kwargs.get('n_jobs', 1) > 1:
-            pipeline_steps_ = [(step.__class__, step.to_dict())
-                               for step in pipeline_steps]
+    if pipeline_nodes is not None:
+        check_graph(pipeline_nodes)
+        
+        if job_kwargs['n_jobs'] > 1:
+            pipeline_nodes_ = [(node.__class__, node.to_dict()) for node in pipeline_nodes]
         else:
-            pipeline_steps_ = pipeline_steps
-        extra_margin = max(step.get_trace_margin() for step in pipeline_steps)
+            pipeline_nodes_ = pipeline_nodes
+        extra_margin = max(node.get_trace_margin() for node in pipeline_nodes)
     else:
-        pipeline_steps_ = None
+        pipeline_nodes_ = None
         extra_margin = 0
-
-    # and run
-    if job_kwargs.get('n_jobs', 1) > 1:
-        recording_ = recording.to_dict()
-    else:
-        recording_ = recording
 
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
-    init_args = (recording_, method, method_args, extra_margin, pipeline_steps_)
+    init_args = (recording, method, method_args, extra_margin, pipeline_nodes_)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
                                        handle_returns=True, job_name='detect peaks',
                                        **job_kwargs)
     outputs = processor.run()
 
-    if pipeline_steps is None:
+    if pipeline_nodes is None:
         peaks = np.concatenate(outputs)
         return peaks
     else:
 
         outs_concat = ()
-        for output_step in zip(*outputs):
-            outs_concat += (np.concatenate(output_step, axis=0), )
+        for output_node in zip(*outputs):
+            outs_concat += (np.concatenate(output_node, axis=0), )
         return outs_concat
 
 
-def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipeline_steps):
+def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipeline_nodes):
     """Initialize a worker for detecting peaks."""
 
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
         recording = load_extractor(recording)
 
-        if pipeline_steps is not None:
-            pipeline_steps = [cls.from_dict(
-                recording, kwargs) for cls, kwargs in pipeline_steps]
+        if pipeline_nodes is not None:
+            pipeline_nodes = [cls.from_dict(recording, kwargs) for cls, kwargs in pipeline_nodes]
 
     # create a local dict per worker
     worker_ctx = {}
@@ -113,14 +105,8 @@ def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipe
     worker_ctx['method_class'] = detect_peak_methods[method]
     worker_ctx['method_args'] = method_args
     worker_ctx['extra_margin'] = extra_margin
-    worker_ctx['pipeline_steps'] = pipeline_steps
-
-    if pipeline_steps is not None:
-        worker_ctx['need_waveform'] = any(
-            step.need_waveforms for step in pipeline_steps)
-        if worker_ctx['need_waveform']:
-            worker_ctx['nbefore'], worker_ctx['nafter'] = get_nbefore_nafter_from_steps(pipeline_steps)
-
+    worker_ctx['pipeline_nodes'] = pipeline_nodes
+    
     return worker_ctx
 
 
@@ -131,7 +117,7 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     method_class = worker_ctx['method_class']
     method_args = worker_ctx['method_args']
     extra_margin = worker_ctx['extra_margin']
-    pipeline_steps = worker_ctx['pipeline_steps']
+    pipeline_nodes = worker_ctx['pipeline_nodes']
 
     margin = method_class.get_method_margin(*method_args) + extra_margin
 
@@ -141,7 +127,7 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
                                                               None, margin, add_zeros=True)
 
     if extra_margin > 0:
-        # remove extra margin for detection step
+        # remove extra margin for detection node
         trace_detection = traces[extra_margin:-extra_margin]
     else:
         trace_detection = traces
@@ -160,26 +146,13 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     peaks['amplitude'] = peak_amplitude
     peaks['segment_ind'] = segment_index
 
-    if pipeline_steps is not None:
-
-        if worker_ctx['need_waveform']:
-            waveforms = traces[peaks['sample_ind'][:, None] + np.arange(-worker_ctx['nbefore'], worker_ctx['nafter'])]
-        else:
-            waveforms = None
-
-        outs = tuple()
-        for step in pipeline_steps:
-            if step.need_waveforms:
-                # give the waveforms pre extracted when needed
-                out = step.compute_buffer(traces, peaks, waveforms=waveforms)
-            else:
-                out = step.compute_buffer(traces, peaks)
-            outs += (out, )
+    if pipeline_nodes is not None:
+        outs = run_nodes(traces, peaks, pipeline_nodes)
 
     # make absolute sample index
     peaks['sample_ind'] += (start_frame - left_margin)
 
-    if pipeline_steps is None:
+    if pipeline_nodes is None:
         return peaks
     else:
         return (peaks, ) + outs

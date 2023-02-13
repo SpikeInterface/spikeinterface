@@ -1,9 +1,9 @@
 from pathlib import Path
-import csv
 
 import numpy as np
 import shutil
 import pandas as pd
+import warnings
 
 import spikeinterface
 from spikeinterface.core import write_binary_recording, BinaryRecordingExtractor, ChannelSparsity
@@ -49,20 +49,17 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     assert isinstance(waveform_extractor, spikeinterface.core.waveform_extractor.WaveformExtractor), \
         'waveform_extractor must be a WaveformExtractor object'
     sorting = waveform_extractor.sorting
-    assert waveform_extractor.has_recording(), "Export to phy is not supported for 'recordingless' waveform extractors"
-    recording = waveform_extractor.recording
 
     assert waveform_extractor.get_num_segments() == 1, "Export to phy only works with one segment"
-    channel_ids = recording.channel_ids
-    num_chans = recording.get_num_channels()
-    fs = recording.sampling_frequency
+    num_chans = waveform_extractor.get_num_channels()
+    fs = waveform_extractor.sampling_frequency
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     # check sparsity
     if (num_chans > 64) and (sparsity is None or not waveform_extractor.is_sparse()):
-        print(
-            "WARNING: export to Phy with many channels and without sparsity might result in a heavy and less "
+        warnings.warn(
+            "Exporting to Phy with many channels and without sparsity might result in a heavy and less "
             "informative visualization. You can use use a sparse WaveformExtractor or you can use the 'sparsity' "
             "argument to enforce sparsity (see compute_sparsity())"
         )
@@ -85,11 +82,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
             empty_flag = True
     unit_ids = non_empty_units
     if empty_flag:
-        print('Warning: empty units have been removed when being exported to Phy')
-
-    if not recording.is_filtered():
-        print("Warning: recording is not filtered! It's recommended to filter the recording before exporting to phy.\n"
-              "You can run spikeinterface.preprocessing.bandpass_filter(recording)")
+        warnings.warn('Empty units have been removed when being exported to Phy')
 
     if len(unit_ids) == 0:
         raise Exception("No non-empty units in the sorting result, can't save to Phy.")
@@ -105,15 +98,21 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
 
     # save dat file
     if dtype is None:
-        dtype = recording.get_dtype()
+        if waveform_extractor.has_recording():
+            dtype = waveform_extractor.recording.get_dtype()
+        else:
+            dtype = waveform_extractor.dtype
 
-    if copy_binary:
-        rec_path = output_folder / 'recording.dat'
-        write_binary_recording(recording, file_paths=rec_path, verbose=verbose, dtype=dtype, **job_kwargs)
-    elif isinstance(recording, BinaryRecordingExtractor):
-        rec_path = recording._kwargs['file_paths'][0]
-        dtype = recording.get_dtype()
+    if waveform_extractor.has_recording():
+        if copy_binary:
+            rec_path = output_folder / 'recording.dat'
+            write_binary_recording(waveform_extractor.recording, file_paths=rec_path, verbose=verbose, dtype=dtype, **job_kwargs)
+        elif isinstance(waveform_extractor.recording, BinaryRecordingExtractor):
+            rec_path = waveform_extractor.recording._kwargs['file_paths'][0]
+            dtype = waveform_extractor.recording.get_dtype()
     else:  # don't save recording.dat
+        if copy_binary:
+            warnings.warn("Recording will not be copied since waveform extractor is recordingless.")
         rec_path = 'None'
 
     dtype_str = np.dtype(dtype).name
@@ -125,7 +124,7 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
         f.write(f"dtype = '{dtype_str}'\n")
         f.write(f"offset = 0\n")
         f.write(f"sample_rate = {fs}\n")
-        f.write(f"hp_filtered = {recording.is_filtered()}")
+        f.write(f"hp_filtered = {waveform_extractor.is_filtered()}")
 
     # export spike_times/spike_templates/spike_clusters
     # here spike_labels is a remapping to unit_index
@@ -155,9 +154,9 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     np.save(str(output_folder / 'similar_templates.npy'), template_similarity)
 
     channel_maps = np.arange(num_chans, dtype='int32')
-    channel_map_si = waveform_extractor.recording.get_channel_ids()
-    channel_positions = recording.get_channel_locations().astype('float32')
-    channel_groups = recording.get_channel_groups()
+    channel_map_si = waveform_extractor.channel_ids
+    channel_positions = waveform_extractor.get_channel_locations().astype('float32')
+    channel_groups = waveform_extractor.get_recording_property("group")
     if channel_groups is None:
         channel_groups = np.zeros(num_chans, dtype='int32')
     np.save(str(output_folder / 'channel_map.npy'), channel_maps)

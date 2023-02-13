@@ -19,9 +19,11 @@ def remove_redundant_units(sorting_or_waveform_extractor,
     Removes redundant or duplicate units by comparing the sorting output with itself.
     
     When a redundant pair is found, there are several strategy to choice which one the best:
+
        * 'minimum_shift'
        * 'highest_amplitude'
        * 'max_spikes'
+
 
     Parameters
     ----------
@@ -40,9 +42,12 @@ def remove_redundant_units(sorting_or_waveform_extractor,
         unit is removed, by default 0.84
     remove_strategy: str
         Which stragtegy to remove one of the two duplicated units:
-            'minimum_shift': keep the unit with best peak alignment (minimum shift)
+
+            * 'minimum_shift': keep the unit with best peak alignment (minimum shift)
                              If shift are equal then the 'highest_amplitude' is used
-            'highest_amplitude': keep the unit with the best amplitude on un shifted max.
+            * 'highest_amplitude': keep the unit with the best amplitude on un shifted max.
+            * 'max_spikes': keep the unit with more spikes
+
     peak_sign: str  ('neg', 'pos', 'both')
         Used when remove_strategy='highest_amplitude'
     extra_outputs: bool

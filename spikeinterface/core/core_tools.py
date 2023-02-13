@@ -11,7 +11,7 @@ import inspect
 
 from .job_tools import (ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, fix_job_kwargs, 
                         ChunkRecordingExecutor, _shared_job_kwargs_doc)
-    
+
 def copy_signature(source_fct):
     def copy(target_fct):
         target_fct.__signature__ = inspect.signature(source_fct)
@@ -100,6 +100,8 @@ def check_json(d):
             dc[k] = int(v)
         elif isinstance(v, np.floating):
             dc[k] = float(v)
+        elif isinstance(v, bytes):
+            dc[k] = v.decode()
         elif isinstance(v, datetime.datetime):
             dc[k] = v.isoformat()
         elif isinstance(v, (np.ndarray, list)):
@@ -769,6 +771,12 @@ def recursive_path_modifier(d, func, target='path', copy=True):
             if isinstance(v, dict) and is_dict_extractor(v):
                 nested_extractor_dict = v
                 recursive_path_modifier(nested_extractor_dict, func, copy=False)
+            # deal with list of extractor objects (e.g. concatenate_recordings)
+            elif isinstance(v, list):
+                for vl in v:
+                    if isinstance(vl, dict) and is_dict_extractor(vl):
+                        nested_extractor_dict = vl
+                        recursive_path_modifier(nested_extractor_dict, func, copy=False)
 
         return dc
     else:
