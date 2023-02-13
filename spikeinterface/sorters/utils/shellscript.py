@@ -75,7 +75,8 @@ class ShellScript():
 
         self.write(script_path)
         cmd = str(script_path)
-        print('RUNNING SHELL SCRIPT: ' + cmd)
+        if self._verbose:
+            print('RUNNING SHELL SCRIPT: ' + cmd)
         self._start_time = time.time()
         self._process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1,
                                          universal_newlines=True)

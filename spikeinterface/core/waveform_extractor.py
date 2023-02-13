@@ -72,6 +72,10 @@ class WaveformExtractor:
             for k in ('channel_ids', 'sampling_frequency', 'num_channels'):
                 if k not in rec_attributes:
                     raise ValueError(f'Missing key in rec_attributes {k}')
+            for k in ('num_samples', 'properties', 'is_filtered'):
+                if k not in rec_attributes:
+                    warn(f'Missing optional key in rec_attributes {k}: '
+                         f'some recordingless functions might not be available')
             self._rec_attributes = rec_attributes
         else:
             assert recording.get_num_segments() == sorting.get_num_segments(), \
@@ -237,6 +241,19 @@ class WaveformExtractor:
     def create(cls, recording, sorting, folder, mode="folder", remove_if_exists=False,
                use_relative_path=False, allow_unfiltered=False, sparsity=None):
         assert mode in ("folder", "memory")
+        # create rec_attributes
+        properties_to_attrs = deepcopy(recording._properties)
+        if 'contact_vector' in properties_to_attrs:
+            del properties_to_attrs['contact_vector']
+        rec_attributes = dict(
+            channel_ids=recording.channel_ids,
+            sampling_frequency=recording.get_sampling_frequency(),
+            num_channels=recording.get_num_channels(),
+            num_samples=[recording.get_num_samples(seg_index)
+                            for seg_index in range(recording.get_num_segments())],
+            is_filtered=recording.is_filtered(),
+            properties=properties_to_attrs
+        )
         if mode == "folder":
             folder = Path(folder)
             if folder.is_dir():
@@ -262,11 +279,6 @@ class WaveformExtractor:
             # dump some attributes of the recording for the mode with_recording=False at next load
             rec_attributes_file = folder / 'recording_info' / 'recording_attributes.json'
             rec_attributes_file.parent.mkdir()
-            rec_attributes = dict(
-                channel_ids=recording.channel_ids,
-                sampling_frequency=recording.get_sampling_frequency(),
-                num_channels=recording.get_num_channels(),
-            )
             rec_attributes_file.write_text(
                 json.dumps(check_json(rec_attributes), indent=4),
                 encoding='utf8'
@@ -282,7 +294,8 @@ class WaveformExtractor:
                 with open(folder / 'sparsity.json', mode='w') as f:
                     json.dump(check_json(sparsity.to_dict()), f)
 
-        return cls(recording, sorting, folder, allow_unfiltered=allow_unfiltered, sparsity=sparsity)
+        return cls(recording, sorting, folder, allow_unfiltered=allow_unfiltered, sparsity=sparsity,
+                   rec_attributes=rec_attributes)
 
     def is_sparse(self):
         return self.sparsity is not None
@@ -380,7 +393,26 @@ class WaveformExtractor:
 
     def has_recording(self):
         return self._recording is not None
-     
+
+    def get_num_samples(self, segment_index=None):
+        if self.has_recording():
+            return self.recording.get_num_samples(segment_index)
+        else:
+            assert "num_samples" in self._rec_attributes, "'num_samples' is not available"
+            # we use self.sorting to check segment_index
+            segment_index = self.sorting._check_segment_index(segment_index)
+            return self._rec_attributes['num_samples'][segment_index]
+
+    def get_total_samples(self):
+        s = 0
+        for segment_index in range(self.get_num_segments()):
+            s += self.get_num_samples(segment_index)
+        return s
+
+    def get_total_duration(self):
+        duration = self.get_total_samples() / self.sampling_frequency
+        return duration
+
     def get_num_channels(self):
         if self.has_recording():
             return self.recording.get_num_channels()
@@ -395,6 +427,12 @@ class WaveformExtractor:
             return self.recording.get_probegroup()
         else:
             return self._rec_attributes['probegroup']
+
+    def is_filtered(self):
+        if self.has_recording():
+            return self.recording.is_filtered()
+        else:
+            return self._rec_attributes['is_filtered']
     
     def get_probe(self):
         probegroup = self.get_probegroup()
@@ -423,6 +461,17 @@ class WaveformExtractor:
             all_channel_ids = self._rec_attributes['channel_ids']
             indices = np.array([all_channel_ids.index(id) for id in channel_ids], dtype=int)
             return indices
+
+    def get_recording_property(self, key):
+        if self.has_recording():
+            return self.recording.get_property(key)
+        else:
+            assert "properties" in self._rec_attributes, "'properties' are not available"
+            values = np.array(self._rec_attributes['properties'].get(key, None))
+            return values
+
+    def get_sorting_property(self, key):
+        return self.sorting.get_property(key)
 
     def get_extension_class(self, extension_name):
         """
@@ -605,8 +654,8 @@ class WaveformExtractor:
         new_folder : Path or None
             The new folder where selected waveforms are copied
             
-        Return
-        ------
+        Returns
+        -------
         we :  WaveformExtractor
             The newly create waveform extractor with the selected units
         """
