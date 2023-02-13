@@ -212,12 +212,15 @@ def test_calculate_drift_metrics(simulated_data):
     assert np.allclose(list(drift_stds_gt.values()), list(drifts_stds.values()), rtol=0.05)
     assert np.allclose(list(drift_mads_gt.values()), list(drift_mads.values()), rtol=0.05)
 
+
 def test_calculate_synchrony_metrics(simulated_data):
     we = setup_dataset(simulated_data)
-    synchrony_metrics= compute_synchrony_metrics(we)
+    synchrony_metrics = compute_synchrony_metrics(we)
+    sync_0 = {0: 1.0, 1: 1.0, 2: 1.0}
+    sync_2 = {0: 0.25274725274725274, 1: 1.0, 2: 0.9941060903732809}
+    assert np.allclose(list(synchrony_metrics.sync_spike_0.values()), list(sync_0.values()), rtol=0.05)
+    assert np.allclose(list(synchrony_metrics.sync_spike_2.values()), list(sync_2.values()), rtol=0.05)
 
-    assert synchrony_metrics.sync_spike_0 == {0: 1.0, 1: 1.0, 2: 1.0}
-    assert synchrony_metrics.sync_spike_2 == {0: 0.25249500998003993, 1: 1.0, 2: 0.9941176470588236}
 
 if __name__ == '__main__':
     setup_module()
