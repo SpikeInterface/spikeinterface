@@ -97,7 +97,7 @@ class PCBaseNode(PipelineNode):
             
         return self.pca_model
     
-PCBaseNode.fit.__doc__ = PCBaseNode.fit.__doc__.format(_shared_job_kwargs_doc=_shared_job_kwargs_doc)
+PCBaseNode.fit.__doc__ = PCBaseNode.fit.__doc__.format(_shared_job_kwargs_doc)
 class PCAProjection(PCBaseNode):
     """
     A step that performs a PCA projection on the waveforms extracted by a peak_detection function.
