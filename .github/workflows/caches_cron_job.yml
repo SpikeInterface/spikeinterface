@@ -25,7 +25,7 @@ jobs:
         id: dependencies
         run: |
           echo "${{hashFiles('**/pyproject.toml')}}"
-          echo "${{hashFiles('**/pyproject.toml')}}" >> $GITHUB_OUTPUT
+          echo ${{hashFiles('**/pyproject.toml')}} >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
         id: cache-venv
         with:
@@ -61,7 +61,7 @@ jobs:
           path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
       - name: Cache found?
-        run: echo "${{steps.cache-datasets-cache-hit}}"
+        run: echo ${{steps.cache-datasets-cache-hit}}
       - name: Create the data cache if cache is not present
         if: steps.cache-datasets-cache-hit == false
         run: |
@@ -70,5 +70,5 @@ jobs:
           python -m pip install -U pip  # Official recommended way
           pip install datalad-installer
           datalad-installer --sudo ok git-annex -m datalad/packages
-          # pip install datalad
-          # datalad install --recursive --get-data --source https://gin.g-node.org/NeuralEnsemble/ephy_testing_data ~/spikeinterface_datasets
+          pip install datalad
+          datalad install --recursive --get-data --source https://gin.g-node.org/NeuralEnsemble/ephy_testing_data ~/spikeinterface_datasets
