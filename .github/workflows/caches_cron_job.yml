@@ -30,8 +30,8 @@ jobs:
           path: ~/test_env
           key: ${{ runner.os }}-venv-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
       - name: Cache found?
-        run: echo "Cache-hit ${{steps.cache-venv.outputs.cache-hit == 'true'}} "
-      - name: Create virtual environment if it is not present
+        run: echo "Cache-hit == ${{steps.cache-venv.outputs.cache-hit == 'true'}} "
+      - name: Create virtual environment if not available in cache
         if: steps.cache-venv.outputs.cache-hit != 'true'
         run: |
           git config --global user.email "CI@example.com"
@@ -66,7 +66,7 @@ jobs:
           path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
       - name: Cache found?
-        run: echo "Cache-hit ${{steps.cache-datasets.outputs.cache-hit == 'true'}} "
+        run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}} "
       - name: Installing datalad and git-annex
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
@@ -79,10 +79,10 @@ jobs:
       - name: Download dataset
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          datalad install -rg https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
-      - name: Change dataset name
-        if: steps.cache-datasets.outputs.cache-hit != 'true'
-        run: |
-          ls -l
-          mv ~/ephy_testing_data ~/spikeinterface_datasets
+          datalad install -rg https://gin.g-node.org/NeuralEnsemble/ephy_testing_data ~/spikeinterface_datasets
+      # - name: Move dataset to the right folder
+      #   if: steps.cache-datasets.outputs.cache-hit != 'true'
+      #   run: |
+      #     ls -l
+      #     mv ~/ephy_testing_data ~/spikeinterface_datasets
           
