@@ -30,14 +30,31 @@ def test_detect_peaks():
     peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
                                     n_jobs=1, chunk_size=10000, verbose=True, progress_bar=True)
 
-    subset_peaks = select_peaks(peaks, 'uniform', n_peaks=100)
-    subset_peaks = select_peaks(peaks, 'uniform', n_peaks=100, select_per_channel=True)
-    subset_peaks = select_peaks(peaks, 'smart_sampling_amplitudes', n_peaks=100, noise_levels=noise_levels)
-    subset_peaks = select_peaks(peaks, 'smart_sampling_amplitudes', n_peaks=100, noise_levels=noise_levels, select_per_channel=True)
-    subset_peaks = select_peaks(peaks, 'smart_sampling_locations', n_peaks=100, peaks_locations=peak_locations)
-    subset_peaks = select_peaks(peaks, 'smart_sampling_locations_and_time', n_peaks=100, peaks_locations=peak_locations)
-    
-    assert len(subset_peaks) < len(peaks)
+    n_peaks = 100
+    select_kwargs = dict(n_peaks=n_peaks, noise_levels=noise_levels, peaks_locations=peak_locations)
+    select_methods = ['uniform', 'smart_sampling_amplitudes',
+                      'smart_sampling_locations', 'smart_sampling_locations_and_time']
+    for method in select_methods:
+        selected_peaks = select_peaks(peaks, method=method, **select_kwargs)
+        assert selected_peaks.size <= n_peaks,\
+            "selected_peaks is not the right size when return_indices=False, select_per_channel=False"
+
+        selected_peaks = select_peaks(peaks, method=method, select_per_channel=True, **select_kwargs)
+        assert selected_peaks.size <= (n_peaks*recording.get_num_channels()),\
+            "selected_peaks is not the right size when return_indices=False, select_per_channel=True"
+
+        selected_peaks, selected_indices = select_peaks(peaks, method=method, return_indices=True, **select_kwargs)
+        assert selected_peaks.size <= n_peaks,\
+            "selected_peaks is not the right size when return_indices=True, select_per_channel=False"
+        assert np.all(selected_peaks == peaks[selected_indices]),\
+            "selection_indices differ from selected_peaks when select_per_channel=False"
+
+        selected_peaks, selected_indices = select_peaks(peaks, method=method, return_indices=True,
+                                                        select_per_channel=True, **select_kwargs)
+        assert selected_peaks.size <= (n_peaks*recording.get_num_channels()),\
+            "selected_peaks is not the right size when return_indices=True, select_per_channel=True"
+        assert np.all(selected_peaks == peaks[selected_indices]),\
+            "selection_indices differ from selected_peaks when select_per_channel=True"
 
 
 if __name__ == '__main__':
