@@ -73,6 +73,7 @@ jobs:
       - name: Download dataset
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          datalad install -rg https://gin.g-node.org/NeuralEnsemble/ephy_testing_data ~/spikeinterface_datasets
+          datalad install -rg https://gin.g-node.org/NeuralEnsemble/ophys_testing_data
           ls -la
+          mv ~/ophys_testing_data ~/spikeinterface_datasets
           
