@@ -81,5 +81,6 @@ jobs:
           cd ~
           pwd
           ls -la
-          cd spikeinterface_datasets
           du -hs spikeinterface_datasets/
+          cd spikeinterface_datasets
+          ls -la
