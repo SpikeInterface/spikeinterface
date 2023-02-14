@@ -1,9 +1,11 @@
-name: Create data and virtual env caches
+name: Create caches for gin data and virtual env
 
 on: 
   workflow_dispatch:
   schedule:
     - cron: "0 12 * * *"  # Daily at noon UTC
+  pull_request:
+    types: [synchronize, opened, reopened, ready_for_review]
 
 jobs:
   create-virtual-env-cache-if-missing:
