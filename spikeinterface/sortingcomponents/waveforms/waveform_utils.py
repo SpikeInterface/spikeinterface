@@ -1,6 +1,6 @@
-def to_channelless_representation(waveforms):
+def to_temporal_representation(waveforms):
     """
-    Transform waveforms to channelless representation. Collapses the channel dimension leaving only 
+    Transform waveforms to temporal representation. Collapses the channel dimension (spatial) leaving only 
     temporal information. 
     """
     num_waveforms, num_time_samples, num_channels = waveforms.shape
@@ -9,9 +9,9 @@ def to_channelless_representation(waveforms):
 
     return channelless_waveforms
 
-def from_channelless_representation(channelless_waveforms, num_channels):
+def from_temporal_representation(channelless_waveforms, num_channels):
     """
-    Transform waveforms from channelless representation. The inverse of to_channelless_representation
+    Transform waveforms from channelless representation. The inverse of to_temporal_representation
     """
     num_channelless_waveforms, num_time_samples = channelless_waveforms.shape
     num_waveforms = num_channelless_waveforms // num_channels

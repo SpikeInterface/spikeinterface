@@ -13,7 +13,7 @@ from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface import extract_waveforms, NumpySorting
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.core.recording_tools import get_channel_distances
-from .waveform_utils import to_channelless_representation, from_channelless_representation
+from .waveform_utils import to_temporal_representation, from_temporal_representation
 
 
 class PCBaseNode(PipelineNode):
@@ -168,8 +168,8 @@ class PCAProjection(PCBaseNode):
         
         num_waveforms, num_samples , num_channels = waveforms.shape
         
-        channeless_waveform = to_channelless_representation(waveforms)
+        channeless_waveform = to_temporal_representation(waveforms)
         projected_chaneless_waveforms = self.pca_model.transform(channeless_waveform)
-        projected_waveforms = from_channelless_representation(projected_chaneless_waveforms, num_channels)
+        projected_waveforms = from_temporal_representation(projected_chaneless_waveforms, num_channels)
 
         return projected_waveforms
