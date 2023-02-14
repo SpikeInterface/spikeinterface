@@ -8,8 +8,10 @@ _sparsity_doc = """
         * "best_channels": N best channels with the largest amplitude. Use the 'num_channels' argument to specify the
                          number of channels.
         * "radius": radius around the best channel. Use the 'radius_um' argument to specify the radius in um
-        * "threshold": thresholds based on template signal-to-noise ratio. Use the 'threshold' argument
+        * "threshold": threshold based on template signal-to-noise ratio. Use the 'threshold' argument
                        to specify the SNR threshold.
+        * "energy": threshold based on the expected energy that should be present on the channels, 
+                    given their noise levels. Use the 'threshold' argument to specify the SNR threshold
         * "by_property": sparsity is given by a property of the recording and sorting(e.g. 'group').
                          Use the 'by_property' argument to specify the property name.
 
@@ -194,6 +196,21 @@ class ChannelSparsity:
         return cls(mask, we.unit_ids, we.channel_ids)
 
     @classmethod
+    def from_energy(cls, we, threshold):
+        """
+        Construct sparsity from a threshold based on per channel energy ratio.
+        Use the 'threshold' argument to specify the SNR threshold.
+        """
+        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
+        noise = np.sqrt(we.nsamples) * get_noise_levels(we.recording, return_scaled=we.return_scaled)
+        for unit_ind, unit_id in enumerate(we.unit_ids):
+            wfs = we.get_waveforms(unit_id)
+            energies = np.linalg.norm(wfs, axis=(0, 1))
+            chan_inds = np.nonzero(energies / (noise * np.sqrt(len(wfs))) >= threshold)
+            mask[unit_ind, chan_inds] = True
+        return cls(mask, we.unit_ids, we.channel_ids)
+
+    @classmethod
     def from_property(cls, we, by_property):
         """
         Construct sparsity witha property of the recording and sorting(e.g. 'group').
@@ -255,6 +272,9 @@ def compute_sparsity(
     elif method == "threshold":
         assert threshold is not None, "For the 'threshold' method, 'threshold' needs to be given"
         sparsity = ChannelSparsity.from_threshold(waveform_extractor, threshold, peak_sign=peak_sign)
+    elif method == "energy":
+        assert threshold is not None, "For the 'energy' method, 'threshold' needs to be given"
+        sparsity = ChannelSparsity.from_energy(waveform_extractor, threshold)
     elif method == "by_property":
         assert by_property is not None, "For the 'by_property' method, 'by_property' needs to be given"
         sparsity = ChannelSparsity.from_property(waveform_extractor, by_property)
