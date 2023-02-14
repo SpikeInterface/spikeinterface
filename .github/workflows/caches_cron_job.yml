@@ -31,7 +31,7 @@ jobs:
           key: ${{ runner.os }}-venv-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-venv.outputs.cache-hit == 'true'}} "
-      - name: Create virtual environment with packages if not available in cache
+      - name: Create the virtual environment to be cached 
         if: steps.cache-venv.outputs.cache-hit != 'true'
         run: |
           git config --global user.email "CI@example.com"
@@ -73,7 +73,7 @@ jobs:
       - name: Download dataset
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          datalad install -rg https://gin.g-node.org/NeuralEnsemble/ophys_testing_data
+          datalad install -rg https://gin.g-node.org/CatalystNeuro/behavior_testing_data
           ls -la
           mv ~/ophys_testing_data ~/spikeinterface_datasets
           
