@@ -83,5 +83,6 @@ jobs:
       - name: Change dataset name
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          mv --recursive ~/ephy_testing_data ~/spikeinterface_datasets
           ls -l
+          mv ~/ephy_testing_data ~/spikeinterface_datasets
+          
