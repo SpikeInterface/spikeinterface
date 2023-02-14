@@ -42,6 +42,8 @@ jobs:
         if: steps.cache-venv.outputs.cache-hit != 'true'
         run: |
           python -m pip install -U pip  # Official recommended way
+          # herdingspikes need numpy to installed first, this numpy pre install will be removed when HS remove from testing
+          pip install numpy==1.22
           pip install -e .[test,extractors,full]
   
   create-data-cache-if-missing:
