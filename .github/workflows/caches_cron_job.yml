@@ -10,27 +10,30 @@ jobs:
     name: Caching virtual env
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
       - name: Get current year-month
         id: date
         run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
+      - name: Get current dependencies hash
+        id: dependencies
+        run: echo hashFiles('**/pyproject.toml') >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
         id: cache-venv
         with:
           path: ~/test_env
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
-      - if: steps.cache-venv.cache-hit == false
-        - name: Create virtual environment as it is not present
-        - run: |
-            git config --global user.email "CI@example.com"
-            git config --global user.name "CI Almighty"
-            python -m venv ~/test_env  # Environment used in the caching step
-            source ~/test_env/bin/activate
-            python -m pip install -U pip  # Official recommended way
-            pip install -e .[test,extractors,full]
+      - name: Create virtual environment as it is not present
+        if: steps.cache-venv.cache-hit == false
+        run: |
+          git config --global user.email "CI@example.com"
+          git config --global user.name "CI Almighty"
+          python -m venv ~/test_env  # Environment used in the caching step
+          source ~/test_env/bin/activate
+          python -m pip install -U pip  # Official recommended way
+          pip install -e .[test,extractors,full]
   
   create-data-cache-if-missing:
     name: Caching data env
@@ -53,13 +56,13 @@ jobs:
           key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
       - name: Cache found?
         run: echo {{steps.cache-datasets-cache-hit}}
-      - if: steps.cache-datasets-cache-hit == false
-        - name: Create the data cache if cache is not present
-        - run: |
-            git config --global user.email "CI@example.com"
-            git config --global user.name "CI Almighty"
-            python -m pip install -U pip  # Official recommended way
-            pip install datalad-installer
-            datalad-installer git-annex -m datalad/packages
-            pip install datalad
-            datalad install --recursive --get-data --source https://gin.g-node.org/NeuralEnsemble/ephy_testing_data ~/spikeinterface_datasets
+      - name: Create the data cache if cache is not present
+        if: steps.cache-datasets-cache-hit == false
+        run: |
+          git config --global user.email "CI@example.com"
+          git config --global user.name "CI Almighty"
+          python -m pip install -U pip  # Official recommended way
+          pip install datalad-installer
+          datalad-installer git-annex -m datalad/packages
+          pip install datalad
+          datalad install --recursive --get-data --source https://gin.g-node.org/NeuralEnsemble/ephy_testing_data ~/spikeinterface_datasets
