@@ -25,14 +25,14 @@ jobs:
         run: |
           echo "hash=${{hashFiles('**/pyproject.toml')}}" >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
-        id: cache
+        id: cache-venv
         with:
           path: ~/test_env
           key: ${{ runner.os }}-venv-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
       - name: Cache found?
-        run: echo "Cache-hit ${{steps.cache.outputs.cache-hit}} "
+        run: echo "Cache-hit ${{steps.cache-venv.outputs.cache-hit == 'true'}} "
       - name: Create virtual environment if it is not present
-        if: steps.cache.outputs.cache-hit == 'false'
+        if: steps.cache-venv.outputs.cache-hit != 'true'
         run: |
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
@@ -53,7 +53,7 @@ jobs:
         run: |
           echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
-        id: cache
+        id: cache-datasets
         env:
           # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
           HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
@@ -61,9 +61,9 @@ jobs:
           path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
       - name: Cache found?
-        run: echo "Cache-hit ${{steps.cache.outputs.cache-hit == 'true'}} "
+        run: echo "Cache-hit ${{steps.cache-datasets.outputs.cache-hit == 'true'}} "
       - name: Installing datalad and git-annex
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
@@ -72,7 +72,7 @@ jobs:
           datalad-installer --sudo ok git-annex -m datalad/packages
           pip install datalad
       - name: Download dataset
-        if: steps.cache-datasets.outputs.cache-hit == 'false'
+        if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
           datalad install --recursive --get-data -source "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
           mv --recursive ~/ephy_testing_data ~/spikeinterface_datasets
