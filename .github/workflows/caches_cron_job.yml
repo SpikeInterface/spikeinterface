@@ -51,17 +51,14 @@ jobs:
         with:
           python-version: '3.9'
       - name: Get ephy_testing_data current head hash
-        id: vars
+        id: repo_hash
         run: |
-          echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
         id: cache-datasets
-        env:
-          # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
-          HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
         with:
           path: ~/spikeinterface_datasets
-          key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
+          key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}} "
       - name: Installing datalad and git-annex
@@ -76,10 +73,6 @@ jobs:
       - name: Download dataset
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          datalad install -rg https://gin.g-node.org/CatalystNeuro/ophys_testing_data ~/spikeinterface_datasets
-      # - name: Move dataset to the right folder
-      #   if: steps.cache-datasets.outputs.cache-hit != 'true'
-      #   run: |
-      #     ls -l
-      #     mv ~/ephy_testing_data ~/spikeinterface_datasets
+          datalad install -rg https://gin.g-node.org/NeuralEnsemble/ephy_testing_data ~/spikeinterface_datasets
+          ls -la
           
