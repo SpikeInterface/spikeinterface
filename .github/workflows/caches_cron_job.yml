@@ -29,7 +29,7 @@ jobs:
         with:
           path: ~/test_env
           key: ${{ runner.os }}-venv-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
-      - name: Create virtual environment as it is not present
+      - name: Create virtual environment if it is not present
         if: steps.cache-venv.cache-hit == 'false'
         run: |
           git config --global user.email "CI@example.com"
@@ -59,8 +59,9 @@ jobs:
           path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
       - name: Cache found?
-        run: echo "printing ${{steps.cache-datasets-cache-hit == 'false'}} "
-      - if: steps.cache-datasets-cache-hit == 'false'
+        run: echo "Cache-hit ${{steps.cache-datasets-cache-hit == 'true'}} "
+      - name: Installing datalad and git-annex
+        if: steps.cache-datasets-cache-hit == 'true'
         run: |
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
@@ -68,7 +69,8 @@ jobs:
           pip install datalad-installer
           datalad-installer --sudo ok git-annex -m datalad/packages
           pip install datalad
-      - if: steps.cache-datasets-cache-hit == 'false'
+      - name: Download dataset
+        if: steps.cache-datasets-cache-hit == 'true'
         run: |
           datalad install --recursive --get-data -source "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
           mv --recursive ~/ephy_testing_data ~/spikeinterface_datasets
