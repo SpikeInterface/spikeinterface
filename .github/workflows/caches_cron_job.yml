@@ -38,6 +38,9 @@ jobs:
           git config --global user.name "CI Almighty"
           python -m venv ~/test_env  # Environment used in the caching step
           source ~/test_env/bin/activate
+      - name: Install packages using pip
+        if: steps.cache-venv.outputs.cache-hit != 'true'
+        run: |
           python -m pip install -U pip  # Official recommended way
           pip install -e .[test,extractors,full]
   
@@ -74,6 +77,9 @@ jobs:
       - name: Download dataset
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          datalad install --recursive --get-data -source "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
+          datalad install -rg https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
+      - name: Change dataset name
+        if: steps.cache-datasets.outputs.cache-hit != 'true'
+        run: |
           mv --recursive ~/ephy_testing_data ~/spikeinterface_datasets
           ls -l
