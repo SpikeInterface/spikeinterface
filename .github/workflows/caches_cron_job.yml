@@ -76,7 +76,10 @@ jobs:
           datalad install -rg https://gin.g-node.org/CatalystNeuro/behavior_testing_data
           ls -la
           pwd
-          mv --force ~/behavior_testing_data/ ~/spikeinterface_datasets
+          mv --force ./behavior_testing_data/ ~/spikeinterface_datasets
+          ls -la
+          cd ~
+          pwd
           ls -la
           cd spikeinterface_datasets
           du -hs spikeinterface_datasets/
