@@ -19,18 +19,18 @@ jobs:
       - name: Get current year-month
         id: date
         run: |
-          echo "date=$(date +'%Y-%m')"
+          echo "The data is $(date +'%Y-%m')"
           echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
       - name: Get current dependencies hash
         id: dependencies
         run: |
-          echo "${{hashFiles('**/pyproject.toml')}}"
-          echo ${{hashFiles('**/pyproject.toml')}} >> $GITHUB_OUTPUT
+          echo "The hash is: ${{hashFiles('**/pyproject.toml')}}"
+          echo "hash=${{hashFiles('**/pyproject.toml')}}" >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
         id: cache-venv
         with:
           path: ~/test_env
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
+          key: ${{ runner.os }}-venv-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
       - name: Create virtual environment as it is not present
         if: steps.cache-venv.cache-hit == false
         run: |
@@ -61,8 +61,8 @@ jobs:
           path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
       - name: Cache found?
-        run: echo ${{steps.cache-datasets-cache-hit}}
-      - name: Create the data cache if cache is not present
+        run: echo "printing ${{steps.cache-datasets-cache-hit}}"
+      - name: Install datalad
         if: steps.cache-datasets-cache-hit == false
         run: |
           git config --global user.email "CI@example.com"
@@ -71,4 +71,6 @@ jobs:
           pip install datalad-installer
           datalad-installer --sudo ok git-annex -m datalad/packages
           pip install datalad
-          datalad install --recursive --get-data --source https://gin.g-node.org/NeuralEnsemble/ephy_testing_data ~/spikeinterface_datasets
+      - name: Download ephy testing data from git
+        if: steps.cache-datasets-cache-hit == false
+        run: datalad install --recursive --get-data --source="https://gin.g-node.org/NeuralEnsemble/ephy_testing_data" ~/spikeinterface_datasets
