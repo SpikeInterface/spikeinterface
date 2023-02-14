@@ -77,14 +77,3 @@ jobs:
           mv --force ./ephy_testing_data ~/spikeinterface_datasets
           cd ~
           du -hs spikeinterface_datasets
-          # datalad install -rg https://gin.g-node.org/CatalystNeuro/behavior_testing_data
-          # ls -la
-          # pwd
-          # mv --force ./behavior_testing_data/ ~/spikeinterface_datasets
-          # ls -la
-          # cd ~
-          # pwd
-          # ls -la
-          # du -hs spikeinterface_datasets/
-          # cd spikeinterface_datasets
-          # ls -la
