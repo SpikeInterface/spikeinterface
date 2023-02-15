@@ -232,11 +232,10 @@ class IblStreamingRecordingSegment(BaseRecordingSegment):
         if end_frame is None:
             end_frame = self.get_num_samples()
         if channel_indices is None:
-            if self._load_sync_channel:
-                channel_indices = slice(None)
-            else:
-                channel_indices = slice(0, -1)
+            channel_indices = slice(None)
         traces = self._file_streamer.read(nsel=slice(start_frame, end_frame), csel=channel_indices, volts=False)
+        if not self._load_sync_channel:
+            traces = traces[:, :-1]
 
         return traces
 
