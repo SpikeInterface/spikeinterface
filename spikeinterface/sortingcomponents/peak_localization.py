@@ -67,7 +67,7 @@ class LocalizeBase(PipelineNode):
     def __init__(self, recording, return_ouput=True, parents=None, local_radius_um=75.):
         PipelineNode.__init__(self, recording, return_ouput=return_ouput, parents=parents)
         
-        self.local_radius_um = w
+        self.local_radius_um = local_radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
         self.neighbours_mask = self.channel_distance < local_radius_um

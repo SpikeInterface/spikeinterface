@@ -97,7 +97,7 @@ def plot_comparison_positions(benchmarks, mode='average'):
     plt.rc('xtick', labelsize=12) 
     plt.rc('ytick', labelsize=12)
 
-    fig, axs = plt.subplots(ncols=4, nrows=2, figsize=(15, 10))
+    fig, axs = plt.subplots(ncols=3, nrows=2, figsize=(15, 10))
     ax = axs[0, 0]
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -108,7 +108,7 @@ def plot_comparison_positions(benchmarks, mode='average'):
 
     for bench in benchmarks:
         errors = np.linalg.norm(bench.template_positions[:, :2] - bench.gt_positions[:,:2], axis=1)
-        ax.plot(norms[idx], savgol_filter(errors[idx], smoothing_factor, 3), label=bench.title)
+        ax.plot(snrs[wdx], savgol_filter(errors[wdx], smoothing_factor, 3), label=bench.title)
 
     ax.legend()
     #ax.set_xlabel('norm')
@@ -124,19 +124,10 @@ def plot_comparison_positions(benchmarks, mode='average'):
         errors = np.linalg.norm(bench.template_positions[:, :2] - bench.gt_positions[:,:2], axis=1)
         ax.plot(distances_to_center[zdx], savgol_filter(errors[zdx], smoothing_factor, 3), label=bench.title)
 
-
-    ax = axs[0, 2]
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-
-    for bench in benchmarks:
-        errors = np.linalg.norm(bench.template_positions[:, :2] - bench.gt_positions[:,:2], axis=1)
-        ax.plot(snrs[wdx], savgol_filter(errors[wdx], smoothing_factor, 3), label=bench.title)
-
     #ax.set_xlabel('distance to center (um)')
     #ax.set_yticks([])
 
-    ax = axs[0, 3]
+    ax = axs[0, 2]
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     #ax.set_title(title)
@@ -155,13 +146,13 @@ def plot_comparison_positions(benchmarks, mode='average'):
 
     for bench in benchmarks:
         
-        ax.plot(norms[idx], savgol_filter(bench.medians_over_templates[idx], smoothing_factor, 3), lw=2, label=bench.title)
-        ymin = savgol_filter((bench.medians_over_templates - bench.mads_over_templates)[idx], smoothing_factor, 3)
-        ymax = savgol_filter((bench.medians_over_templates + bench.mads_over_templates)[idx], smoothing_factor, 3)
+        ax.plot(snrs[wdx], savgol_filter(bench.medians_over_templates[wdx], smoothing_factor, 3), lw=2, label=bench.title)
+        ymin = savgol_filter((bench.medians_over_templates - bench.mads_over_templates)[wdx], smoothing_factor, 3)
+        ymax = savgol_filter((bench.medians_over_templates + bench.mads_over_templates)[wdx], smoothing_factor, 3)
 
-        ax.fill_between(norms[idx], ymin, ymax, alpha=0.5)
+        ax.fill_between(snrs[wdx], ymin, ymax, alpha=0.5)
 
-    ax.set_xlabel('norm')
+    ax.set_xlabel('snr')
     ax.set_ylabel('error (um)')
     #ymin, ymax = ax.get_ylim()
     #ax.set_ylim(0, ymax)
@@ -181,27 +172,6 @@ def plot_comparison_positions(benchmarks, mode='average'):
 
 
     ax.set_xlabel('distance to center (um)')
-    #ax.set_yscale('log')
-    
-    #ymin, ymax = ax.get_ylim()
-    #ax.set_ylim(0, ymax)
-
-    ax = axs[1, 2]
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-
-    for bench in benchmarks:
-        
-        ax.plot(snrs[wdx], savgol_filter(bench.medians_over_templates[wdx], smoothing_factor, 3), lw=2, label=bench.title)
-        ymin = savgol_filter((bench.medians_over_templates - bench.mads_over_templates)[wdx], smoothing_factor, 3)
-        ymax = savgol_filter((bench.medians_over_templates + bench.mads_over_templates)[wdx], smoothing_factor, 3)
-
-        ax.fill_between(snrs[wdx], ymin, ymax, alpha=0.5)
-
-
-    ax.set_xlabel('snr (dB)')
-    #ax.set_yscale('log')
-    
 
     x_means = []
     x_stds = []
@@ -209,11 +179,10 @@ def plot_comparison_positions(benchmarks, mode='average'):
         x_means += [np.median(bench.medians_over_templates)]
         x_stds += [np.std(bench.medians_over_templates)]
 
-
     #ax.set_yticks([])
     #ax.set_ylim(ymin, ymax)
   
-    ax = axs[1, 3]
+    ax = axs[1, 2]
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
 
@@ -231,7 +200,7 @@ def plot_comparison_positions(benchmarks, mode='average'):
     ax.set_xlabel('error medians (um)')
   #ax.set_yticks([]
     ymin, ymax = ax.get_ylim()
-    ax.set_ylim(0, 5)
+    ax.set_ylim(0, 12)
 
 
 def plot_comparison_inferences(benchmarks, bin_size=np.arange(0.1, 20, 1)):
@@ -451,8 +420,9 @@ def plot_figure_1(benchmark, mode='average', cell_ind='auto'):
     mask = benchmark.waveforms.sorting.get_all_spike_trains()[0][1] == unit_id
     times = benchmark.waveforms.sorting.get_all_spike_trains()[0][0][mask]/benchmark.recording.get_sampling_frequency()
 
-    si.plot_timeseries(benchmark.recording, mode='line', time_range=(times[0]-0.01, times[0] + 0.1), channel_ids=benchmark.recording.channel_ids[:20], ax=axs[0, 1])
-    axs[0, 1].set_ylabel('Neurons')
+    print(benchmark.recording)
+    #si.plot_timeseries(benchmark.recording, mode='line', time_range=(times[0]-0.01, times[0] + 0.1), channel_ids=benchmark.recording.channel_ids[:20], ax=axs[0, 1])
+    #axs[0, 1].set_ylabel('Neurons')
 
     #si.plot_spikes_on_traces(benchmark.waveforms, unit_ids=[unit_id], time_range=(times[0]-0.01, times[0] + 0.1), unit_colors={unit_id : 'r'}, ax=axs[0, 1], 
     #    channel_ids=benchmark.recording.channel_ids[120:180], )
