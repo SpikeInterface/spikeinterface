@@ -233,12 +233,11 @@ class IblStreamingRecordingSegment(BaseRecordingSegment):
             end_frame = self.get_num_samples()
         if channel_indices is None:
             channel_indices = slice(None)
-# This is a temporary fixed to mimic the correct behavior to get the none scaled traces:
-        traces = np.rint(self._file_streamer[start_frame:end_frame] / self._file_streamer.sample2volts).astype("int16")
+        traces = self._file_streamer.read(nsel=slice(start_frame, end_frame), csel=channel_indices, volts=False)
         if not self._load_sync_channel:
             traces = traces[:, :-1]
 
-        return traces[:, channel_indices]
+        return traces
 
 
 read_ibl_streaming_recording = define_function_from_class(source_class=IblStreamingRecordingExtractor, name="read_ibl_streaming_recording")
