@@ -153,7 +153,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
             
         # initialize main extractor
         sampling_frequency = self._file_streamer.fs
-        dtype = "int16"  # self._file_streamer.dtype is also 'int16', but always returns 'float32' Volts on read
+        dtype = self._file_streamer.dtype
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
         self.set_channel_gains(channel_gains)
         self.set_channel_offsets(channel_offsets)
@@ -232,10 +232,11 @@ class IblStreamingRecordingSegment(BaseRecordingSegment):
         if end_frame is None:
             end_frame = self.get_num_samples()
         if channel_indices is None:
-            channel_indices = slice(None)
+            if self._load_sync_channel:
+                channel_indices = slice(None)
+            else:
+                channel_indices = slice(0, -1)
         traces = self._file_streamer.read(nsel=slice(start_frame, end_frame), csel=channel_indices, volts=False)
-        if not self._load_sync_channel:
-            traces = traces[:, :-1]
 
         return traces
 
