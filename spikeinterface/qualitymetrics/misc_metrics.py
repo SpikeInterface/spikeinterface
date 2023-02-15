@@ -10,11 +10,13 @@ Implementations here have been refactored to support the multi-segment API of sp
 from collections import namedtuple
 
 import math
+from copy import deepcopy  # todo: remove this import
+import scipy.sparse as sps  # todo: remove this import
+
 import numpy as np
 import warnings
 from scipy.ndimage import gaussian_filter1d
 from scipy.stats import poisson
-from elephant.spike_train_synchrony import Synchrotool
 import quantities as pq
 import neo
 
@@ -24,6 +26,7 @@ from ..core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
 )
+
 
 try:
     import numba
@@ -1010,6 +1013,448 @@ if HAVE_NUMBA:
             nb_rp_violations[i] += n_v
 
 
+def round_binning_errors(values, tolerance=1e-8):
+
+    # same as '1 - (values % 1) <= tolerance' but faster
+    correction_mask = 1 - tolerance <= values % 1
+    if isinstance(values, np.ndarray):
+        num_corrections = correction_mask.sum()
+        if num_corrections > 0:
+            values[correction_mask] += 0.5
+        return values.astype(np.int32)
+
+    # if correction_mask:
+    #     values += 0.5
+
+    return int(values)
+
+class BinnedSpikeTrain(object):
+
+    def __init__(self, spiketrains, bin_size=None, n_bins=None, t_start=None,
+                 t_stop=None, tolerance=1e-8, sparse_format="csr"):
+        if sparse_format not in ("csr", "csc"):
+            raise ValueError(f"Invalid 'sparse_format': {sparse_format}. "
+                             "Available: 'csr' and 'csc'")
+
+        # Converting spiketrains to a list, if spiketrains is one
+        # SpikeTrain object
+        if isinstance(spiketrains, neo.SpikeTrain):
+            spiketrains = [spiketrains]
+
+        # The input params will be rescaled later to unit-less floats
+        self.tolerance = tolerance
+        self._t_start = t_start
+        self._t_stop = t_stop
+        self.n_bins = n_bins
+        self._bin_size = bin_size
+        self.units = None  # will be set later
+        # Check all parameter, set also missing values
+        self._resolve_input_parameters(spiketrains)
+        # Now create the sparse matrix
+        self.sparse_matrix = self._create_sparse_matrix(
+            spiketrains, sparse_format=sparse_format)
+
+    @property
+    def bin_size(self):
+        """
+        Bin size quantity.
+        """
+        return pq.Quantity(self._bin_size, units=self.units, copy=False)
+
+    @property
+    def t_start(self):
+        """
+        t_start quantity; spike times below this value have been ignored.
+        """
+        return pq.Quantity(self._t_start, units=self.units, copy=False)
+
+    @property
+    def t_stop(self):
+        """
+        t_stop quantity; spike times above this value have been ignored.
+        """
+        return pq.Quantity(self._t_stop, units=self.units, copy=False)
+
+    def __resolve_binned(self, spiketrains):
+        spiketrains = np.asarray(spiketrains)
+        if spiketrains.ndim != 2 or spiketrains.dtype == np.dtype('O'):
+            raise ValueError("If the input is not a spiketrain(s), it "
+                             "must be an MxN numpy array, each cell of "
+                             "which represents the number of (binned) "
+                             "spikes that fall in an interval - not "
+                             "raw spike times.")
+        if self.n_bins is not None:
+            raise ValueError("When the input is a binned matrix, 'n_bins' "
+                             "must be set to None - it's extracted from the "
+                             "input shape.")
+        self.n_bins = spiketrains.shape[1]
+        if self._bin_size is None:
+            if self._t_start is None or self._t_stop is None:
+                raise ValueError("To determine the bin size, both 't_start' "
+                                 "and 't_stop' must be set")
+            self._bin_size = (self._t_stop - self._t_start) / self.n_bins
+        if self._t_start is None and self._t_stop is None:
+            raise ValueError("Either 't_start' or 't_stop' must be set")
+        if self._t_start is None:
+            self._t_start = self._t_stop - self._bin_size * self.n_bins
+        if self._t_stop is None:
+            self._t_stop = self._t_start + self._bin_size * self.n_bins
+
+    def _resolve_input_parameters(self, spiketrains):
+        """
+        Calculates `t_start`, `t_stop` from given spike trains.
+
+        The start and stop points are calculated from given spike trains only
+        if they are not calculable from given parameters or the number of
+        parameters is less than three.
+
+        Parameters
+        ----------
+        spiketrains : neo.SpikeTrain or list or np.ndarray of neo.SpikeTrain
+
+        """
+        def get_n_bins():
+            n_bins = (self._t_stop - self._t_start) / self._bin_size
+            if isinstance(n_bins, pq.Quantity):
+                n_bins = n_bins.simplified.item()
+            n_bins = round_binning_errors(n_bins, tolerance=1e-8)
+            return n_bins
+
+        if self._t_start is None:
+            self._t_start = spiketrains[0].t_start
+        if self._t_stop is None:
+            self._t_stop = spiketrains[0].t_stop
+        # At this point, all spiketrains share the same units.
+        self.units = spiketrains[0].units
+
+        # t_start and t_stop are checked to be time quantities in the
+        # check_neo_consistency call.
+        self._t_start = self._t_start.rescale(self.units).item()
+        self._t_stop = self._t_stop.rescale(self.units).item()
+
+        start_shared = max(st.t_start.rescale(self.units).item()
+                           for st in spiketrains)
+        stop_shared = min(st.t_stop.rescale(self.units).item()
+                          for st in spiketrains)
+
+        tolerance = self.tolerance
+
+
+        if self.n_bins is None:
+            # bin_size is provided
+            self._bin_size = self._bin_size.rescale(self.units).item()
+            self.n_bins = get_n_bins()
+        elif self._bin_size is None:
+            # n_bins is provided
+            self._bin_size = (self._t_stop - self._t_start) / self.n_bins
+        else:
+            # both n_bins are bin_size are given
+            self._bin_size = self._bin_size.rescale(self.units).item()
+            check_n_bins_consistency()
+
+    def get_num_of_spikes(self, axis=None):
+        """
+        Compute the number of binned spikes.
+
+        Parameters
+        ----------
+        axis : int, optional
+            If `None`, compute the total num. of spikes.
+            Otherwise, compute num. of spikes along axis.
+            If axis is `1`, compute num. of spikes per spike train (row).
+            Default is `None`.
+
+        Returns
+        -------
+        n_spikes_per_row : int or np.ndarray
+            The number of binned spikes.
+
+        """
+        if axis is None:
+            return self.sparse_matrix.sum(axis=axis)
+        n_spikes_per_row = self.sparse_matrix.sum(axis=axis)
+        n_spikes_per_row = np.ravel(n_spikes_per_row)
+        return n_spikes_per_row
+
+    def binarize(self, copy=True):
+        """
+        Clip the internal array (no. of spikes in a bin) to `0` (no spikes) or
+        `1` (at least one spike) values only.
+
+        Parameters
+        ----------
+        copy : bool, optional
+            If True, a **shallow** copy - a view of `BinnedSpikeTrain` - is
+            returned with the data array filled with zeros and ones. Otherwise,
+            the binarization (clipping) is done in-place. A shallow copy
+            means that :attr:`indices` and :attr:`indptr` of a sparse matrix
+            is shared with the original sparse matrix. Only the data is copied.
+            If you want to perform a deep copy, call
+            :func:`BinnedSpikeTrain.copy` prior to binarizing.
+            Default: True
+
+        Returns
+        -------
+        bst : BinnedSpikeTrain or BinnedSpikeTrainView
+            A (view of) `BinnedSpikeTrain` with the sparse matrix data clipped
+            to zeros and ones.
+
+        """
+        spmat = self.sparse_matrix
+        if copy:
+            data = np.ones(len(spmat.data), dtype=spmat.data.dtype)
+            spmat = spmat.__class__(
+                (data, spmat.indices, spmat.indptr),
+                shape=spmat.shape, copy=False)
+            bst = BinnedSpikeTrainView(t_start=self._t_start,
+                                       t_stop=self._t_stop,
+                                       bin_size=self._bin_size,
+                                       units=self.units,
+                                       sparse_matrix=spmat,
+                                       tolerance=self.tolerance)
+        else:
+            spmat.data[:] = 1
+            bst = self
+
+        return bst
+
+    def _create_sparse_matrix(self, spiketrains, sparse_format):
+        """
+        Converts `neo.SpikeTrain` objects to a scipy sparse matrix, which
+        contains the binned spike times, and
+        stores it in :attr:`sparse_matrix`.
+
+        Parameters
+        ----------
+        spiketrains : neo.SpikeTrain or list of neo.SpikeTrain
+            Spike trains to bin.
+
+        """
+
+        # The data type for numeric values
+        data_dtype = np.int32
+
+        if sparse_format == 'csr':
+            sparse_format = sps.csr_matrix
+        else:
+            # csc
+            sparse_format = sps.csc_matrix
+
+        # Get index dtype that can accomodate the largest index
+        # (this is the same dtype that will be used for the index arrays of the
+        #  sparse matrix, so already using it here avoids array duplication)
+        shape = (len(spiketrains), self.n_bins)
+        numtype = np.int32
+        if max(shape) > np.iinfo(numtype).max:
+            numtype = np.int64
+
+        row_ids, column_ids = [], []
+        # data
+        counts = []
+        n_discarded = 0
+
+        # all spiketrains carry the same units
+        scale_units = 1 / self._bin_size
+        for idx, st in enumerate(spiketrains):
+            times = st.magnitude
+            times = times[(times >= self._t_start) & (
+                times <= self._t_stop)] - self._t_start
+            bins = times * scale_units
+
+            # shift spikes that are very close
+            # to the right edge into the next bin
+            bins = round_binning_errors(bins, tolerance=1e-8)
+            valid_bins = bins[bins < self.n_bins]
+            n_discarded += len(bins) - len(valid_bins)
+            f, c = np.unique(valid_bins, return_counts=True)
+            # f inherits the dtype np.int32 from bins, but c is created in
+            # np.unique with the default int dtype (usually np.int64)
+            c = c.astype(data_dtype)
+            column_ids.append(f)
+            counts.append(c)
+            row_ids.append(np.repeat(idx, repeats=len(f)).astype(numtype))
+
+        if n_discarded > 0:
+            warnings.warn("Binning discarded {} last spike(s) of the "
+                          "input spiketrain".format(n_discarded))
+
+        # Stacking preserves the data type. In any case, while creating
+        # the sparse matrix, a copy is performed even if we set 'copy' to False
+        # explicitly (however, this might change in future scipy versions -
+        # this depends on scipy csr matrix initialization implementation).
+        counts = np.hstack(counts)
+        column_ids = np.hstack(column_ids)
+        row_ids = np.hstack(row_ids)
+
+        sparse_matrix = sparse_format((counts, (row_ids, column_ids)),
+                                      shape=shape, dtype=data_dtype,
+                                      copy=False)
+
+        return sparse_matrix
+
+
+class BinnedSpikeTrainView(BinnedSpikeTrain):
+    """
+    A view of :class:`BinnedSpikeTrain`.
+
+    This class is used to avoid deep copies in several functions of a binned
+    spike train object like :meth:`BinnedSpikeTrain.binarize`,
+    :meth:`BinnedSpikeTrain.time_slice`, etc.
+
+    Parameters
+    ----------
+    t_start, t_stop : float
+        Unit-less start and stop times that share the same units.
+    bin_size : float
+        Unit-less bin size that was used in binning the `sparse_matrix`.
+    units : pq.Quantity
+        The units of input spike trains.
+    sparse_matrix : scipy.sparse.csr_matrix
+        Binned sparse matrix.
+    tolerance : float or None, optional
+        The tolerance property of the original `BinnedSpikeTrain`.
+        Default: 1e-8
+
+    Warnings
+    --------
+    This class is an experimental feature.
+    """
+
+    def __init__(self, t_start, t_stop, bin_size, units, sparse_matrix,
+                 tolerance=1e-8):
+        self._t_start = t_start
+        self._t_stop = t_stop
+        self._bin_size = bin_size
+        self.n_bins = sparse_matrix.shape[1]
+        self.units = units.copy()
+        self.sparse_matrix = sparse_matrix
+        self.tolerance = tolerance
+
+
+
+
+
+class Complexity(object):
+
+    def __init__(self, spiketrains,
+                 sampling_rate=None,
+                 bin_size=None,
+                 spread=0,
+                 tolerance=1e-8):
+
+        self.input_spiketrains = spiketrains
+        self.t_start = spiketrains[0].t_start
+        self.t_stop = spiketrains[0].t_stop
+        self.sampling_rate = sampling_rate
+        self.bin_size = bin_size
+        self.spread = spread
+        self.tolerance = tolerance
+
+        if bin_size is None and sampling_rate is not None:
+            self.bin_size = 1 / self.sampling_rate
+
+        def time_histogram(spiketrains, bin_size, t_start=None, t_stop=None,
+                           output='counts'):
+
+            # Bin the spike trains and sum across columns
+            bs = BinnedSpikeTrain(spiketrains, t_start=t_start, t_stop=t_stop,
+                                  bin_size=bin_size).binarize(copy=False)
+
+            bin_hist = bs.get_num_of_spikes(axis=0)
+            # Flatten array
+            bin_hist = np.ravel(bin_hist)
+            # Renormalise the histogram
+            if output == 'counts':
+                # Raw
+                bin_hist = pq.Quantity(bin_hist, units=pq.dimensionless, copy=False)
+
+            return neo.AnalogSignal(signal=np.expand_dims(bin_hist, axis=1),
+                                    sampling_period=bin_size, units=bin_hist.units,
+                                    t_start=bs.t_start, normalization=output,
+                                    copy=False)
+
+        if spread == 0:
+            self.time_histogram = time_histogram(self.input_spiketrains,
+                                                 self.bin_size)
+            self.epoch = self._epoch_no_spread()
+
+    def _epoch_no_spread(self):
+        """
+        Get an epoch object of the complexity distribution with `spread` = 0
+        """
+        left_edges = self.time_histogram.times
+        durations = self.bin_size * np.ones(self.time_histogram.shape)
+
+        if self.sampling_rate:
+            # ensure that spikes are not on the bin edges
+            bin_shift = .5 / self.sampling_rate
+            left_edges -= bin_shift
+
+            # Ensure that an epoch does not start before the minimum t_start.
+            # Note: all spike trains share the same t_start and t_stop.
+            if left_edges[0] < self.t_start:
+                left_edges[0] = self.t_start
+                durations[0] -= bin_shift
+        else:
+            warnings.warn('No sampling rate specified. '
+                          'Note that using the complexity epoch to get '
+                          'precise spike times can lead to rounding errors.')
+
+        complexity = self.time_histogram.magnitude.flatten()
+        complexity = complexity.astype(np.uint16)
+
+        epoch = neo.Epoch(left_edges,
+                          durations=durations,
+                          array_annotations={'complexity': complexity})
+        return epoch
+
+
+class Synchrotool(Complexity):
+    def __init__(self, spiketrains,
+                 sampling_rate,
+                 bin_size=None,
+                 binary=True,
+                 spread=0,
+                 tolerance=1e-8):
+
+        self.annotated = False
+
+        super(Synchrotool, self).__init__(spiketrains=spiketrains,
+                                          bin_size=bin_size,
+                                          sampling_rate=sampling_rate,
+                                          spread=spread,
+                                          tolerance=tolerance)
+
+    def annotate_synchrofacts(self):
+        """
+        Annotate the complexity of each spike in the
+        ``self.epoch.array_annotations`` *in-place*.
+        """
+        epoch_complexities = self.epoch.array_annotations['complexity']
+        right_edges = (
+            self.epoch.times.magnitude.flatten()
+            + self.epoch.durations.rescale(
+                self.epoch.times.units).magnitude.flatten()
+        )
+
+        for idx, st in enumerate(self.input_spiketrains):
+
+            # all indices of spikes that are within the half-open intervals
+            # defined by the boundaries
+            # note that every second entry in boundaries is an upper boundary
+            spike_to_epoch_idx = np.searchsorted(
+                right_edges,
+                st.times.rescale(self.epoch.times.units).magnitude.flatten())
+            # Bugfix: make sure index is not out of bounds
+            if spike_to_epoch_idx[-1] >= len(epoch_complexities):
+                spike_to_epoch_idx[-1] = len(epoch_complexities) - 1
+            complexity_per_spike = epoch_complexities[spike_to_epoch_idx]
+
+            st.array_annotate(complexity=complexity_per_spike)
+
+        self.annotated = True
+
+
 def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(0, 2), **kwargs):
     """Compute synchrony metrics for each unit and for each synchrony size.
     Parameters
@@ -1027,7 +1472,7 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(0, 2), **kwar
     This function uses the Synchrotool from the elephant library to compute synchrony metrics.
     """
 
-    sampling_rate=waveform_extractor.sorting.get_sampling_frequency()
+    sampling_rate = waveform_extractor.sorting.get_sampling_frequency()
     # get a list of neo.SpikeTrains
     spiketrains = _create_list_of_neo_spiketrains(waveform_extractor.sorting, sampling_rate)
     # get spike counts
@@ -1038,7 +1483,6 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(0, 2), **kwar
     # Synchrony
     synchrotool = Synchrotool(spiketrains, sampling_rate=sampling_rate*pq.Hz)
     # free some memory
-    synchrotool.complexity_histogram = []
     synchrotool.time_histogram = []
     # annotate synchrofacts
     synchrotool.annotate_synchrofacts()
@@ -1063,6 +1507,7 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(0, 2), **kwar
 _default_params["synchrony_metrics"] = dict(
     synchrony_sizes=(0, 2)
 )
+
 
 def _create_list_of_neo_spiketrains(sorting, sampling_rate):
     """ create a list of neo.SpikeTrains from a SortingExtractor"""
