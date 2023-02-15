@@ -7,21 +7,11 @@ Welcome to SpikeInterface's documentation!
   :align: center
 
 
-Spikeinterface is a Python module designed to improve the accessibility, reliability, and reproducibility
-of spike sorting and all its associated computations.
+Spikeinterface is a Python module to analyze extracellular electrophysiology data.
 
-With SpikeInterface, users can:
+With a few lines of code, SpikeInterface enables you to load and pre-process the recording, run several 
+state-of-the-art spike sorters, post-process and curate the output, compute quality metrics, and visualize the results.
 
-- read/write many extracellular file formats.
-- pre-process extracellular recordings.
-- run many popular, semi-automatic spike sorters (also in Docker/Singularity containers).
-- post-process sorted datasets.
-- compare and benchmark spike sorting outputs.
-- compute quality metrics to validate and curate spike sorting outputs.
-- visualize recordings and spike sorting outputs.
-- export report and export to Phy.
-- offer a powerful Qt-based viewer in separate package `spikeinterface-gui <https://https://github.com/SpikeInterface/spikeinterface-gui>`_
-- have some powerful sorting components to build your own sorter.
 
 Overview of SpikeInterface modules
 ----------------------------------
@@ -29,17 +19,30 @@ Overview of SpikeInterface modules
 .. image:: images/overview.png
   :align: center
 
+
+SpikeInterface is made of several modules to deal with different aspects of the analysis pipeline:
+
+- read/write many extracellular file formats.
+- pre-process extracellular recordings.
+- run many popular, semi-automatic spike sorters (also in Docker/Singularity containers).
+- post-process spike sorted data.
+- compare and benchmark spike sorting outputs.
+- compute quality metrics to validate and curate spike sorting outputs.
+- visualize recordings and spike sorting outputs.
+- export report and export to Phy.
+- offer a powerful Qt-based viewer in separate package `spikeinterface-gui <https://https://github.com/SpikeInterface/spikeinterface-gui>`_
+- have some powerful sorting components to build your own sorter.
+
+
 .. toctree::
     :maxdepth: 1
     :caption: Contents:
 
     overview
     installation
-    getting_started/plot_getting_started.rst
-    modules_doc
-    modules/index.rst
-    supported_formats_and_sorters
-    containerized_sorters
+    modules/index
+    how_to/index
+    modules_gallery/index
     install_sorters
     viewers
     contribute
@@ -63,22 +66,6 @@ To get started with SpikeInterface, you can take a look at the following additio
   | performs an in-depth comparison of multiple sorters (spolier alert: they strongly disagree between each other!). 
   | **Note**: the code-base and implementation have changed a lot since the "paper" version in published in 2020. 
   | For detailed documentation we therefore suggest more recent resources, like this documentation and :code:`spiketutorials`.
-
-
-Versions and compatibility
---------------------------
-
-We released a major version of SpikeInterface (referred to as **new API**) in July 2021 (version>=0.90) which:
-
-  * breaks backward compatibility with 0.10/0.11/0.12/0.13 series (**old API**)
-  * is not a metapackage anymore
-  * doesn't depend on spikeextractors/spiketoolkit/spikesorters/spikecomparison/spikewidgets sub-packages
-
-Please see the release notes here: :ref:`release0.90.0`.
-
-For other version release notes check the :ref:`releasenotes`.
-  
-See the documentation for the version **old API** (version<=0.13) `here <https://spikeinterface.readthedocs.io/en/0.13.0/>`_.
 
 
 .. Indices and tables

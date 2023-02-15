@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.97.0.rst
   releases/0.96.1.rst
   releases/0.96.0.rst
   releases/0.95.1.rst
@@ -25,8 +26,36 @@ Release notes
   releases/0.9.9.rst
   releases/0.9.1.rst
 
-NEW API
--------
+
+Version 0.97.1
+==============
+
+* Implemented "sparse" waveforms in core and propagated to all modules:
+  
+  * Add waveform extractor :code:`save()` function and Zarr backend
+  * Dense waveforms can be saved as sparse with the :code:`save()` function
+  * Sparse waveforms can be extracted directly with :code:`sparse=True`
+* Added IBL preprocessing tools for Neuropixels:
+
+  * Bad channel detection 
+  * Channel interpolation
+  * High-pass spatial filter 
+* | Add subfolder for sorter output ("output_folder/sorter_output") and :code:`sorting_info` field to Sorting, 
+  | so that "sorter_output" can be deleted without deleting metadata and :code:`sorting_info`
+* Refactor Quality Metrics module:
+
+  * Improve parameter handling
+  * Unified naming and conventions
+  * Add missing metrics: drift, amp medians, sliding_rp_violations
+* Extended Motion estimation and motion correction, which is now ready to use
+* Removed deprecated functions/modules:
+
+  * :code:`toolkit` module
+  * :code:`symmetrize` argument from compute_correlograms
+  * :code:`localize_units` from postprocessing
+
+* Major rewrite of the docs, with extensive module-specific documentation
+
 
 Version 0.96.1
 ==============
