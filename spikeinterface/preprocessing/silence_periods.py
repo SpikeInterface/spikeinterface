@@ -60,6 +60,11 @@ class SilencedPeriodsRecording(BasePreprocessor):
         assert all(isinstance(list_periods[i], (list, np.ndarray)) for i in range(num_seg)), \
             "Each element of 'list_periods' must be array-like"
 
+        for periods in list_periods:
+            if len(periods) > 0:
+                assert np.all(np.diff(np.array(periods), axis=1) > 0)
+                assert all(e < s for (_, e), (s, _) in zip(periods, periods[1:])), "Intervals should not overlap"
+
         assert mode in available_modes, f"mode {mode} is not an available mode: {available_modes}"
 
         if mode in ['noise']:
