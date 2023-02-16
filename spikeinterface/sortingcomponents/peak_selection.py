@@ -6,27 +6,26 @@ from sklearn.preprocessing import QuantileTransformer
 
 
 def select_peaks(peaks, method='uniform', seed=None, return_indices=False, **method_kwargs):
-
     """Method to subsample all the found peaks before clustering
     Parameters
     ----------
     peaks: the peaks that have been found
-    method: 'uniform', 'uniform_locations', 'smart_sampling_amplitudes', 'smart_sampling_locations', 
+    method: 'uniform', 'uniform_locations', 'smart_sampling_amplitudes', 'smart_sampling_locations',
     'smart_sampling_locations_and_time'
         Method to use. Options:
             * 'uniform': a random subset is selected from all the peaks, on a per channel basis by default
-            * 'smart_sampling_amplitudes': peaks are selected via monte-carlo rejection probabilities 
+            * 'smart_sampling_amplitudes': peaks are selected via monte-carlo rejection probabilities
                 based on peak amplitudes, on a per channel basis
-            * 'smart_sampling_locations': peaks are selection via monte-carlo rejections probabilities 
-                based on peak locations, on a per area region basis
-            * 'smart_sampling_locations_and_time': peaks are selection via monte-carlo rejections probabilities 
+            * 'smart_sampling_locations': peaks are selection via monte-carlo rejections probabilities
+                based on peak locations, on a per area region basis-
+            * 'smart_sampling_locations_and_time': peaks are selection via monte-carlo rejections probabilities
                 based on peak locations and time positions, assuming everything is independent
-    
+
     seed: int
         The seed for random generations
     return_indices: bool
         If True, return the indices of selection such that selected_peaks = peaks[selected_indices]
-    
+
     method_kwargs: dict of kwargs method
         Keyword arguments for the chosen method:
             'uniform':
@@ -53,7 +52,7 @@ def select_peaks(peaks, method='uniform', seed=None, return_indices=False, **met
                     Total number of peaks to select
                 * peaks_locations: array
                     The locations of all the peaks, computed via localize_peaks
-    
+
     {}
     Returns
     -------
@@ -61,6 +60,18 @@ def select_peaks(peaks, method='uniform', seed=None, return_indices=False, **met
         Selected peaks.
     """
 
+    selected_indices = select_indices(peaks, method=method, seed=seed, **method_kwargs)
+    selected_peaks = peaks[selected_indices]
+    if return_indices:
+        return selected_peaks, selected_indices
+    else:
+        return selected_peaks
+
+def select_indices(peaks, method, seed, **method_kwargs):
+    """Method to subsample all the found peaks before clustering.  Returns selected_indices.
+    This function is wrapped by select_peaks -- see
+    :func:`spikeinterface.sortingcomponents.peak_selection.select_peaks` for detailed documentation.
+    """
     selected_indices = []
     
     if seed is not None:
@@ -249,9 +260,4 @@ def select_peaks(peaks, method='uniform', seed=None, return_indices=False, **met
 
     selected_indices = np.concatenate(selected_indices)
     selected_indices = selected_indices[np.argsort(peaks[selected_indices]['sample_ind'])]
-    selected_peaks = peaks[selected_indices]
-
-    if return_indices:
-        return selected_peaks, selected_indices
-    else:
-        return selected_peaks
+    return selected_indices
