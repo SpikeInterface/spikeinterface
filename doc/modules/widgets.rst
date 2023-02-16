@@ -15,8 +15,8 @@ Since version 0.95.0, the :py:mod:`spikeinterface.widgets` module supports multi
   | and `FIGURL <https://github.com/flatironinstitute/figurl>`_ packages.
 
 
-Installaling backends
----------------------
+Installing backends
+-------------------
 
 The backends are loaded at run-time and can be installed separately. Alternatively, all dependencies from all 
 backends can be installed with:

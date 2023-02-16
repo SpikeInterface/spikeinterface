@@ -57,11 +57,10 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None, **kwargs):
     # prepare args
     method_args = method_class.check_params(recording, **method_kwargs)
 
+    extra_margin = 0
     if pipeline_nodes is not None:
         check_graph(pipeline_nodes)
         extra_margin = max(node.get_trace_margin() for node in pipeline_nodes)
-    else:
-        extra_margin = 0
 
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
