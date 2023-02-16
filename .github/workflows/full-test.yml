@@ -48,7 +48,7 @@ jobs:
           # sudo apt install mpich libmpich-dev
           # needed for correct operation of git/git-annex/DataLad
           git config --global user.email "CI@example.com"
-          git config --global user.name "CI Almighty
+          git config --global user.name "CI Almighty"
           python -m venv ~/test_env
           python -m pip install -U pip  # Official recommended way
           source ~/test_env/bin/activate
