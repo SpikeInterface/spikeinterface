@@ -36,6 +36,8 @@ jobs:
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
           restore-keys: |
             ${{ runner.os }}-venv-
+      - name: get true cache
+        run: echo "{ hashFiles('**/pyproject.toml') }}"
       - name: Python version
         run: |
           python --version
