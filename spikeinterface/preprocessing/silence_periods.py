@@ -62,7 +62,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
 
         for periods in list_periods:
             if len(periods) > 0:
-                assert np.all(np.diff(np.array(periods), axis=1) > 0)
+                assert np.all(np.diff(np.array(periods), axis=1) > 0), "t_stops should be larger than t_starts"
                 assert all(e < s for (_, e), (s, _) in zip(periods, periods[1:])), "Intervals should not overlap"
 
         assert mode in available_modes, f"mode {mode} is not an available mode: {available_modes}"
