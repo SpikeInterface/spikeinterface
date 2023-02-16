@@ -29,7 +29,6 @@ jobs:
       - name: Get current year-month
         id: date
         run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
       - uses: actions/cache/restore@v3
         id: cache-venv
         with:
@@ -78,7 +77,6 @@ jobs:
         id: vars
         run: |
           echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
       - uses: actions/cache/restore@v3
         id: cache-datasets
         env:
