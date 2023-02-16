@@ -20,7 +20,7 @@ def test_detect_peaks():
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
     
-    job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
+    job_kwargs = dict(n_jobs=2, chunk_size=10000, progress_bar=True)
     # by_channel
     peaks = detect_peaks(recording, method='by_channel',
                          peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
