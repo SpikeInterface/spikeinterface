@@ -35,7 +35,7 @@ def test_detect_peaks():
     subset_peaks = select_peaks(peaks, 'smart_sampling_amplitudes', n_peaks=100, noise_levels=noise_levels)
     subset_peaks = select_peaks(peaks, 'smart_sampling_amplitudes', n_peaks=100, noise_levels=noise_levels, select_per_channel=True)
     subset_peaks = select_peaks(peaks, 'smart_sampling_locations', n_peaks=100, peaks_locations=peak_locations)
-    subset_peaks = select_peaks(peaks, 'smart_sampling_locations_and_time', n_peaks=100, peaks_locations=peak_locations)
+    subset_peaks = select_peaks(peaks, 'smart_sampling_locations_and_time', n_peaks=100, peaks_locations=peak_locations, seed=0)
     
     assert len(subset_peaks) < len(peaks)
 
