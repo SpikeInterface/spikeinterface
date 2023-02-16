@@ -1,0 +1,81 @@
+name: Create caches for gin ecephys data and virtual env
+
+on: 
+  workflow_dispatch:
+  push:  # When someting is pushed into main this checks if caches need to re-created
+    branches:
+      - main
+  schedule:
+    - cron: "0 12 * * *"  # Daily at noon UTC
+
+jobs:
+  
+  create-virtual-env-cache-if-missing:
+    name: Caching virtual env
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Get current year-month
+        id: date
+        run: |
+          echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
+      - name: Get current dependencies hash
+        id: dependencies
+        run: |
+          echo "hash=${{hashFiles('**/pyproject.toml')}}" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v3
+        id: cache-venv
+        with:
+          path: ~/test_env
+          key: ${{ runner.os }}-venv-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
+      - name: Cache found?
+        run: echo "Cache-hit == ${{steps.cache-venv.outputs.cache-hit == 'true'}} "
+      - name: Create the virtual environment to be cached 
+        if: steps.cache-venv.outputs.cache-hit != 'true'
+        run: |
+          git config --global user.email "CI@example.com"
+          git config --global user.name "CI Almighty"
+          python -m venv ~/test_env  # Environment used in the caching step
+          source ~/test_env/bin/activate
+          python -m pip install -U pip  # Official recommended way
+          # herdingspikes need numpy to installed first (!)
+          pip install numpy==1.22
+          pip install -e .[test,extractors,full]
+  
+  create-data-cache-if-missing:
+    name: Caching data env
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Get ephy_testing_data current head hash
+        id: repo_hash
+        run: |
+          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v3
+        id: cache-datasets
+        with:
+          path: ~/spikeinterface_datasets
+          key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
+      - name: Cache found?
+        run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}} "
+      - name: Installing datalad and git-annex
+        if: steps.cache-datasets.outputs.cache-hit != 'true'
+        run: |
+          git config --global user.email "CI@example.com"
+          git config --global user.name "CI Almighty"
+          python -m pip install -U pip  # Official recommended way
+          pip install datalad-installer
+          datalad-installer --sudo ok git-annex -m datalad/packages
+          pip install datalad
+      - name: Download dataset
+        if: steps.cache-datasets.outputs.cache-hit != 'true'
+        run: |
+          datalad install -rg https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
+          mv --force ./ephy_testing_data ~/spikeinterface_datasets
+          cd ~
+          du -hs spikeinterface_datasets

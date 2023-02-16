@@ -1,6 +1,9 @@
 name: Full spikeinterface tests codecov
 
-on: workflow_dispatch
+on: 
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * *"  # Daily at noon UTC
 
 env:
   KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
@@ -11,14 +14,14 @@ jobs:
     name: Codecov
     runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
       - name: Get current year-month
         id: date
         run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
+      - uses: actions/cache/restore@v3
         id: cache-venv
         with:
           path: ~/test_env
@@ -31,16 +34,15 @@ jobs:
           sudo apt update
           # this is for datalad and download testing datasets
           sudo apt install git 
+          # this is for spyking circus
+          # sudo apt install mpich libmpich-dev
           # needed for correct operation of git/git-annex/DataLad
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
-          # this is for spyking circus
-          # sudo apt install mpich libmpich-dev
-          # create an environement (better for caching)
           python -m venv ~/test_env
+          python -m pip install -U pip  # Official recommended way
           source ~/test_env/bin/activate
-          python -m pip install --upgrade pip
-          pip install setuptools wheel twine
+          pip install tabulate  # This produces summaries at the end
           ## clean some cache to avoid using old cache
           pip cache remove numpy
           pip cache remove hdbscan
@@ -65,7 +67,7 @@ jobs:
         id: vars
         run: |
           echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
+      - uses: actions/cache/restore@v3
         id: cache-datasets
         env:
           # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
@@ -78,7 +80,12 @@ jobs:
       - name: run tests
         run: |
           source ~/test_env/bin/activate
-          pytest --cov=./ --cov-report xml:./coverage.xml
+          pytest --cov=./ --cov-report xml:./coverage.xml -vv --durations=0 --durations-min=0.001 > report_full.txt
+          cat report_full.txt 
+          echo "# Timing profile of full tests" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_full.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY
+          rm report_full.txt
       - uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
