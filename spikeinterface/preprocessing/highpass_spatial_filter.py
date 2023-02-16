@@ -130,6 +130,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
 class HighPassSpatialFilterSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment, n_channel_pad, n_channel_taper,
                  n_channels, agc_window_length_s, sampling_interval, sos_filter, order_f, order_r):
+        BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.parent_recording_segment = parent_recording_segment
         self.n_channel_pad = n_channel_pad
         if n_channel_taper > 0:
