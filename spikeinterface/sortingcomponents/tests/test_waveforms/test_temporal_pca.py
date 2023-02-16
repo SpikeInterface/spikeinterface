@@ -5,7 +5,7 @@ import numpy as np
 
 import spikeinterface as si
 import spikeinterface.extractors as se
-from spikeinterface.sortingcomponents.waveforms.pca import PCAProjection, PCBaseNode
+from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection 
 from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms, ExtractSparseWaveforms
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
@@ -24,7 +24,7 @@ def test_pca_dimensionality_reduction(tmp_path):
     # Node initialization
     extract_waveforms = ExtractDenseWaveforms(recording=recording,ms_before=ms_before,
                                               ms_after=ms_after, return_ouput=False)
-    temporal_pca = PCAProjection(recording=recording, model_path=model_path, parents=[extract_waveforms],
+    temporal_pca = TemporalPCAProjection(recording=recording, model_path=model_path, parents=[extract_waveforms],
                                  local_radius_um=local_radius_um)
     pipeline_nodes = [extract_waveforms, temporal_pca]
 
@@ -57,7 +57,7 @@ def test_pca_dimensionality_reduction_parallel(tmp_path):
     # Node initialization
     extract_waveforms = ExtractDenseWaveforms(recording=recording,ms_before=ms_before,
                                               ms_after=ms_after, return_ouput=False)
-    temporal_pca = PCAProjection(recording=recording, model_path=model_path, parents=[extract_waveforms],
+    temporal_pca = TemporalPCAProjection(recording=recording, model_path=model_path, parents=[extract_waveforms],
                                  local_radius_um=local_radius_um)
     pipeline_nodes = [extract_waveforms, temporal_pca]
 
@@ -92,7 +92,7 @@ def test_pca_dimensionality_reduction_sparsity(tmp_path):
     # Node initialization
     extract_waveforms = ExtractSparseWaveforms(recording=recording, ms_before=ms_before,
                                               ms_after=ms_after, return_ouput=True)
-    temporal_pca = PCAProjection(recording=recording, model_path=model_path, parents=[extract_waveforms],
+    temporal_pca = TemporalPCAProjection(recording=recording, model_path=model_path, parents=[extract_waveforms],
                                  local_radius_um=local_radius_um)
     pipeline_nodes = [extract_waveforms, temporal_pca]   
 

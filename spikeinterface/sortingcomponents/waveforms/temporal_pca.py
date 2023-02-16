@@ -16,7 +16,7 @@ from spikeinterface.core.recording_tools import get_channel_distances
 from .waveform_utils import to_temporal_representation, from_temporal_representation
 
 
-class PCBaseNode(PipelineNode):
+class TemporalPCBaseNode(PipelineNode):
     
     def __init__(self, recording: BaseRecording, parents: list = list[PipelineNode], ms_before: float = 1., ms_after: float = 1.,
             peak_sign: str = 'neg', all_channels: bool = True, model_path: str = None, local_radius_um: float = None,
@@ -97,8 +97,11 @@ class PCBaseNode(PipelineNode):
             
         return self.pca_model
     
-PCBaseNode.fit.__doc__ = PCBaseNode.fit.__doc__.format(_shared_job_kwargs_doc)
-class PCAProjection(PCBaseNode):
+    
+TemporalPCBaseNode.fit.__doc__ = TemporalPCBaseNode.fit.__doc__.format(_shared_job_kwargs_doc)
+
+
+class TemporalPCAProjection(TemporalPCBaseNode):
     """
     A step that performs a PCA projection on the waveforms extracted by a peak_detection function.
         
@@ -135,7 +138,7 @@ class PCAProjection(PCBaseNode):
         return_ouput=True,
         ):
         
-        PCBaseNode.__init__(self, recording=recording, parents=parents, ms_before=ms_before, ms_after=ms_after,
+        TemporalPCBaseNode.__init__(self, recording=recording, parents=parents, ms_before=ms_before, ms_after=ms_after,
                             peak_sign=peak_sign, all_channels=all_channels, model_path=model_path, 
                             local_radius_um=local_radius_um, return_ouput=return_ouput)
             
