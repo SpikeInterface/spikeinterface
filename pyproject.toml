@@ -64,7 +64,7 @@ extractors = [
     "scipy",
     # ONE-api and ibllib for streaming IBL
     "ONE-api>=1.19.1",
-    "ibllib>=2.20.0",
+    "ibllib>=2.21.0",
 ]
 
 full = [
