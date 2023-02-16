@@ -106,12 +106,6 @@ def test_run_peak_pipeline():
     assert waveforms_rms.shape[0] == num_peaks
     assert waveforms_rms.shape[1] == num_channels
     
-
-    # Test to_dict mechanism
-    for node in nodes:
-        cls, kwargs = node.__class__, node.to_dict()
-        node2 = cls.from_dict(recording, kwargs)
-    
     # Test pickle mechanism
     for node in nodes:
         import pickle

@@ -28,7 +28,7 @@ def test_detect_peaks():
                          chunk_size=10000, verbose=1, progress_bar=False, noise_levels=noise_levels)
 
     peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
-                                    n_jobs=1, chunk_size=10000, verbose=True, progress_bar=True)
+                                    n_jobs=2, chunk_size=10000, verbose=True, progress_bar=True)
 
     subset_peaks = select_peaks(peaks, 'uniform', n_peaks=100)
     subset_peaks = select_peaks(peaks, 'uniform', n_peaks=100, select_per_channel=True)
