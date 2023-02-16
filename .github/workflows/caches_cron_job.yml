@@ -2,10 +2,14 @@ name: Create caches for gin ecephys data and virtual env
 
 on: 
   workflow_dispatch:
+  push:  # When someting is pushed into main this checks if caches need to re-created
+    branches:
+      - main
   schedule:
     - cron: "0 12 * * *"  # Daily at noon UTC
 
 jobs:
+  
   create-virtual-env-cache-if-missing:
     name: Caching virtual env
     runs-on: "ubuntu-latest"

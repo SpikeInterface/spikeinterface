@@ -3,7 +3,7 @@ name: Testing core
 on:
   pull_request:
     branches: [master]
-    types: [synchronize, opened, reopened, ready_for_review]
+    types: [synchronize, opened, reopened]
 
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.9
+          python-version: '3.9'
       - name: Install dependencies
         run: |
           python -m pip install -U pip  # Official recommended way
