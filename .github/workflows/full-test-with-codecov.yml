@@ -3,7 +3,7 @@ name: Full spikeinterface tests codecov
 on: 
   workflow_dispatch:
   schedule:
-    - cron: "0 12 * * *"  # Daily at noon UCT
+    - cron: "0 12 * * *"  # Daily at noon UTC
 
 env:
   KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
@@ -34,16 +34,15 @@ jobs:
           sudo apt update
           # this is for datalad and download testing datasets
           sudo apt install git 
-          # needed for correct operation of git/git-annex/DataLad
-          git config --global user.email "CI@example.com"
-          git config --global user.name "CI Almighty"
           # this is for spyking circus
           # sudo apt install mpich libmpich-dev
-          # create an environement (better for caching)
+          # needed for correct operation of git/git-annex/DataLad
+          git config --global user.email "CI@example.com"
+          git config --global user.name "CI Almighty
           python -m venv ~/test_env
-          source ~/test_env/bin/activate
           python -m pip install -U pip  # Official recommended way
-          pip install setuptools wheel twine
+          source ~/test_env/bin/activate
+          pip install tabulate  # This produces summaries at the end
           ## clean some cache to avoid using old cache
           pip cache remove numpy
           pip cache remove hdbscan
@@ -51,7 +50,6 @@ jobs:
           # herdingspikes need numpy to installed first, this numpy pre install will be removed when HS remove from testing
           pip install numpy==1.22
           pip install -e .[test,extractors,full]
-          pip install tabulate
       - name: git-annex install
         run: |
           wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
