@@ -2,7 +2,7 @@ name: S3 NWB Test
 on:
   pull_request:
     branches: [master]
-    types: [synchronize, opened, reopened, ready_for_review]
+    types: [synchronize, opened, reopened]
 
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}

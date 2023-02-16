@@ -542,7 +542,7 @@ class ResidualRecording(BasePreprocessor):
             rec_segment = DifferenceRecordingSegment(parent_recording_segment_1, parent_recording_segment_2)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording_1=recording_1.to_dict(), recording_2=recording_2.to_dict())
+        self._kwargs = dict(recording_1=recording_1, recording_2=recording_2)
 
 
 class DifferenceRecordingSegment(BasePreprocessorSegment):
