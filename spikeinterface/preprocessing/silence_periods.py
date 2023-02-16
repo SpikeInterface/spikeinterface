@@ -28,6 +28,12 @@ class SilencedPeriodsRecording(BasePreprocessor):
         - 'noise': The periods are filled with a gaussion noise that has the
                    same variance that the one in the recordings, on a per channel
                    basis
+    num_chunks_per_segment: int
+        Number of chunks per segment for random chunk, by default 20
+    chunk_size : int
+        Size of a chunk in number for random chunk, by default 10000
+    seed : int
+        Random seed for random chunk, by default None
 
     Returns
     -------
@@ -36,7 +42,8 @@ class SilencedPeriodsRecording(BasePreprocessor):
     """
     name = 'silence_periods'
 
-    def __init__(self, recording, list_periods, mode='zeros', **random_chunk_kwargs):
+    def __init__(self, recording, list_periods, mode='zeros', num_chunks_per_segment=20,
+                 chunk_size=10000, seed=None):
 
         available_modes = ('zeros', 'noise')
         num_seg = recording.get_num_segments()
@@ -56,7 +63,9 @@ class SilencedPeriodsRecording(BasePreprocessor):
         assert mode in available_modes, f"mode {mode} is not an available mode: {available_modes}"
 
         if mode in ['noise']:
-            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
+            noise_levels = get_noise_levels(recording, return_scaled=False, 
+                                    num_chunks_per_segment=num_chunks_per_segment,
+                                    chunk_size=chunk_size, concatenated=True, seed=seed)
         else:
             noise_levels = None
 
@@ -85,7 +94,7 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
 
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
-        nb_channels = traces.shape[1]
+        num_channels = traces.shape[1]
 
         if start_frame is None:
             start_frame = 0
@@ -109,7 +118,7 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
                     if self.mode == 'zeros':
                         traces[onset:offset, :] = 0
                     elif self.mode == 'noise':
-                        traces[onset:offset, :] = self.noise_levels[channel_indices] * np.random.randn(offset-onset, nb_channels)
+                        traces[onset:offset, :] = self.noise_levels[channel_indices] * np.random.randn(offset-onset, num_channels)
 
         return traces
 

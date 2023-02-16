@@ -25,7 +25,6 @@ def test_silence():
 
     rec0 = silence_periods(rec, list_periods=[[[0, 1000], [5000, 6000]], []], mode="zeros")
     rec0.save(verbose=False)
-
     traces0 = rec0.get_traces(segment_index=0, start_frame=0, end_frame=1000)
     traces1 = rec0.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
     assert np.all(traces0 == 0) and np.all(traces1 == 0)
@@ -36,6 +35,10 @@ def test_silence():
     traces0 = rec1.get_traces(segment_index=0, start_frame=0, end_frame=1000)
     traces1 = rec1.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
     assert np.abs((np.std(traces0, axis=0) - noise_levels) < 0.1).sum() and np.abs((np.std(traces1, axis=0) - noise_levels)).sum() < 0.1
+
+    traces0 = rec0.get_traces(segment_index=0, start_frame=900, end_frame=5100)
+    traces = rec.get_traces(segment_index=0, start_frame=900, end_frame=5100)
+    assert np.all(traces[100:-100] == traces0[100:-100]) and np.all(traces0[:100] == 0) and np.all(traces0[-100:] == 0)
 
 
 
