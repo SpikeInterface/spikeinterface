@@ -18,10 +18,7 @@ from .waveform_utils import to_temporal_representation, from_temporal_representa
 
 class TemporalPCBaseNode(PipelineNode):
     
-    def __init__(self, recording: BaseRecording, parents: list = list[PipelineNode], ms_before: float = 1., ms_after: float = 1.,
-            peak_sign: str = 'neg', all_channels: bool = True, model_path: str = None, local_radius_um: float = None,
-            return_ouput=True,
-            ):
+    def __init__(self, recording: BaseRecording, parents: list = list[PipelineNode], model_path: str = None, return_ouput=True):
         """
         Base class for PCA projection nodes. Contains the logic of the fit method that should be inherited by all the 
         child classess. The child should implement a compute method that does a specific operation 
@@ -29,22 +26,17 @@ class TemporalPCBaseNode(PipelineNode):
         """
         
         PipelineNode.__init__(self, recording=recording, parents=parents, return_ouput=return_ouput)
-        self.all_channels = all_channels
-        self.peak_sign = peak_sign
-        self.local_radius_um = local_radius_um
-        self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < local_radius_um
 
-        self._kwargs.update(dict(all_channels=all_channels, peak_sign=peak_sign, model_path=model_path, 
-                                 ms_before=ms_before, ms_after=ms_after, local_radius_um=local_radius_um))
+        self.model_path = model_path
         self._dtype = recording.get_dtype()
 
         if model_path is not None and Path(model_path).is_file():
             with open(model_path, "rb") as f:
                 self.pca_model = pickle.load(f)
 
-    def fit(self, recording: BaseRecording, n_components: int, detect_peaks_params: dict, 
-            peak_selection_params: dict, whiten: bool = True, **job_kwargs) -> IncrementalPCA:
+    def fit(self, recording: BaseRecording, n_components: int, detect_peaks_params: dict, peak_selection_params: dict, 
+            job_kwargs: dict = None, ms_before: float = 1.0, ms_after: float =1.0, whiten: bool = True,
+            local_radius_um: float = None) -> IncrementalPCA:
         """
         Train a pca model using the data in the recording object and the parameters provided.
         Note that this model returns the pca model from scikit-learn but the model is also saved in the path provided
@@ -62,6 +54,12 @@ class TemporalPCBaseNode(PipelineNode):
             The parameters for peak selection.
         whiten : bool, optional
             Whether to whiten the data, by default True.
+        local_radius_um : float, optional
+            The radius (in micrometers) to use for definint sparsity, by default None.
+        ms_before : float, optional
+            The number of milliseconds to include before the peak of the spike, by default 1.
+        ms_after : float, optional
+            The number of milliseconds to include after the peak of the spike, by default 1.
 
         {}
         
@@ -75,24 +73,24 @@ class TemporalPCBaseNode(PipelineNode):
         peaks = detect_peaks(recording, **detect_peaks_params, **job_kwargs)
         peaks = select_peaks(peaks, **peak_selection_params) # How to select n_peaks
 
-        # Create a waveform extractor
-        ms_before = self._kwargs["ms_before"]
-        ms_after = self._kwargs["ms_after"]
         # Creates a numpy sorting object where the spike times are the peak times and the unit ids are the peak channel
         sorting = NumpySorting.from_peaks(peaks, sampling_frequency=recording.sampling_frequency) 
+        # Create a waveform extractor
         we = extract_waveforms(recording, sorting, ms_before=ms_before, ms_after=ms_after, folder=None, 
                                mode="memory", max_spikes_per_unit=None, **job_kwargs)
 
         # compute PCA by_channel_global (with sparsity)
-        sparsity = ChannelSparsity.from_radius(we, radius_um=self.local_radius_um)
+        if local_radius_um is None:
+            sparsity = None
+        else:
+            sparsity = ChannelSparsity.from_radius(we, radius_um=local_radius_um)
         pc = compute_principal_components(we, n_components=n_components,  mode='by_channel_global',
                                         sparsity=sparsity, whiten=whiten)
+        
         self.pca_model  = pc.get_pca_model()
 
-        # model_folder should be an input
-        pca_model_path = self._kwargs["model_path"]
 
-        with open(pca_model_path, "wb") as f:
+        with open(self.model_path, "wb") as f:
             pickle.dump(self.pca_model, f)
             
         return self.pca_model
@@ -117,14 +115,6 @@ class TemporalPCAProjection(TemporalPCBaseNode):
         The recording object.
     parents: list
         The parent nodes of this node. This should contain a mechanism to extract waveforms.
-    ms_before : float, optional
-        The number of milliseconds to include before the peak of the spike, by default 1.
-    ms_after : float, optional
-        The number of milliseconds to include after the peak of the spike, by default 1.
-    peak_sign : str, optional
-        The sign of the peak, either 'neg' or 'pos', by default 'neg'.
-    all_channels : bool, optional
-        Whether to extract spikes from all channels or only the channels with spikes, by default True.
     model_path : str, optional
         The path to the pca model, by default None.
     local_radius_um : float, optional
@@ -133,14 +123,10 @@ class TemporalPCAProjection(TemporalPCBaseNode):
     """    
 
 
-    def __init__(self, recording: BaseRecording, parents: list = list[PipelineNode], ms_before: float = 1., ms_after: float = 1.,
-        peak_sign: str = 'neg', all_channels: bool = True, model_path: str = None, local_radius_um: float = None,
-        return_ouput=True,
-        ):
+    def __init__(self, recording: BaseRecording, parents: list = list[PipelineNode], model_path: str = None, return_ouput=True):
+
         
-        TemporalPCBaseNode.__init__(self, recording=recording, parents=parents, ms_before=ms_before, ms_after=ms_after,
-                            peak_sign=peak_sign, all_channels=all_channels, model_path=model_path, 
-                            local_radius_um=local_radius_um, return_ouput=return_ouput)
+        TemporalPCBaseNode.__init__(self, recording=recording, parents=parents, return_ouput=return_ouput, model_path=model_path)
             
     def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
         """
