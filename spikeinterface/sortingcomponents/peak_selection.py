@@ -5,7 +5,7 @@ import scipy
 from sklearn.preprocessing import QuantileTransformer
 
 
-def select_peaks(peaks, method='uniform', seed=None, return_indexes=False, **method_kwargs):
+def select_peaks(peaks, method='uniform', seed=None, return_indices=False, **method_kwargs):
     """Method to subsample all the found peaks before clustering
     Parameters
     ----------
@@ -23,8 +23,8 @@ def select_peaks(peaks, method='uniform', seed=None, return_indexes=False, **met
 
     seed: int
         The seed for random generations
-    return_indexes: bool
-        If True, return the indexes of selection such that selected_peaks = peaks[selected_indexes]
+    return_indices: bool
+        If True, return the indices of selection such that selected_peaks = peaks[selected_indices]
 
     method_kwargs: dict of kwargs method
         Keyword arguments for the chosen method:
@@ -58,24 +58,24 @@ def select_peaks(peaks, method='uniform', seed=None, return_indexes=False, **met
     -------
     selected_peaks: array
         Selected peaks.
-    selected_indexes: array
-        Indexes of peak selection such that selected_peaks = peaks[selected_indexes].  Only returned when
-        return_indexes is True.
+    selected_indices: array
+        indices of peak selection such that selected_peaks = peaks[selected_indices].  Only returned when
+        return_indices is True.
     """
 
-    selected_indexes = select_peak_indexes(peaks, method=method, seed=seed, **method_kwargs)
-    selected_peaks = peaks[selected_indexes]
-    if return_indexes:
-        return selected_peaks, selected_indexes
+    selected_indices = select_peak_indices(peaks, method=method, seed=seed, **method_kwargs)
+    selected_peaks = peaks[selected_indices]
+    if return_indices:
+        return selected_peaks, selected_indices
     else:
         return selected_peaks
 
-def select_peak_indexes(peaks, method, seed, **method_kwargs):
-    """Method to subsample all the found peaks before clustering.  Returns selected_indexes.
+def select_peak_indices(peaks, method, seed, **method_kwargs):
+    """Method to subsample all the found peaks before clustering.  Returns selected_indices.
     This function is wrapped by select_peaks -- see
     :py:func:`spikeinterface.sortingcomponents.peak_selection.select_peaks` for detailed documentation.
     """
-    selected_indexes = []
+    selected_indices = []
     
     if seed is not None:
         np.random.seed(seed)
@@ -93,12 +93,12 @@ def select_peak_indexes(peaks, method, seed, **method_kwargs):
 
             ## This method will randomly select max_peaks_per_channel peaks per channels
             for channel in np.unique(peaks['channel_ind']):
-                peaks_indexes = np.where(peaks['channel_ind'] == channel)[0]
-                max_peaks = min(peaks_indexes.size, params['n_peaks'])
-                selected_indexes += [np.random.choice(peaks_indexes, size=max_peaks, replace=False)]
+                peaks_indices = np.where(peaks['channel_ind'] == channel)[0]
+                max_peaks = min(peaks_indices.size, params['n_peaks'])
+                selected_indices += [np.random.choice(peaks_indices, size=max_peaks, replace=False)]
         else:
             num_peaks = min(peaks.size, params['n_peaks'])
-            selected_indexes = [np.random.choice(peaks.size, size=num_peaks, replace=False)]
+            selected_indices = [np.random.choice(peaks.size, size=num_peaks, replace=False)]
 
     elif method in ['smart_sampling_amplitudes', 'smart_sampling_locations', 'smart_sampling_locations_and_time']:
 
@@ -127,11 +127,11 @@ def select_peak_indexes(peaks, method, seed, **method_kwargs):
             if params['select_per_channel']:
                 for channel in np.unique(peaks['channel_ind']):
 
-                    peaks_indexes = np.where(peaks['channel_ind'] == channel)[0]                
-                    if params['n_peaks'] > peaks_indexes.size:
-                        selected_indexes += [peaks_indexes]
+                    peaks_indices = np.where(peaks['channel_ind'] == channel)[0]                
+                    if params['n_peaks'] > peaks_indices.size:
+                        selected_indices += [peaks_indices]
                     else:
-                        sub_peaks = peaks[peaks_indexes]
+                        sub_peaks = peaks[peaks_indices]
                         snrs = sub_peaks['amplitude'] / params['noise_levels'][channel]
                         preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles = min(100, len(snrs)))
                         snrs = preprocessing.fit_transform(snrs[:, np.newaxis])
@@ -144,11 +144,11 @@ def select_peak_indexes(peaks, method, seed, **method_kwargs):
                             valid = candidates[np.where(snrs[candidates,0] < probabilities)[0]]
                             my_selection = np.concatenate((my_selection, valid))
 
-                        selected_indexes += [peaks_indexes[np.random.permutation(my_selection)[:params['n_peaks']]]]
+                        selected_indices += [peaks_indices[np.random.permutation(my_selection)[:params['n_peaks']]]]
 
             else:
                 if params['n_peaks'] > peaks.size:
-                    selected_indexes += [np.arange(peaks.size)]
+                    selected_indices += [np.arange(peaks.size)]
                 else:
                     snrs = peaks['amplitude'] / params['noise_levels'][peaks['channel_ind']]
                     preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, len(snrs)))
@@ -162,7 +162,7 @@ def select_peak_indexes(peaks, method, seed, **method_kwargs):
                         valid = candidates[np.where(snrs[candidates,0] < probabilities)[0]]
                         my_selection = np.concatenate((my_selection, valid))
 
-                    selected_indexes = [np.random.permutation(my_selection)[:params['n_peaks']]]
+                    selected_indices = [np.random.permutation(my_selection)[:params['n_peaks']]]
 
         elif method == 'smart_sampling_locations':
 
@@ -186,7 +186,7 @@ def select_peak_indexes(peaks, method, seed, **method_kwargs):
             nb_spikes = len(params['peaks_locations']['x'])
 
             if params['n_peaks'] > nb_spikes:
-                selected_indexes += [np.arange(peaks.size)]
+                selected_indices += [np.arange(peaks.size)]
             else:
                 
                 preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, nb_spikes))
@@ -207,7 +207,7 @@ def select_peak_indexes(peaks, method, seed, **method_kwargs):
                     valid = candidates[np.where(data_x * data_y)[0]]
                     my_selection = np.concatenate((my_selection, valid))
 
-                selected_indexes = [np.random.permutation(my_selection)[:params['n_peaks']]]
+                selected_indices = [np.random.permutation(my_selection)[:params['n_peaks']]]
 
         elif method == 'smart_sampling_locations_and_time':
 
@@ -231,7 +231,7 @@ def select_peak_indexes(peaks, method, seed, **method_kwargs):
             nb_spikes = len(params['peaks_locations']['x'])
 
             if params['n_peaks'] > nb_spikes:
-                selected_indexes += [np.arange(peaks.size)]
+                selected_indices += [np.arange(peaks.size)]
             else:
 
                 preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, nb_spikes))
@@ -255,12 +255,12 @@ def select_peak_indexes(peaks, method, seed, **method_kwargs):
                     valid = candidates[np.where(data_x * data_y * data_t)[0]]
                     my_selection = np.concatenate((my_selection, valid))
 
-                selected_indexes = [np.random.permutation(my_selection)[:params['n_peaks']]]
+                selected_indices = [np.random.permutation(my_selection)[:params['n_peaks']]]
 
     else:
 
         raise NotImplementedError(f"No method {method} for peaks selection")
 
-    selected_indexes = np.concatenate(selected_indexes)
-    selected_indexes = selected_indexes[np.argsort(peaks[selected_indexes]['sample_ind'])]
-    return selected_indexes
+    selected_indices = np.concatenate(selected_indices)
+    selected_indices = selected_indices[np.argsort(peaks[selected_indices]['sample_ind'])]
+    return selected_indices
