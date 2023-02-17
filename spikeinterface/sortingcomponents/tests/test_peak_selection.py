@@ -11,7 +11,7 @@ from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 
 
-def test_detect_peaks():
+def test_select_peaks():
 
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
     remote_path = 'mearec/mearec_test_10s.h5'
@@ -37,25 +37,25 @@ def test_detect_peaks():
     for method in select_methods:
         selected_peaks = select_peaks(peaks, method=method, **select_kwargs)
         assert selected_peaks.size <= n_peaks,\
-            "selected_peaks is not the right size when return_indices=False, select_per_channel=False"
+            "selected_peaks is not the right size when return_indexes=False, select_per_channel=False"
 
         selected_peaks = select_peaks(peaks, method=method, select_per_channel=True, **select_kwargs)
         assert selected_peaks.size <= (n_peaks*recording.get_num_channels()),\
-            "selected_peaks is not the right size when return_indices=False, select_per_channel=True"
+            "selected_peaks is not the right size when return_indexes=False, select_per_channel=True"
 
-        selected_peaks, selected_indices = select_peaks(peaks, method=method, return_indices=True, **select_kwargs)
+        selected_peaks, selected_indexes = select_peaks(peaks, method=method, return_indexes=True, **select_kwargs)
         assert selected_peaks.size <= n_peaks,\
-            "selected_peaks is not the right size when return_indices=True, select_per_channel=False"
-        assert np.all(selected_peaks == peaks[selected_indices]),\
-            "selection_indices differ from selected_peaks when select_per_channel=False"
+            "selected_peaks is not the right size when return_indexes=True, select_per_channel=False"
+        assert np.all(selected_peaks == peaks[selected_indexes]),\
+            "selection_indexes differ from selected_peaks when select_per_channel=False"
 
-        selected_peaks, selected_indices = select_peaks(peaks, method=method, return_indices=True,
+        selected_peaks, selected_indexes = select_peaks(peaks, method=method, return_indexes=True,
                                                         select_per_channel=True, **select_kwargs)
         assert selected_peaks.size <= (n_peaks*recording.get_num_channels()),\
-            "selected_peaks is not the right size when return_indices=True, select_per_channel=True"
-        assert np.all(selected_peaks == peaks[selected_indices]),\
-            "selection_indices differ from selected_peaks when select_per_channel=True"
+            "selected_peaks is not the right size when return_indexes=True, select_per_channel=True"
+        assert np.all(selected_peaks == peaks[selected_indexes]),\
+            "selection_indexes differ from selected_peaks when select_per_channel=True"
 
 
 if __name__ == '__main__':
-    test_detect_peaks()
+    test_select_peaks()
