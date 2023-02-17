@@ -38,9 +38,11 @@ class ChannelSparsity:
         * ChannelSparsity.unit_id_to_channel_indices : unit_id channel_inds
 
     By default it is constructed with a boolean array:
+
     >>> sparsity = ChannelSparsity(mask, unit_ids, channel_ids)
 
     But can be also constructed from a dictionary:
+
     >>> sparsity = ChannelSparsity.from_unit_id_to_channel_ids(unit_id_to_channel_ids, unit_ids, channel_ids)
 
     Parameters
@@ -59,15 +61,19 @@ class ChannelSparsity:
     with several methods:
 
     Using the N best channels (largest template amplitude):
+
     >>> sparsity = ChannelSparsity.from_best_channels(we, num_channels, peak_sign='neg')
 
     Using a neighborhood by radius:
+
     >>> sparsity = ChannelSparsity.from_radius(we, radius_um, peak_sign='neg')
 
     Using a SNR threshold:
+
     >>> sparsity = ChannelSparsity.from_threshold(we, threshold, peak_sign='neg')
 
     Using a recording/sorting property (e.g. 'group'):
+    
     >>> sparsity = ChannelSparsity.from_property(we, by_property="group")
 
     """

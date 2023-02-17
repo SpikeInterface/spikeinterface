@@ -130,5 +130,5 @@ intersphinx_mapping = {
 }
 
 extlinks = {
-    "probeinterface": ("https://probeinterface.readthedocs.io/", "%s"),
+    "probeinterface": ("https://probeinterface.readthedocs.io/%s", None),
 }
