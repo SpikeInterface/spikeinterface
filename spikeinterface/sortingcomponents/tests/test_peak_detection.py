@@ -11,7 +11,6 @@ from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfM
 from spikeinterface.sortingcomponents.features_from_peaks import PeakToPeakFeature
 
 
-
 def test_detect_peaks():
 
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
@@ -34,7 +33,7 @@ def test_detect_peaks():
     
 
     # locally_exclusive + pipeline steps LocalizeCenterOfMass + PeakToPeakFeature
-    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1., ms_after=1.,)
+    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1., ms_after=1., return_ouput=False)
 
     pipeline_nodes = [
         extract_dense_waveforms,

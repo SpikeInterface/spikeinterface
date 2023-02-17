@@ -8,10 +8,14 @@ from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAP
 from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms, ExtractSparseWaveforms
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-
-def test_pca_projection(tmp_path):
+@pytest.fixture
+def mearec_recording():
     local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
     recording, sorting = se.read_mearec(local_path)
+    return recording
+
+def test_pca_projection(tmp_path, mearec_recording):
+    recording = mearec_recording
 
     # Parameters
     ms_before = 1.0
@@ -52,9 +56,9 @@ def test_pca_projection(tmp_path):
     assert extracted_n_channels == recording.get_num_channels()
     assert extracted_n_channels == recording.get_num_channels()
 
-def test_pca_projection_waveform_extract_and_model_mismatch(tmp_path):
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-    recording, sorting = se.read_mearec(local_path)
+def test_pca_projection_waveform_extract_and_model_mismatch(tmp_path, mearec_recording):
+    recording = mearec_recording
+
     
     # Parameters
     ms_before = 1.0
@@ -90,15 +94,14 @@ def test_pca_projection_waveform_extract_and_model_mismatch(tmp_path):
         )
 
     
-def test_pca_projection_sparsity(tmp_path):
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-    recording, sorting = se.read_mearec(local_path)
+def test_pca_projection_sparsity(tmp_path, mearec_recording):
+    recording = mearec_recording
 
     # Parameters
     local_radius_um = 40
     ms_before = 1.0
     ms_after = 1.0
-    job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
+    job_kwargs = dict(n_jobs=2, chunk_size=10000, progress_bar=True)
     model_folder_path = tmp_path
     
     # Fit the model
