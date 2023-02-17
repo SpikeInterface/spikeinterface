@@ -5,8 +5,16 @@ import numpy as np
 import spikeinterface as si
 import spikeinterface.extractors as se
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
-from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms, ExtractSparseWaveforms
+from spikeinterface.sortingcomponents.peak_pipeline import (
+    ExtractDenseWaveforms,
+    ExtractSparseWaveforms,
+    WaveformExtractorNode,
+    PipelineNode,
+    run_peak_pipeline,
+)
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+
+job_kwargs = dict(n_jobs=-1, chunk_size=10000, progress_bar=False)
 
 @pytest.fixture
 def mearec_recording():
@@ -14,17 +22,28 @@ def mearec_recording():
     recording, sorting = se.read_mearec(local_path)
     return recording
 
-def test_pca_projection(tmp_path, mearec_recording):
+
+@pytest.fixture
+def detected_peaks(mearec_recording):
+    recording = mearec_recording
+    peaks = detect_peaks(recording=recording, **job_kwargs)
+    return peaks
+
+
+@pytest.fixture
+def model_path_of_trained_pca(tmp_path, mearec_recording):
     recording = mearec_recording
 
     # Parameters
     ms_before = 1.0
     ms_after = 1.0
     job_kwargs = dict(n_jobs=4, chunk_size=10000, progress_bar=True)
-    model_folder_path = tmp_path
+    model_folder_path = tmp_path / "temporal_pca_model"
+    model_folder_path.mkdir()
+    # model_folder_path.mkdir(parents=True, exist_ok=True)
     # Fit the model
     n_components = 3
-    n_peaks = recording.get_num_channels() * 1e3  # Heuristic for extracting around 1k waveforms per channel
+    n_peaks = 100  # Heuristic for extracting around 1k waveforms per channel
     peak_selection_params = dict(method="uniform", select_per_channel=True, n_peaks=n_peaks)
     detect_peaks_params = dict(method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1)
     TemporalPCAProjection.fit(
@@ -37,6 +56,19 @@ def test_pca_projection(tmp_path, mearec_recording):
         peak_selection_params=peak_selection_params,
         job_kwargs=job_kwargs,
     )
+
+    return model_folder_path
+
+
+def test_pca_projection(mearec_recording, detected_peaks, model_path_of_trained_pca):
+
+    recording = mearec_recording
+    model_folder_path = model_path_of_trained_pca
+    peaks = detected_peaks
+
+    # Parameters
+    ms_before = 1.0
+    ms_after = 1.0
 
     # Node initialization
     extract_waveforms = ExtractDenseWaveforms(
@@ -47,78 +79,24 @@ def test_pca_projection(tmp_path, mearec_recording):
     )
     pipeline_nodes = [extract_waveforms, temporal_pca]
 
-    # Extract features and compare
-    peaks, projected_waveforms = detect_peaks(recording, pipeline_nodes=pipeline_nodes, **job_kwargs)
+    # Extract projected waveforms and compare
+    projected_waveforms = run_peak_pipeline(recording, peaks, nodes=pipeline_nodes, job_kwargs=job_kwargs)
     extracted_n_peaks, extracted_n_components, extracted_n_channels = projected_waveforms.shape
     n_peaks = peaks.shape[0]
     assert extracted_n_peaks == n_peaks
-    assert extracted_n_components == n_components
+    assert extracted_n_components == temporal_pca.pca_model.n_components
     assert extracted_n_channels == recording.get_num_channels()
-    assert extracted_n_channels == recording.get_num_channels()
 
-def test_pca_projection_waveform_extract_and_model_mismatch(tmp_path, mearec_recording):
+def test_pca_projection_sparsity(mearec_recording, detected_peaks, model_path_of_trained_pca):
+
     recording = mearec_recording
-
-    
-    # Parameters
-    ms_before = 1.0
-    ms_after = 1.0
-    job_kwargs = dict(n_jobs=4, chunk_size=10000, progress_bar=True)
-    model_folder_path = tmp_path
-    # Fit the model
-    n_components = 3
-    n_peaks = recording.get_num_channels() * 1e3  # Heuristic for extracting around 1k waveforms per channel
-    peak_selection_params = dict(method="uniform", select_per_channel=True, n_peaks=n_peaks)
-    detect_peaks_params = dict(method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1)
-    TemporalPCAProjection.fit(
-        recording=recording,
-        model_folder_path=model_folder_path,
-        n_components=n_components,
-        ms_before=ms_before,
-        ms_after=ms_after,
-        detect_peaks_params=detect_peaks_params,
-        peak_selection_params=peak_selection_params,
-        job_kwargs=job_kwargs,
-    )
-    
-    # Node initialization
-    ms_before = 0.5
-    ms_after = 1.5
-    extract_waveforms = ExtractDenseWaveforms(
-        recording=recording, ms_before=ms_before, ms_after=ms_after, return_ouput=False
-    )
-    # Pytest raise assertion
-    with pytest.raises(AttributeError):
-        TemporalPCAProjection(
-            recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms]
-        )
-
-    
-def test_pca_projection_sparsity(tmp_path, mearec_recording):
-    recording = mearec_recording
+    model_folder_path = model_path_of_trained_pca
+    peaks = detected_peaks
 
     # Parameters
     local_radius_um = 40
     ms_before = 1.0
     ms_after = 1.0
-    job_kwargs = dict(n_jobs=2, chunk_size=10000, progress_bar=True)
-    model_folder_path = tmp_path
-    
-    # Fit the model
-    n_components = 8
-    n_peaks = 100
-    peak_selection_params = dict(method="uniform", select_per_channel=True, n_peaks=n_peaks)
-    detect_peaks_params = dict(method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1)
-    TemporalPCAProjection.fit(
-        recording=recording,
-        model_folder_path=model_folder_path,
-        n_components=n_components,
-        ms_before=ms_before,
-        ms_after=ms_after,
-        detect_peaks_params=detect_peaks_params,
-        peak_selection_params=peak_selection_params,
-        job_kwargs=job_kwargs,
-    )
 
     # Node initialization
     extract_waveforms = ExtractSparseWaveforms(
@@ -129,14 +107,60 @@ def test_pca_projection_sparsity(tmp_path, mearec_recording):
     )
     pipeline_nodes = [extract_waveforms, temporal_pca]
 
-
     # Extract features and compare
-    peaks, sparse_waveforms, projected_waveforms = detect_peaks(recording, pipeline_nodes=pipeline_nodes, **job_kwargs)
+    sparse_waveforms, projected_waveforms = run_peak_pipeline(
+        recording, peaks, nodes=pipeline_nodes, job_kwargs=job_kwargs
+    )
     extracted_n_peaks, extracted_n_components, extracted_n_channels = projected_waveforms.shape
     n_peaks = peaks.shape[0]
     max_n_channels = sparse_waveforms.shape[2]
 
     assert extracted_n_peaks == n_peaks
-    assert extracted_n_components == n_components
+    assert extracted_n_components == temporal_pca.pca_model.n_components
     assert extracted_n_channels == max_n_channels
+
+def test_initialization_without_parents_failure(mearec_recording, model_path_of_trained_pca):
     
+    recording = mearec_recording
+    model_folder_path = model_path_of_trained_pca
+    dummy_parent = PipelineNode(recording=recording)
+    
+    match_error = f"TemporalPCA should have a {WaveformExtractorNode.__name__} in the parents"
+
+    # Parents without waveform extraction
+    with pytest.raises(AttributeError, match=match_error):
+        TemporalPCAProjection(recording=recording, model_folder_path=model_folder_path, parents=[dummy_parent])
+
+    # Empty parents
+    with pytest.raises(AttributeError, match=match_error):
+        TemporalPCAProjection(recording=recording, model_folder_path=model_folder_path, parents=None)
+
+def test_pca_projection_waveform_extract_and_model_mismatch(mearec_recording, model_path_of_trained_pca):
+    
+    recording = mearec_recording
+    model_folder_path = model_path_of_trained_pca
+
+    # Node initialization
+    ms_before = 0.5
+    ms_after = 1.5
+    extract_waveforms = ExtractDenseWaveforms(
+        recording=recording, ms_before=ms_before, ms_after=ms_after, return_ouput=False
+    )
+    # Pytest raise assertion
+    with pytest.raises(AttributeError, match="PCA model and waveforms mismatch *"):
+        TemporalPCAProjection(recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms])
+        
+def test_pca_projection_incorrect_model_path(mearec_recording, model_path_of_trained_pca):
+    
+    recording = mearec_recording
+    model_folder_path = model_path_of_trained_pca / "a_file_that_does_not_exist.pkl"
+
+    # Node initialization
+    ms_before = 0.5
+    ms_after = 1.5
+    extract_waveforms = ExtractDenseWaveforms(
+        recording=recording, ms_before=ms_before, ms_after=ms_after, return_ouput=False
+    )
+    # Pytest raise assertion
+    with pytest.raises(AttributeError, match="model_path folder is not a folder or does not exist. *"):
+        TemporalPCAProjection(recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms])

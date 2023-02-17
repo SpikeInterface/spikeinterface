@@ -26,16 +26,14 @@ class TemporalPCBaseNode(PipelineNode):
         child classess. The child should implement a compute method that does a specific operation
         (e.g. project, denoise, etc)
         """
-
         PipelineNode.__init__(self, recording=recording, parents=parents, return_ouput=return_ouput)
 
         self.model_folder_path = model_folder_path
-        self._dtype = recording.get_dtype()
 
-        if not Path(model_folder_path).is_dir():
+        if not Path(model_folder_path).is_dir() or model_folder_path is None:
             exception_string = (
-                f"Pca folder not a dir, "
-                f"Train the pca model before running compute_buffer using {self.__name__}.fit(kwargs)"
+                f"model_path folder is not a folder or does not exist. \n"
+                f"A model can be trained by using{self.__class__.__name__}.fit(...)"
             )
             raise AttributeError(exception_string)
 
@@ -47,20 +45,20 @@ class TemporalPCBaseNode(PipelineNode):
         with open(model_time_interval_path, "rb") as f:
             self.waveform_time_interval_dict = json.load(f)
 
-        # Check that the parents contain a waveform extractor
-        waveform_extractor_in_parrents = any([isinstance(parent, WaveformExtractorNode) for parent in self.parents])
-        if not waveform_extractor_in_parrents:
-            exception_string = f"TemporalPCBaseNode should have a WaveformExtractorNode as parent, "
+        # Find waveform extractor in the parents
+        try: 
+            waveform_extractor = next(parent for parent in self.parents if isinstance(parent, WaveformExtractorNode))
+        except (StopIteration, TypeError):
+            exception_string = f"TemporalPCA should have a {WaveformExtractorNode.__name__} in the parents"
             raise AttributeError(exception_string)
 
-        self.assert_model_and_waveform_temporal_match()
+        self.assert_model_and_waveform_temporal_match(waveform_extractor)
     
-    def assert_model_and_waveform_temporal_match(self):
+    def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformExtractorNode):
         """
         Asserts that the model and the waveform extractor have the same temporal parameters
         """        
         # Extract the first waveform extractor in the parents
-        waveform_extractor = next(parent for parent in self.parents if isinstance(parent, WaveformExtractorNode))
         waveforms_ms_before = waveform_extractor.ms_before
         waveforms_ms_after = waveform_extractor.ms_after
         waveforms_sampling_frequency = waveform_extractor.recording.get_sampling_frequency()
@@ -74,7 +72,7 @@ class TemporalPCBaseNode(PipelineNode):
         sampling_frequency_mismatch = waveforms_sampling_frequency != model_sampling_frequency
         if ms_before_mismatch or ms_after_missmatch or sampling_frequency_mismatch:
             exception_string = (
-                "Time interval mistamch between waveform extractor and the time interval used to train the model, \n"
+                "PCA model and waveforms mismatch \n"
                 f"{model_ms_before=} and {waveforms_ms_after=} \n"
                 f"{model_ms_after=} and {waveforms_ms_after=} \n"
                 f"{model_sampling_frequency=} and {waveforms_sampling_frequency=} \n"
@@ -105,6 +103,8 @@ class TemporalPCBaseNode(PipelineNode):
             The recording object.
         n_components : int
             The number of components to use for the PCA model.
+        model_folder_path : str, Path
+            The path to the folder containing the pca model and the training metadata.
         detect_peaks_params : dict
             The parameters for peak detection.
         peak_selection_params : dict
@@ -188,8 +188,8 @@ class TemporalPCAProjection(TemporalPCBaseNode):
         The recording object.
     parents: list
         The parent nodes of this node. This should contain a mechanism to extract waveforms.
-    model_folder_path : str, optional
-        The path to the folder containing the pca model and the training metadata, by default None.
+    model_folder_path : str, Path
+        The path to the folder containing the pca model and the training metadata.
     return_output: bool, optional, true by default
         use false to suppress the output of this node in the pipeline
 
