@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 from pathlib import Path
 
 from spikeinterface import set_global_tmp_folder
@@ -23,14 +24,13 @@ def test_whiten():
     # test dtype
     rec_int = scale(rec2, dtype="int16")
     rec3 = whiten(rec_int, dtype="float16")
+    rec3 = rec3.save(folder=cache_folder / "rec1")
     assert rec3.get_dtype() == "float16"
 
-    # ~ import matplotlib.pyplot as plt
-    # ~ from spikeinterface.widgets import plot_timeseries
-    # ~ fig, ax = plt.subplots()
-    # ~ ax.plot(rec.get_traces(segment_index=0)[:, 0], color='g')
-    # ~ ax.plot(rec2.get_traces(segment_index=0)[:, 0], color='r')
-    # ~ plt.show()
+    # test parallel
+    rec_par = rec3.save(folder=cache_folder / "rec_par", n_jobs=2)
+    np.testing.assert_array_equal(rec3.get_traces(segment_index=0),
+                                  rec_par.get_traces(segment_index=0))
 
 
 if __name__ == '__main__':
