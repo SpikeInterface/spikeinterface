@@ -2,7 +2,6 @@ name: Testing core
 
 on:
   pull_request:
-    branches: [master]
     types: [synchronize, opened, reopened]
 
 concurrency:  # Cancel previous workflows on the same pull request
