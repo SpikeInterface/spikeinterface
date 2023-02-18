@@ -91,6 +91,6 @@ jobs:
           du -hs spikeinterface_datasets
           cd spikeinterface_datasets
           pwd
-          ls -lh  # Should show /ephy_testing_data
-          cd /ephy_testing_data
+          ls -lh  # Should show ephy_testing_data
+          cd ephy_testing_data
           ls -lh
