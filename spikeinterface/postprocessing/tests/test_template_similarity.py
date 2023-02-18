@@ -1,16 +1,19 @@
 import unittest
 
-from spikeinterface.postprocessing import (check_equal_template_with_distribution_overlap,
-                                           TemplateSimilarityCalculator)
-
-from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
+from spikeinterface.postprocessing import (
+    TemplateSimilarityCalculator,
+    check_equal_template_with_distribution_overlap,
+)
+from spikeinterface.postprocessing.tests.common_extension_tests import (
+    WaveformExtensionCommonTestSuite,
+)
 
 
 class SimilarityExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
     extension_class = TemplateSimilarityCalculator
     extension_data_names = ["similarity"]
 
-    # extend common test 
+    # extend common test
     def test_check_equal_template_with_distribution_overlap(self):
         we = self.we1
         for unit_id0 in we.unit_ids:
@@ -22,7 +25,7 @@ class SimilarityExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCas
                 check_equal_template_with_distribution_overlap(waveforms0, waveforms1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test = SimilarityExtensionTest()
     test.setUp()
     test.test_extension()

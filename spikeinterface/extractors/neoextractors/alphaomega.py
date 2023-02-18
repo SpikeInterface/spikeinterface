@@ -1,6 +1,6 @@
 from spikeinterface.core.core_tools import define_function_from_class
 
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
+from .neobaseextractor import NeoBaseEventExtractor, NeoBaseRecordingExtractor
 
 
 class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
@@ -22,17 +22,22 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
     all_annotations: bool, optional, default: False
         Load exhaustively all annotations from neo.
     """
+
     mode = "folder"
     NeoRawIOClass = "AlphaOmegaRawIO"
     name = "alphaomega"
 
-    def __init__(self, folder_path, lsx_files=None, stream_id="RAW", 
-                 stream_name=None, all_annotations=False):
+    def __init__(
+        self, folder_path, lsx_files=None, stream_id="RAW", stream_name=None, all_annotations=False
+    ):
         neo_kwargs = self.map_to_neo_kwargs(folder_path, lsx_files)
-        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
-                                           stream_name=stream_name,
-                                           all_annotations=all_annotations,
-                                           **neo_kwargs)
+        NeoBaseRecordingExtractor.__init__(
+            self,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            all_annotations=all_annotations,
+            **neo_kwargs,
+        )
         self._kwargs.update(dict(folder_path=str(folder_path), lsx_files=lsx_files))
 
     @classmethod
@@ -48,6 +53,7 @@ class AlphaOmegaEventExtractor(NeoBaseEventExtractor):
     """
     Class for reading events from AlphaOmega MPX file format
     """
+
     mode = "folder"
     NeoRawIOClass = "AlphaOmegaRawIO"
     handle_event_frame_directly = True
@@ -62,5 +68,9 @@ class AlphaOmegaEventExtractor(NeoBaseEventExtractor):
         return neo_kwargs
 
 
-read_alphaomega = define_function_from_class(source_class=AlphaOmegaRecordingExtractor, name="read_alphaomega")
-read_alphaomega_event = define_function_from_class(source_class=AlphaOmegaEventExtractor, name="read_alphaomega_event")
+read_alphaomega = define_function_from_class(
+    source_class=AlphaOmegaRecordingExtractor, name="read_alphaomega"
+)
+read_alphaomega_event = define_function_from_class(
+    source_class=AlphaOmegaEventExtractor, name="read_alphaomega_event"
+)

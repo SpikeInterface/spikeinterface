@@ -1,9 +1,8 @@
-import numpy as np
 import matplotlib.pylab as plt
+import numpy as np
+from probeinterface.plotting import plot_probe_group
 
 from .basewidget import BaseWidget
-
-from probeinterface.plotting import plot_probe_group
 
 
 class ProbeMapWidget(BaseWidget):
@@ -30,8 +29,15 @@ class ProbeMapWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, recording, channel_ids=None, with_channel_ids=False, figure=None, ax=None,
-                 **plot_probe_kwargs):
+    def __init__(
+        self,
+        recording,
+        channel_ids=None,
+        with_channel_ids=False,
+        figure=None,
+        ax=None,
+        **plot_probe_kwargs,
+    ):
         BaseWidget.__init__(self, figure, ax)
 
         if channel_ids is not None:
@@ -49,7 +55,7 @@ class ProbeMapWidget(BaseWidget):
         if self.with_channel_ids and len(self._probegroup.probes) == 1:
             # text on contact work only for one probe
             text_on_contact = self._recording.channel_ids
-        self._plot_probe_kwargs['text_on_contact'] = text_on_contact
+        self._plot_probe_kwargs["text_on_contact"] = text_on_contact
         plot_probe_group(self._probegroup, ax=self.ax, same_axes=True, **self._plot_probe_kwargs)
 
 

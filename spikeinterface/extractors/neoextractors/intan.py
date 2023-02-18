@@ -20,24 +20,27 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
     all_annotations: bool, optional, default: False
         Load exhaustively all annotations from neo.
     """
-    mode = 'file'
-    NeoRawIOClass = 'IntanRawIO'
+
+    mode = "file"
+    NeoRawIOClass = "IntanRawIO"
     name = "intan"
 
     def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
-                                           stream_name=stream_name,
-                                           all_annotations=all_annotations,
-                                           **neo_kwargs)
+        NeoBaseRecordingExtractor.__init__(
+            self,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            all_annotations=all_annotations,
+            **neo_kwargs,
+        )
 
         self._kwargs.update(dict(file_path=str(file_path)))
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {'filename': str(file_path)}
+        neo_kwargs = {"filename": str(file_path)}
         return neo_kwargs
-
 
 
 read_intan = define_function_from_class(source_class=IntanRecordingExtractor, name="read_intan")

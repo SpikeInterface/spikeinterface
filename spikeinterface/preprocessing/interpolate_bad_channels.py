@@ -1,9 +1,10 @@
 import numpy as np
+import scipy.stats
 
-from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.preprocessing import preprocessing_tools
-import scipy.stats
+
+from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
 class InterpolateBadChannelsRecording(BasePreprocessor):
@@ -39,7 +40,8 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
     interpolated_recording: InterpolateBadChannelsRecording
         The recording object with interpolated bad channels
     """
-    name = 'interpolate_bad_channels'
+
+    name = "interpolate_bad_channels"
 
     def __init__(self, recording, bad_channel_ids, sigma_um=None, p=1.3, weights=None):
         BasePreprocessor.__init__(self, recording)
@@ -49,7 +51,9 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
 
         self.bad_channel_ids = bad_channel_ids
         self._bad_channel_idxs = recording.ids_to_indices(self.bad_channel_ids)
-        self._good_channel_idxs = ~np.in1d(np.arange(recording.get_num_channels()), self._bad_channel_idxs)
+        self._good_channel_idxs = ~np.in1d(
+            np.arange(recording.get_num_channels()), self._bad_channel_idxs
+        )
         self._bad_channel_idxs.setflags(write=False)
 
         if sigma_um is None:
@@ -59,39 +63,41 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
             locations = recording.get_channel_locations()
             locations_good = locations[self._good_channel_idxs]
             locations_bad = locations[self._bad_channel_idxs]
-            weights = preprocessing_tools.get_kriging_channel_weights(locations_good,
-                                                                      locations_bad,
-                                                                      sigma_um,
-                                                                      p)
+            weights = preprocessing_tools.get_kriging_channel_weights(
+                locations_good, locations_bad, sigma_um, p
+            )
 
         for parent_segment in recording._recording_segments:
-            rec_segment = InterpolateBadChannelsSegment(parent_segment,
-                                                        self._good_channel_idxs,
-                                                        self._bad_channel_idxs,
-                                                        weights)
+            rec_segment = InterpolateBadChannelsSegment(
+                parent_segment, self._good_channel_idxs, self._bad_channel_idxs, weights
+            )
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(),
-                            bad_channel_ids=bad_channel_ids,
-                            p=p,
-                            sigma_um=sigma_um,
-                            weights=weights)
+        self._kwargs = dict(
+            recording=recording.to_dict(),
+            bad_channel_ids=bad_channel_ids,
+            p=p,
+            sigma_um=sigma_um,
+            weights=weights,
+        )
 
     def check_inputs(self, recording, bad_channel_ids):
-
         if bad_channel_ids.ndim != 1:
             raise TypeError("'bad_channel_ids' must be a 1d array or list.")
 
-        if recording.get_property('contact_vector') is None:
-            raise ValueError('A probe must be attached to use bad channel interpolation. Use set_probe(...)')
+        if recording.get_property("contact_vector") is None:
+            raise ValueError(
+                "A probe must be attached to use bad channel interpolation. Use set_probe(...)"
+            )
 
         if recording.get_probe().si_units != "um":
             raise NotImplementedError("Channel spacing units must be um")
 
 
 class InterpolateBadChannelsSegment(BasePreprocessorSegment):
-
-    def __init__(self, parent_recording_segment, good_channel_indices, bad_channel_indices, weights):
+    def __init__(
+        self, parent_recording_segment, good_channel_indices, bad_channel_indices, weights
+    ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self._good_channel_indices = good_channel_indices
@@ -102,9 +108,7 @@ class InterpolateBadChannelsSegment(BasePreprocessorSegment):
         if channel_indices is None:
             channel_indices = slice(None)
 
-        traces = self.parent_recording_segment.get_traces(start_frame,
-                                                          end_frame,
-                                                          slice(None))
+        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
 
         traces = traces.copy()
 
@@ -122,5 +126,6 @@ def estimate_recommended_sigma_um(recording):
     return scipy.stats.mode(np.diff(np.unique(y_sorted)), keepdims=False)[0]
 
 
-interpolate_bad_channels = define_function_from_class(source_class=InterpolateBadChannelsRecording,
-                                                      name='interpolate_bad_channels')
+interpolate_bad_channels = define_function_from_class(
+    source_class=InterpolateBadChannelsRecording, name="interpolate_bad_channels"
+)

@@ -1,55 +1,67 @@
-import pytest
 import numpy as np
+import pytest
 
-from spikeinterface import download_dataset, BaseSorting
+from spikeinterface import BaseSorting, download_dataset
 from spikeinterface.extractors import MEArecRecordingExtractor
-
-from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-
-from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
-from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.features_from_peaks import PeakToPeakFeature
-
+from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
+from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
 
 
 def test_detect_peaks():
-
-    repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
-    remote_path = 'mearec/mearec_test_10s.h5'
-    local_path = download_dataset(
-        repo=repo, remote_path=remote_path, local_folder=None)
+    repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
+    remote_path = "mearec/mearec_test_10s.h5"
+    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
-    
+
     job_kwargs = dict(n_jobs=2, chunk_size=10000, progress_bar=True)
     # by_channel
-    peaks = detect_peaks(recording, method='by_channel',
-                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                         **job_kwargs)
-    
+    peaks = detect_peaks(
+        recording,
+        method="by_channel",
+        peak_sign="neg",
+        detect_threshold=5,
+        exclude_sweep_ms=0.1,
+        **job_kwargs,
+    )
 
     # locally_exclusive
-    peaks = detect_peaks(recording, method='locally_exclusive',
-                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                         chunk_size=10000, verbose=1, progress_bar=False)
-    
+    peaks = detect_peaks(
+        recording,
+        method="locally_exclusive",
+        peak_sign="neg",
+        detect_threshold=5,
+        exclude_sweep_ms=0.1,
+        chunk_size=10000,
+        verbose=1,
+        progress_bar=False,
+    )
 
     # locally_exclusive + pipeline steps LocalizeCenterOfMass + PeakToPeakFeature
-    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1., ms_after=1.,)
+    extract_dense_waveforms = ExtractDenseWaveforms(
+        recording,
+        ms_before=1.0,
+        ms_after=1.0,
+    )
 
     pipeline_nodes = [
         extract_dense_waveforms,
-        PeakToPeakFeature(recording,  all_channels=False, parents=[extract_dense_waveforms]),
-        LocalizeCenterOfMass(recording, local_radius_um=50., parents=[extract_dense_waveforms]),
+        PeakToPeakFeature(recording, all_channels=False, parents=[extract_dense_waveforms]),
+        LocalizeCenterOfMass(recording, local_radius_um=50.0, parents=[extract_dense_waveforms]),
     ]
-    peaks, ptp, peak_locations = detect_peaks(recording, method='locally_exclusive',
-                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                         pipeline_nodes=pipeline_nodes, **job_kwargs)
+    peaks, ptp, peak_locations = detect_peaks(
+        recording,
+        method="locally_exclusive",
+        peak_sign="neg",
+        detect_threshold=5,
+        exclude_sweep_ms=0.1,
+        pipeline_nodes=pipeline_nodes,
+        **job_kwargs,
+    )
     assert peaks.shape[0] == ptp.shape[0]
     assert peaks.shape[0] == peak_locations.shape[0]
-    assert 'x' in peak_locations.dtype.fields
-    
-    
-    
+    assert "x" in peak_locations.dtype.fields
 
     # # DEBUG
     # sample_inds, chan_inds, amplitudes = peaks['sample_ind'], peaks['channel_ind'], peaks['amplitude']
@@ -83,6 +95,5 @@ def test_detect_peaks():
     # plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_detect_peaks()
-    

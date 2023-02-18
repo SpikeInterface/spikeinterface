@@ -1,8 +1,9 @@
 from pathlib import Path
-from subprocess import check_output, CalledProcessError
+from subprocess import CalledProcessError, check_output
 from typing import List, Union
 
 import numpy as np
+
 
 class SpikeSortingError(RuntimeError):
     """Raised whenever spike sorting fails"""
@@ -11,14 +12,14 @@ class SpikeSortingError(RuntimeError):
 def get_bash_path():
     """Return path to existing bash install."""
     try:
-        return check_output( ['which bash'], shell=True).decode().strip('\n')
+        return check_output(["which bash"], shell=True).decode().strip("\n")
     except CalledProcessError as e:
         raise Exception("Bash is not installed or accessible on your system.")
 
 
 def get_matlab_shell_name():
     """Return name of shell program used by MATLAB.
-    
+
     As per MATLAB docs:
     'On UNIX, MATLAB uses a shell program to execute the given command. It
     determines which shell program to use by checking environment variables on
@@ -29,14 +30,18 @@ def get_matlab_shell_name():
     try:
         # Either of "", "bash", "zsh", "fish",...
         # CalledProcessError if not defined
-        matlab_shell_name = check_output(['which $MATLAB_SHELL'], shell=True).decode().strip('\n').split('/')[-1]  
+        matlab_shell_name = (
+            check_output(["which $MATLAB_SHELL"], shell=True).decode().strip("\n").split("/")[-1]
+        )
         return matlab_shell_name
     except CalledProcessError as e:
         pass
     try:
         # Either of "", "bash", "zsh", "fish",...
         # CalledProcessError if not defined
-        df_shell_name = check_output(['which $SHELL'], shell=True).decode().strip('\n').split('/')[-1]  
+        df_shell_name = (
+            check_output(["which $SHELL"], shell=True).decode().strip("\n").split("/")[-1]
+        )
         return df_shell_name
     except CalledProcessError as e:
         pass
@@ -50,7 +55,7 @@ def get_git_commit(git_folder, shorten=True):
     if git_folder is None:
         return None
     try:
-        commit = check_output(['git', 'rev-parse', 'HEAD'], cwd=git_folder).decode('utf8').strip()
+        commit = check_output(["git", "rev-parse", "HEAD"], cwd=git_folder).decode("utf8").strip()
         if shorten:
             commit = commit[:12]
     except:
@@ -63,7 +68,9 @@ def has_nvidia():
     Checks if the machine has nvidia capability.
     """
     try:
-        check_output('nvidia-smi')
+        check_output("nvidia-smi")
         return True
-    except Exception:  # this command not being found can raise quite a few different errors depending on the configuration
+    except (
+        Exception
+    ):  # this command not being found can raise quite a few different errors depending on the configuration
         return False

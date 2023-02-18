@@ -1,13 +1,11 @@
-import pytest
 import numpy as np
+import pytest
 
 from spikeinterface import download_dataset
-
 from spikeinterface.extractors import MEArecRecordingExtractor
-
+from spikeinterface.sortingcomponents.clustering.triage import nearest_neighor_triage
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-from spikeinterface.sortingcomponents.clustering.triage import nearest_neighor_triage
 
 
 def test_triage():

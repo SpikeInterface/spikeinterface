@@ -1,9 +1,9 @@
-'''
+"""
 SortingExtractor Widgets Gallery
 ===================================
 
 Here is a gallery of all the available widgets using SortingExtractor objects.
-'''
+"""
 import matplotlib.pyplot as plt
 
 import spikeinterface.extractors as se

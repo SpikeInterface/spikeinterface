@@ -4,13 +4,18 @@ but check only for BaseRecording general methods.
 """
 import shutil
 from pathlib import Path
-import pytest
+
 import numpy as np
+import pytest
 
-from spikeinterface.core import NumpySorting, NpzSortingExtractor, load_extractor
+from spikeinterface.core import (
+    NpzSortingExtractor,
+    NumpySorting,
+    create_sorting_npz,
+    generate_sorting,
+    load_extractor,
+)
 from spikeinterface.core.base import BaseExtractor
-
-from spikeinterface.core import create_sorting_npz, generate_sorting
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
@@ -20,23 +25,23 @@ else:
 
 def test_BaseSorting():
     num_seg = 2
-    file_path = cache_folder / 'test_BaseSorting.npz'
+    file_path = cache_folder / "test_BaseSorting.npz"
 
     create_sorting_npz(num_seg, file_path)
 
     sorting = NpzSortingExtractor(file_path)
-    # print(sorting)
+    # print(sorting)
 
     assert sorting.get_num_segments() == 2
     assert sorting.get_num_units() == 3
 
     # annotations / properties
-    sorting.annotate(yep='yop')
-    assert sorting.get_annotation('yep') == 'yop'
+    sorting.annotate(yep="yop")
+    assert sorting.get_annotation("yep") == "yop"
 
-    sorting.set_property('amplitude', [-20, -40., -55.5])
-    values = sorting.get_property('amplitude')
-    assert np.all(values == [-20, -40., -55.5])
+    sorting.set_property("amplitude", [-20, -40.0, -55.5])
+    values = sorting.get_property("amplitude")
+    assert np.all(values == [-20, -40.0, -55.5])
 
     # dump/load dict
     d = sorting.to_dict()
@@ -44,17 +49,17 @@ def test_BaseSorting():
     sorting3 = load_extractor(d)
 
     # dump/load json
-    sorting.dump_to_json(cache_folder / 'test_BaseSorting.json')
-    sorting2 = BaseExtractor.load(cache_folder / 'test_BaseSorting.json')
-    sorting3 = load_extractor(cache_folder / 'test_BaseSorting.json')
+    sorting.dump_to_json(cache_folder / "test_BaseSorting.json")
+    sorting2 = BaseExtractor.load(cache_folder / "test_BaseSorting.json")
+    sorting3 = load_extractor(cache_folder / "test_BaseSorting.json")
 
     # dump/load pickle
-    sorting.dump_to_pickle(cache_folder / 'test_BaseSorting.pkl')
-    sorting2 = BaseExtractor.load(cache_folder / 'test_BaseSorting.pkl')
-    sorting3 = load_extractor(cache_folder / 'test_BaseSorting.pkl')
+    sorting.dump_to_pickle(cache_folder / "test_BaseSorting.pkl")
+    sorting2 = BaseExtractor.load(cache_folder / "test_BaseSorting.pkl")
+    sorting3 = load_extractor(cache_folder / "test_BaseSorting.pkl")
 
     # cache
-    folder = cache_folder / 'simple_sorting'
+    folder = cache_folder / "simple_sorting"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
     sorting.save(folder=folder)
     sorting2 = BaseExtractor.load_from_folder(folder)
@@ -68,19 +73,19 @@ def test_BaseSorting():
     assert "test" in sorting4.get_property_keys()
 
     spikes = sorting.get_all_spike_trains()
-    # print(spikes)
+    # print(spikes)
 
     spikes = sorting.to_spike_vector()
-    # print(spikes)
-    spikes = sorting.to_spike_vector(extremum_channel_inds={0: 15, 1:5, 2:18})
-    # print(spikes)
-    
+    # print(spikes)
+    spikes = sorting.to_spike_vector(extremum_channel_inds={0: 15, 1: 5, 2: 18})
+    # print(spikes)
+
     # select units
     keep_units = [0, 1]
     sorting_select = sorting.select_units(unit_ids=keep_units)
     for unit in sorting_select.get_unit_ids():
         assert unit in keep_units
-        
+
     # remove empty units
     empty_units = [1, 3]
     sorting_empty = generate_sorting(empty_units=empty_units)
@@ -100,9 +105,9 @@ def test_empty_sorting():
     assert len(spikes[0][1]) == 0
 
     spikes = sorting.to_spike_vector()
-    assert spikes.shape == (0, )
+    assert spikes.shape == (0,)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_BaseSorting()
     test_empty_sorting()

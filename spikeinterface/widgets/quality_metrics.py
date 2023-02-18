@@ -1,6 +1,6 @@
-from .metrics import MetricsBaseWidget
 from ..core.waveform_extractor import WaveformExtractor
 from ..qualitymetrics import compute_quality_metrics
+from .metrics import MetricsBaseWidget
 
 
 class QualityMetricsWidget(MetricsBaseWidget):
@@ -32,7 +32,7 @@ class QualityMetricsWidget(MetricsBaseWidget):
         unit_colors=None,
         hide_unit_selector=False,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         self.check_extensions(waveform_extractor, "quality_metrics")
         qlc = waveform_extractor.load_extension("quality_metrics")
@@ -40,11 +40,15 @@ class QualityMetricsWidget(MetricsBaseWidget):
 
         sorting = waveform_extractor.sorting
 
-        MetricsBaseWidget.__init__(self, quality_metrics, sorting,
-                                   unit_ids=unit_ids, unit_colors=unit_colors,
-                                   include_metrics=include_metrics, 
-                                   skip_metrics=skip_metrics,
-                                   hide_unit_selector=hide_unit_selector,
-                                   backend=backend, **backend_kwargs)
-
-
+        MetricsBaseWidget.__init__(
+            self,
+            quality_metrics,
+            sorting,
+            unit_ids=unit_ids,
+            unit_colors=unit_colors,
+            include_metrics=include_metrics,
+            skip_metrics=skip_metrics,
+            hide_unit_selector=hide_unit_selector,
+            backend=backend,
+            **backend_kwargs,
+        )

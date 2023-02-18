@@ -11,48 +11,50 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
-import sys
 import shutil
+import sys
 from pathlib import Path
+
 # sys.path.insert(0, os.path.abspath('.'))
 
-on_rtd = os.environ.get('READTHEDOCS') == 'True'
+on_rtd = os.environ.get("READTHEDOCS") == "True"
 if on_rtd:
     # need a git config
     os.system('git config --global user.email "rtd@example.com"')
     os.system('git config --global user.name "RTD Almighty"')
 
 
-if not os.path.isdir('sources'):
-    os.mkdir('sources')
+if not os.path.isdir("sources"):
+    os.mkdir("sources")
 
 
 # clean some folder
-folders =  [
-    '../examples/modules_gallery/core/my_recording',
-    '../examples/modules_gallery/core/my_sorting',
-    '../examples/modules_gallery/core/waveform_folder',
-    '../examples/modules_gallery/core/waveform_folder_parallel',
-    '../examples/modules_gallery/core/waveform_folder_sparse',
-    '../examples/modules_gallery/core/waveform_folder_sparse_direct',
-    '../examples/modules_gallery/core/waveform_folder2',
-    '../examples/modules_gallery/core/waveform_folder',
-    '../examples/modules_gallery/qualitymetrics/waveforms_mearec',
-    '../examples/modules_gallery/qualitymetrics/wfs_mearec',
-    '../examples/modules_gallery/widgets/waveforms_mearec',
-    
+folders = [
+    "../examples/modules_gallery/core/my_recording",
+    "../examples/modules_gallery/core/my_sorting",
+    "../examples/modules_gallery/core/waveform_folder",
+    "../examples/modules_gallery/core/waveform_folder_parallel",
+    "../examples/modules_gallery/core/waveform_folder_sparse",
+    "../examples/modules_gallery/core/waveform_folder_sparse_direct",
+    "../examples/modules_gallery/core/waveform_folder2",
+    "../examples/modules_gallery/core/waveform_folder",
+    "../examples/modules_gallery/qualitymetrics/waveforms_mearec",
+    "../examples/modules_gallery/qualitymetrics/wfs_mearec",
+    "../examples/modules_gallery/widgets/waveforms_mearec",
 ]
 
 for folder in folders:
     if os.path.isdir(folder):
-        print('Removing folder', folder)
+        print("Removing folder", folder)
         shutil.rmtree(folder)
 
 # -- Project information -----------------------------------------------------
 
-project = 'spikeinterface'
-copyright = '2022, Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
-author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
+project = "spikeinterface"
+copyright = (
+    "2022, Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig"
+)
+author = "Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig"
 
 
 # -- General configuration ---------------------------------------------------
@@ -61,28 +63,28 @@ author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Ma
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx_gallery.gen_gallery',
-    'numpydoc',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx_gallery.gen_gallery",
+    "numpydoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
 ]
 
-numpydoc_show_class_members = False 
+numpydoc_show_class_members = False
 
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 
-master_doc = 'index'
+master_doc = "index"
 
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -97,7 +99,7 @@ try:
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 except ImportError:
     print("RTD theme not installed, using default")
-    html_theme = 'alabaster'
+    html_theme = "alabaster"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -105,23 +107,26 @@ except ImportError:
 # html_static_path = ['_static']
 
 
-from sphinx_gallery.sorting import ExplicitOrder
-from sphinx_gallery.sorting import FileNameSortKey
+from sphinx_gallery.sorting import ExplicitOrder, FileNameSortKey
 
 # for sphinx gallery plugin
 sphinx_gallery_conf = {
-    'only_warn_on_example_error': True,
-    'examples_dirs': ['../examples/modules_gallery'],
-    'gallery_dirs': ['modules_gallery', ],  # path where to save gallery generated examples
-    'subsection_order': ExplicitOrder([
-                                       '../examples/modules_gallery/core/',
-                                       '../examples/modules_gallery/extractors/',
-                                       '../examples/modules_gallery/qualitymetrics',
-                                       '../examples/modules_gallery/comparison',
-                                       '../examples/modules_gallery/widgets',
-                                       ]),
-    'within_subsection_order': FileNameSortKey,
-    'ignore_pattern': '/generate_',
+    "only_warn_on_example_error": True,
+    "examples_dirs": ["../examples/modules_gallery"],
+    "gallery_dirs": [
+        "modules_gallery",
+    ],  # path where to save gallery generated examples
+    "subsection_order": ExplicitOrder(
+        [
+            "../examples/modules_gallery/core/",
+            "../examples/modules_gallery/extractors/",
+            "../examples/modules_gallery/qualitymetrics",
+            "../examples/modules_gallery/comparison",
+            "../examples/modules_gallery/widgets",
+        ]
+    ),
+    "within_subsection_order": FileNameSortKey,
+    "ignore_pattern": "/generate_",
 }
 
 intersphinx_mapping = {

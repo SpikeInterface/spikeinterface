@@ -1,5 +1,6 @@
-import numpy as np
 import warnings
+
+import numpy as np
 
 from .basesorting import BaseSorting, BaseSortingSegment
 
@@ -16,7 +17,9 @@ class FrameSliceSorting(BaseSorting):
     def __init__(self, parent_sorting, start_frame=None, end_frame=None):
         unit_ids = parent_sorting.get_unit_ids()
 
-        assert parent_sorting.get_num_segments() == 1, 'FrameSliceSorting work only with one segment'
+        assert (
+            parent_sorting.get_num_segments() == 1
+        ), "FrameSliceSorting work only with one segment"
 
         if start_frame is not None or end_frame is None:
             parent_size = 0
@@ -33,9 +36,9 @@ class FrameSliceSorting(BaseSorting):
         else:
             assert end_frame > start_frame, "'start_frame' must be smaller than 'end_frame'!"
 
-        BaseSorting.__init__(self,
-                             sampling_frequency=parent_sorting.get_sampling_frequency(),
-                             unit_ids=unit_ids)
+        BaseSorting.__init__(
+            self, sampling_frequency=parent_sorting.get_sampling_frequency(), unit_ids=unit_ids
+        )
 
         # link sorting segment
         parent_segment = parent_sorting._sorting_segments[0]
@@ -46,12 +49,16 @@ class FrameSliceSorting(BaseSorting):
         parent_sorting.copy_metadata(self)
 
         if parent_sorting.has_recording():
-            self.register_recording(parent_sorting._recording.frame_slice(start_frame=start_frame,
-                                                                          end_frame=end_frame))
+            self.register_recording(
+                parent_sorting._recording.frame_slice(start_frame=start_frame, end_frame=end_frame)
+            )
 
         # update dump dict
-        self._kwargs = {'parent_sorting': parent_sorting.to_dict(), 'start_frame': int(start_frame),
-                        'end_frame': int(end_frame)}
+        self._kwargs = {
+            "parent_sorting": parent_sorting.to_dict(),
+            "start_frame": int(start_frame),
+            "end_frame": int(end_frame),
+        }
 
 
 class FrameSliceSortingSegment(BaseSortingSegment):
@@ -61,11 +68,12 @@ class FrameSliceSortingSegment(BaseSortingSegment):
         self.start_frame = start_frame
         self.end_frame = end_frame
 
-    def get_unit_spike_train(self,
-                             unit_id,
-                             start_frame,
-                             end_frame,
-                             ):
+    def get_unit_spike_train(
+        self,
+        unit_id,
+        start_frame,
+        end_frame,
+    ):
         if start_frame is None:
             start_frame = 0
         if end_frame is None:
@@ -73,7 +81,10 @@ class FrameSliceSortingSegment(BaseSortingSegment):
         else:
             parent_end = self.start_frame + end_frame
         parent_start = self.start_frame + start_frame
-        spike_times = self._parent_sorting_segment.get_unit_spike_train(start_frame=parent_start,
-                                                                        end_frame=parent_end,
-                                                                        unit_id=unit_id) - self.start_frame
+        spike_times = (
+            self._parent_sorting_segment.get_unit_spike_train(
+                start_frame=parent_start, end_frame=parent_end, unit_id=unit_id
+            )
+            - self.start_frame
+        )
         return spike_times

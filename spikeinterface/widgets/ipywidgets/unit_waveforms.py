@@ -1,26 +1,19 @@
-import numpy as np
-
-import matplotlib.pyplot as plt
 import ipywidgets.widgets as widgets
-
+import matplotlib.pyplot as plt
+import numpy as np
+from IPython.display import display
 
 from ..base import to_attr
-
+from ..matplotlib.unit_waveforms import UnitWaveformPlotter as MplUnitWaveformPlotter
+from ..unit_waveforms import UnitWaveformsWidget
 from .base_ipywidgets import IpywidgetsPlotter
 from .utils import make_unit_controller
 
-from ..unit_waveforms import UnitWaveformsWidget
-from ..matplotlib.unit_waveforms import UnitWaveformPlotter as MplUnitWaveformPlotter
-
-from IPython.display import display
-
 
 class UnitWaveformPlotter(IpywidgetsPlotter):
-
     def do_plot(self, data_plot, **backend_kwargs):
-
         cm = 1 / 2.54
-        we = data_plot['waveform_extractor']
+        we = data_plot["waveform_extractor"]
 
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         width_cm = backend_kwargs["width_cm"]
@@ -35,35 +28,41 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
                 plt.show()
             output2 = widgets.Output()
             with output2:
-                fig_probe, ax_probe = plt.subplots(figsize=((ratios[2] * width_cm) * cm, height_cm * cm))
+                fig_probe, ax_probe = plt.subplots(
+                    figsize=((ratios[2] * width_cm) * cm, height_cm * cm)
+                )
                 plt.show()
 
-        data_plot['unit_ids'] = data_plot['unit_ids'][:1]
-        unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'], we.unit_ids,
-                                                            ratios[0] * width_cm, height_cm)
+        data_plot["unit_ids"] = data_plot["unit_ids"][:1]
+        unit_widget, unit_controller = make_unit_controller(
+            data_plot["unit_ids"], we.unit_ids, ratios[0] * width_cm, height_cm
+        )
 
         same_axis_button = widgets.Checkbox(
             value=False,
-            description='same axis',
+            description="same axis",
             disabled=False,
         )
 
         plot_templates_button = widgets.Checkbox(
             value=True,
-            description='plot templates',
+            description="plot templates",
             disabled=False,
         )
 
         hide_axis_button = widgets.Checkbox(
             value=True,
-            description='hide axis',
+            description="hide axis",
             disabled=False,
         )
 
         footer = widgets.HBox([same_axis_button, plot_templates_button, hide_axis_button])
 
-        self.controller = {"same_axis": same_axis_button, "plot_templates": plot_templates_button,
-                           "hide_axis": hide_axis_button}
+        self.controller = {
+            "same_axis": same_axis_button,
+            "plot_templates": plot_templates_button,
+            "hide_axis": hide_axis_button,
+        }
         self.controller.update(unit_controller)
 
         mpl_plotter = MplUnitWaveformPlotter()
@@ -77,7 +76,7 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
             left_sidebar=unit_widget,
             right_sidebar=fig_probe.canvas,
             pane_widths=ratios,
-            footer=footer
+            footer=footer,
         )
 
         # a first update
@@ -85,7 +84,6 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
 
         if backend_kwargs["display"]:
             display(self.widget)
-
 
 
 UnitWaveformPlotter.register(UnitWaveformsWidget)
@@ -99,7 +97,7 @@ class PlotUpdater:
         self.ax_probe = ax_probe
         self.controller = controller
 
-        self.we = data_plot['waveform_extractor']
+        self.we = data_plot["waveform_extractor"]
         self.next_data_plot = data_plot.copy()
 
     def __call__(self, change):
@@ -113,20 +111,20 @@ class PlotUpdater:
 
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
-        data_plot['unit_ids'] = unit_ids
-        data_plot['wfs_by_ids'] = {unit_id: self.we.get_waveforms(unit_id) for unit_id in unit_ids}
-        data_plot['templates'] = self.we.get_all_templates(unit_ids=unit_ids)
-        data_plot['template_stds'] = self.we.get_all_templates(unit_ids=unit_ids, mode="std")
-        data_plot['same_axis'] = same_axis
-        data_plot['plot_templates'] = plot_templates
+        data_plot["unit_ids"] = unit_ids
+        data_plot["wfs_by_ids"] = {unit_id: self.we.get_waveforms(unit_id) for unit_id in unit_ids}
+        data_plot["templates"] = self.we.get_all_templates(unit_ids=unit_ids)
+        data_plot["template_stds"] = self.we.get_all_templates(unit_ids=unit_ids, mode="std")
+        data_plot["same_axis"] = same_axis
+        data_plot["plot_templates"] = plot_templates
 
         backend_kwargs = {}
 
         if same_axis:
-            backend_kwargs['ax'] = self.fig_wf.add_subplot()
-            data_plot['set_title'] = False
+            backend_kwargs["ax"] = self.fig_wf.add_subplot()
+            data_plot["set_title"] = False
         else:
-            backend_kwargs['figure'] = self.fig_wf
+            backend_kwargs["figure"] = self.fig_wf
 
         self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
         if same_axis:
@@ -141,17 +139,30 @@ class PlotUpdater:
 
         # update probe plot
         channel_locations = self.we.get_channel_locations()
-        self.ax_probe.plot(channel_locations[:, 0], channel_locations[:, 1], ls="", marker="o", color="gray",
-                           markersize=2, alpha=0.5)
+        self.ax_probe.plot(
+            channel_locations[:, 0],
+            channel_locations[:, 1],
+            ls="",
+            marker="o",
+            color="gray",
+            markersize=2,
+            alpha=0.5,
+        )
         self.ax_probe.axis("off")
         self.ax_probe.axis("equal")
 
         for unit in unit_ids:
-            self.ax_probe.plot(channel_locations[self.next_data_plot['channel_inds'][unit], 0],
-                               channel_locations[self.next_data_plot['channel_inds'][unit], 1],
-                               ls="", marker="o", markersize=3,
-                               color=self.next_data_plot['unit_colors'][unit])
-        self.ax_probe.set_xlim(np.min(channel_locations[:, 0])-10, np.max(channel_locations[:, 0])+10)
+            self.ax_probe.plot(
+                channel_locations[self.next_data_plot["channel_inds"][unit], 0],
+                channel_locations[self.next_data_plot["channel_inds"][unit], 1],
+                ls="",
+                marker="o",
+                markersize=3,
+                color=self.next_data_plot["unit_colors"][unit],
+            )
+        self.ax_probe.set_xlim(
+            np.min(channel_locations[:, 0]) - 10, np.max(channel_locations[:, 0]) + 10
+        )
         fig_probe = self.ax_probe.get_figure()
 
         self.fig_wf.canvas.draw()

@@ -1,17 +1,13 @@
 import json
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 from .curationsorting import CurationSorting
 
 
 def apply_sortingview_curation(
-    sorting,
-    uri_or_json,
-    exclude_labels=None,
-    include_labels=None,
-    skip_merge=False,
-    verbose=False
+    sorting, uri_or_json, exclude_labels=None, include_labels=None, skip_merge=False, verbose=False
 ):
     """
     Apply curation from SortingView manual curation.
@@ -85,7 +81,9 @@ def apply_sortingview_curation(
     for _, labels in labels_dict.items():
         for label in labels:
             if label not in properties:
-                properties[label] = np.zeros(len(curation_sorting.current_sorting.unit_ids), dtype=bool)
+                properties[label] = np.zeros(
+                    len(curation_sorting.current_sorting.unit_ids), dtype=bool
+                )
     for u_i, unit_id in enumerate(curation_sorting.current_sorting.unit_ids):
         labels_unit = []
         for unit_label, labels in labels_dict.items():
@@ -99,13 +97,19 @@ def apply_sortingview_curation(
     if include_labels is not None or exclude_labels is not None:
         units_to_remove = []
         unit_ids = curation_sorting.current_sorting.unit_ids
-        assert include_labels or exclude_labels, "Use either `include_labels` or `exclude_labels` to filter units."
+        assert (
+            include_labels or exclude_labels
+        ), "Use either `include_labels` or `exclude_labels` to filter units."
         if include_labels:
             for include_label in include_labels:
-                units_to_remove.extend(unit_ids[curation_sorting.current_sorting.get_property(include_label) == False])
+                units_to_remove.extend(
+                    unit_ids[curation_sorting.current_sorting.get_property(include_label) == False]
+                )
         if exclude_labels:
             for exclude_label in exclude_labels:
-                units_to_remove.extend(unit_ids[curation_sorting.current_sorting.get_property(exclude_label) == True])
+                units_to_remove.extend(
+                    unit_ids[curation_sorting.current_sorting.get_property(exclude_label) == True]
+                )
         units_to_remove = np.unique(units_to_remove)
         curation_sorting.remove_units(units_to_remove)
 

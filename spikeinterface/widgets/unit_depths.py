@@ -1,12 +1,10 @@
-import numpy as np
 from warnings import warn
 
-from .base import BaseWidget
-from .utils import get_unit_colors
-
+import numpy as np
 
 from ..core.template_tools import get_template_extremum_amplitude
-
+from .base import BaseWidget
+from .utils import get_unit_colors
 
 
 class UnitDepthsWidget(BaseWidget):
@@ -24,13 +22,18 @@ class UnitDepthsWidget(BaseWidget):
     peak_sign: str (neg/pos/both)
         Sign of peak for amplitudes.
     """
+
     possible_backends = {}
 
-    
-    def __init__(self, waveform_extractor, unit_colors=None, depth_axis=1,
-                peak_sign='neg',
-                 backend=None, **backend_kwargs):
-
+    def __init__(
+        self,
+        waveform_extractor,
+        unit_colors=None,
+        depth_axis=1,
+        peak_sign="neg",
+        backend=None,
+        **backend_kwargs,
+    ):
         we = waveform_extractor
         unit_ids = we.sorting.unit_ids
 
@@ -38,7 +41,6 @@ class UnitDepthsWidget(BaseWidget):
             unit_colors = get_unit_colors(we.sorting)
 
         colors = [unit_colors[unit_id] for unit_id in unit_ids]
-
 
         self.check_extensions(waveform_extractor, "unit_locations")
         ulc = waveform_extractor.load_extension("unit_locations")
@@ -51,12 +53,11 @@ class UnitDepthsWidget(BaseWidget):
         num_spikes = np.array(list(we.sorting.get_total_num_spikes().values()))
 
         plot_data = dict(
-                unit_depths=unit_depths,
-                unit_amplitudes=unit_amplitudes,
-                num_spikes=num_spikes,
-                unit_colors=unit_colors,
-                colors=colors,
+            unit_depths=unit_depths,
+            unit_amplitudes=unit_amplitudes,
+            num_spikes=num_spikes,
+            unit_colors=unit_colors,
+            colors=colors,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
-

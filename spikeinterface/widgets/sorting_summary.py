@@ -1,21 +1,18 @@
 import numpy as np
 
-from .base import BaseWidget, define_widget_function_from_class
-
+from ..core import ChannelSparsity, WaveformExtractor
 from .amplitudes import AmplitudesWidget
+from .base import BaseWidget, define_widget_function_from_class
 from .crosscorrelograms import CrossCorrelogramsWidget
 from .template_similarity import TemplateSimilarityWidget
 from .unit_locations import UnitLocationsWidget
 from .unit_templates import UnitTemplatesWidget
 
 
-from ..core import WaveformExtractor, ChannelSparsity
-
-
 class SortingSummaryWidget(BaseWidget):
     """
     Plots spike sorting summary
-    
+
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
@@ -33,27 +30,46 @@ class SortingSummaryWidget(BaseWidget):
         List of properties to be added to the unit table, by default None
         (sortingview backend)
     """
+
     possible_backends = {}
 
-    
-    def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None,
-                 sparsity=None, max_amplitudes_per_unit=None, curation=False,
-                 unit_table_properties=None, label_choices=None, backend=None, **backend_kwargs):
-        self.check_extensions(waveform_extractor, ['correlograms', 'spike_amplitudes',
-                                                   'unit_locations', 'similarity'])
+    def __init__(
+        self,
+        waveform_extractor: WaveformExtractor,
+        unit_ids=None,
+        sparsity=None,
+        max_amplitudes_per_unit=None,
+        curation=False,
+        unit_table_properties=None,
+        label_choices=None,
+        backend=None,
+        **backend_kwargs,
+    ):
+        self.check_extensions(
+            waveform_extractor, ["correlograms", "spike_amplitudes", "unit_locations", "similarity"]
+        )
         we = waveform_extractor
         sorting = we.sorting
 
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
-    
+
         # use other widgets to generate data (except for similarity)
-        template_plot_data = UnitTemplatesWidget(we, unit_ids=unit_ids, sparsity=sparsity,
-                                                 hide_unit_selector=True).plot_data
-        ccg_plot_data = CrossCorrelogramsWidget(we, unit_ids=unit_ids, hide_unit_selector=True).plot_data
-        amps_plot_data = AmplitudesWidget(we, unit_ids=unit_ids, max_spikes_per_unit=max_amplitudes_per_unit, 
-                                          hide_unit_selector=True).plot_data
-        locs_plot_data = UnitLocationsWidget(we, unit_ids=unit_ids, hide_unit_selector=True).plot_data
+        template_plot_data = UnitTemplatesWidget(
+            we, unit_ids=unit_ids, sparsity=sparsity, hide_unit_selector=True
+        ).plot_data
+        ccg_plot_data = CrossCorrelogramsWidget(
+            we, unit_ids=unit_ids, hide_unit_selector=True
+        ).plot_data
+        amps_plot_data = AmplitudesWidget(
+            we,
+            unit_ids=unit_ids,
+            max_spikes_per_unit=max_amplitudes_per_unit,
+            hide_unit_selector=True,
+        ).plot_data
+        locs_plot_data = UnitLocationsWidget(
+            we, unit_ids=unit_ids, hide_unit_selector=True
+        ).plot_data
         sim_plot_data = TemplateSimilarityWidget(we, unit_ids=unit_ids).plot_data
 
         plot_data = dict(
@@ -66,8 +82,7 @@ class SortingSummaryWidget(BaseWidget):
             unit_locations=locs_plot_data,
             unit_table_properties=unit_table_properties,
             curation=curation,
-            label_choices=label_choices
+            label_choices=label_choices,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
-

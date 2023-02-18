@@ -1,13 +1,13 @@
 import shutil
 from pathlib import Path
 
-import pytest
 import numpy as np
+import pytest
 
 from spikeinterface.extractors import *
 
 
-@pytest.mark.skip('Klusta can be tested after running run_klusta()')
+@pytest.mark.skip("Klusta can be tested after running run_klusta()")
 def test_klustaextractors():
     # no tested here, tested un run_klusta
     pass
@@ -17,5 +17,5 @@ def test_klustaextractors():
     #  print(sorting)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_klustaextractors()

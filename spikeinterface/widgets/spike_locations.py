@@ -1,9 +1,10 @@
-import numpy as np
 from typing import Union
 
+import numpy as np
+
+from ..core.waveform_extractor import WaveformExtractor
 from .base import BaseWidget
 from .utils import get_unit_colors
-from ..core.waveform_extractor import WaveformExtractor
 
 
 class SpikeLocationsWidget(BaseWidget):
@@ -49,7 +50,7 @@ class SpikeLocationsWidget(BaseWidget):
         plot_legend=False,
         hide_axis=False,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         self.check_extensions(waveform_extractor, "spike_locations")
         slc = waveform_extractor.load_extension("spike_locations")
@@ -62,9 +63,7 @@ class SpikeLocationsWidget(BaseWidget):
         probegroup = waveform_extractor.get_probegroup()
 
         if sorting.get_num_segments() > 1:
-            assert (
-                segment_index is not None
-            ), "Specify segment index for multi-segment object"
+            assert segment_index is not None, "Specify segment index for multi-segment object"
         else:
             segment_index = 0
 
@@ -81,7 +80,9 @@ class SpikeLocationsWidget(BaseWidget):
             spike_locs = dict()
             for unit, locs_unit in all_spike_locs.items():
                 if len(locs_unit) > max_spikes_per_unit:
-                    random_idxs = np.random.choice(len(locs_unit), size=max_spikes_per_unit, replace=False)
+                    random_idxs = np.random.choice(
+                        len(locs_unit), size=max_spikes_per_unit, replace=False
+                    )
                     spike_locs[unit] = locs_unit[random_idxs]
                 else:
                     spike_locs[unit] = locs_unit
@@ -100,7 +101,7 @@ class SpikeLocationsWidget(BaseWidget):
             hide_unit_selector=hide_unit_selector,
             plot_all_units=plot_all_units,
             plot_legend=plot_legend,
-            hide_axis=hide_axis
+            hide_axis=hide_axis,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -113,5 +114,3 @@ def estimate_axis_lims(spike_locations, quantile=0.02):
     ylims = np.quantile(all_locs["y"], [quantile, 1 - quantile])
 
     return xlims, ylims
-
-

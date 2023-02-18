@@ -37,7 +37,7 @@ class MetricsBaseWidget(BaseWidget):
         hide_unit_selector=False,
         include_metrics_data=True,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
@@ -58,7 +58,7 @@ class MetricsBaseWidget(BaseWidget):
             skip_metrics=skip_metrics,
             unit_colors=unit_colors,
             hide_unit_selector=hide_unit_selector,
-            include_metrics_data=include_metrics_data
+            include_metrics_data=include_metrics_data,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)

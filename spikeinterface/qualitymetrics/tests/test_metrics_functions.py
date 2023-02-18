@@ -1,20 +1,34 @@
-import pytest
 import shutil
 from pathlib import Path
+
 import numpy as np
+import pytest
+
 from spikeinterface import extract_waveforms, load_waveforms
 from spikeinterface.core import synthetize_spike_train_bad_isi
 from spikeinterface.extractors.toy_example import toy_example
+from spikeinterface.postprocessing import (
+    compute_principal_components,
+    compute_spike_amplitudes,
+    compute_spike_locations,
+)
+from spikeinterface.qualitymetrics import (
+    calculate_pc_metrics,
+    compute_amplitude_cutoffs,
+    compute_amplitude_medians,
+    compute_drift_metrics,
+    compute_firing_rates,
+    compute_isi_violations,
+    compute_num_spikes,
+    compute_presence_ratios,
+    compute_refrac_period_violations,
+    compute_sliding_rp_violations,
+    compute_snrs,
+    lda_metrics,
+    mahalanobis_metrics,
+    nearest_neighbors_metrics,
+)
 from spikeinterface.qualitymetrics.utils import create_ground_truth_pc_distributions
-
-from spikeinterface.qualitymetrics import calculate_pc_metrics
-from spikeinterface.postprocessing import compute_principal_components, compute_spike_locations, compute_spike_amplitudes
-
-from spikeinterface.qualitymetrics import (mahalanobis_metrics, lda_metrics, nearest_neighbors_metrics, 
-        compute_amplitude_cutoffs, compute_presence_ratios, compute_isi_violations, compute_firing_rates, 
-        compute_num_spikes, compute_snrs, compute_refrac_period_violations, compute_sliding_rp_violations,
-        compute_drift_metrics, compute_amplitude_medians)
-
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "qualitymetrics"
@@ -25,11 +39,13 @@ else:
 def _simulated_data():
     max_time = 100.0
     sampling_frequency = 30000
-    trains = [synthetize_spike_train_bad_isi(max_time, 10, 2),
-              synthetize_spike_train_bad_isi(max_time, 5, 4),
-              synthetize_spike_train_bad_isi(max_time, 5, 10)]
+    trains = [
+        synthetize_spike_train_bad_isi(max_time, 10, 2),
+        synthetize_spike_train_bad_isi(max_time, 5, 4),
+        synthetize_spike_train_bad_isi(max_time, 5, 10),
+    ]
 
-    labels = [np.ones((len(trains[i]),), dtype='int') * i for i in range(len(trains))]
+    labels = [np.ones((len(trains[i]),), dtype="int") * i for i in range(len(trains))]
 
     spike_times = np.concatenate(trains)
     spike_clusters = np.concatenate(labels)
@@ -43,36 +59,46 @@ def _simulated_data():
     spike_times = spike_times[mask]
     spike_clusters = spike_clusters[mask]
 
-    return {"duration": max_time, "times": spike_times, "labels": spike_clusters }
+    return {"duration": max_time, "times": spike_times, "labels": spike_clusters}
 
 
 def setup_module():
-    for folder_name in ('toy_rec', 'toy_sorting', 'toy_waveforms'):
+    for folder_name in ("toy_rec", "toy_sorting", "toy_waveforms"):
         if (cache_folder / folder_name).is_dir():
             shutil.rmtree(cache_folder / folder_name)
 
     recording, sorting = toy_example(num_segments=2, num_units=10)
-    recording = recording.save(folder=cache_folder / 'toy_rec')
-    sorting = sorting.save(folder=cache_folder / 'toy_sorting')
+    recording = recording.save(folder=cache_folder / "toy_rec")
+    sorting = sorting.save(folder=cache_folder / "toy_sorting")
 
-    we = extract_waveforms(recording, sorting, cache_folder / 'toy_waveforms',
-                           ms_before=3., ms_after=4., max_spikes_per_unit=500,
-                           n_jobs=1, chunk_size=30000)
-    pca = compute_principal_components(we, n_components=5, mode='by_channel_local')
+    we = extract_waveforms(
+        recording,
+        sorting,
+        cache_folder / "toy_waveforms",
+        ms_before=3.0,
+        ms_after=4.0,
+        max_spikes_per_unit=500,
+        n_jobs=1,
+        chunk_size=30000,
+    )
+    pca = compute_principal_components(we, n_components=5, mode="by_channel_local")
+
 
 def test_calculate_pc_metrics():
-    we = load_waveforms(cache_folder / 'toy_waveforms')
+    we = load_waveforms(cache_folder / "toy_waveforms")
     print(we)
-    pca = we.load_extension('principal_components')
+    pca = we.load_extension("principal_components")
     print(pca)
 
     res = calculate_pc_metrics(pca)
     print(res)
 
+
 def test_mahalanobis_metrics():
     all_pcs1, all_labels1 = create_ground_truth_pc_distributions([1, -1], [1000, 1000])
-    all_pcs2, all_labels2 = create_ground_truth_pc_distributions([1, -2],
-                                                                 [1000, 1000])  # increase distance between clusters
+    all_pcs2, all_labels2 = create_ground_truth_pc_distributions(
+        [1, -2], [1000, 1000]
+    )  # increase distance between clusters
 
     isolation_distance1, l_ratio1 = mahalanobis_metrics(all_pcs1, all_labels1, 0)
     isolation_distance2, l_ratio2 = mahalanobis_metrics(all_pcs2, all_labels2, 0)
@@ -83,8 +109,9 @@ def test_mahalanobis_metrics():
 
 def test_lda_metrics():
     all_pcs1, all_labels1 = create_ground_truth_pc_distributions([1, -1], [1000, 1000])
-    all_pcs2, all_labels2 = create_ground_truth_pc_distributions([1, -2],
-                                                                 [1000, 1000])  # increase distance between clusters
+    all_pcs2, all_labels2 = create_ground_truth_pc_distributions(
+        [1, -2], [1000, 1000]
+    )  # increase distance between clusters
 
     d_prime1 = lda_metrics(all_pcs1, all_labels1, 0)
     d_prime2 = lda_metrics(all_pcs2, all_labels2, 0)
@@ -94,8 +121,9 @@ def test_lda_metrics():
 
 def test_nearest_neighbors_metrics():
     all_pcs1, all_labels1 = create_ground_truth_pc_distributions([1, -1], [1000, 1000])
-    all_pcs2, all_labels2 = create_ground_truth_pc_distributions([1, -2],
-                                                                 [1000, 1000])  # increase distance between clusters
+    all_pcs2, all_labels2 = create_ground_truth_pc_distributions(
+        [1, -2], [1000, 1000]
+    )  # increase distance between clusters
 
     hit_rate1, miss_rate1 = nearest_neighbors_metrics(all_pcs1, all_labels1, 0, 1000, 3)
     hit_rate2, miss_rate2 = nearest_neighbors_metrics(all_pcs2, all_labels2, 0, 1000, 3)
@@ -103,29 +131,40 @@ def test_nearest_neighbors_metrics():
     assert hit_rate1 < hit_rate2
     assert miss_rate1 > miss_rate2
 
+
 @pytest.fixture
 def simulated_data():
     return _simulated_data()
 
 
 def setup_dataset(spike_data, score_detection=1):
-    recording, sorting = toy_example(duration=[spike_data["duration"]],
-                                     spike_times=[spike_data["times"]],
-                                     spike_labels=[spike_data["labels"]],
-                                     num_segments=1,
-                                     num_units=4,
-                                     score_detection=score_detection,
-                                     seed=10)
-    folder = cache_folder / 'waveform_folder2'
-    we = extract_waveforms(recording, sorting, folder,
-                           ms_before=3., ms_after=4., max_spikes_per_unit=1000,
-                           n_jobs=1, chunk_size=30000, overwrite=True)
+    recording, sorting = toy_example(
+        duration=[spike_data["duration"]],
+        spike_times=[spike_data["times"]],
+        spike_labels=[spike_data["labels"]],
+        num_segments=1,
+        num_units=4,
+        score_detection=score_detection,
+        seed=10,
+    )
+    folder = cache_folder / "waveform_folder2"
+    we = extract_waveforms(
+        recording,
+        sorting,
+        folder,
+        ms_before=3.0,
+        ms_after=4.0,
+        max_spikes_per_unit=1000,
+        n_jobs=1,
+        chunk_size=30000,
+        overwrite=True,
+    )
     return we
 
 
 def test_calculate_firing_rate_num_spikes(simulated_data):
     firing_rates_gt = {0: 10.01, 1: 5.03, 2: 5.09}
-    num_spikes_gt = {0: 1001,  1: 503,  2: 509}
+    num_spikes_gt = {0: 1001, 1: 503, 2: 509}
 
     we = setup_dataset(simulated_data)
     firing_rates = compute_firing_rates(we)
@@ -187,6 +226,7 @@ def test_calculate_sliding_rp_violations(simulated_data):
     print(contaminations)
     assert np.allclose(list(contaminations_gt.values()), list(contaminations.values()), rtol=0.05)
 
+
 def test_calculate_rp_violations(simulated_data):
     rp_contamination_gt = {0: 0.10534956502609294, 1: 1.0, 2: 1.0}
     counts_gt = {0: 2, 1: 4, 2: 10}
@@ -194,8 +234,11 @@ def test_calculate_rp_violations(simulated_data):
     rp_contamination, counts = compute_refrac_period_violations(we, 1, 0.0)
 
     print(rp_contamination)
-    assert np.allclose(list(rp_contamination_gt.values()), list(rp_contamination.values()), rtol=0.05)
+    assert np.allclose(
+        list(rp_contamination_gt.values()), list(rp_contamination.values()), rtol=0.05
+    )
     np.testing.assert_array_equal(list(counts_gt.values()), list(counts.values()))
+
 
 @pytest.mark.sortingcomponents
 def test_calculate_drift_metrics(simulated_data):
@@ -205,7 +248,9 @@ def test_calculate_drift_metrics(simulated_data):
 
     we = setup_dataset(simulated_data)
     spike_locs = compute_spike_locations(we)
-    drifts_ptps, drifts_stds, drift_mads = compute_drift_metrics(we, interval_s=10, min_spikes_per_interval=10)
+    drifts_ptps, drifts_stds, drift_mads = compute_drift_metrics(
+        we, interval_s=10, min_spikes_per_interval=10
+    )
 
     print(drifts_ptps, drifts_stds, drift_mads)
     assert np.allclose(list(drift_ptps_gt.values()), list(drifts_ptps.values()), rtol=0.05)
@@ -213,7 +258,7 @@ def test_calculate_drift_metrics(simulated_data):
     assert np.allclose(list(drift_mads_gt.values()), list(drift_mads.values()), rtol=0.05)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     setup_module()
     sim_data = _simulated_data()
     # test_calculate_amplitude_cutoff(sim_data)

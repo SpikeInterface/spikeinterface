@@ -1,17 +1,23 @@
-import pytest
 import numpy as np
+import pytest
 
 from spikeinterface.core import (
-    append_recordings, AppendSegmentRecording,
-    concatenate_recordings, ConcatenateSegmentRecording,
-    append_sortings, AppendSegmentSorting,
-    split_recording, select_segment_recording, split_sorting)
-
-from spikeinterface.core import NumpyRecording, NumpySorting
+    AppendSegmentRecording,
+    AppendSegmentSorting,
+    ConcatenateSegmentRecording,
+    NumpyRecording,
+    NumpySorting,
+    append_recordings,
+    append_sortings,
+    concatenate_recordings,
+    select_segment_recording,
+    split_recording,
+    split_sorting,
+)
 
 
 def test_append_concatenate_recordings():
-    traces = np.zeros((1000, 5), dtype='float64')
+    traces = np.zeros((1000, 5), dtype="float64")
     traces[:] = np.arange(1000)[:, None]
     sampling_frequency = 30000
     rec0 = NumpyRecording([traces] * 3, sampling_frequency)
@@ -41,7 +47,7 @@ def test_append_concatenate_recordings():
     # case on limit
     traces = rec.get_traces(start_frame=1000, end_frame=2000)
     assert traces.shape == (1000, 5)
-    assert np.array_equal(traces[:, 0], np.arange(0, 1000, dtype='float64'))
+    assert np.array_equal(traces[:, 0], np.arange(0, 1000, dtype="float64"))
 
     # case total
     traces = rec.get_traces(start_frame=None, end_frame=None)
@@ -56,11 +62,11 @@ def test_append_concatenate_recordings():
 
 
 def test_split_recordings():
-    traces = np.zeros((1000, 5), dtype='float64')
+    traces = np.zeros((1000, 5), dtype="float64")
     traces[:] = np.arange(1000)[:, None]
     sampling_frequency = 30000
     rec0 = NumpyRecording([traces] * 3, sampling_frequency)
-    
+
     rec_list = split_recording(rec0)
     rec1 = select_segment_recording(rec0, segment_indices=[1])
     rec2 = rec0.select_segments(segment_indices=[1, 2])
@@ -69,32 +75,30 @@ def test_split_recordings():
     for i, rec in enumerate(rec_list):
         assert rec.get_num_segments() == 1
         assert np.allclose(rec.get_traces(), rec0.get_traces(segment_index=i))
-        
+
     assert rec1.get_num_segments() == 1
     assert np.allclose(rec1.get_traces(), rec0.get_traces(segment_index=1))
-    
+
     assert np.allclose(rec2.get_traces(segment_index=0), rec0.get_traces(segment_index=1))
     assert np.allclose(rec2.get_traces(segment_index=1), rec0.get_traces(segment_index=2))
     assert np.allclose(rec3.get_traces(), rec0.get_traces(segment_index=2))
 
 
 def test_append_sortings():
-    sampling_frequency = 30000.
+    sampling_frequency = 30000.0
     times = np.arange(0, 1000, 10)
-    labels = np.zeros(times.size, dtype='int64')
+    labels = np.zeros(times.size, dtype="int64")
     labels[0::3] = 0
     labels[1::3] = 1
     labels[2::3] = 2
-    sorting0 = NumpySorting.from_times_labels(
-        [times] * 3, [labels] * 3, sampling_frequency)
-    sorting1 = NumpySorting.from_times_labels(
-        [times] * 2, [labels] * 2, sampling_frequency)
+    sorting0 = NumpySorting.from_times_labels([times] * 3, [labels] * 3, sampling_frequency)
+    sorting1 = NumpySorting.from_times_labels([times] * 2, [labels] * 2, sampling_frequency)
 
     sorting = append_sortings([sorting0, sorting1])
     # print(sorting)
     assert sorting.get_num_segments() == 5
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_append_concatenate_recordings()
     test_append_sortings()

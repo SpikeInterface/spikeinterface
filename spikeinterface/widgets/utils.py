@@ -1,25 +1,30 @@
-import numpy as np
 import random
+
+import numpy as np
 
 from ..core import ChannelSparsity
 
 try:
     import distinctipy
+
     HAVE_DISTINCTIPY = True
 except ImportError:
     HAVE_DISTINCTIPY = False
 
 try:
     import matplotlib.pyplot as plt
+
     HAVE_MPL = True
 except ImportError:
     HAVE_MPL = False
 
 
-def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGBA', shuffle=None, seed=None):
+def get_some_colors(
+    keys, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None
+):
     """
     Return a dict of colors for given keys
-    
+
     Params
     ------
     color_engine: str 'auto' / 'matplotlib' / 'colorsys' / 'distinctipy'
@@ -41,44 +46,45 @@ def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGB
     -------
     dict_colors: dict
         A dict of colors for given keys.
-    
-    """
-    assert color_engine in ('auto', 'distinctipy', 'matplotlib', 'colorsys')
 
-    possible_formats = ('RGBA',)
-    assert format in possible_formats, f'format must be {possible_formats}'
+    """
+    assert color_engine in ("auto", "distinctipy", "matplotlib", "colorsys")
+
+    possible_formats = ("RGBA",)
+    assert format in possible_formats, f"format must be {possible_formats}"
 
     # select the colormap engine
-    if color_engine == 'auto':
+    if color_engine == "auto":
         if HAVE_MPL:
-            color_engine = 'matplotlib'
+            color_engine = "matplotlib"
         elif HAVE_DISTINCTIPY:
             # this is the third choice because this is very slow
-            color_engine = 'distinctipy'
+            color_engine = "distinctipy"
         else:
-            color_engine = 'colorsys'
+            color_engine = "colorsys"
 
     if shuffle is None:
         # distinctipy then False
-        shuffle = color_engine != 'distinctipy'
+        shuffle = color_engine != "distinctipy"
         seed = 91
 
     N = len(keys)
 
-    if color_engine == 'distinctipy':
+    if color_engine == "distinctipy":
         colors = distinctipy.get_colors(N)
         # add the alpha
-        colors = [color + (1., ) for color in colors]
+        colors = [color + (1.0,) for color in colors]
 
-    elif color_engine == 'matplotlib':
+    elif color_engine == "matplotlib":
         # some map have black or white at border so +10
         margin = max(4, int(N * 0.08))
         cmap = plt.get_cmap(map_name, N + 2 * margin)
-        colors = [cmap(i+margin) for i, key in enumerate(keys)]
+        colors = [cmap(i + margin) for i, key in enumerate(keys)]
 
-    elif color_engine == 'colorsys':
+    elif color_engine == "colorsys":
         import colorsys
-        colors = [colorsys.hsv_to_rgb(x * 1.0 / N, 0.5, 0.5) + (1., ) for x in range(N)]
+
+        colors = [colorsys.hsv_to_rgb(x * 1.0 / N, 0.5, 0.5) + (1.0,) for x in range(N)]
 
     if shuffle:
         rng = np.random.RandomState(seed=seed)
@@ -91,25 +97,35 @@ def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGB
     return dict_colors
 
 
-def get_unit_colors(sorting, color_engine='auto', map_name='gist_ncar', format='RGBA', shuffle=None, seed=None):
+def get_unit_colors(
+    sorting, color_engine="auto", map_name="gist_ncar", format="RGBA", shuffle=None, seed=None
+):
     """
     Return a dict colors per units.
     """
-    colors = get_some_colors(sorting.unit_ids, color_engine=color_engine, map_name=map_name, format=format, 
-                             shuffle=shuffle, seed=seed)
+    colors = get_some_colors(
+        sorting.unit_ids,
+        color_engine=color_engine,
+        map_name=map_name,
+        format=format,
+        shuffle=shuffle,
+        seed=seed,
+    )
     return colors
 
 
-def array_to_image(data,
-                   colormap='RdGy',
-                   clim=None,
-                   spatial_zoom=(0.75, 1.25),
-                   num_timepoints_per_row=30000,
-                   row_spacing=0.25,
-                   scalebar=False,
-                   sampling_frequency=None):
+def array_to_image(
+    data,
+    colormap="RdGy",
+    clim=None,
+    spatial_zoom=(0.75, 1.25),
+    num_timepoints_per_row=30000,
+    row_spacing=0.25,
+    scalebar=False,
+    sampling_frequency=None,
+):
     """
-    Converts a 2D numpy array (width x height) to a 
+    Converts a 2D numpy array (width x height) to a
     3D image array (width x height x RGB color).
 
     Useful for visualizing data before/after preprocessing
@@ -118,11 +134,11 @@ def array_to_image(data,
     ------
     data : np.array
         2D numpy array
-    colormap : str 
+    colormap : str
         Identifier for a Matplotlib colormap
     clim : tuple or None
         The color limits. If None, the clim is the range of the traces
-    spatial_zoom : tuple 
+    spatial_zoom : tuple
         Tuple specifying width & height scaling
     num_timepoints_per_row : int
         Max number of samples before wrapping
@@ -148,7 +164,9 @@ def array_to_image(data,
     spacing = int(num_channels * spatial_zoom[1] * row_spacing)
 
     num_timepoints_after_scaling = int(num_timepoints * spatial_zoom[0])
-    num_timepoints_per_row_after_scaling = int(np.min([num_timepoints_per_row, num_timepoints]) * spatial_zoom[0])
+    num_timepoints_per_row_after_scaling = int(
+        np.min([num_timepoints_per_row, num_timepoints]) * spatial_zoom[0]
+    )
 
     cmap = plt.get_cmap(colormap)
     zoomed_data = zoom(data, spatial_zoom)
@@ -157,26 +175,41 @@ def array_to_image(data,
     scaled_data[scaled_data < clim[0]] = clim[0]
     scaled_data[scaled_data > clim[1]] = clim[1]
     scaled_data = (scaled_data - clim[0]) / np.ptp(clim)
-    a = np.flip((cmap(scaled_data.T)[:, :, :3]*255).astype(np.uint8), axis=0)  # colorize and convert to uint8
+    a = np.flip(
+        (cmap(scaled_data.T)[:, :, :3] * 255).astype(np.uint8), axis=0
+    )  # colorize and convert to uint8
 
     num_rows = int(np.ceil(num_timepoints / num_timepoints_per_row))
 
-    output_image = np.ones(
-        (num_rows * (num_channels_after_scaling + spacing),
-         num_timepoints_per_row_after_scaling, 3), dtype=np.uint8
-    ) * 255
+    output_image = (
+        np.ones(
+            (
+                num_rows * (num_channels_after_scaling + spacing),
+                num_timepoints_per_row_after_scaling,
+                3,
+            ),
+            dtype=np.uint8,
+        )
+        * 255
+    )
 
     for ir in range(num_rows):
         i1 = ir * num_timepoints_per_row_after_scaling
         i2 = min(i1 + num_timepoints_per_row_after_scaling, num_timepoints_after_scaling)
-        output_image[ir * (num_channels_after_scaling + spacing):ir * (num_channels_after_scaling + spacing) +
-                     num_channels_after_scaling, :i2-i1, :] = a[:, i1:i2, :]
+        output_image[
+            ir
+            * (num_channels_after_scaling + spacing) : ir
+            * (num_channels_after_scaling + spacing)
+            + num_channels_after_scaling,
+            : i2 - i1,
+            :,
+        ] = a[:, i1:i2, :]
 
     if scalebar:
         assert sampling_frequency is not None
 
         try:
-            from PIL import Image, ImageFont, ImageDraw
+            from PIL import Image, ImageDraw, ImageFont
         except ImportError:
             raise ImportError("To add a scalebar, you need pillow: >>> pip install pillow")
         import platform
@@ -187,7 +220,9 @@ def array_to_image(data,
 
         try:
             if platform.system() == "Linux":
-                font = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeMono.ttf", fontsize)
+                font = ImageFont.truetype(
+                    "/usr/share/fonts/truetype/freefont/FreeMono.ttf", fontsize
+                )
             else:
                 font = ImageFont.truetype("arial.ttf", fontsize)
         except:
@@ -203,10 +238,18 @@ def array_to_image(data,
             bar_px = bar_ms * num_timepoints_per_row / row_ms
 
             x_offset = int(0.1 * num_timepoints_per_row)
-            image_editable.line((x_offset, y_scalebar, x_offset + bar_px, y_scalebar), fill=(0, 0, 0), width=10)
-            image_editable.text((x_offset + 0.3 * (bar_px), y_scalebar - 1.1 * fontsize),
-                                text="10 ms", font=font, fill=(0, 0, 0))
+            image_editable.line(
+                (x_offset, y_scalebar, x_offset + bar_px, y_scalebar), fill=(0, 0, 0), width=10
+            )
+            image_editable.text(
+                (x_offset + 0.3 * (bar_px), y_scalebar - 1.1 * fontsize),
+                text="10 ms",
+                font=font,
+                fill=(0, 0, 0),
+            )
 
-            output_image = np.frombuffer(image.tobytes(), dtype=np.uint8).reshape(output_image.shape)
+            output_image = np.frombuffer(image.tobytes(), dtype=np.uint8).reshape(
+                output_image.shape
+            )
 
     return output_image

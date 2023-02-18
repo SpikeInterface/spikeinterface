@@ -1,11 +1,11 @@
-import pytest
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pytest
 
 from spikeinterface import set_global_tmp_folder
 from spikeinterface.core import generate_recording
-
-from spikeinterface.preprocessing import whiten, scale
+from spikeinterface.preprocessing import scale, whiten
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "preprocessing"
@@ -29,9 +29,10 @@ def test_whiten():
 
     # test parallel
     rec_par = rec3.save(folder=cache_folder / "rec_par", n_jobs=2)
-    np.testing.assert_array_equal(rec3.get_traces(segment_index=0),
-                                  rec_par.get_traces(segment_index=0))
+    np.testing.assert_array_equal(
+        rec3.get_traces(segment_index=0), rec_par.get_traces(segment_index=0)
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_whiten()

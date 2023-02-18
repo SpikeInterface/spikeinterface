@@ -1,24 +1,17 @@
-import numpy as np
-
-import matplotlib.pyplot as plt
 import ipywidgets.widgets as widgets
-
+import matplotlib.pyplot as plt
+import numpy as np
+from IPython.display import display
 from matplotlib.lines import Line2D
 
 from ..base import to_attr
-
+from ..matplotlib.metrics import MetricsPlotter as MplMetricsPlotter
 from .base_ipywidgets import IpywidgetsPlotter
 from .utils import make_unit_controller
 
-from ..matplotlib.metrics import MetricsPlotter as MplMetricsPlotter
-
-from IPython.display import display
-
 
 class MetricsPlotter(IpywidgetsPlotter):
-
     def do_plot(self, data_plot, **backend_kwargs):
-
         cm = 1 / 2.54
 
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
@@ -32,12 +25,15 @@ class MetricsPlotter(IpywidgetsPlotter):
             with output:
                 fig = plt.figure(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
-        if data_plot['unit_ids'] is None:
-            data_plot['unit_ids'] = []
+        if data_plot["unit_ids"] is None:
+            data_plot["unit_ids"] = []
 
-        unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'], 
-                                                            list(data_plot['unit_colors'].keys()),
-                                                            ratios[0] * width_cm, height_cm)
+        unit_widget, unit_controller = make_unit_controller(
+            data_plot["unit_ids"],
+            list(data_plot["unit_colors"].keys()),
+            ratios[0] * width_cm,
+            height_cm,
+        )
 
         self.controller = unit_controller
 
@@ -66,7 +62,7 @@ class PlotUpdater:
         self.mpl_plotter = mpl_plotter
         self.fig = fig
         self.controller = controller
-        self.unit_colors = data_plot['unit_colors']
+        self.unit_colors = data_plot["unit_colors"]
 
         self.next_data_plot = data_plot.copy()
 
@@ -84,7 +80,7 @@ class PlotUpdater:
             sizes.append(size)
 
         # here we do a trick: we just update colors
-        if hasattr(self.mpl_plotter, 'patches'):
+        if hasattr(self.mpl_plotter, "patches"):
             for p in self.mpl_plotter.patches:
                 p.set_color(colors)
                 p.set_sizes(sizes)
@@ -96,11 +92,28 @@ class PlotUpdater:
         if len(unit_ids) > 0:
             for l in self.fig.legends:
                 l.remove()
-            handles = [Line2D([0], [0], ls="", marker='o', markersize=5, markeredgewidth=2, 
-                    color=self.unit_colors[unit]) for unit in unit_ids]
+            handles = [
+                Line2D(
+                    [0],
+                    [0],
+                    ls="",
+                    marker="o",
+                    markersize=5,
+                    markeredgewidth=2,
+                    color=self.unit_colors[unit],
+                )
+                for unit in unit_ids
+            ]
             labels = unit_ids
-            self.fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.),
-                            ncol=5, fancybox=True, shadow=True)
+            self.fig.legend(
+                handles,
+                labels,
+                loc="upper center",
+                bbox_to_anchor=(0.5, 1.0),
+                ncol=5,
+                fancybox=True,
+                shadow=True,
+            )
 
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()

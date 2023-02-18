@@ -10,14 +10,19 @@ After spike sorting, you might want to validate the goodness of the sorted units
 import spikeinterface as si
 import spikeinterface.extractors as se
 from spikeinterface.postprocessing import compute_principal_components
-from spikeinterface.qualitymetrics import (compute_snrs, compute_firing_rates, 
-    compute_isi_violations, calculate_pc_metrics, compute_quality_metrics)
+from spikeinterface.qualitymetrics import (
+    calculate_pc_metrics,
+    compute_firing_rates,
+    compute_isi_violations,
+    compute_quality_metrics,
+    compute_snrs,
+)
 
 ##############################################################################
 # First, let's download a simulated dataset
 # from the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
 
-local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
+local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
 recording, sorting = se.read_mearec(local_path)
 print(recording)
 print(sorting)
@@ -25,14 +30,21 @@ print(sorting)
 ##############################################################################
 # Extract spike waveforms
 # -----------------------
-# 
+#
 # For convenience, metrics are computed on the :code:`WaveformExtractor` object,
 # because it contains a reference to the "Recording" and the "Sorting" objects:
 
-folder = 'waveforms_mearec'
-we = si.extract_waveforms(recording, sorting, folder,
-                          ms_before=1, ms_after=2., max_spikes_per_unit=500,
-                          n_jobs=1, chunk_durations='1s')
+folder = "waveforms_mearec"
+we = si.extract_waveforms(
+    recording,
+    sorting,
+    folder,
+    ms_before=1,
+    ms_after=2.0,
+    max_spikes_per_unit=500,
+    n_jobs=1,
+    chunk_durations="1s",
+)
 print(we)
 
 ##############################################################################
@@ -51,11 +63,10 @@ print(snrs)
 # Some metrics are based on the principal component scores, so they require a
 # :code:`WaveformsPrincipalComponent` object as input:
 
-pc = compute_principal_components(we, load_if_exists=True,
-                                     n_components=3, mode='by_channel_local')
+pc = compute_principal_components(we, load_if_exists=True, n_components=3, mode="by_channel_local")
 print(pc)
 
-pc_metrics = calculate_pc_metrics(pc, metric_names=['nearest_neighbor'])
+pc_metrics = calculate_pc_metrics(pc, metric_names=["nearest_neighbor"])
 print(pc_metrics)
 
 ##############################################################################

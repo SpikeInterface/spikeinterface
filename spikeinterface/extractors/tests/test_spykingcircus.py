@@ -1,13 +1,13 @@
 import shutil
 from pathlib import Path
 
-import pytest
 import numpy as np
+import pytest
 
 from spikeinterface.extractors import *
 
 
-@pytest.mark.skip('SpykingCIRCUS can be tested after running run_spykingcircus()')
+@pytest.mark.skip("SpykingCIRCUS can be tested after running run_spykingcircus()")
 def test_spykingcircusextractors():
     # not tested here, tested in run_spykingcircus(...)
     pass
@@ -17,5 +17,5 @@ def test_spykingcircusextractors():
     #  print(sorting)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_spykingcircusextractors()

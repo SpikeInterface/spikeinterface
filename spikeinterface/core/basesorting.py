@@ -1,6 +1,7 @@
-from typing import List, Union, Optional
-import numpy as np
 import warnings
+from typing import List, Optional, Union
+
+import numpy as np
 
 from .base import BaseExtractor, BaseSegment
 
@@ -11,7 +12,6 @@ class BaseSorting(BaseExtractor):
     """
 
     def __init__(self, sampling_frequency: float, unit_ids: List):
-
         BaseExtractor.__init__(self, unit_ids)
         self._sampling_frequency = sampling_frequency
         self._sorting_segments: List[BaseSortingSegment] = []
@@ -23,10 +23,10 @@ class BaseSorting(BaseExtractor):
         clsname = self.__class__.__name__
         nseg = self.get_num_segments()
         nunits = self.get_num_units()
-        sf_khz = self.get_sampling_frequency() / 1000.
-        txt = f'{clsname}: {nunits} units - {nseg} segments - {sf_khz:0.1f}kHz'
-        if 'file_path' in self._kwargs:
-            txt += '\n  file_path: {}'.format(self._kwargs['file_path'])
+        sf_khz = self.get_sampling_frequency() / 1000.0
+        txt = f"{clsname}: {nunits} units - {nseg} segments - {sf_khz:0.1f}kHz"
+        if "file_path" in self._kwargs:
+            txt += "\n  file_path: {}".format(self._kwargs["file_path"])
         return txt
 
     @property
@@ -64,22 +64,23 @@ class BaseSorting(BaseExtractor):
         segment_index = self._check_segment_index(segment_index)
         segment = self._sorting_segments[segment_index]
         spike_frames = segment.get_unit_spike_train(
-            unit_id=unit_id, start_frame=start_frame, end_frame=end_frame).astype("int64")
+            unit_id=unit_id, start_frame=start_frame, end_frame=end_frame
+        ).astype("int64")
         if return_times:
             if self.has_recording():
                 times = self.get_times(segment_index=segment_index)
                 return times[spike_frames]
             else:
                 t_start = segment._t_start if segment._t_start is not None else 0
-                spike_times =  spike_frames / self.get_sampling_frequency()
+                spike_times = spike_frames / self.get_sampling_frequency()
                 return t_start + spike_times
         else:
             return spike_frames
 
     def register_recording(self, recording):
-        assert np.isclose(self.get_sampling_frequency(),
-                          recording.get_sampling_frequency(),
-                          atol=0.1), "The recording has a different sampling frequency than the sorting!"
+        assert np.isclose(
+            self.get_sampling_frequency(), recording.get_sampling_frequency(), atol=0.1
+        ), "The recording has a different sampling frequency than the sorting!"
         self._recording = recording
 
     @property
@@ -90,11 +91,7 @@ class BaseSorting(BaseExtractor):
             return None
 
     def set_sorting_info(self, recording_dict, params_dict, log_dict):
-        sorting_info = dict(
-            recording=recording_dict,
-            params=params_dict,
-            log=log_dict
-        )
+        sorting_info = dict(recording=recording_dict, params=params_dict, log=log_dict)
         self.annotate(__sorting_info__=sorting_info)
 
     def has_recording(self):
@@ -126,31 +123,35 @@ class BaseSorting(BaseExtractor):
         else:
             return None
 
-    def _save(self, format='npz', **save_kwargs):
+    def _save(self, format="npz", **save_kwargs):
         """
         This function replaces the old CachesortingExtractor, but enables more engines
         for caching a results. At the moment only 'npz' is supported.
         """
-        if format == 'npz':
-            folder = save_kwargs.pop('folder')
+        if format == "npz":
+            folder = save_kwargs.pop("folder")
             # TODO save properties/features as npz!!!!!
             from .npzsortingextractor import NpzSortingExtractor
-            save_path = folder / 'sorting_cached.npz'
+
+            save_path = folder / "sorting_cached.npz"
             NpzSortingExtractor.write_sorting(self, save_path)
             cached = NpzSortingExtractor(save_path)
-            cached.dump(folder / 'npz.json', relative_to=folder)
+            cached.dump(folder / "npz.json", relative_to=folder)
 
             from .npzfolder import NpzFolderSorting
+
             cached = NpzFolderSorting(folder_path=folder)
             if self.has_recording():
                 warnings.warn(
-                    "The registered recording will not be persistent on disk, but only available in memory")
+                    "The registered recording will not be persistent on disk, but only available in memory"
+                )
                 cached.register_recording(self._recording)
-        elif format == 'memory':
+        elif format == "memory":
             from .numpyextractors import NumpySorting
+
             cached = NumpySorting.from_extractor(self)
         else:
-            raise ValueError(f'format {format} not supported')            
+            raise ValueError(f"format {format} not supported")
         return cached
 
     def get_unit_property(self, unit_id, key):
@@ -193,10 +194,10 @@ class BaseSorting(BaseExtractor):
             Sorting object with selected units
         """
         from spikeinterface import UnitsSelectionSorting
-        sub_sorting = UnitsSelectionSorting(
-            self, unit_ids, renamed_unit_ids=renamed_unit_ids)
+
+        sub_sorting = UnitsSelectionSorting(self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
-    
+
     def remove_units(self, remove_unit_ids):
         """
         Removes a subset of units
@@ -212,6 +213,7 @@ class BaseSorting(BaseExtractor):
             Sorting object without removed units
         """
         from spikeinterface import UnitsSelectionSorting
+
         new_unit_ids = self.unit_ids[~np.in1d(self.unit_ids, remove_unit_ids)]
         new_sorting = UnitsSelectionSorting(self, new_unit_ids)
         return new_sorting
@@ -235,27 +237,26 @@ class BaseSorting(BaseExtractor):
 
     def frame_slice(self, start_frame, end_frame):
         from spikeinterface import FrameSliceSorting
-        sub_sorting = FrameSliceSorting(
-            self, start_frame=start_frame, end_frame=end_frame)
+
+        sub_sorting = FrameSliceSorting(self, start_frame=start_frame, end_frame=end_frame)
         return sub_sorting
 
-    def get_all_spike_trains(self, outputs='unit_id'):
+    def get_all_spike_trains(self, outputs="unit_id"):
         """
         Return all spike trains concatenated
         """
-        assert outputs in ('unit_id', 'unit_index')
+        assert outputs in ("unit_id", "unit_index")
         spikes = []
         for segment_index in range(self.get_num_segments()):
             spike_times = []
             spike_labels = []
             for i, unit_id in enumerate(self.unit_ids):
-                st = self.get_unit_spike_train(
-                    unit_id=unit_id, segment_index=segment_index)
+                st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 spike_times.append(st)
-                if outputs == 'unit_id':
+                if outputs == "unit_id":
                     spike_labels.append(np.array([unit_id] * st.size))
-                elif outputs == 'unit_index':
-                    spike_labels.append(np.zeros(st.size, dtype='int64') + i)
+                elif outputs == "unit_index":
+                    spike_labels.append(np.zeros(st.size, dtype="int64") + i)
 
             if len(spike_times) > 0:
                 spike_times = np.concatenate(spike_times)
@@ -272,7 +273,7 @@ class BaseSorting(BaseExtractor):
 
     def to_spike_vector(self, extremum_channel_inds=None):
         """
-        Construct a unique structured numpy vector concatenating all spikes 
+        Construct a unique structured numpy vector concatenating all spikes
         with several fields: sample_ind, unit_index, segment_index.
 
         See also `get_all_spike_trains()`
@@ -282,43 +283,41 @@ class BaseSorting(BaseExtractor):
         extremum_channel_inds: None or dict
             If a dictionnary of unit_id to channel_ind is given then an extra field 'channel_ind'.
             This can be convinient for computing spikes postion after sorter.
-            
+
             This dict can be computed with `get_template_extremum_channel(we, outputs="index")`
-        
+
         Returns
         -------
         spikes: np.array
             Structured numpy array ('sample_ind', 'unit_index', 'segment_index') with all spikes
             Or ('sample_ind', 'unit_index', 'segment_index', 'channel_ind') if extremum_channel_inds
             is given
-            
+
         """
-        spikes_ = self.get_all_spike_trains(outputs='unit_index')
+        spikes_ = self.get_all_spike_trains(outputs="unit_index")
 
         n = np.sum([e[0].size for e in spikes_])
-        spike_dtype = [('sample_ind', 'int64'), ('unit_ind',
-                                                 'int64'), ('segment_ind', 'int64')]
-        
+        spike_dtype = [("sample_ind", "int64"), ("unit_ind", "int64"), ("segment_ind", "int64")]
+
         if extremum_channel_inds is not None:
-            spike_dtype += [('channel_ind', 'int64')]
-        
-        
+            spike_dtype += [("channel_ind", "int64")]
+
         spikes = np.zeros(n, dtype=spike_dtype)
 
         pos = 0
         for segment_index, (spike_times, spike_labels) in enumerate(spikes_):
             n = spike_times.size
-            spikes[pos:pos+n]['sample_ind'] = spike_times
-            spikes[pos:pos+n]['unit_ind'] = spike_labels
-            spikes[pos:pos+n]['segment_ind'] = segment_index
+            spikes[pos : pos + n]["sample_ind"] = spike_times
+            spikes[pos : pos + n]["unit_ind"] = spike_labels
+            spikes[pos : pos + n]["segment_ind"] = segment_index
             pos += n
-        
 
         if extremum_channel_inds is not None:
-            ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
+            ext_channel_inds = np.array(
+                [extremum_channel_inds[unit_id] for unit_id in self.unit_ids]
+            )
             # vector way
-            spikes['channel_ind'] = ext_channel_inds[spikes['unit_ind']]
-
+            spikes["channel_ind"] = ext_channel_inds[spikes["unit_ind"]]
 
         return spikes
 

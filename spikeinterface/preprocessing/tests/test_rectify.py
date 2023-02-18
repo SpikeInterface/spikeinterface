@@ -1,13 +1,11 @@
-import pytest
 from pathlib import Path
+
+import numpy as np
+import pytest
 
 from spikeinterface import set_global_tmp_folder
 from spikeinterface.core import generate_recording
-
 from spikeinterface.preprocessing import rectify
-
-import numpy as np
-
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "preprocessing"
@@ -34,5 +32,5 @@ def test_rectify():
     # plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_rectify()

@@ -1,62 +1,89 @@
 from typing import Type
 
 # most important extractor are in spikeinterface.core
-from spikeinterface.core import (BaseRecording, BaseSorting,
-                                 BinaryRecordingExtractor, NumpyRecording,
-                                 NpzSortingExtractor, NumpySorting,
-                                 NpySnippetsExtractor)
-
-# sorting/recording/event from neo
-from .neoextractors import *
-
-# non-NEO objects implemented in neo folder
-from .neoextractors import NeuroScopeSortingExtractor, MaxwellEventExtractor
-
-# NWB sorting/recording/event
-from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor,
-                            read_nwb, read_nwb_recording, read_nwb_sorting)
-
-from .cbin_ibl import CompressedBinaryIblExtractor, read_cbin_ibl
-from .iblstreamingrecording import IblStreamingRecordingExtractor, read_ibl_streaming_recording
-from .mcsh5extractors import MCSH5RecordingExtractor, read_mcsh5
-
-# sorting extractors in relation with a sorter
-from .cellexplorersortingextractor import CellExplorerSortingExtractor, read_cellexplorer
-from .klustaextractors import KlustaSortingExtractor, read_klusta
-from .hdsortextractors import HDSortSortingExtractor, read_hdsort
-from .mclustextractors import MClustSortingExtractor, read_mclust
-from .waveclustextractors import WaveClusSortingExtractor, read_waveclus
-from .yassextractors import YassSortingExtractor, read_yass
-from .combinatoextractors import CombinatoSortingExtractor, read_combinato
-from .tridesclousextractors import TridesclousSortingExtractor, read_tridesclous
-from .spykingcircusextractors import SpykingCircusSortingExtractor, read_spykingcircus
-from .herdingspikesextractors import HerdingspikesSortingExtractor, read_herdingspikes
-from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor, read_mda_recording, read_mda_sorting
-from .phykilosortextractors import PhySortingExtractor, KiloSortSortingExtractor, read_phy, read_kilosort
-
-# sorting in relation with simulator
-from .shybridextractors import (SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor,
-                                read_shybrid_recording, read_shybrid_sorting)
-
-# snippers
-from .waveclussnippetstextractors import WaveClusSnippetsExtractor, read_waveclus_snippets
-
+from spikeinterface.core import (
+    BaseRecording,
+    BaseSorting,
+    BinaryRecordingExtractor,
+    NpySnippetsExtractor,
+    NpzSortingExtractor,
+    NumpyRecording,
+    NumpySorting,
+)
 
 # misc
 from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
+from .cbin_ibl import CompressedBinaryIblExtractor, read_cbin_ibl
 
+# sorting extractors in relation with a sorter
+from .cellexplorersortingextractor import (
+    CellExplorerSortingExtractor,
+    read_cellexplorer,
+)
+from .combinatoextractors import CombinatoSortingExtractor, read_combinato
+from .hdsortextractors import HDSortSortingExtractor, read_hdsort
+from .herdingspikesextractors import HerdingspikesSortingExtractor, read_herdingspikes
+from .iblstreamingrecording import (
+    IblStreamingRecordingExtractor,
+    read_ibl_streaming_recording,
+)
+from .klustaextractors import KlustaSortingExtractor, read_klusta
+from .mclustextractors import MClustSortingExtractor, read_mclust
+from .mcsh5extractors import MCSH5RecordingExtractor, read_mcsh5
+from .mdaextractors import (
+    MdaRecordingExtractor,
+    MdaSortingExtractor,
+    read_mda_recording,
+    read_mda_sorting,
+)
+
+# non-NEO objects implemented in neo folder
+# sorting/recording/event from neo
+from .neoextractors import *
+from .neoextractors import MaxwellEventExtractor, NeuroScopeSortingExtractor
+
+# NWB sorting/recording/event
+from .nwbextractors import (
+    NwbRecordingExtractor,
+    NwbSortingExtractor,
+    read_nwb,
+    read_nwb_recording,
+    read_nwb_sorting,
+)
+from .phykilosortextractors import (
+    KiloSortSortingExtractor,
+    PhySortingExtractor,
+    read_kilosort,
+    read_phy,
+)
+
+# sorting in relation with simulator
+from .shybridextractors import (
+    SHYBRIDRecordingExtractor,
+    SHYBRIDSortingExtractor,
+    read_shybrid_recording,
+    read_shybrid_sorting,
+)
+from .spykingcircusextractors import SpykingCircusSortingExtractor, read_spykingcircus
+from .tridesclousextractors import TridesclousSortingExtractor, read_tridesclous
+
+# snippers
+from .waveclussnippetstextractors import (
+    WaveClusSnippetsExtractor,
+    read_waveclus_snippets,
+)
+from .waveclustextractors import WaveClusSortingExtractor, read_waveclus
+from .yassextractors import YassSortingExtractor, read_yass
 
 ########################################
 
 recording_extractor_full_list = [
     BinaryRecordingExtractor,
-
     # natively implemented in spikeinterface.extractors
     NumpyRecording,
     SHYBRIDRecordingExtractor,
     MdaRecordingExtractor,
     NwbRecordingExtractor,
-
     # others
     CompressedBinaryIblExtractor,
     IblStreamingRecordingExtractor,
@@ -66,13 +93,11 @@ recording_extractor_full_list += neo_recording_extractors_list
 
 sorting_extractor_full_list = [
     NpzSortingExtractor,
-
     # natively implemented in spikeinterface.extractors
     NumpySorting,
     MdaSortingExtractor,
     SHYBRIDSortingExtractor,
     ALFSortingExtractor,
-
     KlustaSortingExtractor,
     HDSortSortingExtractor,
     MClustSortingExtractor,
@@ -89,21 +114,15 @@ sorting_extractor_full_list = [
 ]
 sorting_extractor_full_list += neo_sorting_extractors_list
 
-event_extractor_full_list = [
-    MaxwellEventExtractor
-]
+event_extractor_full_list = [MaxwellEventExtractor]
 event_extractor_full_list += neo_event_extractors_list
 
-snippets_extractor_full_list = [
-    NpySnippetsExtractor,
-    WaveClusSnippetsExtractor
-]
+snippets_extractor_full_list = [NpySnippetsExtractor, WaveClusSnippetsExtractor]
 
 
 recording_extractor_full_dict = {recext.name: recext for recext in recording_extractor_full_list}
 sorting_extractor_full_dict = {recext.name: recext for recext in sorting_extractor_full_list}
 snippets_extractor_full_dict = {recext.name: recext for recext in snippets_extractor_full_list}
-
 
 
 def get_recording_extractor_from_name(name: str) -> Type[BaseRecording]:

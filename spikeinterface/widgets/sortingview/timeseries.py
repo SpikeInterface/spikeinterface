@@ -1,5 +1,6 @@
-import numpy as np
 import warnings
+
+import numpy as np
 
 from ..base import to_attr
 from ..timeseries import TimeseriesWidget
@@ -12,6 +13,7 @@ class TimeseriesPlotter(SortingviewPlotter):
 
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
+
         try:
             import pyvips
         except ImportError:

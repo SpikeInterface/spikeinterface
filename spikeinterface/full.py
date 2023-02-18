@@ -10,15 +10,16 @@ import spikeinterface as si
 import spieinterface.full as si
 """
 import importlib.metadata
+
 __version__ = importlib.metadata.version("spikeinterface")
 
-from .core import *
-from .extractors import *
-from .sorters import *
-from .preprocessing import *
-from .postprocessing import *
-from .qualitymetrics import *
-from .curation import *
 from .comparison import *
-from .widgets import *
+from .core import *
+from .curation import *
 from .exporters import *
+from .extractors import *
+from .postprocessing import *
+from .preprocessing import *
+from .qualitymetrics import *
+from .sorters import *
+from .widgets import *

@@ -1,5 +1,5 @@
-import pytest
 import numpy as np
+import pytest
 
 from spikeinterface.extractors import toy_example
 
@@ -20,5 +20,5 @@ def test_toy_example():
     print(probe)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_toy_example()

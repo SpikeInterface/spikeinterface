@@ -1,4 +1,4 @@
-'''
+"""
 Handling probe information
 ===========================
 
@@ -10,8 +10,9 @@ Depending on the dataset, the :py:class:`~probeinterface.Probe` object can be al
 manually.
 
 Here's how!
-'''
+"""
 import numpy as np
+
 import spikeinterface.extractors as se
 
 ##############################################################################
@@ -38,11 +39,11 @@ plot_probe(probe)
 
 from probeinterface import get_probe
 
-other_probe = get_probe('cambridgeneurotech', 'ASSY-37-E-1')
+other_probe = get_probe("cambridgeneurotech", "ASSY-37-E-1")
 print(other_probe)
 
 other_probe.set_device_channel_indices(np.arange(32))
-recording_2_shanks = recording.set_probe(other_probe, group_mode='by_shank')
+recording_2_shanks = recording.set_probe(other_probe, group_mode="by_shank")
 plot_probe(recording_2_shanks.get_probe())
 
 ###############################################################################
@@ -51,9 +52,9 @@ plot_probe(recording_2_shanks.get_probe())
 # We can use this information to split the recording in two sub recordings:
 
 print(recording_2_shanks)
-print(recording_2_shanks.get_property('group'))
+print(recording_2_shanks.get_property("group"))
 
-rec0, rec1 = recording_2_shanks.split_by(property='group')
+rec0, rec1 = recording_2_shanks.split_by(property="group")
 print(rec0)
 print(rec1)
 

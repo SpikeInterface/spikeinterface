@@ -5,15 +5,16 @@ It is useful when we do extractor.save(name='name').
 """
 
 import tempfile
-from pathlib import Path
 from copy import deepcopy
-from .job_tools import job_keys, _shared_job_kwargs_doc
+from pathlib import Path
+
+from .job_tools import _shared_job_kwargs_doc, job_keys
 
 ########################################
 
 global temp_folder
 global temp_folder_set
-base = Path(tempfile.gettempdir()) / 'spikeinterface_cache'
+base = Path(tempfile.gettempdir()) / "spikeinterface_cache"
 temp_folder_set = False
 
 
@@ -61,7 +62,7 @@ def reset_global_tmp_folder():
 ########################################
 
 global dataset_folder
-dataset_folder = Path.home() / 'spikeinterface_datasets'
+dataset_folder = Path.home() / "spikeinterface_datasets"
 global dataset_folder_set
 dataset_folder_set = False
 
@@ -112,16 +113,18 @@ def get_global_job_kwargs():
 def set_global_job_kwargs(**job_kwargs):
     """
     Set the global job kwargs.
-    
+
     Parameters
     ----------
-    
+
     {}
     """
     global global_job_kwargs
     for k in job_kwargs:
-        assert k in job_keys, (f"{k} is not a valid job keyword argument. "
-                               f"Available keyword arguments are: {list(job_keys)}")
+        assert k in job_keys, (
+            f"{k} is not a valid job keyword argument. "
+            f"Available keyword arguments are: {list(job_keys)}"
+        )
     global_job_kwargs.update(job_kwargs)
     global global_job_kwargs_set
     global_job_kwargs_set = True

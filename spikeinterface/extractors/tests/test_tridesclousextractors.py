@@ -1,13 +1,13 @@
 import shutil
 from pathlib import Path
 
-import pytest
 import numpy as np
+import pytest
 
 from spikeinterface.extractors import *
 
 
-@pytest.mark.skip('Tridesclous can be tested after running run_tridesclous()')
+@pytest.mark.skip("Tridesclous can be tested after running run_tridesclous()")
 def test_tridesclousextractors():
     # not tested here, tested in run_tridesclous(...)
     pass
@@ -17,5 +17,5 @@ def test_tridesclousextractors():
     #  print(sorting)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_tridesclousextractors()

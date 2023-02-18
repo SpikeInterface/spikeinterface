@@ -1,5 +1,5 @@
-from .metrics import MetricsPlotter
 from ..template_metrics import TemplateMetricsWidget
+from .metrics import MetricsPlotter
 
 
 class TemplateMetricsPlotter(MetricsPlotter):

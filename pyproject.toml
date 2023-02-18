@@ -87,6 +87,10 @@ widgets = [
     "figurl-jupyter"
 ]
 
+dev = [
+    "pre-commit",
+]
+
 test = [
     "pytest",
     "pytest-cov",
@@ -129,7 +133,15 @@ test = [
 ]
 
 
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+py_version = 310
 
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
 
 
 [tool.pytest.ini_options]

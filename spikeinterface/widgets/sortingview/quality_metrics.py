@@ -1,5 +1,5 @@
-from .metrics import MetricsPlotter
 from ..quality_metrics import QualityMetricsWidget
+from .metrics import MetricsPlotter
 
 
 class QualityMetricsPlotter(MetricsPlotter):
