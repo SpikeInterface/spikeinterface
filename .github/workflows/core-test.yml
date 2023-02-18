@@ -33,7 +33,7 @@ jobs:
       - name: Installad datalad 
         run: |
           pip install datalad-installer
-          datalad-installer --sudo ok git-annex --method conda
+          datalad-installer --sudo ok git-annex --method datalad/packages
           pip install datalad
       - name: Test core with pytest
         run: |
