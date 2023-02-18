@@ -32,7 +32,7 @@ jobs:
           path: ~/test_env
           key: ${{ runner.os }}-venv-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
       - name: Cache found?
-        run: echo "Cache-hit == ${{steps.cache-venv.outputs.cache-hit == 'true'}} "
+        run: echo "Cache-hit == ${{steps.cache-venv.outputs.cache-hit == 'true'}}"
       - name: Create the virtual environment to be cached 
         if: steps.cache-venv.outputs.cache-hit != 'true'
         run: |
@@ -52,17 +52,17 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - name: Get ephy_testing_data current head hash
+      - name: Get has of HEAD on the ephy_testing_data repo (SHA)
         id: repo_hash
         run: |
-          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+          echo "dataset_hash=${{(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)}}" >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
         id: cache-datasets
         with:
           path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
       - name: Cache found?
-        run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}} "
+        run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}}"
       - name: Installing datalad and git-annex
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
@@ -75,7 +75,9 @@ jobs:
       - name: Download dataset
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          datalad install -rg https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
+          datalad install --recursive --get-data https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
+      - name: Show size of the cache to assert data is downloaded
+        run: |
           mv --force ./ephy_testing_data ~/spikeinterface_datasets
           cd ~
           du -hs spikeinterface_datasets
