@@ -31,7 +31,7 @@ jobs:
           pip install zarr  
           pip install -e .
       - name: Installad datalad on Linux
-        if: runner.os == 'Linux' || runner.os == "Windows" 
+        if: runner.os == 'Linux' || runner.os == 'Windows' 
         run: |
           pip install datalad-installer
           datalad-installer --sudo ok git-annex --method datalad/packages
