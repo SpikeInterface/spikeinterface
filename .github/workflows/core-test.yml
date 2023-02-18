@@ -28,6 +28,12 @@ jobs:
           # zarr is needed to test core
           pip install zarr  
           pip install -e .
+      - name: Installad datalad 
+        run: |
+          pip install datalad-installer
+          datalad-installer --sudo ok git-annex -m datalad/packages
+          pip install datalad
+        shell: bash  # Necessary for pipeline to work on windows
       - name: Test core with pytest
         run: |
           pytest -vv spikeinterface/core --durations=0 --durations-min=0.001 > report.txt

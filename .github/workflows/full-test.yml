@@ -96,7 +96,9 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@v35
       - name: THE TEST THAT I WANT
-        run: pytest -rP spikeinterface/core/tests/test_datasets.py 
+        run: |
+          source ~/test_env/bin/activate
+          pytest -rP spikeinterface/core/tests/test_datasets.py 
       - name: Module changes
         id: modules-changed
         run: |
