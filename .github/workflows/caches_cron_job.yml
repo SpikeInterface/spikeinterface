@@ -63,7 +63,7 @@ jobs:
         id: cache-datasets
         with:
           path: ~/spikeinterface_datasets
-          key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
+          key: ${{ runner.os }}-datasetsTEST-${{ steps.repo_hash.outputs.dataset_hash }}
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}}"
       - name: Installing datalad and git-annex
