@@ -35,7 +35,7 @@ jobs:
           pip install datalad-installer
           datalad-installer --sudo ok git-annex -m datalad/packages
           pip install datalad
-        shell: bash  # Necessary for pipeline to work on windows
+          git-annex version
       - name: Test core with pytest
         run: |
           pytest -rA spikeinterface/core/tests/test_datasets.py 
