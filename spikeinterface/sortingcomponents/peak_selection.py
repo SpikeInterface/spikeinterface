@@ -1,12 +1,13 @@
 """Sorting components: peak selection"""
 
 import numpy as np
-import scipy
 from sklearn.preprocessing import QuantileTransformer
 
 
 def select_peaks(peaks, method='uniform', seed=None, return_indices=False, **method_kwargs):
-    """Method to subsample all the found peaks before clustering
+    """
+    Method to select a subset of peaks from a set of peaks.
+    Usually use for reducing computational foorptint of downstream methods.
     Parameters
     ----------
     peaks: the peaks that have been found
@@ -71,14 +72,20 @@ def select_peaks(peaks, method='uniform', seed=None, return_indices=False, **met
         return selected_peaks
 
 def select_peak_indices(peaks, method, seed, **method_kwargs):
-    """Method to subsample all the found peaks before clustering.  Returns selected_indices.
+    """
+    Method to subsample all the found peaks before clustering.  Returns selected_indices.
+    
     This function is wrapped by select_peaks -- see
+    
     :py:func:`spikeinterface.sortingcomponents.peak_selection.select_peaks` for detailed documentation.
     """
-    selected_indices = []
     
-    if seed is not None:
-        np.random.seed(seed)
+    selected_indices = []
+
+    
+    seed = seed if seed else None
+    rng = np.random.default_rng(seed=seed)    
+    
 
     if method == 'uniform':
 
@@ -95,10 +102,10 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
             for channel in np.unique(peaks['channel_ind']):
                 peaks_indices = np.where(peaks['channel_ind'] == channel)[0]
                 max_peaks = min(peaks_indices.size, params['n_peaks'])
-                selected_indices += [np.random.choice(peaks_indices, size=max_peaks, replace=False)]
+                selected_indices += [rng.choice(peaks_indices, size=max_peaks, replace=False)]
         else:
             num_peaks = min(peaks.size, params['n_peaks'])
-            selected_indices = [np.random.choice(peaks.size, size=num_peaks, replace=False)]
+            selected_indices = [rng.choice(peaks.size, size=num_peaks, replace=False)]
 
     elif method in ['smart_sampling_amplitudes', 'smart_sampling_locations', 'smart_sampling_locations_and_time']:
 
@@ -122,8 +129,6 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
             assert params['n_peaks'] is not None, "n_peaks should be defined!"
             assert params['noise_levels'] is not None, "Noise levels should be provided"
 
-            histograms = {}
-
             if params['select_per_channel']:
                 for channel in np.unique(peaks['channel_ind']):
 
@@ -139,12 +144,12 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
                         my_selection = np.zeros(0, dtype=np.int32)
                         all_index = np.arange(len(snrs))
                         while my_selection.size < params['n_peaks']:
-                            candidates = all_index[np.logical_not(np.in1d(all_index, my_selection))]
-                            probabilities = np.random.rand(len(candidates))
+                            candidates = all_index[np.logical_not(np.isin(all_index, my_selection))]
+                            probabilities = rng.random(size=len(candidates))
                             valid = candidates[np.where(snrs[candidates,0] < probabilities)[0]]
                             my_selection = np.concatenate((my_selection, valid))
 
-                        selected_indices += [peaks_indices[np.random.permutation(my_selection)[:params['n_peaks']]]]
+                        selected_indices += [peaks_indices[rng.permutation(my_selection)[:params['n_peaks']]]]
 
             else:
                 if params['n_peaks'] > peaks.size:
@@ -157,12 +162,12 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
                     my_selection = np.zeros(0, dtype=np.int32)
                     all_index = np.arange(len(snrs))
                     while my_selection.size < params['n_peaks']:
-                        candidates = all_index[np.logical_not(np.in1d(all_index, my_selection))]
-                        probabilities = np.random.rand(len(candidates))
+                        candidates = all_index[np.logical_not(np.isin(all_index, my_selection))]
+                        probabilities = rng.random(size=len(candidates))
                         valid = candidates[np.where(snrs[candidates,0] < probabilities)[0]]
                         my_selection = np.concatenate((my_selection, valid))
 
-                    selected_indices = [np.random.permutation(my_selection)[:params['n_peaks']]]
+                    selected_indices = [rng.permutation(my_selection)[:params['n_peaks']]]
 
         elif method == 'smart_sampling_locations':
 
@@ -196,18 +201,18 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
                 my_selection = np.zeros(0, dtype=np.int32)
                 all_index = np.arange(peaks.size)
                 while my_selection.size < params['n_peaks']:
-                    candidates = all_index[np.logical_not(np.in1d(all_index, my_selection))]
+                    candidates = all_index[np.logical_not(np.isin(all_index, my_selection))]
 
-                    probabilities = np.random.rand(len(candidates))
+                    probabilities = rng.random(size=len(candidates))
                     data_x = data[:, 0] < probabilities
 
-                    probabilities = np.random.rand(len(candidates))
+                    probabilities = rng.random(size=len(candidates))
                     data_y = data[:, 1] < probabilities
 
                     valid = candidates[np.where(data_x * data_y)[0]]
                     my_selection = np.concatenate((my_selection, valid))
 
-                selected_indices = [np.random.permutation(my_selection)[:params['n_peaks']]]
+                selected_indices = [rng.permutation(my_selection)[:params['n_peaks']]]
 
         elif method == 'smart_sampling_locations_and_time':
 
@@ -241,21 +246,21 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
                 my_selection = np.zeros(0, dtype=np.int32)
                 all_index = np.arange(peaks.size)
                 while my_selection.size < params['n_peaks']:
-                    candidates = all_index[np.logical_not(np.in1d(all_index, my_selection))]
+                    candidates = all_index[np.logical_not(np.isin(all_index, my_selection))]
 
-                    probabilities = np.random.rand(len(candidates))
+                    probabilities = rng.random(size=len(candidates))
                     data_x = data[:, 0] < probabilities
 
-                    probabilities = np.random.rand(len(candidates))
+                    probabilities = rng.random(size=len(candidates))
                     data_y = data[:, 1] < probabilities
 
-                    probabilities = np.random.rand(len(candidates))
+                    probabilities = rng.random(size=len(candidates))
                     data_t = data[:, 2] < probabilities
 
                     valid = candidates[np.where(data_x * data_y * data_t)[0]]
                     my_selection = np.concatenate((my_selection, valid))
 
-                selected_indices = [np.random.permutation(my_selection)[:params['n_peaks']]]
+                selected_indices = [rng.permutation(my_selection)[:params['n_peaks']]]
 
     else:
 
