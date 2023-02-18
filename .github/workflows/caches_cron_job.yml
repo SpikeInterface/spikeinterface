@@ -54,10 +54,11 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - name: Get the HEAD hash (SHA) of the ephy_testing_data repo 
+      - name: Get current hash (SHA) of the ephy_testing_data repo 
         id: repo_hash
         run: |
-          echo "dataset_hash=${{git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1}}" >> $GITHUB_OUTPUT
+          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" 
+          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
         id: cache-datasets
         with:
