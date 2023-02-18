@@ -95,6 +95,8 @@ jobs:
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v35
+      - name: THE TEST THAT I WANT
+        run: pytest -rP spikeinterface/core/tests/test_datasets.py 
       - name: Module changes
         id: modules-changed
         run: |
@@ -151,7 +153,7 @@ jobs:
       - name: Test core
         run: |
           source ~/test_env/bin/activate
-          pytest -vv -m core --durations=0 --durations-min=0.001 > report_core.txt
+          pytest -rP -vv -m core --durations=0 --durations-min=0.001 > report_core.txt
           cat report_core.txt
           echo "# Timing profile of core tests" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_core.txt >> $GITHUB_STEP_SUMMARY 

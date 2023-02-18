@@ -21,12 +21,26 @@ def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_e
         #  if not is_set_global_dataset_folder():
         #  print(f'Local folder is {base_local_folder}, Use set_global_dataset_folder() to set it globally')
         local_folder = base_local_folder / repo.split('/')[-1]
-    
+
+    print("=============================")
+    print("=============================")
+    print("=============================")
+    print("=============================")
+    print("=============================")
+    print("=============================")
+
     print("Folder used in downloaded")
     print(get_global_dataset_folder())
     print(local_folder)
     print("first condition", local_folder.exists())
     print("second condition", GitRepo.is_valid_repo(local_folder))
+
+
+    print("=============================")
+    print("=============================")
+    print("=============================")
+    print("=============================")
+    print("=============================")
     
     if local_folder.exists() and GitRepo.is_valid_repo(local_folder):
         dataset = datalad.api.Dataset(path=local_folder)
