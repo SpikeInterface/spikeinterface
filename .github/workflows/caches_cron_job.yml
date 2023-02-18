@@ -57,13 +57,13 @@ jobs:
       - name: Get current hash (SHA) of the ephy_testing_data repo 
         id: repo_hash
         run: |
-          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/CatalystNeuro/behavior_testing_data HEAD | cut -f1)" 
-          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/CatalystNeuro/behavior_testing_data HEAD | cut -f1)" >> $GITHUB_OUTPUT
+          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" 
+          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
         id: cache-datasets
         with:
           path: ~/spikeinterface_datasets
-          key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
+          key: ${{ runner.os }}-datasetsTEST-${{ steps.repo_hash.outputs.dataset_hash }}
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}}"
       - name: Installing datalad and git-annex
@@ -78,12 +78,12 @@ jobs:
       - name: Download dataset
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          datalad install --recursive --get-data https://gin.g-node.org/CatalystNeuro/behavior_testing_data
+          datalad install --recursive --get-data https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
       - name: Move the downloaded data to the right directory
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
           mkdir --parents --verbose ~/spikeinterface_datasets/ephy_testing_data/
-          mv --force ./behavior_testing_data ~/spikeinterface_datasets/
+          mv --force ./ephy_testing_data ~/spikeinterface_datasets/
       - name: Show size of the cache to assert data is downloaded
         run: |
           cd ~
@@ -91,4 +91,6 @@ jobs:
           du -hs spikeinterface_datasets
           cd spikeinterface_datasets
           pwd
-          ls -l  # Should show /ephy_testing_data
+          ls -lh  # Should show /ephy_testing_data
+          cd /ephy_testing_data
+          ls -lh

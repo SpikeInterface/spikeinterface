@@ -36,7 +36,8 @@ jobs:
         shell: bash  # Necessary for pipeline to work on windows
       - name: Test core with pytest
         run: |
-          pytest --capture=tee-sys --full-trace -vv spikeinterface/core --durations=0 --durations-min=0.001 > report.txt
+          pytest -rA spikeinterface/core/tests/test_datasets.py 
+          pytest --capture=tee-sys --full-trace -vv -rA spikeinterface/core --durations=0 --durations-min=0.001 > report.txt
           cat report.txt
       - name: Build test summary
         run: | 
