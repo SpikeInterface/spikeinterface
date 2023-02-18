@@ -33,11 +33,11 @@ jobs:
       - name: Installad datalad 
         run: |
           pip install datalad-installer
-          datalad-installer --sudo ok git-annex -m datalad/packages
+          datalad-installer --sudo ok git-annex --method auto
           pip install datalad
-          git-annex version
       - name: Test core with pytest
         run: |
+          git-annex version
           pytest -rA spikeinterface/core/tests/test_datasets.py 
           pytest --capture=tee-sys --full-trace -vv -rA spikeinterface/core --durations=0 --durations-min=0.001 > report.txt
           cat report.txt
