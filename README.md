@@ -41,6 +41,13 @@
 		</a>
 	</td>
 </tr>
+<tr>
+	<td>Format</td>
+	<td>
+		<a href="https://github.com/psf/black"></a>
+        <a href="https://github.com/PyCQA/isort"></a>
+	</td>
+</tr>
 </table>
 
 [![Twitter](https://img.shields.io/badge/@spikeinterface-%231DA1F2.svg?style=for-the-badge&logo=Twitter&logoColor=white)](https://twitter.com/spikeinterface) [![Mastodon](https://img.shields.io/badge/-@spikeinterface-%232B90D9?style=for-the-badge&logo=mastodon&logoColor=white)](https://fosstodon.org/@spikeinterface)
