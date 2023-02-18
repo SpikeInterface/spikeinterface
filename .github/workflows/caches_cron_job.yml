@@ -7,6 +7,8 @@ on:
       - master
   schedule:
     - cron: "0 12 * * *"  # Daily at noon UTC
+  pull_request:
+    types: [synchronize, opened, reopened]
 
 jobs:
   
@@ -76,8 +78,16 @@ jobs:
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
           datalad install --recursive --get-data https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
+      - name: Move the downloaded data to the right directory
+        if: steps.cache-datasets.outputs.cache-hit != 'true'
+        run: |
+          mkdir --parents --verbose ~/spikeinterface_datasets/ephy_testing_data/
+          mv --force ./ephy_testing_data ~/spikeinterface_datasets/
       - name: Show size of the cache to assert data is downloaded
         run: |
-          mv --force ./ephy_testing_data ~/spikeinterface_datasets
           cd ~
+          pwd 
           du -hs spikeinterface_datasets
+          cd spikeinterface_datasets
+          pwd
+          ls -l  # Should show /ephy_testing_data
