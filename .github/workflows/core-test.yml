@@ -22,7 +22,6 @@ jobs:
         with:
           python-version: '3.10'
           cache: 'pip' # caching pip dependencies
-          cache-dependency-path: '**/pyproject.toml'
       - name: Install dependencies
         run: |
           git config --global user.email "CI@example.com"
@@ -33,36 +32,36 @@ jobs:
           pip install zarr  
           pip install -e .
       - name: Installad datalad
+        # run: |
+        #   pip install datalad-installer
+        #   if [ ${{ runner.os }} = 'Linux' ]; then
+        #     datalad-installer --sudo ok git-annex --method datalad/packages
+        #   elif [ ${{ runner.os }} = 'macOS' ]; then
+        #     datalad-installer --sudo ok git-annex --method brew
+        #   elif [ ${{ runner.os }} = 'Windows' ]; then
+        #     datalad-installer --sudo ok git-annex --method datalad/git-annex:release
+        #   fi
+        #   pip install datalad
+        #   git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
+        # shell: bash
+      - name: Installad datalad on Linux
+        if: runner.os == 'Linux'
         run: |
           pip install datalad-installer
-          if [ ${{ runner.os }} = 'Linux' ]; then
-            datalad-installer --sudo ok git-annex --method datalad/packages
-          elif [ ${{ runner.os }} = 'macOS' ]; then
-            datalad-installer --sudo ok git-annex --method brew
-          elif [ ${{ runner.os }} = 'Windows' ]; then
-            datalad-installer --sudo ok git-annex --method datalad/git-annex:release
-          fi
+          datalad-installer --sudo ok git-annex --method datalad/packages
           pip install datalad
-          git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
-        shell: bash
-      # - name: Installad datalad on Linux
-      #   if: runner.os == 'Linux'
-      #   run: |
-      #     pip install datalad-installer
-      #     datalad-installer --sudo ok git-annex --method datalad/packages
-      #     pip install datalad
-      # - name: Install datalad on Windows 
-      #   if: runner.os == 'Windows'
-      #   run: |
-      #     pip install datalad-installer
-      #     datalad-installer --sudo ok git-annex --method datalad/git-annex:release
-      #     pip install datalad
-      # - name: Install datalad on Mac
-      #   if: runner.os == 'macOS' 
-      #   run: |
-      #     pip install datalad-installer
-      #     datalad-installer --sudo ok git-annex --method brew
-      #     pip install datalad
+      - name: Install datalad on Windows 
+        if: runner.os == 'Windows'
+        run: |
+          pip install datalad-installer
+          datalad-installer --sudo ok git-annex --method datalad/git-annex:release
+          pip install datalad
+      - name: Install datalad on Mac
+        if: runner.os == 'macOS' 
+        run: |
+          pip install datalad-installer
+          datalad-installer --sudo ok git-annex --method brew
+          pip install datalad
       - name: Test download
         run: pytest -rA spikeinterface/core/tests/test_datasets.py 
       - name: Test core with pytest
