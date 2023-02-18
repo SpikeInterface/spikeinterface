@@ -75,6 +75,7 @@ jobs:
           pip install datalad-installer
           datalad-installer --sudo ok git-annex --method datalad/packages
           pip install datalad
+          git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
       - name: Download dataset
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |

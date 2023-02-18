@@ -84,7 +84,7 @@ jobs:
           HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
         with:
           path: ~/spikeinterface_datasets
-          key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
+          key: ${{ runner.os }}-datasetsTEST-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
           restore-keys: |
             ${{ runner.os }}-datasets
       - name: Check ephy_testing_data files
@@ -98,7 +98,7 @@ jobs:
       - name: THE TEST THAT I WANT
         run: |
           source ~/test_env/bin/activate
-          pytest -rP spikeinterface/core/tests/test_datasets.py 
+          pytest -rA spikeinterface/core/tests/test_datasets.py 
       - name: Module changes
         id: modules-changed
         run: |
