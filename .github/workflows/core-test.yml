@@ -63,9 +63,10 @@ jobs:
       #     pip install datalad-installer
       #     datalad-installer --sudo ok git-annex --method brew
       #     pip install datalad
+      - name: Test download
+        run: pytest -rA spikeinterface/core/tests/test_datasets.py 
       - name: Test core with pytest
         run: |
-          pytest -rA spikeinterface/core/tests/test_datasets.py 
           pytest --capture=tee-sys --full-trace -vv -rA spikeinterface/core --durations=0 --durations-min=0.001 > report.txt
           cat report.txt
       - name: Build test summary
