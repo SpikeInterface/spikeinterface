@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: '3.10'
           cache: 'pip' # caching pip dependencies
-          cache-dependency-path: pyproject.toml
+          cache-dependency-path: '**/pyproject.toml'
       - name: Install dependencies
         run: |
           git config --global user.email "CI@example.com"
@@ -44,6 +44,7 @@ jobs:
           fi
           pip install datalad
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
+        shell: bash
       # - name: Installad datalad on Linux
       #   if: runner.os == 'Linux'
       #   run: |
