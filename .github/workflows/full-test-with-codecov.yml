@@ -4,8 +4,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 12 * * *"  # Daily at noon UTC
-  pull_request:
-    types: [synchronize, opened, reopened]
 
 env:
   KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
