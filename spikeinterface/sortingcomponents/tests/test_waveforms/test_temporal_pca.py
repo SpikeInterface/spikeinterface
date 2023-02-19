@@ -125,14 +125,14 @@ def test_initialization_without_parents_failure(mearec_recording, model_path_of_
     model_folder_path = model_path_of_trained_pca
     dummy_parent = PipelineNode(recording=recording)
     
-    match_error = f"TemporalPCA should have a {WaveformExtractorNode.__name__} in the parents"
+    match_error = f"TemporalPCA should have a {WaveformExtractorNode.__name__} in its parents"
 
     # Parents without waveform extraction
-    with pytest.raises(AttributeError, match=match_error):
+    with pytest.raises(TypeError, match=match_error):
         TemporalPCAProjection(recording=recording, model_folder_path=model_folder_path, parents=[dummy_parent])
 
     # Empty parents
-    with pytest.raises(AttributeError, match=match_error):
+    with pytest.raises(TypeError, match=match_error):
         TemporalPCAProjection(recording=recording, model_folder_path=model_folder_path, parents=None)
 
 def test_pca_projection_waveform_extract_and_model_mismatch(mearec_recording, model_path_of_trained_pca):
@@ -147,7 +147,7 @@ def test_pca_projection_waveform_extract_and_model_mismatch(mearec_recording, mo
         recording=recording, ms_before=ms_before, ms_after=ms_after, return_ouput=False
     )
     # Pytest raise assertion
-    with pytest.raises(AttributeError, match="PCA model and waveforms mismatch *"):
+    with pytest.raises(ValueError, match="PCA model and waveforms mismatch *"):
         TemporalPCAProjection(recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms])
         
 def test_pca_projection_incorrect_model_path(mearec_recording, model_path_of_trained_pca):
@@ -162,5 +162,5 @@ def test_pca_projection_incorrect_model_path(mearec_recording, model_path_of_tra
         recording=recording, ms_before=ms_before, ms_after=ms_after, return_ouput=False
     )
     # Pytest raise assertion
-    with pytest.raises(AttributeError, match="model_path folder is not a folder or does not exist. *"):
+    with pytest.raises(TypeError, match="model_path folder is not a folder or does not exist. *"):
         TemporalPCAProjection(recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms])
