@@ -45,7 +45,7 @@
 	<td>Format</td>
 	<td>
 		<a href="https://github.com/psf/black"></a>
-        <a href="https://github.com/PyCQA/isort"></a>
+        	<a href="https://github.com/PyCQA/isort"></a>
 	</td>
 </tr>
 </table>
