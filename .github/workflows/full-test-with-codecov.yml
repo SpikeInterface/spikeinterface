@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 12 * * *"  # Daily at noon UTC
+  pull_request:
+    types: [synchronize, opened, reopened]
 
 env:
   KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
@@ -11,24 +13,45 @@ env:
 
 jobs:
   build-and-test:
-    name: Codecov
-    runs-on: "ubuntu-latest"
+    name: Codecov in Ubuntu
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # "macos-latest", "windows-latest"
+        os: ["ubuntu-latest", ]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.10'
       - name: Get current year-month
         id: date
         run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
-      - uses: actions/cache/restore@v3
+      - name: Restore cached virtual environment with dependencies
+        uses: actions/cache/restore@v3
         id: cache-venv
         with:
           path: ~/test_env
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
-      - name: Python version
+          restore-keys: |
+            ${{ runner.os }}-venv-
+      - name: Get ephy_testing_data current head hash
+        # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
+        id: vars
         run: |
-          python --version
+          echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+      - name: Restore cached gin data for extractors tests
+        uses: actions/cache/restore@v3
+        id: cache-datasets
+        env:
+          # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
+          HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
+        with:
+          path: ~/spikeinterface_datasets
+          key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
+          restore-keys: |
+            ${{ runner.os }}-datasets
       - name: Install dependencies
         run: |
           sudo apt update
@@ -58,25 +81,15 @@ jobs:
       - name: git-annex version
         run: |
           git-annex version
-      - name: pip list
+      - name: Packages installed
         run: |
           source ~/test_env/bin/activate
           pip list
-      - name: Get ephy_testing_data current head hash
-        # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
-        id: vars
+      - name: Check ephy_testing_data files
         run: |
-          echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
-      - uses: actions/cache/restore@v3
-        id: cache-datasets
-        env:
-          # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
-          HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
-        with:
-          path: ~/spikeinterface_datasets
-          key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
-          restore-keys: |
-            ${{ runner.os }}-datasets
+          if [ -d "$HOME/spikeinterface_datasets" ]; then
+            find $HOME/spikeinterface_datasets
+          fi
       - name: run tests
         run: |
           source ~/test_env/bin/activate
