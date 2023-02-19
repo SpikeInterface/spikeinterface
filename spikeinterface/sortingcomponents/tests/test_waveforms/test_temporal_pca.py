@@ -135,7 +135,7 @@ def test_initialization_without_parents_failure(mearec_recording, model_path_of_
     with pytest.raises(TypeError, match=match_error):
         TemporalPCAProjection(recording=recording, model_folder_path=model_folder_path, parents=None)
 
-def test_pca_projection_waveform_extract_and_model_mismatch(mearec_recording, model_path_of_trained_pca):
+def test_pca_waveform_extract_and_model_mismatch(mearec_recording, model_path_of_trained_pca):
     
     recording = mearec_recording
     model_folder_path = model_path_of_trained_pca
@@ -150,7 +150,7 @@ def test_pca_projection_waveform_extract_and_model_mismatch(mearec_recording, mo
     with pytest.raises(ValueError, match="PCA model and waveforms mismatch *"):
         TemporalPCAProjection(recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms])
         
-def test_pca_projection_incorrect_model_path(mearec_recording, model_path_of_trained_pca):
+def test_pca_incorrect_model_path(mearec_recording, model_path_of_trained_pca):
     
     recording = mearec_recording
     model_folder_path = model_path_of_trained_pca / "a_file_that_does_not_exist.pkl"
