@@ -32,7 +32,7 @@ jobs:
           pip install -e .
       - name: Test core with pytest
         run: |
-          pytest --capture=tee-sys --full-trace -vv -rA spikeinterface/core --durations=0 --durations-min=0.001 > report.txt
+          pytest --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 spikeinterface/core > report.txt
           cat report.txt
       - name: Build test summary
         run: | 
