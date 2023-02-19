@@ -231,3 +231,6 @@ tridesclous_output/
 # waveforms/
 waveforms_mearec/
 waveforms_rm/
+
+# Mac OS
+.DS_Store

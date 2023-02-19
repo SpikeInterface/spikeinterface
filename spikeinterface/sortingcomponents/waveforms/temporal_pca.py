@@ -35,7 +35,7 @@ class TemporalPCBaseNode(PipelineNode):
                 f"model_path folder is not a folder or does not exist. \n"
                 f"A model can be trained by using{self.__class__.__name__}.fit(...)"
             )
-            raise AttributeError(exception_string)
+            raise TypeError(exception_string)
 
         # Load the model and the time interval dict from the model_folder
         model_path = Path(model_folder_path) / "pca_model.pkl"
@@ -49,8 +49,8 @@ class TemporalPCBaseNode(PipelineNode):
         try: 
             waveform_extractor = next(parent for parent in self.parents if isinstance(parent, WaveformExtractorNode))
         except (StopIteration, TypeError):
-            exception_string = f"TemporalPCA should have a {WaveformExtractorNode.__name__} in the parents"
-            raise AttributeError(exception_string)
+            exception_string = f"TemporalPCA should have a {WaveformExtractorNode.__name__} in its parents"
+            raise TypeError(exception_string)
 
         self.assert_model_and_waveform_temporal_match(waveform_extractor)
     
@@ -77,7 +77,7 @@ class TemporalPCBaseNode(PipelineNode):
                 f"{model_ms_after=} and {waveforms_ms_after=} \n"
                 f"{model_sampling_frequency=} and {waveforms_sampling_frequency=} \n"
             )
-            raise AttributeError(exception_string)
+            raise ValueError(exception_string)
     
     @staticmethod
     def fit(
