@@ -37,12 +37,6 @@ class PipelineNode:
         if parents is not None:
             self._kwargs['parents'] = parents
         
-    @classmethod
-    def from_dict(cls, recording, kwargs):
-        return cls(recording, **kwargs)
-
-    def to_dict(self):
-        return self._kwargs
             
     def post_check(self):
         # can optionaly be overwritten

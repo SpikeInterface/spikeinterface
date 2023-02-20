@@ -23,6 +23,8 @@ class WhitenRecording(BasePreprocessor):
         Random seed for random chunk, by default None
     W : 2d np.array
         Pre-computed whitening matrix, by default None
+    M : 1d np.array
+        Pre-computed means
 
     Returns
     -------
@@ -32,12 +34,14 @@ class WhitenRecording(BasePreprocessor):
     name = 'whiten'
 
     def __init__(self, recording, dtype="float32", num_chunks_per_segment=20,
-                 chunk_size=10000, seed=None, W=None):
+                 chunk_size=10000, seed=None, W=None, M=None):
         # fix dtype
         dtype_ = fix_dtype(recording, dtype)
 
         if W is not None:
+            assert M is not None, "W and M must be not None"
             W = np.array(W)
+            M = np.array(M)
         else:
             random_data = get_random_data_chunks(recording, num_chunks_per_segment=num_chunks_per_segment,
                                                 chunk_size=chunk_size, concatenated=True, seed=seed,
@@ -60,7 +64,8 @@ class WhitenRecording(BasePreprocessor):
 
         self._kwargs = dict(recording=recording.to_dict(), dtype=dtype,
                             num_chunks_per_segment=num_chunks_per_segment,
-                            chunk_size=chunk_size, seed=seed, W=W.tolist())
+                            chunk_size=chunk_size, seed=seed, 
+                            W=W.tolist(), M=M.tolist())
 
 
 class WhitenRecordingSegment(BasePreprocessorSegment):
