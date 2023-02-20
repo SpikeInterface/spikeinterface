@@ -71,7 +71,7 @@ jobs:
           git config --global user.name "CI Almighty"
           python -m pip install -U pip  # Official recommended way
           pip install datalad-installer
-          datalad-installer --sudo ok git-annex --method auto
+          datalad-installer --sudo ok git-annex --method datalad/packages
           pip install datalad
           git config --global filter.annex.process "git-annex filter-process"  # recommended for efficiency
       - name: Download dataset
