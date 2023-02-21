@@ -1,3 +1,6 @@
+import warnings
+import numpy as np
+
 from .base import BaseWidget
 from .utils import get_unit_colors
 
@@ -49,6 +52,15 @@ class MetricsBaseWidget(BaseWidget):
         if skip_metrics is not None:
             selected_metrics = [m for m in metrics.columns if m not in skip_metrics]
             metrics = metrics[selected_metrics]
+
+        # remove all NaNs metrics
+        nan_metrics = []
+        for m in metrics.columns:
+            if np.all(np.isnan(metrics[m])):
+                nan_metrics.append(m)
+        warnings.warn(f"Skipping {nan_metrics} because they contain all NaNs")
+        selected_metrics = [m for m in metrics.columns if m not in nan_metrics]
+        metrics = metrics[selected_metrics]
 
         plot_data = dict(
             metrics=metrics,

@@ -147,8 +147,9 @@ class PlotUpdater:
         self.ax_probe.axis("equal")
 
         for unit in unit_ids:
-            self.ax_probe.plot(channel_locations[self.next_data_plot['channel_inds'][unit], 0],
-                               channel_locations[self.next_data_plot['channel_inds'][unit], 1],
+            channel_inds = data_plot['sparsity'].unit_id_to_channel_indices[unit]
+            self.ax_probe.plot(channel_locations[channel_inds, 0],
+                               channel_locations[channel_inds, 1],
                                ls="", marker="o", markersize=3,
                                color=self.next_data_plot['unit_colors'][unit])
         self.ax_probe.set_xlim(np.min(channel_locations[:, 0])-10, np.max(channel_locations[:, 0])+10)
