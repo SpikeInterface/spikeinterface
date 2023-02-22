@@ -260,7 +260,7 @@ class DecentralizedRegistration:
         motion = np.zeros((temporal_bins.size, len(non_rigid_windows)), dtype=np.float64)
         windows_iter = non_rigid_windows
         if progress_bar:
-            windows_iter = tqdm(windows_iter, desc="Windows")
+            windows_iter = tqdm(windows_iter, desc="windows")
         if spatial_prior:
             all_pairwise_displacements = np.empty(
                 (len(non_rigid_windows), temporal_bins.size, temporal_bins.size),
@@ -878,8 +878,8 @@ def compute_global_displacement(
             V = np.array(pairwise_displacement[I, J])[0]
         else:
             V = pairwise_displacement[I, J]
-        M = csr_matrix((nnz_ones, (range(I.shape[0]), I)))
-        N = csr_matrix((nnz_ones, (range(I.shape[0]), J)))
+        M = csr_matrix((nnz_ones, (range(I.shape[0]), I)), shape=(I.shape[0], pairwise_displacement.shape[0]))
+        N = csr_matrix((nnz_ones, (range(I.shape[0]), J)), shape=(I.shape[0], pairwise_displacement.shape[0]))
         A = M - N
         idx = np.ones(A.shape[0], dtype=bool)
 
@@ -892,6 +892,7 @@ def compute_global_displacement(
 
     elif convergence_method == 'lsmr':
         from scipy import sparse
+        from scipy.stats import zscore
 
         D = pairwise_displacement
 
@@ -930,6 +931,10 @@ def compute_global_displacement(
         # so that the target p is indexed by i = bT + t (block/window major).
 
         # calculate coefficients matrices and target vector
+        # this list stores boolean masks corresponding to whether or not each
+        # term comes from the prior or the likelihood. we can trim the likelihood terms,
+        # but not the prior terms, in the trimmed least squares (robust iters) iterations below.
+        cannot_trim = []
         for Wb, Db in zip(W, D):
             # indices of active temporal pairs in this window
             I, J = np.nonzero(Wb > 0)
@@ -943,6 +948,7 @@ def compute_global_displacement(
             Nb = sparse.csr_matrix((pair_weights, (range(n_sampled), J)), shape=(n_sampled, T))
             block_sparse_kron = Mb - Nb
             block_disp_pairs = pair_weights * Db[I, J]
+            cannot_trim_block = np.ones_like(block_disp_pairs, dtype=bool)
 
             # add the temporal smoothness prior in this window
             if temporal_prior:
@@ -961,11 +967,16 @@ def compute_global_displacement(
                 block_disp_pairs = np.concatenate(
                     (block_disp_pairs, np.zeros(T - 1)),
                 )
+                cannot_trim_block = np.concatenate(
+                    (cannot_trim_block, np.zeros(T - 1, dtype=bool)),
+                )
 
             coefficients.append(block_sparse_kron)
             targets.append(block_disp_pairs)
+            cannot_trim.append(cannot_trim_block)
         coefficients = sparse.block_diag(coefficients)
         targets = np.concatenate(targets, axis=0)
+        cannot_trim = np.concatenate(cannot_trim, axis=0)
 
         # spatial smoothness prior: penalize difference of each block's
         # displacement with the next.
@@ -988,15 +999,32 @@ def compute_global_displacement(
             )
             coefficients = sparse.vstack((coefficients, spatial_diff_operator))
             targets = np.concatenate((targets, np.zeros((B - 1) * T, dtype=targets.dtype)))
+            cannot_trim = np.concatenate(can_trim, np.zeros((B - 1) * T, dtype=bool))
+        coefficients = coefficients.tocsr()
 
         # initialize at the column mean of pairwise displacements (in each window)
         p0 = D.mean(axis=2).reshape(B * T)
 
         # use LSMR to solve the whole problem || targets - coefficients @ motion ||^2
-        displacement, *_ = sparse.linalg.lsmr(coefficients, targets, x0=p0)
+        iters = range(max(1, lsqr_robust_n_iter))
+        if progress_bar and lsqr_robust_n_iter > 1:
+            iters = tqdm(iters, desc="robust lsqr")
+        for it in iters:
+            # trim active set -- start with no trimming
+            idx = slice(None)
+            if it:
+                idx = np.flatnonzero(
+                    cannot_trim 
+                    | (np.abs(zscore(coefficients @ displacement - targets)) <= robust_regression_sigma)
+                )
+            
+            # solve trimmed ols problem
+            displacement, *_ = sparse.linalg.lsmr(coefficients[idx], targets[idx], x0=p0)
+            
+            # warm start next iteration
+            p0 = displacement
+        
         displacement = displacement.reshape(B, T).T
-
-        # TODO: do we need to weight the upsampling somehow?
     else:
         raise ValueError(f"Method {convergence_method} doesn't exist for compute_global_displacement")
 
