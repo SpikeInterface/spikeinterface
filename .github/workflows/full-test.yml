@@ -71,8 +71,6 @@ jobs:
           pip cache remove numpy
           pip cache remove hdbscan
           pip cache remove numba
-          # herdingspikes need numpy to installed first, this numpy pre install will be removed when HS remove from testing
-          pip install numpy==1.22
           pip install -e .[test,extractors,full]
       - name: git-annex install
         run: |
