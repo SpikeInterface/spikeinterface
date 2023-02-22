@@ -99,18 +99,35 @@ def test_ChunkRecordingExecutor():
                                        n_jobs=1, chunk_size=None)
     processor.run()
 
-    # chunk + loop
+    # simple gathering function
+    def gathering_result(res):
+        # print(res)
+        pass
+
+    # chunk + loop + gather_func
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
-                                       verbose=True, progress_bar=False,
+                                       verbose=True, progress_bar=False, gather_func=gathering_result,
                                        n_jobs=1, chunk_memory="500k")
     processor.run()
 
-    # chunk + parallel
+    # more adavnce trick : gathering using class with callable
+    class GatherClass:
+        def __init__(self):
+            self.pos = 0
+        
+        def __call__(self, res):
+            self.pos += 1
+            # print(self.pos, res)
+            pass
+    gathering_func2 = GatherClass()
+
+    # chunk + parallel + gather_func
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
-                                       verbose=True, progress_bar=True,
+                                       verbose=True, progress_bar=True, gather_func=gathering_func2,
                                        n_jobs=2, chunk_duration="200ms",
                                        job_name='job_name')
     processor.run()
+    assert gathering_func2.pos == 70
 
     # chunk + parallel + spawn
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
@@ -157,9 +174,9 @@ def test_split_job_kwargs():
 
 
 if __name__ == '__main__':
-    test_divide_segment_into_chunks()
-    test_ensure_n_jobs()
-    test_ensure_chunk_size()
+    # test_divide_segment_into_chunks()
+    # test_ensure_n_jobs()
+    # test_ensure_chunk_size()
     test_ChunkRecordingExecutor()
-    test_fix_job_kwargs()
-    test_split_job_kwargs()
+    # test_fix_job_kwargs()
+    # test_split_job_kwargs()
