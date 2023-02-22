@@ -1,7 +1,6 @@
-import pytest
 import numpy as np
 
-from spikeinterface import download_dataset, BaseSorting
+from spikeinterface import download_dataset
 from spikeinterface.extractors import MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -20,7 +19,7 @@ def test_detect_peaks():
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
     
-    job_kwargs = dict(n_jobs=4, chunk_size=10000, progress_bar=True, verbose=True)
+    job_kwargs = dict(n_jobs=2, chunk_size=10000, progress_bar=True, verbose=True)
     # by_channel
     peaks_by_channel_np = detect_peaks(recording, method='by_channel',
                                        peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
