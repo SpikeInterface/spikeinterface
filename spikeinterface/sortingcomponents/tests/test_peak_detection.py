@@ -20,7 +20,7 @@ def test_detect_peaks():
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
     
-    job_kwargs = dict(n_jobs=2, chunk_size=10000, progress_bar=True)
+    job_kwargs = dict(n_jobs=4, chunk_size=10000, progress_bar=True, verbose=True)
     # by_channel
     peaks_by_channel_np = detect_peaks(recording, method='by_channel',
                                        peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
@@ -33,10 +33,10 @@ def test_detect_peaks():
     # locally_exclusive
     peaks_local_numba = detect_peaks(recording, method='locally_exclusive',
                                      peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                                     chunk_size=10000, verbose=1, progress_bar=False)
+                                     **job_kwargs)
     peaks_local_torch = detect_peaks(recording, method='locally_exclusive_torch',
                                      peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                                     chunk_size=10000, verbose=1, progress_bar=False)
+                                     **job_kwargs)
     print(f"Locally exclusive: numba - {len(peaks_local_numba)}, torch - {len(peaks_local_torch)}")
 
     assert np.isclose(np.array(len(peaks_by_channel_np)), np.array(len(peaks_by_channel_torch)),
@@ -49,6 +49,7 @@ def test_detect_peaks():
     assert len(peaks_by_channel_torch) > len(peaks_local_torch)
 
     # locally_exclusive + pipeline steps LocalizeCenterOfMass + PeakToPeakFeature
+    print("With peak pipeline")
     extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1., ms_after=1.,)
 
     pipeline_nodes = [
