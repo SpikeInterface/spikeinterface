@@ -9,7 +9,7 @@ ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
 
 # define marks
 mark_names = ["core", "extractors", "preprocessing", "postprocessing",
-              "sorters", "si_sorters", "qualitymetrics", "comparison", "curation",
+              "sorters_external", "sorters_internal", "qualitymetrics", "comparison", "curation",
               "widgets", "exporters", "sortingcomponents"]
 
 
@@ -38,13 +38,16 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         rel_path = Path(item.fspath).relative_to(rootdir)
 
-        if "si_based_sorters" not in rel_path.name:
+        if "sorters" not in rel_path.name:
             for mark_name in mark_names:
                 if f"/{mark_name}/" in str(rel_path):
                     mark = getattr(pytest.mark, mark_name)
                     item.add_marker(mark)
         else:
-            item.add_marker("si_sorters")
+            if "internal" in rel_path.name:
+                item.add_marker("sorters_internal")
+            elif "external" in rel_path.name:
+                item.add_marker("sorters_external")
 
 
 def pytest_sessionfinish(session, exitstatus):
