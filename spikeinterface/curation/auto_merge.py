@@ -5,7 +5,7 @@ import scipy.spatial
 
 from ..core.template_tools import get_template_extremum_channel
 from ..postprocessing import compute_correlograms
-from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rate
+from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rates
 
 from .mergeunitssorting import MergeUnitsSorting
 
@@ -118,7 +118,8 @@ def get_potential_auto_merge(
 
     
     if steps is None:
-        steps = ['min_spikes', 'remove_contaminated', 'unit_positions', 'correlogram', 'template_similarity', 'check_increase_score']
+        steps = ['min_spikes', 'remove_contaminated', 'unit_positions', 'correlogram', 'template_similarity',
+                 'check_increase_score']
 
     n = unit_ids.size
     pair_mask = np.ones((n, n), dtype='bool')
@@ -134,7 +135,7 @@ def get_potential_auto_merge(
     # STEP 2 : remove contaminated auto corr
     if 'remove_contaminated' in steps:
         contaminations, nb_violations = compute_refrac_period_violations(we, refractory_period_ms=refractory_period_ms,
-                                        censored_period_ms=censored_period_ms)
+                                                                         censored_period_ms=censored_period_ms)
         nb_violations = np.array(list(nb_violations.values()))
         contaminations = np.array(list(contaminations.values()))
         to_remove = contaminations > contamination_threshold
@@ -143,7 +144,7 @@ def get_potential_auto_merge(
 
     # STEP 3 : unit positions are estimated roughly with channel
     if 'unit_positions' in steps:
-        chan_loc = we.recording.get_channel_locations()
+        chan_loc = we.get_channel_locations()
         unit_max_chan = get_template_extremum_channel(we, peak_sign=peak_sign, mode="extremum", outputs="index")
         unit_max_chan = list(unit_max_chan.values())
         unit_locations = chan_loc[unit_max_chan, :]
@@ -162,8 +163,8 @@ def get_potential_auto_merge(
             win_size = get_unit_adaptive_window(auto_corr, thresh)
             win_sizes[unit_ind] = win_size
         correlogram_diff = compute_correlogram_diff(sorting, correlograms_smoothed, bins, win_sizes,
-                                        adaptative_window_threshold=adaptative_window_threshold,
-                                        pair_mask=pair_mask)
+                                                    adaptative_window_threshold=adaptative_window_threshold,
+                                                    pair_mask=pair_mask)
         # print(correlogram_diff)
         pair_mask = pair_mask & (correlogram_diff  < corr_diff_thresh)
 
@@ -175,8 +176,9 @@ def get_potential_auto_merge(
 
     # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
     if 'check_increase_score' in steps:
-        pair_mask = check_improve_contaminations_score(we, pair_mask, contaminations, 
-            firing_contamination_balance, refractory_period_ms, censored_period_ms)
+        pair_mask = check_improve_contaminations_score(we, pair_mask, contaminations,
+                                                       firing_contamination_balance, refractory_period_ms,
+                                                       censored_period_ms)
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
@@ -393,13 +395,23 @@ def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair
 
 
 class MockWaveformExtractor:
+    """
+    Mock WaveformExtractor to be able to run compute_refrac_period_violations() 
+    needed for the auto_merge() function.
+    """
     def __init__(self, recording, sorting):
         self.recording = recording
         self.sorting = sorting
 
+    def get_total_samples(self):
+        return self.recording.get_total_samples()
 
-def check_improve_contaminations_score(we, pair_mask, contaminations,
-        firing_contamination_balance, refractory_period_ms, censored_period_ms):
+    def get_total_duration(self):
+        return self.recording.get_total_duration()
+
+
+def check_improve_contaminations_score(we, pair_mask, contaminations, firing_contamination_balance,
+                                       refractory_period_ms, censored_period_ms):
     """
     Check that the score is improve afeter a potential merge
 
@@ -414,7 +426,7 @@ def check_improve_contaminations_score(we, pair_mask, contaminations,
     sorting = we.sorting
     pair_mask = pair_mask.copy()
 
-    firing_rates = list(compute_firing_rate(we).values())
+    firing_rates = list(compute_firing_rates(we).values())
 
     inds1, inds2 = np.nonzero(pair_mask)
     for i in range(inds1.size):
@@ -435,7 +447,7 @@ def check_improve_contaminations_score(we, pair_mask, contaminations,
         new_contaminations, _ = compute_refrac_period_violations(we_new, refractory_period_ms=refractory_period_ms,
                                     censored_period_ms=censored_period_ms)
         c_new = new_contaminations[unit_id1]
-        f_new = compute_firing_rate(we_new)[unit_id1]
+        f_new = compute_firing_rates(we_new)[unit_id1]
 
         # old and new scores
         k = 1 + firing_contamination_balance
