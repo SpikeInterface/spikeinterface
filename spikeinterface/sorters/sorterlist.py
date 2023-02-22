@@ -39,7 +39,7 @@ sorter_full_list = [
     WaveClusSorter,
     WaveClusSnippetsSorter,
     YassSorter,
-    
+
     # internal
     Spykingcircus2Sorter,
     Tridesclous2Sorter

@@ -15,7 +15,7 @@ from spikeinterface.core import load_extractor, aggregate_units
 from spikeinterface.core.core_tools import check_json
 
 from .sorterlist import sorter_dict
-from .runsorter import run_sorter, _common_param_doc, run_sorter
+from .runsorter import run_sorter, run_sorter
 
 
 def _run_one(arg_list):
