@@ -30,9 +30,10 @@ def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGB
         The output fomrats
     shuffle: bool or None
         Shuffle or not.
-        If None then
-          * set to True for matplotlib and colorsys
-          * set to False for distinctipy
+        If None then:
+
+        * set to True for matplotlib and colorsys
+        * set to False for distinctipy
     seed: int or None
         Eventually a seed
 

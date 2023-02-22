@@ -1,5 +1,5 @@
-Exporter module
-===============
+Exporters module
+================
 
 The :py:mod:`spikeinterface.exporters` module includes functions to export SpikeInterface objects to other commonly 
 used frameworks.

@@ -15,8 +15,8 @@ Since version 0.95.0, the :py:mod:`spikeinterface.widgets` module supports multi
   | and `FIGURL <https://github.com/flatironinstitute/figurl>`_ packages.
 
 
-Installaling backends
----------------------
+Installing backends
+-------------------
 
 The backends are loaded at run-time and can be installed separately. Alternatively, all dependencies from all 
 backends can be installed with:
@@ -220,7 +220,7 @@ Available plotting functions
 ----------------------------
 
 * :py:func:`~spikeinterface.widgets.plot_all_amplitudes_distributions` (backends: :code:`matplotlib`)
-* :py:func:`~spikeinterface.widgets.plot_mplitudes` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
+* :py:func:`~spikeinterface.widgets.plot_amplitudes` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_autocorrelograms` (backends: :code:`matplotlib`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_crosscorrelograms` (backends: :code:`matplotlib`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_quality_metrics` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
@@ -234,8 +234,8 @@ Available plotting functions
 * :py:func:`~spikeinterface.widgets.plot_unit_locations` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_unit_summary` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_unit_templates` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
-* :py:func:`~spikeinterface.widgets.plot_unit_waveforms_density_map` (backends: :code:`matplotlib`, :code:`ipywidgets`)
-* :py:func:`~spikeinterface.widgets.plot_unit_waveforms` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_unit_waveforms_density_map` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_unit_waveforms` (backends: :code:`matplotlib`, :code:`ipywidgets`)
 
 
 Legacy plotting functions

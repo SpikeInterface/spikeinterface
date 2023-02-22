@@ -11,12 +11,10 @@ from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, Pi
 
 
 
-class MyStep(PipelineNode):
-    def __init__(self, recording, name='my_step', return_ouput=True, param0=5.5):
-        PipelineNode.__init__(self, recording, name, return_ouput)
+class AmplitudeExtractionNode(PipelineNode):
+    def __init__(self, recording, return_ouput=True, param0=5.5):
+        PipelineNode.__init__(self, recording, return_ouput=return_ouput)
         self.param0 = param0
-        
-        self._kwargs.update(dict(param0=param0))
         self._dtype = np.dtype([('abs_amplitude', recording.get_dtype())])
 
     def get_dtype(self):
@@ -32,21 +30,21 @@ class MyStep(PipelineNode):
 
 class WaveformDenoiser(PipelineNode):
     # waveform smoother
-    def __init__(self, recording, name='my_step_with_waveforms', return_ouput=True, parents=[]):
-        PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
+    def __init__(self, recording, return_ouput=True, parents=None):
+        PipelineNode.__init__(self, recording, return_ouput=return_ouput, parents=parents)
 
     def get_dtype(self):
         return np.dtype('float32')
     
     def compute(self, traces, peaks, waveforms):
         kernel = np.array([0.1, 0.8, 0.1])[np.newaxis, :, np.newaxis]
-        waveforms2 = scipy.signal.fftconvolve(waveforms, kernel, axes=1, mode='same')
-        return waveforms2
+        denoised_waveforms = scipy.signal.fftconvolve(waveforms, kernel, axes=1, mode='same')
+        return denoised_waveforms
     
 
-class MyStepWithWaveforms(PipelineNode):
-    def __init__(self, recording, name='step_on_waveforms', return_ouput=True, parents=[]):
-        PipelineNode.__init__(self, recording, name, return_ouput, parents=parents)
+class WaveformsRootMeanSquare(PipelineNode):
+    def __init__(self, recording,  return_ouput=True, parents=None):
+        PipelineNode.__init__(self, recording, return_ouput=return_ouput, parents=parents)
 
     def get_dtype(self):
         return np.dtype('float32')
@@ -73,31 +71,46 @@ def test_run_peak_pipeline():
     
     # one step only : squeeze output
     nodes = [
-        MyStep(recording, param0=6.6),
+        AmplitudeExtractionNode(recording, param0=6.6),
     ]
     step_one = run_peak_pipeline(recording, peaks, nodes, job_kwargs, squeeze_output=True)
     assert np.allclose(np.abs(peaks['amplitude']), step_one['abs_amplitude'])
     
     # 3 nodes two have outputs
-    nodes = [
-        ExtractDenseWaveforms(recording, name='extract_dense_waveforms', ms_before=.5, ms_after=1.,  return_ouput=False),
-        WaveformDenoiser(recording, name='denoiser', parents=['extract_dense_waveforms'], return_ouput=False),
-        MyStep(recording, name='simple_step', param0=5.5),
-        MyStepWithWaveforms(recording, name='step_on_raw_wf', parents=['extract_dense_waveforms']),
-        MyStepWithWaveforms(recording, name='step_on_denoised_wf', parents=['denoiser']),
-        ExtractSparseWaveforms(recording, name='extract_sparse_waveforms', ms_before=.5, ms_after=1.,   local_radius_um=40.,return_ouput=True),
-    ]
-
-    for node in nodes:
-        cls, kwargs = node.__class__, node.to_dict()
-        node2 = cls.from_dict(recording, kwargs)
+    ms_before = 0.5
+    ms_after = 1.0
+    extract_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after, return_ouput=False)
+    waveform_denoiser = WaveformDenoiser(recording, parents=[extract_waveforms], return_ouput=False)
+    amplitue_extraction = AmplitudeExtractionNode(recording, param0=6.6, return_ouput=True)
+    waveforms_rms = WaveformsRootMeanSquare(recording, parents=[extract_waveforms], return_ouput=True)
+    denoised_waveforms_rms = WaveformsRootMeanSquare(recording, parents=[waveform_denoiser], return_ouput=True)
     
-    node2, node3, node4, node5 = run_peak_pipeline(recording, peaks, nodes, job_kwargs)
-    assert np.allclose(np.abs(peaks['amplitude']), node2['abs_amplitude'])
-    assert node3.shape[0] == peaks.shape[0]
-    assert node4.shape[1] == recording.get_num_channels()
-    assert node5.shape[0] == peaks.shape[0]
-    assert node5.shape[2] == nodes[5].max_num_chans
+    nodes = [
+        extract_waveforms,
+        waveform_denoiser,
+        amplitue_extraction,
+        waveforms_rms,
+        denoised_waveforms_rms,
+    ]
+    
+        
+    output = run_peak_pipeline(recording, peaks, nodes, job_kwargs)
+    amplitudes, waveforms_rms, denoised_waveforms_rms = output
+    assert np.allclose(np.abs(peaks['amplitude']), amplitudes['abs_amplitude'])
+    
+    num_peaks = peaks.shape[0]
+    num_channels = recording.get_num_channels()
+    assert waveforms_rms.shape[0] == num_peaks
+    assert waveforms_rms.shape[1] == num_channels
+
+    assert waveforms_rms.shape[0] == num_peaks
+    assert waveforms_rms.shape[1] == num_channels
+    
+    # Test pickle mechanism
+    for node in nodes:
+        import pickle
+        pickled_node = pickle.dumps(node)
+        unpickled_node = pickle.loads(pickled_node)
 
 if __name__ == '__main__':
     test_run_peak_pipeline()

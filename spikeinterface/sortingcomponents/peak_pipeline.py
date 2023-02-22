@@ -23,9 +23,8 @@ class PipelineNode:
     
     A Node can optionally connect to other nodes with the parents and receive inputs from others.
     """
-    def __init__(self, recording, name, return_ouput, parents=None):
+    def __init__(self, recording, return_ouput=True, parents=None, name=None):
         self.recording = recording
-        self.name = name
         self.return_ouput = return_ouput
         if isinstance(parents, str):
             # only one parents is allowed
@@ -33,25 +32,12 @@ class PipelineNode:
         self.parents = parents
         
         self._kwargs = dict(
-            name=name,
             return_ouput=return_ouput,
         )
         if parents is not None:
             self._kwargs['parents'] = parents
         
-        self.other_nodes = None
-
-    @classmethod
-    def from_dict(cls, recording, kwargs):
-        return cls(recording, **kwargs)
-
-    def to_dict(self):
-        return self._kwargs
-        
-    def give_other_nodes(self, other_nodes):
-        # other 
-        self.other_nodes = other_nodes
-    
+            
     def post_check(self):
         # can optionaly be overwritten
         # this can trigger a check for compatibility with other nodes (typically parents)
@@ -66,9 +52,9 @@ class PipelineNode:
 
 
 class ExtractDenseWaveforms(PipelineNode):
-    def __init__(self, recording, name='extract_dense_waveforms', return_ouput=False,
+    def __init__(self, recording, return_ouput=False,
                          ms_before=None, ms_after=None):
-        PipelineNode.__init__(self, recording, name=name, return_ouput=return_ouput)
+        PipelineNode.__init__(self, recording, return_ouput=return_ouput)
 
         self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
         self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
@@ -88,9 +74,9 @@ class ExtractDenseWaveforms(PipelineNode):
 
 
 class ExtractSparseWaveforms(PipelineNode):
-    def __init__(self, recording, name='extract_sparse_waveforms', return_ouput=False,
+    def __init__(self, recording, return_ouput=False,
                          ms_before=None, ms_after=None, local_radius_um=100.,):
-        PipelineNode.__init__(self, recording, name=name, return_ouput=return_ouput)
+        PipelineNode.__init__(self, recording, return_ouput=return_ouput)
 
         self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
         self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
@@ -117,45 +103,28 @@ class ExtractSparseWaveforms(PipelineNode):
         return sparse_wfs
 
 
-
-
 def check_graph(nodes):
     """
     Check that node list is orderd in a good (parents are before children)
     """
-    names = [node.name for node in nodes]
-    assert np.unique(names).size == len(names), 'PipelineNonde names are not unique'
+    
     for i, node in enumerate(nodes):
-        assert isinstance(node, PipelineNode)
+        assert isinstance(node, PipelineNode), f"Node {node} is not an instance of PipelineNode"
         # check that parents exists and are before in chain
-        if node.parents is not None:
-            for parent_name in node.parents:
-                assert parent_name in names, f'The node {node.name} do not have parent {parent_name}'
-                assert names.index(parent_name) < i, 'Node are ordered incorrectly: {node.name} before {parent_name} in pipeline definition.'
+        node_parents = node.parents if node.parents else []
+        for parent in node_parents:
+            assert parent in nodes, f"Node {node} has parent {parent} that was not passed in nodes"            
+            assert nodes.index(parent) < i, f"Node are ordered incorrectly: {node} before {parent} in the pipeline definition."
 
     return nodes
 
-
-def propagate_node_instances(nodes):
-    """
-    This istribute all node instance to everyone.
-    And then optionally make a check per Node.
-    """
-    dict_nodes = {node.name : node for node in nodes}
-
-    for node in nodes:
-        # give the the instances from all nodes.
-        # Usefull for parameters propagation and checking
-        node.give_other_nodes(dict_nodes)
-
-    for node in nodes:
-        node.post_check()
-    
 
 def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeline', squeeze_output=True):
     """
     Run one or several PeakPipelineStep on already detected peaks.
     """
+    check_graph(nodes)
+
     job_kwargs = fix_job_kwargs(job_kwargs)
     assert all(isinstance(node, PipelineNode) for node in nodes)
 
@@ -166,20 +135,9 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
         i1 = np.searchsorted(peaks['segment_ind'], segment_index + 1)
         segment_slices.append(slice(i0, i1))
 
-    check_graph(nodes)
 
-    if job_kwargs['n_jobs'] > 1:
-        init_args = (
-            recording.to_dict(),
-            peaks,  # TODO peaks as shared mem to avoid copy
-            [(node.__class__, node.to_dict()) for node in nodes],
-            segment_slices,
-        )
-    else:
-        init_args = (recording, peaks, nodes, segment_slices)
-    
-
-    
+    init_args = (recording, peaks, nodes, segment_slices)
+        
     processor = ChunkRecordingExecutor(recording, _compute_peak_step_chunk, _init_worker_peak_pipeline,
                                        init_args, handle_returns=True, job_name=job_name, **job_kwargs)
 
@@ -201,15 +159,6 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
 
 def _init_worker_peak_pipeline(recording, peaks, nodes, segment_slices):
     """Initialize worker for localizing peaks."""
-
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-        recording = load_extractor(recording)
-
-        nodes = [cls.from_dict(recording, kwargs) for cls, kwargs in nodes]
-    
-    # this is done in every worker to get the instance of the Node in the worker.
-    propagate_node_instances(nodes)
     
     max_margin = max(node.get_trace_margin() for node in nodes)
 
@@ -232,7 +181,7 @@ def _compute_peak_step_chunk(segment_index, start_frame, end_frame, worker_ctx):
     segment_slices = worker_ctx['segment_slices']
 
     recording_segment = recording._recording_segments[segment_index]
-    traces, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame,
+    traces_chunk, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame,
                                                               None, margin, add_zeros=True)
 
     # get local peaks (sgment + start_frame/end_frame)
@@ -247,36 +196,29 @@ def _compute_peak_step_chunk(segment_index, start_frame, end_frame, worker_ctx):
     local_peaks['sample_ind'] -= (start_frame - left_margin)
     
     
-    outs = run_nodes(traces, local_peaks, nodes)
+    outs = run_nodes(traces_chunk, local_peaks, nodes)
     
     return outs
 
-def run_nodes(traces, local_peaks, nodes):
+def run_nodes(traces_chunk, local_peaks, nodes):
     # compute the graph
-    outputs = {}
+    pipeline_outputs = {}
     for node in nodes:
+        node_parents = node.parents if node.parents else list()
+        node_input_args = tuple()
+        for parent in node_parents:
+            parent_output = pipeline_outputs[parent]
+            parent_outputs_tuple = parent_output if isinstance(parent_output, tuple) else (parent_output, )
+            node_input_args += parent_outputs_tuple
         
-        if node.parents is None:
-            # no other input than traces
-            out = node.compute(traces, local_peaks)
-        else:
-            # the node need imputs from other nodes
-            inputs = tuple()
-            for parent_name in node.parents:
-                other_out = outputs[parent_name]
-                if not isinstance(other_out, tuple):
-                    other_out = (other_out, )
-                inputs += other_out
+        node_output = node.compute(traces_chunk, local_peaks, *node_input_args)
+        pipeline_outputs[node] = node_output
 
-            out = node.compute(traces, local_peaks, *inputs)
-
-        outputs[node.name] = out
-    
     # propagate the output
-    outs = tuple()
+    pipeline_outputs_tuple = tuple()
     for node in nodes:
         if node.return_ouput:
-            out = outputs[node.name]
-            outs += (out, )
+            out = pipeline_outputs[node]
+            pipeline_outputs_tuple += (out, )
     
-    return outs
+    return pipeline_outputs_tuple

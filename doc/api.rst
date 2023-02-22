@@ -90,11 +90,13 @@ NEO-based
     .. autofunction:: read_mearec
     .. autofunction:: read_mcsraw
     .. autofunction:: read_neuralynx
+    .. autofunction:: read_neuralynx_sorting
     .. autofunction:: read_neuroscope
     .. autofunction:: read_nix
     .. autofunction:: read_openephys
     .. autofunction:: read_openephys_event
     .. autofunction:: read_plexon
+    .. autofunction:: read_plexon_sorting
     .. autofunction:: read_spike2
     .. autofunction:: read_spikegadgets
     .. autofunction:: read_spikeglx
@@ -144,14 +146,19 @@ spikeinterface.preprocessing
     .. autofunction:: center
     .. autofunction:: clip
     .. autofunction:: common_reference
+    .. autofunction:: correct_lsb
+    .. autofunction:: detect_bad_channels
     .. autofunction:: filter
+    .. autofunction:: highpass_spatial_filter
+    .. autofunction:: interpolate_bad_channels
     .. autofunction:: normalize_by_quantile
     .. autofunction:: notch_filter
+    .. autofunction:: phase_shift
     .. autofunction:: rectify
     .. autofunction:: remove_artifacts
-    .. autofunction:: remove_bad_channels
     .. autofunction:: scale
     .. autofunction:: whiten
+    .. autofunction:: zero_channel_pad
 
 
 spikeinterface.postprocessing
@@ -247,19 +254,23 @@ spikeinterface.widgets
     .. autofunction:: set_default_plotter_backend
     .. autofunction:: get_default_plotter_backend
 
-    .. autofunction:: plot_timeseries
-    .. autofunction:: plot_crosscorrelograms
+    .. autofunction:: plot_all_amplitudes_distributions
+    .. autofunction:: plot_amplitudes
     .. autofunction:: plot_autocorrelograms
-    .. autofunction:: plot_unit_waveforms
+    .. autofunction:: plot_crosscorrelograms
+    .. autofunction:: plot_quality_metrics
+    .. autofunction:: plot_sorting_summary
+    .. autofunction:: plot_spike_locations
+    .. autofunction:: plot_spikes_on_traces
+    .. autofunction:: plot_template_metrics
+    .. autofunction:: plot_template_similarity
+    .. autofunction:: plot_timeseries
+    .. autofunction:: plot_unit_depths
+    .. autofunction:: plot_unit_locations
+    .. autofunction:: plot_unit_summary
     .. autofunction:: plot_unit_templates
     .. autofunction:: plot_unit_waveforms_density_map
-    .. autofunction:: plot_amplitudes
-    .. autofunction:: plot_all_amplitudes_distributions
-    .. autofunction:: plot_unit_locations
-    .. autofunction:: plot_unit_depths
-    .. autofunction:: plot_unit_summary
-    .. autofunction:: plot_sorting_summary
-
+    .. autofunction:: plot_unit_waveforms
 
 
 Legacy widgets

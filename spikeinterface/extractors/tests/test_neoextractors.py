@@ -125,6 +125,14 @@ class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+class PlexonSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = PlexonSortingExtractor
+    downloads = ["plexon"]
+    entities = [
+        ("plexon/File_plexon_1.plx"),
+    ]
+
+
 class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuralynxRecordingExtractor
     downloads = ['neuralynx']
@@ -293,13 +301,14 @@ if __name__ == '__main__':
     # test = SpikeGLXRecordingTest()
     # test = OpenEphysBinaryRecordingTest()
     # test = SpikeGLXRecordingTest()
-    test = OpenEphysBinaryRecordingTest()
+    # test = OpenEphysBinaryRecordingTest()
     # test = OpenEphysLegacyRecordingTest()
     # test = CellExplorerSortingTest()
     # test = ItanRecordingTest()
     # test = EDFRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()
+    test = PlexonSortingTest()
     # test = NeuralynxRecordingTest()
     # test = BlackrockRecordingTest()
     # test = MCSRawRecordingTest()
