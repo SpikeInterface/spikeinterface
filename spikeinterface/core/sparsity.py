@@ -8,8 +8,8 @@ _sparsity_doc = """
         * "best_channels": N best channels with the largest amplitude. Use the 'num_channels' argument to specify the
                          number of channels.
         * "radius": radius around the best channel. Use the 'radius_um' argument to specify the radius in um
-        * "threshold": threshold based on template signal-to-noise ratio. Use the 'threshold' argument
-                       to specify the SNR threshold.
+        * "snr": threshold based on template signal-to-noise ratio. Use the 'threshold' argument
+                 to specify the SNR threshold.
         * "energy": threshold based on the expected energy that should be present on the channels, 
                     given their noise levels. Use the 'threshold' argument to specify the SNR threshold
         * "by_property": sparsity is given by a property of the recording and sorting(e.g. 'group').
@@ -67,7 +67,10 @@ class ChannelSparsity:
     >>> sparsity = ChannelSparsity.from_radius(we, radius_um, peak_sign='neg')
 
     Using a SNR threshold:
-    >>> sparsity = ChannelSparsity.from_threshold(we, threshold, peak_sign='neg')
+    >>> sparsity = ChannelSparsity.from_snr(we, threshold, peak_sign='neg')
+
+    Using a template energy threshold:
+    >>> sparsity = ChannelSparsity.from_energy(we, threshold, peak_sign='neg')
 
     Using a recording/sorting property (e.g. 'group'):
     >>> sparsity = ChannelSparsity.from_property(we, by_property="group")
@@ -179,7 +182,7 @@ class ChannelSparsity:
         return cls(mask, we.unit_ids, we.channel_ids)
 
     @classmethod
-    def from_threshold(cls, we, threshold, peak_sign='neg'):
+    def from_snr(cls, we, threshold, peak_sign='neg'):
         """
         Construct sparsity from a thresholds based on template signal-to-noise ratio.
         Use the 'threshold' argument to specify the SNR threshold.
@@ -269,9 +272,9 @@ def compute_sparsity(
     elif method == "radius":
         assert radius_um is not None, "For the 'radius' method, 'radius_um' needs to be given"
         sparsity = ChannelSparsity.from_radius(waveform_extractor, radius_um, peak_sign=peak_sign)
-    elif method == "threshold":
-        assert threshold is not None, "For the 'threshold' method, 'threshold' needs to be given"
-        sparsity = ChannelSparsity.from_threshold(waveform_extractor, threshold, peak_sign=peak_sign)
+    elif method == "snr":
+        assert threshold is not None, "For the 'snr' method, 'threshold' needs to be given"
+        sparsity = ChannelSparsity.from_snr(waveform_extractor, threshold, peak_sign=peak_sign)
     elif method == "energy":
         assert threshold is not None, "For the 'energy' method, 'threshold' needs to be given"
         sparsity = ChannelSparsity.from_energy(waveform_extractor, threshold)
