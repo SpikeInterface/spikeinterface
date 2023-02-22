@@ -38,12 +38,14 @@ spikeinterface/sorters/tests/*/*
 
 spikeinterface/widgets/tests/mearec_test/*
 
-examples/getting_started/*_output/*
-examples/getting_started/waveforms/*
-examples/*/*/*/*.raw
-examples/*/*/*/*/*.npy
-examples/*/*/sorter_outputs
-examples/*/*/*_to_phy
+
+examples/modules_gallery/**/*.raw
+examples/modules_gallery/**/*.npy
+examples/modules_gallery/**/*.json
+examples/modules_gallery/**/*.pkl
+examples/modules_gallery/**/*.npz
+examples/modules_gallery/**/*.csv
+
 
 .vscode/*
 
@@ -121,9 +123,6 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
-
 # PyBuilder
 target/
 
@@ -168,8 +167,7 @@ venv.bak/
 .mypy_cache/
 
 doc/_build/*
-doc/getting_started/*
-doc/modules/*
+doc/modules_gallery/*
 doc/sources/*
 
 examples/getting_started/tmp_*
@@ -233,3 +231,6 @@ tridesclous_output/
 waveforms/
 waveforms_mearec/
 waveforms_rm/
+
+# Mac OS
+.DS_Store

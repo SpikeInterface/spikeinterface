@@ -1,8 +1,11 @@
 name: S3 NWB Test
 on:
   pull_request:
-    branches: [master]
-    types: [synchronize, opened, reopened, ready_for_review]
+    types: [synchronize, opened, reopened]
+
+concurrency:  # Cancel previous workflows on the same pull request
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
@@ -12,27 +15,32 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        python-version: ["3.9"]
+        python-version: ["3.10"]
     steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
       - uses: s-weigand/setup-conda@v1
         with:
           update-conda: true
           python-version: ${{ matrix.python-version }}
           conda-channels: conda-forge
-      - uses: actions/checkout@v2
       - run: git fetch --prune --unshallow --tags
+      - name: Install openblas
+        run: sudo apt install libopenblas-dev  # Necessary for ROS3 support
       - name: Install pytest
         run: |
+          python -m pip install -U pip  # Official recommended way
           pip install pytest
-          pip install pytest-cov
       - name: Install package
         run: |
           pip install -e .
           pip install pynwb
       - name: Uninstall h5py
         run: pip uninstall -y h5py
-      - name: Install ROS3
-        run: conda install -c conda-forge h5py
+      - name: Install h5py with ROS3 support and test it works
+        run: |
+          conda install -c conda-forge "h5py>=3.2"
+          python -c "import h5py; assert 'ros3' in h5py.registered_drivers(), f'ros3 suppport not available, failed to install'"
       - name: Install fsspec, aiohttp and requests
         run: pip install fsspec aiohttp requests
       - name: run tests

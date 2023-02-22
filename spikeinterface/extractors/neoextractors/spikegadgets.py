@@ -1,11 +1,11 @@
 from spikeinterface.core.core_tools import define_function_from_class
 
-from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
+from .neobaseextractor import NeoBaseRecordingExtractor
 
 
 class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
     """
-    Class for reading *rec files from spikegadgets.
+    Class for reading rec files from spikegadgets.
 
     Based on :py:class:`neo.rawio.SpikeGadgetsRawIO`
 

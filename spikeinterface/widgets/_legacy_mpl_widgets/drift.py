@@ -264,8 +264,8 @@ class DisplacementWidget(BaseWidget):
 
         if self.with_histogram:
             motion_histogram = self.extra_check['motion_histogram']
-            spatial_hist_bins = self.extra_check['spatial_hist_bins']
-            temporal_hist_bins = self.extra_check['temporal_hist_bins']
+            spatial_hist_bins = self.extra_check['spatial_hist_bin_edges']
+            temporal_hist_bins = self.extra_check['temporal_hist_bin_edges']
             extent = (temporal_hist_bins[0], temporal_hist_bins[-1], spatial_hist_bins[0], spatial_hist_bins[-1])
             ax.imshow(
                 motion_histogram.T,

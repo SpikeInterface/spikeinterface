@@ -2,7 +2,7 @@
 from threadpoolctl import threadpool_limits
 import numpy as np
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor
+from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs
 from spikeinterface.core import get_chunk_with_margin
 
 
@@ -32,14 +32,16 @@ def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extr
         Spikes found from templates.
     method_kwargs: 
         Optionaly returns for debug purpose.
+
     Notes
     -----
     Templates are represented as WaveformExtractor so statistics can be extracted.
     """
-
     from .method_list import matching_methods
     assert method in matching_methods, "The method %s is not a valid one" %method
-    
+
+    job_kwargs = fix_job_kwargs(job_kwargs)
+
     method_class = matching_methods[method]
     
     # initialize
@@ -54,7 +56,7 @@ def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extr
     # and run
     func = _find_spikes_chunk
     init_func = _init_worker_find_spikes
-    init_args = (recording.to_dict(), method, method_kwargs_seralized)
+    init_args = (recording, method, method_kwargs_seralized)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
                                        handle_returns=True, job_name=f'find spikes ({method})', **job_kwargs)
     spikes = processor.run()
@@ -69,10 +71,6 @@ def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extr
 
 def _init_worker_find_spikes(recording, method, method_kwargs):
     """Initialize worker for finding spikes."""
-
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-        recording = load_extractor(recording)
 
     from .method_list import matching_methods
     method_class = matching_methods[method]

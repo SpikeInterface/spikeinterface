@@ -18,6 +18,7 @@ class NpyFolderSnippets(NpySnippetsExtractor):
     Parameters
     ----------
     folder_path: str or Path
+        The path to the folder
 
     Returns
     -------
@@ -47,7 +48,7 @@ class NpyFolderSnippets(NpySnippetsExtractor):
         folder_metadata = folder_path
         self.load_metadata_from_folder(folder_metadata)
 
-        self._kwargs = dict(folder_path=str(folder_path))
+        self._kwargs = dict(folder_path=str(folder_path.absolute()))
         self._bin_kwargs = d['kwargs']
 
 

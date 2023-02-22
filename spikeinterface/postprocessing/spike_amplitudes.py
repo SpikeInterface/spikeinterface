@@ -1,7 +1,8 @@
 import numpy as np
 import shutil
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, ensure_n_jobs
+from spikeinterface.core.job_tools import (ChunkRecordingExecutor, _shared_job_kwargs_doc,
+                                           ensure_n_jobs, fix_job_kwargs)
 
 from spikeinterface.core.template_tools import (get_template_extremum_channel,
                                                 get_template_extremum_channel_peak_shift)
@@ -38,6 +39,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         return new_extension_data
         
     def _run(self, **job_kwargs):
+        job_kwargs = fix_job_kwargs(job_kwargs)
         we = self.waveform_extractor
         recording = we.recording
         sorting = we.sorting
@@ -53,7 +55,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         
         # put extremum_channels_index and peak_shifts in vector way
         extremum_channels_index = np.array([extremum_channels_index[unit_id] for unit_id in sorting.unit_ids], 
-                                           dtype='int64')
+                                            dtype='int64')
         peak_shifts = np.array([peak_shifts[unit_id] for unit_id in sorting.unit_ids], dtype='int64')
         
         if return_scaled:
@@ -104,18 +106,17 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
             as a dict with units as key and spike amplitudes as values.
         """
         we = self.waveform_extractor
-        recording = we.recording
         sorting = we.sorting
         all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
 
         if outputs == 'concatenated':
             amplitudes = []
-            for segment_index in range(recording.get_num_segments()):
+            for segment_index in range(we.get_num_segments()):
                 amplitudes.append(self._extension_data[f'amplitude_segment_{segment_index}'])
             return amplitudes
         elif outputs == 'by_unit':
             amplitudes_by_unit = []
-            for segment_index in range(recording.get_num_segments()):
+            for segment_index in range(we.get_num_segments()):
                 amplitudes_by_unit.append({})
                 for unit_index, unit_id in enumerate(sorting.unit_ids):
                     _, spike_labels = all_spikes[segment_index]

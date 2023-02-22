@@ -32,8 +32,7 @@ def correct_motion_on_peaks(peaks, peak_locations, times,
         times vector of recording
     motion: np.array 2D
         motion.shape[0] equal temporal_bins.shape[0]
-        motion.shape[1] equal 1 when "rigid" motion
-                        equal temporal_bins.shape[0] when "none rigid"
+        motion.shape[1] equal 1 when "rigid" motion equal temporal_bins.shape[0] when "non-rigid"
     temporal_bins: np.array
         Temporal bins in second.
     spatial_bins: None or np.array
@@ -212,17 +211,19 @@ class CorrectMotionRecording(BasePreprocessor):
         'kriging' or 'idw' or 'nearest'.
         See `spikeinterface.preprocessing.get_spatial_interpolation_kernel()` for more details.
         Choice of the method:
-            'kriging' : the same one used in kilosort
-            'idw' : inverse  distance weighted
-            'nearest' : use nereast channel
+
+            * 'kriging' : the same one used in kilosort
+            * 'idw' : inverse  distance weighted
+            * 'nearest' : use nereast channel
     sigma_um: float (default 20.)
         Used in the 'kriging' formula
     p: int (default 1)
         Used in the 'kriging' formula
     num_closest: int (default 3)
         Number of closest channels used by 'idw' method for interpolation.
-    border_mode: 'remove_channels', 'force_extrapolate', 'force_zeros'
-        Control how channels are handled on border
+    border_mode: str
+        Control how channels are handled on border:
+
         * 'remove_channels': remove channels on the border, the recording has less channels
         * 'force_extrapolate': keep all channel and force extrapolation (can lead to strange signal)
         * 'force_zeros': keep all channel but set zeros when outside (force_extrapolate=False)
@@ -239,6 +240,13 @@ class CorrectMotionRecording(BasePreprocessor):
                  sigma_um=20., p=1, num_closest=3):
         assert recording.get_num_segments() == 1, 'correct_motion() is only available for single-segment recordings'
         
+        # force as arrays
+        temporal_bins = np.asarray(temporal_bins)
+        motion = np.asarray(motion)
+        if spatial_bins is not None:
+            spatial_bins = np.asarray(spatial_bins)
+
+
         channel_locations = recording.get_channel_locations()
         assert channel_locations.ndim >= direction, (f"'direction' {direction} not available. "
                                                      f"Channel locations have {channel_locations.ndim} dimensions.")
@@ -290,7 +298,7 @@ class CorrectMotionRecording(BasePreprocessor):
                                                         spatial_interpolation_method, spatial_interpolation_kwargs, channel_inds, )
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), motion=motion, temporal_bins=temporal_bins,
+        self._kwargs = dict(recording=recording, motion=motion, temporal_bins=temporal_bins,
                             spatial_bins=spatial_bins, direction=direction, border_mode=border_mode,
                             spatial_interpolation_method=spatial_interpolation_method,
                             sigma_um=sigma_um, p=p, num_closest=num_closest)

@@ -6,6 +6,7 @@ from spikeinterface.extractors import MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
+from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.features_from_peaks import PeakToPeakFeature
 
@@ -19,7 +20,7 @@ def test_detect_peaks():
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
     
-    job_kwargs = dict(n_jobs=1, chunk_size=10000, progress_bar=True)
+    job_kwargs = dict(n_jobs=2, chunk_size=10000, progress_bar=True)
     # by_channel
     peaks_by_channel_np = detect_peaks(recording, method='by_channel',
                                        peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
@@ -48,20 +49,23 @@ def test_detect_peaks():
     assert len(peaks_by_channel_torch) > len(peaks_local_torch)
 
     # locally_exclusive + pipeline steps LocalizeCenterOfMass + PeakToPeakFeature
-    pipeline_steps = [
-        PeakToPeakFeature(recording, ms_before=1., ms_after=1., all_channels=False),
-        LocalizeCenterOfMass(recording, ms_before=1., ms_after=1., local_radius_um=150.),
+    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1., ms_after=1.,)
+
+    pipeline_nodes = [
+        extract_dense_waveforms,
+        PeakToPeakFeature(recording,  all_channels=False, parents=[extract_dense_waveforms]),
+        LocalizeCenterOfMass(recording, local_radius_um=50., parents=[extract_dense_waveforms]),
     ]
-    peaks, ptp, peak_locations = detect_peaks(recording, method='locally_exclusive',
-                                              peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                                              pipeline_steps=pipeline_steps, **job_kwargs)
+    peaks, ptp, peak_locations = detect_peaks(recording, method='locally_exclusive', peak_sign='neg', 
+                                              detect_threshold=5, exclude_sweep_ms=0.1, pipeline_nodes=pipeline_nodes,
+                                              **job_kwargs)
     assert peaks.shape[0] == ptp.shape[0]
     assert peaks.shape[0] == peak_locations.shape[0]
     assert 'x' in peak_locations.dtype.fields
     
     peaks_torch, ptp_torch, peak_locations_torch = detect_peaks(recording, method='locally_exclusive_torch',
                                                                 peak_sign='neg', detect_threshold=5,
-                                                                exclude_sweep_ms=0.1, pipeline_steps=pipeline_steps,
+                                                                exclude_sweep_ms=0.1, pipeline_nodes=pipeline_nodes,
                                                                 **job_kwargs)
     assert peaks_torch.shape[0] == ptp_torch.shape[0]
     assert peaks_torch.shape[0] == peak_locations_torch.shape[0]
