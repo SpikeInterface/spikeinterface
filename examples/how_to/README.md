@@ -22,7 +22,8 @@ with `nbconvert`. Here are the steps (in this example for the `get_started`):
 3. Convert the notebook to .rst
 
 ```
->>>  jupyter nbconvert get_started.ipymb --to rst
+>>>  jupyter nbconvert get_started.ipynb --to rst
+>>>  jupyter nbconvert analyse_neuropixels.ipynb --to rst
 ```
 
 
