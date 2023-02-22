@@ -2,14 +2,12 @@ from pathlib import Path
 import shutil
 import pandas as pd
 
-from spikeinterface.core.job_tools import _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 import spikeinterface.widgets as sw
+from spikeinterface.core import get_template_extremum_channel, get_template_extremum_amplitude
 from spikeinterface.postprocessing import (compute_spike_amplitudes,
-                                           compute_principal_components,
                                            compute_unit_locations,
-                                           compute_correlograms,
-                                           get_template_extremum_channel, 
-                                           get_template_extremum_amplitude)
+                                           compute_correlograms)
 from spikeinterface.qualitymetrics import compute_quality_metrics
 
 import matplotlib.pyplot as plt
@@ -41,6 +39,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
         Force or not some heavy computaion before exporting.
     {}
     """
+    job_kwargs = fix_job_kwargs(job_kwargs)
     we = waveform_extractor
     sorting = we.sorting
     unit_ids = sorting.unit_ids

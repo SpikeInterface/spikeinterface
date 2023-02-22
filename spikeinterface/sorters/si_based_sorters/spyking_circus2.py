@@ -6,7 +6,8 @@ import numpy as np
 import os
 
 from spikeinterface.core import (NumpySorting,  load_extractor, BaseRecording,
-    get_noise_levels, extract_waveforms)
+                                 get_noise_levels, extract_waveforms)
+from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore
 
 try:
@@ -31,7 +32,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         'registration' : {},
         'apply_preprocessing': True,
         'shared_memory' : False,
-        'job_kwargs' : {'n_jobs' : -1, 'chunk_duration' : '1s', 'verbose' : False}
+        'job_kwargs' : {}
     }
 
     @classmethod
@@ -39,16 +40,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         return "2.0"
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
 
         assert HAVE_HDBSCAN, 'spykingcircus2 needs hdbscan to be installed'
-    
-        params['job_kwargs']['verbose'] = verbose
-        params['job_kwargs']['progress_bar'] = verbose
-
-        if "n_jobs" in params["job_kwargs"]:
-            if params["job_kwargs"]["n_jobs"] == -1:
-                params["job_kwargs"]["n_jobs"] = os.cpu_count()
     
         # this is importanted only on demand because numba import are too heavy
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -56,7 +50,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 
-        recording = load_extractor(output_folder / 'spikeinterface_recording.json')
+        job_kwargs = params['job_kwargs'].copy()
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        job_kwargs['verbose'] = verbose
+        job_kwargs['progress_bar'] = verbose
+
+        recording = load_extractor(sorter_output_folder.parent / 'spikeinterface_recording.json')
         sampling_rate = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()
 
@@ -74,7 +73,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params['detection'].copy()
-        detection_params.update(params['job_kwargs'])
+        detection_params.update(job_kwargs)
         if 'local_radius_um' not in detection_params:
             detection_params['local_radius_um'] = params['general']['local_radius_um']
         if 'exclude_sweep_ms' not in detection_params:
@@ -106,8 +105,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params.update(params['waveforms'])
         clustering_params.update(params['general'])
         clustering_params.update(dict(shared_memory=params['shared_memory']))
-        clustering_params['job_kwargs'] = params['job_kwargs']
-        clustering_params['tmp_folder'] = output_folder / "clustering"
+        clustering_params['job_kwargs'] = job_kwargs
+        clustering_params['tmp_folder'] = sorter_output_folder / "clustering"
 
         labels, peak_labels = find_cluster_from_peaks(recording_f, selected_peaks, method='random_projections',
             method_kwargs=clustering_params)
@@ -115,7 +114,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## We get the labels for our peaks
         mask = peak_labels > -1
         sorting = NumpySorting.from_times_labels(selected_peaks['sample_ind'][mask], peak_labels[mask], sampling_rate)
-        clustering_folder = output_folder / "clustering"
+        clustering_folder = sorter_output_folder / "clustering"
         if clustering_folder.exists():
             shutil.rmtree(clustering_folder)
 
@@ -123,14 +122,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## We get the templates our of such a clustering
         waveforms_params = params['waveforms'].copy()
-        waveforms_params.update(params['job_kwargs'])
+        waveforms_params.update(job_kwargs)
 
         if params['shared_memory']:
             mode = 'memory'
             waveforms_folder = None
         else:
             mode = 'folder'
-            waveforms_folder = output_folder / "waveforms"
+            waveforms_folder = sorter_output_folder / "waveforms"
 
         we = extract_waveforms(recording_f, sorting, waveforms_folder, mode=mode, **waveforms_params, return_scaled=False)
 
@@ -139,7 +138,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         matching_params['waveform_extractor'] = we
         matching_params.update({'noise_levels' : noise_levels})
 
-        matching_job_params = params['job_kwargs'].copy()
+        matching_job_params = job_kwargs.copy()
         matching_job_params['chunk_duration'] = '100ms'
 
         spikes = find_spikes_from_templates(recording_f, method='circus-omp', 
@@ -150,7 +149,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## And this is it! We have a spyking circus
         sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], sampling_rate)
-        sorting_folder = output_folder / "sorting"
+        sorting_folder = sorter_output_folder / "sorting"
 
         if sorting_folder.exists():
             shutil.rmtree(sorting_folder)

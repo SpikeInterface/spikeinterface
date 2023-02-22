@@ -2,12 +2,15 @@
 
 from .misc_metrics import (
     compute_num_spikes,
-    compute_firing_rate,
-    compute_presence_ratio,
+    compute_firing_rates,
+    compute_presence_ratios,
     compute_snrs,
     compute_isi_violations,
     compute_refrac_period_violations,
-    compute_amplitudes_cutoff,
+    compute_sliding_rp_violations,
+    compute_amplitude_cutoffs,
+    compute_amplitude_medians,
+    compute_drift_metrics
 )
 
 from .pca_metrics import (
@@ -16,29 +19,24 @@ from .pca_metrics import (
     lda_metrics,
     nearest_neighbors_metrics,
     nearest_neighbors_isolation,
-    nearest_neighbors_noise_overlap)
+    nearest_neighbors_noise_overlap
+)
 
 from .pca_metrics import _possible_pc_metric_names
 
 
 # list of all available metrics and mapping to function
 # this list MUST NOT contain pca metrics, which are handled separately
-_metric_name_to_func = {
+_misc_metric_name_to_func = {
     "num_spikes" : compute_num_spikes,
-    "firing_rate" : compute_firing_rate,
-    "presence_ratio" : compute_presence_ratio,
+    "firing_rate" : compute_firing_rates,
+    "presence_ratio" : compute_presence_ratios,
     "snr" : compute_snrs,
     "isi_violation" : compute_isi_violations,
-    "amplitude_cutoff" : compute_amplitudes_cutoff,
-    # 'mahalanobis_metrics' : mahalanobis_metrics,
-    # 'd_prime' : lda_metrics,
-    # 'nearest_neighbor' : nearest_neighbors_metrics,
-    # 'nn_isolation' : nearest_neighbors_isolation,
-    # 'nn_noise_overlap' : nearest_neighbors_noise_overlap
+    "rp_violation" : compute_refrac_period_violations,
+    "sliding_rp_violation" : compute_sliding_rp_violations,
+    "amplitude_cutoff" : compute_amplitude_cutoffs,
+    "amplitude_median" : compute_amplitude_medians,
+    "drift" : compute_drift_metrics
 }
 
-# TODO
-# @Cole @ Alessio
-# "silhouette_score",
-# "max_drift",
-# "cumulative_drift",

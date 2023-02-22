@@ -16,25 +16,20 @@ from joblib import Parallel, delayed
 
 from spikeinterface.core import load_extractor, BaseRecordingSnippets
 from spikeinterface.core.core_tools import check_json
-from spikeinterface.core.job_tools import split_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .utils import SpikeSortingError, ShellScript
 
 
-default_job_kwargs = {"n_jobs": 1, 
-                      "total_memory": None,
-                      "chunk_size": None,
-                      "chunk_memory": None,
-                      "chunk_duration": "1s",
-                      "progress_bar": True}
+default_job_kwargs = {"n_jobs": -1}
 
 default_job_kwargs_description = {
-    "n_jobs": "Number of jobs (when saving ti binary) - default 1", 
-    "chunk_size": "Number of samples per chunk (when saving ti binary) - default None",
-    "chunk_memory": "Memory usage for each job (e.g. '100M', '1G') (when saving to binary) - default None",
-    "total_memory": "Total memory usage (e.g. '500M', '2G') (when saving to binary) - default None",
+    "n_jobs": "Number of jobs (when saving ti binary) - default -1 (all cores)",
+    "chunk_size": "Number of samples per chunk (when saving ti binary) - default global",
+    "chunk_memory": "Memory usage for each job (e.g. '100M', '1G') (when saving to binary) - default global",
+    "total_memory": "Total memory usage (e.g. '500M', '2G') (when saving to binary) - default global",
     "chunk_duration": "Chunk duration in s if float or with units if str (e.g. '1s', '500ms') (when saving to binary)" \
-                      " - default '1s'",
-    "progress_bar": "If True, progress bar is shown (when saving to binary) - default True"}
+                      " - default global",
+    "progress_bar": "If True, progress bar is shown (when saving to binary) - default global"}
 
 
 class BaseSorter:
@@ -64,6 +59,7 @@ class BaseSorter:
         self.verbose = verbose
         self.delete_output_folder = delete_output_folder
         self.output_folder = output_folder
+        self.sorter_folder = self.output_folder / "sorter_output" if self.output_folder is not None else None
 
     def set_params(self, sorter_params):
         """
@@ -87,7 +83,7 @@ class BaseSorter:
     def get_result(self):
         sorting = self.get_result_from_folder(self.output_folder)
         if self.delete_output_folder:
-            shutil.rmtree(str(self.output_folder), ignore_errors=True)
+            shutil.rmtree(str(self.sorter_folder), ignore_errors=True)
         return sorting
 
     #############################################
@@ -117,6 +113,7 @@ class BaseSorter:
 
         #  .absolute() not anymore
         output_folder = Path(output_folder)
+        sorter_output_folder = output_folder / "sorter_output"
 
         if output_folder.is_dir():
             if remove_existing_folder:
@@ -125,6 +122,7 @@ class BaseSorter:
                 raise ValueError(f'Folder {output_folder} already exists')
 
         output_folder.mkdir(parents=True, exist_ok=True)
+        sorter_output_folder.mkdir()
 
         if recording.get_num_segments() > 1:
             if not cls.handle_multi_segment:
@@ -144,7 +142,8 @@ class BaseSorter:
     def default_params(cls):
         p = copy.deepcopy(cls._default_params)
         if cls.requires_binary_data:
-            p.update(default_job_kwargs)
+            job_kwargs = fix_job_kwargs(default_job_kwargs)
+            p.update(job_kwargs)
         return p
 
     @classmethod
@@ -190,15 +189,17 @@ class BaseSorter:
     @classmethod
     def setup_recording(cls, recording, output_folder, verbose):
         output_folder = Path(output_folder)
+        sorter_output_folder = output_folder / "sorter_output"
         with (output_folder / 'spikeinterface_params.json').open(mode='r', encoding='utf8') as f:
             all_params = json.load(f)
             sorter_params = all_params['sorter_params']
-        cls._setup_recording(recording, output_folder, sorter_params, verbose)
+        cls._setup_recording(recording, sorter_output_folder, sorter_params, verbose)
 
     @classmethod
     def run_from_folder(cls, output_folder, raise_error, verbose):
         # need setup_recording to be done.
         output_folder = Path(output_folder)
+        sorter_output_folder = output_folder / "sorter_output"
 
         # retrieve sorter_name and params
         with (output_folder / 'spikeinterface_params.json').open(mode='r') as f:
@@ -222,7 +223,7 @@ class BaseSorter:
         t0 = time.perf_counter()
 
         try:
-            SorterClass._run_from_folder(output_folder, sorter_params, verbose)
+            SorterClass._run_from_folder(sorter_output_folder, sorter_params, verbose)
             t1 = time.perf_counter()
             run_time = float(t1 - t0)
             has_error = False
@@ -266,6 +267,7 @@ class BaseSorter:
     @classmethod
     def get_result_from_folder(cls, output_folder):
         output_folder = Path(output_folder)
+        sorter_output_folder = output_folder / "sorter_output"
         # check errors in log file
         log_file = output_folder / 'spikeinterface_log.json'
         if not log_file.is_file():
@@ -278,12 +280,26 @@ class BaseSorter:
             raise SpikeSortingError(
                 "Spike sorting failed. You can inspect the runtime trace in spikeinterface_log.json")
 
-        sorting = cls._get_result_from_folder(output_folder)
+        if sorter_output_folder.is_dir():
+            sorting = cls._get_result_from_folder(sorter_output_folder)
+        else:
+            # back-compatibility
+            sorting = cls._get_result_from_folder(output_folder)
         
+        # register recording to Sorting object
         recording = load_extractor(output_folder / 'spikeinterface_recording.json')
         if recording is not None:
             # can be None when not dumpable
             sorting.register_recording(recording)
+        # set sorting info to Sorting object
+        with open(output_folder /'spikeinterface_recording.json', 'r') as f:
+            rec_dict = json.load(f)
+        with open(output_folder /'spikeinterface_params.json', 'r') as f:
+            params_dict = json.load(f)
+        with open(output_folder /'spikeinterface_log.json', 'r') as f:
+            log_dict = json.load(f)
+        sorting.set_sorting_info(rec_dict, params_dict, log_dict)
+
         return sorting
 
     @classmethod
@@ -338,12 +354,13 @@ class BaseSorter:
         return params
 
     @classmethod
-    def _setup_recording(cls, recording, output_folder, params, verbose):
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         # need be implemented in subclass
         # this setup ONE recording (or SubExtractor)
         # this must copy (or not) the trace in the appropriate format
         # this must take care of geometry file (PRB, CSV, ...)
         # this must generate all needed script
+        # the sorter_ourput_folder is: output_folder / "sorter_output"
         raise NotImplementedError
 
     @classmethod
@@ -358,20 +375,23 @@ class BaseSorter:
         # can be implemented in subclass to check if the filter will be applied
 
     @classmethod
-    def _run_from_folder(cls, output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose):
         # need be implemented in subclass
         # this is where the script is launch for one recording from a folder already prepared
         # this must run or generate the command line to run the sorter for one recording
+        # the sorter_ourput_folder is: output_folder / "sorter_output"
         raise NotImplementedError
 
     @classmethod
-    def _get_result_from_folder(cls, output_folder):
+    def _get_result_from_folder(cls, sorter_output_folder):
         # need be implemented in subclass
+        # the sorter_ourput_folder is: output_folder / "sorter_output"
         raise NotImplementedError
 
 
 def get_job_kwargs(params, verbose):
     _, job_kwargs = split_job_kwargs(params)
+    job_kwargs = fix_job_kwargs(job_kwargs)
     if not verbose:
         job_kwargs["progress_bar"] = False
     return job_kwargs

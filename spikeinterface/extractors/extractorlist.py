@@ -17,9 +17,11 @@ from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor,
                             read_nwb, read_nwb_recording, read_nwb_sorting)
 
 from .cbin_ibl import CompressedBinaryIblExtractor, read_cbin_ibl
+from .iblstreamingrecording import IblStreamingRecordingExtractor, read_ibl_streaming_recording
 from .mcsh5extractors import MCSH5RecordingExtractor, read_mcsh5
 
 # sorting extractors in relation with a sorter
+from .cellexplorersortingextractor import CellExplorerSortingExtractor, read_cellexplorer
 from .klustaextractors import KlustaSortingExtractor, read_klusta
 from .hdsortextractors import HDSortSortingExtractor, read_hdsort
 from .mclustextractors import MClustSortingExtractor, read_mclust
@@ -57,7 +59,8 @@ recording_extractor_full_list = [
 
     # others
     CompressedBinaryIblExtractor,
-    MCSH5RecordingExtractor
+    IblStreamingRecordingExtractor,
+    MCSH5RecordingExtractor,
 ]
 recording_extractor_full_list += neo_recording_extractors_list
 

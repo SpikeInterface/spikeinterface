@@ -4,6 +4,7 @@ Some utils to handle parallel jobs on top of job and/or loky
 from pathlib import Path
 import numpy as np
 import platform
+import os
 
 import joblib
 import sys
@@ -33,9 +34,36 @@ _shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel process
                 Context for multiprocessing. It can be None (default), "fork" or "spawn". 
                 Note that "fork" is only available on UNIX systems
     """
-    
+
+
 job_keys = ('n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_duration', 'progress_bar', 
             'mp_context', 'verbose', 'max_threads_per_process')
+
+
+def fix_job_kwargs(runtime_job_kwargs):
+    from .globals import get_global_job_kwargs
+    job_kwargs = get_global_job_kwargs()
+
+    for k in runtime_job_kwargs:
+        assert k in job_keys, (f"{k} is not a valid job keyword argument. "
+                               f"Available keyword arguments are: {list(job_keys)}")
+    # remove None
+    runtime_job_kwargs_exclude_none = runtime_job_kwargs.copy()
+    for job_key, job_value in runtime_job_kwargs.items():
+        if job_value is None:
+            del runtime_job_kwargs_exclude_none[job_key]
+    job_kwargs.update(runtime_job_kwargs_exclude_none)
+
+    # if n_jobs is -1, set to os.cpu_count() (n_jobs is always in global job_kwargs)
+    n_jobs = job_kwargs['n_jobs']
+    assert isinstance(n_jobs, (float, np.integer, int))
+    if isinstance(n_jobs, float):
+        n_jobs = int(n_jobs * os.cpu_count())
+    elif n_jobs < 0:
+        n_jobs = os.cpu_count() + 1 + n_jobs
+    job_kwargs["n_jobs"] = max(n_jobs, 1)
+
+    return job_kwargs
 
 
 def split_job_kwargs(mixed_kwargs):
@@ -44,12 +72,14 @@ def split_job_kwargs(mixed_kwargs):
     This can be useful for some function with generic signature
     mixing specific and job kwargs.
     """
-    specific_kwargs, job_kwargs = {}, {}
+    job_kwargs = {}
+    specific_kwargs = {}
     for k, v in mixed_kwargs.items():
         if k in job_keys:
             job_kwargs[k] = v
         else:
             specific_kwargs[k] = v
+    job_kwargs = fix_job_kwargs(job_kwargs)
     return specific_kwargs, job_kwargs
 
 

@@ -1,14 +1,3 @@
-"""
-Implementation of utils class to manipulate segments with 2 different concept:
-  * append_recordings / append_sortings / append_events
-  * concatenate_recordings
-
-
-Example:
-  * append_recording: given one recording with 2 segments and one recording with 3 segments, returns one recording with 5 segments
-  * concatenate_recording: given a list of several recordings (each with possibly multiple segments), returns one recording with one segment that is a concatenation of all the segments
-
-"""
 import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
@@ -43,8 +32,8 @@ class AppendSegmentRecording(BaseRecording):
     returns a single multi-segment recording that "appends" all segments from
     all parent recordings.
 
-    For instance, given one recording with 2 segments and one recording with
-    3 segments, this class will give one recording with 5 segments
+    For instance, given one recording with 2 segments and one recording with 3 segments, 
+    this class will give one recording with 5 segments
 
     Parameters
     ----------
@@ -109,6 +98,7 @@ class ConcatenateSegmentRecording(BaseRecording):
 
     Time information is lost upon concatenation. By default `ignore_times` is True.
     If it is False, you get an error unless:
+
       * all segments DO NOT have times, AND
       * all segment have t_start=None
 
@@ -216,7 +206,7 @@ concatenate_recordings = define_function_from_class(source_class=ConcatenateSegm
 
 class SelectSegmentRecording(BaseRecording):
     """
-    Return a new recording with a single segment from a multi-segment recording.
+    Return a new recording with a subset of segments from a multi-segment recording.
 
     Parameters
     ----------
@@ -268,7 +258,8 @@ def split_recording(recording: BaseRecording):
     return recording_list
 
 
-select_segment_recording = define_function_from_class(source_class=SelectSegmentRecording, name='select_segment_recording')
+select_segment_recording = define_function_from_class(source_class=SelectSegmentRecording,
+                                                      name='select_segment_recording')
 
 
 class AppendSegmentSorting(BaseSorting):
@@ -322,6 +313,7 @@ class ProxyAppendSortingSegment(BaseSortingSegment):
 
 append_sortings = define_function_from_class(source_class=AppendSegmentSorting, name='append_sortings')
 
+
 class SplitSegmentSorting(BaseSorting):
     """Splits a sorting with a single segment to multiple segments
     based on the given list of recordings (must be in order)
@@ -373,3 +365,39 @@ class SplitSegmentSorting(BaseSorting):
                         'recording_list': [recording.to_dict() for recording in recording_list]}
 
 split_sorting = define_function_from_class(source_class=SplitSegmentSorting, name='split_sorting')
+
+
+class SelectSegmentSorting(BaseSorting):
+    """
+    Return a new sorting with a single segment from a multi-segment sorting.
+
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The multi-segment sorting
+    segment_indices : list of int
+        The segment indices to select
+    """
+
+    def __init__(self, sorting: BaseSorting, segment_indices: Union[int, List[int]]):
+        BaseSorting.__init__(self, sorting.get_sampling_frequency(), 
+                             sorting.unit_ids)
+        sorting.copy_metadata(self)
+        
+        if isinstance(segment_indices, int):
+            segment_indices = [segment_indices]
+        
+        num_segments = sorting.get_num_segments()
+        assert all(0 <= s < num_segments for s in segment_indices), \
+            f"'segment_index' must be between 0 and {num_segments - 1}"
+
+        for segment_index in segment_indices:
+            sort_seg = sorting._sorting_segments[segment_index]
+            self.add_sorting_segment(sort_seg)
+
+        self._kwargs = {'sorting': sorting.to_dict(),
+                        'segment_indices': [int(s) for s in segment_indices]}
+
+
+select_segment_sorting = define_function_from_class(source_class=SelectSegmentSorting,
+                                                    name='select_segment_sorting')

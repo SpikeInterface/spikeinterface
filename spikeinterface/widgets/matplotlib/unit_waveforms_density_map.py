@@ -26,7 +26,8 @@ class UnitWaveformDensityMapPlotter(MplPlotter):
             ax = self.ax
             hist2d = dp.all_hist2d
             im = ax.imshow(hist2d.T, interpolation='nearest',
-                           origin='lower', aspect='auto', extent=(0, hist2d.shape[0], dp.bin_min, dp.bin_max), cmap='hot')
+                           origin='lower', aspect='auto',
+                           extent=(0, hist2d.shape[0], dp.bin_min, dp.bin_max), cmap='hot')
         else:
             for unit_index, unit_id in enumerate(dp.unit_ids):
                 hist2d = dp.all_hist2d[unit_id]

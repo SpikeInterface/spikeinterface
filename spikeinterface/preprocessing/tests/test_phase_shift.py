@@ -55,16 +55,23 @@ def test_phase_shift():
     for dtype in ('float64', 'float32', 'int16'):
         rec = NumpyRecording([traces.astype(dtype)], sampling_frequency)
         rec.set_property('inter_sample_shift', inter_sample_shift)
+        original_traces = rec.get_traces(end_frame=10)
         
         for  margin_ms in (10., 30., 40.):
             for chunk_size in (100, 500, 1000, 2000):
                 rec2 = phase_shift(rec, margin_ms=margin_ms)
+                assert rec2.dtype == rec.dtype
                 
                 # save by chunk rec3 is the cached version
                 rec3 = rec2.save(format='memory', chunk_size=chunk_size, n_jobs=1, progress_bar=False)
                 
                 traces2 = rec2.get_traces()
+                assert traces2.dtype == original_traces.dtype
                 traces3 = rec3.get_traces()
+                assert traces3.dtype == original_traces.dtype
+
+                traces_slice = rec3.get_traces(channel_ids=[rec3.channel_ids[0]])
+                assert traces_slice.shape[1] == 1
                 
                 # error between full and chunked
                 error_mean = np.sqrt(np.mean((traces2 - traces3)**2))

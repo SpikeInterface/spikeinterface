@@ -1,13 +1,18 @@
+.. _installsorters:
+
 Installing Spike Sorters
 ========================
+
 
 An important aspect of spikeinterface is the :py:mod:`spikeinterface.sorters` module.
 This module wraps many popular spike sorting tools, allowing you to run multiple sorters on the same dataset with
 only a few lines of code and through Python.
 
-We have created docker images for most of these sorters, and in many cases the easiest way to run them is to do so
-via docker or singularity. This is the approach we would recommend for most users. To run containerized sorters, see
-see our documentation here: .
+Installing spike sorters can be painful! Many of them come with several requirements that could cause conflicts in 
+your Python environment. To make things easier, we have created docker images for most of these sorters, 
+and in many cases the easiest way to run them is to do so via docker or singularity. 
+**This is the approach we recommend for all users.** 
+To run containerized sorters see our documentation here: :ref:`containerizedsorters`.
 
 There are some cases where users will need to install the spike sorting algorithms in their own environment. If you
 are on a system where it is infeasible to run docker or singularity containers, or if you are actively developing the
@@ -19,12 +24,12 @@ Some of then will also need some computing library like CUDA (Kilosort, Kilosort
 opencl (Tridesclous) to use hardware acceleration (GPU).
 
 Here is a list of the implemented wrappers and some instructions to install them on your local machine.
-Installation instructions are given for an **Unbuntu** platform. Please check the documentation of the different spike
+Installation instructions are given for an **Ubuntu** platform. Please check the documentation of the different spike
 sorters to retrieve installation instructions for other operating systems.
 We use **pip** to install packages, but **conda** should also work in many cases.
 
 Some novel spike sorting algorithms are implemented directly in SpikeInterface using the 
-:py:mod:`spikeinterface.sortingcomponents` module. Checkout the **SpikeInterface-based spike sorters** of this page
+:py:mod:`spikeinterface.sortingcomponents` module. Checkout the :ref:`si_based` section of this page
 for more information!
 
 If you experience installation problems please directly contact the authors of theses tools or write on the
@@ -32,8 +37,11 @@ related mailing list, google group, etc.
 
 Please feel free to enhance this document with more installation tips.
 
+External sorters
+----------------
+
 Herdingspikes2
---------------
+^^^^^^^^^^^^^^
 
 * Python + C++
 * Url: https://github.com/mhhennig/hs2
@@ -43,7 +51,7 @@ Herdingspikes2
     pip install herdingspikes
 
 HDSort
--------
+^^^^^^
 
 * Matlab
 * Url: https://git.bsse.ethz.ch/hima_public/HDsort.git
@@ -55,7 +63,7 @@ HDSort
       # or using HDSortSorter.set_hdsort_path()
 
 IronClust
----------
+^^^^^^^^^
 
 * Matlab
 * Url: https://github.com/jamesjun/ironclust
@@ -67,7 +75,7 @@ IronClust
       # or using IronClustSorter.set_ironclust_path()
 
 Kilosort
---------
+^^^^^^^^
 
 * Matlab, requires CUDA
 * Url: https://github.com/cortex-lab/KiloSort
@@ -81,7 +89,7 @@ Kilosort
 * See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
 
 Kilosort2
----------
+^^^^^^^^^
 
 * Matlab, requires CUDA
 * Url: https://github.com/MouseLand/Kilosort2
@@ -96,7 +104,7 @@ Kilosort2
 
 
 Kilosort2.5
------------
+^^^^^^^^^^^
 
 * Matlab, requires CUDA
 * Url: https://github.com/MouseLand/Kilosort
@@ -110,7 +118,7 @@ Kilosort2.5
 * See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
 
 Kilosort3
------------
+^^^^^^^^^
 
 * Matlab, requires CUDA
 * Url: https://github.com/MouseLand/Kilosort
@@ -123,9 +131,8 @@ Kilosort3
 
 * See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
 
-
-pykilosort
-----------
+pyKilosort
+^^^^^^^^^^
 
 * Python, requires cuda
 * Url: https://github.com/int-brain-lab/pykilosort / https://github.com/MouseLand/pykilosort
@@ -157,22 +164,8 @@ pykilosort
 * See also https://github.com/MouseLand/pykilosort#installation
 
 
-Klusta
-------
-
-* Python
-* Url: https://github.com/kwikteam/klusta
-* Authors: Cyrille Rossant, Shabnam Kadir, Dan Goodman, Max Hunter, Kenneth Harris
-* Installation::
-
-       pip install Cython h5py tqdm
-       pip install click klusta klustakwik2
-
-* See also: https://github.com/kwikteam/phy
-
-
 Mountainsort4
--------------
+^^^^^^^^^^^^^
 
 * Python
 * Url: https://github.com/flatironinstitute/mountainsort
@@ -183,7 +176,8 @@ Mountainsort4
 
 
 SpykingCircus
--------------
+^^^^^^^^^^^^^
+
 
 * Python, requires MPICH
 * Url: https://spyking-circus.readthedocs.io
@@ -196,7 +190,7 @@ SpykingCircus
 
 
 Tridesclous
------------
+^^^^^^^^^^^
 
 * Python, runs faster with opencl installed but optional
 * Url: https://tridesclous.readthedocs.io
@@ -214,9 +208,10 @@ Tridesclous
         pip install pyopencl
 
 Waveclus
---------
+^^^^^^^^
 
 * Matlab
+* Also supports Snippets (waveform cutouts) objects (:py:class:`~spikeinterface.core.BaseSnippets`)
 * Url: https://github.com/csn-le/wave_clus/wiki
 * Authors: Fernando Chaure, Hernan Rey and Rodrigo Quian Quiroga
 * Installation needs Matlab::
@@ -227,7 +222,7 @@ Waveclus
 
 
 Combinato
----------
+^^^^^^^^^
 
 * Python
 * Url: https://github.com/jniediek/combinato/wiki
@@ -240,25 +235,44 @@ Combinato
       # provide installation path by setting the COMBINATO_PATH environment variable
       # or using CombinatoSorter.set_combinato_path()
 
-Yass
-----
+
+Klusta (LEGACY)
+^^^^^^^^^^^^^^^
+
+* Python
+* Requires SpikeInterface<0.96.0 (and Python 3.7)
+* Url: https://github.com/kwikteam/klusta
+* Authors: Cyrille Rossant, Shabnam Kadir, Dan Goodman, Max Hunter, Kenneth Harris
+* Installation::
+
+       pip install Cython h5py tqdm
+       pip install click klusta klustakwik2
+
+* See also: https://github.com/kwikteam/phy
+
+Yass (LEGACY)
+^^^^^^^^^^^^^
+
 
 * Python, cuda, torch
+* Requires SpikeInterface<0.96.0 (and Python 3.7)
 * Url: https://github.com/paninski-lab/yass
-* Authors: Liam Paninski
+* Authors: JinHyung Lee, Catalin Mitelut, Liam Paninski
 * Installation::
 
       https://github.com/paninski-lab/yass/wiki/Installation-Local
 
 
+.. _si_based:
+
 SpikeInterface-based spike sorters
-==================================
+----------------------------------
 
 Thanks to the :py:mod:`spikeinterface.sortingcomponents` module, some spike sorting algorithms can now be fully implemented 
 with SpikeInterface. 
 
 SpykingCircus2
---------------
+^^^^^^^^^^^^^^
 
 This is a upgraded version of SpykingCircus, natively written in SpikeInterface. 
 The main differences are located in the clustering (now using on-the-fly features and less prone to find 

@@ -2,12 +2,13 @@
 
 import numpy as np
 
-from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, split_job_kwargs
+from spikeinterface.core.job_tools import (ChunkRecordingExecutor, _shared_job_kwargs_doc,
+                                           split_job_kwargs, fix_job_kwargs)
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 
 from ..core import get_chunk_with_margin
 
-from .peak_pipeline import PeakPipelineStep, get_nbefore_nafter_from_steps
+from .peak_pipeline import PipelineNode, check_graph, run_nodes
 from .tools import make_multi_method_doc
 
 try:
@@ -20,7 +21,7 @@ base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
                    ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 
-def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
+def detect_peaks(recording, method='by_channel', pipeline_nodes=None, **kwargs):
     """Peak detection based on threshold crossing in term of k x MAD.
 
     In 'by_channel' : peak are detected in each channel independently
@@ -31,8 +32,8 @@ def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
     ----------
     recording: RecordingExtractor
         The recording extractor object.
-    pipeline_steps: None or list[PeakPipelineStep]
-        Optional additional PeakPipelineStep need to computed just after detection time.
+    pipeline_nodes: None or list[PipelineNode]
+        Optional additional PipelineNode need to computed just after detection time.
         This avoid reading the recording multiple times.
     {method_doc}
     {job_doc}
@@ -56,53 +57,39 @@ def detect_peaks(recording, method='by_channel', pipeline_steps=None, **kwargs):
     # prepare args
     method_args = method_class.check_params(recording, **method_kwargs)
 
-    if pipeline_steps is not None:
-        assert all(isinstance(step, PeakPipelineStep)
-                   for step in pipeline_steps)
-        if job_kwargs.get('n_jobs', 1) > 1:
-            pipeline_steps_ = [(step.__class__, step.to_dict())
-                               for step in pipeline_steps]
-        else:
-            pipeline_steps_ = pipeline_steps
-        extra_margin = max(step.get_trace_margin() for step in pipeline_steps)
-    else:
-        pipeline_steps_ = None
-        extra_margin = 0
-
-    # and run
-    if job_kwargs.get('n_jobs', 1) > 1:
-        recording_ = recording.to_dict()
-    else:
-        recording_ = recording
+    extra_margin = 0
+    if pipeline_nodes is not None:
+        check_graph(pipeline_nodes)
+        extra_margin = max(node.get_trace_margin() for node in pipeline_nodes)
 
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
-    init_args = (recording_, method, method_args, extra_margin, pipeline_steps_)
+    init_args = (recording, method, method_args, extra_margin, pipeline_nodes)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
-                                       handle_returns=True, job_name='detect peaks', **job_kwargs)
+                                       handle_returns=True, job_name='detect peaks',
+                                       **job_kwargs)
     outputs = processor.run()
 
-    if pipeline_steps is None:
+    if pipeline_nodes is None:
         peaks = np.concatenate(outputs)
         return peaks
     else:
 
         outs_concat = ()
-        for output_step in zip(*outputs):
-            outs_concat += (np.concatenate(output_step, axis=0), )
+        for output_node in zip(*outputs):
+            outs_concat += (np.concatenate(output_node, axis=0), )
         return outs_concat
 
 
-def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipeline_steps):
+def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipeline_nodes):
     """Initialize a worker for detecting peaks."""
 
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
         recording = load_extractor(recording)
 
-        if pipeline_steps is not None:
-            pipeline_steps = [cls.from_dict(
-                recording, kwargs) for cls, kwargs in pipeline_steps]
+        if pipeline_nodes is not None:
+            pipeline_nodes = [cls.from_dict(recording, kwargs) for cls, kwargs in pipeline_nodes]
 
     # create a local dict per worker
     worker_ctx = {}
@@ -113,14 +100,8 @@ def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipe
     # worker_ctx['method_args'] = copy.deepcopy(method_args)
     worker_ctx['method_args'] = method_args
     worker_ctx['extra_margin'] = extra_margin
-    worker_ctx['pipeline_steps'] = pipeline_steps
-
-    if pipeline_steps is not None:
-        worker_ctx['need_waveform'] = any(
-            step.need_waveforms for step in pipeline_steps)
-        if worker_ctx['need_waveform']:
-            worker_ctx['nbefore'], worker_ctx['nafter'] = get_nbefore_nafter_from_steps(pipeline_steps)
-
+    worker_ctx['pipeline_nodes'] = pipeline_nodes
+    
     return worker_ctx
 
 
@@ -131,7 +112,7 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     method_class = worker_ctx['method_class']
     method_args = worker_ctx['method_args']
     extra_margin = worker_ctx['extra_margin']
-    pipeline_steps = worker_ctx['pipeline_steps']
+    pipeline_nodes = worker_ctx['pipeline_nodes']
 
     margin = method_class.get_method_margin(*method_args) + extra_margin
 
@@ -141,7 +122,7 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
                                                               None, margin, add_zeros=True)
 
     if extra_margin > 0:
-        # remove extra margin for detection step
+        # remove extra margin for detection node
         trace_detection = traces[extra_margin:-extra_margin]
     else:
         trace_detection = traces
@@ -165,26 +146,13 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
     peaks['amplitude'] = peak_amplitude
     peaks['segment_ind'] = segment_index
 
-    if pipeline_steps is not None:
-
-        if worker_ctx['need_waveform']:
-            waveforms = traces[peaks['sample_ind'][:, None] + np.arange(-worker_ctx['nbefore'], worker_ctx['nafter'])]
-        else:
-            waveforms = None
-
-        outs = tuple()
-        for step in pipeline_steps:
-            if step.need_waveforms:
-                # give the waveforms pre extracted when needed
-                out = step.compute_buffer(traces, peaks, waveforms=waveforms)
-            else:
-                out = step.compute_buffer(traces, peaks)
-            outs += (out, )
+    if pipeline_nodes is not None:
+        outs = run_nodes(traces, peaks, pipeline_nodes)
 
     # make absolute sample index
     peaks['sample_ind'] += (start_frame - left_margin)
 
-    if pipeline_steps is None:
+    if pipeline_nodes is None:
         return peaks
     else:
         return (peaks, ) + outs
@@ -367,6 +335,7 @@ if HAVE_NUMBA:
 class DetectPeakLocallyExclusiveOpenCL:
     name = 'locally_exclusive_cl'
     engine = 'opencl'
+    preferred_mp_context = None
     params_doc = DetectPeakLocallyExclusive.params_doc + """
     opencl_context_kwargs: None or dict
         kwargs to create the opencl context
@@ -411,16 +380,11 @@ class OpenCLDetectPeakExecutor:
         self.peak_sign = peak_sign
         self.ctx = None
         self.queue = None
-
-        
-
         self.x = 0
     
     def create_buffers_and_compile(self, chunk_size):
         import pyopencl
         mf = pyopencl.mem_flags
-        
-        # self.ctx = pyopencl.create_some_context(interactive=False)
         try:
             self.device = pyopencl.get_platforms()[0].get_devices()[0]
             self.ctx = pyopencl.Context(devices=[self.device])
@@ -429,23 +393,18 @@ class OpenCLDetectPeakExecutor:
 
         self.queue = pyopencl.CommandQueue(self.ctx)
         self.max_wg_size = self.ctx.devices[0].get_info(pyopencl.device_info.MAX_WORK_GROUP_SIZE)
-        
         self.chunk_size = chunk_size
-        
-        #~ print('self.abs_threholds', self.abs_threholds)
-        #~ print('self.neighbours_mask', self.neighbours_mask)
-        
+
         self.neighbours_mask_cl = pyopencl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.neighbours_mask)
         self.abs_threholds_cl = pyopencl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.abs_threholds)
-        
+
         num_channels = self.neighbours_mask.shape[0]
         self.traces_cl = pyopencl.Buffer(self.ctx, mf.READ_WRITE, size=int(chunk_size * num_channels * 4))
 
         # TODO estimate smaller 
         self.num_peaks = np.zeros(1, dtype='int32')
         self.num_peaks_cl = pyopencl.Buffer(self.ctx, mf.READ_WRITE| mf.COPY_HOST_PTR, hostbuf=self.num_peaks)
-        
-        
+
         nb_max_spike_in_chunk = num_channels * chunk_size
         self.peaks = np.zeros(nb_max_spike_in_chunk, dtype=[('sample_index', 'int32'), ('channel_index', 'int32')])
         self.peaks_cl = pyopencl.Buffer(self.ctx, mf.READ_WRITE| mf.COPY_HOST_PTR, hostbuf=self.peaks)
@@ -458,60 +417,44 @@ class OpenCLDetectPeakExecutor:
         )
 
         kernel_formated = processor_kernel % variables
-        #~ print(kernel_formated)
         prg = pyopencl.Program(self.ctx, kernel_formated)
         self.opencl_prg = prg.build()  # options='-cl-mad-enable'
         self.kern_detect_peaks = getattr(self.opencl_prg, 'detect_peaks')
-        
+
         self.kern_detect_peaks.set_args(self.traces_cl,
-                                                                self.neighbours_mask_cl,
-                                                                self.abs_threholds_cl,
-                                                                self.peaks_cl,
-                                                                self.num_peaks_cl)
-        
+                                        self.neighbours_mask_cl,
+                                        self.abs_threholds_cl,
+                                        self.peaks_cl,
+                                        self.num_peaks_cl)
+
         s = self.chunk_size - 2 * self.exclude_sweep_size
         self.global_size = (s, )
         self.local_size = None
 
-        #~ print('self.global_size', self.global_size, 'self.local_size', self.local_size)
 
     def detect_peak(self, traces):
-        
-        import os
-        # import time
-        # time.sleep(float(np.random.rand() * 3))
-
-        # print('detect_peak', os.getpid(), self.x, self.chunk_size,)
         self.x += 1
 
         import pyopencl
         if self.chunk_size is None or self.chunk_size != traces.shape[0]:
             self.create_buffers_and_compile(traces.shape[0])
-            # print('   AFTER create', os.getpid(), self.chunk_size, self.ctx)
-        # print(self.ctx)
-        #~ print(self.kern_detect_peak)
+        event = pyopencl.enqueue_copy(self.queue,  self.traces_cl, traces.astype('float32'))
 
-        #~ print( traces.astype('float32').min(axis=0))
-        event = pyopencl.enqueue_copy(self.queue,  self.traces_cl, traces.astype('float32'))
-        
         pyopencl.enqueue_nd_range_kernel(self.queue,  self.kern_detect_peaks, self.global_size, self.local_size,)
-        
+
         event = pyopencl.enqueue_copy(self.queue,  self.traces_cl, traces.astype('float32'))
-        
         event = pyopencl.enqueue_copy(self.queue,  self.traces_cl, traces.astype('float32'))
         event = pyopencl.enqueue_copy(self.queue,  self.num_peaks,self.num_peaks_cl)
-
         event = pyopencl.enqueue_copy(self.queue,  self.peaks, self.peaks_cl)
         event.wait()
-        
-        n = self.num_peaks[0]
-        #~ print('num_peaks', n)
-        
-        peaks = self.peaks[:n]
 
+        n = self.num_peaks[0]
+        peaks = self.peaks[:n]
         peak_sample_ind = peaks['sample_index'].astype('int64')
         peak_chan_ind = peaks['channel_index'].astype('int64')
+
         return peak_sample_ind, peak_chan_ind
+
 
 processor_kernel = """
 #define chunk_size %(chunk_size)d
@@ -616,17 +559,14 @@ __kernel void detect_peaks(
     }
     
 }
-
-
 """
 
 
 # TODO make a dict with name+engine entry later
-_methods_list = [DetectPeakByChannel, DetectPeakLocallyExclusive, DetectPeakLocallyExclusiveOpenCL]
+_methods_list = [DetectPeakByChannel, DetectPeakLocallyExclusive,
+                 DetectPeakLocallyExclusiveOpenCL]
 detect_peak_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)
 detect_peaks.__doc__ = detect_peaks.__doc__.format(method_doc=method_doc,
                                                    job_doc=_shared_job_kwargs_doc)
-
-
 

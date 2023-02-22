@@ -1,11 +1,11 @@
 import numpy as np
 
-from spikeinterface.core.job_tools import _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
+
+from spikeinterface.core.template_tools import (get_template_extremum_channel,
+                                                get_template_extremum_channel_peak_shift)
 
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
-
-from .template_tools import (get_template_extremum_channel,
-                             get_template_extremum_channel_peak_shift)
 
 
 class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
@@ -49,7 +49,8 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         spike locations.
         """
         from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-        
+        job_kwargs = fix_job_kwargs(job_kwargs)
+
         we = self.waveform_extractor
         
         extremum_channel_inds = get_template_extremum_channel(we, outputs="index")
@@ -74,7 +75,6 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
             as a dict with units as key and spike locations as values.
         """
         we = self.waveform_extractor
-        recording = we.recording
         sorting = we.sorting
 
         if outputs == 'concatenated':
@@ -82,7 +82,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 
         elif outputs == 'by_unit':
             locations_by_unit = []
-            for segment_index in range(recording.get_num_segments()):
+            for segment_index in range(self.waveform_extractor.get_num_segments()):
                 i0 =np.searchsorted(self.spikes['segment_ind'], segment_index, side="left")
                 i1 =np.searchsorted(self.spikes['segment_ind'], segment_index, side="right")
                 spikes = self.spikes[i0: i1]
