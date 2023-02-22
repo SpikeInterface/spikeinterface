@@ -56,11 +56,12 @@ class MetricsBaseWidget(BaseWidget):
         # remove all NaNs metrics
         nan_metrics = []
         for m in metrics.columns:
-            if np.all(np.isnan(metrics[m])):
+            if len(metrics[m].dropna()) == 0:
                 nan_metrics.append(m)
-        warnings.warn(f"Skipping {nan_metrics} because they contain all NaNs")
-        selected_metrics = [m for m in metrics.columns if m not in nan_metrics]
-        metrics = metrics[selected_metrics]
+        if len(nan_metrics) > 0:
+            warnings.warn(f"Skipping {nan_metrics} because they contain all NaNs")
+            selected_metrics = [m for m in metrics.columns if m not in nan_metrics]
+            metrics = metrics[selected_metrics]
 
         plot_data = dict(
             metrics=metrics,
