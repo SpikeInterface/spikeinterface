@@ -134,8 +134,7 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
     assert all(isinstance(node, PipelineNode) for node in nodes)
 
     if gather_mode == 'memory':
-        handle_returns = True
-        gather_func = GatherTupleInMemory()
+        gather_func = GatherToMemory()
     elif gather_mode == 'npy':
         gather_func = GatherToNpy(folder, names)
     else:
@@ -152,8 +151,7 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
     init_args = (recording, peaks, nodes, segment_slices)
         
     processor = ChunkRecordingExecutor(recording, _compute_peak_step_chunk, _init_worker_peak_pipeline, init_args,
-                                       handle_returns=False, gather_func=gather_func, 
-                                       job_name=job_name, **job_kwargs)
+                                       gather_func=gather_func, job_name=job_name, **job_kwargs)
 
     processor.run()
 
@@ -161,31 +159,41 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
         return gather_func.concatenate(squeeze_output=squeeze_output)
     elif gather_mode == 'npy':
         gather_func.finalize()
-        return gather_func.get_memmap()
+        return gather_func.get_memmap(squeeze_output=squeeze_output)
 
 
-class GatherTupleInMemory:
+class GatherToMemory:
     """
     Gather output of nodes into list and then demultiplex and np.concatenate
     """
     def __init__(self):
         self.outputs = []
+        self.tuple_mode = None
 
     def __call__(self, res):
+        if self.tuple_mode is None:
+            # first loop only
+            self.tuple_mode = isinstance(res, tuple)
+
         # res is a tuple
         self.outputs.append(res)
     
-    def concatenate(self, squeeze_output=True):
-        outs_concat = ()
-        for output_step in zip(*self.outputs):
-            outs_concat += (np.concatenate(output_step, axis=0), )
+    def concatenate(self, squeeze_output=False):
+        if self.tuple_mode:
+            # list of tuple of numpy array
+            outs_concat = ()
+            for output_step in zip(*self.outputs):
+                outs_concat += (np.concatenate(output_step, axis=0), )
 
-        if len(outs_concat) == 1 and squeeze_output:
-            # when tuple size ==1  then remove the tuple
-            return outs_concat[0]
+            if len(outs_concat) == 1 and squeeze_output:
+                # when tuple size ==1  then remove the tuple
+                return outs_concat[0]
+            else:
+                # always a tuple even of size 1
+                return outs_concat
         else:
-            # always a tuple even of size 1
-            return outs_concat
+            # list of numpy array
+            return np.concatenate(self.outputs)
 
 class GatherToNpy:
     """
@@ -200,8 +208,11 @@ class GatherToNpy:
     def __init__(self, folder, names, npy_header_size=1024):
         self.folder = Path(folder)
         self.folder.mkdir(parents=True, exist_ok=False)
+        assert names is not None
         self.names = names
         self.npy_header_size = npy_header_size
+
+        self.tuple_mode = None
         
         self.files = []
         self.dtypes = []
@@ -217,16 +228,22 @@ class GatherToNpy:
             self.final_shapes.append(None)
             
     def __call__(self, res):
+        if self.tuple_mode is None:
+            # first loop only
+            self.tuple_mode = isinstance(res, tuple)
+            assert len(self.names) == 1
+
         # distribute binary buffer to npy files
         for i in range(len(self.names)):
             f = self.files[i]
             buf = res[i]
             buf = np.require(buf, requirements='C')
-            f.write(buf.tobytes())
             if self.dtypes[i] is None:
+                # first loop only
                 self.dtypes[i] = buf.dtype
                 if buf.ndim >1:
                     self.final_shapes[i] = buf.shape[1:]
+            f.write(buf.tobytes())
             self.shapes0[i] += buf.shape[0]
 
     def finalize(self) :
@@ -261,12 +278,29 @@ class GatherToNpy:
                 f.seek(0)
                 f.write(header)
         
-    def get_memmap(self):
-        outs = ()
-        for i, name in enumerate(self.names):
-            filename = self.folder / (name + '.npy')
-            outs += (np.load(filename, mmap_mode='r'), )
-        return outs
+    def get_memmap(self, squeeze_output=False):
+        if self.tuple_mode:
+            outs = ()
+            for i, name in enumerate(self.names):
+                filename = self.folder / (name + '.npy')
+                outs += (np.load(filename, mmap_mode='r'), )
+        
+            if len(outs) == 1 and squeeze_output:
+                # when tuple size ==1  then remove the tuple
+                return outs[0]
+            else:
+                # always a tuple even of size 1
+                return outs
+        else:
+            # only one file
+            filename = self.folder / (self.names[0] + '.npy')
+            return np.load(filename, mmap_mode='r')
+
+
+class GatherToHdf5:
+    pass
+    # Fot me (sam) this is not necessary unless someone realy really want to use
+
 
 
 def _init_worker_peak_pipeline(recording, peaks, nodes, segment_slices):

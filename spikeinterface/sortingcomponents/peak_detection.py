@@ -8,7 +8,7 @@ from spikeinterface.core.recording_tools import get_noise_levels, get_channel_di
 
 from ..core import get_chunk_with_margin
 
-from .peak_pipeline import PipelineNode, check_graph, run_nodes
+from .peak_pipeline import PipelineNode, check_graph, run_nodes, GatherToMemory, GatherToNpy
 from .tools import make_multi_method_doc
 
 try:
@@ -28,7 +28,9 @@ base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
                    ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 
-def detect_peaks(recording, method='by_channel', pipeline_nodes=None, **kwargs):
+def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
+                 gather_mode='memory', folder=None, names=None,
+                 **kwargs):
     """Peak detection based on threshold crossing in term of k x MAD.
 
     In 'by_channel' : peak are detected in each channel independently
@@ -42,6 +44,12 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None, **kwargs):
     pipeline_nodes: None or list[PipelineNode]
         Optional additional PipelineNode need to computed just after detection time.
         This avoid reading the recording multiple times.
+    gather_mode
+
+    folder
+    
+    names
+
     {method_doc}
     {job_doc}
 
@@ -66,27 +74,34 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None, **kwargs):
     method_args = method_class.check_params(recording, **method_kwargs)
 
     extra_margin = 0
-    if pipeline_nodes is not None:
+    if pipeline_nodes is None:
+        squeeze_output = True
+    else:
         check_graph(pipeline_nodes)
         extra_margin = max(node.get_trace_margin() for node in pipeline_nodes)
-
+        squeeze_output = False
+    
+    if gather_mode == 'memory':
+        gather_func = GatherToMemory()
+    elif gather_mode == 'npy':
+        gather_func = GatherToNpy(folder, names)
+    else:
+        raise ValueError(f'wrong gather_mode : {gather_mode}')
+        
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
     init_args = (recording, method, method_args, extra_margin, pipeline_nodes)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
-                                       handle_returns=True, job_name='detect peaks',
+                                       gather_func=gather_func, job_name='detect peaks',
                                        mp_context=mp_context, **job_kwargs)
-    outputs = processor.run()
+    processor.run()
 
-    if pipeline_nodes is None:
-        peaks = np.concatenate(outputs)
-        return peaks
-    else:
-        outs_concat = ()
-        for output_node in zip(*outputs):
-            outs_concat += (np.concatenate(output_node, axis=0), )
-        return outs_concat
-
+    if gather_mode == 'memory':
+        return gather_func.concatenate(squeeze_output=squeeze_output)
+    elif gather_mode == 'npy':
+        gather_func.finalize()
+        return gather_func.get_memmap(squeeze_output=squeeze_output)
+        
 
 def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipeline_nodes):
     """Initialize a worker for detecting peaks."""
