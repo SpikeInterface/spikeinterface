@@ -3,8 +3,8 @@ import os
 import numpy as np
 import sys
 
-from ..basesorter import BaseSorter, get_job_kwargs
-from ..utils import ShellScript
+from ...basesorter import BaseSorter, get_job_kwargs
+from ...utils import ShellScript
 
 from spikeinterface.core import load_extractor
 

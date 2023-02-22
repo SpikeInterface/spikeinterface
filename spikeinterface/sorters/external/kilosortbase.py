@@ -7,8 +7,8 @@ import sys
 import numpy as np
 import scipy.io
 
-from .utils import ShellScript, get_matlab_shell_name, get_bash_path
-from .basesorter import get_job_kwargs
+from ..utils import ShellScript, get_matlab_shell_name, get_bash_path
+from ..basesorter import get_job_kwargs
 from spikeinterface.extractors import KiloSortSortingExtractor
 from spikeinterface.core import write_binary_recording
 

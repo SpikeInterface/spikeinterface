@@ -8,8 +8,8 @@ import numpy as np
 import scipy.io
 
 from spikeinterface.core.core_tools import write_to_h5_dataset_format
-from ..basesorter import BaseSorter
-from ..utils import ShellScript
+from ...basesorter import BaseSorter
+from ...utils import ShellScript
 
 # from spikeinterface.extractors import MaxOneRecordingExtractor
 from spikeinterface.extractors import HDSortSortingExtractor

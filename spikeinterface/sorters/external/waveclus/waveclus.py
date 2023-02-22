@@ -7,8 +7,8 @@ import json
 
 import scipy.io
 
-from ..basesorter import BaseSorter
-from ..utils import ShellScript
+from ...basesorter import BaseSorter
+from ...utils import ShellScript
 
 from spikeinterface.core import write_to_h5_dataset_format
 from spikeinterface.extractors import WaveClusSortingExtractor

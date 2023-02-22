@@ -2,9 +2,9 @@ from pathlib import Path
 import os
 from typing import Union
 
-from ..basesorter import BaseSorter
+from ...basesorter import BaseSorter
 from ..kilosortbase import KilosortBase
-from ..utils import get_git_commit
+from ...utils import get_git_commit
 
 PathType = Union[str, Path]
 
