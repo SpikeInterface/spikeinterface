@@ -109,6 +109,7 @@ def test_estimate_motion():
             conv_engine='torch',
             time_horizon_s=None,
             spatial_prior=True,
+            convergence_method="lsmr",
         ),
         'non-rigid / decentralized / numpy / spatial_prior': dict(
             rigid=False,
@@ -116,6 +117,7 @@ def test_estimate_motion():
             conv_engine='numpy',
             time_horizon_s=None,
             spatial_prior=True,
+            convergence_method="lsmr",
         ),
         'non-rigid / decentralized / torch / time_horizon_s': dict(
             rigid=False,

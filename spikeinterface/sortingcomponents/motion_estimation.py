@@ -999,7 +999,7 @@ def compute_global_displacement(
             )
             coefficients = sparse.vstack((coefficients, spatial_diff_operator))
             targets = np.concatenate((targets, np.zeros((B - 1) * T, dtype=targets.dtype)))
-            cannot_trim = np.concatenate(can_trim, np.zeros((B - 1) * T, dtype=bool))
+            cannot_trim = np.concatenate((cannot_trim, np.zeros((B - 1) * T, dtype=bool)))
         coefficients = coefficients.tocsr()
 
         # initialize at the column mean of pairwise displacements (in each window)
