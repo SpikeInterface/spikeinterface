@@ -58,13 +58,13 @@ extractors = [
     "MEArec>=1.8",
     "pynwb>=2.1.0",
     "pyedflib>=0.1.30",
-    "sonpy;python_version>'3.7'",
+    "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "hdf5storage", # hdf5storage and scipy for cellexplorer
     "scipy",
     # ONE-api and ibllib for streaming IBL
     "ONE-api>=1.19.1",
-    "ibllib>=2.20.0",
+    "ibllib>=2.21.0",
 ]
 
 full = [
