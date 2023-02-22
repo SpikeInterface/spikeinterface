@@ -2,13 +2,13 @@ name: Full spikeinterface tests
 
 on:
   pull_request:
-    types: [synchronize, opened, reopened, ready_for_review]
+    types: [synchronize, opened, reopened]
 
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
+env:  #  For the sortingview backend
   KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
   KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
 
@@ -25,33 +25,47 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.10'
       - name: Get current year-month
         id: date
         run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
+      - name: Restore cached virtual environment with dependencies
+        uses: actions/cache/restore@v3
         id: cache-venv
         with:
           path: ~/test_env
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
-      - name: Python version
+          restore-keys: |
+            ${{ runner.os }}-venv-
+      - name: Get ephy_testing_data current head hash
+        # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
+        id: vars
         run: |
-          python --version
+          echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+      - name: Restore cached gin data for extractors tests
+        uses: actions/cache/restore@v3
+        id: cache-datasets
+        env:
+          # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
+          HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
+        with:
+          path: ~/spikeinterface_datasets
+          key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
+          restore-keys: |
+            ${{ runner.os }}-datasets
       - name: Install dependencies
         run: |
           sudo apt update
           # this is for datalad and download testing datasets
           sudo apt install git 
+          # this is for spyking circus
+          # sudo apt install mpich libmpich-dev
           # needed for correct operation of git/git-annex/DataLad
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
-          # this is for spyking circus
-          # sudo apt install mpich libmpich-dev
-          # create an environement (better for caching)
           python -m venv ~/test_env
-          source ~/test_env/bin/activate
           python -m pip install -U pip  # Official recommended way
-          pip install setuptools wheel twine
+          source ~/test_env/bin/activate
           pip install tabulate  # This produces summaries at the end
           ## clean some cache to avoid using old cache
           pip cache remove numpy
@@ -72,21 +86,6 @@ jobs:
         run: |
           source ~/test_env/bin/activate
           pip list
-      - name: Get ephy_testing_data current head hash
-        # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
-        id: vars
-        run: |
-          echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
-        id: cache-datasets
-        env:
-          # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
-          HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
-        with:
-          path: ~/spikeinterface_datasets
-          key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
-          restore-keys: |
-            ${{ runner.os }}-datasets
       - name: Check ephy_testing_data files
         run: |
           if [ -d "$HOME/spikeinterface_datasets" ]; then
@@ -151,7 +150,7 @@ jobs:
       - name: Test core
         run: |
           source ~/test_env/bin/activate
-          pytest -vv -m core --durations=0 --durations-min=0.001 > report_core.txt
+          pytest -m core --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_core.txt
           cat report_core.txt
           echo "# Timing profile of core tests" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_core.txt >> $GITHUB_STEP_SUMMARY 
@@ -161,7 +160,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -vv -s -m extractors --durations=0 --durations-min=0.001 > report_extractors.txt
+          pytest -m extractors --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_extractors.txt
           cat report_extractors.txt
           echo "# Timing profile of extractors" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_extractors.txt >> $GITHUB_STEP_SUMMARY 
@@ -171,7 +170,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -vv -s -m preprocessing --durations=0 --durations-min=0.001 > report_preprocessing.txt
+          pytest -m preprocessing --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_preprocessing.txt
           cat report_preprocessing.txt
           echo "# Timing profile of preprocessing" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_preprocessing.txt >> $GITHUB_STEP_SUMMARY 
@@ -181,7 +180,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.POSTPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -vv -s -m postprocessing --durations=0 --durations-min=0.001 > report_postprocessing.txt
+          pytest -m postprocessing --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_postprocessing.txt
           cat report_postprocessing.txt
           echo "# Timing profile of postprocessing" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_postprocessing.txt >> $GITHUB_STEP_SUMMARY 
@@ -191,7 +190,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -vv -s -m qualitymetrics --durations=0 --durations-min=0.001 > report_qualitymetrics.txt
+          pytest -m qualitymetrics --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_qualitymetrics.txt
           cat report_qualitymetrics.txt
           echo "# Timing profile of qualitymetrics" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_qualitymetrics.txt >> $GITHUB_STEP_SUMMARY 
@@ -201,7 +200,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -vv -s -m sorters --durations=0 --durations-min=0.001 > report_sorters.txt
+          pytest -m sorters --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_sorters.txt
           cat report_sorters.txt
           echo "# Timing profile of sorters" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_sorters.txt >> $GITHUB_STEP_SUMMARY 
@@ -211,7 +210,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.COMPARISON_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -vv -s -m comparison --durations=0 --durations-min=0.001 > report_comparison.txt
+          pytest -m comparison --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_comparison.txt
           cat report_comparison.txt
           echo "# Timing profile of comparison" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_comparison.txt >> $GITHUB_STEP_SUMMARY 
@@ -221,7 +220,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.CURATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -vv -s -m curation --durations=0 --durations-min=0.001 > report_curation.txt
+          pytest -m curation --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_curation.txt
           cat report_curation.txt
           echo "# Timing profile of curation" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_curation.txt >> $GITHUB_STEP_SUMMARY 
@@ -231,7 +230,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' ||  steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true'}}
         run: |
           source ~/test_env/bin/activate
-          pytest -vv -s -m widgets --durations=0 --durations-min=0.001 > report_widgets.txt
+          pytest -m widgets --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_widgets.txt
           cat report_widgets.txt
           echo "# Timing profile of widgets" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_widgets.txt >> $GITHUB_STEP_SUMMARY 
@@ -241,7 +240,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -vv -s -m exporters --durations=0 --durations-min=0.001 > report_exporters.txt
+          pytest -m exporters --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_exporters.txt
           cat report_exporters.txt
           echo "# Timing profile of exporters" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_exporters.txt >> $GITHUB_STEP_SUMMARY 
@@ -251,7 +250,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -vv -s -m sortingcomponents --durations=0 --durations-min=0.001 > report_sortingcomponents.txt
+          pytest -m sortingcomponents --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_sortingcomponents.txt
           cat report_sortingcomponents.txt
           echo "# Timing profile of sortingcomponents" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_sortingcomponents.txt >> $GITHUB_STEP_SUMMARY 
@@ -261,7 +260,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.SI_SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -vv -s -m si_sorters --durations=0 --durations-min=0.001 > report_si_sorters.txt
+          pytest -m si_sorters --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_si_sorters.txt
           cat report_si_sorters.txt
           echo "# Timing profile of si_sorters" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_si_sorters.txt >> $GITHUB_STEP_SUMMARY 

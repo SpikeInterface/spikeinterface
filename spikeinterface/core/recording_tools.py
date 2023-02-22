@@ -223,7 +223,7 @@ def order_channels_by_depth(recording, channel_ids=None, dimensions=('x', 'y')):
     """
     locations = recording.get_channel_locations()
     ndim = locations.shape[1]
-    channel_inds = recording.ids_to_indices(channel_ids)
+    channel_inds = recording.ids_to_indices(ids=channel_ids, prefer_slice=True)
     locations = locations[channel_inds, :]
 
     if isinstance(dimensions, str):
