@@ -1023,10 +1023,8 @@ def round_binning_errors(values, tolerance=1e-8):
             values[correction_mask] += 0.5
         return values.astype(np.int32)
 
-    # if correction_mask:
-    #     values += 0.5
-
     return int(values)
+
 
 class BinnedSpikeTrain(object):
 
@@ -1077,12 +1075,6 @@ class BinnedSpikeTrain(object):
 
     def __resolve_binned(self, spiketrains):
         spiketrains = np.asarray(spiketrains)
-        if spiketrains.ndim != 2 or spiketrains.dtype == np.dtype('O'):
-            raise ValueError("If the input is not a spiketrain(s), it "
-                             "must be an MxN numpy array, each cell of "
-                             "which represents the number of (binned) "
-                             "spikes that fall in an interval - not "
-                             "raw spike times.")
         if self.n_bins is not None:
             raise ValueError("When the input is a binned matrix, 'n_bins' "
                              "must be set to None - it's extracted from the "
@@ -1138,7 +1130,6 @@ class BinnedSpikeTrain(object):
                           for st in spiketrains)
 
         tolerance = self.tolerance
-
 
         if self.n_bins is None:
             # bin_size is provided
@@ -1293,7 +1284,7 @@ class BinnedSpikeTrain(object):
         return sparse_matrix
 
 
-class BinnedSpikeTrainView(BinnedSpikeTrain):
+class BinnedSpikeTrainView(object):
     """
     A view of :class:`BinnedSpikeTrain`.
 
@@ -1331,9 +1322,6 @@ class BinnedSpikeTrainView(BinnedSpikeTrain):
         self.tolerance = tolerance
 
 
-
-
-
 class Complexity(object):
 
     def __init__(self, spiketrains,
@@ -1353,25 +1341,21 @@ class Complexity(object):
         if bin_size is None and sampling_rate is not None:
             self.bin_size = 1 / self.sampling_rate
 
-        def time_histogram(spiketrains, bin_size, t_start=None, t_stop=None,
-                           output='counts'):
+        def time_histogram(spiketrains, bin_size):
 
             # Bin the spike trains and sum across columns
-            bs = BinnedSpikeTrain(spiketrains, t_start=t_start, t_stop=t_stop,
-                                  bin_size=bin_size).binarize(copy=False)
+            bs = BinnedSpikeTrain(spiketrains, bin_size=bin_size).binarize(copy=False)
 
             bin_hist = bs.get_num_of_spikes(axis=0)
             # Flatten array
             bin_hist = np.ravel(bin_hist)
             # Renormalise the histogram
-            if output == 'counts':
-                # Raw
-                bin_hist = pq.Quantity(bin_hist, units=pq.dimensionless, copy=False)
+            # Raw
+            bin_hist = pq.Quantity(bin_hist, units=pq.dimensionless, copy=False)
 
             return neo.AnalogSignal(signal=np.expand_dims(bin_hist, axis=1),
                                     sampling_period=bin_size, units=bin_hist.units,
-                                    t_start=bs.t_start, normalization=output,
-                                    copy=False)
+                                    t_start=bs.t_start, copy=False)
 
         if spread == 0:
             self.time_histogram = time_histogram(self.input_spiketrains,
