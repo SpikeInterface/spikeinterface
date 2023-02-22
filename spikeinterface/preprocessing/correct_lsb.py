@@ -75,10 +75,10 @@ def _estimate_lsb_from_data(data):
     lsb_value = None
     num_channels = data.shape[1]
     for ch in np.arange(num_channels):
-        abs_unique_values = np.abs(np.unique(data[:, ch]))
+        unique_values = np.unique(data[:, ch])
         # It might happen that there is a single unique value (e.g. a channel is broken, or all zeros)
-        if len(abs_unique_values) > 1:
-            chan_lsb_val = np.min(np.diff(np.abs(np.unique(abs_unique_values))))
+        if len(unique_values) > 1:
+            chan_lsb_val = np.min(np.diff(unique_values))
         else:
             # in this case we can't estimate the LSB for the channel
             continue
