@@ -1,5 +1,3 @@
-import warnings
-
 from .external.combinato import CombinatoSorter
 from .external.hdsort import HDSortSorter
 from .external.herdingspikes import HerdingspikesSorter
@@ -14,7 +12,7 @@ from .external.mountainsort4 import Mountainsort4Sorter
 from .external.spyking_circus import SpykingcircusSorter
 from .external.tridesclous import TridesclousSorter
 from .external.waveclus import WaveClusSorter
-from .external.waveclus import WaveClusSnippetsSorter
+from .external.waveclus_snippets import WaveClusSnippetsSorter
 from .external.yass import YassSorter
 
 # based on spikeinertface.sortingcomponents

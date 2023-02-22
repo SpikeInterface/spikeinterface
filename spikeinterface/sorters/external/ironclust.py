@@ -3,8 +3,8 @@ from pathlib import Path
 from typing import Union
 import sys
 
-from ...utils import ShellScript
-from ...basesorter import BaseSorter, get_job_kwargs
+from ..utils import ShellScript
+from ..basesorter import BaseSorter, get_job_kwargs
 
 from spikeinterface.extractors import MdaRecordingExtractor, MdaSortingExtractor
 
@@ -177,7 +177,7 @@ class IronClustSorter(BaseSorter):
             print(f'channels = {num_channels}, timepoints = {num_timepoints}, duration = {duration_minutes} minutes')
 
         if verbose:
-            print('Creating argfile.txt...')
+            print('Creating argfile.txt..')
         txt = ''
         for key0, val0 in params.items():
             txt += '{}={}\n'.format(key0, val0)
@@ -200,7 +200,7 @@ class IronClustSorter(BaseSorter):
         tmpdir = (sorter_output_folder / 'tmp').absolute()
 
         if verbose:
-            print('Running ironclust in {tmpdir}...'.format(tmpdir=str(tmpdir)))
+            print('Running ironclust in {tmpdir}..'.format(tmpdir=str(tmpdir)))
 
         if cls.check_compiled():
             shell_cmd = '''

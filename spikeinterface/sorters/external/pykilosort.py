@@ -6,7 +6,7 @@ from spikeinterface.core import load_extractor
 from spikeinterface.extractors import KiloSortSortingExtractor
 from spikeinterface.core import write_binary_recording
 import json
-from ...basesorter import BaseSorter, get_job_kwargs
+from ..basesorter import BaseSorter, get_job_kwargs
 
 try:
     import pykilosort

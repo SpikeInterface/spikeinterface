@@ -7,12 +7,22 @@ import json
 
 import scipy.io
 
-from ...basesorter import BaseSorter
-from ...utils import ShellScript
+from ..basesorter import BaseSorter
+from ..utils import ShellScript
 
+from spikeinterface.core import write_to_h5_dataset_format
 from spikeinterface.extractors import WaveClusSortingExtractor
-from spikeinterface.extractors import WaveClusSnippetsExtractor
+from spikeinterface.core.channelslice import ChannelSliceRecording
+from spikeinterface.preprocessing import ScaleRecording
+
 PathType = Union[str, Path]
+
+try:
+    import h5py
+
+    HAVE_H5PY = True
+except ImportError:
+    HAVE_H5PY = False
 
 
 def check_if_installed(waveclus_path: Union[str, None]):
@@ -30,37 +40,69 @@ def check_if_installed(waveclus_path: Union[str, None]):
         return False
 
 
-class WaveClusSnippetsSorter(BaseSorter):
+class WaveClusSorter(BaseSorter):
     """WaveClus Sorter object."""
 
-    sorter_name: str = 'waveclus_snippets'
-    compiled_name: str = 'waveclus_snippets_compiled'
+    sorter_name: str = 'waveclus'
+    compiled_name: str = 'waveclus_compiled'
     waveclus_path: Union[str, None] = os.getenv('WAVECLUS_PATH', None)
     requires_locations = False
 
     _default_params = {
+        'detect_threshold': 5,
+        'detect_sign': -1,  # -1 - 1 - 0
         'feature_type': 'wav',
         'scales': 4,
         'min_clus': 20,
         'maxtemp': 0.251,
         'template_sdnum': 3,
+        'enable_detect_filter': True,
+        'enable_sort_filter': True,
+        'detect_filter_fmin': 300,
+        'detect_filter_fmax': 3000,
+        'detect_filter_order': 4,
+        'sort_filter_fmin': 300,
+        'sort_filter_fmax': 3000,
+        'sort_filter_order': 2,
         'mintemp': 0,
+        'w_pre': 20,
+        'w_post': 44,
+        'alignment_window': 10,
         'stdmax': 50,
         'max_spk': 40000,
+        'ref_ms': 1.5,
+        'interpolation': True,
         'keep_good_only': True,
         'chunk_memory': '500M'
     }
 
     _params_description = {
+        'detect_threshold': "Threshold for spike detection",
+        'detect_sign': "Use -1 (negative), 1 (positive), or 0 (both) depending "
+                       "on the sign of the spikes in the recording",
         'feature_type': "wav (for wavelets) or pca, type of feature extraction applied to the spikes",
         'scales': "Levels of the wavelet decomposition used as features",
         'min_clus': "Minimum increase of cluster sizes used by the peak selection on the temperature map",
         'maxtemp': "Maximum temperature calculated by the SPC method",
         'template_sdnum': "Maximum distance (in total variance of the cluster) from the mean waveform to force a "
                           "spike into a cluster",
+        'enable_detect_filter': "Enable or disable filter on detection",
+        'enable_sort_filter': "Enable or disable filter on sorting",
+        'detect_filter_fmin': "High-pass filter cutoff frequency for detection",
+        'detect_filter_fmax': "Low-pass filter cutoff frequency for detection",
+        'detect_filter_order': "Order of the detection filter",
+        'sort_filter_fmin': "High-pass filter cutoff frequency for sorting",
+        'sort_filter_fmax': "Low-pass filter cutoff frequency for sorting",
+        'sort_filter_order': "Order of the sorting filter",
         'mintemp': "Minimum temperature calculated by the SPC algorithm",
+        'w_pre': "Number of samples from the beginning of the spike waveform up to (including) the peak",
+        'w_post': "Number of samples from the peak (excluding it) to the end of the waveform",
+        'alignment_window': "Number of samples between peaks of different channels",
         'stdmax': "The events with a value over this number of noise standard deviations will be discarded",
         'max_spk': "Maximum number of spikes used by the SPC algorithm",
+        'ref_ms': "Refractory time in milliseconds, all the threshold crossing inside this period are detected as the "
+                  "same spike",
+        'interpolation': "Enable or disable interpolation to improve the alignments of the spikes",
         'keep_good_only': "If True only 'good' units are returned",
         'chunk_memory': 'Chunk size in Mb to write h5 file (default 500Mb)'
     }
@@ -99,7 +141,7 @@ class WaveClusSnippetsSorter(BaseSorter):
     @classmethod
     def set_waveclus_path(cls, waveclus_path: PathType):
         waveclus_path = str(Path(waveclus_path).absolute())
-        WaveClusSnippetsSorter.waveclus_path = waveclus_path
+        WaveClusSorter.waveclus_path = waveclus_path
         try:
             print("Setting WAVECLUS_PATH environment variable for subprocess calls to:", waveclus_path)
             os.environ["WAVECLUS_PATH"] = waveclus_path
@@ -108,19 +150,28 @@ class WaveClusSnippetsSorter(BaseSorter):
 
     @classmethod
     def _check_apply_filter_in_params(cls, params):
-        return False
+        return (params['enable_detect_filter'] or params['enable_sort_filter'])
 
     @classmethod
-    def _setup_recording(cls, snippets, sorter_output_folder, params, verbose):
+    def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         # Generate mat files in the dataset directory
-
-        WaveClusSnippetsExtractor.write_snippets(snippets, sorter_output_folder / 'results_spikes.mat')
+        for nch, id in enumerate(recording.get_channel_ids()):
+            vcFile_h5 = str(sorter_output_folder / ('raw' + str(nch + 1) + '.h5'))
+            with h5py.File(vcFile_h5, mode='w') as f:
+                f.create_dataset(
+                    "sr", data=[recording.get_sampling_frequency()], dtype='float32')
+                rec_sliced = ChannelSliceRecording(recording, channel_ids=[id])
+                write_to_h5_dataset_format(rec_sliced, dataset_path='/data', segment_index=0,
+                                           file_handle=f, time_axis=0, single_axis=True,
+                                           chunk_memory=params['chunk_memory'], return_scaled=rec_sliced.has_scaled())
 
         if verbose:
-            num_snippets = snippets.get_total_snippets()
-            num_channels = snippets.get_num_channels()
-            print('Num. channels = {}, Num. snippets = {}'.format(
-                num_channels, num_snippets))
+            samplerate = recording.get_sampling_frequency()
+            num_timepoints = recording.get_num_frames(segment_index=0)
+            num_channels = recording.get_num_channels()
+            duration_minutes = num_timepoints / samplerate / 60
+            print('Num. channels = {}, Num. timepoints = {}, duration = {} minutes'.format(
+                num_channels, num_timepoints, duration_minutes))
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
@@ -128,7 +179,7 @@ class WaveClusSnippetsSorter(BaseSorter):
 
         cls._generate_par_file(params, sorter_output_folder)
         if verbose:
-            print(f'Running waveclus in {sorter_output_folder}...')
+            print(f'Running waveclus in {sorter_output_folder}..')
 
         if cls.check_compiled():
             shell_cmd = f'''
@@ -137,7 +188,7 @@ class WaveClusSnippetsSorter(BaseSorter):
             '''
         else:
             source_dir = Path(__file__).parent
-            shutil.copy(str(source_dir / f'waveclus_snippets_master.m'), str(sorter_output_folder))
+            shutil.copy(str(source_dir / f'waveclus_master.m'), str(sorter_output_folder))
 
             sorter_path = Path(cls.waveclus_path).absolute()
             if 'win' in sys.platform and sys.platform != 'darwin':
@@ -145,13 +196,13 @@ class WaveClusSnippetsSorter(BaseSorter):
                 shell_cmd = f'''
                     {disk_move}
                     cd {sorter_output_folder}
-                    matlab -nosplash -wait -log -r "waveclus_snippets_master('{sorter_output_folder}', '{sorter_path}')"
+                    matlab -nosplash -wait -log -r "waveclus_master('{sorter_output_folder}', '{sorter_path}')"
                 '''
             else:
                 shell_cmd = f'''
                     #!/bin/bash
                     cd "{sorter_output_folder}"
-                    matlab -nosplash -nodisplay -log -r "waveclus_snippets_master('{sorter_output_folder}', '{sorter_path}')"
+                    matlab -nosplash -nodisplay -log -r "waveclus_master('{sorter_output_folder}', '{sorter_path}')"
                 '''
         shell_cmd = ShellScript(shell_cmd, script_path=sorter_output_folder / f'run_{cls.sorter_name}',
                                 log_path=sorter_output_folder / f'{cls.sorter_name}.log', verbose=verbose)
@@ -197,8 +248,31 @@ class WaveClusSnippetsSorter(BaseSorter):
             Path object to save `par_input.mat`
         """
         p = params.copy()
+        if p['detect_sign'] < 0:
+            p['detect_sign'] = 'neg'
+        elif p['detect_sign'] > 0:
+            p['detect_sign'] = 'pos'
+        else:
+            p['detect_sign'] = 'both'
 
-        par_renames = {'feature_type': 'features'}
+        if not p['enable_detect_filter']:
+            p['detect_filter_order'] = 0
+        del p['enable_detect_filter']
+
+        if not p['enable_sort_filter']:
+            p['sort_filter_order'] = 0
+        del p['enable_sort_filter']
+
+        if p['interpolation']:
+            p['interpolation'] = 'y'
+        else:
+            p['interpolation'] = 'n'
+
+        par_renames = {'detect_sign': 'detection', 'detect_threshold': 'stdmin',
+                       'feature_type': 'features', 'detect_filter_fmin': 'detect_fmin',
+                       'detect_filter_fmax': 'detect_fmax', 'detect_filter_order': 'detect_order',
+                       'sort_filter_fmin': 'sort_fmin', 'sort_filter_fmax': 'sort_fmax',
+                       'sort_filter_order': 'sort_order'}
         par_input = {}
         for key, value in p.items():
             if type(value) == bool:

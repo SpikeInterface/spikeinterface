@@ -116,6 +116,10 @@ jobs:
               echo "Quality metrics changed"
               echo "QUALITYMETRICS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
+            if [[ $file == *"/sorters/"* && $file != *"/sorters/internal/"* && $file != *"/sorters/internal/"* ]]; then
+              echo "Sorters changed"
+              echo "SORTERS_CHANGED=true" >> $GITHUB_OUTPUT
+            fi
             if [[ $file == *"/sorters/external"* ]]; then
               echo "External sorters changed"
               echo "SORTERS_EXTERNAL_CHANGED=true" >> $GITHUB_OUTPUT
@@ -194,7 +198,16 @@ jobs:
           python ./.github/build_job_summary.py report_qualitymetrics.txt >> $GITHUB_STEP_SUMMARY 
           cat $GITHUB_STEP_SUMMARY 
           rm report_qualitymetrics.txt
-      # sorters/external module is tested elsewhere
+      - name: Test core sorters
+        if: ${{ steps.modules-changed.outputs.SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
+        run: |
+          source ~/test_env/bin/activate
+          pytest -m sorters --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_sorters.txt
+          cat report_sorters.txt
+          echo "# Timing profile of sorters" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_sorters.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
+          rm report_sorters.txt
       - name: Test comparison
         if: ${{ steps.modules-changed.outputs.COMPARISON_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |

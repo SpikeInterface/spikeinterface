@@ -133,6 +133,7 @@ markers = [
     "preprocessing",
     "postprocessing",
     "qualitymetrics",
+    "sorters",
     "sorters_external",
     "sorters_internal",
     "comparison",

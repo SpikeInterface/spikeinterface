@@ -8,7 +8,7 @@ from pprint import pprint
 
 from spikeinterface.extractors import TridesclousSortingExtractor
 
-from ...basesorter import BaseSorter, get_job_kwargs
+from ..basesorter import BaseSorter, get_job_kwargs
 from spikeinterface.core import write_binary_recording
 
 from probeinterface import write_prb

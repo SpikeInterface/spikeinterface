@@ -6,8 +6,8 @@ from numpy.lib.format import open_memmap
 import sys
 
 from spikeinterface.extractors import SpykingCircusSortingExtractor
-from ...basesorter import BaseSorter
-from ...utils import ShellScript
+from ..basesorter import BaseSorter
+from ..utils import ShellScript
 
 from probeinterface import write_prb
 
@@ -130,7 +130,7 @@ class SpykingcircusSorter(BaseSorter):
         sample_rate = float(recording.get_sampling_frequency())
 
         # set up spykingcircus config file
-        with (source_dir / 'config_default.params').open('r') as f:
+        with (source_dir / 'sc_config_default.params').open('r') as f:
             circus_config = f.readlines()
         circus_config = ''.join(circus_config).format(sample_rate, prb_file, p['template_width_ms'],
                                                       p['detect_threshold'], detect_sign, p['filter'],

@@ -2,7 +2,7 @@ from pathlib import Path
 import copy
 from packaging import version
 
-from ...basesorter import BaseSorter
+from ..basesorter import BaseSorter
 from spikeinterface.core.old_api_utils import NewToOldRecording
 
 from spikeinterface.core import load_extractor

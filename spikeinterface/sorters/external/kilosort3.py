@@ -2,54 +2,52 @@ from pathlib import Path
 import os
 from typing import Union
 
-from ...basesorter import BaseSorter
-from ..kilosortbase import KilosortBase
-from ...utils import get_git_commit
-
+from ..basesorter import BaseSorter
+from .kilosortbase import KilosortBase
+from ..utils import get_git_commit
 
 PathType = Union[str, Path]
 
 
-def check_if_installed(kilosort2_5_path: Union[str, None]):
-    if kilosort2_5_path is None:
+def check_if_installed(kilosort3_path: Union[str, None]):
+    if kilosort3_path is None:
         return False
-    assert isinstance(kilosort2_5_path, str)
+    assert isinstance(kilosort3_path, str)
 
-    if kilosort2_5_path.startswith('"'):
-        kilosort2_5_path = kilosort2_5_path[1:-1]
-    kilosort2_5_path = str(Path(kilosort2_5_path).absolute())
+    if kilosort3_path.startswith('"'):
+        kilosort3_path = kilosort3_path[1:-1]
+    kilosort3_path = str(Path(kilosort3_path).absolute())
 
-    if (Path(kilosort2_5_path) / 'master_kilosort.m').is_file() or (
-            Path(kilosort2_5_path) / 'main_kilosort.m').is_file():
+    if (Path(kilosort3_path) / 'main_kilosort3.m').is_file():
         return True
     else:
         return False
 
 
-class Kilosort2_5Sorter(KilosortBase, BaseSorter):
-    """Kilosort2.5 Sorter object."""
+class Kilosort3Sorter(KilosortBase, BaseSorter):
+    """Kilosort3 Sorter object."""
 
-    sorter_name: str = 'kilosort2_5'
-    compiled_name: str = 'ks2_5_compiled'
-    kilosort2_5_path: Union[str, None] = os.getenv('KILOSORT2_5_PATH', None)
+    sorter_name: str = 'kilosort3'
+    compiled_name: str = 'ks3_compiled'
+    kilosort3_path: Union[str, None] = os.getenv('KILOSORT3_PATH', None)
     requires_locations = False
 
     _default_params = {
         'detect_threshold': 6,
-        'projection_threshold': [10, 4],
+        'projection_threshold': [9, 9],
         'preclust_threshold': 8,
         'car': True,
-        'minFR': 0.1,
-        'minfr_goodchannels': 0.1,
+        'minFR': 0.2,
+        'minfr_goodchannels': 0.2,
         'nblocks': 5,
         'sig': 20,
-        'freq_min': 150,
+        'freq_min': 300,
         'sigmaMask': 30,
         'nPCs': 3,
         'ntbuff': 64,
         'nfilt_factor': 4,
-        'NT': None,
         'do_correction': True,
+        'NT': None,
         'wave_length': 61,
         'keep_good_only': False,
     }
@@ -70,26 +68,26 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         'nfilt_factor': "Max number of clusters per good channel (even temporary ones) 4",
         "do_correction": "If True drift registration is applied",
         'NT': "Batch size (if None it is automatically computed)",
-        'keep_good_only': "If True only 'good' units are returned",
         'wave_length': "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
+        'keep_good_only': "If True only 'good' units are returned",
     }
 
-    sorter_description = """Kilosort2_5 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
-    predecessor Kilosort, it implements a drift-correction strategy. Kilosort2.5 improves on Kilosort2 primarily in the
+    sorter_description = """Kilosort3 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
+    predecessor Kilosort, it implements a drift-correction strategy. Kilosort3 improves on Kilosort2 primarily in the
     type of drift correction we use. Where Kilosort2 modified templates as a function of time/drift (a drift tracking
-    approach), Kilosort2.5 corrects the raw data directly via a sub-pixel registration process (a drift correction
-    approach). Kilosort2.5 has not been as broadly tested as Kilosort2, but is expected to work out of the box on
+    approach), Kilosort3 corrects the raw data directly via a sub-pixel registration process (a drift correction
+    approach). Kilosort3 has not been as broadly tested as Kilosort2, but is expected to work out of the box on
     Neuropixels 1.0 and 2.0 probes, as well as other probes with vertical pitch <=40um. For other recording methods,
-    like tetrodes or single-channel recordings, you should test empirically if v2.5 or v2.0 works better for you (use
+    like tetrodes or single-channel recordings, you should test empirically if v3 or v2.0 works better for you (use
     the "releases" on the github page to download older versions).
     For more information see https://github.com/MouseLand/Kilosort"""
 
-    installation_mesg = """\nTo use Kilosort2.5 run:\n
+    installation_mesg = """\nTo use Kilosort3 run:\n
         >>> git clone https://github.com/MouseLand/Kilosort
-    and provide the installation path by setting the KILOSORT2_5_PATH
-    environment variables or using Kilosort2_5Sorter.set_kilosort2_5_path().\n\n
+    and provide the installation path by setting the KILOSORT3_PATH
+    environment variables or using Kilosort3Sorter.set_kilosort3_path().\n\n
 
-    More information on Kilosort2.5 at:
+    More information on Kilosort3 at:
         https://github.com/MouseLand/Kilosort
     """
 
@@ -99,27 +97,27 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
     def is_installed(cls):
         if cls.check_compiled():
             return True
-        return check_if_installed(cls.kilosort2_5_path)
+        return check_if_installed(cls.kilosort3_path)
 
     @classmethod
     def get_sorter_version(cls):
         if cls.check_compiled():
             return 'compiled'
-        commit = get_git_commit(os.getenv('KILOSORT2_5_PATH', None))
+        commit = get_git_commit(os.getenv('KILOSORT3_PATH', None))
         if commit is None:
             return 'unknown'
         else:
             return 'git-' + commit
 
     @staticmethod
-    def set_kilosort2_5_path(kilosort2_5_path: PathType):
-        kilosort2_5_path = str(Path(kilosort2_5_path).absolute())
-        Kilosort2_5Sorter.kilosort2_5_path = kilosort2_5_path
+    def set_kilosort3_path(kilosort3_path: PathType):
+        kilosort3_path = str(Path(kilosort3_path).absolute())
+        Kilosort3Sorter.kilosort3_path = kilosort3_path
         try:
-            print("Setting KILOSORT2_5_PATH environment variable for subprocess calls to:", kilosort2_5_path)
-            os.environ["KILOSORT2_5_PATH"] = kilosort2_5_path
+            print("Setting KILOSORT3_PATH environment variable for subprocess calls to:", kilosort3_path)
+            os.environ["KILOSORT3_PATH"] = kilosort3_path
         except Exception as e:
-            print("Could not set KILOSORT2_5_PATH environment variable:", e)
+            print("Could not set KILOSORT3_PATH environment variable:", e)
 
     @classmethod
     def _check_params(cls, recording, output_folder, params):
@@ -132,12 +130,13 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
             p['wave_length'] = p['wave_length'] + 1 # The wave_length must be odd
         if p['wave_length'] > 81:
             p['wave_length'] = 81 # The wave_length must be less than 81.
+
         return p
 
     @classmethod
     def _get_specific_options(cls, ops, params):
         """
-        Adds specific options for Kilosort2_5 in the ops dict and returns the final dict
+        Adds specific options for Kilosort3 in the ops dict and returns the final dict
 
         Parameters
         ----------
@@ -151,39 +150,36 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         ops: dict
             Final ops data
         """
-        # frequency for high pass filtering (300)
+        # frequency for high pass filtering (150)
         ops['fshigh'] = params['freq_min']
-
-        # minimum firing rate on a "good" channel (0 to skip)
-        ops['minfr_goodchannels'] = params['minfr_goodchannels']
-
-        # number of blocks to use for nonrigid registration
-        ops['nblocks'] = params['nblocks']
-
-        # spatial smoothness constant for registration
-        ops['sig'] = params['sig']
 
         projection_threshold = [float(pt) for pt in params['projection_threshold']]
         # threshold on projections (like in Kilosort1, can be different for last pass like [10 4])
         ops['Th'] = projection_threshold
 
         # how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot)
-        ops['lam'] = 10.0
+        ops['lam'] = 20.0
 
         # splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
-        ops['AUCsplit'] = 0.9
+        ops['AUCsplit'] = 0.8
+
+        # minimum firing rate on a "good" channel (0 to skip)
+        ops['minfr_goodchannels'] = params['minfr_goodchannels']
 
         # minimum spike rate (Hz), if a cluster falls below this for too long it gets removed
         ops['minFR'] = params['minFR']
-
-        # number of samples to average over (annealed from first to second value)
-        ops['momentum'] = [20.0, 400.0]
 
         # spatial constant in um for computing residual variance of spike
         ops['sigmaMask'] = params['sigmaMask']
 
         # threshold crossings for pre-clustering (in PCA projection space)
         ops['ThPre'] = params['preclust_threshold']
+
+        # spatial scale for datashift kernel
+        ops['sig'] = params['sig']
+
+        # type of data shifting (0 = none, 1 = rigid, 2 = nonrigid)
+        ops['nblocks'] = params['nblocks']
 
         ## danger, changing these settings can lead to fatal errors
         # options for determining PCs
