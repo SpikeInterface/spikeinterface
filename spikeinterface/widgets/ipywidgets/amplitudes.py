@@ -66,6 +66,7 @@ class AmplitudesPlotter(IpywidgetsPlotter):
         self.updater(None)
 
         if backend_kwargs["display"]:
+            self.check_backend()
             display(self.widget)
 
 

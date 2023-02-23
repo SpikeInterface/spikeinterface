@@ -18,8 +18,7 @@ class IpywidgetsPlotter(BackendPlotter):
         "height_cm": 10,
         "display": True
     }
-    
-    def __init__(self) -> None:
-        super().__init__()
+
+    def check_backend(self):
         mpl_backend = mpl.get_backend()
         assert "ipympl" in mpl_backend, ("To use the 'ipywidgets' backend, you have to set %matplotlib widget")
