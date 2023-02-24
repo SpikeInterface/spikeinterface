@@ -99,7 +99,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         #
         #~ template_sparsity_inds = get_template_channel_sparsity(we, method='radius',
                                   #~ peak_sign=d['peak_sign'], outputs='index', radius_um=d['local_radius_um'])
-        template_sparsity_inds = get_template_channel_sparsity(we, method='threshold',
+        template_sparsity_inds = get_template_channel_sparsity(we, method='snr',
                                                                peak_sign=d['peak_sign'], outputs='index',
                                                                threshold=d['detect_threshold'])
         template_sparsity = np.zeros((unit_ids.size, channel_ids.size), dtype='bool')

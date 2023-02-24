@@ -41,18 +41,15 @@ class TemporalPCBaseNode(PipelineNode):
         model_path = Path(model_folder_path) / "pca_model.pkl"
         with open(model_path, "rb") as f:
             self.pca_model = pickle.load(f)
-        model_time_interval_path = Path(model_folder_path) / "time_interval.json"
-        with open(model_time_interval_path, "rb") as f:
-            self.waveform_time_interval_dict = json.load(f)
+        params_path = Path(model_folder_path) / "params.json"
+        with open(params_path, "rb") as f:
+            self.params = json.load(f)
 
         # Find waveform extractor in the parents
-        try: 
-            waveform_extractor = next(parent for parent in self.parents if isinstance(parent, WaveformExtractorNode))
-        except (StopIteration, TypeError):
-            exception_string = f"TemporalPCA should have a {WaveformExtractorNode.__name__} in its parents"
+        if self.parents is None or not (len(self.parents) == 1 and isinstance(self.parents[0], WaveformExtractorNode)):
+            exception_string = f"TemporalPCA should have a single {WaveformExtractorNode.__name__} in its parents"
             raise TypeError(exception_string)
-
-        self.assert_model_and_waveform_temporal_match(waveform_extractor)
+        self.assert_model_and_waveform_temporal_match(self.parents[0])
     
     def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformExtractorNode):
         """
@@ -63,9 +60,9 @@ class TemporalPCBaseNode(PipelineNode):
         waveforms_ms_after = waveform_extractor.ms_after
         waveforms_sampling_frequency = waveform_extractor.recording.get_sampling_frequency()
 
-        model_ms_before = self.waveform_time_interval_dict["ms_before"]
-        model_ms_after= self.waveform_time_interval_dict["ms_after"]
-        model_sampling_frequency = self.waveform_time_interval_dict["sampling_frequency"]
+        model_ms_before = self.params["ms_before"]
+        model_ms_after= self.params["ms_after"]
+        model_sampling_frequency = self.params["sampling_frequency"]
         
         ms_before_mismatch = waveforms_ms_before != model_ms_before
         ms_after_missmatch = waveforms_ms_after != model_ms_after
@@ -151,7 +148,7 @@ class TemporalPCBaseNode(PipelineNode):
         )
 
         pca_model = pc.get_pca_model()
-        waveform_time_interval_dict = {
+        params = {
             "ms_before": ms_before,
             "ms_after": ms_after,
             "sampling_frequency": recording.get_sampling_frequency(),
@@ -162,9 +159,9 @@ class TemporalPCBaseNode(PipelineNode):
             model_path = Path(model_folder_path) / "pca_model.pkl"
             with open(model_path, "wb") as f:
                 pickle.dump(pca_model, f)
-            model_time_interval_path = Path(model_folder_path) / "time_interval.json"
-            with open(model_time_interval_path, "w") as f:
-                json.dump(waveform_time_interval_dict, f)
+            params_path = Path(model_folder_path) / "params.json"
+            with open(params_path, "w") as f:
+                json.dump(params, f)
 
         return model_folder_path
 
@@ -220,11 +217,11 @@ class TemporalPCAProjection(TemporalPCBaseNode):
 
         """
 
-        num_waveforms, num_samples, num_channels = waveforms.shape
+        num_channels = waveforms.shape[2]
 
-        channeless_waveform = to_temporal_representation(waveforms)
-        projected_chaneless_waveforms = self.pca_model.transform(channeless_waveform)
-        projected_waveforms = from_temporal_representation(projected_chaneless_waveforms, num_channels)
+        temporal_waveforms = to_temporal_representation(waveforms)
+        projected_temporal_waveforms = self.pca_model.transform(temporal_waveforms)
+        projected_waveforms = from_temporal_representation(projected_temporal_waveforms, num_channels)
 
         return projected_waveforms
 

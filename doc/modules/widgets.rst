@@ -234,8 +234,8 @@ Available plotting functions
 * :py:func:`~spikeinterface.widgets.plot_unit_locations` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_unit_summary` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_unit_templates` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
-* :py:func:`~spikeinterface.widgets.plot_unit_waveforms_density_map` (backends: :code:`matplotlib`, :code:`ipywidgets`)
-* :py:func:`~spikeinterface.widgets.plot_unit_waveforms` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_unit_waveforms_density_map` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_unit_waveforms` (backends: :code:`matplotlib`, :code:`ipywidgets`)
 
 
 Legacy plotting functions
