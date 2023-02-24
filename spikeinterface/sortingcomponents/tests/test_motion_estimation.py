@@ -69,37 +69,75 @@ def test_estimate_motion():
         'rigid / decentralized / torch': dict(
             rigid=True,
             method='decentralized',
-            conv_engine='torch'
+            conv_engine='torch',
+            time_horizon_s=None,
             
         ),
         'rigid / decentralized / numpy': dict(
-            rigid=False,
+            rigid=True,
             method='decentralized',
             conv_engine='numpy',
+            time_horizon_s=None,
+        ),
+        'rigid / decentralized / torch / time_horizon_s': dict(
+            rigid=True,
+            method='decentralized',
+            conv_engine='torch',
+            time_horizon_s=5,
             
-            
+        ),
+        'rigid / decentralized / numpy / time_horizon_s': dict(
+            rigid=True,
+            method='decentralized',
+            conv_engine='numpy',
+            time_horizon_s=5,
         ),
         'non-rigid / decentralized / torch': dict(
             rigid=False,
             method='decentralized',
             conv_engine='torch',
+            time_horizon_s=None,
         ),
         'non-rigid / decentralized / numpy': dict(
             rigid=False,
             method='decentralized',
             conv_engine='numpy',
+            time_horizon_s=None,
+        ),
+        'non-rigid / decentralized / torch / spatial_prior': dict(
+            rigid=False,
+            method='decentralized',
+            conv_engine='torch',
+            time_horizon_s=None,
+            spatial_prior=True,
+            convergence_method="lsmr",
+        ),
+        'non-rigid / decentralized / numpy / spatial_prior': dict(
+            rigid=False,
+            method='decentralized',
+            conv_engine='numpy',
+            time_horizon_s=None,
+            spatial_prior=True,
+            convergence_method="lsmr",
         ),
         'non-rigid / decentralized / torch / time_horizon_s': dict(
             rigid=False,
             method='decentralized',
             conv_engine='torch',
-            time_horizon_s=15.,
+            time_horizon_s=5.,
+        ),
+        'non-rigid / decentralized / numpy / time_horizon_s': dict(
+            rigid=False,
+            method='decentralized',
+            conv_engine='numpy',
+            time_horizon_s=5.,
         ),
         'non-rigid / decentralized / torch / gradient_descent': dict(
             rigid=False,
             method='decentralized',
             conv_engine='torch',
             convergence_method='gradient_descent',
+            time_horizon_s=None,
         ),
 
 
@@ -162,10 +200,18 @@ def test_estimate_motion():
     # same params with differents engine should be the same
     motion0, motion1 = motions['rigid / decentralized / torch'], motions['rigid / decentralized / numpy']
     assert (motion0 == motion1).all()
+    
+    motion0, motion1 = motions['rigid / decentralized / torch / time_horizon_s'], motions['rigid / decentralized / numpy / time_horizon_s']
+    assert (motion0 == motion1).all()
 
     motion0, motion1 = motions['non-rigid / decentralized / torch'], motions['non-rigid / decentralized / numpy']
     assert (motion0 == motion1).all()
 
+    motion0, motion1 = motions['non-rigid / decentralized / torch / time_horizon_s'], motions['non-rigid / decentralized / numpy / time_horizon_s']
+    assert (motion0 == motion1).all()
+
+    motion0, motion1 = motions['non-rigid / decentralized / torch / spatial_prior'], motions['non-rigid / decentralized / numpy / spatial_prior']
+    assert (motion0 == motion1).all()
 
 if __name__ == '__main__':
     setup_module()

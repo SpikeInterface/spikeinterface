@@ -1309,6 +1309,7 @@ def extract_waveforms(recording, sorting, folder=None,
                       return_scaled=True,
                       dtype=None,
                       sparse=False,
+                      sparsity=None,
                       num_spikes_for_sparsity=100,
                       allow_unfiltered=False,
                       use_relative_path=False,
@@ -1356,6 +1357,8 @@ def extract_waveforms(recording, sorting, folder=None,
         Then, the waveforms will be sparse at extraction time, which saves a lot of memory.
         When True, you must some provide kwargs handle `precompute_sparsity()` to control the kind of 
         sparsity you want to apply (by radius, by best channels, ...).
+    sparsity: ChannelSparsity or None
+        If sparse is True, this sparsity is used and it is not precomputed. Default None.
     num_spikes_for_sparsity: int (default 100)
         The number of spikes to use to estimate sparsity (if sparse=True).
     allow_unfiltered: bool
@@ -1424,11 +1427,18 @@ def extract_waveforms(recording, sorting, folder=None,
             return we
     
     if sparse:
-        sparsity = precompute_sparsity(recording, sorting, ms_before=ms_before, ms_after=ms_after,
-                                               num_spikes_for_sparsity=num_spikes_for_sparsity,
-                                               **estimate_kwargs, **job_kwargs)
-    else:
-        sparsity = None
+        if sparsity is None:
+            sparsity = precompute_sparsity(recording, sorting, ms_before=ms_before, ms_after=ms_after,
+                                           num_spikes_for_sparsity=num_spikes_for_sparsity,
+                                           **estimate_kwargs, **job_kwargs)
+        else:
+            assert isinstance(sparsity, ChannelSparsity), "'sparsity' must be a ChannelSparsity object"
+            unit_id_to_channel_ids = sparsity.unit_id_to_channel_ids
+            assert all(u in sorting.unit_ids for u in unit_id_to_channel_ids), \
+                    "Invalid unit ids in sparsity"
+            for channels in unit_id_to_channel_ids.values():
+                assert all(ch in recording.channel_ids for ch in channels), \
+                    "Invalid channel ids in sparsity"
 
     we = WaveformExtractor.create(recording, sorting, folder, mode=mode, use_relative_path=use_relative_path,
                                   allow_unfiltered=allow_unfiltered, sparsity=sparsity)
