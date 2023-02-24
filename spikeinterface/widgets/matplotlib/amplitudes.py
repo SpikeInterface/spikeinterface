@@ -6,6 +6,8 @@ from .base_mpl import MplPlotter
 
 
 class AmplitudesPlotter(MplPlotter):
+    def __init__(self) -> None:
+        self.legend = None
 
     def do_plot(self, data_plot, **backend_kwargs):
         dp = to_attr(data_plot)
@@ -55,8 +57,10 @@ class AmplitudesPlotter(MplPlotter):
             self.figure.tight_layout()
         
         if dp.plot_legend:
-            self.figure.legend(loc='upper center', bbox_to_anchor=(0.5, 1.),
-                           ncol=5, fancybox=True, shadow=True)
+            if self.legend is not None:
+                self.legend.remove()
+            self.legend = self.figure.legend(loc='upper center', bbox_to_anchor=(0.5, 1.),
+                                             ncol=5, fancybox=True, shadow=True)
 
         scatter_ax.set_xlim(0, dp.total_duration)
         scatter_ax.set_xlabel('Times [s]')
