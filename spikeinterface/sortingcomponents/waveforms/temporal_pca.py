@@ -272,13 +272,12 @@ class TemporalPCADenoising(TemporalPCBaseNode):
             The projected waveforms.
 
         """
+        num_channels = waveforms.shape[2]
 
-        num_waveforms, num_samples, num_channels = waveforms.shape
+        temporal_waveform = to_temporal_representation(waveforms)
+        projected_temporal_waveforms = self.pca_model.transform(temporal_waveform)
+        temporal_denoised_waveforms = self.pca_model.inverse_transform(projected_temporal_waveforms)
+        denoised_waveforms = from_temporal_representation(temporal_denoised_waveforms, num_channels)
 
-        channeless_waveform = to_temporal_representation(waveforms)
-        projected_chaneless_waveforms = self.pca_model.transform(channeless_waveform)
-        channeless_denoised_waveforms = self.pca_model.inverse_transform(projected_chaneless_waveforms)
-        denoised_waveforms = from_temporal_representation(channeless_denoised_waveforms, num_channels)
-        
 
         return denoised_waveforms
