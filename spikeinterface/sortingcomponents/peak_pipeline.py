@@ -9,17 +9,18 @@ There are two ways for using theses "plugins":
   * during `peak_detect()`
   * when peaks are already detected and reduced with `select_peaks()`
 """
+from typing import Optional
+
 import numpy as np
 
-from spikeinterface.core import get_chunk_with_margin
+from spikeinterface.core import BaseRecording, get_chunk_with_margin
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 from spikeinterface.core import get_channel_distances
 
 class PipelineNode:
     """
-    This is a generic object that will make some computation on peak given a buffer
-    of traces.
-    Typically used for extrating features (amplitudes, localization, ...)
+    This is a generic object that will make some computation on peak given a buffe of traces.
+    Typically used for exctrating features (amplitudes, localization, ...)
     
     A Node can optionally connect to other nodes with the parents and receive inputs from others.
     """
@@ -51,14 +52,36 @@ class PipelineNode:
         raise NotImplementedError
 
 
-class ExtractDenseWaveforms(PipelineNode):
-    def __init__(self, recording, return_ouput=False,
-                         ms_before=None, ms_after=None):
-        PipelineNode.__init__(self, recording, return_ouput=return_ouput)
+class WaveformExtractorNode(PipelineNode):
+    """Base class for waveform extractor"""
 
+    def __init__(self, recording: BaseRecording, 
+                 ms_before: float, ms_after: float, parents: Optional[list[PipelineNode]]=None, return_ouput: bool=True):
+        """
+        Base class for waveform extractor. Contains logic to handle the temporal interval in which to extract the 
+        waveforms.
+
+        Parameters
+        ----------
+        recording : BaseRecording
+            The recording object.
+        ms_before : float, optional
+            The number of milliseconds to include before the peak of the spike, by default 1.
+        ms_after : float, optional
+            The number of milliseconds to include after the peak of the spike, by default 1.
+        """
+        
+        PipelineNode.__init__(self, recording=recording, parents=parents, return_ouput=return_ouput)
+        self.ms_before = ms_before
+        self.ms_after = ms_after
         self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
         self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
+
+class ExtractDenseWaveforms(WaveformExtractorNode):
+    def __init__(self, recording: BaseRecording, 
+                 ms_before: float, ms_after: float, parents: Optional[list[PipelineNode]]=None, return_ouput: bool=True):
         
+        WaveformExtractorNode.__init__(self, recording=recording, ms_before=ms_before, ms_after=ms_after, return_ouput=return_ouput)        
         # this is a bad hack to differentiate in the child if the parents is dense or not.
         self.neighbours_mask = None
         
@@ -73,14 +96,12 @@ class ExtractDenseWaveforms(PipelineNode):
         return waveforms
 
 
-class ExtractSparseWaveforms(PipelineNode):
+class ExtractSparseWaveforms(WaveformExtractorNode):
     def __init__(self, recording, return_ouput=False,
-                         ms_before=None, ms_after=None, local_radius_um=100.,):
-        PipelineNode.__init__(self, recording, return_ouput=return_ouput)
+                ms_before=None, ms_after=None, local_radius_um=100.,):
+        WaveformExtractorNode.__init__(self, recording=recording, ms_before=ms_before, ms_after=ms_after, return_ouput=return_ouput)        
 
-        self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
-        self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
-
+        self.local_radius_um = local_radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
         self.neighbours_mask = self.channel_distance < local_radius_um
