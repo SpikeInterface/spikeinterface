@@ -119,13 +119,16 @@ def test_pca_projection_sparsity(mearec_recording, detected_peaks, model_path_of
     assert extracted_n_components == temporal_pca.pca_model.n_components
     assert extracted_n_channels == max_n_channels
 
-def test_initialization_without_parents_failure(mearec_recording, model_path_of_trained_pca):
+def test_initialization_with_wrong_parents_failure(mearec_recording, model_path_of_trained_pca):
     
     recording = mearec_recording
     model_folder_path = model_path_of_trained_pca
     dummy_parent = PipelineNode(recording=recording)
+    extract_waveforms = ExtractSparseWaveforms(
+        recording=recording, ms_before=1, ms_after=1, local_radius_um=40, return_ouput=True
+    )
     
-    match_error = f"TemporalPCA should have a {WaveformExtractorNode.__name__} in its parents"
+    match_error = f"TemporalPCA should have a single {WaveformExtractorNode.__name__} in its parents"
 
     # Parents without waveform extraction
     with pytest.raises(TypeError, match=match_error):
@@ -134,6 +137,12 @@ def test_initialization_without_parents_failure(mearec_recording, model_path_of_
     # Empty parents
     with pytest.raises(TypeError, match=match_error):
         TemporalPCAProjection(recording=recording, model_folder_path=model_folder_path, parents=None)
+
+    # Multiple parents
+    with pytest.raises(TypeError, match=match_error):
+        TemporalPCAProjection(recording=recording, model_folder_path=model_folder_path,
+                              parents=[extract_waveforms, extract_waveforms])
+
 
 def test_pca_waveform_extract_and_model_mismatch(mearec_recording, model_path_of_trained_pca):
     
