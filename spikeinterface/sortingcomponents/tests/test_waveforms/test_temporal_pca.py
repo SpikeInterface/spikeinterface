@@ -4,7 +4,7 @@ import numpy as np
 
 import spikeinterface as si
 import spikeinterface.extractors as se
-from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
+from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection, TemporalPCADenoising
 from spikeinterface.sortingcomponents.peak_pipeline import (
     ExtractDenseWaveforms,
     ExtractSparseWaveforms,
@@ -59,7 +59,53 @@ def model_path_of_trained_pca(tmp_path, mearec_recording):
 
     return model_folder_path
 
+def test_pca_denoising(mearec_recording, detected_peaks, model_path_of_trained_pca):
+    
+    recording = mearec_recording
+    model_folder_path = model_path_of_trained_pca
+    peaks = detected_peaks
 
+    # Parameters
+    ms_before = 1.0
+    ms_after = 1.0
+
+    # Node initialization
+    extract_waveforms = ExtractDenseWaveforms(
+        recording=recording, ms_before=ms_before, ms_after=ms_after, return_ouput=True
+    )
+    pca_denoising = TemporalPCADenoising(
+        recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms]
+    )
+    pipeline_nodes = [extract_waveforms, pca_denoising]  
+
+    # Extract projected waveforms and compare
+    waveforms, denoised_waveforms = run_peak_pipeline(recording, peaks, nodes=pipeline_nodes, job_kwargs=job_kwargs)
+    assert waveforms.shape == denoised_waveforms.shape
+    
+def test_pca_denoising_sparse(mearec_recording, detected_peaks, model_path_of_trained_pca):
+    
+    recording = mearec_recording
+    model_folder_path = model_path_of_trained_pca
+    peaks = detected_peaks
+
+    # Parameters
+    local_radius_um = 40
+    ms_before = 1.0
+    ms_after = 1.0
+
+    # Node initialization
+    extract_waveforms = ExtractSparseWaveforms(
+        recording=recording, ms_before=ms_before, ms_after=ms_after, local_radius_um=local_radius_um, return_ouput=True
+    )
+    pca_denoising = TemporalPCADenoising(
+        recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms]
+    )
+    pipeline_nodes = [extract_waveforms, pca_denoising]  
+
+    # Extract projected waveforms and compare
+    sparse_waveforms, denoised_waveforms = run_peak_pipeline(recording, peaks, nodes=pipeline_nodes, job_kwargs=job_kwargs)
+    assert sparse_waveforms.shape == denoised_waveforms.shape
+    
 def test_pca_projection(mearec_recording, detected_peaks, model_path_of_trained_pca):
 
     recording = mearec_recording

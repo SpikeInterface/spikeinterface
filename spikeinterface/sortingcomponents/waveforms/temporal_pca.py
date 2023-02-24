@@ -171,12 +171,10 @@ TemporalPCBaseNode.fit.__doc__ = TemporalPCBaseNode.fit.__doc__.format(_shared_j
 
 class TemporalPCAProjection(TemporalPCBaseNode):
     """
-    A step that performs a PCA projection on the waveforms extracted by a peak_detection function.
+    A step that performs a PCA projection on the waveforms extracted by a waveforms parent node.
 
-    This class can work in two ways:
-    1) The class can receive the path of a previously trained model with the `model_folder_path` argument.
-    2) The class can be trained with the fit method after instantiating the class. The model will be stored in
-    `model_folder_path`.
+    This class needs a model_folder_path with a trained model. A model can be trained with the 
+    static method TemporalPCAProjection.fit().
 
 
     Parameters
@@ -226,3 +224,60 @@ class TemporalPCAProjection(TemporalPCBaseNode):
         projected_waveforms = from_temporal_representation(projected_temporal_waveforms, num_channels)
 
         return projected_waveforms
+
+
+class TemporalPCADenoising(TemporalPCBaseNode):
+    """
+    A step that performs a PCA denoising on the waveforms extracted by a peak_detection function.
+
+    This class needs a model_folder_path with a trained model. A model can be trained with the 
+    static method TemporalPCAProjection.fit().
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording object.
+    parents: list
+        The parent nodes of this node. This should contain a mechanism to extract waveforms.
+    model_folder_path : str, Path
+        The path to the folder containing the pca model and the training metadata.
+    return_output: bool, optional, true by default
+        use false to suppress the output of this node in the pipeline
+
+    """
+
+    def __init__(
+        self, recording: BaseRecording, parents: list[PipelineNode], model_folder_path: str, return_ouput=True
+    ):
+        TemporalPCBaseNode.__init__(
+            self, recording=recording, parents=parents, return_ouput=return_ouput, model_folder_path=model_folder_path
+        )
+
+    def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
+        """
+        Projects the waveforms using the PCA model trained in the fit method or loaded from the model_folder_path.
+
+        Parameters
+        ----------
+        traces : np.ndarray
+            The traces of the recording.
+        peaks : np.ndarray
+            The peaks resulting from a peak_detection step.
+        waveforms : np.ndarray
+            Waveforms extracted from the recording using a WavefomExtractor node.
+
+        Returns
+        -------
+        np.ndarray
+            The projected waveforms.
+
+        """
+        num_channels = waveforms.shape[2]
+
+        temporal_waveform = to_temporal_representation(waveforms)
+        projected_temporal_waveforms = self.pca_model.transform(temporal_waveform)
+        temporal_denoised_waveforms = self.pca_model.inverse_transform(projected_temporal_waveforms)
+        denoised_waveforms = from_temporal_representation(temporal_denoised_waveforms, num_channels)
+
+
+        return denoised_waveforms
