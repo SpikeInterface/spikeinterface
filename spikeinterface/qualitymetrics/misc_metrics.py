@@ -93,7 +93,7 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60):
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    bin_duration_s : float, optional, default: 60
+    bin_duration_s : float, default: 60
         The duration of each bin in seconds. If the duration is less than this value, 
         presence_ratio is set to NaN
 
@@ -215,10 +215,10 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object
-    isi_threshold_ms : float, optional, default: 1.5
+    isi_threshold_ms : float, default: 1.5
         Threshold for classifying adjacent spikes as an ISI violation, in ms.
         This is the biophysical refractory period (default=1.5).
-    min_isi_ms : float, optional, default: 0
+    min_isi_ms : float, default: 0
         Minimum possible inter-spike interval, in ms.
         This is the artificial refractory period enforced
         by the data acquisition system or post-processing algorithms.
@@ -296,9 +296,9 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object
-    refractory_period_ms : float, optional, default: 1.0
+    refractory_period_ms : float, default: 1.0
         The period (in ms) where no 2 good spikes can occur.
-    censored_period_ùs : float, optional, default: 0.0
+    censored_period_ùs : float, default: 0.0
         The period (in ms) where no 2 spikes can occur (because they are not detected, or
         because they were removed by another mean).
 
@@ -436,11 +436,11 @@ def compute_amplitude_cutoffs(waveform_extractor, peak_sign='neg',
         The waveform extractor object.
     peak_sign : {'neg', 'pos', 'both'}
         The sign of the peaks.
-    num_histogram_bins : int, optional, default: 100
+    num_histogram_bins : int, default: 100
         The number of bins to use to compute the amplitude histogram.
-    histogram_smoothing_value : int, optional, default: 3
+    histogram_smoothing_value : int, default: 3
         Controls the smoothing applied to the amplitude histogram.
-    amplitudes_bins_min_ratio : int, optional, default: 5
+    amplitudes_bins_min_ratio : int, default: 5
         The minimum ratio between number of amplitudes for a unit and the number of bins.
         If the ratio is less than this threshold, the amplitude_cutoff for the unit is set 
         to NaN.
@@ -760,7 +760,7 @@ def presence_ratio(spike_train, total_length, bin_edges=None, num_bin_edges=None
         Total length of the recording in samples
     bin_edges : np.array
         Pre-computed bin edges (mutually exclusive with num_bin_edges).
-    num_bin_edges : int, optional, default: 101
+    num_bin_edges : int, default: 101
         The number of bins edges to use to compute the presence ratio.
         (mutually exclusive with bin_edges).
 
@@ -794,10 +794,10 @@ def isi_violations(spike_trains, total_duration_s,
         The spike times for each recording segment for one unit, in seconds
     total_duration_s : float
         The total duration of the recording (in seconds)
-    isi_threshold_s : float, optional, default: 0.0015
+    isi_threshold_s : float, default: 0.0015
         Threshold for classifying adjacent spikes as an ISI violation, in seconds.
         This is the biophysical refractory period (default=1.5).
-    min_isi_s : float, optional, default: 0
+    min_isi_s : float, default: 0
         Minimum possible inter-spike interval, in seconds.
         This is the artificial refractory period enforced
         by the data acquisition system or post-processing algorithms.
@@ -850,11 +850,11 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
         The amplitudes (in uV) of the spikes for one unit.
     peak_sign : {'neg', 'pos', 'both'}
         The sign of the template to compute best channels.
-    num_histogram_bins : int, optional, default: 500
+    num_histogram_bins : int, default: 500
         The number of bins to use to compute the amplitude histogram.
-    histogram_smoothing_value : int, optional, default: 3
+    histogram_smoothing_value : int, default: 3
         Controls the smoothing applied to the amplitude histogram.
-    amplitudes_bins_min_ratio : int, optional, default: 5
+    amplitudes_bins_min_ratio : int, default: 5
         The minimum ratio between number of amplitudes for a unit and the number of bins.
         If the ratio is less than this threshold, the amplitude_cutoff for the unit is set 
         to NaN.
