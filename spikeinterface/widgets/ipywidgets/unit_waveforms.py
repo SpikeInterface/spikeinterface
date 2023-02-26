@@ -114,11 +114,12 @@ class PlotUpdater:
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
         data_plot['unit_ids'] = unit_ids
-        data_plot['wfs_by_ids'] = {unit_id: self.we.get_waveforms(unit_id) for unit_id in unit_ids}
         data_plot['templates'] = self.we.get_all_templates(unit_ids=unit_ids)
         data_plot['template_stds'] = self.we.get_all_templates(unit_ids=unit_ids, mode="std")
         data_plot['same_axis'] = same_axis
         data_plot['plot_templates'] = plot_templates
+        if data_plot["plot_waveforms"]:
+            data_plot['wfs_by_ids'] = {unit_id: self.we.get_waveforms(unit_id) for unit_id in unit_ids}
 
         backend_kwargs = {}
 
