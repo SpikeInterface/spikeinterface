@@ -24,16 +24,16 @@ class PipelineNode:
     
     A Node can optionally connect to other nodes with the parents and receive inputs from others.
     """
-    def __init__(self, recording, return_ouput=True, parents=None, name=None):
+    def __init__(self, recording, return_output=True, parents=None, name=None):
         self.recording = recording
-        self.return_ouput = return_ouput
+        self.return_output = return_output
         if isinstance(parents, str):
             # only one parents is allowed
             parents = [parents]
         self.parents = parents
         
         self._kwargs = dict(
-            return_ouput=return_ouput,
+            return_output=return_output,
         )
         if parents is not None:
             self._kwargs['parents'] = parents
@@ -56,7 +56,8 @@ class WaveformExtractorNode(PipelineNode):
     """Base class for waveform extractor"""
 
     def __init__(self, recording: BaseRecording, 
-                 ms_before: float, ms_after: float, parents: Optional[list[PipelineNode]]=None, return_ouput: bool=True):
+                 ms_before: float, ms_after: float, parents: Optional[list[PipelineNode]]=None,
+                 return_output: bool=False):
         """
         Base class for waveform extractor. Contains logic to handle the temporal interval in which to extract the 
         waveforms.
@@ -71,7 +72,7 @@ class WaveformExtractorNode(PipelineNode):
             The number of milliseconds to include after the peak of the spike, by default 1.
         """
         
-        PipelineNode.__init__(self, recording=recording, parents=parents, return_ouput=return_ouput)
+        PipelineNode.__init__(self, recording=recording, parents=parents, return_output=return_output)
         self.ms_before = ms_before
         self.ms_after = ms_after
         self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
@@ -79,9 +80,11 @@ class WaveformExtractorNode(PipelineNode):
 
 class ExtractDenseWaveforms(WaveformExtractorNode):
     def __init__(self, recording: BaseRecording, 
-                 ms_before: float, ms_after: float, parents: Optional[list[PipelineNode]]=None, return_ouput: bool=True):
+                 ms_before: float, ms_after: float, parents: Optional[list[PipelineNode]]=None,
+                 return_output: bool=False):
         
-        WaveformExtractorNode.__init__(self, recording=recording, ms_before=ms_before, ms_after=ms_after, return_ouput=return_ouput)        
+        WaveformExtractorNode.__init__(self, recording=recording, ms_before=ms_before, ms_after=ms_after,
+                                       return_output=return_output)        
         # this is a bad hack to differentiate in the child if the parents is dense or not.
         self.neighbours_mask = None
         
@@ -97,9 +100,10 @@ class ExtractDenseWaveforms(WaveformExtractorNode):
 
 
 class ExtractSparseWaveforms(WaveformExtractorNode):
-    def __init__(self, recording, return_ouput=False,
-                ms_before=None, ms_after=None, local_radius_um=100.,):
-        WaveformExtractorNode.__init__(self, recording=recording, ms_before=ms_before, ms_after=ms_after, return_ouput=return_ouput)        
+    def __init__(self, recording, return_output=False,
+                 ms_before=None, ms_after=None, local_radius_um=100.,):
+        WaveformExtractorNode.__init__(self, recording=recording, ms_before=ms_before, ms_after=ms_after,
+                                       return_output=return_output)        
 
         self.local_radius_um = local_radius_um
         self.contact_locations = recording.get_channel_locations()
@@ -238,7 +242,7 @@ def run_nodes(traces_chunk, local_peaks, nodes):
     # propagate the output
     pipeline_outputs_tuple = tuple()
     for node in nodes:
-        if node.return_ouput:
+        if node.return_output:
             out = pipeline_outputs[node]
             pipeline_outputs_tuple += (out, )
     
