@@ -117,8 +117,8 @@ class NaiveMatching(BaseTemplateMatchingEngine):
             i0 = peak_sample_ind[i] - nbefore
             i1 = peak_sample_ind[i] + nafter
             
-            wf = traces[i0:i1, :]
-            dist = np.sum(np.sum((templates - wf[None, : , :])**2, axis=1), axis=1)
+            waveforms = traces[i0:i1, :]
+            dist = np.sum(np.sum((templates - waveforms[None, : , :])**2, axis=1), axis=1)
             cluster_ind = np.argmin(dist)
 
             spikes['cluster_ind'][i] = cluster_ind

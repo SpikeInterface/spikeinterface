@@ -6,6 +6,8 @@ from .base_mpl import MplPlotter
 
 
 class UnitWaveformPlotter(MplPlotter):
+    def __init__(self) -> None:
+        self.legend = None
 
     def do_plot(self, data_plot, **backend_kwargs):
         dp = to_attr(data_plot)
@@ -82,8 +84,10 @@ class UnitWaveformPlotter(MplPlotter):
                 ax.scatter(dp.channel_locations[:, 0], dp.channel_locations[:, 1], color='k')
             
             if dp.same_axis and dp.plot_legend:
-                self.figure.legend(loc='upper center', bbox_to_anchor=(0.5, 1.),
-                                   ncol=5, fancybox=True, shadow=True)
+                if self.legend is not None:
+                    self.legend.remove()
+                self.legend = self.figure.legend(loc='upper center', bbox_to_anchor=(0.5, 1.),
+                                                 ncol=5, fancybox=True, shadow=True)
 
 
 UnitWaveformPlotter.register(UnitWaveformsWidget)

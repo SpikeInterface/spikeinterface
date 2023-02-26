@@ -90,7 +90,7 @@ The `[full]` option installs all the extra dependencies for all the different su
 To install all interactive widget backends, you can use:
 
 ```bash
- pip install spikeinterface[full, widgets]
+ pip install spikeinterface[full,widgets]
 ```
 
 
