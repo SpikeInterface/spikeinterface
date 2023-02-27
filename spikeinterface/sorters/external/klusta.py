@@ -113,7 +113,7 @@ class KlustaSorter(BaseSorter):
             detect_sign = 'both'
 
         # set up klusta config file
-        with (source_dir / 'config_default.prm').open('r') as f:
+        with (source_dir / 'klusta_config_default.prm').open('r') as f:
             klusta_config = f.readlines()
 
         # Note: should use format with dict approach here

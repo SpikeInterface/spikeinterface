@@ -3,7 +3,7 @@
 ### file format. Otherwise, launch the code and a message will tell you what is needed
 
 [data]
-file_format    = numpy      # Can be raw_binary, openephys, hdf5, ... See >> spyking-circus help -i for more info
+file_format    = numpy      # Can be raw_binary, openephys, hdf5, .. See >> spyking-circus help -i for more info
 sampling_rate  = {}
 stream_mode    = None       # None by default. Can be multi-files, or anything depending to the file format
 mapping        = {}         # Mapping of the electrode (see http://spyking-circus.rtfd.ord)

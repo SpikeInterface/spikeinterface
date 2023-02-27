@@ -71,8 +71,6 @@ jobs:
           pip cache remove numpy
           pip cache remove hdbscan
           pip cache remove numba
-          # herdingspikes need numpy to installed first, this numpy pre install will be removed when HS remove from testing
-          pip install numpy==1.22
           pip install -e .[test,extractors,full]
       - name: git-annex install
         run: |
@@ -118,13 +116,17 @@ jobs:
               echo "Quality metrics changed"
               echo "QUALITYMETRICS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
-            if [[ $file == *"/sorters/"* ]]; then
+            if [[ $file == *"/sorters/"* && $file != *"/sorters/internal/"* && $file != *"/sorters/external/"* ]]; then
               echo "Sorters changed"
               echo "SORTERS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
-            if [[ $file == *"/sorters/si_based_sorters"* ]]; then
-              echo "SI sorters changed"
-              echo "SI_SORTERS_CHANGED=true" >> $GITHUB_OUTPUT
+            if [[ $file == *"/sorters/external"* ]]; then
+              echo "External sorters changed"
+              echo "SORTERS_EXTERNAL_CHANGED=true" >> $GITHUB_OUTPUT
+            fi
+            if [[ $file == *"/sorters/internal"* ]]; then
+              echo "Internal sorters changed"
+              echo "SORTERS_INTERNAL_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/comparison/"* ]]; then
               echo "Comparison changed"
@@ -186,7 +188,7 @@ jobs:
           echo "# Timing profile of qualitymetrics" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_qualitymetrics.txt >> $GITHUB_STEP_SUMMARY  
           rm report_qualitymetrics.txt
-      - name: Test sorters
+      - name: Test core sorters
         if: ${{ steps.modules-changed.outputs.SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
@@ -234,10 +236,10 @@ jobs:
           echo "# Timing profile of sortingcomponents" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_sortingcomponents.txt >> $GITHUB_STEP_SUMMARY  
           rm report_sortingcomponents.txt
-      - name: Test SI sorters
-        if: ${{ steps.modules-changed.outputs.SI_SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
+      - name: Test internal sorters
+        if: ${{ steps.modules-changed.outputs.SORTERS_INTERNAL_CHANGED == 'true' || steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -m si_sorters -vv -ra --durations=0 --durations-min=0.001 | tee report_si_sorters.txt; test ${PIPESTATUS[0]} -eq 0 || fail
-          echo "# Timing profile of si_sorters" >> $GITHUB_STEP_SUMMARY 
-          python ./.github/build_job_summary.py report_si_sorters.txt >> $GITHUB_STEP_SUMMARY  
+          pytest -m sorters_internal -vv -ra --durations=0 --durations-min=0.001 | tee report_sorters_internal.txt; test ${PIPESTATUS[0]} -eq 0 || fail
+          echo "# Timing profile of sorters_internal" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_sorters_internal.txt >> $GITHUB_STEP_SUMMARY 

@@ -4,7 +4,7 @@ from typing import Union
 import numpy as np
 
 from ..basesorter import BaseSorter
-from ..kilosortbase import KilosortBase
+from .kilosortbase import KilosortBase
 from ..utils import get_git_commit
 
 
