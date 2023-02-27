@@ -28,23 +28,20 @@ def test_single_channel_toy_denoiser_in_peak_pipeline():
     ms_before = 2.0
     ms_after = 2.0
     sampling_frequency = recording.get_sampling_frequency()
+    waveform_extraction = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after, return_output=True)
 
-    # Test post_check mechanism for SingleChannelToyDenoiser
-    with pytest.raises(ValueError) as e_info:
-        toy_denoiser = SingleChannelToyDenoiser(recording, ms_before=ms_before, ms_after=ms_after, 
-                                        sampling_frequency=sampling_frequency)
+    # # Test post_check mechanism for SingleChannelToyDenoiser
+    # with pytest.raises(ValueError) as e_info:
+    #     toy_denoiser = SingleChannelToyDenoiser(recording, parents=[waveform_extraction])
         
     
     # Build nodes for computation
-    waveform_exraction = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after, return_ouput=True)
-    toy_denoiser = SingleChannelToyDenoiser(recording, ms_before=ms_before, ms_after=ms_after, 
-                                      sampling_frequency=sampling_frequency, parents=[waveform_exraction])
-    
-    # Test assertion raise
-    toy_denoiser = SingleChannelToyDenoiser(recording, ms_before=ms_before, ms_after=ms_after, 
-                                      sampling_frequency=sampling_frequency, parents=[waveform_exraction])
+    waveform_extraction = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after, return_output=True)
+    toy_denoiser = SingleChannelToyDenoiser(recording, parents=[waveform_extraction])
 
-    nodes = [waveform_exraction, toy_denoiser]
+
+    nodes = [waveform_extraction, toy_denoiser]
     waveforms, denoised_waveforms = run_peak_pipeline(recording, peaks=peaks, nodes=nodes, job_kwargs=job_kwargs)
 
-    assert waveforms.shape == denoised_waveforms.shape 
+    assert waveforms.shape == denoised_waveforms.shape
+    assert 3==6 

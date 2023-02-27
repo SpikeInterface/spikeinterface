@@ -13,7 +13,6 @@ from spikeinterface.core import BaseRecording
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface import extract_waveforms, NumpySorting
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
-from spikeinterface.core.recording_tools import get_channel_distances
 from .waveform_utils import to_temporal_representation, from_temporal_representation
 
 

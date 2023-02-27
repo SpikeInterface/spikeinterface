@@ -1,45 +1,68 @@
 from pathlib import Path
-import json 
+import json
 from typing import List, Optional
 
-import torch 
+import torch
 from torch import nn
 from huggingface_hub import hf_hub_download
 
 
 from spikeinterface.core import BaseRecording
-from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, ExtractDenseWaveforms
-from .waveform_utils import to_channelless_representation, from_channelless_representation
+from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformExtractorNode
+from .waveform_utils import to_temporal_representation, from_temporal_representation
 
 
 class SingleChannelToyDenoiser(PipelineNode):
+    def __init__(
+        self, recording: BaseRecording, return_output: bool = True, parents: Optional[List[PipelineNode]] = None
+    ):
+        super().__init__(recording, return_output=return_output, parents=parents)
 
-    def __init__(self, recording: BaseRecording, ms_before: float, ms_after: float, sampling_frequency: float, 
-                 return_ouput: bool = True, parents: Optional[List[PipelineNode ]] = None):
-        super().__init__(recording, return_ouput=return_ouput, parents=parents)
+        # Find waveform extractor in the parents
+        try:
+            waveform_extractor = next(parent for parent in self.parents if isinstance(parent, WaveformExtractorNode))
+        except (StopIteration, TypeError):
+            exception_string = f"TemporalPCA should have a {WaveformExtractorNode.__name__} in its parents"
+            raise TypeError(exception_string)
 
-        # Check model parameters match
-        self.check_peak_interval_match(ms_before, ms_after, sampling_frequency)
+        self.assert_model_and_waveform_temporal_match(waveform_extractor)
 
         # Load model
         self.denoiser = self.load_model()
-        
-        self.assert_waveform_extractor_in_parents()
 
-    def check_peak_interval_match(self, ms_before: float, ms_after: float, sampling_frequency: float):
+    def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformExtractorNode):
+        """
+        Asserts that the model and the waveform extractor have the same temporal parameters
+        """
+        # Extract temporal parameters from the waveform extractor
+        waveforms_ms_before = waveform_extractor.ms_before
+        waveforms_ms_after = waveform_extractor.ms_after
+        waveforms_sampling_frequency = waveform_extractor.recording.get_sampling_frequency()
 
-        # Temporary
+        # Load the model temporal parameters
         repo_id = "SpikeInterface/test_repo"
         filename = "toy_model_peak_interval.json"
 
         json_file_path = hf_hub_download(repo_id=repo_id, filename=filename)
         # Load the json file in the json_file_path_variable
         with open(json_file_path, "r") as json_file:
-            peak_interval_dict = json.load(json_file)        
+            peak_interval_dict = json.load(json_file)
 
-        assert peak_interval_dict["ms_before"] == ms_before
-        assert peak_interval_dict["ms_after"] == ms_after
-        assert peak_interval_dict["sampling_frequency"] == sampling_frequency
+        model_ms_before = peak_interval_dict["ms_before"]
+        model_ms_after = peak_interval_dict["ms_after"]
+        model_sampling_frequency = peak_interval_dict["sampling_frequency"]
+
+        ms_before_mismatch = waveforms_ms_before != model_ms_before
+        ms_after_missmatch = waveforms_ms_after != model_ms_after
+        sampling_frequency_mismatch = waveforms_sampling_frequency != model_sampling_frequency
+        if ms_before_mismatch or ms_after_missmatch or sampling_frequency_mismatch:
+            exception_string = (
+                "PCA model and waveforms mismatch \n"
+                f"{model_ms_before=} and {waveforms_ms_after=} \n"
+                f"{model_ms_after=} and {waveforms_ms_after=} \n"
+                f"{model_sampling_frequency=} and {waveforms_sampling_frequency=} \n"
+            )
+            raise ValueError(exception_string)
 
     def load_model(self):
         repo_id = "SpikeInterface/test_repo"
@@ -51,31 +74,20 @@ class SingleChannelToyDenoiser(PipelineNode):
 
         return denoiser
 
+    def compute(self, traces, peaks, waveforms):
+        num_channels = waveforms.shape[2]
 
-    def compute(self, traces, peaks, waveforms): 
-
-        n_waveforms, n_timestamps, n_channels = waveforms.shape
-        
         # Collapse channels and transform to torch tensor
-        channelless_waveforms = to_channelless_representation(waveforms)
-        channelless_waveforms_tensor = torch.from_numpy(channelless_waveforms).float()
+        temporal_waveforms = to_temporal_representation(waveforms)
+        temporal_waveforms_tensor = torch.from_numpy(temporal_waveforms).float()
 
         # Denoise
-        denoised_channelless_waveforms = self.denoiser(channelless_waveforms_tensor).detach().numpy()
-                
+        denoised_temporal_waveforms = self.denoiser(temporal_waveforms_tensor).detach().numpy()
+
         # Reconstruct representation with channels
-        desnoised_waveforms = from_channelless_representation(denoised_channelless_waveforms, n_channels)
+        desnoised_waveforms = from_temporal_representation(denoised_temporal_waveforms, num_channels)
 
         return desnoised_waveforms
-    
-    def assert_waveform_extractor_in_parents(self):
-        
-        if self.parents is None:
-            raise ValueError("The SingleChannelToyDenoiser needs a WaveformExtractor as parent")
-        else:
-            some_parent_is_extractor = any((isinstance(parent, ExtractDenseWaveforms) for parent in self.parents))
-            if not some_parent_is_extractor:
-                raise ValueError("The SingleChannelToyDenoiser needs a WaveformExtractor as parent")
 
 
 class PaninskiSingleChannelDenoiser(nn.Module):
@@ -90,7 +102,6 @@ class PaninskiSingleChannelDenoiser(nn.Module):
         self.out = nn.Linear(n_input_feat, spike_size)
         self.pretrained_path = pretrained_path
 
-
     def forward(self, x):
         x = x[:, None]
         x = self.conv1(x)
@@ -99,7 +110,6 @@ class PaninskiSingleChannelDenoiser(nn.Module):
         x = self.out(x)
         return x
 
-    #TODO: Put it outside the class
     def load(self, device="cpu"):
         checkpoint = torch.load(self.pretrained_path, map_location=device)
         self.load_state_dict(checkpoint)
