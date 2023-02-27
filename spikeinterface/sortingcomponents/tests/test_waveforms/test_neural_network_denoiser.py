@@ -19,7 +19,7 @@ def test_single_channel_toy_denoiser_in_peak_pipeline():
     recording = MEArecRecordingExtractor(local_path)
 
 
-    job_kwargs = dict(chunk_duration='0.5s', n_jobs=2, progress_bar=False)
+    job_kwargs = dict(chunk_duration='0.5s', n_jobs=-1, progress_bar=False)
 
     peaks = detect_peaks(recording, method='locally_exclusive',
                             peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
@@ -28,11 +28,6 @@ def test_single_channel_toy_denoiser_in_peak_pipeline():
     ms_before = 2.0
     ms_after = 2.0
     waveform_extraction = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after, return_output=True)
-
-    # # Test post_check mechanism for SingleChannelToyDenoiser
-    # with pytest.raises(ValueError) as e_info:
-    #     toy_denoiser = SingleChannelToyDenoiser(recording, parents=[waveform_extraction])
-        
     
     # Build nodes for computation
     waveform_extraction = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after, return_output=True)
@@ -43,4 +38,3 @@ def test_single_channel_toy_denoiser_in_peak_pipeline():
     waveforms, denoised_waveforms = run_peak_pipeline(recording, peaks=peaks, nodes=nodes, job_kwargs=job_kwargs)
 
     assert waveforms.shape == denoised_waveforms.shape
-    assert 3==6 
