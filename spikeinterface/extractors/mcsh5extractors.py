@@ -19,7 +19,7 @@ class MCSH5RecordingExtractor(BaseRecording):
     ----------
     file_path : str or Path
         The path to the MCS h5 file.
-    stream_id : int, optional, default: 0
+    stream_id : int, default: 0
         The stream ID to load.
 
     Returns

@@ -14,7 +14,7 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
     ----------
     file_path : str or Path
         Path to the WaveClus file.
-    keep_good_only : bool, optional, default: True
+    keep_good_only : bool, default: True
         Whether to only keep good units.
 
     Returns

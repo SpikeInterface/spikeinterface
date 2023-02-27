@@ -132,7 +132,7 @@ def compute_isi_histograms(waveform_or_sorting_extractor, load_if_exists=False,
     ----------
     waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
         If WaveformExtractor, the ISI histograms are saved as WaveformExtensions.
-    load_if_exists : bool, optional, default: False
+    load_if_exists : bool, default: False
         Whether to load precomputed crosscorrelograms, if they already exist.
     window_ms : float, optional
         The window in ms, by default 50.0.
