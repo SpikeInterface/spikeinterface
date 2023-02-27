@@ -179,7 +179,7 @@ class WaveClusSorter(BaseSorter):
 
         cls._generate_par_file(params, sorter_output_folder)
         if verbose:
-            print(f'Running waveclus in {sorter_output_folder}...')
+            print(f'Running waveclus in {sorter_output_folder}..')
 
         if cls.check_compiled():
             shell_cmd = f'''

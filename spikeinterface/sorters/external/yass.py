@@ -109,7 +109,7 @@ class YassSorter(BaseSorter):
 
 
                             2.  Using previously trained Neural Networks:
-                            ...
+                            ..
                             sorting_yass = ss.run_yass(rec, '/home/cat/Downloads/test2', neural_nets_path=PATH_TO_NEURAL_NETS)
 
                             For any installation or operation issues please visit: https://github.com/paninski-lab/yass
@@ -138,7 +138,7 @@ class YassSorter(BaseSorter):
         p = params
 
         source_dir = Path(__file__).parent
-        config_default_location = os.path.join(source_dir, 'config_default.yaml')
+        config_default_location = os.path.join(source_dir, 'yass_config_default.yaml')
 
         with open(config_default_location) as file:
             yass_params = yaml.load(file, Loader=yaml.FullLoader)
