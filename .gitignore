@@ -123,9 +123,6 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
-
 # PyBuilder
 target/
 
@@ -170,7 +167,6 @@ venv.bak/
 .mypy_cache/
 
 doc/_build/*
-doc/how_to/*
 doc/modules_gallery/*
 doc/sources/*
 
@@ -235,3 +231,6 @@ tridesclous_output/
 # waveforms/
 waveforms_mearec/
 waveforms_rm/
+
+# Mac OS
+.DS_Store

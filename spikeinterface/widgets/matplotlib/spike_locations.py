@@ -12,6 +12,8 @@ from matplotlib.lines import Line2D
 
 
 class SpikeLocationsPlotter(MplPlotter):
+    def __init__(self) -> None:
+        self.legend = None
 
     def do_plot(self, data_plot, **backend_kwargs):
         dp = to_attr(data_plot)
@@ -64,8 +66,10 @@ class SpikeLocationsPlotter(MplPlotter):
         handles = [Line2D([0], [0], ls="", marker='o', markersize=5, markeredgewidth=2, 
                           color=unit_colors[unit]) for unit in dp.unit_ids]
         if dp.plot_legend:
-            self.figure.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.),
-                           ncol=5, fancybox=True, shadow=True)
+            if self.legend is not None:
+                self.legend.remove()
+            self.legend = self.figure.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.),
+                                             ncol=5, fancybox=True, shadow=True)
 
         # set proper axis limits
         xlims, ylims = estimate_axis_lims(spike_locations)
