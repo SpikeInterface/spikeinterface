@@ -89,8 +89,7 @@ jobs:
       - name: run tests
         run: |
           source ~/test_env/bin/activate
-          pytest --cov=./ --cov-report xml:./coverage.xml --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_full.txt
-          cat report_full.txt 
+          pytest --cov=./ --cov-report xml:./coverage.xml -vv -ra --durations=0 | tee report_full.txt; test ${PIPESTATUS[0]} -eq 0 || fail
           echo "# Timing profile of full tests" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_full.txt >> $GITHUB_STEP_SUMMARY 
           cat $GITHUB_STEP_SUMMARY
