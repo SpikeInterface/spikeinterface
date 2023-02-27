@@ -1,6 +1,7 @@
 import pickle
 import json
 from pathlib import Path
+from typing import List
 
 import numpy as np
 from sklearn.decomposition import IncrementalPCA
@@ -19,7 +20,7 @@ from .waveform_utils import to_temporal_representation, from_temporal_representa
 
 class TemporalPCBaseNode(PipelineNode):
     def __init__(
-        self, recording: BaseRecording, parents: list[PipelineNode], model_folder_path: str, return_output=True
+        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_output=True
     ):
         """
         Base class for PCA projection nodes. Contains the logic of the fit method that should be inherited by all the
@@ -191,7 +192,7 @@ class TemporalPCAProjection(TemporalPCBaseNode):
     """
 
     def __init__(
-        self, recording: BaseRecording, parents: list[PipelineNode], model_folder_path: str, return_output=True
+        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_output=True
     ):
         TemporalPCBaseNode.__init__(
             self, recording=recording, parents=parents, return_output=return_output, model_folder_path=model_folder_path
@@ -247,7 +248,7 @@ class TemporalPCADenoising(TemporalPCBaseNode):
     """
 
     def __init__(
-        self, recording: BaseRecording, parents: list[PipelineNode], model_folder_path: str, return_output=True
+        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_output=True
     ):
         TemporalPCBaseNode.__init__(
             self, recording=recording, parents=parents, return_output=return_output, model_folder_path=model_folder_path
