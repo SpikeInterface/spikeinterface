@@ -150,8 +150,7 @@ jobs:
       - name: Test core
         run: |
           source ~/test_env/bin/activate
-          pytest -m core --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_core.txt
-          cat report_core.txt
+          pytest -m core --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 | tee report_core.txt
           echo "# Timing profile of core tests" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_core.txt >> $GITHUB_STEP_SUMMARY 
           cat $GITHUB_STEP_SUMMARY 
@@ -250,8 +249,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -m sortingcomponents --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 > report_sortingcomponents.txt
-          cat report_sortingcomponents.txt
+          pytest -m sortingcomponents --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 | tee report_sortingcomponents.txt
           echo "# Timing profile of sortingcomponents" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_sortingcomponents.txt >> $GITHUB_STEP_SUMMARY 
           cat $GITHUB_STEP_SUMMARY 

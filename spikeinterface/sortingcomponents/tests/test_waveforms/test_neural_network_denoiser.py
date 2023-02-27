@@ -27,7 +27,6 @@ def test_single_channel_toy_denoiser_in_peak_pipeline():
 
     ms_before = 2.0
     ms_after = 2.0
-    sampling_frequency = recording.get_sampling_frequency()
     waveform_extraction = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after, return_output=True)
 
     # # Test post_check mechanism for SingleChannelToyDenoiser
