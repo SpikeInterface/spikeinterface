@@ -139,9 +139,10 @@ class KilosortBase:
             '''
         else:
             source_dir = Path(Path(__file__).parent)
-            shutil.copy(str(source_dir / cls.sorter_name / f'{cls.sorter_name}_master.m'), str(sorter_output_folder))
-            shutil.copy(str(source_dir / 'utils' / 'writeNPY.m'), str(sorter_output_folder))
-            shutil.copy(str(source_dir / 'utils' / 'constructNPYheader.m'), str(sorter_output_folder))
+            external_dir = source_dir.parent
+            shutil.copy(str(source_dir / f'{cls.sorter_name}_master.m'), str(sorter_output_folder))
+            shutil.copy(str(external_dir / 'utils' / 'writeNPY.m'), str(sorter_output_folder))
+            shutil.copy(str(external_dir / 'utils' / 'constructNPYheader.m'), str(sorter_output_folder))
 
             sorter_path = getattr(cls, f'{cls.sorter_name}_path')
             sorter_path = Path(sorter_path).absolute()
