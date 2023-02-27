@@ -32,8 +32,7 @@ jobs:
           pip install -e .
       - name: Test core with pytest
         run: |
-          pytest --capture=tee-sys --full-trace -vv -rA --durations=0 --durations-min=0.001 spikeinterface/core > report.txt
-          cat report.txt
+          pytest -vv -ra --durations=0 --durations-min=0.001 spikeinterface/core | tee report.txt; test ${PIPESTATUS[0]} -eq 0 || fail
       - name: Build test summary
         run: | 
           pip install pandas
