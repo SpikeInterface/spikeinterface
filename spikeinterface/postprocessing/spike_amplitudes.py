@@ -149,7 +149,7 @@ def compute_spike_amplitudes(waveform_extractor, load_if_exists=False,
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor object
-    load_if_exists : bool, optional, default: False
+    load_if_exists : bool, default: False
         Whether to load precomputed spike amplitudes, if they already exist.
     peak_sign: str
         The sign to compute maximum channel:

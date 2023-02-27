@@ -101,12 +101,13 @@ class UnitWaveformsWidget(BaseWidget):
             waveform_extractor, templates, channel_locations, x_offset_units)
 
         wfs_by_ids = {}
-        for unit_id in unit_ids:
-            if waveform_extractor.is_sparse():
-                wfs = we.get_waveforms(unit_id)
-            else:
-                wfs = we.get_waveforms(unit_id, sparsity=sparsity)
-            wfs_by_ids[unit_id] = wfs
+        if plot_waveforms:
+            for unit_id in unit_ids:
+                if waveform_extractor.is_sparse():
+                    wfs = we.get_waveforms(unit_id)
+                else:
+                    wfs = we.get_waveforms(unit_id, sparsity=sparsity)
+                wfs_by_ids[unit_id] = wfs
 
         plot_data = dict(
             waveform_extractor=waveform_extractor,

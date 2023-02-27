@@ -54,7 +54,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         
         self._recording = None
         self.detect_kwargs = detect_kwargs.copy()
-        self.select_kwargs = select_kwargs.copy()
+        self.select_kwargs = select_kwargs.copy() if select_kwargs is not None else None
         self.localize_kwargs = localize_kwargs.copy()
         self.estimate_motion_kwargs = estimate_motion_kwargs.copy()
 
@@ -448,19 +448,27 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         _simpleaxis(ax)
 
 
-def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True):
-
+def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colors=None):
     if axes is None:
         fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
     for count, benchmark in enumerate(benchmarks):
+        c = colors[count] if colors is not None else None
         errors = benchmark.gt_motion - benchmark.motion
         mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
         depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
 
-        axes[0].plot(benchmark.temporal_bins, mean_error, label=benchmark.title)
-        axes[1].violinplot(mean_error, [count], showmeans=True)
-        axes[2].plot(benchmark.spatial_bins, depth_error, label=benchmark.title)
+        axes[0].plot(benchmark.temporal_bins, mean_error, label=benchmark.title, color=c)
+        parts = axes[1].violinplot(mean_error, [count], showmeans=True)
+        if c is not None:
+            for pc in parts['bodies']:
+                pc.set_facecolor(c)
+                pc.set_edgecolor(c)
+            for k in parts:
+                if k != "bodies":
+                    # for line in parts[k]:
+                    parts[k].set_color(c)
+        axes[2].plot(benchmark.spatial_bins, depth_error, label=benchmark.title, color=c)
 
     ax0 = ax = axes[0]
     ax.set_xlabel('time (s)')

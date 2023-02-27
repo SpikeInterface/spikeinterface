@@ -19,13 +19,13 @@ class CombinatoSortingExtractor(BaseSorting):
     ----------
     folder_path : str or Path
         Path to the Combinato folder.
-    sampling_frequency : int, optional, default: 30000
+    sampling_frequency : int, default: 30000
         The sampling frequency.
     user : str
         The username that ran the sorting. Defaults to 'simple'.
     det_sign : {'both', 'pos', 'neg'}
         Which sign was used for detection.
-    keep_good_only : bool, optional, default: True
+    keep_good_only : bool, default: True
         Whether to only keep good units.
 
     Returns
