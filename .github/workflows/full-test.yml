@@ -231,7 +231,6 @@ jobs:
         run: |
           source ~/test_env/bin/activate
           pytest -m sortingcomponents -vv -ra --durations=0 --durations-min=0.001 | tee report_sortingcomponents.txt; test ${PIPESTATUS[0]} -eq 0 || fail
-          cat 
           echo "# Timing profile of sortingcomponents" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_sortingcomponents.txt >> $GITHUB_STEP_SUMMARY  
           rm report_sortingcomponents.txt
