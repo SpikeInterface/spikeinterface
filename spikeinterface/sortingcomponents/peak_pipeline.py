@@ -9,7 +9,7 @@ There are two ways for using theses "plugins":
   * during `peak_detect()`
   * when peaks are already detected and reduced with `select_peaks()`
 """
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
 
@@ -56,7 +56,7 @@ class WaveformExtractorNode(PipelineNode):
     """Base class for waveform extractor"""
 
     def __init__(self, recording: BaseRecording, 
-                 ms_before: float, ms_after: float, parents: Optional[list[PipelineNode]]=None,
+                 ms_before: float, ms_after: float, parents: Optional[List[PipelineNode]]=None,
                  return_output: bool=False):
         """
         Base class for waveform extractor. Contains logic to handle the temporal interval in which to extract the 
@@ -80,7 +80,7 @@ class WaveformExtractorNode(PipelineNode):
 
 class ExtractDenseWaveforms(WaveformExtractorNode):
     def __init__(self, recording: BaseRecording, 
-                 ms_before: float, ms_after: float, parents: Optional[list[PipelineNode]]=None,
+                 ms_before: float, ms_after: float, parents: Optional[List[PipelineNode]]=None,
                  return_output: bool=False):
         
         WaveformExtractorNode.__init__(self, recording=recording, ms_before=ms_before, ms_after=ms_after,
