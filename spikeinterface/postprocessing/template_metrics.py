@@ -150,7 +150,7 @@ def compute_template_metrics(waveform_extractor, load_if_exists=False,
     ----------
     waveform_extractor : WaveformExtractor, optional
         The waveform extractor used to compute template metrics
-    load_if_exists : bool, optional, default: False
+    load_if_exists : bool, default: False
         Whether to load precomputed template metrics, if they already exist.
     metric_names : list, optional
         List of metrics to compute (see si.postprocessing.get_template_metric_names()), by default None

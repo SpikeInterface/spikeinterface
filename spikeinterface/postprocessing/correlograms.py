@@ -153,7 +153,7 @@ def compute_correlograms(waveform_or_sorting_extractor,
     ----------
     waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
         If WaveformExtractor, the correlograms are saved as WaveformExtensions.
-    load_if_exists : bool, optional, default: False
+    load_if_exists : bool, default: False
         Whether to load precomputed crosscorrelograms, if they already exist.
     window_ms : float, optional
         The window in ms, by default 100.0.
