@@ -116,7 +116,7 @@ jobs:
               echo "Quality metrics changed"
               echo "QUALITYMETRICS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
-            if [[ $file == *"/sorters/"* && $file != *"/sorters/internal/"* && $file != *"/sorters/internal/"* ]]; then
+            if [[ $file == *"/sorters/"* && $file != *"/sorters/internal/"* && $file != *"/sorters/external/"* ]]; then
               echo "Sorters changed"
               echo "SORTERS_CHANGED=true" >> $GITHUB_OUTPUT
             fi

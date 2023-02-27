@@ -153,7 +153,7 @@ class CombinatoSorter(BaseSorter):
         tmpdir = sorter_output_folder
 
         if verbose:
-            print(f'Running combinato in {tmpdir}..')
+            print(f'Running combinato in {tmpdir}...')
 
         with open(tmpdir / "local_options.py", "w") as outFile:
             outFile.writelines("options = {}".format(p))
