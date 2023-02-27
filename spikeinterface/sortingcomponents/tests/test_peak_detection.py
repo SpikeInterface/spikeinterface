@@ -80,7 +80,7 @@ def test_detect_peaks():
     # locally_exclusive + pipeline steps LocalizeCenterOfMass + PeakToPeakFeature
     print("With peak pipeline")
     extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1., ms_after=1.,
-                                                    return_ouput=False)
+                                                    return_output=False)
 
     pipeline_nodes = [
         extract_dense_waveforms,

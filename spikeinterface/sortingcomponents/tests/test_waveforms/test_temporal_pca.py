@@ -71,7 +71,7 @@ def test_pca_denoising(mearec_recording, detected_peaks, model_path_of_trained_p
 
     # Node initialization
     extract_waveforms = ExtractDenseWaveforms(
-        recording=recording, ms_before=ms_before, ms_after=ms_after, return_ouput=True
+        recording=recording, ms_before=ms_before, ms_after=ms_after, return_output=True
     )
     pca_denoising = TemporalPCADenoising(
         recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms]
@@ -95,7 +95,7 @@ def test_pca_denoising_sparse(mearec_recording, detected_peaks, model_path_of_tr
 
     # Node initialization
     extract_waveforms = ExtractSparseWaveforms(
-        recording=recording, ms_before=ms_before, ms_after=ms_after, local_radius_um=local_radius_um, return_ouput=True
+        recording=recording, ms_before=ms_before, ms_after=ms_after, local_radius_um=local_radius_um, return_output=True
     )
     pca_denoising = TemporalPCADenoising(
         recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms]
@@ -118,7 +118,7 @@ def test_pca_projection(mearec_recording, detected_peaks, model_path_of_trained_
 
     # Node initialization
     extract_waveforms = ExtractDenseWaveforms(
-        recording=recording, ms_before=ms_before, ms_after=ms_after, return_ouput=False
+        recording=recording, ms_before=ms_before, ms_after=ms_after, return_output=False
     )
     temporal_pca = TemporalPCAProjection(
         recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms]
@@ -146,7 +146,7 @@ def test_pca_projection_sparsity(mearec_recording, detected_peaks, model_path_of
 
     # Node initialization
     extract_waveforms = ExtractSparseWaveforms(
-        recording=recording, ms_before=ms_before, ms_after=ms_after, local_radius_um=local_radius_um, return_ouput=True
+        recording=recording, ms_before=ms_before, ms_after=ms_after, local_radius_um=local_radius_um, return_output=True
     )
     temporal_pca = TemporalPCAProjection(
         recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms]
@@ -171,7 +171,7 @@ def test_initialization_with_wrong_parents_failure(mearec_recording, model_path_
     model_folder_path = model_path_of_trained_pca
     dummy_parent = PipelineNode(recording=recording)
     extract_waveforms = ExtractSparseWaveforms(
-        recording=recording, ms_before=1, ms_after=1, local_radius_um=40, return_ouput=True
+        recording=recording, ms_before=1, ms_after=1, local_radius_um=40, return_output=True
     )
     
     match_error = f"TemporalPCA should have a single {WaveformExtractorNode.__name__} in its parents"
@@ -199,7 +199,7 @@ def test_pca_waveform_extract_and_model_mismatch(mearec_recording, model_path_of
     ms_before = 0.5
     ms_after = 1.5
     extract_waveforms = ExtractDenseWaveforms(
-        recording=recording, ms_before=ms_before, ms_after=ms_after, return_ouput=False
+        recording=recording, ms_before=ms_before, ms_after=ms_after, return_output=False
     )
     # Pytest raise assertion
     with pytest.raises(ValueError, match="PCA model and waveforms mismatch *"):
@@ -214,7 +214,7 @@ def test_pca_incorrect_model_path(mearec_recording, model_path_of_trained_pca):
     ms_before = 0.5
     ms_after = 1.5
     extract_waveforms = ExtractDenseWaveforms(
-        recording=recording, ms_before=ms_before, ms_after=ms_after, return_ouput=False
+        recording=recording, ms_before=ms_before, ms_after=ms_after, return_output=False
     )
     # Pytest raise assertion
     with pytest.raises(TypeError, match="model_path folder is not a folder or does not exist. *"):

@@ -20,14 +20,14 @@ from .waveform_utils import to_temporal_representation, from_temporal_representa
 
 class TemporalPCBaseNode(PipelineNode):
     def __init__(
-        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_ouput=True
+        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_output=True
     ):
         """
         Base class for PCA projection nodes. Contains the logic of the fit method that should be inherited by all the
         child classess. The child should implement a compute method that does a specific operation
         (e.g. project, denoise, etc)
         """
-        PipelineNode.__init__(self, recording=recording, parents=parents, return_ouput=return_ouput)
+        PipelineNode.__init__(self, recording=recording, parents=parents, return_output=return_output)
 
         self.model_folder_path = model_folder_path
 
@@ -192,10 +192,10 @@ class TemporalPCAProjection(TemporalPCBaseNode):
     """
 
     def __init__(
-        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_ouput=True
+        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_output=True
     ):
         TemporalPCBaseNode.__init__(
-            self, recording=recording, parents=parents, return_ouput=return_ouput, model_folder_path=model_folder_path
+            self, recording=recording, parents=parents, return_output=return_output, model_folder_path=model_folder_path
         )
 
     def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
@@ -248,10 +248,10 @@ class TemporalPCADenoising(TemporalPCBaseNode):
     """
 
     def __init__(
-        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_ouput=True
+        self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_output=True
     ):
         TemporalPCBaseNode.__init__(
-            self, recording=recording, parents=parents, return_ouput=return_ouput, model_folder_path=model_folder_path
+            self, recording=recording, parents=parents, return_output=return_output, model_folder_path=model_folder_path
         )
 
     def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
