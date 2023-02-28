@@ -7,8 +7,8 @@ import sys
 import numpy as np
 import scipy.io
 
-from .utils import ShellScript, get_matlab_shell_name, get_bash_path
-from .basesorter import get_job_kwargs
+from ..utils import ShellScript, get_matlab_shell_name, get_bash_path
+from ..basesorter import get_job_kwargs
 from spikeinterface.extractors import KiloSortSortingExtractor
 from spikeinterface.core import write_binary_recording
 
@@ -139,9 +139,10 @@ class KilosortBase:
             '''
         else:
             source_dir = Path(Path(__file__).parent)
-            shutil.copy(str(source_dir / cls.sorter_name / f'{cls.sorter_name}_master.m'), str(sorter_output_folder))
-            shutil.copy(str(source_dir / 'utils' / 'writeNPY.m'), str(sorter_output_folder))
-            shutil.copy(str(source_dir / 'utils' / 'constructNPYheader.m'), str(sorter_output_folder))
+            external_dir = source_dir.parent
+            shutil.copy(str(source_dir / f'{cls.sorter_name}_master.m'), str(sorter_output_folder))
+            shutil.copy(str(external_dir / 'utils' / 'writeNPY.m'), str(sorter_output_folder))
+            shutil.copy(str(external_dir / 'utils' / 'constructNPYheader.m'), str(sorter_output_folder))
 
             sorter_path = getattr(cls, f'{cls.sorter_name}_path')
             sorter_path = Path(sorter_path).absolute()
