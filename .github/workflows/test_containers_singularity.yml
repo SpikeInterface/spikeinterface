@@ -1,0 +1,37 @@
+name: Test sorter images in singularity
+
+on: workflow_dispatch
+
+jobs:
+  test-images:
+    name: Test on (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # "macos-latest", "windows-latest"
+        os: ["ubuntu-latest", ]
+    steps:
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - uses: eWaterCycle/setup-singularity@v7
+        with:
+          singularity-version: 3.8.3
+
+      - name: Python and Singularity versions
+        run:
+          python --version
+          singularity --version
+
+      - name: Install dependencies
+        run: |
+          pip install -e .[full]
+          pip install spython
+          pip install pytest
+
+      - name: Run test singularity containers
+        run: |
+          pip install tridesclous
+          pytest -sv spikeinterface/sorters/external/tests/test_singularity_containers.py
