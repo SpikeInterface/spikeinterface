@@ -429,7 +429,7 @@ def test_portability():
     shutil.copytree(folder_to_move, folder_moved)
     wf_folder_moved = folder_moved / "waveform_extractor"
     we_loaded = extract_waveforms(
-        recording, sorting, wf_folder_moved, load_if_exists=True)
+        recording, sorting, wf_folder_moved, load_waveforms=True)
 
     assert we_loaded.recording is not None
     assert we_loaded.sorting is not None
