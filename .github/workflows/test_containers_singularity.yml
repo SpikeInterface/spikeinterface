@@ -20,13 +20,19 @@ jobs:
         with:
           singularity-version: 3.8.3
 
-      - name: Python and Singularity versions
+      - name: Python version
         run:
           python --version
+
+      - name: Singularity version
+        run:
           singularity --version
 
       - name: Install dependencies
         run: |
+          python -m venv ~/test_env
+          python -m pip install -U pip  # Official recommended way
+          source ~/test_env/bin/activate
           pip install -e .[full]
           pip install spython
           pip install pytest
