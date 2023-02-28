@@ -110,8 +110,8 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         self.compute_gt_motion()
 
-        # align gt motion and motion on the time bin
-        self.motion +=  self.gt_motion[0, :].mean() - self.motion[0, :].mean()
+        # align globaly gt_motion and motion to avoid offsets
+        self.motion +=  np.median(self.gt_motion) - np.median(self.motion)
 
         ## save folder
         if self.folder is not None:
@@ -126,8 +126,8 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         self.compute_gt_motion()
 
-        # align gt motion and motion on the time bin
-        self.motion +=  self.gt_motion[0, :].mean() - self.motion[0, :].mean()
+        # align globaly gt_motion and motion to avoid offsets
+        self.motion +=  np.median(self.gt_motion) - np.median(self.motion)
         self.run_times['estimate_motion'] = t4 - t3
 
         ## save folder
