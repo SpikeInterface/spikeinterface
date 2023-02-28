@@ -10,14 +10,16 @@ from spikeinterface.sortingcomponents.peak_pipeline import (
     run_peak_pipeline,
 )
 
+
 @pytest.fixture(scope="module")
 def folder_to_save_pca_model(tmp_path_factory):
     """
     Creates a temporary folder to save the PCA model which is available to all the tests in this module
     """
-    model_folder_path = tmp_path_factory.mktemp('my_temp_dir') / "temporal_pca_model"
+    model_folder_path = tmp_path_factory.mktemp("my_temp_dir") / "temporal_pca_model"
     model_folder_path.mkdir()
     return model_folder_path
+
 
 @pytest.fixture(scope="module")
 def model_path_of_trained_pca(folder_to_save_pca_model, mearec_recording, chunk_executor_kwargs):
@@ -49,8 +51,8 @@ def model_path_of_trained_pca(folder_to_save_pca_model, mearec_recording, chunk_
 
     return model_folder_path
 
+
 def test_pca_denoising(mearec_recording, detected_peaks, model_path_of_trained_pca, chunk_executor_kwargs):
-    
     recording = mearec_recording
     model_folder_path = model_path_of_trained_pca
     peaks = detected_peaks
@@ -66,14 +68,16 @@ def test_pca_denoising(mearec_recording, detected_peaks, model_path_of_trained_p
     pca_denoising = TemporalPCADenoising(
         recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms]
     )
-    pipeline_nodes = [extract_waveforms, pca_denoising]  
+    pipeline_nodes = [extract_waveforms, pca_denoising]
 
     # Extract projected waveforms and compare
-    waveforms, denoised_waveforms = run_peak_pipeline(recording, peaks, nodes=pipeline_nodes, job_kwargs=chunk_executor_kwargs)
+    waveforms, denoised_waveforms = run_peak_pipeline(
+        recording, peaks, nodes=pipeline_nodes, job_kwargs=chunk_executor_kwargs
+    )
     assert waveforms.shape == denoised_waveforms.shape
-    
+
+
 def test_pca_denoising_sparse(mearec_recording, detected_peaks, model_path_of_trained_pca, chunk_executor_kwargs):
-    
     recording = mearec_recording
     model_folder_path = model_path_of_trained_pca
     peaks = detected_peaks
@@ -90,14 +94,16 @@ def test_pca_denoising_sparse(mearec_recording, detected_peaks, model_path_of_tr
     pca_denoising = TemporalPCADenoising(
         recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms]
     )
-    pipeline_nodes = [extract_waveforms, pca_denoising]  
+    pipeline_nodes = [extract_waveforms, pca_denoising]
 
     # Extract projected waveforms and compare
-    sparse_waveforms, denoised_waveforms = run_peak_pipeline(recording, peaks, nodes=pipeline_nodes, job_kwargs=chunk_executor_kwargs)
+    sparse_waveforms, denoised_waveforms = run_peak_pipeline(
+        recording, peaks, nodes=pipeline_nodes, job_kwargs=chunk_executor_kwargs
+    )
     assert sparse_waveforms.shape == denoised_waveforms.shape
-    
-def test_pca_projection(mearec_recording, detected_peaks, model_path_of_trained_pca, chunk_executor_kwargs):
 
+
+def test_pca_projection(mearec_recording, detected_peaks, model_path_of_trained_pca, chunk_executor_kwargs):
     recording = mearec_recording
     model_folder_path = model_path_of_trained_pca
     peaks = detected_peaks
@@ -123,8 +129,8 @@ def test_pca_projection(mearec_recording, detected_peaks, model_path_of_trained_
     assert extracted_n_components == temporal_pca.pca_model.n_components
     assert extracted_n_channels == recording.get_num_channels()
 
-def test_pca_projection_sparsity(mearec_recording, detected_peaks, model_path_of_trained_pca, chunk_executor_kwargs):
 
+def test_pca_projection_sparsity(mearec_recording, detected_peaks, model_path_of_trained_pca, chunk_executor_kwargs):
     recording = mearec_recording
     model_folder_path = model_path_of_trained_pca
     peaks = detected_peaks
@@ -155,15 +161,15 @@ def test_pca_projection_sparsity(mearec_recording, detected_peaks, model_path_of
     assert extracted_n_components == temporal_pca.pca_model.n_components
     assert extracted_n_channels == max_n_channels
 
+
 def test_initialization_with_wrong_parents_failure(mearec_recording, model_path_of_trained_pca):
-    
     recording = mearec_recording
     model_folder_path = model_path_of_trained_pca
     dummy_parent = PipelineNode(recording=recording)
     extract_waveforms = ExtractSparseWaveforms(
         recording=recording, ms_before=1, ms_after=1, local_radius_um=40, return_output=True
     )
-    
+
     match_error = f"TemporalPCA should have a single {WaveformExtractorNode.__name__} in its parents"
 
     # Parents without waveform extraction
@@ -176,12 +182,12 @@ def test_initialization_with_wrong_parents_failure(mearec_recording, model_path_
 
     # Multiple parents
     with pytest.raises(TypeError, match=match_error):
-        TemporalPCAProjection(recording=recording, model_folder_path=model_folder_path,
-                              parents=[extract_waveforms, extract_waveforms])
+        TemporalPCAProjection(
+            recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms, extract_waveforms]
+        )
 
 
 def test_pca_waveform_extract_and_model_mismatch(mearec_recording, model_path_of_trained_pca):
-    
     recording = mearec_recording
     model_folder_path = model_path_of_trained_pca
 
@@ -194,9 +200,9 @@ def test_pca_waveform_extract_and_model_mismatch(mearec_recording, model_path_of
     # Pytest raise assertion
     with pytest.raises(ValueError, match="PCA model and waveforms mismatch *"):
         TemporalPCAProjection(recording=recording, model_folder_path=model_folder_path, parents=[extract_waveforms])
-        
+
+
 def test_pca_incorrect_model_path(mearec_recording, model_path_of_trained_pca):
-    
     recording = mearec_recording
     model_folder_path = model_path_of_trained_pca / "a_file_that_does_not_exist.pkl"
 

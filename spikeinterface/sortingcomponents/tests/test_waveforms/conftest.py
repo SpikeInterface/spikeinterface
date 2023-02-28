@@ -5,10 +5,12 @@ import spikeinterface.extractors as se
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
+
 @pytest.fixture(scope="module")
 def chunk_executor_kwargs():
     job_kwargs = dict(n_jobs=-1, chunk_size=10000, progress_bar=False)
     return job_kwargs
+
 
 @pytest.fixture(scope="module")
 def mearec_recording():

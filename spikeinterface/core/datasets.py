@@ -42,10 +42,6 @@ def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_e
         base_local_folder = get_global_dataset_folder()
         base_local_folder.mkdir(exist_ok=True)
         local_folder = base_local_folder / repo.split("/")[-1]
-
-    print("------------------")
-    print("Downloading dataset from: ", repo)
-    print("Using the folder", local_folder)
     
     if local_folder.exists() and GitRepo.is_valid_repo(local_folder):
         dataset = datalad.api.Dataset(path=local_folder)
