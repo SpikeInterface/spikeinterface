@@ -33,9 +33,13 @@ jobs:
           pip install pytest
           pip install -e .[full]
           pip install spython
-      - name: Run test singularity containers
-        env: 
+      - name: Check SPIKEINTERFACE_DEV_PATH
+        env:
           SPIKEINTERFACE_DEV_PATH: $GITHUB_WORKSPACE
         run: |
           echo $SPIKEINTERFACE_DEV_PATH
+      - name: Run test singularity containers
+        env:
+          SPIKEINTERFACE_DEV_PATH: $GITHUB_WORKSPACE
+        run: |
           pytest -v spikeinterface/sorters/external/tests/test_singularity_containers.py
