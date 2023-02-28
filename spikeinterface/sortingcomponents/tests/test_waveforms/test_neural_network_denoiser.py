@@ -6,24 +6,14 @@ from spikeinterface import download_dataset
 
 
 from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, ExtractDenseWaveforms
-from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.waveforms.neural_network_denoiser import SingleChannelToyDenoiser
 
 
 
-def test_single_channel_toy_denoiser_in_peak_pipeline():
-    repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
-    remote_path = 'mearec/mearec_test_10s.h5'
-    local_path = download_dataset(
-        repo=repo, remote_path=remote_path, local_folder=None)
-    recording = MEArecRecordingExtractor(local_path)
+def test_single_channel_toy_denoiser_in_peak_pipeline(mearec_recording, detected_peaks, chunk_executor_kwargs):
 
-
-    job_kwargs = dict(chunk_duration='0.5s', n_jobs=-1, progress_bar=False)
-
-    peaks = detect_peaks(recording, method='locally_exclusive',
-                            peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                            **job_kwargs)
+    recording = mearec_recording
+    peaks = detected_peaks
 
     ms_before = 2.0
     ms_after = 2.0
@@ -35,6 +25,6 @@ def test_single_channel_toy_denoiser_in_peak_pipeline():
 
 
     nodes = [waveform_extraction, toy_denoiser]
-    waveforms, denoised_waveforms = run_peak_pipeline(recording, peaks=peaks, nodes=nodes, job_kwargs=job_kwargs)
+    waveforms, denoised_waveforms = run_peak_pipeline(recording, peaks=peaks, nodes=nodes, job_kwargs=chunk_executor_kwargs)
 
     assert waveforms.shape == denoised_waveforms.shape

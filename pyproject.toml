@@ -25,7 +25,6 @@ dependencies = [
     "threadpoolctl",
     "tqdm",
     "probeinterface>=0.2.16",
-    "huggingface_hub",
 ]
 
 [build-system]
@@ -78,6 +77,7 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
+    "huggingface_hub",
 ]
 
 widgets = [
