@@ -24,7 +24,6 @@ jobs:
       - uses: eWaterCycle/setup-singularity@v7
         with:
           singularity-version: 3.8.7
-      - name: Test env variable 
       - name: Python version
         run:
           python --version
