@@ -130,4 +130,6 @@ We have other tools for cleaning spike sorting outputs:
  * :py:func:`~spikeinterface.curation.find_duplicated_spikes` : find duplicated spikes in the spike trains
  * | :py:func:`~spikeinterface.curation.remove_duplicated_spikes` : remove all duplicated spikes from a 
    | :py:class:`~spikeinterface.core.BaseSorting` object (internally using the previous function)
+ * | :py:func:`~spikeinterface.curation.remove_excess_spikes` : remove spikes whose times are greater than the 
+   | recording's number of samples (by segment)
 
