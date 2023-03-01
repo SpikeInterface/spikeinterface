@@ -482,7 +482,9 @@ if __name__ == '__main__':
     if verbose:
         print('Starting container')
     container_client.start()
-
+    print("******")
+    print("Container started with the following paths")
+    print(si_dev_path_unix, si_source_folder)
     # check if container contains spikeinterface already
     cmd_1 = ['python', '-c', 'import spikeinterface; print(spikeinterface.__version__)']
     cmd_2 = ['python', '-c', 'from spikeinterface.sorters import run_sorter_local']

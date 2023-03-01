@@ -46,6 +46,7 @@ jobs:
         run: |
           echo $SPIKEINTERFACE_DEV_PATH
           python -c "import os; assert os.getenv('SPIKEINTERFACE_DEV_PATH') is not None"
+          ls -l
       - name: Run test singularity containers
         run: |
           pytest -vv --capture=tee-sys -rA spikeinterface/sorters/external/tests/test_singularity_containers.py
