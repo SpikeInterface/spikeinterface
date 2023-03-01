@@ -491,7 +491,7 @@ if __name__ == '__main__':
     res_output = ''
     for cmd in [cmd_1, cmd_2]:
         res_output += str(container_client.run_command(cmd))
-    need_si_install = 'ModuleNotFoundError' in res_output
+    need_si_install = 'ModuleNotFoundError' in res_output or running_on_github_actions
 
     if need_si_install:
         if 'dev' in si_version:
