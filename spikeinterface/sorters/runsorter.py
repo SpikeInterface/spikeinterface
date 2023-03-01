@@ -434,8 +434,14 @@ if __name__ == '__main__':
                 'bind': str(recording_folder_unix), 'mode': 'ro'}
     volumes[str(parent_folder)] = {'bind': str(parent_folder_unix), 'mode': 'rw'}
     
-    si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH')
-
+    running_on_github_actions = os.getenv("CI") 
+    si_dev_path = None
+    if running_on_github_actions:
+        print(si_version)
+        si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH')
+        print(si_dev_path)
+        assert si_dev_path is not None
+        
     install_si_from_source = False
     if 'dev' in si_version and si_dev_path is not None:
         install_si_from_source = True
