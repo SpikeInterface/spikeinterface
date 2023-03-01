@@ -107,14 +107,8 @@ test = [
     # so we use an old one here
     "datalad==0.16.2",
 
-    ## install sorters ##
+    ## install tridesclous for testing ##
     "tridesclous>=1.6.6.1",
-
-    ## spyking-circus - mpi is buggy in 3.9
-    # "spyking-circus",
-
-    ## herdingspikes
-    "herdingspikes<=0.3.99",
 
     ## sliding_nn
     "pymde",
@@ -140,7 +134,8 @@ markers = [
     "postprocessing",
     "qualitymetrics",
     "sorters",
-    "si_sorters",
+    "sorters_external",
+    "sorters_internal",
     "comparison",
     "curation",
     "exporters",

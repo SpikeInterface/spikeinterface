@@ -44,13 +44,13 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.3, ms_
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
     
     if method == 'center_of_mass':
-        extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_ouput=False)
+        extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_output=False)
         pipeline_nodes = [
             extract_dense_waveforms,
             LocalizeCenterOfMass(recording, parents=[extract_dense_waveforms], **method_kwargs)
         ]
     elif method == 'monopolar_triangulation':
-        extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_ouput=False)
+        extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_output=False)
         pipeline_nodes = [
             extract_dense_waveforms,
             LocalizeMonopolarTriangulation(recording, parents=[extract_dense_waveforms], **method_kwargs)
@@ -64,8 +64,8 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.3, ms_
 
 
 class LocalizeBase(PipelineNode):
-    def __init__(self, recording, return_ouput=True, parents=None, local_radius_um=75.):
-        PipelineNode.__init__(self, recording, return_ouput=return_ouput, parents=parents)
+    def __init__(self, recording, return_output=True, parents=None, local_radius_um=75.):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         
         self.local_radius_um = local_radius_um
         self.contact_locations = recording.get_channel_locations()
@@ -83,8 +83,8 @@ class LocalizePeakChannel(PipelineNode):
     params_doc = """
     """
 
-    def __init__(self, recording, return_ouput=True):
-        PipelineNode.__init__(self, recording, return_ouput, parents=None)
+    def __init__(self, recording, return_output=True):
+        PipelineNode.__init__(self, recording, return_output, parents=None)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
         
         self.contact_locations = recording.get_channel_locations()
@@ -111,8 +111,8 @@ class LocalizeCenterOfMass(LocalizeBase):
     local_radius_um: float
         Radius in um for channel sparsity.
     """
-    def __init__(self, recording, return_ouput=True, parents=['extract_waveforms'], local_radius_um=75.):
-        LocalizeBase.__init__(self, recording, return_ouput=return_ouput, parents=parents, local_radius_um=local_radius_um)
+    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=75.):
+        LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
 
     def get_dtype(self):
@@ -152,9 +152,9 @@ class LocalizeMonopolarTriangulation(PipelineNode):
     enforce_decrease : bool (default True)
         Enforce spatial decreasingness for PTP vectors.
     """
-    def __init__(self, recording, return_ouput=True, parents=['extract_waveforms'],
+    def __init__(self, recording, return_output=True, parents=['extract_waveforms'],
                             local_radius_um=75., max_distance_um=150., optimizer='minimize_with_log_penality', enforce_decrease=False):
-        LocalizeBase.__init__(self, recording, return_ouput=return_ouput, parents=parents, local_radius_um=local_radius_um)
+        LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um)
 
         self._kwargs.update(dict(max_distance_um=max_distance_um,
                                  optimizer=optimizer,

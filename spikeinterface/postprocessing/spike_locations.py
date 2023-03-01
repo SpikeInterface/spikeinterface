@@ -115,7 +115,7 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
     ----------
     waveform_extractor : WaveformExtractor
         A waveform extractor object.
-    load_if_exists : bool, optional, default: False
+    load_if_exists : bool, default: False
         Whether to load precomputed spike locations, if they already exist.
     ms_before : float
         The left window, before a peak, in milliseconds.
