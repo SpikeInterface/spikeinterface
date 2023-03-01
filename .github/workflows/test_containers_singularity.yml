@@ -4,8 +4,11 @@ on:
   workflow_dispatch:
   pull_request:
 
+
 jobs:
   test-images:
+    env:
+      SPIKEINTERFACE_DEV_PATH: ${{ github.workspace }}
     name: Test on (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
@@ -21,6 +24,8 @@ jobs:
       - uses: eWaterCycle/setup-singularity@v7
         with:
           singularity-version: 3.8.7
+      - name: Test env variable 
+        run: echo $SPIKEINTERFACE_DEV_PATH
       - name: Python version
         run:
           python --version
@@ -39,13 +44,7 @@ jobs:
           pip install pytest
           pip install -e .[full]
           pip install spython
-      - name: Check SPIKEINTERFACE_DEV_PATH
-        env:
-          SPIKEINTERFACE_DEV_PATH: $GITHUB_WORKSPACE
-        run: |
           echo $SPIKEINTERFACE_DEV_PATH
       - name: Run test singularity containers
-        env:
-          SPIKEINTERFACE_DEV_PATH: $GITHUB_WORKSPACE
         run: |
-          pytest -v spikeinterface/sorters/external/tests/test_singularity_containers.py
+          pytest -vv -ra spikeinterface/sorters/external/tests/test_singularity_containers.py

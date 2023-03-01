@@ -20,6 +20,9 @@ os.environ['SINGULARITY_DISABLE_CACHE'] = 'true'
 container_mode = "singularity" # "singularity" | "docker"
 
 if ON_GITHUB:
+    si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH')    
+    assert si_dev_path is not None
+    print("si_dev_path", si_dev_path)
     CONTAINER_MODE = "singularity"
 else:
     CONTAINER_MODE = container_mode
