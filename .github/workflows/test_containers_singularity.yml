@@ -41,11 +41,11 @@ jobs:
           pip install spython
       - name: Check SPIKEINTERFACE_DEV_PATH
         env:
-          SPIKEINTERFACE_DEV_PATH: ${{ GITHUB_WORKSPACE }}
+          SPIKEINTERFACE_DEV_PATH: $GITHUB_WORKSPACE
         run: |
           echo $SPIKEINTERFACE_DEV_PATH
       - name: Run test singularity containers
         env:
-          SPIKEINTERFACE_DEV_PATH: ${{ GITHUB_WORKSPACE }}
+          SPIKEINTERFACE_DEV_PATH: $GITHUB_WORKSPACE
         run: |
           pytest -v spikeinterface/sorters/external/tests/test_singularity_containers.py
