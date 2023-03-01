@@ -352,3 +352,27 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
                     wfs[pos, :, :] = wf
                 else:
                     wfs[pos, :, :] = wf[:, sparsity_mask[unit_ind]]
+
+
+def has_exceeding_spikes(recording, sorting):
+    """
+    Check if the sorting objects has spikes exceeding the recording number of samples, for all segments
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording object
+    sorting : BaseSorting
+        The sorting object
+
+    Returns
+    -------
+    bool
+        True if exceeding spikes, False otherwise
+    """
+    spike_vector = sorting.to_spike_vector()
+    for segment_index in range(recording.get_num_segments()):
+        spike_vector_seg = spike_vector[spike_vector["segment_ind"] == segment_index]
+        if np.max(spike_vector_seg["sample_ind"]) > recording.get_num_samples(segment_index=segment_index) - 1:
+            return True
+    return False
