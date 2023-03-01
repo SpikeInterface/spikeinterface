@@ -21,7 +21,6 @@ CONTAINER_MODE = "singularity" # "singularity" | "docker"
 running_on_github_actions = os.getenv("CI") 
 if running_on_github_actions:
     si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH')    
-    assert si_dev_path is not None
     CONTAINER_MODE = "singularity"
 
 

@@ -25,7 +25,6 @@ jobs:
         with:
           singularity-version: 3.8.7
       - name: Test env variable 
-        run: echo $SPIKEINTERFACE_DEV_PATH
       - name: Python version
         run:
           python --version
@@ -44,7 +43,10 @@ jobs:
           pip install pytest
           pip install -e .[full]
           pip install spython
+      - name: Test that containers will install CI version of spikeinterface
+        run: |
           echo $SPIKEINTERFACE_DEV_PATH
+          python -c "import os; assert os.getenv('SPIKEINTERFACE_DEV_PATH') is not None
       - name: Run test singularity containers
         run: |
           pytest -vv --capture=tee-sys -rA spikeinterface/sorters/external/tests/test_singularity_containers.py
