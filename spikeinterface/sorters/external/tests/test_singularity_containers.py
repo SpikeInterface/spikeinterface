@@ -12,14 +12,18 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "sorters"
 
-ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
 
 os.environ['SINGULARITY_DISABLE_CACHE'] = 'true'
 
 # This can be used locally to test singularity or docker
 container_mode = "singularity" # "singularity" | "docker"
 
-if ON_GITHUB:
+running_on_github_actions = os.getenv("CI") 
+print("------------")
+print(os.environ)
+print('------------')
+
+if running_on_github_actions:
     si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH')    
     assert si_dev_path is not None
     print("si_dev_path", si_dev_path)
