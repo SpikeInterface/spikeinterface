@@ -373,6 +373,7 @@ def has_exceeding_spikes(recording, sorting):
     spike_vector = sorting.to_spike_vector()
     for segment_index in range(recording.get_num_segments()):
         spike_vector_seg = spike_vector[spike_vector["segment_ind"] == segment_index]
-        if np.max(spike_vector_seg["sample_ind"]) > recording.get_num_samples(segment_index=segment_index) - 1:
-            return True
+        if len(spike_vector_seg) > 0:
+            if np.max(spike_vector_seg["sample_ind"]) > recording.get_num_samples(segment_index=segment_index) - 1:
+                return True
     return False
