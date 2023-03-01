@@ -21,10 +21,10 @@ CONTAINER_MODE = "singularity" # "singularity" | "docker"
 running_on_github_actions = os.getenv("CI") 
 if running_on_github_actions:
     si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH')    
+    assert si_dev_path is not None
     CONTAINER_MODE = "singularity"
 
 
-@pytest.fixture(scope="module")
 def generate_run_kwargs():
     test_recording, _ = se.toy_example(
         duration=30,
@@ -44,7 +44,7 @@ def generate_run_kwargs():
         raise Exception("CONTAINER_MODE can be 'docker' or 'singularity'")
     return run_kwargs
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def run_kwargs():
     return generate_run_kwargs()
 
