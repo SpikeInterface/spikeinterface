@@ -47,4 +47,4 @@ jobs:
           echo $SPIKEINTERFACE_DEV_PATH
       - name: Run test singularity containers
         run: |
-          pytest -vv -ra spikeinterface/sorters/external/tests/test_singularity_containers.py
+          pytest -vv --capture=tee-sys -rA spikeinterface/sorters/external/tests/test_singularity_containers.py
