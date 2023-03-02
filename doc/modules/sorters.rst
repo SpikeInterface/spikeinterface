@@ -8,7 +8,7 @@ Kilosort, Spyking-circus, etc. (see :ref:`compatible-sorters`). All these sorter
 from the :py:class:`~spikeinterface.sorters.BaseSorter` class, which provides the common tools to
 run spike sorters.
 
-On the other hand SpikeInterface directly implements some internal sorters (**spkykingcircus2**) 
+On the other hand SpikeInterface directly implements some internal sorters (**spykingcircus2**) 
 that do not depend on external tools, but depend on the :py:mod:`spikeinterface.sortingcomponents` 
 module. **Note that internal sorters are currently experimental and under development**.
 
