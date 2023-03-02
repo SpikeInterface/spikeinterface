@@ -224,8 +224,8 @@ Here is a short example that depends on the output of "Motion estimation":
 **Notes**:
   * :code:`spatial_interpolation_method` "kriging" or "iwd" do not play a big role.
   * :code:`border_mode` is a very important parameter. It controls how to deal with the border because motion causes units on the
-    border to not be present throughout the recording. We highly recommend the :code:`border_mode='remove_channels'`
-    because this remove channels on the border that will be impacted by drift. Of course the larger the motion is
+    border to not be present throughout the entire recording. We highly recommend the :code:`border_mode='remove_channels'`
+    because this removes channels on the border that will be impacted by drift. Of course the larger the motion is
     the more channels are removed.
 
 
