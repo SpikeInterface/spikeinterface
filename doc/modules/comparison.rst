@@ -492,7 +492,7 @@ Template comparison
 
 For template comparisons, the underlying ideas are very similar to :ref:`symmetric` and :ref:`multiple`, for 
 pairwise and multiple comparisons, respectively. In contrast to spike train comparisons, agreement is assessed
-in the simalrity of templates rather than spiking events.
+in the similarity of templates rather than spiking events.
 This enables us to use exatly the same tools for both types of comparisons, just by changing the way that agreement 
 scores are computed.
 
