@@ -93,7 +93,7 @@ Currently, we support many popular file formats for both raw and sorted extracel
 Given the standardized, modular design of our recording and sorting extractors,
 adding new file formats is straightforward so we expect this list to grow in future versions.
 
-Most of formats are supported on top of `NEO <https://github.com/NeuralEnsemble/python-neo>`_
+Most formats are supported on top of `NEO <https://github.com/NeuralEnsemble/python-neo>`_
 
 Dependencies
 ------------
