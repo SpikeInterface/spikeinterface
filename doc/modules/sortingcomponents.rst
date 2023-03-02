@@ -108,7 +108,7 @@ Currently, the following methods are implemented:
     see also [here](https://openreview.net/forum?id=ohfi44BZPC4)
   * 'monopolar_triangulation' with optimizer='minimize_with_log_penality'
 
-Theses methods are the same as implemented in :py:mod:`spikeinterface.postprocessing.unit_localization`
+These methods are the same as implemented in :py:mod:`spikeinterface.postprocessing.unit_localization`
 
 
 
@@ -222,9 +222,9 @@ Here is a short example that depends on the output of "Motion estimation":
                                               border_mode='remove_channels')
 
 **Notes**:
-  * :code:`spatial_interpolation_method` "krigging" or "iwd" fot not play a big role.
-  * :code:`border_mode` is very important details. How to deal with the border because with motion units on the border
-    by nature are not present on the entire recording. We higly recommend the :code:`border_mode='remove_channels'`
+  * :code:`spatial_interpolation_method` "kriging" or "iwd" do not play a big role.
+  * :code:`border_mode` is a very important parameter. It controls how to deal with the border because motion causes units on the
+    border to not be present throughout the recording. We highly recommend the :code:`border_mode='remove_channels'`
     because this remove channels on the border that will be impacted by drift. Of course the larger the motion is
     the more channels are removed.
 
