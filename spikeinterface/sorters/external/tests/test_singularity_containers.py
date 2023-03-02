@@ -18,11 +18,15 @@ os.environ['SINGULARITY_DISABLE_CACHE'] = 'true'
 # This can be used locally to test singularity or docker
 CONTAINER_MODE = "singularity" # "singularity" | "docker"
 
-running_on_github_actions = os.getenv("CI") 
-if running_on_github_actions:
-    si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH')    
-    assert si_dev_path is not None
+ON_GITHUB = os.getenv("CI")
+if ON_GITHUB:
     CONTAINER_MODE = "singularity"
+
+
+def check_gh_settings():
+    if ON_GITHUB:
+        si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH')
+        assert si_dev_path is not None, "Tests on GITHUB CI must run with the SPIKEINTERFACE_DEV_PATH"
 
 
 def generate_run_kwargs():
@@ -46,6 +50,7 @@ def generate_run_kwargs():
 
 @pytest.fixture(scope="module")
 def run_kwargs():
+    check_gh_settings()
     return generate_run_kwargs()
 
 
