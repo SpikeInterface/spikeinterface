@@ -359,8 +359,8 @@ The difference is that no assumption is done on which of the units are ground-tr
 
 So the procedure is the following:
 
-  * **Matching firing events** : same as ground truth comparison
-  * **Compute agreement score** : same as ground truth comparison
+  * **Matching firing events** : same a ground truth comparison
+  * **Compute agreement score** : same a ground truth comparison
   * **Match units** : only with **hungarian** method
 
 As there is no ground-truth information, performance metrics are not computed.
