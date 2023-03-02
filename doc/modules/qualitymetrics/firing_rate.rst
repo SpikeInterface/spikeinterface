@@ -16,8 +16,8 @@ Firing rate is simply the average number of spikes within the recording per seco
 Expectation and use
 -------------------
 
-Both very high and very low values of firing rate can indicate errors.
-Highly contaminated units (type I error) may have high firing rates as a result of inclusion of other neurons' spikes.
+Both very high and very low firing rates can indicate errors.
+Highly contaminated units (type I error) may have high firing rates as a result of the inclusion of other neurons' spikes.
 Low firing rate units are likely to be incomplete (type II error), although this is not always the case (some neurons have highly selective firing patterns).
 The firing rate is expected to be approximately log-normally distributed [Buzsáki]_.
 
@@ -41,8 +41,8 @@ With SpikeInterface:
 
     # Make recording, sorting and wvf_extractor object for your data.
     firing_rate = qm.compute_firing_rates(wvf_extractor)
-    # firing_rate is a dict containing the units' ID as keys,
-    # and their firing rate across segments as values (in Hz).
+    # firing_rate is a dict containing the units' IDs as keys,
+    # and their firing rates across segments as values (in Hz).
 
 References
 ----------
