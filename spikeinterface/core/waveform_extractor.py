@@ -1371,9 +1371,6 @@ def extract_waveforms(recording, sorting, folder=None,
         Default is False.
     seed: int or None
         Random seed for spike selection
-    load_if_exists: None or bool
-        If True and waveforms have already been extracted in the specified folder, they are loaded
-        and not recomputed.
 
     sparsity kwargs:
     {}
