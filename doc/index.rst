@@ -30,7 +30,7 @@ SpikeInterface is made of several modules to deal with different aspects of the 
 - compute quality metrics to validate and curate spike sorting outputs.
 - visualize recordings and spike sorting outputs.
 - export report and export to Phy.
-- offer a powerful Qt-based viewer in separate package `spikeinterface-gui <https://https://github.com/SpikeInterface/spikeinterface-gui>`_
+- offer a powerful Qt-based viewer in a separate package `spikeinterface-gui <https://https://github.com/SpikeInterface/spikeinterface-gui>`_
 - have some powerful sorting components to build your own sorter.
 
 
@@ -64,7 +64,7 @@ To get started with SpikeInterface, you can take a look at the following additio
 
 - | The `2020 eLife paper <https://elifesciences.org/articles/61834>`_ introduces the concept and motivation and 
   | performs an in-depth comparison of multiple sorters (spolier alert: they strongly disagree between each other!). 
-  | **Note**: the code-base and implementation have changed a lot since the "paper" version in published in 2020. 
+  | **Note**: the code-base and implementation have changed a lot since the "paper" version published in 2020. 
   | For detailed documentation we therefore suggest more recent resources, like this documentation and :code:`spiketutorials`.
 
 

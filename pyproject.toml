@@ -123,9 +123,6 @@ test = [
 ]
 
 
-
-
-
 [tool.pytest.ini_options]
 markers = [
     "core",
@@ -141,4 +138,8 @@ markers = [
     "exporters",
     "widgets",
     "sortingcomponents",
+]
+filterwarnings =[
+    'ignore:.*distutils Version classes are deprecated.*:DeprecationWarning',
+    'ignore:.*the imp module is deprecated in favour of importlib.*:DeprecationWarning',
 ]

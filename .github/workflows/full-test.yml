@@ -55,11 +55,8 @@ jobs:
             ${{ runner.os }}-datasets
       - name: Install dependencies
         run: |
-          sudo apt update
           # this is for datalad and download testing datasets
           sudo apt install git 
-          # this is for spyking circus
-          # sudo apt install mpich libmpich-dev
           # needed for correct operation of git/git-annex/DataLad
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
@@ -152,7 +149,7 @@ jobs:
       - name: Test core
         run: |
           source ~/test_env/bin/activate
-          pytest -m core -vv -ra --durations=0 --durations-min=0.001 | tee report_core.txt; test ${PIPESTATUS[0]} -eq 0 || fail
+          pytest -m core -vv -ra --durations=0 --durations-min=0.001 | tee report_core.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of core tests" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_core.txt >> $GITHUB_STEP_SUMMARY  
           rm report_core.txt
@@ -160,7 +157,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -m extractors -vv -ra --durations=0 --durations-min=0.001 | tee report_extractors.txt; test ${PIPESTATUS[0]} -eq 0 || fail
+          pytest -m extractors -vv -ra --durations=0 --durations-min=0.001 | tee report_extractors.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of extractors" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_extractors.txt >> $GITHUB_STEP_SUMMARY  
           rm report_extractors.txt
@@ -168,7 +165,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -m preprocessing -vv -ra --durations=0 --durations-min=0.001 | tee report_preprocessing.txt; test ${PIPESTATUS[0]} -eq 0 || fail
+          pytest -m preprocessing -vv -ra --durations=0 --durations-min=0.001 | tee report_preprocessing.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of preprocessing" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_preprocessing.txt >> $GITHUB_STEP_SUMMARY  
           rm report_preprocessing.txt
@@ -176,7 +173,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.POSTPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -m postprocessing -vv -ra --durations=0 --durations-min=0.001 | tee report_postprocessing.txt; test ${PIPESTATUS[0]} -eq 0 || fail
+          pytest -m postprocessing -vv -ra --durations=0 --durations-min=0.001 | tee report_postprocessing.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of postprocessing" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_postprocessing.txt >> $GITHUB_STEP_SUMMARY  
           rm report_postprocessing.txt
@@ -184,7 +181,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -m qualitymetrics -vv -ra --durations=0 --durations-min=0.001 | tee report_qualitymetrics.txt; test ${PIPESTATUS[0]} -eq 0 || fail
+          pytest -m qualitymetrics -vv -ra --durations=0 --durations-min=0.001 | tee report_qualitymetrics.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of qualitymetrics" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_qualitymetrics.txt >> $GITHUB_STEP_SUMMARY  
           rm report_qualitymetrics.txt
@@ -192,7 +189,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -m sorters -vv -ra --durations=0 --durations-min=0.001 | tee report_sorters.txt; test ${PIPESTATUS[0]} -eq 0 || fail
+          pytest -m sorters -vv -ra --durations=0 --durations-min=0.001 | tee report_sorters.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of sorters" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_sorters.txt >> $GITHUB_STEP_SUMMARY  
           rm report_sorters.txt
@@ -200,7 +197,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.COMPARISON_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -m comparison -vv -ra --durations=0 --durations-min=0.001 | tee report_comparison.txt; test ${PIPESTATUS[0]} -eq 0 || fail
+          pytest -m comparison -vv -ra --durations=0 --durations-min=0.001 | tee report_comparison.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of comparison" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_comparison.txt >> $GITHUB_STEP_SUMMARY  
           rm report_comparison.txt
@@ -208,7 +205,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.CURATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -m curation -vv -ra --durations=0 --durations-min=0.001 | tee report_curation.txt; test ${PIPESTATUS[0]} -eq 0 || fail
+          pytest -m curation -vv -ra --durations=0 --durations-min=0.001 | tee report_curation.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of curation" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_curation.txt >> $GITHUB_STEP_SUMMARY  
           rm report_curation.txt
@@ -216,7 +213,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' ||  steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true'}}
         run: |
           source ~/test_env/bin/activate
-          pytest -m widgets -vv -ra --durations=0 --durations-min=0.001 | tee report_widgets.txt; test ${PIPESTATUS[0]} -eq 0 || fail
+          pytest -m widgets -vv -ra --durations=0 --durations-min=0.001 | tee report_widgets.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of widgets" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_widgets.txt >> $GITHUB_STEP_SUMMARY  
           rm report_widgets.txt
@@ -224,7 +221,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -m exporters -vv -ra --durations=0 --durations-min=0.001 | tee report_exporters.txt; test ${PIPESTATUS[0]} -eq 0 || fail
+          pytest -m exporters -vv -ra --durations=0 --durations-min=0.001 | tee report_exporters.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of exporters" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_exporters.txt >> $GITHUB_STEP_SUMMARY  
           rm report_exporters.txt
@@ -232,7 +229,7 @@ jobs:
         if: ${{ steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -m sortingcomponents -vv -ra --durations=0 --durations-min=0.001 | tee report_sortingcomponents.txt; test ${PIPESTATUS[0]} -eq 0 || fail
+          pytest -m sortingcomponents -vv -ra --durations=0 --durations-min=0.001 | tee report_sortingcomponents.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of sortingcomponents" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_sortingcomponents.txt >> $GITHUB_STEP_SUMMARY  
           rm report_sortingcomponents.txt
@@ -240,6 +237,6 @@ jobs:
         if: ${{ steps.modules-changed.outputs.SORTERS_INTERNAL_CHANGED == 'true' || steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -m sorters_internal -vv -ra --durations=0 --durations-min=0.001 | tee report_sorters_internal.txt; test ${PIPESTATUS[0]} -eq 0 || fail
+          pytest -m sorters_internal -vv -ra --durations=0 --durations-min=0.001 | tee report_sorters_internal.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of sorters_internal" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_sorters_internal.txt >> $GITHUB_STEP_SUMMARY 
