@@ -6,7 +6,7 @@ from copy import deepcopy
 import spikeinterface as si
 import spikeinterface.preprocessing as spre
 import spikeinterface.extractors as se
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core import generate_recording
 import spikeinterface.widgets as sw
 
 try:
