@@ -1,0 +1,50 @@
+name: Test sorter images in singularity
+
+on: workflow_dispatch
+
+
+jobs:
+  test-images:
+    env:
+      SPIKEINTERFACE_DEV_PATH: ${{ github.workspace }}
+    name: Test on (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # "macos-latest", "windows-latest"
+        os: ["ubuntu-latest", ]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - uses: eWaterCycle/setup-singularity@v7
+        with:
+          singularity-version: 3.8.7
+      - name: Python version
+        run:
+          python --version
+      - name: Singularity version
+        run:
+          singularity --version
+      - name: Check Singularity cache
+        run:
+          singularity cache list -v
+      - name: Clear Singularity cache
+        run:
+          singularity cache clean --force
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip  # Official recommended way
+          pip install pytest
+          pip install -e .[full]
+          pip install spython
+      - name: Test that containers install the local CI version of spikeinterface
+        run: |
+          echo $SPIKEINTERFACE_DEV_PATH
+          python -c "import os; assert os.getenv('SPIKEINTERFACE_DEV_PATH') is not None"
+          ls -l
+      - name: Run test singularity containers
+        run: |
+          pytest -vv --capture=tee-sys -rA spikeinterface/sorters/external/tests/test_singularity_containers.py
