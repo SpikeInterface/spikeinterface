@@ -1,9 +1,15 @@
 import numpy as np
 
 from .numpyextractors import NumpyRecording, NumpySorting
-from .snippets_tools import snippets_from_sorting
 
 from probeinterface import generate_linear_probe
+from spikeinterface.core import (
+    BaseRecording,
+    BaseRecordingSegment,
+)
+from .snippets_tools import snippets_from_sorting
+
+from typing import List, Optional
 
 def generate_recording(
         num_channels=2,
@@ -347,6 +353,110 @@ def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, viol
 
     return spike_train
 
+
+class LazyRandomRecording(BaseRecording):
+    def __init__(
+        self,
+        durations: List[int],
+        sampling_frequency: float,
+        num_channels: int,
+        dtype: Optional[np.dtype] = np.float32,
+        seed: Optional[int] = None,
+    ):
+        """
+        A lazy recording that generates random samples if and only if `get_traces` is called.
+        Intended for testing memory problems.
+
+        Note that get_traces is no consistent across calls. That is, get_traces(0, 10, :) may not be the same
+        as get_traces(0, 10, :). This is because the random numbers are generated on the fly.
+
+        For generate a consistent recording, use the `generate_recording` function.
+
+
+        Parameters
+        ----------
+        durations : List[int]
+            The durations of each segment in seconds. Note that the length of this list is the number of segments.
+        sampling_frequency : float
+            The sampling frequency of the recorder
+        num_channels : int
+            The number of channels
+        dtype : np.dtype
+            The dtype of the recording, by default np.float32
+        seed : int, optional
+            The seed for np.random.default_rng, by default None        
+        """
+        channel_ids = list(range(num_channels))
+        BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
+
+        rng = np.random.default_rng(seed=seed)
+
+        for duration in durations:
+            rec_segment = LazyRandomRecordingSegment(
+                duration=duration, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype, rng=rng
+            )
+            self.add_recording_segment(rec_segment)
+
+        self._kwargs = {
+            "num_channels": num_channels,
+            "durations": durations,
+            "sampling_frequency": sampling_frequency,
+            "dtype": dtype,
+            "seed": seed,
+        }
+
+class LazyRandomRecordingSegment(BaseRecordingSegment):
+    def __init__(self, duration, sampling_frequency, num_channels, dtype, rng):
+        BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
+        self.num_samples = int(duration * sampling_frequency)
+        self.rng = rng
+        self.num_channels = num_channels
+        self.dtype = dtype 
+
+    def get_num_samples(self):
+        return self.num_samples
+
+    def get_traces(self, start_frame, end_frame, channel_indices):
+        
+        end_frame = self.num_samples if end_frame is None else min(end_frame, self.num_samples)
+        start_frame = 0 if start_frame is None else max(start_frame, 0)
+                
+        traces = self.rng.random(size=(end_frame - start_frame, self.num_channels), dtype=self.dtype)
+        traces = traces if channel_indices is None else traces[:, channel_indices]
+        return traces
+
+
+def test_generate_large_recording(full_traces_size_GiB: float, seed=None) -> LazyRandomRecording:
+    """
+    Generate a large lazy recording.
+    This is a convenience wrapper around the LazyRandomRecording class where only
+    the size in GiB (NOT GB!) is specified.
+    
+    It is generated with 1024 channels and a sampling frequency of 1 Hz. The duration is manipulted to
+    produced the desired size.
+
+    Parameters
+    ----------
+    full_traces_size_GiB : float
+        The size in gibibyte (GiB) of the recording.
+    seed : int, optional
+        The seed for np.random.default_rng, by default None
+    Returns
+    -------
+    LazyRandomRecording
+        A lazy random recording with the specified size.
+    """
+    
+    dtype = np.dtype("float32")
+    sampling_frequency = 1.0
+    num_channels = 1024 
+    base_duration = int((1024 * 1024) / dtype.itemsize) # This is already 1 GiB
+    durations = [base_duration * full_traces_size_GiB]
+    
+    recording = LazyRandomRecording(durations=durations, sampling_frequency=sampling_frequency, 
+                        num_channels=num_channels, dtype=dtype, seed=seed)
+
+    return recording
 
 if __name__ == '__main__':
     print(generate_recording())
