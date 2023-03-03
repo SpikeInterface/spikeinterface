@@ -71,12 +71,11 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
         return spikes
 
+
     @classmethod
     def run_array(cls, obj, traces):
         # update obj.data
-        obj.data = traces
-        obj.data_len = traces.shape[0]
-        obj.update_data()
+        cls.update_data(obj, traces)
 
         # compute objective
         obj.compute_objective()
@@ -106,6 +105,24 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         obj.dec_spike_train = obj.dec_spike_train[idx]
         obj.dec_scalings = obj.dec_scalings[idx]
         obj.dist_metric = obj.dist_metric[idx]
+
+
+    @classmethod
+    def update_data(cls, objective, traces):
+        # Re-assign data and objective lengths
+        objective.data = traces
+        # TODO: Remove data type change after refactoring initialization
+        objective.data = objective.data.astype(np.float32)
+        # TODO: Does this really need to be an attribute?
+        objective.data_len = objective.data.shape[0]
+        # TODO: compute convolution length as a function
+        objective.obj_len = objective.data_len + objective.n_time - 1
+
+        # Reinitialize the objective.obj and spiketrains
+        objective.obj_computed = False
+        objective.dec_spike_train = np.zeros([0, 2], dtype=np.int32)
+        objective.dist_metric = np.array([])
+        objective.iter_spike_train = []
 
 
     @classmethod
