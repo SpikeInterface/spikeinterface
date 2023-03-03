@@ -2,6 +2,7 @@ import numpy as np
 from .main import BaseTemplateMatchingEngine
 from spikeinterface.core import WaveformExtractor
 from spike_psvae.deconvolve import MatchPursuitObjectiveUpsample as Objective
+from time import time
 
 class SpikePSVAE(BaseTemplateMatchingEngine):
     """
@@ -47,7 +48,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         nbefore, nafter = method_kwargs['nbefore'], method_kwargs['nafter']
 
         # run using run_array
-        _ = objective.run_array(traces)
+        cls.run_array(objective, traces)
 
         # extract spiketrain and perform adjustments
         spiketrain = objective.dec_spike_train
@@ -69,3 +70,66 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         spikes['cluster_ind'] = spiketrain[:, 1]
 
         return spikes
+
+    @classmethod
+    def run_array(cls, obj, traces):
+        # update obj.data
+        obj.data = traces
+        obj.data_len = traces.shape[0]
+        obj.update_data()
+
+        # compute objective
+        obj.compute_objective()
+
+        # compute spike train
+        spiketrains, scalings, distance_metrics = [], [], []
+        for i in range(obj.max_iter):
+            # find peaks
+            spiketrain, scaling, distance_metric = obj.find_peaks()
+            if len(spiketrain) == 0:
+                break
+
+            # update spiketrain, scaling, distance metrics with new values
+            spiketrains.extend(list(spiketrain))
+            scalings.extend(list(scaling))
+            distance_metrics.extend(list(distance_metric))
+
+            # subtract newly detected spike train from traces
+            cls.subtract_spike_train(obj, spiketrain, scaling)
+
+        obj.dec_spike_train = np.array(spiketrains)
+        obj.dec_scalings = np.array(scalings)
+        obj.dist_metric = np.array(distance_metrics)
+
+        # order spike times
+        idx = np.argsort(obj.dec_spike_train[:, 0])
+        obj.dec_spike_train = obj.dec_spike_train[idx]
+        obj.dec_scalings = obj.dec_scalings[idx]
+        obj.dist_metric = obj.dist_metric[idx]
+
+
+    @classmethod
+    def subtract_spike_train(cls, obj, spiketrain, scaling):
+        present_units = np.unique(spiketrain[:, 1])
+        convolution_resolution_len = obj.n_time * 2 - 1
+        for unit in present_units:
+            unit_mask = spiketrain[:, 1] == unit
+            unit_spiketrain = spiketrain[unit_mask, :]
+            spiketrain_idx = np.arange(0, convolution_resolution_len) + unit_spiketrain[:, :1]
+
+            unit_idx = np.flatnonzero(obj.unit_overlap[unit])
+            idx = np.ix_(unit_idx, spiketrain_idx.ravel())
+            pconv = obj.pairwise_conv[obj.up_up_map[unit]]
+            np.subtract.at(obj.obj, idx, np.tile(2*pconv, len(unit_spiketrain)))
+
+            if not obj.no_amplitude_scaling:
+                # None's add extra dimensions (lines things up with the ravel supposedly)
+                to_subtract = pconv[:, None, :] * scaling[unit_mask][None, :, None]
+                to_subtract = to_subtract.reshape(*pconv.shape[:-1], -1)
+                np.subtract.at(obj.conv_result, idx, to_subtract)
+
+            obj.enforce_refractory(spiketrain)
+
+
+
+
