@@ -11,10 +11,10 @@ a large variety of acquisition systems and spike sorting outputs.
 Most of the :code:`Recording` classes are implemented by wrapping the
 `NEO rawio implementation <https://github.com/NeuralEnsemble/python-neo/tree/master/neo/rawio>`_.
 
-Most of the :code:`Sorting` are instead directly implemented in SpikeInterface.
+Most of the :code:`Sorting` classes are instead directly implemented in SpikeInterface.
 
 
-Although SI is object-oriented (class-based), each object can also be loaded with  a convenient
+Although spikeinterface is object-oriented (class-based), each object can also be loaded with a convenient
 :code:`read_XXXXX()` function.
 
 
@@ -70,7 +70,7 @@ Lazy loading
 ------------
 
 An important concept is that all :code:`read_XXXX()` functions are lazy.
-Traces are not read from the disk, but only the relevant metadata, like channel_ids, sampling frequency, etc.
+Traces are not read from disk; instead only the relevant metadata (e.g. channel_ids, sampling frequency, etc.) is.
 
 The actual reading will be done on demand using the :py:meth:`~spikeinterface.core.BaseRecording.get_traces` method:
 
@@ -79,7 +79,7 @@ The actual reading will be done on demand using the :py:meth:`~spikeinterface.co
     # open a 40GB SpikeGLX dataset is fast
     recording_spikeglx = read_spikeglx("spikeglx-folder")
 
-    # this really does the full 40GB loading in memory : not recommended!!!!!
+    # this really does load the full 40GB into memory : not recommended!!!!!
     traces = recording_spikeglx.get_traces(start_frame=None, end_frame=None, return_scaled=False)
 
 
@@ -93,17 +93,17 @@ Currently, we support many popular file formats for both raw and sorted extracel
 Given the standardized, modular design of our recording and sorting extractors,
 adding new file formats is straightforward so we expect this list to grow in future versions.
 
-Most of format are supported on top on `NEO <https://github.com/NeuralEnsemble/python-neo>`_
+Most formats are supported on top of `NEO <https://github.com/NeuralEnsemble/python-neo>`_
 
 Dependencies
 ------------
 
-The :code:`neo` package is a hard dependency of spiekinterface. So all formats handle by neo directly will be handled
+The :code:`neo` package is a hard dependency of spikeinterface. So all formats handled by neo directly will be handled
 also in spikeinterface.
 
-However, some format are handle directly by spikeinterface and need extra installation.
+However, some formats are handled directly by spikeinterface and need extra installation.
 
-You can install all extractors dependeicies with:
+You can install all extractors dependencies with:
 
 .. code-block:: python
 

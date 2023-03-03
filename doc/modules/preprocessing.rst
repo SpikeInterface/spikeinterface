@@ -5,7 +5,7 @@ Overview: the "chain" concept
 -----------------------------
 
 The :py:mod:`~spikeinterface.preprocessing` module includes preprocessing steps to apply before running a sorter.
-Example processing to run are filtering, removing noise, removing bad channels, etc.
+Example processing steps include filtering, removing noise, removing bad channels, etc.
 Preprocessors are *lazy*, meaning that no computation is performed until it is required (usually at the
 spike sorting step). This enables one to build preprocessing chains to be applied in sequence to a
 :code:`~spikeinterface.core.BaseRecording` object.
@@ -21,7 +21,7 @@ In this code example, we build a preprocessing chain with two steps:
 
     import spikeinterface.preprocessing import bandpass_filter, common_reference
 
-    # recording is a RecordingEctractor object
+    # recording is a RecordingExtractor object
     recording_f = bandpass_filter(recording, freq_min=300, freq_max=6000)
     recording_cmr = common_reference(recording_f, operator="median")
 
@@ -37,7 +37,7 @@ save the:
 
 .. code-block:: python
 
-    # here the circus2 sorter engine use directly the lazy "recording_cmr" object
+    # here the circus2 sorter engine directly uses the lazy "recording_cmr" object
     sorting = run_sorter(recording_cmr, 'spykingcircus2')
 
 Most of the external sorters, however, will need a binary file as input, so we can optionally save the processed 
@@ -59,7 +59,7 @@ Impact on recording dtype
 By default the dtype of a preprocessed recording does not change the recording's dtype, even if, internally, the 
 computation is performed using a different dtype.
 For instance if we have a :code:`int16`` recording, the application of a bandpass filter will conserve the original 
-dtype (unless specifying otherwise):
+dtype (unless specified otherwise):
 
 
 .. code-block:: python
@@ -77,7 +77,7 @@ Some scaling pre-processors, such as :code:`whiten()` or :code:`zscore()`, will 
 Available preprocessing
 -----------------------
 
-We have many preprocessing functions that can be flexibly pipelined.
+We have many preprocessing functions that can be flexibly added to a pipeline.
 
 The full list of preprocessing functions can be found here: :ref:`api_preprocessing`
 
@@ -92,7 +92,7 @@ There are several variants of filtering (e.g., bandpass, highpass, notch).
 Filtering steps are implemented using :code:`scipy.signal`.
 
 Important aspects of filtering functions:
-  * they use a margin internally for to deal with border effects
+  * they use a margin internally to deal with border effects
   * they perform forward-backward filtering (:code:`filtfilt`)
   * they can use 'ba' or 'sos' mode
 
@@ -139,7 +139,7 @@ For Neuropixels recordings (read with the :py:func:`~spikeinterface.extractors.r
 from the metadata and set.
 
 Calling :code:`phase_shift()` alone has almost no effect, but combined with :code:`common_reference()` it makes a real 
-differences on artifact removal.
+difference on artifact removal.
 
 
 .. code-block:: python
@@ -179,8 +179,8 @@ whiten()
 ^^^^^^^^
 
 Many sorters use this pre-processing step internally, but if you want to combine this operation to other preprocessing 
-steps, you can use the :code:`whiten()` the implemented in SpikeInterface.
-The whitenning matrix :code:`W` is constructed by estimating the covariance across channels and then invert it.
+steps, you can use the :code:`whiten()` implemented in SpikeInterface.
+The whitenning matrix :code:`W` is constructed by estimating the covariance across channels and then inverting it.
 
 The whitened traces are then the dot product between the traces and :code:`W` matrix.
 
@@ -195,7 +195,7 @@ clip() / blank_staturation()
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 We can limit traces between a user-defined minimum and maximum using :code:`clip()` function.
-The :code:`blank_staturation()` function is similar, but it automatically estimates the limts by using quantiles.
+The :code:`blank_staturation()` function is similar, but it automatically estimates the limits by using quantiles.
 
 .. code-block:: python
 
@@ -222,7 +222,7 @@ detect_bad_channels() / interpolate_bad_channels()
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The :code:`detect_bad_channels()` can be used to detect bad channels with several methods, including an :code:`std`- or :code:`mad`-based 
-approach to detect bad channels with abnormal high power and the :code:`coherence+psd` method (introduced by [IBL_spikesorting]_), 
+approach to detect bad channels with abnormally high power and the :code:`coherence+psd` method (introduced by [IBL_spikesorting]_), 
 which detects bad channels looking at both coherence with other channels and PSD power in the high-frequency range.
 
 The function returns both the :code:`bad_channel_ids` and :code:`channel_labels`, which can be :code:`good`, :code:`noise`, :code:`dead`, 
@@ -298,7 +298,7 @@ How to implement "IBL destriping" or "SpikeGLX CatGT" in SpikeInterface
 
 SpikeGLX have a built-in function called `CatGT <https://billkarsh.github.io/SpikeGLX/help/dmx_vs_gbl/dmx_vs_gbl/>`_ 
 to apply some preprocessing on the traces to remove noise and artifacts.
-IBL also have a standardized pipeline to preprocessed traces a bit similar to CatGT which is called "destriping" [IBL_spikesorting]_.
+IBL also have a standardized pipeline for preprocessed traces a bit similar to CatGT which is called "destriping" [IBL_spikesorting]_.
 In these both cases, the traces are entiely read, processed and written back to a file.
 
 SpikeInterface can reproduce similar results without the need to write back to a file by building a *lazy* 

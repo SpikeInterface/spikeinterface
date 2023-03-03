@@ -1,7 +1,7 @@
 Quality Metrics module
 ======================
 
-Quality metrics allows one to quantitatively assess to *goodness* of a spike sorting output. 
+Quality metrics allows one to quantitatively assess the *goodness* of a spike sorting output. 
 The :py:mod:`~spikeinterface.qualitymetrics` module includes functions to compute a large variety of available metrics.
 All of the metrics currently implemented in spikeInterface are *per unit* (pairwise metrics do appear in the literature).
 
