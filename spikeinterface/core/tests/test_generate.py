@@ -2,7 +2,7 @@ import pytest
 import psutil
 
 import numpy as np
-from spikeinterface.core.generate import LazyRandomRecording, generate_specific_size_recording
+from spikeinterface.core.generate import LazyRandomRecording, generate_lazy_random_recording
 
 
 def test_lazy_random_recording():
@@ -44,7 +44,7 @@ def test_generate_large_recording():
     process = psutil.Process()
     initial_memory_GiB = process.memory_info().rss / bytes_to_GiB_factor 
     full_traces_size_GiB = 1.0
-    recording = generate_specific_size_recording(full_traces_size_GiB = full_traces_size_GiB)
+    recording = generate_lazy_random_recording(full_traces_size_GiB = full_traces_size_GiB)
     memory_after_instanciation_GiB = process.memory_info().rss / bytes_to_GiB_factor
     assert round(memory_after_instanciation_GiB) == round(initial_memory_GiB)
     

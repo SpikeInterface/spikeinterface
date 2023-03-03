@@ -426,7 +426,7 @@ class LazyRandomRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-def test_generate_large_recording(full_traces_size_GiB: float, seed=None) -> LazyRandomRecording:
+def generate_lazy_random_recording(full_traces_size_GiB: float, seed=None) -> LazyRandomRecording:
     """
     Generate a large lazy recording.
     This is a convenience wrapper around the LazyRandomRecording class where only
