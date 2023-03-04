@@ -74,11 +74,12 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
     @classmethod
     def run_array(cls, obj, traces):
-        # update obj.data
         cls.update_data(obj, traces)
 
-        # compute objective
-        obj.compute_objective()
+        # compute objective if necessary
+        if not obj.obj_computed:
+            obj.obj = cls.compute_objective(obj)
+            obj.obj_computed = True
 
         # compute spike train
         spiketrains, scalings, distance_metrics = [], [], []
@@ -123,6 +124,27 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         objective.dec_spike_train = np.zeros([0, 2], dtype=np.int32)
         objective.dist_metric = np.array([])
         objective.iter_spike_train = []
+
+
+    @classmethod
+    def compute_objective(cls, objective):
+        conv_len = objective.data_len + objective.n_time - 1 # TODO: convolution length as a func
+        conv_shape = (objective.orig_n_unit, conv_len)
+        objective.conv_result = np.zeros(conv_shape, dtype=np.float32) # TODO: rename conv_result
+        # TODO: vectorize this loop
+        for rank in range(objective.approx_rank):
+            spatial_filters = objective.spatial[:, rank, :]
+            temporal_filters = objective.temporal[:, :, rank]
+            spatially_filtered_data = np.matmul(spatial_filters, objective.data.T)
+            scaled_filtered_data = spatially_filtered_data * objective.singular[:, [rank]]
+            # TODO: vectorize this loop
+            for unit in range(objective.orig_n_unit):
+                unit_data = scaled_filtered_data[unit, :]
+                unit_temporal_filter = temporal_filters[unit]
+                objective.conv_result[unit, :] += np.convolve(unit_data, unit_temporal_filter, mode='full')
+
+        obj = 2 * objective.conv_result - objective.norm[:, np.newaxis]
+        return obj
 
 
     @classmethod
