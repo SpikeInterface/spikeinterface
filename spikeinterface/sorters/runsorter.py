@@ -434,13 +434,7 @@ if __name__ == '__main__':
                 'bind': str(recording_folder_unix), 'mode': 'ro'}
     volumes[str(parent_folder)] = {'bind': str(parent_folder_unix), 'mode': 'rw'}
     
-    running_on_github_actions = os.getenv("CI") 
-    si_dev_path = None
-    if running_on_github_actions:
-        print(si_version)
-        si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH')
-        print(si_dev_path)
-        assert si_dev_path is not None
+    si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH', None)
         
     install_si_from_source = False
     if 'dev' in si_version and si_dev_path is not None:
@@ -482,16 +476,18 @@ if __name__ == '__main__':
     if verbose:
         print('Starting container')
     container_client.start()
-    print("******")
-    print("Container started with the following paths")
-    print(si_dev_path_unix, si_source_folder)
+    if verbose:
+        print("******")
+        print("Container started with the following paths")
+        print(si_dev_path_unix, si_source_folder)
+    
     # check if container contains spikeinterface already
     cmd_1 = ['python', '-c', 'import spikeinterface; print(spikeinterface.__version__)']
     cmd_2 = ['python', '-c', 'from spikeinterface.sorters import run_sorter_local']
     res_output = ''
     for cmd in [cmd_1, cmd_2]:
         res_output += str(container_client.run_command(cmd))
-    need_si_install = 'ModuleNotFoundError' in res_output or running_on_github_actions
+    need_si_install = 'ModuleNotFoundError' in res_output
 
     if need_si_install:
         if 'dev' in si_version:
