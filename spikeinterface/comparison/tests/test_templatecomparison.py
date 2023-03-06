@@ -24,7 +24,6 @@ def setup_module():
 
 
 def test_compare_multiple_templates():
-    test_dir = Path("temp_comp_test")
 
     duration = 60
     num_channels = 8
