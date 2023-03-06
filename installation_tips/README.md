@@ -13,7 +13,7 @@ This environment will install:
  * herdingspikes (not on windows)
 
 Kilosort, Ironclust and HDSort are MATLAB based and need to be installed from source.
-Klusta does not work anymore with python3.8 you should create a similar environment with python3.6
+Klusta does not work anymore with python3.8 you should create a similar environment with python3.6.
 
 ### Quick installation
 
@@ -24,14 +24,14 @@ Steps:
 3. Download with right click + save the file corresponding to your OS, and put it in "Documents" folder
     * [`full_spikeinterface_environment_windows.yml`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/master/installation_tips/full_spikeinterface_environment_windows.yml)
     * [`full_spikeinterface_environment_mac.yml`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/master/installation_tips/full_spikeinterface_environment_mac.yml)
-4. Then open the "Anaconda Command Prompt" (search in your applications)
-5. If not in Documents folder type `cd Documents`
-6. Then run this depending your OS:
+4. Then open the "Anaconda Command Prompt" (if Windows, search in your applications) or the Terminal (for Mac users)
+5. If not in the "Documents" folder type `cd Documents`
+6. Then run this depending on your OS:
     * `conda env create --file full_spikeinterface_environment_windows.yml`
     * `conda env create --file full_spikeinterface_environment_mac.yml`
 
 
-Done! Before running a spikeinterface script you will need "select" this "environment" with `conda activate si_env`.
+Done! Before running a spikeinterface script you will need to "select" this "environment" with `conda activate si_env`.
 
 Note for **linux** users : this conda recipe should work but we recommend strongly to use **pip + virtualenv**.
 
@@ -39,13 +39,13 @@ Note for **linux** users : this conda recipe should work but we recommend strong
 ### Check the installation
 
 
-If you want a first try you can:
+If you want to test the spikeinterface install you can:
 
 1. Download with right click + save the file [`check_your_install.py`](https://raw.githubusercontent.com/SpikeInterface/spikeinterface/master/installation_tips/check_your_install.py)
-    and put it in "Documents" folder
+    and put it into the "Documents" folder
 
-2. Open the Anaconda Command Prompt
-3. If not in your "Documents" folder `cd Documents`
+2. Open the Anaconda Command Prompt (Windows) or Terminal (Mac)
+3. If not in your "Documents" folder type `cd Documents`
 4. Run this:
     ```
     conda activate si_env
