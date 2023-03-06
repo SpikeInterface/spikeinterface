@@ -148,6 +148,11 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
 
     @classmethod
+    def find_peaks(cls, objective):
+        raise NotImplementedError
+
+
+    @classmethod
     def subtract_spike_train(cls, obj, spiketrain, scaling):
         present_units = np.unique(spiketrain[:, 1])
         convolution_resolution_len = obj.n_time * 2 - 1
@@ -167,8 +172,35 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
                 to_subtract = to_subtract.reshape(*pconv.shape[:-1], -1)
                 np.subtract.at(obj.conv_result, idx, to_subtract)
 
-            obj.enforce_refractory(spiketrain)
+            cls.enforce_refractory(obj, spiketrain)
 
+
+    # TODO : Finish this method on Monday
+    @classmethod
+    def enforce_refractory(cls, objective, spiketrain):
+        window = np.arange(-objective.adjusted_refrac_radius, objective.adjusted_refrac_radius+1)
+
+        # Adjust cluster IDs so that they match original templates
+        unit_idx = spiketrain[:, 1] // objective.up_factor
+        spiketimes = spiketrain[:, 0]
+
+        # correct for template grouping
+        if objective.grouped_temps:
+            units_group_idx = objective.group_index[unit_idx]
+            group_shape = (spiketimes.shape[0], objective.max_group_size)
+            spiketimes = np.broadcast_to(spiketimes[:, np.newaxis], group_shape)
+            valid_spikes = units_group_idx > 0
+            unit_idx = units_group_idx[valid_spikes]
+            spiketimes = spiketimes[valid_spikes]
+
+        # TODO : convolution length as function
+        time_idx = (spiketimes[:, np.newaxis] + objective.n_time - 1) + window
+
+        # Enforce refractory by setting objective to negative infinity in invalid regions
+        objective.obj[unit_idx[:, np.newaxis], time_idx[:, 1:-1]] = -1 * np.inf
+        # TODO : make both with and without amplitude scaling the same
+        if not objective.no_amplitude_scaling:
+            objective.conv_result[unit_idx[:, np.newaxis], time_idx[:, 1:-1]] = -1 * np.inf
 
 
 
