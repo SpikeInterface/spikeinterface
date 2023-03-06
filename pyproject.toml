@@ -113,7 +113,6 @@ test = [
     # Sorters
     "python-cuda",
 
-
     ## sliding_nn
     "pymde",
     "torch",
