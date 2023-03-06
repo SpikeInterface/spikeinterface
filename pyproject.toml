@@ -77,7 +77,6 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
-    "huggingface_hub",
 ]
 
 widgets = [
