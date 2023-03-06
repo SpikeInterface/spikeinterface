@@ -111,7 +111,7 @@ test = [
     "tridesclous>=1.6.6.1",
 
     # Sorters
-    "python-cuda",
+    "cuda-python",
 
     ## sliding_nn
     "pymde",
