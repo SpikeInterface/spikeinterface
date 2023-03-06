@@ -480,8 +480,9 @@ class BaseExtractor:
                                  relative_to=relative_to,
                                  folder_metadata=folder_metadata)
         file_path = self._get_file_path(file_path, ['.json'])
+        json_recorder = check_json(dump_dict)
         file_path.write_text(
-            json.dumps(check_json(dump_dict), indent=4),
+            json.dumps(json_recorder, indent=4),
             encoding='utf8'
         )
 

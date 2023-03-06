@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import sys
+import warnings
 import datetime
 from copy import deepcopy
 import gc
@@ -11,6 +12,7 @@ import inspect
 
 from .job_tools import (ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, fix_job_kwargs, 
                         ChunkRecordingExecutor, _shared_job_kwargs_doc)
+import spikeinterface.core.base as base
 
 def copy_signature(source_fct):
     def copy(target_fct):
@@ -79,7 +81,20 @@ def write_python(path, dict):
                 f.write(str(k) + " = " + str(v) + "\n")
 
 
-def check_json(d):
+
+def check_json(d: dict) -> dict:  # TODO: Use a proper JSONEncoder 
+    """
+    Function that transforms a dictionary into a json writable dictionary ()
+
+    Parameters
+    ----------
+    d : A dictionary
+
+    Returns
+    -------
+    dc : A json writable dictionary
+    """
+    
     dc = deepcopy(d)
     # quick hack to ensure json writable
     for k, v in d.items():
@@ -90,8 +105,13 @@ def check_json(d):
         if isinstance(k, np.floating):
             del dc[k]
             dc[float(k)] = v
+        
+        # Now the values
         if isinstance(v, dict):
             dc[k] = check_json(v)
+        elif isinstance(v, base.BaseExtractor):
+            del dc[k]
+            dc[str(k)] = check_json(v.to_dict())  # Transform recording to dictionary
         elif isinstance(v, Path):
             dc[k] = str(v.absolute())
         elif isinstance(v, (bool, np.bool_)):
@@ -112,7 +132,7 @@ def check_json(d):
                 else:
                     v_arr = np.array(v)
                     if v_arr.dtype.kind not in ("b", "i", "u", "f", "S", "U", "O"):
-                        print(f'Skipping field {k}: only int, uint, bool, float, or str types can be serialized')
+                        warnings.warn(f'Skipping field {k}: only int, uint, bool, float, or str types can be serialized')
                         continue
                     # 64-bit types are not serializable
                     if v_arr.dtype == np.dtype('int64'):
