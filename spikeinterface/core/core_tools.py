@@ -3,6 +3,7 @@ import os
 import sys
 import warnings
 import datetime
+import json
 from copy import deepcopy
 import gc
 
@@ -80,6 +81,29 @@ def write_python(path, dict):
             else:
                 f.write(str(k) + " = " + str(v) + "\n")
 
+class ExtractorJsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        # Over-write behaviors for datetime object
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+
+        # This should transforms numpy generic integers and floats to python floats
+        if isinstance(obj, np.generic):
+            return obj.item()
+
+        # Numpy-versions of various numeric types
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+
+        if isinstance(obj, base.BaseExtractor):
+            return obj.to_dict()
+
+        # The base-class handles it
+        return super().default(obj)
 
 
 def check_json(d: dict) -> dict:  # TODO: Use a proper JSONEncoder 
