@@ -74,19 +74,19 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
 
     @classmethod
-    def run_array(cls, obj, traces):
-        cls.update_data(obj, traces)
+    def run_array(cls, objective, traces):
+        cls.update_data(objective, traces)
 
         # compute objective if necessary
-        if not obj.obj_computed:
-            obj.obj = cls.compute_objective(obj)
-            obj.obj_computed = True
+        if not objective.obj_computed:
+            objective.obj = cls.compute_objective(objective)
+            objective.obj_computed = True
 
         # compute spike train
         spiketrains, scalings, distance_metrics = [], [], []
-        for i in range(obj.max_iter):
+        for i in range(objective.max_iter):
             # find peaks
-            spiketrain, scaling, distance_metric = cls.find_peaks(obj)
+            spiketrain, scaling, distance_metric = cls.find_peaks(objective)
             if len(spiketrain) == 0:
                 break
 
@@ -96,17 +96,17 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             distance_metrics.extend(list(distance_metric))
 
             # subtract newly detected spike train from traces
-            cls.subtract_spike_train(obj, spiketrain, scaling)
+            cls.subtract_spike_train(objective, spiketrain, scaling)
 
-        obj.dec_spike_train = np.array(spiketrains)
-        obj.dec_scalings = np.array(scalings)
-        obj.dist_metric = np.array(distance_metrics)
+        objective.dec_spike_train = np.array(spiketrains)
+        objective.dec_scalings = np.array(scalings)
+        objective.dist_metric = np.array(distance_metrics)
 
         # order spike times
-        idx = np.argsort(obj.dec_spike_train[:, 0])
-        obj.dec_spike_train = obj.dec_spike_train[idx]
-        obj.dec_scalings = obj.dec_scalings[idx]
-        obj.dist_metric = obj.dist_metric[idx]
+        idx = np.argsort(objective.dec_spike_train[:, 0])
+        objective.dec_spike_train = objective.dec_spike_train[idx]
+        objective.dec_scalings = objective.dec_scalings[idx]
+        objective.dist_metric = objective.dist_metric[idx]
 
 
     @classmethod
@@ -166,7 +166,8 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
         # Find the best upsampled template
         spike_unit_ids = np.argmax(objective.obj[:, spike_time_indices], axis=0)
-        high_res_peaks = objective.high_res_peak(spike_time_indices, spike_unit_ids)
+        #high_res_peaks = objective.high_res_peak(spike_time_indices, spike_unit_ids, )
+        high_res_peaks = cls.high_res_peak(objective, spike_time_indices, spike_unit_ids)
         upsampled_template_idx, time_shift, valid_idx, scalings = high_res_peaks
 
         # Update unit_ids, spike_times, and scalings
@@ -187,26 +188,85 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
 
     @classmethod
-    def subtract_spike_train(cls, obj, spiketrain, scaling):
+    def subtract_spike_train(cls, objective, spiketrain, scaling):
         present_units = np.unique(spiketrain[:, 1])
-        convolution_resolution_len = obj.n_time * 2 - 1
+        convolution_resolution_len = objective.n_time * 2 - 1
         for unit in present_units:
             unit_mask = spiketrain[:, 1] == unit
             unit_spiketrain = spiketrain[unit_mask, :]
             spiketrain_idx = np.arange(0, convolution_resolution_len) + unit_spiketrain[:, :1]
 
-            unit_idx = np.flatnonzero(obj.unit_overlap[unit])
+            unit_idx = np.flatnonzero(objective.unit_overlap[unit])
             idx = np.ix_(unit_idx, spiketrain_idx.ravel())
-            pconv = obj.pairwise_conv[obj.up_up_map[unit]]
-            np.subtract.at(obj.obj, idx, np.tile(2*pconv, len(unit_spiketrain)))
+            pconv = objective.pairwise_conv[objective.up_up_map[unit]]
+            np.subtract.at(objective.obj, idx, np.tile(2 * pconv, len(unit_spiketrain)))
 
-            if not obj.no_amplitude_scaling:
+            if not objective.no_amplitude_scaling:
                 # None's add extra dimensions (lines things up with the ravel supposedly)
                 to_subtract = pconv[:, None, :] * scaling[unit_mask][None, :, None]
                 to_subtract = to_subtract.reshape(*pconv.shape[:-1], -1)
-                np.subtract.at(obj.conv_result, idx, to_subtract)
+                np.subtract.at(objective.conv_result, idx, to_subtract)
 
-            cls.enforce_refractory(obj, spiketrain)
+            cls.enforce_refractory(objective, spiketrain)
+
+
+    @classmethod
+    def high_res_peak(cls, objective, spike_time_indices, spike_unit_ids):
+        # Return identities if no high-resolution templates are necessary
+        not_high_res = objective.up_factor == 1 and objective.no_amplitude_scaling
+        at_least_one_spike = bool(len(spike_time_indices))
+        if not_high_res or not at_least_one_spike:
+            upsampled_template_idx = np.zeros_like(spike_time_indices)
+            time_shift = np.zeros_like(spike_time_indices)
+            non_refractory_indices = range(len(spike_time_indices))
+            scalings = np.ones_like(spike_time_indices)
+            return upsampled_template_idx, time_shift, non_refractory_indices, scalings
+
+        peak_indices = spike_time_indices + objective.up_window
+        obj_peaks = objective.obj[spike_unit_ids, peak_indices]
+
+        # Omit refractory spikes
+        peak_is_refractory = np.logical_or(np.isinf(obj_peaks[0, :]), np.isinf(obj_peaks[-1, :]))
+        refractory_before_spike = np.arange(-objective.refrac_radius, 1)[:, np.newaxis]
+        refractory_indices = spike_time_indices[peak_is_refractory] + refractory_before_spike
+        objective.obj[spike_unit_ids[peak_is_refractory], refractory_indices] = -1 * np.inf
+        non_refractory_indices = np.flatnonzero(np.logical_not(refractory_indices))
+        obj_peaks = obj_peaks[:, non_refractory_indices]
+        if obj_peaks.shape[1] == 0: # no non-refractory peaks --> exit function
+            return np.array([]), np.array([]), non_refractory_indices, np.array([])
+
+        # Upsample and compute optimal template shift
+        resample_factor = objective.up_window_len * objective.up_factor
+        if objective.no_amplitude_scaling:
+            # Perform simple upsampling using scipy.signal.resample
+            high_resolution_peaks = signal.resample(obj_peaks, resample_factor, axis=0)
+            shift_idx = np.argmax(high_resolution_peaks[objective.zoom_index, :], axis=0)
+            scalings = np.ones(len(non_refractory_indices))
+        else:
+            # the objective is (conv + 1/lambd)^2 / (norm + 1/lambd) - 1/lambd
+            obj_peaks_high_res = objective.conv_result[spike_unit_ids, peak_indices]
+            obj_peaks_high_res = obj_peaks_high_res[:, non_refractory_indices]
+            high_resolution_conv = signal.resample(obj_peaks_high_res, resample_factor, axis=0)
+            norm_peaks = objective.norm[spike_unit_ids[non_refractory_indices]]
+
+            b = high_resolution_conv + 1/objective.lambd
+            a = norm_peaks[np.newaxis, :] + 1/objective.lambd
+
+            # this is the objective with the optimal scaling *without hard clipping*
+            # this order of operations is key to avoid overflows when squaring!
+            # self.obj = b * (b / a) - 1 / self.lambd
+
+            # but, in practice we do apply hard clipping. so we have to compute
+            # the following more cumbersome formula:
+            scalings = np.clip(b/a, objective.scale_min, objective.scale_max)
+            high_res_obj = (2 * scalings * b) - (np.square(scalings) * a) - (1/objective.lambd)
+            shift_idx = np.argmax(high_res_obj[objective.zoom_index, :], axis=0)
+            scalings = scalings[shift_idx, np.arange(len(non_refractory_indices))]
+
+        # Extract outputs using shift_idx
+        upsampled_template_idx = objective.peak_to_template_idx[shift_idx]
+        time_shift = objective.peak_time_jitter[shift_idx]
+        return upsampled_template_idx, time_shift, non_refractory_indices, scalings
 
 
     @classmethod
