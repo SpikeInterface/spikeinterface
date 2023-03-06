@@ -22,7 +22,7 @@ class PipelineNode:
         self, recording: BaseRecording, return_output: bool = True, parents: Optional[List[Type["PipelineNode"]]] = None
     ):
         """
-        This is a generic object that will make some computation on peak given a buffe of traces.
+        This is a generic object that will make some computation on peaks given a buffer of traces.
         Typically used for exctrating features (amplitudes, localization, ...)
 
         A Node can optionally connect to other nodes with the parents and receive inputs from them.

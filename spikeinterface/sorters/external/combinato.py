@@ -190,7 +190,7 @@ class CombinatoSorter(BaseSorter):
         sorter_output_folder = Path(sorter_output_folder)
         result_fname = str(sorter_output_folder / 'recording')
 
-        with (sorter_output_folder / 'spikeinterface_params.json').open('r') as f:
+        with (sorter_output_folder.parent / 'spikeinterface_params.json').open('r') as f:
             sorter_params = json.load(f)['sorter_params']
         keep_good_only = sorter_params.get('keep_good_only', True)
         sorting = CombinatoSortingExtractor(folder_path=result_fname, keep_good_only=keep_good_only)
