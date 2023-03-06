@@ -12,6 +12,7 @@ def test_remove_excess_spikes():
     # create two units with excess 5 excess spikes each in each segment
     num_units = 2
     num_spikes = 100
+    num_num_samples_spikes_per_segment = 5
     num_excess_spikes_per_segment = 5
     times = []
     labels = []
@@ -20,9 +21,12 @@ def test_remove_excess_spikes():
         times_segment = np.array([], dtype=int)
         labels_segment = np.array([], dtype=int)
         for unit in range(num_units):
-            spike_times = np.random.randint(0, num_samples - 1, num_spikes)
+            spike_times = np.random.randint(0, num_samples, num_spikes)
+            last_samples_spikes = (num_samples - 1) * np.ones(num_num_samples_spikes_per_segment, dtype=int)
+            num_samples_spike_times = num_samples * np.ones(num_num_samples_spikes_per_segment, dtype=int)
             excess_spikes = np.random.randint(num_samples, num_samples + 100, num_excess_spikes_per_segment)
-            spike_times = np.sort(np.concatenate((spike_times, excess_spikes)))
+            spike_times = np.sort(np.concatenate((spike_times, last_samples_spikes, num_samples_spike_times,
+                                                  excess_spikes)))
             spike_labels = unit * np.ones_like(spike_times)
             times_segment = np.concatenate((times_segment, spike_times))
             labels_segment = np.concatenate((labels_segment, spike_labels))
@@ -32,8 +36,16 @@ def test_remove_excess_spikes():
     sorting = NumpySorting.from_times_labels(times, labels, sampling_frequency=sampling_frequency)
     assert has_exceeding_spikes(recording, sorting)
 
-    sorting_excess = remove_excess_spikes(sorting, recording)
-    assert not has_exceeding_spikes(recording, sorting_excess)
+    sorting_corrected = remove_excess_spikes(sorting, recording)
+    assert not has_exceeding_spikes(recording, sorting_corrected)
+
+    for u in sorting.unit_ids:
+        for segment_index in range(sorting.get_num_segments()):
+            spike_train_excess = sorting.get_unit_spike_train(u, segment_index=segment_index)
+            spike_train_corrected = sorting_corrected.get_unit_spike_train(u, segment_index=segment_index)
+
+            assert len(spike_train_corrected) == len(spike_train_excess) - num_num_samples_spikes_per_segment - \
+                num_excess_spikes_per_segment
 
 
 if __name__ == "__main__":

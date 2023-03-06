@@ -20,7 +20,7 @@ In the following documentation, we provide an overview of SpikeInterface.
 Organization
 ------------
 
-SpikeInterface consists several sub-packages which encapsulate all steps in a typical spike sorting pipeline:
+SpikeInterface consists of several sub-packages which encapsulate all steps in a typical spike sorting pipeline:
 
 - :py:mod:`spikeinterface.core`
 - :py:mod:`spikeinterface.extractors`

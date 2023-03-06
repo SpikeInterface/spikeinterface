@@ -54,7 +54,7 @@ class RemoveExcessSpikesSortingSegment(BaseSortingSegment):
                              end_frame: Optional[int] = None) -> np.ndarray:
         spike_train = self._parent_segment.get_unit_spike_train(unit_id, start_frame=start_frame, end_frame=end_frame)
 
-        return spike_train[spike_train < self._num_samples - 1]
+        return spike_train[spike_train < self._num_samples]
 
 
 def remove_excess_spikes(sorting, recording):
