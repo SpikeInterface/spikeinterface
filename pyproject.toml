@@ -77,7 +77,6 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
-    "huggingface_hub",
 ]
 
 widgets = [
@@ -95,6 +94,7 @@ test = [
     # zarr is needed for testing
     "zarr",
     "xarray",
+    "huggingface_hub",
 
     # tridesclous
     "numpy<1.24",
