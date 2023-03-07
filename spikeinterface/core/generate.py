@@ -479,11 +479,14 @@ def generate_lazy_random_recording(full_traces_size_GiB: float, seed=None) -> La
     """
     
     dtype = np.dtype("float32")
-    sampling_frequency = 1.0
-    num_channels = 1024 
-    base_duration = int((1024 * 1024) / dtype.itemsize) # This is already 1 GiB
-    durations = [base_duration * full_traces_size_GiB]
+    sampling_frequency = 30_000.0 # Hz 
+    num_channels = 1024    
     
+    GiB_to_bytes = 1024** 3
+    full_traces_size_bytes = full_traces_size_GiB * GiB_to_bytes 
+    num_samples = int(full_traces_size_bytes / (num_channels * dtype.itemsize))
+    durations = [num_samples / sampling_frequency]
+
     recording = LazyRandomRecording(durations=durations, sampling_frequency=sampling_frequency, 
                         num_channels=num_channels, dtype=dtype, seed=seed)
 
