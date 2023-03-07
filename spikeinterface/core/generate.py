@@ -450,6 +450,17 @@ class LazyRandomRecordingSegment(BaseRecordingSegment):
     
     def get_traces(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None, channel_indices: Union[List, None] = None) -> np.ndarray:
         
+        import psutil
+        print("===============")
+        print("===============")
+        print("===============")
+        print(f"The memory here before generating the traces")
+        process = psutil.Process()
+        print(f"Memory in MiB here {process.memory_info().rss / 1024 ** 2}")
+        print("===============")
+        print("===============")
+        print("===============")
+        
         start_frame = 0 if start_frame is None else max(start_frame, 0)
         end_frame = self.num_samples if end_frame is None else min(end_frame, self.num_samples)
         
@@ -467,9 +478,9 @@ class LazyRandomRecordingSegment(BaseRecordingSegment):
         print("===============")
         print("===============")
         print("===============")
-        print(f"The memory here in {__file__}")
+        print(f"The memory here after generating the traces")
         process = psutil.Process()
-        print(f"Memory in bytes here {process.memory_info().rss / 1024 ** 2}")
+        print(f"Memory in MiB here {process.memory_info().rss / 1024 ** 2}")
         print("===============")
         print("===============")
         print("===============")
