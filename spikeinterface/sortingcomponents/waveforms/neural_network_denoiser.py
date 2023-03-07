@@ -22,7 +22,7 @@ class SingleChannelToyDenoiser(PipelineNode):
         try:
             waveform_extractor = next(parent for parent in self.parents if isinstance(parent, WaveformExtractorNode))
         except (StopIteration, TypeError):
-            exception_string = f"TemporalPCA should have a {WaveformExtractorNode.__name__} in its parents"
+            exception_string = f"Model should have a {WaveformExtractorNode.__name__} in its parents"
             raise TypeError(exception_string)
 
         self.assert_model_and_waveform_temporal_match(waveform_extractor)
@@ -41,9 +41,10 @@ class SingleChannelToyDenoiser(PipelineNode):
 
         # Load the model temporal parameters
         repo_id = "SpikeInterface/test_repo"
-        filename = "toy_model_peak_interval.json"
+        subfolder = "mearec_toy_model"
+        filename = "params.json"
 
-        json_file_path = hf_hub_download(repo_id=repo_id, filename=filename)
+        json_file_path = hf_hub_download(repo_id=repo_id, subfolder=subfolder, filename=filename)
         # Load the json file in the json_file_path_variable
         with open(json_file_path, "r") as json_file:
             peak_interval_dict = json.load(json_file)
@@ -57,7 +58,7 @@ class SingleChannelToyDenoiser(PipelineNode):
         sampling_frequency_mismatch = waveforms_sampling_frequency != model_sampling_frequency
         if ms_before_mismatch or ms_after_missmatch or sampling_frequency_mismatch:
             exception_string = (
-                "PCA model and waveforms mismatch \n"
+                "Model and waveforms mismatch \n"
                 f"{model_ms_before=} and {waveforms_ms_after=} \n"
                 f"{model_ms_after=} and {waveforms_ms_after=} \n"
                 f"{model_sampling_frequency=} and {waveforms_sampling_frequency=} \n"
@@ -66,10 +67,11 @@ class SingleChannelToyDenoiser(PipelineNode):
 
     def load_model(self):
         repo_id = "SpikeInterface/test_repo"
+        subfolder = "mearec_toy_model"
         filename = "toy_model_marec.pt"
 
-        model_path = hf_hub_download(repo_id=repo_id, filename=filename)
-        denoiser = PaninskiSingleChannelDenoiser(pretrained_path=model_path, spike_size=128)
+        model_path = hf_hub_download(repo_id=repo_id, subfolder=subfolder, filename=filename)
+        denoiser = SingleChannel1dCNNDenoiser(pretrained_path=model_path, spike_size=128)
         denoiser = denoiser.load()
 
         return denoiser
@@ -90,7 +92,7 @@ class SingleChannelToyDenoiser(PipelineNode):
         return desnoised_waveforms
 
 
-class PaninskiSingleChannelDenoiser(nn.Module):
+class SingleChannel1dCNNDenoiser(nn.Module):
     def __init__(self, pretrained_path=None, n_filters=[16, 8], filter_sizes=[5, 11], spike_size=121):
         super().__init__()
 
