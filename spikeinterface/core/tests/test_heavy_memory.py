@@ -7,6 +7,9 @@ from spikeinterface.core.generate import generate_lazy_random_recording
 
 
 def test_writing_overflow():
+    platform_system = platform.system()
+    partition_path = "C:" if platform_system == "Windows" else "/" 
+    print(psutil.disk_usage(partition_path))
     
     # Convert the total memory to GB
     total_memory = psutil.virtual_memory().total
@@ -24,7 +27,7 @@ def test_writing_overflow():
     print("Running tests")
     print("=================")
     
-    full_traces_size_GiB = 8.0
+    full_traces_size_GiB = 20.0
     job_kwargs = dict(n_jobs=-1, total_memory="1G", verbose=True, progress_bar=True)
     # job_kwargs = dict(n_jobs=-1, chunk_memory="1G", verbose=True, progress_bar=True)
     large_recording = generate_lazy_random_recording(full_traces_size_GiB=full_traces_size_GiB)
@@ -49,7 +52,7 @@ def test_writing_overflow():
     print(f"{total_memory_GiB_availalble=}")
 
 
-    if platform.system() == "Linux":
+    if platform_system == "Linux":
         from resource import getrusage, RUSAGE_SELF, RUSAGE_CHILDREN
         print("Peak resident memory ru_maxrss (GiB):", getrusage(RUSAGE_SELF).ru_maxrss / (1024 * 1024))
         print("Peak virtual memory ru_ru_ixrss (GiB):", getrusage(RUSAGE_SELF).ru_ixrss / (1024 * 1024))
