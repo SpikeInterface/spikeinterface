@@ -9,9 +9,11 @@ from spikeinterface.core.generate import generate_lazy_random_recording
 def test_writing_overflow():
     platform_system = platform.system()
     partition_path = "C:" if platform_system == "Windows" else "/" 
-    print(psutil.disk_usage(partition_path))
-    free_hard_drive_Gb = psutil.disk_usage(partition_path).free / (1024 ** 3)
-    print(f"{free_hard_drive_Gb=}")
+    hdd = psutil.disk_usage(partition_path)
+
+    print ("Total: %d GiB" % hdd.total / (2**30))
+    print ("Used: %d GiB" % hdd.used / (2**30))
+    print ("Free: %d GiB" % hdd.free / (2**30))
 
     # Convert the total memory to GB
     total_memory = psutil.virtual_memory().total
