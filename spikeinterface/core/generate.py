@@ -1,4 +1,5 @@
 import numpy as np
+from typing import List, Optional
 
 from .numpyextractors import NumpyRecording, NumpySorting
 from .snippets_tools import snippets_from_sorting
@@ -6,18 +7,46 @@ from .snippets_tools import snippets_from_sorting
 from probeinterface import generate_linear_probe
 
 def generate_recording(
-        num_channels=2,
-        sampling_frequency=30000.,  # in Hz
-        durations=[10.325, 3.5],  #  in s for 2 segments
-        set_probe=True,
-        ndim=2
-):
+    num_channels: Optional[int] = 2,
+    sampling_frequency: Optional[float] = 30000.0,
+    durations: Optional[List[float]] = [5.0, 2.5],
+    set_probe: Optional[bool] = True,
+    ndim: Optional[int] = 2,
+    seed: Optional[int] = None,
+) -> NumpyRecording:
+    """
+
+    Convenience function that generates a recording object with some desired characteristics.
+    Useful for testing.
+
+    Parameters
+    ----------
+    num_channels : int, default 2
+        The number of channels in the recording.
+    sampling_frequency : float, default 30000. (in Hz)
+        The sampling frequency of the recording, by default 30000.
+    durations: List[float], default [5.0, 2.5]
+        The duration in seconds of each segment in the recording, by default [5.0, 2.5].
+        Note that the number of segments is determined by the length of this list.
+    ndim : int, default 2
+        The number of dimensions of the probe, by default 2. Set to 3 to make 3 dimensional probes.
+    seed : Optional[int]
+        A seed for the np.ramdom.default_rng function,
+
+    Returns
+    -------
+    NumpyRecording
+        Returns a NumpyRecording object with the specified parameters.
+    """
+
+    rng = np.random.default_rng(seed=seed)
+
     num_segments = len(durations)
     num_timepoints = [int(sampling_frequency * d) for d in durations]
 
     traces_list = []
     for i in range(num_segments):
-        traces = np.random.randn(num_timepoints[i], num_channels).astype('float32')
+        traces = rng.random(size=(num_timepoints[i], num_channels), dtype=np.float32)
         times = np.arange(num_timepoints[i]) / sampling_frequency
         traces += np.sin(2 * np.pi * 50 * times)[:, None]
         traces_list.append(traces)
@@ -30,6 +59,7 @@ def generate_recording(
         probe.set_device_channel_indices(np.arange(num_channels))
         recording.set_probe(probe, in_place=True)
         probe = generate_linear_probe(num_elec=num_channels)
+
     return recording
 
 
