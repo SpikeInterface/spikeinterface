@@ -112,7 +112,7 @@ class SingleChannel1dCNNDenoiser(nn.Module):
         x = self.out(x)
         return x
 
-    def load(self, device="cpu"):
+    def load(self, device="cuda"):
         checkpoint = torch.load(self.pretrained_path, map_location=device)
         self.load_state_dict(checkpoint)
         return self
