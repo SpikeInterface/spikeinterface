@@ -190,6 +190,7 @@ class BaseRecording(BaseRecordingSnippets):
                 gains = gains[channel_indices].astype('float32')
                 offsets = offsets[channel_indices].astype('float32')
                 traces = traces.astype('float32') * gains + offsets
+        return traces
     
     def has_scaled_traces(self):
         """Checks if the recording has scaled traces
