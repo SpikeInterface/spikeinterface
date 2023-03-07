@@ -453,7 +453,6 @@ class LazyRandomRecordingSegment(BaseRecordingSegment):
         start_frame = 0 if start_frame is None else max(start_frame, 0)
         end_frame = self.num_samples if end_frame is None else min(end_frame, self.num_samples)
         
-
         times = np.arange(start=start_frame, stop=end_frame) / self.sampling_frequency
         channel_phase = np.linspace(start=0, stop=2*np.pi, num=self.num_channels, endpoint=False, dtype=self.dtype)
         frequency = 50 # Hz (20 spikes per second)

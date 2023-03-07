@@ -30,22 +30,17 @@ jobs:
           # zarr is needed to test core
           pip install zarr  
           pip install -e .
-      - name: Test memory
+      - name: Test core with pytest
         run: |
-          pip show numpy
-          pytest -vv -rA spikeinterface/core/tests/test_generate.py 
+          pytest -vv -ra --durations=0 --durations-min=0.001 spikeinterface/core | tee report.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
         shell: bash  # Necessary for pipeline to work on windows
-      # - name: Test core with pytest
-      #   run: |
-      #     pytest -vv -ra --durations=0 --durations-min=0.001 spikeinterface/core | tee report.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
-      #   shell: bash  # Necessary for pipeline to work on windows
-      # - name: Build test summary
-      #   run: | 
-      #     pip install pandas
-      #     pip install tabulate
-      #     echo "# Timing profile of core tests in ${{matrix.os}}" >> $GITHUB_STEP_SUMMARY 
-      #     # Outputs markdown summary to standard output
-      #     python ./.github/build_job_summary.py report.txt >> $GITHUB_STEP_SUMMARY 
-      #     cat $GITHUB_STEP_SUMMARY 
-      #     rm report.txt
-      #   shell: bash  # Necessary for pipeline to work on windows
+      - name: Build test summary
+        run: | 
+          pip install pandas
+          pip install tabulate
+          echo "# Timing profile of core tests in ${{matrix.os}}" >> $GITHUB_STEP_SUMMARY 
+          # Outputs markdown summary to standard output
+          python ./.github/build_job_summary.py report.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
+          rm report.txt
+        shell: bash  # Necessary for pipeline to work on windows
