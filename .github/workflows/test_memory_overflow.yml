@@ -1,4 +1,4 @@
-name: Testing core
+name: Testing memory overflown
 
 on:
   pull_request:
