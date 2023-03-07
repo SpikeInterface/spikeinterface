@@ -32,7 +32,7 @@ jobs:
           pip install -e .
       - name: Test core with pytest
         run: |
-          pytest -vv -ra --durations=0 --durations-min=0.001 spikeinterface/core | tee report.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          pytest -vv -rA --durations=0 --durations-min=0.001 spikeinterface/core | tee report.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
         shell: bash  # Necessary for pipeline to work on windows
       - name: Build test summary
         run: | 

@@ -459,6 +459,9 @@ class LazyRandomRecordingSegment(BaseRecordingSegment):
         frequency = 50 # Hz (20 spikes per second)
         times_in_frequency = times * 2 * np.pi * frequency 
         traces = np.sin(times_in_frequency[:, np.newaxis] + channel_phase[np.newaxis, :], dtype=self.dtype)
+        del times_in_frequency
+        del times
+        del channel_phase
 
         traces = traces if channel_indices is None else traces[:, channel_indices]
         return traces

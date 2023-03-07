@@ -37,6 +37,7 @@ def test_lazy_random_recording():
     
     memory_after_traces_MiB = process.memory_info().rss / bytes_to_MiB_factor
     excess_memory = memory_after_traces_MiB / (memory_after_instanciation_MiB + traces_size_MiB)
+    print("Memory stuff \n")
     print(f"{memory_after_instanciation_MiB=} - {traces_size_MiB=} - {memory_after_traces_MiB=} - {initial_memory_MiB=}")
     assert excess_memory == pytest.approx(1.0, rel=1e-2)
 
