@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from .numpyextractors import NumpyRecording, NumpySorting
 
@@ -390,7 +390,7 @@ class LazyRandomRecording(BaseRecording):
         durations: List[int],
         sampling_frequency: float,
         num_channels: int,
-        dtype: Optional[np.dtype] = np.float32,
+        dtype: Optional[Union[np.dtype, str]] = "float32",
         seed: Optional[int] = None,
     ):
         """
@@ -417,7 +417,8 @@ class LazyRandomRecording(BaseRecording):
             The seed for np.random.default_rng, by default None        
         """
         channel_ids = list(range(num_channels))
-        BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
+        dtype = np.dtype(dtype).name   # Cast to string for serialization
+        BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
 
         rng = np.random.default_rng(seed=seed)
 
