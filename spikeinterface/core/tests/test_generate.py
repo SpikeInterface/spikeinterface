@@ -6,7 +6,7 @@ from spikeinterface.core.generate import LazyRandomRecording, generate_lazy_rand
 
 
 def test_lazy_random_recording():
-    bytes_to_MiB_factor = 1024 * 1024
+    bytes_to_MiB_factor = 1024 ** 2
     
     sampling_frequency = 30000  # Hz
     durations = [1.0]
@@ -15,9 +15,8 @@ def test_lazy_random_recording():
     seed = 0
     
     num_samples = int(durations[0] * sampling_frequency)
-    # Around 50 MiB                  4 bytes per sample * 384 channels * 30000 samples
+    # Around 50 MiB  4 bytes per sample * 384 channels * 30000 samples
     expected_trace_size_MiB = dtype.itemsize * num_channels * num_samples / bytes_to_MiB_factor
-    print(expected_trace_size_MiB)  # This is around 1MB
     
     process = psutil.Process()
     initial_memory_MiB = process.memory_info().rss / bytes_to_MiB_factor
@@ -26,7 +25,8 @@ def test_lazy_random_recording():
         durations=durations, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype, seed=seed
     )
     memory_after_instanciation_MiB = process.memory_info().rss / bytes_to_MiB_factor
-    assert round(memory_after_instanciation_MiB) == round(initial_memory_MiB)
+    excess_memory = memory_after_instanciation_MiB / initial_memory_MiB
+    assert excess_memory == pytest.approx(1.0, rel=1e-2)  # 1 relative one percent difference tolerance
 
     traces = lazy_recording.get_traces()
     expected_traces_shape = (int(durations[0] * sampling_frequency), num_channels)
@@ -36,7 +36,9 @@ def test_lazy_random_recording():
     assert traces.shape == expected_traces_shape
     
     memory_after_traces_MiB = process.memory_info().rss / bytes_to_MiB_factor
-    assert round(memory_after_traces_MiB) == round(memory_after_instanciation_MiB + traces_size_MiB)
+    excess_memory = memory_after_traces_MiB / (memory_after_instanciation_MiB + traces_size_MiB)
+    assert excess_memory == pytest.approx(1.0, rel=1e-2)
+
 
 
 def test_generate_large_recording():
@@ -46,10 +48,14 @@ def test_generate_large_recording():
     full_traces_size_GiB = 1.0
     recording = generate_lazy_random_recording(full_traces_size_GiB = full_traces_size_GiB)
     memory_after_instanciation_GiB = process.memory_info().rss / bytes_to_GiB_factor
-    assert round(memory_after_instanciation_GiB) == round(initial_memory_GiB)
     
+    
+    excess_memory = memory_after_instanciation_GiB / initial_memory_GiB
+    assert excess_memory == pytest.approx(1.0, rel=1e-2)  # 1 relative one percent difference tolerance
+
     traces = recording.get_traces()
     assert full_traces_size_GiB == round(traces.nbytes / bytes_to_GiB_factor) 
     
     memory_after_traces_GiB = process.memory_info().rss / bytes_to_GiB_factor
-    assert round(memory_after_traces_GiB) == round(memory_after_instanciation_GiB + full_traces_size_GiB)
+    excess_memory = memory_after_traces_GiB  / (memory_after_instanciation_GiB + full_traces_size_GiB)
+    assert excess_memory == pytest.approx(1.0, rel=1e-2)  # 1 relative one percent difference tolerance

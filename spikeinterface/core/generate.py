@@ -420,11 +420,11 @@ class LazyRandomRecording(BaseRecording):
         dtype = np.dtype(dtype).name   # Cast to string for serialization
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
 
-        rng = np.random.default_rng(seed=seed)
+        self.seed = seed 
 
         for duration in durations:
             rec_segment = LazyRandomRecordingSegment(
-                duration=duration, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype, rng=rng
+                duration=duration, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype, seed=seed
             )
             self.add_recording_segment(rec_segment)
 
@@ -437,24 +437,33 @@ class LazyRandomRecording(BaseRecording):
         }
 
 class LazyRandomRecordingSegment(BaseRecordingSegment):
-    def __init__(self, duration, sampling_frequency, num_channels, dtype, rng):
+    def __init__(self, duration, sampling_frequency, num_channels, dtype, seed):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
+        self.sampling_frequency = sampling_frequency
         self.num_samples = int(duration * sampling_frequency)
-        self.rng = rng
+        self.seed = seed
         self.num_channels = num_channels
         self.dtype = dtype 
 
     def get_num_samples(self):
         return self.num_samples
-
-    def get_traces(self, start_frame, end_frame, channel_indices):
+    
+    def get_traces(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None, channel_indices: Union[List, None] = None) -> np.ndarray:
         
-        end_frame = self.num_samples if end_frame is None else min(end_frame, self.num_samples)
         start_frame = 0 if start_frame is None else max(start_frame, 0)
-                
-        traces = self.rng.random(size=(end_frame - start_frame, self.num_channels), dtype=self.dtype)
+        end_frame = self.num_samples if end_frame is None else min(end_frame, self.num_samples)
+        
+
+        times = np.arange(start=start_frame, stop=end_frame) / self.sampling_frequency
+        channel_phase = np.linspace(start=0, stop=2*np.pi, num=self.num_channels, endpoint=False, dtype=self.dtype)
+        frequency = 50 # Hz (20 spikes per second)
+        times_in_frequency = times * 2 * np.pi * frequency 
+        traces = np.sin(times_in_frequency[:, np.newaxis] + channel_phase[np.newaxis, :], dtype=self.dtype)
+
         traces = traces if channel_indices is None else traces[:, channel_indices]
         return traces
+    
+
 
 
 def generate_lazy_random_recording(full_traces_size_GiB: float, seed=None) -> LazyRandomRecording:
