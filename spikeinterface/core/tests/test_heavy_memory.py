@@ -10,14 +10,16 @@ def test_writing_overflow():
     
     # Convert the total memory to GB
     total_memory = psutil.virtual_memory().total
-    total_memory_GiB = total_memory / (1024 * 1024 * 1024)
-
+    total_memory_GiB_total = total_memory / (1024 * 1024 * 1024)
+    
+    total_memory = psutil.virtual_memory().available
+    total_memory_GiB_availalble = total_memory / (1024 * 1024 * 1024)
     # Get the model name of the processor
-    processor_name = psutil.cpu_info().current_processor
 
     # Print the RAM and processor information
-    print(f"{total_memory_GiB=}")
-    print(f"{processor_name=}")
+    print(f"{total_memory_GiB_total=}")
+    print(f"{total_memory_GiB_availalble=}")
+
     print("=================")
     print("Running tests")
     print("=================")
@@ -41,14 +43,16 @@ def test_writing_overflow():
 def test_writing_overflow_failing_non_parallel():
     # Convert the total memory to GB
     total_memory = psutil.virtual_memory().total
-    total_memory_GiB = total_memory / (1024 * 1024 * 1024)
-
+    total_memory_GiB_total = total_memory / (1024 * 1024 * 1024)
+    
+    total_memory = psutil.virtual_memory().available
+    total_memory_GiB_availalble = total_memory / (1024 * 1024 * 1024)
     # Get the model name of the processor
-    processor_name = psutil.cpu_info().current_processor
 
     # Print the RAM and processor information
-    print(f"{total_memory_GiB=}")
-    print(f"{processor_name=}")
+    print(f"{total_memory_GiB_total=}")
+    print(f"{total_memory_GiB_availalble=}")
+
     print("=================")
     print("Running tests")
     print("=================")
