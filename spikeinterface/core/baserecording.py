@@ -195,7 +195,7 @@ class BaseRecording(BaseRecordingSnippets):
         print("===============")
         print("===============")
         print("===============")
-        print(f"The memory here in {__path__}")
+        print(f"The memory here in base recording get traces")
         process = psutil.Process()
         print(f"Memory in bytes here {process.memory_info().rss / 1024 ** 2}")
         print("===============")
