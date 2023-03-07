@@ -11,9 +11,9 @@ def test_writing_overflow():
     partition_path = "C:" if platform_system == "Windows" else "/" 
     hdd = psutil.disk_usage(partition_path)
 
-    print ("Total: %d GiB" % hdd.total / (2**30))
-    print ("Used: %d GiB" % hdd.used / (2**30))
-    print ("Free: %d GiB" % hdd.free / (2**30))
+    print(f"Total: {hdd.total / (2**30)} GiB" )
+    print(f"Used: {hdd.used / (2**30)} GiB")
+    print(f"Free: {hdd.free / (2**30)} GiB")
 
     # Convert the total memory to GB
     total_memory = psutil.virtual_memory().total
