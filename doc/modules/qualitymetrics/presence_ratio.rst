@@ -28,7 +28,7 @@ Example code
     # Make recording, sorting and wvf_extractor object for your data.
 
     presence_ratio = qm.compute_presence_ratios(wvf_extractor)
-    # presence_ratio is a dict containing the units' ID as keys
+    # presence_ratio is a dict containing the units' IDs as keys
     # and their presence ratio (between 0 and 1) as values.
 
 Links to original implementations
