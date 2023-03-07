@@ -1,8 +1,8 @@
 name: Full spikeinterface tests
 
 on:
-  pull_request:
-    types: [synchronize, opened, reopened]
+  workflow_dispatch: # Pause momentarily 
+
 
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}

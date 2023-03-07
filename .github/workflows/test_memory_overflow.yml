@@ -1,0 +1,34 @@
+name: Testing core
+
+on:
+  pull_request:
+    types: [synchronize, opened, reopened]
+
+concurrency:  # Cancel previous workflows on the same pull request
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Test on ${{ matrix.os }} OS
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          git config --global user.email "CI@example.com"
+          git config --global user.name "CI Almighty"
+          python -m pip install -U pip  # Official recommended way
+          pip install pytest
+          pip install -e .
+      - name: Test core with pytest
+        run: |
+          pytest -vv -rA --durations=0 spikeinterface/core/tests/test_heavy_memory.py
+        shell: bash  # Necessary for pipeline to work on windows

@@ -387,6 +387,7 @@ class LazyRandomRecording(BaseRecording):
             The seed for np.random.default_rng, by default None        
         """
         channel_ids = list(range(num_channels))
+        dtype = np.dtype(dtype).name   # Cast to string for serialization
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
         rng = np.random.default_rng(seed=seed)
@@ -396,7 +397,7 @@ class LazyRandomRecording(BaseRecording):
                 duration=duration, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype, rng=rng
             )
             self.add_recording_segment(rec_segment)
-
+        
         self._kwargs = {
             "num_channels": num_channels,
             "durations": durations,
@@ -452,7 +453,7 @@ def generate_lazy_random_recording(full_traces_size_GiB: float, seed=None) -> La
     num_channels = 1024 
     base_duration = int((1024 * 1024) / dtype.itemsize) # This is already 1 GiB
     durations = [base_duration * full_traces_size_GiB]
-    
+
     recording = LazyRandomRecording(durations=durations, sampling_frequency=sampling_frequency, 
                         num_channels=num_channels, dtype=dtype, seed=seed)
 
