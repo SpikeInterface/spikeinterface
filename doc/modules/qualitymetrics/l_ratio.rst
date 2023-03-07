@@ -4,7 +4,7 @@ L-ratio (:code:`l_ratio`)
 Calculation
 -----------
 
-This description assumes a tetrode is used as an example. 
+This example assumes use of a tetrode. 
 
 L-ratio uses 4 principal components (PCs) for each tetrode channel (the first being energy, the square root of the sum of squares of each sample in the waveform, followed by the first 3 PCs of the energy normalised waveform).
 This yields spikes which are each represented as a point in 16 dimensional space.
@@ -18,7 +18,7 @@ Define for each cluster :math:`C`, the value :math:`L(C)`, representing the amou
     L(C) = \sum_{i \notin \mathrm{C}} 1 - \mathrm{CDF}_{\chi^2_{\mathrm{df}}}(D^2_{i, C})
 
 
-:math:`L` is then the sum of probabilities that each spike which is not a cluster member of :math:`C` should be included in the cluster.
+:math:`L` is then the sum of probabilities that each spike which is not a member of cluster :math:`C` should be.
 Therefore the inverse of this cumulative distribution yields the probability of cluster membership for each spike :math:`i`.
 :math:`L` is then normalised by the number of spikes :math:`N_s` in :math:`C` to allow larger clusters to tolerate more contamination.
 This yields L-ratio, which can be expressed as:

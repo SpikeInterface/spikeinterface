@@ -14,7 +14,6 @@ from spikeinterface.core import BaseRecording
 from spikeinterface.core.sparsity import ChannelSparsity
 from spikeinterface import extract_waveforms, NumpySorting
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
-from spikeinterface.core.recording_tools import get_channel_distances
 from .waveform_utils import to_temporal_representation, from_temporal_representation
 
 
@@ -51,20 +50,20 @@ class TemporalPCBaseNode(PipelineNode):
             exception_string = f"TemporalPCA should have a single {WaveformExtractorNode.__name__} in its parents"
             raise TypeError(exception_string)
         self.assert_model_and_waveform_temporal_match(self.parents[0])
-    
+
     def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformExtractorNode):
         """
         Asserts that the model and the waveform extractor have the same temporal parameters
-        """        
+        """
         # Extract the first waveform extractor in the parents
         waveforms_ms_before = waveform_extractor.ms_before
         waveforms_ms_after = waveform_extractor.ms_after
         waveforms_sampling_frequency = waveform_extractor.recording.get_sampling_frequency()
 
         model_ms_before = self.params["ms_before"]
-        model_ms_after= self.params["ms_after"]
+        model_ms_after = self.params["ms_after"]
         model_sampling_frequency = self.params["sampling_frequency"]
-        
+
         ms_before_mismatch = waveforms_ms_before != model_ms_before
         ms_after_missmatch = waveforms_ms_after != model_ms_after
         sampling_frequency_mismatch = waveforms_sampling_frequency != model_sampling_frequency
@@ -76,7 +75,7 @@ class TemporalPCBaseNode(PipelineNode):
                 f"{model_sampling_frequency=} and {waveforms_sampling_frequency=} \n"
             )
             raise ValueError(exception_string)
-    
+
     @staticmethod
     def fit(
         recording: BaseRecording,
@@ -174,7 +173,7 @@ class TemporalPCAProjection(TemporalPCBaseNode):
     """
     A step that performs a PCA projection on the waveforms extracted by a waveforms parent node.
 
-    This class needs a model_folder_path with a trained model. A model can be trained with the 
+    This class needs a model_folder_path with a trained model. A model can be trained with the
     static method TemporalPCAProjection.fit().
 
 
@@ -231,7 +230,7 @@ class TemporalPCADenoising(TemporalPCBaseNode):
     """
     A step that performs a PCA denoising on the waveforms extracted by a peak_detection function.
 
-    This class needs a model_folder_path with a trained model. A model can be trained with the 
+    This class needs a model_folder_path with a trained model. A model can be trained with the
     static method TemporalPCAProjection.fit().
 
     Parameters
@@ -279,6 +278,5 @@ class TemporalPCADenoising(TemporalPCBaseNode):
         projected_temporal_waveforms = self.pca_model.transform(temporal_waveform)
         temporal_denoised_waveforms = self.pca_model.inverse_transform(projected_temporal_waveforms)
         denoised_waveforms = from_temporal_representation(temporal_denoised_waveforms, num_channels)
-
 
         return denoised_waveforms
