@@ -1,5 +1,5 @@
 import pytest 
-from resource import getrusage, RUSAGE_SELF, RUSAGE_CHILDREN
+import platform
 
 import psutil
 
@@ -49,7 +49,8 @@ def test_writing_overflow():
     print(f"{total_memory_GiB_availalble=}")
 
 
-    if False:
+    if platform.system() == "Linux":
+        from resource import getrusage, RUSAGE_SELF, RUSAGE_CHILDREN
         print("Peak resident memory ru_maxrss (GiB):", getrusage(RUSAGE_SELF).ru_maxrss / (1024 * 1024))
         print("Peak virtual memory ru_ru_ixrss (GiB):", getrusage(RUSAGE_SELF).ru_ixrss / (1024 * 1024))
         print("children")
