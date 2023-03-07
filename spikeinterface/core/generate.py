@@ -473,6 +473,12 @@ class LazyRandomRecordingSegment(BaseRecordingSegment):
 
         traces = traces if channel_indices is None else traces[:, channel_indices]
         
+        traces_out = traces.copy()
+        
+        del traces
+        del times
+        del times_in_frequency
+        del channel_indices
         
         import psutil
         print("===============")
@@ -484,7 +490,7 @@ class LazyRandomRecordingSegment(BaseRecordingSegment):
         print("===============")
         print("===============")
         print("===============")
-        return traces
+        return traces_out
         
         return traces.copy()
     
