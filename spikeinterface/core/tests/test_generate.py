@@ -7,6 +7,49 @@ import numpy as np
 from spikeinterface.core.generate import LazyRandomRecording, generate_lazy_random_recording
 
 
+# def test_lazy_random_recording():
+#     bytes_to_MiB_factor = 1024 ** 2
+    
+#     sampling_frequency = 30000  # Hz
+#     durations = [1.0]
+#     dtype = np.dtype("float32")
+#     num_channels = 384
+#     seed = 0
+    
+#     num_samples = int(durations[0] * sampling_frequency)
+#     # Around 50 MiB  4 bytes per sample * 384 channels * 30000 samples
+#     expected_trace_size_MiB = dtype.itemsize * num_channels * num_samples / bytes_to_MiB_factor
+    
+#     process = psutil.Process()
+#     initial_memory_MiB = process.memory_info().rss / bytes_to_MiB_factor
+
+#     lazy_recording = LazyRandomRecording(
+#         durations=durations, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype, seed=seed
+#     )
+#     memory_after_instanciation_MiB = process.memory_info().rss / bytes_to_MiB_factor
+#     excess_memory = memory_after_instanciation_MiB / initial_memory_MiB
+#     assert excess_memory == pytest.approx(1.0, rel=1e-2)  # 1 relative one percent difference tolerance
+
+#     traces = lazy_recording.get_traces()
+#     expected_traces_shape = (int(durations[0] * sampling_frequency), num_channels)
+    
+#     traces_size_MiB = traces.nbytes / bytes_to_MiB_factor
+#     assert traces_size_MiB == expected_trace_size_MiB
+#     assert traces.shape == expected_traces_shape
+    
+#     memory_after_traces_MiB = process.memory_info().rss / bytes_to_MiB_factor
+#     excess_memory = memory_after_traces_MiB / (memory_after_instanciation_MiB + traces_size_MiB)
+#     print("================")
+#     print("================")
+#     print("================")
+#     print("Memory stuff \n")
+#     print(f"{memory_after_instanciation_MiB=} - {traces_size_MiB=} - {memory_after_traces_MiB=} - {initial_memory_MiB=}")
+#     print("================")
+#     print("================")
+#     print("================")
+#     assert excess_memory == pytest.approx(1.0, rel=1e-2)
+
+
 def test_lazy_random_recording():
     bytes_to_MiB_factor = 1024 ** 2
     
@@ -20,13 +63,15 @@ def test_lazy_random_recording():
     # Around 50 MiB  4 bytes per sample * 384 channels * 30000 samples
     expected_trace_size_MiB = dtype.itemsize * num_channels * num_samples / bytes_to_MiB_factor
     
-    process = psutil.Process()
-    initial_memory_MiB = process.memory_info().rss / bytes_to_MiB_factor
+    mem_info = psutil.virtual_memory()
+    initial_memory_MiB = (mem_info.total - mem_info.available) / bytes_to_MiB_factor
 
     lazy_recording = LazyRandomRecording(
         durations=durations, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype, seed=seed
     )
-    memory_after_instanciation_MiB = process.memory_info().rss / bytes_to_MiB_factor
+    
+    mem_info = psutil.virtual_memory()
+    memory_after_instanciation_MiB = (mem_info.total - mem_info.available) / bytes_to_MiB_factor
     excess_memory = memory_after_instanciation_MiB / initial_memory_MiB
     assert excess_memory == pytest.approx(1.0, rel=1e-2)  # 1 relative one percent difference tolerance
 
@@ -37,18 +82,14 @@ def test_lazy_random_recording():
     assert traces_size_MiB == expected_trace_size_MiB
     assert traces.shape == expected_traces_shape
     
-    memory_after_traces_MiB = process.memory_info().rss / bytes_to_MiB_factor
+    mem_info = psutil.virtual_memory()
+    memory_after_traces_MiB = (mem_info.total - mem_info.available) / bytes_to_MiB_factor
     excess_memory = memory_after_traces_MiB / (memory_after_instanciation_MiB + traces_size_MiB)
-    print("================")
-    print("================")
-    print("================")
+
+    assert excess_memory == pytest.approx(1.0, rel=1e-2)
+    
     print("Memory stuff \n")
     print(f"{memory_after_instanciation_MiB=} - {traces_size_MiB=} - {memory_after_traces_MiB=} - {initial_memory_MiB=}")
-    print("================")
-    print("================")
-    print("================")
-    assert excess_memory == pytest.approx(1.0, rel=1e-2)
-
 
 
 def test_generate_large_recording():

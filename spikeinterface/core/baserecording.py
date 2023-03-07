@@ -190,18 +190,6 @@ class BaseRecording(BaseRecordingSnippets):
                 gains = gains[channel_indices].astype('float32')
                 offsets = offsets[channel_indices].astype('float32')
                 traces = traces.astype('float32') * gains + offsets
-       
-        import psutil
-        print("===============")
-        print("===============")
-        print("===============")
-        print(f"The memory here in base recording get traces")
-        process = psutil.Process()
-        print(f"Memory in MiB here {process.memory_info().rss / 1024 ** 2}")
-        print("===============")
-        print("===============")
-        print("===============")
-        return traces
     
     def has_scaled_traces(self):
         """Checks if the recording has scaled traces
