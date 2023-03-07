@@ -461,6 +461,20 @@ class LazyRandomRecordingSegment(BaseRecordingSegment):
         traces = np.sin(times_in_frequency[:, np.newaxis] + channel_phase[np.newaxis, :], dtype=self.dtype)
 
         traces = traces if channel_indices is None else traces[:, channel_indices]
+        
+        
+        import psutil
+        print("===============")
+        print("===============")
+        print("===============")
+        print(f"The memory here in {__path__}")
+        process = psutil.Process()
+        print(f"Memory in bytes here {process.memory_info().rss / 1024 ** 2}")
+        print("===============")
+        print("===============")
+        print("===============")
+        return traces
+        
         return traces.copy()
     
 

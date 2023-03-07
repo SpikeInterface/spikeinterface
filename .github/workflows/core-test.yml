@@ -30,6 +30,9 @@ jobs:
           # zarr is needed to test core
           pip install zarr  
           pip install -e .
+      - name: Test memory
+        run: |
+          pytest -vv -rA spikeinterface/core/tests/test_generate.py 
       - name: Test core with pytest
         run: |
           pytest -vv -rA --durations=0 --durations-min=0.001 spikeinterface/core | tee report.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
