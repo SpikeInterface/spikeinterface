@@ -83,9 +83,8 @@ class MyObjective(Objective):
         # Upsample and downsample time shifted versions
         # Dynamic Upsampling Setup; function for upsampling based on PTP
         # Cat: TODO find better ptp-> upsample function
-        (self.up_factor,
-         self.unit_up_factor,
-         self.up_up_map) = self.upsample_templates_mp(self.temps, self.params.upsample, self.n_unit)
+        upsampling_factors = self.upsample_templates_mp(self.temps, self.params.upsample, self.n_unit)
+        self.up_factor, self.unit_up_factor, self.up_up_map = upsampling_factors
 
         self.vis_chan = self.spatially_mask_templates(self.temps, self.vis_su_threshold)
         self.unit_overlap = self.template_overlaps(self.vis_chan, self.up_factor)
@@ -96,10 +95,8 @@ class MyObjective(Objective):
         self.n_unit = self.orig_n_unit * self.up_factor
 
         # Computing SVD for each template.
-        (self.temporal,
-         self.singular,
-         self.spatial,
-         self.temporal_up) = self.compress_templates(self.temps, self.approx_rank, self.up_factor, self.n_time)
+        svd_matrices = self.compress_templates(self.temps, self.approx_rank, self.up_factor, self.n_time)
+        self.temporal, self.singular, self.spatial, self.temporal_up = svd_matrices
 
         # Compute pairwise convolution of filters
         self.pairwise_filter_conv()
@@ -111,7 +108,7 @@ class MyObjective(Objective):
                 np.square(self.temps[:, self.vis_chan[:, i], i])
             )
 
-            # Initialize outputs
+        # Initialize outputs
         self.dec_spike_train = np.zeros((0, 2), dtype=np.int32)
         self.dec_scalings = np.zeros((0,), dtype=np.float32)
         self.dist_metric = np.array([])
@@ -216,6 +213,13 @@ class MyObjective(Objective):
         temporal = np.flip(temporal, axis=1)
         temporal_up = np.flip(temporal_up, axis=1)
         return temporal, singular, spatial, temporal_up
+
+
+    def pairwise_filter_conv(self):
+        if self.multi_processing:
+            raise NotImplementedError # TODO: Fold in spikeinterface multi-processing if necessary
+        units = np.unique(self.up_up_map)
+        self.pairwise_conv = self.conv_filter(units, self.temporal, self.temporal_up, self.singular, self.spatial)
 
 
 
