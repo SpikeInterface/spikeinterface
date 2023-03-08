@@ -450,53 +450,19 @@ class LazyRandomRecordingSegment(BaseRecordingSegment):
     
     def get_traces(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None, channel_indices: Union[List, None] = None) -> np.ndarray:
 
-        import psutil
-        print("===============")
-        print("===============")
-        print("===============")
-        print(f"The memory here before generating the traces")
-        process = psutil.Process()
-        print(f"Memory in MiB here {process.memory_info().rss / 1024 ** 2}")
-        print("===============")
-        print("===============")
-        print("===============")
-                      
         start_frame = 0 if start_frame is None else max(start_frame, 0)
         end_frame = self.num_samples if end_frame is None else min(end_frame, self.num_samples)
-        traces = generate_deterministic_trace(start_frame=start_frame, end_frame=end_frame,
-                                              sampling_frequency=self.sampling_frequency, num_channels=self.num_channels, dtype=self.dtype)
-    
+        
+        times = np.arange(start=start_frame, stop=end_frame) / self.sampling_frequency
+        channel_phase = np.linspace(start=0, stop=2*np.pi, num=self.num_channels, endpoint=False, dtype=self.dtype)
+        frequency = 50 # Hz (20 spikes per second)
+        times_in_frequency = times * 2 * np.pi * frequency 
+        traces = np.sin(times_in_frequency[:, np.newaxis] + channel_phase[np.newaxis, :], dtype=self.dtype)
+
         traces = traces if channel_indices is None else traces[:, channel_indices]
         
-
-        import psutil
-        print("===============")
-        print("===============")
-        print("===============")
-        print(f"The memory here after generating the traces")
-        process = psutil.Process()
-        print(f"Memory in MiB here {process.memory_info().rss / 1024 ** 2}")
-        print("===============")
-        print("===============")
-        print("===============")
-
         return traces 
 
-def generate_deterministic_trace(start_frame: int, end_frame: int, sampling_frequency:float, num_channels: int, dtype: str):
-    
-    times = np.arange(start=start_frame, stop=end_frame) / sampling_frequency
-    channel_phase = np.linspace(start=0, stop=2*np.pi, num=num_channels, endpoint=False, dtype=dtype)
-    frequency = 50 # Hz (20 spikes per second)
-    times_in_frequency = times * 2 * np.pi * frequency 
-    traces = np.sin(times_in_frequency[:, np.newaxis] + channel_phase[np.newaxis, :], dtype=dtype)
-    
-    traces_out = traces.copy()
-    traces = None
-    times = None 
-    times_in_frequency = None
-    channel_phase = None
-    
-    return traces_out    
 
 
 def generate_lazy_random_recording(full_traces_size_GiB: float, seed=None) -> LazyRandomRecording:
