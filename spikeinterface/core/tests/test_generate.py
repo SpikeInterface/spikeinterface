@@ -41,8 +41,8 @@ def test_lazy_random_recording_process():
     excess_memory = memory_after_traces_MiB / (memory_after_instanciation_MiB + traces_size_MiB)
     assert excess_memory == pytest.approx(1.0, rel=1e-2)
 
-
-    print(f"{memory_after_instanciation_MiB=} - {traces_size_MiB=} - {memory_after_traces_MiB=} - {initial_memory_MiB=}")
+    print("Memory usage")
+    print(f"{initial_memory_MiB=} - {memory_after_instanciation_MiB=} - {traces_size_MiB=} - {memory_after_traces_MiB=}")
 
 
 def test_lazy_random_recording():
@@ -84,8 +84,8 @@ def test_lazy_random_recording():
 
     assert excess_memory == pytest.approx(1.0, rel=rel)
     
-    print("Memory stuff \n")
-    print(f"{memory_after_instanciation_MiB=} - {traces_size_MiB=} - {memory_after_traces_MiB=} - {initial_memory_MiB=}")
+    print("Memory usage")
+    print(f"{initial_memory_MiB=} - {memory_after_instanciation_MiB=} - {traces_size_MiB=} - {memory_after_traces_MiB=}")
 
 
 def test_generate_large_recording():
@@ -111,5 +111,5 @@ def test_generate_large_recording():
     excess_memory = memory_after_traces_GiB  / (memory_after_instanciation_GiB + full_traces_size_GiB)
     assert excess_memory == pytest.approx(1.0, rel=rel)  
 
-    print("Memory stuff \n")
+    print("Memory usage")
     print(f"{initial_memory_GiB=} - {memory_after_instanciation_GiB=} - {full_traces_size_GiB=} - {memory_after_traces_GiB=}")

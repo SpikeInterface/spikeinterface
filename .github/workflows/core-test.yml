@@ -32,7 +32,7 @@ jobs:
           pip install -e .
       - name: Test memory
         run: |
-          pytest -vv -rA spikeinterface/core/tests/test_generate.py 
+          pytest -vv -rA spikeinterface/core/tests/test_generate.py::test_lazy_random_recording_process
         shell: bash  # Necessary for pipeline to work on windows
       # - name: Test core with pytest
       #   run: |

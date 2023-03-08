@@ -482,7 +482,7 @@ class LazyRandomRecordingSegment(BaseRecordingSegment):
         print("===============")
         print("===============")
         print("===============")
-        print(f"The memory here before generating the traces")
+        print(f"The memory here after generating the traces")
         process = psutil.Process()
         print(f"Memory in MiB here {process.memory_info().rss / 1024 ** 2}")
         print("===============")
