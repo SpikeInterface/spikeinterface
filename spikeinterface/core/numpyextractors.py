@@ -27,7 +27,9 @@ class NumpyRecording(BaseRecording):
 
     def __init__(self, traces_list, sampling_frequency, t_starts=None, channel_ids=None):
         if isinstance(traces_list, list):
-            traces_list = [np.array(trace) for trace in traces_list]
+            all_elements_are_list = all(isinstance(e, list) for e in traces_list)
+            if all_elements_are_list:
+                traces_list = [np.array(trace) for trace in traces_list]
             assert all(isinstance(e, np.ndarray) for e in traces_list), f'must give a list of numpy array but gave {traces_list[0]}'
         else:
             assert isinstance(traces_list, np.ndarray), 'must give a list of numpy array'
