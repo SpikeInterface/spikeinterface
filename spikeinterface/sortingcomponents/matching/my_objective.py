@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import signal
 from spike_psvae.deconvolve import MatchPursuitObjectiveUpsample as Objective
 from dataclasses import dataclass
 
@@ -95,7 +96,10 @@ class MyObjective(Objective):
         self.n_unit = self.orig_n_unit * self.up_factor
 
         # Computing SVD for each template.
-        self.compress_templates()
+        (self.temporal,
+         self.singular,
+         self.spatial,
+         self.temporal_up) = self.compress_templates(self.temps, self.approx_rank, self.up_factor, self.n_time)
 
         # Compute pairwise convolution of filters
         self.pairwise_filter_conv()
@@ -181,6 +185,38 @@ class MyObjective(Objective):
         invisible_channels = np.logical_not(visible_channels)
         templates[:, invisible_channels] = 0.0
         return visible_channels
+
+
+    @classmethod
+    def compress_templates(cls, templates, approx_rank, up_factor, n_time):
+        templates_unit_time_channel = np.transpose(templates, [2, 0, 1]) # TODO: Define template order
+        temporal, singular, spatial = np.linalg.svd(templates_unit_time_channel)
+
+        # Keep only the strongest components
+        temporal = temporal[:, :, :approx_rank]
+        singular = singular[:, :approx_rank]
+        spatial = spatial[:, :approx_rank, :]
+
+        # Upsample the temporal components of the SVD -- i.e. upsample the reconstruction
+        if up_factor == 1: # Trivial Case
+            temporal = np.flip(temporal, axis=1)
+            temporal_up = temporal.copy()
+            return temporal, singular, spatial, temporal_up
+
+        num_samples = n_time * up_factor
+        temporal_up = signal.resample(temporal, num_samples, axis=1)
+
+        original_idx = np.arange(0, num_samples, up_factor) # indices of original data
+        shift_idx = np.arange(up_factor)[:, np.newaxis] # shift for each super-res template
+        shifted_idx = original_idx + shift_idx # array of all shifted template indices
+
+        temporal_up = np.reshape(temporal_up[:, shifted_idx, :], [-1, n_time, approx_rank])
+        temporal_up = temporal_up.astype(np.float32, casting='safe') # TODO: Redundant?
+
+        temporal = np.flip(temporal, axis=1)
+        temporal_up = np.flip(temporal_up, axis=1)
+        return temporal, singular, spatial, temporal_up
+
 
 
 
