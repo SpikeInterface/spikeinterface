@@ -1,3 +1,4 @@
+from pathlib import Path
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
@@ -26,6 +27,12 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
 
     def __init__(self, file_path, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
+        # do not load spike because this is slow
+        neo_kwargs['load_nev'] = False
+        # trick to avoid to select automatically the correct stream_id
+        suffix = Path(file_path).suffix
+        if '.ns' in suffix:
+            neo_kwargs['nsx_to_load'] = int(suffix[-1])
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
                                            stream_name=stream_name,
                                            all_annotations=all_annotations,
