@@ -47,6 +47,8 @@ class SpikesOnTracesPlotter(MplPlotter):
             spike_frames = sorting.get_unit_spike_train(unit, segment_index=segment_index)
             spike_start, spike_end = np.searchsorted(spike_frames, frame_range)
             
+            chan_ids = dp.sparsity.unit_id_to_channel_ids[unit]
+            
             spike_frames_to_plot = spike_frames[spike_start:spike_end]
             
             if dp.timeseries["mode"] == "map":
@@ -80,7 +82,7 @@ class SpikesOnTracesPlotter(MplPlotter):
                     
                     for i, chan_id in enumerate(dp.timeseries["channel_ids"]):
                         offset = vspacing * (n - 1 - i)
-                        if chan_id in dp.sparsity[unit]:
+                        if chan_id in chan_ids:
                             l = ax.plot(times_r, offset + waveforms_r[:, i], color=dp.unit_colors[unit])
                             if not label_set:
                                 handles.append(l[0])
