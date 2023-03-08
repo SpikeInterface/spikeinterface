@@ -21,7 +21,7 @@ def test_matching_psvae():
     template_index_to_unit_id = np.array(template_index_to_unit_id)
     param_sets = {
         0 : dict(lambd=0, n_jobs=1, template_index_to_unit_id=None, upsample=1),
-        1 : dict(lambd=0, n_jobs=2, template_index_to_unit_id=template_index_to_unit_id),
+        1 : dict(lambd=0, n_jobs=2, template_index_to_unit_id=template_index_to_unit_id, vis_su=10),
     }
     for params in param_sets.values():
         print(f"{params = }")

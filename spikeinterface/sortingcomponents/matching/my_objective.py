@@ -86,10 +86,9 @@ class MyObjective(Objective):
          self.unit_up_factor,
          self.up_up_map) = self.upsample_templates_mp(self.temps, self.params.upsample, self.n_unit)
 
-        self.vis_chan = np.ptp(self.temps, axis=0) > self.vis_su_threshold
+        self.vis_chan = self.spatially_mask_templates(self.temps, self.vis_su_threshold)
         self.unit_overlap = self.template_overlaps(self.vis_chan, self.up_factor)
-        self.spatially_mask_templates()
-        # Upsample the templates
+
         # Index of the original templates prior to
         # upsampling them.
         self.orig_n_unit = self.n_unit
@@ -174,6 +173,14 @@ class MyObjective(Objective):
         unit_overlap = unit_overlap > 0
         unit_overlap = np.repeat(unit_overlap, up_factor, axis=0)
         return unit_overlap
+
+
+    @classmethod
+    def spatially_mask_templates(cls, templates, visibility_threshold):
+        visible_channels = np.ptp(templates, axis=0) > visibility_threshold
+        invisible_channels = np.logical_not(visible_channels)
+        templates[:, invisible_channels] = 0.0
+        return visible_channels
 
 
 
