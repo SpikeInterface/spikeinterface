@@ -219,8 +219,42 @@ class MyObjective(Objective):
         if self.multi_processing:
             raise NotImplementedError # TODO: Fold in spikeinterface multi-processing if necessary
         units = np.unique(self.up_up_map)
-        self.pairwise_conv = self.conv_filter(units, self.temporal, self.temporal_up, self.singular, self.spatial)
+        self.pairwise_conv = self.conv_filter(units, self.temporal, self.temporal_up, self.singular, self.spatial,
+                                              self.n_time, self.unit_overlap, self.up_factor, self.vis_chan,
+                                              self.approx_rank)
 
+
+    @classmethod
+    def conv_filter(cls, unit_array, temporal, temporal_up, singular, spatial,
+                    n_time, unit_overlap, up_factor, vis_chan, approx_rank):
+        conv_res_len = (n_time * 2) - 1  # TODO: convolution length as a function
+        pairwise_conv_array = []
+        for unit in unit_array:
+            n_overlap = np.sum(unit_overlap[unit, :])
+            orig_unit = unit // up_factor
+            pairwise_conv = np.zeros([n_overlap, conv_res_len], dtype=np.float32)
+
+            # Reconstruct unit template from SVD Matrices
+            temporal_up_scaled = temporal_up[unit] * singular[orig_unit][np.newaxis, :]
+            template_reconstructed = np.matmul(temporal_up_scaled, spatial[orig_unit, :, :])
+            template_reconstructed = np.flipud(template_reconstructed)
+
+            # TODO : Make order consistent with compute_objective (units and then rank or rank and then units?)
+            units_are_overlapping = unit_overlap[unit, :]
+            overlapping_units = np.where(units_are_overlapping)[0]
+            for j, unit2 in enumerate(overlapping_units):
+                temporal_overlapped = temporal[unit2]
+                singular_overlapped = singular[unit2]
+                spatial_overlapped = spatial[unit2]
+                visible_overlapped_channels = vis_chan[:, unit2]
+                visible_template = template_reconstructed[:, visible_overlapped_channels]
+                spatial_filters = spatial_overlapped[:approx_rank, visible_overlapped_channels].T
+                spatially_filtered_template = np.matmul(visible_template, spatial_filters)
+                scaled_filtered_template = spatially_filtered_template * singular_overlapped
+                for i in range(approx_rank):
+                    pairwise_conv[j, :] += np.convolve(scaled_filtered_template[:, i], temporal_overlapped[:, i], 'full')
+            pairwise_conv_array.append(pairwise_conv)
+        return pairwise_conv_array
 
 
 
