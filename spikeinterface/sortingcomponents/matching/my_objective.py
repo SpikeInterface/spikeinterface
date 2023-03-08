@@ -86,7 +86,7 @@ class MyObjective(Objective):
          self.unit_up_factor,
          self.up_up_map) = self.upsample_templates_mp(int(self.params.upsample))
 
-        self.visible_chans()
+        self.vis_chan = np.ptp(self.temps, axis=0) > self.vis_su_threshold
         self.template_overlaps()
         self.spatially_mask_templates()
         # Upsample the templates
