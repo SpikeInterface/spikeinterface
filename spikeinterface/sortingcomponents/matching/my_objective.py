@@ -82,7 +82,9 @@ class MyObjective(Objective):
         # Upsample and downsample time shifted versions
         # Dynamic Upsampling Setup; function for upsampling based on PTP
         # Cat: TODO find better ptp-> upsample function
-        self.upsample_templates_mp(int(self.params.upsample))
+        (self.up_factor,
+         self.unit_up_factor,
+         self.up_up_map) = self.upsample_templates_mp(int(self.params.upsample))
 
         self.visible_chans()
         self.template_overlaps()
@@ -137,3 +139,29 @@ class MyObjective(Objective):
         # window around peak for valid spikes.
         # (This is the actual refractory condition we enforce.)
         self.adjusted_refrac_radius = self.params.refractory_period_frames
+
+
+    def upsample_templates_mp(self, max_upsample):
+        assert max_upsample >= 1, "upsample must be a positive integer"
+        if max_upsample == 1: # Trivial Case
+            up_factor = max_upsample
+            unit_up_factor = np.ones(self.n_unit, dtype=int)
+            up_up_map = np.arange(self.n_unit * up_factor)
+            return up_factor, unit_up_factor, up_up_map
+
+        # Compute appropriate upsample factor for each template
+        template_range = np.max( np.ptp(self.temps, axis=0), axis=0 )
+        unit_up_factor = np.power(4, np.floor( np.log2(template_range) )) # Why this computation?
+        up_factor_unitmax = int(np.max(unit_up_factor))
+        up_factor = np.clip(up_factor_unitmax, 1, max_upsample)
+        unit_up_factor = np.clip(unit_up_factor.astype(np.int32), 1, max_upsample)
+        up_up_map = np.zeros(self.n_unit*up_factor, dtype=np.int32)
+
+        for i in range(self.n_unit):
+            start_idx, stop_idx = i * up_factor, (i+1) * up_factor
+            skip = up_factor // unit_up_factor[i]
+            map_idx = start_idx + np.arange(0, up_factor, skip).repeat(skip)
+            up_up_map[start_idx:stop_idx] = map_idx
+
+        return up_factor, unit_up_factor, up_up_map
+
