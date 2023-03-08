@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segment=20, 
                            chunk_size=10000, concatenated=True, seed=0, margin_frames=0):
     """
