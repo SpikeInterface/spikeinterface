@@ -479,7 +479,8 @@ if __name__ == '__main__':
     if verbose:
         print("******")
         print("Container started with the following paths")
-        print(si_dev_path_unix, si_source_folder)
+        if install_si_from_source:
+            print(si_dev_path_unix, si_source_folder)
     
     # check if container contains spikeinterface already
     cmd_1 = ['python', '-c', 'import spikeinterface; print(spikeinterface.__version__)']
