@@ -489,7 +489,7 @@ class LazyRandomRecordingSegment(BaseRecordingSegment):
         print("===============")
         print("===============")
 
-        return traces 
+        return traces_out 
 
 
 
