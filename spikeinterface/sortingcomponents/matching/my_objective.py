@@ -1,6 +1,5 @@
 import numpy as np
 from scipy import signal
-from spike_psvae.deconvolve import MatchPursuitObjectiveUpsample as Objective
 from dataclasses import dataclass
 
 @dataclass
@@ -24,8 +23,8 @@ class ObjectiveParameters:
     refractory_period_frames: int = 10
 
 
-class MyObjective(Objective):
-    """Wrapper for MatchPursuitObjectiveUpsample"""
+class MyObjective:
+    """Refactored Version of MatchPursuitObjectiveUpsample from Spike-PSVAE"""
 
     def __init__(self, templates, **params):
         # Unpack params
@@ -99,7 +98,10 @@ class MyObjective(Objective):
         self.temporal, self.singular, self.spatial, self.temporal_up = svd_matrices
 
         # Compute pairwise convolution of filters
-        self.pairwise_filter_conv()
+        self.pairwise_conv = self.pairwise_filter_conv(self.multi_processing, self.up_up_map, self.temporal,
+                                                       self.temporal_up, self.singular, self.spatial, self.n_time,
+                                                       self.unit_overlap, self.up_factor, self.vis_chan,
+                                                       self.approx_rank)
 
         # compute squared norm of templates
         self.norm = np.zeros(self.orig_n_unit, dtype=np.float32)
@@ -215,13 +217,15 @@ class MyObjective(Objective):
         return temporal, singular, spatial, temporal_up
 
 
-    def pairwise_filter_conv(self):
-        if self.multi_processing:
+    @classmethod
+    def pairwise_filter_conv(cls, multi_processing, up_up_map, temporal, temporal_up, singular, spatial, n_time,
+                             unit_overlap, up_factor, vis_chan, approx_rank):
+        if multi_processing:
             raise NotImplementedError # TODO: Fold in spikeinterface multi-processing if necessary
-        units = np.unique(self.up_up_map)
-        self.pairwise_conv = self.conv_filter(units, self.temporal, self.temporal_up, self.singular, self.spatial,
-                                              self.n_time, self.unit_overlap, self.up_factor, self.vis_chan,
-                                              self.approx_rank)
+        units = np.unique(up_up_map)
+        pairwise_conv = cls.conv_filter(units, temporal, temporal_up, singular, spatial, n_time,
+                                        unit_overlap, up_factor, vis_chan, approx_rank)
+        return pairwise_conv
 
 
     @classmethod
