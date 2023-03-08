@@ -47,7 +47,7 @@ class SpikesOnTracesPlotter(MplPlotter):
             spike_frames = sorting.get_unit_spike_train(unit, segment_index=segment_index)
             spike_start, spike_end = np.searchsorted(spike_frames, frame_range)
             
-            chan_inds = dp.sparsity.unit_id_to_channel_indices[unit]
+            chan_ids = dp.sparsity.unit_id_to_channel_ids[unit]
             
             spike_frames_to_plot = spike_frames[spike_start:spike_end]
             
