@@ -397,11 +397,6 @@ class LazyRandomRecording(BaseRecording):
         A lazy recording that generates random samples if and only if `get_traces` is called.
         Intended for testing memory problems.
 
-        Note that get_traces is no consistent across calls. That is, get_traces(0, 10, :) may not be the same
-        as get_traces(0, 10, :). This is because the random numbers are generated on the fly.
-
-        For generate a consistent recording, use the `generate_recording` function.
-
 
         Parameters
         ----------
@@ -412,7 +407,7 @@ class LazyRandomRecording(BaseRecording):
         num_channels : int
             The number of channels
         dtype : np.dtype
-            The dtype of the recording, by default np.float32
+            The dtype of the recording, by default np.float32. Note that only np.float32 and np.float65 are supported
         seed : int, optional
             The seed for np.random.default_rng, by default None        
         """
@@ -420,11 +415,13 @@ class LazyRandomRecording(BaseRecording):
         dtype = np.dtype(dtype).name   # Cast to string for serialization
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
 
-        self.seed = seed 
+        self.seed = seed if seed is not None else 0
 
-        for duration in durations:
+        for index, duration in enumerate(durations):
+            segment_seed = self.seed + index
             rec_segment = LazyRandomRecordingSegment(
-                duration=duration, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype, seed=seed
+                duration=duration, sampling_frequency=sampling_frequency, num_channels=num_channels,
+                dtype=dtype, seed=segment_seed
             )
             self.add_recording_segment(rec_segment)
 
@@ -445,6 +442,13 @@ class LazyRandomRecordingSegment(BaseRecordingSegment):
         self.num_channels = num_channels
         self.dtype = dtype 
 
+        # Random numbers characterising the channels, need to be done outside for consistency
+        self.rng = np.random.default_rng(seed=self.seed)        
+        self.channel_phases = self.rng.uniform(low=0, high=2*np.pi, size=self.num_channels)
+        self.frequencies = 1.0 + self.rng.exponential(scale=1.0, size=self.num_channels)
+        self.amplitudes = self.rng.normal(loc=70, scale=10.0, size=self.num_channels)
+        self.amplitudes *= self.rng.choice([-1, 1], size=self.num_channels)
+        
     def get_num_samples(self):
         return self.num_samples
     
@@ -453,18 +457,43 @@ class LazyRandomRecordingSegment(BaseRecordingSegment):
         start_frame = 0 if start_frame is None else max(start_frame, 0)
         end_frame = self.num_samples if end_frame is None else min(end_frame, self.num_samples)
         
-        times = np.arange(start=start_frame, stop=end_frame) / self.sampling_frequency
-        channel_phase = np.linspace(start=0, stop=2*np.pi, num=self.num_channels, endpoint=False, dtype=self.dtype)
-        frequency = 50 # Hz (20 spikes per second)
-        times_in_frequency = times * 2 * np.pi * frequency 
-        traces = np.sin(times_in_frequency[:, np.newaxis] + channel_phase[np.newaxis, :], dtype=self.dtype)
-
+        traces = self._deterministic_traces(start_frame=start_frame, end_frame=end_frame)
+        
         traces = traces if channel_indices is None else traces[:, channel_indices]
         
         return traces 
+    
+    def _deterministic_traces(self, start_frame: int, end_frame: int) -> np.ndarray:
+        """
+        Produces a deterministic trace for a given start and end frame.
+        
+        Note that the out arguments are important to avoid creating memory allocations
+        """
 
+        num_samples = end_frame - start_frame 
+        times = np.arange(start=start_frame, stop=end_frame, dtype=self.dtype)
+        times = np.repeat(times, repeats=self.num_channels).reshape(num_samples, self.num_channels)
+        times = np.multiply(times, (2 * np.pi * self.frequencies) / self.sampling_frequency, out=times, dtype=self.dtype)   
+        
+        # Each channel has its own phase
+        times = np.add(times, self.channel_phases, dtype=self.dtype, out=times)
+        traces = np.sin(times, dtype=self.dtype, out=times)
+        
+        # This makes the peaks sharp
+        traces = np.power(traces, 10, dtype=self.dtype, out=traces)
+        # Adds diversity in amplitudes to the traces
+        traces = np.multiply(self.amplitudes, traces,  dtype=self.dtype, out=traces)   
+        
+        return traces
 
+    def _random_traces(self, start_frame: int, end_frame: int) -> np.ndarray:
 
+        unique_seed_hash = (start_frame, end_frame, self.seed)
+        local_rng = np.random.default_rng(seed=unique_seed_hash)
+        traces = local_rng.random(size=(end_frame - start_frame, self.num_channels), dtype=self.dtype)
+        
+        return traces
+        
 def generate_lazy_random_recording(full_traces_size_GiB: float, seed=None) -> LazyRandomRecording:
     """
     Generate a large lazy recording.
