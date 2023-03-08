@@ -470,14 +470,17 @@ class LazyRandomRecordingSegment(BaseRecordingSegment):
         Note that the out arguments are important to avoid creating memory allocations
         """
 
-        num_samples = end_frame - start_frame 
-        times = np.arange(start=start_frame, stop=end_frame, dtype=self.dtype)
-        times = np.repeat(times, repeats=self.num_channels).reshape(num_samples, self.num_channels)
+        # Allocate memory for the traces and use this reference throughout this function to avoid extra memory
+        num_samples = end_frame - start_frame
+        traces = np.ones((num_samples, self.num_channels), dtype=self.dtype)
+        
+        times = np.arange(start=start_frame, stop=end_frame, dtype=self.dtype).reshape(num_samples, 1)
+        times = np.multiply(times, traces, dtype=self.dtype, out=traces)
         times = np.multiply(times, (2 * np.pi * self.frequencies) / self.sampling_frequency, out=times, dtype=self.dtype)   
         
         # Each channel has its own phase
-        times = np.add(times, self.channel_phases, dtype=self.dtype, out=times)
-        traces = np.sin(times, dtype=self.dtype, out=times)
+        times = np.add(times, self.channel_phases, dtype=self.dtype, out=traces)
+        traces = np.sin(times, dtype=self.dtype, out=traces)
         
         # This makes the peaks sharp
         traces = np.power(traces, 10, dtype=self.dtype, out=traces)
