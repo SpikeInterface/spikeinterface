@@ -9,7 +9,7 @@ from spikeinterface.core.generate import LazyRandomRecording, generate_lazy_rand
 
 def test_lazy_random_recording():
     bytes_to_MiB_factor = 1024 ** 2
-    rel = 0.1  # relative tolerance
+    rel = 0.01  # relative tolerance
 
     sampling_frequency = 30000  # Hz
     durations = [1.0]
@@ -53,7 +53,7 @@ def test_lazy_random_recording():
 def test_generate_large_recording():
     bytes_to_GiB_factor = 1024 ** 3
     full_traces_size_GiB = 1.0
-    rel = 0.1  # Relative tolerance on error
+    rel = 0.01  # relative tolerance
 
     mem_info = psutil.virtual_memory()
     initial_memory_GiB = (mem_info.total - mem_info.available) / bytes_to_GiB_factor 
