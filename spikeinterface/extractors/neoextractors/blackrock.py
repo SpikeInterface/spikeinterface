@@ -25,7 +25,8 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
     NeoRawIOClass = 'BlackrockRawIO'
     name = "blackrock"
 
-    def __init__(self, file_path, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
+    def __init__(self, file_path, stream_id=None, stream_name=None, block_index=None,
+                 all_annotations=False, use_names_as_ids=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         # do not load spike because this is slow
         neo_kwargs['load_nev'] = False
@@ -36,6 +37,7 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
                                            stream_name=stream_name,
                                            all_annotations=all_annotations,
+                                           use_names_as_ids=use_names_as_ids,
                                            **neo_kwargs)
         self._kwargs.update({'file_path': str(file_path)})
 
