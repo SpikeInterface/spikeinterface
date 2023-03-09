@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.97.1.rst
   releases/0.97.0.rst
   releases/0.96.1.rst
   releases/0.96.0.rst
@@ -28,6 +29,12 @@ Release notes
 
 
 Version 0.97.1
+==============
+
+* Minor release with some bug fixes and minor new features
+
+
+Version 0.97.0
 ==============
 
 * Implemented "sparse" waveforms in core and propagated to all modules:
