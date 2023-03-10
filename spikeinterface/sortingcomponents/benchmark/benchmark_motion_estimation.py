@@ -110,8 +110,8 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         self.compute_gt_motion()
 
-        # align gt motion and motion on the time bin
-        self.motion +=  self.gt_motion[0, :].mean() - self.motion[0, :].mean()
+        # align globally gt_motion and motion to avoid offsets
+        self.motion += np.median(self.gt_motion - self.motion)
 
         ## save folder
         if self.folder is not None:
@@ -126,8 +126,8 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         self.compute_gt_motion()
 
-        # align gt motion and motion on the time bin
-        self.motion +=  self.gt_motion[0, :].mean() - self.motion[0, :].mean()
+        # align globally gt_motion and motion to avoid offsets
+        self.motion += np.median(self.gt_motion - self.motion)
         self.run_times['estimate_motion'] = t4 - t3
 
         ## save folder
@@ -137,8 +137,14 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
     def compute_gt_motion(self):
         self.gt_unit_positions, _ = mr.extract_units_drift_vector(self.mearec_filename, time_vector=self.temporal_bins)
-        unit_motions = self.gt_unit_positions - self.gt_unit_positions[0, :]
-        unit_positions = np.mean(self.gt_unit_positions, axis=0)
+
+        template_locations = np.array(mr.load_recordings(self.mearec_filename).template_locations)
+        assert len(template_locations.shape) == 3
+        mid = template_locations.shape[1] //2
+        unit_mid_positions = template_locations[:, mid, 2]
+        
+        unit_motions = self.gt_unit_positions - unit_mid_positions
+        # unit_positions = np.mean(self.gt_unit_positions, axis=0)
 
         if self.spatial_bins is None:
             self.gt_motion = np.mean(unit_motions, axis=1)[:, None]
@@ -150,7 +156,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
             # time, units
             self.gt_motion = np.zeros_like(self.motion)
             for t in range(self.gt_unit_positions.shape[0]):
-                f = scipy.interpolate.interp1d(unit_positions, unit_motions[t, :], fill_value="extrapolate")
+                f = scipy.interpolate.interp1d(unit_mid_positions, unit_motions[t, :], fill_value="extrapolate")
                 self.gt_motion[t, :] = f(self.spatial_bins)
 
     def plot_true_drift(self, scaling_probe=1.5, figsize=(15, 10), axes=None):
@@ -414,7 +420,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         ax.set_xlabel('time (s)')
         _simpleaxis(ax)
 
-    def view_errors(self, figsize=(15, 10)):
+    def view_errors(self, figsize=(15, 10), lim=None):
         fig = plt.figure(figsize=figsize)
         gs = fig.add_gridspec(2, 2)
 
@@ -430,6 +436,8 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         ax.set_ylabel('depth (um)')
         ax.set_xlabel('time (s)')
         ax.set_title(self.title)
+        if lim is not None:
+            im.set_clim(0, lim)
 
         ax = fig.add_subplot(gs[1, 0])
         mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
@@ -437,6 +445,8 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         ax.set_xlabel('time (s)')
         ax.set_ylabel('error')
         _simpleaxis(ax)
+        if lim is not None:
+            ax.set_ylim(0, lim)
 
         ax = fig.add_subplot(gs[1, 1])
         depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
@@ -446,6 +456,8 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         ax.set_xlabel('depth (um)')
         ax.set_ylabel('error')
         _simpleaxis(ax)
+        if lim is not None:
+            ax.set_ylim(0, lim)
 
 
 def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colors=None):

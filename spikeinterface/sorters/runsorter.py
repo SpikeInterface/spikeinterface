@@ -476,7 +476,8 @@ if __name__ == '__main__':
     if verbose:
         print('Starting container')
     container_client.start()
-    if verbose:
+
+    if verbose and install_si_from_source:
         print("******")
         print("Container started with the following paths")
         print(si_dev_path_unix, si_source_folder)
