@@ -18,9 +18,9 @@ There are some cases where users will need to install the spike sorting algorith
 are on a system where it is infeasible to run docker or singularity containers, or if you are actively developing the
 spike sorting software, you will likely need to install each spike sorter yourself.
 
-Some of theses sorters are written in Matlab, so you will also to install Matlab if you want
-to use them (Kilosort, Kilosort2, Ironclust, ...)
-Some of then will also need some computing library like CUDA (Kilosort, Kilosort2, Ironclust (optional)) or
+Some of theses sorters are written in Matlab, so you will also need to install Matlab if you want
+to use them (Kilosort, Kilosort2, Ironclust, ...).
+Some of then will also need some computing libraries like CUDA (Kilosort, Kilosort2, Ironclust (optional)) or
 opencl (Tridesclous) to use hardware acceleration (GPU).
 
 Here is a list of the implemented wrappers and some instructions to install them on your local machine.
@@ -275,8 +275,8 @@ SpykingCircus2
 ^^^^^^^^^^^^^^
 
 This is a upgraded version of SpykingCircus, natively written in SpikeInterface. 
-The main differences are located in the clustering (now using on-the-fly features and less prone to find 
-noise clusters), and in the template-matching procedure, which is now a full orthogonal matching pursuit, 
+The main differences are located in the clustering (now using on-the-fly features and less prone to finding 
+noise clusters), and in the template-matching procedure, which is now a fully orthogonal matching pursuit, 
 working not only at peak times but at all times, recovering more spikes close to noise thresholds.
 
 * Python, requires HDBSCAN
