@@ -121,7 +121,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         self.set_property('gain_to_uV', final_gains)
         self.set_property('offset_to_uV', final_offsets)
-        if not use_names_as_ids :
+        if not use_names_as_ids:
             self.set_property('channel_name', signal_channels["name"])
 
         if all_annotations:
