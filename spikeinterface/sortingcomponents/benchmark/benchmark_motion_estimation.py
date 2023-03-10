@@ -110,7 +110,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         self.compute_gt_motion()
 
-        # align globaly gt_motion and motion to avoid offsets
+        # align globally gt_motion and motion to avoid offsets
         self.motion += np.median(self.gt_motion - self.motion)
 
         ## save folder
