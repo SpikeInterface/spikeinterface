@@ -49,6 +49,11 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             kwargs['stream_name'] = stream_name
         if stream_id is not None:
             kwargs['stream_id'] = stream_id
+        if use_names_as_ids is not None:
+            kwargs['use_names_as_ids'] = use_names_as_ids
+        else:
+            use_names_as_ids = False
+
 
         stream_channels = self.neo_reader.header['signal_streams']
         stream_names = list(stream_channels['name'])
