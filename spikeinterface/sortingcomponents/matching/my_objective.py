@@ -84,22 +84,19 @@ class MyObjective:
 
         # Upsample and downsample time shifted versions
         self.up_factor = self.params.upsample
-        self.jittered_ids = np.arange(self.n_templates * self.up_factor)
+        self.n_jittered = self.n_templates * self.up_factor
+        self.jittered_ids = np.arange(self.n_jittered)
 
         self.vis_chan = self.spatially_mask_templates(self.temps, self.vis_su_threshold)
         self.unit_overlap = self.template_overlaps(self.vis_chan, self.up_factor)
 
-        # Index of the original templates prior to
-        # upsampling them.
-        self.n_jittered = self.n_templates * self.up_factor
-
         # Computing SVD for each template.
         svd_matrices = self.compress_templates(self.temps, self.approx_rank, self.up_factor, self.n_time)
-        self.temporal, self.singular, self.spatial, self.temporal_up = svd_matrices
+        self.temporal, self.singular, self.spatial, self.temporal_jittered = svd_matrices
 
         # Compute pairwise convolution of filters
         self.pairwise_conv = self.pairwise_filter_conv(self.multi_processing, self.jittered_ids, self.temporal,
-                                                       self.temporal_up, self.singular, self.spatial, self.n_time,
+                                                       self.temporal_jittered, self.singular, self.spatial, self.n_time,
                                                        self.unit_overlap, self.up_factor, self.vis_chan,
                                                        self.approx_rank)
 
@@ -142,35 +139,7 @@ class MyObjective:
         # (This is the actual refractory condition we enforce.)
         self.adjusted_refrac_radius = self.params.refractory_period_frames
 
-
-    @classmethod
-    def upsample_templates_mp(cls, temps, max_upsample, n_unit):
-        """This method is deprecated in favor of a static upsampling factor"""
-        assert max_upsample >= 1, "upsample must be a positive integer"
-        if max_upsample == 1: # Trivial Case
-            up_factor = max_upsample
-            unit_up_factor = np.ones(n_unit, dtype=int)
-            jittered_ids = np.arange(n_unit * up_factor)
-            return up_factor, unit_up_factor, jittered_ids
-
-        # Compute appropriate upsample factor for each template
-        template_range = np.max( np.ptp(temps, axis=0), axis=0 )
-        unit_up_factor = np.power(4, np.floor( np.log2(template_range) )) # Why this computation?
-        up_factor_unitmax = int(np.max(unit_up_factor))
-        up_factor = np.clip(up_factor_unitmax, 1, max_upsample)
-        unit_up_factor = np.clip(unit_up_factor.astype(np.int32), 1, max_upsample)
-        jittered_ids = np.zeros(n_unit*up_factor, dtype=np.int32)
-
-        for i in range(n_unit):
-            start_idx, stop_idx = i * up_factor, (i+1) * up_factor
-            skip = up_factor // unit_up_factor[i]
-            map_idx = start_idx + np.arange(0, up_factor, skip).repeat(skip)
-            jittered_ids[start_idx:stop_idx] = map_idx
-        print(f"{jittered_ids = }")
-
-        return up_factor, unit_up_factor, jittered_ids
-
-
+    # TODO: Replace vis_chan, template_overlaps & spatially_mask_templates with spikeinterface sparsity representation
     @classmethod
     def template_overlaps(cls, vis_chan, up_factor):
         vis = vis_chan.T
@@ -201,57 +170,57 @@ class MyObjective:
         # Upsample the temporal components of the SVD -- i.e. upsample the reconstruction
         if up_factor == 1: # Trivial Case
             temporal = np.flip(temporal, axis=1)
-            temporal_up = temporal.copy()
-            return temporal, singular, spatial, temporal_up
+            temporal_jittered = temporal.copy()
+            return temporal, singular, spatial, temporal_jittered
 
         num_samples = n_time * up_factor
-        temporal_up = signal.resample(temporal, num_samples, axis=1)
+        temporal_jittered = signal.resample(temporal, num_samples, axis=1)
 
         original_idx = np.arange(0, num_samples, up_factor) # indices of original data
         shift_idx = np.arange(up_factor)[:, np.newaxis] # shift for each super-res template
         shifted_idx = original_idx + shift_idx # array of all shifted template indices
 
-        temporal_up = np.reshape(temporal_up[:, shifted_idx, :], [-1, n_time, approx_rank])
-        temporal_up = temporal_up.astype(np.float32, casting='safe') # TODO: Redundant?
+        temporal_jittered = np.reshape(temporal_jittered[:, shifted_idx, :], [-1, n_time, approx_rank])
+        temporal_jittered = temporal_jittered.astype(np.float32, casting='safe') # TODO: Redundant?
 
         temporal = np.flip(temporal, axis=1)
-        temporal_up = np.flip(temporal_up, axis=1)
-        return temporal, singular, spatial, temporal_up
+        temporal_jittered = np.flip(temporal_jittered, axis=1)
+        return temporal, singular, spatial, temporal_jittered
 
 
     @classmethod
-    def pairwise_filter_conv(cls, multi_processing, jittered_ids, temporal, temporal_up, singular, spatial, n_time,
+    def pairwise_filter_conv(cls, multi_processing, jittered_ids, temporal, temporal_jittered, singular, spatial, n_time,
                              unit_overlap, up_factor, vis_chan, approx_rank):
         if multi_processing:
             raise NotImplementedError # TODO: Fold in spikeinterface multi-processing if necessary
-        pairwise_conv = cls.conv_filter(jittered_ids, temporal, temporal_up, singular, spatial, n_time,
+        pairwise_conv = cls.conv_filter(jittered_ids, temporal, temporal_jittered, singular, spatial, n_time,
                                         unit_overlap, up_factor, vis_chan, approx_rank)
         return pairwise_conv
 
 
     @classmethod
-    def conv_filter(cls, unit_array, temporal, temporal_up, singular, spatial,
+    def conv_filter(cls, jittered_ids, temporal, temporal_jittered, singular, spatial,
                     n_time, unit_overlap, up_factor, vis_chan, approx_rank):
         conv_res_len = (n_time * 2) - 1  # TODO: convolution length as a function
         pairwise_conv_array = []
-        for unit in unit_array:
-            n_overlap = np.sum(unit_overlap[unit, :])
-            orig_unit = unit // up_factor
+        for jittered_id in jittered_ids:
+            n_overlap = np.sum(unit_overlap[jittered_id, :])
+            template_id = jittered_id // up_factor
             pairwise_conv = np.zeros([n_overlap, conv_res_len], dtype=np.float32)
 
             # Reconstruct unit template from SVD Matrices
-            temporal_up_scaled = temporal_up[unit] * singular[orig_unit][np.newaxis, :]
-            template_reconstructed = np.matmul(temporal_up_scaled, spatial[orig_unit, :, :])
+            temporal_jittered_scaled = temporal_jittered[jittered_id] * singular[template_id][np.newaxis, :]
+            template_reconstructed = np.matmul(temporal_jittered_scaled, spatial[template_id, :, :])
             template_reconstructed = np.flipud(template_reconstructed)
 
             # TODO : Make order consistent with compute_objective (units and then rank or rank and then units?)
-            units_are_overlapping = unit_overlap[unit, :]
+            units_are_overlapping = unit_overlap[jittered_id, :]
             overlapping_units = np.where(units_are_overlapping)[0]
-            for j, unit2 in enumerate(overlapping_units):
-                temporal_overlapped = temporal[unit2]
-                singular_overlapped = singular[unit2]
-                spatial_overlapped = spatial[unit2]
-                visible_overlapped_channels = vis_chan[:, unit2]
+            for j, jittered_id2 in enumerate(overlapping_units):
+                temporal_overlapped = temporal[jittered_id2]
+                singular_overlapped = singular[jittered_id2]
+                spatial_overlapped = spatial[jittered_id2]
+                visible_overlapped_channels = vis_chan[:, jittered_id2]
                 visible_template = template_reconstructed[:, visible_overlapped_channels]
                 spatial_filters = spatial_overlapped[:approx_rank, visible_overlapped_channels].T
                 spatially_filtered_template = np.matmul(visible_template, spatial_filters)
@@ -261,6 +230,36 @@ class MyObjective:
             pairwise_conv_array.append(pairwise_conv)
         return pairwise_conv_array
 
+
+    # ------------------------------------------------------------------------------------------------------------------
+    # DEPRECATED
+    # ------------------------------------------------------------------------------------------------------------------
+    @classmethod
+    def upsample_templates_mp(cls, temps, max_upsample, n_unit):
+        """This method is deprecated in favor of a static upsampling factor"""
+        assert max_upsample >= 1, "upsample must be a positive integer"
+        if max_upsample == 1: # Trivial Case
+            up_factor = max_upsample
+            unit_up_factor = np.ones(n_unit, dtype=int)
+            jittered_ids = np.arange(n_unit * up_factor)
+            return up_factor, unit_up_factor, jittered_ids
+
+        # Compute appropriate upsample factor for each template
+        template_range = np.max( np.ptp(temps, axis=0), axis=0 )
+        unit_up_factor = np.power(4, np.floor( np.log2(template_range) )) # Why this computation?
+        up_factor_unitmax = int(np.max(unit_up_factor))
+        up_factor = np.clip(up_factor_unitmax, 1, max_upsample)
+        unit_up_factor = np.clip(unit_up_factor.astype(np.int32), 1, max_upsample)
+        jittered_ids = np.zeros(n_unit*up_factor, dtype=np.int32)
+
+        for i in range(n_unit):
+            start_idx, stop_idx = i * up_factor, (i+1) * up_factor
+            skip = up_factor // unit_up_factor[i]
+            map_idx = start_idx + np.arange(0, up_factor, skip).repeat(skip)
+            jittered_ids[start_idx:stop_idx] = map_idx
+        print(f"{jittered_ids = }")
+
+        return up_factor, unit_up_factor, jittered_ids
 
 
 
