@@ -77,6 +77,7 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
+    "cuda-python",
 ]
 
 widgets = [
@@ -109,9 +110,6 @@ test = [
 
     ## install tridesclous for testing ##
     "tridesclous>=1.6.6.1",
-
-    # Sorters
-    "cuda-python",
 
     ## sliding_nn
     "pymde",
