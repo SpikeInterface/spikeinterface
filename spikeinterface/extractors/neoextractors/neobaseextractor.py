@@ -37,7 +37,7 @@ class _NeoBaseExtractor:
 
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
     def __init__(self, stream_id=None, stream_name=None, 
-                 block_index=None, all_annotations=False, use_names_as_ids=False,
+                 block_index=None, all_annotations=False, use_names_as_ids=None,
                  **neo_kwargs):
 
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
