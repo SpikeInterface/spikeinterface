@@ -86,8 +86,8 @@ def compute_firing_rates(waveform_extractor):
     return firing_rates
 
 
-def compute_presence_ratios(waveform_extractor, bin_duration_s=60):
-    """Calculate the presence ratio, representing the fraction of time the unit is firing.
+def compute_presence_ratios(waveform_extractor, bin_duration_s=60.0, mean_fr_ratio_thres=0.0):
+    """Calculate the presence ratio, the fraction of time the unit is firing above a certain threshold.
 
     Parameters
     ----------
@@ -96,6 +96,9 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60):
     bin_duration_s : float, default: 60
         The duration of each bin in seconds. If the duration is less than this value, 
         presence_ratio is set to NaN
+    mean_fr_ratio_thres: float, default: 0
+        The unit is considered active in a bin if its firing rate during that bin
+        is strictly above `mean_fr_ratio_thres` times its mean firing rate throughout the recording.
 
     Returns
     -------
@@ -113,9 +116,17 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60):
 
     seg_lengths = [waveform_extractor.get_num_samples(i) for i in range(num_segs)]
     total_length = waveform_extractor.get_total_samples()
+    total_duration = waveform_extractor.get_total_duration()
     bin_duration_samples = int((bin_duration_s * waveform_extractor.sampling_frequency))
     num_bin_edges = total_length // bin_duration_samples + 1
     bin_edges = np.arange(num_bin_edges) * bin_duration_samples
+
+    mean_fr_ratio_thres = float(mean_fr_ratio_thres)
+    if mean_fr_ratio_thres < 0:
+        raise ValueError(
+            f"Expected positive float for `mean_fr_ratio_thres` param."
+            f"Provided value: {mean_fr_ratio_thres}"
+        )
 
     presence_ratios = {}
     if total_length < bin_duration_samples:
@@ -131,13 +142,22 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60):
                 spike_train.append(st)
             spike_train = np.concatenate(spike_train)
 
-            presence_ratios[unit_id] = presence_ratio(spike_train, total_length, bin_edges=bin_edges)
+            unit_fr = spike_train.size / total_duration
+            bin_n_spikes_thres = math.floor(unit_fr * bin_duration_s * mean_fr_ratio_thres)
+
+            presence_ratios[unit_id] = presence_ratio(
+                spike_train, 
+                total_length, 
+                bin_edges=bin_edges,
+                bin_n_spikes_thres=bin_n_spikes_thres,
+            )
 
     return presence_ratios
 
 
 _default_params["presence_ratio"] = dict(
-    bin_duration_s=60
+    bin_duration_s=60,
+    mean_fr_ratio_thres=0.0,
 )
 
 
@@ -749,7 +769,7 @@ _default_params["drift"] = dict(
 
 
 ### LOW-LEVEL FUNCTIONS ###
-def presence_ratio(spike_train, total_length, bin_edges=None, num_bin_edges=None):
+def presence_ratio(spike_train, total_length, bin_edges=None, num_bin_edges=None, bin_n_spikes_thres=0):
     """Calculate the presence ratio for a single unit
 
     Parameters
@@ -763,6 +783,8 @@ def presence_ratio(spike_train, total_length, bin_edges=None, num_bin_edges=None
     num_bin_edges : int, default: 101
         The number of bins edges to use to compute the presence ratio.
         (mutually exclusive with bin_edges).
+    bin_n_spikes_thres: int, default 0
+        Minimum number of spikes within a bin to consider the unit active
 
     Returns
     -------
@@ -771,6 +793,7 @@ def presence_ratio(spike_train, total_length, bin_edges=None, num_bin_edges=None
 
     """
     assert bin_edges is not None or num_bin_edges is not None, "Use either bin_edges or num_bin_edges"
+    assert bin_n_spikes_thres >= 0
     if bin_edges is not None:
         bins = bin_edges
         num_bin_edges = len(bin_edges)
@@ -778,7 +801,7 @@ def presence_ratio(spike_train, total_length, bin_edges=None, num_bin_edges=None
         bins = num_bin_edges
     h, _ = np.histogram(spike_train, bins=bins)
     
-    return np.sum(h > 0) / (num_bin_edges - 1)
+    return np.sum(h > bin_n_spikes_thres) / (num_bin_edges - 1)
 
 
 def isi_violations(spike_trains, total_duration_s,
