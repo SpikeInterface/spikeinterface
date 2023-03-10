@@ -13,7 +13,7 @@ from copy import deepcopy
 import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
-from .core_tools import check_json, is_dict_extractor, recursive_path_modifier, ExtractorJsonEncoder
+from .core_tools import check_json, is_dict_extractor, recursive_path_modifier, SIJsonEncoder
 from .job_tools import _shared_job_kwargs_doc
 
 class BaseExtractor:
@@ -482,7 +482,7 @@ class BaseExtractor:
         file_path = self._get_file_path(file_path, ['.json'])
         
         file_path.write_text(
-            json.dumps(dump_dict, indent=4, cls=ExtractorJsonEncoder),
+            json.dumps(dump_dict, indent=4, cls=SIJsonEncoder),
             encoding='utf8',
         )
 

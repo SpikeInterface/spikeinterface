@@ -81,7 +81,10 @@ def write_python(path, dict):
             else:
                 f.write(str(k) + " = " + str(v) + "\n")
 
-class ExtractorJsonEncoder(json.JSONEncoder):
+class SIJsonEncoder(json.JSONEncoder):
+    """
+    An encoder used to encode Spike interface objects to json
+    """
     def default(self, obj):
         # Over-write behaviors for datetime object
         if isinstance(obj, datetime.datetime):
