@@ -78,6 +78,7 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
+    "cuda-python",
 ]
 
 widgets = [
@@ -95,6 +96,7 @@ test = [
     # zarr is needed for testing
     "zarr",
     "xarray",
+    "huggingface_hub",
 
     # tridesclous
     "numpy<1.24",
