@@ -16,17 +16,17 @@ def test_matching_psvae():
     recording, gt_sorting = generate_gt_recording(job_kwargs, filepaths, verbose=verbose)
     gt_templates, we = generate_templates(recording, gt_sorting, job_kwargs, filepaths, verbose=verbose)
     duplicated_templates = np.concatenate((gt_templates, gt_templates[ [0] ]))
-    template_index_to_unit_id = list(range(7))
-    template_index_to_unit_id.append(0)
-    template_index_to_unit_id = np.array(template_index_to_unit_id)
+    template_ids2unit_ids = list(range(7))
+    template_ids2unit_ids.append(0)
+    template_ids2unit_ids = np.array(template_ids2unit_ids)
     param_sets = {
-        0 : dict(lambd=0, n_jobs=1, template_index_to_unit_id=None, upsample=1),
-        1 : dict(lambd=1, n_jobs=2, template_index_to_unit_id=template_index_to_unit_id, vis_su=10),
+        0 : dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, upsample=1),
+        1 : dict(lambd=1, n_jobs=2, template_ids2unit_ids=template_ids2unit_ids, upsample=3, vis_su=10),
     }
     for params in param_sets.values():
         print(f"{params = }")
         job_kwargs['n_jobs'] = params.pop('n_jobs')
-        if params['template_index_to_unit_id'] is None:
+        if params['template_ids2unit_ids'] is None:
             templates = gt_templates
         else:
             templates = duplicated_templates

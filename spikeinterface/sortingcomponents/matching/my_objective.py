@@ -19,7 +19,7 @@ class ObjectiveParameters:
     multi_processing: bool = False
     vis_su: float = 1
     verbose: bool = False
-    template_index_to_unit_id: np.ndarray = None
+    template_ids2unit_ids: np.ndarray = None
     refractory_period_frames: int = 10
 
 
@@ -41,17 +41,20 @@ class MyObjective:
         # templates --> self.temps
         assert templates.dtype == np.float32, "templates must have dtype np.float32"
         self.temps = templates.transpose(1, 2, 0)
-        self.n_time, self.n_chan, self.n_unit = self.temps.shape
+        self.n_time, self.n_chan, self.n_templates = self.temps.shape
 
         # handle grouped templates, as in the superresolution case
         # TODO: refactor grouped_index mapping
         self.grouped_temps = False
-        if self.params.template_index_to_unit_id is not None:
+        self.n_units = self.n_templates
+        if self.params.template_ids2unit_ids is not None:
             self.grouped_temps = True
-            assert self.params.template_index_to_unit_id.shape == (self.n_unit,)
+            self.unit_ids = np.unique(self.params.template_ids2unit_ids)
+            self.n_units = len(self.unit_ids)
+            assert self.params.template_ids2unit_ids.shape == (self.n_templates,)
             group_index = [
-                np.flatnonzero(self.params.template_index_to_unit_id == u)
-                for u in self.params.template_index_to_unit_id
+                np.flatnonzero(self.params.template_ids2unit_ids == u)
+                for u in self.params.template_ids2unit_ids
             ]
             self.max_group_size = max(map(len, group_index))
 
@@ -61,7 +64,7 @@ class MyObjective:
             # are part of its group. so that the array is not ragged,
             # we pad rows with -1s when their group is smaller than the
             # largest group.
-            self.group_index = np.full((self.n_unit, self.max_group_size), -1)
+            self.group_index = np.full((self.n_templates, self.max_group_size), -1)
             for j, row in enumerate(group_index):
                 self.group_index[j, : len(row)] = row
 
@@ -72,7 +75,7 @@ class MyObjective:
         self.scale_max = 1 + self.params.allowed_scale
 
         if self.verbose:
-            print("expected shape of templates loaded (n_times, n_chan, n_units):", self.temps.shape)
+            print("expected shape of templates loaded (n_times, n_chan, n_templates):", self.temps.shape)
             print(f"Instantiating MatchPursuitObjectiveUpsample on {self.params.t_end - self.params.t_start}",
                   f"seconds long recording with threshold {self.threshold}")
 
@@ -82,30 +85,29 @@ class MyObjective:
         # Upsample and downsample time shifted versions
         # Dynamic Upsampling Setup; function for upsampling based on PTP
         # Cat: TODO find better ptp-> upsample function
-        upsampling_factors = self.upsample_templates_mp(self.temps, self.params.upsample, self.n_unit)
-        self.up_factor, self.unit_up_factor, self.up_up_map = upsampling_factors
+        upsampling_factors = self.upsample_templates_mp(self.temps, self.params.upsample, self.n_templates)
+        self.up_factor, self.unit_up_factor, self.jittered_ids = upsampling_factors
 
         self.vis_chan = self.spatially_mask_templates(self.temps, self.vis_su_threshold)
         self.unit_overlap = self.template_overlaps(self.vis_chan, self.up_factor)
 
         # Index of the original templates prior to
         # upsampling them.
-        self.orig_n_unit = self.n_unit
-        self.n_unit = self.orig_n_unit * self.up_factor
+        self.n_jittered = self.n_templates * self.up_factor
 
         # Computing SVD for each template.
         svd_matrices = self.compress_templates(self.temps, self.approx_rank, self.up_factor, self.n_time)
         self.temporal, self.singular, self.spatial, self.temporal_up = svd_matrices
 
         # Compute pairwise convolution of filters
-        self.pairwise_conv = self.pairwise_filter_conv(self.multi_processing, self.up_up_map, self.temporal,
+        self.pairwise_conv = self.pairwise_filter_conv(self.multi_processing, self.jittered_ids, self.temporal,
                                                        self.temporal_up, self.singular, self.spatial, self.n_time,
                                                        self.unit_overlap, self.up_factor, self.vis_chan,
                                                        self.approx_rank)
 
         # compute squared norm of templates
-        self.norm = np.zeros(self.orig_n_unit, dtype=np.float32)
-        for i in range(self.orig_n_unit):
+        self.norm = np.zeros(self.n_templates, dtype=np.float32)
+        for i in range(self.n_templates):
             self.norm[i] = np.sum(
                 np.square(self.temps[:, self.vis_chan[:, i], i])
             )
@@ -145,12 +147,13 @@ class MyObjective:
 
     @classmethod
     def upsample_templates_mp(cls, temps, max_upsample, n_unit):
+        """This method is deprecated in favor of a static upsampling factor"""
         assert max_upsample >= 1, "upsample must be a positive integer"
         if max_upsample == 1: # Trivial Case
             up_factor = max_upsample
             unit_up_factor = np.ones(n_unit, dtype=int)
-            up_up_map = np.arange(n_unit * up_factor)
-            return up_factor, unit_up_factor, up_up_map
+            jittered_ids = np.arange(n_unit * up_factor)
+            return up_factor, unit_up_factor, jittered_ids
 
         # Compute appropriate upsample factor for each template
         template_range = np.max( np.ptp(temps, axis=0), axis=0 )
@@ -158,15 +161,16 @@ class MyObjective:
         up_factor_unitmax = int(np.max(unit_up_factor))
         up_factor = np.clip(up_factor_unitmax, 1, max_upsample)
         unit_up_factor = np.clip(unit_up_factor.astype(np.int32), 1, max_upsample)
-        up_up_map = np.zeros(n_unit*up_factor, dtype=np.int32)
+        jittered_ids = np.zeros(n_unit*up_factor, dtype=np.int32)
 
         for i in range(n_unit):
             start_idx, stop_idx = i * up_factor, (i+1) * up_factor
             skip = up_factor // unit_up_factor[i]
             map_idx = start_idx + np.arange(0, up_factor, skip).repeat(skip)
-            up_up_map[start_idx:stop_idx] = map_idx
+            jittered_ids[start_idx:stop_idx] = map_idx
+        print(f"{jittered_ids = }")
 
-        return up_factor, unit_up_factor, up_up_map
+        return up_factor, unit_up_factor, jittered_ids
 
 
     @classmethod
@@ -218,12 +222,11 @@ class MyObjective:
 
 
     @classmethod
-    def pairwise_filter_conv(cls, multi_processing, up_up_map, temporal, temporal_up, singular, spatial, n_time,
+    def pairwise_filter_conv(cls, multi_processing, jittered_ids, temporal, temporal_up, singular, spatial, n_time,
                              unit_overlap, up_factor, vis_chan, approx_rank):
         if multi_processing:
             raise NotImplementedError # TODO: Fold in spikeinterface multi-processing if necessary
-        units = np.unique(up_up_map)
-        pairwise_conv = cls.conv_filter(units, temporal, temporal_up, singular, spatial, n_time,
+        pairwise_conv = cls.conv_filter(jittered_ids, temporal, temporal_up, singular, spatial, n_time,
                                         unit_overlap, up_factor, vis_chan, approx_rank)
         return pairwise_conv
 

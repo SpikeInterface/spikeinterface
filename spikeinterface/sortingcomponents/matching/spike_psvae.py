@@ -129,7 +129,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
     @classmethod
     def compute_objective(cls, objective):
         conv_len = objective.data_len + objective.n_time - 1 # TODO: convolution length as a func
-        conv_shape = (objective.orig_n_unit, conv_len)
+        conv_shape = (objective.n_templates, conv_len)
         objective.conv_result = np.zeros(conv_shape, dtype=np.float32) # TODO: rename conv_result
         # TODO: vectorize this loop
         for rank in range(objective.approx_rank):
@@ -138,7 +138,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             spatially_filtered_data = np.matmul(spatial_filters, objective.data.T)
             scaled_filtered_data = spatially_filtered_data * objective.singular[:, [rank]]
             # TODO: vectorize this loop
-            for unit in range(objective.orig_n_unit):
+            for unit in range(objective.n_templates):
                 unit_data = scaled_filtered_data[unit, :]
                 unit_temporal_filter = temporal_filters[unit]
                 objective.conv_result[unit, :] += np.convolve(unit_data, unit_temporal_filter, mode='full')
@@ -196,7 +196,8 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
             unit_idx = np.flatnonzero(objective.unit_overlap[unit])
             idx = np.ix_(unit_idx, spiketrain_idx.ravel())
-            pconv = objective.pairwise_conv[objective.up_up_map[unit]]
+            #pconv = objective.pairwise_conv[objective.jittered_ids[unit]] # I think this indexing is redundant
+            pconv = objective.pairwise_conv[unit]
             np.subtract.at(objective.obj, idx, np.tile(2 * pconv, len(unit_spiketrain)))
 
             if not objective.no_amplitude_scaling:
