@@ -84,7 +84,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         mask = signal_channels['stream_id'] == stream_id
         signal_channels = signal_channels[mask]
 
-        if use_names_as_ids :
+        if use_names_as_ids:
             chan_names = signal_channels['name']
             assert chan_names.size == np.unique(chan_names).size,\
                 'use_names_as_ids=True is not possible, channel names are not unique'
