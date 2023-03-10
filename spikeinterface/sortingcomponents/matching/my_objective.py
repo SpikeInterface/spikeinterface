@@ -83,10 +83,8 @@ class MyObjective:
         self.end_sample = self.params.t_end * self.params.sampling_rate
 
         # Upsample and downsample time shifted versions
-        # Dynamic Upsampling Setup; function for upsampling based on PTP
-        # Cat: TODO find better ptp-> upsample function
-        upsampling_factors = self.upsample_templates_mp(self.temps, self.params.upsample, self.n_templates)
-        self.up_factor, self.unit_up_factor, self.jittered_ids = upsampling_factors
+        self.up_factor = self.params.upsample
+        self.jittered_ids = np.arange(self.n_templates * self.up_factor)
 
         self.vis_chan = self.spatially_mask_templates(self.temps, self.vis_su_threshold)
         self.unit_overlap = self.template_overlaps(self.vis_chan, self.up_factor)
