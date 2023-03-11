@@ -130,7 +130,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
     def compute_objective(cls, objective):
         conv_len = objective.data_len + objective.n_time - 1 # TODO: convolution length as a func
         conv_shape = (objective.n_templates, conv_len)
-        objective.conv_result = np.zeros(conv_shape, dtype=np.float32) # TODO: rename conv_result
+        objective.template_convolution = np.zeros(conv_shape, dtype=np.float32)
         # TODO: vectorize this loop
         for rank in range(objective.approx_rank):
             spatial_filters = objective.spatial[:, rank, :]
@@ -141,9 +141,9 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             for unit in range(objective.n_templates):
                 unit_data = scaled_filtered_data[unit, :]
                 unit_temporal_filter = temporal_filters[unit]
-                objective.conv_result[unit, :] += np.convolve(unit_data, unit_temporal_filter, mode='full')
+                objective.template_convolution[unit, :] += np.convolve(unit_data, unit_temporal_filter, mode='full')
 
-        obj = 2 * objective.conv_result - objective.norm[:, np.newaxis]
+        obj = 2 * objective.template_convolution - objective.norm[:, np.newaxis]
         return obj
 
 
@@ -204,7 +204,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
                 objective.obj[overlapping_templates, spike_start_idx:spike_stop_idx] -= 2*pconv
                 if not objective.no_amplitude_scaling:
                     pconv_scaled = pconv * spike_scaling
-                    objective.conv_result[overlapping_templates, spike_start_idx:spike_stop_idx] -= pconv_scaled
+                    objective.template_convolution[overlapping_templates, spike_start_idx:spike_stop_idx] -= pconv_scaled
 
             cls.enforce_refractory(objective, spiketrain)
 
@@ -243,7 +243,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             scalings = np.ones(len(non_refractory_indices))
         else:
             # the objective is (conv + 1/lambd)^2 / (norm + 1/lambd) - 1/lambd
-            obj_peaks_high_res = objective.conv_result[spike_unit_ids, peak_indices]
+            obj_peaks_high_res = objective.template_convolution[spike_unit_ids, peak_indices]
             obj_peaks_high_res = obj_peaks_high_res[:, non_refractory_indices]
             high_resolution_conv = signal.resample(obj_peaks_high_res, resample_factor, axis=0)
             norm_peaks = objective.norm[spike_unit_ids[non_refractory_indices]]
@@ -292,7 +292,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         objective.obj[unit_idx[:, np.newaxis], time_idx[:, 1:-1]] = -1 * np.inf
         # TODO : make both with and without amplitude scaling the same
         if not objective.no_amplitude_scaling:
-            objective.conv_result[unit_idx[:, np.newaxis], time_idx[:, 1:-1]] = -1 * np.inf
+            objective.template_convolution[unit_idx[:, np.newaxis], time_idx[:, 1:-1]] = -1 * np.inf
 
 
 
