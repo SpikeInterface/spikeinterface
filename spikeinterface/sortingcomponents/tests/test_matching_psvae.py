@@ -20,8 +20,8 @@ def test_matching_psvae():
     template_ids2unit_ids.append(0)
     template_ids2unit_ids = np.array(template_ids2unit_ids)
     param_sets = {
-        0 : dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, upsample=1),
         1 : dict(lambd=1, n_jobs=2, template_ids2unit_ids=template_ids2unit_ids, upsample=3, vis_su=10),
+        0: dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, upsample=1),
     }
     for params in param_sets.values():
         print(f"{params = }")

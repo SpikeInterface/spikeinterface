@@ -187,24 +187,24 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
     @classmethod
     def subtract_spike_train(cls, objective, spiketrain, scaling):
-        present_units = np.unique(spiketrain[:, 1])
+        present_jittered_ids = np.unique(spiketrain[:, 1])
+        # TODO: convolution length as a function
         convolution_resolution_len = objective.n_time * 2 - 1
-        for unit in present_units:
-            unit_mask = spiketrain[:, 1] == unit
-            unit_spiketrain = spiketrain[unit_mask, :]
-            spiketrain_idx = np.arange(0, convolution_resolution_len) + unit_spiketrain[:, :1]
+        for jittered_id in present_jittered_ids:
+            id_mask = spiketrain[:, 1] == jittered_id
+            id_spiketrain = spiketrain[id_mask, 0]
+            id_scaling = scaling[id_mask]
 
-            unit_idx = np.flatnonzero(objective.unit_overlap[unit])
-            idx = np.ix_(unit_idx, spiketrain_idx.ravel())
-            #pconv = objective.pairwise_conv[objective.jittered_ids[unit]] # I think this indexing is redundant
-            pconv = objective.pairwise_conv[unit]
-            np.subtract.at(objective.obj, idx, np.tile(2 * pconv, len(unit_spiketrain)))
-
-            if not objective.no_amplitude_scaling:
-                # None's add extra dimensions (lines things up with the ravel supposedly)
-                to_subtract = pconv[:, None, :] * scaling[unit_mask][None, :, None]
-                to_subtract = to_subtract.reshape(*pconv.shape[:-1], -1)
-                np.subtract.at(objective.conv_result, idx, to_subtract)
+            overlapping_templates = objective.unit_overlap[jittered_id]
+            # Note: pairwise_conv only has overlapping template convolutions already
+            pconv = objective.pairwise_conv[jittered_id]
+            # TODO: If optimizing for speed -- check this loop
+            for spike_start_idx, spike_scaling in zip(id_spiketrain, id_scaling):
+                spike_stop_idx = spike_start_idx + convolution_resolution_len
+                objective.obj[overlapping_templates, spike_start_idx:spike_stop_idx] -= 2*pconv
+                if not objective.no_amplitude_scaling:
+                    pconv_scaled = pconv * spike_scaling
+                    objective.conv_result[overlapping_templates, spike_start_idx:spike_stop_idx] -= pconv_scaled
 
             cls.enforce_refractory(objective, spiketrain)
 
