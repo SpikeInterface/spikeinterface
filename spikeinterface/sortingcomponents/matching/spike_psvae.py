@@ -7,6 +7,12 @@ from .my_objective import MyObjective
 class SpikePSVAE(BaseTemplateMatchingEngine):
     """
     SpikePSVAE from Paninski Lab
+    For consistency:
+    - 'unit' refers to a single unit, which may have multiple corresponding templates
+    - 'template' refers to a single template, which may have multiple corresponding super-res jittered versions
+    - 'jittered_template' refers to a single super-res jittered template
+    each has their own corresponding variables ex.
+        'unit_ids'=[0, 1, ..., n_units], 'template_ids'=[0, 1, ..., n_templates], etc.
     """
     default_params = {
         'waveform_extractor' : None,
@@ -271,19 +277,19 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
         # Adjust cluster IDs so that they match original templates
         unit_idx = spiketrain[:, 1] // objective.up_factor
-        spiketimes = spiketrain[:, 0]
+        spike_times = spiketrain[:, 0]
 
         # correct for template grouping
         if objective.grouped_temps:
             units_group_idx = objective.group_index[unit_idx]
-            group_shape = (spiketimes.shape[0], objective.max_group_size)
-            spiketimes = np.broadcast_to(spiketimes[:, np.newaxis], group_shape)
+            group_shape = (spike_times.shape[0], objective.max_group_size)
+            spike_times = np.broadcast_to(spike_times[:, np.newaxis], group_shape)
             valid_spikes = units_group_idx > 0
             unit_idx = units_group_idx[valid_spikes]
-            spiketimes = spiketimes[valid_spikes]
+            spike_times = spike_times[valid_spikes]
 
         # Get the samples (time indices) that correspond to the waveform for each spike
-        waveform_samples = get_convolution_len(spiketimes[:, np.newaxis], objective.n_time) + window
+        waveform_samples = get_convolution_len(spike_times[:, np.newaxis], objective.n_time) + window
 
         # Enforce refractory by setting objective to negative infinity in invalid regions
         objective.obj[unit_idx[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
