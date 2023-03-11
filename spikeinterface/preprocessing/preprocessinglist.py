@@ -23,6 +23,8 @@ from .zero_channel_pad import ZeroChannelPaddedRecording, zero_channel_pad
 from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate
 from .highpass_spatial_filter import HighpassSpatialFilterRecording, highpass_spatial_filter
 from .interpolate_bad_channels import InterpolateBadChannelsRecording, interpolate_bad_channels
+from .directional_average import DirectionalAverageRecording, directional_average
+from .depth_order import DepthOrderRecording, depth_order
 
 
 preprocessers_full_list = [
@@ -43,7 +45,6 @@ preprocessers_full_list = [
 
     # re-reference
     CommonReferenceRecording,
-    
     PhaseShiftRecording,
 
     # misc
@@ -55,7 +56,9 @@ preprocessers_full_list = [
     DeepInterpolatedRecording,
     ResampleRecording,
     HighpassSpatialFilterRecording,
-    InterpolateBadChannelsRecording
+    InterpolateBadChannelsRecording,
+    DepthOrderRecording,
+    DirectionalAverageRecording,
 ]
 
 installed_preprocessers_list = [pp for pp in preprocessers_full_list if pp.installed]
