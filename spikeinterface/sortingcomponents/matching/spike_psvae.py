@@ -116,8 +116,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         objective.data = objective.data.astype(np.float32)
         # TODO: Does this really need to be an attribute?
         objective.data_len = objective.data.shape[0]
-        # TODO: compute convolution length as a function
-        objective.obj_len = objective.data_len + objective.n_time - 1
+        objective.obj_len = get_convolution_len(objective.data_len, objective.n_time)
 
         # Reinitialize the objective.obj and spiketrains
         objective.obj_computed = False
@@ -128,7 +127,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
     @classmethod
     def compute_objective(cls, objective):
-        conv_len = objective.data_len + objective.n_time - 1 # TODO: convolution length as a func
+        conv_len = get_convolution_len(objective.data_len, objective.n_time)
         conv_shape = (objective.n_templates, conv_len)
         objective.template_convolution = np.zeros(conv_shape, dtype=np.float32)
         # TODO: vectorize this loop
@@ -177,7 +176,6 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             dec_scalings[valid_idx] = scalings
 
         # Generate new spike train from spike times (indices)
-        # TODO: convolutional indices correction as function(s)
         convolution_correction = -1*(objective.n_time - 1) # convolution indices --> raw_indices
         spike_time_indices += convolution_correction
         new_spike_train = np.c_[spike_time_indices, spike_unit_ids] # fancy way to concatenate arrays
@@ -188,8 +186,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
     @classmethod
     def subtract_spike_train(cls, objective, spiketrain, scaling):
         present_jittered_ids = np.unique(spiketrain[:, 1])
-        # TODO: convolution length as a function
-        convolution_resolution_len = objective.n_time * 2 - 1
+        convolution_resolution_len = get_convolution_len(objective.n_time, objective.n_time)
         for jittered_id in present_jittered_ids:
             id_mask = spiketrain[:, 1] == jittered_id
             id_spiketrain = spiketrain[id_mask, 0]
@@ -285,14 +282,18 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             unit_idx = units_group_idx[valid_spikes]
             spiketimes = spiketimes[valid_spikes]
 
-        # TODO : convolution length as function
-        time_idx = (spiketimes[:, np.newaxis] + objective.n_time - 1) + window
+        # Get the samples (time indices) that correspond to the waveform for each spike
+        waveform_samples = get_convolution_len(spiketimes[:, np.newaxis], objective.n_time) + window
 
         # Enforce refractory by setting objective to negative infinity in invalid regions
-        objective.obj[unit_idx[:, np.newaxis], time_idx[:, 1:-1]] = -1 * np.inf
+        objective.obj[unit_idx[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
         # TODO : make both with and without amplitude scaling the same
         if not objective.no_amplitude_scaling:
-            objective.template_convolution[unit_idx[:, np.newaxis], time_idx[:, 1:-1]] = -1 * np.inf
+            objective.template_convolution[unit_idx[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
+
+
+def get_convolution_len(x, y):
+    return x + y - 1
 
 
 
