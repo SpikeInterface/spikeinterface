@@ -4,8 +4,8 @@ from .basepreprocessor import BasePreprocessorSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 
-class DirectionalAverageRecording(BaseRecording):
-    name = "directional_average"
+class AverageAcrossDirectionRecording(BaseRecording):
+    name = "average_across_direction"
     installed = True
 
     def __init__(
@@ -63,7 +63,7 @@ class DirectionalAverageRecording(BaseRecording):
         self.parent_recording = parent_recording
         self.num_channels = n_pos_unique
         for segment in parent_recording._recording_segments:
-            recording_segment = DirectionalAverageRecordingSegment(
+            recording_segment = AverageAcrossDirectionRecordingSegment(
                 segment,
                 self.num_channels,
                 same_along_dim_chans,
@@ -99,7 +99,7 @@ class DirectionalAverageRecording(BaseRecording):
         )
 
 
-class DirectionalAverageRecordingSegment(BasePreprocessorSegment):
+class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):
     def __init__(
         self,
         parent_recording_segment: BaseRecordingSegment,
@@ -148,6 +148,6 @@ class DirectionalAverageRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-directional_average = define_function_from_class(
-    source_class=DirectionalAverageRecording, name="directional_average"
+average_across_direction = define_function_from_class(
+    source_class=AverageAcrossDirectionRecording, name="average_across_direction"
 )
