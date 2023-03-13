@@ -57,7 +57,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         cls.run_array(objective, traces)
 
         # extract spiketrain and perform adjustments
-        spiketrain = objective.dec_spike_train
+        spiketrain = objective.spike_train
         spiketrain[:, 0] += nbefore
         spiketrain[:, 1] //= objective_kwargs['upsample']
 
@@ -103,15 +103,15 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             # subtract newly detected spike train from traces
             cls.subtract_spike_train(objective, spiketrain, scaling)
 
-        objective.dec_spike_train = np.array(spiketrains)
-        objective.dec_scalings = np.array(scalings)
-        objective.dist_metric = np.array(distance_metrics)
+        objective.spike_train = np.array(spiketrains)
+        objective.scalings = np.array(scalings)
+        objective.distance_metric = np.array(distance_metrics)
 
         # order spike times
-        idx = np.argsort(objective.dec_spike_train[:, 0])
-        objective.dec_spike_train = objective.dec_spike_train[idx]
-        objective.dec_scalings = objective.dec_scalings[idx]
-        objective.dist_metric = objective.dist_metric[idx]
+        idx = np.argsort(objective.spike_train[:, 0])
+        objective.spike_train = objective.spike_train[idx]
+        objective.scalings = objective.scalings[idx]
+        objective.distance_metric = objective.distance_metric[idx]
 
 
     @classmethod
@@ -126,8 +126,8 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
         # Reinitialize the objective.obj and spiketrains
         objective.obj_computed = False
-        objective.dec_spike_train = np.zeros([0, 2], dtype=np.int32)
-        objective.dist_metric = np.array([])
+        objective.spike_train = np.zeros([0, 2], dtype=np.int32)
+        objective.distance_metric = np.array([])
         objective.iter_spike_train = []
 
 
@@ -166,12 +166,12 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
         # Extract metrics using spike times (indices)
         distance_metric = obj_template_max[spike_time_indices]
-        dec_scalings = np.ones(len(spike_time_indices), dtype=objective.obj.dtype)
+        scalings = np.ones(len(spike_time_indices), dtype=objective.obj.dtype)
 
         # Find the best upsampled template
         spike_unit_ids = np.argmax(objective.obj[:, spike_time_indices], axis=0)
         high_res_peaks = cls.high_res_peak(objective, spike_time_indices, spike_unit_ids)
-        upsampled_template_idx, time_shift, valid_idx, scalings = high_res_peaks
+        upsampled_template_idx, time_shift, valid_idx, scaling = high_res_peaks
 
         # Update unit_ids, spike_times, and scalings
         spike_unit_ids *= objective.up_factor # TODO: clarify true 'units' and upsampled templates
@@ -179,14 +179,14 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         if at_least_one_spike:
             spike_unit_ids[valid_idx] += upsampled_template_idx
             spike_time_indices[valid_idx] += time_shift
-            dec_scalings[valid_idx] = scalings
+            scalings[valid_idx] = scaling
 
         # Generate new spike train from spike times (indices)
         convolution_correction = -1*(objective.n_time - 1) # convolution indices --> raw_indices
         spike_time_indices += convolution_correction
         new_spike_train = np.c_[spike_time_indices, spike_unit_ids] # fancy way to concatenate arrays
 
-        return new_spike_train, dec_scalings, distance_metric
+        return new_spike_train, scalings, distance_metric
 
 
     @classmethod

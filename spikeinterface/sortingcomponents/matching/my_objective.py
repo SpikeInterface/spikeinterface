@@ -98,9 +98,9 @@ class MyObjective:
             )
 
         # Initialize outputs
-        self.dec_spike_train = np.zeros((0, 2), dtype=np.int32)
-        self.dec_scalings = np.zeros((0,), dtype=np.float32)
-        self.dist_metric = np.array([])
+        self.spike_train = np.zeros((0, 2), dtype=np.int32)
+        self.scalings = np.zeros((0,), dtype=np.float32)
+        self.distance_metric = np.array([])
 
         # Single time preperation for high resolution matches
         # matching indeces of peaks to indices of upsampled templates
