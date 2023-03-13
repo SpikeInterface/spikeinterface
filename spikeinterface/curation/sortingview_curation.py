@@ -50,7 +50,7 @@ def apply_sortingview_curation(
     curation_sorting = CurationSorting(sorting, make_graph=False, properties_policy="keep")
 
     # get sorting view curation
-    if Path(uri_or_json).suffix == ".json":
+    if Path(uri_or_json).suffix == ".json" and Path(uri_or_json).is_file():
         with open(uri_or_json, "r") as f:
             sortingview_curation_dict = json.load(f)
     else:
