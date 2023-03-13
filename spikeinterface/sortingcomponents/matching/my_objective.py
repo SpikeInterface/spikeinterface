@@ -51,22 +51,13 @@ class MyObjective:
             self.grouped_temps = True
             self.unit_ids = np.unique(self.params.template_ids2unit_ids)
             self.n_units = len(self.unit_ids)
+            self.template_ids = np.arange(self.n_templates)
+            self.template_ids2unit_ids = self.params.template_ids2unit_ids
             assert self.params.template_ids2unit_ids.shape == (self.n_templates,)
-            group_index = [
-                np.flatnonzero(self.params.template_ids2unit_ids == u)
-                for u in self.params.template_ids2unit_ids
-            ]
-            self.max_group_size = max(map(len, group_index))
-
-            # like a channel index, sort of
-            # this is a n_templates x group_size array that maps each
-            # template index to the set of other template indices that
-            # are part of its group. so that the array is not ragged,
-            # we pad rows with -1s when their group is smaller than the
-            # largest group.
-            self.group_index = np.full((self.n_templates, self.max_group_size), -1)
-            for j, row in enumerate(group_index):
-                self.group_index[j, : len(row)] = row
+            self.unit_ids2template_ids = []
+            for unit_id in self.unit_ids:
+                template_ids_of_unit = set(self.template_ids[self.template_ids2unit_ids == unit_id])
+                self.unit_ids2template_ids.append(template_ids_of_unit)
 
                 # variance parameter for the amplitude scaling prior
         assert self.lambd is None or self.lambd >= 0, "lambd must be a non-negative scalar"

@@ -276,26 +276,24 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         window = np.arange(-objective.adjusted_refrac_radius, objective.adjusted_refrac_radius+1)
 
         # Adjust cluster IDs so that they match original templates
-        unit_idx = spiketrain[:, 1] // objective.up_factor
         spike_times = spiketrain[:, 0]
+        spike_template_ids = spiketrain[:, 1] // objective.up_factor
+        spike_unit_ids = spike_template_ids.copy()
 
         # correct for template grouping
         if objective.grouped_temps:
-            units_group_idx = objective.group_index[unit_idx]
-            group_shape = (spike_times.shape[0], objective.max_group_size)
-            spike_times = np.broadcast_to(spike_times[:, np.newaxis], group_shape)
-            valid_spikes = units_group_idx > 0
-            unit_idx = units_group_idx[valid_spikes]
-            spike_times = spike_times[valid_spikes]
+            for template_id in set(spike_template_ids):
+                unit_id = objective.template_ids2unit_ids[template_id] # unit_id corresponding to this template
+                spike_unit_ids[spike_template_ids==template_id] = unit_id
 
         # Get the samples (time indices) that correspond to the waveform for each spike
         waveform_samples = get_convolution_len(spike_times[:, np.newaxis], objective.n_time) + window
 
         # Enforce refractory by setting objective to negative infinity in invalid regions
-        objective.obj[unit_idx[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
+        objective.obj[spike_unit_ids[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
         # TODO : make both with and without amplitude scaling the same
         if not objective.no_amplitude_scaling:
-            objective.template_convolution[unit_idx[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
+            objective.template_convolution[spike_unit_ids[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
 
 
 def get_convolution_len(x, y):
