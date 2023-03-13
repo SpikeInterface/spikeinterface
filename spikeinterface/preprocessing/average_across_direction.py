@@ -28,11 +28,12 @@ class AverageAcrossDirectionRecording(BaseRecording):
             Channels living at unique positions along this direction
             will be averaged.
         dtype : optional numpy dtype
-            If supplied, convert to this type before recording. Otherwise,
-            if the recording is not a floating type, it is converted to
-            float32 by default, or kept as its floating type otherwise.
+            If supplied, convert recording to this type before averaging.
+            If unset, if the recording is not a floating type, it is converted
+            to float32 by default, or kept as its floating type otherwise.
         """
         parent_channel_locations = parent_recording.get_channel_locations()
+        parent_channels = parent_recording.ids_to_indices(None, prefer_slice=True)
         dim = ["x", "y", "z"].index(direction)
         if dim > parent_channel_locations.shape[1]:
             raise ValueError(
@@ -65,6 +66,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
         for segment in parent_recording._recording_segments:
             recording_segment = AverageAcrossDirectionRecordingSegment(
                 segment,
+                parent_channels,
                 self.num_channels,
                 same_along_dim_chans,
                 n_chans_each_pos,
@@ -103,6 +105,7 @@ class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):
     def __init__(
         self,
         parent_recording_segment: BaseRecordingSegment,
+        parent_channels,
         num_channels: int,
         same_along_dim_chans: np.array,
         n_chans_each_pos: np.array,
@@ -110,6 +113,7 @@ class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):
     ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.parent_recording_segment = parent_recording_segment
+        self.parent_channels = parent_channels
         self.num_channels = num_channels
         self.same_along_dim_chans = same_along_dim_chans
         self.n_chans_each_pos = n_chans_each_pos
@@ -127,7 +131,7 @@ class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):
         parent_traces = self.parent_recording_segment.get_traces(
             start_frame=start_frame,
             end_frame=end_frame,
-            channel_indices=np.arange(self.num_channels),
+            channel_indices=self.parent_channels,
         )
         traces = np.zeros(
             (parent_traces.shape[0], self.num_channels),
