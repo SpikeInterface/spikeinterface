@@ -70,6 +70,33 @@ def test_gh_curation():
     assert len(sorting_curated_gh_art_mua.unit_ids) == 5
 
 
+@pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
+def test_sha1_curation():
+    local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
+    _, sorting = read_mearec(local_path)
+
+    # from SHA1
+    # curated link:
+    # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://bd53f6b707f8121cadc901562a89b67aec81cc81&label=SpikeInterface%20-%20Sorting%20Summary&s={%22sortingCuration%22:%22sha1://1182ba19671fcc7d3f8e0501b0f8c07fb9736c22%22}
+    sha1_uri = "sha1://1182ba19671fcc7d3f8e0501b0f8c07fb9736c22"
+    sorting_curated_sha1 = apply_sortingview_curation(sorting, uri_or_json=sha1_uri, verbose=True)
+    print(f"From SHA: {sorting_curated_sha1}")
+
+    assert len(sorting_curated_sha1.unit_ids) == 9
+    assert "#8-#9" in sorting_curated_sha1.unit_ids
+    assert "accept" in sorting_curated_sha1.get_property_keys()
+    assert "mua" in sorting_curated_sha1.get_property_keys()
+    assert "artifact" in sorting_curated_sha1.get_property_keys()
+
+    sorting_curated_sha1_accepted = apply_sortingview_curation(sorting, uri_or_json=sha1_uri, include_labels=["accept"])
+    sorting_curated_sha1_mua = apply_sortingview_curation(sorting, uri_or_json=sha1_uri, exclude_labels=["mua"])
+    sorting_curated_sha1_art_mua = apply_sortingview_curation(sorting, uri_or_json=sha1_uri,
+                                                              exclude_labels=["artifact", "mua"])
+    assert len(sorting_curated_sha1_accepted.unit_ids) == 3
+    assert len(sorting_curated_sha1_mua.unit_ids) == 6
+    assert len(sorting_curated_sha1_art_mua.unit_ids) == 5
+
+
 def test_json_curation():
     local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     _, sorting = read_mearec(local_path)
@@ -96,6 +123,6 @@ def test_json_curation():
 
 if __name__ == "__main__":
     # generate_sortingview_curation_dataset()
+    test_sha1_curation()
     test_gh_curation()
-    # test_gh_curation()
-    # test_json_curation()
+    test_json_curation()
