@@ -117,12 +117,9 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
     @classmethod
     def update_data(cls, objective, traces):
         # Re-assign data and objective lengths
+        traces = traces.astype(np.float32, casting='safe')
         objective.data = traces
-        # TODO: Remove data type change after refactoring initialization
-        objective.data = objective.data.astype(np.float32)
-        # TODO: Does this really need to be an attribute?
-        objective.data_len = objective.data.shape[0]
-        objective.obj_len = get_convolution_len(objective.data_len, objective.n_time)
+        objective.obj_len = get_convolution_len(objective.data.shape[0], objective.n_time)
 
         # Reinitialize the objective.obj and spiketrains
         objective.obj_computed = False
@@ -133,8 +130,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
     @classmethod
     def compute_objective(cls, objective):
-        conv_len = get_convolution_len(objective.data_len, objective.n_time)
-        conv_shape = (objective.n_templates, conv_len)
+        conv_shape = (objective.n_templates, objective.obj_len)
         objective.template_convolution = np.zeros(conv_shape, dtype=np.float32)
         # TODO: vectorize this loop
         for rank in range(objective.approx_rank):
@@ -143,10 +139,12 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             spatially_filtered_data = np.matmul(spatial_filters, objective.data.T)
             scaled_filtered_data = spatially_filtered_data * objective.singular[:, [rank]]
             # TODO: vectorize this loop
-            for unit in range(objective.n_templates):
-                unit_data = scaled_filtered_data[unit, :]
-                unit_temporal_filter = temporal_filters[unit]
-                objective.template_convolution[unit, :] += np.convolve(unit_data, unit_temporal_filter, mode='full')
+            for template_id in range(objective.n_templates):
+                template_data = scaled_filtered_data[template_id, :]
+                template_temporal_filter = temporal_filters[template_id]
+                objective.template_convolution[template_id, :] += np.convolve(template_data,
+                                                                              template_temporal_filter,
+                                                                              mode='full')
 
         obj = 2 * objective.template_convolution - objective.norm[:, np.newaxis]
         return obj
@@ -160,7 +158,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         peak_window = (objective.n_time - 1, objective.obj.shape[1] - objective.n_time)
         obj_windowed = obj_template_max[peak_window[0]:peak_window[1]]
         spike_time_indices = signal.argrelmax(obj_windowed, order=objective.adjusted_refrac_radius)[0]
-        spike_time_indices += objective.n_time - 1 # TODO: convolutional indices correction as function(s)
+        spike_time_indices += objective.n_time - 1
         obj_spikes = obj_template_max[spike_time_indices]
         spike_time_indices = spike_time_indices[obj_spikes > objective.threshold]
 
@@ -169,22 +167,22 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         scalings = np.ones(len(spike_time_indices), dtype=objective.obj.dtype)
 
         # Find the best upsampled template
-        spike_unit_ids = np.argmax(objective.obj[:, spike_time_indices], axis=0)
-        high_res_peaks = cls.high_res_peak(objective, spike_time_indices, spike_unit_ids)
+        spike_template_ids = np.argmax(objective.obj[:, spike_time_indices], axis=0)
+        high_res_peaks = cls.high_res_peak(objective, spike_time_indices, spike_template_ids)
         upsampled_template_idx, time_shift, valid_idx, scaling = high_res_peaks
 
         # Update unit_ids, spike_times, and scalings
-        spike_unit_ids *= objective.up_factor # TODO: clarify true 'units' and upsampled templates
+        spike_jittered_ids = spike_template_ids * objective.up_factor
         at_least_one_spike = bool(len(valid_idx))
         if at_least_one_spike:
-            spike_unit_ids[valid_idx] += upsampled_template_idx
+            spike_jittered_ids[valid_idx] += upsampled_template_idx
             spike_time_indices[valid_idx] += time_shift
             scalings[valid_idx] = scaling
 
         # Generate new spike train from spike times (indices)
         convolution_correction = -1*(objective.n_time - 1) # convolution indices --> raw_indices
         spike_time_indices += convolution_correction
-        new_spike_train = np.c_[spike_time_indices, spike_unit_ids] # fancy way to concatenate arrays
+        new_spike_train = np.array([spike_time_indices, spike_jittered_ids]).T
 
         return new_spike_train, scalings, distance_metric
 
@@ -291,8 +289,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
         # Enforce refractory by setting objective to negative infinity in invalid regions
         objective.obj[spike_unit_ids[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
-        # TODO : make both with and without amplitude scaling the same
-        if not objective.no_amplitude_scaling:
+        if not objective.no_amplitude_scaling: # template_convolution is only used with amplitude scaling
             objective.template_convolution[spike_unit_ids[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
 
 

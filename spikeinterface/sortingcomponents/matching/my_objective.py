@@ -202,7 +202,6 @@ class MyObjective:
             template_reconstructed = np.matmul(temporal_jittered_scaled, spatial[template_id, :, :])
             template_reconstructed = np.flipud(template_reconstructed)
 
-            # TODO : Make order consistent with compute_objective (units and then rank or rank and then units?)
             units_are_overlapping = unit_overlap[jittered_id, :]
             overlapping_units = np.where(units_are_overlapping)[0]
             for j, jittered_id2 in enumerate(overlapping_units):
