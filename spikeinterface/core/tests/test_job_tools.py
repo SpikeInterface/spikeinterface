@@ -4,7 +4,7 @@ import os
 from spikeinterface.core import generate_recording
 
 from spikeinterface.core.job_tools import divide_segment_into_chunks, ensure_n_jobs, ensure_chunk_size, \
-    ChunkRecordingExecutor, fix_job_kwargs, split_job_kwargs
+    ChunkRecordingExecutor, fix_job_kwargs, split_job_kwargs, divide_recording_into_chunks
 
 
 def test_divide_segment_into_chunks():
@@ -127,7 +127,9 @@ def test_ChunkRecordingExecutor():
                                        n_jobs=2, chunk_duration="200ms",
                                        job_name='job_name')
     processor.run()
-    assert gathering_func2.pos == 70
+    num_chunks = len(divide_recording_into_chunks(recording, processor.chunk_size))
+
+    assert gathering_func2.pos == num_chunks
 
     # chunk + parallel + spawn
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
