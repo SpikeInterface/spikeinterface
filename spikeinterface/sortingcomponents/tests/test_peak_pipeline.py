@@ -20,8 +20,8 @@ else:
 
 
 class AmplitudeExtractionNode(PipelineNode):
-    def __init__(self, recording, return_ouput=True, param0=5.5):
-        PipelineNode.__init__(self, recording, return_ouput=return_ouput)
+    def __init__(self, recording, return_output=True, param0=5.5):
+        PipelineNode.__init__(self, recording, return_output=return_output)
         self.param0 = param0
         self._dtype = np.dtype([('abs_amplitude', recording.get_dtype())])
 
@@ -38,8 +38,8 @@ class AmplitudeExtractionNode(PipelineNode):
 
 class WaveformDenoiser(PipelineNode):
     # waveform smoother
-    def __init__(self, recording, return_ouput=True, parents=None):
-        PipelineNode.__init__(self, recording, return_ouput=return_ouput, parents=parents)
+    def __init__(self, recording, return_output=True, parents=None):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
     def get_dtype(self):
         return np.dtype('float32')
@@ -51,8 +51,8 @@ class WaveformDenoiser(PipelineNode):
     
 
 class WaveformsRootMeanSquare(PipelineNode):
-    def __init__(self, recording,  return_ouput=True, parents=None):
-        PipelineNode.__init__(self, recording, return_ouput=return_ouput, parents=parents)
+    def __init__(self, recording,  return_output=True, parents=None):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
     def get_dtype(self):
         return np.dtype('float32')
@@ -87,11 +87,11 @@ def test_run_peak_pipeline():
     # 3 nodes two have outputs
     ms_before = 0.5
     ms_after = 1.0
-    extract_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after, return_ouput=False)
-    waveform_denoiser = WaveformDenoiser(recording, parents=[extract_waveforms], return_ouput=False)
-    amplitue_extraction = AmplitudeExtractionNode(recording, param0=6.6, return_ouput=True)
-    waveforms_rms = WaveformsRootMeanSquare(recording, parents=[extract_waveforms], return_ouput=True)
-    denoised_waveforms_rms = WaveformsRootMeanSquare(recording, parents=[waveform_denoiser], return_ouput=True)
+    extract_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after, return_output=False)
+    waveform_denoiser = WaveformDenoiser(recording, parents=[extract_waveforms], return_output=False)
+    amplitue_extraction = AmplitudeExtractionNode(recording, param0=6.6, return_output=True)
+    waveforms_rms = WaveformsRootMeanSquare(recording, parents=[extract_waveforms], return_output=True)
+    denoised_waveforms_rms = WaveformsRootMeanSquare(recording, parents=[waveform_denoiser], return_output=True)
     
     nodes = [
         extract_waveforms,
@@ -103,7 +103,7 @@ def test_run_peak_pipeline():
     
 
     
-    # memory mode
+    # gather memory mode
     output = run_peak_pipeline(recording, peaks, nodes, job_kwargs, gather_mode='memory')
     amplitudes, waveforms_rms, denoised_waveforms_rms = output
     assert np.allclose(np.abs(peaks['amplitude']), amplitudes['abs_amplitude'])
@@ -116,7 +116,7 @@ def test_run_peak_pipeline():
     assert waveforms_rms.shape[0] == num_peaks
     assert waveforms_rms.shape[1] == num_channels
 
-    # npy mode
+    # gather npy mode
     folder = cache_folder / 'pipeline_folder'
     if folder.is_dir():
         shutil.rmtree(folder)
@@ -129,7 +129,6 @@ def test_run_peak_pipeline():
     amplitudes3 = np.load(amplitudes_file)
     assert np.array_equal(amplitudes, amplitudes2)
     assert np.array_equal(amplitudes2, amplitudes3)
-
 
 
     # Test pickle mechanism

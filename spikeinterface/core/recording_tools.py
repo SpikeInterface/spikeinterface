@@ -1,7 +1,8 @@
 import numpy as np
 
+
 def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segment=20, 
-                           chunk_size=10000, concatenated=True, seed=0):
+                           chunk_size=10000, concatenated=True, seed=0, margin_frames=0):
     """
     Exctract random chunks across segments
 
@@ -39,7 +40,8 @@ def get_random_data_chunks(recording, return_scaled=False, num_chunks_per_segmen
     chunk_list = []
     for segment_index in range(recording.get_num_segments()):
         length = recording.get_num_frames(segment_index)
-        random_starts = np.random.RandomState(seed=seed).randint(0, length - chunk_size, size=num_chunks_per_segment)
+        
+        random_starts = np.random.RandomState(seed=seed).randint(margin_frames, length - chunk_size - margin_frames, size=num_chunks_per_segment)
         for start_frame in random_starts:
             chunk = recording.get_traces(start_frame=start_frame,
                                          end_frame=start_frame + chunk_size,

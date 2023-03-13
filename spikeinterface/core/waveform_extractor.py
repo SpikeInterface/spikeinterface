@@ -13,7 +13,7 @@ from .base import load_extractor
 from .core_tools import check_json
 from .job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 from .recording_tools import check_probe_do_not_overlap
-from .waveform_tools import extract_waveforms_to_buffers
+from .waveform_tools import extract_waveforms_to_buffers, has_exceeding_spikes
 from .sparsity import ChannelSparsity, compute_sparsity, _sparsity_doc
 
 _possible_template_modes = ('average', 'std', 'median')
@@ -245,6 +245,11 @@ class WaveformExtractor:
         properties_to_attrs = deepcopy(recording._properties)
         if 'contact_vector' in properties_to_attrs:
             del properties_to_attrs['contact_vector']
+        if has_exceeding_spikes(recording, sorting):
+            raise ValueError(
+                    "The sorting object has spikes exceeding the recording duration. You have to remove those spikes "
+                    "with the `spikeinterface.curation.remove_excess_spikes()` function"
+                )
         rec_attributes = dict(
             channel_ids=recording.channel_ids,
             sampling_frequency=recording.get_sampling_frequency(),
@@ -1309,6 +1314,7 @@ def extract_waveforms(recording, sorting, folder=None,
                       return_scaled=True,
                       dtype=None,
                       sparse=False,
+                      sparsity=None,
                       num_spikes_for_sparsity=100,
                       allow_unfiltered=False,
                       use_relative_path=False,
@@ -1356,6 +1362,8 @@ def extract_waveforms(recording, sorting, folder=None,
         Then, the waveforms will be sparse at extraction time, which saves a lot of memory.
         When True, you must some provide kwargs handle `precompute_sparsity()` to control the kind of 
         sparsity you want to apply (by radius, by best channels, ...).
+    sparsity: ChannelSparsity or None
+        The sparsity used to compute waveforms. If this is given, `sparse` is ignored. Default None.
     num_spikes_for_sparsity: int (default 100)
         The number of spikes to use to estimate sparsity (if sparse=True).
     allow_unfiltered: bool
@@ -1368,9 +1376,6 @@ def extract_waveforms(recording, sorting, folder=None,
         Default is False.
     seed: int or None
         Random seed for spike selection
-    load_if_exists: None or bool
-        If True and waveforms have already been extracted in the specified folder, they are loaded
-        and not recomputed.
 
     sparsity kwargs:
     {}
@@ -1422,11 +1427,19 @@ def extract_waveforms(recording, sorting, folder=None,
         if load_if_exists and folder.is_dir():
             we = WaveformExtractor.load_from_folder(folder)
             return we
-    
-    if sparse:
+
+    if sparsity is not None:
+        assert isinstance(sparsity, ChannelSparsity), "'sparsity' must be a ChannelSparsity object"
+        unit_id_to_channel_ids = sparsity.unit_id_to_channel_ids
+        assert all(u in sorting.unit_ids for u in unit_id_to_channel_ids), \
+                "Invalid unit ids in sparsity"
+        for channels in unit_id_to_channel_ids.values():
+            assert all(ch in recording.channel_ids for ch in channels), \
+                "Invalid channel ids in sparsity"
+    elif sparse:
         sparsity = precompute_sparsity(recording, sorting, ms_before=ms_before, ms_after=ms_after,
-                                               num_spikes_for_sparsity=num_spikes_for_sparsity,
-                                               **estimate_kwargs, **job_kwargs)
+                                       num_spikes_for_sparsity=num_spikes_for_sparsity,
+                                       **estimate_kwargs, **job_kwargs)
     else:
         sparsity = None
 

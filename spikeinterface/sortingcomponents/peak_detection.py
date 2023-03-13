@@ -96,11 +96,8 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
                                        mp_context=mp_context, **job_kwargs)
     processor.run()
 
-    if gather_mode == 'memory':
-        return gather_func.concatenate(squeeze_output=squeeze_output)
-    elif gather_mode == 'npy':
-        gather_func.finalize()
-        return gather_func.get_memmap(squeeze_output=squeeze_output)
+    outs = gather_func.finalize_buffers(squeeze_output=squeeze_output)
+    return outs
         
 
 def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipeline_nodes):

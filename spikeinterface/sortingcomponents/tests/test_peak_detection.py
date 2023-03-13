@@ -38,7 +38,7 @@ def test_detect_peaks():
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
     
-    job_kwargs = dict(n_jobs=2, chunk_size=10000, progress_bar=True, verbose=True)
+    job_kwargs = dict(n_jobs=-1, chunk_size=10000, progress_bar=True, verbose=True)
     # by_channel
     by_channel_str = f"By channel:\n"
     peaks_by_channel_np = detect_peaks(recording, method='by_channel',
@@ -88,7 +88,8 @@ def test_detect_peaks():
 
     # locally_exclusive + pipeline steps LocalizeCenterOfMass + PeakToPeakFeature
     print("With peak pipeline")
-    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1., ms_after=1.,)
+    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1., ms_after=1.,
+                                                    return_output=False)
 
     pipeline_nodes = [
         extract_dense_waveforms,

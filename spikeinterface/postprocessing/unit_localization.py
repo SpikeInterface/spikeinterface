@@ -105,7 +105,7 @@ def compute_unit_locations(waveform_extractor,
     ----------
     waveform_extractor: WaveformExtractor
         A waveform extractor object.
-    load_if_exists : bool, optional, default: False
+    load_if_exists : bool, default: False
         Whether to load precomputed unit locations, if they already exist.
     method: str
         'center_of_mass' / 'monopolar_triangulation'

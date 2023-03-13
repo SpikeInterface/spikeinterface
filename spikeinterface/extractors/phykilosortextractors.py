@@ -15,7 +15,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         Path to the output Phy folder (containing the params.py)
     exclude_cluster_groups: list or str, optional
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
-    keep_good_only : bool, optional, default: True
+    keep_good_only : bool, default: True
         Whether to only keep good units.
     """
     extractor_name = 'BasePhyKilosortSorting'
@@ -199,7 +199,7 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
         Path to the output Phy folder (containing the params.py).
     exclude_cluster_groups: list or str, optional
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
-    keep_good_only : bool, optional, default: True
+    keep_good_only : bool, default: True
         Whether to only keep good units.
         If True, only Kilosort-labeled 'good' units are returned.
 

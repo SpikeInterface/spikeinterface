@@ -9,43 +9,49 @@ There are two ways for using theses "plugins":
   * during `peak_detect()`
   * when peaks are already detected and reduced with `select_peaks()`
 """
+
+from typing import Optional, List, Type 
+
 import struct
 
 from pathlib import Path
+
+
 import numpy as np
 
-from spikeinterface.core import get_chunk_with_margin
+from spikeinterface.core import BaseRecording, get_chunk_with_margin
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 from spikeinterface.core import get_channel_distances
 
 class PipelineNode:
-    """
-    This is a generic object that will make some computation on peak given a buffer
-    of traces.
-    Typically used for extrating features (amplitudes, localization, ...)
-    
-    A Node can optionally connect to other nodes with the parents and receive inputs from others.
-    """
-    def __init__(self, recording, return_ouput=True, parents=None, name=None):
+    def __init__(
+        self, recording: BaseRecording, return_output: bool = True, parents: Optional[List[Type["PipelineNode"]]] = None
+    ):
+        """
+        This is a generic object that will make some computation on peaks given a buffer of traces.
+        Typically used for exctrating features (amplitudes, localization, ...)
+
+        A Node can optionally connect to other nodes with the parents and receive inputs from them.
+
+        Parameters
+        ----------
+        recording : BaseRecording
+            The recording object.
+        parents : Optional[List[PipelineNode]], optional
+            Pass parents nodes to perform a previous computation, by default None
+        return_output : bool, optional
+            Whether or not the output of the node is returned by the pipeline, by default False
+        """
+
         self.recording = recording
-        self.return_ouput = return_ouput
+        self.return_output = return_output
         if isinstance(parents, str):
             # only one parents is allowed
             parents = [parents]
         self.parents = parents
         
-        self._kwargs = dict(
-            return_ouput=return_ouput,
-        )
-        if parents is not None:
-            self._kwargs['parents'] = parents
+        self._kwargs = dict()
         
-            
-    def post_check(self):
-        # can optionaly be overwritten
-        # this can trigger a check for compatibility with other nodes (typically parents)
-        pass
-    
     def get_trace_margin(self):
         # can optionaly be overwritten
         return 0
@@ -54,56 +60,156 @@ class PipelineNode:
         raise NotImplementedError
 
 
-class ExtractDenseWaveforms(PipelineNode):
-    def __init__(self, recording, return_ouput=False,
-                         ms_before=None, ms_after=None):
-        PipelineNode.__init__(self, recording, return_ouput=return_ouput)
+class WaveformExtractorNode(PipelineNode):
+    """Base class for waveform extractor"""
 
-        self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
-        self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
-        
+    def __init__(
+        self,
+        recording: BaseRecording,
+        ms_before: float,
+        ms_after: float,
+        parents: Optional[List[PipelineNode]] = None,
+        return_output: bool = False,
+    ):
+        """
+        Base class for waveform extractor. Contains logic to handle the temporal interval in which to extract the
+        waveforms.
+
+        Parameters
+        ----------
+        recording : BaseRecording
+            The recording object.
+        parents : Optional[List[PipelineNode]], optional
+            Pass parents nodes to perform a previous computation, by default None
+        return_output : bool, optional
+            Whether or not the output of the node is returned by the pipeline, by default False
+        ms_before : float, optional
+            The number of milliseconds to include before the peak of the spike, by default 1.
+        ms_after : float, optional
+            The number of milliseconds to include after the peak of the spike, by default 1.
+        """
+
+        PipelineNode.__init__(self, recording=recording, parents=parents, return_output=return_output)
+        self.ms_before = ms_before
+        self.ms_after = ms_after
+        self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.0)
+        self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.0)
+
+
+class ExtractDenseWaveforms(WaveformExtractorNode):
+    def __init__(
+        self,
+        recording: BaseRecording,
+        ms_before: float,
+        ms_after: float,
+        parents: Optional[List[PipelineNode]] = None,
+        return_output: bool = False,
+    ):
+        """
+        Extract dense waveforms from a recording. This is the default waveform extractor which extracts the waveforms
+        for further cmoputation on them.
+
+
+        Parameters
+        ----------
+        recording : BaseRecording
+            The recording object.
+        parents : Optional[List[PipelineNode]], optional
+            Pass parents nodes to perform a previous computation, by default None
+        return_output : bool, optional
+            Whether or not the output of the node is returned by the pipeline, by default False
+        ms_before : float, optional
+            The number of milliseconds to include before the peak of the spike, by default 1.
+        ms_after : float, optional
+            The number of milliseconds to include after the peak of the spike, by default 1.
+        """
+
+        WaveformExtractorNode.__init__(
+            self,
+            recording=recording,
+            parents=parents,
+            ms_before=ms_before,
+            ms_after=ms_after,
+            return_output=return_output,
+        )
         # this is a bad hack to differentiate in the child if the parents is dense or not.
         self.neighbours_mask = None
-        
-        self._kwargs['ms_before'] = float(ms_before)
-        self._kwargs['ms_after'] = float(ms_after)
+
 
     def get_trace_margin(self):
         return max(self.nbefore, self.nafter)
-    
+
     def compute(self, traces, peaks):
-        waveforms = traces[peaks['sample_ind'][:, None] + np.arange(-self.nbefore, self.nafter)]
+        waveforms = traces[peaks["sample_ind"][:, None] + np.arange(-self.nbefore, self.nafter)]
         return waveforms
 
 
-class ExtractSparseWaveforms(PipelineNode):
-    def __init__(self, recording, return_ouput=False,
-                         ms_before=None, ms_after=None, local_radius_um=100.,):
-        PipelineNode.__init__(self, recording, return_ouput=return_ouput)
+class ExtractSparseWaveforms(WaveformExtractorNode):
+    def __init__(
+        self,
+        recording: BaseRecording,
+        ms_before: float,
+        ms_after: float,
+        parents: Optional[List[PipelineNode]] = None,
+        return_output: bool = False,
+        local_radius_um: float = 100.0,
+    ):
+        """
+        Extract sparse waveforms from a recording. The strategy in this specific node is to reshape the waveforms
+        to eliminate their inactive channels. This is achieved by changing thei shape from
+        (num_waveforms, num_time_samples, num_channels) to (num_waveforms, num_time_samples, max_num_active_channels).
 
-        self.nbefore = int(ms_before * recording.get_sampling_frequency() / 1000.)
-        self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.)
+        Where max_num_active_channels is the max number of active channels in the waveforms. This is done by selecting
+        the max number of non-zeros entries in the sparsity neighbourhood mask.
 
+        Note that not all waveforms will have the same number of active channels. Even in the reduced form some of
+        the channels will be inactive and are filled with zeros.
+
+        Parameters
+        ----------
+        recording : BaseRecording
+            The recording object.
+        parents : Optional[List[PipelineNode]], optional
+            Pass parents nodes to perform a previous computation, by default None
+        return_output : bool, optional
+            Whether or not the output of the node is returned by the pipeline, by default False
+        ms_before : float, optional
+            The number of milliseconds to include before the peak of the spike, by default 1.
+        ms_after : float, optional
+            The number of milliseconds to include after the peak of the spike, by default 1.
+
+
+        """
+        WaveformExtractorNode.__init__(
+            self,
+            recording=recording,
+            parents=parents,
+            ms_before=ms_before,
+            ms_after=ms_after,
+            return_output=return_output,
+        )
+
+        self.local_radius_um = local_radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
         self.neighbours_mask = self.channel_distance < local_radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
-        
-        self._kwargs['ms_before'] = float(ms_before)
-        self._kwargs['ms_after'] = float(ms_after)
-        self._kwargs['local_radius_um'] = float(local_radius_um)
+
 
     def get_trace_margin(self):
         return max(self.nbefore, self.nafter)
-    
+
     def compute(self, traces, peaks):
         sparse_wfs = np.zeros((peaks.shape[0], self.nbefore + self.nafter, self.max_num_chans), dtype=traces.dtype)
-        
+
         for i, peak in enumerate(peaks):
-            chans, = np.nonzero(self.neighbours_mask[peak['channel_ind']])
-            sparse_wfs[i, :, :len(chans)] = traces[peak['sample_ind'] - self.nbefore: peak['sample_ind'] + self.nafter, :][:, chans]
+            (chans,) = np.nonzero(self.neighbours_mask[peak["channel_ind"]])
+            sparse_wfs[i, :, : len(chans)] = traces[
+                peak["sample_ind"] - self.nbefore : peak["sample_ind"] + self.nafter, :
+            ][:, chans]
 
         return sparse_wfs
+
 
 
 def check_graph(nodes):
@@ -155,6 +261,9 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
 
     processor.run()
 
+    outs = gather_func.finalize_buffers(squeeze_output=squeeze_output)
+    return outs
+
     if gather_mode == 'memory':
         return gather_func.concatenate(squeeze_output=squeeze_output)
     elif gather_mode == 'npy':
@@ -178,7 +287,8 @@ class GatherToMemory:
         # res is a tuple
         self.outputs.append(res)
     
-    def concatenate(self, squeeze_output=False):
+    def finalize_buffers(self, squeeze_output=False):
+        # concatenate
         if self.tuple_mode:
             # list of tuple of numpy array
             outs_concat = ()
@@ -231,7 +341,10 @@ class GatherToNpy:
         if self.tuple_mode is None:
             # first loop only
             self.tuple_mode = isinstance(res, tuple)
-            assert len(self.names) == 1
+            if self.tuple_mode:
+                assert len(self.names) == len(res)
+            else:
+                assert len(self.names) == 1
 
         # distribute binary buffer to npy files
         for i in range(len(self.names)):
@@ -246,7 +359,7 @@ class GatherToNpy:
             f.write(buf.tobytes())
             self.shapes0[i] += buf.shape[0]
 
-    def finalize(self) :
+    def finalize_buffers(self, squeeze_output=False):
         # close and post write header to files
         for f in self.files:
             f.close()
@@ -278,7 +391,7 @@ class GatherToNpy:
                 f.seek(0)
                 f.write(header)
         
-    def get_memmap(self, squeeze_output=False):
+        # open back the npy files in mmap mode read only
         if self.tuple_mode:
             outs = ()
             for i, name in enumerate(self.names):
@@ -363,7 +476,7 @@ def run_nodes(traces_chunk, local_peaks, nodes):
     # propagate the output
     pipeline_outputs_tuple = tuple()
     for node in nodes:
-        if node.return_ouput:
+        if node.return_output:
             out = pipeline_outputs[node]
             pipeline_outputs_tuple += (out, )
     

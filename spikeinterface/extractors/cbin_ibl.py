@@ -27,7 +27,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
     ----------
     folder_path: str or Path
         Path to ibl folder.
-    load_sync_channel: bool, optional, default: False
+    load_sync_channel: bool, default: False
         Load or not the last channel (sync).
         If not then the probe is loaded.
 

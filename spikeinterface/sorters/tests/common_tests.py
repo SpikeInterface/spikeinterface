@@ -30,32 +30,6 @@ class SorterCommonTestSuite:
             folder=cache_folder / "rec", verbose=False, format='binary')
         print(self.recording)
 
-    # def test_with_class(self):
-    #     # test the classmethod approach
-
-    #     SorterClass = self.SorterClass
-    #     recording = self.recording
-
-    #     sorter_params = SorterClass.default_params()
-
-    #     output_folder = cache_folder / SorterClass.sorter_name
-    #     verbose = False
-    #     remove_existing_folder = True
-    #     raise_error = True
-
-    #     output_folder = SorterClass.initialize_folder(
-    #         recording, output_folder, verbose, remove_existing_folder)
-    #     SorterClass.set_params_to_folder(
-    #         recording, output_folder, sorter_params, verbose)
-    #     SorterClass.setup_recording(recording, output_folder, verbose)
-    #     SorterClass.run_from_folder(output_folder, raise_error, verbose)
-    #     sorting = SorterClass.get_result_from_folder(output_folder)
-
-    #     # for unit_id in sorting.get_unit_ids():
-    #     # print('unit #', unit_id, 'nb', len(sorting.get_unit_spike_train(unit_id)))
-
-    #     del sorting
-
     def test_with_run(self):
         # some sorter (TDC, KS, KS2, ...) work by default with the raw binary
         # format as input to avoid copy when the recording is already this format
@@ -109,32 +83,6 @@ class SnippetsSorterCommonTestSuite:
 
         self.snippets = nse.save(folder=snippets_folder, verbose=False, format='npy')
         print(self.snippets)
-
-    # def test_with_class(self):
-    #     # test the classmethod approach
-
-    #     SorterClass = self.SorterClass
-    #     snippets = self.snippets
-
-    #     sorter_params = SorterClass.default_params()
-
-    #     output_folder = cache_folder / SorterClass.sorter_name
-    #     verbose = False
-    #     remove_existing_folder = True
-    #     raise_error = True
-
-    #     output_folder = SorterClass.initialize_folder(
-    #         snippets, output_folder, verbose, remove_existing_folder)
-    #     SorterClass.set_params_to_folder(
-    #         snippets, output_folder, sorter_params, verbose)
-    #     SorterClass.setup_recording(snippets, output_folder, verbose)
-    #     SorterClass.run_from_folder(output_folder, raise_error, verbose)
-    #     sorting = SorterClass.get_result_from_folder(output_folder)
-
-    #     # for unit_id in sorting.get_unit_ids():
-    #     # print('unit #', unit_id, 'nb', len(sorting.get_unit_spike_train(unit_id)))
-
-    #     del sorting
 
     def test_with_run(self):
         # some sorter (TDC, KS, KS2, ...) work by default with the raw binary

@@ -77,7 +77,7 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, qm_params=None,
         for each unit.
     qm_params : dict or None
         Dictionary with parameters for each PC metric function.
-    seed : int, optional, default: None
+    seed : int, default: None
         Random seed value.
     n_jobs : int
         Number of jobs to parallelize metric computations.
@@ -347,24 +347,24 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
         The waveform extractor object.
     this_unit_id : int
         The ID for the unit to calculate these metrics for.
-    max_spikes : int, optional, default: 1000
+    max_spikes : int, default: 1000
         Max number of spikes to use per unit.
     min_spikes : int, optional, defalt: 10
         Min number of spikes a unit must have to go through with metric computation.
         Units with spikes < min_spikes gets numpy.NaN as the quality metric.
-    n_neighbors : int, optional, default: 5
+    n_neighbors : int, default: 5
         Number of neighbors to check membership of.
-    n_components : int, optional, default: 10
+    n_components : int, default: 10
         The number of PC components to use to project the snippets to.
-    radius_um : float, optional, default: 100
+    radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    peak_sign: str, optional, default: 'neg'
+    peak_sign: str, default: 'neg'
         The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor 
         is not sparse already.
-    min_spatial_overlap : float, optional, default: 100
+    min_spatial_overlap : float, default: 100
         In case waveform_extractor is sparse, other units are selected if they share at least 
         `min_spatial_overlap` times `n_target_unit_channels` with the target unit
-    seed : int, optional, default: None
+    seed : int, default: None
         Seed for random subsampling of spikes.
 
     Returns
@@ -502,21 +502,21 @@ def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor,
         The waveform extractor object.
     this_unit_id : int
         The ID of the unit to calculate this metric on.
-    max_spikes : int, optional, default: 1000
+    max_spikes : int, default: 1000
         The max number of spikes to use per cluster.
     min_spikes : int, optional, defalt: 10
         Min number of spikes a unit must have to go through with metric computation.
         Units with spikes < min_spikes gets numpy.NaN as the quality metric.
-    n_neighbors : int, optional, default: 5
+    n_neighbors : int, default: 5
         The number of neighbors to check membership.
-    n_components : int, optional, default: 10
+    n_components : int, default: 10
         The number of PC components to use to project the snippets to.
-    radius_um : float, optional, default: 100
+    radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    peak_sign: str, optional, default: 'neg'
+    peak_sign: str, default: 'neg'
         The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor 
         is not sparse already.
-    seed : int, optional, default: 0
+    seed : int, default: 0
         Random seed for subsampling spikes.
 
     Returns
