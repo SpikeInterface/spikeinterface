@@ -14,6 +14,7 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "curation"
 
+parent_folder = Path(__file__).parent
 
 ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
 KACHERY_CLOUD_SET = bool(os.getenv('KACHERY_CLOUD_CLIENT_ID')) and bool(os.getenv('KACHERY_CLOUD_PRIVATE_KEY'))
@@ -50,8 +51,7 @@ def test_gh_curation():
     # from GH
     # curated link:
     # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://bd53f6b707f8121cadc901562a89b67aec81cc81&label=SpikeInterface%20-%20Sorting%20Summary&s={%22sortingCuration%22:%22gh://alejoe91/spikeinterface/fix-codecov/spikeinterface/curation/tests/sv-sorting-curation.json%22}
-    gh_uri = "gh://alejoe91/spikeinterface/fix-codecov/spikeinterface/curation/tests/sv-sorting-curation.json"
-    # TODO: use official SpikeInterface + master before merging
+    gh_uri = "gh://SpikeInterface/spikeinterface/master/spikeinterface/curation/tests/sv-sorting-curation.json"
     sorting_curated_gh = apply_sortingview_curation(sorting, uri_or_json=gh_uri, verbose=True)
     print(f"From GH: {sorting_curated_gh}")
 
@@ -102,7 +102,7 @@ def test_json_curation():
     _, sorting = read_mearec(local_path)
 
     # from curation.json
-    json_file = "sv-sorting-curation.json"
+    json_file = parent_folder / "sv-sorting-curation.json"
     sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_file, verbose=True)
     print(f"From JSON: {sorting_curated_json}")
 
