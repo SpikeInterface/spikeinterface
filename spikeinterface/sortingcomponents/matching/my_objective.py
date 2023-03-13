@@ -40,11 +40,10 @@ class MyObjective:
 
         # templates --> self.temps
         assert templates.dtype == np.float32, "templates must have dtype np.float32"
-        self.temps = templates.transpose(1, 2, 0)
-        self.n_time, self.n_chan, self.n_templates = self.temps.shape
+        self.templates = templates
+        self.n_templates, self.n_time, self.n_chan = self.templates.shape
 
         # handle grouped templates, as in the superresolution case
-        # TODO: refactor grouped_index mapping
         self.grouped_temps = False
         self.n_units = self.n_templates
         if self.params.template_ids2unit_ids is not None:
@@ -59,14 +58,14 @@ class MyObjective:
                 template_ids_of_unit = set(self.template_ids[self.template_ids2unit_ids == unit_id])
                 self.unit_ids2template_ids.append(template_ids_of_unit)
 
-                # variance parameter for the amplitude scaling prior
+        # variance parameter for the amplitude scaling prior
         assert self.lambd is None or self.lambd >= 0, "lambd must be a non-negative scalar"
         self.no_amplitude_scaling = self.lambd is None or self.lambd == 0
         self.scale_min = 1 / (1 + self.params.allowed_scale)
         self.scale_max = 1 + self.params.allowed_scale
 
         if self.verbose:
-            print("expected shape of templates loaded (n_times, n_chan, n_templates):", self.temps.shape)
+            print("expected shape of templates loaded (n_templates, n_time, n_chan):", self.templates.shape)
             print(f"Instantiating MatchPursuitObjectiveUpsample on {self.params.t_end - self.params.t_start}",
                   f"seconds long recording with threshold {self.threshold}")
 
@@ -78,11 +77,11 @@ class MyObjective:
         self.n_jittered = self.n_templates * self.up_factor
         self.jittered_ids = np.arange(self.n_jittered)
 
-        self.vis_chan = self.spatially_mask_templates(self.temps, self.vis_su_threshold)
+        self.vis_chan = self.spatially_mask_templates(self.templates, self.vis_su_threshold)
         self.unit_overlap = self.template_overlaps(self.vis_chan, self.up_factor)
 
         # Computing SVD for each template.
-        svd_matrices = self.compress_templates(self.temps, self.approx_rank, self.up_factor, self.n_time)
+        svd_matrices = self.compress_templates(self.templates, self.approx_rank, self.up_factor, self.n_time)
         self.temporal, self.singular, self.spatial, self.temporal_jittered = svd_matrices
 
         # Compute pairwise convolution of filters
@@ -95,7 +94,7 @@ class MyObjective:
         self.norm = np.zeros(self.n_templates, dtype=np.float32)
         for i in range(self.n_templates):
             self.norm[i] = np.sum(
-                np.square(self.temps[:, self.vis_chan[:, i], i])
+                np.square(self.templates[i, :, self.vis_chan[i, :]])
             )
 
         # Initialize outputs
@@ -133,8 +132,7 @@ class MyObjective:
     # TODO: Replace vis_chan, template_overlaps & spatially_mask_templates with spikeinterface sparsity representation
     @classmethod
     def template_overlaps(cls, vis_chan, up_factor):
-        vis = vis_chan.T
-        unit_overlap = np.sum(np.logical_and(vis[:, np.newaxis, :], vis[np.newaxis, :, :]), axis=2)
+        unit_overlap = np.sum(np.logical_and(vis_chan[:, np.newaxis, :], vis_chan[np.newaxis, :, :]), axis=2)
         unit_overlap = unit_overlap > 0
         unit_overlap = np.repeat(unit_overlap, up_factor, axis=0)
         return unit_overlap
@@ -142,16 +140,16 @@ class MyObjective:
 
     @classmethod
     def spatially_mask_templates(cls, templates, visibility_threshold):
-        visible_channels = np.ptp(templates, axis=0) > visibility_threshold
+        visible_channels = np.ptp(templates, axis=1) > visibility_threshold
         invisible_channels = np.logical_not(visible_channels)
-        templates[:, invisible_channels] = 0.0
+        for i in range(templates.shape[0]):
+            templates[i, :, invisible_channels[i, :]] = 0.0
         return visible_channels
 
 
     @classmethod
     def compress_templates(cls, templates, approx_rank, up_factor, n_time):
-        templates_unit_time_channel = np.transpose(templates, [2, 0, 1]) # TODO: Define template order
-        temporal, singular, spatial = np.linalg.svd(templates_unit_time_channel)
+        temporal, singular, spatial = np.linalg.svd(templates)
 
         # Keep only the strongest components
         temporal = temporal[:, :, :approx_rank]
@@ -211,7 +209,7 @@ class MyObjective:
                 temporal_overlapped = temporal[jittered_id2]
                 singular_overlapped = singular[jittered_id2]
                 spatial_overlapped = spatial[jittered_id2]
-                visible_overlapped_channels = vis_chan[:, jittered_id2]
+                visible_overlapped_channels = vis_chan[jittered_id2, :]
                 visible_template = template_reconstructed[:, visible_overlapped_channels]
                 spatial_filters = spatial_overlapped[:approx_rank, visible_overlapped_channels].T
                 spatially_filtered_template = np.matmul(visible_template, spatial_filters)
