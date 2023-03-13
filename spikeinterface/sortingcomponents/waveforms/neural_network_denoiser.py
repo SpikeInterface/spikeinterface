@@ -87,9 +87,9 @@ class SingleChannelToyDenoiser(PipelineNode):
         denoised_temporal_waveforms = self.denoiser(temporal_waveforms_tensor).detach().numpy()
 
         # Reconstruct representation with channels
-        desnoised_waveforms = from_temporal_representation(denoised_temporal_waveforms, num_channels)
+        denoised_waveforms = from_temporal_representation(denoised_temporal_waveforms, num_channels)
 
-        return desnoised_waveforms
+        return denoised_waveforms
 
 
 class SingleChannel1dCNNDenoiser(nn.Module):
