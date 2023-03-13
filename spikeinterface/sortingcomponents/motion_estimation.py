@@ -213,6 +213,8 @@ class DecentralizedRegistration:
     spatial_prior : bool, False
         Ensures continuity across space. Not usually necessary except in recordings with
         glitches across space.
+    force_spatial_median_continuity: bool, False
+        When spatial_prior=False we can optionaly apply a median continuity across spatial windows.
     reference_displacement : string, one of: "mean", "median", "time", "mode_search"
         Strategy for picking what is considered displacement=0.
          - "mean" : the mean displacement is subtracted
@@ -230,8 +232,8 @@ class DecentralizedRegistration:
             error_sigma=0.2, conv_engine=None, torch_device=None, batch_size=1, corr_threshold=0.0,
             time_horizon_s=None, convergence_method='lsqr_robust', soft_weights=False, 
             normalized_xcorr=True, centered_xcorr=True, temporal_prior=True, spatial_prior=False,
-            reference_displacement="median", reference_displacement_time_s=0,
-            robust_regression_sigma=2, lsqr_robust_n_iter=20, weight_with_amplitude=True):
+            force_spatial_median_continuity=False, reference_displacement="median", reference_displacement_time_s=0,
+            robust_regression_sigma=2, lsqr_robust_n_iter=20, weight_with_amplitude=False):
 
         # use torch if installed
         if conv_engine is None:
@@ -324,8 +326,9 @@ class DecentralizedRegistration:
         elif len(non_rigid_windows) > 1:
             # if spatial_prior is False, we still want keep the spatial bins
             # correctly offset from each other
-            for i in range(len(non_rigid_windows) - 1):
-                motion[:, i + 1] -= np.median(motion[:, i + 1] - motion[:, i])
+            if force_spatial_median_continuity:
+                for i in range(len(non_rigid_windows) - 1):
+                    motion[:, i + 1] -= np.median(motion[:, i + 1] - motion[:, i])
 
         # try to avoid constant offset
         # let the user choose how to do this. here are some ideas.
