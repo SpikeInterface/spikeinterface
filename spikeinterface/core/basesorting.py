@@ -53,6 +53,51 @@ class BaseSorting(BaseExtractor):
     def get_num_segments(self):
         return len(self._sorting_segments)
 
+    def get_num_samples(self, *args, **kwargs):
+        """Returns the number of samples of the associated recording for a segment.
+
+        Parameters
+        ----------
+        segment_index : int, optional
+            The segment index to retrieve the number of samples for. 
+            For multi-segment objects, it is required, by default None
+
+        Returns
+        -------
+        int
+            The number of samples
+        """
+        assert self.has_recording(), (
+            "This methods requires an associated recording. Call self.register_recording() first."
+        )
+        return self._recording.get_num_samples(*args, **kwargs)
+
+    def get_total_samples(self, *args, **kwargs):
+        """Returns the total number of samples of the associated recording.
+
+        Returns
+        -------
+        int
+            The total number of samples
+        """
+        assert self.has_recording(), (
+            "This methods requires an associated recording. Call self.register_recording() first."
+        )
+        return self._recording.get_total_samples(*args, **kwargs)
+
+    def get_total_duration(self, *args, **kwargs):
+        """Returns the total duration in s of the associated recording.
+
+        Returns
+        -------
+        float
+            The duration in seconds
+        """
+        assert self.has_recording(), (
+            "This methods requires an associated recording. Call self.register_recording() first."
+        )
+        return self._recording.get_total_duration(*args, **kwargs)
+
     def get_unit_spike_train(
         self,
         unit_id,
