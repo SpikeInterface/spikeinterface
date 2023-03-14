@@ -15,7 +15,7 @@ class ObjectiveParameters:
     n_sec_chunk: int = 1
     sampling_rate: int = 30_000
     max_iter: int = 1_000
-    upsample: int = 8 # TODO : rename --> jitter_factor
+    jitter_factor: int = 8
     threshold: float = 30
     conv_approx_rank: int = 5
     n_processors: int = 1
@@ -117,15 +117,14 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         params.no_amplitude_scaling = params.lambd is None or params.lambd == 0
         params.scale_min = 1 / (1 + params.allowed_scale)
         params.scale_max = 1 + params.allowed_scale
-        params.up_factor = params.upsample  # TODO: redundant --> remove
         # TODO: more explicative naming for radius, up_window, zoom_index, and peak_to_template_idx
-        radius = (params.up_factor // 2) + (params.up_factor % 2)
+        radius = (params.jitter_factor // 2) + (params.jitter_factor % 2)
         params.up_window = np.arange(-radius, radius + 1)[:, np.newaxis]
         params.up_window_len = len(params.up_window)
         # Indices of single time window the window around peak after upsampling
-        params.zoom_index = radius * params.up_factor + np.arange(-radius, radius + 1)
+        params.zoom_index = radius * params.jitter_factor + np.arange(-radius, radius + 1)
         params.peak_to_template_idx = np.concatenate(
-            (np.arange(radius, -1, -1), (params.up_factor - 1) - np.arange(radius))
+            (np.arange(radius, -1, -1), (params.jitter_factor - 1) - np.arange(radius))
         )
         params.peak_time_jitter = np.concatenate(
             ([0], np.array([0, 1]).repeat(radius))
@@ -155,7 +154,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         for unit_id in unit_ids:
             template_ids_of_unit = set(template_ids[template_ids2unit_ids == unit_id])
             unit_ids2template_ids.append(template_ids_of_unit)
-        n_jittered = n_templates * params.up_factor
+        n_jittered = n_templates * params.jitter_factor
         jittered_ids = np.arange(n_jittered)
         overlapping_spike_buffer = n_time - 1  # makes sure two overlapping spikes aren't subtracted at the same time
         template_meta = TemplateMetadata(
@@ -170,7 +169,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
     @classmethod
     def aggregate_sparsity(cls, params, templates):
         vis_chan = spatially_mask_templates(templates, params.vis_su)
-        unit_overlap = template_overlaps(vis_chan, params.up_factor)
+        unit_overlap = template_overlaps(vis_chan, params.jitter_factor)
         sparsity = Sparsity(vis_chan=vis_chan, unit_overlap=unit_overlap)
         return sparsity
 
@@ -223,7 +222,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
         # extract spiketrain and perform adjustments
         spike_train[:, 0] += nbefore
-        spike_train[:, 1] //= params.up_factor
+        spike_train[:, 1] //= params.jitter_factor
 
         # TODO : Find spike amplitudes / channels
         # amplitudes, channel_inds = [], []
@@ -333,7 +332,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         upsampled_template_idx, time_shift, valid_idx, scaling = high_res_peaks
 
         # Update unit_ids, spike_times, and scalings
-        spike_jittered_ids = spike_template_ids * params.up_factor
+        spike_jittered_ids = spike_template_ids * params.jitter_factor
         at_least_one_spike = bool(len(valid_idx))
         if at_least_one_spike:
             spike_jittered_ids[valid_idx] += upsampled_template_idx
@@ -374,7 +373,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
     @classmethod
     def high_res_peak(cls, spike_time_indices, spike_unit_ids, objective, params, template_meta):
         # Return identities if no high-resolution templates are necessary
-        not_high_res = params.up_factor == 1 and params.no_amplitude_scaling
+        not_high_res = params.jitter_factor == 1 and params.no_amplitude_scaling
         at_least_one_spike = bool(len(spike_time_indices))
         if not_high_res or not at_least_one_spike:
             upsampled_template_idx = np.zeros_like(spike_time_indices)
@@ -397,7 +396,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             return np.array([]), np.array([]), non_refractory_indices, np.array([])
 
         # Upsample and compute optimal template shift
-        resample_factor = params.up_window_len * params.up_factor
+        resample_factor = params.up_window_len * params.jitter_factor
         if params.no_amplitude_scaling:
             # Perform simple upsampling using scipy.signal.resample
             high_resolution_peaks = signal.resample(obj_peaks, resample_factor, axis=0)
@@ -436,7 +435,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
         # Adjust cluster IDs so that they match original templates
         spike_times = spiketrain[:, 0]
-        spike_template_ids = spiketrain[:, 1] // params.up_factor
+        spike_template_ids = spiketrain[:, 1] // params.jitter_factor
         spike_unit_ids = spike_template_ids.copy()
 
         # correct for template grouping
@@ -483,16 +482,16 @@ def compress_templates(templates, params, template_meta):
     spatial = spatial[:, :params.conv_approx_rank, :]
 
     # Upsample the temporal components of the SVD -- i.e. upsample the reconstruction
-    if params.up_factor == 1: # Trivial Case
+    if params.jitter_factor == 1: # Trivial Case
         temporal = np.flip(temporal, axis=1)
         temporal_jittered = temporal.copy()
         return temporal, singular, spatial, temporal_jittered
 
-    num_samples = template_meta.n_time * params.up_factor
+    num_samples = template_meta.n_time * params.jitter_factor
     temporal_jittered = signal.resample(temporal, num_samples, axis=1)
 
-    original_idx = np.arange(0, num_samples, params.up_factor) # indices of original data
-    shift_idx = np.arange(params.up_factor)[:, np.newaxis] # shift for each super-res template
+    original_idx = np.arange(0, num_samples, params.jitter_factor) # indices of original data
+    shift_idx = np.arange(params.jitter_factor)[:, np.newaxis] # shift for each super-res template
     shifted_idx = original_idx + shift_idx # array of all shifted template indices
 
     shape_temporal_jittered = [-1, template_meta.n_time, params.conv_approx_rank]
@@ -514,7 +513,7 @@ def conv_filter(svd_matrices, params, template_meta, sparsity):
     pairwise_conv_array = []
     for jittered_id in template_meta.jittered_ids:
         n_overlap = np.sum(sparsity.unit_overlap[jittered_id, :])
-        template_id = jittered_id // params.up_factor
+        template_id = jittered_id // params.jitter_factor
         pairwise_conv = np.zeros([n_overlap, conv_res_len], dtype=np.float32)
 
         # Reconstruct unit template from SVD Matrices
