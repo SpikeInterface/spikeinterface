@@ -98,7 +98,6 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
         # Perform initial computations necessary for computing the objective
         compressed_templates = compress_templates(templates, params, template_meta)
-        print(f"{type(compressed_templates) = }")
         pairwise_convolution = conv_filter(compressed_templates, params, template_meta, sparsity)
         norm = cls.compute_template_norm(sparsity, template_meta, templates)
         objective = Objective(compressed_templates=compressed_templates,
@@ -500,10 +499,6 @@ def compress_templates(templates, params, template_meta):
 
     temporal = np.flip(temporal, axis=1)
     temporal_jittered = np.flip(temporal_jittered, axis=1)
-    print(f"{type(temporal) = }")
-    print(f"{type(singular) = }")
-    print(f"{type(spatial) = }")
-    print(f"{type(temporal_jittered) = }")
     return temporal, singular, spatial, temporal_jittered
 
 
