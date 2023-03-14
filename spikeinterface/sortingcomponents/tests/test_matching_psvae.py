@@ -15,7 +15,6 @@ def test_matching_psvae():
     job_kwargs = dict(n_jobs=4, chunk_duration='1s', progress_bar=True, verbose=verbose)
     recording, gt_sorting = generate_gt_recording(job_kwargs, filepaths, verbose=verbose)
     gt_templates, we = generate_templates(recording, gt_sorting, job_kwargs, filepaths, verbose=verbose)
-    print(gt_templates.shape)
     duplicated_templates = np.concatenate((gt_templates, gt_templates[ [0] ]))
     template_ids2unit_ids = list(range(7))
     template_ids2unit_ids.append(0)
