@@ -61,7 +61,7 @@ class Sparsity:
 class Objective:
     """All of the *stuff* one needs to compute the objective and the objective itself (obj)"""
     compressed_templates : List[np.ndarray] = None
-    pairwise_convolution : np.ndarray = None
+    pairwise_convolution : List[np.ndarray] = None
     norm : np.ndarray = None
     obj_len : int = None
     obj: np.ndarray = None
@@ -88,16 +88,35 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
     def initialize_and_check_kwargs(cls, recording, kwargs):
         d = cls.default_params.copy()
         objective_kwargs = kwargs['objective_kwargs']
-
-        # format parameters TODO : extract out as a function
         templates = objective_kwargs.pop('templates')
+        templates = templates.astype(np.float32, casting='safe')
+
+        # Aggregate useful parameters/variables for handy access in downstream functions
+        params = cls.aggregate_parameters(objective_kwargs)
+        template_meta = cls.aggregate_template_metadata(params, templates)
+        sparsity = cls.aggregate_sparsity(params, templates) # TODO: replace with spikeinterface sparsity
+
+        # Perform initial computations necessary for computing the objective
+        compressed_templates = compress_templates(templates, params, template_meta)
+        pairwise_convolution = conv_filter(compressed_templates, params, template_meta, sparsity)
+        norm = cls.compute_template_norm(sparsity, template_meta, templates)
+        objective = Objective(compressed_templates=compressed_templates,
+                              pairwise_convolution=pairwise_convolution,
+                              norm=norm)
+
+        cls.pack_kwargs(kwargs, params, template_meta, sparsity, objective)
+        d.update(kwargs)
+        return d
+
+
+    @classmethod
+    def aggregate_parameters(cls, objective_kwargs):
         params = ObjectiveParameters(**objective_kwargs)
         assert params.lambd is None or params.lambd >= 0, "lambd must be a non-negative scalar"
         params.no_amplitude_scaling = params.lambd is None or params.lambd == 0
         params.scale_min = 1 / (1 + params.allowed_scale)
         params.scale_max = 1 + params.allowed_scale
-        params.up_factor = params.upsample # TODO: redundant --> remove
-
+        params.up_factor = params.upsample  # TODO: redundant --> remove
         # TODO: more explicative naming for radius, up_window, zoom_index, and peak_to_template_idx
         radius = (params.up_factor // 2) + (params.up_factor % 2)
         params.up_window = np.arange(-radius, radius + 1)[:, np.newaxis]
@@ -110,9 +129,11 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         params.peak_time_jitter = np.concatenate(
             ([0], np.array([0, 1]).repeat(radius))
         )
+        return params
 
-        # format templates TODO: extract out as a function
-        templates = templates.astype(np.float32, casting='safe')
+
+    @classmethod
+    def aggregate_template_metadata(cls, params, templates):
         n_templates, n_time, n_chan = templates.shape
         # TODO: use grouped templates in all cases even if trivial
         # handle grouped templates, as in the superresolution case
@@ -135,40 +156,38 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             unit_ids2template_ids.append(template_ids_of_unit)
         n_jittered = n_templates * params.up_factor
         jittered_ids = np.arange(n_jittered)
-        overlapping_spike_buffer = n_time - 1 # makes sure two overlapping spikes aren't subtracted at the same time
+        overlapping_spike_buffer = n_time - 1  # makes sure two overlapping spikes aren't subtracted at the same time
         template_meta = TemplateMetadata(
             n_time=n_time, n_chan=n_chan, n_units=n_units, n_templates=n_templates, n_jittered=n_jittered,
             unit_ids=unit_ids, template_ids=template_ids, jittered_ids=jittered_ids,
             template_ids2unit_ids=template_ids2unit_ids, unit_ids2template_ids=unit_ids2template_ids,
             grouped_temps=grouped_temps, overlapping_spike_buffer=overlapping_spike_buffer
         )
+        return template_meta
 
-        # Channel / Unit Sparsity # TODO: replace with spikeinterface sparsity
+
+    @classmethod
+    def aggregate_sparsity(cls, params, templates):
         vis_chan = spatially_mask_templates(templates, params.vis_su)
         unit_overlap = template_overlaps(vis_chan, params.up_factor)
         sparsity = Sparsity(vis_chan=vis_chan, unit_overlap=unit_overlap)
+        return sparsity
 
-        # Perform initial computations necessary for computing the objective
-        compressed_templates = compress_templates(templates, params, template_meta)
-        pairwise_convolution = conv_filter(compressed_templates, params, template_meta, sparsity)
-        # TODO: extract norm out into a function
+    @classmethod
+    def compute_template_norm(cls, sparsity, template_meta, templates):
         norm = np.zeros(template_meta.n_templates, dtype=np.float32)
         for i in range(template_meta.n_templates):
             norm[i] = np.sum(
                 np.square(templates[i, :, sparsity.vis_chan[i, :]])
             )
-        objective = Objective(compressed_templates=compressed_templates,
-                              pairwise_convolution=pairwise_convolution,
-                              norm=norm)
+        return norm
 
-        # Pack variables into kwargs
+    @classmethod
+    def pack_kwargs(cls, kwargs, params, template_meta, sparsity, objective):
         kwargs['params'] = params
         kwargs['template_meta'] = template_meta
         kwargs['sparsity'] = sparsity
         kwargs['objective'] = objective
-        d.update(kwargs)
-        return d
-
 
     @classmethod
     def serialize_method_kwargs(cls, kwargs):
