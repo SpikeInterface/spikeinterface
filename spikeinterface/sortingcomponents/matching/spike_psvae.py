@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import signal
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple, Optional
 from .main import BaseTemplateMatchingEngine
 
 
@@ -11,7 +11,7 @@ class ObjectiveParameters:
     allowed_scale: float = np.inf
     save_residual: bool = False
     t_start: int = 0
-    t_end: int = None
+    t_end: Optional[int] = None
     n_sec_chunk: int = 1
     sampling_rate: int = 30_000
     max_iter: int = 1_000
@@ -19,19 +19,19 @@ class ObjectiveParameters:
     threshold: float = 30
     conv_approx_rank: int = 5
     n_processors: int = 1
-    multi_processing: bool = False
+    multi_processing: Optional[bool] = False
     vis_su: float = 1
     verbose: bool = False
-    template_ids2unit_ids: np.ndarray = None
+    template_ids2unit_ids: Optional[np.ndarray] = None
     refractory_period_frames: int = 10
     no_amplitude_scaling : bool = False
     scale_min : float = 0
     scale_max : float = np.inf
-    up_window : np.ndarray = None # TODO : rename 'up_window'
-    up_window_len : int = None # TODO : rename 'up_window_len'
-    zoom_index : np.ndarray = None # TODO : rename 'zoom_index'
-    peak_to_template_idx : np.ndarray = None # TODO : rename 'peak_to_template_idx'
-    peak_time_jitter : np.ndarray = None # TODO : rename 'peak_time_jitter'
+    up_window : Optional[np.ndarray] = None # TODO : rename 'up_window'
+    up_window_len : Optional[int] = None # TODO : rename 'up_window_len'
+    zoom_index : Optional[np.ndarray] = None # TODO : rename 'zoom_index'
+    peak_to_template_idx : Optional[np.ndarray] = None # TODO : rename 'peak_to_template_idx'
+    peak_time_jitter : Optional[np.ndarray] = None # TODO : rename 'peak_time_jitter'
 
 
 
@@ -60,12 +60,12 @@ class Sparsity:
 @dataclass
 class Objective:
     """All of the *stuff* one needs to compute the objective and the objective itself (obj)"""
-    compressed_templates : List[np.ndarray] = None
-    pairwise_convolution : List[np.ndarray] = None
-    norm : np.ndarray = None
-    obj_len : int = None
-    obj: np.ndarray = None
-    obj_normalized: np.ndarray = None
+    compressed_templates : Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]] = None
+    pairwise_convolution : Optional[List[np.ndarray]] = None
+    norm : Optional[np.ndarray] = None
+    obj_len : Optional[int] = None
+    obj: Optional[np.ndarray] = None
+    obj_normalized: Optional[np.ndarray] = None
 
 
 class SpikePSVAE(BaseTemplateMatchingEngine):
@@ -98,6 +98,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
         # Perform initial computations necessary for computing the objective
         compressed_templates = compress_templates(templates, params, template_meta)
+        print(f"{type(compressed_templates) = }")
         pairwise_convolution = conv_filter(compressed_templates, params, template_meta, sparsity)
         norm = cls.compute_template_norm(sparsity, template_meta, templates)
         objective = Objective(compressed_templates=compressed_templates,
@@ -500,6 +501,10 @@ def compress_templates(templates, params, template_meta):
 
     temporal = np.flip(temporal, axis=1)
     temporal_jittered = np.flip(temporal_jittered, axis=1)
+    print(f"{type(temporal) = }")
+    print(f"{type(singular) = }")
+    print(f"{type(spatial) = }")
+    print(f"{type(temporal_jittered) = }")
     return temporal, singular, spatial, temporal_jittered
 
 
