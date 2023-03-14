@@ -121,10 +121,35 @@ class BaseSorting(BaseExtractor):
         else:
             return spike_frames
 
-    def register_recording(self, recording):
+    def register_recording(self, recording, check_spike_frames=True):
+        """Register a recording to the sorting.
+
+        Parameters
+        ----------
+        recording : BaseRecording
+            Recording with the same number of segments as current sorting.
+            Assigned to self._recording.
+        check_spike_frames : bool, optional
+            If True, assert for each segment that all spikes are within the recording's range.
+            By default True.
+        """
         assert np.isclose(self.get_sampling_frequency(),
                           recording.get_sampling_frequency(),
                           atol=0.1), "The recording has a different sampling frequency than the sorting!"
+        assert self.get_num_segments() == recording.get_num_segments(), (
+            "The recording has a different number of segments than the sorting!"
+        )
+        if check_spike_frames:
+            for sorting_segment, rec_segment in zip(self._sorting_segments, recording._recording_segments):
+                for unit_id in self.unit_ids:
+                    unit_segment_spikes = sorting_segment.get_unit_spike_train(
+                        unit_id=unit_id, 
+                        start_frame=None,
+                        end_frame=None,
+                    )
+                    segment_n_samples = rec_segment.get_num_samples()
+                    if any([spike_frame >= segment_n_samples for spike_frame in unit_segment_spikes]):
+                        raise ValueError("Sorting's spike trains are inconsistent with the recording's duration.")
         self._recording = recording
 
     @property
