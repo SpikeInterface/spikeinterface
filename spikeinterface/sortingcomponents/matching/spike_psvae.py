@@ -47,7 +47,6 @@ class TemplateMetadata:
     jittered_ids : np.ndarray
     template_ids2unit_ids : np.ndarray
     unit_ids2template_ids : List[set]
-    grouped_temps : bool
     overlapping_spike_buffer : int
 
 
@@ -134,21 +133,16 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
     @staticmethod
     def aggregate_template_metadata(params, templates):
         n_templates, n_time, n_chan = templates.shape
-        # TODO: use grouped templates in all cases even if trivial
-        # handle grouped templates, as in the superresolution case
-        grouped_temps = False
-        n_units = n_templates
-        if params.template_ids2unit_ids is not None:
+        # handle units with many templates, as in the super-resolution case
+        if params.template_ids2unit_ids is None: # Trivial grouping of templates = units
+            template_ids2unit_ids = np.arange(n_templates)
+        else:
             assert params.template_ids2unit_ids.shape == (templates.shape[0],), \
                 "template_ids2unit_ids must have shape (n_templates,)"
-            grouped_temps = True
             template_ids2unit_ids = params.template_ids2unit_ids
-        else:
-            template_ids2unit_ids = np.arange(n_units)
         unit_ids = np.unique(template_ids2unit_ids)
         n_units = len(unit_ids)
         template_ids = np.arange(n_templates)
-        template_ids2unit_ids = params.template_ids2unit_ids
         unit_ids2template_ids = []
         for unit_id in unit_ids:
             template_ids_of_unit = set(template_ids[template_ids2unit_ids == unit_id])
@@ -160,7 +154,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             n_time=n_time, n_chan=n_chan, n_units=n_units, n_templates=n_templates, n_jittered=n_jittered,
             unit_ids=unit_ids, template_ids=template_ids, jittered_ids=jittered_ids,
             template_ids2unit_ids=template_ids2unit_ids, unit_ids2template_ids=unit_ids2template_ids,
-            grouped_temps=grouped_temps, overlapping_spike_buffer=overlapping_spike_buffer
+            overlapping_spike_buffer=overlapping_spike_buffer
         )
         return template_meta
 
@@ -510,19 +504,18 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
 
     @classmethod
-    def enforce_refractory(cls, spiketrain, objective, params, template_meta):
+    def enforce_refractory(cls, spike_train, objective, params, template_meta):
         window = np.arange(-params.refractory_period_frames, params.refractory_period_frames+1)
 
         # Adjust cluster IDs so that they match original templates
-        spike_times = spiketrain[:, 0]
-        spike_template_ids = spiketrain[:, 1] // params.jitter_factor
-        spike_unit_ids = spike_template_ids.copy()
+        spike_times = spike_train[:, 0]
+        spike_template_ids = spike_train[:, 1] // params.jitter_factor
 
-        # correct for template grouping
-        if template_meta.grouped_temps:
-            for template_id in set(spike_template_ids):
-                unit_id = template_meta.template_ids2unit_ids[template_id] # unit_id corresponding to this template
-                spike_unit_ids[spike_template_ids==template_id] = unit_id
+        # We want to enforce refractory conditions on unit_ids rather than template_ids for units with many templates
+        spike_unit_ids = spike_template_ids.copy()
+        for template_id in set(spike_template_ids):
+            unit_id = template_meta.template_ids2unit_ids[template_id] # unit_id corresponding to this template
+            spike_unit_ids[spike_template_ids==template_id] = unit_id
 
         # Get the samples (time indices) that correspond to the waveform for each spike
         waveform_samples = get_convolution_len(spike_times[:, np.newaxis], template_meta.n_time) + window
