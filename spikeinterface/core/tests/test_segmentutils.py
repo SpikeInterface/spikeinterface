@@ -11,11 +11,11 @@ from spikeinterface.core import NumpyRecording, NumpySorting
 
 
 def test_append_concatenate_recordings():
-    traces = np.zeros((1000, 5), dtype='float64')
-    traces[:] = np.arange(1000)[:, None]
+    base_traces = np.zeros((1000, 5), dtype='float64')
+    base_traces[:] = np.arange(1000)[:, None]
     sampling_frequency = 30000
-    rec0 = NumpyRecording([traces] * 3, sampling_frequency)
-    rec1 = NumpyRecording([traces] * 2, sampling_frequency)
+    rec0 = NumpyRecording([base_traces] * 3, sampling_frequency)
+    rec1 = NumpyRecording([base_traces] * 2, sampling_frequency)
 
     # append
     rec = append_recordings([rec0, rec1])
@@ -34,25 +34,32 @@ def test_append_concatenate_recordings():
 
     # case one segment
     traces = rec.get_traces(start_frame=0, end_frame=15)
-    assert np.array_equal(traces[:, 0], np.arange(0, 15))
+    assert np.array_equal(traces, base_traces[:15])
+    traces = rec.get_traces(start_frame=0, end_frame=1000)
+    assert np.array_equal(traces, base_traces)
     traces = rec.get_traces(start_frame=500, end_frame=750)
-    assert np.array_equal(traces[:, 0], np.arange(500, 750))
+    assert np.array_equal(traces, base_traces[500:750])
 
     # case on limit
     traces = rec.get_traces(start_frame=1000, end_frame=2000)
     assert traces.shape == (1000, 5)
-    assert np.array_equal(traces[:, 0], np.arange(0, 1000, dtype='float64'))
+    assert np.array_equal(traces, base_traces)
 
     # case total
     traces = rec.get_traces(start_frame=None, end_frame=None)
     assert traces.shape == (5000, 5)
-    assert traces[1000, 0] == 0
+    assert np.array_equal(traces[:1000], base_traces)
+    assert np.array_equal(traces[1000:2000], base_traces)
+    assert np.array_equal(traces[4000:5000], base_traces)
 
     # several segments
     traces = rec.get_traces(start_frame=50, end_frame=4500)
     assert traces.shape == (4450, 5)
-    assert traces[0, 0] == 50
-    assert traces[-1, 0] == 499
+    assert np.array_equal(traces[0:10], base_traces[50:60])
+    assert np.array_equal(traces[-10:], base_traces[490:500])
+    # across segments
+    assert np.array_equal(traces[949,:], base_traces[-1,:])
+    assert np.array_equal(traces[950,:], base_traces[0,:])
 
 
 def test_split_recordings():
