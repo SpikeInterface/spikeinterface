@@ -12,7 +12,7 @@ The metric is then converted back to original units.
 Expectation and use
 -------------------
 
-A larger value (larger signal) is taken to indicate a better unit.
+A larger value (larger signal) indicates a better unit.
 
 
 Example code
@@ -25,7 +25,7 @@ Example code
 	# It is also recommended to run `compute_spike_amplitudes(wvf_extractor)`
 	# in order to use amplitude values from all spikes.
 	amplitude_medians = qm.compute_amplitude_medians(wvf_extractor)
-	# amplitude_medians is a dict containing the units' ID as keys,
+	# amplitude_medians is a dict containing the units' IDs as keys,
 	# and their estimated amplitude medians as values.
 
 Reference

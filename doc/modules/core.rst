@@ -283,11 +283,11 @@ classes (currently only :py:class:`~spikeinterface.core.NumpySnippets` and
 :code:`WaveClusSnippetsExtractor` are implemented).
 
 It represents unsorted waveform cutouts. Some acquisition systems, in fact, allow users to set a 
-threshold and only record the times and which a peak was detected and the waveform cut out around 
+threshold and only record the times at which a peak was detected and the waveform cut out around 
 the peak. 
 
 **NOTE**: while we support this class (mainly for legacy formats), this approach is a bad practice 
-and highly discouraged! Most of modern spike sorters, in fact, require the raw traces to perform 
+and highly discouraged! Most modern spike sorters, in fact, require the raw traces to perform 
 template matching to recover spikes!
 
 Here we assume :code:`snippets` is a :py:class:`~spikeinterface.core.BaseSnippets` object 
@@ -372,7 +372,7 @@ Sparsity
 
 In several cases, it is not necessary to have waveforms on all channels. This is especially true for high-density 
 probes, such as Neuropixels, because the waveforms of a unit will only appear on a small set of channels. 
-Sparsity is defined as the subset of channels on which waveforms (and related information) are defined. Of course, the 
+Sparsity is defined as the subset of channels on which waveforms (and related information) are defined. Of course, 
 sparsity is not global, but it is unit-specific.
 
 Sparsity can be computed from a :py:class:`~spikeinterface.core.WaveformExtractor` object with the 
@@ -421,7 +421,7 @@ Saving, loading, and compression
 
 The Base SpikeInterface objects (:py:class:`~spikeinterface.core.BaseRecording`, 
 :py:class:`~spikeinterface.core.BaseSorting`, and 
-:py:class:`~spikeinterface.core.BaseSnippets`) hold full information about their history to endure provenance. 
+:py:class:`~spikeinterface.core.BaseSnippets`) hold full information about their history to maintain provenance. 
 Each object is in fact internally represented as a dictionary (:code:`si_object.to_dict()`) which can be used to 
 re-instantiate the object from scratch (this is true for all objects except in-memory ones, see :ref:`in_memory`).
 
@@ -514,7 +514,7 @@ Any of these argument, can be overridden by manually passing the argument to a f
 Object "in-memory"
 ------------------
 
-While most of the times SpikeInterface objects will be loaded from a file, sometimes is convenient to construct 
+While most of the times SpikeInterface objects will be loaded from a file, sometimes it is convenient to construct 
 in-memory objects (for example, for testing a new method) or "manually" add some information to the pipeline 
 workflow.
 
@@ -585,7 +585,7 @@ the new objects will be a *view* of the original ones.
     sub_sorting = sorting.select_units(unit_ids=sorting.unit_ids[:4])
 
 
-We can also aggregate (or stack) multiple recordings on on the channel axis using 
+We can also aggregate (or stack) multiple recordings on the channel axis using 
 the :py:func:`~spikeinterface.core.aggregate_channels`. Note that for this operation the recordings need to have the 
 same sampling frequency, number of segments, and number of samples:
 
@@ -595,7 +595,7 @@ same sampling frequency, number of segments, and number of samples:
     recB_4_chans = read_binray('fileB.raw')
     rec_8_chans = aggregate_channels([recA_4_chans, recB_4_chans])
 
-We can also aggregate (or stack) multiple sortings on unit axis using the 
+We can also aggregate (or stack) multiple sortings on the unit axis using the 
 :py:func:`~spikeinterface.core.aggregate_units` function:
 
 .. code-block:: python
@@ -612,7 +612,7 @@ Multi-segment objects can result from running different recording phases (e.g., 
 without moving the underlying probe (e.g., just clicking play/pause on the acquisition software). Therefore, multiple 
 segments are assumed to record from the same set of neurons.
 
-We have several functions to manipulate segments of SpikeInterface objects. All this manipulations are lazy.
+We have several functions to manipulate segments of SpikeInterface objects. All these manipulations are lazy.
 
 
 .. code-block:: python
@@ -648,16 +648,16 @@ The same functions are also available for
 
 
 **Note** :py:func:`~spikeinterface.core.append_recordings` and:py:func:`~spikeinterface.core.concatenate_recordings`
-have the same goal, aggregate recording piece on the time axis but with 2 differents strategy! One is keeping the
+have the same goal, aggregate recording pieces on the time axis but with 2 different strategies! One is keeping the
 multi segments concept, the other one is breaking it!
-Ses this example for more detail :ref:`example_segments`.
+See this example for more detail :ref:`example_segments`.
 
 
 
 Recording tools
 ---------------
 
-The :py:mod:`spikeinterface.core.recording_tools` submodule offers some utility functions to on top of the recording 
+The :py:mod:`spikeinterface.core.recording_tools` submodule offers some utility functions on top of the recording 
 object:
 
   * :py:func:`~spikeinterface.core.get_random_data_chunks`: retrieves some random chunks of data: 
@@ -678,7 +678,7 @@ The :py:mod:`spikeinterface.core.template_tools` submodule includes functionalit
     | every channel
   * | :py:func:`~spikeinterface.core.get_template_extremum_channel`: returns the channel id (or index) where the 
     | template has the largest amplitude
-  * | :py:func:`~spikeinterface.core.get_template_extremum_channel_peak_shift`: returnes the misalignment in samples 
+  * | :py:func:`~spikeinterface.core.get_template_extremum_channel_peak_shift`: returns the misalignment in samples 
     | (peak shift) of each template with respect to the center of the waveforms (:py:attr:`~spikeinterface.core.WaveformExtractor.nbefore`)
   * | :py:func:`~spikeinterface.core.get_template_extremum_amplitude`: returns the amplitude of the template for each 
     | unit on the extremum channel
@@ -688,7 +688,7 @@ The :py:mod:`spikeinterface.core.template_tools` submodule includes functionalit
 Generate toy objects
 --------------------
 
-The The :py:mod:`~spikeinterface.core` module also offers some functions to generate tow/fake data.
+The :py:mod:`~spikeinterface.core` module also offers some functions to generate toy/fake data.
 They are useful to make examples, tests, and small demos:
 
 .. code-block:: python

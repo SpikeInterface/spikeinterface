@@ -4,11 +4,11 @@ Sorting Components module
 Spike sorting is comprised of several steps, or components. In the :py:mod:`spikeinterface.sortingcomponents` module we
 are building a library of methods and steps that can be assembled to build full spike sorting pipelines.
 
-This effort goes in the direction of *modularization* of spike sorting algorithms. Currently, spike sorters are shipped
+The goal is to allow for the *modularization* of spike sorting algorithms. Currently, spike sorters are shipped
 as full packages with all the steps needed to perform end-to-end spike sorting.
 
-However, this might not be the best option. It is in fact very likely that a sorter has an excellent step,
-say the clustering, but another step is sub-optimal. Decoupling different steps as separate components would allow
+However, this might not be the best option. It is in fact very likely that a sorter has one excellent step,
+say the clustering, but another step, which is sub-optimal. Decoupling different steps as separate components would allow
 one to mix-and-match sorting steps from different sorters.
 
 Another advantage of *modularization* is that we can accurately benchmark every step of a spike sorting pipeline.
@@ -27,7 +27,7 @@ For now, we have methods for:
 For some of theses steps, implementations are in a very early stage and are still a bit *drafty*.
 Signature and behavior may change from time to time in this alpha period development.
 
-You can also have a look `spikeinterface blog <https://spikeinterface.github.io>`_ where there are more detailled 
+You can also have a look `spikeinterface blog <https://spikeinterface.github.io>`_ where there are more detailed 
 notebooks on sorting components.
 
 
@@ -73,7 +73,7 @@ Different methods are available with the :code:`method` argument:
 * 'by_channel_torch' (requires :code:`torch`): pytorch implementation (GPU-compatible) that uses max pooling for time deduplication
 * 'locally_exclusive_torch' (requires :code:`torch`): pytorch implementation (GPU-compatible) that uses max pooling for space-time deduplication
 
-**NOTE**: the torch implementations give slight different results due to the different implementation.
+**NOTE**: the torch implementations give slightly different results due to a different implementation.
 
 Peak detection, as many sorting components, can be run in parallel.
 
@@ -82,7 +82,7 @@ Peak localization
 -----------------
 
 Peak localization estimates the spike *location* on the probe. An estimate of location can be important to correct for
-drifts or cluster spikes into different units.
+drift or cluster spikes into different units.
 
 
 Peak localization can be run using :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks()` as
@@ -108,7 +108,7 @@ Currently, the following methods are implemented:
     see also [here](https://openreview.net/forum?id=ohfi44BZPC4)
   * 'monopolar_triangulation' with optimizer='minimize_with_log_penality'
 
-Theses methods are the same implemented in :py:mod:`spikeinterface.postprocessing.unit_localization`
+These methods are the same as implemented in :py:mod:`spikeinterface.postprocessing.unit_localization`
 
 
 
@@ -122,7 +122,7 @@ For instance, the 'monopolar_triangulation' method will have:
 
 .. note::
 
-   By convention in spikeinterface, when a probe is describe in 2d
+   By convention in spikeinterface, when a probe is described in 2d
      * **'x'** is the width of the probe
      * **'y'** is the depth
      * **'z'** is the orthogonal to the probe plane
@@ -136,7 +136,7 @@ This is the strategy used by spyking-circus or tridesclous, for instance.
 Then, clustering is run on this subset of peaks, templates are extracted, and a template-matching step is run to find 
 all spikes.
 
-The way the *peak vector* is reduced (or sub-sampled) is a crutial step because units with small firing rate
+The way the *peak vector* is reduced (or sub-sampled) is a crucial step because units with small firing rates
 can be *hidden* by this process.
 
 
@@ -163,22 +163,22 @@ Implemented methods are the following:
 Motion estimation
 -----------------
 
-Recently, drift estimation has been added in some the available spike sorters (Kilosort 2.5, 3)
-Especially for Neuropixels-like probes, this is crucials step.
+Recently, drift estimation has been added to some of the available spike sorters (Kilosort 2.5, 3)
+Especially for Neuropixels-like probes, this is a crucial step.
 
-Several methods have been proposed to correct for drifts, but only one is currently implemented in spikeinterface 
-at the moment. See `Decentralized Motion Inference and Registration of Neuropixel Data <https://ieeexplore.ieee.org/document/9414145>`_ 
+Several methods have been proposed to correct for drift, but only one is currently implemented in spikeinterface. 
+See `Decentralized Motion Inference and Registration of Neuropixel Data <https://ieeexplore.ieee.org/document/9414145>`_ 
 for more details.
 
 The motion estimation step comes after peak detection and peak localization.
-The idea is to divide the recording in time bins and estimate the relative motion between temporal bins.
+The idea is to divide the recording into time bins and estimate the relative motion between temporal bins.
 
 This method has two options:
 
   * rigid drift : one motion vector is estimated for the entire probe 
   * non-rigid drift : one motion vector is estimated per depth bin
 
-Here is an example with non-rigid motion estimation
+Here is an example with non-rigid motion estimation:
   
 .. code-block:: python
 
@@ -206,11 +206,11 @@ Motion correction
 The estimated motion can be used to correct the motion, in other words, for drift correction.
 One possible way is to make an interpolation sample-by-sample to compensate for the motion.
 The :py:class:`~spikeinterface.sortingcomponents.motion_correction.CorrectMotionRecording` is a preprocessing step doing
-this. This preprocessing is *lazy*, so that inperpolation is done the on-the-fly. However, the class needs the
+this. This preprocessing is *lazy*, so that interpolation is done on-the-fly. However, the class needs the
 "motion vector" as input, which requires a relatively long computation (peak detection, localization and motion
 estimation).
 
-Here is a short example the depends on the output of "Motion estimation":
+Here is a short example that depends on the output of "Motion estimation":
 
 
 .. code-block:: python
@@ -222,10 +222,10 @@ Here is a short example the depends on the output of "Motion estimation":
                                               border_mode='remove_channels')
 
 **Notes**:
-  * :code:`spatial_interpolation_method` "krigging" or "iwd" fot not play a big role.
-  * :code:`border_mode` is very imprtant details. How to deal with the border because with motion untis on the border
-    by nature are not present on the entire recording. We higly recommend the :code:`border_mode='remove_channels'`
-    because this remove channel on th border that will be impact by the drift. Of course the the large the motion is
+  * :code:`spatial_interpolation_method` "kriging" or "iwd" do not play a big role.
+  * :code:`border_mode` is a very important parameter. It controls how to deal with the border because motion causes units on the
+    border to not be present throughout the entire recording. We highly recommend the :code:`border_mode='remove_channels'`
+    because this removes channels on the border that will be impacted by drift. Of course the larger the motion is
     the more channels are removed.
 
 
@@ -234,14 +234,14 @@ Clustering
 
 The clustering step remains the central step of the spike sorting.
 Historically this step was separted into two distinct parts: feature reduction and clustering.
-In spikeinterface, we decided to regroup this two steps in the same module.
+In spikeinterface, we decided to regroup these two steps into the same module.
 This allows one to compute feature reduction on-the-fly and avoid long computations and storage of 
 large features.
 
 The clustering step takes the recording and detected (and optionally selected) peaks as input and returns 
 a label for every peak.
 
-At the moment, the implemenation is quite experimental.
+At the moment, the implemention is quite experimental.
 These methods have been implemented:
 
   * | "position_clustering": use HDBSCAN on peak locations.
@@ -250,7 +250,7 @@ These methods have been implemented:
   * | "position_pca_clustering": this method tries to use peak locations for a first clustering step and then perform 
     | further splits using PCA + HDBSCAN
 
-Different methods may need different inputs (for instance some of them require need peak locations and some do not).
+Different methods may need different inputs (for instance some of them require peak locations and some do not).
     
 .. code-block:: python
   
@@ -268,9 +268,9 @@ Different methods may need different inputs (for instance some of them require n
 Template matching
 -----------------
 
-Template matching is the final step used in many tools (kilosort, spyking-circus, yass, tridesclous, hdsort...)
+Template matching is the final step used in many sorters (kilosort, spyking-circus, yass, tridesclous, hdsort...)
 
-In this step, from a given catalogue (or dictionnary) of templates (or atoms), the algorithms try to *explain* the 
+In this step, from a given catalogue (or dictionary) of templates (or atoms), the algorithms try to *explain* the 
 traces as a linear sum of template plus a residual noise.
 
 At the moment, there are four methods implemented:

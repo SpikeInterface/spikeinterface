@@ -1,0 +1,31 @@
+.. _release0.97.1:
+
+SpikeInterface 0.97.1 release notes
+-----------------------------------
+
+10th March 2023
+
+
+Minor release with some bug fixes and minor new features:
+
+* Sparsity threshold based on expected energy for noise (#1315)
+* Add optional selection indices to select_peaks function (#1318)
+* Missing parent init in HighPassSpatialFilterSegment (#1329)
+* New numpy features for peak selection (#1330)
+* Fix whiten: add M to parameters and kwargs (#1337)
+* Fix ids_to_indices when channel_ids is None (#1338)
+* Add TemporalPCADenoising as a pipeline node (#1339)
+* Fix LSB correction (#1348)
+* Fix ipywidgets sparsity for plot_waveforms (#1353)
+* Create internal and external sorters sub-modules (#1354)
+* Pass sparsity argument directly to extract_waveforms (#1359)
+* Typo and return output False by default for waveform nodes (#1360)
+* Add a margin parameter to get_random_data_chunks (#1363)
+* Fix saving of CorrectMotion object (#1367)
+* Fix plot templates with waveformless WaveformExtractor (#1368)
+* Allow to load objects when 'properties' folder is missing (#1369)
+* Force_spatial_median_continuity=False and weight_with_amplitude=False in estimate_motion (#1374)
+* Add function to remove excess spikes (#1378)
+* Fix for handling sparsity in plot_spikes_on_traces (#1402)
+* Fix runsorter print in non-dev mode (#1410)
+* Improve Docs (#1381, #1383, #1387, #1396, #1408)

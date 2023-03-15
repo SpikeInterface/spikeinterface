@@ -64,7 +64,7 @@ as :code:`spikeinterface` strongly relies on these packages to interface with va
 For beginners
 -------------
 
-We provide here some installation tips for beginners in Python here:
+We provide some installation tips for beginners in Python here:
 
 https://github.com/SpikeInterface/spikeinterface/tree/master/installation_tips
 
@@ -94,4 +94,4 @@ Sub-modules have more dependencies, so you should also install:
 
 
 All external spike sorters can be either run inside containers (Docker or Singularity - see :ref:`containerizedsorters`) 
-or must installed independently (see :ref:`installsorters`).
+or must be installed independently (see :ref:`installsorters`).

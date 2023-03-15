@@ -317,6 +317,7 @@ spikeinterface.curation
     .. autofunction:: find_redundant_units
     .. autofunction:: remove_redundant_units
     .. autofunction:: remove_duplicated_spikes
+    .. autofunction:: remove_excess_spikes
     .. autofunction:: apply_sortingview_curation
 
 
