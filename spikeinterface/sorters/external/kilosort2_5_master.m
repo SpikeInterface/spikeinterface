@@ -37,8 +37,6 @@ function kilosort2_5_master(fpath, kilosortPath)
             rez.yc = yc;
             rez.xcoords = xc;
             rez.ycoords = yc;
-            rez.ops.chanMap = chanMap;
-            rez.ops.kcoords = kcoords;
             Nbatch      = ceil(ops.sampsToRead / ops.NT); % number of data batches
             NTbuff      = ops.NT + 3*ops.ntbuff; % we need buffers on both sides for filtering
             ops.Nbatch = Nbatch;
@@ -48,6 +46,9 @@ function kilosort2_5_master(fpath, kilosortPath)
             % fproc is the same as the binary
             ops.fproc = ops.fbinary;
             rez.ops = ops; % memorize ops
+            rez.ops.chanMap = chanMap;
+            rez.ops.kcoords = kcoords;
+
         else
             % preprocess data to create temp_wh.dat
             rez = preprocessDataSub(ops);
