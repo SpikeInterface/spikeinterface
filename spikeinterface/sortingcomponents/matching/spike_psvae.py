@@ -97,8 +97,8 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         sparsity = cls.aggregate_sparsity(params, templates) # TODO: replace with spikeinterface sparsity
 
         # Perform initial computations necessary for computing the objective
-        compressed_templates = compress_templates(templates, params, template_meta)
-        pairwise_convolution = conv_filter(compressed_templates, params, template_meta, sparsity)
+        compressed_templates = cls.compress_templates(templates, params, template_meta)
+        pairwise_convolution = cls.conv_filter(compressed_templates, params, template_meta, sparsity)
         norm = cls.compute_template_norm(sparsity, template_meta, templates)
         objective = Objective(compressed_templates=compressed_templates,
                               pairwise_convolution=pairwise_convolution,
@@ -109,15 +109,15 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         return d
 
 
-    @classmethod
-    def aggregate_parameters(cls, objective_kwargs):
+    @staticmethod
+    def aggregate_parameters(objective_kwargs):
         params = ObjectiveParameters(**objective_kwargs)
         assert params.lambd is None or params.lambd >= 0, "lambd must be a non-negative scalar"
         params.no_amplitude_scaling = params.lambd is None or params.lambd == 0
         params.scale_min = 1 / (1 + params.allowed_scale)
         params.scale_max = 1 + params.allowed_scale
-        # TODO: more explicative naming for radius, up_window, zoom_index, and peak_to_template_idx
-        radius = (params.jitter_factor // 2) + (params.jitter_factor % 2)
+        # TODO: more explicative naming for radius, up_window, zoom_index, and peak_to_template_idx -- ask Charlie
+        radius = (params.jitter_factor // 2) + (params.jitter_factor % 2) # TODO: ask Charlie about this one
         params.up_window = np.arange(-radius, radius + 1)[:, np.newaxis]
         params.up_window_len = len(params.up_window)
         # Indices of single time window the window around peak after upsampling
@@ -131,8 +131,8 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         return params
 
 
-    @classmethod
-    def aggregate_template_metadata(cls, params, templates):
+    @staticmethod
+    def aggregate_template_metadata(params, templates):
         n_templates, n_time, n_chan = templates.shape
         # TODO: use grouped templates in all cases even if trivial
         # handle grouped templates, as in the superresolution case
@@ -167,13 +167,13 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
     @classmethod
     def aggregate_sparsity(cls, params, templates):
-        vis_chan = spatially_mask_templates(templates, params.vis_su)
-        unit_overlap = template_overlaps(vis_chan, params.jitter_factor)
+        vis_chan = cls.spatially_mask_templates(templates, params.vis_su)
+        unit_overlap = cls.template_overlaps(vis_chan, params.jitter_factor)
         sparsity = Sparsity(vis_chan=vis_chan, unit_overlap=unit_overlap)
         return sparsity
 
-    @classmethod
-    def compute_template_norm(cls, sparsity, template_meta, templates):
+    @staticmethod
+    def compute_template_norm(sparsity, template_meta, templates):
         norm = np.zeros(template_meta.n_templates, dtype=np.float32)
         for i in range(template_meta.n_templates):
             norm[i] = np.sum(
@@ -181,12 +181,94 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             )
         return norm
 
-    @classmethod
-    def pack_kwargs(cls, kwargs, params, template_meta, sparsity, objective):
+    @staticmethod
+    def pack_kwargs(kwargs, params, template_meta, sparsity, objective):
         kwargs['params'] = params
         kwargs['template_meta'] = template_meta
         kwargs['sparsity'] = sparsity
         kwargs['objective'] = objective
+
+
+    # TODO: Replace vis_chan, template_overlaps & spatially_mask_templates with spikeinterface sparsity representation
+    @staticmethod
+    def template_overlaps(vis_chan, up_factor):
+        unit_overlap = np.sum(np.logical_and(vis_chan[:, np.newaxis, :], vis_chan[np.newaxis, :, :]), axis=2)
+        unit_overlap = unit_overlap > 0
+        unit_overlap = np.repeat(unit_overlap, up_factor, axis=0)
+        return unit_overlap
+
+
+    @staticmethod
+    def spatially_mask_templates(templates, visibility_threshold):
+        visible_channels = np.ptp(templates, axis=1) > visibility_threshold
+        invisible_channels = np.logical_not(visible_channels)
+        for i in range(templates.shape[0]):
+            templates[i, :, invisible_channels[i, :]] = 0.0
+        return visible_channels
+
+
+    @staticmethod
+    def compress_templates(templates, params, template_meta):
+        temporal, singular, spatial = np.linalg.svd(templates)
+
+        # Keep only the strongest components
+        temporal = temporal[:, :, :params.conv_approx_rank]
+        singular = singular[:, :params.conv_approx_rank]
+        spatial = spatial[:, :params.conv_approx_rank, :]
+
+        # Upsample the temporal components of the SVD -- i.e. upsample the reconstruction
+        if params.jitter_factor == 1:  # Trivial Case
+            temporal = np.flip(temporal, axis=1)
+            temporal_jittered = temporal.copy()
+            return temporal, singular, spatial, temporal_jittered
+
+        num_samples = template_meta.n_time * params.jitter_factor
+        temporal_jittered = signal.resample(temporal, num_samples, axis=1)
+
+        original_idx = np.arange(0, num_samples, params.jitter_factor)  # indices of original data
+        shift_idx = np.arange(params.jitter_factor)[:, np.newaxis]  # shift for each super-res template
+        shifted_idx = original_idx + shift_idx  # array of all shifted template indices
+
+        shape_temporal_jittered = [-1, template_meta.n_time, params.conv_approx_rank]
+        temporal_jittered = np.reshape(temporal_jittered[:, shifted_idx, :], shape_temporal_jittered)
+        temporal_jittered = temporal_jittered.astype(np.float32, casting='safe')  # TODO: Redundant?
+
+        temporal = np.flip(temporal, axis=1)
+        temporal_jittered = np.flip(temporal_jittered, axis=1)
+        return temporal, singular, spatial, temporal_jittered
+
+
+    @staticmethod
+    def conv_filter(compressed_templates, params, template_meta, sparsity):
+        temporal, singular, spatial, temporal_jittered = compressed_templates
+        conv_res_len = get_convolution_len(template_meta.n_time, template_meta.n_time)
+        pairwise_conv_array = []
+        for jittered_id in template_meta.jittered_ids:
+            n_overlap = np.sum(sparsity.unit_overlap[jittered_id, :])
+            template_id = jittered_id // params.jitter_factor
+            pairwise_conv = np.zeros([n_overlap, conv_res_len], dtype=np.float32)
+
+            # Reconstruct unit template from SVD Matrices
+            temporal_jittered_scaled = temporal_jittered[jittered_id] * singular[template_id][np.newaxis, :]
+            template_reconstructed = np.matmul(temporal_jittered_scaled, spatial[template_id, :, :])
+            template_reconstructed = np.flipud(template_reconstructed)
+
+            units_are_overlapping = sparsity.unit_overlap[jittered_id, :]
+            overlapping_units = np.where(units_are_overlapping)[0]
+            for j, jittered_id2 in enumerate(overlapping_units):
+                temporal_overlapped = temporal[jittered_id2]
+                singular_overlapped = singular[jittered_id2]
+                spatial_overlapped = spatial[jittered_id2]
+                visible_overlapped_channels = sparsity.vis_chan[jittered_id2, :]
+                visible_template = template_reconstructed[:, visible_overlapped_channels]
+                spatial_filters = spatial_overlapped[:params.conv_approx_rank, visible_overlapped_channels].T
+                spatially_filtered_template = np.matmul(visible_template, spatial_filters)
+                scaled_filtered_template = spatially_filtered_template * singular_overlapped
+                for i in range(params.conv_approx_rank):
+                    pairwise_conv[j, :] += np.convolve(scaled_filtered_template[:, i], temporal_overlapped[:, i],
+                                                       'full')
+            pairwise_conv_array.append(pairwise_conv)
+        return pairwise_conv_array
 
     @classmethod
     def serialize_method_kwargs(cls, kwargs):
@@ -208,7 +290,6 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
     @classmethod
     def main_function(cls, traces, method_kwargs):
         # Unpack method_kwargs
-        objective_kwargs = method_kwargs['objective_kwargs']
         nbefore, nafter = method_kwargs['nbefore'], method_kwargs['nafter']
         template_meta = method_kwargs['template_meta']
         params = method_kwargs['params']
@@ -456,91 +537,6 @@ def get_convolution_len(x, y):
     return x + y - 1
 
 
-# TODO: Replace vis_chan, template_overlaps & spatially_mask_templates with spikeinterface sparsity representation
-def template_overlaps(vis_chan, up_factor):
-    unit_overlap = np.sum(np.logical_and(vis_chan[:, np.newaxis, :], vis_chan[np.newaxis, :, :]), axis=2)
-    unit_overlap = unit_overlap > 0
-    unit_overlap = np.repeat(unit_overlap, up_factor, axis=0)
-    return unit_overlap
-
-
-def spatially_mask_templates(templates, visibility_threshold):
-    visible_channels = np.ptp(templates, axis=1) > visibility_threshold
-    invisible_channels = np.logical_not(visible_channels)
-    for i in range(templates.shape[0]):
-        templates[i, :, invisible_channels[i, :]] = 0.0
-    return visible_channels
-
-
-def compress_templates(templates, params, template_meta):
-    temporal, singular, spatial = np.linalg.svd(templates)
-
-    # Keep only the strongest components
-    temporal = temporal[:, :, :params.conv_approx_rank]
-    singular = singular[:, :params.conv_approx_rank]
-    spatial = spatial[:, :params.conv_approx_rank, :]
-
-    # Upsample the temporal components of the SVD -- i.e. upsample the reconstruction
-    if params.jitter_factor == 1: # Trivial Case
-        temporal = np.flip(temporal, axis=1)
-        temporal_jittered = temporal.copy()
-        return temporal, singular, spatial, temporal_jittered
-
-    num_samples = template_meta.n_time * params.jitter_factor
-    temporal_jittered = signal.resample(temporal, num_samples, axis=1)
-
-    original_idx = np.arange(0, num_samples, params.jitter_factor) # indices of original data
-    shift_idx = np.arange(params.jitter_factor)[:, np.newaxis] # shift for each super-res template
-    shifted_idx = original_idx + shift_idx # array of all shifted template indices
-
-    shape_temporal_jittered = [-1, template_meta.n_time, params.conv_approx_rank]
-    temporal_jittered = np.reshape(temporal_jittered[:, shifted_idx, :], shape_temporal_jittered)
-    temporal_jittered = temporal_jittered.astype(np.float32, casting='safe') # TODO: Redundant?
-
-    temporal = np.flip(temporal, axis=1)
-    temporal_jittered = np.flip(temporal_jittered, axis=1)
-    return temporal, singular, spatial, temporal_jittered
-
-
-def conv_filter(svd_matrices, params, template_meta, sparsity):
-    temporal, singular, spatial, temporal_jittered = svd_matrices
-    conv_res_len = get_convolution_len(template_meta.n_time, template_meta.n_time)
-    pairwise_conv_array = []
-    for jittered_id in template_meta.jittered_ids:
-        n_overlap = np.sum(sparsity.unit_overlap[jittered_id, :])
-        template_id = jittered_id // params.jitter_factor
-        pairwise_conv = np.zeros([n_overlap, conv_res_len], dtype=np.float32)
-
-        # Reconstruct unit template from SVD Matrices
-        temporal_jittered_scaled = temporal_jittered[jittered_id] * singular[template_id][np.newaxis, :]
-        template_reconstructed = np.matmul(temporal_jittered_scaled, spatial[template_id, :, :])
-        template_reconstructed = np.flipud(template_reconstructed)
-
-        units_are_overlapping = sparsity.unit_overlap[jittered_id, :]
-        overlapping_units = np.where(units_are_overlapping)[0]
-        for j, jittered_id2 in enumerate(overlapping_units):
-            temporal_overlapped = temporal[jittered_id2]
-            singular_overlapped = singular[jittered_id2]
-            spatial_overlapped = spatial[jittered_id2]
-            visible_overlapped_channels = sparsity.vis_chan[jittered_id2, :]
-            visible_template = template_reconstructed[:, visible_overlapped_channels]
-            spatial_filters = spatial_overlapped[:params.conv_approx_rank, visible_overlapped_channels].T
-            spatially_filtered_template = np.matmul(visible_template, spatial_filters)
-            scaled_filtered_template = spatially_filtered_template * singular_overlapped
-            for i in range(params.conv_approx_rank):
-                pairwise_conv[j, :] += np.convolve(scaled_filtered_template[:, i], temporal_overlapped[:, i], 'full')
-        pairwise_conv_array.append(pairwise_conv)
-    return pairwise_conv_array
-
-
 # ----------------------------------------------------------------------------------------------------------------------
 # DEPRECATED
 # ----------------------------------------------------------------------------------------------------------------------
-
-def pairwise_filter_conv(multi_processing, jittered_ids, temporal, temporal_jittered, singular, spatial, n_time,
-                         unit_overlap, up_factor, vis_chan, approx_rank):
-    if multi_processing:
-        raise NotImplementedError # TODO: Fold in spikeinterface multi-processing if necessary
-    pairwise_conv = conv_filter(jittered_ids, temporal, temporal_jittered, singular, spatial, n_time,
-                                    unit_overlap, up_factor, vis_chan, approx_rank)
-    return pairwise_conv

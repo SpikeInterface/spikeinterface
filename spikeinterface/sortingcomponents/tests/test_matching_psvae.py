@@ -20,8 +20,8 @@ def test_matching_psvae():
     template_ids2unit_ids.append(0)
     template_ids2unit_ids = np.array(template_ids2unit_ids)
     param_sets = {
-        1 : dict(lambd=1, n_jobs=2, template_ids2unit_ids=template_ids2unit_ids, upsample=3, vis_su=10),
-        0: dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, upsample=1),
+        1 : dict(lambd=1, n_jobs=2, template_ids2unit_ids=template_ids2unit_ids, jitter_factor=3, vis_su=10),
+        0: dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=1),
     }
     for params in param_sets.values():
         print(f"{params = }")
@@ -100,7 +100,7 @@ def generate_method_kwargs(recording, templates, we, lambd=0, verbose=False):
         't_end': int(recording.get_num_samples() / recording.sampling_frequency),  # t_end must be an integer
         'n_sec_chunk': 1,
         'refractory_period_frames': int(refractory_period_s * recording.sampling_frequency),
-        'upsample': 8,
+        'jitter_factor': 8,
         'threshold': 50,
         'lambd' : lambd,
         'verbose': verbose,
