@@ -80,10 +80,10 @@ class BaseSorting(BaseExtractor):
         int
             The total number of samples
         """
-        assert self.has_recording(), (
-            "This methods requires an associated recording. Call self.register_recording() first."
-        )
-        return self._recording.get_total_samples(*args, **kwargs)
+        s = 0
+        for segment_index in range(self.get_num_segments()):
+            s += self.get_num_samples(segment_index)
+        return s
 
     def get_total_duration(self, *args, **kwargs):
         """Returns the total duration in s of the associated recording.
