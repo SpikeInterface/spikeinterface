@@ -216,5 +216,8 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         ops['nt0'] = params['wave_length'] # size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.
 
         ops['skip_kilosort_preprocess'] = params['skip_kilosort_preprocess']
+        if params['skip_kilosort_preprocess']:
+            ops['fproc'] = ops['fbinary']
+            ops['scaleproc'] = 1.
         
         return ops
