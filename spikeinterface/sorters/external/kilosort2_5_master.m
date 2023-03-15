@@ -33,6 +33,10 @@ function kilosort2_5_master(fpath, kilosortPath)
         end
 
         rez = datashift2(rez, do_correction); % last input is for shifting data
+        
+        if do_correction
+            writeNPY(rez.dshift, fullfile(fpath, 'motion.npy'))
+        end
 
         % ORDER OF BATCHES IS NOW RANDOM, controlled by random number generator
         iseed = 1;
