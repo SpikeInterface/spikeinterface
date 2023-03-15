@@ -46,7 +46,7 @@ With SpikeInterface:
     # Make recording, sorting and wvf_extractor object for your data.
 
     SNRs = qm.compute_snrs(wvf_extractor)
-    # SNRs is a dict containing the units' ID as keys and their SNR as values.
+    # SNRs is a dict containing the units' IDs as keys and their SNRs as values.
 
 Links to original implementations
 ---------------------------------

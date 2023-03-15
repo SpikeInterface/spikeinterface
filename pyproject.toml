@@ -77,6 +77,7 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
+    "cuda-python",
 ]
 
 widgets = [
@@ -94,6 +95,7 @@ test = [
     # zarr is needed for testing
     "zarr",
     "xarray",
+    "huggingface_hub",
 
     # tridesclous
     "numpy<1.24",
@@ -123,9 +125,6 @@ test = [
 ]
 
 
-
-
-
 [tool.pytest.ini_options]
 markers = [
     "core",
@@ -141,4 +140,8 @@ markers = [
     "exporters",
     "widgets",
     "sortingcomponents",
+]
+filterwarnings =[
+    'ignore:.*distutils Version classes are deprecated.*:DeprecationWarning',
+    'ignore:.*the imp module is deprecated in favour of importlib.*:DeprecationWarning',
 ]

@@ -8,7 +8,7 @@ Manual curation
 ---------------
 
 SpikeInterface offer a machinery to manually curate a sorting and keep track of the curation history.
-The curation have several "steps" that can be be repeated and chained:
+The curation has several "steps" that can be be repeated and chained:
 
   * remove/select units
   * split units
@@ -16,7 +16,7 @@ The curation have several "steps" that can be be repeated and chained:
 
 This functionality is done with :py:class:`~spikeinterface.curation.CurationSorting` class.
 Internally, this class keeps the history of curation as a graph. 
-The merging and splitting operaitons are handled by the :py:class:`~spikeinterface.curation.MergeUnitsSorting` and 
+The merging and splitting operations are handled by the :py:class:`~spikeinterface.curation.MergeUnitsSorting` and 
 :py:class:`~spikeinterface.curation.SplitUnitSorting`. These two classes can also be used independently.
 
 
@@ -128,6 +128,8 @@ Other curation tools
 We have other tools for cleaning spike sorting outputs:
 
  * :py:func:`~spikeinterface.curation.find_duplicated_spikes` : find duplicated spikes in the spike trains
- * | :py:func:`~spikeinterface.curation.remove_duplicated_spikes` : remove all duplicated spikes from a 
+ * | :py:func:`~spikeinterface.curation.remove_duplicated_spikes` : remove all duplicated spikes from the spike trains
    | :py:class:`~spikeinterface.core.BaseSorting` object (internally using the previous function)
+ * | :py:func:`~spikeinterface.curation.remove_excess_spikes` : remove spikes whose times are greater than the 
+   | recording's number of samples (by segment)
 

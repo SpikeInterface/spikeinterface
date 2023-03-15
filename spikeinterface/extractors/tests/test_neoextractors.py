@@ -160,7 +160,8 @@ class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         'blackrock/FileSpec2.3001.ns5',
         ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '2'}),
-        ('blackrock/blackrock_2_1/l101210-001.ns2', {'stream_id': '5'}),
+        'blackrock/blackrock_2_1/l101210-001.ns2',  # this also work now because the stream id is auto selected with suffix
+        ('blackrock/blackrock_2_1/l101210-001.ns5', {'stream_id': '5'}),
     ]
 
 
@@ -308,9 +309,9 @@ if __name__ == '__main__':
     # test = EDFRecordingTest()
     # test = NeuroScopeRecordingTest()
     # test = PlexonRecordingTest()
-    test = PlexonSortingTest()
+    # test = PlexonSortingTest()
     # test = NeuralynxRecordingTest()
-    # test = BlackrockRecordingTest()
+    test = BlackrockRecordingTest()
     # test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
     # test = Spike2RecordingTest()
