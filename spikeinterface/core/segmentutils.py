@@ -333,10 +333,10 @@ class ConcatenateSegmentSorting(BaseSorting):
     Parameters
     ----------
     sorting_list : list of BaseSorting
-        A list of sortings. If `total_num_samples_list` is not provided, all
+        A list of sortings. If `total_samples_list` is not provided, all
         sortings should have an assigned recording.  Otherwise, all sortings
         should be monosegments.
-    total_num_samples_list : list[int] or None
+    total_samples_list : list[int] or None
         If the sortings have no assigned recording, the total number of samples
         of each of the concatenated (monosegment) sortings is pulled from this
         list.
@@ -347,17 +347,17 @@ class ConcatenateSegmentSorting(BaseSorting):
         Maximum allowed difference of sampling frequencies across sortings (default 0)
     """
 
-    def __init__(self, sorting_list, total_num_samples_list=None, ignore_times=True, sampling_frequency_max_diff=0):
+    def __init__(self, sorting_list, total_samples_list=None, ignore_times=True, sampling_frequency_max_diff=0):
 
         # CHeck that all sortings have a recording or that sortings' num_samples are provided
         all_has_recording = all([sorting.has_recording() for sorting in sorting_list])
         if not all_has_recording:
-            assert total_num_samples_list is not None, (
+            assert total_samples_list is not None, (
                 "Some concatenated sortings don't have a registered recording. "
-                "Call sorting.register_recording() or set `total_num_samples_list` kwarg."
+                "Call sorting.register_recording() or set `total_samples_list` kwarg."
             )
-            assert len(total_num_samples_list) == len(sorting_list), (
-                "Unexpected length for `total_num_samples_list`"
+            assert len(total_samples_list) == len(sorting_list), (
+                "Unexpected length for `total_samples_list`"
             )
             assert all([s.get_num_segments() == 1 for s in sorting_list]), (
                 "All sortings are expected to be monosegment."
@@ -367,7 +367,7 @@ class ConcatenateSegmentSorting(BaseSorting):
                 "Use ignore_times=True to ignore time information."
             )
         else:
-            assert total_num_samples_list is None, "Sortings have registered recordings: Use `total_num_samples_list`=None"
+            assert total_samples_list is None, "Sortings have registered recordings: Use `total_samples_list`=None"
 
         # Pull metadata from AppendSorting object
         one_sorting = append_sortings(sorting_list, sampling_frequency_max_diff=sampling_frequency_max_diff)
@@ -390,7 +390,7 @@ class ConcatenateSegmentSorting(BaseSorting):
                     segment_num_samples = sorting.get_num_samples(segment_index=segment_i)
                 else:
                     assert segment_i == 0  # Already checked: sortings should be monosegment if they have no rec
-                    segment_num_samples = total_num_samples_list[segment_i]
+                    segment_num_samples = total_samples_list[segment_i]
                 parent_segments.append(parent_segment)
                 parent_num_samples.append(segment_num_samples)
         self.parent_num_samples = parent_num_samples
