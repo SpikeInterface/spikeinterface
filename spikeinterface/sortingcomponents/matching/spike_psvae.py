@@ -166,6 +166,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         sparsity = Sparsity(vis_chan=vis_chan, unit_overlap=unit_overlap)
         return sparsity
 
+
     @staticmethod
     def compute_template_norm(sparsity, template_meta, templates):
         norm = np.zeros(template_meta.n_templates, dtype=np.float32)
@@ -174,6 +175,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
                 np.square(templates[i, :, sparsity.vis_chan[i, :]])
             )
         return norm
+
 
     @staticmethod
     def pack_kwargs(kwargs, params, template_meta, sparsity, objective):
@@ -225,7 +227,6 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
         shape_temporal_jittered = [-1, template_meta.n_time, params.conv_approx_rank]
         temporal_jittered = np.reshape(temporal_jittered[:, shifted_idx, :], shape_temporal_jittered)
-        temporal_jittered = temporal_jittered.astype(np.float32, casting='safe')  # TODO: Redundant?
 
         temporal = np.flip(temporal, axis=1)
         temporal_jittered = np.flip(temporal_jittered, axis=1)
@@ -290,6 +291,10 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         sparsity = method_kwargs['sparsity']
         objective = method_kwargs['objective']
 
+        # Check traces
+        traces = traces.astype(np.float32, casting='safe') # ensure traces are specified as np.float32
+        objective.obj_len = get_convolution_len(traces.shape[0], template_meta.n_time)
+
         # run using run_array
         spike_outputs = cls.run_array(traces, template_meta, params, sparsity, objective)
         spike_train, scalings, distance_metric = spike_outputs
@@ -317,13 +322,10 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
     @classmethod
     def run_array(cls, traces, template_meta, params, sparsity, objective):
-        traces, obj_len = cls.update_data(traces, template_meta.n_time)
-        objective.obj_len = obj_len
-
         # Compute objective
         cls.compute_objective(traces, objective, params, template_meta)
 
-        # compute spike train
+        # Compute spike train
         spiketrains, scalings, distance_metrics = [], [], []
         for i in range(params.max_iter):
             # find peaks
@@ -350,15 +352,6 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         distance_metric = distance_metric[idx]
 
         return spike_train, scalings, distance_metric
-
-
-    # TODO: redundant --> remove
-    @classmethod
-    def update_data(cls, traces, n_time):
-        # Re-assign data and objective lengths
-        traces = traces.astype(np.float32, casting='safe')
-        obj_len = get_convolution_len(traces.shape[0], n_time)
-        return traces, obj_len
 
 
     @classmethod
@@ -483,8 +476,8 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             high_resolution_conv = signal.resample(obj_peaks_high_res, resample_factor, axis=0)
             norm_peaks = objective.norm[spike_unit_ids[non_refractory_indices]]
 
-            b = high_resolution_conv + 1/params.lambd # TODO: rename 'b'
-            a = norm_peaks[np.newaxis, :] + 1/params.lambd # TODO: rename 'a'
+            b = high_resolution_conv + 1/params.lambd # TODO: rename 'b' --ask Charlie
+            a = norm_peaks[np.newaxis, :] + 1/params.lambd # TODO: rename 'a' --ask Charlie
 
             # this is the objective with the optimal scaling *without hard clipping*
             # this order of operations is key to avoid overflows when squaring!
