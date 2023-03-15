@@ -16,8 +16,31 @@ function kilosort2_5_master(fpath, kilosortPath)
         % Load the configuration file, it builds the structure of options (ops)
         load(fullfile(fpath, 'ops.mat'));
 
-        % preprocess data to create temp_wh.dat
-        rez = preprocessDataSub(ops);
+        if ops.skip_kilosort_preprocess:
+            
+            % hack to skip the internal preprocessing
+            % this mimic the preprocessDataSub() function
+            fprintf("SKIP kilosort2.5 preprocessing\n");
+            [chanMap, xc, yc, kcoords, NchanTOTdefault] = loadChanMap(ops.chanMap); % function to load channel map file
+            rez.ops         = ops; % memorize ops
+            rez.xc = xc; % for historical reasons, make all these copies of the channel coordinates
+            rez.yc = yc;
+            rez.xcoords = xc;
+            rez.ycoords = yc;
+            rez.ops.chanMap = chanMap;
+            rez.ops.kcoords = kcoords;
+            NTbuff      = NT + 3*ops.ntbuff; % we need buffers on both sides for filtering
+            rez.ops.Nbatch = Nbatch;
+            rez.ops.NTbuff = NTbuff;
+            rez.ops.chanMap = chanMap;
+            rez.Wrot    = eye(ops.Nchan); % fake whitenning
+            rez.temp.Nbatch = Nbatch;
+            % fproc is the same as the binary
+            rez.fproc = rez.fbinary;
+        else
+            % preprocess data to create temp_wh.dat
+            rez = preprocessDataSub(ops);
+        end
 
         % NEW STEP TO DO DATA REGISTRATION
         if isfield(ops, 'do_correction')
@@ -34,9 +57,6 @@ function kilosort2_5_master(fpath, kilosortPath)
 
         rez = datashift2(rez, do_correction); % last input is for shifting data
         
-        if do_correction
-            writeNPY(rez.dshift, fullfile(fpath, 'motion.npy'))
-        end
 
         % ORDER OF BATCHES IS NOW RANDOM, controlled by random number generator
         iseed = 1;
@@ -64,6 +84,12 @@ function kilosort2_5_master(fpath, kilosortPath)
         % write to Phy
         fprintf('Saving results to Phy  \n')
         rezToPhy(rez, fullfile(fpath));
+
+        % save the motion vector. Done after rezToPhy because it delete the entire folder
+        if do_correction
+            writeNPY(rez.dshift, fullfile(fpath, 'motion.npy'))
+        end
+
     catch
         fprintf('----------------------------------------');
         fprintf(lasterr());
