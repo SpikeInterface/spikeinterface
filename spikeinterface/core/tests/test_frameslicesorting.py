@@ -31,7 +31,7 @@ def test_FrameSliceSorting():
     start_frame, end_frame = None, None
     sub_sorting = sorting.frame_slice(start_frame, end_frame)
     assert np.array_equal(sub_sorting.get_unit_spike_train("0"), unit_0_train)
-    assert sub_sorting.get_total_samples() == nsamp
+    assert sub_sorting._recording.get_total_samples() == nsamp
     sub_sorting_norec = sorting.frame_slice(start_frame, end_frame)
     assert np.array_equal(sub_sorting_norec.get_unit_spike_train("0"), unit_0_train)
 
@@ -41,7 +41,7 @@ def test_FrameSliceSorting():
         sub_sorting.get_unit_spike_train("0"), 
         [t for t in unit_0_train if t < mid_frame]
     )
-    assert sub_sorting.get_total_samples() == mid_frame
+    assert sub_sorting._recording.get_total_samples() == mid_frame
     sub_sorting_norec = sorting.frame_slice(start_frame, end_frame)
     assert np.array_equal(
         sub_sorting_norec.get_unit_spike_train("0"), 
@@ -54,7 +54,7 @@ def test_FrameSliceSorting():
         sub_sorting.get_unit_spike_train("0"), 
         [t - mid_frame for t in unit_0_train if t >= mid_frame]
     )
-    assert sub_sorting.get_total_samples() == nsamp - mid_frame
+    assert sub_sorting._recording.get_total_samples() == nsamp - mid_frame
     sub_sorting_norec = sorting.frame_slice(start_frame, end_frame)
     assert np.array_equal(
         sub_sorting_norec.get_unit_spike_train("0"), 
@@ -67,7 +67,7 @@ def test_FrameSliceSorting():
         sub_sorting.get_unit_spike_train("0"), 
         [t - start_frame for t in unit_0_train if start_frame <= t < end_frame]
     )
-    assert sub_sorting.get_total_samples() == 20
+    assert sub_sorting._recording.get_total_samples() == 20
     sub_sorting_norec = sorting.frame_slice(start_frame, end_frame)
     assert np.array_equal(
         sub_sorting_norec.get_unit_spike_train("0"), 
