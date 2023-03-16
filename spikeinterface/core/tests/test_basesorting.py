@@ -95,7 +95,7 @@ def test_BaseSorting():
 def test_npy_sorting():
     sfreq = 10
     spike_times_0 = {
-        "0": np.array([0, 1, 10]),
+        "0": np.array([0, 1, 9]), # Max sample idx is 9 for a rec of length 10
         "1": np.array([2, 5]),
     }
     spike_times_1 = {
