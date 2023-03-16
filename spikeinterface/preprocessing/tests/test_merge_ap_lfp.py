@@ -1,7 +1,7 @@
 import numpy as np
 
 from spikeinterface.core import NumpyRecording
-from spikeinterface.preprocessing import generate_RC_filter, MergeApLfpRecording
+from spikeinterface.preprocessing import generate_RC_filter, MergeNeuropixels1Recording
 
 
 def test_generate_RC_filter():
@@ -17,9 +17,9 @@ def test_MergeApLfpRecording():
     sf = 30000
 
     # Generate a 1-second 2-channels white noise recording.
-    original_trace = np.array([np.random.normal(loc=0.0, scale=1.0, size=sf), np.random.normal(loc=0.0, scale=1.0, size=sf)]).T
-    original_fourier = np.fft.rfft(original_trace, axis=0)
-    freq = np.fft.rfftfreq(original_trace.shape[0], d=1/sf)
+    original_traces = np.array([np.random.normal(loc=0.0, scale=1.0, size=sf), np.random.normal(loc=0.0, scale=1.0, size=sf)]).T
+    original_fourier = np.fft.rfft(original_traces, axis=0)
+    freq = np.fft.rfftfreq(original_traces.shape[0], d=1/sf)
 
     ap_filter  = generate_RC_filter(freq, [300, 10000])
     lfp_filter = generate_RC_filter(freq, [0.5, 500])
@@ -33,9 +33,9 @@ def test_MergeApLfpRecording():
     ap_recording  = NumpyRecording(trace_ap, sf)
     lfp_recording = NumpyRecording(trace_lfp, sf/12)
 
-    merged_recording = MergeApLfpRecording(ap_recording, lfp_recording)
+    merged_recording = MergeNeuropixels1Recording(ap_recording, lfp_recording)
 
-    # TODO: Test the get_traces.
+    assert original_traces.shape == merged_recording.get_traces().shape
 
 
 if __name__ == '__main__':

@@ -128,7 +128,7 @@ def get_chunk_with_margin(rec_segment, start_frame, end_frame,
         channel_indices = slice(None)
 
     if not add_zeros:
-        assert not window_on_margin, 'window_mon_margin can be used only for add_zeros=True'
+        assert not window_on_margin, 'window_on_margin can be used only for add_zeros=True'
         if start_frame is None:
             left_margin = 0
             start_frame = 0
