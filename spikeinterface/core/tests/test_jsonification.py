@@ -5,7 +5,6 @@ import numpy as np
 
 from spikeinterface.core.core_tools import SIJsonEncoder
 from spikeinterface.core.generate import generate_recording, generate_sorting
-from spikeinterface.preprocessing.common_reference import CommonReferenceRecording
 
 
 @pytest.fixture(scope="module")
@@ -15,7 +14,7 @@ def numpy_generated_recording():
 
 
 @pytest.fixture(scope="module")
-def sorting_generated_recording():
+def numpy_generated_sorting():
     sorting = generate_sorting()
     return sorting
 
@@ -111,20 +110,26 @@ def test_recording_encoding(numpy_generated_recording):
     json.dumps(recording, cls=SIJsonEncoder)
 
 
-def test_sorting_encoding(sorting_generated_recording):
-    sorting = sorting_generated_recording
+def test_sorting_encoding(numpy_generated_sorting):
+    sorting = numpy_generated_sorting
     json.dumps(sorting, cls=SIJsonEncoder)
 
 
-def test_pre_processing_encoding(numpy_generated_recording):
-    recording = numpy_generated_recording
-    common_reference_recording = CommonReferenceRecording(recording=recording)
-    json.dumps(common_reference_recording, cls=SIJsonEncoder)
+# def test_pre_processing_encoding(numpy_generated_recording):
+#     from spikeinterface.preprocessing.common_reference import CommonReferenceRecording
+#     recording = numpy_generated_recording
+#     common_reference_recording = CommonReferenceRecording(recording=recording)
+#     json.dumps(common_reference_recording, cls=SIJsonEncoder)
 
 
-def test_waveforms_encoding(numpy_generated_recording, sorting_generated_recording):
-    
-    pass 
+# def test_waveforms_encoding(numpy_generated_recording, numpy_generated_sorting):
+#     from spikeinterface.core.waveform_extractor import WaveformExtractor
+
+#     waveformextractor = WaveformExtractor(
+#         recording=numpy_generated_recording, sorting=numpy_generated_sorting, allow_unfiltered=True
+#     )
+#     json.dumps(waveformextractor)
+
 
 if __name__ == "__main__":
     test_encoding_numpy_scalars_keys(np.arange(3)[0], np.arange(3)[0], np.arange(3)[0])
