@@ -122,7 +122,8 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         params.up_window = np.arange(-radius, radius + 1)[:, np.newaxis]
         params.up_window_len = len(params.up_window)
         # Indices of single time window the window around peak after upsampling
-        params.zoom_index = radius * params.jitter_factor + np.arange(-radius, radius + 1)
+        #params.zoom_index = radius * params.jitter_factor + np.arange(-radius, radius + 1)
+        params.zoom_index = [0]
         params.peak_to_template_idx = np.concatenate(
             (np.arange(radius, -1, -1), (params.jitter_factor - 1) - np.arange(radius))
         )
@@ -460,10 +461,10 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         refractory_before_spike = np.arange(-template_meta.overlapping_spike_buffer, 1)[:, np.newaxis]
         refractory_indices = spike_time_indices[peak_is_refractory] + refractory_before_spike
         objective.obj_normalized[spike_unit_ids[peak_is_refractory], refractory_indices] = -1 * np.inf
-        non_refractory_indices = np.flatnonzero(np.logical_not(refractory_indices))
+        non_refractory_indices = np.flatnonzero(np.logical_not(peak_is_refractory))
         obj_peaks = obj_peaks[:, non_refractory_indices]
         if obj_peaks.shape[1] == 0: # no non-refractory peaks --> exit function
-            return np.array([]), np.array([]), non_refractory_indices, np.array([])
+            return np.array([]), np.array([]), np.array([]), np.array([])
 
         # Upsample and compute optimal template shift
         resample_factor = params.up_window_len * params.jitter_factor
