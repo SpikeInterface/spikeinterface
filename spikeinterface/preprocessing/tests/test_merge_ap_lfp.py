@@ -15,11 +15,18 @@ def test_generate_RC_filter():
 
 def test_MergeApLfpRecording():
     sf = 30000
+    T = 10
 
-    # Generate a 1-second 2-channels white noise recording.
-    original_traces = np.array([np.random.normal(loc=0.0, scale=1.0, size=sf), np.random.normal(loc=0.0, scale=1.0, size=sf)]).T
+    # Generate a 10-seconds 2-channels white noise recording.
+    rng = np.random.RandomState(seed=420)
+    original_traces = np.array([rng.normal(loc=0.0, scale=1.0, size=T*sf), np.random.normal(loc=0.0, scale=1.0, size=T*sf)]).T
     original_fourier = np.fft.rfft(original_traces, axis=0)
     freq = np.fft.rfftfreq(original_traces.shape[0], d=1/sf)
+
+    # Remove 0Hz (can't be reconstructed) and Nyquist frequency (behave weirdly).
+    original_fourier[0] = 0.0
+    original_fourier[-1] = 0.0
+    original_traces = np.fft.irfft(original_fourier, axis=0)
 
     ap_filter  = generate_RC_filter(freq, [300, 10000])
     lfp_filter = generate_RC_filter(freq, [0.5, 500])
@@ -34,8 +41,35 @@ def test_MergeApLfpRecording():
     lfp_recording = NumpyRecording(trace_lfp, sf/12)
 
     merged_recording = MergeNeuropixels1Recording(ap_recording, lfp_recording)
+    merged_traces = merged_recording.get_traces()
 
-    assert original_traces.shape == merged_recording.get_traces().shape
+    assert original_traces.shape == merged_traces.shape
+    assert np.allclose(original_traces, merged_traces, rtol=1e-3, atol=1e-4)
+
+    traces = merged_recording.get_traces(start_frame=100, end_frame=30000)
+
+    # print(original_traces[1000:1010, 0])
+    # print(traces[900:910, 0])
+    # print(traces[900:910, :])
+
+    # import plotly.graph_objects as go
+    # fig = go.Figure()
+
+    # fig.add_trace(go.Scattergl(
+    #     x=np.fft.rfftfreq(len(original_traces[100:30000, 0]), d=1/sf),
+    #     y=np.abs(np.fft.rfft(original_traces[100:30000, 0])),
+    #     mode="lines",
+    #     name="Original"
+    # ))
+    # fig.add_trace(go.Scattergl(
+    #     x=np.fft.rfftfreq(traces.shape[0], d=1/sf),
+    #     y=np.abs(np.fft.rfft(traces[:, 0])),
+    #     mode="lines",
+    #     name="Merged"
+    # ))
+
+    # fig.update_xaxes(type="log")
+    # fig.show()
 
 
 if __name__ == '__main__':
