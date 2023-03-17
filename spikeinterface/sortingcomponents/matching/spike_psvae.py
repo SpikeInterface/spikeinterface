@@ -2,6 +2,8 @@ import numpy as np
 from scipy import signal
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
+import matplotlib.pyplot as plt
+
 from .main import BaseTemplateMatchingEngine
 
 
@@ -296,26 +298,27 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         objective.obj_len = get_convolution_len(traces.shape[0], template_meta.n_time)
 
         # run using run_array
-        spike_outputs = cls.run_array(traces, template_meta, params, sparsity, objective)
-        spike_train, scalings, distance_metric = spike_outputs
+        spike_train, scalings, distance_metric = cls.run_array(traces, template_meta, params, sparsity, objective)
 
         # extract spiketrain and perform adjustments
         spike_train[:, 0] += nbefore
         spike_train[:, 1] //= params.jitter_factor
 
-        # TODO : Find spike amplitudes / channels
-        # amplitudes, channel_inds = [], []
-        # for spike_idx in spiketrain[:, 0]:
-        #     spike = traces[spike_idx-nbefore:spike_idx+nafter, :]
-        #     best_ch = np.argmax(np.max(np.abs(spike), axis=0))
-        #     amp = np.max(np.abs(spike[:, best_ch]))
-        #     amplitudes.append(amp)
-        #     channel_inds.append(best_ch)
+        # TODO : Benchmark spike amplitudes
+        # Find spike amplitudes / channels
+        amplitudes, channel_inds = [], []
+        for i, spike_idx in enumerate(spike_train[:, 0]):
+            best_ch = np.argmax(np.abs(traces[spike_idx, :]))
+            amp = np.abs(traces[spike_idx, best_ch])
+            amplitudes.append(amp)
+            channel_inds.append(best_ch)
 
         # assign result to spikes array
         spikes = np.zeros(spike_train.shape[0], dtype=cls.spike_dtype)
         spikes['sample_ind'] = spike_train[:, 0]
         spikes['cluster_ind'] = spike_train[:, 1]
+        spikes['channel_ind'] = channel_inds
+        spikes['amplitude'] = amplitudes
 
         return spikes
 
@@ -326,22 +329,22 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         cls.compute_objective(traces, objective, params, template_meta)
 
         # Compute spike train
-        spiketrains, scalings, distance_metrics = [], [], []
+        spike_trains, scalings, distance_metrics = [], [], []
         for i in range(params.max_iter):
             # find peaks
-            spiketrain, scaling, distance_metric = cls.find_peaks(objective, params, template_meta)
-            if len(spiketrain) == 0:
+            spike_train, scaling, distance_metric = cls.find_peaks(objective, params, template_meta)
+            if len(spike_train) == 0:
                 break
 
-            # update spiketrain, scaling, distance metrics with new values
-            spiketrains.extend(list(spiketrain))
+            # update spike_train, scaling, distance metrics with new values
+            spike_trains.extend(list(spike_train))
             scalings.extend(list(scaling))
             distance_metrics.extend(list(distance_metric))
 
             # subtract newly detected spike train from traces (via the objective)
-            cls.subtract_spike_train(spiketrain, scaling, objective, params, template_meta, sparsity)
+            cls.subtract_spike_train(spike_train, scaling, objective, params, template_meta, sparsity)
 
-        spike_train = np.array(spiketrains)
+        spike_train = np.array(spike_trains)
         scalings = np.array(scalings)
         distance_metric = np.array(distance_metrics)
 

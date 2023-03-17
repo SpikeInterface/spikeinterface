@@ -1,6 +1,7 @@
 # Standard Libraries
 from pathlib import Path
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Spikeinterface
 import spikeinterface.core as sc
@@ -20,8 +21,10 @@ def test_matching_psvae():
     template_ids2unit_ids.append(0)
     template_ids2unit_ids = np.array(template_ids2unit_ids)
     param_sets = {
-        1 : dict(lambd=1, n_jobs=2, template_ids2unit_ids=template_ids2unit_ids, jitter_factor=3, vis_su=10),
-        0: dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=1),
+        "check amplitude scaling, multiprocessing, grouped templates, channel sparsity" : dict(
+            lambd=1, n_jobs=2, template_ids2unit_ids=template_ids2unit_ids, jitter_factor=3, vis_su=10
+        ),
+        "check trivial cases": dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=1),
     }
     for params in param_sets.values():
         print(f"{params = }")
@@ -35,7 +38,8 @@ def test_matching_psvae():
         method_kwargs['objective_kwargs'].update(params)
         recording, gt_sorting = shorten_recording(recording, gt_sorting, method_kwargs, filepaths, verbose=verbose)
         spikes = run_matching(recording, method_kwargs, job_kwargs, verbose=verbose)
-        hit_rate, misclass_rate, miss_rate = evaluate_performance(recording, gt_sorting, we, spikes, verbose=verbose)
+        hit_rate, misclass_rate, miss_rate = evaluate_performance(recording, gt_sorting, we, spikes, hit_threshold=0.1e-3,
+                                                                  verbose=verbose)
 
         print("Performance:")
         print(f"{hit_rate = }")
