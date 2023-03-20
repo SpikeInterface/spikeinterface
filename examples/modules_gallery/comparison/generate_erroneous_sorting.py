@@ -16,7 +16,7 @@ def generate_erroneous_sorting():
     Generate an erroneous spike sorting for illustration purposes.
 
     This function creates a toy example recording and true sorting using the
-    `toy_example` function from the SpikeInterface package. It then introduces
+    `toy_example` function. It then introduces
     various errors in the true sorting to create an erroneous sorting.
 
     The specific types of errors are:
