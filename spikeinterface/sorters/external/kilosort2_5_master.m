@@ -16,7 +16,7 @@ function kilosort2_5_master(fpath, kilosortPath)
         % Load the configuration file, it builds the structure of options (ops)
         load(fullfile(fpath, 'ops.mat'));
 
-        if ops.skip_kilosort_preprocess
+        if ops.skip_kilosort_preprocessing
             % hack to skip the internal preprocessing
             % this mimic the preprocessDataSub() function
             fprintf("SKIP kilosort2.5 preprocessing\n");
@@ -30,24 +30,31 @@ function kilosort2_5_master(fpath, kilosortPath)
             ops.tstart  = ceil(ops.trange(1) * ops.fs); % starting timepoint for processing data segment
             ops.tend    = min(nTimepoints, ceil(ops.trange(2) * ops.fs)); % ending timepoint
             ops.sampsToRead = ops.tend-ops.tstart; % total number of samples to read
-            ops.twind = ops.tstart * NchanTOT*2; % skip this many bytes at the start            
+            ops.twind = ops.tstart * NchanTOT*2; % skip this many bytes at the start
             [chanMap, xc, yc, kcoords, NchanTOTdefault] = loadChanMap(ops.chanMap); % function to load channel map file
-            
+
+            ops.igood = true(size(chanMap));
+            ops.Nchan = numel(chanMap); % total number of good channels that we will spike sort
+            ops.Nfilt = getOr(ops, 'nfilt_factor', 4) * ops.Nchan; % upper bound on the number of templates we can have
+
             rez.xc = xc; % for historical reasons, make all these copies of the channel coordinates
             rez.yc = yc;
             rez.xcoords = xc;
             rez.ycoords = yc;
             Nbatch      = ceil(ops.sampsToRead / ops.NT); % number of data batches
             NTbuff      = ops.NT + 3*ops.ntbuff; % we need buffers on both sides for filtering
-            ops.Nbatch = Nbatch;
-            ops.NTbuff = NTbuff;
+
             rez.Wrot    = eye(ops.Nchan); % fake whitenning
             rez.temp.Nbatch = Nbatch;
             % fproc is the same as the binary
             ops.fproc = ops.fbinary;
+
             rez.ops = ops; % memorize ops
             rez.ops.chanMap = chanMap;
             rez.ops.kcoords = kcoords;
+            rez.ops.Nbatch = Nbatch;
+            rez.ops.NTbuff = NTbuff;
+
 
         else
             % preprocess data to create temp_wh.dat

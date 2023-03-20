@@ -52,7 +52,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         'do_correction': True,
         'wave_length': 61,
         'keep_good_only': False,
-        'skip_kilosort_preprocess': False,
+        'skip_kilosort_preprocessing': False,
         'scaleproc': None, 
     }
 
@@ -74,7 +74,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         'NT': "Batch size (if None it is automatically computed)",
         'keep_good_only': "If True only 'good' units are returned",
         'wave_length': "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
-        'skip_kilosort_preprocess' : "Can optionaly skip the internal kilosort preprocessing",
+        'skip_kilosort_preprocessing' : "Can optionaly skip the internal kilosort preprocessing",
         'scaleproc': "int16 scaling of whitened data, if None set to 200.",
     }
 
@@ -136,11 +136,6 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
             p['wave_length'] = p['wave_length'] + 1 # The wave_length must be odd
         if p['wave_length'] > 81:
             p['wave_length'] = 81 # The wave_length must be less than 81.
-        if p['skip_kilosort_preprocess']:
-            # check that we work on a local copy otherwise the motion overwrite the file original binary file itself
-            # this is very very important
-            if recording.binary_compatible_with(dtype='int16', time_axis=0, file_paths_lenght=1):
-                raise ValueError('skip_kilosort_preprocess is not possible because because there is not copy of the binary input file')
         return p
 
     @classmethod
@@ -217,8 +212,8 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         ## option for wavelength
         ops['nt0'] = params['wave_length'] # size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.
 
-        ops['skip_kilosort_preprocess'] = params['skip_kilosort_preprocess']
-        if params['skip_kilosort_preprocess']:
+        ops['skip_kilosort_preprocessing'] = params['skip_kilosort_preprocessing']
+        if params['skip_kilosort_preprocessing']:
             ops['fproc'] = ops['fbinary']
             ops['scaleproc'] = params['scaleproc']
             assert ops['scaleproc'] is not None
