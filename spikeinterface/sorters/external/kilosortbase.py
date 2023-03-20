@@ -130,7 +130,6 @@ class KilosortBase:
                 nt = params['NT']
                 num_samples = recording.get_num_samples()
                 pad = (nt - num_samples % nt)
-                print('pad', pad)
                 zero_pad_samples = [0, pad]
             else:
                 zero_pad_samples = None
