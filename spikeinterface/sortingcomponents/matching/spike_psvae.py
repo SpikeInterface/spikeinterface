@@ -8,7 +8,7 @@ from .main import BaseTemplateMatchingEngine
 
 
 @dataclass
-class ObjectiveParameters:
+class ObjectiveParameters: # TODO : clean up parameters i.e. remove redundant ones, clarify names, etc.
     lambd: float = 0
     allowed_scale: float = np.inf
     save_residual: bool = False
@@ -122,11 +122,11 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         params.up_window = np.arange(-radius, radius + 1)[:, np.newaxis]
         params.up_window_len = len(params.up_window)
         # Indices of single time window the window around peak after upsampling
-        #params.zoom_index = radius * params.jitter_factor + np.arange(-radius, radius + 1)
-        params.zoom_index = [0]
+        params.zoom_index = radius * params.jitter_factor + np.arange(-radius, radius + 1)
         params.peak_to_template_idx = np.concatenate(
             (np.arange(radius, -1, -1), (params.jitter_factor - 1) - np.arange(radius))
         )
+        print(f"{params.peak_to_template_idx = }")
         params.peak_time_jitter = np.concatenate(
             ([0], np.array([0, 1]).repeat(radius))
         )
@@ -511,7 +511,10 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         # We want to enforce refractory conditions on unit_ids rather than template_ids for units with many templates
         spike_unit_ids = spike_template_ids.copy()
         for template_id in set(spike_template_ids):
-            unit_id = template_meta.template_ids2unit_ids[template_id] # unit_id corresponding to this template
+            try:
+                unit_id = template_meta.template_ids2unit_ids[template_id] # unit_id corresponding to this template
+            except IndexError:
+                print("BP")
             spike_unit_ids[spike_template_ids==template_id] = unit_id
 
         # Get the samples (time indices) that correspond to the waveform for each spike

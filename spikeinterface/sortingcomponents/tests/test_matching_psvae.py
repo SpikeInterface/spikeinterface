@@ -16,6 +16,7 @@ def test_matching_psvae():
     verbose = False
     down_factor = 10
     hit_threshold = 0.4e-3
+    plot_templates = False
 
     filepaths = generate_filepaths(project_name="test_matching_psvae", verbose=verbose)
     job_kwargs = dict(n_jobs=4, chunk_duration='1s', progress_bar=True, verbose=verbose)
@@ -25,16 +26,19 @@ def test_matching_psvae():
     downsampled_output = downsample_recording(recording, gt_sorting, templates, we, filepaths,
                                               down_factor=down_factor, overwrite=True, verbose=verbose)
     recording, gt_sorting, gt_templates, nbefore, nafter = downsampled_output
+    if verbose:
+        print(f"dt = {1 / recording.sampling_frequency}")
 
-    # dt = 1/we.sampling_frequency
-    # t = np.arange(-we.nbefore*dt, we.nafter*dt, dt)
-    # dt_down = 1/recording.sampling_frequency
-    # t_down = np.arange(-nbefore*dt_down, nafter*dt_down, dt_down)
-    # plt.figure()
-    # best_ch = np.argmax(np.max(np.abs(templates[0]), axis=0))
-    # plt.plot(t, templates[0, :, best_ch], c='k', label='True Template')
-    # plt.plot(t_down, gt_templates[0, :, best_ch], c='r', ls='--', label='Downsampled Template')
-    # plt.show()
+    if plot_templates:
+        dt = 1/we.sampling_frequency
+        t = np.arange(-we.nbefore*dt, we.nafter*dt, dt)
+        dt_down = 1/recording.sampling_frequency
+        t_down = np.arange(-nbefore*dt_down, nafter*dt_down, dt_down)
+        plt.figure()
+        best_ch = np.argmax(np.max(np.abs(templates[0]), axis=0))
+        plt.plot(t, templates[0, :, best_ch], c='k', label='True Template')
+        plt.plot(t_down, gt_templates[0, :, best_ch], c='r', ls='--', label='Downsampled Template')
+        plt.show()
 
     duplicated_templates = np.concatenate((gt_templates, gt_templates[ [0] ]))
     method_kwargs = generate_method_kwargs(recording, nbefore, nafter, verbose=verbose)
@@ -42,8 +46,10 @@ def test_matching_psvae():
     template_ids2unit_ids.append(0)
     template_ids2unit_ids = np.array(template_ids2unit_ids)
     param_sets = {
+        "specify all parameters" : dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=1, vis_su=1,
+                                        threshold=50),
         "check amplitude scaling, multiprocessing, grouped templates, channel sparsity" : dict(
-            lambd=1, n_jobs=2, template_ids2unit_ids=template_ids2unit_ids, jitter_factor=down_factor, vis_su=10),
+            lambd=1, n_jobs=2, template_ids2unit_ids=template_ids2unit_ids, jitter_factor=1, vis_su=10),
         "check trivial cases": dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=1),
         "check no_amplitude_scaling" : dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=down_factor),
         "check best case" : dict(lambd=1, n_jobs=1, template_ids2unit_ids=None, jitter_factor=2*down_factor)
@@ -207,6 +213,8 @@ def evaluate_performance(recording, gt_sorting, we, spikes, hit_threshold=0.4e-3
     if verbose:
         print("...Evaluating Performance...")
     gt_spike_times, gt_spike_ids = gt_sorting.get_all_spike_trains()[0]
+    print(f"{len(gt_spike_times) = }")
+    print(f"{len(spikes) = }")
     hits, misses, misclasses = 0, 0, 0
     for gt_spike_idx, gt_unit_id in zip(gt_spike_times, gt_spike_ids):
         idx = np.argmin(np.abs(spikes['sample_ind'] - gt_spike_idx))
