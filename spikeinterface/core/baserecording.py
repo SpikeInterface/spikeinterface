@@ -515,16 +515,16 @@ class BaseRecordingSegment(BaseSegment):
                  time_vector=self.time_vector)
         return d
 
-    def sample_index_to_time(self, sample_ind):
+    def sample_index_to_time(self, sample_indexes):
         """
         Transform sample index into time in seconds
         """
         if self.time_vector is None:
-            time_s = sample_ind / self.sampling_frequency
+            time_s = sample_indexes / self.sampling_frequency
             if self.t_start is not None:
                 time_s += self.t_start
         else:
-            time_s = self.time_vector[sample_ind]
+            time_s = self.time_vector[sample_indexes]
         return time_s
 
     def time_to_sample_index(self, time_s):

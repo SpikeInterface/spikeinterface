@@ -80,7 +80,7 @@ class InjectTemplatesRecording(BaseRecording):
 
         if num_samples is None:
             if parent_recording is None:
-                num_samples = [self.spike_vector['sample_ind'][-1] + templates.shape[1]]
+                num_samples = [self.spike_vector['sample_indexes'][-1] + templates.shape[1]]
             else:
                 num_samples = [parent_recording.get_num_frames(segment_index) for segment_index in range(sorting.get_num_segments())]
         if isinstance(num_samples, int):
