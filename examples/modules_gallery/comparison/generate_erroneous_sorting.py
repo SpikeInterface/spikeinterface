@@ -12,6 +12,27 @@ import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
 
 def generate_erroneous_sorting():
+    """
+    Generate an erroneous spike sorting for illustration purposes.
+
+    This function creates a toy example recording and true sorting using the
+    `toy_example` function. It then introduces
+    various errors in the true sorting to create an erroneous sorting.
+
+    The specific types of errors are:
+
+    * Units 1 and 2 are perfect and have no errors.
+    * Units 3, 4, and 10 have medium to low agreement with the true sorting.
+    * Units 5 and 6 are over-merged, meaning that they contain spikes from multiple true units.
+    * Unit 7 is over-split, meaning that it contains spikes from a true unit that has been split into two parts.
+    * Unit 8 is redundant and appears 3 times in the erroneous sorting.
+    * Unit 9 is completely missing from the erroneous sorting.
+    * Units 15, 16, and 17 do not exist in the true sorting, but are included in the erroneous sorting.
+
+    Returns:
+        A tuple containing the true sorting and the erroneous sorting in that order
+    """
+    
     rec, sorting_true = se.toy_example(num_channels=4, num_units=10, duration=10, seed=10, num_segments=1)
 
     # artificially remap to one based
@@ -58,7 +79,7 @@ def generate_erroneous_sorting():
     st82 = np.sort(np.random.choice(st8, size=int(st8.size*0.55), replace=False))
     units_err[80] = st80
     units_err[81] = st81
-    units_err[81] = st82
+    units_err[82] = st82
 
     # unit 9 is missing
 

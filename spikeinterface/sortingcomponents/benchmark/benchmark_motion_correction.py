@@ -50,6 +50,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 title='',
                 job_kwargs={'chunk_duration' : '1s', 'n_jobs' : -1, 'progress_bar':True, 'verbose' :True}, 
                 overwrite=False,
+                delete_output_folder=True,
                 parent_benchmark=None):
 
         BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite, job_kwargs=job_kwargs,
@@ -67,6 +68,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         self.spatial_bins = spatial_bins
         self.motion = motion
         self.do_preprocessing = do_preprocessing
+        self.delete_output_folder = delete_output_folder
 
         self._recordings = None
         _, self.sorting_gt = read_mearec(self.mearec_filenames['static'])
@@ -80,7 +82,9 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 correct_motion_kwargs=self.correct_motion_kwargs,
                 sorter_cases=self.sorter_cases,
                 do_preprocessing=do_preprocessing,
+                delete_output_folder=delete_output_folder,
                 sparse_kwargs=sparse_kwargs,
+                
             )
         )
 
@@ -139,7 +143,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             sorter_params = case['sorter_params']
             recording = self.recordings[case['recording']]
             output_folder = self.folder / f'tmp_sortings_{label}'
-            sorting = run_sorter(sorter_name, recording, output_folder, **sorter_params, delete_output_folder=True)
+            sorting = run_sorter(sorter_name, recording, output_folder, **sorter_params, delete_output_folder=self.delete_output_folder)
             self.sortings[label] = sorting
 
 
