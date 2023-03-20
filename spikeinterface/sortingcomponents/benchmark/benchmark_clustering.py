@@ -143,7 +143,7 @@ class BenchmarkClustering:
         self.labels = labels
 
         
-        self.clustering = NumpySorting.from_times_labels(self.selected_peaks['sample_ind'][~self.noise], self.selected_peaks_labels[~self.noise], self.sampling_rate)
+        self.clustering = NumpySorting.from_times_labels(self.selected_peaks['sample_index'][~self.noise], self.selected_peaks_labels[~self.noise], self.sampling_rate)
         if self.verbose:
             print("Performing the comparison with (sliced) ground truth")
 
@@ -183,8 +183,8 @@ class BenchmarkClustering:
             if self.verbose:
                 print("Computing gt peaks")
             gt_peaks_ = self.gt_sorting.to_spike_vector()
-            self.gt_peaks = np.zeros(gt_peaks_.size, dtype=[('sample_ind', '<i8'), ('channel_ind', '<i8'), ('segment_ind', '<i8')])
-            self.gt_peaks['sample_ind'] = gt_peaks_['sample_ind']
+            self.gt_peaks = np.zeros(gt_peaks_.size, dtype=[('sample_index', '<i8'), ('channel_ind', '<i8'), ('segment_ind', '<i8')])
+            self.gt_peaks['sample_index'] = gt_peaks_['sample_index']
             self.gt_peaks['segment_ind'] = gt_peaks_['segment_ind']
             max_channels = get_template_extremum_channel(self.waveforms['full_gt'], peak_sign='neg', outputs='index')
 

@@ -26,7 +26,7 @@ potrs, = scipy.linalg.get_lapack_funcs(('potrs',), dtype=np.float32)
 
 nrm2, = scipy.linalg.get_blas_funcs(('nrm2', ), dtype=np.float32)
 
-spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind', 'int64'),
+spike_dtype = [('sample_index', 'int64'), ('channel_ind', 'int64'), ('cluster_ind', 'int64'),
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 from .main import BaseTemplateMatchingEngine
@@ -478,13 +478,13 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         valid_indices = np.where(is_valid)
 
         num_spikes = len(valid_indices[0])
-        spikes['sample_ind'][:num_spikes] = valid_indices[1] + d['nbefore']
+        spikes['sample_index'][:num_spikes] = valid_indices[1] + d['nbefore']
         spikes['channel_ind'][:num_spikes] = 0
         spikes['cluster_ind'][:num_spikes] = valid_indices[0]
         spikes['amplitude'][:num_spikes] = final_amplitudes[valid_indices[0], valid_indices[1]]
         
         spikes = spikes[:num_spikes]
-        order = np.argsort(spikes['sample_ind'])
+        order = np.argsort(spikes['sample_index'])
         spikes = spikes[order]
 
         return spikes
@@ -812,29 +812,29 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         sym_patch = d['sym_patch']
         
         peak_traces = traces[margin // 2:-margin // 2, :]
-        peak_sample_ind, peak_chan_ind = DetectPeakByChannel.detect_peaks(peak_traces, peak_sign, abs_threholds, exclude_sweep_size)
+        peak_sample_index, peak_chan_ind = DetectPeakByChannel.detect_peaks(peak_traces, peak_sign, abs_threholds, exclude_sweep_size)
 
         if jitter > 0:
-            jittered_peaks = peak_sample_ind[:, np.newaxis] + np.arange(-jitter, jitter)
+            jittered_peaks = peak_sample_index[:, np.newaxis] + np.arange(-jitter, jitter)
             jittered_channels = peak_chan_ind[:, np.newaxis] + np.zeros(2*jitter)
             mask = (jittered_peaks > 0) & (jittered_peaks < len(peak_traces))
             jittered_peaks = jittered_peaks[mask]
             jittered_channels = jittered_channels[mask]
-            peak_sample_ind, unique_idx = np.unique(jittered_peaks, return_index=True)
+            peak_sample_index, unique_idx = np.unique(jittered_peaks, return_index=True)
             peak_chan_ind = jittered_channels[unique_idx]
         else:
-            peak_sample_ind, unique_idx = np.unique(peak_sample_ind, return_index=True)
+            peak_sample_index, unique_idx = np.unique(peak_sample_index, return_index=True)
             peak_chan_ind = peak_chan_ind[unique_idx]
 
-        num_peaks = len(peak_sample_ind)
+        num_peaks = len(peak_sample_index)
 
         if sym_patch:
-            snippets = extract_patches_2d(traces, patch_sizes)[peak_sample_ind]
-            peak_sample_ind += margin // 2
+            snippets = extract_patches_2d(traces, patch_sizes)[peak_sample_index]
+            peak_sample_index += margin // 2
         else:
-            peak_sample_ind += margin // 2
+            peak_sample_index += margin // 2
             snippet_window = np.arange(-d['nbefore'], d['nafter'])
-            snippets = traces[peak_sample_ind[:, np.newaxis] + snippet_window]
+            snippets = traces[peak_sample_index[:, np.newaxis] + snippet_window]
 
         if num_peaks > 0:
             snippets = snippets.reshape(num_peaks, -1)
@@ -859,10 +859,10 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             best_cluster_ind, peak_index = np.unravel_index(idx_lookup[is_valid][best_amplitude_ind], idx_lookup.shape)
 
             best_amplitude = scalar_products[best_cluster_ind, peak_index]
-            best_peak_sample_ind = peak_sample_ind[peak_index]
+            best_peak_sample_index = peak_sample_index[peak_index]
             best_peak_chan_ind = peak_chan_ind[peak_index]
 
-            peak_data = peak_sample_ind - peak_sample_ind[peak_index]
+            peak_data = peak_sample_index - peak_sample_index[peak_index]
             is_valid_nn = np.searchsorted(peak_data, [-neighbor_window, neighbor_window + 1])
             idx_neighbor = peak_data[is_valid_nn[0]:is_valid_nn[1]] + neighbor_window
 
@@ -874,7 +874,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             scalar_products[:, is_valid_nn[0]:is_valid_nn[1]] += to_add
             scalar_products[best_cluster_ind, is_valid_nn[0]:is_valid_nn[1]] = -np.inf
 
-            spikes['sample_ind'][num_spikes] = best_peak_sample_ind
+            spikes['sample_index'][num_spikes] = best_peak_sample_index
             spikes['channel_ind'][num_spikes] = best_peak_chan_ind
             spikes['cluster_ind'][num_spikes] = best_cluster_ind
             spikes['amplitude'][num_spikes] = best_amplitude
@@ -885,7 +885,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         spikes['amplitude'][:num_spikes] /= norms[spikes['cluster_ind'][:num_spikes]]
         
         spikes = spikes[:num_spikes]
-        order = np.argsort(spikes['sample_ind'])
+        order = np.argsort(spikes['sample_index'])
         spikes = spikes[order]
 
         return spikes

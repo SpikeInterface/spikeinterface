@@ -49,13 +49,13 @@ def correct_motion_on_peaks(peaks, peak_locations, times,
         # rigid motion interpolation 1D
         sample_bins = np.searchsorted(times, temporal_bins)
         f = scipy.interpolate.interp1d(sample_bins, motion[:, 0], bounds_error=False, fill_value="extrapolate")
-        shift = f(peaks['sample_ind'])
+        shift = f(peaks['sample_index'])
         corrected_peak_locations[direction] -= shift
     else:
         # non rigid motion = interpolation 2D
         f = scipy.interpolate.RegularGridInterpolator((temporal_bins, spatial_bins), motion,
                                                       method='linear', bounds_error=False, fill_value=None)
-        spike_times = times[peaks['sample_ind']]
+        spike_times = times[peaks['sample_index']]
         shift = f(np.c_[spike_times, peak_locations[direction]])
         corrected_peak_locations[direction] -= shift
 
@@ -163,14 +163,14 @@ def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_
 #         num_samples = data_in.shape[0]
 #         num_chan_out = data_out.shape[1]
 #         num_sparse = sparse_chans.shape[1]
-#         # for sample_ind in range(num_samples):
-#         for sample_ind in numba.prange(num_samples):
+#         # for sample_index in range(num_samples):
+#         for sample_index in numba.prange(num_samples):
 #             for out_chan in range(num_chan_out):
 #                 v = 0
 #                 for i in range(num_sparse):
 #                     in_chan = sparse_chans[out_chan, i]
-#                     v +=  weights[out_chan, i] * data_in[sample_ind, in_chan]
-#                 data_out[sample_ind, out_chan] = v
+#                     v +=  weights[out_chan, i] * data_in[sample_index, in_chan]
+#                 data_out[sample_index, out_chan] = v
 
 
 def _get_closest_ind(array, values):

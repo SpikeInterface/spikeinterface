@@ -84,8 +84,8 @@ class PeakActivityMapWidget(BaseWidget):
             num_frames = int(duration / self.bin_duration_s)
 
             def animate_func(i):
-                i0 = np.searchsorted(peaks['sample_ind'], bin_size * i)
-                i1 = np.searchsorted(peaks['sample_ind'], bin_size * (i + 1))
+                i0 = np.searchsorted(peaks['sample_index'], bin_size * i)
+                i1 = np.searchsorted(peaks['sample_index'], bin_size * (i + 1))
                 local_peaks = peaks[i0:i1]
                 artists = self._plot_one_bin(rec, probe, local_peaks, self.bin_duration_s)
                 return artists

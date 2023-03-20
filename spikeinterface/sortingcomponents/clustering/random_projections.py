@@ -58,7 +58,7 @@ class RandomProjectionClustering:
         d = params
         verbose = d['job_kwargs']['verbose']
         
-        peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
+        peak_dtype = [('sample_index', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
 
         fs = recording.get_sampling_frequency()
         nbefore = int(params['ms_before'] * fs / 1000.)
@@ -145,7 +145,7 @@ class RandomProjectionClustering:
         idx = np.argsort(mask)
         mask = mask[idx]
 
-        spikes['sample_ind'] = peaks[mask]['sample_ind']
+        spikes['sample_index'] = peaks[mask]['sample_index']
         spikes['segment_ind'] = peaks[mask]['segment_ind']
         spikes['unit_ind'] = peak_labels[mask]
 
@@ -188,7 +188,7 @@ class RandomProjectionClustering:
                 mode = 'folder'
 
             sorting_folder = tmp_folder / "sorting"
-            sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['unit_ind'], fs)
+            sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['unit_ind'], fs)
             sorting = sorting.save(folder=sorting_folder)
             we = extract_waveforms(recording, sorting, waveform_folder, ms_before=params['ms_before'],
                 ms_after=params['ms_after'], **params['job_kwargs'], return_scaled=False, mode=mode)

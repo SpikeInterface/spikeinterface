@@ -134,7 +134,7 @@ class ExtractDenseWaveforms(WaveformExtractorNode):
         return max(self.nbefore, self.nafter)
 
     def compute(self, traces, peaks):
-        waveforms = traces[peaks["sample_ind"][:, None] + np.arange(-self.nbefore, self.nafter)]
+        waveforms = traces[peaks["sample_index"][:, None] + np.arange(-self.nbefore, self.nafter)]
         return waveforms
 
 
@@ -199,7 +199,7 @@ class ExtractSparseWaveforms(WaveformExtractorNode):
         for i, peak in enumerate(peaks):
             (chans,) = np.nonzero(self.neighbours_mask[peak["channel_ind"]])
             sparse_wfs[i, :, : len(chans)] = traces[
-                peak["sample_ind"] - self.nbefore : peak["sample_ind"] + self.nafter, :
+                peak["sample_index"] - self.nbefore : peak["sample_index"] + self.nafter, :
             ][:, chans]
 
         return sparse_wfs
@@ -290,13 +290,13 @@ def _compute_peak_step_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # get local peaks (sgment + start_frame/end_frame)
     sl = segment_slices[segment_index]
     peaks_in_segment = peaks[sl]
-    i0 = np.searchsorted(peaks_in_segment['sample_ind'], start_frame)
-    i1 = np.searchsorted(peaks_in_segment['sample_ind'], end_frame)
+    i0 = np.searchsorted(peaks_in_segment['sample_index'], start_frame)
+    i1 = np.searchsorted(peaks_in_segment['sample_index'], end_frame)
     local_peaks = peaks_in_segment[i0:i1]
 
     # make sample index local to traces
     local_peaks = local_peaks.copy()
-    local_peaks['sample_ind'] -= (start_frame - left_margin)
+    local_peaks['sample_index'] -= (start_frame - left_margin)
     
     
     outs = run_nodes(traces_chunk, local_peaks, nodes)

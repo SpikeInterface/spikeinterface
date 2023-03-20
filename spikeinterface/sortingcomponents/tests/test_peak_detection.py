@@ -114,7 +114,7 @@ def test_detect_peaks():
     
 
     # # DEBUG
-    # sample_inds, chan_inds, amplitudes = peaks['sample_ind'], peaks['channel_ind'], peaks['amplitude']
+    # sample_indexes, chan_inds, amplitudes = peaks['sample_index'], peaks['channel_ind'], peaks['amplitude']
     # import matplotlib.pyplot as plt
     # import spikeinterface.widgets as sw
     # chan_offset = 500
@@ -122,7 +122,7 @@ def test_detect_peaks():
     # traces += np.arange(traces.shape[1])[None, :] * chan_offset
     # fig, ax = plt.subplots()
     # ax.plot(traces, color='k')
-    # ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, color='r')
+    # ax.scatter(sample_indexes, chan_inds * chan_offset + amplitudes, color='r')
     # plt.show()
 
     # import matplotlib.pyplot as plt

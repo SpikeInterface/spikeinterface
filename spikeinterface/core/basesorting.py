@@ -273,7 +273,7 @@ class BaseSorting(BaseExtractor):
     def to_spike_vector(self, extremum_channel_inds=None):
         """
         Construct a unique structured numpy vector concatenating all spikes 
-        with several fields: sample_ind, unit_index, segment_index.
+        with several fields: sample_index, unit_index, segment_index.
 
         See also `get_all_spike_trains()`
 
@@ -288,15 +288,15 @@ class BaseSorting(BaseExtractor):
         Returns
         -------
         spikes: np.array
-            Structured numpy array ('sample_ind', 'unit_index', 'segment_index') with all spikes
-            Or ('sample_ind', 'unit_index', 'segment_index', 'channel_ind') if extremum_channel_inds
+            Structured numpy array ('sample_index', 'unit_index', 'segment_index') with all spikes
+            Or ('sample_index', 'unit_index', 'segment_index', 'channel_ind') if extremum_channel_inds
             is given
             
         """
         spikes_ = self.get_all_spike_trains(outputs='unit_index')
 
         n = np.sum([e[0].size for e in spikes_])
-        spike_dtype = [('sample_ind', 'int64'), ('unit_ind',
+        spike_dtype = [('sample_index', 'int64'), ('unit_ind',
                                                  'int64'), ('segment_ind', 'int64')]
         
         if extremum_channel_inds is not None:
@@ -308,7 +308,7 @@ class BaseSorting(BaseExtractor):
         pos = 0
         for segment_index, (spike_times, spike_labels) in enumerate(spikes_):
             n = spike_times.size
-            spikes[pos:pos+n]['sample_ind'] = spike_times
+            spikes[pos:pos+n]['sample_index'] = spike_times
             spikes[pos:pos+n]['unit_ind'] = spike_labels
             spikes[pos:pos+n]['segment_ind'] = segment_index
             pos += n

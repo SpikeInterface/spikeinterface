@@ -224,7 +224,7 @@ class NumpySorting(BaseSorting):
         sorting
             The NumpySorting object
         """
-        return NumpySorting.from_times_labels(peaks['sample_ind'], peaks['channel_ind'], sampling_frequency)
+        return NumpySorting.from_times_labels(peaks['sample_index'], peaks['channel_ind'], sampling_frequency)
 
 
 class NumpySortingSegment(BaseSortingSegment):

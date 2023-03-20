@@ -37,7 +37,7 @@ peaks = detect_peaks(
 
 ##############################################################################
 # peaks is a numpy 1D array with structured dtype that contains several fields:
-# sample_ind/channel_ind/amplitude/segment_ind
+# sample_index/channel_ind/amplitude/segment_ind
 
 print(peaks.dtype)
 print(peaks.shape)

@@ -576,7 +576,7 @@ def make_2d_motion_histogram(recording, peaks, peak_locations,
         spatial_bin_edges = get_spatial_bin_edges(recording, direction, margin_um, bin_um)
 
     arr = np.zeros((peaks.size, 2), dtype='float64')
-    arr[:, 0] = peaks['sample_ind']
+    arr[:, 0] = peaks['sample_index']
     arr[:, 1] = peak_locations[direction]
     
     if weight_with_amplitude:
@@ -653,7 +653,7 @@ def make_3d_motion_histograms(recording, peaks, peak_locations,
         (np.log10(max_peak_amp) - np.log10(min_peak_amp))
 
     arr = np.zeros((peaks.size, 3), dtype='float64')
-    arr[:, 0] = peaks['sample_ind']
+    arr[:, 0] = peaks['sample_index']
     arr[:, 1] = peak_locations[direction]
     arr[:, 2] = abs_peaks_log_norm
 

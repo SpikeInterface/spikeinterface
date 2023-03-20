@@ -234,22 +234,22 @@ def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
         extremum_channels_index = worker_ctx['extremum_channels_index']
 
-        sample_inds = spike_times[i0:i1].copy()
+        sample_indexes = spike_times[i0:i1].copy()
         labels = spike_labels[i0:i1]
         
         # apply shifts per spike
-        sample_inds += peak_shifts[labels]
+        sample_indexes += peak_shifts[labels]
         
         # get channels per spike
         chan_inds = extremum_channels_index[labels]
         
         # prevent border accident due to shift
-        sample_inds[sample_inds < 0] = 0
-        sample_inds[sample_inds >= seg_size] = seg_size - 1
+        sample_indexes[sample_indexes < 0] = 0
+        sample_indexes[sample_indexes >= seg_size] = seg_size - 1
         
-        first = np.min(sample_inds)
-        last = np.max(sample_inds)
-        sample_inds -= first
+        first = np.min(sample_indexes)
+        last = np.max(sample_indexes)
+        sample_indexes -= first
         
         # load trace in memory
         traces = recording.get_traces(start_frame=first, end_frame=last+1, 
@@ -257,7 +257,7 @@ def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
                                       return_scaled=return_scaled)
         
         # and get amplitudes
-        amplitudes = traces[sample_inds, chan_inds]
+        amplitudes = traces[sample_indexes, chan_inds]
     
     segments = np.zeros(amplitudes.size, dtype='int64') + segment_index
     

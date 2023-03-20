@@ -174,7 +174,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
         for i, peak in enumerate(peaks):
-            sample_ind = peak['sample_ind']
+            sample_index = peak['sample_index']
             chan_mask = self.neighbours_mask[peak['channel_ind'], :]
             chan_inds = np.flatnonzero(chan_mask)
             local_contact_locations = self.contact_locations[chan_inds, :]

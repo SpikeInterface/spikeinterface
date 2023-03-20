@@ -24,7 +24,7 @@ try:
 except ImportError:
     HAVE_TORCH = False
 
-base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
+base_peak_dtype = [('sample_index', 'int64'), ('channel_ind', 'int64'),
                    ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 
@@ -133,16 +133,16 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
         trace_detection = traces
 
     # TODO: handle waveform returns
-    peak_sample_ind, peak_chan_ind = method_class.detect_peaks(trace_detection, *method_args)
+    peak_sample_index, peak_chan_ind = method_class.detect_peaks(trace_detection, *method_args)
 
     if extra_margin > 0:
-        peak_sample_ind += extra_margin
+        peak_sample_index += extra_margin
 
     peak_dtype = base_peak_dtype
-    peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
+    peak_amplitude = traces[peak_sample_index, peak_chan_ind]
 
-    peaks = np.zeros(peak_sample_ind.size, dtype=peak_dtype)
-    peaks['sample_ind'] = peak_sample_ind
+    peaks = np.zeros(peak_sample_index.size, dtype=peak_dtype)
+    peaks['sample_index'] = peak_sample_index
     peaks['channel_ind'] = peak_chan_ind
     peaks['amplitude'] = peak_amplitude
     peaks['segment_ind'] = segment_index
@@ -151,7 +151,7 @@ def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
         outs = run_nodes(traces, peaks, pipeline_nodes)
 
     # make absolute sample index
-    peaks['sample_ind'] += (start_frame - left_margin)
+    peaks['sample_index'] += (start_frame - left_margin)
 
     if pipeline_nodes is None:
         return peaks
@@ -226,11 +226,11 @@ class DetectPeakByChannel:
                 peak_mask = peak_mask | peak_mask_pos
 
         # find peaks
-        peak_sample_ind, peak_chan_ind = np.nonzero(peak_mask)
+        peak_sample_index, peak_chan_ind = np.nonzero(peak_mask)
         # correct for time shift
-        peak_sample_ind += exclude_sweep_size
+        peak_sample_index += exclude_sweep_size
 
-        return peak_sample_ind, peak_chan_ind
+        return peak_sample_index, peak_chan_ind
 
 
 class DetectPeakByChannelTorch:
@@ -284,11 +284,11 @@ class DetectPeakByChannelTorch:
 
     @classmethod
     def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, device, return_tensor):
-        sample_inds, chan_inds = _torch_detect_peaks(traces, peak_sign, abs_threholds, exclude_sweep_size, None, device)
+        sample_indexes, chan_inds = _torch_detect_peaks(traces, peak_sign, abs_threholds, exclude_sweep_size, None, device)
         if not return_tensor:
-            sample_inds = np.array(sample_inds.cpu())
+            sample_indexes = np.array(sample_indexes.cpu())
             chan_inds = np.array(chan_inds.cpu())
-        return sample_inds, chan_inds
+        return sample_indexes, chan_inds
 
 
 class DetectPeakLocallyExclusive:
@@ -343,10 +343,10 @@ class DetectPeakLocallyExclusive:
                 peak_mask = peak_mask | peak_mask_pos
 
         # Find peaks and correct for time shift
-        peak_sample_ind, peak_chan_ind = np.nonzero(peak_mask)
-        peak_sample_ind += exclude_sweep_size
+        peak_sample_index, peak_chan_ind = np.nonzero(peak_mask)
+        peak_sample_index += exclude_sweep_size
 
-        return peak_sample_ind, peak_chan_ind
+        return peak_sample_index, peak_chan_ind
 
 
 class DetectPeakLocallyExclusiveTorch:
@@ -390,12 +390,12 @@ class DetectPeakLocallyExclusiveTorch:
 
     @classmethod
     def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, device, return_tensor, neighbor_idxs):
-        sample_inds, chan_inds = _torch_detect_peaks(traces, peak_sign, abs_threholds, exclude_sweep_size, 
+        sample_indexes, chan_inds = _torch_detect_peaks(traces, peak_sign, abs_threholds, exclude_sweep_size, 
                                                      neighbor_idxs, device)
         if not return_tensor:
-            sample_inds = np.array(sample_inds.cpu())
+            sample_indexes = np.array(sample_indexes.cpu())
             chan_inds = np.array(chan_inds.cpu())
-        return sample_inds, chan_inds
+        return sample_indexes, chan_inds
 
 
 if HAVE_NUMBA:
@@ -473,7 +473,7 @@ if HAVE_TORCH:
 
         Returns
         -------
-        sample_inds, chan_inds
+        sample_indexes, chan_inds
             1D numpy arrays
         """
         # TODO handle GPU-memory at chunk executor level
@@ -521,17 +521,17 @@ if HAVE_TORCH:
         # -- unravel the spike index
         # (right now the indices are into flattened recording)
         peak_inds = window_max_inds[crossings]
-        sample_inds = torch.div(peak_inds, num_channels, rounding_mode="floor")
+        sample_indexes = torch.div(peak_inds, num_channels, rounding_mode="floor")
         chan_inds = peak_inds % num_channels
         amplitudes = max_amps_at_inds[crossings]
 
         # we need this due to the padding in convolution
         valid_inds = torch.nonzero(
-            (0 < sample_inds) & (sample_inds < traces.shape[0] - 1)
+            (0 < sample_indexes) & (sample_indexes < traces.shape[0] - 1)
         ).squeeze()
-        if not sample_inds.numel():
+        if not sample_indexes.numel():
             return np.array([]), np.array([]), np.array([])
-        sample_inds = sample_inds[valid_inds]
+        sample_indexes = sample_indexes[valid_inds]
         chan_inds = chan_inds[valid_inds]
         amplitudes = amplitudes[valid_inds]
 
@@ -546,7 +546,7 @@ if HAVE_TORCH:
             # still not sure why we can't just use `max_amps` instead of making
             # this sparsely populated array, but it leads to a different result.
             max_amps[:] = 0
-            max_amps[sample_inds, chan_inds] = amplitudes
+            max_amps[sample_indexes, chan_inds] = amplitudes
             max_window = 2 * exclude_sweep_size
             max_amps = F.max_pool2d(
                 max_amps[None, None],
@@ -567,15 +567,15 @@ if HAVE_TORCH:
 
             # -- deduplication
             dedup = torch.nonzero(
-                amplitudes >= max_amps[sample_inds, chan_inds] - 1e-8
+                amplitudes >= max_amps[sample_indexes, chan_inds] - 1e-8
             ).squeeze()
             if not dedup.numel():
                 return np.array([]), np.array([]), np.array([])
-            sample_inds = sample_inds[dedup]
+            sample_indexes = sample_indexes[dedup]
             chan_inds = chan_inds[dedup]
             amplitudes = amplitudes[dedup]
 
-        return sample_inds, chan_inds
+        return sample_indexes, chan_inds
 
 
 class DetectPeakLocallyExclusiveOpenCL:
@@ -610,9 +610,9 @@ class DetectPeakLocallyExclusiveOpenCL:
 
     @classmethod
     def detect_peaks(cls, traces, executor):
-        peak_sample_ind, peak_chan_ind = executor.detect_peak(traces)
+        peak_sample_index, peak_chan_ind = executor.detect_peak(traces)
         
-        return peak_sample_ind, peak_chan_ind
+        return peak_sample_index, peak_chan_ind
 
 
 class OpenCLDetectPeakExecutor:
@@ -696,10 +696,10 @@ class OpenCLDetectPeakExecutor:
 
         n = self.num_peaks[0]
         peaks = self.peaks[:n]
-        peak_sample_ind = peaks['sample_index'].astype('int64')
+        peak_sample_index = peaks['sample_index'].astype('int64')
         peak_chan_ind = peaks['channel_index'].astype('int64')
 
-        return peak_sample_ind, peak_chan_ind
+        return peak_sample_index, peak_chan_ind
 
 
 processor_kernel = """

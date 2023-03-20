@@ -112,9 +112,9 @@ class SlidingNNClustering:
             sparsity_mask[c, chans] = True
         
         # create a new peak vector to extract waveforms
-        dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
+        dtype = [('sample_index', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
         peaks2 = np.zeros(peaks.size, dtype=dtype)
-        peaks2['sample_ind'] = peaks['sample_ind']
+        peaks2['sample_index'] = peaks['sample_index']
         peaks2['unit_ind'] = peaks['channel_ind']
         peaks2['segment_ind'] = peaks['segment_ind']
         
@@ -480,8 +480,8 @@ def get_chunk_spike_waveforms(
     )
 
     # find the peaks that exist in this sample
-    peaks_in_chunk_mask = (peaks["sample_ind"] >= start_frame) & (
-        peaks["sample_ind"] <= end_frame
+    peaks_in_chunk_mask = (peaks["sample_index"] >= start_frame) & (
+        peaks["sample_index"] <= end_frame
     )
 
     # get the peaks in this chunk
@@ -505,11 +505,11 @@ def get_chunk_spike_waveforms(
     all_chan_idx = np.zeros((len(peaks_chunk), n_channel_neighbors))
 
     # for each spike in the sample, add it to the
-    for spike_i, (sample_ind, channel_ind, amplitude, segment_ind) in enumerate(
+    for spike_i, (sample_index, channel_ind, amplitude, segment_ind) in enumerate(
         peaks_chunk
     ):
-        spike_start = sample_ind + margin_frames - spike_pre_frames - start_frame
-        spike_end = sample_ind + margin_frames + spike_post_frames - start_frame
+        spike_start = sample_index + margin_frames - spike_pre_frames - start_frame
+        spike_end = sample_index + margin_frames + spike_post_frames - start_frame
         all_spikes[spike_i] = traces[
             spike_start:spike_end, channel_neighbors[channel_ind]
         ].T
