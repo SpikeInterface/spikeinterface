@@ -219,6 +219,6 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
             assert ops['scaleproc'] is not None
         else:
             # int16 scaling of whitened data, when None then set to 200.
-            ops['scaleproc'] = params.get('scaleproc', 200.0)
+            ops['scaleproc'] = 200. if params['scaleproc'] is None else params['scaleproc']
 
         return ops
