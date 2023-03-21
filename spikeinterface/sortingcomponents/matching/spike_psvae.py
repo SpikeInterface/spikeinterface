@@ -473,23 +473,15 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             jitter = np.argmax(high_resolution_peaks[params.jitter_window, :], axis=0)
             scalings = np.ones(len(non_refractory_indices))
         else:
-            # the objective is (conv + 1/lambd)^2 / (norm + 1/lambd) - 1/lambd
+            # upsampled the convolution for the detected peaks only
             obj_peaks_high_res = objective.obj[spike_unit_ids, peak_indices]
             obj_peaks_high_res = obj_peaks_high_res[:, non_refractory_indices]
             high_resolution_conv = signal.resample(obj_peaks_high_res, resample_factor, axis=0)
+
+            # Find template norms for detected peaks only
             norm_peaks = objective.norm[spike_unit_ids[non_refractory_indices]]
 
-            b = high_resolution_conv + 1/params.lambd # TODO: rename 'b' --ask Charlie
-            a = norm_peaks[np.newaxis, :] + 1/params.lambd # TODO: rename 'a' --ask Charlie
-
-            # this is the objective with the optimal scaling *without hard clipping*
-            # this order of operations is key to avoid overflows when squaring!
-            # self.obj = b * (b / a) - 1 / params.lambd
-
-            # but, in practice we do apply hard clipping. so we have to compute
-            # the following more cumbersome formula:
-            scalings = np.clip(b/a, params.scale_min, params.scale_max)
-            high_res_obj = (2 * scalings * b) - (np.square(scalings) * a) - (1/params.lambd)
+            high_res_obj, scalings = cls.compute_amplitude_scaling(high_resolution_conv, norm_peaks, params)
             jitter = np.argmax(high_res_obj[params.jitter_window, :], axis=0)
             scalings = scalings[jitter, np.arange(len(non_refractory_indices))]
 
@@ -498,6 +490,19 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         time_shift = params.jitter2spike_time_shift[jitter]
         return template_shift, time_shift, non_refractory_indices, scalings
 
+    @classmethod
+    def compute_amplitude_scaling(cls, high_resolution_conv, norm_peaks, params):
+        # the objective is (conv + 1/lambd)^2 / (norm + 1/lambd) - 1/lambd
+        # this is the objective with the optimal scaling *without hard clipping*
+        # this order of operations is key to avoid overflows when squaring!
+        # self.obj = b * (b / a) - 1 / params.lambd
+        # but, in practice we do apply hard clipping. so we have to compute
+        # the following more cumbersome formula:
+        b = high_resolution_conv + 1 / params.lambd
+        a = norm_peaks[np.newaxis, :] + 1 / params.lambd
+        scalings = np.clip(b / a, params.scale_min, params.scale_max)
+        high_res_obj = (2 * scalings * b) - (np.square(scalings) * a) - (1 / params.lambd)
+        return high_res_obj, scalings
 
     @classmethod
     def enforce_refractory(cls, spike_train, objective, params, template_meta):
