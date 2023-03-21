@@ -24,11 +24,13 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
     NeoRawIOClass = 'IntanRawIO'
     name = "intan"
 
-    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
+    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False,
+                 use_names_as_ids=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
                                            stream_name=stream_name,
                                            all_annotations=all_annotations,
+                                           use_names_as_ids=use_names_as_ids,
                                            **neo_kwargs)
 
         self._kwargs.update(dict(file_path=str(file_path)))
