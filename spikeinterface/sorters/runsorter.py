@@ -433,21 +433,21 @@ if __name__ == '__main__':
             volumes[str(recording_folder)] = {
                 'bind': str(recording_folder_unix), 'mode': 'ro'}
     volumes[str(parent_folder)] = {'bind': str(parent_folder_unix), 'mode': 'rw'}
-    si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH')
-
+    
+    si_dev_path = os.getenv('SPIKEINTERFACE_DEV_PATH', None)
+        
+    install_si_from_source = False
     if 'dev' in si_version and si_dev_path is not None:
         install_si_from_source = True
         # Making sure to get rid of last / or \
         si_dev_path = str(Path(si_dev_path).absolute().resolve())
         si_dev_path_unix = path_to_unix(si_dev_path)
         volumes[si_dev_path] = {'bind': si_dev_path_unix, 'mode': 'ro'}
-    else:
-        install_si_from_source = False
 
     extra_kwargs = {}
+    
     use_gpu = SorterClass.use_gpu(sorter_params)
     gpu_capability = SorterClass.gpu_capability
-
     if use_gpu:
         if gpu_capability == 'nvidia-required':
             assert has_nvidia(), "The container requires a NVIDIA GPU capability, but it is not available"
@@ -477,6 +477,11 @@ if __name__ == '__main__':
         print('Starting container')
     container_client.start()
 
+    if verbose and install_si_from_source:
+        print("******")
+        print("Container started with the following paths")
+        print(si_dev_path_unix, si_source_folder)
+    
     # check if container contains spikeinterface already
     cmd_1 = ['python', '-c', 'import spikeinterface; print(spikeinterface.__version__)']
     cmd_2 = ['python', '-c', 'from spikeinterface.sorters import run_sorter_local']

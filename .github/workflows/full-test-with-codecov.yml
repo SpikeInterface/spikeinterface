@@ -1,6 +1,6 @@
 name: Full spikeinterface tests codecov
 
-on: 
+on:
   workflow_dispatch:
   schedule:
     - cron: "0 12 * * *"  # Daily at noon UTC
@@ -52,11 +52,8 @@ jobs:
             ${{ runner.os }}-datasets
       - name: Install dependencies
         run: |
-          sudo apt update
           # this is for datalad and download testing datasets
           sudo apt install git 
-          # this is for spyking circus
-          # sudo apt install mpich libmpich-dev
           # needed for correct operation of git/git-annex/DataLad
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
@@ -89,7 +86,7 @@ jobs:
       - name: run tests
         run: |
           source ~/test_env/bin/activate
-          pytest --cov=./ --cov-report xml:./coverage.xml -vv -ra --durations=0 | tee report_full.txt; test ${PIPESTATUS[0]} -eq 0 || fail
+          pytest -m "not sorters_external" --cov=./ --cov-report xml:./coverage.xml -vv -ra --durations=0 | tee report_full.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of full tests" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_full.txt >> $GITHUB_STEP_SUMMARY 
           cat $GITHUB_STEP_SUMMARY

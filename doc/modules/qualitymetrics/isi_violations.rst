@@ -10,9 +10,10 @@ Calculation
 Neurons have a refractory period after a spiking event during which they cannot fire again.
 Inter-spike-interval (ISI) violations refers to the rate of refractory period violations (as described by [Hill]_).
 
-The calculation works under the assumption that the contaminant events happen randomly, or comes from another neuron that is not correlated with our unit. A correlation will lead to an over-estimation of the contamination, whereas an anti-correlation will lead to an under-estimation.
+The calculation works under the assumption that the contaminant events happen randomly or come from another neuron that is not correlated with our unit. 
+A correlation will lead to an overestimation of the contamination, whereas an anti-correlation will lead to an underestimation.
 
-Different formulas were developped over the years.
+Different formulas have been developed over the years.
 
 Calculation from the [Hill]_ paper
 ----------------------------------
@@ -22,7 +23,7 @@ The following quantities are required:
 - :math:`ISI_t` : biological threshold for ISI violation.
 - :math:`ISI_{min}`: minimum ISI threshold enforced by the data recording system used.
 - :math:`ISI_s` : the array of ISI violations which are observed in the unit's spike train.
-- :math:`\#`: denote count.
+- :math:`\#`: denotes count.
 
 The threshold for ISI violations is the biological ISI threshold, :math:`ISI_t`, minus the minimum ISI threshold, :math:`ISI_{min}` enforced by the data recording system used.
 The array of inter-spike-intervals observed in the unit's spike train, :math:`ISI_s`, is used to identify the count (:math:`\#`) of observed ISI's below this threshold.
@@ -57,7 +58,7 @@ Expectation and use
 -------------------
 
 ISI violations identifies unit contamination - a high value indicates a highly contaminated unit.
-Despite being a ratio, ISI violations can exceed 1 (or become a complex number in the [Llobet]_ formula). This is usually due to the contaminant events being correlated with our neuron, and their number are greater than a purely random spike train.
+Despite being a ratio, ISI violations can exceed 1 (or become a complex number in the [Llobet]_ formula). This is usually due to the contaminant events being correlated with our neuron, and their number is greater than a purely random spike train.
 
 Example code
 ------------

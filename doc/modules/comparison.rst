@@ -44,13 +44,13 @@ Given:
     For all pairs of GT unit and tested unit we first count how many
     events are matched within a *delta_time* tolerance (0.4 ms by default).
 
-    This gives a matrix called **match_event_count** of size *(n_gt X n_tested)*. This is an example of such matrices:
+    This gives a matrix called **match_event_count** of size *(n_gt X n_tested)*. This is an example of the matrix:
 
     .. image:: ../images/spikecomparison_match_count.png
         :scale: 100 %
 
     Note that this matrix represents the number of **true positive** (TP) spikes
-    of each pair. We can also compute the number of **false negatives** (FN) and **false positive** (FP) spikes.
+    of each pair. We can also compute the number of **false negative** (FN) and **false positive** (FP) spikes.
 
       *  **num_tp** [i, k] = match_event_count[i, k]
       *  **num_fn** [i, k] = event_counts_GT[i] - match_event_count[i, k]
@@ -89,7 +89,7 @@ Given:
 
    3. **Match units**
 
-      During this step, given the **agreement_score** matrix each GT units can be matched to a tested units.
+      During this step, given the **agreement_score** matrix each GT unit can be matched to a tested unit.
       For matching, a minimum **match_score** is used (0.5 by default). If the agreement is below this threshold,
       the possible match is discarded.
 
@@ -129,8 +129,8 @@ Given:
 
       With the list of matched units we can compute performance metrics.
       Given : **tp** the number of true positive events, **fp** number of false
-      positive event, **fn** the number of false negative event, **num_gt** the number
-      of event of the matched tested units, the following metrics are computed for each GT unit:
+      positive events, **fn** the number of false negative events, **num_gt** the number
+      of events of the matched tested units, the following metrics are computed for each GT unit:
 
         * accuracy = tp / (tp + fn + fp)
         * recall = tp / (tp + fn)
@@ -152,9 +152,9 @@ More information about **hungarian** or **best** match methods
 
     * **Hungarian**:
 
-      Finds the best paring. If the matrix is square, then all units are associated.
+      Finds the best pairing. If the matrix is square, then all units are associated.
       If the matrix is rectangular, then each row is matched.
-      A GT unit (row) can be match one time only.
+      A GT unit (row) can be matched one time only.
 
       * Pros
 
@@ -165,16 +165,16 @@ More information about **hungarian** or **best** match methods
 
       * Cons
 
-        * Does not catch units that are split in several sub-units. Only the best math will be listed
+        * Does not catch units that are split into several sub-units. Only the best match will be listed
         * More complicated implementation
 
     * **Best**
 
-        Each GT units is associated to the tested unit that has the best **agreement score**.
+        Each GT unit is associated to the tested unit that has the best **agreement score**.
 
       * Pros:
 
-        * Each GT unit is matched totally independently from others units
+        * Each GT unit is matched totally independently from other units
         * The accuracy score of a GT unit is totally independent from other units
         * It can identify over-merged units, as they would match multiple GT units
 
@@ -199,7 +199,7 @@ Tested units are classified depending on their performance. We identify three di
 A **well-detected** unit is a unit whose performance is good. By default, a good performance is measured by an accuracy
 greater than 0.8-
 
-A **false positive** unit has low agreement scores for all GT units and it is not matched.
+A **false positive** unit has low agreement scores for all GT units and is not matched.
 
 A **redundant** unit has a relatively high agreement (>= 0.2 by default), but it is not a best match. This means that
 it could either be an oversplit unit or a duplicate unit.
@@ -234,7 +234,7 @@ An **over-merged** unit has a relatively high agreement (>= 0.2 by default) for 
     # and an extra row for FP
     plot_confusion_matrix(cmp_gt_HS)
 
-    # We can query the well and bad detected units. By default, the threshold
+    # We can query the well and poorly detected units. By default, the threshold
     # on accuracy is 0.95.
     cmp_gt_HS.get_well_detected_units(well_detected_score=0.95)
 
@@ -248,9 +248,9 @@ An **over-merged** unit has a relatively high agreement (>= 0.2 by default) for 
 We also have a high level class to compare many sorter against ground truth : 
 :py:func:`~spiekinterface.comparison.GroundTruthStudy()`
 
-A study is a systematic performance comparisons several ground truth recordings with several sorters.
+A study is a systematic performance comparison of several ground truth recordings with several sorters.
 
-The study class  propose high level tools functions to run many groundtruth comparison with many sorter
+The study class proposes high level tool functions to run many groundtruth comparisons with many sorters
 on many recordings and then collect and aggregate results in an easy way.
 
 The all mechanism is based on an intrinsic organization into a "study_folder" with several subfolder:
@@ -303,7 +303,7 @@ binary (for recordings) and npz (for sortings).
     # GroundTruthComparison on it.
     # So you can access finely to all individual results.
     #  
-    # Note that exhaustive_gt=True when you exactly how many
+    # Note that exhaustive_gt=True when you know exactly how many
     # units in ground truth (for synthetic datasets)
 
     study.run_comparisons(exhaustive_gt=True)
@@ -331,7 +331,7 @@ binary (for recordings) and npz (for sortings).
     # Pandas dataframes can be nicely displayed as tables in the notebook.
     print(dataframes.keys())
 
-    # we can also acces to run times
+    # we can also access run times
     print(dataframes['run_times'])
 
     # Easy plot with seaborn
@@ -354,8 +354,8 @@ binary (for recordings) and npz (for sortings).
 2. Compare the output of two spike sorters (symmetric comparison)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The comparison of two sorter is a quite similar to the procedure of **compare to ground truth**.
-The difference is that no assumption is done on which is the units are ground-truth.
+The comparison of two sorters is quite similar to the procedure of **compare to ground truth**.
+The difference is that no assumption is done on which of the units are ground-truth.
 
 So the procedure is the following:
 
@@ -414,7 +414,7 @@ The :py:func:`~spikeinterface.comparison.compare_two_sorters()` return the compa
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 With 3 or more spike sorters, the comparison is implemented with a graph-based method. The multiple sorter comparison
-also allows to clean the output by applying a consensus-based method which only selects spike trains and spikes
+also allows cleaning the output by applying a consensus-based method which only selects spike trains and spikes
 in agreement with multiple sorters.
 
 Comparison of multiple sorters uses the following procedure:
@@ -434,7 +434,7 @@ Comparison of multiple sorters uses the following procedure:
     local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     recording, sorting = se.read_mearec(local_path)
 
-    # Then run 3 spike sorters and compare their output.
+    # Then run 3 spike sorters and compare their outputs.
     sorting_MS4 = ss.run_sorter('mountainsort4', recording)
     sorting_HS = ss.run_sorter('herdingspikes', recording)
     sorting_TDC = ss.run_sorter('tridesclous', recording)
@@ -490,9 +490,9 @@ Comparison of multiple sorters uses the following procedure:
 Template comparison
 -------------------
 
-For template comparisons, the underlying ideaa are very similar to :ref:`symmetric` and :ref:`multiple`, for 
-pairwise and multiple comparisons, respectively. Differently than spike trains comparisons, however, in this case the 
-agreement is not the matching of spiking events, but rather the similarity between templates. 
+For template comparisons, the underlying ideas are very similar to :ref:`symmetric` and :ref:`multiple`, for 
+pairwise and multiple comparisons, respectively. In contrast to spike train comparisons, agreement is assessed
+in the similarity of templates rather than spiking events.
 This enables us to use exatly the same tools for both types of comparisons, just by changing the way that agreement 
 scores are computed.
 
@@ -516,7 +516,7 @@ waveform extractors from day 1 (:code:`we_day1`) to day 5 (:code:`we_day5`):
 Benchmark spike collisions
 --------------------------
 
-SpikeInterface also have a specific toolset to benchmark how good sorter are to recover spikes in "collision".
+SpikeInterface also has a specific toolset to benchmark how good sorters are at recovering spikes in "collision".
 
 We have three classes to handle collision-specific comparisons, and also to quantify the effects on correlogram 
 estimation: 
