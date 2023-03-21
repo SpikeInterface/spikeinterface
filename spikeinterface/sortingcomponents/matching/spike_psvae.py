@@ -126,7 +126,6 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         params.peak_to_template_idx = np.concatenate(
             (np.arange(radius, -1, -1), (params.jitter_factor - 1) - np.arange(radius))
         )
-        print(f"{params.peak_to_template_idx = }")
         params.peak_time_jitter = np.concatenate(
             ([0], np.array([0, 1]).repeat(radius))
         )
@@ -283,7 +282,8 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
     def get_margin(cls, recording, kwargs):
         buffer_ms = 10
         margin = int(buffer_ms*1e-3 * recording.sampling_frequency)
-        return margin
+        # return margin
+        return 300
 
     @classmethod
     def main_function(cls, traces, method_kwargs):
@@ -348,6 +348,8 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         spike_train = np.array(spike_trains)
         scalings = np.array(scalings)
         distance_metric = np.array(distance_metrics)
+        if len(spike_train) == 0:
+            spike_train = np.zeros((0, 2), dtype=np.int32)
 
         # order spike times
         idx = np.argsort(spike_train[:, 0])
@@ -388,7 +390,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         obj_template_max = np.max(objective.obj_normalized, axis=0)
         peak_window = (template_meta.n_time - 1, objective.obj_normalized.shape[1] - template_meta.n_time)
         obj_windowed = obj_template_max[peak_window[0]:peak_window[1]]
-        spike_time_indices = signal.argrelmax(obj_windowed, order=params.refractory_period_frames)[0]
+        spike_time_indices = signal.argrelmax(obj_windowed, order=template_meta.n_time-1)[0]
         spike_time_indices += template_meta.n_time - 1
         obj_spikes = obj_template_max[spike_time_indices]
         spike_time_indices = spike_time_indices[obj_spikes > params.threshold]
@@ -426,7 +428,6 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             id_mask = spiketrain[:, 1] == jittered_id
             id_spiketrain = spiketrain[id_mask, 0]
             id_scaling = scaling[id_mask]
-
             overlapping_templates = sparsity.unit_overlap[jittered_id]
             # Note: pairwise_conv only has overlapping template convolutions already
             pconv = objective.pairwise_convolution[jittered_id]

@@ -14,7 +14,7 @@ from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 
 def test_matching_psvae():
     verbose = False
-    down_factor = 10
+    down_factor = 5
     hit_threshold = 0.4e-3
     plot_templates = False
 
@@ -48,10 +48,11 @@ def test_matching_psvae():
     param_sets = {
         "specify all parameters" : dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=1, vis_su=1,
                                         threshold=50),
-        "check amplitude scaling, multiprocessing, grouped templates, channel sparsity" : dict(
-            lambd=1, n_jobs=2, template_ids2unit_ids=template_ids2unit_ids, jitter_factor=1, vis_su=10),
+        "check amplitude scaling, multiprocessing, grouped templates" : dict(
+            lambd=1, n_jobs=2, template_ids2unit_ids=template_ids2unit_ids, jitter_factor=1, vis_su=1),
         "check trivial cases": dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=1),
         "check no_amplitude_scaling" : dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=down_factor),
+        "check sparsity": dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=down_factor, vis_su=10),
         "check best case" : dict(lambd=1, n_jobs=1, template_ids2unit_ids=None, jitter_factor=2*down_factor)
     }
     for params in param_sets.values():
