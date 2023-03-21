@@ -32,7 +32,7 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
 
 def test_lazy_random_recording():
     bytes_to_MiB_factor = 1024**2
-    tolerance = 0.05  # relative tolerance of 5 per cent
+    relative_tolerance = 0.05  # relative tolerance of 5 per cent
 
     sampling_frequency = 30000  # Hz
     durations = [2.0]
@@ -50,8 +50,7 @@ def test_lazy_random_recording():
     )
 
     memory_after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    excess_memory = memory_after_instanciation_MiB - initial_memory_MiB
-    excess_memory == pytest.approx(0, abs=tolerance)
+    memory_after_instanciation_MiB == pytest.approx(initial_memory_MiB, rel=relative_tolerance)
 
     traces = lazy_recording.get_traces()
     expected_traces_shape = (int(durations[0] * sampling_frequency), num_channels)
@@ -65,26 +64,25 @@ def test_lazy_random_recording():
     print("Memory footprint")
     print(f"Initial memory = {initial_memory_MiB} MiB")
     print(f"Memory after instantiate class {memory_after_instanciation_MiB} MiB")
-    print(f"Memory after traces {memory_after_traces_MiB}")
+    print(f"Memory after traces {memory_after_traces_MiB} MiB")
     print(f"Traces size {traces_size_MiB} MiB")
     print(f"Difference between the last two {(memory_after_traces_MiB - traces_size_MiB)} MiB")
 
-    excess_memory = memory_after_traces_MiB - (memory_after_instanciation_MiB + traces_size_MiB)
-    excess_memory == pytest.approx(0, abs=tolerance)
+    (memory_after_instanciation_MiB + traces_size_MiB) == pytest.approx(memory_after_traces_MiB, rel=relative_tolerance)
 
 
 def test_generate_lazy_recording():
     bytes_to_MiB_factor = 1024**2
     full_traces_size_GiB = 1.0
-    tolerance = 0.05  # relative tolerance of 5 per cent
+    relative_tolerance = 0.05  # relative tolerance of 5 per cent
 
     initial_memory_MiB = measure_memory_allocation() / bytes_to_MiB_factor
 
     lazy_recording = generate_lazy_recording(full_traces_size_GiB=full_traces_size_GiB)
+    
     memory_after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
+    memory_after_instanciation_MiB == pytest.approx(initial_memory_MiB, rel=relative_tolerance)
 
-    excess_memory = memory_after_instanciation_MiB - initial_memory_MiB
-    excess_memory == pytest.approx(0, abs=tolerance)
 
     traces = lazy_recording.get_traces()
     traces_size_MiB = traces.nbytes / bytes_to_MiB_factor
@@ -95,9 +93,8 @@ def test_generate_lazy_recording():
     print("Memory footprint")
     print(f"Initial memory = {initial_memory_MiB} MiB")
     print(f"Memory after instantiate class {memory_after_instanciation_MiB} MiB")
-    print(f"Memory after traces {memory_after_traces_MiB}")
+    print(f"Memory after traces {memory_after_traces_MiB} MiB")
     print(f"Traces size {traces_size_MiB} MiB")
     print(f"Difference between the last two {(memory_after_traces_MiB - traces_size_MiB)} MiB")
 
-    excess_memory = memory_after_traces_MiB - (memory_after_instanciation_MiB + traces_size_MiB)
-    excess_memory == pytest.approx(0, abs=tolerance)
+    (memory_after_instanciation_MiB + traces_size_MiB) == pytest.approx(memory_after_traces_MiB, rel=relative_tolerance)
