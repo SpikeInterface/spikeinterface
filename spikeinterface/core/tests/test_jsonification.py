@@ -105,6 +105,19 @@ def test_encoding_numpy_scalars_keys_nestes_mixed(numpy_array_integer, numpy_arr
     json.dumps(dict_with_nested_numpy_scalars, cls=SIJsonEncoder)
 
 
+def test_numpy_dtype_encoding():
+    json.dumps(np.dtype("int32"), cls=SIJsonEncoder)
+    json.dumps(np.dtype("float32"), cls=SIJsonEncoder)
+    json.dumps(np.dtype("bool"), cls=SIJsonEncoder)
+
+
+def test_numpy_dtype_alises_encoding():
+    # People tend to use as a dtype instead of the proper classes
+    json.dumps(np.int32, cls=SIJsonEncoder)
+    json.dumps(np.float32, cls=SIJsonEncoder)
+    json.dumps(np.bool_, cls=SIJsonEncoder)  # Note that np.bool was deperecated in numpy 1.20.0
+
+
 def test_recording_encoding(numpy_generated_recording):
     recording = numpy_generated_recording
     json.dumps(recording, cls=SIJsonEncoder)
@@ -113,23 +126,3 @@ def test_recording_encoding(numpy_generated_recording):
 def test_sorting_encoding(numpy_generated_sorting):
     sorting = numpy_generated_sorting
     json.dumps(sorting, cls=SIJsonEncoder)
-
-
-# def test_pre_processing_encoding(numpy_generated_recording):
-#     from spikeinterface.preprocessing.common_reference import CommonReferenceRecording
-#     recording = numpy_generated_recording
-#     common_reference_recording = CommonReferenceRecording(recording=recording)
-#     json.dumps(common_reference_recording, cls=SIJsonEncoder)
-
-
-# def test_waveforms_encoding(numpy_generated_recording, numpy_generated_sorting):
-#     from spikeinterface.core.waveform_extractor import WaveformExtractor
-
-#     waveformextractor = WaveformExtractor(
-#         recording=numpy_generated_recording, sorting=numpy_generated_sorting, allow_unfiltered=True
-#     )
-#     json.dumps(waveformextractor)
-
-
-if __name__ == "__main__":
-    test_encoding_numpy_scalars_keys(np.arange(3)[0], np.arange(3)[0], np.arange(3)[0])

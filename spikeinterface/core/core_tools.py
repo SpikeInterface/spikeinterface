@@ -94,35 +94,37 @@ class SIJsonEncoder(json.JSONEncoder):
 
         # This should transforms integer, floats and bool to their python counterparts
         if isinstance(obj, np.generic):
-            return obj.item()       
-                
+            return obj.item()
+
+        if np.issctype(obj):  # Cast numpy datatypes to their names
+            return np.dtype(obj).name
+
         if isinstance(obj, np.ndarray):
             return obj.tolist()
 
         if isinstance(obj, BaseExtractor):
             return obj.to_dict()
-        
+
         # The base-class handles the assertion
         return super().default(obj)
 
     # This machinery is necessary for overriding the default behavior of the json encoder with keys
-    # This is a deep issue that goes deep down to cpython: https://github.com/python/cpython/issues/63020        
+    # This is a deep issue that goes deep down to cpython: https://github.com/python/cpython/issues/63020
     def iterencode(self, obj, _one_shot=False):
         return super().iterencode(self.remove_numpy_scalar_from_object(obj), _one_shot=_one_shot)
-    
+
     def remove_numpy_scalar_from_object(self, object):
         if isinstance(object, dict):
             return self.remove_python_scalar_in_dict(object)
         elif isinstance(object, list):
             return self.remove_numpy_scalar_in_list(object)
         else:
-            return object.item() if isinstance(object, np.generic) else object 
+            return object.item() if isinstance(object, np.generic) else object
 
     def remove_numpy_scalar_in_list(self, list_: list) -> list:
         return [self.remove_numpy_scalar_from_object(obj) for obj in list_]
 
     def remove_python_scalar_in_dict(self, dictionary: dict) -> dict:
-        
         dict_copy = dict()
         for key, value in dictionary.items():
             key = self.remove_numpy_scalar_from_object(key)
@@ -130,8 +132,8 @@ class SIJsonEncoder(json.JSONEncoder):
             dict_copy[key] = value
 
         return dict_copy
-        
-    
+
+
 def check_json(dictionary: dict) -> dict:
     """
     Function that transforms a dictionary with spikeinterface objects into a json writable dictionary
@@ -141,7 +143,7 @@ def check_json(dictionary: dict) -> dict:
     dictionary : A dictionary
 
     """
-        
+
     json_string = json.dumps(dictionary, indent=4, cls=SIJsonEncoder)
     return json.loads(json_string)
 
