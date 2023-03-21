@@ -50,14 +50,18 @@ def test_matching_psvae():
     template_ids2unit_ids.append(0)
     template_ids2unit_ids = np.array(template_ids2unit_ids)
     param_sets = {
-        "specify all parameters" : dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=1, vis_su=1,
-                                        threshold=50),
+        "specify all parameters" : dict(amplitude_variance=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=1,
+                                        visibility_threshold=1, threshold=50),
         "check amplitude scaling, multiprocessing, grouped templates" : dict(
-            lambd=1, n_jobs=2, template_ids2unit_ids=template_ids2unit_ids, jitter_factor=1, vis_su=1),
-        "check trivial cases": dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=1),
-        "check no_amplitude_scaling" : dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=down_factor),
-        "check sparsity": dict(lambd=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=down_factor, vis_su=10),
-        "check best case" : dict(lambd=1, n_jobs=1, template_ids2unit_ids=None, jitter_factor=2*down_factor)
+            amplitude_variance=1, n_jobs=2, template_ids2unit_ids=template_ids2unit_ids, jitter_factor=1,
+            visibility_threshold=1),
+        "check trivial cases": dict(amplitude_variance=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=1),
+        "check no_amplitude_scaling" : dict(amplitude_variance=0, n_jobs=1, template_ids2unit_ids=None,
+                                            jitter_factor=down_factor),
+        "check sparsity": dict(amplitude_variance=0, n_jobs=1, template_ids2unit_ids=None, jitter_factor=down_factor,
+                               visibility_threshold=10),
+        "check best case" : dict(amplitude_variance=1, n_jobs=1, template_ids2unit_ids=None,
+                                 jitter_factor=2*down_factor)
     }
     for params in param_sets.values():
         print(f"{params = }")
@@ -70,7 +74,7 @@ def test_matching_psvae():
         method_kwargs['objective_kwargs'].update(params)
         spikes = run_matching(recording, method_kwargs, job_kwargs, verbose=verbose)
         psvae_kwargs = copy.deepcopy(method_kwargs)
-        spikes_psvae = run_spike_psvae(templates, psvae_kwargs, filepaths, verbose=verbose)
+        spikes_psvae = run_spike_psvae(templates, psvae_kwargs, filepaths, recording.sampling_frequency, verbose=verbose)
         hit_rate, misclass_rate, miss_rate = evaluate_performance(recording, gt_sorting, we, spikes,
                                                                   hit_threshold=hit_threshold, verbose=verbose)
         hit_psvae, misclass_psvae, miss_psvae = evaluate_performance(recording, gt_sorting, we, spikes,
@@ -142,19 +146,15 @@ def generate_templates(recording, sorting, job_kwargs, filepaths, overwrite=Fals
     return templates, we
 
 
-def generate_method_kwargs(recording, nbefore, nafter, lambd=0, verbose=False):
+def generate_method_kwargs(recording, nbefore, nafter, amplitude_variance=0, verbose=False):
     if verbose:
         print("...Generating Kwargs...")
     refractory_period_s = 10 / 30_000
     objective_kwargs = {
-        'sampling_rate': int(recording.sampling_frequency),  # sampling rate must be integer
-        't_start': 0,
-        't_end': int(recording.get_num_samples() / recording.sampling_frequency),  # t_end must be an integer
-        'n_sec_chunk': 1,
         'refractory_period_frames': int(refractory_period_s * recording.sampling_frequency),
         'jitter_factor': 8,
         'threshold': 50,
-        'lambd' : lambd,
+        'amplitude_variance' : amplitude_variance,
         'verbose': verbose,
     }
     method_kwargs = {
@@ -219,17 +219,20 @@ def downsample_recording(recording, sorting, templates, we, filepaths, down_fact
 def run_matching(recording, method_kwargs, job_kwargs, verbose=False):
     if verbose:
         print("...Running Matching...")
-    job_kwargs['chunk_duration'] = float(method_kwargs['objective_kwargs']['n_sec_chunk'])  # these must be the same
     spikes = find_spikes_from_templates(recording, method='spike-psvae', method_kwargs=method_kwargs, **job_kwargs)
     return spikes
 
 
-def run_spike_psvae(templates, method_kwargs, filepaths, verbose=False):
+def run_spike_psvae(templates, method_kwargs, filepaths, fs, verbose=False):
     if verbose:
         print("...Running Spike-PSVAE...")
+    # Rename parameters as necessary
     objective_kwargs = method_kwargs['objective_kwargs']
     objective_kwargs['upsample'] = objective_kwargs.pop('jitter_factor')
     objective_kwargs['template_index_to_unit_id'] = objective_kwargs.pop('template_ids2unit_ids')
+    objective_kwargs['lambd'] = objective_kwargs.pop('amplitude_variance')
+    objective_kwargs['sampling_rate'] = int(fs)
+    objective_kwargs['vis_su'] = objective_kwargs.pop('visibility_threshold')
 
     standardized_bin = filepaths['rec_down_path'] / "traces_cached_seg0.raw"
     deconv_path = filepaths['project_path'] / "deconv"

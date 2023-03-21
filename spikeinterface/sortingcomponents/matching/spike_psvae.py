@@ -7,33 +7,19 @@ import matplotlib.pyplot as plt
 from .main import BaseTemplateMatchingEngine
 
 @dataclass
-class ObjectiveParameters: # TODO : clean up parameters i.e. remove redundant ones, clarify names, etc.
-    lambd: float = 0
-    allowed_scale: float = np.inf
-    save_residual: bool = False
-    t_start: int = 0
-    t_end: Optional[int] = None
-    n_sec_chunk: int = 1
-    sampling_rate: int = 30_000
+class ObjectiveParameters:
+    amplitude_variance: float = 0
     max_iter: int = 1_000
     jitter_factor: int = 8
     threshold: float = 30
     conv_approx_rank: int = 5
-    n_processors: int = 1
-    multi_processing: Optional[bool] = False
-    vis_su: float = 1
+    visibility_threshold: float = 1
     verbose: bool = False
     template_ids2unit_ids: Optional[np.ndarray] = None
-    refractory_period_frames: int = 10
-    no_amplitude_scaling : bool = False
+    refractory_period_frames: int = 10 # TODO : convert to refractory_period_ms --> benchmark
     scale_min : float = 0
     scale_max : float = np.inf
-    peak_window : Optional[np.ndarray] = None
-    peak_window_len : Optional[int] = None
-    jitter_window : Optional[np.ndarray] = None
-    jitter2template_shift : Optional[np.ndarray] = None
-    jitter2spike_time_shift : Optional[np.ndarray] = None
-
+    scale_amplitudes: bool = False
 
 
 @dataclass
@@ -49,6 +35,11 @@ class TemplateMetadata:
     template_ids2unit_ids : np.ndarray
     unit_ids2template_ids : List[set]
     overlapping_spike_buffer : int
+    peak_window : np.ndarray
+    peak_window_len : int
+    jitter_window : np.ndarray
+    jitter2template_shift : np.ndarray
+    jitter2spike_time_shift : np.ndarray
 
 
 @dataclass
@@ -112,21 +103,8 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
     @staticmethod
     def aggregate_parameters(objective_kwargs):
         params = ObjectiveParameters(**objective_kwargs)
-        assert params.lambd is None or params.lambd >= 0, "lambd must be a non-negative scalar"
-        params.no_amplitude_scaling = params.lambd is None or params.lambd == 0
-        params.scale_min = 1 / (1 + params.allowed_scale)
-        params.scale_max = 1 + params.allowed_scale
-        # TODO: Benchmark peak_radius with alternative expressions
-        peak_radius = (params.jitter_factor // 2) + (params.jitter_factor % 2) # Empirical --> needs to be benchmarked
-        params.peak_window = np.arange(-peak_radius, peak_radius + 1)
-        params.peak_window_len = len(params.peak_window)
-        params.jitter_window = peak_radius * params.jitter_factor + params.peak_window
-        params.jitter2template_shift = np.concatenate(
-            (np.arange(peak_radius, -1, -1), (params.jitter_factor - 1) - np.arange(peak_radius))
-        )
-        params.jitter2spike_time_shift = np.concatenate(
-            ([0], np.array([0, 1]).repeat(peak_radius))
-        )
+        assert(params.amplitude_variance >= 0, "amplitude_variance must be a non-negative scalar")
+        params.scale_amplitudes = params.amplitude_variance > 0
         return params
 
 
@@ -150,18 +128,30 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         n_jittered = n_templates * params.jitter_factor
         jittered_ids = np.arange(n_jittered)
         overlapping_spike_buffer = n_time - 1  # makes sure two overlapping spikes aren't subtracted at the same time
+
+        # TODO: Benchmark peak_radius with alternative expressions
+        peak_radius = (params.jitter_factor // 2) + (params.jitter_factor % 2) # Empirical --> needs to be benchmarked
+        peak_window = np.arange(-peak_radius, peak_radius + 1)
+        peak_window_len = len(peak_window)
+        jitter_window = peak_radius * params.jitter_factor + peak_window
+        jitter2template_shift = np.concatenate(
+            (np.arange(peak_radius, -1, -1), (params.jitter_factor - 1) - np.arange(peak_radius))
+        )
+        jitter2spike_time_shift = np.concatenate( ([0], np.array([0, 1]).repeat(peak_radius)) )
         template_meta = TemplateMetadata(
             n_time=n_time, n_chan=n_chan, n_units=n_units, n_templates=n_templates, n_jittered=n_jittered,
             unit_ids=unit_ids, template_ids=template_ids, jittered_ids=jittered_ids,
             template_ids2unit_ids=template_ids2unit_ids, unit_ids2template_ids=unit_ids2template_ids,
-            overlapping_spike_buffer=overlapping_spike_buffer
+            overlapping_spike_buffer=overlapping_spike_buffer, peak_window=peak_window, peak_window_len=peak_window_len,
+            jitter_window=jitter_window, jitter2template_shift=jitter2template_shift,
+            jitter2spike_time_shift=jitter2spike_time_shift
         )
         return template_meta
 
 
     @classmethod
     def aggregate_sparsity(cls, params, templates):
-        vis_chan = cls.spatially_mask_templates(templates, params.vis_su)
+        vis_chan = cls.spatially_mask_templates(templates, params.visibility_threshold)
         unit_overlap = cls.template_overlaps(vis_chan, params.jitter_factor)
         sparsity = Sparsity(vis_chan=vis_chan, unit_overlap=unit_overlap)
         return sparsity
@@ -433,7 +423,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             for spike_start_idx, spike_scaling in zip(id_spiketrain, id_scaling):
                 spike_stop_idx = spike_start_idx + convolution_resolution_len
                 objective.obj_normalized[overlapping_templates, spike_start_idx:spike_stop_idx] -= 2*pconv
-                if not params.no_amplitude_scaling:
+                if params.scale_amplitudes:
                     pconv_scaled = pconv * spike_scaling
                     objective.obj[overlapping_templates, spike_start_idx:spike_stop_idx] -= pconv_scaled
 
@@ -443,7 +433,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
     @classmethod
     def high_res_peak(cls, spike_time_indices, spike_unit_ids, objective, params, template_meta):
         # Return identities if no high-resolution templates are necessary
-        not_high_res = params.jitter_factor == 1 and params.no_amplitude_scaling
+        not_high_res = params.jitter_factor == 1 and not params.scale_amplitudes
         at_least_one_spike = bool(len(spike_time_indices))
         if not_high_res or not at_least_one_spike:
             upsampled_template_idx = np.zeros_like(spike_time_indices)
@@ -452,7 +442,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             scalings = np.ones_like(spike_time_indices)
             return upsampled_template_idx, time_shift, non_refractory_indices, scalings
 
-        peak_indices = spike_time_indices + params.peak_window[:, np.newaxis]
+        peak_indices = spike_time_indices + template_meta.peak_window[:, np.newaxis]
         obj_peaks = objective.obj_normalized[spike_unit_ids, peak_indices]
 
         # Omit refractory spikes
@@ -466,11 +456,11 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             return np.array([]), np.array([]), np.array([]), np.array([])
 
         # Upsample and compute optimal template shift
-        resample_factor = params.peak_window_len * params.jitter_factor
-        if params.no_amplitude_scaling:
+        resample_factor = template_meta.peak_window_len * params.jitter_factor
+        if not params.scale_amplitudes:
             # Perform simple upsampling using scipy.signal.resample
             high_resolution_peaks = signal.resample(obj_peaks, resample_factor, axis=0)
-            jitter = np.argmax(high_resolution_peaks[params.jitter_window, :], axis=0)
+            jitter = np.argmax(high_resolution_peaks[template_meta.jitter_window, :], axis=0)
             scalings = np.ones(len(non_refractory_indices))
         else:
             # upsampled the convolution for the detected peaks only
@@ -481,27 +471,27 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             # Find template norms for detected peaks only
             norm_peaks = objective.norm[spike_unit_ids[non_refractory_indices]]
 
-            high_res_obj, scalings = cls.compute_amplitude_scaling(high_resolution_conv, norm_peaks, params)
-            jitter = np.argmax(high_res_obj[params.jitter_window, :], axis=0)
+            high_res_obj, scalings = cls.compute_scale_amplitudes(high_resolution_conv, norm_peaks, params)
+            jitter = np.argmax(high_res_obj[template_meta.jitter_window, :], axis=0)
             scalings = scalings[jitter, np.arange(len(non_refractory_indices))]
 
         # Extract outputs from jitter
-        template_shift = params.jitter2template_shift[jitter]
-        time_shift = params.jitter2spike_time_shift[jitter]
+        template_shift = template_meta.jitter2template_shift[jitter]
+        time_shift = template_meta.jitter2spike_time_shift[jitter]
         return template_shift, time_shift, non_refractory_indices, scalings
 
     @classmethod
-    def compute_amplitude_scaling(cls, high_resolution_conv, norm_peaks, params):
-        # the objective is (conv + 1/lambd)^2 / (norm + 1/lambd) - 1/lambd
+    def compute_scale_amplitudes(cls, high_resolution_conv, norm_peaks, params):
+        # the objective is (conv + 1/amplitude_variance)^2 / (norm + 1/amplitude_variance) - 1/amplitude_variance
         # this is the objective with the optimal scaling *without hard clipping*
         # this order of operations is key to avoid overflows when squaring!
-        # self.obj = b * (b / a) - 1 / params.lambd
+        # self.obj = b * (b / a) - 1 / params.amplitude_variance
         # but, in practice we do apply hard clipping. so we have to compute
         # the following more cumbersome formula:
-        b = high_resolution_conv + 1 / params.lambd
-        a = norm_peaks[np.newaxis, :] + 1 / params.lambd
+        b = high_resolution_conv + 1 / params.amplitude_variance
+        a = norm_peaks[np.newaxis, :] + 1 / params.amplitude_variance
         scalings = np.clip(b / a, params.scale_min, params.scale_max)
-        high_res_obj = (2 * scalings * b) - (np.square(scalings) * a) - (1 / params.lambd)
+        high_res_obj = (2 * scalings * b) - (np.square(scalings) * a) - (1 / params.amplitude_variance)
         return high_res_obj, scalings
 
     @classmethod
@@ -526,7 +516,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
         # Enforce refractory by setting objective to negative infinity in invalid regions
         objective.obj_normalized[spike_unit_ids[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
-        if not params.no_amplitude_scaling: # template_convolution is only used with amplitude scaling
+        if params.scale_amplitudes: # template_convolution is only used with amplitude scaling
             objective.obj[spike_unit_ids[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
 
 
