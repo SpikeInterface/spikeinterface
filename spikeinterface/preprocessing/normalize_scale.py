@@ -214,9 +214,9 @@ class ZScoreRecording(BasePreprocessor):
     offset : None or np.array
         Pre-computed offset
     int_scale : None or float
-        Apply a a final scale to fit integer range.
-        This is usefull for dtype=int and want to keep the output as int also typical scale are 200 which means
-        that the noise in noise [0-1] will be encoded in [0-200].
+        Apply a scaling factor to fit the integer range.
+        This is used when the dtype is an integer, so that the ourput is scaled. 
+        For example, a value of `int_scale=200` will scale the zscore value to a standard deviation od 200.
 
     **random_chunk_kwargs: keyword arguments for `get_random_data_chunks()` function
     
@@ -248,9 +248,9 @@ class ZScoreRecording(BasePreprocessor):
             assert gain.shape[0] == n
             assert offset.shape[0] == n
             if gain.ndim == 1:
-                gain = gain[None:, ]
+                gain = gain[None, :]
             if offset.ndim == 1:
-                offset = offset[None:, ]
+                offset = offset[None, :]
         elif mode == "median+mad":
             medians = np.median(random_data, axis=0)
             medians = medians[None, :]
