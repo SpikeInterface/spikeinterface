@@ -4,6 +4,8 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
+from .filter import fix_dtype
+
 from ..core import get_random_data_chunks
 
 
@@ -204,8 +206,18 @@ class ZScoreRecording(BasePreprocessor):
         The recording extractor to be centered
     mode: str
         "median+mad" (default) or "mean+std"
-    dtype: str or np.dtype
-        The dtype of the output traces. Default "float32"
+    dtype: None or dtype
+        If None the the parent dtype is kept.
+        For integer dtype a int_scale must be also given.
+    gain : None or np.array
+        Pre-computed gain.
+    offset : None or np.array
+        Pre-computed offset
+    int_scale : None or float
+        Apply a a final scale to fit integer range.
+        This is usefull for dtype=int and want to keep the output as int also typical scale are 200 which means
+        that the noise in noise [0-1] will be encoded in [0-200].
+
     **random_chunk_kwargs: keyword arguments for `get_random_data_chunks()` function
     
     Returns
@@ -215,10 +227,16 @@ class ZScoreRecording(BasePreprocessor):
     """
     name = 'center'
 
-    def __init__(self, recording, mode="median+mad",
+    def __init__(self, recording, mode="median+mad", gain=None, offset=None, int_scale=None,
                  dtype="float32", **random_chunk_kwargs):
         
         assert mode in ("median+mad", "mean+std")
+
+        # fix dtype
+        dtype_ = fix_dtype(recording, dtype)
+
+        if dtype_.kind == 'i':
+            assert int_scale is not None, 'For recording with dtype=int you must set dtype=float32 OR set a scale' 
 
         random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
 
@@ -237,13 +255,18 @@ class ZScoreRecording(BasePreprocessor):
             gain = 1 / stds
             offset = -means / stds
         
+        if int_scale is not None:
+            gain *= int_scale
+            offset *= int_scale
+        
         BasePreprocessor.__init__(self, recording, dtype=dtype)
 
         for parent_segment in recording._recording_segments:
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), dtype=np.dtype(self._dtype).str)
+        self._kwargs = dict(recording=recording.to_dict(), dtype=np.dtype(self._dtype).str,
+                            gain=gain.tolist(), offset=offset.tolist())
         self._kwargs.update(random_chunk_kwargs)
 
 

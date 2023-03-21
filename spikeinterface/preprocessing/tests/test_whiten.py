@@ -32,6 +32,13 @@ def test_whiten():
     np.testing.assert_array_equal(rec3.get_traces(segment_index=0),
                                   rec_par.get_traces(segment_index=0))
 
+    with pytest.raises(AssertionError):
+        rec4 = whiten(rec_int, dtype=None)
+    rec4 = whiten(rec_int, dtype=None, int_scale=256)
+    assert rec4.get_dtype() == "int16"
+    assert rec4._kwargs['M'] is None
+
+
 
 if __name__ == '__main__':
     test_whiten()
