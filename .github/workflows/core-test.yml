@@ -25,10 +25,7 @@ jobs:
         run: |
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
-          python -m pip install -U pip  # Official recommended way
-          pip install pytest
-          # zarr is needed to test core
-          pip install zarr  
+          python -m pip install -U pip  # Official recommended way 
           pip install -e .
       - name: Test core with pytest
         run: |
