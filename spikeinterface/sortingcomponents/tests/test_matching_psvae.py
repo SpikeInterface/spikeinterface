@@ -4,12 +4,16 @@ import shutil
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal
+import copy
 
 # Spikeinterface
 import spikeinterface.core as sc
 import spikeinterface.extractors as se
 import spikeinterface.preprocessing as spre
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
+
+# SpikePSVAE
+from spike_psvae.deconvolve import MatchPursuitObjectiveUpsample as Objective
 
 
 def test_matching_psvae():
@@ -65,14 +69,24 @@ def test_matching_psvae():
         method_kwargs['objective_kwargs']['templates'] = templates
         method_kwargs['objective_kwargs'].update(params)
         spikes = run_matching(recording, method_kwargs, job_kwargs, verbose=verbose)
+        psvae_kwargs = copy.deepcopy(method_kwargs)
+        spikes_psvae = run_spike_psvae(templates, psvae_kwargs, filepaths, verbose=verbose)
         hit_rate, misclass_rate, miss_rate = evaluate_performance(recording, gt_sorting, we, spikes,
+                                                                  hit_threshold=hit_threshold, verbose=verbose)
+        hit_psvae, misclass_psvae, miss_psvae = evaluate_performance(recording, gt_sorting, we, spikes,
                                                                   hit_threshold=hit_threshold, verbose=verbose)
 
         print("Performance:")
         print(f"{hit_rate = }")
         print(f"{misclass_rate = }")
         print(f"{miss_rate = }")
-        # assert hit_rate == 1, "Missed Spikes"
+        print(f"# of spikes detected = {spikes.shape[0]}")
+        print(f"# of true spikes = {len(gt_sorting.get_all_spike_trains()[0][0])}")
+
+        assert hit_rate == hit_psvae, "Hit Rate doesn't match Spike-PSVAE"
+        assert misclass_rate == misclass_psvae, "Misclass Rate doesn't match Spike-PSVAE"
+        assert miss_rate == miss_psvae, "Miss Rate doesn't match Spike-PSVAE"
+        assert len(spikes) == len(spikes_psvae), "# of Detected spikes doesn't match Spike-PSVAE"
 
 
 def generate_filepaths(project_name, verbose=False):
@@ -210,12 +224,45 @@ def run_matching(recording, method_kwargs, job_kwargs, verbose=False):
     return spikes
 
 
+def run_spike_psvae(templates, method_kwargs, filepaths, verbose=False):
+    if verbose:
+        print("...Running Spike-PSVAE...")
+    objective_kwargs = method_kwargs['objective_kwargs']
+    objective_kwargs['upsample'] = objective_kwargs.pop('jitter_factor')
+    objective_kwargs['template_index_to_unit_id'] = objective_kwargs.pop('template_ids2unit_ids')
+
+    standardized_bin = filepaths['rec_down_path'] / "traces_cached_seg0.raw"
+    deconv_path = filepaths['project_path'] / "deconv"
+    if not deconv_path.exists():
+        deconv_path.mkdir()
+    # Instantiate objective and run
+    obj = Objective(templates, deconv_path, standardized_bin, **objective_kwargs)
+    batch_ids = np.arange(obj.n_batches)
+    fnames_out = [deconv_path / f"{i}" for i in batch_ids]
+    obj.run(batch_ids, fnames_out)
+
+    # Recover spike trains from saved files
+    spiketrain = []
+    for batch_id, fname_out in zip(batch_ids, fnames_out):
+        fname_out = fname_out.parent / (fname_out.name + '.npz')
+        with np.load(fname_out) as d:
+            for spike, scaling in zip(d['spike_train'], d['scalings']):
+                spike[0] += method_kwargs['nbefore']  # account for 'trough_offset'
+                spike[1] //= objective_kwargs['upsample']  # account for multiple upsampled templates
+                spiketrain.append(spike)
+    spiketrain = np.array(spiketrain)
+    spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind', 'int64'),
+                   ('amplitude', 'float64'), ('segment_ind', 'int64')]
+    spikes = np.zeros(spiketrain.shape[0], dtype=spike_dtype)
+    spikes['sample_ind'] = spiketrain[:, 0]
+    spikes['cluster_ind'] = spiketrain[:, 1]
+    return spikes
+
+
 def evaluate_performance(recording, gt_sorting, we, spikes, hit_threshold=0.4e-3, verbose=False):
     if verbose:
         print("...Evaluating Performance...")
     gt_spike_times, gt_spike_ids = gt_sorting.get_all_spike_trains()[0]
-    print(f"{len(gt_spike_times) = }")
-    print(f"{len(spikes) = }")
     hits, misses, misclasses = 0, 0, 0
     for gt_spike_idx, gt_unit_id in zip(gt_spike_times, gt_spike_ids):
         idx = np.argmin(np.abs(spikes['sample_ind'] - gt_spike_idx))

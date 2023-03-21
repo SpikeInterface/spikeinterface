@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 
 from .main import BaseTemplateMatchingEngine
 
-
 @dataclass
 class ObjectiveParameters: # TODO : clean up parameters i.e. remove redundant ones, clarify names, etc.
     lambd: float = 0
