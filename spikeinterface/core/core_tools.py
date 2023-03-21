@@ -13,7 +13,6 @@ import inspect
 
 from .job_tools import (ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, fix_job_kwargs, 
                         ChunkRecordingExecutor, _shared_job_kwargs_doc)
-import spikeinterface.core.base as base
 
 def copy_signature(source_fct):
     def copy(target_fct):
@@ -85,7 +84,10 @@ class SIJsonEncoder(json.JSONEncoder):
     """
     An encoder used to encode Spike interface objects to json
     """
+
     def default(self, obj):
+        from spikeinterface.core.base import BaseExtractor
+
         # Over-write behaviors for datetime object
         if isinstance(obj, datetime.datetime):
             return obj.isoformat()
@@ -97,7 +99,7 @@ class SIJsonEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
 
-        if isinstance(obj, base.BaseExtractor):
+        if isinstance(obj, BaseExtractor):
             return obj.to_dict()
         
         # The base-class handles the assertion
