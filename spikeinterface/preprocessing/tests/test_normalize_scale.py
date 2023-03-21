@@ -72,12 +72,23 @@ def test_zscore():
     tr = rec2.get_traces(segment_index=0)
     # print("medians", np.median(tr, axis=0))
     # print("stds", np.std(tr, axis=0))
+    assert 'gain' in rec2._kwargs
     
     # print("mean+std")
     rec3 = zscore(rec, mode="mean+std")
     tr = rec3.get_traces(segment_index=0)
     # print("medians", np.median(tr, axis=0))
     # print("stds", np.std(tr, axis=0))
+
+    rec_int = scale(rec, dtype="int16", gain=100)
+    with pytest.raises(AssertionError):
+        rec4 = zscore(rec_int, dtype=None)
+    rec4 = zscore(rec_int, dtype='float32', mode="mean+std")
+    rec4 = zscore(rec_int, dtype='int16', int_scale=256, mode="mean+std")
+    tr = rec4.get_traces(segment_index=0)
+    # print("medians", np.mean(tr, axis=0))
+    # print("stds", np.std(tr, axis=0))
+
 
 
 if __name__ == '__main__':
