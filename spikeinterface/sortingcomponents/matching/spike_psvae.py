@@ -28,11 +28,11 @@ class ObjectiveParameters: # TODO : clean up parameters i.e. remove redundant on
     no_amplitude_scaling : bool = False
     scale_min : float = 0
     scale_max : float = np.inf
-    up_window : Optional[np.ndarray] = None # TODO : rename 'up_window'
-    up_window_len : Optional[int] = None # TODO : rename 'up_window_len'
-    zoom_index : Optional[np.ndarray] = None # TODO : rename 'zoom_index'
-    peak_to_template_idx : Optional[np.ndarray] = None # TODO : rename 'peak_to_template_idx'
-    peak_time_jitter : Optional[np.ndarray] = None # TODO : rename 'peak_time_jitter'
+    peak_window : Optional[np.ndarray] = None
+    peak_window_len : Optional[int] = None
+    jitter_window : Optional[np.ndarray] = None
+    jitter2template_shift : Optional[np.ndarray] = None
+    jitter2spike_time_shift : Optional[np.ndarray] = None
 
 
 
@@ -116,17 +116,16 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         params.no_amplitude_scaling = params.lambd is None or params.lambd == 0
         params.scale_min = 1 / (1 + params.allowed_scale)
         params.scale_max = 1 + params.allowed_scale
-        # TODO: more explicative naming for radius, up_window, zoom_index, and peak_to_template_idx -- ask Charlie
-        radius = (params.jitter_factor // 2) + (params.jitter_factor % 2) # TODO: ask Charlie about this one
-        params.up_window = np.arange(-radius, radius + 1)[:, np.newaxis]
-        params.up_window_len = len(params.up_window)
-        # Indices of single time window the window around peak after upsampling
-        params.zoom_index = radius * params.jitter_factor + np.arange(-radius, radius + 1)
-        params.peak_to_template_idx = np.concatenate(
-            (np.arange(radius, -1, -1), (params.jitter_factor - 1) - np.arange(radius))
+        # TODO: Benchmark peak_radius with alternative expressions
+        peak_radius = (params.jitter_factor // 2) + (params.jitter_factor % 2) # Empirical --> needs to be benchmarked
+        params.peak_window = np.arange(-peak_radius, peak_radius + 1)
+        params.peak_window_len = len(params.peak_window)
+        params.jitter_window = peak_radius * params.jitter_factor + params.peak_window
+        params.jitter2template_shift = np.concatenate(
+            (np.arange(peak_radius, -1, -1), (params.jitter_factor - 1) - np.arange(peak_radius))
         )
-        params.peak_time_jitter = np.concatenate(
-            ([0], np.array([0, 1]).repeat(radius))
+        params.jitter2spike_time_shift = np.concatenate(
+            ([0], np.array([0, 1]).repeat(peak_radius))
         )
         return params
 
@@ -387,8 +386,8 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
     def find_peaks(cls, objective, params, template_meta):
         # Get spike times (indices) using peaks in the objective
         obj_template_max = np.max(objective.obj_normalized, axis=0)
-        peak_window = (template_meta.n_time - 1, objective.obj_normalized.shape[1] - template_meta.n_time)
-        obj_windowed = obj_template_max[peak_window[0]:peak_window[1]]
+        spike_window = (template_meta.n_time - 1, objective.obj_normalized.shape[1] - template_meta.n_time)
+        obj_windowed = obj_template_max[spike_window[0]:spike_window[1]]
         spike_time_indices = signal.argrelmax(obj_windowed, order=template_meta.n_time-1)[0]
         spike_time_indices += template_meta.n_time - 1
         obj_spikes = obj_template_max[spike_time_indices]
@@ -401,13 +400,13 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
         # Find the best upsampled template
         spike_template_ids = np.argmax(objective.obj_normalized[:, spike_time_indices], axis=0)
         high_res_peaks = cls.high_res_peak(spike_time_indices, spike_template_ids, objective, params, template_meta)
-        upsampled_template_idx, time_shift, valid_idx, scaling = high_res_peaks
+        template_shift, time_shift, valid_idx, scaling = high_res_peaks
 
         # Update unit_ids, spike_times, and scalings
         spike_jittered_ids = spike_template_ids * params.jitter_factor
         at_least_one_spike = bool(len(valid_idx))
         if at_least_one_spike:
-            spike_jittered_ids[valid_idx] += upsampled_template_idx
+            spike_jittered_ids[valid_idx] += template_shift
             spike_time_indices[valid_idx] += time_shift
             scalings[valid_idx] = scaling
 
@@ -453,7 +452,7 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             scalings = np.ones_like(spike_time_indices)
             return upsampled_template_idx, time_shift, non_refractory_indices, scalings
 
-        peak_indices = spike_time_indices + params.up_window
+        peak_indices = spike_time_indices + params.peak_window[:, np.newaxis]
         obj_peaks = objective.obj_normalized[spike_unit_ids, peak_indices]
 
         # Omit refractory spikes
@@ -467,11 +466,11 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             return np.array([]), np.array([]), np.array([]), np.array([])
 
         # Upsample and compute optimal template shift
-        resample_factor = params.up_window_len * params.jitter_factor
+        resample_factor = params.peak_window_len * params.jitter_factor
         if params.no_amplitude_scaling:
             # Perform simple upsampling using scipy.signal.resample
             high_resolution_peaks = signal.resample(obj_peaks, resample_factor, axis=0)
-            shift_idx = np.argmax(high_resolution_peaks[params.zoom_index, :], axis=0)
+            jitter = np.argmax(high_resolution_peaks[params.jitter_window, :], axis=0)
             scalings = np.ones(len(non_refractory_indices))
         else:
             # the objective is (conv + 1/lambd)^2 / (norm + 1/lambd) - 1/lambd
@@ -491,13 +490,13 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
             # the following more cumbersome formula:
             scalings = np.clip(b/a, params.scale_min, params.scale_max)
             high_res_obj = (2 * scalings * b) - (np.square(scalings) * a) - (1/params.lambd)
-            shift_idx = np.argmax(high_res_obj[params.zoom_index, :], axis=0)
-            scalings = scalings[shift_idx, np.arange(len(non_refractory_indices))]
+            jitter = np.argmax(high_res_obj[params.jitter_window, :], axis=0)
+            scalings = scalings[jitter, np.arange(len(non_refractory_indices))]
 
-        # Extract outputs using shift_idx
-        upsampled_template_idx = params.peak_to_template_idx[shift_idx]
-        time_shift = params.peak_time_jitter[shift_idx]
-        return upsampled_template_idx, time_shift, non_refractory_indices, scalings
+        # Extract outputs from jitter
+        template_shift = params.jitter2template_shift[jitter]
+        time_shift = params.jitter2spike_time_shift[jitter]
+        return template_shift, time_shift, non_refractory_indices, scalings
 
 
     @classmethod
