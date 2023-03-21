@@ -197,7 +197,7 @@ def test_detect_injected_correlation():
         peak_location_02_ms = bins[np.argmax(cc_10)]
         
         sampling_period_ms = (1000.0 / sampling_frequency)
-        assert abs(peak_location_01_ms) - 1.4 < sampling_period_ms
+        assert abs(peak_location_01_ms) - injected_delta_ms< sampling_period_ms
         assert abs(peak_location_02_ms) - 1.4 < sampling_period_ms
         
     #     import matplotlib.pyplot as plt
