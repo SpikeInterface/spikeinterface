@@ -10,7 +10,7 @@ from .normalize_scale import (
     ScaleRecording, scale,
     ZScoreRecording, zscore,
     CenterRecording, center)
-from .whiten import WhitenRecording, whiten
+from .whiten import WhitenRecording, whiten, compute_whitening_matrix
 from .rectify import RectifyRecording, rectify
 from .clip import (
     BlankSaturationRecording, blank_staturation,
