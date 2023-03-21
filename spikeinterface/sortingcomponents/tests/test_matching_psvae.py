@@ -219,7 +219,7 @@ def downsample_recording(recording, sorting, templates, we, filepaths, down_fact
 def run_matching(recording, method_kwargs, job_kwargs, verbose=False):
     if verbose:
         print("...Running Matching...")
-    spikes = find_spikes_from_templates(recording, method='spike-psvae', method_kwargs=method_kwargs, **job_kwargs)
+    spikes = find_spikes_from_templates(recording, method='wobble', method_kwargs=method_kwargs, **job_kwargs)
     return spikes
 
 

@@ -59,7 +59,7 @@ class Objective:
     obj_normalized: Optional[np.ndarray] = None
 
 
-class SpikePSVAE(BaseTemplateMatchingEngine):
+class WobbleMatch(BaseTemplateMatchingEngine):
     """
     SpikePSVAE from Paninski Lab
     For consistency:
@@ -522,8 +522,3 @@ class SpikePSVAE(BaseTemplateMatchingEngine):
 
 def get_convolution_len(x, y):
     return x + y - 1
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-# DEPRECATED
-# ----------------------------------------------------------------------------------------------------------------------
