@@ -240,7 +240,18 @@ class ZScoreRecording(BasePreprocessor):
 
         random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
 
-        if mode == "median+mad":
+        if gain is not None:
+            assert offset is not None
+            gain = np.asarray(gain)
+            offset = np.asarray(offset)
+            n = recording.get_num_channels()
+            assert gain.shape[0] == n
+            assert offset.shape[0] == n
+            if gain.ndim == 1:
+                gain = gain[None:, ]
+            if offset.ndim == 1:
+                offset = offset[None:, ]
+        elif mode == "median+mad":
             medians = np.median(random_data, axis=0)
             medians = medians[None, :]
             mads = np.median(np.abs(random_data - medians), axis=0) / 0.6745
