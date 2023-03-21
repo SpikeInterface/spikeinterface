@@ -87,7 +87,7 @@ class NormalizeByQuantileRecording(BasePreprocessor):
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), scale=scale, median=median,
+        self._kwargs = dict(recording=recording, scale=scale, median=median,
                             q1=q1, q2=q2, mode=mode, dtype=np.dtype(self._dtype).str)
         self._kwargs.update(random_chunk_kwargs)
 
@@ -145,7 +145,7 @@ class ScaleRecording(BasePreprocessor):
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, self._dtype)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), gain=gain, 
+        self._kwargs = dict(recording=recording, gain=gain, 
                             offset=offset, dtype=np.dtype(self._dtype).str)
 
 
@@ -189,7 +189,7 @@ class CenterRecording(BasePreprocessor):
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), mode=mode, dtype=np.dtype(self._dtype).str)
+        self._kwargs = dict(recording=recording, mode=mode, dtype=np.dtype(self._dtype).str)
         self._kwargs.update(random_chunk_kwargs)
 
 
@@ -243,7 +243,7 @@ class ZScoreRecording(BasePreprocessor):
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), dtype=np.dtype(self._dtype).str)
+        self._kwargs = dict(recording=recording, dtype=np.dtype(self._dtype).str)
         self._kwargs.update(random_chunk_kwargs)
 
 
