@@ -13,7 +13,7 @@ from .base import load_extractor
 from .core_tools import check_json
 from .job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 from .recording_tools import check_probe_do_not_overlap
-from .waveform_tools import extract_waveforms_to_buffers
+from .waveform_tools import extract_waveforms_to_buffers, has_exceeding_spikes
 from .sparsity import ChannelSparsity, compute_sparsity, _sparsity_doc
 
 _possible_template_modes = ('average', 'std', 'median')
@@ -245,6 +245,11 @@ class WaveformExtractor:
         properties_to_attrs = deepcopy(recording._properties)
         if 'contact_vector' in properties_to_attrs:
             del properties_to_attrs['contact_vector']
+        if has_exceeding_spikes(recording, sorting):
+            raise ValueError(
+                    "The sorting object has spikes exceeding the recording duration. You have to remove those spikes "
+                    "with the `spikeinterface.curation.remove_excess_spikes()` function"
+                )
         rec_attributes = dict(
             channel_ids=recording.channel_ids,
             sampling_frequency=recording.get_sampling_frequency(),
@@ -1371,9 +1376,6 @@ def extract_waveforms(recording, sorting, folder=None,
         Default is False.
     seed: int or None
         Random seed for spike selection
-    load_if_exists: None or bool
-        If True and waveforms have already been extracted in the specified folder, they are loaded
-        and not recomputed.
 
     sparsity kwargs:
     {}

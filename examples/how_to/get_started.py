@@ -21,8 +21,8 @@
 How to "get started"
 ====================
 
-In this introductory example, you will see how to use the SpikeInterface to perform a full electrophysiology analysis.
-We will download simulated dataset, and we will then perform some pre-processing, run a spike sorting
+In this introductory example, you will see how to use SpikeInterface to perform a full electrophysiology analysis.
+We will download a simulated dataset, and we will then perform some pre-processing, run a spike sorting
 algorithm, post-process the spike sorting output, perform curation (manual and automatic), and compare spike sorting results.
 
 """
@@ -31,21 +31,21 @@ algorithm, post-process the spike sorting output, perform curation (manual and a
 import matplotlib.pyplot as plt
 from pprint import pprint
 
-# The spikeinterface module by itself import only the spikeinterface.core submodule
+# The spikeinterface module by itself imports only the spikeinterface.core submodule
 # which is not useful for end user
 
 import spikeinterface
 
 # We need to import one by one different submodules separately (preferred).
-# There several modules:
+# There are several modules:
 #
 # - `extractors` : file IO
 # - `preprocessing` : preprocessing 
 # - `sorters` : Python wrappers of spike sorters
 # - `postprocessing` : postprocessing
-# - `qualitymetrics` : quality metrics on units found by sorter 
+# - `qualitymetrics` : quality metrics on units found by sorters 
 # - `curation` : automatic curation of spike sorting output
-# - `comparison` : comparison of spike sorting output
+# - `comparison` : comparison of spike sorting outputs
 # - `widgets` : visualization
 
 import spikeinterface as si  # import core only
@@ -60,7 +60,7 @@ import spikeinterface.curation as scur
 import spikeinterface.widgets as sw
 
 #  We can also import all submodules at once with this
-#  this internally import core+extractors+preprocessing+sorters+postprocessing+
+#  this internally imports core+extractors+preprocessing+sorters+postprocessing+
 #  qualitymetrics+comparison+widgets+exporters
 #
 # This is useful for notebooks, but it is a heavier import because internally many more dependencies
@@ -77,7 +77,7 @@ si.set_global_job_kwargs(**global_job_kwargs)
 # https://gin.g-node.org/NeuralEnsemble/ephy_testing_data repo
 #
 # Then we can open it. Note that [MEArec](https://mearec.readthedocs.io>) simulated file
-# contains both "recording" and a "sorting" object.
+# contains both a "recording" and a "sorting" object.
 
 local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
 recording, sorting_true = se.read_mearec(local_path)
@@ -109,7 +109,7 @@ print('Number of channels:', num_chan)
 print('Number of segments:', num_seg)
 # -
 
-# ...and a `BaseSorting`
+# ...and from a `BaseSorting`
 
 # +
 num_seg = recording.get_num_segments()
@@ -158,7 +158,7 @@ print(recording_preprocessed)
 print('Available sorters', ss.available_sorters())
 print('Installed sorters', ss.installed_sorters())
 
-# The `ss.installed_sorters()` will list the sorters installed in the machine.
+# The `ss.installed_sorters()` will list the sorters installed on the machine.
 # We can see we have HerdingSpikes and Tridesclous installed.
 # Spike sorters come with a set of parameters that users can change.
 # The available parameters are dictionaries and can be accessed with:
@@ -168,12 +168,12 @@ pprint(ss.get_default_sorter_params('tridesclous'))
 print("SpykingCircus2 params:")
 pprint(ss.get_default_sorter_params('spykingcircus2'))
 
-# Let's run `tridesclous` and change one of the parameter, say, the `detect_threshold`:
+# Let's run `tridesclous` and change one of the parameters, say, the `detect_threshold`:
 
 sorting_TDC = ss.run_sorter(sorter_name="tridesclous", recording=recording_preprocessed, detect_threshold=4)
 print(sorting_TDC)
 
-# Alternatively we can pass full dictionary containing the parameters:
+# Alternatively we can pass a full dictionary containing the parameters:
 
 # +
 other_params = ss.get_default_sorter_params('tridesclous')
@@ -195,7 +195,7 @@ print(sorting_SC2)
 print('Units found by tridesclous:', sorting_TDC.get_unit_ids())
 print('Units found by spyking-circus2:', sorting_SC2.get_unit_ids())
 
-# If a sorter is not installed locally, we can also avoid to install it and run it anyways, using a container (Docker or Singularity). For example, let's run `Kilosort2` using Docker:
+# If a sorter is not installed locally, we can also avoid installing it and run it anyways, using a container (Docker or Singularity). For example, let's run `Kilosort2` using Docker:
 
 sorting_KS2 = ss.run_sorter(sorter_name="kilosort2", recording=recording_preprocessed,
                             docker_image=True, verbose=True)
@@ -203,7 +203,7 @@ print(sorting_KS2)
 
 # SpikeInterface provides a efficient way to extract waveforms from paired recording/sorting objects.
 # The `extract_waveforms` function samples some spikes (by default `max_spikes_per_unit=500`)
-# for each unit, extracts, their waveforms, and stores them to disk. These waveforms are helpful to compute the average waveform, or "template", for each unit and then to compute, for example, quality metrics.
+# for each unit, extracts their waveforms, and stores them to disk. These waveforms are helpful to compute the average waveform, or "template", for each unit and then to compute, for example, quality metrics.
 
 # +
 we_TDC = si.extract_waveforms(recording_preprocessed, sorting_TDC, 'waveforms_folder', overwrite=True)
@@ -217,7 +217,7 @@ template = we_TDC.get_template(unit_id0)
 print(template.shape)
 # -
 
-# `we_TDC` is a have the  `WaveformExtractor` object
+# `we_TDC` is a `WaveformExtractor` object
 # we can post-process, validate, and curate the results. With
 # the `spikeinterface.postprocessing` submodule, one can, for example,
 # compute spike amplitudes, PCA projections, unit locations, and more.
@@ -230,7 +230,7 @@ spike_locations = spost.compute_spike_locations(we_TDC)
 correlograms, bins = spost.compute_correlograms(we_TDC)
 similarity = spost.compute_template_similarity(we_TDC)
 
-# All of this postprocessing functions are saved in the waveforms folder as extensions:
+# All of these postprocessing functions are saved in the waveforms folder as extensions:
 
 print(we_TDC.get_available_extension_names())
 
@@ -239,12 +239,12 @@ print(we_TDC.get_available_extension_names())
 we_loaded = si.load_waveforms('waveforms_folder')
 print(we_loaded.get_available_extension_names())
 
-# Once we have computed all these postprocessing information, we can compute quality metrics (different quality metrics require different extensions - e.g., drift metrics resuire `spike_locations`):
+# Once we have computed all of the postprocessing information, we can compute quality metrics (different quality metrics require different extensions - e.g., drift metrics require `spike_locations`):
 
 qm_params = sqm.get_default_qm_params()
 pprint(qm_params)
 
-# Since the recording is very short, let's change some parameters to accomodate the duration:
+# Since the recording is very short, let's change some parameters to accommodate the duration:
 
 qm_params["presence_ratio"]["bin_duration_s"] = 1
 qm_params["amplitude_cutoff"]["num_histogram_bins"] = 5
@@ -258,7 +258,7 @@ display(qm)
 
 # Next, we can use some of the powerful tools for spike sorting visualization.
 #
-# We can export a sorting summary and quality metrics plot using the `sortingview` backend. This will generate shareble links for web-based visualization.
+# We can export a sorting summary and quality metrics plot using the `sortingview` backend. This will generate shareable links for web-based visualization.
 
 w1 = sw.plot_quality_metrics(we_TDC, display=False, backend="sortingview")
 
@@ -304,9 +304,9 @@ print(sorting_curated_auto)
 # 1. compare the spike sorting results with the ground-truth
 # sorting `sorting_true`
 #
-# 2. compare the output of two (Tridesclous and SpykingCircus2)
+# 2. compare the output of two sorters (e.g. Tridesclous and SpykingCircus2)
 #
-# 3. compare the output of multiple sorters (Tridesclous, SpykingCircus2, Kilosort2)
+# 3. compare the output of multiple sorters (e.g. Tridesclous, SpykingCircus2, and Kilosort2)
 
 comp_gt = sc.compare_sorter_to_ground_truth(gt_sorting=sorting_true, tested_sorting=sorting_TDC)
 comp_pair = sc.compare_two_sorters(sorting1=sorting_TDC, sorting2=sorting_SC2)
@@ -321,7 +321,7 @@ w_conf = sw.plot_confusion_matrix(comp_gt)
 w_agr = sw.plot_agreement_matrix(comp_gt)
 
 # When comparing two sorters (2.), we can see the matching of units between sorters.
-# Units which are not matched has -1 as unit id:
+# Units which are not matched have -1 as their unit id:
 
 comp_pair.hungarian_match_12
 

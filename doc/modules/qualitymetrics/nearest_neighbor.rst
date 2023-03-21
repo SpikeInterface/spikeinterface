@@ -18,7 +18,7 @@ All options involve non-parametric calculations in PCA space.
 ------------------------
 
 The membership function, :math:`\rho` is defined such that for any spike :math:`g_i`` in some cluster :math:`G`, :math:`\rho(g_i) = G`.
-Additionally, the nearest neighbour function :math:`n_k(g_i)` is defined such that the output of the function is the set of :math:`k` spikes which are closest to :math:`g_i`.
+Additionally, the nearest neighbor function :math:`n_k(g_i)` is defined such that the output of the function is the set of :math:`k` spikes which are closest to :math:`g_i`.
 
 For a unit associated with cluster :math:`C`, a subset of spikes are randomly drawn to form the cluster  :math:`A`.
 A subset of spikes which are not in  :math:`C` are drawn to form the cluster  :math:`B`.
