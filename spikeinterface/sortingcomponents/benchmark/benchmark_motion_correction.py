@@ -10,7 +10,7 @@ from spikeinterface.core import extract_waveforms, precompute_sparsity, Waveform
 
 
 from spikeinterface.extractors import read_mearec
-from spikeinterface.preprocessing import bandpass_filter, zscore, common_reference, scale, highpass_filter
+from spikeinterface.preprocessing import bandpass_filter, zscore, common_reference, scale, highpass_filter, whiten
 from spikeinterface.sorters import run_sorter
 from spikeinterface.widgets import plot_unit_waveforms, plot_gt_performances
 
@@ -95,11 +95,12 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             for key in ('drifting', 'static',):
                 rec, _  = read_mearec(self.mearec_filenames[key])
                 if self.do_preprocessing:
+                    # all computation are done in float32
                     # rec = bandpass_filter(rec)
-                    rec = common_reference(rec)
+                    rec = common_reference(rec, dtype='float32')
                     rec = highpass_filter(rec, freq_min=150.)
                     # rec = zscore(rec)
-                    rec = zscore(rec)
+                    rec = whiten(rec, mode='local', radius_um=100.)
                     rec = scale(rec, gain=200, dtype='int16')
                 self._recordings[key] = rec
 
