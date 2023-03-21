@@ -86,7 +86,7 @@ def compute_firing_rates(waveform_extractor):
     return firing_rates
 
 
-def compute_presence_ratios(waveform_extractor, bin_duration_s=60.0, mean_fr_ratio_thres=0.0):
+def compute_presence_ratios(waveform_extractor, bin_duration_s=60.0, mean_fr_ratio_thresh=0.0):
     """Calculate the presence ratio, the fraction of time the unit is firing above a certain threshold.
 
     Parameters
@@ -96,9 +96,9 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60.0, mean_fr_rat
     bin_duration_s : float, default: 60
         The duration of each bin in seconds. If the duration is less than this value, 
         presence_ratio is set to NaN
-    mean_fr_ratio_thres: float, default: 0
+    mean_fr_ratio_thresh: float, default: 0
         The unit is considered active in a bin if its firing rate during that bin
-        is strictly above `mean_fr_ratio_thres` times its mean firing rate throughout the recording.
+        is strictly above `mean_fr_ratio_thresh` times its mean firing rate throughout the recording.
 
     Returns
     -------
@@ -121,11 +121,11 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60.0, mean_fr_rat
     num_bin_edges = total_length // bin_duration_samples + 1
     bin_edges = np.arange(num_bin_edges) * bin_duration_samples
 
-    mean_fr_ratio_thres = float(mean_fr_ratio_thres)
-    if mean_fr_ratio_thres < 0:
+    mean_fr_ratio_thresh = float(mean_fr_ratio_thresh)
+    if mean_fr_ratio_thresh < 0:
         raise ValueError(
-            f"Expected positive float for `mean_fr_ratio_thres` param."
-            f"Provided value: {mean_fr_ratio_thres}"
+            f"Expected positive float for `mean_fr_ratio_thresh` param."
+            f"Provided value: {mean_fr_ratio_thresh}"
         )
 
     presence_ratios = {}
@@ -143,7 +143,7 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60.0, mean_fr_rat
             spike_train = np.concatenate(spike_train)
 
             unit_fr = spike_train.size / total_duration
-            bin_n_spikes_thres = math.floor(unit_fr * bin_duration_s * mean_fr_ratio_thres)
+            bin_n_spikes_thres = math.floor(unit_fr * bin_duration_s * mean_fr_ratio_thresh)
 
             presence_ratios[unit_id] = presence_ratio(
                 spike_train, 
@@ -157,7 +157,7 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60.0, mean_fr_rat
 
 _default_params["presence_ratio"] = dict(
     bin_duration_s=60,
-    mean_fr_ratio_thres=0.0,
+    mean_fr_ratio_thresh=0.0,
 )
 
 
