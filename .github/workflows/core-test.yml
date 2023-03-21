@@ -26,7 +26,7 @@ jobs:
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
           python -m pip install -U pip  # Official recommended way 
-          pip install -e .
+          pip install -e .[test_core]
       - name: Test core with pytest
         run: |
           pytest -vv -ra --durations=0 --durations-min=0.001 spikeinterface/core | tee report.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
