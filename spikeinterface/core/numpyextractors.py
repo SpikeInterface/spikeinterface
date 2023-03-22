@@ -27,7 +27,10 @@ class NumpyRecording(BaseRecording):
 
     def __init__(self, traces_list, sampling_frequency, t_starts=None, channel_ids=None):
         if isinstance(traces_list, list):
-            assert all(isinstance(e, np.ndarray) for e in traces_list), 'must give a list of numpy array'
+            all_elements_are_list = all(isinstance(e, list) for e in traces_list)
+            if all_elements_are_list:
+                traces_list = [np.array(trace) for trace in traces_list]
+            assert all(isinstance(e, np.ndarray) for e in traces_list), f'must give a list of numpy array but gave {traces_list[0]}'
         else:
             assert isinstance(traces_list, np.ndarray), 'must give a list of numpy array'
             traces_list = [traces_list]
@@ -46,7 +49,7 @@ class NumpyRecording(BaseRecording):
             assert len(t_starts) == len(traces_list), 't_starts must be a list of same size than traces_list'
             t_starts = [float(t_start) for t_start in t_starts]
 
-        self.is_dumpable = False
+        self.is_dumpable = True
 
         for i, traces in enumerate(traces_list):
             if t_starts is None:

@@ -360,7 +360,8 @@ _default_params["rp_violation"] = dict(
 )
 
 
-def compute_sliding_rp_violations(waveform_extractor, bin_size_ms=0.25, window_size_s=1,
+def compute_sliding_rp_violations(waveform_extractor, min_spikes=0,
+                                  bin_size_ms=0.25, window_size_s=1,
                                   exclude_ref_period_below_ms=0.5, max_ref_period_ms=10,
                                   contamination_values=None):
     """Compute sliding refractory period violations, a metric developed by IBL which computes 
@@ -371,6 +372,9 @@ def compute_sliding_rp_violations(waveform_extractor, bin_size_ms=0.25, window_s
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
+    min_spikes : int, default 0
+        Contamination  is set to np.nan if the unit has less than this many
+        spikes across all segments.
     bin_size_ms : float
         The size of binning for the autocorrelogram in ms, by default 0.25
     window_size_s : float
@@ -409,6 +413,11 @@ def compute_sliding_rp_violations(waveform_extractor, bin_size_ms=0.25, window_s
             spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
             spike_train_list.append(spike_train)
 
+        unit_n_spikes = np.sum([len(train) for train in spike_train_list])
+        if unit_n_spikes <= min_spikes:
+            contamination[unit_id] = np.nan
+            continue
+
         contamination[unit_id] = slidingRP_violations(spike_train_list, fs, duration, bin_size_ms, window_size_s,
                                                       exclude_ref_period_below_ms, max_ref_period_ms,
                                                       contamination_values)
@@ -417,6 +426,7 @@ def compute_sliding_rp_violations(waveform_extractor, bin_size_ms=0.25, window_s
 
 
 _default_params["sliding_rp_violation"] = dict(
+    min_spikes=0,
     bin_size_ms=0.25,
     window_size_s=1,
     exclude_ref_period_below_ms=0.5,
