@@ -31,9 +31,9 @@ class WhitenRecording(BasePreprocessor):
     apply_mean: bool
         Substract or not the mean matrix M before the dot product with W.
     int_scale : None or float
-        Apply a scale after the whetening.
-        This is usefull for dtype=int and want to keep the output as int also typical scale are 200 which means
-        that the noise in noise [0-1] will be encoded in [0-200].
+        Apply a scaling factor to fit the integer range.
+        This is used when the dtype is an integer, so that the output is scaled. 
+        For example, a value of `int_scale=200` will scale the traces value to a standard deviation of 200.
 
     **random_chunk_kwargs: keyword arguments for `get_random_data_chunks()` function
 
