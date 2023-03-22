@@ -100,7 +100,8 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                     rec = common_reference(rec, dtype='float32')
                     rec = highpass_filter(rec, freq_min=150.)
                     # rec = zscore(rec)
-                    rec = whiten(rec, mode='local', radius_um=100.)
+                    # 150um is more or less 30 channels
+                    rec = whiten(rec, mode='local', radius_um=150.)
                     rec = scale(rec, gain=200, dtype='int16')
                 self._recordings[key] = rec
 
