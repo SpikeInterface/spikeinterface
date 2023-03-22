@@ -298,7 +298,7 @@ class CorrectMotionRecording(BasePreprocessor):
                                                         spatial_interpolation_method, spatial_interpolation_kwargs, channel_inds, )
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), motion=motion, temporal_bins=temporal_bins,
+        self._kwargs = dict(recording=recording, motion=motion, temporal_bins=temporal_bins,
                             spatial_bins=spatial_bins, direction=direction, border_mode=border_mode,
                             spatial_interpolation_method=spatial_interpolation_method,
                             sigma_um=sigma_um, p=p, num_closest=num_closest)
