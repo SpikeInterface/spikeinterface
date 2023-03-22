@@ -150,7 +150,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         elif self.reference == 'local':
             out_traces = np.zeros((all_traces.shape[0], _channel_indices.size), dtype=self.dtype)
             for i, chan_ind in enumerate(_channel_indices):
-                out_traces[:, i] = all_traces[:, [chan_ind]] - \
+                out_traces[:, [i]] = all_traces[:, [chan_ind]] - \
                                             self.operator_func(all_traces[:, self.neighbors[chan_ind]])
         return out_traces
 
