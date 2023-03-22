@@ -25,6 +25,7 @@ dependencies = [
     "threadpoolctl",
     "tqdm",
     "probeinterface>=0.2.16",
+    "psutil",
 ]
 
 [build-system]
@@ -77,6 +78,7 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
+    "cuda-python",
 ]
 
 widgets = [
@@ -87,6 +89,12 @@ widgets = [
     "figurl-jupyter"
 ]
 
+test_core = [
+    "pytest",
+    "zarr",
+    "psutil",
+]
+
 test = [
     "pytest",
     "pytest-cov",
@@ -94,6 +102,7 @@ test = [
     # zarr is needed for testing
     "zarr",
     "xarray",
+    "huggingface_hub",
 
     # tridesclous
     "numpy<1.24",

@@ -171,8 +171,9 @@ def test_detect_injected_correlation():
     
     sampling_frequency = 10000.
     num_spike = 2000
-    spike_times1 = np.sort(np.unique(np.random.randint(0, 100000, num_spike)))
-    spike_times2 = np.sort(np.unique(np.random.randint(0, 100000, num_spike)))
+    rng = np.random.default_rng(seed=0)
+    spike_times1 = np.sort(np.unique(rng.integers(low=0, high=100000, size=num_spike)))
+    spike_times2 = np.sort(np.unique(rng.integers(low=0, high=100000, size=num_spike)))
     n = min(spike_times1.size, spike_times2.size)
     spike_times1 = spike_times1[:n]
     spike_times2 = spike_times2[:n]
@@ -181,8 +182,6 @@ def test_detect_injected_correlation():
     spike_times2[::13] = spike_times1[::13] + int(injected_delta_ms / 1000 * sampling_frequency)
     spike_times2 = np.sort(spike_times2)
     
-    num_injected = spike_times2[::13].size
-    #~ print('num_injected', num_injected)
     
     units_dict = {'1': spike_times1, '2': spike_times2}
     sorting = NumpySorting.from_dict([units_dict], sampling_frequency=sampling_frequency)
@@ -191,41 +190,38 @@ def test_detect_injected_correlation():
         
         correlograms, bins = compute_correlograms(sorting, window_ms=10., bin_ms=0.1, method=method)
         
-        num_half_bins = correlograms.shape[2]  // 2
-
         cc_01 = correlograms[0, 1, :]
         cc_10 = correlograms[1, 0, :]
         
+        peak_location_01_ms = bins[np.argmax(cc_01)]
+        peak_location_02_ms = bins[np.argmax(cc_10)]
         
-        half_bin_ms = np.mean(np.diff(bins)) / 2.
+        sampling_period_ms = (1000.0 / sampling_frequency)
+        assert abs(peak_location_01_ms) - injected_delta_ms< sampling_period_ms
+        assert abs(peak_location_02_ms) - injected_delta_ms < sampling_period_ms
         
-        # check that we have a peak in the CC 01
-        expected_peak_value = np.median(cc_01) * 0.7 + num_injected
-        assert np.max(cc_01) > expected_peak_value
-        assert np.max(cc_10) > expected_peak_value
-        
-        #~ import matplotlib.pyplot as plt
-        #~ fig, ax = plt.subplots()
-        
-        #~ ax.plot(bins[:-1]+half_bin_ms, cc_01, marker='*',  color='red', label='cross-corr 0>1')
-        #~ ax.plot(bins[:-1]+half_bin_ms, cc_10, marker='*',  color='orange', label='cross-corr 1>0')
-        #~ ax.set_title(method)
-        #~ ax.legend()
-    #~ plt.show()
+    #     import matplotlib.pyplot as plt
+    #     fig, ax = plt.subplots()
+    #     half_bin_ms = np.mean(np.diff(bins)) / 2.
+    #     ax.plot(bins[:-1]+half_bin_ms, cc_01, marker='*',  color='red', label='cross-corr 0>1')
+    #     ax.plot(bins[:-1]+half_bin_ms, cc_10, marker='*',  color='orange', label='cross-corr 1>0')
+    #     ax.set_title(method)
+    #     ax.legend()
+    # plt.show()
 
 
 
 
 if __name__ == '__main__':
     #~ test_make_bins()
-    test_equal_results_correlograms()
+    # test_equal_results_correlograms()
     #~ test_flat_cross_correlogram()
     #~ test_auto_equal_cross_correlograms()
-    #~ test_detect_injected_correlation()
+    test_detect_injected_correlation()
     
     
-    test = CorrelogramsExtensionTest()
-    test.setUp()
-    test.test_compute_correlograms()
-    test.test_extension()
+    # test = CorrelogramsExtensionTest()
+    # test.setUp()
+    # test.test_compute_correlograms()
+    # test.test_extension()
 
