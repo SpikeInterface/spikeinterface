@@ -202,7 +202,6 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         ops['NT'] = params['NT']  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
         ops['whiteningRange'] = 32.0  # number of channels to use for whitening each channel
         ops['nSkipCov'] = 25.0  # compute whitening matrix from every N-th batch
-        # ops['scaleproc'] = 200.0  # int16 scaling of whitened data
         ops['nPCs'] = params['nPCs']  # how many PCs to project the spikes into
         ops['useRAM'] = 0.0  # not yet available
 
@@ -215,10 +214,10 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         ops['skip_kilosort_preprocessing'] = params['skip_kilosort_preprocessing']
         if params['skip_kilosort_preprocessing']:
             ops['fproc'] = ops['fbinary']
-            ops['scaleproc'] = params['scaleproc']
-            assert ops['scaleproc'] is not None
-        else:
-            # int16 scaling of whitened data, when None then set to 200.
-            ops['scaleproc'] = 200. if params['scaleproc'] is None else params['scaleproc']
+            assert params['scaleproc'] is not None, 'When skip_kilosort_preprocessing=True scaleproc must explicitly given'
+
+        # int16 scaling of whitened data, when None then scaleproc is set to 200.
+        scaleproc = params['scaleproc']
+        ops['scaleproc'] = scaleproc if scaleproc is not None else 200.
 
         return ops

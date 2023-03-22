@@ -127,6 +127,8 @@ class KilosortBase:
             # local copy needed
             binary_file_path = sorter_output_folder / 'recording.dat'
             if skip_kilosort_preprocessing:
+                # when we skip the kilosort preprocessing we need to extend the file with zero pad to ensure
+                # that the number of sample is compatible with batch size (NT)
                 nt = params['NT']
                 num_samples = recording.get_num_samples()
                 pad = (nt - num_samples % nt)
