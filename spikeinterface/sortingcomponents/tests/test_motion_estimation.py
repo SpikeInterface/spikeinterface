@@ -9,6 +9,8 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.motion_estimation import (estimate_motion, make_2d_motion_histogram,
                                                                 compute_pairwise_displacement, 
                                                                 compute_global_displacement)
+
+from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
 from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 
@@ -173,7 +175,10 @@ def test_estimate_motion():
             assert motion.shape[1] == 1
         else:
             assert motion.shape[1] > 1
-            
+        
+        # Test saving to disk
+        corrected_rec = CorrectMotionRecording(recording, motion, temporal_bins, spatial_bins, border_mode="force_extrapolate")
+        corrected_rec.save()
 
         if DEBUG:
             fig, ax = plt.subplots()
