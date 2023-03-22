@@ -286,4 +286,4 @@ working not only at peak times but at all times, recovering more spikes close to
 
         pip install hdbscan
         pip install spikeinterface
-        pip install numba  (or conda install numba as is recommend by conda authors)
+        pip install numba  (or conda install numba as recommended by conda authors)
