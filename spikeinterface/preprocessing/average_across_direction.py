@@ -47,18 +47,39 @@ class AverageAcrossDirectionRecording(BaseRecording):
         )
         n_pos_unique = dim_unique_pos.size
 
-        if dtype is None and not np.issubdtype(
-            parent_recording.dtype, np.floating
-        ):
-            dtype = "float32"
-        self._dtype = dtype
+        # join the original channel ids in each group with -
+        joined_channel_ids = [
+            "-".join(parent_recording.channel_ids[same_along_dim_chans == i])
+            for i in range(dim_unique_pos.size)
+        ]
+        joined_channel_ids = np.array(joined_channel_ids)
+
+        dtype_ = dtype
+        # kind == "f"
+        if dtype_ is None and parent_recording.dtype.kind != "f":
+            dtype_ = "float32"
 
         BaseRecording.__init__(
             self,
             parent_recording.get_sampling_frequency(),
-            np.arange(n_pos_unique),
-            parent_recording.get_dtype(),
+            joined_channel_ids,
+            dtype_,
         )
+
+        # my geometry
+        channel_locations = np.zeros(
+            (n_pos_unique, parent_channel_locations.shape[1]),
+            dtype=parent_channel_locations.dtype,
+        )
+        # average other dimensions in the geometry
+        other_dim = np.arange(parent_channel_locations.shape[1]) != dim
+        for i in range(dim_unique_pos.size):
+            chans_in_group = np.flatnonzero(same_along_dim_chans == i)
+            channel_locations[chans_in_group, other_dim] = np.mean(
+                parent_channel_locations[chans_in_group, other_dim]
+            )
+        channel_locations[:, dim] = dim_unique_pos
+        self.set_channel_locations(channel_locations)
 
         self.parent_recording = parent_recording
         self.num_channels = n_pos_unique
@@ -68,34 +89,14 @@ class AverageAcrossDirectionRecording(BaseRecording):
                 self.num_channels,
                 same_along_dim_chans,
                 n_chans_each_pos,
-                dtype,
+                dtype_,
             )
             self.add_recording_segment(recording_segment)
-
-        # only copy relevant metadata and properties
-        parent_recording.copy_metadata(self, only_main=True)
-
-        # TODO: not sure what to do with properties here
-        #       this is a guess
-        for k in parent_recording.get_property_keys():
-            if k not in ("contact_vector", "location"):
-                values = self.get_property(k)
-                if values is not None:
-                    self.set_property(
-                        k, values, ids=self.channel_ids[self.channel_mapping]
-                    )
-
-        # my geometry
-        channel_locations = np.zeros(
-            (n_pos_unique, parent_channel_locations.shape[1]),
-            dtype=parent_channel_locations.dtype,
-        )
-        channel_locations[:, dim] = dim_unique_pos
-        self.set_property("location", channel_locations)
 
         self._kwargs = dict(
             parent_recording=parent_recording.to_dict(),
             direction=direction,
+            dtype=dtype,
         )
 
 
@@ -149,5 +150,6 @@ class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):
 
 # function for API
 average_across_direction = define_function_from_class(
-    source_class=AverageAcrossDirectionRecording, name="average_across_direction"
+    source_class=AverageAcrossDirectionRecording,
+    name="average_across_direction",
 )
