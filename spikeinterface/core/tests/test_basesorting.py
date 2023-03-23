@@ -118,10 +118,12 @@ def test_npy_sorting():
     assert sorting.get_num_samples(segment_index=1) == 5
     assert sorting.get_total_samples() == 15
 
-    # Registering too short a recording
+    # Registering too short a recording raises a warning
     seg_nframes = [9, 5]
     rec = NumpyRecording([np.zeros((nframes, 10)) for nframes in seg_nframes], sampling_frequency=sfreq)
-    assert_raises(Exception, sorting.register_recording, rec)
+    # assert_raises(Exception, sorting.register_recording, rec)
+    with pytest.warns():
+        sorting.register_recording(rec)
 
     # Registering a rec with too many segments
     seg_nframes = [9, 5, 10]
