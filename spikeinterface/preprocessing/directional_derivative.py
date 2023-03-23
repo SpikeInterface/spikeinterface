@@ -50,7 +50,7 @@ class DirectionalDerivativeRecording(BasePreprocessor):
 
         # float32 by default if parent recording is integer
         dtype_ = dtype
-        if dtype is None and dtype.kind != "f":
+        if dtype is None and recording.dtype.kind != "f":
             dtype_ = "float32"
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
