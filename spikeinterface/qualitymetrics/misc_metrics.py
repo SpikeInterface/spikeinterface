@@ -127,6 +127,8 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60.0, mean_fr_rat
             f"Expected positive float for `mean_fr_ratio_thresh` param."
             f"Provided value: {mean_fr_ratio_thresh}"
         )
+    if mean_fr_ratio_thresh > 1:
+        warnings.warn("`mean_fr_ratio_thres` parameter above 1 might lead to low presence ratios.")
 
     presence_ratios = {}
     if total_length < bin_duration_samples:
