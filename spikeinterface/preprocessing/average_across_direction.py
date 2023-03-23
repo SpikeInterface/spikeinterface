@@ -49,7 +49,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
 
         # join the original channel ids in each group with -
         joined_channel_ids = [
-            "-".join(parent_recording.channel_ids[same_along_dim_chans == i])
+            "-".join(map(str, parent_recording.channel_ids[same_along_dim_chans == i]))
             for i in range(dim_unique_pos.size)
         ]
         joined_channel_ids = np.array(joined_channel_ids)
@@ -74,7 +74,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
         other_dim = np.arange(parent_channel_locations.shape[1]) != dim
         for i in range(dim_unique_pos.size):
             chans_in_group = np.flatnonzero(same_along_dim_chans == i)
-            channel_locations[chans_in_group, other_dim] = np.mean(
+            channel_locations[i, other_dim] = np.mean(
                 parent_channel_locations[chans_in_group, other_dim]
             )
         channel_locations[:, dim] = dim_unique_pos
