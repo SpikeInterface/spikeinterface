@@ -301,7 +301,7 @@ def order_channels_by_depth(
             assert dim < ndim, "Invalid dimensions!"
             locations_to_sort += (locations[:, dim],)
         order_f = np.lexsort(locations_to_sort)
-    order_r = np.argsort(order_f)
+    order_r = np.argsort(order_f, kind="stable")
 
     return order_f, order_r
 
