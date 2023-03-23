@@ -377,7 +377,7 @@ class ConcatenateSegmentSorting(BaseSorting):
         # Check and pull n_samples from each segment
         parent_segments = []
         parent_num_samples = []
-        for sorting in sorting_list:
+        for sorting_i, sorting in enumerate(sorting_list):
             for segment_i, parent_segment in enumerate(sorting._sorting_segments):
                 # Check t_start is not assigned
                 segment_t_start = parent_segment._t_start
@@ -390,7 +390,7 @@ class ConcatenateSegmentSorting(BaseSorting):
                     segment_num_samples = sorting.get_num_samples(segment_index=segment_i)
                 else:
                     assert segment_i == 0  # Already checked: sortings should be monosegment if they have no rec
-                    segment_num_samples = total_samples_list[segment_i]
+                    segment_num_samples = total_samples_list[sorting_i]
                 # Check consistency between num samples and spike frames
                 for unit_id in sorting.unit_ids:
                     unit_segment_spikes = parent_segment.get_unit_spike_train(
