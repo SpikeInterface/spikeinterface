@@ -81,7 +81,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     Parameters
     ----------
     folder_path: str
-        The folder path to the root folder (containing the settings.xml file).
+        The folder path to the root folder (containing the record node folders).
     load_sync_channel : bool
         If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
         If True, the SYNC channel is loaded and can be accessed in the analog signals.
