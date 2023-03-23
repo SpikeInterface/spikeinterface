@@ -1,6 +1,9 @@
-from spikeinterface.core import NumpySorting, NumpyRecording
+import warnings
+
 import numpy as np
 from numpy.testing import assert_raises
+
+from spikeinterface.core import NumpyRecording, NumpySorting
 
 
 def test_FrameSliceSorting():
@@ -23,6 +26,12 @@ def test_FrameSliceSorting():
     sorting.register_recording(rec)
     # Sorting without attached rec
     sorting_norec = NumpySorting.from_dict( [spike_times], sf)
+    # Sorting with attached rec and exceeding spikes
+    sorting_exceeding = NumpySorting.from_dict( [spike_times], sf)
+    rec_exceeding = NumpyRecording([np.zeros((max_spike_time-1, 5))], sampling_frequency=sf)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        sorting_exceeding.register_recording(rec_exceeding)
 
     mid_frame = nsamp // 2
 
@@ -94,6 +103,9 @@ def test_FrameSliceSorting():
 
     # Edge case: start_frame = end_frame
     assert_raises(Exception, sorting.frame_slice, max_spike_time, max_spike_time)
+
+    # Sorting with exceeding spikes
+    assert_raises(Exception, sorting_exceeding.frame_slice, None, None)
 
 if __name__ == '__main__':
     test_FrameSliceSorting()
