@@ -55,7 +55,6 @@ class AverageAcrossDirectionRecording(BaseRecording):
         joined_channel_ids = np.array(joined_channel_ids)
 
         dtype_ = dtype
-        # kind == "f"
         if dtype_ is None and parent_recording.dtype.kind != "f":
             dtype_ = "float32"
 
