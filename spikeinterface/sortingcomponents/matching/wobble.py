@@ -204,12 +204,12 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             Updated Keyword arguments.
         """
         d = cls.default_params.copy()
-        objective_kwargs = kwargs['objective_kwargs']
-        templates = objective_kwargs.pop('templates')
+        parameters = kwargs['parameters']
+        templates = kwargs['templates']
         templates = templates.astype(np.float32, casting='safe')
 
         # Aggregate useful parameters/variables for handy access in downstream functions
-        params = cls.aggregate_parameters(objective_kwargs)
+        params = cls.aggregate_parameters(parameters)
         template_meta = cls.aggregate_template_metadata(params, templates)
         sparsity = cls.aggregate_sparsity(params, templates) # TODO: replace with spikeinterface sparsity
 
@@ -227,12 +227,12 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
 
     @staticmethod
-    def aggregate_parameters(objective_kwargs):
-        """Aggregate parameters from objective_kwargs into dataclass object.
+    def aggregate_parameters(parameters):
+        """Aggregate parameters from parameters into dataclass object.
 
         Parameters
         ----------
-        objective_kwargs : dict
+        parameters : dict
             Keyword arguments for WobbleMatch algorithm.
 
         Returns
@@ -240,7 +240,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         params : WobbleParameters
             Dataclass object for aggregating the parameters together.
         """
-        params = WobbleParameters(**objective_kwargs)
+        params = WobbleParameters(**parameters)
         assert(params.amplitude_variance >= 0, "amplitude_variance must be a non-negative scalar")
         params.scale_amplitudes = params.amplitude_variance > 0
         return params
