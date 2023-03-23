@@ -367,7 +367,7 @@ class ConcatenateSegmentSorting(BaseSorting):
                 "Use ignore_times=True to ignore time information."
             )
         else:
-            assert total_samples_list is None, "Sortings have registered recordings: Use `total_samples_list`=None"
+            assert total_samples_list is None, "Sortings have registered recordings: Use `total_samples_list=None`"
 
         # Pull metadata from AppendSorting object
         one_sorting = append_sortings(sorting_list, sampling_frequency_max_diff=sampling_frequency_max_diff)
