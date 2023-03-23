@@ -13,7 +13,7 @@ from copy import deepcopy
 import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
-from .core_tools import check_json, is_dict_extractor, recursive_path_modifier
+from .core_tools import check_json, is_dict_extractor, recursive_path_modifier, SIJsonEncoder
 from .job_tools import _shared_job_kwargs_doc
 
 class BaseExtractor:
@@ -480,9 +480,10 @@ class BaseExtractor:
                                  relative_to=relative_to,
                                  folder_metadata=folder_metadata)
         file_path = self._get_file_path(file_path, ['.json'])
+        
         file_path.write_text(
-            json.dumps(check_json(dump_dict), indent=4),
-            encoding='utf8'
+            json.dumps(dump_dict, indent=4, cls=SIJsonEncoder),
+            encoding='utf8',
         )
 
     def dump_to_pickle(self, file_path=None, include_properties=True,

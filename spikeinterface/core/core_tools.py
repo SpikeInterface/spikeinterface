@@ -1,7 +1,9 @@
 from pathlib import Path
 import os
 import sys
+import warnings
 import datetime
+import json
 from copy import deepcopy
 import gc
 
@@ -78,63 +80,72 @@ def write_python(path, dict):
             else:
                 f.write(str(k) + " = " + str(v) + "\n")
 
+class SIJsonEncoder(json.JSONEncoder):
+    """
+    An encoder used to encode Spike interface objects to json
+    """
 
-def check_json(d):
-    dc = deepcopy(d)
-    # quick hack to ensure json writable
-    for k, v in d.items():
-        # take care of keys first
-        if isinstance(k, np.integer):
-            del dc[k]
-            dc[int(k)] = v
-        if isinstance(k, np.floating):
-            del dc[k]
-            dc[float(k)] = v
-        if isinstance(v, dict):
-            dc[k] = check_json(v)
-        elif isinstance(v, Path):
-            dc[k] = str(v.absolute())
-        elif isinstance(v, (bool, np.bool_)):
-            dc[k] = bool(v)
-        elif isinstance(v, np.integer):
-            dc[k] = int(v)
-        elif isinstance(v, np.floating):
-            dc[k] = float(v)
-        elif isinstance(v, bytes):
-            dc[k] = v.decode()
-        elif isinstance(v, datetime.datetime):
-            dc[k] = v.isoformat()
-        elif isinstance(v, (np.ndarray, list)):
-            if len(v) > 0:
-                if isinstance(v[0], dict):
-                    # these must be extractors for multi extractors
-                    dc[k] = [check_json(v_el) for v_el in v]
-                else:
-                    v_arr = np.array(v)
-                    if v_arr.dtype.kind not in ("b", "i", "u", "f", "S", "U", "O"):
-                        print(f'Skipping field {k}: only int, uint, bool, float, or str types can be serialized')
-                        continue
-                    # 64-bit types are not serializable
-                    if v_arr.dtype == np.dtype('int64'):
-                        v_arr = v_arr.astype('int32')
-                    if v_arr.dtype == np.dtype('float64'):
-                        v_arr = v_arr.astype('float32')
-                    # np.bool_ needs to be cast as bool
-                    if v_arr.dtype == np.bool_:
-                        v_arr = v_arr.astype(bool)
-                    # for object types O, if they are actually str cast it
-                    # this is the case when loading a pandas column
-                    if v_arr.dtype.kind == "O":
-                        if isinstance(v_arr[0], str):
-                            v_arr = v_arr.astype('str')
-                        else:
-                            print(f'Skipping field {k}: Object type cannot be serialized')
-                            continue
-                    dc[k] = v_arr.tolist()
-            else:
-                # this is for empty arrays
-                dc[k] = list(v)
-    return dc
+    def default(self, obj):
+        from spikeinterface.core.base import BaseExtractor
+
+        # Over-write behaviors for datetime object
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+
+        # This should transforms integer, floats and bool to their python counterparts
+        if isinstance(obj, np.generic):
+            return obj.item()
+
+        if np.issctype(obj):  # Cast numpy datatypes to their names
+            return np.dtype(obj).name
+
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+
+        if isinstance(obj, BaseExtractor):
+            return obj.to_dict()
+
+        # The base-class handles the assertion
+        return super().default(obj)
+
+    # This machinery is necessary for overriding the default behavior of the json encoder with keys
+    # This is a deep issue that goes deep down to cpython: https://github.com/python/cpython/issues/63020
+    def iterencode(self, obj, _one_shot=False):
+        return super().iterencode(self.remove_numpy_scalar_from_object(obj), _one_shot=_one_shot)
+
+    def remove_numpy_scalar_from_object(self, object):
+        if isinstance(object, dict):
+            return self.remove_python_scalar_in_dict(object)
+        elif isinstance(object, list):
+            return self.remove_numpy_scalar_in_list(object)
+        else:
+            return object.item() if isinstance(object, np.generic) else object
+
+    def remove_numpy_scalar_in_list(self, list_: list) -> list:
+        return [self.remove_numpy_scalar_from_object(obj) for obj in list_]
+
+    def remove_python_scalar_in_dict(self, dictionary: dict) -> dict:
+        dict_copy = dict()
+        for key, value in dictionary.items():
+            key = self.remove_numpy_scalar_from_object(key)
+            value = self.remove_numpy_scalar_from_object(value)
+            dict_copy[key] = value
+
+        return dict_copy
+
+
+def check_json(dictionary: dict) -> dict:
+    """
+    Function that transforms a dictionary with spikeinterface objects into a json writable dictionary
+
+    Parameters
+    ----------
+    dictionary : A dictionary
+
+    """
+
+    json_string = json.dumps(dictionary, indent=4, cls=SIJsonEncoder)
+    return json.loads(json_string)
 
 
 def add_suffix(file_path, possible_suffix):

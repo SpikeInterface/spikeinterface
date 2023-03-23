@@ -40,7 +40,7 @@ class ClipRecording(BasePreprocessor):
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording.to_dict(),
-                            a_min=a_max, a_max=a_max)
+                            a_min=a_min, a_max=a_max)
 
 
 class BlankSaturationRecording(BasePreprocessor):
