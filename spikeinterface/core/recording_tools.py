@@ -247,12 +247,13 @@ def get_chunk_with_margin(
             elif add_reflect_padding:
                 # in this case, we don't want to taper
                 traces_chunk = np.pad(
-                    traces_chunk,
-                    [(left_margin, right_margin), (0, 0)],
+                    traces_chunk.astype(dtype),
+                    [(left_pad, right_pad), (0, 0)],
                     mode="reflect",
                 )
             else:
-                assert False  # unreachable
+                # we need a copy to change the dtype
+                traces_chunk = np.asarray(traces_chunk, dtype=dtype)
 
     return traces_chunk, left_margin, right_margin
 

@@ -138,7 +138,6 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             parent_end_frame,
             channel_indices,
             self._margin,
-            window_on_margin=False,
             add_reflect_padding=True,
             dtype=np.float32,
         )
@@ -153,7 +152,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             (end_frame + right_margin_rs) - (start_frame - left_margin_rs)
         )
 
-        # Decimate can misbehave on some cases, while resample allways looks nice enough.
+        # Decimate can misbehave on some cases, while resample always looks nice enough.
         # Check which method to use:
         if np.mod(self._parent_rate, self.sampling_frequency) == 0:
             # Ratio between sampling frequencies
@@ -168,7 +167,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
 
         # now take care of the edges
         resampled_traces = resampled_traces[
-            left_margin_rs : left_margin_rs + num - right_margin_rs
+            left_margin_rs : num - right_margin_rs
         ]
         return resampled_traces.astype(self._dtype)
 
