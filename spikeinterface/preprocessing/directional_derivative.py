@@ -50,7 +50,7 @@ class DirectionalDerivativeRecording(BasePreprocessor):
 
         # float32 by default if parent recording is integer
         dtype_ = dtype
-        if dtype is None and not np.issubdtype(recording.dtype, np.floating):
+        if dtype is None and dtype.kind != "f":
             dtype_ = "float32"
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
@@ -93,8 +93,19 @@ class DirectionalDerivativeRecordingSegment(BasePreprocessorSegment):
         self.dim = dim
         self._dtype = dtype
 
-    def get_num_samples(self):
-        return self.parent_recording_segment.get_num_samples()
+        # get unique positions along dims other than `direction`
+        # channels at the same positions along these other dims are considered
+        # to belong to a "column"/"row", and the derivative is applied in these
+        # groups along `direction`
+        ndim = self.channel_locations.shape[1]
+        geom_other_dims = self.channel_locations[
+            :, np.arange(ndim) != self.dim
+        ]
+        # column_inds is the column grouping by channel,
+        # so that geom_other_dims[i] == unique_pos_other_dims[column_inds[i]]
+        self.unique_pos_other_dims, self.column_inds = np.unique(
+            geom_other_dims, axis=0, return_inverse=True
+        )
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:
@@ -109,24 +120,10 @@ class DirectionalDerivativeRecordingSegment(BasePreprocessorSegment):
         )
         parent_traces = parent_traces.astype(self._dtype)
 
-        # get unique positions along dims other than `direction`
-        # channels at the same positions along these other dims are considered
-        # to belong to a "column"/"row", and the derivative is applied in these
-        # groups along `direction`
-        ndim = self.channel_locations.shape[1]
-        geom_other_dims = self.channel_locations[
-            :, np.arange(ndim) != self.dim
-        ]
-        # column_inds is the column grouping by channel,
-        # so that geom_other_dims[i] == unique_pos_other_dims[column_inds[i]]
-        unique_pos_other_dims, column_inds = np.unique(
-            geom_other_dims, axis=0, return_inverse=True
-        )
-
         # calculate derivative independently in each column
         derivative_traces = np.empty_like(parent_traces)
-        for column_ix, other_pos in enumerate(unique_pos_other_dims):
-            chans_in_column = np.flatnonzero(column_inds == column_ix)
+        for column_ix, other_pos in enumerate(self.unique_pos_other_dims):
+            chans_in_column = np.flatnonzero(self.column_inds == column_ix)
             dim_pos_in_column = self.channel_locations[
                 chans_in_column, self.dim
             ]
