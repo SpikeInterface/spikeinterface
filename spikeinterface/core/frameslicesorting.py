@@ -2,6 +2,7 @@ import numpy as np
 import warnings
 
 from .basesorting import BaseSorting, BaseSortingSegment
+from .waveform_tools import has_exceeding_spikes
 
 
 class FrameSliceSorting(BaseSorting):
@@ -53,6 +54,11 @@ class FrameSliceSorting(BaseSorting):
             assert start_frame <= parent_n_samples, (
                 "`start_frame` should be smaller than the sortings total number of samples."
             )
+            if has_exceeding_spikes(parent_sorting._recording, parent_sorting):
+                raise ValueError(
+                    "The sorting object has spikes exceeding the recording duration. You have to remove those spikes "
+                    "with the `spikeinterface.curation.remove_excess_spikes()` function"
+                )
         else:
             # Pull df end_frame from spikes
             if end_frame is None:
