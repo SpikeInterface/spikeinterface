@@ -128,15 +128,17 @@ class DirectionalDerivativeRecordingSegment(BasePreprocessorSegment):
                 chans_in_column, self.dim
             ]
 
-            column_traces = parent_traces[:, chans_in_column]
-
-            for _ in range(self.order):
-                column_traces = np.gradient(
-                    column_traces,
-                    dim_pos_in_column,
-                    axis=1,
-                    edge_order=self.edge_order,
-                )
+            if dim_pos_in_column.size == 1:
+                column_traces = np.zeros((parent_traces.shape[0], 1), dtype=self._dtype)
+            else:
+                column_traces = parent_traces[:, chans_in_column]
+                for _ in range(self.order):
+                    column_traces = np.gradient(
+                        column_traces,
+                        dim_pos_in_column,
+                        axis=1,
+                        edge_order=self.edge_order,
+                    )
 
             # when order=0, do a spatial common reference
             if self.order == 0:
