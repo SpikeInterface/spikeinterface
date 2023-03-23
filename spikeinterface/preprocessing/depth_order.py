@@ -28,7 +28,6 @@ class DepthOrderRecording(ChannelSliceRecording):
         order_f, order_r = order_channels_by_depth(
             parent_recording, channel_ids=channel_ids, dimensions=dimensions
         )
-        channel_ids = parent_recording.get_channel_ids()
         reordered_channel_ids = parent_recording.channel_ids[order_f]
         ChannelSliceRecording.__init__(
             self,
