@@ -127,6 +127,9 @@ def test_append_concatenate_sortings():
     traces1 = np.zeros((nsamp1, 5), dtype='float64')
     rec0_mono = NumpyRecording([traces0], sampling_frequency)
     rec1_mono = NumpyRecording([traces1], sampling_frequency)
+    # Recording too short
+    traces0_short = np.zeros((nsamp0-1, 5), dtype='float64')
+    rec0_mono_short = NumpyRecording([traces0_short], sampling_frequency)
 
     # Append
     # Append multisegment
@@ -162,6 +165,15 @@ def test_append_concatenate_sortings():
     # Succeeds without registered recording for mono
     sorting_mono_norec = concatenate_sortings(sorting_list_mono, total_samples_list=[nsamp0, nsamp1])
     assert sorting_mono_norec.get_num_segments() == 1
+    # Fails when excess spikes with total_samples_list
+    assert_raises(Exception, concatenate_sortings, sorting_list, total_samples_list=[nsamp0 - 1, nsamp1])
+    # Fails when excess spikes with registered recording
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore')
+        sorting0_mono.register_recording(rec0_mono_short)
+    assert_raises(Exception, concatenate_sortings, [sorting0_mono])
+    
+    # Fails 
 
     # With registered recording
     sorting0.register_recording(rec0)
