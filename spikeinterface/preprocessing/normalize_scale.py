@@ -257,7 +257,7 @@ class ZScoreRecording(BasePreprocessor):
         The centered traces recording extractor object
     """
 
-    name = "center"
+    name = "zscore"
 
     def __init__(
         self,
