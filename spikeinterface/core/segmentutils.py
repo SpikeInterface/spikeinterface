@@ -391,6 +391,18 @@ class ConcatenateSegmentSorting(BaseSorting):
                 else:
                     assert segment_i == 0  # Already checked: sortings should be monosegment if they have no rec
                     segment_num_samples = total_samples_list[segment_i]
+                # Check consistency between num samples and spike frames
+                for unit_id in sorting.unit_ids:
+                    unit_segment_spikes = parent_segment.get_unit_spike_train(
+                        unit_id=unit_id, start_frame=None, end_frame=None,
+                    )
+                    if any([spike_frame >= segment_num_samples for spike_frame in unit_segment_spikes]):
+                        raise ValueError(
+                            "Sortings' spike frames exceed the provided number of samples for some segment. "
+                            "If the sortings have registered recordings, you can remove these excess "
+                            "spikes with `spikeinterface.curation.remove_excess_spikes(sorting, sorting._recording)`. "
+                            "Otherwise, the `total_num_samples` argument may contain invalid values."
+                        )
                 parent_segments.append(parent_segment)
                 parent_num_samples.append(segment_num_samples)
         self.parent_num_samples = parent_num_samples
