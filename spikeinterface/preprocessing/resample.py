@@ -139,7 +139,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             channel_indices,
             self._margin,
             window_on_margin=False,
-            add_zeros=False,
+            add_reflect_padding=True,
             dtype=np.float32,
         )
         # get left and right margins for the resampled case
