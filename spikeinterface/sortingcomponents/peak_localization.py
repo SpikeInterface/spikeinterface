@@ -39,7 +39,7 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.3, ms_
         Array with estimated location for each spike.
         The dtype depends on the method. ('x', 'y') or ('x', 'y', 'z', 'alpha').
     """
-    assert method in possible_localization_methods, f"Method {method} is not supported. Choose from {possible_localization_methods}"
+    #assert method in possible_localization_methods, f"Method {method} is not supported. Choose from {possible_localization_methods}"
 
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
     
@@ -57,6 +57,12 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.3, ms_
         ]
     elif method == "peak_channel":
         pipeline_nodes = [LocalizePeakChannel(recording,  **method_kwargs)]
+    elif method == "from_templates":
+        extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_output=False)
+        pipeline_nodes = [
+            extract_dense_waveforms,
+            LocalizeFromTemplates(recording, parents=[extract_dense_waveforms], **method_kwargs)
+        ]
     
     peak_locations = run_peak_pipeline(recording, peaks, pipeline_nodes, job_kwargs, job_name='localize peaks', squeeze_output=True)
     
@@ -192,8 +198,78 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         return peak_locations
 
 
+class LocalizeFromTemplates(PipelineNode):
+    """Localize peaks using the center of mass method."""
+    need_waveforms = True
+    name = 'center_of_mass'
+    params_doc = """
+    local_radius_um: float
+        Radius in um for channel sparsity.
+    """
+    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=75., nb_templates=None,
+        sigma_um = 20, margin=0.1, seed=42):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
+        
+        self.local_radius_um = local_radius_um
+        self.sigma_um = sigma_um
+        self.margin = margin
+        self.seed = seed
+        self.nb_templates = nb_templates
+        if self.nb_templates is None:
+            self.nb_templates = self.recording.get_num_channels()*1000
+        self.contact_locations = recording.get_channel_locations()
+
+        nbefore = self.parents[-1].nbefore
+        nafter = self.parents[-1].nafter
+        ms_before = self.parents[-1].ms_before
+        fs = self.recording.get_sampling_frequency()
+        
+        time_axis = np.arange(-nbefore, nafter) * 1000/fs
+        self.prototype = -np.exp(-(time_axis - ms_before)**2)
+
+        x_min, x_max = self.contact_locations[:,0].min(), self.contact_locations[:,0].max()
+        y_min, y_max = self.contact_locations[:,1].min(), self.contact_locations[:,1].max()
+
+        self.random_positions = np.zeros((self.nb_templates, 2))
+        self.random_positions[:, 0] = x_min*(1 - self.margin) + ((1 + self.margin)*x_max - (1 - self.margin)*x_min) * np.random.rand(self.nb_templates)
+        self.random_positions[:, 1] = y_min*(1 - self.margin) + ((1 + self.margin)*y_max - (1 - self.margin)*y_min) * np.random.rand(self.nb_templates)
+
+        import sklearn
+        dist = sklearn.metrics.pairwise_distances(self.random_positions, self.contact_locations)
+        self.neighbours_mask = dist < self.local_radius_um
+        #max_nb_channels = neighbours_mask.sum(axis=1).max()
+        self.weights = self.neighbours_mask * np.exp(-dist**2/(2*(sigma_um**2)))
+
+        self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
+
+        self._kwargs.update(dict(local_radius_um=self.local_radius_um,
+                                 nb_templates=self.nb_templates,
+                                 sigma_um=self.sigma_um, 
+                                 margin=self.margin, 
+                                 prototype=self.prototype,
+                                 random_positions=self.random_positions,
+                                 neighbours_mask=self.neighbours_mask,
+                                 weights=self.weights))
+
+    def get_dtype(self):
+        return self._dtype
+        
+    def compute(self, traces, peaks, waveforms):
+        peak_locations = np.zeros(peaks.size, dtype=self._dtype)
+
+        for main_chan in np.unique(peaks['channel_ind']):
+            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+            intersect = self.neighbours_mask[:, main_chan] == True
+            dot_products = (waveforms[idx] * self.prototype[:, np.newaxis]).sum(axis=1)
+            dot_products = np.dot(self.weights[intersect], dot_products.T)
+            found_positions = np.dot(dot_products.T, self.random_positions[intersect])/dot_products.sum()
+            peak_locations['x'][idx] = found_positions[:, 0]
+            peak_locations['y'][idx] = found_positions[:, 1]
+
+        return peak_locations
+
 # LocalizePeakChannel is not include in doc because it is not a good idea to use it
-_methods_list = [LocalizeCenterOfMass, LocalizeMonopolarTriangulation]
+_methods_list = [LocalizeCenterOfMass, LocalizeMonopolarTriangulation, LocalizeFromTemplates]
 localize_peak_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)
 localize_peaks.__doc__ = localize_peaks.__doc__.format(
