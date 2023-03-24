@@ -206,17 +206,14 @@ class LocalizeFromTemplates(PipelineNode):
     local_radius_um: float
         Radius in um for channel sparsity.
     """
-    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=75., nb_templates=None,
-        sigma_um = 20, margin=0.1, seed=42):
+    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=50., upsampling_um=1,
+        sigma_um = 20, sigma_ms=0.1, margin=0.1):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         
         self.local_radius_um = local_radius_um
         self.sigma_um = sigma_um
         self.margin = margin
-        self.seed = seed
-        self.nb_templates = nb_templates
-        if self.nb_templates is None:
-            self.nb_templates = self.recording.get_num_channels()*1000
+        self.upsampling_um = upsampling_um
         self.contact_locations = recording.get_channel_locations()
 
         nbefore = self.parents[-1].nbefore
@@ -225,17 +222,34 @@ class LocalizeFromTemplates(PipelineNode):
         fs = self.recording.get_sampling_frequency()
         
         time_axis = np.arange(-nbefore, nafter) * 1000/fs
-        self.prototype = -np.exp(-(time_axis - ms_before)**2)
+        self.prototype = -np.exp(-time_axis**2/(2*(sigma_ms**2)))
 
         x_min, x_max = self.contact_locations[:,0].min(), self.contact_locations[:,0].max()
         y_min, y_max = self.contact_locations[:,1].min(), self.contact_locations[:,1].max()
 
-        self.random_positions = np.zeros((self.nb_templates, 2))
-        self.random_positions[:, 0] = x_min*(1 - self.margin) + ((1 + self.margin)*x_max - (1 - self.margin)*x_min) * np.random.rand(self.nb_templates)
-        self.random_positions[:, 1] = y_min*(1 - self.margin) + ((1 + self.margin)*y_max - (1 - self.margin)*y_min) * np.random.rand(self.nb_templates)
+        x_min *= (1 + self.margin)
+        x_max *= (1 + self.margin)
+
+        y_min *= (1 + self.margin)
+        y_max *= (1 + self.margin)
+
+        dx = np.abs(x_max - x_min)
+        dy = np.abs(y_max - y_min)
+
+        nb_x = int(dx/upsampling_um) + 1
+        nb_y = int(dy/upsampling_um) + 1
+        self.nb_templates = nb_x * nb_y
+        all_x, all_y = np.meshgrid(range(nb_x), range(nb_y))
+        self.template_positions = np.zeros((self.nb_templates, 2))
+        self.template_positions[:, 0] = x_min + all_x.flatten()*self.upsampling_um
+        self.template_positions[:, 1] = y_min + all_y.flatten()*self.upsampling_um
+
+        #self.template_positions = np.zeros((self.nb_templates, 2))
+        #self.template_positions[:, 0] = x_min*(1 - self.margin) + ((1 + self.margin)*x_max - (1 - self.margin)*x_min) * np.random.rand(self.nb_templates)
+        #self.template_positions[:, 1] = y_min*(1 - self.margin) + ((1 + self.margin)*y_max - (1 - self.margin)*y_min) * np.random.rand(self.nb_templates)
 
         import sklearn
-        dist = sklearn.metrics.pairwise_distances(self.random_positions, self.contact_locations)
+        dist = sklearn.metrics.pairwise_distances(self.template_positions, self.contact_locations)
         self.neighbours_mask = dist < self.local_radius_um
         #max_nb_channels = neighbours_mask.sum(axis=1).max()
         self.weights = self.neighbours_mask * np.exp(-dist**2/(2*(sigma_um**2)))
@@ -246,8 +260,9 @@ class LocalizeFromTemplates(PipelineNode):
                                  nb_templates=self.nb_templates,
                                  sigma_um=self.sigma_um, 
                                  margin=self.margin, 
+                                 upsampling_um=self.upsampling_um,
                                  prototype=self.prototype,
-                                 random_positions=self.random_positions,
+                                 template_positions=self.template_positions,
                                  neighbours_mask=self.neighbours_mask,
                                  weights=self.weights))
 
@@ -261,8 +276,8 @@ class LocalizeFromTemplates(PipelineNode):
             idx, = np.nonzero(peaks['channel_ind'] == main_chan)
             intersect = self.neighbours_mask[:, main_chan] == True
             dot_products = (waveforms[idx] * self.prototype[:, np.newaxis]).sum(axis=1)
-            dot_products = np.dot(self.weights[intersect], dot_products.T)
-            found_positions = np.dot(dot_products.T, self.random_positions[intersect])/dot_products.sum()
+            dot_products = np.maximum(0, np.dot(self.weights[intersect], dot_products.T))
+            found_positions = np.dot(dot_products.T, self.template_positions[intersect])/(dot_products.sum(0)[:, np.newaxis])
             peak_locations['x'][idx] = found_positions[:, 0]
             peak_locations['y'][idx] = found_positions[:, 1]
 
