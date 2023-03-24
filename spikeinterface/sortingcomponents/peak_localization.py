@@ -201,18 +201,18 @@ class LocalizeMonopolarTriangulation(PipelineNode):
 class LocalizeFromTemplates(PipelineNode):
     """Localize peaks using the center of mass method."""
     need_waveforms = True
-    name = 'center_of_mass'
+    name = 'from_templates'
     params_doc = """
     local_radius_um: float
         Radius in um for channel sparsity.
     """
-    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=50., upsampling_um=1,
-        sigma_um = 20, sigma_ms=0.1, margin=0.1):
+    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=150., upsampling_um=3,
+        sigma_um=50, sigma_ms=0.25, margin_um=100):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         
         self.local_radius_um = local_radius_um
         self.sigma_um = sigma_um
-        self.margin = margin
+        self.margin_um = margin_um
         self.upsampling_um = upsampling_um
         self.contact_locations = recording.get_channel_locations()
 
@@ -227,31 +227,29 @@ class LocalizeFromTemplates(PipelineNode):
         x_min, x_max = self.contact_locations[:,0].min(), self.contact_locations[:,0].max()
         y_min, y_max = self.contact_locations[:,1].min(), self.contact_locations[:,1].max()
 
-        x_min *= (1 + self.margin)
-        x_max *= (1 + self.margin)
-
-        y_min *= (1 + self.margin)
-        y_max *= (1 + self.margin)
+        x_min -= self.margin_um
+        x_max += self.margin_um
+        y_min -= self.margin_um
+        y_max += self.margin_um
 
         dx = np.abs(x_max - x_min)
         dy = np.abs(y_max - y_min)
 
-        nb_x = int(dx/upsampling_um) + 1
-        nb_y = int(dy/upsampling_um) + 1
-        self.nb_templates = nb_x * nb_y
-        all_x, all_y = np.meshgrid(range(nb_x), range(nb_y))
-        self.template_positions = np.zeros((self.nb_templates, 2))
-        self.template_positions[:, 0] = x_min + all_x.flatten()*self.upsampling_um
-        self.template_positions[:, 1] = y_min + all_y.flatten()*self.upsampling_um
 
-        #self.template_positions = np.zeros((self.nb_templates, 2))
-        #self.template_positions[:, 0] = x_min*(1 - self.margin) + ((1 + self.margin)*x_max - (1 - self.margin)*x_min) * np.random.rand(self.nb_templates)
-        #self.template_positions[:, 1] = y_min*(1 - self.margin) + ((1 + self.margin)*y_max - (1 - self.margin)*y_min) * np.random.rand(self.nb_templates)
+        
+        eps = upsampling_um/10
+
+        all_x, all_y = np.meshgrid(np.arange(x_min, x_max+eps, upsampling_um), np.arange(y_min, y_max+eps, upsampling_um))
+
+        self.nb_templates = all_x.size
+
+        self.template_positions = np.zeros((self.nb_templates, 2))
+        self.template_positions[:, 0] = all_x.flatten()
+        self.template_positions[:, 1] = all_y.flatten()
 
         import sklearn
         dist = sklearn.metrics.pairwise_distances(self.template_positions, self.contact_locations)
         self.neighbours_mask = dist < self.local_radius_um
-        #max_nb_channels = neighbours_mask.sum(axis=1).max()
         self.weights = self.neighbours_mask * np.exp(-dist**2/(2*(sigma_um**2)))
 
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
@@ -259,7 +257,7 @@ class LocalizeFromTemplates(PipelineNode):
         self._kwargs.update(dict(local_radius_um=self.local_radius_um,
                                  nb_templates=self.nb_templates,
                                  sigma_um=self.sigma_um, 
-                                 margin=self.margin, 
+                                 margin_um=self.margin_um, 
                                  upsampling_um=self.upsampling_um,
                                  prototype=self.prototype,
                                  template_positions=self.template_positions,
@@ -268,7 +266,7 @@ class LocalizeFromTemplates(PipelineNode):
 
     def get_dtype(self):
         return self._dtype
-        
+
     def compute(self, traces, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
@@ -276,7 +274,7 @@ class LocalizeFromTemplates(PipelineNode):
             idx, = np.nonzero(peaks['channel_ind'] == main_chan)
             intersect = self.neighbours_mask[:, main_chan] == True
             dot_products = (waveforms[idx] * self.prototype[:, np.newaxis]).sum(axis=1)
-            dot_products = np.maximum(0, np.dot(self.weights[intersect], dot_products.T))
+            dot_products = np.dot(self.weights[intersect], dot_products.T)
             found_positions = np.dot(dot_products.T, self.template_positions[intersect])/(dot_products.sum(0)[:, np.newaxis])
             peak_locations['x'][idx] = found_positions[:, 0]
             peak_locations['y'][idx] = found_positions[:, 1]
