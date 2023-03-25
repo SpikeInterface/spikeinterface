@@ -206,8 +206,8 @@ class LocalizeFromTemplates(PipelineNode):
     local_radius_um: float
         Radius in um for channel sparsity.
     """
-    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=150., upsampling_um=3,
-        sigma_um=50, sigma_ms=0.25, margin_um=100):
+    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=75., upsampling_um=5,
+        sigma_um=100, sigma_ms=0.25, margin_um=50):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         
         self.local_radius_um = local_radius_um
@@ -235,8 +235,6 @@ class LocalizeFromTemplates(PipelineNode):
         dx = np.abs(x_max - x_min)
         dy = np.abs(y_max - y_min)
 
-
-        
         eps = upsampling_um/10
 
         all_x, all_y = np.meshgrid(np.arange(x_min, x_max+eps, upsampling_um), np.arange(y_min, y_max+eps, upsampling_um))
@@ -255,10 +253,6 @@ class LocalizeFromTemplates(PipelineNode):
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
 
         self._kwargs.update(dict(local_radius_um=self.local_radius_um,
-                                 nb_templates=self.nb_templates,
-                                 sigma_um=self.sigma_um, 
-                                 margin_um=self.margin_um, 
-                                 upsampling_um=self.upsampling_um,
                                  prototype=self.prototype,
                                  template_positions=self.template_positions,
                                  neighbours_mask=self.neighbours_mask,
