@@ -94,7 +94,7 @@ class SplitUnitSorting(BaseSorting):
         if parent_sorting.has_recording():
             self.register_recording(parent_sorting._recording)
 
-        self._kwargs = dict(parent_sorting=parent_sorting.to_dict(), split_unit_id=split_unit_id, 
+        self._kwargs = dict(parent_sorting=parent_sorting, split_unit_id=split_unit_id, 
                             indices_list=indices_list, new_unit_ids=new_unit_ids,properties_policy=properties_policy)
 
 
