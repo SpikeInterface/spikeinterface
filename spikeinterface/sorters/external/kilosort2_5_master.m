@@ -100,6 +100,9 @@ function kilosort2_5_master(fpath, kilosortPath)
 
         fprintf('found %d good units \n', sum(rez.good>0))
 
+        % save rez
+        save(fullfile(fpath, 'rez.mat'), 'rez', '-v7')
+
         % write to Phy
         fprintf('Saving results to Phy  \n')
         rezToPhy(rez, fullfile(fpath));
