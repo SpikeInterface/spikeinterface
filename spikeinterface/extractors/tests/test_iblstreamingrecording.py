@@ -25,7 +25,7 @@ class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
         self.assertCountEqual(first=stream_names, second=expected_stream_names)
 
     def test_representation(self):
-        expected_recording_representation = "IblStreamingRecordingExtractor: 384 channels - 1 segments - 30.0kHz - 5812.311s - 124.72 GiB"
+        expected_recording_representation = "IblStreamingRecordingExtractor: 384 channels - 1 segments - 30.0kHz - 5812.311s - int16 type - 124.72 GiB"
         assert repr(self.recording) == expected_recording_representation
 
     def test_dtype(self):
