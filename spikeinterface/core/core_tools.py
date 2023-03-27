@@ -811,3 +811,21 @@ def recursive_key_finder(d, key):
         else:
             if k == key:
                 yield v
+
+
+def convert_bytes_to_str(byte_value:int ) -> str:
+    """
+    Converts a number of bytes to a value in either KiB, MiB, GiB, or TiB.
+
+    Args:
+        byte_value (int): The number of bytes to convert.
+
+    Returns:
+        str: The converted value with the appropriate unit (KiB, MiB, GiB, or TiB).
+    """
+    suffixes = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
+    i = 0
+    while byte_value >= 1024 and i < len(suffixes) - 1:
+        byte_value /= 1024
+        i += 1
+    return f"{byte_value:.2f} {suffixes[i]}"
