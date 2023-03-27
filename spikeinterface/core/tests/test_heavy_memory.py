@@ -3,7 +3,7 @@ import platform
 
 import psutil
 
-from spikeinterface.core.generate import generate_lazy_random_recording
+from spikeinterface.core.generate import generate_lazy_recording
 
 
 def test_writing_overflow():
@@ -34,7 +34,7 @@ def test_writing_overflow():
     full_traces_size_GiB = 10.0  #  Both linux and windows have 7 GiB of ram available
     job_kwargs = dict(n_jobs=-1, total_memory="1G", verbose=True, progress_bar=True)
     # job_kwargs = dict(n_jobs=-1, chunk_memory="1G", verbose=True, progress_bar=True)
-    large_recording = generate_lazy_random_recording(full_traces_size_GiB=full_traces_size_GiB)
+    large_recording = generate_lazy_recording(full_traces_size_GiB=full_traces_size_GiB)
 
     binary_recoder_cache = large_recording.save_to_folder(**job_kwargs)
     print(binary_recoder_cache)
@@ -86,7 +86,7 @@ def test_writing_overflow_failing_non_parallel():
     full_traces_size_GiB = 8.0
     job_kwargs = dict(n_jobs=1, total_memory="8G", verbose=True, progress_bar=True)
     # job_kwargs = dict(n_jobs=-1, chunk_memory="1G", verbose=True, progress_bar=True)
-    large_recording = generate_lazy_random_recording(full_traces_size_GiB=full_traces_size_GiB)
+    large_recording = generate_lazy_recording(full_traces_size_GiB=full_traces_size_GiB)
 
     binary_recoder_cache = large_recording.save_to_folder(**job_kwargs)
     print(binary_recoder_cache)
