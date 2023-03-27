@@ -14,7 +14,7 @@ from ..postprocessing.unit_localization import (dtype_localize_by_method,
                                                 enforce_decrease_shells_ptp)
 
 
-def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.3, ms_after=.5, **kwargs):
+def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.5, ms_after=.5, **kwargs):
     """Localize peak (spike) in 2D or 3D depending the method.
 
     When a probe is 2D then:
@@ -121,10 +121,14 @@ class LocalizeCenterOfMass(LocalizeBase):
     params_doc = """
     local_radius_um: float
         Radius in um for channel sparsity.
+    feature: str ['ptp', 'mean', 'energy', 'v_peak']
+        Feature to consider for computation. Default is 'ptp'
     """
-    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=75.):
-        LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um)
+    def __init__(self, recording, return_ouput=True, parents=['extract_waveforms'], local_radius_um=75., feature='ptp'):
+        LocalizeBase.__init__(self, recording, return_ouput=return_ouput, parents=parents, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
+        self.feature = feature
+        self._kwargs.update(dict(feature=feature))
 
     def get_dtype(self):
         return self._dtype
@@ -137,8 +141,17 @@ class LocalizeCenterOfMass(LocalizeBase):
             chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
             local_contact_locations = self.contact_locations[chan_inds, :]
 
-            wf_ptp = (waveforms[idx][:, :, chan_inds]).ptp(axis=1)
-            coms = np.dot(wf_ptp, local_contact_locations)/(np.sum(wf_ptp, axis=1)[:,np.newaxis])
+            if self.feature == 'ptp':
+                wf_data = (waveforms[idx][:, :, chan_inds]).ptp(axis=1)
+            elif self.feature == 'mean':
+                wf_data = (waveforms[idx][:, :, chan_inds]).mean(axis=1)
+            elif self.feature == 'energy':
+                wf_data = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
+            elif self.feature == 'v_peak':
+                nbefore = waveforms[idx].shape[1] // 2
+                wf_data = waveforms[idx][:, nbefore, chan_inds]
+
+            coms = np.dot(wf_data, local_contact_locations)/(np.sum(wf_data, axis=1)[:,np.newaxis])
             peak_locations['x'][idx] = coms[:, 0]
             peak_locations['y'][idx] = coms[:, 1]
 
@@ -160,10 +173,10 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         For channel sparsity.
     max_distance_um: float, default: 1000
         Boundary for distance estimation.
-    enforce_decrease : bool (default True)
+    enforce_decrease : bool (default False)
         Enforce spatial decreasingness for PTP vectors.
     """
-    def __init__(self, recording, return_output=True, parents=['extract_waveforms'],
+    def __init__(self, recording, return_ouput=True, parents=['extract_waveforms'],
                             local_radius_um=75., max_distance_um=150., optimizer='minimize_with_log_penality', enforce_decrease=False):
         LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um)
 

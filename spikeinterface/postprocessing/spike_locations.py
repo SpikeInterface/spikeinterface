@@ -25,7 +25,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         extremum_channel_inds = get_template_extremum_channel(self.waveform_extractor, outputs="index")
         self.spikes = self.waveform_extractor.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
 
-    def _set_params(self, ms_before=1., ms_after=1.5, method='center_of_mass',
+    def _set_params(self, ms_before=1., ms_after=1., method='center_of_mass',
                     method_kwargs={}):
 
         params = dict(ms_before=ms_before,
@@ -103,7 +103,7 @@ WaveformExtractor.register_extension(SpikeLocationsCalculator)
 
 
 def compute_spike_locations(waveform_extractor, load_if_exists=False, 
-                            ms_before=0.3, ms_after=0.5, 
+                            ms_before=1., ms_after=1, 
                             method='center_of_mass',
                             method_kwargs={},
                             outputs='concatenated',
@@ -126,7 +126,7 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
     method_kwargs : dict 
         Other kwargs depending on the method.
     outputs : str 
-        'numpy' (default) / 'numpy_dtype' / 'dict'
+        'concatenated' (default) / 'by_unit'
     {}
 
     Returns

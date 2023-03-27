@@ -219,7 +219,7 @@ def estimate_distance_error_with_log(vec, wf_ptp, local_contact_locations, maxpt
 
 
 def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with_log_penality',
-                                    radius_um=50, max_distance_um=1000, return_alpha=False):
+                                    local_radius_um=75, max_distance_um=1000, return_alpha=False, enforce_decrease=False):
     '''
     Localize unit with monopolar triangulation.
     This method is from Julien Boussard, Erdem Varol and Charlie Windolf
@@ -243,12 +243,14 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         A waveform extractor object
     method: str  ('least_square', 'minimize_with_log_penality')
        2 variants of the method
-    radius_um: float
+    local_radius_um: float
         For channel sparsity
     max_distance_um: float
         to make bounddary in x, y, z and also for alpha
     return_alpha: bool default False
         Return or not the alpha value
+    enforce_decrease : False
+        To enforce spatial decreasingness for PTP vectors.
 
     Returns
     -------
@@ -262,17 +264,30 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
 
     contact_locations = waveform_extractor.get_channel_locations()
 
-    sparsity = compute_sparsity(waveform_extractor, method='radius', radius_um=radius_um)
+    sparsity = compute_sparsity(waveform_extractor, method='radius', radius_um=local_radius_um)
     templates = waveform_extractor.get_all_templates(mode='average')
+
+    #if enforce_decrease:
+    #    neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
+    #    for i, unit_id in enumerate(unit_ids):
+    #        neighbours_mask[i][channel_sparsity[unit_id]] = True
+    #    enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
+    #    best_channels = get_template_extremum_channel(waveform_extractor, outputs='index')
 
     unit_location = np.zeros((unit_ids.size, 4), dtype='float64')
     for i, unit_id in enumerate(unit_ids):
         chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
         local_contact_locations = contact_locations[chan_inds, :]
 
-        # wf is (nsample, nchan) - chann is only nieghboor
+        # wf is (nsample, nchan) - chann is only neighboor
         wf = templates[i, :, :]
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
+
+        #if enforce_decrease:
+        #    enforce_decrease_shells_ptp(
+        #        wf_ptp, best_channels[unit_id], enforce_decrease_radial_parents, in_place=True
+        #    )
+
         unit_location[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_um, optimizer)
 
     if not return_alpha:
@@ -281,7 +296,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
     return unit_location
 
 
-def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=50):
+def compute_center_of_mass(waveform_extractor, peak_sign='neg', local_radius_um=75, feature='ptp'):
     '''
     Computes the center of mass (COM) of a unit based on the template amplitudes.
 
@@ -293,6 +308,8 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=50):
         Sign of the template to compute best channels ('neg', 'pos', 'both')
     radius_um: float
         Radius to consider in order to estimate the COM
+    feature: str ['ptp', 'mean', 'energy', 'v_peak']
+        Feature to consider for computation. Default is 'ptp'
 
     Returns
     -------
@@ -303,8 +320,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=50):
     recording = waveform_extractor.recording
     contact_locations = recording.get_channel_locations()
 
-    # TODO
-    sparsity = compute_sparsity(waveform_extractor, peak_sign=peak_sign, method='radius', radius_um=radius_um)
+    sparsity = compute_sparsity(waveform_extractor, peak_sign=peak_sign, method='radius', radius_um=local_radius_um)
     templates = waveform_extractor.get_all_templates(mode='average')
 
     unit_location = np.zeros((unit_ids.size, 2), dtype='float64')
@@ -314,10 +330,17 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=50):
 
         wf = templates[i, :, :]
 
-        wf_ptp = wf[:, chan_inds].ptp(axis=0)
+        if feature == 'ptp':
+            wf_data = (wf[:, chan_inds]).ptp(axis=0)
+        elif feature == 'mean':
+            wf_data = (wf[:, chan_inds]).mean(axis=0)
+        elif feature == 'energy':
+            wf_data = np.linalg.norm(wf[:, chan_inds], axis=0)
+        elif feature == 'v_peak':
+            wf_data = wf[waveform_extractor.nbefore, chan_inds]
 
         # center of mass
-        com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
+        com = np.sum(wf_data[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_data)
         unit_location[i, :] = com
 
     return unit_location
