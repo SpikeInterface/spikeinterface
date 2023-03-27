@@ -150,6 +150,12 @@ def get_chunk_with_margin(
 ):
     """
     Helper to get chunk with margin
+
+    The margin is extracted from the recording when possible. If
+    at the edge of the recording, no margin is used unless one
+    of `add_zeros` or `add_reflect_padding` is True. In the first
+    case zero padding is used, in the second case np.pad is called
+    with mod="reflect".
     """
     length = rec_segment.get_num_samples()
 
