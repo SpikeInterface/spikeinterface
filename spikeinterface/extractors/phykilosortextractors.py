@@ -36,6 +36,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         phy_folder = Path(folder_path)
 
         spike_times = np.load(phy_folder / 'spike_times.npy')
+        spike_times = np.atleast_1d(spike_times.squeeze())  # Because sometimes, this is a 2d array.
 
         if (phy_folder / 'spike_clusters.npy').is_file():
             spike_clusters = np.load(phy_folder / 'spike_clusters.npy')
