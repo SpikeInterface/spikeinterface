@@ -12,7 +12,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
         self,
         parent_recording: BaseRecording,
         direction: str = "y",
-        dtype=None,
+        dtype="float32",
     ):
         """Averages channels at the same position along `direction
 
@@ -28,9 +28,8 @@ class AverageAcrossDirectionRecording(BaseRecording):
             Channels living at unique positions along this direction
             will be averaged.
         dtype : optional numpy dtype
-            If supplied, convert recording to this type before averaging.
-            If unset, if the recording is not a floating type, it is converted
-            to float32 by default, or kept as its floating type otherwise.
+            If unset, parent dtype is preserved, but the average will
+            lose accuracy, so float32 by default.
         """
         parent_channel_locations = parent_recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)
@@ -55,8 +54,8 @@ class AverageAcrossDirectionRecording(BaseRecording):
         joined_channel_ids = np.array(joined_channel_ids)
 
         dtype_ = dtype
-        if dtype_ is None and parent_recording.dtype.kind != "f":
-            dtype_ = "float32"
+        if dtype_ is None:
+            dtype_ = parent_recording.dtype
 
         BaseRecording.__init__(
             self,

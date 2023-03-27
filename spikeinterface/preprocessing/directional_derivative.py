@@ -14,7 +14,7 @@ class DirectionalDerivativeRecording(BasePreprocessor):
         direction: str = "y",
         order: int = 1,
         edge_order: int = 2,
-        dtype=None,
+        dtype="float32",
     ):
         """Take derivative of any `order` along `direction`
 
@@ -37,9 +37,8 @@ class DirectionalDerivativeRecording(BasePreprocessor):
         edge_order : int
             Order of gradient accuracy at edges; see np.gradient for details.
         dtype : optional numpy dtype
-            If supplied, convert recording to this type before taking grad.
-            If unset, if the recording is not a floating type, it is converted
-            to float32 by default, or kept as its floating type otherwise.
+            If unset, parent dtype is preserved, but the derivative can
+            overflow or lose accuracy, so "float32" by default.
         """
         parent_channel_locations = recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)
@@ -50,8 +49,8 @@ class DirectionalDerivativeRecording(BasePreprocessor):
 
         # float32 by default if parent recording is integer
         dtype_ = dtype
-        if dtype is None and recording.dtype.kind != "f":
-            dtype_ = "float32"
+        if dtype_ is None:
+            dtype_ = recording.dtype
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
 
