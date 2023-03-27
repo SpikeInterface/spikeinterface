@@ -346,7 +346,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', local_radius_um=
     return unit_location
 
 
-def compute_from_templates(waveform_extractor, peak_sign='neg', radius_um=75., upsampling_um=5,
+def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=75., upsampling_um=5,
         sigma_um=100, sigma_ms=0.25, margin_um=50):
     '''
     Estimate the positions of the templates from a large grid of fake templates
@@ -357,7 +357,7 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', radius_um=75., u
         The waveform extractor
     peak_sign: str
         Sign of the template to compute best channels ('neg', 'pos', 'both')
-    radius_um: float
+    local_radius_um: float
         Radius to consider for the fake templates
     upsampling_um: float
         Upsampling resolution for the grid of templates
@@ -373,7 +373,7 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', radius_um=75., u
     unit_location: np.array
     '''
     
-    contact_locations = recording.get_channel_locations()
+    contact_locations = waveform_extractor.recording.get_channel_locations()
 
     nbefore = waveform_extractor.nbefore
     nafter = waveform_extractor.nafter
@@ -405,7 +405,7 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', radius_um=75., u
 
     import sklearn
     dist = sklearn.metrics.pairwise_distances(template_positions, contact_locations)
-    neighbours_mask = dist < radius_um
+    neighbours_mask = dist < local_radius_um
     weights = (neighbours_mask * np.exp(-dist**2/(2*(sigma_um**2)))).T
 
     templates = waveform_extractor.get_all_templates(mode='average')
@@ -418,7 +418,7 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', radius_um=75., u
         wf = templates[i, :, :]
         intersect = neighbours_mask[:, main_chan] == True
         dot_products = (wf * prototype).sum(axis=1)
-        dot_products = np.dot(dot_products, weights[:, intersect])
+        dot_products = np.maximum(0, np.dot(dot_products, weights[:, intersect]))
         found_positions = np.dot(dot_products, template_positions[intersect])/dot_products.sum()
         unit_location[i, :] = found_positions
 

@@ -124,8 +124,8 @@ class LocalizeCenterOfMass(LocalizeBase):
     feature: str ['ptp', 'mean', 'energy', 'v_peak']
         Feature to consider for computation. Default is 'ptp'
     """
-    def __init__(self, recording, return_ouput=True, parents=['extract_waveforms'], local_radius_um=75., feature='ptp'):
-        LocalizeBase.__init__(self, recording, return_ouput=return_ouput, parents=parents, local_radius_um=local_radius_um)
+    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=75., feature='ptp'):
+        LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
         self.feature = feature
         self._kwargs.update(dict(feature=feature))
@@ -176,7 +176,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
     enforce_decrease : bool (default False)
         Enforce spatial decreasingness for PTP vectors.
     """
-    def __init__(self, recording, return_ouput=True, parents=['extract_waveforms'],
+    def __init__(self, recording, return_output=True, parents=['extract_waveforms'],
                             local_radius_um=75., max_distance_um=150., optimizer='minimize_with_log_penality', enforce_decrease=False):
         LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um)
 
