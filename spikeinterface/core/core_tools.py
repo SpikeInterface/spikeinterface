@@ -815,13 +815,32 @@ def recursive_key_finder(d, key):
 
 def convert_bytes_to_str(byte_value:int ) -> str:
     """
-    Converts a number of bytes to a value in either KiB, MiB, GiB, or TiB.
+    Convert a number of bytes to a human-readable string with an appropriate unit.
 
-    Args:
-        byte_value (int): The number of bytes to convert.
+    This function converts a given number of bytes into a human-readable string
+    representing the value in either bytes (B), kibibytes (KiB), mebibytes (MiB),
+    gibibytes (GiB), or tebibytes (TiB). The function uses the IEC binary prefixes
+    (1 KiB = 1024 B, 1 MiB = 1024 KiB, etc.) to determine the appropriate unit.
 
-    Returns:
-        str: The converted value with the appropriate unit (KiB, MiB, GiB, or TiB).
+    Parameters
+    ----------
+    byte_value : int
+        The number of bytes to convert.
+
+    Returns
+    -------
+    str
+        The converted value as a formatted string with two decimal places,
+        followed by a space and the appropriate unit (B, KiB, MiB, GiB, or TiB).
+
+    Examples
+    --------
+    >>> convert_bytes_to_str(1024)
+    '1.00 KiB'
+    >>> convert_bytes_to_str(1048576)
+    '1.00 MiB'
+    >>> convert_bytes_to_str(45056)
+    '43.99 KiB'
     """
     suffixes = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
     i = 0
