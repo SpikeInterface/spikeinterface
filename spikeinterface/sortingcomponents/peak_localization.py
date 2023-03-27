@@ -223,6 +223,7 @@ class LocalizeFromTemplates(PipelineNode):
         
         time_axis = np.arange(-nbefore, nafter) * 1000/fs
         self.prototype = -np.exp(-time_axis**2/(2*(sigma_ms**2)))
+        self.prototype = self.prototype[:, np.newaxis]
 
         x_min, x_max = self.contact_locations[:,0].min(), self.contact_locations[:,0].max()
         y_min, y_max = self.contact_locations[:,1].min(), self.contact_locations[:,1].max()
@@ -248,7 +249,7 @@ class LocalizeFromTemplates(PipelineNode):
         import sklearn
         dist = sklearn.metrics.pairwise_distances(self.template_positions, self.contact_locations)
         self.neighbours_mask = dist < self.local_radius_um
-        self.weights = self.neighbours_mask * np.exp(-dist**2/(2*(sigma_um**2)))
+        self.weights = (self.neighbours_mask * np.exp(-dist**2/(2*(sigma_um**2)))).T
 
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
 
@@ -267,9 +268,9 @@ class LocalizeFromTemplates(PipelineNode):
         for main_chan in np.unique(peaks['channel_ind']):
             idx, = np.nonzero(peaks['channel_ind'] == main_chan)
             intersect = self.neighbours_mask[:, main_chan] == True
-            dot_products = (waveforms[idx] * self.prototype[:, np.newaxis]).sum(axis=1)
-            dot_products = np.dot(self.weights[intersect], dot_products.T)
-            found_positions = np.dot(dot_products.T, self.template_positions[intersect])/(dot_products.sum(0)[:, np.newaxis])
+            dot_products = (waveforms[idx] * self.prototype).sum(axis=1)
+            dot_products = np.dot(dot_products, self.weights[:, intersect])
+            found_positions = np.dot(dot_products, self.template_positions[intersect])/(dot_products.sum(1)[:, np.newaxis])
             peak_locations['x'][idx] = found_positions[:, 0]
             peak_locations['y'][idx] = found_positions[:, 1]
 
