@@ -25,6 +25,7 @@ dependencies = [
     "threadpoolctl",
     "tqdm",
     "probeinterface>=0.2.16",
+    "psutil",
 ]
 
 [build-system]
@@ -86,6 +87,12 @@ widgets = [
     "ipywidgets",
     "sortingview>=0.11.0",
     "figurl-jupyter"
+]
+
+test_core = [
+    "pytest",
+    "zarr",
+    "psutil",
 ]
 
 test = [

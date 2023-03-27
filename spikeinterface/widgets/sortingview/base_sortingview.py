@@ -28,7 +28,7 @@ class SortingviewPlotter(BackendPlotter):
         serializable_dict = check_json(dict_to_serialize)
         returns = ()
         for i in range(len(args) - 1):
-            returns += (serializable_dict[i],)
+            returns += (serializable_dict[str(i)],)
         if len(returns) == 1:
             returns = returns[0]
         return returns
