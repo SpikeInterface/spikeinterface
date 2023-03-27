@@ -516,7 +516,7 @@ def generate_lazy_recording(full_traces_size_GiB: float, seed=None) -> Generator
     num_channels = 1024    
     
     GiB_to_bytes = 1024** 3
-    full_traces_size_bytes = full_traces_size_GiB * GiB_to_bytes 
+    full_traces_size_bytes = int(full_traces_size_GiB * GiB_to_bytes) 
     num_samples = int(full_traces_size_bytes / (num_channels * dtype.itemsize))
     durations = [num_samples / sampling_frequency]
 
@@ -524,6 +524,7 @@ def generate_lazy_recording(full_traces_size_GiB: float, seed=None) -> Generator
                         num_channels=num_channels, dtype=dtype, seed=seed)
 
     return recording
+
 
 if __name__ == '__main__':
     print(generate_recording())
