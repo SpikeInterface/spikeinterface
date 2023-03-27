@@ -313,7 +313,7 @@ class ChunkRecordingExecutor:
         self.max_threads_per_process = max_threads_per_process
         
         if verbose:
-            print(self.job_name, 'with n_jobs =', self.n_jobs, 'and chunk_size =', self.chunk_size)
+            print(self.job_name, 'with n_jobs =', self.n_jobs, 'and chunk_size =', self.chunk_size, f"{total_memory=} - {chunk_memory=} - {self.mp_context=} - {self.max_threads_per_process=}")
 
     def run(self):
         """
