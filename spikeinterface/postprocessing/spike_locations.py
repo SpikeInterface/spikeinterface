@@ -103,7 +103,7 @@ WaveformExtractor.register_extension(SpikeLocationsCalculator)
 
 
 def compute_spike_locations(waveform_extractor, load_if_exists=False, 
-                            ms_before=1., ms_after=1.5, 
+                            ms_before=0.3, ms_after=0.5, 
                             method='center_of_mass',
                             method_kwargs={},
                             outputs='concatenated',
@@ -122,7 +122,7 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
     ms_after : float
         The right window, after a peak, in milliseconds.
     method : str
-        'center_of_mass' / 'monopolar_triangulation'
+        'center_of_mass' / 'monopolar_triangulation' / 'from_templates'
     method_kwargs : dict 
         Other kwargs depending on the method.
     outputs : str 
@@ -142,7 +142,7 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
         slc = SpikeLocationsCalculator(waveform_extractor)
         slc.set_params(ms_before=ms_before, ms_after=ms_after, method=method, method_kwargs=method_kwargs)
         slc.run(**job_kwargs)
-    
+
     locs = slc.get_data(outputs=outputs)
     return locs
 

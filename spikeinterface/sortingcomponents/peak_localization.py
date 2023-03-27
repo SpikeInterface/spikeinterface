@@ -39,7 +39,7 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.3, ms_
         Array with estimated location for each spike.
         The dtype depends on the method. ('x', 'y') or ('x', 'y', 'z', 'alpha').
     """
-    #assert method in possible_localization_methods, f"Method {method} is not supported. Choose from {possible_localization_methods}"
+    assert method in possible_localization_methods, f"Method {method} is not supported. Choose from {possible_localization_methods}"
 
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
     
@@ -110,7 +110,12 @@ class LocalizePeakChannel(PipelineNode):
 
 
 class LocalizeCenterOfMass(LocalizeBase):
-    """Localize peaks using the center of mass method."""
+    """Localize peaks using the center of mass method
+
+    Notes
+    -----
+    See spikeinterface.postprocessing.unit_localization.
+    """
     need_waveforms = True
     name = 'center_of_mass'
     params_doc = """
@@ -199,12 +204,25 @@ class LocalizeMonopolarTriangulation(PipelineNode):
 
 
 class LocalizeFromTemplates(PipelineNode):
-    """Localize peaks using the center of mass method."""
+    """Localize peaks using convlution with a grid of fake templates
+
+    Notes
+    -----
+    See spikeinterface.postprocessing.unit_localization.
+    """
     need_waveforms = True
     name = 'from_templates'
     params_doc = """
     local_radius_um: float
         Radius in um for channel sparsity.
+    upsampling_um: float
+        Upsampling resolution for the grid of templates
+    sigma_um: float
+        The spatial decay of the fake templates
+    sigma_ms: float
+        The temporal decay of the fake templates
+    margin_um: float
+        The margin for the grid of fake templates
     """
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=75., upsampling_um=5,
         sigma_um=100, sigma_ms=0.25, margin_um=50):
@@ -251,7 +269,7 @@ class LocalizeFromTemplates(PipelineNode):
         self.neighbours_mask = dist < self.local_radius_um
         self.weights = (self.neighbours_mask * np.exp(-dist**2/(2*(sigma_um**2)))).T
 
-        self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
+        self._dtype = np.dtype(dtype_localize_by_method['from_templates'])
 
         self._kwargs.update(dict(local_radius_um=self.local_radius_um,
                                  prototype=self.prototype,
