@@ -1,7 +1,18 @@
 import numpy as np
+import pytest
 
-from spikeinterface.core import NumpyRecording
+from spikeinterface.core import NumpyRecording, load_extractor, set_global_tmp_folder
+from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.preprocessing import generate_RC_filter, MergeNeuropixels1Recording
+
+
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "preprocessing" / "merge_ap_lfp"
+else:
+    cache_folder = Path("cache_folder") / "preprocessing" / "merge_ap_lfp"
+
+set_global_tmp_folder(cache_folder)
+cache_folder.mkdir(parents=True, exist_ok=True)
 
 
 def test_generate_RC_filter():
@@ -46,30 +57,43 @@ def test_MergeApLfpRecording():
     assert original_traces.shape == merged_traces.shape
     assert np.allclose(original_traces, merged_traces, rtol=1e-3, atol=1e-4)
 
-    traces = merged_recording.get_traces(start_frame=100, end_frame=30000)
+    # Check dumpability
+    saved_loaded = load_extractor(merged_recording.to_dict())
+    check_recordings_equal(merged_recording, saved_loaded, return_scaled=False)
 
-    # print(original_traces[1000:1010, 0])
-    # print(traces[900:910, 0])
-    # print(traces[900:910, :])
+    # Check chunks
+    chunked_recording = merged_recording.save(folder=cache_folder / "chunked", n_jobs=2, chunk_duration='1s')
+    chunked_traces = chunked_recording.get_traces()
 
-    # import plotly.graph_objects as go
-    # fig = go.Figure()
+    assert np.all(np.abs(merged_traces - chunked_traces)[500:-500] < 0.05)
 
-    # fig.add_trace(go.Scattergl(
-    #     x=np.fft.rfftfreq(len(original_traces[100:30000, 0]), d=1/sf),
-    #     y=np.abs(np.fft.rfft(original_traces[100:30000, 0])),
-    #     mode="lines",
-    #     name="Original"
-    # ))
-    # fig.add_trace(go.Scattergl(
-    #     x=np.fft.rfftfreq(traces.shape[0], d=1/sf),
-    #     y=np.abs(np.fft.rfft(traces[:, 0])),
-    #     mode="lines",
-    #     name="Merged"
-    # ))
+    import plotly.graph_objects as go
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=np.arange(sf*T),
+        y=merged_traces[:, 0],
+        mode="lines",
+        name="Non-chunked"
+    ))
+    fig.add_trace(go.Scatter(
+        x=np.arange(sf*T),
+        y=chunked_traces[:, 0],
+        mode="lines",
+        name="Chunked"
+    ))
+    fig.add_trace(go.Scatter(
+        x=np.arange(sf*T),
+        y=merged_traces[:, 0] - chunked_traces[:, 0],
+        mode="lines",
+        name="Difference"
+    ))
+
+    for i in range(1, T):
+        fig.add_vline(x=i*sf, line_dash="dash", line_color="rgba(0, 0, 0, 0.3)")
 
     # fig.update_xaxes(type="log")
-    # fig.show()
+    fig.show()
 
 
 if __name__ == '__main__':

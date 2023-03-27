@@ -50,6 +50,8 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
 
     def __init__(self, ap_recording_segment: BaseRecordingSegment, lfp_recording_segment: BaseRecordingSegment,
                  ap_filter: Callable[[np.ndarray], np.ndarray], lfp_filter: Callable[[np.ndarray], np.ndarray], margin: int) -> None:
+        BaseRecordingSegment.__init__(self, ap_recording_segment.sampling_frequency, ap_recording_segment.t_start)
+
         self.ap_recording  = ap_recording_segment
         self.lfp_recording = lfp_recording_segment
         self.ap_filter  = ap_filter
