@@ -56,7 +56,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
             if values is not None:
                 self.set_property(k, values, ids=self.channel_ids[self.channel_mapping])
 
-        self._kwargs = dict(recording=parent_recording.to_dict(),
+        self._kwargs = dict(recording=parent_recording,
                             num_channels=num_channels, channel_mapping=channel_mapping)
 
 
