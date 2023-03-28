@@ -19,7 +19,7 @@ from ..core.template_tools import get_template_extremum_channel
 from ..postprocessing import WaveformPrincipalComponent
 import warnings
 
-from .misc_metrics import compute_num_spikes
+from .misc_metrics import compute_num_spikes, compute_firing_rates
 
 from ..core import get_random_data_chunks, load_waveforms, compute_sparsity, WaveformExtractor
 from ..core.job_tools import tqdm_joblib
@@ -39,6 +39,7 @@ _default_params = dict(
     nn_isolation=dict(
         max_spikes=10000,
         min_spikes=10,
+        min_fr=0.0,
         n_neighbors=4,
         n_components=10,
         radius_um=100,
@@ -47,6 +48,7 @@ _default_params = dict(
     nn_noise_overlap=dict(
         max_spikes=10000,
         min_spikes=10,
+        min_fr=0.0,
         n_neighbors=4,
         n_components=10,
         radius_um=100,
@@ -336,9 +338,11 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_n
 
 
 def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit_id: int,
-                                max_spikes: int = 1000, min_spikes: int = 10, n_neighbors: int = 5,
-                                n_components: int = 10, radius_um: float = 100, peak_sign: str = 'neg',
-                                min_spatial_overlap: float = 0.5, seed=None):
+                                max_spikes: int = 1000, min_spikes: int = 10,
+                                min_fr: float = 0.0, n_neighbors: int = 5,
+                                n_components: int = 10, radius_um: float = 100,
+                                peak_sign: str = 'neg', min_spatial_overlap: float = 0.5,
+                                seed=None):
     """Calculates unit isolation based on NearestNeighbors search in PCA space.
 
     Parameters
@@ -349,9 +353,14 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
         The ID for the unit to calculate these metrics for.
     max_spikes : int, default: 1000
         Max number of spikes to use per unit.
-    min_spikes : int, optional, defalt: 10
+    min_spikes : int, optional, default: 10
         Min number of spikes a unit must have to go through with metric computation.
-        Units with spikes < min_spikes gets numpy.NaN as the quality metric.
+        Units with spikes < min_spikes gets numpy.NaN as the quality metric, 
+        and are ignored when selecting other units' neighbors.
+    min_fr : float, optional, default: 0.0
+        Min firing rate a unit must have to go through with metric computation.
+        Units with firing rate < min_fr gets numpy.NaN as the quality metric,
+        and are ignored when selecting other units' neighbors.
     n_neighbors : int, default: 5
         Number of neighbors to check membership of.
     n_components : int, default: 10
@@ -408,6 +417,7 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
     sorting = waveform_extractor.sorting
     all_units_ids = sorting.get_unit_ids()
     n_spikes_all_units = compute_num_spikes(waveform_extractor)
+    fr_all_units = compute_firing_rates(waveform_extractor)
 
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
@@ -415,10 +425,18 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
                       f'specified by `min_spikes` ({min_spikes}); ',
                       f'returning NaN as the quality metric...')
         return np.nan
+    elif fr_all_units[this_unit_id] < min_fr:
+        warnings.warn(f'Warning: unit {this_unit_id} has a firing rate ',
+                      f'below the specified `min_fr` ({min_fr}Hz); '
+                      f'returning NaN as the quality metric...')
+        return np.nan
     else:
         # first remove the units with too few spikes
-        unit_ids_to_keep = np.array([unit for unit, num_spikes in n_spikes_all_units.items()
-                                     if num_spikes >= min_spikes])
+        unit_ids_to_keep = np.array([
+            unit for unit in all_units_ids
+            if (n_spikes_all_units[unit] >= min_spikes
+                and fr_all_units[unit] >= min_fr)
+        ])
         sorting = sorting.select_units(unit_ids=unit_ids_to_keep)
 
         all_units_ids = sorting.get_unit_ids()
@@ -489,9 +507,9 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
         return nn_isolation
 
 
-def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor,
-                                    this_unit_id: int, max_spikes: int = 1000,
-                                    min_spikes: int = 10, n_neighbors: int = 5,
+def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor, this_unit_id: int,
+                                    max_spikes: int = 1000, min_spikes: int = 10,
+                                    min_fr: float = 0.0, n_neighbors: int = 5,
                                     n_components: int = 10, radius_um: float = 100,
                                     peak_sign: str = 'neg', seed=None):
     """Calculates unit noise overlap based on NearestNeighbors search in PCA space.
@@ -504,9 +522,12 @@ def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor,
         The ID of the unit to calculate this metric on.
     max_spikes : int, default: 1000
         The max number of spikes to use per cluster.
-    min_spikes : int, optional, defalt: 10
+    min_spikes : int, optional, default: 10
         Min number of spikes a unit must have to go through with metric computation.
         Units with spikes < min_spikes gets numpy.NaN as the quality metric.
+    min_fr : float, optional, default: 0.0
+        Min firing rate a unit must have to go through with metric computation.
+        Units with firing rate < min_fr gets numpy.NaN as the quality metric.
     n_neighbors : int, default: 5
         The number of neighbors to check membership.
     n_components : int, default: 10
@@ -546,11 +567,17 @@ def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor,
     rng = np.random.default_rng(seed=seed)
 
     n_spikes_all_units = compute_num_spikes(waveform_extractor)
+    fr_all_units = compute_firing_rates(waveform_extractor)
 
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
         warnings.warn(f'Warning: unit {this_unit_id} has fewer spikes than ',
                       f'specified by `min_spikes` ({min_spikes}); ',
+                      f'returning NaN as the quality metric...')
+        return np.nan
+    elif fr_all_units[this_unit_id] < min_fr:
+        warnings.warn(f'Warning: unit {this_unit_id} has a firing rate ',
+                      f'below the specified `min_fr` ({min_fr}Hz); '
                       f'returning NaN as the quality metric...')
         return np.nan
     else:

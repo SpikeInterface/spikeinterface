@@ -86,7 +86,7 @@ class ResampleRecording(BasePreprocessor):
             )
 
         self._kwargs = dict(
-            recording=recording.to_dict(),
+            recording=recording,
             resample_rate=resample_rate,
             margin_ms=margin_ms,
             dtype=dtype,
@@ -187,7 +187,7 @@ def check_nyquist(recording, resample_rate):
     # Check that the signal, if it has been filtered, is still not violating
     if recording.is_filtered():
         # Check if we have access to the highcut frequency
-        freq_max = list(recursive_key_finder(recording.to_dict(), "freq_max"))
+        freq_max = list(recursive_key_finder(recording, "freq_max"))
         if freq_max:
             # Given that there might be more than one filter applied, keep the lowest
             freq_max = min(freq_max)
