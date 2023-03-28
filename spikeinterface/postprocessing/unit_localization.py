@@ -345,8 +345,8 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', local_radius_um=
     return unit_location
 
 
-def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=30., upsampling_um=5,
-        sigma_um=100, sigma_ms=0.1, margin_um=50):
+def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=50., upsampling_um=5,
+        sigma_um=25, sigma_ms=0.25, margin_um=50):
     '''
     Estimate the positions of the templates from a large grid of fake templates
 
@@ -411,6 +411,7 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=
 
     peak_channels = get_template_extremum_channel(waveform_extractor, peak_sign, outputs='index')
     unit_ids = waveform_extractor.sorting.unit_ids
+    np.seterr(divide='ignore', invalid='ignore')
 
     unit_location = np.zeros((unit_ids.size, 2), dtype='float64')
     for i, unit_id in enumerate(unit_ids):
@@ -420,7 +421,9 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=
         intersect = neighbours_mask[:, main_chan] == True
         dot_products = ((wf / amplitude) * prototype).sum(axis=0)
         dot_products = np.dot(dot_products, weights[:, intersect])
-        found_positions = np.dot(dot_products, template_positions[intersect])/dot_products.sum()
+        dot_products = np.maximum(0, dot_products)
+        denominator = dot_products.sum()
+        found_positions = np.dot(dot_products, template_positions[intersect])/denominator
         unit_location[i, :] = found_positions
 
     return unit_location

@@ -237,8 +237,8 @@ class LocalizeFromTemplates(PipelineNode):
     margin_um: float
         The margin for the grid of fake templates
     """
-    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=30., upsampling_um=5,
-        sigma_um=100, sigma_ms=0.1, margin_um=50):
+    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=50., upsampling_um=5,
+        sigma_um=25., sigma_ms=0.25, margin_um=100.):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         
         self.local_radius_um = local_radius_um
@@ -288,6 +288,7 @@ class LocalizeFromTemplates(PipelineNode):
                                  neighbours_mask=self.neighbours_mask,
                                  weights=self.weights,
                                  nbefore=self.nbefore))
+        np.seterr(divide='ignore', invalid='ignore')
 
     def get_dtype(self):
         return self._dtype
@@ -304,7 +305,9 @@ class LocalizeFromTemplates(PipelineNode):
                 amplitudes = waveforms[idx, self.nbefore, main_chan]
             dot_products = (waveforms[idx]/(amplitudes[:, np.newaxis, np.newaxis]) * self.prototype).sum(axis=1)
             dot_products = np.dot(dot_products, self.weights[:, intersect])
-            found_positions = np.dot(dot_products, self.template_positions[intersect])/(dot_products.sum(1)[:, np.newaxis])
+            dot_products = np.maximum(0, dot_products)
+            denominators = dot_products.sum(1)
+            found_positions = np.dot(dot_products, self.template_positions[intersect])/(denominators[:, np.newaxis])
             peak_locations['x'][idx] = found_positions[:, 0]
             peak_locations['y'][idx] = found_positions[:, 1]
 
