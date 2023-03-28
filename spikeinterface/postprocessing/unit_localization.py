@@ -123,7 +123,6 @@ def compute_unit_locations(waveform_extractor,
     unit_locations: np.array
         unit location with shape (num_unit, 2) or (num_unit, 3) or (num_unit, 3) (with alpha)
     """
-    print("bonjour")
     if load_if_exists and waveform_extractor.is_extension(UnitLocationsCalculator.extension_name):
         ulc = waveform_extractor.load_extension(UnitLocationsCalculator.extension_name)
     else:
@@ -346,8 +345,8 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', local_radius_um=
     return unit_location
 
 
-def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=75., upsampling_um=5,
-        sigma_um=100, sigma_ms=0.25, margin_um=50):
+def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=40., upsampling_um=5,
+        sigma_um=100, sigma_ms=0.1, margin_um=50):
     '''
     Estimate the positions of the templates from a large grid of fake templates
 
@@ -377,11 +376,11 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=
 
     nbefore = waveform_extractor.nbefore
     nafter = waveform_extractor.nafter
-    ms_before = waveform_extractor.ms_before
-    fs = waveform_extractor.get_sampling_frequency()
+    fs = waveform_extractor.recording.get_sampling_frequency()
         
     time_axis = np.arange(-nbefore, nafter) * 1000/fs
     prototype = -np.exp(-time_axis**2/(2*(sigma_ms**2)))
+    prototype = prototype[:, np.newaxis]
 
     x_min, x_max = contact_locations[:,0].min(), contact_locations[:,0].max()
     y_min, y_max = contact_locations[:,1].min(), contact_locations[:,1].max()
@@ -410,15 +409,16 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=
 
     templates = waveform_extractor.get_all_templates(mode='average')
 
-    peaks = get_template_extremum_channel(waveform_extractor, peak_sign, outputs='index')
+    peak_channels = get_template_extremum_channel(waveform_extractor, peak_sign, outputs='index')
+    unit_ids = waveform_extractor.sorting.unit_ids
 
     unit_location = np.zeros((unit_ids.size, 2), dtype='float64')
     for i, unit_id in enumerate(unit_ids):
         main_chan = peak_channels[unit_id]
         wf = templates[i, :, :]
         intersect = neighbours_mask[:, main_chan] == True
-        dot_products = (wf * prototype).sum(axis=1)
-        dot_products = np.maximum(0, np.dot(dot_products, weights[:, intersect]))
+        dot_products = (wf * prototype).sum(axis=0)
+        dot_products = np.dot(dot_products, weights[:, intersect])
         found_positions = np.dot(dot_products, template_positions[intersect])/dot_products.sum()
         unit_location[i, :] = found_positions
 
