@@ -237,8 +237,8 @@ class LocalizeFromTemplates(PipelineNode):
     margin_um: float
         The margin for the grid of fake templates
     """
-    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=75., upsampling_um=5,
-        sigma_um=100, sigma_ms=0.25, margin_um=50):
+    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=40., upsampling_um=5,
+        sigma_um=100, sigma_ms=0.1, margin_um=50):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         
         self.local_radius_um = local_radius_um
@@ -249,7 +249,6 @@ class LocalizeFromTemplates(PipelineNode):
 
         nbefore = self.parents[-1].nbefore
         nafter = self.parents[-1].nafter
-        ms_before = self.parents[-1].ms_before
         fs = self.recording.get_sampling_frequency()
         
         time_axis = np.arange(-nbefore, nafter) * 1000/fs
