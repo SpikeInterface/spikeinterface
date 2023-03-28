@@ -237,7 +237,7 @@ class LocalizeFromTemplates(PipelineNode):
     margin_um: float
         The margin for the grid of fake templates
     """
-    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=40., upsampling_um=5,
+    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=30., upsampling_um=5,
         sigma_um=100, sigma_ms=0.1, margin_um=50):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         
@@ -247,12 +247,12 @@ class LocalizeFromTemplates(PipelineNode):
         self.upsampling_um = upsampling_um
         self.contact_locations = recording.get_channel_locations()
 
-        nbefore = self.parents[-1].nbefore
-        nafter = self.parents[-1].nafter
+        self.nbefore = self.parents[-1].nbefore
+        self.nafter = self.parents[-1].nafter
         fs = self.recording.get_sampling_frequency()
         
-        time_axis = np.arange(-nbefore, nafter) * 1000/fs
-        self.prototype = -np.exp(-time_axis**2/(2*(sigma_ms**2)))
+        time_axis = np.arange(-self.nbefore, self.nafter) * 1000/fs
+        self.prototype = np.exp(-time_axis**2/(2*(sigma_ms**2)))
         self.prototype = self.prototype[:, np.newaxis]
 
         x_min, x_max = self.contact_locations[:,0].min(), self.contact_locations[:,0].max()
@@ -282,12 +282,12 @@ class LocalizeFromTemplates(PipelineNode):
         self.weights = (self.neighbours_mask * np.exp(-dist**2/(2*(sigma_um**2)))).T
 
         self._dtype = np.dtype(dtype_localize_by_method['from_templates'])
-
         self._kwargs.update(dict(local_radius_um=self.local_radius_um,
                                  prototype=self.prototype,
                                  template_positions=self.template_positions,
                                  neighbours_mask=self.neighbours_mask,
-                                 weights=self.weights))
+                                 weights=self.weights,
+                                 nbefore=self.nbefore))
 
     def get_dtype(self):
         return self._dtype
@@ -298,7 +298,11 @@ class LocalizeFromTemplates(PipelineNode):
         for main_chan in np.unique(peaks['channel_ind']):
             idx, = np.nonzero(peaks['channel_ind'] == main_chan)
             intersect = self.neighbours_mask[:, main_chan] == True
-            dot_products = (waveforms[idx] * self.prototype).sum(axis=1)
+            if 'amplitude' in peaks.dtype.names:
+                amplitudes = peaks['amplitude'][idx]
+            else:
+                amplitudes = waveforms[idx, self.nbefore, main_chan]
+            dot_products = (waveforms[idx]/(amplitudes[:, np.newaxis, np.newaxis]) * self.prototype).sum(axis=1)
             dot_products = np.dot(dot_products, self.weights[:, intersect])
             found_positions = np.dot(dot_products, self.template_positions[intersect])/(dot_products.sum(1)[:, np.newaxis])
             peak_locations['x'][idx] = found_positions[:, 0]
