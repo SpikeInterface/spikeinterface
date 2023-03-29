@@ -25,7 +25,6 @@ dependencies = [
     "threadpoolctl",
     "tqdm",
     "probeinterface>=0.2.16",
-    "psutil",
 ]
 
 [build-system]
