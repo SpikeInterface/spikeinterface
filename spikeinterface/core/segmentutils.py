@@ -349,7 +349,7 @@ class ConcatenateSegmentSorting(BaseSorting):
 
     def __init__(self, sorting_list, total_samples_list=None, ignore_times=True, sampling_frequency_max_diff=0):
 
-        # CHeck that all sortings have a recording or that sortings' num_samples are provided
+        # Check that all sortings have a recording or that sortings' num_samples are provided
         all_has_recording = all([sorting.has_recording() for sorting in sorting_list])
         if not all_has_recording:
             assert total_samples_list is not None, (
@@ -357,7 +357,7 @@ class ConcatenateSegmentSorting(BaseSorting):
                 "Call sorting.register_recording() or set `total_samples_list` kwarg."
             )
             assert len(total_samples_list) == len(sorting_list), (
-                "Unexpected length for `total_samples_list`"
+                "`total_samples_list` should have the same number of elements as `sorting_list`"
             )
             assert all([s.get_num_segments() == 1 for s in sorting_list]), (
                 "All sortings are expected to be monosegment."
@@ -422,7 +422,7 @@ class ConcatenateSegmentSorting(BaseSorting):
                         'ignore_times': ignore_times}
 
     def get_num_samples(self, segment_index=None):
-        """Overrides the BaseSorting method, which necessitates a recording."""
+        """Overrides the BaseSorting method, which requires a recording."""
         segment_index = self._check_segment_index(segment_index)
         n_samples = self._sorting_segments[segment_index].get_num_samples()
         if self.has_recording():  # Sanity check
