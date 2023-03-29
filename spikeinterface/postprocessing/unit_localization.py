@@ -430,11 +430,11 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=
         global_products = ((wf / amplitude) * prototype).sum(axis=0)
 
         found_positions = np.zeros((len(weights), 2), dtype=np.float32)
-        for count, weights in enumerate(weights):
-            dot_products = np.dot(global_products, weights[:, intersect])
+        for count, w in enumerate(weights):
+            dot_products = np.dot(global_products, w[:, intersect])
             dot_products = np.maximum(0, dot_products)
-            denominators = dot_products.sum()
-            found_positions = np.dot(dot_products, template_positions[intersect])/denominator
+            denominator = dot_products.sum()
+            found_positions[count] = np.dot(dot_products, template_positions[intersect])/denominator
 
         unit_location[i, :] = found_positions.mean(axis=0)
 
