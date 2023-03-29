@@ -13,6 +13,8 @@ from ..postprocessing.unit_localization import (dtype_localize_by_method,
                                                 make_radial_order_parents,
                                                 enforce_decrease_shells_ptp)
 
+from .tools import get_prototype_spike
+
 
 def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.5, ms_after=.5, **kwargs):
     """Localize peak (spike) in 2D or 3D depending the method.
@@ -58,6 +60,8 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.5, ms_
     elif method == "peak_channel":
         pipeline_nodes = [LocalizePeakChannel(recording,  **method_kwargs)]
     elif method == "from_templates":
+        if 'prototype' not in method_kwargs:
+            method_kwargs['prototype'] = get_prototype_spike(recording, peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs)
         extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_output=False)
         pipeline_nodes = [
             extract_dense_waveforms,
