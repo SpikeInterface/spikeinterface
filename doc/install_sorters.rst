@@ -279,9 +279,11 @@ The main differences are located in the clustering (now using on-the-fly feature
 noise clusters), and in the template-matching procedure, which is now a fully orthogonal matching pursuit, 
 working not only at peak times but at all times, recovering more spikes close to noise thresholds.
 
-* Python, requires HDBSCAN
+* Python
+* Requires: HDBSCAN and Numba
 * Authors: Pierre Yger
 * Installation::
 
         pip install hdbscan
         pip install spikeinterface
+        pip install numba  (or conda install numba as recommended by conda authors)
