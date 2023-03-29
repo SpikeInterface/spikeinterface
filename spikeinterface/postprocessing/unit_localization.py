@@ -346,7 +346,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', local_radius_um=
 
 
 def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=50., upsampling_um=5,
-        sigma_um=25, sigma_ms=0.25, margin_um=50):
+        sigma_um=25, sigma_ms=0.25, margin_um=50, prototype=None):
     '''
     Estimate the positions of the templates from a large grid of fake templates
 
@@ -366,6 +366,8 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=
         The temporal decay of the fake templates
     margin_um: float
         The margin for the grid of fake templates
+    prototype: np.array
+        Fake waveforms for the templates. If None, generated as Gaussian
 
     Returns
     -------
@@ -379,7 +381,9 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=
     fs = waveform_extractor.recording.get_sampling_frequency()
         
     time_axis = np.arange(-nbefore, nafter) * 1000/fs
-    prototype = np.exp(-time_axis**2/(2*(sigma_ms**2)))
+    if prototype is None:
+        prototype = np.exp(-time_axis**2/(2*(sigma_ms**2)))
+    
     prototype = prototype[:, np.newaxis]
 
     x_min, x_max = contact_locations[:,0].min(), contact_locations[:,0].max()

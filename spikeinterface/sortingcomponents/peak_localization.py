@@ -236,9 +236,11 @@ class LocalizeFromTemplates(PipelineNode):
         The temporal decay of the fake templates
     margin_um: float
         The margin for the grid of fake templates
+    prototype: np.array
+        Fake waveforms for the templates. If None, generated as Gaussian
     """
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=50., upsampling_um=5,
-        sigma_um=25., sigma_ms=0.25, margin_um=100.):
+        sigma_um=25., sigma_ms=0.25, margin_um=100., prototype=None):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         
         self.local_radius_um = local_radius_um
@@ -251,8 +253,11 @@ class LocalizeFromTemplates(PipelineNode):
         self.nafter = self.parents[-1].nafter
         fs = self.recording.get_sampling_frequency()
         
-        time_axis = np.arange(-self.nbefore, self.nafter) * 1000/fs
-        self.prototype = np.exp(-time_axis**2/(2*(sigma_ms**2)))
+        if prototype is None:
+            time_axis = np.arange(-self.nbefore, self.nafter) * 1000/fs
+            self.prototype = np.exp(-time_axis**2/(2*(sigma_ms**2)))
+        else:
+            self.prototype = prototype
         self.prototype = self.prototype[:, np.newaxis]
 
         x_min, x_max = self.contact_locations[:,0].min(), self.contact_locations[:,0].max()
@@ -298,15 +303,17 @@ class LocalizeFromTemplates(PipelineNode):
 
         for main_chan in np.unique(peaks['channel_ind']):
             idx, = np.nonzero(peaks['channel_ind'] == main_chan)
-            intersect = self.neighbours_mask[:, main_chan] == True
             if 'amplitude' in peaks.dtype.names:
                 amplitudes = peaks['amplitude'][idx]
             else:
                 amplitudes = waveforms[idx, self.nbefore, main_chan]
+
+            intersect = self.neighbours_mask[:, main_chan] == True
             dot_products = (waveforms[idx]/(amplitudes[:, np.newaxis, np.newaxis]) * self.prototype).sum(axis=1)
             dot_products = np.dot(dot_products, self.weights[:, intersect])
             dot_products = np.maximum(0, dot_products)
             denominators = dot_products.sum(1)
+
             found_positions = np.dot(dot_products, self.template_positions[intersect])/(denominators[:, np.newaxis])
             peak_locations['x'][idx] = found_positions[:, 0]
             peak_locations['y'][idx] = found_positions[:, 1]
