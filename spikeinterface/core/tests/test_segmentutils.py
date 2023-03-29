@@ -160,7 +160,7 @@ def test_append_concatenate_sortings():
     # Fails without registered recording
     assert_raises(Exception, concatenate_sortings, sorting_list)
     assert_raises(Exception, concatenate_sortings, sorting_list_mono)
-    # Fails with total_samples_list for multisegmet
+    # Fails with total_samples_list for multisegment
     assert_raises(Exception, concatenate_sortings, sorting_list, total_samples_list="dummy")
     # Succeeds without registered recording for mono
     sorting_mono_norec = concatenate_sortings(sorting_list_mono, total_samples_list=[nsamp0, nsamp1])
