@@ -43,8 +43,9 @@ class BaseRecording(BaseRecordingSnippets):
         nchan = self.get_num_channels()
         sf_khz = self.get_sampling_frequency() / 1000.
         duration = self.get_total_duration()
+        dtype = self.get_dtype()
         memory_size = self.get_memory_size()
-        txt = f"{clsname}: {nchan} channels - {nseg} segments - {sf_khz:0.1f}kHz - {duration:0.3f}s - {memory_size}"
+        txt = f"{clsname}: {nchan} channels - {nseg} segments - {sf_khz:0.1f}kHz - {duration:0.3f}s - {dtype} type - {memory_size}"
         if 'file_paths' in self._kwargs:
             txt += '\n  file_paths: {}'.format(self._kwargs['file_paths'])
         if 'file_path' in self._kwargs:
