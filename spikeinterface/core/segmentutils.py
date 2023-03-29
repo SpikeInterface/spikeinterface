@@ -389,7 +389,6 @@ class ConcatenateSegmentSorting(BaseSorting):
                 if sorting.has_recording():
                     segment_num_samples = sorting.get_num_samples(segment_index=segment_i)
                 else:
-                    assert segment_i == 0  # Already checked: sortings should be monosegment if they have no rec
                     segment_num_samples = total_samples_list[sorting_i]
                 # Check consistency between num samples and spike frames
                 for unit_id in sorting.unit_ids:
