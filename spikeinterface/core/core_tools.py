@@ -793,8 +793,10 @@ def recursive_path_modifier(d, func, target='path', copy=True):
     else:
         for k, v in d.items():
             if target in k:
-                # paths can be str or list of str
-                if isinstance(v, str):
+                # paths can be str or list of str or None
+                if v is None:
+                    continue
+                if isinstance(v, (str, Path)):
                     dc[k] =func(v)
                 elif isinstance(v, list):
                     dc[k] = [func(e) for e in v]
