@@ -72,7 +72,7 @@ class BaseSorting(BaseExtractor):
         assert self.has_recording(), (
             "This methods requires an associated recording. Call self.register_recording() first."
         )
-        return self._recording.get_num_samples(*args, **kwargs)
+        return self._recording.get_num_samples(segment_index=segment_index)
 
     def get_total_samples(self):
         """Returns the total number of samples of the associated recording.
