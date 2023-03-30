@@ -42,6 +42,8 @@ from .segmentutils import (
     SelectSegmentRecording,
     append_sortings,
     AppendSegmentSorting,
+    concatenate_sortings,
+    ConcatenateSegmentSorting,
     split_sorting,
     SplitSegmentSorting,
     select_segment_sorting,
