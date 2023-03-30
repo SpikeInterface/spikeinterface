@@ -34,7 +34,6 @@ class WhitenRecording(BasePreprocessor):
         Apply a scaling factor to fit the integer range.
         This is used when the dtype is an integer, so that the output is scaled. 
         For example, a value of `int_scale=200` will scale the traces value to a standard deviation of 200.
-
     **random_chunk_kwargs: keyword arguments for `get_random_data_chunks()` function
 
     Returns
@@ -74,6 +73,7 @@ class WhitenRecording(BasePreprocessor):
                             )
         self._kwargs.update(random_chunk_kwargs)
 
+
 class WhitenRecordingSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment, W, M, dtype, int_scale):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
@@ -112,24 +112,37 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean,
     """
     Compute whitening matrix
 
-    Args:
-        recording : 
-            Recording object
-        mode: 'global' / 'local'
-        random_chunk_kwargs : dict
-            Dict used for get_random_data_chunks()
-        apply_mean : bool
-            Apply mean or not
-        radius_um: None or float
-            Used for mode = 'local' to get the neighborhood
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording object
+    mode : str
+        The mode to compute the whitening matrix.
+
+        * 'global': compute SVD using all channels
+        * 'local': compute SVD on local neighborhood (controlled by `radius_um`)
+
+    random_chunk_kwargs : dict
+        Keyword arguments for  get_random_data_chunks()
+    apply_mean : bool
+        If True, the mean is removed prior to computing the covariance
+    radius_um : float, optional
+        Used for mode = 'local' to get the neighborhood, by default None
+    eps : float, optional
+        Small epsilon to regularize SVD, by default 1e-8
+
+    Returns
+    -------
+    W : 2D array
+        The whitening matrix
+    M : 2D array or None
+        The "mean" matrix
+
     """
-
-
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False,
                                           **random_chunk_kwargs)
     random_data = random_data.astype('float32')
 
-    # 
     if apply_mean:
         M = np.mean(random_data, axis=0)
         M = M[None, :]

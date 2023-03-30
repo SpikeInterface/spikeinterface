@@ -217,7 +217,6 @@ class ZScoreRecording(BasePreprocessor):
         Apply a scaling factor to fit the integer range.
         This is used when the dtype is an integer, so that the output is scaled. 
         For example, a value of `int_scale=200` will scale the zscore value to a standard deviation of 200.
-
     **random_chunk_kwargs: keyword arguments for `get_random_data_chunks()` function
     
     Returns
@@ -245,12 +244,12 @@ class ZScoreRecording(BasePreprocessor):
             gain = np.asarray(gain)
             offset = np.asarray(offset)
             n = recording.get_num_channels()
-            assert gain.shape[0] == n
-            assert offset.shape[0] == n
             if gain.ndim == 1:
                 gain = gain[None, :]
+            assert gain.shape[1] == n
             if offset.ndim == 1:
                 offset = offset[None, :]
+            assert offset.shape[1] == n
         elif mode == "median+mad":
             medians = np.median(random_data, axis=0)
             medians = medians[None, :]
@@ -269,7 +268,11 @@ class ZScoreRecording(BasePreprocessor):
         if int_scale is not None:
             gain *= int_scale
             offset *= int_scale
-        
+
+        # convenient to have them here
+        self.gain = gain
+        self.offset = offset
+
         BasePreprocessor.__init__(self, recording, dtype=dtype)
 
         for parent_segment in recording._recording_segments:
