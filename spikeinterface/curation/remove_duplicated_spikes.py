@@ -47,7 +47,7 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
             self.register_recording(sorting._recording)
 
         self._kwargs = {
-            'sorting': sorting.to_dict(),
+            'sorting': sorting,
             'censored_period_ms': censored_period_ms,
             'method': method
         }
