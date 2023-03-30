@@ -47,7 +47,8 @@ def test_find_spikes_from_templates():
     result = {}
 
     for method in matching_methods.keys():
-        method_kwargs_ = method_kwargs.get(method, {}).update(method_kwargs_all)
+        method_kwargs_ = method_kwargs.get(method, {})
+        method_kwargs_.update(method_kwargs_all)
         spikes = find_spikes_from_templates(recording, method=method, method_kwargs=method_kwargs_,
                                             n_jobs=2, chunk_size=1000, progress_bar=True)
 
