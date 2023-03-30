@@ -117,7 +117,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
                                                        order_r)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(),
+        self._kwargs = dict(recording=recording,
                             n_channel_pad=n_channel_pad,
                             n_channel_taper=n_channel_taper,
                             direction=direction,
