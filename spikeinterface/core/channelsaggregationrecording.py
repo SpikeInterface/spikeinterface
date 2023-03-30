@@ -87,7 +87,7 @@ class ChannelsAggregationRecording(BaseRecording):
             self.add_recording_segment(sub_segment)
 
         self._recordings = recording_list
-        self._kwargs = {'recording_list': [rec.to_dict() for rec in recording_list],
+        self._kwargs = {'recording_list': [rec for rec in recording_list],
                         'renamed_channel_ids': renamed_channel_ids}
 
 

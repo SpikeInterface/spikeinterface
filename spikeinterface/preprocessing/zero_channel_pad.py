@@ -56,7 +56,7 @@ class ZeroChannelPaddedRecording(BaseRecording):
             if values is not None:
                 self.set_property(k, values, ids=self.channel_ids[self.channel_mapping])
 
-        self._kwargs = dict(recording=parent_recording.to_dict(),
+        self._kwargs = dict(parent_recording=parent_recording,
                             num_channels=num_channels, channel_mapping=channel_mapping)
 
 
@@ -67,9 +67,6 @@ class ZeroChannelPaddedRecordingSegment(BasePreprocessorSegment):
         self.parent_recording_segment = parent_recording_segment
         self.num_channels = num_channels
         self.channel_mapping = channel_mapping
-
-    def get_num_samples(self):
-        return self.parent_recording_segment.get_num_samples()
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:

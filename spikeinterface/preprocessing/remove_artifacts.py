@@ -191,7 +191,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
             list_labels_= [list(lab_seg) for lab_seg in list_labels]
         else:
             list_labels_ = None
-        self._kwargs = dict(recording=recording.to_dict(), list_triggers=list_triggers_,
+        self._kwargs = dict(recording=recording, list_triggers=list_triggers_,
                             ms_before=ms_before, ms_after=ms_after, mode=mode,
                             fit_sample_spacing=fit_sample_spacing, artifacts=artifacts,
                             list_labels=list_labels_, scale_amplitude=scale_amplitude,

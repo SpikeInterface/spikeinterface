@@ -121,7 +121,7 @@ class MergeUnitsSorting(BaseSorting):
         
         # make it jsonable
         units_to_merge = [list(e) for e in units_to_merge]
-        self._kwargs = dict(parent_sorting=parent_sorting.to_dict(), units_to_merge=units_to_merge,
+        self._kwargs = dict(parent_sorting=parent_sorting, units_to_merge=units_to_merge,
                             new_unit_id=new_unit_ids, properties_policy=properties_policy, delta_time_ms=delta_time_ms)
 
 
