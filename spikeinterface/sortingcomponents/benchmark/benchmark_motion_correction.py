@@ -84,7 +84,6 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 do_preprocessing=do_preprocessing,
                 delete_output_folder=delete_output_folder,
                 sparse_kwargs=sparse_kwargs,
-                
             )
         )
 
@@ -96,10 +95,10 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 rec, _  = read_mearec(self.mearec_filenames[key])
                 if self.do_preprocessing:
                     # all computation are done in float32
-                    # rec = bandpass_filter(rec)
+                    # rec = bandpass_filter(rec)
                     rec = common_reference(rec, dtype='float32')
                     rec = highpass_filter(rec, freq_min=150.)
-                    # rec = zscore(rec)
+                    # rec = zscore(rec)
                     # 150um is more or less 30 channels
                     rec = whiten(rec, mode='local', radius_um=150.)
                     rec = scale(rec, gain=200, dtype='int16')
@@ -393,7 +392,6 @@ def plot_distances_to_static(benchmarks, metric='cosine', figsize=(15, 10)):
     ax = fig.add_subplot(gs[0:2, 0])
     for count, bench in enumerate(benchmarks):
         distances = bench.compute_distances_to_static(force=False)
-        print(distances.keys())
         ax.scatter(distances['drifting'][f'template_{metric}'], distances['corrected'][f'template_{metric}'], c=f'C{count}', alpha=0.5, label=bench.title)
 
     ax.legend()
