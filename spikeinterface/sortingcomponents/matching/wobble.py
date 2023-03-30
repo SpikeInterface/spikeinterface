@@ -204,7 +204,10 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             Updated Keyword arguments.
         """
         d = cls.default_params.copy()
-        parameters = kwargs['parameters']
+        required_kwargs_keys = ['nbefore', 'nafter', 'templates']
+        for required_key in required_kwargs_keys:
+            assert required_key in kwargs, f"`{required_key}` is a required key in the kwargs"
+        parameters = kwargs.get('parameters', {})
         templates = kwargs['templates']
         templates = templates.astype(np.float32, casting='safe')
 
