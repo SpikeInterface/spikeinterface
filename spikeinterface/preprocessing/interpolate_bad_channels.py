@@ -71,7 +71,7 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
                                                         weights)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(),
+        self._kwargs = dict(recording=recording,
                             bad_channel_ids=bad_channel_ids,
                             p=p,
                             sigma_um=sigma_um,
