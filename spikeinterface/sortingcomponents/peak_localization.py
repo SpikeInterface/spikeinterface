@@ -13,6 +13,8 @@ from ..postprocessing.unit_localization import (dtype_localize_by_method,
                                                 make_radial_order_parents,
                                                 enforce_decrease_shells_ptp)
 
+from .tools import get_prototype_spike
+
 
 def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.5, ms_after=.5, **kwargs):
     """Localize peak (spike) in 2D or 3D depending the method.
@@ -58,6 +60,8 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.5, ms_
     elif method == "peak_channel":
         pipeline_nodes = [LocalizePeakChannel(recording,  **method_kwargs)]
     elif method == "from_templates":
+        if 'prototype' not in method_kwargs:
+            method_kwargs['prototype'] = get_prototype_spike(recording, peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs)
         extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_output=False)
         pipeline_nodes = [
             extract_dense_waveforms,
@@ -230,15 +234,17 @@ class LocalizeFromTemplates(PipelineNode):
         Radius in um for channel sparsity.
     upsampling_um: float
         Upsampling resolution for the grid of templates
-    sigma_um: float
-        The spatial decay of the fake templates
+    sigma_um: np.array
+        Spatial decays of the fake templates
     sigma_ms: float
         The temporal decay of the fake templates
     margin_um: float
         The margin for the grid of fake templates
+    prototype: np.array
+        Fake waveforms for the templates. If None, generated as Gaussian
     """
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=50., upsampling_um=5,
-        sigma_um=25., sigma_ms=0.25, margin_um=100.):
+        sigma_um=np.linspace(10, 100, 5), sigma_ms=0.25, margin_um=100., prototype=None):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         
         self.local_radius_um = local_radius_um
@@ -251,8 +257,11 @@ class LocalizeFromTemplates(PipelineNode):
         self.nafter = self.parents[-1].nafter
         fs = self.recording.get_sampling_frequency()
         
-        time_axis = np.arange(-self.nbefore, self.nafter) * 1000/fs
-        self.prototype = np.exp(-time_axis**2/(2*(sigma_ms**2)))
+        if prototype is None:
+            time_axis = np.arange(-self.nbefore, self.nafter) * 1000/fs
+            self.prototype = np.exp(-time_axis**2/(2*(sigma_ms**2)))
+        else:
+            self.prototype = prototype
         self.prototype = self.prototype[:, np.newaxis]
 
         x_min, x_max = self.contact_locations[:,0].min(), self.contact_locations[:,0].max()
@@ -279,7 +288,10 @@ class LocalizeFromTemplates(PipelineNode):
         import sklearn
         dist = sklearn.metrics.pairwise_distances(self.template_positions, self.contact_locations)
         self.neighbours_mask = dist < self.local_radius_um
-        self.weights = (self.neighbours_mask * np.exp(-dist**2/(2*(sigma_um**2)))).T
+
+        self.weights = np.zeros((len(self.sigma_um), len(self.contact_locations), self.nb_templates), dtype=np.float32)
+        for count, sigma in enumerate(self.sigma_um):
+            self.weights[count] = (self.neighbours_mask * np.exp(-dist**2/(2*(sigma**2)))).T
 
         self._dtype = np.dtype(dtype_localize_by_method['from_templates'])
         self._kwargs.update(dict(local_radius_um=self.local_radius_um,
@@ -298,16 +310,22 @@ class LocalizeFromTemplates(PipelineNode):
 
         for main_chan in np.unique(peaks['channel_ind']):
             idx, = np.nonzero(peaks['channel_ind'] == main_chan)
-            intersect = self.neighbours_mask[:, main_chan] == True
             if 'amplitude' in peaks.dtype.names:
                 amplitudes = peaks['amplitude'][idx]
             else:
                 amplitudes = waveforms[idx, self.nbefore, main_chan]
-            dot_products = (waveforms[idx]/(amplitudes[:, np.newaxis, np.newaxis]) * self.prototype).sum(axis=1)
-            dot_products = np.dot(dot_products, self.weights[:, intersect])
-            dot_products = np.maximum(0, dot_products)
-            denominators = dot_products.sum(1)
-            found_positions = np.dot(dot_products, self.template_positions[intersect])/(denominators[:, np.newaxis])
+
+            intersect = self.neighbours_mask[:, main_chan] == True
+            global_products = (waveforms[idx]/(amplitudes[:, np.newaxis, np.newaxis]) * self.prototype).sum(axis=1)
+
+            found_positions = np.zeros((len(self.weights), len(idx), 2), dtype=np.float32)
+            for count, weights in enumerate(self.weights):
+                dot_products = np.dot(global_products, weights[:, intersect])
+                dot_products = np.maximum(0, dot_products)
+                denominators = dot_products.sum(1)
+                found_positions[count, :] = np.dot(dot_products, self.template_positions[intersect])/(denominators[:, np.newaxis])
+
+            found_positions = np.mean(found_positions, axis=0)
             peak_locations['x'][idx] = found_positions[:, 0]
             peak_locations['y'][idx] = found_positions[:, 1]
 

@@ -346,7 +346,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', local_radius_um=
 
 
 def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=50., upsampling_um=5,
-        sigma_um=25, sigma_ms=0.25, margin_um=50):
+        sigma_um=np.linspace(10, 100, 5), sigma_ms=0.25, margin_um=50, prototype=None):
     '''
     Estimate the positions of the templates from a large grid of fake templates
 
@@ -360,12 +360,14 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=
         Radius to consider for the fake templates
     upsampling_um: float
         Upsampling resolution for the grid of templates
-    sigma_um: float
-        The spatial decay of the fake templates
+    sigma_um: np.array
+        Spatial decays of the fake templates
     sigma_ms: float
         The temporal decay of the fake templates
     margin_um: float
         The margin for the grid of fake templates
+    prototype: np.array
+        Fake waveforms for the templates. If None, generated as Gaussian
 
     Returns
     -------
@@ -379,7 +381,9 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=
     fs = waveform_extractor.recording.get_sampling_frequency()
         
     time_axis = np.arange(-nbefore, nafter) * 1000/fs
-    prototype = np.exp(-time_axis**2/(2*(sigma_ms**2)))
+    if prototype is None:
+        prototype = np.exp(-time_axis**2/(2*(sigma_ms**2)))
+    
     prototype = prototype[:, np.newaxis]
 
     x_min, x_max = contact_locations[:,0].min(), contact_locations[:,0].max()
@@ -405,7 +409,10 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=
     import sklearn
     dist = sklearn.metrics.pairwise_distances(template_positions, contact_locations)
     neighbours_mask = dist < local_radius_um
-    weights = (neighbours_mask * np.exp(-dist**2/(2*(sigma_um**2)))).T
+
+    weights = np.zeros((len(sigma_um), len(contact_locations), nb_templates), dtype=np.float32)
+    for count, sigma in enumerate(sigma_um):
+        weights[count] = (neighbours_mask * np.exp(-dist**2/(2*(sigma**2)))).T
 
     templates = waveform_extractor.get_all_templates(mode='average')
 
@@ -419,12 +426,17 @@ def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=
         wf = templates[i, :, :]
         amplitude = wf[nbefore, main_chan]
         intersect = neighbours_mask[:, main_chan] == True
-        dot_products = ((wf / amplitude) * prototype).sum(axis=0)
-        dot_products = np.dot(dot_products, weights[:, intersect])
-        dot_products = np.maximum(0, dot_products)
-        denominator = dot_products.sum()
-        found_positions = np.dot(dot_products, template_positions[intersect])/denominator
-        unit_location[i, :] = found_positions
+
+        global_products = ((wf / amplitude) * prototype).sum(axis=0)
+
+        found_positions = np.zeros((len(weights), 2), dtype=np.float32)
+        for count, w in enumerate(weights):
+            dot_products = np.dot(global_products, w[:, intersect])
+            dot_products = np.maximum(0, dot_products)
+            denominator = dot_products.sum()
+            found_positions[count] = np.dot(dot_products, template_positions[intersect])/denominator
+
+        unit_location[i, :] = found_positions.mean(axis=0)
 
     return unit_location
 
