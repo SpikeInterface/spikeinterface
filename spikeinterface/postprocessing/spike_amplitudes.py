@@ -12,7 +12,7 @@ from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWavefo
 
 class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
     """
-    Computes spike amplitudes form WaveformExtractor.
+    Computes spike amplitudes from WaveformExtractor.
     """    
     extension_name = 'spike_amplitudes'
     
@@ -185,13 +185,6 @@ compute_spike_amplitudes.__doc__.format(_shared_job_kwargs_doc)
 def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, peak_shifts, return_scaled):
     # create a local dict per worker
     worker_ctx = {}
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-        recording = load_extractor(recording)
-    if isinstance(sorting, dict):
-        from spikeinterface.core import load_extractor
-        sorting = load_extractor(sorting)
-    
     worker_ctx['recording'] = recording
     worker_ctx['sorting'] = sorting
     worker_ctx['return_scaled'] = return_scaled
