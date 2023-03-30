@@ -91,7 +91,6 @@ def test_filter_opencl():
 
     print(rec.get_dtype())
     print(rec.is_dumpable)
-    # print(rec.to_dict())
 
     rec_filtered = filter(rec, engine='scipy')
     rec_filtered = rec_filtered.save(

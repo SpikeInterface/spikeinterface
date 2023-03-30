@@ -10,6 +10,18 @@ class FrameSliceRecording(BaseRecording):
 
     Do not use this class directly but use `recording.frame_slice(...)`
 
+    Parameters
+    ----------
+    parent_recording: BaseRecording
+    start_frame: None or int
+        Earliest included frame in the parent recording.
+        Times are re-referenced to start_frame in the
+        sliced object. Set to 0 by default.
+    end_frame: None or int
+        Latest frame in the parent recording. As for usual
+        python slicing, the end frame is excluded. 
+        Set to the recording's total number of samples by 
+        default
     """
 
     def __init__(self, parent_recording, start_frame=None, end_frame=None):
@@ -44,7 +56,7 @@ class FrameSliceRecording(BaseRecording):
         parent_recording.copy_metadata(self)
 
         # update dump dict
-        self._kwargs = {'parent_recording': parent_recording.to_dict(), 'start_frame': int(start_frame),
+        self._kwargs = {'parent_recording': parent_recording, 'start_frame': int(start_frame),
                         'end_frame': int(end_frame)}
 
 

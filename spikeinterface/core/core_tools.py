@@ -281,11 +281,7 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
     # use executor (loop or workers)
     func = _write_binary_chunk
     init_func = _init_binary_worker
-    n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
-    if n_jobs == 1:
-        init_args = (recording, rec_memmaps_dict, dtype, cast_unsigned)
-    else:
-        init_args = (recording.to_dict(), rec_memmaps_dict, dtype, cast_unsigned)
+    init_args = (recording, rec_memmaps_dict, dtype, cast_unsigned)
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_binary_recording', **job_kwargs)
     executor.run()
@@ -655,10 +651,7 @@ def write_traces_to_zarr(recording, zarr_root, zarr_path, storage_options,
     # use executor (loop or workers)
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
-    if n_jobs == 1:
-        init_args = (recording, zarr_path, storage_options, dataset_paths, dtype, cast_unsigned)
-    else:
-        init_args = (recording.to_dict(), zarr_path, storage_options, dataset_paths, dtype, cast_unsigned)
+    init_args = (recording, zarr_path, storage_options, dataset_paths, dtype, cast_unsigned)
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_zarr_recording', **job_kwargs)
     executor.run()
@@ -793,8 +786,10 @@ def recursive_path_modifier(d, func, target='path', copy=True):
     else:
         for k, v in d.items():
             if target in k:
-                # paths can be str or list of str
-                if isinstance(v, str):
+                # paths can be str or list of str or None
+                if v is None:
+                    continue
+                if isinstance(v, (str, Path)):
                     dc[k] =func(v)
                 elif isinstance(v, list):
                     dc[k] = [func(e) for e in v]
@@ -811,3 +806,40 @@ def recursive_key_finder(d, key):
         else:
             if k == key:
                 yield v
+
+
+def convert_bytes_to_str(byte_value:int ) -> str:
+    """
+    Convert a number of bytes to a human-readable string with an appropriate unit.
+
+    This function converts a given number of bytes into a human-readable string
+    representing the value in either bytes (B), kibibytes (KiB), mebibytes (MiB),
+    gibibytes (GiB), or tebibytes (TiB). The function uses the IEC binary prefixes
+    (1 KiB = 1024 B, 1 MiB = 1024 KiB, etc.) to determine the appropriate unit.
+
+    Parameters
+    ----------
+    byte_value : int
+        The number of bytes to convert.
+
+    Returns
+    -------
+    str
+        The converted value as a formatted string with two decimal places,
+        followed by a space and the appropriate unit (B, KiB, MiB, GiB, or TiB).
+
+    Examples
+    --------
+    >>> convert_bytes_to_str(1024)
+    '1.00 KiB'
+    >>> convert_bytes_to_str(1048576)
+    '1.00 MiB'
+    >>> convert_bytes_to_str(45056)
+    '43.99 KiB'
+    """
+    suffixes = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
+    i = 0
+    while byte_value >= 1024 and i < len(suffixes) - 1:
+        byte_value /= 1024
+        i += 1
+    return f"{byte_value:.2f} {suffixes[i]}"

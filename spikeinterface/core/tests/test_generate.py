@@ -98,3 +98,9 @@ def test_generate_lazy_recording():
     print(f"Difference between the last two {(memory_after_traces_MiB - traces_size_MiB)} MiB")
 
     (memory_after_instanciation_MiB + traces_size_MiB) == pytest.approx(memory_after_traces_MiB, rel=relative_tolerance)
+
+
+def test_generate_lazy_recording_under_giga():
+    
+    recording = generate_lazy_recording(full_traces_size_GiB=0.5)
+    assert recording.get_memory_size() == "512.00 MiB"

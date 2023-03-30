@@ -62,7 +62,7 @@ class WhitenRecording(BasePreprocessor):
             rec_segment = WhitenRecordingSegment(parent_segment, W, M, dtype_)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), dtype=dtype,
+        self._kwargs = dict(recording=recording, dtype=dtype,
                             num_chunks_per_segment=num_chunks_per_segment,
                             chunk_size=chunk_size, seed=seed, 
                             W=W.tolist(), M=M.tolist())
