@@ -67,20 +67,11 @@ class WhitenRecording(BasePreprocessor):
             rec_segment = WhitenRecordingSegment(parent_segment, W, M, dtype_, int_scale)
             self.add_recording_segment(rec_segment)
 
-<<<<<<< HEAD
-        self._kwargs = dict(recording=recording.to_dict(), dtype=dtype,
-                            W=W.tolist(), M=M.tolist() if M is not None else None,
-                            int_scale=float(int_scale) if int_scale is not None else None,
-                            mode=mode, radius_um=radius_um,
-                            )
-        self._kwargs.update(random_chunk_kwargs)
-=======
         self._kwargs = dict(recording=recording, dtype=dtype,
                             num_chunks_per_segment=num_chunks_per_segment,
                             chunk_size=chunk_size, seed=seed, 
                             W=W.tolist(), M=M.tolist())
 
->>>>>>> 3f081d5dd13de13b5a13ecf63213884d77cbad06
 
 class WhitenRecordingSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment, W, M, dtype, int_scale):

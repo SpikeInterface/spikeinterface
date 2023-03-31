@@ -276,6 +276,9 @@ class ZScoreRecording(BasePreprocessor):
         recording,
         mode="median+mad",
         dtype="float32",
+        gain=None,
+        offset=None,
+        int_scale=None,
         **random_chunk_kwargs
     ):
 
