@@ -1,6 +1,13 @@
 import numpy as np
 from numpy.testing import assert_array_equal
 
+
+def check_sorted_arrays_equal(a1, a2):
+    a1 = np.sort(np.array(a1))
+    a2 = np.sort(np.array(a2))
+    assert_array_equal(a1, a2)
+
+
 def check_recordings_equal(RX1, RX2, return_scaled=True, force_dtype=None):
     assert RX1.get_num_segments() == RX2.get_num_segments()
 

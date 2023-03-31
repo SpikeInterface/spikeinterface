@@ -61,7 +61,7 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
         if method == 'center_of_mass':
             unit_location = compute_center_of_mass(self.waveform_extractor,  **method_kwargs)
         elif method == 'grid_convolution':
-            unit_location = compute_from_templates(self.waveform_extractor,  **method_kwargs)
+            unit_location = compute_grid_convolution(self.waveform_extractor,  **method_kwargs)
         elif method == 'monopolar_triangulation':
             unit_location = compute_monopolar_triangulation(self.waveform_extractor,  **method_kwargs)
         self._extension_data['unit_locations'] = unit_location
