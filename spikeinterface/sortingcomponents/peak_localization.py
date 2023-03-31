@@ -59,13 +59,13 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.5, ms_
         ]
     elif method == "peak_channel":
         pipeline_nodes = [LocalizePeakChannel(recording,  **method_kwargs)]
-    elif method == "from_templates":
+    elif method == "grid_convolution":
         if 'prototype' not in method_kwargs:
             method_kwargs['prototype'] = get_prototype_spike(recording, peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs)
         extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_output=False)
         pipeline_nodes = [
             extract_dense_waveforms,
-            LocalizeFromTemplates(recording, parents=[extract_dense_waveforms], **method_kwargs)
+            LocalizeGridConvolution(recording, parents=[extract_dense_waveforms], **method_kwargs)
         ]
     
     peak_locations = run_peak_pipeline(recording, peaks, pipeline_nodes, job_kwargs, job_name='localize peaks', squeeze_output=True)
@@ -293,7 +293,7 @@ class LocalizeGridConvolution(PipelineNode):
         for count, sigma in enumerate(self.sigma_um):
             self.weights[count] = (self.neighbours_mask * np.exp(-dist**2/(2*(sigma**2)))).T
 
-        self._dtype = np.dtype(dtype_localize_by_method['from_templates'])
+        self._dtype = np.dtype(dtype_localize_by_method['grid_convolution'])
         self._kwargs.update(dict(local_radius_um=self.local_radius_um,
                                  prototype=self.prototype,
                                  template_positions=self.template_positions,
