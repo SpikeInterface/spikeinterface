@@ -13,7 +13,7 @@ class RectifyRecording(BasePreprocessor):
         for parent_segment in recording._recording_segments:
             rec_segment = RectifyRecordingSegment(parent_segment)
             self.add_recording_segment(rec_segment)
-        self._kwargs = dict(recording=recording.to_dict())
+        self._kwargs = dict(recording=recording)
 
 
 class RectifyRecordingSegment(BasePreprocessorSegment):

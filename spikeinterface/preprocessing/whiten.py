@@ -18,11 +18,6 @@ class WhitenRecording(BasePreprocessor):
     dtype: None or dtype
         If None the the parent dtype is kept.
         For integer dtype a int_scale must be also given.
-    W : 2d np.array
-        Pre-computed whitening matrix, by default None
-    M : 1d np.array or None
-        Pre-computed means.
-        M can be None when previously computed with apply_mean=False
     mode: 'global' / 'local'
         'global' use the entire covariance matrix to compute the W matrix
         'local' use local covariance (by radius) to compute the W matrix
@@ -34,8 +29,17 @@ class WhitenRecording(BasePreprocessor):
         Apply a scaling factor to fit the integer range.
         This is used when the dtype is an integer, so that the output is scaled. 
         For example, a value of `int_scale=200` will scale the traces value to a standard deviation of 200.
-
-    **random_chunk_kwargs: keyword arguments for `get_random_data_chunks()` function
+    num_chunks_per_segment: int
+        Number of chunks per segment for random chunk, by default 20
+    chunk_size : int
+        Size of a chunk in number for random chunk, by default 10000
+    seed : int
+        Random seed for random chunk, by default None
+    W : 2d np.array
+        Pre-computed whitening matrix, by default None
+    M : 1d np.array or None
+        Pre-computed means.
+        M can be None when previously computed with apply_mean=False
 
     Returns
     -------
@@ -45,8 +49,9 @@ class WhitenRecording(BasePreprocessor):
     name = 'whiten'
 
     def __init__(self, recording, dtype=None, apply_mean=False, mode='global', radius_um=100., int_scale=None,
-                 W=None, M=None, **random_chunk_kwargs):
-
+                 num_chunks_per_segment=20,
+                 chunk_size=10000, seed=None,
+                 W=None, M=None):
         # fix dtype
         dtype_ = fix_dtype(recording, dtype)
 
@@ -58,8 +63,13 @@ class WhitenRecording(BasePreprocessor):
             if M is not None:
                 M = np.asarray(M)
         else:
+            random_chunk_kwargs = dict(
+                num_chunks_per_segment=num_chunks_per_segment,
+                chunk_size=chunk_size,
+                seed=seed
+            )
             W, M = compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean,
-                             radius_um=radius_um, eps=1e-8)
+                                            radius_um=radius_um, eps=1e-8)
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
 
@@ -67,12 +77,18 @@ class WhitenRecording(BasePreprocessor):
             rec_segment = WhitenRecordingSegment(parent_segment, W, M, dtype_, int_scale)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), dtype=dtype,
-                            W=W.tolist(), M=M.tolist() if M is not None else None,
-                            int_scale=float(int_scale) if int_scale is not None else None,
-                            mode=mode, radius_um=radius_um,
-                            )
-        self._kwargs.update(random_chunk_kwargs)
+        self._kwargs = dict(
+            recording=recording, dtype=dtype,
+            mode=mode,
+            radius_um=radius_um,
+            apply_mean=apply_mean,
+            int_scale=float(int_scale) if int_scale is not None else None,
+            num_chunks_per_segment=num_chunks_per_segment,
+            chunk_size=chunk_size, seed=seed,
+            M=M.tolist() if M is not None else None,
+            W=W.tolist()
+        )
+
 
 class WhitenRecordingSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment, W, M, dtype, int_scale):
@@ -112,24 +128,37 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean,
     """
     Compute whitening matrix
 
-    Args:
-        recording : 
-            Recording object
-        mode: 'global' / 'local'
-        random_chunk_kwargs : dict
-            Dict used for get_random_data_chunks()
-        apply_mean : bool
-            Apply mean or not
-        radius_um: None or float
-            Used for mode = 'local' to get the neighborhood
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording object
+    mode : str
+        The mode to compute the whitening matrix.
+
+        * 'global': compute SVD using all channels
+        * 'local': compute SVD on local neighborhood (controlled by `radius_um`)
+
+    random_chunk_kwargs : dict
+        Keyword arguments for  get_random_data_chunks()
+    apply_mean : bool
+        If True, the mean is removed prior to computing the covariance
+    radius_um : float, optional
+        Used for mode = 'local' to get the neighborhood, by default None
+    eps : float, optional
+        Small epsilon to regularize SVD, by default 1e-8
+
+    Returns
+    -------
+    W : 2D array
+        The whitening matrix
+    M : 2D array or None
+        The "mean" matrix
+
     """
-
-
     random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False,
-                                          **random_chunk_kwargs)
+                                         **random_chunk_kwargs)
     random_data = random_data.astype('float32')
 
-    # 
     if apply_mean:
         M = np.mean(random_data, axis=0)
         M = M[None, :]
