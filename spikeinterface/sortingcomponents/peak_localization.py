@@ -220,7 +220,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         return peak_locations
 
 
-class LocalizeFromTemplates(PipelineNode):
+class LocalizeGridConvolution(PipelineNode):
     """Localize peaks using convlution with a grid of fake templates
 
     Notes
@@ -228,7 +228,7 @@ class LocalizeFromTemplates(PipelineNode):
     See spikeinterface.postprocessing.unit_localization.
     """
     need_waveforms = True
-    name = 'from_templates'
+    name = 'grid_convolution'
     params_doc = """
     local_radius_um: float
         Radius in um for channel sparsity.
@@ -244,7 +244,7 @@ class LocalizeFromTemplates(PipelineNode):
         Fake waveforms for the templates. If None, generated as Gaussian
     """
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=50., upsampling_um=5,
-        sigma_um=np.linspace(10, 100, 5), sigma_ms=0.25, margin_um=100., prototype=None):
+        sigma_um=np.linspace(10, 50., 3), sigma_ms=0.25, margin_um=50., prototype=None):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         
         self.local_radius_um = local_radius_um
@@ -332,7 +332,7 @@ class LocalizeFromTemplates(PipelineNode):
         return peak_locations
 
 # LocalizePeakChannel is not include in doc because it is not a good idea to use it
-_methods_list = [LocalizeCenterOfMass, LocalizeMonopolarTriangulation, LocalizeFromTemplates]
+_methods_list = [LocalizeCenterOfMass, LocalizeMonopolarTriangulation, LocalizeGridConvolution]
 localize_peak_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)
 localize_peaks.__doc__ = localize_peaks.__doc__.format(
