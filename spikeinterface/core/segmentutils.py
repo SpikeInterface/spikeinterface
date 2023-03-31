@@ -69,7 +69,7 @@ class AppendSegmentRecording(BaseRecording):
                 rec_seg = ProxyAppendRecordingSegment(parent_segment)
                 self.add_recording_segment(rec_seg)
 
-        self._kwargs = {'recording_list': [rec.to_dict() for rec in recording_list]}
+        self._kwargs = {'recording_list': recording_list}
 
 
 class ProxyAppendRecordingSegment(BaseRecordingSegment):
@@ -134,7 +134,7 @@ class ConcatenateSegmentRecording(BaseRecording):
                                                    ignore_times=ignore_times)
         self.add_recording_segment(rec_seg)
 
-        self._kwargs = {'recording_list': [rec.to_dict() for rec in recording_list],
+        self._kwargs = {'recording_list': recording_list,
                         'ignore_times': ignore_times}
 
 
@@ -232,8 +232,8 @@ class SelectSegmentRecording(BaseRecording):
             rec_seg = recording._recording_segments[segment_index]
             self.add_recording_segment(rec_seg)
 
-        self._kwargs = {'recording': recording.to_dict(),
-                        'segment_indices': [int(s) for s in segment_indices]}
+        self._kwargs = {'recording': recording,
+                        'segment_indices': segment_indices}
         
 
 def split_recording(recording: BaseRecording):

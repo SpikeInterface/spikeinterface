@@ -66,7 +66,7 @@ class DirectionalDerivativeRecording(BasePreprocessor):
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(
-            recording=recording.to_dict(),
+            recording=recording,
             direction=direction,
             order=order,
             edge_order=edge_order,
