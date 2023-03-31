@@ -244,7 +244,7 @@ class LocalizeGridConvolution(PipelineNode):
         Fake waveforms for the templates. If None, generated as Gaussian
     """
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=50., upsampling_um=5,
-        sigma_um=np.linspace(10, 50., 3), sigma_ms=0.25, margin_um=50., prototype=None):
+        sigma_um=np.linspace(10, 50., 5), sigma_ms=0.25, margin_um=50., prototype=None):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         
         self.local_radius_um = local_radius_um
@@ -318,14 +318,16 @@ class LocalizeGridConvolution(PipelineNode):
             intersect = self.neighbours_mask[:, main_chan] == True
             global_products = (waveforms[idx]/(amplitudes[:, np.newaxis, np.newaxis]) * self.prototype).sum(axis=1)
 
-            found_positions = np.zeros((len(self.weights), len(idx), 2), dtype=np.float32)
+            found_positions = np.zeros((len(idx), 2), dtype=np.float32)
+            scalar_products = np.zeros((len(idx), self.nb_templates), dtype=np.float32)
+
             for count, weights in enumerate(self.weights):
                 dot_products = np.dot(global_products, weights[:, intersect])
                 dot_products = np.maximum(0, dot_products)
-                denominators = dot_products.sum(1)
-                found_positions[count, :] = np.dot(dot_products, self.template_positions[intersect])/(denominators[:, np.newaxis])
+                scalar_products[:, intersect] += dot_products
+                found_positions += np.dot(dot_products, self.template_positions[intersect])
 
-            found_positions = np.mean(found_positions, axis=0)
+            found_positions /= scalar_products.sum(1)[:, np.newaxis]
             peak_locations['x'][idx] = found_positions[:, 0]
             peak_locations['y'][idx] = found_positions[:, 1]
 
