@@ -56,7 +56,7 @@ class FrameSliceRecording(BaseRecording):
         parent_recording.copy_metadata(self)
 
         # update dump dict
-        self._kwargs = {'parent_recording': parent_recording.to_dict(), 'start_frame': int(start_frame),
+        self._kwargs = {'parent_recording': parent_recording, 'start_frame': int(start_frame),
                         'end_frame': int(end_frame)}
 
 

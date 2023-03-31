@@ -82,9 +82,9 @@ class HybridUnitsRecording(InjectTemplatesRecording):
             self, self.injected_sorting, templates, nbefore, amplitude_factor, parent_recording, num_samples)
 
         self._kwargs = dict(
-            parent_recording=parent_recording.to_dict(),
+            parent_recording=parent_recording,
             templates=templates,
-            injected_sorting=self.injected_sorting.to_dict(),
+            injected_sorting=self.injected_sorting,
             nbefore=nbefore,
             firing_rate=firing_rate,
             amplitude_factor=amplitude_factor,
