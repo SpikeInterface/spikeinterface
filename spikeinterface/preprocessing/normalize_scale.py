@@ -277,9 +277,6 @@ class ZScoreRecording(BasePreprocessor):
         offset=None,
         int_scale=None,
         dtype="float32",
-        gain=None,
-        offset=None,
-        int_scale=None,
         **random_chunk_kwargs
     ):
 
