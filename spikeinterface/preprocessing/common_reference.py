@@ -100,8 +100,8 @@ class CommonReferenceRecording(BasePreprocessor):
                                                           neighbors, dtype_)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), reference=reference, groups=groups, operator=operator,
-                            ref_channel_ids=ref_channel_ids, local_radius=local_radius, dtype=dtype_.str)
+        self._kwargs = dict(recording=recording, reference=reference, groups=groups, operator=operator,
+                            ref_channel_ids=ref_channel_ids, local_radius=local_radius)
 
 
 class CommonReferenceRecordingSegment(BasePreprocessorSegment):

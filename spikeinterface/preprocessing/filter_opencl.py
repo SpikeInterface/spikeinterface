@@ -69,7 +69,7 @@ class FilterOpenCLRecording(BasePreprocessor):
         for parent_segment in recording._recording_segments:
             self.add_recording_segment(FilterOpenCLRecordingSegment(parent_segment, executor, margin))
 
-        self._kwargs = dict(recording=recording.to_dict(), band=band, btype=btype,
+        self._kwargs = dict(recording=recording, band=band, btype=btype,
                             filter_order=filter_order, ftype=ftype, filter_mode=filter_mode, margin_ms=margin_ms)
 
 

@@ -19,7 +19,7 @@ from ..core.template_tools import get_template_extremum_channel
 
 dtype_localize_by_method = {
     'center_of_mass': [('x', 'float64'), ('y', 'float64')],
-    'from_templates': [('x', 'float64'), ('y', 'float64')],
+    'grid_convolution': [('x', 'float64'), ('y', 'float64')],
     'peak_channel': [('x', 'float64'), ('y', 'float64')],
     'monopolar_triangulation': [('x', 'float64'), ('y', 'float64'), ('z', 'float64'), ('alpha', 'float64')],
 }
@@ -60,7 +60,7 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
 
         if method == 'center_of_mass':
             unit_location = compute_center_of_mass(self.waveform_extractor,  **method_kwargs)
-        elif method == 'from_templates':
+        elif method == 'grid_convolution':
             unit_location = compute_from_templates(self.waveform_extractor,  **method_kwargs)
         elif method == 'monopolar_triangulation':
             unit_location = compute_monopolar_triangulation(self.waveform_extractor,  **method_kwargs)
@@ -345,8 +345,8 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', local_radius_um=
     return unit_location
 
 
-def compute_from_templates(waveform_extractor, peak_sign='neg', local_radius_um=50., upsampling_um=5,
-        sigma_um=np.linspace(10, 100, 5), sigma_ms=0.25, margin_um=50, prototype=None):
+def compute_grid_convolution(waveform_extractor, peak_sign='neg', local_radius_um=50., upsampling_um=5,
+        sigma_um=np.linspace(10, 50, 3), sigma_ms=0.25, margin_um=50, prototype=None):
     '''
     Estimate the positions of the templates from a large grid of fake templates
 

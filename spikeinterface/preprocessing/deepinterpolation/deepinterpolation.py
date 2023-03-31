@@ -286,7 +286,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
             self.add_recording_segment(recording_segment)
 
         self._preferred_mp_context = "spawn"
-        self._kwargs = dict(recording=recording.to_dict(), model_path=model_path,
+        self._kwargs = dict(recording=recording, model_path=model_path,
                             pre_frames=pre_frames, post_frames=post_frames, pre_post_omission=pre_post_omission,
                             batch_size=batch_size, **random_chunk_kwargs)
         self.extra_requirements.extend(['tensorflow'])
