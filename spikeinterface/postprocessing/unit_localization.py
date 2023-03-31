@@ -346,7 +346,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', local_radius_um=
 
 
 def compute_grid_convolution(waveform_extractor, peak_sign='neg', local_radius_um=50., upsampling_um=5,
-        sigma_um=np.linspace(10, 50, 3), sigma_ms=0.25, margin_um=50, prototype=None):
+        sigma_um=np.linspace(10, 50, 5), sigma_ms=0.25, margin_um=50, prototype=None):
     '''
     Estimate the positions of the templates from a large grid of fake templates
 
