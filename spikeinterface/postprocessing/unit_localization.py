@@ -430,7 +430,7 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', local_radius_u
         global_products = ((wf / amplitude) * prototype).sum(axis=0)
 
         found_positions = np.zeros(2, dtype=np.float32)
-        scalar_products = np.zeros(self.nb_templates, dtype=np.float32)
+        scalar_products = np.zeros(nb_templates, dtype=np.float32)
 
         for count, w in enumerate(weights):
             dot_products = np.dot(global_products, w[:, intersect])
