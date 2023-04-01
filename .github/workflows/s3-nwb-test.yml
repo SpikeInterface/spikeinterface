@@ -46,4 +46,4 @@ jobs:
       - name: Install fsspec, aiohttp and requests
         run: pip install fsspec aiohttp requests
       - name: run tests
-        run: pytest spikeinterface/extractors/tests/test_nwb_s3_extractor.py
+        run: pytest src/spikeinterface/extractors/tests/test_nwb_s3_extractor.py
