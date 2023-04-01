@@ -39,7 +39,7 @@ package-data = {"spikeinterface.sorters" = ["**/*.m", "**/*.prm", "**/*.params",
 spikeinterface = ["**/tests/test_*"]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 include = ["spikeinterface*"]
 namespaces = false
 exclude = ["spikeinterface.*.tests"]
