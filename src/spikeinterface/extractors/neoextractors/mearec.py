@@ -16,17 +16,18 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
     """
-    mode = 'file'
-    NeoRawIOClass = 'MEArecRawIO'
+
+    mode = "file"
+    NeoRawIOClass = "MEArecRawIO"
     name = "mearec"
 
     def __init__(self, file_path, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        NeoBaseRecordingExtractor.__init__(self, 
-                                           all_annotations=all_annotations,
-                                           **neo_kwargs)
+        NeoBaseRecordingExtractor.__init__(
+            self, all_annotations=all_annotations, **neo_kwargs
+        )
 
-        self.extra_requirements.append('mearec')
+        self.extra_requirements.append("mearec")
 
         probe = pi.read_mearec(file_path)
         probe.annotations["mearec_name"] = str(probe.annotations["mearec_name"])
@@ -36,32 +37,34 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
         if hasattr(self.neo_reader._recgen, "gain_to_uV"):
             self.set_channel_gains(self.neo_reader._recgen.gain_to_uV)
 
-        self._kwargs.update({'file_path': str(file_path)})
+        self._kwargs.update({"file_path": str(file_path)})
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {'filename': str(file_path)}
+        neo_kwargs = {"filename": str(file_path)}
         return neo_kwargs
 
 
 class MEArecSortingExtractor(NeoBaseSortingExtractor):
-    mode = 'file'
-    NeoRawIOClass = 'MEArecRawIO'
+    mode = "file"
+    NeoRawIOClass = "MEArecRawIO"
     handle_spike_frame_directly = False
     name = "mearec"
 
     def __init__(self, file_path):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        NeoBaseSortingExtractor.__init__(self,
-                                         sampling_frequency=None,  # auto guess is correct here
-                                         use_natural_unit_ids=True,
-                                         **neo_kwargs)
+        NeoBaseSortingExtractor.__init__(
+            self,
+            sampling_frequency=None,  # auto guess is correct here
+            use_natural_unit_ids=True,
+            **neo_kwargs,
+        )
 
-        self._kwargs = {'file_path': str(file_path)}
+        self._kwargs = {"file_path": str(file_path)}
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {'filename': str(file_path)}
+        neo_kwargs = {"filename": str(file_path)}
         return neo_kwargs
 
 

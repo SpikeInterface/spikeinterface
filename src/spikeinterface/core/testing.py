@@ -18,19 +18,26 @@ def check_recordings_equal(RX1, RX2, return_scaled=True, force_dtype=None):
         # get_num_channels
         assert np.allclose(RX1.get_num_channels(), RX2.get_num_channels())
         # get_num_frames
-        assert np.allclose(RX1.get_num_frames(segment_idx), RX2.get_num_frames(segment_idx))
+        assert np.allclose(
+            RX1.get_num_frames(segment_idx), RX2.get_num_frames(segment_idx)
+        )
         # get_sampling_frequency
         assert np.allclose(RX1.get_sampling_frequency(), RX2.get_sampling_frequency())
         # get_traces
         if force_dtype is None:
-            assert np.allclose(RX1.get_traces(segment_index=segment_idx,
-                                              return_scaled=return_scaled), 
-                               RX2.get_traces(segment_index=segment_idx, 
-                                              return_scaled=return_scaled))
+            assert np.allclose(
+                RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled),
+                RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled),
+            )
         else:
             assert np.allclose(
-                RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),
-                RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype))
+                RX1.get_traces(
+                    segment_index=segment_idx, return_scaled=return_scaled
+                ).astype(force_dtype),
+                RX2.get_traces(
+                    segment_index=segment_idx, return_scaled=return_scaled
+                ).astype(force_dtype),
+            )
         sf = 0
         ef = N
         if RX1.get_num_channels() > 1:
@@ -38,15 +45,39 @@ def check_recordings_equal(RX1, RX2, return_scaled=True, force_dtype=None):
         else:
             ch = [RX1.get_channel_ids()[0]]
         if force_dtype is None:
-            assert np.allclose(RX1.get_traces(segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef,
-                                              return_scaled=return_scaled),
-                               RX2.get_traces(segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef,
-                                              return_scaled=return_scaled))
+            assert np.allclose(
+                RX1.get_traces(
+                    segment_index=segment_idx,
+                    channel_ids=ch,
+                    start_frame=sf,
+                    end_frame=ef,
+                    return_scaled=return_scaled,
+                ),
+                RX2.get_traces(
+                    segment_index=segment_idx,
+                    channel_ids=ch,
+                    start_frame=sf,
+                    end_frame=ef,
+                    return_scaled=return_scaled,
+                ),
+            )
         else:
-            assert np.allclose(RX1.get_traces(segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef,
-                                              return_scaled=return_scaled).astype(force_dtype),
-                               RX2.get_traces(segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef,
-                                              return_scaled=return_scaled).astype(force_dtype))
+            assert np.allclose(
+                RX1.get_traces(
+                    segment_index=segment_idx,
+                    channel_ids=ch,
+                    start_frame=sf,
+                    end_frame=ef,
+                    return_scaled=return_scaled,
+                ).astype(force_dtype),
+                RX2.get_traces(
+                    segment_index=segment_idx,
+                    channel_ids=ch,
+                    start_frame=sf,
+                    end_frame=ef,
+                    return_scaled=return_scaled,
+                ).astype(force_dtype),
+            )
 
 
 # def check_recording_properties(RX1, RX2):
@@ -60,6 +91,7 @@ def check_recordings_equal(RX1, RX2, return_scaled=True, force_dtype=None):
 #             else:
 #                 assert RX1.get_channel_property(ch, prop) == RX2.get_channel_property(ch, prop)
 
+
 def check_sortings_equal(SX1, SX2):
     assert SX1.get_num_segments() == SX2.get_num_segments()
 
@@ -72,6 +104,7 @@ def check_sortings_equal(SX1, SX2):
             train1 = np.sort(SX1.get_unit_spike_train(id, segment_index=segment_idx))
             train2 = np.sort(SX2.get_unit_spike_train(id, segment_index=segment_idx))
             assert np.array_equal(train1, train2)
+
 
 # def check_sorting_properties_features(SX1, SX2):
 #     # check properties

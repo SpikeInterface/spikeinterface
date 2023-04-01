@@ -30,8 +30,15 @@ class ProbeMapWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, recording, channel_ids=None, with_channel_ids=False, figure=None, ax=None,
-                 **plot_probe_kwargs):
+    def __init__(
+        self,
+        recording,
+        channel_ids=None,
+        with_channel_ids=False,
+        figure=None,
+        ax=None,
+        **plot_probe_kwargs,
+    ):
         BaseWidget.__init__(self, figure, ax)
 
         if channel_ids is not None:
@@ -50,20 +57,24 @@ class ProbeMapWidget(BaseWidget):
             xlims2, ylims2, _ = get_auto_lims(probe)
             xlims = min(xlims[0], xlims2[0]), max(xlims[1], xlims2[1])
             ylims = min(ylims[0], ylims2[0]), max(ylims[1], ylims2[1])
-        
-        self._plot_probe_kwargs['title'] = False
+
+        self._plot_probe_kwargs["title"] = False
         pos = 0
         text_on_contact = None
         for i, probe in enumerate(self._probegroup.probes):
             n = probe.get_contact_count()
             if self.with_channel_ids:
-                text_on_contact = self._recording.channel_ids[pos:pos+n]
+                text_on_contact = self._recording.channel_ids[pos : pos + n]
             pos += n
-            plot_probe(probe, ax=self.ax, text_on_contact=text_on_contact, **self._plot_probe_kwargs)
+            plot_probe(
+                probe,
+                ax=self.ax,
+                text_on_contact=text_on_contact,
+                **self._plot_probe_kwargs,
+            )
 
         self.ax.set_xlim(*xlims)
         self.ax.set_ylim(*ylims)
-
 
 
 def plot_probe_map(*args, **kwargs):

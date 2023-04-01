@@ -20,8 +20,7 @@ class ScaleRecordingSegment(BasePreprocessorSegment):
             start_frame, end_frame, channel_indices
         )
         scaled_traces = (
-            traces * self.gain[:, channel_indices]
-            + self.offset[:, channel_indices]
+            traces * self.gain[:, channel_indices] + self.offset[:, channel_indices]
         )
         return scaled_traces.astype(self._dtype)
 
@@ -69,9 +68,8 @@ class NormalizeByQuantileRecording(BasePreprocessor):
         q2=0.99,
         mode="by_channel",
         dtype="float32",
-        **random_chunk_kwargs
+        **random_chunk_kwargs,
     ):
-
         assert mode in ("pool_channel", "by_channel")
 
         random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
@@ -79,9 +77,7 @@ class NormalizeByQuantileRecording(BasePreprocessor):
         if mode == "pool_channel":
             num_chans = recording.get_num_channels()
             # old behavior
-            loc_q1, pre_median, loc_q2 = np.quantile(
-                random_data, q=[q1, 0.5, q2]
-            )
+            loc_q1, pre_median, loc_q2 = np.quantile(random_data, q=[q1, 0.5, q2])
             pre_scale = abs(loc_q2 - loc_q1)
             gain = scale / pre_scale
             offset = median - pre_median * gain
@@ -145,7 +141,6 @@ class ScaleRecording(BasePreprocessor):
     name = "scale"
 
     def __init__(self, recording, gain=1.0, offset=0.0, dtype="float32"):
-
         if dtype is None:
             dtype = recording.get_dtype()
 
@@ -209,7 +204,6 @@ class CenterRecording(BasePreprocessor):
     def __init__(
         self, recording, mode="median", dtype="float32", **random_chunk_kwargs
     ):
-
         assert mode in ("median", "mean")
         random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
 
@@ -260,13 +254,8 @@ class ZScoreRecording(BasePreprocessor):
     name = "zscore"
 
     def __init__(
-        self,
-        recording,
-        mode="median+mad",
-        dtype="float32",
-        **random_chunk_kwargs
+        self, recording, mode="median+mad", dtype="float32", **random_chunk_kwargs
     ):
-
         assert mode in ("median+mad", "mean+std")
 
         random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
@@ -307,9 +296,5 @@ normalize_by_quantile = define_function_from_class(
     source_class=NormalizeByQuantileRecording, name="normalize_by_quantile"
 )
 scale = define_function_from_class(source_class=ScaleRecording, name="scale")
-center = define_function_from_class(
-    source_class=CenterRecording, name="center"
-)
-zscore = define_function_from_class(
-    source_class=ZScoreRecording, name="zscore"
-)
+center = define_function_from_class(source_class=CenterRecording, name="center")
+zscore = define_function_from_class(source_class=ZScoreRecording, name="zscore")

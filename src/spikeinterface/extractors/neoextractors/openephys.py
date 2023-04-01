@@ -17,9 +17,11 @@ import warnings
 
 import probeinterface as pi
 
-from .neobaseextractor import (NeoBaseRecordingExtractor,
-                               NeoBaseSortingExtractor,
-                               NeoBaseEventExtractor)
+from .neobaseextractor import (
+    NeoBaseRecordingExtractor,
+    NeoBaseSortingExtractor,
+    NeoBaseEventExtractor,
+)
 
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 
@@ -48,22 +50,33 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     all_annotations: bool  (default False)
         Load exhaustively all annotation from neo.
     """
-    mode = 'folder'
-    NeoRawIOClass = 'OpenEphysRawIO'
+
+    mode = "folder"
+    NeoRawIOClass = "OpenEphysRawIO"
     name = "openephyslegacy"
 
-    def __init__(self, folder_path, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
+    def __init__(
+        self,
+        folder_path,
+        stream_id=None,
+        stream_name=None,
+        block_index=None,
+        all_annotations=False,
+    ):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)
-        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id,
-                                           stream_name=stream_name,
-                                           block_index=block_index,
-                                           all_annotations=all_annotations, 
-                                           **neo_kwargs)
+        NeoBaseRecordingExtractor.__init__(
+            self,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            block_index=block_index,
+            all_annotations=all_annotations,
+            **neo_kwargs,
+        )
         self._kwargs.update(dict(folder_path=str(folder_path)))
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {'dirname': str(folder_path)}
+        neo_kwargs = {"dirname": str(folder_path)}
         return neo_kwargs
 
 
@@ -103,19 +116,34 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         Load exhaustively all annotation from neo.
 
     """
-    mode = 'folder'
-    NeoRawIOClass = 'OpenEphysBinaryRawIO'
+
+    mode = "folder"
+    NeoRawIOClass = "OpenEphysBinaryRawIO"
     name = "openephys"
     has_default_locations = True
 
-    def __init__(self, folder_path, load_sync_channel=False, load_sync_timestamps=False, experiment_names=None,
-                 stream_id=None, stream_name=None, block_index=None, all_annotations=False):
-        neo_kwargs = self.map_to_neo_kwargs(folder_path, load_sync_channel, experiment_names)
-        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id,
-                                           stream_name=stream_name,
-                                           block_index=block_index,
-                                           all_annotations=all_annotations, 
-                                           **neo_kwargs)
+    def __init__(
+        self,
+        folder_path,
+        load_sync_channel=False,
+        load_sync_timestamps=False,
+        experiment_names=None,
+        stream_id=None,
+        stream_name=None,
+        block_index=None,
+        all_annotations=False,
+    ):
+        neo_kwargs = self.map_to_neo_kwargs(
+            folder_path, load_sync_channel, experiment_names
+        )
+        NeoBaseRecordingExtractor.__init__(
+            self,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            block_index=block_index,
+            all_annotations=all_annotations,
+            **neo_kwargs,
+        )
         # get streams to find correct probe
         stream_names, stream_ids = self.get_streams(folder_path, experiment_names)
         if stream_name is None and stream_id is None:
@@ -127,9 +155,11 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         if "#" in stream_name:
             record_node, oe_stream = stream_name.split("#")
         else:
-            record_node = ''
+            record_node = ""
             oe_stream = stream_name
-        exp_ids = sorted(list(self.neo_reader.folder_structure[record_node]["experiments"].keys()))
+        exp_ids = sorted(
+            list(self.neo_reader.folder_structure[record_node]["experiments"].keys())
+        )
         if block_index is None:
             exp_id = exp_ids[0]
         else:
@@ -137,11 +167,16 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
         # do not load probe for NIDQ stream
         if "NI-DAQmx" not in stream_name:
-            settings_file = self.neo_reader.folder_structure[record_node]["experiments"][exp_id]["settings_file"]
+            settings_file = self.neo_reader.folder_structure[record_node][
+                "experiments"
+            ][exp_id]["settings_file"]
 
             if Path(settings_file).is_file():
-                probe = pi.read_openephys(settings_file=settings_file,
-                                          stream_name=stream_name, raise_error=False)
+                probe = pi.read_openephys(
+                    settings_file=settings_file,
+                    stream_name=stream_name,
+                    raise_error=False,
+                )
             else:
                 probe = None
 
@@ -153,15 +188,22 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     num_channels_per_adc = 16
                 else:
                     num_channels_per_adc = 12
-                sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_channels_per_adc)
+                sample_shifts = get_neuropixels_sample_shifts(
+                    self.get_num_channels(), num_channels_per_adc
+                )
                 self.set_property("inter_sample_shift", sample_shifts)
 
         # load synchronized timestamps and set_times to recording
         if load_sync_timestamps:
             recording_folder = Path(folder_path) / record_node
             for segment_index in range(self.get_num_segments()):
-                stream_folder = recording_folder / f"experiment{exp_id}" / f"recording{segment_index+1}" / \
-                    "continuous" / oe_stream
+                stream_folder = (
+                    recording_folder
+                    / f"experiment{exp_id}"
+                    / f"recording{segment_index+1}"
+                    / "continuous"
+                    / oe_stream
+                )
                 if (stream_folder / "sample_numbers.npy").is_file():
                     # OE version>=v0.6
                     sync_times = np.load(stream_folder / "timestamps.npy")
@@ -171,21 +213,34 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 else:
                     sync_times = None
                 try:
-                    self.set_times(times=sync_times, segment_index=segment_index, with_warning=False)
+                    self.set_times(
+                        times=sync_times,
+                        segment_index=segment_index,
+                        with_warning=False,
+                    )
                 except AssertionError:
-                    warnings.warn(f"Could not load synchronized timestamps for {stream_name}")
+                    warnings.warn(
+                        f"Could not load synchronized timestamps for {stream_name}"
+                    )
 
-        self._kwargs.update(dict(folder_path=str(folder_path),
-                                 load_sync_channel=load_sync_channel,
-                                 load_sync_timestamps=load_sync_timestamps,
-                                 experiment_names=experiment_names))
-
+        self._kwargs.update(
+            dict(
+                folder_path=str(folder_path),
+                load_sync_channel=load_sync_channel,
+                load_sync_timestamps=load_sync_timestamps,
+                experiment_names=experiment_names,
+            )
+        )
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path, load_sync_channel=False, experiment_names=None):
-        neo_kwargs = {'dirname': str(folder_path),
-                      'load_sync_channel': load_sync_channel,
-                      'experiment_names': experiment_names}
+    def map_to_neo_kwargs(
+        cls, folder_path, load_sync_channel=False, experiment_names=None
+    ):
+        neo_kwargs = {
+            "dirname": str(folder_path),
+            "load_sync_channel": load_sync_channel,
+            "experiment_names": experiment_names,
+        }
         return neo_kwargs
 
 
@@ -205,18 +260,18 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
     folder_path: str
 
     """
-    mode = 'folder'
-    NeoRawIOClass = 'OpenEphysBinaryRawIO'
+
+    mode = "folder"
+    NeoRawIOClass = "OpenEphysBinaryRawIO"
     name = "openephys"
 
     def __init__(self, folder_path, block_index=None):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)
-        NeoBaseEventExtractor.__init__(self, block_index=block_index,
-                                       **neo_kwargs)
+        NeoBaseEventExtractor.__init__(self, block_index=block_index, **neo_kwargs)
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {'dirname': str(folder_path)}
+        neo_kwargs = {"dirname": str(folder_path)}
         return neo_kwargs
 
 
@@ -243,7 +298,7 @@ def read_openephys(folder_path, **kwargs):
     """
     # auto guess format
     files = [str(f) for f in Path(folder_path).iterdir()]
-    if np.any([f.endswith('continuous') for f in files]):
+    if np.any([f.endswith("continuous") for f in files]):
         #  format = 'legacy'
         recording = OpenEphysLegacyRecordingExtractor(folder_path, **kwargs)
     else:
@@ -269,7 +324,7 @@ def read_openephys_event(folder_path, block_index=None):
     """
     # auto guess format
     files = [str(f) for f in Path(folder_path).iterdir()]
-    if np.any([f.startswith('Continuous') for f in files]):
+    if np.any([f.startswith("Continuous") for f in files]):
         raise Exception("Events can be read only from 'binary' format")
     else:
         # format = 'binary'

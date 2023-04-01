@@ -131,9 +131,7 @@ def get_noise_levels(recording, return_scaled=True, **random_chunk_kwargs):
     )
     med = np.median(random_chunks, axis=0, keepdims=True)
     # hard-coded so that core doesn't depend on scipy
-    noise_levels = (
-        np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
-    )
+    noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
     return noise_levels
 
 
@@ -207,16 +205,9 @@ def get_chunk_with_margin(
             end_frame2 = end_frame + margin
             right_pad = 0
 
-        traces_chunk = rec_segment.get_traces(
-            start_frame2, end_frame2, channel_indices
-        )
+        traces_chunk = rec_segment.get_traces(start_frame2, end_frame2, channel_indices)
 
-        if (
-            dtype is not None
-            or window_on_margin
-            or left_pad > 0
-            or right_pad > 0
-        ):
+        if dtype is not None or window_on_margin or left_pad > 0 or right_pad > 0:
             need_copy = True
         else:
             need_copy = False
@@ -243,9 +234,7 @@ def get_chunk_with_margin(
                 traces_chunk2[i0:i1, :] = traces_chunk
                 if window_on_margin:
                     # apply inplace taper on border
-                    taper = (
-                        1 - np.cos(np.arange(margin) / margin * np.pi)
-                    ) / 2
+                    taper = (1 - np.cos(np.arange(margin) / margin * np.pi)) / 2
                     taper = taper[:, np.newaxis]
                     traces_chunk2[:margin] *= taper
                     traces_chunk2[-margin:] *= taper[::-1]
@@ -264,9 +253,7 @@ def get_chunk_with_margin(
     return traces_chunk, left_margin, right_margin
 
 
-def order_channels_by_depth(
-    recording, channel_ids=None, dimensions=("x", "y")
-):
+def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y")):
     """
     Order channels by depth, by first ordering the x-axis, and then the y-axis.
 
@@ -298,9 +285,7 @@ def order_channels_by_depth(
         assert dim < ndim, "Invalid dimensions!"
         order_f = np.argsort(locations[:, dim], kind="stable")
     else:
-        assert isinstance(
-            dimensions, tuple
-        ), "dimensions can be a str or a tuple"
+        assert isinstance(dimensions, tuple), "dimensions can be a str or a tuple"
         locations_to_sort = ()
         for dim in dimensions:
             dim = ["x", "y", "z"].index(dim)

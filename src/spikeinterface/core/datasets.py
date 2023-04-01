@@ -6,7 +6,9 @@ import warnings
 from .globals import get_global_dataset_folder, is_set_global_dataset_folder
 
 
-def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_exists=False, unlock=False):
+def download_dataset(
+    repo=None, remote_path=None, local_folder=None, update_if_exists=False, unlock=False
+):
     """
     Function to download dataset from a remote repository using datalad.
 
@@ -20,7 +22,7 @@ def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_e
         If not provided, the function returns None
     local_folder : str, optional
         The destination folder / directory to download the dataset to.
-        defaults to the path "get_global_dataset_folder()" / f{repo_name} (see `spikeinterface.core.globals`) 
+        defaults to the path "get_global_dataset_folder()" / f{repo_name} (see `spikeinterface.core.globals`)
     update_if_exists : bool, optional
         Forces re-download of the dataset if it already exists, by default False
     unlock : bool, optional

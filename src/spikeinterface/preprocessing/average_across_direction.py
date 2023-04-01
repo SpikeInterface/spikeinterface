@@ -34,9 +34,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
         parent_channel_locations = parent_recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)
         if dim > parent_channel_locations.shape[1]:
-            raise ValueError(
-                f"Direction {direction} not present in this recording."
-            )
+            raise ValueError(f"Direction {direction} not present in this recording.")
         locs_dim = parent_channel_locations[:, dim]
         # note np.unique returns sorted dim_unique
         # same_along_dim_chans is the inverse mapping: same_along_dim_chans[i]
@@ -137,9 +135,7 @@ class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):
         # first, add in the traces from all of the channels at each position
         # np.add.at is necessary -- it will add multiple times in the same
         # position, which + and += do not do
-        np.add.at(
-            traces, (slice(None), self.same_along_dim_chans), parent_traces
-        )
+        np.add.at(traces, (slice(None), self.same_along_dim_chans), parent_traces)
         # now, divide by the number of channels at that position
         traces /= self.n_chans_each_pos
 

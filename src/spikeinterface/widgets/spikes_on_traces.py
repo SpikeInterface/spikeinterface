@@ -33,7 +33,7 @@ class SpikesOnTracesWidget(BaseWidget):
     plot_channels: bool
         Plot channel locations below traces.
     unit_selected_waveforms: None or dict
-        A dict key is unit_id and value is the subset of waveforms indices that should be 
+        A dict key is unit_id and value is the subset of waveforms indices that should be
         be displayed (matplotlib backend)
     max_spikes_per_unit: int or None
         If given and unit_selected_waveforms is None, only max_spikes_per_unit random units are
@@ -54,29 +54,63 @@ class SpikesOnTracesWidget(BaseWidget):
     same_axis: bool
         If True, waveforms and templates are diplayed on the same axis, default False (matplotlib backend)
     x_offset_units: bool
-        In case same_axis is True, this parameter allow to x-offset the waveforms for different units 
+        In case same_axis is True, this parameter allow to x-offset the waveforms for different units
         (recommended for a few units), default False (matlotlib backend)
     """
+
     possible_backends = {}
 
-    def __init__(self, waveform_extractor: WaveformExtractor, 
-                 segment_index=None, channel_ids=None, unit_ids=None, order_channel_by_depth=False,
-                 time_range=None, unit_colors=None, sparsity=None, 
-                 mode='auto', return_scaled=False, cmap='RdBu', show_channel_ids=False,
-                 color_groups=False, color=None, clim=None, tile_size=512, seconds_per_row=0.2, 
-                 with_colorbar=True, backend=None, **backend_kwargs):
+    def __init__(
+        self,
+        waveform_extractor: WaveformExtractor,
+        segment_index=None,
+        channel_ids=None,
+        unit_ids=None,
+        order_channel_by_depth=False,
+        time_range=None,
+        unit_colors=None,
+        sparsity=None,
+        mode="auto",
+        return_scaled=False,
+        cmap="RdBu",
+        show_channel_ids=False,
+        color_groups=False,
+        color=None,
+        clim=None,
+        tile_size=512,
+        seconds_per_row=0.2,
+        with_colorbar=True,
+        backend=None,
+        **backend_kwargs,
+    ):
         we = waveform_extractor
         recording: BaseRecording = we.recording
         sorting: BaseSorting = we.sorting
-        
-        ts_widget = TimeseriesWidget(recording, segment_index, channel_ids, order_channel_by_depth,
-                                     time_range, mode, return_scaled, cmap, show_channel_ids, color_groups, color, clim, 
-                                     tile_size, seconds_per_row, with_colorbar, backend, **backend_kwargs)
+
+        ts_widget = TimeseriesWidget(
+            recording,
+            segment_index,
+            channel_ids,
+            order_channel_by_depth,
+            time_range,
+            mode,
+            return_scaled,
+            cmap,
+            show_channel_ids,
+            color_groups,
+            color,
+            clim,
+            tile_size,
+            seconds_per_row,
+            with_colorbar,
+            backend,
+            **backend_kwargs,
+        )
 
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
         unit_ids = unit_ids
-        
+
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
 
@@ -87,11 +121,13 @@ class SpikesOnTracesWidget(BaseWidget):
             if sparsity is None:
                 # in this case, we construct a sparsity dictionary only with the best channel
                 extremum_channel_ids = get_template_extremum_channel(we)
-                unit_id_to_channel_ids = {u: [ch] for u, ch in extremum_channel_ids.items()}
+                unit_id_to_channel_ids = {
+                    u: [ch] for u, ch in extremum_channel_ids.items()
+                }
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
                     unit_id_to_channel_ids=unit_id_to_channel_ids,
                     unit_ids=we.unit_ids,
-                    channel_ids=we.channel_ids
+                    channel_ids=we.channel_ids,
                 )
             else:
                 assert isinstance(sparsity, ChannelSparsity)

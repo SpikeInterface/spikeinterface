@@ -19,15 +19,17 @@ def test_ChannelSliceRecording():
     num_chan = 3
     num_samples = 30
     sampling_frequency = 10000
-    dtype = 'int16'
+    dtype = "int16"
 
-    file_paths = [cache_folder / f'test_BinaryRecordingExtractor_{i}.raw' for i in range(num_seg)]
+    file_paths = [
+        cache_folder / f"test_BinaryRecordingExtractor_{i}.raw" for i in range(num_seg)
+    ]
     for i in range(num_seg):
         traces = np.memmap(
-            file_paths[i], dtype=dtype, mode='w+', shape=(num_samples, num_chan))
+            file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_chan)
+        )
         traces[:] = np.arange(3)[None, :]
-    rec = BinaryRecordingExtractor(
-        file_paths, sampling_frequency, num_chan, dtype)
+    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
 
     # keep original ids
     rec_sliced = ChannelSliceRecording(rec, channel_ids=[0, 2])
@@ -43,7 +45,8 @@ def test_ChannelSliceRecording():
 
     # with channel ids renaming
     rec_sliced2 = ChannelSliceRecording(
-        rec, channel_ids=[0, 2], renamed_channel_ids=[3, 4])
+        rec, channel_ids=[0, 2], renamed_channel_ids=[3, 4]
+    )
     assert np.all(rec_sliced2.get_channel_ids() == [3, 4])
     traces = rec_sliced2.get_traces(segment_index=1)
     assert traces.shape[1] == 2
@@ -60,10 +63,11 @@ def test_ChannelSliceRecording():
     probe.set_device_channel_indices(np.arange(num_chan))
     rec_p = rec.set_probe(probe)
     rec_sliced3 = ChannelSliceRecording(
-        rec_p, channel_ids=[0, 2], renamed_channel_ids=[3, 4])
+        rec_p, channel_ids=[0, 2], renamed_channel_ids=[3, 4]
+    )
     probe3 = rec_sliced3.get_probe()
     locations3 = probe3.contact_positions
-    folder = cache_folder / 'sliced_recording'
+    folder = cache_folder / "sliced_recording"
     rec_saved = rec_sliced3.save(folder=folder, chunk_size=10, n_jobs=2)
     probe = rec_saved.get_probe()
     assert np.array_equal(locations3, rec_saved.get_channel_locations())
@@ -72,5 +76,5 @@ def test_ChannelSliceRecording():
     assert np.all(traces3[:, 1] == 2)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_ChannelSliceRecording()

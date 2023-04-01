@@ -11,7 +11,6 @@ from spikeinterface.sortingcomponents.peak_pipeline import (
 )
 
 
-
 def test_savgol_denoising(mearec_recording, detected_peaks, chunk_executor_kwargs):
     recording = mearec_recording
     peaks = detected_peaks
@@ -25,9 +24,7 @@ def test_savgol_denoising(mearec_recording, detected_peaks, chunk_executor_kwarg
         recording=recording, ms_before=ms_before, ms_after=ms_after, return_output=True
     )
 
-    spline_denoiser = SavGolDenoiser(
-        recording=recording, parents=[extract_waveforms]
-    )
+    spline_denoiser = SavGolDenoiser(recording=recording, parents=[extract_waveforms])
     pipeline_nodes = [extract_waveforms, spline_denoiser]
 
     # Extract projected waveforms and compare
@@ -35,5 +32,3 @@ def test_savgol_denoising(mearec_recording, detected_peaks, chunk_executor_kwarg
         recording, peaks, nodes=pipeline_nodes, job_kwargs=chunk_executor_kwargs
     )
     assert waveforms.shape == denoised_waveforms.shape
-
-

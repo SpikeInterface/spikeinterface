@@ -4,7 +4,10 @@ from pathlib import Path
 from spikeinterface import set_global_tmp_folder
 from spikeinterface.core import NumpyRecording
 
-from spikeinterface.preprocessing import DirectionalDerivativeRecording, directional_derivative
+from spikeinterface.preprocessing import (
+    DirectionalDerivativeRecording,
+    directional_derivative,
+)
 
 import numpy as np
 
@@ -55,5 +58,5 @@ def test_directional_derivative():
     assert (traces == 0).all()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_directional_derivative()

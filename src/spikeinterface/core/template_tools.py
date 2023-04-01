@@ -5,7 +5,9 @@ from .sparsity import compute_sparsity, _sparsity_doc
 from .recording_tools import get_channel_distances, get_noise_levels
 
 
-def get_template_amplitudes(waveform_extractor, peak_sign: str = "neg", mode: str = "extremum"):
+def get_template_amplitudes(
+    waveform_extractor, peak_sign: str = "neg", mode: str = "extremum"
+):
     """
     Get amplitude per channel for each unit.
 
@@ -56,7 +58,12 @@ def get_template_amplitudes(waveform_extractor, peak_sign: str = "neg", mode: st
     return peak_values
 
 
-def get_template_extremum_channel(waveform_extractor, peak_sign: str = "neg", mode: str = "extremum", outputs: str = "id"):
+def get_template_extremum_channel(
+    waveform_extractor,
+    peak_sign: str = "neg",
+    mode: str = "extremum",
+    outputs: str = "id",
+):
     """
     Compute the channel with the extremum peak for each unit.
 
@@ -86,7 +93,9 @@ def get_template_extremum_channel(waveform_extractor, peak_sign: str = "neg", mo
     unit_ids = waveform_extractor.sorting.unit_ids
     channel_ids = waveform_extractor.channel_ids
 
-    peak_values = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign, mode=mode)
+    peak_values = get_template_amplitudes(
+        waveform_extractor, peak_sign=peak_sign, mode=mode
+    )
     extremum_channels_id = {}
     extremum_channels_index = {}
     for unit_id in unit_ids:
@@ -105,39 +114,48 @@ def get_template_channel_sparsity(
     method="radius",
     peak_sign="neg",
     num_channels=5,
-    radius_um=100.,
+    radius_um=100.0,
     threshold=5,
     by_property=None,
     outputs="id",
 ):
     """
-    Get channel sparsity (subset of channels) for each template with several methods.
+        Get channel sparsity (subset of channels) for each template with several methods.
 
-    Parameters
-    ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor
-{}
-    outputs: str
-        * 'id': channel id
-        * 'index': channel index
+        Parameters
+        ----------
+        waveform_extractor: WaveformExtractor
+            The waveform extractor
+    {}
+        outputs: str
+            * 'id': channel id
+            * 'index': channel index
 
-    Returns
-    -------
-    sparsity: dict
-        Dictionary with unit ids as keys and sparse channel ids or indices (id or index based on 'outputs')
-        as values
+        Returns
+        -------
+        sparsity: dict
+            Dictionary with unit ids as keys and sparse channel ids or indices (id or index based on 'outputs')
+            as values
     """
     from spikeinterface.core.sparsity import compute_sparsity
 
-    warnings.warn("The 'get_template_channel_sparsity()' function is deprecated. "
-                  "Use 'compute_sparsity()' instead",
-                  DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        "The 'get_template_channel_sparsity()' function is deprecated. "
+        "Use 'compute_sparsity()' instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
-    assert outputs in ('id', 'index'), "'outputs' can either be 'id' or 'index'"
-    sparsity = compute_sparsity(waveform_extractor, method=method, peak_sign=peak_sign,
-                                 num_channels=num_channels, radius_um=radius_um, threshold=threshold,
-                                 by_property=by_property)
+    assert outputs in ("id", "index"), "'outputs' can either be 'id' or 'index'"
+    sparsity = compute_sparsity(
+        waveform_extractor,
+        method=method,
+        peak_sign=peak_sign,
+        num_channels=num_channels,
+        radius_um=radius_um,
+        threshold=threshold,
+        by_property=by_property,
+    )
 
     # handle output ids or indexes
     if outputs == "id":
@@ -146,10 +164,14 @@ def get_template_channel_sparsity(
         return sparsity.unit_id_to_channel_indices
 
 
-get_template_channel_sparsity.__doc__ = get_template_channel_sparsity.__doc__.format(_sparsity_doc)
+get_template_channel_sparsity.__doc__ = get_template_channel_sparsity.__doc__.format(
+    _sparsity_doc
+)
 
 
-def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: str = "neg"):
+def get_template_extremum_channel_peak_shift(
+    waveform_extractor, peak_sign: str = "neg"
+):
     """
     In some situations spike sorters could return a spike index with a small shift related to the waveform peak.
     This function estimates and return these alignment shifts for the mean template.
@@ -170,7 +192,9 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: str 
     sorting = waveform_extractor.sorting
     unit_ids = sorting.unit_ids
 
-    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign)
+    extremum_channels_ids = get_template_extremum_channel(
+        waveform_extractor, peak_sign=peak_sign
+    )
 
     shifts = {}
 
@@ -193,7 +217,9 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: str 
     return shifts
 
 
-def get_template_extremum_amplitude(waveform_extractor, peak_sign: str = "neg", mode: str = "at_index"):
+def get_template_extremum_amplitude(
+    waveform_extractor, peak_sign: str = "neg", mode: str = "at_index"
+):
     """
     Computes amplitudes on the best channel.
 
@@ -234,5 +260,3 @@ def get_template_extremum_amplitude(waveform_extractor, peak_sign: str = "neg", 
         unit_amplitudes[unit_id] = extremum_amplitudes[unit_id][best_channel]
 
     return unit_amplitudes
-
-

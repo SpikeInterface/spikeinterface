@@ -10,15 +10,21 @@ class BaseWidget:
         figure/ax/axes : only one of then can be not None
         """
         if figure is not None:
-            assert ax is None and axes is None, 'figure/ax/axes : only one of then can be not None'
+            assert (
+                ax is None and axes is None
+            ), "figure/ax/axes : only one of then can be not None"
             ax = figure.add_subplot(111)
             axes = np.array([[ax]])
         elif ax is not None:
-            assert figure is None and axes is None, 'figure/ax/axes : only one of then can be not None'
+            assert (
+                figure is None and axes is None
+            ), "figure/ax/axes : only one of then can be not None"
             figure = ax.get_figure()
             axes = np.array([[ax]])
         elif axes is not None:
-            assert figure is None and ax is None, 'figure/ax/axes : only one of then can be not None'
+            assert (
+                figure is None and ax is None
+            ), "figure/ax/axes : only one of then can be not None"
             axes = np.asarray(axes)
             figure = axes.flatten()[0].get_figure()
         else:
@@ -41,7 +47,10 @@ class BaseWidget:
                     if num_axes < ncols:
                         ncols = num_axes
                     nrows = int(np.ceil(num_axes / ncols))
-                    figure, axes = plt.subplots(nrows=nrows, ncols=ncols, )
+                    figure, axes = plt.subplots(
+                        nrows=nrows,
+                        ncols=ncols,
+                    )
                     ax = None
                     # remove extra axes
                     if ncols * nrows > num_axes:
@@ -53,17 +62,16 @@ class BaseWidget:
         # axes is a 2D array of ax
         self.axes = axes
         # self.figure.axes is the flatten of all axes
-        
-        
-        
+
+
 class DataWidget:
-    
     def __init__(self) -> None:
         self.plotter = None
         pass
-    
+
     def _prepare_data(self):
         raise NotImplementedError
+
 
 # keep here just in case it is needed
 
@@ -75,4 +83,3 @@ class DataWidget:
 #        gs_sel = gs[r, c]
 #        ax = self.figure.add_subplot(gs_sel)
 #        return ax
-

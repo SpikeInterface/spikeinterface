@@ -26,12 +26,20 @@ class TemplateSimilarityWidget(BaseWidget):
     show_colorbar : bool
         If True, color bar is displayed. Default True. (matplotlib backend)
     """
+
     possible_backends = {}
 
-    def __init__(self, waveform_extractor: WaveformExtractor,
-                 unit_ids=None, cmap='viridis', display_diagonal_values=False,
-                 show_unit_ticks=False, show_colorbar=True,
-                 backend=None, **backend_kwargs):
+    def __init__(
+        self,
+        waveform_extractor: WaveformExtractor,
+        unit_ids=None,
+        cmap="viridis",
+        display_diagonal_values=False,
+        show_unit_ticks=False,
+        show_colorbar=True,
+        backend=None,
+        **backend_kwargs,
+    ):
         self.check_extensions(waveform_extractor, "similarity")
         tsc = waveform_extractor.load_extension("similarity")
         similarity = tsc.get_data().copy()
@@ -51,10 +59,7 @@ class TemplateSimilarityWidget(BaseWidget):
             unit_ids=unit_ids,
             cmap=cmap,
             show_unit_ticks=show_unit_ticks,
-            show_colorbar=show_colorbar
+            show_colorbar=show_colorbar,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
-
-
-

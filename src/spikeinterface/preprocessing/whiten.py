@@ -31,10 +31,19 @@ class WhitenRecording(BasePreprocessor):
     whitened_recording: WhitenRecording
         The whitened recording extractor
     """
-    name = 'whiten'
 
-    def __init__(self, recording, dtype="float32", num_chunks_per_segment=20,
-                 chunk_size=10000, seed=None, W=None, M=None):
+    name = "whiten"
+
+    def __init__(
+        self,
+        recording,
+        dtype="float32",
+        num_chunks_per_segment=20,
+        chunk_size=10000,
+        seed=None,
+        W=None,
+        M=None,
+    ):
         # fix dtype
         dtype_ = fix_dtype(recording, dtype)
 
@@ -43,9 +52,14 @@ class WhitenRecording(BasePreprocessor):
             W = np.array(W)
             M = np.array(M)
         else:
-            random_data = get_random_data_chunks(recording, num_chunks_per_segment=num_chunks_per_segment,
-                                                chunk_size=chunk_size, concatenated=True, seed=seed,
-                                                return_scaled=False)
+            random_data = get_random_data_chunks(
+                recording,
+                num_chunks_per_segment=num_chunks_per_segment,
+                chunk_size=chunk_size,
+                concatenated=True,
+                seed=seed,
+                return_scaled=False,
+            )
             random_data = random_data.astype(dtype_)
             # compute whitening matrix
             M = np.mean(random_data, axis=0)
@@ -62,10 +76,15 @@ class WhitenRecording(BasePreprocessor):
             rec_segment = WhitenRecordingSegment(parent_segment, W, M, dtype_)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording, dtype=dtype,
-                            num_chunks_per_segment=num_chunks_per_segment,
-                            chunk_size=chunk_size, seed=seed, 
-                            W=W.tolist(), M=M.tolist())
+        self._kwargs = dict(
+            recording=recording,
+            dtype=dtype,
+            num_chunks_per_segment=num_chunks_per_segment,
+            chunk_size=chunk_size,
+            seed=seed,
+            W=W.tolist(),
+            M=M.tolist(),
+        )
 
 
 class WhitenRecordingSegment(BasePreprocessorSegment):
@@ -77,7 +96,8 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self.parent_recording_segment.get_traces(
-            start_frame, end_frame, slice(None))
+            start_frame, end_frame, slice(None)
+        )
         traces_dtype = traces.dtype
         # if uint --> force int
         if traces_dtype.kind == "u":

@@ -10,7 +10,12 @@ from numpy.testing import assert_raises
 
 from probeinterface import Probe
 
-from spikeinterface.core import BinaryRecordingExtractor, NumpyRecording, load_extractor, get_default_zarr_compressor
+from spikeinterface.core import (
+    BinaryRecordingExtractor,
+    NumpyRecording,
+    load_extractor,
+    get_default_zarr_compressor,
+)
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_recordings_equal
 
@@ -28,48 +33,60 @@ def test_BaseRecording():
     num_chan = 3
     num_samples = 30
     sampling_frequency = 10000
-    dtype = 'int16'
+    dtype = "int16"
 
-    file_paths = [cache_folder / f'test_base_recording_{i}.raw' for i in range(num_seg)]
+    file_paths = [cache_folder / f"test_base_recording_{i}.raw" for i in range(num_seg)]
     for i in range(num_seg):
-        a = np.memmap(file_paths[i], dtype=dtype,
-                      mode='w+', shape=(num_samples, num_chan))
+        a = np.memmap(
+            file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_chan)
+        )
         a[:] = np.random.randn(*a.shape).astype(dtype)
-    rec = BinaryRecordingExtractor(
-        file_paths, sampling_frequency, num_chan, dtype)
+    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
 
     assert rec.get_num_segments() == 2
     assert rec.get_num_channels() == 3
 
     assert np.all(rec.ids_to_indices([0, 1, 2]) == [0, 1, 2])
-    assert np.all(rec.ids_to_indices(
-        [0, 1, 2], prefer_slice=True) == slice(0, 3, None))
+    assert np.all(rec.ids_to_indices([0, 1, 2], prefer_slice=True) == slice(0, 3, None))
 
     # annotations / properties
-    rec.annotate(yep='yop')
-    assert rec.get_annotation('yep') == 'yop'
+    rec.annotate(yep="yop")
+    assert rec.get_annotation("yep") == "yop"
 
     rec.set_channel_groups([0, 0, 1])
 
-    rec.set_property('quality', [1., 3.3, np.nan])
-    values = rec.get_property('quality')
-    assert np.all(values[:2] == [1., 3.3, ])
+    rec.set_property("quality", [1.0, 3.3, np.nan])
+    values = rec.get_property("quality")
+    assert np.all(
+        values[:2]
+        == [
+            1.0,
+            3.3,
+        ]
+    )
 
     # missing property
-    rec.set_property('string_property', ["ciao", "bello"], ids=[0, 1])
-    values = rec.get_property('string_property')
+    rec.set_property("string_property", ["ciao", "bello"], ids=[0, 1])
+    values = rec.get_property("string_property")
     assert values[2] == ""
 
     # setting an different type raises an error
-    assert_raises(Exception, rec.set_property, key='string_property_nan', values=["ciao", "bello"], ids=[0, 1],
-                  missing_value=np.nan)
+    assert_raises(
+        Exception,
+        rec.set_property,
+        key="string_property_nan",
+        values=["ciao", "bello"],
+        ids=[0, 1],
+        missing_value=np.nan,
+    )
 
     # int properties without missing values raise an error
-    assert_raises(Exception, rec.set_property,
-                  key='int_property', values=[5, 6], ids=[1, 2])
+    assert_raises(
+        Exception, rec.set_property, key="int_property", values=[5, 6], ids=[1, 2]
+    )
 
-    rec.set_property('int_property', [5, 6], ids=[1, 2], missing_value=200)
-    values = rec.get_property('int_property')
+    rec.set_property("int_property", [5, 6], ids=[1, 2], missing_value=200)
+    values = rec.get_property("int_property")
     assert values.dtype.kind == "i"
 
     times0 = rec.get_times(segment_index=0)
@@ -80,14 +97,14 @@ def test_BaseRecording():
     rec3 = load_extractor(d)
 
     # dump/load json
-    rec.dump_to_json(cache_folder / 'test_BaseRecording.json')
-    rec2 = BaseExtractor.load(cache_folder / 'test_BaseRecording.json')
-    rec3 = load_extractor(cache_folder / 'test_BaseRecording.json')
+    rec.dump_to_json(cache_folder / "test_BaseRecording.json")
+    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording.json")
+    rec3 = load_extractor(cache_folder / "test_BaseRecording.json")
 
     # dump/load pickle
-    rec.dump_to_pickle(cache_folder / 'test_BaseRecording.pkl')
-    rec2 = BaseExtractor.load(cache_folder / 'test_BaseRecording.pkl')
-    rec3 = load_extractor(cache_folder / 'test_BaseRecording.pkl')
+    rec.dump_to_pickle(cache_folder / "test_BaseRecording.pkl")
+    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording.pkl")
+    rec3 = load_extractor(cache_folder / "test_BaseRecording.pkl")
 
     # dump/load dict - relative
     d = rec.to_dict(relative_to=cache_folder)
@@ -95,18 +112,23 @@ def test_BaseRecording():
     rec3 = load_extractor(d, base_folder=cache_folder)
 
     # dump/load json
-    rec.dump_to_json(cache_folder / 'test_BaseRecording_rel.json', relative_to=cache_folder)
-    rec2 = BaseExtractor.load(cache_folder / 'test_BaseRecording_rel.json', base_folder=cache_folder)
+    rec.dump_to_json(
+        cache_folder / "test_BaseRecording_rel.json", relative_to=cache_folder
+    )
+    rec2 = BaseExtractor.load(
+        cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder
+    )
     rec3 = load_extractor(
-        cache_folder / 'test_BaseRecording_rel.json', base_folder=cache_folder)
+        cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder
+    )
 
     # cache to binary
-    folder = cache_folder / 'simple_recording'
-    rec.save(format='binary', folder=folder)
+    folder = cache_folder / "simple_recording"
+    rec.save(format="binary", folder=folder)
     rec2 = BaseExtractor.load_from_folder(folder)
-    assert 'quality' in rec2.get_property_keys()
-    values = rec2.get_property('quality')
-    assert values[0] == 1.
+    assert "quality" in rec2.get_property_keys()
+    values = rec2.get_property("quality")
+    assert values[0] == 1.0
     assert values[1] == 3.3
     assert np.isnan(values[2])
 
@@ -114,32 +136,31 @@ def test_BaseRecording():
     assert np.array_equal(groups, [0, 0, 1])
 
     # but also possible
-    rec3 = BaseExtractor.load(cache_folder / 'simple_recording')
+    rec3 = BaseExtractor.load(cache_folder / "simple_recording")
 
     # cache to memory
-    rec4 = rec3.save(format='memory')
+    rec4 = rec3.save(format="memory")
 
     traces4 = rec4.get_traces(segment_index=0)
     traces = rec.get_traces(segment_index=0)
     assert np.array_equal(traces4, traces)
 
     # cache joblib several jobs
-    folder = cache_folder / 'simple_recording2'
+    folder = cache_folder / "simple_recording2"
     rec2 = rec.save(folder=folder, chunk_size=10, n_jobs=4)
     traces2 = rec2.get_traces(segment_index=0)
 
     # set/get Probe only 2 channels
     probe = Probe(ndim=2)
-    positions = [[0., 0.], [0., 15.], [0, 30.]]
-    probe.set_contacts(positions=positions, shapes='circle',
-                       shape_params={'radius': 5})
+    positions = [[0.0, 0.0], [0.0, 15.0], [0, 30.0]]
+    probe.set_contacts(positions=positions, shapes="circle", shape_params={"radius": 5})
     probe.set_device_channel_indices([2, -1, 0])
     probe.create_auto_shape()
 
-    rec_p = rec.set_probe(probe, group_mode='by_shank')
-    rec_p = rec.set_probe(probe, group_mode='by_probe')
+    rec_p = rec.set_probe(probe, group_mode="by_shank")
+    rec_p = rec.set_probe(probe, group_mode="by_probe")
     positions2 = rec_p.get_channel_locations()
-    assert np.array_equal(positions2, [[0, 30.], [0., 0.]])
+    assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
 
     probe2 = rec_p.get_probe()
     positions3 = probe2.contact_positions
@@ -148,13 +169,13 @@ def test_BaseRecording():
     assert np.array_equal(probe2.device_channel_indices, [0, 1])
 
     # test save with probe
-    folder = cache_folder / 'simple_recording3'
+    folder = cache_folder / "simple_recording3"
     rec2 = rec_p.save(folder=folder, chunk_size=10, n_jobs=2)
     rec2 = load_extractor(folder)
     probe2 = rec2.get_probe()
-    assert np.array_equal(probe2.contact_positions, [[0, 30.], [0., 0.]])
+    assert np.array_equal(probe2.contact_positions, [[0, 30.0], [0.0, 0.0]])
     positions2 = rec_p.get_channel_locations()
-    assert np.array_equal(positions2, [[0, 30.], [0., 0.]])
+    assert np.array_equal(positions2, [[0, 30.0], [0.0, 0.0]])
     traces2 = rec2.get_traces(segment_index=0)
     assert np.array_equal(traces2, rec_p.get_traces(segment_index=0))
 
@@ -166,68 +187,72 @@ def test_BaseRecording():
 
     # set unconnected probe
     probe = Probe(ndim=2)
-    positions = [[0., 0.], [0., 15.], [0, 30.]]
-    probe.set_contacts(positions=positions, shapes='circle',
-                       shape_params={'radius': 5})
+    positions = [[0.0, 0.0], [0.0, 15.0], [0, 30.0]]
+    probe.set_contacts(positions=positions, shapes="circle", shape_params={"radius": 5})
     probe.set_device_channel_indices([-1, -1, -1])
     probe.create_auto_shape()
 
-    rec_empty_probe = rec.set_probe(probe, group_mode='by_shank')
+    rec_empty_probe = rec.set_probe(probe, group_mode="by_shank")
     assert rec_empty_probe.channel_ids.size == 0
-    
+
     # test return_scale
     sampling_frequency = 30000
-    traces = np.zeros((1000, 5), dtype='int16')
+    traces = np.zeros((1000, 5), dtype="int16")
     rec_int16 = NumpyRecording([traces], sampling_frequency)
-    assert rec_int16.get_dtype() == 'int16'
+    assert rec_int16.get_dtype() == "int16"
 
-    traces = np.zeros((1000, 5), dtype='uint16')
+    traces = np.zeros((1000, 5), dtype="uint16")
     rec_uint16 = NumpyRecording([traces], sampling_frequency)
-    assert rec_uint16.get_dtype() == 'uint16'
+    assert rec_uint16.get_dtype() == "uint16"
 
     traces_int16 = rec_int16.get_traces()
-    assert traces_int16.dtype == 'int16'
+    assert traces_int16.dtype == "int16"
     # return_scaled raise error when no gain_to_uV/offset_to_uV properties
     with pytest.raises(ValueError):
         traces_float32 = rec_int16.get_traces(return_scaled=True)
-    rec_int16.set_property('gain_to_uV', [.195] * 5)
-    rec_int16.set_property('offset_to_uV', [0.] * 5)
+    rec_int16.set_property("gain_to_uV", [0.195] * 5)
+    rec_int16.set_property("offset_to_uV", [0.0] * 5)
     traces_float32 = rec_int16.get_traces(return_scaled=True)
-    assert traces_float32.dtype == 'float32'
+    assert traces_float32.dtype == "float32"
 
     # test cast unsigned
     tr_u = rec_uint16.get_traces(cast_unsigned=False)
     assert tr_u.dtype.kind == "u"
     tr_i = rec_uint16.get_traces(cast_unsigned=True)
     assert tr_i.dtype.kind == "i"
-    folder = cache_folder / 'recording_unsigned'
+    folder = cache_folder / "recording_unsigned"
     rec_u = rec_uint16.save(folder=folder)
-    rec_u.get_dtype() == 'uint16'
-    folder = cache_folder / 'recording_signed'
+    rec_u.get_dtype() == "uint16"
+    folder = cache_folder / "recording_signed"
     rec_i = rec_uint16.save(folder=folder, dtype="int16")
-    rec_i.get_dtype() == 'int16'
-    assert np.allclose(rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15),
-                       rec_i.get_traces().astype("float"))
-    assert np.allclose(rec_u.get_traces(cast_unsigned=True),
-                       rec_i.get_traces().astype("float"))
+    rec_i.get_dtype() == "int16"
+    assert np.allclose(
+        rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15),
+        rec_i.get_traces().astype("float"),
+    )
+    assert np.allclose(
+        rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float")
+    )
 
     # test with t_start
     rec = BinaryRecordingExtractor(
-        file_paths, sampling_frequency, num_chan, dtype, t_starts=np.arange(num_seg)*10.)
+        file_paths,
+        sampling_frequency,
+        num_chan,
+        dtype,
+        t_starts=np.arange(num_seg) * 10.0,
+    )
     times1 = rec.get_times(1)
-    folder = cache_folder / 'recording_with_t_start'
+    folder = cache_folder / "recording_with_t_start"
     rec2 = rec.save(folder=folder)
     assert np.allclose(times1, rec2.get_times(1))
 
     # test with time_vector
-    rec = BinaryRecordingExtractor(
-        file_paths, sampling_frequency, num_chan, dtype)
-    rec.set_times(np.arange(num_samples) /
-                  sampling_frequency + 30., segment_index=0)
-    rec.set_times(np.arange(num_samples) /
-                  sampling_frequency + 40., segment_index=1)
+    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
+    rec.set_times(np.arange(num_samples) / sampling_frequency + 30.0, segment_index=0)
+    rec.set_times(np.arange(num_samples) / sampling_frequency + 40.0, segment_index=1)
     times1 = rec.get_times(1)
-    folder = cache_folder / 'recording_with_times'
+    folder = cache_folder / "recording_with_times"
     rec2 = rec.save(folder=folder)
     assert np.allclose(times1, rec2.get_times(1))
     rec3 = load_extractor(folder)
@@ -252,28 +277,34 @@ def test_BaseRecording():
     rec_2d = rec_3d.planarize(axes="zy")
     assert np.allclose(rec_2d.get_channel_locations(), locations_3d[:, [2, 1]])
 
-
     # Test save to zarr
     compressor = get_default_zarr_compressor()
-    rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording",
-                         compressor=compressor)
+    rec_zarr = rec2.save(
+        format="zarr", folder=cache_folder / "recording", compressor=compressor
+    )
     check_recordings_equal(rec2, rec_zarr, return_scaled=False)
 
-    rec_zarr2 = rec2.save(format="zarr", folder=cache_folder / "recording_channel_chunk",
-                          compressor=compressor, channel_chunk_size=2)
+    rec_zarr2 = rec2.save(
+        format="zarr",
+        folder=cache_folder / "recording_channel_chunk",
+        compressor=compressor,
+        channel_chunk_size=2,
+    )
     check_recordings_equal(rec2, rec_zarr2, return_scaled=False)
 
     # test cast unsigned
     rec_u = rec_uint16.save(format="zarr", folder=cache_folder / "rec_u")
-    rec_u.get_dtype() == 'uint16'
+    rec_u.get_dtype() == "uint16"
     rec_i = rec_uint16.save(format="zarr", folder=cache_folder / "rec_i", dtype="int16")
-    rec_i.get_dtype() == 'int16'
-    assert np.allclose(rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15),
-                       rec_i.get_traces().astype("float"))
-    assert np.allclose(rec_u.get_traces(cast_unsigned=True),
-                       rec_i.get_traces().astype("float"))
+    rec_i.get_dtype() == "int16"
+    assert np.allclose(
+        rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15),
+        rec_i.get_traces().astype("float"),
+    )
+    assert np.allclose(
+        rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float")
+    )
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_BaseRecording()

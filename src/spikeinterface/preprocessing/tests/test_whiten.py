@@ -29,9 +29,10 @@ def test_whiten():
 
     # test parallel
     rec_par = rec3.save(folder=cache_folder / "rec_par", n_jobs=2)
-    np.testing.assert_array_equal(rec3.get_traces(segment_index=0),
-                                  rec_par.get_traces(segment_index=0))
+    np.testing.assert_array_equal(
+        rec3.get_traces(segment_index=0), rec_par.get_traces(segment_index=0)
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_whiten()

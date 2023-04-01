@@ -19,12 +19,11 @@ class DepthOrderRecording(ChannelSliceRecording):
         If tuple, it sorts the locations in two dimensions using lexsort.
         This approach is recommended since there is less ambiguity, by default ('x', 'y')
     """
+
     name = "depth_order"
     installed = True
 
-    def __init__(
-        self, parent_recording, channel_ids=None, dimensions=("x", "y")
-    ):
+    def __init__(self, parent_recording, channel_ids=None, dimensions=("x", "y")):
         order_f, order_r = order_channels_by_depth(
             parent_recording, channel_ids=channel_ids, dimensions=dimensions
         )

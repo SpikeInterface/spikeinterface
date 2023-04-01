@@ -42,42 +42,59 @@ class CommonReferenceRecording(BasePreprocessor):
         The re-referenced recording extractor object
     """
 
-    name = 'common_reference'
+    name = "common_reference"
 
-    def __init__(self, recording, reference='global', operator='median', groups=None, ref_channel_ids=None,
-                 local_radius=(30, 55), verbose=False):
-
+    def __init__(
+        self,
+        recording,
+        reference="global",
+        operator="median",
+        groups=None,
+        ref_channel_ids=None,
+        local_radius=(30, 55),
+        verbose=False,
+    ):
         num_chans = recording.get_num_channels()
         neighbors = None
         # some checks
-        if reference not in ('global', 'single', 'local'):
+        if reference not in ("global", "single", "local"):
             raise ValueError("'reference' must be either 'global', 'single' or 'local'")
-        if operator not in ('median', 'average'):
+        if operator not in ("median", "average"):
             raise ValueError("'operator' must be either 'median', 'average'")
 
-        if reference == 'global':
+        if reference == "global":
             pass
-        elif reference == 'single':
-            assert ref_channel_ids is not None, "With 'single' reference, provide 'ref_channel_ids'"
+        elif reference == "single":
+            assert (
+                ref_channel_ids is not None
+            ), "With 'single' reference, provide 'ref_channel_ids'"
             if groups is not None:
-                assert len(ref_channel_ids) == len(groups), \
-                    "'ref_channel_ids' and 'groups' must have the same length"
+                assert len(ref_channel_ids) == len(
+                    groups
+                ), "'ref_channel_ids' and 'groups' must have the same length"
             else:
                 if np.isscalar(ref_channel_ids):
                     ref_channel_ids = [ref_channel_ids]
                 else:
-                    assert len(ref_channel_ids) == 1, \
-                        "'ref_channel_ids' with no 'groups' must be int or a list of one element"
+                    assert (
+                        len(ref_channel_ids) == 1
+                    ), "'ref_channel_ids' with no 'groups' must be int or a list of one element"
                 ref_channel_ids = np.asarray(ref_channel_ids)
-                assert np.all([ch in recording.get_channel_ids() for ch in ref_channel_ids]), "Some wrong 'ref_channel_ids'!"
-        elif reference == 'local':
-            assert groups is None, "With 'local' CAR, the group option should not be used."
+                assert np.all(
+                    [ch in recording.get_channel_ids() for ch in ref_channel_ids]
+                ), "Some wrong 'ref_channel_ids'!"
+        elif reference == "local":
+            assert (
+                groups is None
+            ), "With 'local' CAR, the group option should not be used."
             closest_inds, dist = get_closest_channels(recording)
             neighbors = {}
             for i in range(num_chans):
                 mask = (dist[i, :] > local_radius[0]) & (dist[i, :] <= local_radius[1])
                 neighbors[i] = closest_inds[i, mask]
-                assert len(neighbors[i]) > 0, "No reference channels available in the local annulus for selection."
+                assert (
+                    len(neighbors[i]) > 0
+                ), "No reference channels available in the local annulus for selection."
 
         BasePreprocessor.__init__(self, recording)
 
@@ -90,17 +107,38 @@ class CommonReferenceRecording(BasePreprocessor):
             ref_channel_inds = None
 
         for parent_segment in recording._recording_segments:
-            rec_segment = CommonReferenceRecordingSegment(parent_segment,
-                                                          reference, operator, groups, ref_channel_inds, local_radius,
-                                                          neighbors)
+            rec_segment = CommonReferenceRecordingSegment(
+                parent_segment,
+                reference,
+                operator,
+                groups,
+                ref_channel_inds,
+                local_radius,
+                neighbors,
+            )
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording, reference=reference, groups=groups, operator=operator,
-                            ref_channel_ids=ref_channel_ids, local_radius=local_radius)
+        self._kwargs = dict(
+            recording=recording,
+            reference=reference,
+            groups=groups,
+            operator=operator,
+            ref_channel_ids=ref_channel_ids,
+            local_radius=local_radius,
+        )
 
 
 class CommonReferenceRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, reference, operator, groups, ref_channel_inds, local_radius, neighbors):
+    def __init__(
+        self,
+        parent_recording_segment,
+        reference,
+        operator,
+        groups,
+        ref_channel_inds,
+        local_radius,
+        neighbors,
+    ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.reference = reference
@@ -111,38 +149,53 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         self.neighbors = neighbors
         self.temp = None
 
-        if self.operator == 'median':
+        if self.operator == "median":
             self.operator_func = lambda x: np.median(x, axis=1, out=self.temp)[:, None]
-        elif self.operator == 'average':
+        elif self.operator == "average":
             self.operator_func = lambda x: np.mean(x, axis=1, out=self.temp)[:, None]
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         # need input trace
-        all_traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
-        self.temp = np.zeros((all_traces.shape[0],),dtype=all_traces.dtype)
+        all_traces = self.parent_recording_segment.get_traces(
+            start_frame, end_frame, slice(None)
+        )
+        self.temp = np.zeros((all_traces.shape[0],), dtype=all_traces.dtype)
         _channel_indices = np.arange(all_traces.shape[1])
         if channel_indices is not None:
             _channel_indices = _channel_indices[channel_indices]
 
-        
-        if self.reference == 'global':
-            out_traces = np.zeros((all_traces.shape[0], _channel_indices.size), dtype=all_traces.dtype)
+        if self.reference == "global":
+            out_traces = np.zeros(
+                (all_traces.shape[0], _channel_indices.size), dtype=all_traces.dtype
+            )
             for chan_inds, chan_group_inds in self._groups(_channel_indices):
-                out_inds = np.array([np.where(_channel_indices == i)[0][0] for i in chan_inds])
-                out_traces[:, out_inds] = all_traces[:, chan_inds] \
-                    - self.operator_func(all_traces[:, chan_group_inds])
+                out_inds = np.array(
+                    [np.where(_channel_indices == i)[0][0] for i in chan_inds]
+                )
+                out_traces[:, out_inds] = all_traces[:, chan_inds] - self.operator_func(
+                    all_traces[:, chan_group_inds]
+                )
 
-        elif self.reference == 'single':
-            out_traces = np.zeros((all_traces.shape[0], _channel_indices.size), dtype=all_traces.dtype)
+        elif self.reference == "single":
+            out_traces = np.zeros(
+                (all_traces.shape[0], _channel_indices.size), dtype=all_traces.dtype
+            )
             for i, (chan_inds, _) in enumerate(self._groups(_channel_indices)):
-                out_inds = np.array([np.where(_channel_indices == i)[0][0] for i in chan_inds])
-                out_traces[:, out_inds] = all_traces[:, chan_inds] \
-                    - self.operator_func(all_traces[:, [self.ref_channel_inds[i]]])
-        
-        elif self.reference == 'local':
-            out_traces = np.hstack([
-                all_traces[:, [chan_ind]] - self.operator_func(all_traces[:, self.neighbors[chan_ind]])
-                for chan_ind in _channel_indices])
+                out_inds = np.array(
+                    [np.where(_channel_indices == i)[0][0] for i in chan_inds]
+                )
+                out_traces[:, out_inds] = all_traces[:, chan_inds] - self.operator_func(
+                    all_traces[:, [self.ref_channel_inds[i]]]
+                )
+
+        elif self.reference == "local":
+            out_traces = np.hstack(
+                [
+                    all_traces[:, [chan_ind]]
+                    - self.operator_func(all_traces[:, self.neighbors[chan_ind]])
+                    for chan_ind in _channel_indices
+                ]
+            )
 
         return out_traces
 
@@ -163,4 +216,6 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         return zip(selected_channels, selected_groups)
 
 
-common_reference = define_function_from_class(source_class=CommonReferenceRecording, name="common_reference")
+common_reference = define_function_from_class(
+    source_class=CommonReferenceRecording, name="common_reference"
+)

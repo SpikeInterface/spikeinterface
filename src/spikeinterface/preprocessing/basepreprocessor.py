@@ -5,8 +5,12 @@ class BasePreprocessor(BaseRecording):
     installed = True  # check at class level if installed or not
     installation_mesg = ""  # err
 
-    def __init__(self, recording, sampling_frequency=None, channel_ids=None, dtype=None):
-        assert isinstance(recording, BaseRecording), "'recording' must be a RecordingExtractor"
+    def __init__(
+        self, recording, sampling_frequency=None, channel_ids=None, dtype=None
+    ):
+        assert isinstance(
+            recording, BaseRecording
+        ), "'recording' must be a RecordingExtractor"
 
         self._parent_recording = recording
         if sampling_frequency is None:
@@ -27,7 +31,9 @@ class BasePreprocessor(BaseRecording):
 
 class BasePreprocessorSegment(BaseRecordingSegment):
     def __init__(self, parent_recording_segment):
-        BaseRecordingSegment.__init__(self, **parent_recording_segment.get_times_kwargs())
+        BaseRecordingSegment.__init__(
+            self, **parent_recording_segment.get_times_kwargs()
+        )
         self.parent_recording_segment = parent_recording_segment
 
     def get_num_samples(self):

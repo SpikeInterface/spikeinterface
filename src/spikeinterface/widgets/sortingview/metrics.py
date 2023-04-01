@@ -6,7 +6,6 @@ from .base_sortingview import SortingviewPlotter, generate_unit_table_view
 
 
 class MetricsPlotter(SortingviewPlotter):
-
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
 
@@ -25,11 +24,7 @@ class MetricsPlotter(SortingviewPlotter):
         metrics_sv = []
         for col in metric_names:
             dtype = metrics.iloc[0][col].dtype
-            metric = vv.UnitMetricsGraphMetric(
-                            key=col,
-                            label=col,
-                            dtype=dtype.str
-                        )
+            metric = vv.UnitMetricsGraphMetric(key=col, label=col, dtype=dtype.str)
             metrics_sv.append(metric)
 
         units_m = []
@@ -40,17 +35,11 @@ class MetricsPlotter(SortingviewPlotter):
                 if np.isnan(v):
                     continue
                 values_skip_nans[k] = v
-            
+
             units_m.append(
-                vv.UnitMetricsGraphUnit(
-                    unit_id=unit_id,
-                    values=values_skip_nans
-                )
+                vv.UnitMetricsGraphUnit(unit_id=unit_id, values=values_skip_nans)
             )
-        v_metrics = vv.UnitMetricsGraph(
-                units=units_m,
-                metrics=metrics_sv
-            )
+        v_metrics = vv.UnitMetricsGraph(units=units_m, metrics=metrics_sv)
 
         if not dp.hide_unit_selector:
             if dp.include_metrics_data:
@@ -60,14 +49,16 @@ class MetricsPlotter(SortingviewPlotter):
                     if col not in sorting_copy.get_property_keys():
                         sorting_copy.set_property(col, metrics[col].values)
                 # generate table with properties
-                v_units_table = generate_unit_table_view(sorting_copy, unit_properties=metric_names)
+                v_units_table = generate_unit_table_view(
+                    sorting_copy, unit_properties=metric_names
+                )
             else:
                 v_units_table = generate_unit_table_view(dp.sorting)
 
             view = vv.Splitter(
                 direction="horizontal",
                 item1=vv.LayoutItem(v_units_table),
-                item2=vv.LayoutItem(v_metrics)
+                item2=vv.LayoutItem(v_metrics),
             )
         else:
             view = v_metrics

@@ -3,13 +3,23 @@ from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
-from ...postprocessing import get_template_extremum_channel, get_template_extremum_amplitude
+from ...postprocessing import (
+    get_template_extremum_channel,
+    get_template_extremum_amplitude,
+)
 from .utils import get_unit_colors
 
 
 class UnitsDepthAmplitudeWidget(BaseWidget):
-    def __init__(self, waveform_extractor, peak_sign='neg', depth_axis=1,
-                 unit_colors=None, figure=None, ax=None):
+    def __init__(
+        self,
+        waveform_extractor,
+        peak_sign="neg",
+        depth_axis=1,
+        unit_colors=None,
+        figure=None,
+        ax=None,
+    ):
         BaseWidget.__init__(self, figure, ax)
 
         self.we = waveform_extractor
@@ -24,7 +34,9 @@ class UnitsDepthAmplitudeWidget(BaseWidget):
         we = self.we
         unit_ids = we.unit_ids
 
-        channels_index = get_template_extremum_channel(we, peak_sign=self.peak_sign, outputs='index')
+        channels_index = get_template_extremum_channel(
+            we, peak_sign=self.peak_sign, outputs="index"
+        )
         contact_positions = we.get_channel_locations()
 
         channel_depth = contact_positions[:, self.depth_axis]
@@ -38,15 +50,17 @@ class UnitsDepthAmplitudeWidget(BaseWidget):
         num_spikes = np.zeros(len(unit_ids))
         for i, unit_id in enumerate(unit_ids):
             for segment_index in range(we.get_num_segments()):
-                st = we.sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                st = we.sorting.get_unit_spike_train(
+                    unit_id=unit_id, segment_index=segment_index
+                )
                 num_spikes[i] += st.size
 
         size = num_spikes / max(num_spikes) * 120
         ax.scatter(unit_amplitude, unit_depth, color=colors, s=size)
 
         ax.set_aspect(3)
-        ax.set_xlabel('amplitude')
-        ax.set_ylabel('depth [um]')
+        ax.set_xlabel("amplitude")
+        ax.set_ylabel("depth [um]")
         ax.set_xlim(0, max(unit_amplitude) * 1.2)
 
 

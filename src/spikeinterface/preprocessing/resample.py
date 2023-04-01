@@ -148,9 +148,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         ]
 
         # get the size for the resampled traces in case of resample:
-        num = int(
-            (end_frame + right_margin_rs) - (start_frame - left_margin_rs)
-        )
+        num = int((end_frame + right_margin_rs) - (start_frame - left_margin_rs))
 
         # Decimate can misbehave on some cases, while resample always looks nice enough.
         # Check which method to use:
@@ -166,24 +164,18 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             resampled_traces = signal.resample(parent_traces, num, axis=0)
 
         # now take care of the edges
-        resampled_traces = resampled_traces[
-            left_margin_rs : num - right_margin_rs
-        ]
+        resampled_traces = resampled_traces[left_margin_rs : num - right_margin_rs]
         return resampled_traces.astype(self._dtype)
 
 
-resample = define_function_from_class(
-    source_class=ResampleRecording, name="resample"
-)
+resample = define_function_from_class(source_class=ResampleRecording, name="resample")
 
 
 # Some helpers to do checks
 def check_nyquist(recording, resample_rate):
     # Check that the original and requested sampling rates will not induce aliasing
     # Basic test, compare the sampling frequency with the resample rate
-    sampling_frequency_check = (
-        recording.get_sampling_frequency() / 2 > resample_rate
-    )
+    sampling_frequency_check = recording.get_sampling_frequency() / 2 > resample_rate
     # Check that the signal, if it has been filtered, is still not violating
     if recording.is_filtered():
         # Check if we have access to the highcut frequency

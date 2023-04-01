@@ -4,8 +4,8 @@ from .circus import CircusPeeler, CircusOMPPeeler
 
 
 matching_methods = {
-    'naive' : NaiveMatching,
-    'tridesclous' : TridesclousPeeler,
-    'circus' : CircusPeeler,
-    'circus-omp' : CircusOMPPeeler
+    "naive": NaiveMatching,
+    "tridesclous": TridesclousPeeler,
+    "circus": CircusPeeler,
+    "circus-omp": CircusOMPPeeler,
 }

@@ -12,7 +12,7 @@ class TimeseriesWidget(BaseWidget):
     Parameters
     ----------
     recording: RecordingExtractor, dict, or list
-        The recording extractor object. If dict (or list) then it is a multi-layer display to compare, for example, 
+        The recording extractor object. If dict (or list) then it is a multi-layer display to compare, for example,
         different processing steps
     segment_index: None or int
         The segment index (required for multi-segment recordings)
@@ -53,31 +53,50 @@ class TimeseriesWidget(BaseWidget):
     W: TimeseriesWidget
         The output widget
     """
-    possible_backends = {}
-    
 
-    def __init__(self, recording, segment_index=None, channel_ids=None, order_channel_by_depth=False,
-                 time_range=None, mode='auto', return_scaled=False, cmap='RdBu_r', show_channel_ids=False,
-                 color_groups=False, color=None, clim=None, tile_size=1500, seconds_per_row=0.2,
-                 with_colorbar=True, add_legend=True, backend=None, **backend_kwargs):
+    possible_backends = {}
+
+    def __init__(
+        self,
+        recording,
+        segment_index=None,
+        channel_ids=None,
+        order_channel_by_depth=False,
+        time_range=None,
+        mode="auto",
+        return_scaled=False,
+        cmap="RdBu_r",
+        show_channel_ids=False,
+        color_groups=False,
+        color=None,
+        clim=None,
+        tile_size=1500,
+        seconds_per_row=0.2,
+        with_colorbar=True,
+        add_legend=True,
+        backend=None,
+        **backend_kwargs,
+    ):
         if isinstance(recording, BaseRecording):
-            recordings = {'rec': recording}
+            recordings = {"rec": recording}
             rec0 = recording
         elif isinstance(recording, dict):
             recordings = recording
             k0 = list(recordings.keys())[0]
             rec0 = recordings[k0]
         elif isinstance(recording, list):
-            recordings = {f'rec{i}': rec for i, rec in enumerate(recording)}
-            rec0= recordings[0]
+            recordings = {f"rec{i}": rec for i, rec in enumerate(recording)}
+            rec0 = recordings[0]
         else:
-            raise ValueError('plot_timeseries recording must be recording or dict or list')
+            raise ValueError(
+                "plot_timeseries recording must be recording or dict or list"
+            )
 
         layer_keys = list(recordings.keys())
 
         if segment_index is None:
             if rec0.get_num_segments() != 1:
-                raise ValueError('You must provide segment_index=...')
+                raise ValueError("You must provide segment_index=...")
             segment_index = 0
 
         if channel_ids is None:
@@ -96,21 +115,22 @@ class TimeseriesWidget(BaseWidget):
 
         fs = rec0.get_sampling_frequency()
         if time_range is None:
-            time_range = (0, 1.)
+            time_range = (0, 1.0)
         time_range = np.array(time_range)
 
-        assert mode in ('auto', 'line', 'map'), 'Mode must be in auto/line/map'
-        if mode == 'auto':
+        assert mode in ("auto", "line", "map"), "Mode must be in auto/line/map"
+        if mode == "auto":
             if len(channel_ids) <= 64:
-                mode = 'line'
+                mode = "line"
             else:
-                mode = 'map'
+                mode = "map"
         mode = mode
         cmap = cmap
-        
-        times, list_traces, frame_range, channel_ids = _get_trace_list(recordings, channel_ids, time_range, 
-                                                                       segment_index, order, return_scaled)
-        
+
+        times, list_traces, frame_range, channel_ids = _get_trace_list(
+            recordings, channel_ids, time_range, segment_index, order, return_scaled
+        )
+
         # stat for auto scaling done on the first layer
         traces0 = list_traces[0]
         mean_channel_std = np.mean(np.std(traces0, axis=0))
@@ -124,13 +144,13 @@ class TimeseriesWidget(BaseWidget):
         # lets first create black for all channels and layer
         colors = {}
         for k in layer_keys:
-            colors[k] = {chan_id: 'k' for chan_id in channel_ids}
+            colors[k] = {chan_id: "k" for chan_id in channel_ids}
 
         if color_groups:
             channel_groups = rec0.get_channel_groups(channel_ids=channel_ids)
             groups = np.unique(channel_groups)
 
-            group_colors = get_some_colors(groups, color_engine='auto')
+            group_colors = get_some_colors(groups, color_engine="auto")
 
             channel_colors = {}
             for i, chan_id in enumerate(channel_ids):
@@ -152,7 +172,7 @@ class TimeseriesWidget(BaseWidget):
         else:
             # color is None unique layer : all channels black
             pass
-        
+
         if clim is None:
             clims = {layer_key: [-200, 200] for layer_key in layer_keys}
         else:
@@ -162,7 +182,9 @@ class TimeseriesWidget(BaseWidget):
                 assert all(layer_key in clim for layer_key in layer_keys), ""
                 clims = clim
             else:
-                raise TypeError(f"'clim' can be None, tuple, or dict! Unsupported type {type(clim)}")
+                raise TypeError(
+                    f"'clim' can be None, tuple, or dict! Unsupported type {type(clim)}"
+                )
 
         plot_data = dict(
             recordings=recordings,
@@ -188,24 +210,26 @@ class TimeseriesWidget(BaseWidget):
             order=order,
             tile_size=tile_size,
             num_timepoints_per_row=int(seconds_per_row * fs),
-            return_scaled=return_scaled
+            return_scaled=return_scaled,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
-def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=None,
-                    return_scaled=False):
+def _get_trace_list(
+    recordings, channel_ids, time_range, segment_index, order=None, return_scaled=False
+):
     # function also used in ipywidgets plotter
     k0 = list(recordings.keys())[0]
     rec0 = recordings[k0]
 
     fs = rec0.get_sampling_frequency()
-    
+
     if return_scaled:
-        assert all(rec.has_scaled() for rec in recordings.values()), \
-            ("Some recording layers do not have scaled traces. Use `return_scaled=False`")
-    frame_range = (time_range * fs).astype('int64')
+        assert all(
+            rec.has_scaled() for rec in recordings.values()
+        ), "Some recording layers do not have scaled traces. Use `return_scaled=False`"
+    frame_range = (time_range * fs).astype("int64")
     a_max = rec0.get_num_frames(segment_index=segment_index)
     frame_range = np.clip(frame_range, 0, a_max)
     time_range = frame_range / fs
@@ -218,7 +242,7 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=No
             channel_ids=channel_ids,
             start_frame=frame_range[0],
             end_frame=frame_range[1],
-            return_scaled=return_scaled
+            return_scaled=return_scaled,
         )
 
         if order is not None:

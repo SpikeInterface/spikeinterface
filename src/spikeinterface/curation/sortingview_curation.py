@@ -11,7 +11,7 @@ def apply_sortingview_curation(
     exclude_labels=None,
     include_labels=None,
     skip_merge=False,
-    verbose=False
+    verbose=False,
 ):
     """
     Apply curation from SortingView manual curation.
@@ -47,7 +47,9 @@ def apply_sortingview_curation(
             "To apply a SortingView manual curation, you need to have sortingview installed: "
             ">>> pip install sortingview"
         )
-    curation_sorting = CurationSorting(sorting, make_graph=False, properties_policy="keep")
+    curation_sorting = CurationSorting(
+        sorting, make_graph=False, properties_policy="keep"
+    )
 
     # get sorting view curation
     if Path(uri_or_json).suffix == ".json" and not str(uri_or_json).startswith("gh://"):
@@ -57,7 +59,9 @@ def apply_sortingview_curation(
         try:
             sortingview_curation_dict = kcl.load_json(uri=uri_or_json)
         except:
-            raise Exception(f"Could not retrieve curation from SortingView uri: {uri_or_json}")
+            raise Exception(
+                f"Could not retrieve curation from SortingView uri: {uri_or_json}"
+            )
 
     unit_ids_dtype = sorting.unit_ids.dtype
 
@@ -85,7 +89,9 @@ def apply_sortingview_curation(
     for _, labels in labels_dict.items():
         for label in labels:
             if label not in properties:
-                properties[label] = np.zeros(len(curation_sorting.current_sorting.unit_ids), dtype=bool)
+                properties[label] = np.zeros(
+                    len(curation_sorting.current_sorting.unit_ids), dtype=bool
+                )
     for u_i, unit_id in enumerate(curation_sorting.current_sorting.unit_ids):
         labels_unit = []
         for unit_label, labels in labels_dict.items():
@@ -99,13 +105,25 @@ def apply_sortingview_curation(
     if include_labels is not None or exclude_labels is not None:
         units_to_remove = []
         unit_ids = curation_sorting.current_sorting.unit_ids
-        assert include_labels or exclude_labels, "Use either `include_labels` or `exclude_labels` to filter units."
+        assert (
+            include_labels or exclude_labels
+        ), "Use either `include_labels` or `exclude_labels` to filter units."
         if include_labels:
             for include_label in include_labels:
-                units_to_remove.extend(unit_ids[curation_sorting.current_sorting.get_property(include_label) == False])
+                units_to_remove.extend(
+                    unit_ids[
+                        curation_sorting.current_sorting.get_property(include_label)
+                        == False
+                    ]
+                )
         if exclude_labels:
             for exclude_label in exclude_labels:
-                units_to_remove.extend(unit_ids[curation_sorting.current_sorting.get_property(exclude_label) == True])
+                units_to_remove.extend(
+                    unit_ids[
+                        curation_sorting.current_sorting.get_property(exclude_label)
+                        == True
+                    ]
+                )
         units_to_remove = np.unique(units_to_remove)
         curation_sorting.remove_units(units_to_remove)
 
