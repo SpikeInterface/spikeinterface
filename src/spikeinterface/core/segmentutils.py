@@ -480,7 +480,7 @@ class ConcatenateSegmentSorting(BaseSorting):
             )
 
         self._kwargs = {
-            "sorting_list": [sorting.to_dict() for sorting in sorting_list],
+            "sorting_list": sorting_list,
             "ignore_times": ignore_times,
         }
 
