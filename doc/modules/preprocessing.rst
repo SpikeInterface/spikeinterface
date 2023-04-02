@@ -32,12 +32,12 @@ These two preprocessors will not compute anything at instantiation, but the comp
 
     traces = recording_cmr.get_traces(start_frame=100_000, end_frame=200_000)
 
-Some internal sorters (see :ref:`si_based`) can work directly in these preprocessed objects so there is no need to 
-save the:
+Some internal sorters (see :ref:`si_based`) can work directly on these preprocessed objects so there is no need to 
+save the object:
 
 .. code-block:: python
 
-    # here the circus2 sorter engine directly uses the lazy "recording_cmr" object
+    # here the spykingcircus2 sorter engine directly uses the lazy "recording_cmr" object
     sorting = run_sorter(recording_cmr, 'spykingcircus2')
 
 Most of the external sorters, however, will need a binary file as input, so we can optionally save the processed 
@@ -58,7 +58,7 @@ Impact on recording dtype
 
 By default the dtype of a preprocessed recording does not change the recording's dtype, even if, internally, the 
 computation is performed using a different dtype.
-For instance if we have a :code:`int16`` recording, the application of a bandpass filter will conserve the original 
+For instance if we have a :code:`int16`` recording, the application of a bandpass filter will preserve the original 
 dtype (unless specified otherwise):
 
 
@@ -178,11 +178,11 @@ centered with unitary variance on each channel.
 whiten()
 ^^^^^^^^
 
-Many sorters use this pre-processing step internally, but if you want to combine this operation to other preprocessing 
+Many sorters use this pre-processing step internally, but if you want to combine this operation with other preprocessing 
 steps, you can use the :code:`whiten()` implemented in SpikeInterface.
 The whitenning matrix :code:`W` is constructed by estimating the covariance across channels and then inverting it.
 
-The whitened traces are then the dot product between the traces and :code:`W` matrix.
+The whitened traces are then the dot product between the traces and the :code:`W` matrix.
 
 .. code-block:: python
 
@@ -209,7 +209,7 @@ highpass_spatial_filter()
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 :code:`highpass_spatial_filter()` is a preprocessing step introduced by the International Brain Laboratory [IBL_spikesorting]_.
-It applies a filter in the spatial axis of the tarces after ordering the channels by depth.
+It applies a filter in the spatial axis of the traces after ordering the channels by depth.
 It is similar to common reference, but it can deal with "stripes" that are uneven across depth. 
 This preprocessing step can be super useful for long probes like Neuropixels.
 
@@ -296,9 +296,9 @@ How to implement "IBL destriping" or "SpikeGLX CatGT" in SpikeInterface
 -----------------------------------------------------------------------
 
 
-SpikeGLX have a built-in function called `CatGT <https://billkarsh.github.io/SpikeGLX/help/dmx_vs_gbl/dmx_vs_gbl/>`_ 
+SpikeGLX has a built-in function called `CatGT <https://billkarsh.github.io/SpikeGLX/help/dmx_vs_gbl/dmx_vs_gbl/>`_ 
 to apply some preprocessing on the traces to remove noise and artifacts.
-IBL also have a standardized pipeline for preprocessed traces a bit similar to CatGT which is called "destriping" [IBL_spikesorting]_.
+IBL also has a standardized pipeline for preprocessed traces a bit similar to CatGT which is called "destriping" [IBL_spikesorting]_.
 In these both cases, the traces are entiely read, processed and written back to a file.
 
 SpikeInterface can reproduce similar results without the need to write back to a file by building a *lazy* 
