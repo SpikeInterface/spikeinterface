@@ -52,7 +52,7 @@ class NormalizeByQuantileRecording(BasePreprocessor):
         Random seed for reproducibility
     dtype: str or np.dtype
         The dtype of the output traces. Default "float32"
-    **random_chunk_kwargs: keyword arguments for `get_random_data_chunks()` function
+    **random_chunk_kwargs: Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
     -------
@@ -198,7 +198,7 @@ class CenterRecording(BasePreprocessor):
         'median' (default) | 'mean'
     dtype: str or np.dtype
         The dtype of the output traces. Default "float32"
-    **random_chunk_kwargs: keyword arguments for `get_random_data_chunks()` function
+    **random_chunk_kwargs: Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
     -------
@@ -260,7 +260,7 @@ class ZScoreRecording(BasePreprocessor):
         Apply a scaling factor to fit the integer range.
         This is used when the dtype is an integer, so that the output is scaled. 
         For example, a value of `int_scale=200` will scale the zscore value to a standard deviation of 200.
-    **random_chunk_kwargs: keyword arguments for `get_random_data_chunks()` function
+    **random_chunk_kwargs: Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
     -------
