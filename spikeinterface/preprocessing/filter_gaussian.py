@@ -6,9 +6,9 @@ from spikeinterface.core.core_tools import define_function_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
-class GaussianFilterRecording(BasePreprocessor):
+class GaussianBandpassFilterRecording(BasePreprocessor):
     """
-    Class for performing gaussian filtering/smoothing on a recording.
+    Class for performing a bandpass gaussian filtering/smoothing on a recording.
 
     Parameters
     ----------
@@ -21,7 +21,7 @@ class GaussianFilterRecording(BasePreprocessor):
 
     Returns
     -------
-    gaussian_filtered_recording: GaussianFilterRecording
+    gaussian_bandpass_filtered_recording: GaussianBandpassFilterRecording
         The filtered recording extractor object.
     """
 
@@ -80,4 +80,4 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         else:
             return norm.pdf(faxis / cutoff_f) * np.sqrt(2*np.pi)
 
-gaussian_bandpass_filter = define_function_from_class(source_class=GaussianFilterRecording, name="gaussian_filter")
+gaussian_bandpass_filter = define_function_from_class(source_class=GaussianBandpassFilterRecording, name="gaussian_filter")
