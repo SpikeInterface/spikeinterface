@@ -93,6 +93,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             self._recordings = {}
             for key in ('drifting', 'static',):
                 rec, _  = read_mearec(self.mearec_filenames[key])
+                self._recordings['raw_'+key] = rec
                 if self.do_preprocessing:
                     # all computation are done in float32
                     # rec = bandpass_filter(rec)
