@@ -132,6 +132,7 @@ class LocalizeCenterOfMass(LocalizeBase):
         LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
         self.feature = feature
+        self.nbefore = self.parents[-1].nbefore
         self._kwargs.update(dict(feature=feature))
 
     def get_dtype(self):
@@ -152,8 +153,7 @@ class LocalizeCenterOfMass(LocalizeBase):
             elif self.feature == 'energy':
                 wf_data = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
             elif self.feature == 'v_peak':
-                nbefore = waveforms[idx].shape[1] // 2
-                wf_data = waveforms[idx][:, nbefore, chan_inds]
+                wf_data = waveforms[idx][:, self.nbefore, chan_inds]
 
             coms = np.dot(wf_data, local_contact_locations)/(np.sum(wf_data, axis=1)[:,np.newaxis])
             peak_locations['x'][idx] = coms[:, 0]
