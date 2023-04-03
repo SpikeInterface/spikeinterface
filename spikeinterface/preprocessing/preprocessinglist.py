@@ -52,6 +52,7 @@ preprocessers_full_list = [
     RectifyRecording,
     ClipRecording,
     BlankSaturationRecording,
+    SilencedPeriodsRecording,
     RemoveArtifactsRecording,
     ZeroChannelPaddedRecording,
     DeepInterpolatedRecording,
