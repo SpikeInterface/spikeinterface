@@ -80,4 +80,4 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         else:
             return norm.pdf(faxis / cutoff_f) * np.sqrt(2*np.pi)
 
-gaussian_filter = define_function_from_class(source_class=GaussianFilterRecording, name="gaussian_filter")
+gaussian_bandpass_filter = define_function_from_class(source_class=GaussianFilterRecording, name="gaussian_filter")
