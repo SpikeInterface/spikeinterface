@@ -4,13 +4,13 @@ from pathlib import Path
 from spikeinterface.core import load_extractor, set_global_tmp_folder
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core.generate import generate_recording
-from spikeinterface.preprocessing import gaussian_filter
+from spikeinterface.preprocessing import gaussian_bandpass_filter
 
 
 if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing" / "gaussian_filter"
+    cache_folder = pytest.global_test_folder / "preprocessing" / "gaussian_bandpass_filter"
 else:
-    cache_folder = Path("cache_folder") / "preprocessing" / "gaussian_filter"
+    cache_folder = Path("cache_folder") / "preprocessing" / "gaussian_bandpass_filter"
 
 set_global_tmp_folder(cache_folder)
 cache_folder.mkdir(parents=True, exist_ok=True)
@@ -21,7 +21,7 @@ def test_filter_gaussian():
     recording.annotate(is_filtered=True)
     recording = recording.save(folder=cache_folder / "recording")
 
-    rec_filtered = gaussian_filter(recording)
+    rec_filtered = gaussian_bandpass_filter(recording)
 
     assert rec_filtered.dtype == recording.dtype
     assert rec_filtered.get_traces(segment_index=0, end_frame=100).dtype == rec_filtered.dtype

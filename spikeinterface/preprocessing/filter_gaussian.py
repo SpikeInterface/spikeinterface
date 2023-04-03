@@ -24,6 +24,7 @@ class GaussianBandpassFilterRecording(BasePreprocessor):
     gaussian_bandpass_filtered_recording: GaussianBandpassFilterRecording
         The filtered recording extractor object.
     """
+    name = 'gaussian_bandpass_filter'
 
     def __init__(self, recording: BaseRecording, freq_min: float = 300., freq_max: float = 5000.):
         sf = recording.sampling_frequency
