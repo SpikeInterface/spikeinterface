@@ -59,7 +59,7 @@ follows:
         **job_kwargs,
     )
 
-The output :code:`peaks` is a numpy array with a length of the number of peaks found and the following dtype:
+The output :code:`peaks` is a NumPy array with a length of the number of peaks found and the following dtype:
 
 .. code-block:: python
 
@@ -112,7 +112,7 @@ These methods are the same as implemented in :py:mod:`spikeinterface.postprocess
 
 
 
-The output :code:`peak_locations` is a 1d numpy array with a dtype that depends on the chosen method.
+The output :code:`peak_locations` is a 1d NumPy array with a dtype that depends on the chosen method.
 
 For instance, the 'monopolar_triangulation' method will have:
 
@@ -122,10 +122,10 @@ For instance, the 'monopolar_triangulation' method will have:
 
 .. note::
 
-   By convention in spikeinterface, when a probe is described in 2d
+   By convention in SpikeInterface, when a probe is described in 2d
      * **'x'** is the width of the probe
      * **'y'** is the depth
-     * **'z'** is the orthogonal to the probe plane
+     * **'z'** is orthogonal to the probe plane
 
 
 Peak selection
@@ -166,7 +166,7 @@ Motion estimation
 Recently, drift estimation has been added to some of the available spike sorters (Kilosort 2.5, 3)
 Especially for Neuropixels-like probes, this is a crucial step.
 
-Several methods have been proposed to correct for drift, but only one is currently implemented in spikeinterface. 
+Several methods have been proposed to correct for drift, but only one is currently implemented in SpikeInterface. 
 See `Decentralized Motion Inference and Registration of Neuropixel Data <https://ieeexplore.ieee.org/document/9414145>`_ 
 for more details.
 
@@ -232,10 +232,10 @@ Here is a short example that depends on the output of "Motion estimation":
 Clustering
 ----------
 
-The clustering step remains the central step of the spike sorting.
+The clustering step remains the central step of spike sorting.
 Historically this step was separted into two distinct parts: feature reduction and clustering.
-In spikeinterface, we decided to regroup these two steps into the same module.
-This allows one to compute feature reduction on-the-fly and avoid long computations and storage of 
+In SpikeInterface, we decided to regroup these two steps into the same module.
+This allows one to compute feature reduction 'on-the-fly' and avoid long computations and storage of 
 large features.
 
 The clustering step takes the recording and detected (and optionally selected) peaks as input and returns 
@@ -268,17 +268,17 @@ Different methods may need different inputs (for instance some of them require p
 Template matching
 -----------------
 
-Template matching is the final step used in many sorters (kilosort, spyking-circus, yass, tridesclous, hdsort...)
+Template matching is the final step used in many sorters (Kilosort, SpyKING-Circus, YASS, Tridesclous, HDsort...)
 
 In this step, from a given catalogue (or dictionary) of templates (or atoms), the algorithms try to *explain* the 
-traces as a linear sum of template plus a residual noise.
+traces as a linear sum of a template plus a residual noise.
 
 At the moment, there are four methods implemented:
 
-  * 'naive': a very naive implemenation used as  a reference for benchmarks
-  * 'tridesclous': the algorithm for template matching implemented in tridesclous
-  * 'circus': the algorithm for template matching implemented in spyking-circus
-  * 'circus-omp': a updated algorithm similar to the spyking-circus one circus but with OMP (orthogonal macthing 
+  * 'naive': a very naive implemenation used as a reference for benchmarks
+  * 'tridesclous': the algorithm for template matching implemented in Tridesclous
+  * 'circus': the algorithm for template matching implemented in SpyKING-Circus
+  * 'circus-omp': a updated algorithm similar to SpyKING-Circus but with OMP (orthogonal macthing 
     pursuit)
 
 Very preliminary benchmarks suggest that:

@@ -62,8 +62,12 @@ def has_nvidia():
     """
     Checks if the machine has nvidia capability.
     """
+    from cuda import cuda
+        
     try:
-        check_output('nvidia-smi')
-        return True
-    except Exception:  # this command not being found can raise quite a few different errors depending on the configuration
+        cu_result_init,  = cuda.cuInit(0)
+        cu_result, cu_string = cuda.cuGetErrorString(cu_result_init)
+        cu_result_device_count, device_count = cuda.cuDeviceGetCount()
+        return device_count > 0
+    except RuntimeError: #  Failed to dlopen libcuda.so
         return False

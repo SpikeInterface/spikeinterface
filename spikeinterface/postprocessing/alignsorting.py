@@ -39,7 +39,7 @@ class AlignSortingExtractor(BaseSorting):
             self.register_recording(sorting._recording)
 
         self._kwargs = {
-            'sorting': sorting.to_dict(),
+            'sorting': sorting,
             'unit_peak_shifts': unit_peak_shifts
         }
 
