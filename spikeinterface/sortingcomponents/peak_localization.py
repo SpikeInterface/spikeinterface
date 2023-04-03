@@ -300,11 +300,11 @@ class LocalizeGridConvolution(PipelineNode):
                                  neighbours_mask=self.neighbours_mask,
                                  weights=self.weights,
                                  nbefore=self.nbefore))
-        np.seterr(divide='ignore', invalid='ignore')
 
     def get_dtype(self):
         return self._dtype
 
+    @np.errstate(divide='ignore', invalid='ignore')
     def compute(self, traces, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 

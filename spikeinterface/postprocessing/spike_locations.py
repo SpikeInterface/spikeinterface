@@ -122,7 +122,7 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
     ms_after : float
         The right window, after a peak, in milliseconds.
     method : str
-        'center_of_mass' / 'monopolar_triangulation' / 'from_templates'
+        'center_of_mass' / 'monopolar_triangulation' / 'grid_convolution'
     method_kwargs : dict 
         Other kwargs depending on the method.
     outputs : str 

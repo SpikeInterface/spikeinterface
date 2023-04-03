@@ -218,7 +218,7 @@ def estimate_distance_error_with_log(vec, wf_ptp, local_contact_locations, maxpt
 
 
 def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with_log_penality',
-                                    local_radius_um=75, max_distance_um=1000, return_alpha=False, enforce_decrease=False):
+                                    radius_um=75, max_distance_um=1000, return_alpha=False, enforce_decrease=False):
     '''
     Localize unit with monopolar triangulation.
     This method is from Julien Boussard, Erdem Varol and Charlie Windolf
@@ -242,7 +242,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         A waveform extractor object
     method: str  ('least_square', 'minimize_with_log_penality')
        2 variants of the method
-    local_radius_um: float
+    radius_um: float
         For channel sparsity
     max_distance_um: float
         to make bounddary in x, y, z and also for alpha
@@ -263,15 +263,15 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
 
     contact_locations = waveform_extractor.get_channel_locations()
 
-    sparsity = compute_sparsity(waveform_extractor, method='radius', radius_um=local_radius_um)
+    sparsity = compute_sparsity(waveform_extractor, method='radius', radius_um=radius_um)
     templates = waveform_extractor.get_all_templates(mode='average')
 
-    #if enforce_decrease:
-    #    neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
-    #    for i, unit_id in enumerate(unit_ids):
-    #        neighbours_mask[i][channel_sparsity[unit_id]] = True
-    #    enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
-    #    best_channels = get_template_extremum_channel(waveform_extractor, outputs='index')
+    if enforce_decrease:
+       neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
+       for i, unit_id in enumerate(unit_ids):
+           neighbours_mask[i][channel_sparsity[unit_id]] = True
+       enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
+       best_channels = get_template_extremum_channel(waveform_extractor, outputs='index')
 
     unit_location = np.zeros((unit_ids.size, 4), dtype='float64')
     for i, unit_id in enumerate(unit_ids):
@@ -282,10 +282,10 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         wf = templates[i, :, :]
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
 
-        #if enforce_decrease:
-        #    enforce_decrease_shells_ptp(
-        #        wf_ptp, best_channels[unit_id], enforce_decrease_radial_parents, in_place=True
-        #    )
+        if enforce_decrease:
+           enforce_decrease_shells_ptp(
+               wf_ptp, best_channels[unit_id], enforce_decrease_radial_parents, in_place=True
+           )
 
         unit_location[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_um, optimizer)
 
@@ -295,7 +295,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
     return unit_location
 
 
-def compute_center_of_mass(waveform_extractor, peak_sign='neg', local_radius_um=75, feature='ptp'):
+def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=75, feature='ptp'):
     '''
     Computes the center of mass (COM) of a unit based on the template amplitudes.
 
@@ -319,7 +319,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', local_radius_um=
     recording = waveform_extractor.recording
     contact_locations = recording.get_channel_locations()
 
-    sparsity = compute_sparsity(waveform_extractor, peak_sign=peak_sign, method='radius', radius_um=local_radius_um)
+    sparsity = compute_sparsity(waveform_extractor, peak_sign=peak_sign, method='radius', radius_um=radius_um)
     templates = waveform_extractor.get_all_templates(mode='average')
 
     unit_location = np.zeros((unit_ids.size, 2), dtype='float64')
@@ -344,8 +344,8 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', local_radius_um=
 
     return unit_location
 
-
-def compute_grid_convolution(waveform_extractor, peak_sign='neg', local_radius_um=50., upsampling_um=5,
+@np.errstate(divide='ignore', invalid='ignore')
+def compute_grid_convolution(waveform_extractor, peak_sign='neg', radius_um=50., upsampling_um=5,
         sigma_um=np.linspace(10, 50, 5), sigma_ms=0.25, margin_um=50, prototype=None):
     '''
     Estimate the positions of the templates from a large grid of fake templates
@@ -356,7 +356,7 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', local_radius_u
         The waveform extractor
     peak_sign: str
         Sign of the template to compute best channels ('neg', 'pos', 'both')
-    local_radius_um: float
+    radius_um: float
         Radius to consider for the fake templates
     upsampling_um: float
         Upsampling resolution for the grid of templates
@@ -408,7 +408,7 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', local_radius_u
 
     import sklearn
     dist = sklearn.metrics.pairwise_distances(template_positions, contact_locations)
-    neighbours_mask = dist < local_radius_um
+    neighbours_mask = dist < radius_um
 
     weights = np.zeros((len(sigma_um), len(contact_locations), nb_templates), dtype=np.float32)
     for count, sigma in enumerate(sigma_um):
@@ -418,7 +418,7 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', local_radius_u
 
     peak_channels = get_template_extremum_channel(waveform_extractor, peak_sign, outputs='index')
     unit_ids = waveform_extractor.sorting.unit_ids
-    np.seterr(divide='ignore', invalid='ignore')
+    
 
     unit_location = np.zeros((unit_ids.size, 2), dtype='float64')
     for i, unit_id in enumerate(unit_ids):
@@ -437,8 +437,7 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', local_radius_u
             dot_products = np.maximum(0, dot_products)
             scalar_products[intersect] += dot_products
             found_positions += np.dot(dot_products, template_positions[intersect])
-
-        unit_location[i, :] = found_positions/scalar_products.sum()
+            unit_location[i, :] = found_positions/scalar_products.sum()
 
     return unit_location
 
