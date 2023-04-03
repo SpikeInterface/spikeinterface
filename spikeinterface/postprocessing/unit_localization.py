@@ -378,7 +378,7 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', local_radius_u
 
     nbefore = waveform_extractor.nbefore
     nafter = waveform_extractor.nafter
-    fs = waveform_extractor.recording.get_sampling_frequency()
+    fs = waveform_extractor.sampling_frequency
         
     time_axis = np.arange(-nbefore, nafter) * 1000/fs
     if prototype is None:
