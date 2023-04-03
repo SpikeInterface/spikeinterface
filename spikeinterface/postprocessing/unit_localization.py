@@ -61,7 +61,7 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
         if method == 'center_of_mass':
             unit_location = compute_center_of_mass(self.waveform_extractor,  **method_kwargs)
         elif method == 'grid_convolution':
-            unit_location = compute_from_templates(self.waveform_extractor,  **method_kwargs)
+            unit_location = compute_grid_convolution(self.waveform_extractor,  **method_kwargs)
         elif method == 'monopolar_triangulation':
             unit_location = compute_monopolar_triangulation(self.waveform_extractor,  **method_kwargs)
         self._extension_data['unit_locations'] = unit_location
@@ -346,7 +346,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', local_radius_um=
 
 
 def compute_grid_convolution(waveform_extractor, peak_sign='neg', local_radius_um=50., upsampling_um=5,
-        sigma_um=np.linspace(10, 50, 3), sigma_ms=0.25, margin_um=50, prototype=None):
+        sigma_um=np.linspace(10, 50, 5), sigma_ms=0.25, margin_um=50, prototype=None):
     '''
     Estimate the positions of the templates from a large grid of fake templates
 
@@ -429,14 +429,16 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', local_radius_u
 
         global_products = ((wf / amplitude) * prototype).sum(axis=0)
 
-        found_positions = np.zeros((len(weights), 2), dtype=np.float32)
+        found_positions = np.zeros(2, dtype=np.float32)
+        scalar_products = np.zeros(nb_templates, dtype=np.float32)
+
         for count, w in enumerate(weights):
             dot_products = np.dot(global_products, w[:, intersect])
             dot_products = np.maximum(0, dot_products)
-            denominator = dot_products.sum()
-            found_positions[count] = np.dot(dot_products, template_positions[intersect])/denominator
+            scalar_products[intersect] += dot_products
+            found_positions += np.dot(dot_products, template_positions[intersect])
 
-        unit_location[i, :] = found_positions.mean(axis=0)
+        unit_location[i, :] = found_positions/scalar_products.sum()
 
     return unit_location
 
