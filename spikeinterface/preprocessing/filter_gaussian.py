@@ -14,8 +14,10 @@ class GaussianFilterRecording(BasePreprocessor):
     ----------
     recording: BaseRecording
         The recording extractor to be filtered.
-    band: list[float, float]
-        Band (low, high) in Hz of the bandpass filter.
+    freq_min: float
+        The lower frequency cutoff for the bandpass filter.
+    freq_max: float
+        The higher frequency cutoff for the bandpass filter.
 
     Returns
     -------
@@ -23,28 +25,28 @@ class GaussianFilterRecording(BasePreprocessor):
         The filtered recording extractor object.
     """
 
-    def __init__(self, recording: BaseRecording, band=[300., 5000.]):
+    def __init__(self, recording: BaseRecording, freq_min: float = 300., freq_max: float = 5000.):
         sf = recording.sampling_frequency
         BasePreprocessor.__init__(self, recording)
         self.annotate(is_filtered=True)
 
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(GaussianFilterRecordingSegment(parent_segment, *band))
+            self.add_recording_segment(GaussianFilterRecordingSegment(parent_segment, freq_min, freq_max))
 
-        self._kwargs = {'recording': recording.to_dict(), 'band': band}
+        self._kwargs = {'recording': recording.to_dict(), 'freq_min': freq_min, 'freq_max': freq_max}
 
 
 class GaussianFilterRecordingSegment(BasePreprocessorSegment):
 
-    def __init__(self, parent_recording_segment: BaseRecordingSegment, low_f: float, high_f: float):
+    def __init__(self, parent_recording_segment: BaseRecordingSegment, freq_min: float, freq_max: float):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
-        self.low_f  = low_f
-        self.high_f = high_f
+        self.freq_min  = freq_min
+        self.freq_max = freq_max
 
         sf = parent_recording_segment.sampling_frequency
-        low_sigma  = sf / (2*np.pi * low_f)
-        high_sigma = sf / (2*np.pi * high_f)
+        low_sigma  = sf / (2*np.pi * freq_min)
+        high_sigma = sf / (2*np.pi * freq_max)
         self.margin = int(max(low_sigma, high_sigma) * 6. + 1)
 
     def get_traces(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None,
@@ -54,8 +56,8 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         dtype = traces.dtype
         
         traces_fft = np.fft.fft(traces, axis=0)
-        gauss_low  = self._create_gaussian(traces.shape[0], self.low_f)
-        gauss_high = self._create_gaussian(traces.shape[0], self.high_f)
+        gauss_low  = self._create_gaussian(traces.shape[0], self.freq_min)
+        gauss_high = self._create_gaussian(traces.shape[0], self.freq_max)
 
         filtered_fft = traces_fft * (gauss_high - gauss_low)[:, None]
         filtered_traces = np.real(np.fft.ifft(filtered_fft, axis=0))
