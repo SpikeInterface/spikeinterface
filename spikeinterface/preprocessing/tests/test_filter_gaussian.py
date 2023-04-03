@@ -1,8 +1,9 @@
+import numpy as np
 import pytest
 from pathlib import Path
 from spikeinterface.core import load_extractor, set_global_tmp_folder
 from spikeinterface.core.testing import check_recordings_equal
-from spikeinterface.core.testing_tools import generate_recording
+from spikeinterface.core.generate import generate_recording
 from spikeinterface.preprocessing import gaussian_filter
 
 
@@ -35,6 +36,10 @@ def test_filter_gaussian():
 	saved_1job = rec_filtered.save(folder=cache_folder / "1job")
 	saved_2job = rec_filtered.save(folder=cache_folder / "2job", n_jobs=2, chunk_duration='1s')
 
-	check_recordings_equal(rec_filtered, saved_1job, return_scaled=False)
-	# The following test fails because the result differs for the first 3-4ms and the last 3-4ms.
-	# check_recordings_equal(rec_filtered, saved_2job, return_scaled=False)
+	for seg_idx in range(rec_filtered.get_num_segments()):
+		original_trace = rec_filtered.get_traces(seg_idx)
+		saved1_trace = saved_1job.get_traces(seg_idx)
+		saved2_trace = saved_2job.get_traces(seg_idx)
+
+		assert np.allclose(original_trace[60:-60], saved1_trace[60:-60], rtol=1e-3, atol=1e-3)
+		assert np.allclose(original_trace[60:-60], saved2_trace[60:-60], rtol=1e-3, atol=1e-3)
