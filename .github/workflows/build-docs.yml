@@ -1,0 +1,22 @@
+name: Build documentation
+on: workflow_dispatch
+
+jobs:
+  build-and-test:
+    name: Docs
+    runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          environment-file: environment_rtd.yml
+      - name: Python version
+        run: |
+          python --version
+      - name: Build docs
+        run: |
+          cd doc
+          make html

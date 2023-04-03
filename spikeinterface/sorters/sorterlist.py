@@ -1,27 +1,26 @@
-import warnings
-
-from .combinato import CombinatoSorter
-from .hdsort import HDSortSorter
-from .herdingspikes import HerdingspikesSorter
-
-from .ironclust import IronClustSorter
-from .kilosort import KilosortSorter
-from .kilosort2 import Kilosort2Sorter
-from .kilosort2_5 import Kilosort2_5Sorter
-from .kilosort3 import Kilosort3Sorter
-from .pykilosort import PyKilosortSorter
-from .klusta import KlustaSorter
-from .mountainsort4 import Mountainsort4Sorter
-from .spyking_circus import SpykingcircusSorter
-from .tridesclous import TridesclousSorter
-from .waveclus import WaveClusSorter
-from .waveclus import WaveClusSnippetsSorter
-from .yass import YassSorter
+from .external.combinato import CombinatoSorter
+from .external.hdsort import HDSortSorter
+from .external.herdingspikes import HerdingspikesSorter
+from .external.ironclust import IronClustSorter
+from .external.kilosort import KilosortSorter
+from .external.kilosort2 import Kilosort2Sorter
+from .external.kilosort2_5 import Kilosort2_5Sorter
+from .external.kilosort3 import Kilosort3Sorter
+from .external.pykilosort import PyKilosortSorter
+from .external.klusta import KlustaSorter
+from .external.mountainsort4 import Mountainsort4Sorter
+from .external.spyking_circus import SpykingcircusSorter
+from .external.tridesclous import TridesclousSorter
+from .external.waveclus import WaveClusSorter
+from .external.waveclus_snippets import WaveClusSnippetsSorter
+from .external.yass import YassSorter
 
 # based on spikeinertface.sortingcomponents
-from .si_based_sorters import Spykingcircus2Sorter, Tridesclous2Sorter
+from .internal.spyking_circus2 import Spykingcircus2Sorter
+from .internal.tridesclous2 import Tridesclous2Sorter
 
 sorter_full_list = [
+    # external
     CombinatoSorter,
     HDSortSorter,
     HerdingspikesSorter,
@@ -38,8 +37,8 @@ sorter_full_list = [
     WaveClusSorter,
     WaveClusSnippetsSorter,
     YassSorter,
-    
-    # si_based_sorters
+
+    # internal
     Spykingcircus2Sorter,
     Tridesclous2Sorter
 ]
@@ -94,12 +93,6 @@ def get_default_sorter_params(sorter_name_or_class):
     return SorterClass.default_params()
 
 
-def get_default_params(sorter_name_or_class):
-    warnings.warn("Use get_default_sorter_params() function instead", 
-                  category=DeprecationWarning)
-    return get_default_sorter_params(sorter_name_or_class)
-
-
 def get_sorter_params_description(sorter_name_or_class):
     """Returns a description of the parameters for the specified sorter.
 
@@ -122,12 +115,6 @@ def get_sorter_params_description(sorter_name_or_class):
         raise (ValueError('Unknown sorter'))
 
     return SorterClass.params_description()
-
-
-def get_params_description(sorter_name_or_class):
-    warnings.warn("Use get_sorter_params_description() function instead",
-                  category=DeprecationWarning)
-    return get_sorter_params_description(sorter_name_or_class)
 
 
 def get_sorter_description(sorter_name_or_class):

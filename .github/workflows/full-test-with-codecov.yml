@@ -1,0 +1,99 @@
+name: Full spikeinterface tests codecov
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * *"  # Daily at noon UTC
+
+env:
+  KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
+  KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
+
+jobs:
+  build-and-test:
+    name: Codecov in Ubuntu
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # "macos-latest", "windows-latest"
+        os: ["ubuntu-latest", ]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Get current year-month
+        id: date
+        run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
+      - name: Restore cached virtual environment with dependencies
+        uses: actions/cache/restore@v3
+        id: cache-venv
+        with:
+          path: ~/test_env
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
+          restore-keys: |
+            ${{ runner.os }}-venv-
+      - name: Get ephy_testing_data current head hash
+        # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
+        id: vars
+        run: |
+          echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+      - name: Restore cached gin data for extractors tests
+        uses: actions/cache/restore@v3
+        id: cache-datasets
+        env:
+          # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
+          HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
+        with:
+          path: ~/spikeinterface_datasets
+          key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
+          restore-keys: |
+            ${{ runner.os }}-datasets
+      - name: Install dependencies
+        run: |
+          # this is for datalad and download testing datasets
+          sudo apt install git 
+          # needed for correct operation of git/git-annex/DataLad
+          git config --global user.email "CI@example.com"
+          git config --global user.name "CI Almighty"
+          python -m venv ~/test_env
+          python -m pip install -U pip  # Official recommended way
+          source ~/test_env/bin/activate
+          pip install tabulate  # This produces summaries at the end
+          ## clean some cache to avoid using old cache
+          pip cache remove numpy
+          pip cache remove hdbscan
+          pip cache remove numba
+          pip install -e .[test,extractors,full]
+      - name: git-annex install
+        run: |
+          wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
+          tar xvzf git-annex-standalone-amd64.tar.gz
+          echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
+      - name: git-annex version
+        run: |
+          git-annex version
+      - name: Packages installed
+        run: |
+          source ~/test_env/bin/activate
+          pip list
+      - name: Check ephy_testing_data files
+        run: |
+          if [ -d "$HOME/spikeinterface_datasets" ]; then
+            find $HOME/spikeinterface_datasets
+          fi
+      - name: run tests
+        run: |
+          source ~/test_env/bin/activate
+          pytest -m "not sorters_external" --cov=./ --cov-report xml:./coverage.xml -vv -ra --durations=0 | tee report_full.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          echo "# Timing profile of full tests" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_full.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY
+          rm report_full.txt
+      - uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          file: ./coverage.xml
+          flags: unittests

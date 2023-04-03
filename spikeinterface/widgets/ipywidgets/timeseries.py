@@ -74,6 +74,7 @@ class TimeseriesPlotter(IpywidgetsPlotter):
         self.updater(None)
 
         if backend_kwargs["display"]:
+            self.check_backend()
             display(self.widget)
 
 
@@ -159,7 +160,7 @@ class PlotUpdater:
                 all_channel_ids = all_channel_ids[self.data_plot["order"]]
             channel_ids = all_channel_ids[channel_indices]
             if self.data_plot['order_channel_by_depth']:
-                order = order_channels_by_depth(self.rec0, channel_ids)
+                order, _ = order_channels_by_depth(self.rec0, channel_ids)
             else:
                 order = None
             times, list_traces, frame_range, channel_ids = _get_trace_list(self.recordings, channel_ids, time_range,

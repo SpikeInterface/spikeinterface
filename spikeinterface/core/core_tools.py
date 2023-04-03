@@ -1,7 +1,9 @@
 from pathlib import Path
 import os
 import sys
+import warnings
 import datetime
+import json
 from copy import deepcopy
 import gc
 
@@ -11,7 +13,7 @@ import inspect
 
 from .job_tools import (ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, fix_job_kwargs, 
                         ChunkRecordingExecutor, _shared_job_kwargs_doc)
-    
+
 def copy_signature(source_fct):
     def copy(target_fct):
         target_fct.__signature__ = inspect.signature(source_fct)
@@ -78,61 +80,72 @@ def write_python(path, dict):
             else:
                 f.write(str(k) + " = " + str(v) + "\n")
 
+class SIJsonEncoder(json.JSONEncoder):
+    """
+    An encoder used to encode Spike interface objects to json
+    """
 
-def check_json(d):
-    dc = deepcopy(d)
-    # quick hack to ensure json writable
-    for k, v in d.items():
-        # take care of keys first
-        if isinstance(k, np.integer):
-            del dc[k]
-            dc[int(k)] = v
-        if isinstance(k, np.floating):
-            del dc[k]
-            dc[float(k)] = v
-        if isinstance(v, dict):
-            dc[k] = check_json(v)
-        elif isinstance(v, Path):
-            dc[k] = str(v.absolute())
-        elif isinstance(v, (bool, np.bool_)):
-            dc[k] = bool(v)
-        elif isinstance(v, np.integer):
-            dc[k] = int(v)
-        elif isinstance(v, np.floating):
-            dc[k] = float(v)
-        elif isinstance(v, datetime.datetime):
-            dc[k] = v.isoformat()
-        elif isinstance(v, (np.ndarray, list)):
-            if len(v) > 0:
-                if isinstance(v[0], dict):
-                    # these must be extractors for multi extractors
-                    dc[k] = [check_json(v_el) for v_el in v]
-                else:
-                    v_arr = np.array(v)
-                    if v_arr.dtype.kind not in ("b", "i", "u", "f", "S", "U", "O"):
-                        print(f'Skipping field {k}: only int, uint, bool, float, or str types can be serialized')
-                        continue
-                    # 64-bit types are not serializable
-                    if v_arr.dtype == np.dtype('int64'):
-                        v_arr = v_arr.astype('int32')
-                    if v_arr.dtype == np.dtype('float64'):
-                        v_arr = v_arr.astype('float32')
-                    # np.bool_ needs to be cast as bool
-                    if v_arr.dtype == np.bool_:
-                        v_arr = v_arr.astype(bool)
-                    # for object types O, if they are actually str cast it
-                    # this is the case when loading a pandas column
-                    if v_arr.dtype.kind == "O":
-                        if isinstance(v_arr[0], str):
-                            v_arr = v_arr.astype('str')
-                        else:
-                            print(f'Skipping field {k}: Object type cannot be serialized')
-                            continue
-                    dc[k] = v_arr.tolist()
-            else:
-                # this is for empty arrays
-                dc[k] = list(v)
-    return dc
+    def default(self, obj):
+        from spikeinterface.core.base import BaseExtractor
+
+        # Over-write behaviors for datetime object
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+
+        # This should transforms integer, floats and bool to their python counterparts
+        if isinstance(obj, np.generic):
+            return obj.item()
+
+        if np.issctype(obj):  # Cast numpy datatypes to their names
+            return np.dtype(obj).name
+
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+
+        if isinstance(obj, BaseExtractor):
+            return obj.to_dict()
+
+        # The base-class handles the assertion
+        return super().default(obj)
+
+    # This machinery is necessary for overriding the default behavior of the json encoder with keys
+    # This is a deep issue that goes deep down to cpython: https://github.com/python/cpython/issues/63020
+    def iterencode(self, obj, _one_shot=False):
+        return super().iterencode(self.remove_numpy_scalar_from_object(obj), _one_shot=_one_shot)
+
+    def remove_numpy_scalar_from_object(self, object):
+        if isinstance(object, dict):
+            return self.remove_python_scalar_in_dict(object)
+        elif isinstance(object, list):
+            return self.remove_numpy_scalar_in_list(object)
+        else:
+            return object.item() if isinstance(object, np.generic) else object
+
+    def remove_numpy_scalar_in_list(self, list_: list) -> list:
+        return [self.remove_numpy_scalar_from_object(obj) for obj in list_]
+
+    def remove_python_scalar_in_dict(self, dictionary: dict) -> dict:
+        dict_copy = dict()
+        for key, value in dictionary.items():
+            key = self.remove_numpy_scalar_from_object(key)
+            value = self.remove_numpy_scalar_from_object(value)
+            dict_copy[key] = value
+
+        return dict_copy
+
+
+def check_json(dictionary: dict) -> dict:
+    """
+    Function that transforms a dictionary with spikeinterface objects into a json writable dictionary
+
+    Parameters
+    ----------
+    dictionary : A dictionary
+
+    """
+
+    json_string = json.dumps(dictionary, indent=4, cls=SIJsonEncoder)
+    return json.loads(json_string)
 
 
 def add_suffix(file_path, possible_suffix):
@@ -268,11 +281,7 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
     # use executor (loop or workers)
     func = _write_binary_chunk
     init_func = _init_binary_worker
-    n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
-    if n_jobs == 1:
-        init_args = (recording, rec_memmaps_dict, dtype, cast_unsigned)
-    else:
-        init_args = (recording.to_dict(), rec_memmaps_dict, dtype, cast_unsigned)
+    init_args = (recording, rec_memmaps_dict, dtype, cast_unsigned)
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_binary_recording', **job_kwargs)
     executor.run()
@@ -642,10 +651,7 @@ def write_traces_to_zarr(recording, zarr_root, zarr_path, storage_options,
     # use executor (loop or workers)
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
-    if n_jobs == 1:
-        init_args = (recording, zarr_path, storage_options, dataset_paths, dtype, cast_unsigned)
-    else:
-        init_args = (recording.to_dict(), zarr_path, storage_options, dataset_paths, dtype, cast_unsigned)
+    init_args = (recording, zarr_path, storage_options, dataset_paths, dtype, cast_unsigned)
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_zarr_recording', **job_kwargs)
     executor.run()
@@ -769,13 +775,21 @@ def recursive_path_modifier(d, func, target='path', copy=True):
             if isinstance(v, dict) and is_dict_extractor(v):
                 nested_extractor_dict = v
                 recursive_path_modifier(nested_extractor_dict, func, copy=False)
+            # deal with list of extractor objects (e.g. concatenate_recordings)
+            elif isinstance(v, list):
+                for vl in v:
+                    if isinstance(vl, dict) and is_dict_extractor(vl):
+                        nested_extractor_dict = vl
+                        recursive_path_modifier(nested_extractor_dict, func, copy=False)
 
         return dc
     else:
         for k, v in d.items():
             if target in k:
-                # paths can be str or list of str
-                if isinstance(v, str):
+                # paths can be str or list of str or None
+                if v is None:
+                    continue
+                if isinstance(v, (str, Path)):
                     dc[k] =func(v)
                 elif isinstance(v, list):
                     dc[k] = [func(e) for e in v]
@@ -792,3 +806,40 @@ def recursive_key_finder(d, key):
         else:
             if k == key:
                 yield v
+
+
+def convert_bytes_to_str(byte_value:int ) -> str:
+    """
+    Convert a number of bytes to a human-readable string with an appropriate unit.
+
+    This function converts a given number of bytes into a human-readable string
+    representing the value in either bytes (B), kibibytes (KiB), mebibytes (MiB),
+    gibibytes (GiB), or tebibytes (TiB). The function uses the IEC binary prefixes
+    (1 KiB = 1024 B, 1 MiB = 1024 KiB, etc.) to determine the appropriate unit.
+
+    Parameters
+    ----------
+    byte_value : int
+        The number of bytes to convert.
+
+    Returns
+    -------
+    str
+        The converted value as a formatted string with two decimal places,
+        followed by a space and the appropriate unit (B, KiB, MiB, GiB, or TiB).
+
+    Examples
+    --------
+    >>> convert_bytes_to_str(1024)
+    '1.00 KiB'
+    >>> convert_bytes_to_str(1048576)
+    '1.00 MiB'
+    >>> convert_bytes_to_str(45056)
+    '43.99 KiB'
+    """
+    suffixes = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
+    i = 0
+    while byte_value >= 1024 and i < len(suffixes) - 1:
+        byte_value /= 1024
+        i += 1
+    return f"{byte_value:.2f} {suffixes[i]}"

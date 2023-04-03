@@ -2,18 +2,16 @@ from pathlib import Path
 from typing import Union, List
 
 import numpy as np
+import h5py
 
 from spikeinterface import get_global_tmp_folder
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 try:
-    import pandas as pd
     import pynwb
-    from pynwb import NWBHDF5IO
-    from pynwb import NWBFile
-    from pynwb.ecephys import ElectricalSeries, FilteredEphys, LFP
-    from pynwb.ecephys import ElectrodeGroup
+    from pynwb import NWBHDF5IO, NWBFile
+    from pynwb.ecephys import ElectricalSeries, FilteredEphys, LFP, ElectrodeGroup
     from hdmf.data_utils import DataChunkIterator
     from hdmf.backends.hdf5.h5_utils import H5DataIO
     HAVE_NWB = True
@@ -64,9 +62,9 @@ class NwbRecordingExtractor(BaseRecording):
         Path to NWB file or s3 url.
     electrical_series_name: str, optional
         The name of the ElectricalSeries. Used if multiple ElectricalSeries are present.
-    load_time_vector: bool, optional, default: False
+    load_time_vector: bool, default: False
         If True, the time vector is loaded to the recording object.
-    samples_for_rate_estimation: int, optional, default: 100000
+    samples_for_rate_estimation: int, default: 100000
         The number of timestamp samples to use to estimate the rate.
         Used if 'rate' is not specified in the ElectricalSeries.
     stream_mode: str, optional
@@ -123,10 +121,8 @@ class NwbRecordingExtractor(BaseRecording):
         self._electrical_series_name = electrical_series_name
 
         if stream_mode == "fsspec":
-            check_nwb_install()
             import fsspec
             from fsspec.implementations.cached import CachingFileSystem
-            import h5py
             
             self.stream_cache_path = stream_cache_path if stream_cache_path is not None else get_global_tmp_folder()
             self.cfs = CachingFileSystem(
@@ -138,7 +134,9 @@ class NwbRecordingExtractor(BaseRecording):
             self.io = NWBHDF5IO(file=f, mode='r', load_namespaces=True)
         
         elif stream_mode == "ros3":
-            assert self.stream_cache_path is None, "'stream_cache_path' is only used with 'fsspec' stream_mode"
+            drivers = h5py.registered_drivers()
+            assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
+            assert "ros3" in drivers, assertion_msg
             self._file_path = str(file_path)
             self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True, driver="ros3")
 
@@ -337,7 +335,7 @@ class NwbSortingExtractor(BaseSorting):
         The name of the ElectricalSeries (if multiple ElectricalSeries are present).
     sampling_frequency: float, optional
         The sampling frequency in Hz (required if no ElectricalSeries is available).
-    samples_for_rate_estimation: int, optional, default: 100000
+    samples_for_rate_estimation: int, default: 100000
         The number of timestamp samples to use to estimate the rate.
         Used if 'rate' is not specified in the ElectricalSeries.
     stream_mode: str, optional
@@ -488,9 +486,9 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
     ----------
     file_path: str or Path
         Path to NWB file.
-    load_recording : bool, optional, default: True
+    load_recording : bool, default: True
         If True, the recording object is loaded.
-    load_sorting : bool, optional, default: False
+    load_sorting : bool, default: False
         If True, the recording object is loaded.
     electrical_series_name: str, optional
         The name of the ElectricalSeries (if multiple ElectricalSeries are present)

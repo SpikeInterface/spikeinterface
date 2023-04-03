@@ -13,9 +13,8 @@ from copy import deepcopy
 import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
-from .core_tools import check_json, is_dict_extractor, recursive_path_modifier
+from .core_tools import check_json, is_dict_extractor, recursive_path_modifier, SIJsonEncoder
 from .job_tools import _shared_job_kwargs_doc
-
 
 class BaseExtractor:
     """
@@ -97,7 +96,7 @@ class BaseExtractor:
             if prefer_slice:
                 indices = slice(None)
             else:
-                indices = self._main_ids
+                indices = np.arange(len(self._main_ids))
         else:
             _main_ids = self._main_ids.tolist()
             indices = np.array([_main_ids.index(id) for id in ids], dtype=int)
@@ -284,8 +283,8 @@ class BaseExtractor:
     def to_dict(self, include_annotations=False, include_properties=False,
                 relative_to=None, folder_metadata=None):
         """
-        Make a nested serialized dictionary out of the extractor. The dictionary be used to re-initialize an
-        extractor with load_extractor_from_dict(dump_dict)
+        Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize 
+        an extractor using load_extractor_from_dict(dump_dict)
 
         Parameters
         ----------
@@ -385,11 +384,12 @@ class BaseExtractor:
 
         # load properties
         prop_folder = folder_metadata / 'properties'
-        for prop_file in prop_folder.iterdir():
-            if prop_file.suffix == '.npy':
-                values = np.load(prop_file, allow_pickle=True)
-                key = prop_file.stem
-                self.set_property(key, values)
+        if prop_folder.is_dir():
+            for prop_file in prop_folder.iterdir():
+                if prop_file.suffix == '.npy':
+                    values = np.load(prop_file, allow_pickle=True)
+                    key = prop_file.stem
+                    self.set_property(key, values)
 
     def save_metadata_to_folder(self, folder_metadata):
         self._extra_metadata_to_folder(folder_metadata)
@@ -480,9 +480,10 @@ class BaseExtractor:
                                  relative_to=relative_to,
                                  folder_metadata=folder_metadata)
         file_path = self._get_file_path(file_path, ['.json'])
+        
         file_path.write_text(
-            json.dumps(check_json(dump_dict), indent=4),
-            encoding='utf8'
+            json.dumps(dump_dict, indent=4, cls=SIJsonEncoder),
+            encoding='utf8',
         )
 
     def dump_to_pickle(self, file_path=None, include_properties=True,
@@ -562,10 +563,18 @@ class BaseExtractor:
         else:
             raise ValueError('spikeinterface.Base.load() file_path must be an existing folder or file')
 
+    def __reduce__(self):
+        """
+        This function is used by pickle to serialize the object.
+        """
+        instance_constructor = self.from_dict
+        intialization_args = (self.to_dict(), )
+        return (instance_constructor, intialization_args)
+
     @staticmethod
     def load_from_folder(folder):
         return BaseExtractor.load(folder)
-
+    
     def _save(self, folder, **save_kwargs):
         # This implemented in BaseRecording or baseSorting
         # this is internally call by cache(...) main function

@@ -36,9 +36,20 @@ def test_global_job_kwargs():
     assert global_job_kwargs == dict(n_jobs=1, chunk_duration="1s", progress_bar=True)
     set_global_job_kwargs(**job_kwargs)
     assert get_global_job_kwargs() == job_kwargs
+    # test updating only one field
+    partial_job_kwargs = dict(n_jobs=2)
+    set_global_job_kwargs(**partial_job_kwargs)
+    global_job_kwargs = get_global_job_kwargs()
+    assert global_job_kwargs == dict(n_jobs=2, chunk_duration="1s", progress_bar=True)
+    # test that fix_job_kwargs grabs global kwargs
     new_job_kwargs = dict(n_jobs=10)
     job_kwargs_split = fix_job_kwargs(new_job_kwargs)
     assert job_kwargs_split['n_jobs'] == new_job_kwargs['n_jobs']
+    assert job_kwargs_split['chunk_duration'] == job_kwargs['chunk_duration']
+    assert job_kwargs_split['progress_bar'] == job_kwargs['progress_bar']
+    # test that None values do not change existing global kwargs
+    none_job_kwargs = dict(n_jobs=None, progress_bar=None, chunk_duration=None)
+    job_kwargs_split = fix_job_kwargs(none_job_kwargs)
     assert job_kwargs_split['chunk_duration'] == job_kwargs['chunk_duration']
     assert job_kwargs_split['progress_bar'] == job_kwargs['progress_bar']
     reset_global_job_kwargs()

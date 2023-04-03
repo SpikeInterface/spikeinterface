@@ -19,6 +19,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
     IBL have a custom format - compressed binary with spikeglx meta.
 
     The format is like spikeglx (have a meta file) but contains:
+
       * "cbin" file (instead of "bin")
       * "ch" file used by mtscomp for compression info
 
@@ -26,7 +27,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
     ----------
     folder_path: str or Path
         Path to ibl folder.
-    load_sync_channel: bool, optional, default: False
+    load_sync_channel: bool, default: False
         Load or not the last channel (sync).
         If not then the probe is loaded.
 
@@ -83,19 +84,25 @@ class CompressedBinaryIblExtractor(BaseRecording):
         # set inplace meta data
         self.set_channel_gains(gains)
         self.set_channel_offsets(offsets)
-        probe = pi.read_spikeglx(meta_file)
-        self.set_probe(probe, in_place=True)
 
-        # load sample shifts
-        imDatPrb_type = probe.annotations["imDatPrb_type"]
+        if not load_sync_channel:
+            probe = pi.read_spikeglx(meta_file)
 
-        if imDatPrb_type < 2:
-            num_adcs = 12
-        else:
-            num_adcs = 16
+            if probe.shank_ids is not None:
+                self.set_probe(probe, in_place=True, group_mode="by_shank")
+            else:
+                self.set_probe(probe, in_place=True)
 
-        sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_adcs)
-        self.set_property("inter_sample_shift", sample_shifts)
+            # load num_channels_per_adc depending on probe type
+            ptype = probe.annotations["probe_type"]
+
+            if ptype in [21, 24]: # NP2.0
+                num_channels_per_adc = 16
+            else: # NP1.0
+                num_channels_per_adc = 12
+
+            sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_channels_per_adc)
+            self.set_property("inter_sample_shift", sample_shifts)
 
         self._kwargs = {'folder_path': str(folder_path.absolute()), 'load_sync_channel': load_sync_channel}
 

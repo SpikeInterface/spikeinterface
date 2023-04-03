@@ -84,6 +84,7 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
         self.updater(None)
 
         if backend_kwargs["display"]:
+            self.check_backend()
             display(self.widget)
 
 
@@ -114,11 +115,12 @@ class PlotUpdater:
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
         data_plot['unit_ids'] = unit_ids
-        data_plot['wfs_by_ids'] = {unit_id: self.we.get_waveforms(unit_id) for unit_id in unit_ids}
         data_plot['templates'] = self.we.get_all_templates(unit_ids=unit_ids)
         data_plot['template_stds'] = self.we.get_all_templates(unit_ids=unit_ids, mode="std")
         data_plot['same_axis'] = same_axis
         data_plot['plot_templates'] = plot_templates
+        if data_plot["plot_waveforms"]:
+            data_plot['wfs_by_ids'] = {unit_id: self.we.get_waveforms(unit_id) for unit_id in unit_ids}
 
         backend_kwargs = {}
 
@@ -147,8 +149,9 @@ class PlotUpdater:
         self.ax_probe.axis("equal")
 
         for unit in unit_ids:
-            self.ax_probe.plot(channel_locations[self.next_data_plot['channel_inds'][unit], 0],
-                               channel_locations[self.next_data_plot['channel_inds'][unit], 1],
+            channel_inds = data_plot['sparsity'].unit_id_to_channel_indices[unit]
+            self.ax_probe.plot(channel_locations[channel_inds, 0],
+                               channel_locations[channel_inds, 1],
                                ls="", marker="o", markersize=3,
                                color=self.next_data_plot['unit_colors'][unit])
         self.ax_probe.set_xlim(np.min(channel_locations[:, 0])-10, np.max(channel_locations[:, 0])+10)

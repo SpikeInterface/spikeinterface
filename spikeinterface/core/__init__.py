@@ -1,12 +1,4 @@
-"""
-Contain core class:
-  * Recording
-  * Sorting
 
-And contain also "core extractors" used for caching:
-  * BinaryRecordingExtractor
-  * NpzSortingExtractor
-"""
 from .base import load_extractor  # , load_extractor_from_dict, load_extractor_from_json, load_extractor_from_pickle
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment
@@ -20,7 +12,8 @@ from .npzsortingextractor import NpzSortingExtractor, read_npz_sorting
 from .numpyextractors import NumpyRecording, NumpySorting, NumpyEvent, NumpySnippets
 from .zarrrecordingextractor import ZarrRecordingExtractor, read_zarr, get_default_zarr_compressor
 from .binaryfolder import BinaryFolderRecording, read_binary_folder
-from .npysnippetsextractor import NpySnippetsExtractor
+from .npzfolder import NpzFolderSorting, read_npz_folder
+from .npysnippetsextractor import NpySnippetsExtractor, read_npy_snippets
 from .npyfoldersnippets import NpyFolderSnippets, read_npy_snippets_folder
 
 # utility extractors (equivalent to OLD subrecording/subsorting)
@@ -49,6 +42,8 @@ from .segmentutils import (
     SelectSegmentRecording,
     append_sortings,
     AppendSegmentSorting,
+    concatenate_sortings,
+    ConcatenateSegmentSorting,
     split_sorting,
     SplitSegmentSorting,
     select_segment_sorting,
@@ -72,7 +67,8 @@ from .waveform_tools import extract_waveforms_to_buffers
 from .snippets_tools import snippets_from_sorting
 
 # waveform extractor
-from .waveform_extractor import WaveformExtractor, extract_waveforms, load_waveforms, precompute_sparsity
+from .waveform_extractor import (WaveformExtractor, BaseWaveformExtractorExtension,
+                                 extract_waveforms, load_waveforms, precompute_sparsity)
 
 # retrieve datasets
 from .datasets import download_dataset

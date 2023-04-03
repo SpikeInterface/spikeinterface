@@ -17,18 +17,20 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream id you want to load.
     stream_name: str, optional
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, optional, default: False
+    all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
     """
     mode = 'file'
     NeoRawIOClass = 'IntanRawIO'
     name = "intan"
 
-    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
+    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False,
+                 use_names_as_ids=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
                                            stream_name=stream_name,
                                            all_annotations=all_annotations,
+                                           use_names_as_ids=use_names_as_ids,
                                            **neo_kwargs)
 
         self._kwargs.update(dict(file_path=str(file_path)))

@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.96.2.dev0"
+version = "0.98.0.dev0"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -18,14 +18,13 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 
-
 dependencies = [
     "numpy",
     "neo>=0.11.1",
-    "joblib!=1.2",
+    "joblib",
     "threadpoolctl",
     "tqdm",
-    "probeinterface>=0.2.14",
+    "probeinterface>=0.2.16",
 ]
 
 [build-system]
@@ -56,18 +55,16 @@ changelog = "https://spikeinterface.readthedocs.io/en/latest/whatisnew.html"
 [project.optional-dependencies]
 
 extractors = [
-    "MEArec>=1.7.1",
+    "MEArec>=1.8",
     "pynwb>=2.1.0",
     "pyedflib>=0.1.30",
-    # "nixio>=1.5.0",
-    # "shybrid>=0.4.2",
-    # "pyyaml>=5.4.1 for shybrid",
-    "sonpy;python_version>'3.7'",
-    # lxml for neuroscope
-    "lxml",
-    # hdf5storage and scipy for cellexplorer
-    "hdf5storage",
-    "scipy"
+    "sonpy;python_version<'3.10'",
+    "lxml", # lxml for neuroscope
+    "hdf5storage", # hdf5storage and scipy for cellexplorer
+    "scipy",
+    # ONE-api and ibllib for streaming IBL
+    "ONE-api>=1.19.1",
+    "ibllib>=2.21.0",
 ]
 
 full = [
@@ -80,12 +77,21 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
+    "cuda-python",
 ]
 
 widgets = [
+    "matplotlib",
     "ipympl",
     "ipywidgets",
-    "sortingview>=0.11.0,<0.12",
+    "sortingview>=0.11.0",
+    "figurl-jupyter"
+]
+
+test_core = [
+    "pytest",
+    "zarr",
+    "psutil",
 ]
 
 test = [
@@ -95,6 +101,7 @@ test = [
     # zarr is needed for testing
     "zarr",
     "xarray",
+    "huggingface_hub",
 
     # tridesclous
     "numpy<1.24",
@@ -106,33 +113,22 @@ test = [
 
     # recent datalad need a too recent version for git-annex
     # so we use an old one here
-    # datalad ==0.14.4
     "datalad==0.16.2",
 
-    ## install sorters ##
+    ## install tridesclous for testing ##
     "tridesclous>=1.6.6.1",
-
-    ## spyking-circus - mpi is buggy in 3.9
-    # "spyking-circus",
-
-    ## herdingspikes
-    "herdingspikes<=0.3.99",
-
 
     ## sliding_nn
     "pymde",
     "torch",
     "pynndescent",
-    
+
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
     
 ]
-
-
-
 
 
 [tool.pytest.ini_options]
@@ -143,10 +139,15 @@ markers = [
     "postprocessing",
     "qualitymetrics",
     "sorters",
-    "si_sorters",
+    "sorters_external",
+    "sorters_internal",
     "comparison",
     "curation",
     "exporters",
     "widgets",
     "sortingcomponents",
+]
+filterwarnings =[
+    'ignore:.*distutils Version classes are deprecated.*:DeprecationWarning',
+    'ignore:.*the imp module is deprecated in favour of importlib.*:DeprecationWarning',
 ]

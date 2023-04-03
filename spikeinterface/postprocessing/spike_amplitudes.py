@@ -55,7 +55,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         
         # put extremum_channels_index and peak_shifts in vector way
         extremum_channels_index = np.array([extremum_channels_index[unit_id] for unit_id in sorting.unit_ids], 
-                                           dtype='int64')
+                                            dtype='int64')
         peak_shifts = np.array([peak_shifts[unit_id] for unit_id in sorting.unit_ids], dtype='int64')
         
         if return_scaled:
@@ -68,16 +68,13 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         func = _spike_amplitudes_chunk
         init_func = _init_worker_spike_amplitudes
         n_jobs = ensure_n_jobs(recording, job_kwargs.get('n_jobs', None))
-        if n_jobs == 1:
-            init_args = (recording, sorting)
-        else:
+        if n_jobs != 1:
             # TODO: avoid dumping sorting and use spike vector and peak pipeline instead
             assert sorting.check_if_dumpable(), (
                 "The soring object is not dumpable and cannot be processed in parallel. You can use the "
                 "`sorting.save()` function to make it dumpable"
             )
-            init_args = (recording.to_dict(), sorting.to_dict())
-        init_args = init_args + (extremum_channels_index, peak_shifts, return_scaled)
+        init_args = (recording, sorting, extremum_channels_index, peak_shifts, return_scaled)
         processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
                                            handle_returns=True, job_name='extract amplitudes', **job_kwargs)
         out = processor.run()
@@ -106,18 +103,17 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
             as a dict with units as key and spike amplitudes as values.
         """
         we = self.waveform_extractor
-        recording = we.recording
         sorting = we.sorting
         all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
 
         if outputs == 'concatenated':
             amplitudes = []
-            for segment_index in range(recording.get_num_segments()):
+            for segment_index in range(we.get_num_segments()):
                 amplitudes.append(self._extension_data[f'amplitude_segment_{segment_index}'])
             return amplitudes
         elif outputs == 'by_unit':
             amplitudes_by_unit = []
-            for segment_index in range(recording.get_num_segments()):
+            for segment_index in range(we.get_num_segments()):
                 amplitudes_by_unit.append({})
                 for unit_index, unit_id in enumerate(sorting.unit_ids):
                     _, spike_labels = all_spikes[segment_index]
@@ -150,7 +146,7 @@ def compute_spike_amplitudes(waveform_extractor, load_if_exists=False,
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor object
-    load_if_exists : bool, optional, default: False
+    load_if_exists : bool, default: False
         Whether to load precomputed spike amplitudes, if they already exist.
     peak_sign: str
         The sign to compute maximum channel:

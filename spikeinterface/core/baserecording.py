@@ -10,6 +10,7 @@ from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
 from .job_tools import split_job_kwargs, fix_job_kwargs
+from .core_tools import convert_bytes_to_str
 
 from warnings import warn
 
@@ -42,34 +43,81 @@ class BaseRecording(BaseRecordingSnippets):
         nchan = self.get_num_channels()
         sf_khz = self.get_sampling_frequency() / 1000.
         duration = self.get_total_duration()
-        txt = f'{clsname}: {nchan} channels - {nseg} segments - {sf_khz:0.1f}kHz - {duration:0.3f}s'
+        dtype = self.get_dtype()
+        memory_size = self.get_memory_size()
+        txt = f"{clsname}: {nchan} channels - {nseg} segments - {sf_khz:0.1f}kHz - {duration:0.3f}s - {dtype} type - {memory_size}"
         if 'file_paths' in self._kwargs:
             txt += '\n  file_paths: {}'.format(self._kwargs['file_paths'])
         if 'file_path' in self._kwargs:
             txt += '\n  file_path: {}'.format(self._kwargs['file_path'])
         return txt
+    
+    def get_memory_size(self):
+        bytes = self.get_total_samples() * self.get_num_channels() * self.get_dtype().itemsize 
+        return convert_bytes_to_str(bytes)
 
     def get_num_segments(self):
+        """Returns the number of segments.
+
+        Returns
+        -------
+        int
+            Number of segments in the recording
+        """
         return len(self._recording_segments)
 
     def add_recording_segment(self, recording_segment):
+        """Adds a recording segment.
+
+        Parameters
+        ----------
+        recording_segment : BaseRecordingSegment
+            The recording segment to add
+        """
         # todo: check channel count and sampling frequency
         self._recording_segments.append(recording_segment)
         recording_segment.set_parent_extractor(self)
 
     def get_num_samples(self, segment_index=None):
+        """Returns the number of samples for a segment.
+
+        Parameters
+        ----------
+        segment_index : int, optional
+            The segment index to retrieve the number of samples for. 
+            For multi-segment objects, it is required, by default None
+
+        Returns
+        -------
+        int
+            The number of samples
+        """
         segment_index = self._check_segment_index(segment_index)
         return self._recording_segments[segment_index].get_num_samples()
 
     get_num_frames = get_num_samples
 
     def get_total_samples(self):
+        """Returns the total number of samples
+
+        Returns
+        -------
+        int
+            The total number of samples
+        """
         s = 0
         for segment_index in range(self.get_num_segments()):
             s += self.get_num_samples(segment_index)
         return s
 
     def get_total_duration(self):
+        """Returns the total duration in s
+
+        Returns
+        -------
+        float
+            The duration in seconds
+        """
         duration = self.get_total_samples() / self.get_sampling_frequency()
         return duration
 
@@ -152,16 +200,32 @@ class BaseRecording(BaseRecordingSnippets):
         return traces
     
     def has_scaled_traces(self):
+        """Checks if the recording has scaled traces
+
+        Returns
+        -------
+        bool
+            True if the recording has scaled traces, False otherwise
+        """
         return self.has_scaled()
 
     def get_times(self, segment_index=None):
-        """
-        Get time vector for a recording segment.
+        """Get time vector for a recording segment.
 
         If the segment has a time_vector, then it is returned. Otherwise
         a time_vector is constructed on the fly with sampling frequency.
         If t_start is defined and the time vector is constructed on the fly,
         the first time will be t_start. Otherwise it will start from 0.
+
+        Parameters
+        ----------
+        segment_index : int, optional
+            The segment index (required for multi-segment), by default None
+
+        Returns
+        -------
+        np.array
+            The 1d times array
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self._recording_segments[segment_index]
@@ -169,8 +233,17 @@ class BaseRecording(BaseRecordingSnippets):
         return times
 
     def has_time_vector(self, segment_index=None):
-        """
-        Check if the segment of the recording has a time vector.
+        """Check if the segment of the recording has a time vector.
+
+        Parameters
+        ----------
+        segment_index : int, optional
+            The segment index (required for multi-segment), by default None
+
+        Returns
+        -------
+        bool
+            True if the recording has time vectors, False otherwise
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self._recording_segments[segment_index]
@@ -178,8 +251,16 @@ class BaseRecording(BaseRecordingSnippets):
         return d['time_vector'] is not None
 
     def set_times(self, times, segment_index=None, with_warning=True):
-        """
-        Set times for a recording segment.
+        """Set times for a recording segment.
+
+        Parameters
+        ----------
+        times : 1d np.array
+            The time vector
+        segment_index : int, optional
+            The segment index (required for multi-segment), by default None
+        with_warning : bool, optional
+            If True, a warning is printed, by default True
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self._recording_segments[segment_index]
@@ -353,7 +434,8 @@ class BaseRecording(BaseRecordingSnippets):
         
         Returns
         -------
-        is_binary_compatible: bool
+        bool
+            True if the underlying recording is binary
         """
         # has to be changed in subclass if yes
         return False
@@ -367,9 +449,10 @@ class BaseRecording(BaseRecordingSnippets):
             raise NotImplementedError
     
     def binary_compatible_with(self, dtype=None, time_axis=None, file_paths_lenght=None, 
-            file_offset=None, file_suffix=None):
+                               file_offset=None, file_suffix=None):
         """
         Check is the recording is binary compatible with some constrain on
+
           * dtype
           * tim_axis
           * len(file_paths)

@@ -1,4 +1,5 @@
-from spikeinterface.preprocessing.resample import ResampleRecording
+### PREPROCESSORS ###
+from .resample import ResampleRecording, resample
 from .filter import (FilterRecording, filter,
                      BandpassFilterRecording, bandpass_filter,
                      NotchFilterRecording, notch_filter,
@@ -17,12 +18,15 @@ from .clip import (
     ClipRecording, clip)
 from .common_reference import CommonReferenceRecording, common_reference
 from .remove_artifacts import RemoveArtifactsRecording, remove_artifacts
-from .remove_bad_channels import RemoveBadChannelsRecording, remove_bad_channels
-from .resample import ResampleRecording, resample
 from .phase_shift import PhaseShiftRecording, phase_shift
 from .zero_channel_pad import ZeroChannelPaddedRecording, zero_channel_pad
-# not importing deepinterpolation by default
 from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate
+from .highpass_spatial_filter import HighpassSpatialFilterRecording, highpass_spatial_filter
+from .interpolate_bad_channels import InterpolateBadChannelsRecording, interpolate_bad_channels
+from .average_across_direction import AverageAcrossDirectionRecording, average_across_direction
+from .directional_derivative import DirectionalDerivativeRecording, directional_derivative
+from .depth_order import DepthOrderRecording, depth_order
+
 
 preprocessers_full_list = [
     # filter stuff
@@ -42,7 +46,6 @@ preprocessers_full_list = [
 
     # re-reference
     CommonReferenceRecording,
-    
     PhaseShiftRecording,
 
     # misc
@@ -50,11 +53,14 @@ preprocessers_full_list = [
     ClipRecording,
     BlankSaturationRecording,
     RemoveArtifactsRecording,
-    RemoveBadChannelsRecording,
     ZeroChannelPaddedRecording,
     DeepInterpolatedRecording,
-    ResampleRecording
-
+    ResampleRecording,
+    HighpassSpatialFilterRecording,
+    InterpolateBadChannelsRecording,
+    DepthOrderRecording,
+    AverageAcrossDirectionRecording,
+    DirectionalDerivativeRecording,
 ]
 
 installed_preprocessers_list = [pp for pp in preprocessers_full_list if pp.installed]

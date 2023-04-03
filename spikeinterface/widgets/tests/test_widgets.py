@@ -11,7 +11,7 @@ if __name__ != '__main__':
 import matplotlib.pyplot as plt
 
 
-from spikeinterface import extract_waveforms, download_dataset, ChannelSparsity
+from spikeinterface import extract_waveforms, load_waveforms, download_dataset, compute_sparsity
 
 from spikeinterface.widgets import HAVE_MPL, HAVE_SV
 
@@ -44,11 +44,14 @@ class TestWidgets(unittest.TestCase):
         cls.sorting = se.MEArecSortingExtractor(local_path)
 
         cls.num_units = len(cls.sorting.get_unit_ids())
-        cls.we = extract_waveforms(cls.recording, cls.sorting, cache_folder / 'mearec_test', load_if_exists=True)
+        if (cache_folder / 'mearec_test').is_dir():
+            cls.we = load_waveforms(cache_folder / 'mearec_test')
+        else:
+            cls.we = extract_waveforms(cls.recording, cls.sorting, cache_folder / 'mearec_test')
         
         sw.set_default_plotter_backend('matplotlib')
 
-        metric_names = ["snr", "isi_violations", "num_spikes"]
+        metric_names = ["snr", "isi_violation", "num_spikes"]
         _ = compute_spike_amplitudes(cls.we)
         _ = compute_unit_locations(cls.we)
         _ = compute_spike_locations(cls.we)
@@ -58,8 +61,8 @@ class TestWidgets(unittest.TestCase):
         _ = compute_template_similarity(cls.we)
 
         # make sparse waveforms
-        cls.sparsity_radius =  ChannelSparsity.from_radius(cls.we, radius_um=50)
-        cls.sparsity_best =  ChannelSparsity.from_best_channels(cls.we, num_channels=5)
+        cls.sparsity_radius =  compute_sparsity(cls.we, method="radius", radius_um=50)
+        cls.sparsity_best =  compute_sparsity(cls.we, method="best_channels", num_channels=5)
         cls.we_sparse = cls.we.save(folder=cache_folder / 'mearec_test_sparse', sparsity=cls.sparsity_radius)
 
         cls.skip_backends = ["ipywidgets"]
@@ -72,7 +75,7 @@ class TestWidgets(unittest.TestCase):
         cls.backend_kwargs = {
             'matplotlib': {},
             'sortingview': {},
-            'ipywidgets': {}
+            'ipywidgets': {'display': False}
         }
 
         cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
@@ -244,7 +247,7 @@ if __name__ == '__main__':
     mytest = TestWidgets()
     mytest.setUpClass()
 
-    mytest.test_plot_unit_waveforms_density_map()
+    # mytest.test_plot_unit_waveforms_density_map()
     # mytest.test_plot_unit_summary()
     # mytest.test_plot_all_amplitudes_distributions()
     # mytest.test_plot_timeseries()
@@ -255,7 +258,7 @@ if __name__ == '__main__':
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_summary()
     mytest.test_quality_metrics()
-    mytest.test_sorting_summary()
+    mytest.test_template_metrics()
 
     # plt.ion()
     plt.show()

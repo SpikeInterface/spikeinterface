@@ -15,7 +15,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         Path to the output Phy folder (containing the params.py)
     exclude_cluster_groups: list or str, optional
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
-    keep_good_only : bool, optional, default: True
+    keep_good_only : bool, default: True
         Whether to only keep good units.
     """
     extractor_name = 'BasePhyKilosortSorting'
@@ -24,7 +24,8 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     installation_mesg = "To use the PhySortingExtractor install pandas: \n\n pip install pandas\n\n"  # error message when not installed
     name = "phykilosort"
 
-    def __init__(self, folder_path, exclude_cluster_groups=None, keep_good_only=False):
+    def __init__(self, folder_path, exclude_cluster_groups=None, keep_good_only=False,
+                 load_all_cluster_properties=True):
         try:
             import pandas as pd
             HAVE_PD = True
@@ -34,16 +35,19 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         phy_folder = Path(folder_path)
 
-        spike_times = np.load(phy_folder / 'spike_times.npy')
+        spike_times = np.load(phy_folder / 'spike_times.npy').astype(int)
 
         if (phy_folder / 'spike_clusters.npy').is_file():
             spike_clusters = np.load(phy_folder / 'spike_clusters.npy')
         else:
             spike_clusters = np.load(phy_folder / 'spike_templates.npy')
 
+        # spike_times and spike_clusters can be 2d sometimes --> convert to 1d.
+        spike_times = np.atleast_1d(spike_times.squeeze())
+        spike_clusters = np.atleast_1d(spike_clusters.squeeze())
+
         clust_id = np.unique(spike_clusters)
         unit_ids = list(clust_id)
-        spike_times = spike_times.astype(int)
         params = read_python(str(phy_folder / 'params.py'))
         sampling_frequency = params['sample_rate']
 
@@ -143,6 +147,9 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             elif prop_name == "group":
                 # rename group property to 'quality'
                 self.set_property(key="quality", values=cluster_info[prop_name])
+            else:
+                if load_all_cluster_properties:
+                    self.set_property(key=prop_name, values=cluster_info[prop_name])
 
         self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
 
@@ -195,7 +202,7 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
         Path to the output Phy folder (containing the params.py).
     exclude_cluster_groups: list or str, optional
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
-    keep_good_only : bool, optional, default: True
+    keep_good_only : bool, default: True
         Whether to only keep good units.
         If True, only Kilosort-labeled 'good' units are returned.
 

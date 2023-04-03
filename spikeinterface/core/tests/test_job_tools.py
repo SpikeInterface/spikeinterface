@@ -29,10 +29,6 @@ def test_ensure_n_jobs():
     n_jobs = ensure_n_jobs(recording, n_jobs=1)
     assert n_jobs == 1
 
-    # not dumpable fails
-    with pytest.raises(RuntimeError):
-        n_jobs = ensure_n_jobs(recording, n_jobs=-1)
-
     # dumpable
     n_jobs = ensure_n_jobs(recording.save(), n_jobs=-1)
     assert n_jobs > 1

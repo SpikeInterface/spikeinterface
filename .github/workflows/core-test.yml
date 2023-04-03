@@ -1,29 +1,43 @@
-name: spikeinterface.core with conda
+name: Testing core
 
 on:
   pull_request:
-    branches: [master]
-    types: [synchronize, opened, reopened, ready_for_review]
+    types: [synchronize, opened, reopened]
+
+concurrency:  # Cancel previous workflows on the same pull request
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
-    name: Test on (${{ matrix.os }})
+    name: Test on ${{ matrix.os }} OS
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
     steps:
-      - uses: actions/checkout@v2
-      - uses: s-weigand/setup-conda@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
-          python-version: 3.9
+          python-version: '3.10'
       - name: Install dependencies
         run: |
-          conda install pytest
-          # zarr is needed to test core
-          pip install zarr  
-          pip install -e .
+          git config --global user.email "CI@example.com"
+          git config --global user.name "CI Almighty"
+          python -m pip install -U pip  # Official recommended way 
+          pip install -e .[test_core]
       - name: Test core with pytest
         run: |
-          pytest -v spikeinterface/core
+          pytest -vv -ra --durations=0 --durations-min=0.001 spikeinterface/core | tee report.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+        shell: bash  # Necessary for pipeline to work on windows
+      - name: Build test summary
+        run: | 
+          pip install pandas
+          pip install tabulate
+          echo "# Timing profile of core tests in ${{matrix.os}}" >> $GITHUB_STEP_SUMMARY 
+          # Outputs markdown summary to standard output
+          python ./.github/build_job_summary.py report.txt >> $GITHUB_STEP_SUMMARY 
+          cat $GITHUB_STEP_SUMMARY 
+          rm report.txt
+        shell: bash  # Necessary for pipeline to work on windows

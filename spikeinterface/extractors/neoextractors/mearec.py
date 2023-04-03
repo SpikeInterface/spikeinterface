@@ -13,7 +13,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     file_path: str
         The file path to load the recordings from.
-    all_annotations: bool, optional, default: False
+    all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
     """
     mode = 'file'
@@ -29,6 +29,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
         self.extra_requirements.append('mearec')
 
         probe = pi.read_mearec(file_path)
+        probe.annotations["mearec_name"] = str(probe.annotations["mearec_name"])
         self.set_probe(probe, in_place=True)
         self.annotate(is_filtered=True)
 

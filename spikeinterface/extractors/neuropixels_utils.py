@@ -9,14 +9,16 @@ def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12):
     This information is needed to perform the preprocessing.phase_shift operation.
 
     See https://github.com/int-brain-lab/ibllib/blob/master/ibllib/ephys/neuropixel.py
+    
+    
     for the original implementation.
 
     Parameters
     ----------
-    num_channels : int, optional, default: 384
+    num_channels : int, default: 384
         The total number of channels in a recording.
         All currently available Neuropixels variants have 384 channels.
-    num_channels_per_adc : int, optional, default: 12
+    num_channels_per_adc : int, default: 12
         The number of channels per ADC on the probe.
         Neuropixels 1.0 probes have 12 ADCs.
         Neuropixels 2.0 probes have 16 ADCs.
@@ -61,10 +63,10 @@ def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
 
     Parameters
     ----------
-    num_channels : int, optional, default: 384
+    num_channels : int, default: 384
         The total number of channels in a recording.
         All currently available Neuropixels variants have 384 channels.
-    num_channels_per_adc : int, optional, default: 12
+    num_channels_per_adc : int, default: 12
         The number of channels per ADC on the probe.
         Neuropixels 1.0 probes have 12 ADCs.
         Neuropixels 2.0 probes have 16 ADCs.

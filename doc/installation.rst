@@ -21,7 +21,7 @@ To install all interactive widget backends, you can use:
 
 .. code-block:: bash
 
-   pip install spikeinterface[full, widgets]
+   pip install spikeinterface[full,widgets]
 
 Note that the :code:`[widgets]` option also installs jupyter (and relative dependencies).
 
@@ -64,7 +64,7 @@ as :code:`spikeinterface` strongly relies on these packages to interface with va
 For beginners
 -------------
 
-We provide here some installation tips for beginners in Python here:
+We provide some installation tips for beginners in Python here:
 
 https://github.com/SpikeInterface/spikeinterface/tree/master/installation_tips
 
@@ -76,20 +76,22 @@ Requirements
 :code:`spikeinterface.core` itself has only a few dependencies:
 
   * numpy
+  * probeinterface
   * neo>=0.9.0
   * joblib
-  * probeinterface
+  * threadpoolctl
   * tqdm
 
 Sub-modules have more dependencies, so you should also install:
 
+  * zarr
   * scipy
-  * h5py
   * pandas
+  * xarray
   * sklearn
-  * matplotlib
   * networkx
-  * datalad
-  * MEArec
+  * matplotlib
 
-All sorters must installed independently.
+
+All external spike sorters can be either run inside containers (Docker or Singularity - see :ref:`containerizedsorters`) 
+or must be installed independently (see :ref:`installsorters`).

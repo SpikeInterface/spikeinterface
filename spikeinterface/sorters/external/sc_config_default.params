@@ -1,0 +1,105 @@
+### Note that depending on the file format selected, the parameters in the data section can vary
+### You should refer to the documentation to know what are the needed parameters for a given
+### file format. Otherwise, launch the code and a message will tell you what is needed
+
+[data]
+file_format    = numpy      # Can be raw_binary, openephys, hdf5, .. See >> spyking-circus help -i for more info
+sampling_rate  = {}
+stream_mode    = None       # None by default. Can be multi-files, or anything depending to the file format
+mapping        = {}         # Mapping of the electrode (see http://spyking-circus.rtfd.ord)
+suffix         =            # Suffix to add to generated files
+global_tmp     = True       # should be False if local /tmp/ has enough space (better for clusters)
+overwrite      = True       # Filter or remove artefacts on site (if write access is possible). Data are duplicated otherwise
+parallel_hdf5  = True       # Use the parallel HDF5 feature (if available)
+
+[detection]
+radius         = auto       # Radius [in um] (if auto, read from the prb file)
+N_t            = {}         # Width of the templates [in ms]
+spike_thresh   = {}         # Threshold for spike detection
+peaks          = {}         # Can be negative (default), positive or both
+
+[filtering]
+cut_off        = 300, auto  # Min and Max (auto=nyquist) cut off frequencies for the band pass butterworth filter [Hz]
+filter         = {}         # If True, then a low-pass filtering is performed
+remove_median  = False      # If True, median over all channels is subtracted to each channels (movement artifacts)
+
+[triggers]
+trig_file      =            # External stimuli to be considered as putative artefacts [in trig units] (see documentation)
+trig_windows   =            # The time windows of those external stimuli [in trig units]
+trig_unit      = ms         # The unit in which times are expressed: can be ms or timestep
+clean_artefact = False      # If True, external artefacts induced by triggers will be suppressed from data
+dead_file      =            # Portion of the signals that should be excluded from the analysis [in dead units]
+dead_unit      = ms         # The unit in which times for dead regions are expressed: can be ms or timestep
+ignore_times   = False      # If True, any spike in the dead regions will be ignored by the analysis
+make_plots     =            # Generate sanity plots of the averaged artefacts [Nothing or None if no plots]
+
+[whitening]
+spatial        = True       # Perform spatial whitening
+max_elts       = {}         # Max number of events per electrode (should be compatible with nb_elts)
+nb_elts        = 0.8        # Fraction of max_elts that should be obtained per electrode [0-1]
+output_dim     = 5          # Can be in percent of variance explain, or num of dimensions for PCA on waveforms
+
+[clustering]
+extraction     = median-raw # Can be either median-raw (default) or mean-raw
+sub_dim        = 10         # Number of dimensions to keep for local PCA per electrode
+max_elts       = {}         # Max number of events per electrode (should be compatible with nb_elts)
+nb_elts        = 0.8        # Fraction of max_elts that should be obtained per electrode [0-1]
+nb_repeats     = 3          # Number of passes used for the clustering
+smart_search   = True       # Activate the smart search mode
+merging_method = nd-bhatta  # Method to perform local merges (distance, dip, folding, nd-folding, bhatta, nd-bhatta)
+merging_param  = default    # Merging parameter (see doc) (3 if distance, 0.5 if dip, 1e-3 if folding, 2 if bhatta)
+sensitivity    = 3          # Single parameter for clustering sensitivity. The lower the more sensitive
+cc_merge       = 0.95       # If CC between two templates is higher, they are merged
+dispersion     = (5, 5)     # Min and Max dispersion allowed for amplitudes [in MAD]
+make_plots     =            # Generate sanity plots of the clustering [Nothing or None if no plots]
+
+[fitting]
+amp_limits     = (0.3, 5)   # Amplitudes for the templates during spike detection [if not auto] (0.3, 5)
+amp_auto       = True       # True if amplitudes are adjusted automatically for every templates
+collect_all    = False      # If True, one garbage template per electrode is created, to store unfitted spikes
+ratio_thresh   = 0.9        # Ratio of the spike_threshold used while fitting [0-1]. The lower the slower
+
+[merging]
+cc_overlap     = 0.75       # Only templates with CC higher than cc_overlap may be merged
+cc_bin         = 2          # Bin size for computing CC [in ms]
+default_lag    = 5          # Default length of the period to compute dip in the CC [ms]
+auto_mode      = {}         # Between 0 (aggressive) and 1 (no merging). If empty, GUI is launched
+remove_noise   = True       # If True, meta merging will remove obvious noise templates (weak amplitudes)
+noise_limit    = 0.75       # Amplitude at which templates are classified as noise
+sparsity_limit = 0          # Sparsity level (in percentage) for selecting templates as putative noise (in [0, 1])
+time_rpv       = 5          # Time [in ms] to consider for Refraction Period Violations (RPV) (0 to disable)
+rpv_threshold  = 0.02       # Percentage of RPV allowed while merging
+merge_drifts   = True       # Try to automatically merge drifts, i.e. non overlapping spiking neurons
+drift_limit    = 1          # Distance for drifts. The higher, the more non-overlapping the activities should be
+
+[converting]
+erase_all      = True       # If False, a prompt will ask you to export if export has already been done
+export_pcs     = prompt     # Can be prompt [default] or in none, all, some
+export_all     = False      # If True, unfitted spikes will be exported as the last Ne templates
+sparse_export  = False      # For recent versions of phy, and large number of templates/channels
+
+[validating]
+nearest_elec   = auto       # Validation channel (e.g. electrode closest to the ground truth cell)
+max_iter       = 200        # Maximum number of iterations of the stochastic gradient descent (SGD)
+learning_rate  = 1.0e-3     # Initial learning rate which controls the step-size of the SGD
+roc_sampling   = 10         # Number of points to estimate the ROC curve of the BEER estimate
+test_size      = 0.3        # Portion of the dataset to include in the test split
+radius_factor  = 0.5        # Radius factor to modulate physical radius during validation
+juxta_dtype    = uint16     # Type of the juxtacellular data
+juxta_thresh   = 6          # Threshold for juxtacellular detection
+juxta_valley   = False      # True if juxta-cellular spikes are negative peaks
+juxta_spikes   =            # If none, spikes are automatically detected based on juxta_thresh
+filter         = True       # If the juxta channel need to be filtered or not
+make_plots     = png        # Generate sanity plots of the validation [Nothing or None if no plots]
+
+[extracting]
+safety_time    = 1          # Temporal zone around which spikes are isolated [in ms]
+max_elts       = 1000       # Max number of collected events per templates
+output_dim     = 5          # Percentage of variance explained while performing PCA
+cc_merge       = 0.975      # If CC between two templates is higher, they are merged
+noise_thr      = 0.8        # Minimal amplitudes are such than amp*min(templates) < noise_thr*threshold
+
+[noedits]
+filter_done    = False      # Will become True automatically after filtering
+artefacts_done = False      # Will become True automatically after removing artefacts
+median_done    = False      # Will become True automatically after removing common median

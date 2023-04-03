@@ -1,8 +1,10 @@
-from typing import List, Union, Optional
-import numpy as np
 import warnings
+from typing import List, Optional, Union
+
+import numpy as np
 
 from .base import BaseExtractor, BaseSegment
+from .waveform_tools import has_exceeding_spikes
 
 
 class BaseSorting(BaseExtractor):
@@ -33,6 +35,10 @@ class BaseSorting(BaseExtractor):
     def unit_ids(self):
         return self._main_ids
 
+    @property
+    def sampling_frequency(self):
+        return self._sampling_frequency
+
     def get_unit_ids(self) -> List:
         return self._main_ids
 
@@ -48,6 +54,51 @@ class BaseSorting(BaseExtractor):
 
     def get_num_segments(self):
         return len(self._sorting_segments)
+
+    def get_num_samples(self, segment_index=None):
+        """Returns the number of samples of the associated recording for a segment.
+
+        Parameters
+        ----------
+        segment_index : int, optional
+            The segment index to retrieve the number of samples for. 
+            For multi-segment objects, it is required, by default None
+
+        Returns
+        -------
+        int
+            The number of samples
+        """
+        assert self.has_recording(), (
+            "This methods requires an associated recording. Call self.register_recording() first."
+        )
+        return self._recording.get_num_samples(segment_index=segment_index)
+
+    def get_total_samples(self):
+        """Returns the total number of samples of the associated recording.
+
+        Returns
+        -------
+        int
+            The total number of samples
+        """
+        s = 0
+        for segment_index in range(self.get_num_segments()):
+            s += self.get_num_samples(segment_index)
+        return s
+
+    def get_total_duration(self):
+        """Returns the total duration in s of the associated recording.
+
+        Returns
+        -------
+        float
+            The duration in seconds
+        """
+        assert self.has_recording(), (
+            "This methods requires an associated recording. Call self.register_recording() first."
+        )
+        return self._recording.get_total_duration()
 
     def get_unit_spike_train(
         self,
@@ -72,10 +123,31 @@ class BaseSorting(BaseExtractor):
         else:
             return spike_frames
 
-    def register_recording(self, recording):
+    def register_recording(self, recording, check_spike_frames=True):
+        """Register a recording to the sorting.
+
+        Parameters
+        ----------
+        recording : BaseRecording
+            Recording with the same number of segments as current sorting.
+            Assigned to self._recording.
+        check_spike_frames : bool, optional
+            If True, assert for each segment that all spikes are within the recording's range.
+            By default True.
+        """
         assert np.isclose(self.get_sampling_frequency(),
                           recording.get_sampling_frequency(),
                           atol=0.1), "The recording has a different sampling frequency than the sorting!"
+        assert self.get_num_segments() == recording.get_num_segments(), (
+            "The recording has a different number of segments than the sorting!"
+        )
+        if check_spike_frames:
+            if has_exceeding_spikes(recording, self):
+                warnings.warn(
+                    "Some spikes are exceeding the recording's duration! "
+                    "Removing these excess spikes with `spikeinterface.curation.remove_excess_spikes()` "
+                    "Might be necessary for further postprocessing."
+                )
         self._recording = recording
 
     @property
@@ -113,6 +185,7 @@ class BaseSorting(BaseExtractor):
         If a recording is registered:
             * if the segment has a time_vector, then it is returned
             * if not, a time_vector is constructed on the fly with sampling frequency
+
         If there is no registered recording it returns None
         """
         segment_index = self._check_segment_index(segment_index)

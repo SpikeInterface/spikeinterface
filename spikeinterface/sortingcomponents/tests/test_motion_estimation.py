@@ -10,6 +10,8 @@ from spikeinterface.sortingcomponents.motion_estimation import (estimate_motion,
                                                                 compute_pairwise_displacement, 
                                                                 compute_global_displacement)
 
+from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
+from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 
 repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
@@ -37,12 +39,16 @@ def setup_module():
     cache_folder.mkdir(parents=True, exist_ok=True)
 
     # detect and localize
+    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=0.1, ms_after=0.3, return_output=False)
+    pipeline_nodes = [
+        extract_dense_waveforms,
+        LocalizeCenterOfMass(recording,  parents=[extract_dense_waveforms], local_radius_um=60.)
+    ]
     peaks, peak_locations = detect_peaks(recording,
                                          method='locally_exclusive',
                                          peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
                                          chunk_size=10000, verbose=1, progress_bar=True,
-                                         pipeline_steps = [LocalizeCenterOfMass(recording, ms_before=0.1,
-                                                                                ms_after=0.3, local_radius_um=150.)]
+                                         pipeline_nodes = pipeline_nodes
                          )
     np.save(cache_folder / 'mearec_peaks.npy', peaks)
     np.save(cache_folder / 'mearec_peak_locations.npy', peak_locations)
@@ -65,37 +71,75 @@ def test_estimate_motion():
         'rigid / decentralized / torch': dict(
             rigid=True,
             method='decentralized',
-            conv_engine='torch'
+            conv_engine='torch',
+            time_horizon_s=None,
             
         ),
         'rigid / decentralized / numpy': dict(
-            rigid=False,
+            rigid=True,
             method='decentralized',
             conv_engine='numpy',
+            time_horizon_s=None,
+        ),
+        'rigid / decentralized / torch / time_horizon_s': dict(
+            rigid=True,
+            method='decentralized',
+            conv_engine='torch',
+            time_horizon_s=5,
             
-            
+        ),
+        'rigid / decentralized / numpy / time_horizon_s': dict(
+            rigid=True,
+            method='decentralized',
+            conv_engine='numpy',
+            time_horizon_s=5,
         ),
         'non-rigid / decentralized / torch': dict(
             rigid=False,
             method='decentralized',
             conv_engine='torch',
+            time_horizon_s=None,
         ),
         'non-rigid / decentralized / numpy': dict(
             rigid=False,
             method='decentralized',
             conv_engine='numpy',
+            time_horizon_s=None,
+        ),
+        'non-rigid / decentralized / torch / spatial_prior': dict(
+            rigid=False,
+            method='decentralized',
+            conv_engine='torch',
+            time_horizon_s=None,
+            spatial_prior=True,
+            convergence_method="lsmr",
+        ),
+        'non-rigid / decentralized / numpy / spatial_prior': dict(
+            rigid=False,
+            method='decentralized',
+            conv_engine='numpy',
+            time_horizon_s=None,
+            spatial_prior=True,
+            convergence_method="lsmr",
         ),
         'non-rigid / decentralized / torch / time_horizon_s': dict(
             rigid=False,
             method='decentralized',
             conv_engine='torch',
-            time_horizon_s=15.,
+            time_horizon_s=5.,
+        ),
+        'non-rigid / decentralized / numpy / time_horizon_s': dict(
+            rigid=False,
+            method='decentralized',
+            conv_engine='numpy',
+            time_horizon_s=5.,
         ),
         'non-rigid / decentralized / torch / gradient_descent': dict(
             rigid=False,
             method='decentralized',
             conv_engine='torch',
             convergence_method='gradient_descent',
+            time_horizon_s=None,
         ),
 
 
@@ -131,7 +175,10 @@ def test_estimate_motion():
             assert motion.shape[1] == 1
         else:
             assert motion.shape[1] > 1
-            
+        
+        # Test saving to disk
+        corrected_rec = CorrectMotionRecording(recording, motion, temporal_bins, spatial_bins, border_mode="force_extrapolate")
+        corrected_rec.save()
 
         if DEBUG:
             fig, ax = plt.subplots()
@@ -158,12 +205,20 @@ def test_estimate_motion():
     # same params with differents engine should be the same
     motion0, motion1 = motions['rigid / decentralized / torch'], motions['rigid / decentralized / numpy']
     assert (motion0 == motion1).all()
+    
+    motion0, motion1 = motions['rigid / decentralized / torch / time_horizon_s'], motions['rigid / decentralized / numpy / time_horizon_s']
+    assert (motion0 == motion1).all()
 
     motion0, motion1 = motions['non-rigid / decentralized / torch'], motions['non-rigid / decentralized / numpy']
     assert (motion0 == motion1).all()
 
+    motion0, motion1 = motions['non-rigid / decentralized / torch / time_horizon_s'], motions['non-rigid / decentralized / numpy / time_horizon_s']
+    assert (motion0 == motion1).all()
+
+    motion0, motion1 = motions['non-rigid / decentralized / torch / spatial_prior'], motions['non-rigid / decentralized / numpy / spatial_prior']
+    assert (motion0 == motion1).all()
 
 if __name__ == '__main__':
-    # setup_module()
+    setup_module()
     test_estimate_motion()
 

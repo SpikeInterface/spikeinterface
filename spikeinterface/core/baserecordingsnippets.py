@@ -1,12 +1,12 @@
-from typing import Iterable, List, Union
+from typing import List
 from pathlib import Path
 
 import numpy as np
 
 from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
-from .base import BaseExtractor, BaseSegment
-from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
+from .base import BaseExtractor
+from .core_tools import check_json
 from .recording_tools import check_probe_do_not_overlap
 
 from warnings import warn
@@ -188,6 +188,12 @@ class BaseRecordingSnippets(BaseExtractor):
                 groups[mask] = group
         sub_recording.set_property('group', groups, ids=None)
 
+        # add probe annotations to recording
+        probes_info = []
+        for probe in probegroup.probes:
+            probes_info.append(probe.annotations)
+        self.annotate(probes_info=probes_info)
+
         return sub_recording
 
     def get_probe(self):
@@ -206,7 +212,7 @@ class BaseRecordingSnippets(BaseExtractor):
             positions = self.get_property('location')
             if positions is None:
                 raise ValueError(
-                    'There is not Probe attached to recording. use set_probe(...)')
+                    'There is no Probe attached to this recording. Use set_probe(...) to attach one.')
             else:
                 warn(
                     'There is no Probe attached to this recording. Creating a dummy one with contact positions')

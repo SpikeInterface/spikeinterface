@@ -2,9 +2,13 @@ name: Full spikeinterface tests
 
 on:
   pull_request:
-    types: [synchronize, opened, reopened, ready_for_review]
+    types: [synchronize, opened, reopened]
 
-env:
+concurrency:  # Cancel previous workflows on the same pull request
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:  #  For the sortingview backend
   KACHERY_CLOUD_CLIENT_ID: ${{ secrets.KACHERY_CLOUD_CLIENT_ID }}
   KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
 
@@ -18,42 +22,52 @@ jobs:
         # "macos-latest", "windows-latest"
         os: ["ubuntu-latest", ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.10'
       - name: Get current year-month
         id: date
         run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
+      - name: Restore cached virtual environment with dependencies
+        uses: actions/cache/restore@v3
         id: cache-venv
         with:
           path: ~/test_env
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
-      - name: Python version
+          restore-keys: |
+            ${{ runner.os }}-venv-
+      - name: Get ephy_testing_data current head hash
+        # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
+        id: vars
         run: |
-          python --version
+          echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
+      - name: Restore cached gin data for extractors tests
+        uses: actions/cache/restore@v3
+        id: cache-datasets
+        env:
+          # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
+          HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
+        with:
+          path: ~/spikeinterface_datasets
+          key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
+          restore-keys: |
+            ${{ runner.os }}-datasets
       - name: Install dependencies
         run: |
-          sudo apt update
           # this is for datalad and download testing datasets
           sudo apt install git 
           # needed for correct operation of git/git-annex/DataLad
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
-          # this is for spyking circus
-          # sudo apt install mpich libmpich-dev
-          # create an environement (better for caching)
           python -m venv ~/test_env
+          python -m pip install -U pip  # Official recommended way
           source ~/test_env/bin/activate
-          python -m pip install --upgrade pip
-          pip install setuptools wheel twine
+          pip install tabulate  # This produces summaries at the end
           ## clean some cache to avoid using old cache
           pip cache remove numpy
           pip cache remove hdbscan
           pip cache remove numba
-          # herdingspikes need numpy to installed first, this numpy pre install will be removed when HS remove from testing
-          pip install numpy==1.22
           pip install -e .[test,extractors,full]
       - name: git-annex install
         run: |
@@ -63,25 +77,10 @@ jobs:
       - name: git-annex version
         run: |
           git-annex version
-      - name: pip list
+      - name: Packages installed
         run: |
           source ~/test_env/bin/activate
           pip list
-      - name: Get ephy_testing_data current head hash
-        # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
-        id: vars
-        run: |
-          echo "HASH_EPHY_DATASET=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
-        id: cache-datasets
-        env:
-          # the key depend on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
-          HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
-        with:
-          path: ~/spikeinterface_datasets
-          key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
-          restore-keys: |
-            ${{ runner.os }}-datasets
       - name: Check ephy_testing_data files
         run: |
           if [ -d "$HOME/spikeinterface_datasets" ]; then
@@ -89,7 +88,7 @@ jobs:
           fi
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v17.2
+        uses: tj-actions/changed-files@v35
       - name: Module changes
         id: modules-changed
         run: |
@@ -114,13 +113,17 @@ jobs:
               echo "Quality metrics changed"
               echo "QUALITYMETRICS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
-            if [[ $file == *"/sorters/"* ]]; then
+            if [[ $file == *"/sorters/"* && $file != *"/sorters/internal/"* && $file != *"/sorters/external/"* ]]; then
               echo "Sorters changed"
               echo "SORTERS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
-            if [[ $file == *"/sorters/si_based_sorters"* ]]; then
-              echo "SI sorters changed"
-              echo "SI_SORTERS_CHANGED=true" >> $GITHUB_OUTPUT
+            if [[ $file == *"/sorters/external"* ]]; then
+              echo "External sorters changed"
+              echo "SORTERS_EXTERNAL_CHANGED=true" >> $GITHUB_OUTPUT
+            fi
+            if [[ $file == *"/sorters/internal"* ]]; then
+              echo "Internal sorters changed"
+              echo "SORTERS_INTERNAL_CHANGED=true" >> $GITHUB_OUTPUT
             fi
             if [[ $file == *"/comparison/"* ]]; then
               echo "Comparison changed"
@@ -146,59 +149,94 @@ jobs:
       - name: Test core
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m core
+          pytest -m core -vv -ra --durations=0 --durations-min=0.001 | tee report_core.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          echo "# Timing profile of core tests" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_core.txt >> $GITHUB_STEP_SUMMARY  
+          rm report_core.txt
       - name: Test extractors
-        if: ${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' }}
+        if: ${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -s -m extractors
+          pytest -m extractors -vv -ra --durations=0 --durations-min=0.001 | tee report_extractors.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          echo "# Timing profile of extractors" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_extractors.txt >> $GITHUB_STEP_SUMMARY  
+          rm report_extractors.txt
       - name: Test preprocessing
         if: ${{ steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m preprocessing
+          pytest -m preprocessing -vv -ra --durations=0 --durations-min=0.001 | tee report_preprocessing.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          echo "# Timing profile of preprocessing" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_preprocessing.txt >> $GITHUB_STEP_SUMMARY  
+          rm report_preprocessing.txt
       - name: Test postprocessing
         if: ${{ steps.modules-changed.outputs.POSTPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m postprocessing
+          pytest -m postprocessing -vv -ra --durations=0 --durations-min=0.001 | tee report_postprocessing.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          echo "# Timing profile of postprocessing" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_postprocessing.txt >> $GITHUB_STEP_SUMMARY  
+          rm report_postprocessing.txt
       - name: Test quality metrics
         if: ${{ steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m qualitymetrics
-      - name: Test sorters
+          pytest -m qualitymetrics -vv -ra --durations=0 --durations-min=0.001 | tee report_qualitymetrics.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          echo "# Timing profile of qualitymetrics" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_qualitymetrics.txt >> $GITHUB_STEP_SUMMARY  
+          rm report_qualitymetrics.txt
+      - name: Test core sorters
         if: ${{ steps.modules-changed.outputs.SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m sorters
+          pytest -m sorters -vv -ra --durations=0 --durations-min=0.001 | tee report_sorters.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          echo "# Timing profile of sorters" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_sorters.txt >> $GITHUB_STEP_SUMMARY  
+          rm report_sorters.txt
       - name: Test comparison
         if: ${{ steps.modules-changed.outputs.COMPARISON_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m comparison
+          pytest -m comparison -vv -ra --durations=0 --durations-min=0.001 | tee report_comparison.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          echo "# Timing profile of comparison" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_comparison.txt >> $GITHUB_STEP_SUMMARY  
+          rm report_comparison.txt
       - name: Test curation
         if: ${{ steps.modules-changed.outputs.CURATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -s -m curation
+          pytest -m curation -vv -ra --durations=0 --durations-min=0.001 | tee report_curation.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          echo "# Timing profile of curation" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_curation.txt >> $GITHUB_STEP_SUMMARY  
+          rm report_curation.txt
       - name: Test widgets
-        if: ${{ steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
+        if: ${{ steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' ||  steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true'}}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -s -m widgets
+          pytest -m widgets -vv -ra --durations=0 --durations-min=0.001 | tee report_widgets.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          echo "# Timing profile of widgets" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_widgets.txt >> $GITHUB_STEP_SUMMARY  
+          rm report_widgets.txt
       - name: Test exporters
         if: ${{ steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m exporters
+          pytest -m exporters -vv -ra --durations=0 --durations-min=0.001 | tee report_exporters.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          echo "# Timing profile of exporters" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_exporters.txt >> $GITHUB_STEP_SUMMARY  
+          rm report_exporters.txt
       - name: Test sortingcomponents
         if: ${{ steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m sortingcomponents
-      - name: Test SI sorters
-        if: ${{ steps.modules-changed.outputs.SI_SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
+          pytest -m sortingcomponents -vv -ra --durations=0 --durations-min=0.001 | tee report_sortingcomponents.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          echo "# Timing profile of sortingcomponents" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_sortingcomponents.txt >> $GITHUB_STEP_SUMMARY  
+          rm report_sortingcomponents.txt
+      - name: Test internal sorters
+        if: ${{ steps.modules-changed.outputs.SORTERS_INTERNAL_CHANGED == 'true' || steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
-          pytest -v -m si_sorters
+          pytest -m sorters_internal -vv -ra --durations=0 --durations-min=0.001 | tee report_sorters_internal.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          echo "# Timing profile of sorters_internal" >> $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report_sorters_internal.txt >> $GITHUB_STEP_SUMMARY 

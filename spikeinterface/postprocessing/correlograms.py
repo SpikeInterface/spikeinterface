@@ -25,11 +25,10 @@ class CorrelogramsCalculator(BaseWaveformExtractorExtension):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
     def _set_params(self, window_ms: float = 100.0,
-                    bin_ms: float = 5.0, symmetrize=None,
-                    method: str = "auto"):
+                    bin_ms: float = 5.0, method: str = "auto"):
 
         params = dict(window_ms=window_ms, bin_ms=bin_ms, 
-                      symmetrize=symmetrize, method=method)
+                      method=method)
 
         return params
 
@@ -146,7 +145,7 @@ def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_
 def compute_correlograms(waveform_or_sorting_extractor, 
                          load_if_exists=False,
                          window_ms: float = 100.0,
-                         bin_ms: float = 5.0, symmetrize=None,
+                         bin_ms: float = 5.0,
                          method: str = "auto"):
     """Compute auto and cross correlograms.
 
@@ -154,14 +153,12 @@ def compute_correlograms(waveform_or_sorting_extractor,
     ----------
     waveform_or_sorting_extractor : WaveformExtractor or BaseSorting
         If WaveformExtractor, the correlograms are saved as WaveformExtensions.
-    load_if_exists : bool, optional, default: False
+    load_if_exists : bool, default: False
         Whether to load precomputed crosscorrelograms, if they already exist.
     window_ms : float, optional
         The window in ms, by default 100.0.
     bin_ms : float, optional
         The bin size in ms, by default 5.0.
-    symmetrize : None
-        Keep for back compatibility. Always True now.
     method : str, optional
         "auto" | "numpy" | "numba". If _auto" and numba is installed, numba is used, by default "auto"
 
@@ -180,29 +177,19 @@ def compute_correlograms(waveform_or_sorting_extractor,
             ccc = waveform_or_sorting_extractor.load_extension(CorrelogramsCalculator.extension_name)
         else:
             ccc = CorrelogramsCalculator(waveform_or_sorting_extractor)
-            ccc.set_params(window_ms=window_ms, bin_ms=bin_ms,
-                           symmetrize=symmetrize, method=method)
+            ccc.set_params(window_ms=window_ms, bin_ms=bin_ms, method=method)
             ccc.run()
         ccgs, bins = ccc.get_data()
         return ccgs, bins
     else:
         return _compute_correlograms(waveform_or_sorting_extractor, window_ms=window_ms,
-                                     bin_ms=bin_ms, symmetrize=symmetrize,
-                                     method=method)
+                                     bin_ms=bin_ms, method=method)
 
 
-def _compute_correlograms(sorting, window_ms, bin_ms, symmetrize=None, method="auto"):
+def _compute_correlograms(sorting, window_ms, bin_ms, method="auto"):
     """
     Computes several cross-correlogram in one course from several clusters.
-    """
-    
-    if symmetrize is not None:
-        if symmetrize:
-            warnings.warn("symmetrize is deprecated. It will always be True soon.", DeprecationWarning, stacklevel=2)        
-        else:
-            raise ValueError('symmetrize is deprecated. It will always be True')
-        
-
+    """ 
     assert method in ("auto", "numba", "numpy")
 
     if method == "auto":
@@ -221,17 +208,16 @@ def _compute_correlograms(sorting, window_ms, bin_ms, symmetrize=None, method="a
 # LOW-LEVEL IMPLEMENTATIONS
 def compute_correlograms_numpy(sorting, window_size, bin_size):
     """
-    Computes several cross-correlogram in one course
-    from several cluster.
+    Computes cross-correlograms for all units in a sorting object.
     
-    This very elegant implementation is copy from phy package written by Cyrille Rossant.
+    This very elegant implementation is copied from phy package written by Cyrille Rossant.
     https://github.com/cortex-lab/phylib/blob/master/phylib/stats/ccg.py
     
-    The main modification is way the positive and negative are handle explicitly
+    The main modification is way the positive and negative are handled explicitly
     for rounding reasons.
     
-    Other some sligh modification have been made to fit spikeinterface
-    data model because there are several segments handling in spikeinterface.
+    Other slight modifications have been made to fit the SpikeInterface
+    data model (e.g. adding the ability to handle multiple segments).
     
     Adaptation: Samuel Garcia
     """
@@ -239,71 +225,78 @@ def compute_correlograms_numpy(sorting, window_size, bin_size):
     num_units = len(sorting.unit_ids)
     spikes = sorting.get_all_spike_trains(outputs='unit_index')
 
-    num_half_bins = window_size // bin_size
-    num_bins = 2 * num_half_bins
+    num_half_bins = int(window_size // bin_size)
+    num_bins = int(2 * num_half_bins)
 
-    #~ correlograms = np.zeros((num_units, num_units, num_half_bins), dtype='int64')
     correlograms = np.zeros((num_units, num_units, num_bins), dtype='int64')
 
     for seg_index in range(num_seg):
         spike_times, spike_labels = spikes[seg_index]
 
-        # At a given shift, the mask precises which spikes have matching spikes
-        # within the correlogram time window.
-        mask = np.ones_like(spike_times, dtype='bool')
+        c0 = correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size)
 
-        # The loop continues as long as there is at least one spike with
-        # a matching spike.
-        shift = 1
-        while mask[:-shift].any():
-            # Number of time samples between spike i and spike i+shift.
-            spike_diff = spike_times[shift:] - spike_times[:-shift]
+        correlograms += c0
 
-            for sign in (-1, 1):
-                # Binarize the delays between spike i and spike i+shift for negative and positive
+    return correlograms
+
+def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size):
+    """
+    Called by compute_correlograms_numpy
+    """
+
+    num_half_bins = int(window_size // bin_size)
+    num_bins = int(2 * num_half_bins)
+    num_units = len(np.unique(spike_labels))
+    
+    correlograms = np.zeros((num_units, num_units, num_bins), dtype='int64')
+
+    # At a given shift, the mask precises which spikes have matching spikes
+    # within the correlogram time window.
+    mask = np.ones_like(spike_times, dtype='bool')
+
+    # The loop continues as long as there is at least one spike with
+    # a matching spike.
+    shift = 1
+    while mask[:-shift].any():
+        # Number of time samples between spike i and spike i+shift.
+        spike_diff = spike_times[shift:] - spike_times[:-shift]
+
+        for sign in (-1, 1):
+            # Binarize the delays between spike i and spike i+shift for negative and positive
+            # the operator // is np.floor_divide
+            spike_diff_b = (spike_diff  * sign) // bin_size
+
+            # Spikes with no matching spikes are masked.
+            if sign == -1:
+                mask[:-shift][spike_diff_b < -num_half_bins] = False
+            else:
+                mask[:-shift][spike_diff_b >= num_half_bins] = False
+
+            m = mask[:-shift]
+
+            # Find the indices in the raveled correlograms array that need
+            # to be incremented, taking into account the spike clusters.
+            if sign ==1:
+                indices = np.ravel_multi_index(
+                                                    (
+                                                        spike_labels[+shift:][m],
+                                                        spike_labels[:-shift][m],
+                                                        spike_diff_b[m] + num_half_bins),
+                                                correlograms.shape)
+            else:
                 
-                # the operator // is np.floor_divide
-                spike_diff_b = (spike_diff  * sign) // bin_size
-                # spike_diff_b = np.floor_divide(spike_diff * sign, bin_size).astype('int64')
-        
-                # Spikes with no matching spikes are masked.
-                if sign == -1:
-                    mask[:-shift][spike_diff_b < -num_half_bins] = False
-                else:
-                    mask[:-shift][spike_diff_b >= num_half_bins] = False
+                indices = np.ravel_multi_index(
+                                                    (spike_labels[:-shift][m],
+                                                        spike_labels[+shift:][m],
+                                                        spike_diff_b[m] + num_half_bins),
+                                                correlograms.shape)
+                
 
-                # Cache the masked spike delays.
-                #~ m = mask[:-shift].copy()
-                m = mask[:-shift]
-                #~ d = spike_diff_b[m] + num_half_bins
+            # Increment the matching spikes in the correlograms array.
+            bbins = np.bincount(indices)
+            correlograms.ravel()[:len(bbins)] += bbins
 
-                # Find the indices in the raveled correlograms array that need
-                # to be incremented, taking into account the spike clusters.
-                if sign ==1:
-                    indices = np.ravel_multi_index(
-                                                        #~ (spike_labels[:-shift][m],
-                                                         #~ spike_labels[+shift:][m],
-                                                        (
-                                                         spike_labels[+shift:][m],
-                                                         spike_labels[:-shift][m],
-                                                         spike_diff_b[m] + num_half_bins),
-                                                   correlograms.shape)
-                else:
-                    indices = np.ravel_multi_index(
-                                                        (spike_labels[:-shift][m],
-                                                         spike_labels[+shift:][m],
-                                                        #~ (
-                                                         #~ spike_labels[+shift:][m],
-                                                         #~ spike_labels[:-shift][m],
-                                                         spike_diff_b[m] + num_half_bins),
-                                                   correlograms.shape)
-                    
-
-                # Increment the matching spikes in the correlograms array.
-                bbins = np.bincount(indices)
-                correlograms.ravel()[:len(bbins)] += bbins
-
-            shift += 1
+        shift += 1
 
     return correlograms
 

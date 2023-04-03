@@ -65,7 +65,7 @@ class PhaseShiftRecording(BasePreprocessor):
         # for dumpability
         if inter_sample_shift is not None:
             inter_sample_shift = list(inter_sample_shift)
-        self._kwargs = dict(recording=recording.to_dict(), margin_ms=float(margin_ms),
+        self._kwargs = dict(recording=recording, margin_ms=float(margin_ms),
                              inter_sample_shift=inter_sample_shift)
 
 
@@ -82,14 +82,16 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             start_frame = 0
         if end_frame is None:
             end_frame = self.get_num_samples()
-        
+        if channel_indices is None:
+            channel_indices = slice(None)
+
         # this return a copy with margin  + taper on border always
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment,
                                                                         start_frame, end_frame, channel_indices,
                                                                         self.margin, dtype=self.tmp_dtype,
                                                                         add_zeros=True, window_on_margin=True)
         
-        traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts, axis=0)
+        traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts[channel_indices], axis=0)
         # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]

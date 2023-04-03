@@ -13,14 +13,14 @@ class RemoveArtifactsRecording(BasePreprocessor):
     for traces that are centered around zero (e.g. through a prior highpass
     filter); if this is not the case, linear and cubic interpolation modes are
     also available, controlled by the 'mode' input argument.
-    Note that several artefacts can be removed at once (potentially with 
+    Note that several artifacts can be removed at once (potentially with 
     distinct duration each), if labels are specified
 
     Parameters
     ----------
     recording: RecordingExtractor
         The recording extractor to remove artifacts from
-    list_triggers: list of list
+    list_triggers: list of lists/arrays
         One list per segment of int with the stimulation trigger frames
     ms_before: float or None
         Time interval in ms to remove before the trigger events. 
@@ -28,19 +28,20 @@ class RemoveArtifactsRecording(BasePreprocessor):
     ms_after: float or None
         Time interval in ms to remove after the trigger events.
         If None, then also ms_before must be None and a single sample is removed
-    list_labels: list of list or None
+    list_labels: list of lists/arrays or None
         One list per segment of labels with the stimulation labels for the given
-        artefacs
+        artefacs. labels should be strings, for JSON serialization.
+        Required for 'median' and 'average' modes.
     mode: str
         Determines what artifacts are replaced by. Can be one of the following:
             
         - 'zeros' (default): Artifacts are replaced by zeros.
 
-        - 'median': The median over all artefacts is computed and subtracted for 
-            each occurence of an artefact
+        - 'median': The median over all artifacts is computed and subtracted for 
+            each occurence of an artifact
 
-        - 'average': The mean over all artefacts is computed and subtracted for each 
-            occurence of an artefact
+        - 'average': The mean over all artifacts is computed and subtracted for each 
+            occurence of an artifact
         
         - 'linear': Replacement are obtained through Linear interpolation between
            the trace before and after the artifact.
@@ -63,7 +64,25 @@ class RemoveArtifactsRecording(BasePreprocessor):
         fit if mode = 'cubic'. Default = 1ms. Note: The actual fit samples are 
         the median of the 5 data points around the time of each sample point to
         avoid excessive influence from hyper-local fluctuations.
-        
+    artifacts: dict
+        If provided (when mode is 'median' or 'average') then it must be a dict with
+        keys that are the labels of the artifacts, and values the artifacts themselves,
+        on all channels (and thus bypassing ms_before and ms_after)
+    sparsity: dict
+        If provided (when mode is 'median' or 'average') then it must be a dict with
+        keys that are the labels of the artifacts, and values that are boolean mask of
+        the channels where the artifacts should be considered (for subtraction/scaling)
+    scale_amplitude: False
+        If true, then for mode 'median' or 'average' the amplitude of the template
+        will be scaled in amplitude at each time occurence to minimize residuals
+    time_jitter: float (default 0)
+        If non 0, then for mode 'median' or 'average', a time jitter in ms 
+        can be allowed to minimize the residuals
+    waveforms_kwargs: dict or None
+        The arguments passed to the WaveformExtractor object when extracting the
+        artifacts, for mode 'median' or 'average'.
+        By default, the global job kwargs are used, in addition to {'allow_unfiltered' : True, 'mode':'memory'}.
+        To estimate sparse artifact
 
     Returns
     -------
@@ -72,31 +91,37 @@ class RemoveArtifactsRecording(BasePreprocessor):
     """
     name = 'remove_artifacts'
 
-    def __init__(self, recording, list_triggers, ms_before=0.5, ms_after=3.0, mode='zeros', fit_sample_spacing=1., list_labels=None):
+    def __init__(self, recording, list_triggers, ms_before=0.5, ms_after=3.0, mode='zeros', fit_sample_spacing=1.,
+                 list_labels=None, artifacts=None, sparsity=None, scale_amplitude=False, time_jitter=0,
+                 waveforms_kwargs={'allow_unfiltered' : True, 'mode':'memory'}):
 
+        available_modes = ('zeros', 'linear', 'cubic', 'average', 'median')
         num_seg = recording.get_num_segments()
-        if num_seg == 1 and isinstance(list_triggers, list) and np.isscalar(list_triggers[0]):
-            # when unisque segment accept list instead of of list of list
-            list_triggers = [list_triggers]
 
-        if num_seg == 1 and isinstance(list_labels, list):
-            if not isinstance(list_labels[0], list):
-                # when unisque segment accept list instead of of list of list
+        if num_seg == 1:
+            if isinstance(list_triggers, (list, np.ndarray)) and np.isscalar(list_triggers[0]):
+                # when unique segment accept list instead of of list of list/arrays
+                list_triggers = [list_triggers]
+            if isinstance(list_labels, (list, np.ndarray)) and np.isscalar(list_labels[0]):
+                # when unique segment accept list instead of of list of list/arrays
                 list_labels = [list_labels]
 
+        # if no labels are given, assume single label
         if list_labels is None:
             list_labels = [[0]*len(i) for i in list_triggers]
 
-        # some check
-        if list_labels is not None:
-            assert isinstance(list_labels, list)
-            assert len(list_labels) == num_seg
-            assert all(isinstance(list_labels[i], list) for i in range(num_seg))
+        # some checks
+        assert isinstance(list_triggers, list), "'list_triggers' must be a list (one per segment)"
+        assert len(list_triggers) == num_seg, "'list_triggers' must have the same length as the number of segments"
+        assert all(isinstance(list_triggers[i], (list, np.ndarray)) for i in range(num_seg)), \
+            "Each element of 'list_triggers' must be array-like"
 
-        assert isinstance(list_triggers, list)
-        assert len(list_triggers) == num_seg
-        assert all(isinstance(list_triggers[i], list) for i in range(num_seg))
-        assert mode in ('zeros', 'linear', 'cubic', 'average', 'median')
+        if list_labels is not None:
+            assert isinstance(list_labels, list), "'list_labels' must be a list (one per segment)"
+            assert len(list_labels) == num_seg
+            assert all(isinstance(list_labels[i], (list, np.ndarray)) for i in range(num_seg))
+
+        assert mode in available_modes, f"mode {mode} is not an available mode: {available_modes}"
 
         if ms_before is None:
             assert ms_after is None, "To remove a single sample, set both ms_before and ms_after to None"
@@ -104,52 +129,99 @@ class RemoveArtifactsRecording(BasePreprocessor):
             ms_before = float(ms_before)
             ms_after = float(ms_after)
         
-        sf = recording.get_sampling_frequency()
+        fs = recording.get_sampling_frequency()
         if ms_before is not None:
-            pad = [int(ms_before * sf / 1000), int(ms_after * sf / 1000)]
+            pad = [int(ms_before * fs / 1000), int(ms_after * fs / 1000)]
         else:
             pad = None
 
-        fit_sample_interval = int(fit_sample_spacing * sf / 1000.)
+        fit_sample_interval = int(fit_sample_spacing * fs / 1000.)
         fit_sample_range = fit_sample_interval * 2 + 1
         fit_samples = np.arange(0, fit_sample_range, fit_sample_interval)
 
         if mode in ['median', 'average']:
-            sorting = NumpySorting.from_times_labels(list_triggers, list_labels, recording.get_sampling_frequency())
-            waveforms_params = {'ms_before' : ms_before, 'ms_after' : ms_after}
-            w = extract_waveforms(recording, sorting, None, mode='memory', **waveforms_params, return_scaled=False)
-            artefacts = {}
-            for label in w.sorting.unit_ids:
-                artefacts[label] = w.get_template(label, mode=mode)
+            assert time_jitter >= 0, "time jitter should be a positive value"
+            time_pad = int(time_jitter * fs / 1000.)
+
+            if artifacts is not None:
+                labels = []
+                for sub_list in list_labels:
+                    labels += list(np.unique(sub_list))
+                for l in np.unique(labels):
+                    assert l in artifacts.keys(), f"Artefacts are provided but label {l} has no value!"
+            else:
+                assert 'ms_before' != None and 'ms_after' != None, \
+                    f"ms_before/after should not be None for mode {mode}"
+                sorting = NumpySorting.from_times_labels(list_triggers, list_labels,
+                                                         recording.get_sampling_frequency())
+                sorting = sorting.save()
+                waveforms_kwargs.update({'ms_before' : ms_before, 'ms_after' : ms_after})
+                w = extract_waveforms(recording, sorting, None, **waveforms_kwargs)
+
+                artifacts = {}
+                sparsity = {}
+                for label in w.sorting.unit_ids:
+                    artifacts[label] = w.get_template(label, mode=mode).astype(recording.dtype)
+                    if w.is_sparse():
+                        unit_ind = w.sorting.id_to_index(label)
+                        sparsity[label] = w.sparsity.mask[unit_ind]
+                    else:
+                        sparsity = None
+
+            if sparsity is not None:
+                labels = []
+                for sub_list in list_labels:
+                    labels += list(np.unique(sub_list))
+                for l in np.unique(labels):
+                    assert l in sparsity.keys(), f"Sparsities are provided but label {l} has no value!"
         else:
-            artefacts = None
+            artifacts = None
+            time_pad = None
 
         BasePreprocessor.__init__(self, recording)
         for seg_index, parent_segment in enumerate(recording._recording_segments):
             triggers = list_triggers[seg_index]
             labels = list_labels[seg_index]
-            rec_segment = RemoveArtifactsRecordingSegment(parent_segment, triggers, pad, mode, fit_samples, artefacts, labels)
+            rec_segment = RemoveArtifactsRecordingSegment(parent_segment, triggers, pad, mode, fit_samples,
+                                                          artifacts, labels, scale_amplitude, time_pad, sparsity)
             self.add_recording_segment(rec_segment)
 
-        list_triggers_int = [[int(trig) for trig in trig_seg] for trig_seg in list_triggers]
-        self._kwargs = dict(recording=recording.to_dict(), list_triggers=list_triggers_int,
+        list_triggers_ = [[int(trig) for trig in trig_seg] for trig_seg in list_triggers]
+        if list_labels is not None:
+            list_labels_= [list(lab_seg) for lab_seg in list_labels]
+        else:
+            list_labels_ = None
+        self._kwargs = dict(recording=recording, list_triggers=list_triggers_,
                             ms_before=ms_before, ms_after=ms_after, mode=mode,
-                            fit_sample_spacing=fit_sample_spacing, artefacts=artefacts, list_labels=list_labels)
+                            fit_sample_spacing=fit_sample_spacing, artifacts=artifacts,
+                            list_labels=list_labels_, scale_amplitude=scale_amplitude,
+                            time_jitter=time_jitter, sparsity=sparsity)
 
 
 class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, triggers, pad, mode, fit_samples, artefacts, labels):
+    def __init__(self, parent_recording_segment, triggers, pad, mode, fit_samples, artifacts,
+                 labels, scale_amplitude, time_pad, sparsity):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.triggers = np.asarray(triggers, dtype='int64')
         self.pad = pad
         self.mode = mode
-        self.artefacts = artefacts
+        self.artifacts = artifacts
+        if self.artifacts is not None:
+            for key, value in self.artifacts.items():
+                self.artifacts[key] = np.array(value)
         self.labels = np.asarray(labels)
         self.fit_samples = fit_samples
+        self.scale_amplitude = scale_amplitude
+        self.time_pad = time_pad
+        self.sparsity = sparsity
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
+
+        if self.mode in ['average', 'median']:
+            traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
+        else:
+            traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
 
         if start_frame is None:
@@ -186,7 +258,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                     post_data_start_idx = trig + pad[1] + 1
 
                 # Generate fit points from the sample points determined
-                #  pre_idx = pre_data_end_idx - self.rev_fit_samples + 1
+                # pre_idx = pre_data_end_idx - self.rev_fit_samples + 1
                 pre_idx = pre_data_end_idx - self.fit_samples[::-1]
                 post_idx = post_data_start_idx + self.fit_samples
 
@@ -261,19 +333,77 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                     # No data to interpolate from on either side of gap;
                     # Fill with zeros
                     traces[gap_idx, :] = 0
+
         elif self.mode in ['average', 'median']:
             for label, trig in zip(labels, triggers):
-                if pad is None:
-                    traces[trig, :] -= self.artefacts[label][trig, :]    
+                if self.sparsity is not None:
+                    mask = self.sparsity[label]
                 else:
-                    if trig - pad[0] > 0 and trig + pad[1] < end_frame - start_frame:
-                        traces[trig-pad[0]:trig+pad[1], :] -= self.artefacts[label]
-                    elif trig - pad[0] < 0:
-                        duration = pad[1] + pad[0] - (pad[0] - trig)
-                        traces[:trig+pad[1], :] -= self.artefacts[label][duration:]
-                    elif trig + pad[1] >= end_frame - start_frame:
-                        duration = (end_frame - start_frame) - (trig - pad[0])
-                        traces[trig-pad[0]:, :] -= self.artefacts[label][:duration]        
+                    mask = None
+                artifact_duration = len(self.artifacts[label])
+                if self.time_pad > 0:
+                    jitters = np.arange(-self.time_pad, self.time_pad, 1)
+                else:
+                    jitters = np.array([0])
+
+                nb_jitters = len(jitters)
+                best_amplitudes = np.zeros(nb_jitters, dtype=np.float32)
+
+                for count, padding in enumerate(jitters):
+
+                    t_trig = trig + padding
+
+                    if t_trig - pad[0] >= 0 and t_trig + pad[1] < end_frame - start_frame:
+                        trace_slice = slice(t_trig - pad[0], t_trig + pad[1])
+                        artifact_slice = slice(0, artifact_duration)
+                    elif t_trig - pad[0] < 0:
+                        trace_slice = slice(0, t_trig + pad[1])
+                        duration = t_trig + pad[1]
+                        artifact_slice = slice(artifact_duration - duration, artifact_duration)
+                    elif t_trig + pad[1] >= end_frame - start_frame:
+                        trace_slice = slice(t_trig - pad[0], end_frame - start_frame)
+                        duration = (end_frame - start_frame) - (t_trig - pad[0])
+                        artifact_slice = slice(0, duration)
+
+                    trace_slice_values = traces[trace_slice]
+                    if mask is not None:
+                        trace_slice_values = trace_slice_values[:, mask]
+                    
+                    artifact_slice_values = self.artifacts[label][artifact_slice]
+
+                    norm = np.linalg.norm(trace_slice_values)*np.linalg.norm(artifact_slice_values)
+                    best_amplitudes[count] = np.dot(trace_slice_values.flatten(), artifact_slice_values.flatten())/norm
+
+                if nb_jitters > 0:
+                    idx_best_jitter = np.argmax(best_amplitudes)
+                    t_trig = trig + jitters[idx_best_jitter]
+
+                    if t_trig - pad[0] >= 0 and t_trig + pad[1] < end_frame - start_frame:
+                        trace_slice = slice(t_trig - pad[0], t_trig + pad[1])
+                        artifact_slice = slice(0, artifact_duration)
+                    elif t_trig - pad[0] < 0:
+                        trace_slice = slice(0, t_trig + pad[1])
+                        duration = t_trig + pad[1]
+                        artifact_slice = slice(artifact_duration - duration, artifact_duration)
+                    elif t_trig + pad[1] >= end_frame - start_frame:
+                        trace_slice = slice(t_trig - pad[0], end_frame - start_frame)
+                        duration = (end_frame - start_frame) - (t_trig - pad[0])
+                        artifact_slice = slice(0, duration)
+                else:
+                    idx_best_jitter = 0
+                
+                if self.scale_amplitude:
+                    best_amp = best_amplitudes[idx_best_jitter]
+                else:
+                    best_amp = 1
+
+                if mask is not None:
+                    traces[trace_slice][:, mask] -= \
+                        (best_amp * self.artifacts[label][artifact_slice]).astype(traces.dtype)
+                else:
+                    traces[trace_slice] -= \
+                        (best_amp * self.artifacts[label][artifact_slice]).astype(traces.dtype)
+            traces = traces[:, channel_indices]
 
         return traces
 

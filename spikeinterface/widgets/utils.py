@@ -16,9 +16,32 @@ except ImportError:
     HAVE_MPL = False
 
 
-def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGBA', shuffle=False):
+def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGBA', shuffle=None, seed=None):
     """
     Return a dict of colors for given keys
+    
+    Params
+    ------
+    color_engine: str 'auto' / 'matplotlib' / 'colorsys' / 'distinctipy'
+        The engine to generate colors
+    map_name: str
+        Used for matplotlib
+    format: 'RGBA'
+        The output fomrats
+    shuffle: bool or None
+        Shuffle or not.
+        If None then:
+
+        * set to True for matplotlib and colorsys
+        * set to False for distinctipy
+    seed: int or None
+        Eventually a seed
+
+    Returns
+    -------
+    dict_colors: dict
+        A dict of colors for given keys.
+    
     """
     assert color_engine in ('auto', 'distinctipy', 'matplotlib', 'colorsys')
 
@@ -27,12 +50,18 @@ def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGB
 
     # select the colormap engine
     if color_engine == 'auto':
-        if HAVE_DISTINCTIPY:
-            color_engine = 'distinctipy'
-        elif HAVE_MPL:
+        if HAVE_MPL:
             color_engine = 'matplotlib'
+        elif HAVE_DISTINCTIPY:
+            # this is the third choice because this is very slow
+            color_engine = 'distinctipy'
         else:
             color_engine = 'colorsys'
+
+    if shuffle is None:
+        # distinctipy then False
+        shuffle = color_engine != 'distinctipy'
+        seed = 91
 
     N = len(keys)
 
@@ -43,27 +72,31 @@ def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGB
 
     elif color_engine == 'matplotlib':
         # some map have black or white at border so +10
-        margin = max(4, N // 20) // 2
+        margin = max(4, int(N * 0.08))
         cmap = plt.get_cmap(map_name, N + 2 * margin)
         colors = [cmap(i+margin) for i, key in enumerate(keys)]
-        if shuffle:
-            random.shuffle(colors)
 
     elif color_engine == 'colorsys':
         import colorsys
         colors = [colorsys.hsv_to_rgb(x * 1.0 / N, 0.5, 0.5) + (1., ) for x in range(N)]
+
+    if shuffle:
+        rng = np.random.RandomState(seed=seed)
+        inds = np.arange(N)
+        rng.shuffle(inds)
+        colors = [colors[i] for i in inds]
 
     dict_colors = dict(zip(keys, colors))
 
     return dict_colors
 
 
-def get_unit_colors(sorting, color_engine='auto', map_name='gist_ncar', format='RGBA', shuffle=False):
+def get_unit_colors(sorting, color_engine='auto', map_name='gist_ncar', format='RGBA', shuffle=None, seed=None):
     """
     Return a dict colors per units.
     """
-    colors = get_some_colors(sorting.unit_ids, color_engine=color_engine,
-                             map_name=map_name, format=format, shuffle=shuffle)
+    colors = get_some_colors(sorting.unit_ids, color_engine=color_engine, map_name=map_name, format=format, 
+                             shuffle=shuffle, seed=seed)
     return colors
 
 
@@ -111,14 +144,13 @@ def array_to_image(data,
 
     num_timepoints = data.shape[0]
     num_channels = data.shape[1]
-    num_channels_after_scaling = int(num_channels * spatial_zoom[1])
     spacing = int(num_channels * spatial_zoom[1] * row_spacing)
 
-    num_timepoints_after_scaling = int(num_timepoints * spatial_zoom[0])
-    num_timepoints_per_row_after_scaling = int(np.min([num_timepoints_per_row, num_timepoints]) * spatial_zoom[0])
 
     cmap = plt.get_cmap(colormap)
     zoomed_data = zoom(data, spatial_zoom)
+    num_timepoints_after_scaling, num_channels_after_scaling = zoomed_data.shape
+    num_timepoints_per_row_after_scaling = int(np.min([num_timepoints_per_row, num_timepoints]) * spatial_zoom[0])
 
     scaled_data = zoomed_data
     scaled_data[scaled_data < clim[0]] = clim[0]

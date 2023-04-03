@@ -44,7 +44,7 @@ class CurationSorting:
         else:
             self.max_used_id = max(parent_units)
         
-        self._kwargs = dict(parent_sorting=parent_sorting.to_dict(), make_graph=make_graph, properties_policy=properties_policy)
+        self._kwargs = dict(parent_sorting=parent_sorting, make_graph=make_graph, properties_policy=properties_policy)
 
     def _get_unused_id(self, n=1):
         #check units in the graph to the next unused unit id
@@ -75,7 +75,7 @@ class CurationSorting:
         else:
             assert new_unit_id not in current_sorting.unit_ids, f"new_unit_id already exists!"
         new_sorting = MergeUnitsSorting(parent_sorting=current_sorting, units_to_merge=units_to_merge, 
-                new_unit_id=new_unit_id, delta_time_ms=delta_time_ms, properties_policy=self._properties_policy)
+                new_unit_ids=[new_unit_id], delta_time_ms=delta_time_ms, properties_policy=self._properties_policy)
         if self._make_graph:
             units = current_sorting.get_unit_ids()
             i = self._sorting_stages_i

@@ -2,8 +2,9 @@
 import numpy as np
 
 from spikeinterface.core.job_tools import fix_job_kwargs
+from spikeinterface.core import get_channel_distances
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass, LocalizeMonopolarTriangulation
-from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PeakPipelineStep
+from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PipelineNode, ExtractDenseWaveforms
 
 
 
@@ -45,25 +46,26 @@ def compute_features_from_peaks(
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    steps = []
+    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_output=False)
+    nodes = [
+        extract_dense_waveforms,
+    ]
     for feature_name in feature_list:
         Class = _features_class[feature_name]
         params = feature_params.get(feature_name, {}).copy()
-        if Class.need_waveforms:
-            params.update(dict(ms_before=ms_before, ms_after=ms_after))
-        step = Class(recording, **params)
-        steps.append(step)
+        node = Class(recording, parents=[extract_dense_waveforms], **params)
+        nodes.append(node)
 
-    features = run_peak_pipeline(
-        recording, peaks, steps, job_kwargs, job_name='features_from_peaks', squeeze_output=False)
+    features = run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='features_from_peaks', squeeze_output=False)
 
     return features
 
 
-class AmplitudeFeature(PeakPipelineStep):
-    need_waveforms = True
-    def __init__(self, recording, ms_before=1., ms_after=1.,  peak_sign='neg', all_channels=True):
-        PeakPipelineStep.__init__(self, recording, ms_before=ms_before, ms_after=ms_after)
+class AmplitudeFeature(PipelineNode):
+    def __init__(self, recording,  name='amplitude_feature', return_output=True, parents=None, 
+                        all_channels=False, peak_sign='neg'):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
+
         self.all_channels = all_channels
         self.peak_sign = peak_sign
         self._kwargs.update(dict(all_channels=all_channels, peak_sign=peak_sign))
@@ -72,7 +74,7 @@ class AmplitudeFeature(PeakPipelineStep):
     def get_dtype(self):
         return self._dtype
 
-    def compute_buffer(self, traces, peaks, waveforms):
+    def compute(self, traces, peaks, waveforms):
         if self.all_channels:
             if self.peak_sign == 'neg':
                 amplitudes = np.min(waveforms, axis=1)
@@ -90,19 +92,22 @@ class AmplitudeFeature(PeakPipelineStep):
         return amplitudes
 
 
-class PeakToPeakFeature(PeakPipelineStep):
-    need_waveforms = True
-    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150., all_channels=True):
-        PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
-                                  ms_after=ms_after, local_radius_um=local_radius_um)
+class PeakToPeakFeature(PipelineNode):
+    def __init__(self, recording,  name='ptp_feature', return_output=True, parents=None,
+                   local_radius_um=150., all_channels=True):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
+
+        self.contact_locations = recording.get_channel_locations()
+        self.channel_distance = get_channel_distances(recording)
+        self.neighbours_mask = self.channel_distance < local_radius_um
         self.all_channels = all_channels
-        self._kwargs = dict(all_channels=all_channels)
+        self._kwargs.update(dict(local_radius_um=local_radius_um, all_channels=all_channels))
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
         return self._dtype
 
-    def compute_buffer(self, traces, peaks, waveforms):
+    def compute(self, traces, peaks, waveforms):
         if self.all_channels:
             all_ptps = np.ptp(waveforms, axis=1)
         else:
@@ -115,19 +120,25 @@ class PeakToPeakFeature(PeakPipelineStep):
         return all_ptps
 
 
-class PeakToPeakLagsFeature(PeakPipelineStep):
-    need_waveforms = True
-    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150., all_channels=True):
-        PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
-                                  ms_after=ms_after, local_radius_um=local_radius_um)
+class PeakToPeakLagsFeature(PipelineNode):
+    def __init__(self, recording,  name='ptp_lag_feature', return_output=True, parents=None,
+                   local_radius_um=150., all_channels=True):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
+
         self.all_channels = all_channels
-        self._kwargs = dict(all_channels=all_channels)
+        self.local_radius_um = local_radius_um
+
+        self.contact_locations = recording.get_channel_locations()
+        self.channel_distance = get_channel_distances(recording)
+        self.neighbours_mask = self.channel_distance < local_radius_um
+        
+        self._kwargs.update(dict(local_radius_um=local_radius_um, all_channels=all_channels))
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
         return self._dtype
 
-    def compute_buffer(self, traces, peaks, waveforms):
+    def compute(self, traces, peaks, waveforms):
         if self.all_channels:
             all_maxs = np.argmax(waveforms, axis=1)
             all_mins = np.argmin(waveforms, axis=1)
@@ -146,20 +157,28 @@ class PeakToPeakLagsFeature(PeakPipelineStep):
         return all_lags
 
 
-class RandomProjectionsFeature(PeakPipelineStep):
-    need_waveforms = True
-    def __init__(self, recording, projections, ms_before=1., ms_after=1., local_radius_um=150., min_values=None):
-        PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
-                                  ms_after=ms_after, local_radius_um=local_radius_um)
+class RandomProjectionsFeature(PipelineNode):
+
+    def __init__(self, recording,  name='random_projections_feature', return_output=True, parents=None,
+                   projections=None, local_radius_um=150., min_values=None):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
+
         self.projections = projections
+        self.local_radius_um = local_radius_um
         self.min_values = min_values
-        self._kwargs = dict(projections=self.projections)
+
+        self.contact_locations = recording.get_channel_locations()
+        self.channel_distance = get_channel_distances(recording)
+        self.neighbours_mask = self.channel_distance < local_radius_um
+        
+        self._kwargs.update(dict(projections=projections, local_radius_um=local_radius_um, min_values=min_values))
+    
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
         return self._dtype
 
-    def compute_buffer(self, traces, peaks, waveforms):
+    def compute(self, traces, peaks, waveforms):
         all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
         for main_chan in np.unique(peaks['channel_ind']):
             idx, = np.nonzero(peaks['channel_ind'] == main_chan)
@@ -177,20 +196,25 @@ class RandomProjectionsFeature(PeakPipelineStep):
         return all_projections
 
 
-class RandomProjectionsEnergyFeature(PeakPipelineStep):
-    need_waveforms = True
-    def __init__(self, recording, projections, ms_before=1., ms_after=1., local_radius_um=150., min_values=None):
-        PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
-                                  ms_after=ms_after, local_radius_um=local_radius_um)
+class RandomProjectionsEnergyFeature(PipelineNode):
+    def __init__(self, recording,  name='random_projections_energy_feature', return_output=True, parents=None,
+                   projections=None, local_radius_um=150., min_values=None):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
+
+        self.contact_locations = recording.get_channel_locations()
+        self.channel_distance = get_channel_distances(recording)
+        self.neighbours_mask = self.channel_distance < local_radius_um
+
         self.projections = projections
         self.min_values = min_values
-        self._kwargs = dict(projections=self.projections)
+        self.local_radius_um = local_radius_um
+        self._kwargs.update(dict(projections=projections, min_values=min_values, local_radius_um=local_radius_um))
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
         return self._dtype
 
-    def compute_buffer(self, traces, peaks, waveforms):
+    def compute(self, traces, peaks, waveforms):
         all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
         for main_chan in np.unique(peaks['channel_ind']):
             idx, = np.nonzero(peaks['channel_ind'] == main_chan)
@@ -208,13 +232,23 @@ class RandomProjectionsEnergyFeature(PeakPipelineStep):
         return all_projections
 
 
-class StdPeakToPeakFeature(PeakToPeakFeature):
-    need_waveforms = True
-    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150.):
-        PeakToPeakFeature.__init__(self, recording, ms_before=ms_before,
-                                  ms_after=ms_after, local_radius_um=local_radius_um, all_channels=False)
+class StdPeakToPeakFeature(PipelineNode):
+    def __init__(self, recording,  name='std_ptp_feature', return_output=True, parents=None,
+                   local_radius_um=150.):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
-    def compute_buffer(self, traces, peaks, waveforms):
+        self.contact_locations = recording.get_channel_locations()
+        self.channel_distance = get_channel_distances(recording)
+        self.neighbours_mask = self.channel_distance < local_radius_um
+        
+        self._kwargs.update(dict(local_radius_um=local_radius_um))
+
+        self._dtype = recording.get_dtype()
+
+    def get_dtype(self):
+        return self._dtype
+
+    def compute(self, traces, peaks, waveforms):
         all_ptps = np.zeros(peaks.size)
         for main_chan in np.unique(peaks['channel_ind']):
             idx, = np.nonzero(peaks['channel_ind'] == main_chan)
@@ -223,13 +257,24 @@ class StdPeakToPeakFeature(PeakToPeakFeature):
             all_ptps[idx] = np.std(np.ptp(wfs, axis=1), axis=1)
         return all_ptps
 
-class GlobalPeakToPeakFeature(PeakToPeakFeature):
-    need_waveforms = True
-    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150.):
-        PeakToPeakFeature.__init__(self, recording, ms_before=ms_before,
-                                  ms_after=ms_after, local_radius_um=local_radius_um, all_channels=False)
 
-    def compute_buffer(self, traces, peaks, waveforms):
+class GlobalPeakToPeakFeature(PipelineNode):
+    def __init__(self, recording,  name='global_ptp_feature', return_output=True, parents=None,
+                   local_radius_um=150.):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
+
+        self.contact_locations = recording.get_channel_locations()
+        self.channel_distance = get_channel_distances(recording)
+        self.neighbours_mask = self.channel_distance < local_radius_um
+        
+        self._kwargs.update(dict(local_radius_um=local_radius_um))
+
+        self._dtype = recording.get_dtype()
+
+    def get_dtype(self):
+        return self._dtype
+
+    def compute(self, traces, peaks, waveforms):
         all_ptps = np.zeros(peaks.size)
         for main_chan in np.unique(peaks['channel_ind']):
             idx, = np.nonzero(peaks['channel_ind'] == main_chan)
@@ -238,37 +283,48 @@ class GlobalPeakToPeakFeature(PeakToPeakFeature):
             all_ptps[idx] = np.max(wfs, axis=(1, 2)) - np.min(wfs, axis=(1, 2))
         return all_ptps
 
-class KurtosisPeakToPeakFeature(PeakToPeakFeature):
-    need_waveforms = True
-    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=150.):
-        PeakToPeakFeature.__init__(self, recording, ms_before=ms_before,
-                                  ms_after=ms_after, local_radius_um=local_radius_um, all_channels=False)
+class KurtosisPeakToPeakFeature(PipelineNode):
+    def __init__(self, recording,  name='kurtosis_ptp_feature', return_output=True, parents=None,
+                   local_radius_um=150.):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
-    def compute_buffer(self, traces, peaks, waveforms):
-        if self.all_channels:
-            all_ptps = np.ptp(waveforms, axis=1)
-        else:
-            all_ptps = np.zeros(peaks.size)
-            import scipy
-            for main_chan in np.unique(peaks['channel_ind']):
-                idx, = np.nonzero(peaks['channel_ind'] == main_chan)
-                chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
-                wfs = waveforms[idx][:, :, chan_inds]
-                all_ptps[idx] = scipy.stats.kurtosis(np.ptp(wfs, axis=1), axis=1)
+        self.contact_locations = recording.get_channel_locations()
+        self.channel_distance = get_channel_distances(recording)
+        self.neighbours_mask = self.channel_distance < local_radius_um
+        
+        self._kwargs.update(dict(local_radius_um=local_radius_um))
+
+        self._dtype = recording.get_dtype()
+
+    def get_dtype(self):
+        return self._dtype
+
+    def compute(self, traces, peaks, waveforms):
+        all_ptps = np.zeros(peaks.size)
+        import scipy
+        for main_chan in np.unique(peaks['channel_ind']):
+            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+            chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
+            wfs = waveforms[idx][:, :, chan_inds]
+            all_ptps[idx] = scipy.stats.kurtosis(np.ptp(wfs, axis=1), axis=1)
         return all_ptps
 
 
-class EnergyFeature(PeakPipelineStep):
-    need_waveforms = True
+class EnergyFeature(PipelineNode):
+    def __init__(self, recording,  name='energy_feature', return_output=True, parents=None,
+                   local_radius_um=50.):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
-    def __init__(self, recording, ms_before=1., ms_after=1., local_radius_um=50.):
-        PeakPipelineStep.__init__(self, recording, ms_before=ms_before,
-                                  ms_after=ms_after, local_radius_um=local_radius_um)
+        self.contact_locations = recording.get_channel_locations()
+        self.channel_distance = get_channel_distances(recording)
+        self.neighbours_mask = self.channel_distance < local_radius_um
+        
+        self._kwargs.update(dict(local_radius_um=local_radius_um))
 
     def get_dtype(self):
         return np.dtype('float32')
 
-    def compute_buffer(self, traces, peaks, waveforms):
+    def compute(self, traces, peaks, waveforms):
         energy = np.zeros(peaks.size, dtype='float32')
         for main_chan in np.unique(peaks['channel_ind']):
             idx, = np.nonzero(peaks['channel_ind'] == main_chan)

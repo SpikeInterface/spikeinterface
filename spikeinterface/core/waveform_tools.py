@@ -225,12 +225,9 @@ def distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info
     # and run
     func = _waveform_extractor_chunk
     init_func = _init_worker_waveform_extractor
-    if n_jobs == 1:
-        init_args = (recording, )
-    else:
-        init_args = (recording.to_dict(), )
-    init_args = init_args + (unit_ids, spikes, wfs_arrays_info, nbefore,
-                             nafter, return_scaled, inds_by_unit, mode, sparsity_mask)
+
+    init_args = (recording, unit_ids, spikes, wfs_arrays_info, nbefore,
+                 nafter, return_scaled, inds_by_unit, mode, sparsity_mask)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=f'extract waveforms {mode}',
                                        **job_kwargs)
     processor.run()
@@ -352,3 +349,30 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
                     wfs[pos, :, :] = wf
                 else:
                     wfs[pos, :, :] = wf[:, sparsity_mask[unit_ind]]
+
+
+def has_exceeding_spikes(recording, sorting):
+    """
+    Check if the sorting objects has spikes exceeding the recording number of samples, for all segments
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording object
+    sorting : BaseSorting
+        The sorting object
+
+    Returns
+    -------
+    bool
+        True if exceeding spikes, False otherwise
+    """
+    spike_vector = sorting.to_spike_vector()
+    for segment_index in range(recording.get_num_segments()):
+        start_seg_ind = np.searchsorted(spike_vector["segment_ind"], segment_index)
+        end_seg_ind = np.searchsorted(spike_vector["segment_ind"], segment_index + 1)
+        spike_vector_seg = spike_vector[start_seg_ind:end_seg_ind]
+        if len(spike_vector_seg) > 0:
+            if spike_vector_seg["sample_ind"][-1] > recording.get_num_samples(segment_index=segment_index) - 1:
+                return True
+    return False

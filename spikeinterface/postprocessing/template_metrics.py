@@ -11,7 +11,7 @@ import scipy.stats
 from scipy.signal import resample_poly
 
 from ..core import WaveformExtractor
-from ..core.template_tools import get_template_extremum_channel, get_template_channel_sparsity
+from ..core.template_tools import get_template_extremum_channel
 from ..core.waveform_extractor import BaseWaveformExtractorExtension
 import warnings
 
@@ -70,12 +70,12 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
                 index=unit_ids, columns=metric_names)
         else:
             extremum_channels_ids = sparsity.unit_id_to_channel_ids
-            unit_ids = []
-            channel_ids = []
+            index_unit_ids = []
+            index_channel_ids = []
             for unit_id, sparse_channels in extremum_channels_ids.items():
-                unit_ids += [unit_id] * len(sparse_channels)
-                channel_ids += list(sparse_channels)
-            multi_index = pd.MultiIndex.from_tuples(list(zip(unit_ids, channel_ids)),
+                index_unit_ids += [unit_id] * len(sparse_channels)
+                index_channel_ids += list(sparse_channels)
+            multi_index = pd.MultiIndex.from_tuples(list(zip(index_unit_ids, index_channel_ids)),
                                                     names=["unit_id", "channel_id"])
             template_metrics = pd.DataFrame(
                 index=multi_index, columns=metric_names)
@@ -150,7 +150,7 @@ def compute_template_metrics(waveform_extractor, load_if_exists=False,
     ----------
     waveform_extractor : WaveformExtractor, optional
         The waveform extractor used to compute template metrics
-    load_if_exists : bool, optional, default: False
+    load_if_exists : bool, default: False
         Whether to load precomputed template metrics, if they already exist.
     metric_names : list, optional
         List of metrics to compute (see si.postprocessing.get_template_metric_names()), by default None

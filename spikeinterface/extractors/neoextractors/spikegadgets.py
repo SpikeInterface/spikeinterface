@@ -5,7 +5,7 @@ from .neobaseextractor import NeoBaseRecordingExtractor
 
 class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
     """
-    Class for reading *rec files from spikegadgets.
+    Class for reading rec files from spikegadgets.
 
     Based on :py:class:`neo.rawio.SpikeGadgetsRawIO`
 
@@ -17,7 +17,7 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream id you want to load.
     stream_name: str, optional
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, optional, default: False
+    all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
     """
     mode = 'file'

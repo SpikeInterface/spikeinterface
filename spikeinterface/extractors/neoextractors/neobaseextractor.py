@@ -1,4 +1,3 @@
-from copy import copy
 from typing import Union, List
 
 import numpy as np
@@ -38,7 +37,8 @@ class _NeoBaseExtractor:
 
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
     def __init__(self, stream_id=None, stream_name=None, 
-                 block_index=None, all_annotations=False, **neo_kwargs):
+                 block_index=None, all_annotations=False, use_names_as_ids=None,
+                 **neo_kwargs):
 
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
 
@@ -49,6 +49,11 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             kwargs['stream_name'] = stream_name
         if stream_id is not None:
             kwargs['stream_id'] = stream_id
+        if use_names_as_ids is not None:
+            kwargs['use_names_as_ids'] = use_names_as_ids
+        else:
+            use_names_as_ids = False
+
 
         stream_channels = self.neo_reader.header['signal_streams']
         stream_names = list(stream_channels['name'])
@@ -57,7 +62,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         if stream_id is None and stream_name is None:
             if stream_channels.size > 1:
                 raise ValueError(f"This reader have several streams: \nNames: {stream_names}\nIDs: {stream_ids}. "
-                                 f"Specify it with the 'stram_name' or 'stream_id' arguments")
+                                 f"Specify it with the 'stream_name' or 'stream_id' arguments")
             else:
                 stream_id = stream_ids[0]
                 stream_name = stream_names[0]
@@ -79,8 +84,14 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         mask = signal_channels['stream_id'] == stream_id
         signal_channels = signal_channels[mask]
 
-        # check channel groups
-        chan_ids = signal_channels['id']
+        if use_names_as_ids:
+            chan_names = signal_channels['name']
+            assert chan_names.size == np.unique(chan_names).size,\
+                'use_names_as_ids=True is not possible, channel names are not unique'
+            chan_ids = chan_names
+        else:
+            # unique in all cases
+            chan_ids = signal_channels['id']
 
         sampling_frequency = self.neo_reader.get_signal_sampling_rate(stream_index=self.stream_index)
         dtype = signal_channels['dtype'][0]
@@ -110,7 +121,8 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         self.set_property('gain_to_uV', final_gains)
         self.set_property('offset_to_uV', final_offsets)
-        self.set_property('channel_name', signal_channels["name"])
+        if not use_names_as_ids:
+            self.set_property('channel_name', signal_channels["name"])
 
         if all_annotations:
             block_ann = self.neo_reader.raw_annotations['blocks'][self.block_index]

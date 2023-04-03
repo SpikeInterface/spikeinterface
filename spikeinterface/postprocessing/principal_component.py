@@ -127,8 +127,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         all_projections: np.array
             The PCA projections (num_all_waveforms, num_components, num_channels)
         """
-        recording = self.waveform_extractor.recording
-
         if unit_ids is None:
             unit_ids = self.waveform_extractor.sorting.unit_ids
 
@@ -137,7 +135,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         for unit_index, unit_id in enumerate(unit_ids):
             proj = self.get_projections(unit_id)
             if channel_ids is not None:
-                chan_inds = recording.ids_to_indices(channel_ids)
+                chan_inds = self.waveform_extractor.channel_ids_to_indices(channel_ids)
                 proj = proj[:, :, chan_inds]
             n = proj.shape[0]
             if outputs == 'id':
@@ -216,7 +214,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             return self.waveform_extractor.sparsity
         return self._params["sparsity"]
 
-    def _run(self, n_jobs=1, progress_bar=False):
+    def _run(self, **job_kwargs):
         """
         Compute the PCs on waveforms extacted within the WaveformExtarctor.
         Projections are computed only on the waveforms sampled by the WaveformExtractor.
@@ -228,6 +226,11 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         p = self._params
         we = self.waveform_extractor
         num_chans = we.get_num_channels()
+
+        # update job_kwargs with global ones
+        job_kwargs = fix_job_kwargs(job_kwargs)
+        n_jobs = job_kwargs['n_jobs']
+        progress_bar = job_kwargs['progress_bar']
 
         # prepare memmap files with npy
         projection_objects = {}
@@ -330,13 +333,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         # and run
         func = _all_pc_extractor_chunk
         init_func = _init_work_all_pc_extractor
-        n_jobs = ensure_n_jobs(recording, job_kwargs.get('n_jobs', None))
-        if n_jobs == 1:
-            init_args = (recording,)
-        else:
-            init_args = (recording.to_dict(),)
-        init_args = init_args + (all_pcs_args, spike_times, spike_labels, we.nbefore, we.nafter, 
-                                 unit_channels, pca_model)
+        init_args = (recording, all_pcs_args, spike_times, spike_labels, we.nbefore, we.nafter, unit_channels, pca_model)
         processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name='extract PCs', **job_kwargs)
         processor.run()
 
@@ -371,6 +368,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         for unit_ind, unit_id in units_loop:
             wfs, channel_inds = self._get_sparse_waveforms(unit_id)
+            if len(wfs) < p['n_components']:
+                continue
             if n_jobs in (0, 1):
                 for wf_ind, chan_ind in enumerate(channel_inds):
                     pca = pca_models[chan_ind]
@@ -444,10 +443,10 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         # with 'by_channel_global' we can't parallelize over channels
         for unit_ind, unit_id in units_loop:
             wfs, _ = self._get_sparse_waveforms(unit_id)
-            if wfs.size == 0:
+            shape = wfs.shape
+            if shape[0] * shape[2] < p['n_components']:
                 continue
             # avoid loop with reshape
-            shape = wfs.shape
             wfs_concat = wfs.transpose(0, 2, 1).reshape(shape[0] * shape[2], shape[1])
             pca_model.partial_fit(wfs_concat)
 
@@ -504,6 +503,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         for unit_ind, unit_id in units_loop:
             wfs, _ = self._get_sparse_waveforms(unit_id)
             wfs_flat = wfs.reshape(wfs.shape[0], -1)
+            if len(wfs_flat) < p['n_components']:
+                continue
             pca_model.partial_fit(wfs_flat)
 
         # save
@@ -630,8 +631,7 @@ WaveformExtractor.register_extension(WaveformPrincipalComponent)
 
 def compute_principal_components(waveform_extractor, load_if_exists=False,
                                  n_components=5, mode='by_channel_local', sparsity=None,
-                                 whiten=True, dtype='float32', n_jobs=1,
-                                 progress_bar=False):
+                                 whiten=True, dtype='float32', **job_kwargs):
     """
     Compute PC scores from waveform extractor. The PCA projections are pre-computed only
     on the sampled waveforms available from the WaveformExtractor.
@@ -686,7 +686,7 @@ def compute_principal_components(waveform_extractor, load_if_exists=False,
         pc = WaveformPrincipalComponent.create(waveform_extractor)
         pc.set_params(n_components=n_components, mode=mode, whiten=whiten, dtype=dtype,
                       sparsity=sparsity)
-        pc.run(n_jobs=n_jobs, progress_bar=progress_bar)
+        pc.run(**job_kwargs)
 
     return pc
 

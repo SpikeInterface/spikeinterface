@@ -1,5 +1,6 @@
+import numpy as np
+
 from ..base import to_attr
-from ..metrics import MetricsBaseWidget
 from .base_mpl import MplPlotter
 
 

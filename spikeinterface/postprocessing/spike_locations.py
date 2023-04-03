@@ -75,7 +75,6 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
             as a dict with units as key and spike locations as values.
         """
         we = self.waveform_extractor
-        recording = we.recording
         sorting = we.sorting
 
         if outputs == 'concatenated':
@@ -83,7 +82,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 
         elif outputs == 'by_unit':
             locations_by_unit = []
-            for segment_index in range(recording.get_num_segments()):
+            for segment_index in range(self.waveform_extractor.get_num_segments()):
                 i0 =np.searchsorted(self.spikes['segment_ind'], segment_index, side="left")
                 i1 =np.searchsorted(self.spikes['segment_ind'], segment_index, side="right")
                 spikes = self.spikes[i0: i1]
@@ -116,7 +115,7 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
     ----------
     waveform_extractor : WaveformExtractor
         A waveform extractor object.
-    load_if_exists : bool, optional, default: False
+    load_if_exists : bool, default: False
         Whether to load precomputed spike locations, if they already exist.
     ms_before : float
         The left window, before a peak, in milliseconds.

@@ -38,12 +38,14 @@ spikeinterface/sorters/tests/*/*
 
 spikeinterface/widgets/tests/mearec_test/*
 
-examples/getting_started/*_output/*
-examples/getting_started/waveforms/*
-examples/*/*/*/*.raw
-examples/*/*/*/*/*.npy
-examples/*/*/sorter_outputs
-examples/*/*/*_to_phy
+
+examples/modules_gallery/**/*.raw
+examples/modules_gallery/**/*.npy
+examples/modules_gallery/**/*.json
+examples/modules_gallery/**/*.pkl
+examples/modules_gallery/**/*.npz
+examples/modules_gallery/**/*.csv
+
 
 .vscode/*
 
@@ -121,9 +123,6 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
-
 # PyBuilder
 target/
 
@@ -168,8 +167,7 @@ venv.bak/
 .mypy_cache/
 
 doc/_build/*
-doc/getting_started/*
-doc/modules/*
+doc/modules_gallery/*
 doc/sources/*
 
 examples/getting_started/tmp_*
@@ -186,50 +184,7 @@ examples/modules/toolkit/phy/*
 examples/modules/toolkit/tmp_*
 
 # Files and folders generated during tests
-all_pc1.npy
-all_pc2.npy
-binary01.raw
-binary02.raw
-herdingspikes_output/
-local_cache/
-mdatest/
-mearec_GT_report/
-mearec_test/
-mearec_waveforms/
-phy_output/
-phy_output_radius/
-phy_output_rm/
-phy_output_thr/
-rec/
-saved_multisorting_comparison/
-sort/
-sorting_tdc_local/
-spykingcircus_output/
-test_BaseSorting.npz
-test_BinaryRecordingExtractor_0.raw
-test_BinaryRecordingExtractor_1.raw
-test_BinaryRecordingExtractor_copied_0.raw
-test_BinaryRecordingExtractor_copied_1.raw
-test_NpzSortingExtractor.npz
-test_NpzSortingExtractor_copy.npz
-test_extract_waveforms_returnscaled/
-test_extract_waveforms_sparsity/
-test_groundtruthstudy/
-test_run_sorter_by_property/
-test_run_sorters_dict/
-test_run_sorters_list/
-test_studytools/
-toy_rec/
-toy_rec_1seg/
-toy_rec_2seg/
-toy_sort/
-toy_sorting/
-toy_sorting_1seg/
-toy_sorting_2seg/
-toy_waveforms/
-toy_waveforms_1seg/
-toy_waveforms_2seg/
-tridesclous_output/
-waveforms/
-waveforms_mearec/
-waveforms_rm/
+test_folder/
+
+# Mac OS
+.DS_Store

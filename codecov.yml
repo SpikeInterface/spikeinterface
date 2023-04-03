@@ -1,0 +1,6 @@
+ignore:
+  - "**/test_*.py"
+  - "./setup.py"
+  - "./docs/"
+  # ignore external sorters
+  - "./spikeinterface/sorters/external/"
