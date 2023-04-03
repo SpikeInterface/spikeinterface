@@ -374,7 +374,7 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', local_radius_u
     unit_location: np.array
     '''
     
-    contact_locations = waveform_extractor.recording.get_channel_locations()
+    contact_locations = waveform_extractor.get_channel_locations()
 
     nbefore = waveform_extractor.nbefore
     nafter = waveform_extractor.nafter
