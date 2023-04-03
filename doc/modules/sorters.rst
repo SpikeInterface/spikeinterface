@@ -157,7 +157,7 @@ or
 1) have singularity installed
 2) have `singularity python <https://singularityhub.github.io/singularity-cli/>`_ (:code:`pip install spython`)
 
-Some sorters require (are can be accelerated) with use of a GPU. To run containerized sorters with GPU capabilities,
+Some sorters require (or can be accelerated) with use of a GPU. To run containerized sorters with GPU capabilities,
 CUDA and `nvidia-container-toolkit <https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html>`_
 need to be installed. Only NVIDIA GPUs are supported for now.
 
