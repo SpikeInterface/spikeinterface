@@ -88,6 +88,12 @@ widgets = [
     "figurl-jupyter"
 ]
 
+test_core = [
+    "pytest",
+    "zarr",
+    "psutil",
+]
+
 test = [
     "pytest",
     "pytest-cov",

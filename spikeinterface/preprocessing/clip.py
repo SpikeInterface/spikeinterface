@@ -39,8 +39,8 @@ class ClipRecording(BasePreprocessor):
                 parent_segment, a_min, value_min, a_max, value_max)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(),
-                            a_min=a_max, a_max=a_max)
+        self._kwargs = dict(recording=recording,
+                            a_min=a_min, a_max=a_max)
 
 
 class BlankSaturationRecording(BasePreprocessor):
@@ -133,7 +133,7 @@ class BlankSaturationRecording(BasePreprocessor):
                 parent_segment, a_min, value_min, a_max, value_max)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording.to_dict(), abs_threshold=abs_threshold,
+        self._kwargs = dict(recording=recording, abs_threshold=abs_threshold,
                             quantile_threshold=quantile_threshold, direction=direction, fill_value=fill_value,
                             num_chunks_per_segment=num_chunks_per_segment, chunk_size=chunk_size,
                             seed=seed)

@@ -39,8 +39,8 @@ class RemoveExcessSpikesSorting(BaseSorting):
             self.register_recording(sorting._recording)
 
         self._kwargs = {
-            'sorting': sorting.to_dict(),
-            'recording': recording.to_dict()
+            'sorting': sorting,
+            'recording': recording
         }
 
 

@@ -591,8 +591,8 @@ same sampling frequency, number of segments, and number of samples:
 
 .. code-block:: python
     
-    recA_4_chans = read_binray('fileA.raw')
-    recB_4_chans = read_binray('fileB.raw')
+    recA_4_chans = read_binary('fileA.raw')
+    recB_4_chans = read_binary('fileB.raw')
     rec_8_chans = aggregate_channels([recA_4_chans, recB_4_chans])
 
 We can also aggregate (or stack) multiple sortings on the unit axis using the 
@@ -639,9 +639,12 @@ We have several functions to manipulate segments of SpikeInterface objects. All 
 
 
 
-The same functions, except for the :code:`concatenate_*` one, are also available for 
-:py:class:`~spikeinterface.core.BaseSorting` objects (:py:func:`~spikeinterface.core.append_sortings`, 
-:py:func:`~spikeinterface.core.split_sorting`, :py:func:`~spikeinterface.core.select_segment_sorting`).
+The same functions are also available for 
+:py:class:`~spikeinterface.core.BaseSorting` objects
+(:py:func:`~spikeinterface.core.append_sortings`,
+:py:func:`~spikeinterface.core.concatenate_sortings`, 
+:py:func:`~spikeinterface.core.split_sorting`,
+:py:func:`~spikeinterface.core.select_segment_sorting`).
 
 
 **Note** :py:func:`~spikeinterface.core.append_recordings` and:py:func:`~spikeinterface.core.concatenate_recordings`

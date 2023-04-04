@@ -99,7 +99,7 @@ class InjectTemplatesRecording(BaseRecording):
             self.add_recording_segment(recording_segment)
 
         self._kwargs = {
-            "sorting": sorting.to_dict(),
+            "sorting": sorting,
             "templates": templates.tolist(),
             "nbefore": nbefore,
             "amplitude_factor": amplitude_factor
@@ -107,7 +107,7 @@ class InjectTemplatesRecording(BaseRecording):
         if parent_recording is None:
             self._kwargs['num_samples'] = num_samples
         else:
-            self._kwargs['parent_recording'] = parent_recording.to_dict()
+            self._kwargs['parent_recording'] = parent_recording
         self._kwargs = check_json(self._kwargs)
 
 

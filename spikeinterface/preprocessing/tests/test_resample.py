@@ -15,7 +15,7 @@ else:
     cache_folder = Path("cache_folder") / "preprocessing"
 
 DEBUG = False
-# DEBUG = True
+# DEBUG = True
 
 if DEBUG:
     import matplotlib.pyplot as plt
@@ -176,7 +176,7 @@ def test_resample_by_chunks():
     resample_rates = [1000, 2000] #[500, 1000, 2500]
     margins_ms = [100, 1000] # [100, 200, 1000]
     chunk_durations = [0.5, 1] #[1, 2, 3]
-    
+
     for resample_rate in resample_rates:
         for margin_ms in margins_ms:
             for chunk_size in [int(resample_rate * chunk_multi) for chunk_multi in chunk_durations]:
@@ -188,8 +188,6 @@ def test_resample_by_chunks():
 
                 traces2 = rec2.get_traces()
                 traces3 = rec3.get_traces()
-                
-                
 
                 # error between full and chunked
                 # for error first and last chunk is removed
@@ -198,7 +196,7 @@ def test_resample_by_chunks():
                 error_max = np.sqrt(np.max((traces2[sl] - traces3[sl])**2))
 
                 # this will never be possible:
-                #      assert np.allclose(traces2, traces3)
+                # assert np.allclose(traces2, traces3)
                 # so we check that the diff between chunk processing and not chunked is small
                 # print()
                 # print(dtype, margin_ms, chunk_size)

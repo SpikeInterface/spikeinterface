@@ -36,6 +36,9 @@ class TimeseriesPlotter(MplPlotter):
                 ax.set_yticks(np.arange(n) * dp.vspacing)
                 channel_labels = np.array([str(chan_id) for chan_id in dp.channel_ids])
                 ax.set_yticklabels(channel_labels)
+            else:
+                ax.get_yaxis().set_visible(False)
+
             ax.set_xlim(*dp.time_range)
             ax.set_ylim(-dp.vspacing, dp.vspacing * n)
             ax.get_xaxis().set_major_locator(MaxNLocator(prune='both'))
@@ -60,5 +63,7 @@ class TimeseriesPlotter(MplPlotter):
                 ax.set_yticks(np.linspace(min_y, max_y, n) + (max_y - min_y) / n * 0.5)
                 channel_labels = np.array([str(chan_id) for chan_id in dp.channel_ids])
                 ax.set_yticklabels(channel_labels)
+            else:
+                ax.get_yaxis().set_visible(False)
 
 TimeseriesPlotter.register(TimeseriesWidget)
