@@ -267,11 +267,12 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
     templates = waveform_extractor.get_all_templates(mode='average')
 
     if enforce_decrease:
-       neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
-       for i, unit_id in enumerate(unit_ids):
-           neighbours_mask[i][channel_sparsity[unit_id]] = True
-       enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
-       best_channels = get_template_extremum_channel(waveform_extractor, outputs='index')
+        neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
+        for i, unit_id in enumerate(unit_ids):
+            chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
+            neighbours_mask[i, chan_inds] = True
+        enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
+        best_channels = get_template_extremum_channel(waveform_extractor, outputs='index')
 
     unit_location = np.zeros((unit_ids.size, 4), dtype='float64')
     for i, unit_id in enumerate(unit_ids):
@@ -282,10 +283,10 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         wf = templates[i, :, :]
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
 
-        if enforce_decrease:
-           enforce_decrease_shells_ptp(
-               wf_ptp, best_channels[unit_id], enforce_decrease_radial_parents, in_place=True
-           )
+        # if enforce_decrease:
+        #    enforce_decrease_shells_ptp(
+        #        wf_ptp, best_channels[unit_id], enforce_decrease_radial_parents, in_place=True
+        #    )
 
         unit_location[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_um, optimizer)
 
