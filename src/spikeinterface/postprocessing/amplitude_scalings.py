@@ -194,9 +194,7 @@ def compute_amplitude_scalings(
         sac = waveform_extractor.load_extension(AmplitudeScalingsCalculator.extension_name)
     else:
         sac = AmplitudeScalingsCalculator(waveform_extractor)
-        sac.set_params(
-            sparsity=sparsity, max_dense_channels=max_dense_channels, ms_before=ms_before, ms_after=ms_after
-        )
+        sac.set_params(sparsity=sparsity, max_dense_channels=max_dense_channels, ms_before=ms_before, ms_after=ms_after)
         sac.run(**job_kwargs)
 
     amps = sac.get_data(outputs=outputs)
