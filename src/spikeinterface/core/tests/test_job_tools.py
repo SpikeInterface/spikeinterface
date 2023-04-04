@@ -10,6 +10,7 @@ from spikeinterface.core.job_tools import (
     ChunkRecordingExecutor,
     fix_job_kwargs,
     split_job_kwargs,
+    divide_recording_into_chunks,
 )
 
 
@@ -47,9 +48,7 @@ def test_ensure_chunk_size():
     # make dumpable
     recording = recording.save()
 
-    chunk_size = ensure_chunk_size(
-        recording, total_memory="512M", chunk_size=None, chunk_memory=None, n_jobs=2
-    )
+    chunk_size = ensure_chunk_size(recording, total_memory="512M", chunk_size=None, chunk_memory=None, n_jobs=2)
     assert chunk_size == 32000000
 
     chunk_size = ensure_chunk_size(recording, chunk_memory="256M")
@@ -98,18 +97,16 @@ def test_ChunkRecordingExecutor():
 
     # no chunk
     processor = ChunkRecordingExecutor(
-        recording,
-        func,
-        init_func,
-        init_args,
-        verbose=True,
-        progress_bar=False,
-        n_jobs=1,
-        chunk_size=None,
+        recording, func, init_func, init_args, verbose=True, progress_bar=False, n_jobs=1, chunk_size=None
     )
     processor.run()
 
-    # chunk + loop
+    # simple gathering function
+    def gathering_result(res):
+        # print(res)
+        pass
+
+    # chunk + loop + gather_func
     processor = ChunkRecordingExecutor(
         recording,
         func,
@@ -117,12 +114,25 @@ def test_ChunkRecordingExecutor():
         init_args,
         verbose=True,
         progress_bar=False,
+        gather_func=gathering_result,
         n_jobs=1,
         chunk_memory="500k",
     )
     processor.run()
 
-    # chunk + parallel
+    # more adavnce trick : gathering using class with callable
+    class GatherClass:
+        def __init__(self):
+            self.pos = 0
+
+        def __call__(self, res):
+            self.pos += 1
+            # print(self.pos, res)
+            pass
+
+    gathering_func2 = GatherClass()
+
+    # chunk + parallel + gather_func
     processor = ChunkRecordingExecutor(
         recording,
         func,
@@ -130,11 +140,15 @@ def test_ChunkRecordingExecutor():
         init_args,
         verbose=True,
         progress_bar=True,
+        gather_func=gathering_func2,
         n_jobs=2,
         chunk_duration="200ms",
         job_name="job_name",
     )
     processor.run()
+    num_chunks = len(divide_recording_into_chunks(recording, processor.chunk_size))
+
+    assert gathering_func2.pos == num_chunks
 
     # chunk + parallel + spawn
     processor = ChunkRecordingExecutor(
@@ -173,9 +187,7 @@ def test_fix_job_kwargs():
 
     # test wrong keys
     with pytest.raises(AssertionError):
-        job_kwargs = dict(
-            n_jobs=0, progress_bar=False, chunk_duration="1s", other_param="other"
-        )
+        job_kwargs = dict(n_jobs=0, progress_bar=False, chunk_duration="1s", other_param="other")
         fixed_job_kwargs = fix_job_kwargs(job_kwargs)
 
 
@@ -183,21 +195,15 @@ def test_split_job_kwargs():
     kwargs = dict(n_jobs=2, progress_bar=False, other_param="other")
     specific_kwargs, job_kwargs = split_job_kwargs(kwargs)
     assert (
-        "other_param" in specific_kwargs
-        and "n_jobs" not in specific_kwargs
-        and "progress_bar" not in specific_kwargs
+        "other_param" in specific_kwargs and "n_jobs" not in specific_kwargs and "progress_bar" not in specific_kwargs
     )
-    assert (
-        "other_param" not in job_kwargs
-        and "n_jobs" in job_kwargs
-        and "progress_bar" in job_kwargs
-    )
+    assert "other_param" not in job_kwargs and "n_jobs" in job_kwargs and "progress_bar" in job_kwargs
 
 
 if __name__ == "__main__":
-    test_divide_segment_into_chunks()
-    test_ensure_n_jobs()
-    test_ensure_chunk_size()
+    # test_divide_segment_into_chunks()
+    # test_ensure_n_jobs()
+    # test_ensure_chunk_size()
     test_ChunkRecordingExecutor()
-    test_fix_job_kwargs()
-    test_split_job_kwargs()
+    # test_fix_job_kwargs()
+    # test_split_job_kwargs()
