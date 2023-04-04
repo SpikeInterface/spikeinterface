@@ -264,12 +264,6 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
     outs = gather_func.finalize_buffers(squeeze_output=squeeze_output)
     return outs
 
-    if gather_mode == 'memory':
-        return gather_func.concatenate(squeeze_output=squeeze_output)
-    elif gather_mode == 'npy':
-        gather_func.finalize()
-        return gather_func.get_memmap(squeeze_output=squeeze_output)
-
 
 class GatherToMemory:
     """
@@ -304,6 +298,7 @@ class GatherToMemory:
         else:
             # list of numpy array
             return np.concatenate(self.outputs)
+
 
 class GatherToNpy:
     """

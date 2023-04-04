@@ -92,7 +92,7 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
     elif gather_mode == 'npy':
         gather_func = GatherToNpy(folder, names)
     else:
-        raise ValueError(f'wrong gather_mode : {gather_mode}')
+        raise ValueError(f"Wrong gather_mode : {gather_mode}. Available gather modes: 'memory' | 'npy'")
         
     func = _detect_peaks_chunk
     init_func = _init_worker_detect_peaks
