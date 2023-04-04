@@ -9,4 +9,4 @@ repos:
     rev: 23.1.0
     hooks:
     -   id: black
-        exclude: ["doc/", "examples/", "spikeinterface/", "installation_tips"]
+        exclude: '(doc|examples|spikeinterface|installation_tips)/.*'
