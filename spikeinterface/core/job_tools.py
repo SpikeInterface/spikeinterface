@@ -258,6 +258,9 @@ class ChunkRecordingExecutor:
         If True, a progress bar is printed to monitor the progress of the process
     handle_returns: bool
         If True, the function can return values
+    gather_func: None or callable
+        Optional function that is called in the main thread and retrieves the results of each worker.
+        This function can be used instead of `handle_returns` to implement custom storage on-the-fly.
     n_jobs: int
         Number of jobs to be used (default 1). Use -1 to use as many jobs as number of cores
     total_memory: str
@@ -277,7 +280,8 @@ class ChunkRecordingExecutor:
         Limit the number of thread per process using threadpoolctl modules.
         This used only when n_jobs>1
         If None, no limits.
-
+    
+        
     Returns
     -------
     res: list
@@ -285,7 +289,7 @@ class ChunkRecordingExecutor:
     """
 
     def __init__(self, recording, func, init_func, init_args, verbose=False, progress_bar=False, handle_returns=False,
-                 n_jobs=1, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None,
+                 gather_func=None, n_jobs=1, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None,
                  mp_context=None, job_name='', max_threads_per_process=1):
         self.recording = recording
         self.func = func
@@ -303,6 +307,7 @@ class ChunkRecordingExecutor:
         self.progress_bar = progress_bar
 
         self.handle_returns = handle_returns
+        self.gather_func = gather_func
 
         self.n_jobs = ensure_n_jobs(recording, n_jobs=n_jobs)
         self.chunk_size = ensure_chunk_size(recording,
@@ -339,6 +344,8 @@ class ChunkRecordingExecutor:
                 res = self.func(segment_index, frame_start, frame_stop, worker_ctx)
                 if self.handle_returns:
                     returns.append(res)
+                if self.gather_func is not None:
+                    self.gather_func(res)
         else:
             n_jobs = min(self.n_jobs, len(all_chunks))
             ######## Do you want to limit the number of threads per process?
@@ -357,12 +364,11 @@ class ChunkRecordingExecutor:
                 if self.progress_bar:
                     results = tqdm(results, desc=self.job_name, total=len(all_chunks))
 
-                if self.handle_returns:
-                    for res in results:
+                for res in results:
+                    if self.handle_returns:
                         returns.append(res)
-                else:
-                    for res in results:
-                        pass
+                    if self.gather_func is not None:
+                        self.gather_func(res)
 
         return returns
 
