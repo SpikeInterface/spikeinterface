@@ -9,7 +9,7 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
     """
     Class to remove duplicated spikes from the spike trains.
     Spikes are considered duplicated if they are less than x
-    ms appart where x is the censored period.
+    ms apart where x is the censored period.
 
     Parameters
     ----------
