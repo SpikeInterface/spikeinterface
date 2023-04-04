@@ -35,6 +35,9 @@ class TimeseriesPlotter(MplPlotter):
                 ax.set_yticks(np.arange(n) * dp.vspacing)
                 channel_labels = np.array([str(chan_id) for chan_id in dp.channel_ids])
                 ax.set_yticklabels(channel_labels)
+            else:
+                ax.get_yaxis().set_visible(False)
+
             ax.set_xlim(*dp.time_range)
             ax.set_ylim(-dp.vspacing, dp.vspacing * n)
             ax.get_xaxis().set_major_locator(MaxNLocator(prune="both"))
@@ -43,19 +46,12 @@ class TimeseriesPlotter(MplPlotter):
                 ax.legend(loc="upper right")
 
         elif dp.mode == "map":
-            assert (
-                len(dp.list_traces) == 1
-            ), 'plot_timeseries with mode="map" do not support multi recording'
+            assert len(dp.list_traces) == 1, 'plot_timeseries with mode="map" do not support multi recording'
             assert len(dp.clims) == 1
             clim = list(dp.clims.values())[0]
             extent = (dp.time_range[0], dp.time_range[1], min_y, max_y)
             im = ax.imshow(
-                dp.list_traces[0].T,
-                interpolation="nearest",
-                origin="lower",
-                aspect="auto",
-                extent=extent,
-                cmap=dp.cmap,
+                dp.list_traces[0].T, interpolation="nearest", origin="lower", aspect="auto", extent=extent, cmap=dp.cmap
             )
 
             im.set_clim(*clim)
@@ -67,6 +63,8 @@ class TimeseriesPlotter(MplPlotter):
                 ax.set_yticks(np.linspace(min_y, max_y, n) + (max_y - min_y) / n * 0.5)
                 channel_labels = np.array([str(chan_id) for chan_id in dp.channel_ids])
                 ax.set_yticklabels(channel_labels)
+            else:
+                ax.get_yaxis().set_visible(False)
 
 
 TimeseriesPlotter.register(TimeseriesWidget)
