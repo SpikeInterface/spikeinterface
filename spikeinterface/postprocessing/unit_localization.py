@@ -386,39 +386,15 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', radius_um=50.,
     
     prototype = prototype[:, np.newaxis]
 
-    x_min, x_max = contact_locations[:,0].min(), contact_locations[:,0].max()
-    y_min, y_max = contact_locations[:,1].min(), contact_locations[:,1].max()
+    template_positions, weights, neighbours_mask = get_grid_convolution_templates_and_weights(
+                contact_locations, local_radius_um, upsampling_um, 
+                sigma_um, margin_um)
 
-    x_min -= margin_um
-    x_max += margin_um
-    y_min -= margin_um
-    y_max += margin_um
-
-    dx = np.abs(x_max - x_min)
-    dy = np.abs(y_max - y_min)
-
-    eps = upsampling_um/10
-
-    all_x, all_y = np.meshgrid(np.arange(x_min, x_max+eps, upsampling_um), np.arange(y_min, y_max+eps, upsampling_um))
-    nb_templates = all_x.size
-
-    template_positions = np.zeros((nb_templates, 2))
-    template_positions[:, 0] = all_x.flatten()
-    template_positions[:, 1] = all_y.flatten()
-
-    import sklearn
-    dist = sklearn.metrics.pairwise_distances(template_positions, contact_locations)
-    neighbours_mask = dist < radius_um
-
-    weights = np.zeros((len(sigma_um), len(contact_locations), nb_templates), dtype=np.float32)
-    for count, sigma in enumerate(sigma_um):
-        weights[count] = (neighbours_mask * np.exp(-dist**2/(2*(sigma**2)))).T
-
+    nb_templates = len(template_positions)
     templates = waveform_extractor.get_all_templates(mode='average')
 
     peak_channels = get_template_extremum_channel(waveform_extractor, peak_sign, outputs='index')
     unit_ids = waveform_extractor.sorting.unit_ids
-    
 
     unit_location = np.zeros((unit_ids.size, 2), dtype='float64')
     for i, unit_id in enumerate(unit_ids):
@@ -549,6 +525,38 @@ def enforce_decrease_shells_ptp(
 
     return decreasing_ptp
 
+def get_grid_convolution_templates_and_weights(contact_locations, local_radius_um=50, upsampling_um=5, 
+    sigma_um=[np.linspace(10, 50., 5)], margin_um=50):
+    
+    x_min, x_max = contact_locations[:,0].min(), contact_locations[:,0].max()
+    y_min, y_max = contact_locations[:,1].min(), contact_locations[:,1].max()
+
+    x_min -= margin_um
+    x_max += margin_um
+    y_min -= margin_um
+    y_max += margin_um
+
+    dx = np.abs(x_max - x_min)
+    dy = np.abs(y_max - y_min)
+
+    eps = upsampling_um/10
+
+    all_x, all_y = np.meshgrid(np.arange(x_min, x_max+eps, upsampling_um), np.arange(y_min, y_max+eps, upsampling_um))
+
+    nb_templates = all_x.size
+
+    template_positions = np.zeros((nb_templates, 2))
+    template_positions[:, 0] = all_x.flatten()
+    template_positions[:, 1] = all_y.flatten()
+
+    import sklearn
+    dist = sklearn.metrics.pairwise_distances(template_positions, contact_locations)
+    neighbours_mask = dist < local_radius_um
+
+    weights = np.zeros((len(sigma_um), len(contact_locations), nb_templates), dtype=np.float32)
+    for count, sigma in enumerate(sigma_um):
+        weights[count] = (neighbours_mask * np.exp(-dist**2/(2*(sigma**2)))).T
+    return template_positions, weights, neighbours_mask
 
 if HAVE_NUMBA:
     enforce_decrease_shells = numba.jit(enforce_decrease_shells_ptp, nopython=True)

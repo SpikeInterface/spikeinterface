@@ -11,7 +11,8 @@ from ..postprocessing.unit_localization import (dtype_localize_by_method,
                                                 possible_localization_methods,
                                                 solve_monopolar_triangulation,
                                                 make_radial_order_parents,
-                                                enforce_decrease_shells_ptp)
+                                                enforce_decrease_shells_ptp,
+                                                get_grid_convolution_templates_and_weights)
 
 from .tools import get_prototype_spike
 
@@ -251,7 +252,7 @@ class LocalizeGridConvolution(PipelineNode):
         self.sigma_um = sigma_um
         self.margin_um = margin_um
         self.upsampling_um = upsampling_um
-        self.contact_locations = recording.get_channel_locations()
+        contact_locations = recording.get_channel_locations()
 
         self.nbefore = self.parents[-1].nbefore
         self.nafter = self.parents[-1].nafter
@@ -264,34 +265,9 @@ class LocalizeGridConvolution(PipelineNode):
             self.prototype = prototype
         self.prototype = self.prototype[:, np.newaxis]
 
-        x_min, x_max = self.contact_locations[:,0].min(), self.contact_locations[:,0].max()
-        y_min, y_max = self.contact_locations[:,1].min(), self.contact_locations[:,1].max()
-
-        x_min -= self.margin_um
-        x_max += self.margin_um
-        y_min -= self.margin_um
-        y_max += self.margin_um
-
-        dx = np.abs(x_max - x_min)
-        dy = np.abs(y_max - y_min)
-
-        eps = upsampling_um/10
-
-        all_x, all_y = np.meshgrid(np.arange(x_min, x_max+eps, upsampling_um), np.arange(y_min, y_max+eps, upsampling_um))
-
-        self.nb_templates = all_x.size
-
-        self.template_positions = np.zeros((self.nb_templates, 2))
-        self.template_positions[:, 0] = all_x.flatten()
-        self.template_positions[:, 1] = all_y.flatten()
-
-        import sklearn
-        dist = sklearn.metrics.pairwise_distances(self.template_positions, self.contact_locations)
-        self.neighbours_mask = dist < self.local_radius_um
-
-        self.weights = np.zeros((len(self.sigma_um), len(self.contact_locations), self.nb_templates), dtype=np.float32)
-        for count, sigma in enumerate(self.sigma_um):
-            self.weights[count] = (self.neighbours_mask * np.exp(-dist**2/(2*(sigma**2)))).T
+        self.template_positions, self.weights, self.neighbours_mask = get_grid_convolution_templates_and_weights(
+                contact_locations, self.local_radius_um, self.upsampling_um, 
+                self.sigma_um, self.margin_um)
 
         self._dtype = np.dtype(dtype_localize_by_method['grid_convolution'])
         self._kwargs.update(dict(local_radius_um=self.local_radius_um,
@@ -317,9 +293,9 @@ class LocalizeGridConvolution(PipelineNode):
 
             intersect = self.neighbours_mask[:, main_chan] == True
             global_products = (waveforms[idx]/(amplitudes[:, np.newaxis, np.newaxis]) * self.prototype).sum(axis=1)
-
+            nb_templates = len(self.template_positions)
             found_positions = np.zeros((len(idx), 2), dtype=np.float32)
-            scalar_products = np.zeros((len(idx), self.nb_templates), dtype=np.float32)
+            scalar_products = np.zeros((len(idx), nb_templates), dtype=np.float32)
 
             for count, weights in enumerate(self.weights):
                 dot_products = np.dot(global_products, weights[:, intersect])
