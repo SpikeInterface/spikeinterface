@@ -591,8 +591,8 @@ same sampling frequency, number of segments, and number of samples:
 
 .. code-block:: python
     
-    recA_4_chans = read_binray('fileA.raw')
-    recB_4_chans = read_binray('fileB.raw')
+    recA_4_chans = read_binary('fileA.raw')
+    recB_4_chans = read_binary('fileB.raw')
     rec_8_chans = aggregate_channels([recA_4_chans, recB_4_chans])
 
 We can also aggregate (or stack) multiple sortings on the unit axis using the 

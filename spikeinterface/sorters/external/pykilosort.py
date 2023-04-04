@@ -177,6 +177,8 @@ class PyKilosortSorter(BaseSorter):
         ks_probe.xc = locations[:, 0]
         ks_probe.yc = locations[:, 1]
         ks_probe.shank = None
+        ks_probe.channel_labels = np.zeros(num_chans, dtype=int)
+
         if recording.get_channel_gains() is not None:
             gains = recording.get_channel_gains()
             if len(np.unique(gains)) == 1:

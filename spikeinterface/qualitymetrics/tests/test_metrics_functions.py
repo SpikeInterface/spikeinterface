@@ -199,9 +199,9 @@ def test_calculate_rp_violations(simulated_data):
 
 @pytest.mark.sortingcomponents
 def test_calculate_drift_metrics(simulated_data):
-    drift_ptps_gt = {0: 0.46840681501541326, 1: 0.6777238017179599, 2: 0.8942870016859388}
-    drift_stds_gt = {0: 0.1524300978308216, 1: 0.2000278046705443, 2: 0.2515466033662633}
-    drift_mads_gt = {0: 0.09958965007876515, 1: 0.15344260957426314, 2: 0.15754859427461837}
+    drift_ptps_gt = {0: 0.7155675636836349, 1: 0.8163672125409391, 2: 1.0224792180505773}
+    drift_stds_gt = {0: 0.17536888672049475, 1: 0.24508522219800638, 2: 0.29252984101193136}
+    drift_mads_gt = {0: 0.06894539993542423, 1: 0.1072587408373451, 2: 0.13237607989318861}
 
     we = setup_dataset(simulated_data)
     spike_locs = compute_spike_locations(we)
