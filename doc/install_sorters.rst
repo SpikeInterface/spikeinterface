@@ -117,7 +117,7 @@ Kilosort2.5
 
       git clone https://github.com/MouseLand/Kilosort
       # provide installation path by setting the KILOSORT2_5_PATH environment variable
-      # or using Kilosort2_5Sorter.set_kilosort2_path()
+      # or using Kilosort2_5Sorter.set_kilosort2_5_path()
 
 * See also for Matlab/CUDA: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
 
