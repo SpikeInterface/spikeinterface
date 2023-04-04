@@ -20,6 +20,7 @@ from .normalize_scale import (
     CenterRecording,
     center,
 )
+from .silence_periods import SilencedPeriodsRecording, silence_periods
 from .whiten import WhitenRecording, whiten, compute_whitening_matrix
 from .rectify import RectifyRecording, rectify
 from .clip import BlankSaturationRecording, blank_staturation, ClipRecording, clip
