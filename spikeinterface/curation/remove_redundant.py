@@ -18,7 +18,7 @@ def remove_redundant_units(sorting_or_waveform_extractor,
     """
     Removes redundant or duplicate units by comparing the sorting output with itself.
     
-    When a redundant pair is found, there are several strategy to choice which one the best:
+    When a redundant pair is found, there are several strategies to chooose which ones are the best:
 
        * 'minimum_shift'
        * 'highest_amplitude'
@@ -63,7 +63,7 @@ def remove_redundant_units(sorting_or_waveform_extractor,
         sorting = sorting_or_waveform_extractor.sorting
         we = sorting_or_waveform_extractor
     else:
-        assert not align, "The 'align' option is only available when a waveform extractor is used as input"
+        assert not align, "The 'align' option is only available when a WaveformExtractor is used as input"
         sorting = sorting_or_waveform_extractor
         we = None
 
@@ -84,7 +84,7 @@ def remove_redundant_units(sorting_or_waveform_extractor,
     remove_unit_ids = []
 
     if remove_strategy in ('minimum_shift', 'highest_amplitude'):
-        # this is the values at spike index !
+        # these are the values at the spike index !
         peak_values = get_template_amplitudes(we, peak_sign=peak_sign, mode="at_index")
         peak_values = {unit_id: np.max(np.abs(values)) for unit_id, values in peak_values.items()}
 
