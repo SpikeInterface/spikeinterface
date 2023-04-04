@@ -25,21 +25,28 @@ def test_silence():
 
     rec0 = silence_periods(rec, list_periods=[[[0, 1000], [5000, 6000]], []], mode="zeros")
     rec0.save(verbose=False)
-    traces0 = rec0.get_traces(segment_index=0, start_frame=0, end_frame=1000)
-    traces1 = rec0.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
-    assert np.all(traces0 == 0) and np.all(traces1 == 0)
+    traces_in0 = rec0.get_traces(segment_index=0, start_frame=0, end_frame=1000)
+    traces_in1 = rec0.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
+    traces_out0 = rec0.get_traces(segment_index=0, start_frame=2000, end_frame=3000)
+    assert np.all(traces_in0 == 0)
+    assert np.all(traces_in1 == 0)
+    assert not np.all(traces_out0 == 0)
 
     rec1 = silence_periods(rec, list_periods=[[[0, 1000], [5000, 6000]], []], mode="noise")
-    rec1.save(verbose=False)
+    rec1 = rec1.save(folder=cache_folder / "rec_w_noise", verbose=False)
     noise_levels = get_noise_levels(rec, return_scaled=False)
-    traces0 = rec1.get_traces(segment_index=0, start_frame=0, end_frame=1000)
-    traces1 = rec1.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
-    assert np.abs((np.std(traces0, axis=0) - noise_levels) < 0.1).sum() and np.abs((np.std(traces1, axis=0) - noise_levels)).sum() < 0.1
+    traces_in0 = rec1.get_traces(segment_index=0, start_frame=0, end_frame=1000)
+    traces_in1 = rec1.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
+    assert np.abs((np.std(traces_in0, axis=0) - noise_levels) < 0.1).sum()
+    assert np.abs((np.std(traces_in1, axis=0) - noise_levels)).sum() < 0.1
 
-    traces0 = rec0.get_traces(segment_index=0, start_frame=900, end_frame=5100)
-    traces = rec.get_traces(segment_index=0, start_frame=900, end_frame=5100)
-    assert np.all(traces[100:-100] == traces0[100:-100]) and np.all(traces0[:100] == 0) and np.all(traces0[-100:] == 0)
-
+    traces_mix = rec0.get_traces(segment_index=0, start_frame=900, end_frame=5100)
+    traces_original = rec.get_traces(segment_index=0, start_frame=900, end_frame=5100)
+    assert np.all(traces_original[100:-100] == traces_mix[100:-100])
+    assert np.all(traces_mix[:100] == 0)
+    assert np.all(traces_mix[-100:] == 0)
+    assert not np.all(traces_mix[:200] == 0)
+    assert not np.all(traces_mix[:-200] == 0)
 
 
 if __name__ == '__main__':

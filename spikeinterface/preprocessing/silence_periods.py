@@ -29,8 +29,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
         - 'noise': The periods are filled with a gaussion noise that has the
                    same variance that the one in the recordings, on a per channel
                    basis
-    **random_chunk_kwargs
-        Random seed for random chunk, by default None
+    **random_chunk_kwargs: Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
 
     Returns
     -------
@@ -52,6 +51,8 @@ class SilencedPeriodsRecording(BasePreprocessor):
                 list_periods = [list_periods]
 
         # some checks
+        assert mode in available_modes, f"mode {mode} is not an available mode: {available_modes}"
+
         assert isinstance(list_periods, list), "'list_periods' must be a list (one per segment)"
         assert len(list_periods) == num_seg, "'list_periods' must have the same length as the number of segments"
         assert all(isinstance(list_periods[i], (list, np.ndarray)) for i in range(num_seg)), \
@@ -60,9 +61,8 @@ class SilencedPeriodsRecording(BasePreprocessor):
         for periods in list_periods:
             if len(periods) > 0:
                 assert np.all(np.diff(np.array(periods), axis=1) > 0), "t_stops should be larger than t_starts"
-                assert all(e < s for (_, e), (s, _) in zip(periods, periods[1:])), "Intervals should not overlap"
-
-        assert mode in available_modes, f"mode {mode} is not an available mode: {available_modes}"
+                assert np.all(periods[i][1] < periods[i + 1][0] for i in np.arange(len(periods) - 1)), \
+                    "Intervals should not overlap"
 
         if mode in ['noise']:
             noise_levels = get_noise_levels(recording, return_scaled=False, concatenated=True, **random_chunk_kwargs)
@@ -73,7 +73,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
         for seg_index, parent_segment in enumerate(recording._recording_segments):
             periods = list_periods[seg_index]
             periods = np.asarray(periods, dtype='int64')
-            periods = np.sort(self.periods, axis=0)
+            periods = np.sort(periods, axis=0)
             rec_segment = SilencedPeriodsRecordingSegment(parent_segment, periods, mode, noise_levels)
             self.add_recording_segment(rec_segment)
         
@@ -84,7 +84,6 @@ class SilencedPeriodsRecording(BasePreprocessor):
 class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
 
     def __init__(self, parent_recording_segment, periods, mode, noise_levels):
-
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.periods = periods
         self.mode = mode
@@ -103,22 +102,23 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
 
         if len(self.periods) > 0:
             new_interval = np.array([start_frame, end_frame])
-            lower_index = np.searchsorted(self.periods[:,1], new_interval[0])
-            upper_index = np.searchsorted(self.periods[:,0], new_interval[1])
+            lower_index = np.searchsorted(self.periods[:, 1], new_interval[0])
+            upper_index = np.searchsorted(self.periods[:, 0], new_interval[1])
 
             if upper_index > lower_index:
 
-                intersection = self.periods[lower_index:upper_index]
+                periods_in_interval = self.periods[lower_index:upper_index]
 
-                for i in intersection:
+                for period in periods_in_interval:
 
-                    onset = max(0, i[0] - start_frame)
-                    offset = min(i[1] - start_frame, end_frame)
+                    onset = max(0, period[0] - start_frame)
+                    offset = min(period[1] - start_frame, end_frame)
 
                     if self.mode == 'zeros':
                         traces[onset:offset, :] = 0
                     elif self.mode == 'noise':
-                        traces[onset:offset, :] = self.noise_levels[channel_indices] * np.random.randn(offset-onset, num_channels)
+                        traces[onset:offset, :] = self.noise_levels[channel_indices] * \
+                            np.random.randn(offset - onset, num_channels)
 
         return traces
 
