@@ -55,10 +55,7 @@ class BaseRecordingSnippets(BaseExtractor):
         return self._dtype
 
     def has_scaled(self):
-        if (
-            self.get_property("gain_to_uV") is None
-            or self.get_property("offset_to_uV") is None
-        ):
+        if self.get_property("gain_to_uV") is None or self.get_property("offset_to_uV") is None:
             return False
         else:
             return True
@@ -150,9 +147,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
         # check
         if np.max(list(inds) + [0]) >= self.get_num_channels():
-            raise ValueError(
-                'The given Probe have "device_channel_indices" that do not match channel count'
-            )
+            raise ValueError('The given Probe have "device_channel_indices" that do not match channel count')
         new_channel_ids = self.get_channel_ids()[inds]
         arr = arr[order]
         arr["device_channel_indices"] = np.arange(arr.size, dtype="int64")
@@ -175,9 +170,7 @@ class BaseRecordingSnippets(BaseExtractor):
         for probe_index, probe in enumerate(probegroup.probes):
             contour = probe.probe_planar_contour
             if contour is not None:
-                sub_recording.set_annotation(
-                    f"probe_{probe_index}_planar_contour", contour, overwrite=True
-                )
+                sub_recording.set_annotation(f"probe_{probe_index}_planar_contour", contour, overwrite=True)
 
         # duplicate positions to "locations" property
         ndim = probegroup.ndim
@@ -197,9 +190,7 @@ class BaseRecordingSnippets(BaseExtractor):
                 probe.shank_ids is not None for probe in probegroup.probes
             ), "shank_ids is None in probe, you cannot group by shank"
             for group, a in enumerate(np.unique(arr[["probe_index", "shank_ids"]])):
-                mask = (arr["probe_index"] == a["probe_index"]) & (
-                    arr["shank_ids"] == a["shank_ids"]
-                )
+                mask = (arr["probe_index"] == a["probe_index"]) & (arr["shank_ids"] == a["shank_ids"])
                 groups[mask] = group
         sub_recording.set_property("group", groups, ids=None)
 
@@ -213,9 +204,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def get_probe(self):
         probes = self.get_probes()
-        assert (
-            len(probes) == 1
-        ), "there are several probe use .get_probes() or get_probegroup()"
+        assert len(probes) == 1, "there are several probe use .get_probes() or get_probegroup()"
         return probes[0]
 
     def get_probes(self):
@@ -227,21 +216,13 @@ class BaseRecordingSnippets(BaseExtractor):
         if arr is None:
             positions = self.get_property("location")
             if positions is None:
-                raise ValueError(
-                    "There is no Probe attached to this recording. Use set_probe(...) to attach one."
-                )
+                raise ValueError("There is no Probe attached to this recording. Use set_probe(...) to attach one.")
             else:
-                warn(
-                    "There is no Probe attached to this recording. Creating a dummy one with contact positions"
-                )
+                warn("There is no Probe attached to this recording. Creating a dummy one with contact positions")
                 ndim = positions.shape[1]
                 probe = Probe(ndim=ndim)
-                probe.set_contacts(
-                    positions=positions, shapes="circle", shape_params={"radius": 5}
-                )
-                probe.set_device_channel_indices(
-                    np.arange(self.get_num_channels(), dtype="int64")
-                )
+                probe.set_contacts(positions=positions, shapes="circle", shape_params={"radius": 5})
+                probe.set_device_channel_indices(np.arange(self.get_num_channels(), dtype="int64"))
                 #  probe.create_auto_shape()
                 probegroup = ProbeGroup()
                 probegroup.add_probe(probe)
@@ -266,9 +247,7 @@ class BaseRecordingSnippets(BaseExtractor):
             probegroup = self.get_probegroup()
             write_probeinterface(folder / "probe.json", probegroup)
 
-    def set_dummy_probe_from_locations(
-        self, locations, shape="circle", shape_params={"radius": 1}, axes="xy"
-    ):
+    def set_dummy_probe_from_locations(self, locations, shape="circle", shape_params={"radius": 1}, axes="xy"):
         """
         Sets a 'dummy' probe based on locations.
 
@@ -299,9 +278,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def set_channel_locations(self, locations, channel_ids=None):
         if self.get_property("contact_vector") is not None:
-            raise ValueError(
-                "set_channel_locations(..) destroy the probe description, prefer set_probes(..)"
-            )
+            raise ValueError("set_channel_locations(..) destroy the probe description, prefer set_probes(..)")
         self.set_property("location", locations, ids=channel_ids)
 
     def get_channel_locations(self, channel_ids=None, axes: str = "xy"):
@@ -316,9 +293,7 @@ class BaseRecordingSnippets(BaseExtractor):
                 all_probes = self.get_probes()
                 # check that multiple probes are non-overlapping
                 check_probe_do_not_overlap(all_probes)
-                all_positions = np.vstack(
-                    [probe.contact_positions for probe in all_probes]
-                )
+                all_positions = np.vstack([probe.contact_positions for probe in all_probes])
                 positions = all_positions[channel_indices]
             return select_axes(positions, axes)
         else:
@@ -341,9 +316,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
     def set_channel_groups(self, groups, channel_ids=None):
         if "probes" in self._annotations:
-            warn(
-                "set_channel_groups() destroys the probe description. Using set_probe() is preferable"
-            )
+            warn("set_channel_groups() destroys the probe description. Using set_probe() is preferable")
             self._annotations.pop("probes")
         self.set_property("group", groups, ids=channel_ids)
 
@@ -394,9 +367,7 @@ class BaseRecordingSnippets(BaseExtractor):
         BaseRecording
             The recording with 2D positions
         """
-        assert (
-            self.has_3d_locations
-        ), "The 'planarize' function needs a recording with 3d locations"
+        assert self.has_3d_locations, "The 'planarize' function needs a recording with 3d locations"
         assert len(axes) == 2, "You need to specify 2 dimensions (e.g. 'xy', 'zy')"
 
         probe2d = self.get_probe().to_2d(axes=axes)

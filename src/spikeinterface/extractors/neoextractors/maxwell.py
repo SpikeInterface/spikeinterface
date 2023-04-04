@@ -84,9 +84,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         auto_install_maxwell_hdf5_compression_plugin(force_download=False)
 
 
-_maxwell_event_dtype = np.dtype(
-    [("frame", "int64"), ("state", "int8"), ("time", "float64")]
-)
+_maxwell_event_dtype = np.dtype([("frame", "int64"), ("state", "int8"), ("time", "float64")])
 
 
 class MaxwellEventExtractor(BaseEvent):
@@ -130,9 +128,7 @@ class MaxwellEventSegment(BaseEventSegment):
         ttl_frames = self.bits["frameno"] - first_frame
         ttl_states = self.bits["bits"]
         if channel_id is not None:
-            bits_channel_idx = np.where((ttl_states == channel_id) | (ttl_states == 0))[
-                0
-            ]
+            bits_channel_idx = np.where((ttl_states == channel_id) | (ttl_states == 0))[0]
             ttl_frames = ttl_frames[bits_channel_idx]
             ttl_states = ttl_states[bits_channel_idx]
         ttl_states[ttl_states == 0] = -1
@@ -148,9 +144,5 @@ class MaxwellEventSegment(BaseEventSegment):
         return event
 
 
-read_maxwell = define_function_from_class(
-    source_class=MaxwellRecordingExtractor, name="read_maxwell"
-)
-read_maxwell_event = define_function_from_class(
-    source_class=MaxwellEventExtractor, name="read_maxwell_event"
-)
+read_maxwell = define_function_from_class(source_class=MaxwellRecordingExtractor, name="read_maxwell")
+read_maxwell_event = define_function_from_class(source_class=MaxwellEventExtractor, name="read_maxwell_event")

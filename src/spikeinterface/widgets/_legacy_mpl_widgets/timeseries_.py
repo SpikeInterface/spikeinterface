@@ -88,9 +88,7 @@ class TimeseriesWidget(BaseWidget):
             locations = self.recording.get_channel_locations()
             channel_inds = self.recording.ids_to_indices(self.visible_channel_ids)
             locations = locations[channel_inds, :]
-            origin = np.array([np.max(locations[:, 0]), np.min(locations[:, 1])])[
-                None, :
-            ]
+            origin = np.array([np.max(locations[:, 0]), np.min(locations[:, 1])])[None, :]
             dist = scipy.spatial.distance.cdist(locations, origin, metric="euclidean")
             dist = dist[:, 0]
             self.order = np.argsort(dist)
@@ -181,10 +179,7 @@ class TimeseriesWidget(BaseWidget):
             self._plots = {}
             self._plot_offsets = {}
             offset0 = self._vspacing * (n - 1)
-            times = (
-                np.arange(self._frame_range[0], self._frame_range[1])
-                / self._sampling_frequency
-            )
+            times = np.arange(self._frame_range[0], self._frame_range[1]) / self._sampling_frequency
             for im, m in enumerate(self.visible_channel_ids):
                 self._plot_offsets[m] = offset0
                 if self._color_groups:
@@ -203,9 +198,7 @@ class TimeseriesWidget(BaseWidget):
 
             if self.show_channel_ids:
                 ax.set_yticks(np.arange(n) * self._vspacing)
-                ax.set_yticklabels(
-                    [str(chan_id) for chan_id in self.visible_channel_ids[::-1]]
-                )
+                ax.set_yticklabels([str(chan_id) for chan_id in self.visible_channel_ids[::-1]])
 
         elif self.mode == "map":
             extent = (
@@ -233,9 +226,7 @@ class TimeseriesWidget(BaseWidget):
 
             if self.show_channel_ids:
                 ax.set_yticks(np.arange(n) + 0.5)
-                ax.set_yticklabels(
-                    [str(chan_id) for chan_id in self.visible_channel_ids[::-1]]
-                )
+                ax.set_yticklabels([str(chan_id) for chan_id in self.visible_channel_ids[::-1]])
 
     def _initialize_stats(self):
         chunk0 = self.recording.get_traces(

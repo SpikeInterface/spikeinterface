@@ -113,9 +113,7 @@ class UnitProbeMapWidget(BaseWidget):
                     poly_contact.set_array(contacts_values)
                 return all_poly_contact
 
-            self.animation = FuncAnimation(
-                self.figure, animate_func, frames=num_frames, interval=20, blit=True
-            )
+            self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames, interval=20, blit=True)
 
 
 def plot_unit_probe_map(*args, **kwargs):

@@ -49,6 +49,4 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_spikegadgets = define_function_from_class(
-    source_class=SpikeGadgetsRecordingExtractor, name="read_spikegadgets"
-)
+read_spikegadgets = define_function_from_class(source_class=SpikeGadgetsRecordingExtractor, name="read_spikegadgets")

@@ -18,9 +18,7 @@ def check_recordings_equal(RX1, RX2, return_scaled=True, force_dtype=None):
         # get_num_channels
         assert np.allclose(RX1.get_num_channels(), RX2.get_num_channels())
         # get_num_frames
-        assert np.allclose(
-            RX1.get_num_frames(segment_idx), RX2.get_num_frames(segment_idx)
-        )
+        assert np.allclose(RX1.get_num_frames(segment_idx), RX2.get_num_frames(segment_idx))
         # get_sampling_frequency
         assert np.allclose(RX1.get_sampling_frequency(), RX2.get_sampling_frequency())
         # get_traces
@@ -31,12 +29,8 @@ def check_recordings_equal(RX1, RX2, return_scaled=True, force_dtype=None):
             )
         else:
             assert np.allclose(
-                RX1.get_traces(
-                    segment_index=segment_idx, return_scaled=return_scaled
-                ).astype(force_dtype),
-                RX2.get_traces(
-                    segment_index=segment_idx, return_scaled=return_scaled
-                ).astype(force_dtype),
+                RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),
+                RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),
             )
         sf = 0
         ef = N

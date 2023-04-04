@@ -26,15 +26,11 @@ if ON_GITHUB:
 def check_gh_settings():
     if ON_GITHUB:
         si_dev_path = os.getenv("SPIKEINTERFACE_DEV_PATH")
-        assert (
-            si_dev_path is not None
-        ), "Tests on GITHUB CI must run with the SPIKEINTERFACE_DEV_PATH"
+        assert si_dev_path is not None, "Tests on GITHUB CI must run with the SPIKEINTERFACE_DEV_PATH"
 
 
 def generate_run_kwargs():
-    test_recording, _ = se.toy_example(
-        duration=30, seed=0, num_channels=64, num_segments=1
-    )
+    test_recording, _ = se.toy_example(duration=30, seed=0, num_channels=64, num_segments=1)
     test_recording = test_recording.save(name="toy")
     test_recording.set_channel_gains(1)
     test_recording.set_channel_offsets(1)
@@ -55,49 +51,37 @@ def run_kwargs():
 
 
 def test_spykingcircus(run_kwargs):
-    sorting = ss.run_sorter(
-        "spykingcircus", output_folder=cache_folder / "spykingcircus", **run_kwargs
-    )
+    sorting = ss.run_sorter("spykingcircus", output_folder=cache_folder / "spykingcircus", **run_kwargs)
     print("resulting sorting")
     print(sorting)
 
 
 def test_mountainsort4(run_kwargs):
-    sorting = ss.run_sorter(
-        "mountainsort4", output_folder=cache_folder / "mountainsort4", **run_kwargs
-    )
+    sorting = ss.run_sorter("mountainsort4", output_folder=cache_folder / "mountainsort4", **run_kwargs)
     print("resulting sorting")
     print(sorting)
 
 
 def test_tridesclous(run_kwargs):
-    sorting = ss.run_sorter(
-        "tridesclous", output_folder=cache_folder / "tridesclous", **run_kwargs
-    )
+    sorting = ss.run_sorter("tridesclous", output_folder=cache_folder / "tridesclous", **run_kwargs)
     print("resulting sorting")
     print(sorting)
 
 
 def test_ironclust(run_kwargs):
-    sorting = ss.run_sorter(
-        "ironclust", output_folder=cache_folder / "ironclust", fGpu=False, **run_kwargs
-    )
+    sorting = ss.run_sorter("ironclust", output_folder=cache_folder / "ironclust", fGpu=False, **run_kwargs)
     print("resulting sorting")
     print(sorting)
 
 
 def test_waveclus(run_kwargs):
-    sorting = ss.run_sorter(
-        sorter_name="waveclus", output_folder=cache_folder / "waveclus", **run_kwargs
-    )
+    sorting = ss.run_sorter(sorter_name="waveclus", output_folder=cache_folder / "waveclus", **run_kwargs)
     print("resulting sorting")
     print(sorting)
 
 
 def test_hdsort(run_kwargs):
-    sorting = ss.run_sorter(
-        sorter_name="hdsort", output_folder=cache_folder / "hdsort", **run_kwargs
-    )
+    sorting = ss.run_sorter(sorter_name="hdsort", output_folder=cache_folder / "hdsort", **run_kwargs)
     print("resulting sorting")
     print(sorting)
 
@@ -118,17 +102,13 @@ def test_combinato(run_kwargs):
     channels = rec.get_channel_ids()[0:1]
     rec_one_channel = rec.channel_slice(channels)
     run_kwargs["recording"] = rec_one_channel
-    sorting = ss.run_sorter(
-        sorter_name="combinato", output_folder=cache_folder / "combinato", **run_kwargs
-    )
+    sorting = ss.run_sorter(sorter_name="combinato", output_folder=cache_folder / "combinato", **run_kwargs)
     print(sorting)
 
 
 @pytest.mark.skip("Klusta is not supported anymore for Python>=3.8")
 def test_klusta(run_kwargs):
-    sorting = ss.run_sorter(
-        "klusta", output_folder=cache_folder / "klusta", **run_kwargs
-    )
+    sorting = ss.run_sorter("klusta", output_folder=cache_folder / "klusta", **run_kwargs)
     print(sorting)
 
 

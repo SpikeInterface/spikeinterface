@@ -26,9 +26,7 @@ class Spike2RecordingExtractor(NeoBaseRecordingExtractor):
     NeoRawIOClass = "Spike2RawIO"
     name = "spike2"
 
-    def __init__(
-        self, file_path, stream_id=None, stream_name=None, all_annotations=False
-    ):
+    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(
             self,
@@ -46,6 +44,4 @@ class Spike2RecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_spike2 = define_function_from_class(
-    source_class=Spike2RecordingExtractor, name="read_spike2"
-)
+read_spike2 = define_function_from_class(source_class=Spike2RecordingExtractor, name="read_spike2")

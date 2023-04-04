@@ -35,8 +35,7 @@ class BaseWidget:
         if backend is None:
             backend = get_default_plotter_backend()
         assert backend in self.possible_backends, (
-            f"{backend} backend not available! Available backends are: "
-            f"{list(self.possible_backends.keys())}"
+            f"{backend} backend not available! Available backends are: " f"{list(self.possible_backends.keys())}"
         )
         return backend
 

@@ -41,9 +41,7 @@ class BenchmarkClustering:
     ):
         self.method = method
 
-        assert method in clustering_methods, (
-            "Clustering method should be in %s" % clustering_methods.keys()
-        )
+        assert method in clustering_methods, "Clustering method should be in %s" % clustering_methods.keys()
 
         self.verbose = verbose
         self.recording = recording
@@ -123,9 +121,7 @@ class BenchmarkClustering:
         if self.verbose:
             method = method_kwargs["method"]
             print(f"Selecting peaks with method {method}")
-        self._selected_peaks = select_peaks(
-            self.peaks, **method_kwargs, **self.job_kwargs
-        )
+        self._selected_peaks = select_peaks(self.peaks, **method_kwargs, **self.job_kwargs)
         if self.verbose:
             ratio = len(self._selected_peaks) / len(self.peaks)
             print(f"The ratio of peaks kept for clustering is {ratio}%")
@@ -136,9 +132,7 @@ class BenchmarkClustering:
         if self.verbose:
             method = method_kwargs["method"]
             print(f"Localizing peaks with method {method}")
-        self._positions = localize_peaks(
-            self.recording_f, self.selected_peaks, **method_kwargs, **self.job_kwargs
-        )
+        self._positions = localize_peaks(self.recording_f, self.selected_peaks, **method_kwargs, **self.job_kwargs)
 
     def localize_gt_peaks(self, method_kwargs={"method": "center_of_mass"}):
         from spikeinterface.sortingcomponents.peak_localization import localize_peaks
@@ -146,9 +140,7 @@ class BenchmarkClustering:
         if self.verbose:
             method = method_kwargs["method"]
             print(f"Localizing gt peaks with method {method}")
-        self._gt_positions = localize_peaks(
-            self.recording_f, self.gt_peaks, **method_kwargs, **self.job_kwargs
-        )
+        self._gt_positions = localize_peaks(self.recording_f, self.gt_peaks, **method_kwargs, **self.job_kwargs)
 
     def run(self, peaks=None, positions=None, method=None, method_kwargs={}, delta=0.2):
         t_start = time.time()
@@ -160,9 +152,7 @@ class BenchmarkClustering:
 
         nb_peaks = len(self.selected_peaks)
         if self.verbose:
-            print(
-                f"Launching the {self.method} clustering algorithm with {nb_peaks} peaks"
-            )
+            print(f"Launching the {self.method} clustering algorithm with {nb_peaks} peaks")
 
         if positions is not None:
             self._positions = positions
@@ -192,9 +182,7 @@ class BenchmarkClustering:
 
         times1 = self.gt_sorting.get_all_spike_trains()[0]
         times2 = self.clustering.get_all_spike_trains()[0]
-        matches = make_matching_events(
-            times1[0], times2[0], int(delta * self.sampling_rate / 1000)
-        )
+        matches = make_matching_events(times1[0], times2[0], int(delta * self.sampling_rate / 1000))
 
         self.matches = matches
         idx = matches["index1"]
@@ -205,9 +193,7 @@ class BenchmarkClustering:
             unit_ids=self.gt_sorting.unit_ids,
         )
 
-        self.comp = GroundTruthComparison(
-            self.sliced_gt_sorting, self.clustering, exhaustive_gt=self.exhaustive_gt
-        )
+        self.comp = GroundTruthComparison(self.sliced_gt_sorting, self.clustering, exhaustive_gt=self.exhaustive_gt)
 
         for label, sorting in zip(
             ["gt", "clustering", "full_gt"],
@@ -239,9 +225,7 @@ class BenchmarkClustering:
                 #                     n_components=5, mode='by_channel_local',
                 #                     whiten=True, dtype='float32')
 
-                self.templates[label] = self.waveforms[label].get_all_templates(
-                    mode="median"
-                )
+                self.templates[label] = self.waveforms[label].get_all_templates(mode="median")
 
         if self.gt_peaks is None:
             if self.verbose:
@@ -257,13 +241,9 @@ class BenchmarkClustering:
             )
             self.gt_peaks["sample_ind"] = gt_peaks_["sample_ind"]
             self.gt_peaks["segment_ind"] = gt_peaks_["segment_ind"]
-            max_channels = get_template_extremum_channel(
-                self.waveforms["full_gt"], peak_sign="neg", outputs="index"
-            )
+            max_channels = get_template_extremum_channel(self.waveforms["full_gt"], peak_sign="neg", outputs="index")
 
-            for unit_ind, unit_id in enumerate(
-                self.waveforms["full_gt"].sorting.unit_ids
-            ):
+            for unit_ind, unit_id in enumerate(self.waveforms["full_gt"].sorting.unit_ids):
                 mask = gt_peaks_["unit_ind"] == unit_ind
                 max_channel = max_channels[unit_id]
                 self.gt_peaks["channel_ind"][mask] = max_channel
@@ -450,9 +430,7 @@ class BenchmarkClustering:
         fig, axs = plt.subplots(ncols=3, nrows=2, figsize=(15, 10))
 
         fig.suptitle(f"Clustering results with {self.method}")
-        metrics = compute_quality_metrics(
-            self.waveforms["gt"], metric_names=["snr"], load_if_exists=False
-        )
+        metrics = compute_quality_metrics(self.waveforms["gt"], metric_names=["snr"], load_if_exists=False)
 
         ax = axs[0, 0]
         plot_agreement_matrix(self.comp, ax=ax)
@@ -489,9 +467,7 @@ class BenchmarkClustering:
         inds_2 = self.comp.sorting2.ids_to_indices(unit_ids2)
 
         a = self.templates["gt"].reshape(len(self.templates["gt"]), -1)[inds_1]
-        b = self.templates["clustering"].reshape(len(self.templates["clustering"]), -1)[
-            inds_2
-        ]
+        b = self.templates["clustering"].reshape(len(self.templates["clustering"]), -1)[inds_2]
 
         import sklearn
 
@@ -502,10 +478,7 @@ class BenchmarkClustering:
 
         ax = axs[0, 1]
         nb_peaks = np.array(
-            [
-                len(self.sliced_gt_sorting.get_unit_spike_train(i))
-                for i in self.sliced_gt_sorting.unit_ids
-            ]
+            [len(self.sliced_gt_sorting.get_unit_spike_train(i)) for i in self.sliced_gt_sorting.unit_ids]
         )
 
         nb_potentials = np.sum(scores.max(1).values > 0.1)
@@ -589,19 +562,9 @@ class BenchmarkClustering:
             template_real = template_real.reshape(template_real.size, 1).T
 
             if metric == "cosine":
-                dist = (
-                    sklearn.metrics.pairwise.cosine_similarity(
-                        template, template_real, metric
-                    )
-                    .flatten()
-                    .tolist()
-                )
+                dist = sklearn.metrics.pairwise.cosine_similarity(template, template_real, metric).flatten().tolist()
             else:
-                dist = (
-                    sklearn.metrics.pairwise_distances(template, template_real, metric)
-                    .flatten()
-                    .tolist()
-                )
+                dist = sklearn.metrics.pairwise_distances(template, template_real, metric).flatten().tolist()
             res += dist
             nb_spikes += [self.sliced_gt_sorting.get_unit_spike_train(real).size]
             energy += [np.linalg.norm(template_real)]

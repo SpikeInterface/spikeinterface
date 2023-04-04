@@ -27,9 +27,7 @@ def test_FrameSliceSorting():
     sorting_norec = NumpySorting.from_dict([spike_times], sf)
     # Sorting with attached rec and exceeding spikes
     sorting_exceeding = NumpySorting.from_dict([spike_times], sf)
-    rec_exceeding = NumpyRecording(
-        [np.zeros((max_spike_time - 1, 5))], sampling_frequency=sf
-    )
+    rec_exceeding = NumpyRecording([np.zeros((max_spike_time - 1, 5))], sampling_frequency=sf)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         sorting_exceeding.register_recording(rec_exceeding)

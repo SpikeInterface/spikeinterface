@@ -39,9 +39,7 @@ def test_make_match_count_matrix():
         [0, 0, 5],
     )
 
-    match_event_count = make_match_count_matrix(
-        sorting1, sorting2, delta_frames, n_jobs=1
-    )
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1)
     # ~ print(match_event_count)
 
     assert match_event_count.shape[0] == len(sorting1.get_unit_ids())
@@ -71,9 +69,7 @@ def test_make_agreement_scores():
     assert_array_equal(agreement_scores.values, ok)
 
     # test if symetric
-    agreement_scores2 = make_agreement_scores(
-        sorting2, sorting1, delta_frames, n_jobs=1
-    )
+    agreement_scores2 = make_agreement_scores(sorting2, sorting1, delta_frames, n_jobs=1)
     assert_array_equal(agreement_scores, agreement_scores2.T)
 
 
@@ -95,9 +91,7 @@ def test_make_possible_match():
 
     agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1)
 
-    possible_match_12, possible_match_21 = make_possible_match(
-        agreement_scores, min_accuracy
-    )
+    possible_match_12, possible_match_21 = make_possible_match(agreement_scores, min_accuracy)
 
     # print(possible_match_12)
     # print(possible_match_21)
@@ -155,9 +149,7 @@ def test_make_hungarian_match():
 
     agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1)
 
-    hungarian_match_12, hungarian_match_21 = make_hungarian_match(
-        agreement_scores, min_accuracy
-    )
+    hungarian_match_12, hungarian_match_21 = make_hungarian_match(agreement_scores, min_accuracy)
 
     # print(hungarian_match_12)
     # print(hungarian_match_21)
@@ -183,9 +175,7 @@ def test_do_score_labels():
         [0, 0, 5],
     )
     unit_map12 = {0: 0, 1: 5}
-    labels_st1, labels_st2 = do_score_labels(
-        sorting1, sorting2, delta_frames, unit_map12
-    )
+    labels_st1, labels_st2 = do_score_labels(sorting1, sorting2, delta_frames, unit_map12)
     assert_array_equal(labels_st1[0][0], ["TP", "TP", "FN"])
     assert_array_equal(
         labels_st1[1][0],
@@ -209,9 +199,7 @@ def test_do_score_labels():
         [0, 1, 0, 1, 0],
     )
     unit_map12 = {0: 0, 1: 1}
-    labels_st1, labels_st2 = do_score_labels(
-        sorting1, sorting2, delta_frames, unit_map12
-    )
+    labels_st1, labels_st2 = do_score_labels(sorting1, sorting2, delta_frames, unit_map12)
     assert_array_equal(labels_st1[0][0], ["TP", "TP", "TP"])
     assert_array_equal(
         labels_st1[1][0],
@@ -267,17 +255,11 @@ def test_do_confusion_matrix():
 
     event_counts1 = do_count_event(sorting1)
     event_counts2 = do_count_event(sorting2)
-    match_event_count = make_match_count_matrix(
-        sorting1, sorting2, delta_frames, n_jobs=1
-    )
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1)
     agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1)
-    hungarian_match_12, hungarian_match_21 = make_hungarian_match(
-        agreement_scores, min_accuracy
-    )
+    hungarian_match_12, hungarian_match_21 = make_hungarian_match(agreement_scores, min_accuracy)
 
-    confusion = do_confusion_matrix(
-        event_counts1, event_counts2, hungarian_match_12, match_event_count
-    )
+    confusion = do_confusion_matrix(event_counts1, event_counts2, hungarian_match_12, match_event_count)
 
     cm = np.array([[2, 0, 1], [0, 1, 0], [0, 0, 0]], dtype="int64")
     assert_array_equal(confusion, cm)
@@ -292,17 +274,11 @@ def test_do_confusion_matrix():
 
     event_counts1 = do_count_event(sorting1)
     event_counts2 = do_count_event(sorting2)
-    match_event_count = make_match_count_matrix(
-        sorting1, sorting2, delta_frames, n_jobs=1
-    )
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1)
     agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1)
-    hungarian_match_12, hungarian_match_21 = make_hungarian_match(
-        agreement_scores, min_accuracy
-    )
+    hungarian_match_12, hungarian_match_21 = make_hungarian_match(agreement_scores, min_accuracy)
 
-    confusion = do_confusion_matrix(
-        event_counts1, event_counts2, hungarian_match_12, match_event_count
-    )
+    confusion = do_confusion_matrix(event_counts1, event_counts2, hungarian_match_12, match_event_count)
 
     cm = np.array([[3, 0, 0], [0, 2, 0], [0, 0, 0]], dtype="int64")
     assert_array_equal(confusion, cm)
@@ -326,17 +302,11 @@ def test_do_count_score_and_perf():
 
     event_counts1 = do_count_event(sorting1)
     event_counts2 = do_count_event(sorting2)
-    match_event_count = make_match_count_matrix(
-        sorting1, sorting2, delta_frames, n_jobs=1
-    )
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1)
     agreement_scores = make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1)
-    hungarian_match_12, hungarian_match_21 = make_hungarian_match(
-        agreement_scores, min_accuracy
-    )
+    hungarian_match_12, hungarian_match_21 = make_hungarian_match(agreement_scores, min_accuracy)
 
-    count_score = do_count_score(
-        event_counts1, event_counts2, hungarian_match_12, match_event_count
-    )
+    count_score = do_count_score(event_counts1, event_counts2, hungarian_match_12, match_event_count)
 
     #  print(count_score)
 

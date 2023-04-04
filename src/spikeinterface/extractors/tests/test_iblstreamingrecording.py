@@ -17,26 +17,22 @@ class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.session = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
-        cls.recording = IblStreamingRecordingExtractor(
-            session=cls.session, stream_name="probe00.ap"
-        )
-        cls.small_scaled_trace = cls.recording.get_traces(
-            start_frame=5, end_frame=26, return_scaled=True
-        )
+        cls.recording = IblStreamingRecordingExtractor(session=cls.session, stream_name="probe00.ap")
+        cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
         cls.small_unscaled_trace = cls.recording.get_traces(
             start_frame=5, end_frame=26
         )  # return_scaled=False is SI default
 
     def test_get_stream_names(self):
-        stream_names = IblStreamingRecordingExtractor.get_stream_names(
-            session=self.session
-        )
+        stream_names = IblStreamingRecordingExtractor.get_stream_names(session=self.session)
 
         expected_stream_names = ["probe01.ap", "probe01.lf", "probe00.ap", "probe00.lf"]
         self.assertCountEqual(first=stream_names, second=expected_stream_names)
 
     def test_representation(self):
-        expected_recording_representation = "IblStreamingRecordingExtractor: 384 channels - 1 segments - 30.0kHz - 5812.311s - int16 type - 124.72 GiB"
+        expected_recording_representation = (
+            "IblStreamingRecordingExtractor: 384 channels - 1 segments - 30.0kHz - 5812.311s - int16 type - 124.72 GiB"
+        )
         assert repr(self.recording) == expected_recording_representation
 
     def test_dtype(self):
@@ -45,9 +41,7 @@ class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
 
     def test_channel_ids(self):
         expected_channel_ids = [f"AP{index}" for index in range(384)]
-        self.assertListEqual(
-            list1=list(self.recording.get_channel_ids()), list2=expected_channel_ids
-        )
+        self.assertListEqual(list1=list(self.recording.get_channel_ids()), list2=expected_channel_ids)
 
     def test_gains(self):
         expected_gains = 2.34375 * np.ones(shape=384)
@@ -77,15 +71,11 @@ class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
             "adc",
             "index_on_probe",
         ]
-        self.assertCountEqual(
-            first=self.recording.get_property_keys(), second=expected_property_keys
-        )
+        self.assertCountEqual(first=self.recording.get_property_keys(), second=expected_property_keys)
 
     def test_trace_shape(self):
         expected_shape = (21, 384)
-        self.assertTupleEqual(
-            tuple1=self.small_scaled_trace.shape, tuple2=expected_shape
-        )
+        self.assertTupleEqual(tuple1=self.small_scaled_trace.shape, tuple2=expected_shape)
 
     def test_scaled_trace_dtype(self):
         expected_dtype = np.dtype("float32")
@@ -103,15 +93,15 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
         cls.recording = IblStreamingRecordingExtractor(
             session=cls.session, stream_name="probe00.ap", load_sync_channel=True
         )
-        cls.small_scaled_trace = cls.recording.get_traces(
-            start_frame=5, end_frame=26, return_scaled=True
-        )
+        cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
         cls.small_unscaled_trace = cls.recording.get_traces(
             start_frame=5, end_frame=26
         )  # return_scaled=False is SI default
 
     def test_representation(self):
-        expected_recording_representation = "IblStreamingRecordingExtractor: 385 channels - 1 segments - 30.0kHz - 5812.311s - int16 type - 125.04 GiB"
+        expected_recording_representation = (
+            "IblStreamingRecordingExtractor: 385 channels - 1 segments - 30.0kHz - 5812.311s - int16 type - 125.04 GiB"
+        )
         assert repr(self.recording) == expected_recording_representation
 
     def test_dtype(self):
@@ -120,9 +110,7 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
 
     def test_channel_ids(self):
         expected_channel_ids = [f"AP{index}" for index in range(384)] + ["SY0"]
-        self.assertListEqual(
-            list1=list(self.recording.get_channel_ids()), list2=expected_channel_ids
-        )
+        self.assertListEqual(list1=list(self.recording.get_channel_ids()), list2=expected_channel_ids)
 
     def test_gains(self):
         expected_gains = np.concatenate([2.34375 * np.ones(shape=384), [1171.875]])
@@ -153,15 +141,11 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
             "adc",
             "index_on_probe",
         ]
-        self.assertCountEqual(
-            first=self.recording.get_property_keys(), second=expected_property_keys
-        )
+        self.assertCountEqual(first=self.recording.get_property_keys(), second=expected_property_keys)
 
     def test_trace_shape(self):
         expected_shape = (21, 385)
-        self.assertTupleEqual(
-            tuple1=self.small_scaled_trace.shape, tuple2=expected_shape
-        )
+        self.assertTupleEqual(tuple1=self.small_scaled_trace.shape, tuple2=expected_shape)
 
     def test_scaled_trace_dtype(self):
         expected_dtype = np.dtype("float32")

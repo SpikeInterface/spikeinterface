@@ -22,7 +22,9 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     extractor_name = "BasePhyKilosortSorting"
     installed = False  # check at class level if installed or not
     mode = "folder"
-    installation_mesg = "To use the PhySortingExtractor install pandas: \n\n pip install pandas\n\n"  # error message when not installed
+    installation_mesg = (
+        "To use the PhySortingExtractor install pandas: \n\n pip install pandas\n\n"  # error message when not installed
+    )
     name = "phykilosort"
 
     def __init__(
@@ -60,9 +62,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         # try to load cluster info
         cluster_info_files = [
-            p
-            for p in phy_folder.iterdir()
-            if p.suffix in [".csv", ".tsv"] and "cluster_info" in p.name
+            p for p in phy_folder.iterdir() if p.suffix in [".csv", ".tsv"] and "cluster_info" in p.name
         ]
 
         if len(cluster_info_files) == 1:
@@ -75,9 +75,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             cluster_info = pd.read_csv(cluster_info_file, delimiter=delimiter)
         else:
             # load properties from other tsv/csv files
-            all_property_files = [
-                p for p in phy_folder.iterdir() if p.suffix in [".csv", ".tsv"]
-            ]
+            all_property_files = [p for p in phy_folder.iterdir() if p.suffix in [".csv", ".tsv"]]
 
             cluster_info = None
             for file in all_property_files:
@@ -103,9 +101,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         if exclude_cluster_groups is not None:
             if isinstance(exclude_cluster_groups, str):
-                cluster_info = cluster_info.query(
-                    f"group != '{exclude_cluster_groups}'"
-                )
+                cluster_info = cluster_info.query(f"group != '{exclude_cluster_groups}'")
             elif isinstance(exclude_cluster_groups, list):
                 if len(exclude_cluster_groups) > 0:
                     for exclude_group in exclude_cluster_groups:
@@ -115,18 +111,12 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             cluster_info = cluster_info.query("KSLabel == 'good'")
 
         if "cluster_id" not in cluster_info.columns:
-            assert (
-                "id" in cluster_info.columns
-            ), "Couldn't find cluster ids in the tsv files!"
+            assert "id" in cluster_info.columns, "Couldn't find cluster ids in the tsv files!"
             cluster_info.loc[:, "cluster_id"] = cluster_info["id"].values
             del cluster_info["id"]
 
         # update spike clusters and times values
-        bad_clusters = [
-            clust
-            for clust in clust_id
-            if clust not in cluster_info["cluster_id"].values
-        ]
+        bad_clusters = [clust for clust in clust_id if clust not in cluster_info["cluster_id"].values]
         spike_clusters_clean_idxs = ~np.isin(spike_clusters, bad_clusters)
         spike_clusters_clean = spike_clusters[spike_clusters_clean_idxs]
         spike_times_clean = spike_times[spike_clusters_clean_idxs]
@@ -140,9 +130,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 max_si_unit_id = int(np.nanmax(unit_ids))
 
             for i, (phy_id, si_id) in enumerate(
-                zip(
-                    cluster_info["cluster_id"].values, cluster_info["si_unit_id"].values
-                )
+                zip(cluster_info["cluster_id"].values, cluster_info["si_unit_id"].values)
             ):
                 if np.isnan(si_id):
                     max_si_unit_id += 1
@@ -179,9 +167,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 if load_all_cluster_properties:
                     self.set_property(key=prop_name, values=cluster_info[prop_name])
 
-        self.add_sorting_segment(
-            PhySortingSegment(spike_times_clean, spike_clusters_clean)
-        )
+        self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
 
 
 class PhySortingSegment(BaseSortingSegment):
@@ -191,20 +177,10 @@ class PhySortingSegment(BaseSortingSegment):
         self._all_clusters = all_clusters
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
-        start = (
-            0
-            if start_frame is None
-            else np.searchsorted(self._all_spikes, start_frame, side="left")
-        )
-        end = (
-            len(self._all_spikes)
-            if end_frame is None
-            else np.searchsorted(self._all_spikes, end_frame, side="right")
-        )
+        start = 0 if start_frame is None else np.searchsorted(self._all_spikes, start_frame, side="left")
+        end = len(self._all_spikes) if end_frame is None else np.searchsorted(self._all_spikes, end_frame, side="right")
 
-        spike_times = self._all_spikes[start:end][
-            self._all_clusters[start:end] == unit_id
-        ]
+        spike_times = self._all_spikes[start:end][self._all_clusters[start:end] == unit_id]
         return np.atleast_1d(spike_times.copy().squeeze())
 
 
@@ -228,9 +204,7 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
     name = "phy"
 
     def __init__(self, folder_path, exclude_cluster_groups=None):
-        BasePhyKilosortSortingExtractor.__init__(
-            self, folder_path, exclude_cluster_groups, keep_good_only=False
-        )
+        BasePhyKilosortSortingExtractor.__init__(self, folder_path, exclude_cluster_groups, keep_good_only=False)
 
         self._kwargs = {
             "folder_path": str(Path(folder_path).absolute()),
@@ -275,6 +249,4 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
 
 
 read_phy = define_function_from_class(source_class=PhySortingExtractor, name="read_phy")
-read_kilosort = define_function_from_class(
-    source_class=KiloSortSortingExtractor, name="read_kilosort"
-)
+read_kilosort = define_function_from_class(source_class=KiloSortSortingExtractor, name="read_kilosort")

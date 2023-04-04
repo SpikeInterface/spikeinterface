@@ -46,9 +46,7 @@ class MClustSortingExtractor(BaseSorting):
             raise Exception("Mclust files not found in path")
 
         if ext.startswith("raw") and sampling_frequency_raw is None:
-            raise Exception(
-                f"To load files with extension {ext} a sampling_frequency_raw input is required."
-            )
+            raise Exception(f"To load files with extension {ext} a sampling_frequency_raw input is required.")
 
         if ext.endswith("64"):
             dataformat = ">u8"
@@ -97,6 +95,4 @@ class MClustSortingSegment(BaseSortingSegment):
         return times
 
 
-read_mclust = define_function_from_class(
-    source_class=MClustSortingExtractor, name="read_mclust"
-)
+read_mclust = define_function_from_class(source_class=MClustSortingExtractor, name="read_mclust")

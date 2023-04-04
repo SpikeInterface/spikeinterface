@@ -50,12 +50,8 @@ class GroundTruthStudy:
     def scan_folder(self):
         self.rec_names = get_rec_names(self.study_folder)
         # scan computed names
-        self.computed_names = list(
-            iter_computed_names(self.study_folder)
-        )  # list of pair (rec_name, sorter_name)
-        self.sorter_names = np.unique(
-            [e for _, e in iter_computed_names(self.study_folder)]
-        ).tolist()
+        self.computed_names = list(iter_computed_names(self.study_folder))  # list of pair (rec_name, sorter_name)
+        self.sorter_names = np.unique([e for _, e in iter_computed_names(self.study_folder)]).tolist()
         self._is_scanned = True
 
     @classmethod
@@ -92,9 +88,7 @@ class GroundTruthStudy:
         if not self._is_scanned:
             self.scan_folder()
         if len(self.rec_names) > 1 and rec_name is None:
-            raise Exception(
-                "Pass 'rec_name' parameter to select which recording to use."
-            )
+            raise Exception("Pass 'rec_name' parameter to select which recording to use.")
         elif len(self.rec_names) == 1:
             rec_name = self.rec_names[0]
         else:
@@ -116,9 +110,7 @@ class GroundTruthStudy:
 
         selected_sorting = None
         if sort_name in self.sorter_names:
-            for r_name, sorter_name, sorting in iter_computed_sorting(
-                self.study_folder
-            ):
+            for r_name, sorter_name, sorting in iter_computed_sorting(self.study_folder):
                 if sort_name == sorter_name and r_name == rec_name:
                     selected_sorting = sorting
         return selected_sorting
@@ -153,9 +145,7 @@ class GroundTruthStudy:
         self.comparisons = {}
         for rec_name, sorter_name, sorting in iter_computed_sorting(self.study_folder):
             gt_sorting = self.get_ground_truth(rec_name)
-            sc = compare_sorter_to_ground_truth(
-                gt_sorting, sorting, exhaustive_gt=exhaustive_gt, **kwargs
-            )
+            sc = compare_sorter_to_ground_truth(gt_sorting, sorting, exhaustive_gt=exhaustive_gt, **kwargs)
             self.comparisons[(rec_name, sorter_name)] = sc
         self.exhaustive_gt = exhaustive_gt
 
@@ -180,14 +170,10 @@ class GroundTruthStudy:
 
         return perf_by_unit
 
-    def aggregate_count_units(
-        self, well_detected_score=None, redundant_score=None, overmerged_score=None
-    ):
+    def aggregate_count_units(self, well_detected_score=None, redundant_score=None, overmerged_score=None):
         assert self.comparisons is not None, "run_comparisons first"
 
-        index = pd.MultiIndex.from_tuples(
-            self.computed_names, names=["rec_name", "sorter_name"]
-        )
+        index = pd.MultiIndex.from_tuples(self.computed_names, names=["rec_name", "sorter_name"])
 
         count_units = pd.DataFrame(
             index=index,
@@ -209,28 +195,20 @@ class GroundTruthStudy:
             gt_sorting = self.get_ground_truth(rec_name)
             comp = self.comparisons[(rec_name, sorter_name)]
 
-            count_units.loc[(rec_name, sorter_name), "num_gt"] = len(
-                gt_sorting.get_unit_ids()
+            count_units.loc[(rec_name, sorter_name), "num_gt"] = len(gt_sorting.get_unit_ids())
+            count_units.loc[(rec_name, sorter_name), "num_sorter"] = len(sorting.get_unit_ids())
+            count_units.loc[(rec_name, sorter_name), "num_well_detected"] = comp.count_well_detected_units(
+                well_detected_score
             )
-            count_units.loc[(rec_name, sorter_name), "num_sorter"] = len(
-                sorting.get_unit_ids()
-            )
-            count_units.loc[
-                (rec_name, sorter_name), "num_well_detected"
-            ] = comp.count_well_detected_units(well_detected_score)
             if self.exhaustive_gt:
-                count_units.loc[
-                    (rec_name, sorter_name), "num_overmerged"
-                ] = comp.count_overmerged_units(overmerged_score)
-                count_units.loc[
-                    (rec_name, sorter_name), "num_redundant"
-                ] = comp.count_redundant_units(redundant_score)
-                count_units.loc[
-                    (rec_name, sorter_name), "num_false_positive"
-                ] = comp.count_false_positive_units(redundant_score)
-                count_units.loc[
-                    (rec_name, sorter_name), "num_bad"
-                ] = comp.count_bad_units()
+                count_units.loc[(rec_name, sorter_name), "num_overmerged"] = comp.count_overmerged_units(
+                    overmerged_score
+                )
+                count_units.loc[(rec_name, sorter_name), "num_redundant"] = comp.count_redundant_units(redundant_score)
+                count_units.loc[(rec_name, sorter_name), "num_false_positive"] = comp.count_false_positive_units(
+                    redundant_score
+                )
+                count_units.loc[(rec_name, sorter_name), "num_bad"] = comp.count_bad_units()
 
         return count_units
 
@@ -240,9 +218,7 @@ class GroundTruthStudy:
         perfs = self.aggregate_performance_by_unit()
 
         dataframes["perf_by_unit"] = perfs.reset_index()
-        dataframes["count_units"] = self.aggregate_count_units(
-            **karg_thresh
-        ).reset_index()
+        dataframes["count_units"] = self.aggregate_count_units(**karg_thresh).reset_index()
 
         if copy_into_folder:
             tables_folder = self.study_folder / "tables"
@@ -264,9 +240,7 @@ class GroundTruthStudy:
             name = sorter_name
             sorting = self.get_sorting(sorter_name, rec_name)
 
-        waveform_folder = (
-            self.study_folder / "waveforms" / f"waveforms_{name}_{rec_name}"
-        )
+        waveform_folder = self.study_folder / "waveforms" / f"waveforms_{name}_{rec_name}"
 
         if waveform_folder.is_dir():
             we = WaveformExtractor.load(waveform_folder)

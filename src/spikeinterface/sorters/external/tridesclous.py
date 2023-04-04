@@ -39,8 +39,7 @@ class TridesclousSorter(BaseSorter):
         "freq_min": "High-pass filter cutoff frequency",
         "freq_max": "Low-pass filter cutoff frequency",
         "detect_threshold": "Threshold for spike detection",
-        "detect_sign": "Use -1 (negative) or 1 (positive) depending "
-        "on the sign of the spikes in the recording",
+        "detect_sign": "Use -1 (negative) or 1 (positive) depending " "on the sign of the spikes in the recording",
         "common_ref_removal": "remove common reference with median",
     }
 
@@ -108,10 +107,7 @@ class TridesclousSorter(BaseSorter):
             # save binary file (chunk by chunk) into a new file
             num_chan = recording.get_num_channels()
             dtype = recording.get_dtype().str
-            file_paths = [
-                str(sorter_output_folder / f"raw_signals_{i}.raw")
-                for i in range(num_seg)
-            ]
+            file_paths = [str(sorter_output_folder / f"raw_signals_{i}.raw") for i in range(num_seg)]
             write_binary_recording(
                 recording,
                 file_paths=file_paths,
@@ -148,9 +144,7 @@ class TridesclousSorter(BaseSorter):
         chan_grps = list(tdc_dataio.channel_groups.keys())
         for chan_grp in chan_grps:
             # parameters can change depending the group
-            catalogue_nested_params = make_nested_tdc_params(
-                tdc_dataio, chan_grp, **params
-            )
+            catalogue_nested_params = make_nested_tdc_params(tdc_dataio, chan_grp, **params)
 
             if verbose:
                 print("catalogue_nested_params")

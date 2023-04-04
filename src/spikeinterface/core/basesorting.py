@@ -209,9 +209,7 @@ class BaseSorting(BaseExtractor):
 
             cached = NpzFolderSorting(folder_path=folder)
             if self.has_recording():
-                warnings.warn(
-                    "The registered recording will not be persistent on disk, but only available in memory"
-                )
+                warnings.warn("The registered recording will not be persistent on disk, but only available in memory")
                 cached.register_recording(self._recording)
         elif format == "memory":
             from .numpyextractors import NumpySorting
@@ -239,9 +237,7 @@ class BaseSorting(BaseExtractor):
         for unit_id in self.unit_ids:
             n = 0
             for segment_index in range(self.get_num_segments()):
-                st = self.get_unit_spike_train(
-                    unit_id=unit_id, segment_index=segment_index
-                )
+                st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 n += st.size
             num_spikes[unit_id] = n
         return num_spikes
@@ -264,9 +260,7 @@ class BaseSorting(BaseExtractor):
         """
         from spikeinterface import UnitsSelectionSorting
 
-        sub_sorting = UnitsSelectionSorting(
-            self, unit_ids, renamed_unit_ids=renamed_unit_ids
-        )
+        sub_sorting = UnitsSelectionSorting(self, unit_ids, renamed_unit_ids=renamed_unit_ids)
         return sub_sorting
 
     def remove_units(self, remove_unit_ids):
@@ -301,10 +295,7 @@ class BaseSorting(BaseExtractor):
         units_to_keep = []
         for segment_index in range(self.get_num_segments()):
             for unit in self.get_unit_ids():
-                if (
-                    len(self.get_unit_spike_train(unit, segment_index=segment_index))
-                    > 0
-                ):
+                if len(self.get_unit_spike_train(unit, segment_index=segment_index)) > 0:
                     units_to_keep.append(unit)
         units_to_keep = np.unique(units_to_keep)
         return self.select_units(units_to_keep)
@@ -312,9 +303,7 @@ class BaseSorting(BaseExtractor):
     def frame_slice(self, start_frame, end_frame):
         from spikeinterface import FrameSliceSorting
 
-        sub_sorting = FrameSliceSorting(
-            self, start_frame=start_frame, end_frame=end_frame
-        )
+        sub_sorting = FrameSliceSorting(self, start_frame=start_frame, end_frame=end_frame)
         return sub_sorting
 
     def get_all_spike_trains(self, outputs="unit_id"):
@@ -327,9 +316,7 @@ class BaseSorting(BaseExtractor):
             spike_times = []
             spike_labels = []
             for i, unit_id in enumerate(self.unit_ids):
-                st = self.get_unit_spike_train(
-                    unit_id=unit_id, segment_index=segment_index
-                )
+                st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 spike_times.append(st)
                 if outputs == "unit_id":
                     spike_labels.append(np.array([unit_id] * st.size))
@@ -395,9 +382,7 @@ class BaseSorting(BaseExtractor):
             pos += n
 
         if extremum_channel_inds is not None:
-            ext_channel_inds = np.array(
-                [extremum_channel_inds[unit_id] for unit_id in self.unit_ids]
-            )
+            ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
             # vector way
             spikes["channel_ind"] = ext_channel_inds[spikes["unit_ind"]]
 

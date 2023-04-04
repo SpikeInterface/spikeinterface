@@ -10,21 +10,15 @@ class BaseWidget:
         figure/ax/axes : only one of then can be not None
         """
         if figure is not None:
-            assert (
-                ax is None and axes is None
-            ), "figure/ax/axes : only one of then can be not None"
+            assert ax is None and axes is None, "figure/ax/axes : only one of then can be not None"
             ax = figure.add_subplot(111)
             axes = np.array([[ax]])
         elif ax is not None:
-            assert (
-                figure is None and axes is None
-            ), "figure/ax/axes : only one of then can be not None"
+            assert figure is None and axes is None, "figure/ax/axes : only one of then can be not None"
             figure = ax.get_figure()
             axes = np.array([[ax]])
         elif axes is not None:
-            assert (
-                figure is None and ax is None
-            ), "figure/ax/axes : only one of then can be not None"
+            assert figure is None and ax is None, "figure/ax/axes : only one of then can be not None"
             axes = np.asarray(axes)
             figure = axes.flatten()[0].get_figure()
         else:

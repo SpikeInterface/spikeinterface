@@ -53,6 +53,4 @@ class NixRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_nix = define_function_from_class(
-    source_class=NixRecordingExtractor, name="read_nix"
-)
+read_nix = define_function_from_class(source_class=NixRecordingExtractor, name="read_nix")

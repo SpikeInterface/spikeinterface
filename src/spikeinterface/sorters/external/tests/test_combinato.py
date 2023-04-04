@@ -13,9 +13,7 @@ from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 
 
 # This run several tests
-@pytest.mark.skipif(
-    not CombinatoSorter.is_installed(), reason="combinato not installed"
-)
+@pytest.mark.skipif(not CombinatoSorter.is_installed(), reason="combinato not installed")
 class CombinatoSorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
     SorterClass = CombinatoSorter
 

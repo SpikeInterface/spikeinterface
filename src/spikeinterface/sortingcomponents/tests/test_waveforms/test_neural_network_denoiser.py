@@ -14,22 +14,16 @@ from spikeinterface.sortingcomponents.waveforms.neural_network_denoiser import (
 )
 
 
-def test_single_channel_toy_denoiser_in_peak_pipeline(
-    mearec_recording, detected_peaks, chunk_executor_kwargs
-):
+def test_single_channel_toy_denoiser_in_peak_pipeline(mearec_recording, detected_peaks, chunk_executor_kwargs):
     recording = mearec_recording
     peaks = detected_peaks
 
     ms_before = 2.0
     ms_after = 2.0
-    waveform_extraction = ExtractDenseWaveforms(
-        recording, ms_before=ms_before, ms_after=ms_after, return_output=True
-    )
+    waveform_extraction = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after, return_output=True)
 
     # Build nodes for computation
-    waveform_extraction = ExtractDenseWaveforms(
-        recording, ms_before=ms_before, ms_after=ms_after, return_output=True
-    )
+    waveform_extraction = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after, return_output=True)
     toy_denoiser = SingleChannelToyDenoiser(recording, parents=[waveform_extraction])
 
     nodes = [waveform_extraction, toy_denoiser]

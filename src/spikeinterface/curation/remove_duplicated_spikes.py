@@ -40,16 +40,12 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
         method: str = "keep_first",
     ) -> None:
         super().__init__(sorting.get_sampling_frequency(), sorting.unit_ids)
-        censored_period = int(
-            round(censored_period_ms * 1e-3 * sorting.get_sampling_frequency())
-        )
+        censored_period = int(round(censored_period_ms * 1e-3 * sorting.get_sampling_frequency()))
         seed = np.random.randint(low=0, high=np.iinfo(np.int32).max)
 
         for segment in sorting._sorting_segments:
             self.add_sorting_segment(
-                RemoveDuplicatedSpikesSortingSegment(
-                    segment, censored_period, sorting.unit_ids, method, seed
-                )
+                RemoveDuplicatedSpikesSortingSegment(segment, censored_period, sorting.unit_ids, method, seed)
             )
 
         sorting.copy_metadata(self, only_main=False)
@@ -78,9 +74,7 @@ class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
 
         for unit_id in unit_ids:
             self._duplicated_spikes[unit_id] = find_duplicated_spikes(
-                parent_segment.get_unit_spike_train(
-                    unit_id, start_frame=None, end_frame=None
-                ),
+                parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None),
                 censored_period,
                 method=method,
                 seed=seed,
@@ -92,9 +86,7 @@ class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
         start_frame: Optional[int] = None,
         end_frame: Optional[int] = None,
     ) -> np.ndarray:
-        spike_train = self._parent_segment.get_unit_spike_train(
-            unit_id, start_frame=None, end_frame=None
-        )
+        spike_train = self._parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None)
         spike_train = np.delete(spike_train, self._duplicated_spikes[unit_id])
 
         if start_frame == None:

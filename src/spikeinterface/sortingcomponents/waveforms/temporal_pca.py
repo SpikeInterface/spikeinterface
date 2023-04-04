@@ -33,9 +33,7 @@ class TemporalPCBaseNode(PipelineNode):
         child classess. The child should implement a compute method that does a specific operation
         (e.g. project, denoise, etc)
         """
-        PipelineNode.__init__(
-            self, recording=recording, parents=parents, return_output=return_output
-        )
+        PipelineNode.__init__(self, recording=recording, parents=parents, return_output=return_output)
 
         self.model_folder_path = model_folder_path
 
@@ -55,26 +53,19 @@ class TemporalPCBaseNode(PipelineNode):
             self.params = json.load(f)
 
         # Find waveform extractor in the parents
-        if self.parents is None or not (
-            len(self.parents) == 1
-            and isinstance(self.parents[0], WaveformExtractorNode)
-        ):
+        if self.parents is None or not (len(self.parents) == 1 and isinstance(self.parents[0], WaveformExtractorNode)):
             exception_string = f"TemporalPCA should have a single {WaveformExtractorNode.__name__} in its parents"
             raise TypeError(exception_string)
         self.assert_model_and_waveform_temporal_match(self.parents[0])
 
-    def assert_model_and_waveform_temporal_match(
-        self, waveform_extractor: WaveformExtractorNode
-    ):
+    def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformExtractorNode):
         """
         Asserts that the model and the waveform extractor have the same temporal parameters
         """
         # Extract the first waveform extractor in the parents
         waveforms_ms_before = waveform_extractor.ms_before
         waveforms_ms_after = waveform_extractor.ms_after
-        waveforms_sampling_frequency = (
-            waveform_extractor.recording.get_sampling_frequency()
-        )
+        waveforms_sampling_frequency = waveform_extractor.recording.get_sampling_frequency()
 
         model_ms_before = self.params["ms_before"]
         model_ms_after = self.params["ms_after"]
@@ -82,9 +73,7 @@ class TemporalPCBaseNode(PipelineNode):
 
         ms_before_mismatch = waveforms_ms_before != model_ms_before
         ms_after_missmatch = waveforms_ms_after != model_ms_after
-        sampling_frequency_mismatch = (
-            waveforms_sampling_frequency != model_sampling_frequency
-        )
+        sampling_frequency_mismatch = waveforms_sampling_frequency != model_sampling_frequency
         if ms_before_mismatch or ms_after_missmatch or sampling_frequency_mismatch:
             exception_string = (
                 "PCA model and waveforms mismatch \n"
@@ -146,9 +135,7 @@ class TemporalPCBaseNode(PipelineNode):
         peaks = select_peaks(peaks, **peak_selection_params)  # How to select n_peaks
 
         # Creates a numpy sorting object where the spike times are the peak times and the unit ids are the peak channel
-        sorting = NumpySorting.from_peaks(
-            peaks, sampling_frequency=recording.sampling_frequency
-        )
+        sorting = NumpySorting.from_peaks(peaks, sampling_frequency=recording.sampling_frequency)
         # Create a waveform extractor
         we = extract_waveforms(
             recording,
@@ -162,11 +149,7 @@ class TemporalPCBaseNode(PipelineNode):
         )
 
         # compute PCA by_channel_global (with sparsity)
-        sparsity = (
-            ChannelSparsity.from_radius(we, radius_um=local_radius_um)
-            if local_radius_um
-            else None
-        )
+        sparsity = ChannelSparsity.from_radius(we, radius_um=local_radius_um) if local_radius_um else None
         pc = compute_principal_components(
             we,
             n_components=n_components,
@@ -194,9 +177,7 @@ class TemporalPCBaseNode(PipelineNode):
         return model_folder_path
 
 
-TemporalPCBaseNode.fit.__doc__ = TemporalPCBaseNode.fit.__doc__.format(
-    _shared_job_kwargs_doc
-)
+TemporalPCBaseNode.fit.__doc__ = TemporalPCBaseNode.fit.__doc__.format(_shared_job_kwargs_doc)
 
 
 class TemporalPCAProjection(TemporalPCBaseNode):
@@ -235,9 +216,7 @@ class TemporalPCAProjection(TemporalPCBaseNode):
             model_folder_path=model_folder_path,
         )
 
-    def compute(
-        self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray
-    ) -> np.ndarray:
+    def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
         """
         Projects the waveforms using the PCA model trained in the fit method or loaded from the model_folder_path.
 
@@ -261,9 +240,7 @@ class TemporalPCAProjection(TemporalPCBaseNode):
 
         temporal_waveforms = to_temporal_representation(waveforms)
         projected_temporal_waveforms = self.pca_model.transform(temporal_waveforms)
-        projected_waveforms = from_temporal_representation(
-            projected_temporal_waveforms, num_channels
-        )
+        projected_waveforms = from_temporal_representation(projected_temporal_waveforms, num_channels)
 
         return projected_waveforms
 
@@ -303,9 +280,7 @@ class TemporalPCADenoising(TemporalPCBaseNode):
             model_folder_path=model_folder_path,
         )
 
-    def compute(
-        self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray
-    ) -> np.ndarray:
+    def compute(self, traces: np.ndarray, peaks: np.ndarray, waveforms: np.ndarray) -> np.ndarray:
         """
         Projects the waveforms using the PCA model trained in the fit method or loaded from the model_folder_path.
 
@@ -328,11 +303,7 @@ class TemporalPCADenoising(TemporalPCBaseNode):
 
         temporal_waveform = to_temporal_representation(waveforms)
         projected_temporal_waveforms = self.pca_model.transform(temporal_waveform)
-        temporal_denoised_waveforms = self.pca_model.inverse_transform(
-            projected_temporal_waveforms
-        )
-        denoised_waveforms = from_temporal_representation(
-            temporal_denoised_waveforms, num_channels
-        )
+        temporal_denoised_waveforms = self.pca_model.inverse_transform(projected_temporal_waveforms)
+        denoised_waveforms = from_temporal_representation(temporal_denoised_waveforms, num_channels)
 
         return denoised_waveforms

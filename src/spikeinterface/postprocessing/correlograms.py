@@ -26,9 +26,7 @@ class CorrelogramsCalculator(BaseWaveformExtractorExtension):
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
-    def _set_params(
-        self, window_ms: float = 100.0, bin_ms: float = 5.0, method: str = "auto"
-    ):
+    def _set_params(self, window_ms: float = 100.0, bin_ms: float = 5.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
 
         return params
@@ -42,9 +40,7 @@ class CorrelogramsCalculator(BaseWaveformExtractorExtension):
         return new_extension_data
 
     def _run(self):
-        ccgs, bins = _compute_correlograms(
-            self.waveform_extractor.sorting, **self._params
-        )
+        ccgs, bins = _compute_correlograms(self.waveform_extractor.sorting, **self._params)
         self._extension_data["ccgs"] = ccgs
         self._extension_data["bins"] = bins
 
@@ -60,10 +56,7 @@ class CorrelogramsCalculator(BaseWaveformExtractorExtension):
             1D array with bins in ms
         """
         msg = "Crosscorrelograms are not computed. Use the 'run()' function."
-        assert (
-            self._extension_data["ccgs"] is not None
-            and self._extension_data["bins"] is not None
-        ), msg
+        assert self._extension_data["ccgs"] is not None and self._extension_data["bins"] is not None, msg
         return self._extension_data["ccgs"], self._extension_data["bins"]
 
     @staticmethod
@@ -113,9 +106,7 @@ def compute_autocorrelogram_from_spiketrain(spike_times, window_size, bin_size):
     return _compute_autocorr_numba(spike_times.astype(np.int64), window_size, bin_size)
 
 
-def compute_crosscorrelogram_from_spiketrain(
-    spike_times1, spike_times2, window_size, bin_size
-):
+def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_size, bin_size):
     """
     Computes the cros-correlogram between two given spike trains.
 
@@ -181,12 +172,8 @@ def compute_correlograms(
         The bin edges in ms
     """
     if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
-        if load_if_exists and waveform_or_sorting_extractor.is_extension(
-            CorrelogramsCalculator.extension_name
-        ):
-            ccc = waveform_or_sorting_extractor.load_extension(
-                CorrelogramsCalculator.extension_name
-            )
+        if load_if_exists and waveform_or_sorting_extractor.is_extension(CorrelogramsCalculator.extension_name):
+            ccc = waveform_or_sorting_extractor.load_extension(CorrelogramsCalculator.extension_name)
         else:
             ccc = CorrelogramsCalculator(waveform_or_sorting_extractor)
             ccc.set_params(window_ms=window_ms, bin_ms=bin_ms, method=method)
@@ -249,9 +236,7 @@ def compute_correlograms_numpy(sorting, window_size, bin_size):
     for seg_index in range(num_seg):
         spike_times, spike_labels = spikes[seg_index]
 
-        c0 = correlogram_for_one_segment(
-            spike_times, spike_labels, window_size, bin_size
-        )
+        c0 = correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size)
 
         correlograms += c0
 
@@ -429,9 +414,7 @@ if HAVE_NUMBA:
         cache=True,
         parallel=True,
     )
-    def _compute_correlograms_numba(
-        correlograms, spike_times, spike_labels, window_size, bin_size
-    ):
+    def _compute_correlograms_numba(correlograms, spike_times, spike_labels, window_size, bin_size):
         n_units = correlograms.shape[0]
 
         for i in numba.prange(n_units):
@@ -442,12 +425,8 @@ if HAVE_NUMBA:
                 spike_times2 = spike_times[spike_labels == j]
 
                 if i == j:
-                    correlograms[i, j, :] += _compute_autocorr_numba(
-                        spike_times1, window_size, bin_size
-                    )
+                    correlograms[i, j, :] += _compute_autocorr_numba(spike_times1, window_size, bin_size)
                 else:
-                    cc = _compute_crosscorr_numba(
-                        spike_times1, spike_times2, window_size, bin_size
-                    )
+                    cc = _compute_crosscorr_numba(spike_times1, spike_times2, window_size, bin_size)
                     correlograms[i, j, :] += cc
                     correlograms[j, i, :] += cc[::-1]

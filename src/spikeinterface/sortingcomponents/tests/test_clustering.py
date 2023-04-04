@@ -39,9 +39,7 @@ def test_find_cluster_from_peaks():
         **job_kwargs,
     )
 
-    peak_locations = localize_peaks(
-        recording, peaks, method="center_of_mass", **job_kwargs
-    )
+    peak_locations = localize_peaks(recording, peaks, method="center_of_mass", **job_kwargs)
 
     for method in clustering_methods.keys():
         method_kwargs = {}
@@ -51,9 +49,7 @@ def test_find_cluster_from_peaks():
             method_kwargs["waveform_mode"] = "shared_memory"
 
         t0 = time.perf_counter()
-        labels, peak_labels = find_cluster_from_peaks(
-            recording, peaks, method=method, method_kwargs=method_kwargs
-        )
+        labels, peak_labels = find_cluster_from_peaks(recording, peaks, method=method, method_kwargs=method_kwargs)
         t1 = time.perf_counter()
         print(method, "found", len(labels), "clusters in ", t1 - t0)
 

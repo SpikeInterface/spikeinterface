@@ -38,9 +38,7 @@ def test_export_report():
 
     job_kwargs = dict(n_jobs=1, chunk_size=30000, progress_bar=True)
 
-    export_report(
-        waveform_extractor, output_folder, force_computation=True, **job_kwargs
-    )
+    export_report(waveform_extractor, output_folder, force_computation=True, **job_kwargs)
 
 
 if __name__ == "__main__":

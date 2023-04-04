@@ -62,9 +62,7 @@ def test_phase_shift():
                 assert rec2.dtype == rec.dtype
 
                 # save by chunk rec3 is the cached version
-                rec3 = rec2.save(
-                    format="memory", chunk_size=chunk_size, n_jobs=1, progress_bar=False
-                )
+                rec3 = rec2.save(format="memory", chunk_size=chunk_size, n_jobs=1, progress_bar=False)
 
                 traces2 = rec2.get_traces()
                 assert traces2.dtype == original_traces.dtype

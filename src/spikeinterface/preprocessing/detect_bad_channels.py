@@ -108,9 +108,7 @@ def detect_bad_channels(
     https://www.internationalbrainlab.com/repro-ephys
     """
     method_list = ("std", "mad", "coherence+psd")
-    assert (
-        method in method_list
-    ), f"{method} is not a valid method. Available methods are {method_list}"
+    assert method in method_list, f"{method} is not a valid method. Available methods are {method_list}"
 
     # Get random subset of data to estimate from
     random_chunk_kwargs = dict(
@@ -168,19 +166,13 @@ def detect_bad_channels(
             order_r = None
         else:
             # sort by x, y to avoid ambiguity
-            order_f, order_r = order_channels_by_depth(
-                recording=recording, dimensions=("x", "y")
-            )
+            order_f, order_r = order_channels_by_depth(recording=recording, dimensions=("x", "y"))
 
         # Create empty channel labels and fill with bad-channel detection estimate for each chunk
-        chunk_channel_labels = np.zeros(
-            (recording.get_num_channels(), len(random_data)), dtype=np.int8
-        )
+        chunk_channel_labels = np.zeros((recording.get_num_channels(), len(random_data)), dtype=np.int8)
 
         for i, random_chunk in enumerate(random_data):
-            random_chunk_sorted = (
-                random_chunk[order_f] if order_f is not None else random_chunk
-            )
+            random_chunk_sorted = random_chunk[order_f] if order_f is not None else random_chunk
             chunk_channel_labels[:, i] = detect_bad_channels_ibl(
                 raw=random_chunk_sorted,
                 fs=recording.sampling_frequency,
@@ -194,9 +186,7 @@ def detect_bad_channels(
             )
 
         # Take the mode of the chunk estimates as final result. Convert to binary good / bad channel output.
-        mode_channel_labels, _ = scipy.stats.mode(
-            chunk_channel_labels, axis=1, keepdims=False
-        )
+        mode_channel_labels, _ = scipy.stats.mode(chunk_channel_labels, axis=1, keepdims=False)
         if order_r is not None:
             mode_channel_labels = mode_channel_labels[order_r]
 
@@ -281,9 +271,7 @@ def detect_bad_channels_ibl(
 
     ichannels = np.zeros(nc, dtype=int)
     idead = np.where(xcorr_neighbors < dead_channel_thr)[0]
-    inoisy = np.where(
-        np.logical_or(psd_hf > psd_hf_threshold, xcorr_neighbors > noisy_channel_thr)
-    )[0]
+    inoisy = np.where(np.logical_or(psd_hf > psd_hf_threshold, xcorr_neighbors > noisy_channel_thr))[0]
 
     ichannels[idead] = 1
     ichannels[inoisy] = 2

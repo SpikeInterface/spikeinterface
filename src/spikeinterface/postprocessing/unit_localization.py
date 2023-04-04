@@ -61,13 +61,9 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
         assert method in possible_localization_methods
 
         if method == "center_of_mass":
-            unit_location = compute_center_of_mass(
-                self.waveform_extractor, **method_kwargs
-            )
+            unit_location = compute_center_of_mass(self.waveform_extractor, **method_kwargs)
         elif method == "monopolar_triangulation":
-            unit_location = compute_monopolar_triangulation(
-                self.waveform_extractor, **method_kwargs
-            )
+            unit_location = compute_monopolar_triangulation(self.waveform_extractor, **method_kwargs)
         self._extension_data["unit_locations"] = unit_location
 
     def get_data(self, outputs="numpy"):
@@ -90,12 +86,8 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
 
         elif outputs == "by_unit":
             locations_by_unit = {}
-            for unit_ind, unit_id in enumerate(
-                self.waveform_extractor.sorting.unit_ids
-            ):
-                locations_by_unit[unit_id] = self._extension_data["unit_locations"][
-                    unit_ind
-                ]
+            for unit_ind, unit_id in enumerate(self.waveform_extractor.sorting.unit_ids):
+                locations_by_unit[unit_id] = self._extension_data["unit_locations"][unit_ind]
             return locations_by_unit
 
     @staticmethod
@@ -134,9 +126,7 @@ def compute_unit_locations(
     unit_locations: np.array
         unit location with shape (num_unit, 2) or (num_unit, 3) or (num_unit, 3) (with alpha)
     """
-    if load_if_exists and waveform_extractor.is_extension(
-        UnitLocationsCalculator.extension_name
-    ):
+    if load_if_exists and waveform_extractor.is_extension(UnitLocationsCalculator.extension_name):
         ulc = waveform_extractor.load_extension(UnitLocationsCalculator.extension_name)
     else:
         ulc = UnitLocationsCalculator(waveform_extractor)
@@ -147,27 +137,18 @@ def compute_unit_locations(
     return unit_locations
 
 
-def make_initial_guess_and_bounds(
-    wf_ptp, local_contact_locations, max_distance_um, initial_z=20
-):
+def make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um, initial_z=20):
     # constant for initial guess and bounds
     ind_max = np.argmax(wf_ptp)
     max_ptp = wf_ptp[ind_max]
     max_alpha = max_ptp * max_distance_um
 
     # initial guess is the center of mass
-    com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(
-        wf_ptp
-    )
+    com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
     x0 = np.zeros(4, dtype="float32")
     x0[:2] = com
     x0[2] = initial_z
-    initial_alpha = (
-        np.sqrt(
-            np.sum((com - local_contact_locations[ind_max, :]) ** 2) + initial_z**2
-        )
-        * max_ptp
-    )
+    initial_alpha = np.sqrt(np.sum((com - local_contact_locations[ind_max, :]) ** 2) + initial_z**2) * max_ptp
     x0[3] = initial_alpha
 
     # bounds depend on initial guess
@@ -184,19 +165,13 @@ def make_initial_guess_and_bounds(
     return x0, bounds
 
 
-def solve_monopolar_triangulation(
-    wf_ptp, local_contact_locations, max_distance_um, optimizer
-):
-    x0, bounds = make_initial_guess_and_bounds(
-        wf_ptp, local_contact_locations, max_distance_um
-    )
+def solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_um, optimizer):
+    x0, bounds = make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um)
 
     if optimizer == "least_square":
         args = (wf_ptp, local_contact_locations)
         try:
-            output = scipy.optimize.least_squares(
-                estimate_distance_error, x0=x0, bounds=bounds, args=args
-            )
+            output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args=args)
             return tuple(output["x"])
         except Exception as e:
             print(f"scipy.optimize.least_squares error: {e}")
@@ -212,9 +187,7 @@ def solve_monopolar_triangulation(
         maxptp = wf_ptp.max()
         args = (wf_ptp, local_contact_locations, maxptp)
         try:
-            output = scipy.optimize.minimize(
-                estimate_distance_error_with_log, x0=x0, bounds=bounds, args=args
-            )
+            output = scipy.optimize.minimize(estimate_distance_error_with_log, x0=x0, bounds=bounds, args=args)
             # final alpha
             q = ptp_at(*output["x"], 1.0, local_contact_locations)
             alpha = (wf_ptp * q).sum() / np.square(q).sum()
@@ -231,9 +204,7 @@ def solve_monopolar_triangulation(
 def estimate_distance_error(vec, wf_ptp, local_contact_locations):
     # vec dims ar (x, y, z amplitude_factor)
     # given that for contact_location x=dim0 + z=dim1 and y is orthogonal to probe
-    dist = np.sqrt(
-        ((local_contact_locations - vec[np.newaxis, :2]) ** 2).sum(axis=1) + vec[2] ** 2
-    )
+    dist = np.sqrt(((local_contact_locations - vec[np.newaxis, :2]) ** 2).sum(axis=1) + vec[2] ** 2)
     ptp_estimated = vec[3] / dist
     err = wf_ptp - ptp_estimated
     return err
@@ -245,9 +216,7 @@ def estimate_distance_error(vec, wf_ptp, local_contact_locations):
 
 def ptp_at(x, y, z, alpha, local_contact_locations):
     return alpha / np.sqrt(
-        np.square(x - local_contact_locations[:, 0])
-        + np.square(y - local_contact_locations[:, 1])
-        + np.square(z)
+        np.square(x - local_contact_locations[:, 0]) + np.square(y - local_contact_locations[:, 1]) + np.square(z)
     )
 
 
@@ -256,9 +225,7 @@ def estimate_distance_error_with_log(vec, wf_ptp, local_contact_locations, maxpt
     q = ptp_at(x, y, z, 1.0, local_contact_locations)
     alpha = (q * wf_ptp / maxptp).sum() / (q * q).sum()
     err = (
-        np.square(
-            wf_ptp / maxptp - ptp_at(x, y, z, alpha, local_contact_locations)
-        ).mean()
+        np.square(wf_ptp / maxptp - ptp_at(x, y, z, alpha, local_contact_locations)).mean()
         - np.log1p(10.0 * z) / 10000.0
     )
     return err
@@ -313,9 +280,7 @@ def compute_monopolar_triangulation(
 
     contact_locations = waveform_extractor.get_channel_locations()
 
-    sparsity = compute_sparsity(
-        waveform_extractor, method="radius", radius_um=radius_um
-    )
+    sparsity = compute_sparsity(waveform_extractor, method="radius", radius_um=radius_um)
     templates = waveform_extractor.get_all_templates(mode="average")
 
     unit_location = np.zeros((unit_ids.size, 4), dtype="float64")
@@ -326,9 +291,7 @@ def compute_monopolar_triangulation(
         # wf is (nsample, nchan) - chann is only nieghboor
         wf = templates[i, :, :]
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
-        unit_location[i] = solve_monopolar_triangulation(
-            wf_ptp, local_contact_locations, max_distance_um, optimizer
-        )
+        unit_location[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_um, optimizer)
 
     if not return_alpha:
         unit_location = unit_location[:, :3]
@@ -359,9 +322,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign="neg", radius_um=50):
     contact_locations = recording.get_channel_locations()
 
     # TODO
-    sparsity = compute_sparsity(
-        waveform_extractor, peak_sign=peak_sign, method="radius", radius_um=radius_um
-    )
+    sparsity = compute_sparsity(waveform_extractor, peak_sign=peak_sign, method="radius", radius_um=radius_um)
     templates = waveform_extractor.get_all_templates(mode="average")
 
     unit_location = np.zeros((unit_ids.size, 2), dtype="float64")
@@ -374,9 +335,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign="neg", radius_um=50):
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
 
         # center of mass
-        com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(
-            wf_ptp
-        )
+        com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
         unit_location[i, :] = com
 
     return unit_location
@@ -416,9 +375,7 @@ def make_shells(geom, n_jumps=1):
     return [make_shell(c, geom, n_jumps=n_jumps) for c in range(geom.shape[0])]
 
 
-def make_radial_order_parents(
-    geom, neighbours_mask, n_jumps_per_growth=1, n_jumps_parent=3
-):
+def make_radial_order_parents(geom, neighbours_mask, n_jumps_per_growth=1, n_jumps_parent=3):
     """Pre-computes a helper data structure for enforce_decrease_shells"""
     n_channels = len(geom)
 
@@ -442,11 +399,7 @@ def make_radial_order_parents(
         while len(already_seen) < (neighbors < n_channels).sum():
             # grow our search -- what are the next-closest channels?
             new_shell = make_shell(channel, geom, n_jumps=jumps * n_jumps_per_growth)
-            new_shell = list(
-                sorted(
-                    c for c in new_shell if (c not in already_seen) and (c in neighbors)
-                )
-            )
+            new_shell = list(sorted(c for c in new_shell if (c not in already_seen) and (c in neighbors)))
 
             # for each new channel, find the intersection of the channels
             # from previous shells and that channel's shell in `shells`
@@ -456,9 +409,7 @@ def make_radial_order_parents(
                 if not len(parents_rel):
                     # this can happen for some strange geometries. in that case, bail.
                     continue
-                channel_parents.append(
-                    (np.flatnonzero(neighbors == new_chan).item(), parents_rel)
-                )
+                channel_parents.append((np.flatnonzero(neighbors == new_chan).item(), parents_rel))
 
             # add this shell to what we have seen
             already_seen += new_shell

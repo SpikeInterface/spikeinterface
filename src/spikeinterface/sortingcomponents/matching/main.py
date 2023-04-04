@@ -5,9 +5,7 @@ from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs
 from spikeinterface.core import get_chunk_with_margin
 
 
-def find_spikes_from_templates(
-    recording, method="naive", method_kwargs={}, extra_outputs=False, **job_kwargs
-):
+def find_spikes_from_templates(recording, method="naive", method_kwargs={}, extra_outputs=False, **job_kwargs):
     """Find spike from a recording from given templates.
 
     Parameters
@@ -116,9 +114,7 @@ def _find_spikes_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     # remove spikes in margin
     if margin > 0:
-        keep = (spikes["sample_ind"] >= margin) & (
-            spikes["sample_ind"] < (traces.shape[0] - margin)
-        )
+        keep = (spikes["sample_ind"] >= margin) & (spikes["sample_ind"] < (traces.shape[0] - margin))
         spikes = spikes[keep]
 
     spikes["sample_ind"] += start_frame - margin

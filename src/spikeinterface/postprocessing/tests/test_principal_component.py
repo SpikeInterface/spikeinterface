@@ -22,9 +22,7 @@ else:
 DEBUG = False
 
 
-class PrincipalComponentsExtensionTest(
-    WaveformExtensionCommonTestSuite, unittest.TestCase
-):
+class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
     extension_class = WaveformPrincipalComponent
     extension_data_names = ["pca_0", "pca_1"]
     extension_function_kwargs_list = [
@@ -37,17 +35,13 @@ class PrincipalComponentsExtensionTest(
     def test_shapes(self):
         nchan1 = self.we1.recording.get_num_channels()
         for mode in ("by_channel_local", "by_channel_global"):
-            _ = self.extension_class.get_extension_function()(
-                self.we1, mode=mode, n_components=5
-            )
+            _ = self.extension_class.get_extension_function()(self.we1, mode=mode, n_components=5)
             pc = self.we1.load_extension(self.extension_class.extension_name)
             for unit_id in self.we1.sorting.unit_ids:
                 proj = pc.get_projections(unit_id)
                 assert proj.shape[1:] == (5, nchan1)
         for mode in ("concatenated",):
-            _ = self.extension_class.get_extension_function()(
-                self.we2, mode=mode, n_components=3
-            )
+            _ = self.extension_class.get_extension_function()(self.we2, mode=mode, n_components=3)
             pc = self.we2.load_extension(self.extension_class.extension_name)
             for unit_id in self.we2.sorting.unit_ids:
                 proj = pc.get_projections(unit_id)
@@ -71,9 +65,7 @@ class PrincipalComponentsExtensionTest(
         # test with sparsity
         sparsity = compute_sparsity(we, method="radius", radius_um=50)
         we_copy = we.save(folder=cache_folder / "we_copy")
-        pc_sparse = self.extension_class.get_extension_function()(
-            we_copy, sparsity=sparsity, load_if_exists=False
-        )
+        pc_sparse = self.extension_class.get_extension_function()(we_copy, sparsity=sparsity, load_if_exists=False)
         pc_file_sparse = pc.extension_folder / "all_pc_sparse.npy"
         pc_sparse.run_for_all_spikes(pc_file_sparse, chunk_size=10000, n_jobs=1)
         all_pc_sparse = np.load(pc_file_sparse)
@@ -125,9 +117,7 @@ class PrincipalComponentsExtensionTest(
                                 comp[:, 1, chan_ind],
                                 color=cmap(i),
                             )
-                            ax.set_title(
-                                f"{mode}-{sparsity.unit_id_to_channel_ids[unit_id]}"
-                            )
+                            ax.set_title(f"{mode}-{sparsity.unit_id_to_channel_ids[unit_id]}")
                             if i == 0:
                                 ax.set_xlabel(f"Ch{chan_ind}")
                     plt.show()
@@ -153,9 +143,7 @@ class PrincipalComponentsExtensionTest(
         we = self.we1
         if we.is_extension("principal_components"):
             we.delete_extension("principal_components")
-        we_cp = we.select_units(
-            we.unit_ids, self.cache_folder / "toy_waveforms_1seg_cp"
-        )
+        we_cp = we.select_units(we.unit_ids, self.cache_folder / "toy_waveforms_1seg_cp")
 
         wfs0 = we.get_waveforms(unit_id=we.unit_ids[0])
         n_samples = wfs0.shape[1]

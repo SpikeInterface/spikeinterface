@@ -35,9 +35,7 @@ class TimeseriesPlotter(IpywidgetsPlotter):
         with plt.ioff():
             output = widgets.Output()
             with output:
-                fig, ax = plt.subplots(
-                    figsize=(0.9 * ratios[1] * width_cm * cm, height_cm * cm)
-                )
+                fig, ax = plt.subplots(figsize=(0.9 * ratios[1] * width_cm * cm, height_cm * cm))
                 plt.show()
 
         t_start = 0.0
@@ -54,13 +52,9 @@ class TimeseriesPlotter(IpywidgetsPlotter):
             width_cm,
         )
 
-        ch_widget, ch_controller = make_channel_controller(
-            rec0, width_cm=ratios[2] * width_cm, height_cm=height_cm
-        )
+        ch_widget, ch_controller = make_channel_controller(rec0, width_cm=ratios[2] * width_cm, height_cm=height_cm)
 
-        scale_widget, scale_controller = make_scale_controller(
-            width_cm=ratios[0] * width_cm, height_cm=height_cm
-        )
+        scale_widget, scale_controller = make_scale_controller(width_cm=ratios[0] * width_cm, height_cm=height_cm)
 
         self.controller = ts_controller
         self.controller.update(ch_controller)
@@ -112,8 +106,7 @@ class PlotUpdater:
 
         self.rec0 = self.recordings[self.data_plot["layer_keys"][0]]
         self.t_stops = [
-            self.rec0.get_num_samples(segment_index=seg_index)
-            / self.rec0.get_sampling_frequency()
+            self.rec0.get_num_samples(segment_index=seg_index) / self.rec0.get_sampling_frequency()
             for seg_index in range(self.rec0.get_num_segments())
         ]
 
@@ -172,9 +165,7 @@ class PlotUpdater:
         data_plot = self.next_data_plot
 
         if retrieve_traces:
-            all_channel_ids = self.recordings[
-                list(self.recordings.keys())[0]
-            ].channel_ids
+            all_channel_ids = self.recordings[list(self.recordings.keys())[0]].channel_ids
             if self.data_plot["order"] is not None:
                 all_channel_ids = all_channel_ids[self.data_plot["order"]]
             channel_ids = all_channel_ids[channel_indices]
@@ -204,25 +195,21 @@ class PlotUpdater:
         else:
             layer_keys = [layer_key]
             recordings = {layer_key: self.recordings[layer_key]}
-            list_traces_plot = [
-                self.list_traces[list(self.recordings.keys()).index(layer_key)]
-            ]
+            list_traces_plot = [self.list_traces[list(self.recordings.keys()).index(layer_key)]]
 
         if scale_up:
             if mode == "line":
                 data_plot["vspacing"] *= 0.8
             elif mode == "map":
                 data_plot["clims"] = {
-                    layer: (1.2 * val[0], 1.2 * val[1])
-                    for layer, val in self.data_plot["clims"].items()
+                    layer: (1.2 * val[0], 1.2 * val[1]) for layer, val in self.data_plot["clims"].items()
                 }
         if scale_down:
             if mode == "line":
                 data_plot["vspacing"] *= 1.2
             elif mode == "map":
                 data_plot["clims"] = {
-                    layer: (0.8 * val[0], 0.8 * val[1])
-                    for layer, val in self.data_plot["clims"].items()
+                    layer: (0.8 * val[0], 0.8 * val[1]) for layer, val in self.data_plot["clims"].items()
                 }
 
         self.next_data_plot["vspacing"] = data_plot["vspacing"]

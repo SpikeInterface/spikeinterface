@@ -12,9 +12,7 @@ class BaseComparison:
     Base class for all comparisons (SpikeTrain and Template)
     """
 
-    def __init__(
-        self, object_list, name_list, match_score=0.5, chance_score=0.1, verbose=False
-    ):
+    def __init__(self, object_list, name_list, match_score=0.5, chance_score=0.1, verbose=False):
         self.object_list = object_list
         self.name_list = name_list
         self._verbose = verbose
@@ -29,9 +27,7 @@ class BaseMultiComparison(BaseComparison):
     It handles graph operations, comparisons, and agreements.
     """
 
-    def __init__(
-        self, object_list, name_list, match_score=0.5, chance_score=0.1, verbose=False
-    ):
+    def __init__(self, object_list, name_list, match_score=0.5, chance_score=0.1, verbose=False):
         BaseComparison.__init__(
             self,
             object_list=object_list,
@@ -134,9 +130,7 @@ class BaseMultiComparison(BaseComparison):
         if self._verbose:
             print("Multicomaprison step 3: clean graph")
         clean_graph = self.graph.copy()
-        subgraphs = (
-            clean_graph.subgraph(c).copy() for c in nx.connected_components(clean_graph)
-        )
+        subgraphs = (clean_graph.subgraph(c).copy() for c in nx.connected_components(clean_graph))
         removed_nodes = 0
         for sg in subgraphs:
             object_names = []
@@ -159,9 +153,7 @@ class BaseMultiComparison(BaseComparison):
                     # remove extra edges
                     n_edges_to_remove = len(nodes_duplicate) - 1
                     remove_idxs = np.argsort(weights_duplicates)[:n_edges_to_remove]
-                    edges_to_remove = np.array(edges_duplicates, dtype=object)[
-                        remove_idxs
-                    ]
+                    edges_to_remove = np.array(edges_duplicates, dtype=object)[remove_idxs]
 
                     for edge_to_remove in edges_to_remove:
                         clean_graph.remove_edge(edge_to_remove[0], edge_to_remove[1])
@@ -192,10 +184,7 @@ class BaseMultiComparison(BaseComparison):
         self._new_units = {}
 
         # save new units
-        self.subgraphs = [
-            self.clean_graph.subgraph(c).copy()
-            for c in nx.connected_components(self.clean_graph)
-        ]
+        self.subgraphs = [self.clean_graph.subgraph(c).copy() for c in nx.connected_components(self.clean_graph)]
         for new_unit, sg in enumerate(self.subgraphs):
             edges = list(sg.edges(data=True))
             if len(edges) > 0:
@@ -259,20 +248,12 @@ class BasePairComparison(BaseComparison):
         if self._verbose:
             print("Matching...")
 
-        self.possible_match_12, self.possible_match_21 = make_possible_match(
-            self.agreement_scores, self.chance_score
-        )
-        self.best_match_12, self.best_match_21 = make_best_match(
-            self.agreement_scores, self.chance_score
-        )
-        self.hungarian_match_12, self.hungarian_match_21 = make_hungarian_match(
-            self.agreement_scores, self.match_score
-        )
+        self.possible_match_12, self.possible_match_21 = make_possible_match(self.agreement_scores, self.chance_score)
+        self.best_match_12, self.best_match_21 = make_best_match(self.agreement_scores, self.chance_score)
+        self.hungarian_match_12, self.hungarian_match_21 = make_hungarian_match(self.agreement_scores, self.match_score)
 
     def get_ordered_agreement_scores(self):
-        assert (
-            self.agreement_scores is not None
-        ), "'agreement_scores' have not been computed!"
+        assert self.agreement_scores is not None, "'agreement_scores' have not been computed!"
         # order rows
         order0 = self.agreement_scores.max(axis=1).argsort()
         scores = self.agreement_scores.iloc[order0.values[::-1], :]
@@ -309,10 +290,7 @@ class MixinSpikeTrainComparison:
     def set_frames_and_frequency(self, sorting_list):
         sorting0 = sorting_list[0]
         # check num segments
-        if not np.all(
-            sorting.get_num_segments() == sorting0.get_num_segments()
-            for sorting in sorting_list
-        ):
+        if not np.all(sorting.get_num_segments() == sorting0.get_num_segments() for sorting in sorting_list):
             raise Exception("Sorting objects must have the same number of segments.")
 
         # take sampling frequency from sorting list and test that they are equivalent.
@@ -326,9 +304,7 @@ class MixinSpikeTrainComparison:
         if not np.all(sf0 == sampling_freqs):
             delta_freq_ratio = np.abs(sampling_freqs - sf0) / sf0
             # tolerance of 0.1%
-            assert np.all(
-                delta_freq_ratio < 0.001
-            ), "Inconsistent sampling frequency among sorting list"
+            assert np.all(delta_freq_ratio < 0.001), "Inconsistent sampling frequency among sorting list"
 
         self.sampling_frequency = sf0
         self.delta_frames = int(self.delta_time / 1000 * self.sampling_frequency)

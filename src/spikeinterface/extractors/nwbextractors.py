@@ -39,19 +39,13 @@ def check_nwb_install():
 
 
 def check_fsspec_install():
-    assert (
-        HAVE_FSSPEC
-    ), "To stream NWB data with fsspec, install fsspec: \n\n pip install fsspec aiohttp requests\n\n"
+    assert HAVE_FSSPEC, "To stream NWB data with fsspec, install fsspec: \n\n pip install fsspec aiohttp requests\n\n"
 
 
 def get_electrical_series(nwbfile, electrical_series_name):
     if electrical_series_name is not None:
-        es_dict = {
-            i.name: i for i in nwbfile.all_children() if isinstance(i, ElectricalSeries)
-        }
-        assert (
-            electrical_series_name in es_dict
-        ), "electrical series name not present in nwbfile"
+        es_dict = {i.name: i for i in nwbfile.all_children() if isinstance(i, ElectricalSeries)}
+        assert electrical_series_name in es_dict, "electrical series name not present in nwbfile"
         es = es_dict[electrical_series_name]
     else:
         es_list = []
@@ -118,9 +112,7 @@ class NwbRecordingExtractor(BaseRecording):
     installed = HAVE_NWB  # check at class level if installed or not
     is_writable = True
     mode = "file"
-    installation_mesg = (
-        "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
-    )
+    installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
     name = "nwb"
 
     def __init__(
@@ -141,11 +133,7 @@ class NwbRecordingExtractor(BaseRecording):
             import fsspec
             from fsspec.implementations.cached import CachingFileSystem
 
-            self.stream_cache_path = (
-                stream_cache_path
-                if stream_cache_path is not None
-                else get_global_tmp_folder()
-            )
+            self.stream_cache_path = stream_cache_path if stream_cache_path is not None else get_global_tmp_folder()
             self.cfs = CachingFileSystem(
                 fs=fsspec.filesystem("http"),
                 cache_storage=str(self.stream_cache_path),
@@ -159,9 +147,7 @@ class NwbRecordingExtractor(BaseRecording):
             assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
             assert "ros3" in drivers, assertion_msg
             self._file_path = str(file_path)
-            self.io = NWBHDF5IO(
-                self._file_path, mode="r", load_namespaces=True, driver="ros3"
-            )
+            self.io = NWBHDF5IO(self._file_path, mode="r", load_namespaces=True, driver="ros3")
 
         else:
             self._file_path = str(file_path)
@@ -192,9 +178,7 @@ class NwbRecordingExtractor(BaseRecording):
                 "'timestamps' are missing from the file. "
                 "Use the 'sampling_frequency' argument."
             )
-            sampling_frequency = 1.0 / np.median(
-                np.diff(timestamps[:samples_for_rate_estimation])
-            )
+            sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
 
         if load_time_vector and timestamps is not None:
             times_kwargs = dict(time_vector=self._es.timestamps)
@@ -206,17 +190,13 @@ class NwbRecordingExtractor(BaseRecording):
 
         # Extractors channel groups must be integers, but Nwb electrodes group_name can be strings
         if "group_name" in self._nwbfile.electrodes.colnames:
-            unique_grp_names = list(
-                np.unique(self._nwbfile.electrodes["group_name"][:])
-            )
+            unique_grp_names = list(np.unique(self._nwbfile.electrodes["group_name"][:]))
 
         # Fill channel properties dictionary from electrodes table
         if "channel_name" in self._nwbfile.electrodes.colnames:
             channel_ids = self._es.electrodes["channel_name"][:].astype("str")
         else:
-            channel_ids = [
-                self._es.electrodes.table.id[x] for x in self._es.electrodes.data
-            ]
+            channel_ids = [self._es.electrodes.table.id[x] for x in self._es.electrodes.data]
 
         dtype = self._es.data.dtype
         BaseRecording.__init__(
@@ -253,66 +233,44 @@ class NwbRecordingExtractor(BaseRecording):
 
         # Add properties
         properties = dict()
-        for es_ind, (channel_id, electrode_table_index) in enumerate(
-            zip(channel_ids, self._es.electrodes.data)
-        ):
+        for es_ind, (channel_id, electrode_table_index) in enumerate(zip(channel_ids, self._es.electrodes.data)):
             if "rel_x" in self._nwbfile.electrodes:
                 ndim = 2  # assume 2 dimensions
                 if "rel_z" in self._nwbfile.electrodes:
                     ndim = 3  # if we have rel_z, it is 3 dimensions
 
                 if "location" not in properties:
-                    properties["location"] = np.zeros(
-                        (self.get_num_channels(), ndim), dtype=float
-                    )
-                properties["location"][es_ind, 0] = self._nwbfile.electrodes["rel_x"][
-                    electrode_table_index
-                ]
+                    properties["location"] = np.zeros((self.get_num_channels(), ndim), dtype=float)
+                properties["location"][es_ind, 0] = self._nwbfile.electrodes["rel_x"][electrode_table_index]
                 if "rel_y" in self._nwbfile.electrodes:
-                    properties["location"][es_ind, 1] = self._nwbfile.electrodes[
-                        "rel_y"
-                    ][electrode_table_index]
+                    properties["location"][es_ind, 1] = self._nwbfile.electrodes["rel_y"][electrode_table_index]
                 if "rel_z" in self._nwbfile.electrodes:
-                    properties["location"][es_ind, 2] = self._nwbfile.electrodes[
-                        "rel_z"
-                    ][electrode_table_index]
+                    properties["location"][es_ind, 2] = self._nwbfile.electrodes["rel_z"][electrode_table_index]
 
             for col in self._nwbfile.electrodes.colnames:
-                if isinstance(
-                    self._nwbfile.electrodes[col][electrode_table_index], ElectrodeGroup
-                ):
+                if isinstance(self._nwbfile.electrodes[col][electrode_table_index], ElectrodeGroup):
                     continue
                 elif col == "group_name":
-                    group = unique_grp_names.index(
-                        self._nwbfile.electrodes[col][electrode_table_index]
-                    )
+                    group = unique_grp_names.index(self._nwbfile.electrodes[col][electrode_table_index])
                     if "group" not in properties:
-                        properties["group"] = np.zeros(
-                            self.get_num_channels(), dtype=type(group)
-                        )
+                        properties["group"] = np.zeros(self.get_num_channels(), dtype=type(group))
                     properties["group"][es_ind] = group
                 elif col == "location":
                     brain_area = self._nwbfile.electrodes[col][electrode_table_index]
                     if "brain_area" not in properties:
-                        properties["brain_area"] = np.zeros(
-                            self.get_num_channels(), dtype=type(brain_area)
-                        )
+                        properties["brain_area"] = np.zeros(self.get_num_channels(), dtype=type(brain_area))
                     properties["brain_area"][es_ind] = brain_area
                 elif col == "offset":
                     offset = self._nwbfile.electrodes[col][electrode_table_index]
                     if "offset" not in properties:
-                        properties["offset"] = np.zeros(
-                            self.get_num_channels(), dtype=type(offset)
-                        )
+                        properties["offset"] = np.zeros(self.get_num_channels(), dtype=type(offset))
                     properties["offset"][es_ind] = offset
                 elif col in ["x", "y", "z", "rel_x", "rel_y", "rel_z"]:
                     continue
                 else:
                     val = self._nwbfile.electrodes[col][electrode_table_index]
                     if col not in properties:
-                        properties[col] = np.zeros(
-                            self.get_num_channels(), dtype=type(val)
-                        )
+                        properties[col] = np.zeros(self.get_num_channels(), dtype=type(val))
                     properties[col][es_ind] = val
 
         for prop_name, values in properties.items():
@@ -370,15 +328,11 @@ class NwbRecordingSegment(BaseRecordingSegment):
             traces = es.data[start_frame:end_frame, channel_indices]
         else:
             # channel_indices is np.ndarray
-            if np.array(channel_indices).size > 1 and np.any(
-                np.diff(channel_indices) < 0
-            ):
+            if np.array(channel_indices).size > 1 and np.any(np.diff(channel_indices) < 0):
                 # get around h5py constraint that it does not allow datasets
                 # to be indexed out of order
                 sorted_channel_indices = np.sort(channel_indices)
-                resorted_indices = np.array(
-                    [list(sorted_channel_indices).index(ch) for ch in channel_indices]
-                )
+                resorted_indices = np.array([list(sorted_channel_indices).index(ch) for ch in channel_indices])
                 recordings = es.data[start_frame:end_frame, sorted_channel_indices]
                 traces = recordings[:, resorted_indices]
             else:
@@ -415,9 +369,7 @@ class NwbSortingExtractor(BaseSorting):
     extractor_name = "NwbSorting"
     installed = HAVE_NWB  # check at class level if installed or not
     mode = "file"
-    installation_mesg = (
-        "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
-    )
+    installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
     name = "nwb"
 
     def __init__(
@@ -440,9 +392,7 @@ class NwbSortingExtractor(BaseSorting):
             from fsspec.implementations.cached import CachingFileSystem
             import h5py
 
-            self.stream_cache_path = (
-                stream_cache_path if stream_cache_path is not None else "cache"
-            )
+            self.stream_cache_path = stream_cache_path if stream_cache_path is not None else "cache"
             self.cfs = CachingFileSystem(
                 fs=fsspec.filesystem("http"),
                 cache_storage=self.stream_cache_path,
@@ -453,9 +403,7 @@ class NwbSortingExtractor(BaseSorting):
 
         elif stream_mode == "ros3":
             self._file_path = str(file_path)
-            self.io = NWBHDF5IO(
-                self._file_path, mode="r", load_namespaces=True, driver="ros3"
-            )
+            self.io = NWBHDF5IO(self._file_path, mode="r", load_namespaces=True, driver="ros3")
 
         else:
             self._file_path = str(file_path)
@@ -466,9 +414,7 @@ class NwbSortingExtractor(BaseSorting):
         if sampling_frequency is None:
             # defines the electrical series from where the sorting came from
             # important to know the sampling_frequency
-            self._es = get_electrical_series(
-                self._nwbfile, self._electrical_series_name
-            )
+            self._es = get_electrical_series(self._nwbfile, self._electrical_series_name)
             # get rate
             if self._es.rate is not None:
                 sampling_frequency = self._es.rate
@@ -476,13 +422,10 @@ class NwbSortingExtractor(BaseSorting):
                 if hasattr(self._es, "timestamps"):
                     if self._es.timestamps is not None:
                         timestamps = self._es.timestamps
-                        sampling_frequency = 1 / np.median(
-                            np.diff(timestamps[samples_for_rate_estimation])
-                        )
+                        sampling_frequency = 1 / np.median(np.diff(timestamps[samples_for_rate_estimation]))
 
         assert sampling_frequency is not None, (
-            "Couldn't load sampling frequency. Please provide it with the "
-            "'sampling_frequency' argument"
+            "Couldn't load sampling frequency. Please provide it with the " "'sampling_frequency' argument"
         )
 
         # get all units ids
@@ -503,9 +446,7 @@ class NwbSortingExtractor(BaseSorting):
             else:
                 print(f"Skipping {column} because of unequal shapes across units")
 
-        BaseSorting.__init__(
-            self, sampling_frequency=sampling_frequency, unit_ids=units_ids
-        )
+        BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=units_ids)
         sorting_segment = NwbSortingSegment(
             nwbfile=self._nwbfile,
             sampling_frequency=sampling_frequency,
@@ -548,9 +489,7 @@ class NwbSortingSegment(BaseSortingSegment):
             start_frame = 0
         if end_frame is None:
             end_frame = np.inf
-        times = self._nwbfile.units["spike_times"][
-            list(self._nwbfile.units.id[:]).index(unit_id)
-        ][:]
+        times = self._nwbfile.units["spike_times"][list(self._nwbfile.units.id[:]).index(unit_id)][:]
 
         if self._timestamps is not None:
             frames = np.searchsorted(times, self.timestamps).astype("int64")
@@ -559,17 +498,11 @@ class NwbSortingSegment(BaseSortingSegment):
         return frames[(frames > start_frame) & (frames < end_frame)]
 
 
-read_nwb_recording = define_function_from_class(
-    source_class=NwbRecordingExtractor, name="read_nwb_recording"
-)
-read_nwb_sorting = define_function_from_class(
-    source_class=NwbSortingExtractor, name="read_nwb_sorting"
-)
+read_nwb_recording = define_function_from_class(source_class=NwbRecordingExtractor, name="read_nwb_recording")
+read_nwb_sorting = define_function_from_class(source_class=NwbSortingExtractor, name="read_nwb_sorting")
 
 
-def read_nwb(
-    file_path, load_recording=True, load_sorting=False, electrical_series_name=None
-):
+def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_series_name=None):
     """Reads NWB file into SpikeInterface extractors.
 
     Parameters
@@ -591,14 +524,10 @@ def read_nwb(
     """
     outputs = ()
     if load_recording:
-        rec = read_nwb_recording(
-            file_path, electrical_series_name=electrical_series_name
-        )
+        rec = read_nwb_recording(file_path, electrical_series_name=electrical_series_name)
         outputs = outputs + (rec,)
     if load_sorting:
-        sorting = read_nwb_sorting(
-            file_path, electrical_series_name=electrical_series_name
-        )
+        sorting = read_nwb_sorting(file_path, electrical_series_name=electrical_series_name)
         outputs = outputs + (sorting,)
 
     if len(outputs) == 1:

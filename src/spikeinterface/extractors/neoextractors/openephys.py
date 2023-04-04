@@ -133,9 +133,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         block_index=None,
         all_annotations=False,
     ):
-        neo_kwargs = self.map_to_neo_kwargs(
-            folder_path, load_sync_channel, experiment_names
-        )
+        neo_kwargs = self.map_to_neo_kwargs(folder_path, load_sync_channel, experiment_names)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -157,9 +155,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         else:
             record_node = ""
             oe_stream = stream_name
-        exp_ids = sorted(
-            list(self.neo_reader.folder_structure[record_node]["experiments"].keys())
-        )
+        exp_ids = sorted(list(self.neo_reader.folder_structure[record_node]["experiments"].keys()))
         if block_index is None:
             exp_id = exp_ids[0]
         else:
@@ -167,9 +163,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
         # do not load probe for NIDQ stream
         if "NI-DAQmx" not in stream_name:
-            settings_file = self.neo_reader.folder_structure[record_node][
-                "experiments"
-            ][exp_id]["settings_file"]
+            settings_file = self.neo_reader.folder_structure[record_node]["experiments"][exp_id]["settings_file"]
 
             if Path(settings_file).is_file():
                 probe = pi.read_openephys(
@@ -188,9 +182,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     num_channels_per_adc = 16
                 else:
                     num_channels_per_adc = 12
-                sample_shifts = get_neuropixels_sample_shifts(
-                    self.get_num_channels(), num_channels_per_adc
-                )
+                sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_channels_per_adc)
                 self.set_property("inter_sample_shift", sample_shifts)
 
         # load synchronized timestamps and set_times to recording
@@ -198,11 +190,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             recording_folder = Path(folder_path) / record_node
             for segment_index in range(self.get_num_segments()):
                 stream_folder = (
-                    recording_folder
-                    / f"experiment{exp_id}"
-                    / f"recording{segment_index+1}"
-                    / "continuous"
-                    / oe_stream
+                    recording_folder / f"experiment{exp_id}" / f"recording{segment_index+1}" / "continuous" / oe_stream
                 )
                 if (stream_folder / "sample_numbers.npy").is_file():
                     # OE version>=v0.6
@@ -219,9 +207,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                         with_warning=False,
                     )
                 except AssertionError:
-                    warnings.warn(
-                        f"Could not load synchronized timestamps for {stream_name}"
-                    )
+                    warnings.warn(f"Could not load synchronized timestamps for {stream_name}")
 
         self._kwargs.update(
             dict(
@@ -233,9 +219,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         )
 
     @classmethod
-    def map_to_neo_kwargs(
-        cls, folder_path, load_sync_channel=False, experiment_names=None
-    ):
+    def map_to_neo_kwargs(cls, folder_path, load_sync_channel=False, experiment_names=None):
         neo_kwargs = {
             "dirname": str(folder_path),
             "load_sync_channel": load_sync_channel,

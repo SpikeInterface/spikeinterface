@@ -18,12 +18,8 @@ class AlignSnippets(BaseSnippets):
         interpolate=1,
         det_sign=0,
     ):
-        assert isinstance(
-            snippets, BaseSnippets
-        ), "'snippets' must be a SnippetsExtractor"
-        assert mode in ("ch_peak", "main_peak"), (
-            "mode must be " "ch_peak" " or " "main_peak" ""
-        )
+        assert isinstance(snippets, BaseSnippets), "'snippets' must be a SnippetsExtractor"
+        assert mode in ("ch_peak", "main_peak"), "mode must be " "ch_peak" " or " "main_peak" ""
 
         BaseSnippets.__init__(
             self,
@@ -33,9 +29,7 @@ class AlignSnippets(BaseSnippets):
             channel_ids=snippets.channel_ids,
             dtype=snippets.get_dtype(),
         )
-        assert (
-            self.snippet_len >= new_nbefore + new_nafter
-        ), "snippet_len smaller than new_nbefore+new_nafter"
+        assert self.snippet_len >= new_nbefore + new_nafter, "snippet_len smaller than new_nbefore+new_nafter"
 
         snippets.copy_metadata(self, only_main=False, ids=None)
 
@@ -83,17 +77,11 @@ class AlignSnippetsSegment(BaseSnippetsSegment):
         start_search = int(new_nbefore * interpolate)
         end_search = int((org_splen - new_nafter + 1) * interpolate)
         if det_sign == 0:
-            self._find_peak = lambda x: start_search + np.argmax(
-                np.abs(x[:, start_search:end_search, :]), axis=1
-            )
+            self._find_peak = lambda x: start_search + np.argmax(np.abs(x[:, start_search:end_search, :]), axis=1)
         elif det_sign > 0:
-            self._find_peak = lambda x: start_search + np.argmax(
-                x[:, start_search:end_search, :], axis=1
-            )
+            self._find_peak = lambda x: start_search + np.argmax(x[:, start_search:end_search, :], axis=1)
         else:
-            self._find_peak = lambda x: start_search + np.argmin(
-                x[:, start_search:end_search, :], axis=1
-            )
+            self._find_peak = lambda x: start_search + np.argmin(x[:, start_search:end_search, :], axis=1)
         self._mode = mode
         if mode == "main_peak":
             if det_sign == 0:
@@ -109,14 +97,10 @@ class AlignSnippetsSegment(BaseSnippetsSegment):
         end_frame: Union[int, None] = None,
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
-        snippets = self.parent_snippets_segment.get_snippets(
-            indices=indices, channel_indices=channel_indices
-        )
+        snippets = self.parent_snippets_segment.get_snippets(indices=indices, channel_indices=channel_indices)
         if self._interpolate > 1:
             xs = np.arange(0, self._org_splen, 1 / self._interpolate)
-            snippets = CubicSpline(
-                xs[:: self._interpolate], snippets, axis=1, bc_type="natural"
-            )(xs)
+            snippets = CubicSpline(xs[:: self._interpolate], snippets, axis=1, bc_type="natural")(xs)
 
         peaks_pos = self._find_peak(snippets)
 
@@ -132,18 +116,12 @@ class AlignSnippetsSegment(BaseSnippetsSegment):
         posts = self._new_nafter * self._interpolate
         if self._mode == "main_peak":
             for i, pos in enumerate(peaks_pos):
-                jpeak = pos[
-                    self._find_main_ch([snippets[i, p, ch] for ch, p in enumerate(pos)])
-                ]
-                aligned_snippets[i, :, :] = snippets[
-                    i, jpeak - pres : jpeak + posts : inp, :
-                ]
+                jpeak = pos[self._find_main_ch([snippets[i, p, ch] for ch, p in enumerate(pos)])]
+                aligned_snippets[i, :, :] = snippets[i, jpeak - pres : jpeak + posts : inp, :]
         else:
             for i, pos in enumerate(peaks_pos):
                 for chi, chpos in enumerate(pos):
-                    aligned_snippets[i, :, chi] = snippets[
-                        i, chpos - pres : chpos + posts : inp, chi
-                    ]
+                    aligned_snippets[i, :, chi] = snippets[i, chpos - pres : chpos + posts : inp, chi]
         return aligned_snippets
 
     def get_num_snippets(self):
@@ -152,7 +130,5 @@ class AlignSnippetsSegment(BaseSnippetsSegment):
     def get_frames(self, indices):
         return self.parent_snippets_segment.get_num_snippets(indices)
 
-    def frames_to_indices(
-        self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None
-    ):
+    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
         return self.parent_snippets_segment.frames_to_indices(start_frame, end_frame)

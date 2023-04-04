@@ -166,10 +166,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             sparsity = self.waveforms["static"].sparsity
 
         for key in self.keys:
-            if (
-                self.parent_benchmark is not None
-                and key in self._waveform_names_from_parent
-            ):
+            if self.parent_benchmark is not None and key in self._waveform_names_from_parent:
                 continue
 
             waveforms_folder = self.folder / "waveforms" / key
@@ -243,12 +240,8 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 wfs = wfs.reshape(wfs.shape[0], -1)
 
                 dist["norm_static"][unit_ind] = np.linalg.norm(ref_template)
-                dist["template_euclidean"][
-                    unit_ind
-                ] = sklearn.metrics.pairwise_distances(ref_template, template)[0]
-                dist["template_cosine"][
-                    unit_ind
-                ] = sklearn.metrics.pairwise.cosine_similarity(ref_template, template)[
+                dist["template_euclidean"][unit_ind] = sklearn.metrics.pairwise_distances(ref_template, template)[0]
+                dist["template_cosine"][unit_ind] = sklearn.metrics.pairwise.cosine_similarity(ref_template, template)[
                     0
                 ]
 
@@ -275,20 +268,12 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         self.residuals = {}
 
         for key in ["corrected"]:
-            difference = ResidualRecording(
-                self.recordings["static"], self.recordings[key]
-            )
-            self.residuals[key] = np.zeros(
-                (self.recordings["static"].get_num_channels(), 0)
-            )
+            difference = ResidualRecording(self.recordings["static"], self.recordings[key])
+            self.residuals[key] = np.zeros((self.recordings["static"].get_num_channels(), 0))
 
             for i in np.arange(t_start * fr, t_stop * fr, fr):
-                data = np.linalg.norm(
-                    difference.get_traces(start_frame=i, end_frame=i + fr), axis=0
-                ) / np.sqrt(fr)
-                self.residuals[key] = np.hstack(
-                    (self.residuals[key], data[:, np.newaxis])
-                )
+                data = np.linalg.norm(difference.get_traces(start_frame=i, end_frame=i + fr), axis=0) / np.sqrt(fr)
+                self.residuals[key] = np.hstack((self.residuals[key], data[:, np.newaxis]))
 
         return self.residuals, (t_start, t_stop)
 
@@ -297,15 +282,11 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             label = case["label"]
             sorting = self.sortings[label]
             if label not in self.comparisons:
-                comp = GroundTruthComparison(
-                    self.sorting_gt, sorting, exhaustive_gt=True
-                )
+                comp = GroundTruthComparison(self.sorting_gt, sorting, exhaustive_gt=True)
                 self.comparisons[label] = comp
                 self.accuracies[label] = comp.get_performance()["accuracy"].values
 
-    def _plot_accuracy(
-        self, accuracies, mode="ordered_accuracy", figsize=(15, 5), ls="-"
-    ):
+    def _plot_accuracy(self, accuracies, mode="ordered_accuracy", figsize=(15, 5), ls="-"):
         if len(self.accuracies) != len(self.sorter_cases):
             self.compute_accuracies()
 
@@ -336,9 +317,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
             chan_locations = self.recordings["drifting"].get_channel_locations()
 
-            metrics = compute_quality_metrics(
-                self.waveforms["static"], metric_names=["snr"], load_if_exists=True
-            )
+            metrics = compute_quality_metrics(self.waveforms["static"], metric_names=["snr"], load_if_exists=True)
             snr = metrics["snr"].values
 
             for i, case in enumerate(self.sorter_cases):
@@ -356,9 +335,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         elif mode == "snr":
             fig, ax = plt.subplots(figsize=figsize)
 
-            metrics = compute_quality_metrics(
-                self.waveforms["static"], metric_names=["snr"], load_if_exists=True
-            )
+            metrics = compute_quality_metrics(self.waveforms["static"], metric_names=["snr"], load_if_exists=True)
             snr = metrics["snr"].values
 
             for i, case in enumerate(self.sorter_cases):
@@ -441,15 +418,11 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             merged_sporting = MergeUnitsSorting(sorting, to_merge)
             print(sorting)
             print(merged_sporting)
-            comp_merged = GroundTruthComparison(
-                self.sorting_gt, merged_sporting, exhaustive_gt=True
-            )
+            comp_merged = GroundTruthComparison(self.sorting_gt, merged_sporting, exhaustive_gt=True)
 
             self.merged_sortings[label] = merged_sporting
             self.merged_comparisons[label] = comp_merged
-            self.merged_accuracies[label] = comp_merged.get_performance()[
-                "accuracy"
-            ].values
+            self.merged_accuracies[label] = comp_merged.get_performance()["accuracy"].values
 
 
 def plot_distances_to_static(benchmarks, metric="cosine", figsize=(15, 10)):
@@ -494,14 +467,8 @@ def plot_distances_to_static(benchmarks, metric="cosine", figsize=(15, 10)):
         # results = bench._compute_snippets_variability(metric=metric, num_channels=num_channels)
         distances = bench.compute_distances_to_static(force=False)
 
-        m_differences = (
-            distances["corrected"][f"wf_{metric}_mean"]
-            / distances["static"][f"wf_{metric}_mean"]
-        )
-        s_differences = (
-            distances["corrected"][f"wf_{metric}_std"]
-            / distances["static"][f"wf_{metric}_std"]
-        )
+        m_differences = distances["corrected"][f"wf_{metric}_mean"] / distances["static"][f"wf_{metric}_mean"]
+        s_differences = distances["corrected"][f"wf_{metric}_std"] / distances["static"][f"wf_{metric}_std"]
 
         ax_3.bar(
             [count],
@@ -556,9 +523,7 @@ def plot_snr_decrease(benchmarks, figsize=(15, 10)):
     idx = np.argsort(distances_to_center)
     _simpleaxis(axes[0, 0])
 
-    snr_static = compute_quality_metrics(
-        benchmarks[0].waveforms["static"], metric_names=["snr"], load_if_exists=True
-    )
+    snr_static = compute_quality_metrics(benchmarks[0].waveforms["static"], metric_names=["snr"], load_if_exists=True)
     snr_drifting = compute_quality_metrics(
         benchmarks[0].waveforms["drifting"], metric_names=["snr"], load_if_exists=True
     )
@@ -581,9 +546,7 @@ def plot_snr_decrease(benchmarks, figsize=(15, 10)):
     axes[0, 0].set_xticks([])
 
     for count, bench in enumerate(benchmarks):
-        snr_corrected = compute_quality_metrics(
-            bench.waveforms["corrected"], metric_names=["snr"], load_if_exists=True
-        )
+        snr_corrected = compute_quality_metrics(bench.waveforms["corrected"], metric_names=["snr"], load_if_exists=True)
         axes[1, 0].scatter(snr_static.values, snr_corrected.values, label=bench.title)
         axes[1, 0].plot([0, m], [0, m], color="k")
 
@@ -669,9 +632,7 @@ class ResidualRecording(BasePreprocessor):
         for parent_recording_segment_1, parent_recording_segment_2 in zip(
             recording_1._recording_segments, recording_2._recording_segments
         ):
-            rec_segment = DifferenceRecordingSegment(
-                parent_recording_segment_1, parent_recording_segment_2
-            )
+            rec_segment = DifferenceRecordingSegment(parent_recording_segment_1, parent_recording_segment_2)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording_1=recording_1, recording_2=recording_2)
@@ -684,12 +645,8 @@ class DifferenceRecordingSegment(BasePreprocessorSegment):
         self.parent_recording_segment_2 = parent_recording_segment_2
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        traces_1 = self.parent_recording_segment_1.get_traces(
-            start_frame, end_frame, channel_indices
-        )
-        traces_2 = self.parent_recording_segment_2.get_traces(
-            start_frame, end_frame, channel_indices
-        )
+        traces_1 = self.parent_recording_segment_1.get_traces(start_frame, end_frame, channel_indices)
+        traces_2 = self.parent_recording_segment_2.get_traces(start_frame, end_frame, channel_indices)
 
         return traces_2 - traces_1
 

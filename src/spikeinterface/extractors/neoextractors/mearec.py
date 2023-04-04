@@ -23,9 +23,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
 
     def __init__(self, file_path, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        NeoBaseRecordingExtractor.__init__(
-            self, all_annotations=all_annotations, **neo_kwargs
-        )
+        NeoBaseRecordingExtractor.__init__(self, all_annotations=all_annotations, **neo_kwargs)
 
         self.extra_requirements.append("mearec")
 

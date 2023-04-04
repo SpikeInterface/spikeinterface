@@ -196,12 +196,8 @@ class YassSorter(BaseSorter):
             # use previously trained NN folder location
             neural_nets_path = Path(params["neural_nets_path"])
 
-        merge_params["neuralnetwork"]["denoise"]["filename"] = str(
-            neural_nets_path.absolute() / "denoise.pt"
-        )
-        merge_params["neuralnetwork"]["detect"]["filename"] = str(
-            neural_nets_path.absolute() / "detect.pt"
-        )
+        merge_params["neuralnetwork"]["denoise"]["filename"] = str(neural_nets_path.absolute() / "denoise.pt")
+        merge_params["neuralnetwork"]["detect"]["filename"] = str(neural_nets_path.absolute() / "detect.pt")
 
         # to yaml again (for NNs update)
         fname_config = sorter_output_folder / "config.yaml"
@@ -244,9 +240,7 @@ class YassSorter(BaseSorter):
                 "TRAINING YASS (Note: using default spike width, neighbour chan radius; to change, see parameter files)"
             )
             print("To use previously-trained NNs, change the NNs prior to running: ")
-            print(
-                "            ss.set_NNs('path_to_NNs') (or set params['neural_nets_path'] = path_toNNs)"
-            )
+            print("            ss.set_NNs('path_to_NNs') (or set params['neural_nets_path'] = path_toNNs)")
             print("prior to running ss.run_sorter()")
 
         config_file = sorter_output_folder.absolute() / "config.yaml"
@@ -308,23 +302,15 @@ def merge_params_dict(yass_params, params):
     merge_params["preprocess"]["filter"]["low_pass_freq"] = params["freq_min"]
     merge_params["preprocess"]["filter"]["high_factor"] = params["freq_max"]
 
-    merge_params["neuralnetwork"]["detect"]["filename"] = os.path.join(
-        params["neural_nets_path"], "detect.pt"
-    )
-    merge_params["neuralnetwork"]["denoise"]["filename"] = os.path.join(
-        params["neural_nets_path"], "denoise.pt"
-    )
+    merge_params["neuralnetwork"]["detect"]["filename"] = os.path.join(params["neural_nets_path"], "detect.pt")
+    merge_params["neuralnetwork"]["denoise"]["filename"] = os.path.join(params["neural_nets_path"], "denoise.pt")
 
     merge_params["resources"]["multi_processing"] = params["multi_processing"]
     merge_params["resources"]["n_processors"] = params["n_processors"]
     merge_params["resources"]["n_gpu_processors"] = params["n_gpu_processors"]
     merge_params["resources"]["n_sec_chunk"] = params["n_sec_chunk"]
-    merge_params["resources"]["n_sec_chunk_gpu_detect"] = params[
-        "n_sec_chunk_gpu_detect"
-    ]
-    merge_params["resources"]["n_sec_chunk_gpu_deconv"] = params[
-        "n_sec_chunk_gpu_deconv"
-    ]
+    merge_params["resources"]["n_sec_chunk_gpu_detect"] = params["n_sec_chunk_gpu_detect"]
+    merge_params["resources"]["n_sec_chunk_gpu_deconv"] = params["n_sec_chunk_gpu_deconv"]
     merge_params["resources"]["gpu_id"] = params["gpu_id"]
     merge_params["resources"]["generate_phy"] = params["generate_phy"]
     merge_params["resources"]["phy_percent_spikes"] = params["phy_percent_spikes"]
@@ -335,8 +321,6 @@ def merge_params_dict(yass_params, params):
 
     merge_params["deconvolution"]["update_templates"] = params["update_templates"]
     merge_params["deconvolution"]["neuron_discover"] = params["neuron_discover"]
-    merge_params["deconvolution"]["template_update_time"] = params[
-        "template_update_time"
-    ]
+    merge_params["deconvolution"]["template_update_time"] = params["template_update_time"]
 
     return merge_params

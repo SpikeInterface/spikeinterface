@@ -39,9 +39,7 @@ def test_features_from_peaks():
         "center_of_mass": {"local_radius_um": 120.0},
         "energy": {"local_radius_um": 160.0},
     }
-    features = compute_features_from_peaks(
-        recording, peaks, feature_list, feature_params=feature_params, **job_kwargs
-    )
+    features = compute_features_from_peaks(recording, peaks, feature_list, feature_params=feature_params, **job_kwargs)
 
     assert isinstance(features, tuple)
 
@@ -64,10 +62,7 @@ def test_features_from_peaks():
 
     # amplitude and peak to peak with multi channels
     d = {"all_channels": True}
-    (
-        amplitude,
-        ptp,
-    ) = compute_features_from_peaks(
+    (amplitude, ptp,) = compute_features_from_peaks(
         recording,
         peaks,
         ["amplitude", "ptp"],

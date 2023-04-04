@@ -40,9 +40,7 @@ class PhaseShiftRecording(BasePreprocessor):
 
     def __init__(self, recording, margin_ms=40.0, inter_sample_shift=None, dtype=None):
         if inter_sample_shift is None:
-            assert (
-                "inter_sample_shift" in recording.get_property_keys()
-            ), "'inter_sample_shift' is not a property!"
+            assert "inter_sample_shift" in recording.get_property_keys(), "'inter_sample_shift' is not a property!"
             sample_shifts = recording.get_property("inter_sample_shift")
         else:
             assert len(inter_sample_shift) == recording.get_num_channels(), "sample "
@@ -61,9 +59,7 @@ class PhaseShiftRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
         for parent_segment in recording._recording_segments:
-            rec_segment = PhaseShiftRecordingSegment(
-                parent_segment, sample_shifts, margin, dtype, tmp_dtype
-            )
+            rec_segment = PhaseShiftRecordingSegment(parent_segment, sample_shifts, margin, dtype, tmp_dtype)
             self.add_recording_segment(rec_segment)
 
         # for dumpability
@@ -77,9 +73,7 @@ class PhaseShiftRecording(BasePreprocessor):
 
 
 class PhaseShiftRecordingSegment(BasePreprocessorSegment):
-    def __init__(
-        self, parent_recording_segment, sample_shifts, margin, dtype, tmp_dtype
-    ):
+    def __init__(self, parent_recording_segment, sample_shifts, margin, dtype, tmp_dtype):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.sample_shifts = sample_shifts
         self.margin = margin
@@ -106,9 +100,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             window_on_margin=True,
         )
 
-        traces_shift = apply_fshift_sam(
-            traces_chunk, self.sample_shifts[channel_indices], axis=0
-        )
+        traces_shift = apply_fshift_sam(traces_chunk, self.sample_shifts[channel_indices], axis=0)
         # traces_shift = apply_fshift_ibl(traces_chunk, self.sample_shifts, axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
@@ -119,9 +111,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-phase_shift = define_function_from_class(
-    source_class=PhaseShiftRecording, name="phase_shift"
-)
+phase_shift = define_function_from_class(source_class=PhaseShiftRecording, name="phase_shift")
 
 
 def apply_fshift_sam(sig, sample_shifts, axis=0):

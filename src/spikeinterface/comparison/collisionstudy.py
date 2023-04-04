@@ -6,9 +6,7 @@ import numpy as np
 
 
 class CollisionGTStudy(GroundTruthStudy):
-    def run_comparisons(
-        self, exhaustive_gt=True, collision_lag=2.0, nbins=11, **kwargs
-    ):
+    def run_comparisons(self, exhaustive_gt=True, collision_lag=2.0, nbins=11, **kwargs):
         self.comparisons = {}
         for rec_name, sorter_name, sorting in iter_computed_sorting(self.study_folder):
             gt_sorting = self.get_ground_truth(rec_name)
@@ -24,12 +22,8 @@ class CollisionGTStudy(GroundTruthStudy):
         self.collision_lag = collision_lag
 
     def get_lags(self):
-        fs = self.comparisons[
-            (self.rec_names[0], self.sorter_names[0])
-        ].sorting1.get_sampling_frequency()
-        lags = (
-            self.comparisons[(self.rec_names[0], self.sorter_names[0])].bins / fs * 1000
-        )
+        fs = self.comparisons[(self.rec_names[0], self.sorter_names[0])].sorting1.get_sampling_frequency()
+        lags = self.comparisons[(self.rec_names[0], self.sorter_names[0])].bins / fs * 1000
         return lags
 
     def precompute_scores_by_similarities(self, good_only=True, min_accuracy=0.9):
@@ -40,9 +34,7 @@ class CollisionGTStudy(GroundTruthStudy):
             for rec_name in self.rec_names:
                 templates = self.get_templates(rec_name)
                 flat_templates = templates.reshape(templates.shape[0], -1)
-                similarity_matrix[
-                    rec_name
-                ] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+                similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
 
             self.all_similarities = {}
             self.all_recall_scores = {}
@@ -56,11 +48,7 @@ class CollisionGTStudy(GroundTruthStudy):
                 for rec_name in self.rec_names:
                     if (rec_name, sorter_name) in self.comparisons.keys():
                         comp = self.comparisons[(rec_name, sorter_name)]
-                        (
-                            similarities,
-                            recall_scores,
-                            pair_names,
-                        ) = comp.compute_collision_by_similarity(
+                        (similarities, recall_scores, pair_names,) = comp.compute_collision_by_similarity(
                             similarity_matrix[rec_name],
                             good_only=good_only,
                             min_accuracy=min_accuracy,
@@ -69,12 +57,8 @@ class CollisionGTStudy(GroundTruthStudy):
                     all_similarities.append(similarities)
                     all_recall_scores.append(recall_scores)
 
-                self.all_similarities[sorter_name] = np.concatenate(
-                    all_similarities, axis=0
-                )
-                self.all_recall_scores[sorter_name] = np.concatenate(
-                    all_recall_scores, axis=0
-                )
+                self.all_similarities[sorter_name] = np.concatenate(all_similarities, axis=0)
+                self.all_recall_scores[sorter_name] = np.concatenate(all_recall_scores, axis=0)
 
     def get_mean_over_similarity_range(self, similarity_range, sorter_name):
         idx = (self.all_similarities[sorter_name] >= similarity_range[0]) & (

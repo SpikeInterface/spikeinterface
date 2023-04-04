@@ -32,7 +32,9 @@ class HerdingspikesSortingExtractor(BaseSorting):
     extractor_name = "HS2Sorting"
     installed = HAVE_HS2SX  # check at class level if installed or not
     mode = "file"
-    installation_mesg = "To use the HS2SortingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
+    installation_mesg = (
+        "To use the HS2SortingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
+    )
     name = "herdingspikes"
 
     def __init__(self, file_path, load_unit_info=True):
@@ -54,9 +56,7 @@ class HerdingspikesSortingExtractor(BaseSorting):
             self.load_unit_info()
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        self.add_sorting_segment(
-            HerdingspikesSortingSegment(unit_ids, spike_times, spike_ids)
-        )
+        self.add_sorting_segment(HerdingspikesSortingSegment(unit_ids, spike_times, spike_ids))
         self._kwargs = {
             "file_path": str(Path(file_path).absolute()),
             "load_unit_info": load_unit_info,
@@ -150,6 +150,4 @@ class HerdingspikesSortingSegment(BaseSortingSegment):
     """
 
 
-read_herdingspikes = define_function_from_class(
-    source_class=HerdingspikesSortingExtractor, name="read_herdingspikes"
-)
+read_herdingspikes = define_function_from_class(source_class=HerdingspikesSortingExtractor, name="read_herdingspikes")

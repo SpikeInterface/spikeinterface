@@ -124,13 +124,9 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
         d["template_sparsity"] = template_sparsity
 
-        extremum_channel = get_template_extremum_channel(
-            we, peak_sign=d["peak_sign"], outputs="index"
-        )
+        extremum_channel = get_template_extremum_channel(we, peak_sign=d["peak_sign"], outputs="index")
         # as numpy vector
-        extremum_channel = np.array(
-            [extremum_channel[unit_id] for unit_id in unit_ids], dtype="int64"
-        )
+        extremum_channel = np.array([extremum_channel[unit_id] for unit_id in unit_ids], dtype="int64")
         d["extremum_channel"] = extremum_channel
 
         channel_locations = we.recording.get_channel_locations()
@@ -140,9 +136,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         # ~ print(unit_locations)
 
         # distance between units
-        unit_distances = scipy.spatial.distance.cdist(
-            unit_locations, unit_locations, metric="euclidean"
-        )
+        unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
 
         # seach for closet units and unitary discriminant vector
         closest_units = []
@@ -169,9 +163,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         d["closest_units"] = closest_units
 
         # distance channel from unit
-        distances = scipy.spatial.distance.cdist(
-            channel_locations, unit_locations, metric="euclidean"
-        )
+        distances = scipy.spatial.distance.cdist(channel_locations, unit_locations, metric="euclidean")
         near_cluster_mask = distances < d["local_radius_um"]
 
         # nearby cluster for each channel
@@ -181,9 +173,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
             possible_clusters_by_channel.append(cluster_inds)
 
         d["possible_clusters_by_channel"] = possible_clusters_by_channel
-        d["possible_shifts"] = np.arange(
-            -d["sample_shift"], d["sample_shift"] + 1, dtype="int64"
-        )
+        d["possible_shifts"] = np.arange(-d["sample_shift"], d["sample_shift"] + 1, dtype="int64")
 
         return d
 
@@ -286,13 +276,9 @@ def _tdc_find_spikes(traces, d, level=0):
             # distances = np.sum(np.sum((templates[possible_clusters][:, :, union_channels] - wf[: , union_channels][None, : :])**2, axis=1), axis=1)
 
             ## numba with cluster+channel spasity
-            union_channels = np.any(
-                d["template_sparsity"][possible_clusters, :], axis=0
-            )
+            union_channels = np.any(d["template_sparsity"][possible_clusters, :], axis=0)
             # distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
-            distances = numba_sparse_dist(
-                wf_short, templates_short, union_channels, possible_clusters
-            )
+            distances = numba_sparse_dist(wf_short, templates_short, union_channels, possible_clusters)
 
             # DEBUG
             # ~ ind = np.argmin(distances)

@@ -15,10 +15,7 @@ class UnitLocationsPlotter(SortingviewPlotter):
         # ensure serializable for sortingview
         unit_ids, channel_ids = self.make_serializable(dp.unit_ids, dp.channel_ids)
 
-        locations = {
-            str(ch): dp.channel_locations[i_ch].astype("float32")
-            for i_ch, ch in enumerate(channel_ids)
-        }
+        locations = {str(ch): dp.channel_locations[i_ch].astype("float32") for i_ch, ch in enumerate(channel_ids)}
 
         unit_items = []
         for unit_id in unit_ids:
@@ -30,9 +27,7 @@ class UnitLocationsPlotter(SortingviewPlotter):
                 )
             )
 
-        v_unit_locations = vv.UnitLocations(
-            units=unit_items, channel_locations=locations, disable_auto_rotate=True
-        )
+        v_unit_locations = vv.UnitLocations(units=unit_items, channel_locations=locations, disable_auto_rotate=True)
 
         if not dp.hide_unit_selector:
             v_units_table = generate_unit_table_view(dp.sorting)

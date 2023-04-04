@@ -24,9 +24,7 @@ class ISIHistogramsCalculator(BaseWaveformExtractorExtension):
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
-    def _set_params(
-        self, window_ms: float = 100.0, bin_ms: float = 5.0, method: str = "auto"
-    ):
+    def _set_params(self, window_ms: float = 100.0, bin_ms: float = 5.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
 
         return params
@@ -40,9 +38,7 @@ class ISIHistogramsCalculator(BaseWaveformExtractorExtension):
         return new_extension_data
 
     def _run(self):
-        isi_histograms, bins = _compute_isi_histograms(
-            self.waveform_extractor.sorting, **self._params
-        )
+        isi_histograms, bins = _compute_isi_histograms(self.waveform_extractor.sorting, **self._params)
         self._extension_data["isi_histograms"] = isi_histograms
         self._extension_data["bins"] = bins
 
@@ -58,10 +54,7 @@ class ISIHistogramsCalculator(BaseWaveformExtractorExtension):
             1D array with bins in ms
         """
         msg = "ISI histograms are not computed. Use the 'run()' function."
-        assert (
-            self._extension_data["isi_histograms"] is not None
-            and self._extension_data["bins"] is not None
-        ), msg
+        assert self._extension_data["isi_histograms"] is not None and self._extension_data["bins"] is not None, msg
         return self._extension_data["isi_histograms"], self._extension_data["bins"]
 
     @staticmethod
@@ -72,9 +65,7 @@ class ISIHistogramsCalculator(BaseWaveformExtractorExtension):
 WaveformExtractor.register_extension(ISIHistogramsCalculator)
 
 
-def compute_isi_histograms_from_spiketrain(
-    spike_train: np.ndarray, max_time: int, bin_size: int, sampling_f: float
-):
+def compute_isi_histograms_from_spiketrain(spike_train: np.ndarray, max_time: int, bin_size: int, sampling_f: float):
     """
     Computes the Inter-Spike Intervals histogram from a given spike train.
 
@@ -105,9 +96,7 @@ def compute_isi_histograms_from_spiketrain(
         print("compute_ISI_from_spiketrain cannot run without numba.")
         return 0
 
-    return _compute_isi_histograms_from_spiketrain(
-        spike_train.astype(np.int64), max_time, bin_size, sampling_f
-    )
+    return _compute_isi_histograms_from_spiketrain(spike_train.astype(np.int64), max_time, bin_size, sampling_f)
 
 
 if HAVE_NUMBA:
@@ -118,9 +107,7 @@ if HAVE_NUMBA:
         nogil=True,
         cache=True,
     )
-    def _compute_isi_histograms_from_spiketrain(
-        spike_train, max_time, bin_size, sampling_f
-    ):
+    def _compute_isi_histograms_from_spiketrain(spike_train, max_time, bin_size, sampling_f):
         n_bins = int(max_time / bin_size)
 
         bins = np.arange(0, max_time + bin_size, bin_size) * 1e3 / sampling_f
@@ -168,12 +155,8 @@ def compute_isi_histograms(
         The bin edges in ms
     """
     if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
-        if load_if_exists and waveform_or_sorting_extractor.is_extension(
-            ISIHistogramsCalculator.extension_name
-        ):
-            isic = waveform_or_sorting_extractor.load_extension(
-                ISIHistogramsCalculator.extension_name
-            )
+        if load_if_exists and waveform_or_sorting_extractor.is_extension(ISIHistogramsCalculator.extension_name):
+            isic = waveform_or_sorting_extractor.load_extension(ISIHistogramsCalculator.extension_name)
         else:
             isic = ISIHistogramsCalculator(waveform_or_sorting_extractor)
             isic.set_params(window_ms=window_ms, bin_ms=bin_ms, method=method)
@@ -189,9 +172,7 @@ def compute_isi_histograms(
         )
 
 
-def _compute_isi_histograms(
-    sorting, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"
-):
+def _compute_isi_histograms(sorting, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
     """
     Computes the Inter-Spike Intervals histogram for all
     the units inside the given sorting.
@@ -234,9 +215,7 @@ def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float
     for i, unit_id in enumerate(sorting.unit_ids):
         for seg_index in range(sorting.get_num_segments()):
             spike_train = sorting.get_unit_spike_train(unit_id, segment_index=seg_index)
-            ISI = np.histogram(
-                np.diff(spike_train), bins=num_bins, range=(0, window_size - 1)
-            )[0]
+            ISI = np.histogram(np.diff(spike_train), bins=num_bins, range=(0, window_size - 1))[0]
             ISIs[i] += ISI
 
     return ISIs, bins
@@ -297,14 +276,10 @@ if HAVE_NUMBA:
         cache=True,
         parallel=True,
     )
-    def _compute_isi_histograms_numba(
-        ISIs, spike_trains, spike_clusters, max_time, bin_size, sampling_f
-    ):
+    def _compute_isi_histograms_numba(ISIs, spike_trains, spike_clusters, max_time, bin_size, sampling_f):
         n_units = ISIs.shape[0]
 
         for i in numba.prange(n_units):
             spike_train = spike_trains[spike_clusters == i]
 
-            ISIs[i] += _compute_isi_histograms_from_spiketrain(
-                spike_train, max_time, bin_size, sampling_f
-            )[0]
+            ISIs[i] += _compute_isi_histograms_from_spiketrain(spike_train, max_time, bin_size, sampling_f)[0]

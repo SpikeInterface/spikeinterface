@@ -98,9 +98,7 @@ class UnitWaveformsWidget(BaseWidget):
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
 
-        channel_locations = we.get_channel_locations()[
-            we.channel_ids_to_indices(channel_ids)
-        ]
+        channel_locations = we.get_channel_locations()[we.channel_ids_to_indices(channel_ids)]
 
         if waveform_extractor.is_sparse():
             sparsity = waveform_extractor.sparsity
@@ -114,9 +112,7 @@ class UnitWaveformsWidget(BaseWidget):
                     channel_ids=we.channel_ids,
                 )
             else:
-                assert isinstance(
-                    sparsity, ChannelSparsity
-                ), "'sparsity' should be a ChannelSparsity object!"
+                assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
 
         # get templates
         templates = we.get_all_templates(unit_ids=unit_ids)

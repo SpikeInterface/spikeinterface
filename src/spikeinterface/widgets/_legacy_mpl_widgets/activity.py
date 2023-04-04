@@ -99,14 +99,10 @@ class PeakActivityMapWidget(BaseWidget):
                 i0 = np.searchsorted(peaks["sample_ind"], bin_size * i)
                 i1 = np.searchsorted(peaks["sample_ind"], bin_size * (i + 1))
                 local_peaks = peaks[i0:i1]
-                artists = self._plot_one_bin(
-                    rec, probe, local_peaks, self.bin_duration_s
-                )
+                artists = self._plot_one_bin(rec, probe, local_peaks, self.bin_duration_s)
                 return artists
 
-            self.animation = FuncAnimation(
-                self.figure, animate_func, frames=num_frames, interval=100, blit=True
-            )
+            self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames, interval=100, blit=True)
 
     def _plot_one_bin(self, rec, probe, peaks, duration):
         # TODO: @alessio weight_with_amplitudes is not implemented yet

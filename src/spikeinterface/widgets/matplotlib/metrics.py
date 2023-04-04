@@ -36,9 +36,7 @@ class MetricsPlotter(MplPlotter):
                 if i == j:
                     self.axes[i, j].hist(metrics[m1], color="gray")
                 else:
-                    p = self.axes[i, j].scatter(
-                        metrics[m1], metrics[m2], c=colors, s=3, marker="o"
-                    )
+                    p = self.axes[i, j].scatter(metrics[m1], metrics[m2], c=colors, s=3, marker="o")
                     self.patches.append(p)
                 if i == num_metrics - 1:
                     self.axes[i, j].set_xlabel(m2, fontsize=10)

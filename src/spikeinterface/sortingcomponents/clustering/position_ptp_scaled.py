@@ -50,9 +50,7 @@ class PositionPTPScaledClustering:
                 localize_peaks,
             )
 
-            peak_locations = localize_peaks(
-                recording, peaks, **d["peak_localization_kwargs"]
-            )
+            peak_locations = localize_peaks(recording, peaks, **d["peak_localization_kwargs"])
         else:
             peak_locations = d["peak_locations"]
 
@@ -92,9 +90,7 @@ class PositionPTPScaledClustering:
 
             fig1, ax = plt.subplots()
             kwargs = dict(
-                probe_shape_kwargs=dict(
-                    facecolor="w", edgecolor="k", lw=0.5, alpha=0.3
-                ),
+                probe_shape_kwargs=dict(facecolor="w", edgecolor="k", lw=0.5, alpha=0.3),
                 contacts_kargs=dict(alpha=0.5, edgecolor="k", lw=0.5, facecolor="w"),
             )
             si.plot_probe_map(recording, ax=ax, **kwargs)

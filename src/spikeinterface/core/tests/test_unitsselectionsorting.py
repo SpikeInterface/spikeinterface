@@ -30,9 +30,7 @@ def test_unitsselectionsorting():
     print(sorting2.unit_ids)
     assert np.array_equal(sorting2.unit_ids, [0, 2])
 
-    sorting3 = UnitsSelectionSorting(
-        sorting, unit_ids=[0, 2], renamed_unit_ids=["a", "b"]
-    )
+    sorting3 = UnitsSelectionSorting(sorting, unit_ids=[0, 2], renamed_unit_ids=["a", "b"])
     print(sorting3.unit_ids)
     assert np.array_equal(sorting3.unit_ids, ["a", "b"])
 

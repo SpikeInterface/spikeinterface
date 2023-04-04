@@ -41,9 +41,7 @@ class CorrelogramsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestC
 
 
 def test_make_bins():
-    sorting = generate_sorting(
-        num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5]
-    )
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5])
 
     window_ms = 43.57
     bin_ms = 1.6421
@@ -60,9 +58,7 @@ def test_make_bins():
 
 def _test_correlograms(sorting, window_ms, bin_ms, methods):
     for method in methods:
-        correlograms, bins = compute_correlograms(
-            sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
-        )
+        correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
         if method == "numpy":
             ref_correlograms = correlograms
             ref_bins = bins
@@ -80,9 +76,7 @@ def _test_correlograms(sorting, window_ms, bin_ms, methods):
             # numba and numyp do not have exactly the same output
             # assert np.all(correlograms == ref_correlograms), f"Failed with method={method}"
 
-            assert np.allclose(
-                bins, ref_bins, atol=1e-10
-            ), f"Failed with method={method}"
+            assert np.allclose(bins, ref_bins, atol=1e-10), f"Failed with method={method}"
 
 
 def test_equal_results_correlograms():
@@ -91,18 +85,14 @@ def test_equal_results_correlograms():
     if HAVE_NUMBA:
         methods.append("numba")
 
-    sorting = generate_sorting(
-        num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5]
-    )
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5])
 
     _test_correlograms(sorting, window_ms=60.0, bin_ms=2.0, methods=methods)
     _test_correlograms(sorting, window_ms=43.57, bin_ms=1.6421, methods=methods)
 
 
 def test_flat_cross_correlogram():
-    sorting = generate_sorting(
-        num_units=2, sampling_frequency=10000.0, durations=[100000.0]
-    )
+    sorting = generate_sorting(num_units=2, sampling_frequency=10000.0, durations=[100000.0])
 
     methods = ["numpy"]
     if HAVE_NUMBA:
@@ -112,9 +102,7 @@ def test_flat_cross_correlogram():
     # ~ fig, ax = plt.subplots()
 
     for method in methods:
-        correlograms, bins = compute_correlograms(
-            sorting, window_ms=50.0, bin_ms=1.0, method=method
-        )
+        correlograms, bins = compute_correlograms(sorting, window_ms=50.0, bin_ms=1.0, method=method)
         cc = correlograms[0, 1, :].copy()
         m = np.mean(cc)
         assert np.all(cc > (m * 0.90))
@@ -146,9 +134,7 @@ def test_auto_equal_cross_correlograms():
     sorting = NumpySorting.from_dict([units_dict], sampling_frequency=10000.0)
 
     for method in methods:
-        correlograms, bins = compute_correlograms(
-            sorting, window_ms=10.0, bin_ms=0.1, method=method
-        )
+        correlograms, bins = compute_correlograms(sorting, window_ms=10.0, bin_ms=0.1, method=method)
 
         num_half_bins = correlograms.shape[2] // 2
 
@@ -161,9 +147,7 @@ def test_auto_equal_cross_correlograms():
             # numpy method have some border effect on left
             assert np.array_equal(cc_corrected[1:num_half_bins], ac[1:num_half_bins])
             # numpy method have some problem on center
-            assert np.array_equal(
-                cc_corrected[num_half_bins + 1 :], ac[num_half_bins + 1 :]
-            )
+            assert np.array_equal(cc_corrected[num_half_bins + 1 :], ac[num_half_bins + 1 :])
         else:
             assert np.array_equal(cc_corrected, ac)
 
@@ -193,20 +177,14 @@ def test_detect_injected_correlation():
     spike_times2 = spike_times2[:n]
     # inject 1.44 ms correlation every 13 spikes
     injected_delta_ms = 1.44
-    spike_times2[::13] = spike_times1[::13] + int(
-        injected_delta_ms / 1000 * sampling_frequency
-    )
+    spike_times2[::13] = spike_times1[::13] + int(injected_delta_ms / 1000 * sampling_frequency)
     spike_times2 = np.sort(spike_times2)
 
     units_dict = {"1": spike_times1, "2": spike_times2}
-    sorting = NumpySorting.from_dict(
-        [units_dict], sampling_frequency=sampling_frequency
-    )
+    sorting = NumpySorting.from_dict([units_dict], sampling_frequency=sampling_frequency)
 
     for method in methods:
-        correlograms, bins = compute_correlograms(
-            sorting, window_ms=10.0, bin_ms=0.1, method=method
-        )
+        correlograms, bins = compute_correlograms(sorting, window_ms=10.0, bin_ms=0.1, method=method)
 
         cc_01 = correlograms[0, 1, :]
         cc_10 = correlograms[1, 0, :]

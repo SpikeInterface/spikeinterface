@@ -66,9 +66,7 @@ class CircusClustering:
         tmp_folder = params["tmp_folder"]
         if params["waveform_mode"] == "memmap":
             if tmp_folder is None:
-                name = "".join(
-                    random.choices(string.ascii_uppercase + string.digits, k=8)
-                )
+                name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
                 tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
             else:
                 tmp_folder = Path(tmp_folder)
@@ -93,9 +91,7 @@ class CircusClustering:
                 localize_peaks,
             )
 
-            peak_locations = localize_peaks(
-                recording, peaks, **d["peak_localization_kwargs"], **d["job_kwargs"]
-            )
+            peak_locations = localize_peaks(recording, peaks, **d["peak_localization_kwargs"], **d["job_kwargs"])
         else:
             peak_locations = d["peak_locations"]
 
@@ -125,9 +121,7 @@ class CircusClustering:
         chan_distances = get_channel_distances(recording)
 
         for main_chan in unit_inds:
-            (closest_chans,) = np.nonzero(
-                chan_distances[main_chan, :] <= params["local_radius_um"]
-            )
+            (closest_chans,) = np.nonzero(chan_distances[main_chan, :] <= params["local_radius_um"])
             sparsity_mask[main_chan, closest_chans] = True
 
         if params["waveform_mode"] == "shared_memory":
@@ -198,9 +192,7 @@ class CircusClustering:
                 noise_labels = clustering[0][len(wfs) :]
                 valid_labels = clustering[0][: len(wfs)]
 
-                shared_indices = np.intersect1d(
-                    np.unique(noise_labels), np.unique(valid_labels)
-                )
+                shared_indices = np.intersect1d(np.unique(noise_labels), np.unique(valid_labels))
                 for l in shared_indices:
                     idx_noise = noise_labels == l
                     idx_valid = valid_labels == l
@@ -231,9 +223,7 @@ class CircusClustering:
 
         for unit_ind in labels:
             mask = peak_labels == unit_ind
-            best_spikes[unit_ind] = np.random.permutation(all_indices[mask])[
-                : params["max_spikes_per_unit"]
-            ]
+            best_spikes[unit_ind] = np.random.permutation(all_indices[mask])[: params["max_spikes_per_unit"]]
             nb_spikes += best_spikes[unit_ind].size
 
         spikes = np.zeros(nb_spikes, dtype=peak_dtype)
@@ -258,10 +248,7 @@ class CircusClustering:
 
         cleaning_method = params["cleaning_method"]
 
-        print(
-            "We found %d raw clusters, starting to clean with %s..."
-            % (len(labels), cleaning_method)
-        )
+        print("We found %d raw clusters, starting to clean with %s..." % (len(labels), cleaning_method))
 
         if cleaning_method == "cosine":
             wfs_arrays = extract_waveforms_to_buffers(
@@ -310,9 +297,7 @@ class CircusClustering:
             name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
             tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
 
-            sorting = NumpySorting.from_times_labels(
-                spikes["sample_ind"], spikes["unit_ind"], fs
-            )
+            sorting = NumpySorting.from_times_labels(spikes["sample_ind"], spikes["unit_ind"], fs)
             we = extract_waveforms(
                 recording,
                 sorting,
@@ -322,9 +307,7 @@ class CircusClustering:
                 ms_after=params["ms_after"],
                 **params["job_kwargs"],
             )
-            labels, peak_labels = remove_duplicates_via_matching(
-                we, peak_labels, job_kwargs=params["job_kwargs"]
-            )
+            labels, peak_labels = remove_duplicates_via_matching(we, peak_labels, job_kwargs=params["job_kwargs"])
             shutil.rmtree(tmp_folder)
 
         print("We kept %d non-duplicated clusters..." % len(labels))

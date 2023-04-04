@@ -41,9 +41,7 @@ def test_time_handling():
 
             # spike times are correctly adjusted
             for u in sort.get_unit_ids():
-                spike_times = sort.get_unit_spike_train(
-                    u, segment_index=segment_index, return_times=True
-                )
+                spike_times = sort.get_unit_spike_train(u, segment_index=segment_index, return_times=True)
                 rec_times = rec.get_times(segment_index=segment_index)
                 assert np.all(spike_times >= rec_times[0])
                 assert np.all(spike_times <= rec_times[-1])

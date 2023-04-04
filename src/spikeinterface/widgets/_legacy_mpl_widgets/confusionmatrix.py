@@ -27,9 +27,7 @@ class ConfusionMatrixWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(
-        self, gt_comparison, count_text=True, unit_ticks=True, figure=None, ax=None
-    ):
+    def __init__(self, gt_comparison, count_text=True, unit_ticks=True, figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
         self._gtcomp = gt_comparison
         self._count_text = count_text

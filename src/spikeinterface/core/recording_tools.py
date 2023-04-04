@@ -74,9 +74,7 @@ def get_channel_distances(recording):
     Distance between channel pairs
     """
     locations = recording.get_channel_locations()
-    channel_distances = np.linalg.norm(
-        locations[:, np.newaxis] - locations[np.newaxis, :], axis=2
-    )
+    channel_distances = np.linalg.norm(locations[:, np.newaxis] - locations[np.newaxis, :], axis=2)
 
     return channel_distances
 
@@ -126,9 +124,7 @@ def get_noise_levels(recording, return_scaled=True, **random_chunk_kwargs):
     And then, it use MAD estimator (more robust than STD)
 
     """
-    random_chunks = get_random_data_chunks(
-        recording, return_scaled=return_scaled, **random_chunk_kwargs
-    )
+    random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
     med = np.median(random_chunks, axis=0, keepdims=True)
     # hard-coded so that core doesn't depend on scipy
     noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
@@ -226,9 +222,7 @@ def get_chunk_with_margin(
                 right_margin = end_frame + margin - length
 
             if add_zeros:
-                traces_chunk2 = np.zeros(
-                    (full_size, traces_chunk.shape[1]), dtype=dtype
-                )
+                traces_chunk2 = np.zeros((full_size, traces_chunk.shape[1]), dtype=dtype)
                 i0 = left_pad
                 i1 = left_pad + traces_chunk.shape[0]
                 traces_chunk2[i0:i1, :] = traces_chunk
@@ -320,12 +314,9 @@ def check_probe_do_not_overlap(probes):
             if np.any(
                 np.array(
                     [
-                        x_bounds_i[0] < cp[0] < x_bounds_i[1]
-                        and y_bounds_i[0] < cp[1] < y_bounds_i[1]
+                        x_bounds_i[0] < cp[0] < x_bounds_i[1] and y_bounds_i[0] < cp[1] < y_bounds_i[1]
                         for cp in probe_j.contact_positions
                     ]
                 )
             ):
-                raise Exception(
-                    "Probes are overlapping! Retrieve locations of single probes separately"
-                )
+                raise Exception("Probes are overlapping! Retrieve locations of single probes separately")

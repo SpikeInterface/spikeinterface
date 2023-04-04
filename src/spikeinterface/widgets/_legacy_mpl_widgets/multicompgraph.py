@@ -156,9 +156,7 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
 
     def _do_plot(self):
         cmap = plt.get_cmap(self._cmap)
-        colors = np.array(
-            [cmap(i) for i in np.linspace(0.1, 0.8, len(self._msc.name_list))]
-        )
+        colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(self._msc.name_list))])
         sg_names, sg_units = self._msc.compute_subgraphs()
         # fraction of units with agreement > threshold
         v, c = np.unique([len(np.unique(s)) for s in sg_names], return_counts=True)
@@ -245,9 +243,7 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
     def _do_plot(self):
         name_list = self._msc.name_list
         cmap = plt.get_cmap(self._cmap)
-        colors = np.array(
-            [cmap(i) for i in np.linspace(0.1, 0.8, len(self._msc.name_list))]
-        )
+        colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(self._msc.name_list))])
         sg_names, sg_units = self._msc.compute_subgraphs()
         # fraction of units with agreement > threshold
         for i, name in enumerate(name_list):

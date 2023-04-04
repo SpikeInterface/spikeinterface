@@ -37,9 +37,7 @@ class CombinatoSortingExtractor(BaseSorting):
 
     extractor_name = "CombinatoSortingExtractor"
     installed = HAVE_H5PY
-    installation_mesg = (
-        "To use the CombinatoSortingExtractor install h5py: \n\n pip install h5py\n\n"
-    )
+    installation_mesg = "To use the CombinatoSortingExtractor install h5py: \n\n pip install h5py\n\n"
     name = "combinato"
 
     def __init__(
@@ -63,9 +61,7 @@ class CombinatoSortingExtractor(BaseSorting):
         sort_cat_files = []
         for sign in ["neg", "pos"]:
             if det_sign in ["both", sign]:
-                sort_cat_file = folder_path / Path(
-                    "sort_{}_{}/sort_cat.h5".format(sign, user)
-                )
+                sort_cat_file = folder_path / Path("sort_{}_{}/sort_cat.h5".format(sign, user))
                 if sort_cat_file.exists():
                     sort_cat_files.append((sign, str(sort_cat_file)))
 
@@ -78,9 +74,7 @@ class CombinatoSortingExtractor(BaseSorting):
                 with h5py.File(sfile, mode="r") as f:
                     sp_class = f["classes"][()]
                     gaux = f["groups"][()]
-                    groups = {
-                        g: gaux[gaux[:, 1] == g, 0] for g in np.unique(gaux[:, 1])
-                    }  # array of classes per group
+                    groups = {g: gaux[gaux[:, 1] == g, 0] for g in np.unique(gaux[:, 1])}  # array of classes per group
                     group_type = {group: g_type for group, g_type in f["types"][()]}
                     sp_index = f["index"][()]
 
@@ -89,8 +83,7 @@ class CombinatoSortingExtractor(BaseSorting):
                     if keep_good_only and (group_type[gr] < 1):  # artifact or unsorted
                         continue
                     spiketrains[unit_counter] = np.rint(
-                        times_css[sp_index[np.isin(sp_class, cls)]]
-                        * (sampling_frequency / 1000)
+                        times_css[sp_index[np.isin(sp_class, cls)]] * (sampling_frequency / 1000)
                     )
                     metadata[unit_counter] = {"group_type": group_type[gr]}
                     unit_counter = unit_counter + 1
@@ -129,6 +122,4 @@ class CombinatoSortingSegment(BaseSortingSegment):
         return times
 
 
-read_combinato = define_function_from_class(
-    source_class=CombinatoSortingExtractor, name="read_combinato"
-)
+read_combinato = define_function_from_class(source_class=CombinatoSortingExtractor, name="read_combinato")

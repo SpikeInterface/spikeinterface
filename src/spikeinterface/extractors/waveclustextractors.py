@@ -39,9 +39,7 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
         spiketrains = {}
         for unit_id in unit_ids:
             mask = classes == unit_id
-            spiketrains[unit_id] = np.rint(
-                spike_times[mask] * (sampling_frequency / 1000)
-            )
+            spiketrains[unit_id] = np.rint(spike_times[mask] * (sampling_frequency / 1000))
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
@@ -68,6 +66,4 @@ class WaveClustSortingSegment(BaseSortingSegment):
         return times
 
 
-read_waveclus = define_function_from_class(
-    source_class=WaveClusSortingExtractor, name="read_waveclus"
-)
+read_waveclus = define_function_from_class(source_class=WaveClusSortingExtractor, name="read_waveclus")

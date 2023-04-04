@@ -176,7 +176,5 @@ class KlustaSorter(BaseSorter):
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
-        sorting = KlustaSortingExtractor(
-            file_or_folder_path=Path(sorter_output_folder) / "recording.kwik"
-        )
+        sorting = KlustaSortingExtractor(file_or_folder_path=Path(sorter_output_folder) / "recording.kwik")
         return sorting

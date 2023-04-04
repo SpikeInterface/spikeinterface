@@ -48,7 +48,9 @@ class KlustaSortingExtractor(BaseSorting):
 
     extractor_name = "KlustaSortingExtractor"
     installed = HAVE_H5PY  # check at class level if installed or not
-    installation_mesg = "To use the KlustaSortingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
+    installation_mesg = (
+        "To use the KlustaSortingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
+    )
     mode = "file_or_folder"
     name = "klusta"
 
@@ -67,9 +69,7 @@ class KlustaSortingExtractor(BaseSorting):
             klustafolder = kwikfile.parent
         elif kwik_file_or_folder.is_dir():
             klustafolder = kwik_file_or_folder
-            kwikfiles = [
-                f for f in kwik_file_or_folder.iterdir() if f.suffix == ".kwik"
-            ]
+            kwikfiles = [f for f in kwik_file_or_folder.iterdir() if f.suffix == ".kwik"]
             if len(kwikfiles) == 1:
                 kwikfile = kwikfiles[0]
         assert kwikfile is not None, "Could not load '.kwik' file"
@@ -93,37 +93,25 @@ class KlustaSortingExtractor(BaseSorting):
         cs_to_exclude = []
         valid_group_names = [i[1].lower() for i in self.default_cluster_groups.items()]
         if exclude_cluster_groups is not None:
-            assert isinstance(
-                exclude_cluster_groups, list
-            ), "exclude_cluster_groups should be a list"
+            assert isinstance(exclude_cluster_groups, list), "exclude_cluster_groups should be a list"
             for ec in exclude_cluster_groups:
-                assert (
-                    ec in valid_group_names
-                ), f"select exclude names out of: {valid_group_names}"
+                assert ec in valid_group_names, f"select exclude names out of: {valid_group_names}"
                 cs_to_exclude.append(ec.lower())
 
         for channel_group in kf_reader.get("/channel_groups"):
-            chan_cluster_id_arr = kf_reader.get(
-                f"/channel_groups/{channel_group}/spikes/clusters/main"
-            )[()]
-            chan_cluster_times_arr = kf_reader.get(
-                f"/channel_groups/{channel_group}/spikes/time_samples"
-            )[()]
-            chan_cluster_ids = np.unique(
-                chan_cluster_id_arr
-            )  # if clusters were merged in gui,
+            chan_cluster_id_arr = kf_reader.get(f"/channel_groups/{channel_group}/spikes/clusters/main")[()]
+            chan_cluster_times_arr = kf_reader.get(f"/channel_groups/{channel_group}/spikes/time_samples")[()]
+            chan_cluster_ids = np.unique(chan_cluster_id_arr)  # if clusters were merged in gui,
             # the original id's are still in the kwiktree, but
             # in this array
 
             for cluster_id in chan_cluster_ids:
-                cluster_frame_idx = np.nonzero(
-                    chan_cluster_id_arr == cluster_id
-                )  # the [()] is a h5py thing
+                cluster_frame_idx = np.nonzero(chan_cluster_id_arr == cluster_id)  # the [()] is a h5py thing
                 st = chan_cluster_times_arr[cluster_frame_idx]
                 assert st.shape[0] > 0, "no spikes in cluster"
-                cluster_group = kf_reader.get(
-                    f"/channel_groups/{channel_group}/clusters/main/{cluster_id}"
-                ).attrs["cluster_group"]
+                cluster_group = kf_reader.get(f"/channel_groups/{channel_group}/clusters/main/{cluster_id}").attrs[
+                    "cluster_group"
+                ]
 
                 assert (
                     cluster_group in self.default_cluster_groups.keys()
@@ -157,9 +145,7 @@ class KlustaSortingExtractor(BaseSorting):
         quality = [e.lower() for e in cluster_groups_name]
         self.set_property("quality", quality)
 
-        self._kwargs = {
-            "file_or_folder_path": str(Path(file_or_folder_path).absolute())
-        }
+        self._kwargs = {"file_or_folder_path": str(Path(file_or_folder_path).absolute())}
 
 
 class KlustSortingSegment(BaseSortingSegment):
@@ -178,6 +164,4 @@ class KlustSortingSegment(BaseSortingSegment):
         return times
 
 
-read_klusta = define_function_from_class(
-    source_class=KlustaSortingExtractor, name="read_klusta"
-)
+read_klusta = define_function_from_class(source_class=KlustaSortingExtractor, name="read_klusta")

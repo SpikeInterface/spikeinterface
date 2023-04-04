@@ -124,16 +124,12 @@ class SpykingcircusSorter(BaseSorter):
         n_frames = recording.get_num_frames(segment_index=0)
         chunk_size = 2**24 // n_chan
         npy_file = str(sorter_output_folder / file_name) + ".npy"
-        data_file = open_memmap(
-            npy_file, shape=(n_frames, n_chan), dtype=np.float32, mode="w+"
-        )
+        data_file = open_memmap(npy_file, shape=(n_frames, n_chan), dtype=np.float32, mode="w+")
         nb_chunks = n_frames // chunk_size
         for i in range(nb_chunks + 1):
             start_frame = i * chunk_size
             end_frame = min((i + 1) * chunk_size, n_frames)
-            data = recording.get_traces(
-                start_frame=start_frame, end_frame=end_frame
-            ).astype("float32")
+            data = recording.get_traces(start_frame=start_frame, end_frame=end_frame).astype("float32")
             data_file[start_frame:end_frame, :] = data
 
         sample_rate = float(recording.get_sampling_frequency())
@@ -192,7 +188,5 @@ class SpykingcircusSorter(BaseSorter):
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
-        sorting = SpykingCircusSortingExtractor(
-            folder_path=Path(sorter_output_folder) / "recording"
-        )
+        sorting = SpykingCircusSortingExtractor(folder_path=Path(sorter_output_folder) / "recording")
         return sorting

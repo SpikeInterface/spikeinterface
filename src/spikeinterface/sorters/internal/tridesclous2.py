@@ -62,9 +62,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         import hdbscan
 
-        recording_raw = load_extractor(
-            sorter_output_folder.parent / "spikeinterface_recording.json"
-        )
+        recording_raw = load_extractor(sorter_output_folder.parent / "spikeinterface_recording.json")
 
         num_chans = recording_raw.get_num_channels()
         sampling_frequency = recording_raw.get_sampling_frequency()
@@ -83,21 +81,15 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         detection_params = params["detection"].copy()
         detection_params["local_radius_um"] = params["general"]["local_radius_um"]
         detection_params["noise_levels"] = noise_levels
-        peaks = detect_peaks(
-            recording, method="locally_exclusive", **detection_params, **job_kwargs
-        )
+        peaks = detect_peaks(recording, method="locally_exclusive", **detection_params, **job_kwargs)
 
         if verbose:
             print("We found %d peaks in total" % len(peaks))
 
         # selection
         selection_params = params["selection"].copy()
-        selection_params["n_peaks"] = (
-            params["selection"]["n_peaks_per_channel"] * num_chans
-        )
-        selection_params["n_peaks"] = max(
-            selection_params["min_n_peaks"], selection_params["n_peaks"]
-        )
+        selection_params["n_peaks"] = params["selection"]["n_peaks_per_channel"] * num_chans
+        selection_params["n_peaks"] = max(selection_params["min_n_peaks"], selection_params["n_peaks"])
         selection_params["noise_levels"] = noise_levels
         some_peaks = select_peaks(
             peaks,
@@ -174,9 +166,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if verbose:
             print("We found %d spikes" % len(spikes))
 
-        sorting = NumpySorting.from_times_labels(
-            spikes["sample_ind"], spikes["cluster_ind"], sampling_frequency
-        )
+        sorting = NumpySorting.from_times_labels(spikes["sample_ind"], spikes["cluster_ind"], sampling_frequency)
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
 
         return sorting

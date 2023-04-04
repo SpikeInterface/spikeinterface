@@ -37,9 +37,7 @@ class StudyComparisonRunTimesWidget(BaseWidget):
         ax = self.ax
 
         all_run_times = study.aggregate_run_times()
-        av_run_times = (
-            all_run_times.reset_index().groupby("sorter_name")["run_time"].mean()
-        )
+        av_run_times = all_run_times.reset_index().groupby("sorter_name")["run_time"].mean()
 
         if len(study.rec_names) == 1:
             # no errors bars
@@ -120,9 +118,7 @@ class StudyComparisonUnitCountsAveragesWidget(BaseWidget):
             stds = df.groupby("sorter_name")[columns].std()
 
         sorter_names = m.index
-        clean_labels = [
-            col.replace("num_", "").replace("_", " ").title() for col in columns
-        ]
+        clean_labels = [col.replace("num_", "").replace("_", " ").title() for col in columns]
 
         for c, col in enumerate(columns):
             x = np.arange(sorter_names.size) + 1 + c / (ncol + 2)
@@ -211,9 +207,7 @@ class StudyComparisonUnitCountsWidget(BaseWidget):
             df = count_units.loc[count_units["rec_name"] == rec_name, :]
             m = df.groupby("sorter_name")[columns].mean()
             sorter_names = m.index
-            clean_labels = [
-                col.replace("num_", "").replace("_", " ").title() for col in columns
-            ]
+            clean_labels = [col.replace("num_", "").replace("_", " ").title() for col in columns]
 
             for c, col in enumerate(columns):
                 x = np.arange(sorter_names.size) + 1 + c / (ncol + 2)
@@ -248,9 +242,7 @@ def plot_gt_study_unit_counts_averages(*args, **kwargs):
     return W
 
 
-plot_gt_study_unit_counts_averages.__doc__ = (
-    StudyComparisonUnitCountsAveragesWidget.__doc__
-)
+plot_gt_study_unit_counts_averages.__doc__ = StudyComparisonUnitCountsAveragesWidget.__doc__
 
 
 def plot_gt_study_unit_counts(*args, **kwargs):
@@ -362,9 +354,7 @@ class StudyComparisonTemplateSimilarityWidget(BaseWidget):
         ncol = len(columns)
 
         for column in columns:
-            perf_by_units[column] = pd.to_numeric(
-                perf_by_units[column], downcast="float"
-            )
+            perf_by_units[column] = pd.to_numeric(perf_by_units[column], downcast="float")
             to_agg[column] = ["mean"]
 
         data = perf_by_units.groupby(["sorter_name", "rec_name"]).agg(to_agg)
@@ -381,9 +371,7 @@ class StudyComparisonTemplateSimilarityWidget(BaseWidget):
             stds = data.groupby("sorter_name").std()
 
         sorter_names = m.index
-        clean_labels = [
-            col.replace("num_", "").replace("_", " ").title() for col in columns
-        ]
+        clean_labels = [col.replace("num_", "").replace("_", " ").title() for col in columns]
 
         width = 1 / (ncol + 2)
 
@@ -444,9 +432,7 @@ class StudyComparisonPerformancesAveragesWidget(BaseWidget):
         ncol = len(columns)
 
         for column in columns:
-            perf_by_units[column] = pd.to_numeric(
-                perf_by_units[column], downcast="float"
-            )
+            perf_by_units[column] = pd.to_numeric(perf_by_units[column], downcast="float")
             to_agg[column] = ["mean"]
 
         data = perf_by_units.groupby(["sorter_name", "rec_name"]).agg(to_agg)
@@ -463,9 +449,7 @@ class StudyComparisonPerformancesAveragesWidget(BaseWidget):
             stds = data.groupby("sorter_name").std()
 
         sorter_names = m.index
-        clean_labels = [
-            col.replace("num_", "").replace("_", " ").title() for col in columns
-        ]
+        clean_labels = [col.replace("num_", "").replace("_", " ").title() for col in columns]
 
         width = 1 / (ncol + 2)
 
@@ -506,9 +490,7 @@ class StudyComparisonPerformancesByTemplateSimilarity(BaseWidget):
 
     """
 
-    def __init__(
-        self, study, cmap_name="Set1", ax=None, ylim=(0.6, 1), show_legend=True
-    ):
+    def __init__(self, study, cmap_name="Set1", ax=None, ylim=(0.6, 1), show_legend=True):
         self.study = study
         self.cmap_name = cmap_name
         self.show_legend = show_legend
@@ -524,11 +506,7 @@ class StudyComparisonPerformancesByTemplateSimilarity(BaseWidget):
 
         flat_templates_gt = {}
         for rec_name in self.study.rec_names:
-            waveform_folder = (
-                self.study.study_folder
-                / "waveforms"
-                / f"waveforms_GroundTruth_{rec_name}"
-            )
+            waveform_folder = self.study.study_folder / "waveforms" / f"waveforms_GroundTruth_{rec_name}"
             if not waveform_folder.is_dir():
                 self.study.compute_waveforms(rec_name)
 
@@ -542,11 +520,7 @@ class StudyComparisonPerformancesByTemplateSimilarity(BaseWidget):
 
             for rec_name in self.study.rec_names:
                 try:
-                    waveform_folder = (
-                        self.study.study_folder
-                        / "waveforms"
-                        / f"waveforms_{sorter_name}_{rec_name}"
-                    )
+                    waveform_folder = self.study.study_folder / "waveforms" / f"waveforms_{sorter_name}_{rec_name}"
                     if not waveform_folder.is_dir():
                         self.study.compute_waveforms(rec_name, sorter_name)
                     templates = self.study.get_templates(rec_name, sorter_name)
@@ -566,50 +540,28 @@ class StudyComparisonPerformancesByTemplateSimilarity(BaseWidget):
                                     comp.sorting2.id_to_index(u2),
                                 ]
                             ]
-                            all_results[sorter_name]["accuracy"] += [
-                                comp.agreement_scores.at[u1, u2]
-                            ]
+                            all_results[sorter_name]["accuracy"] += [comp.agreement_scores.at[u1, u2]]
                 except Exception:
                     pass
 
-            all_results[sorter_name]["similarity"] = np.array(
-                all_results[sorter_name]["similarity"]
-            )
-            all_results[sorter_name]["accuracy"] = np.array(
-                all_results[sorter_name]["accuracy"]
-            )
+            all_results[sorter_name]["similarity"] = np.array(all_results[sorter_name]["similarity"])
+            all_results[sorter_name]["accuracy"] = np.array(all_results[sorter_name]["accuracy"])
 
         from matplotlib.patches import Ellipse
 
-        similarity_means = [
-            all_results[sorter_name]["similarity"].mean()
-            for sorter_name in self.study.sorter_names
-        ]
-        similarity_stds = [
-            all_results[sorter_name]["similarity"].std()
-            for sorter_name in self.study.sorter_names
-        ]
+        similarity_means = [all_results[sorter_name]["similarity"].mean() for sorter_name in self.study.sorter_names]
+        similarity_stds = [all_results[sorter_name]["similarity"].std() for sorter_name in self.study.sorter_names]
 
-        accuracy_means = [
-            all_results[sorter_name]["accuracy"].mean()
-            for sorter_name in self.study.sorter_names
-        ]
-        accuracy_stds = [
-            all_results[sorter_name]["accuracy"].std()
-            for sorter_name in self.study.sorter_names
-        ]
+        accuracy_means = [all_results[sorter_name]["accuracy"].mean() for sorter_name in self.study.sorter_names]
+        accuracy_stds = [all_results[sorter_name]["accuracy"].std() for sorter_name in self.study.sorter_names]
 
         scount = 0
-        for x, y, i, j in zip(
-            similarity_means, accuracy_means, similarity_stds, accuracy_stds
-        ):
+        for x, y, i, j in zip(similarity_means, accuracy_means, similarity_stds, accuracy_stds):
             e = Ellipse((x, y), i, j)
             e.set_alpha(0.2)
             e.set_facecolor(colors[scount])
             self.ax.add_artist(e)
-            self.ax.scatter(
-                [x], [y], c=colors[scount], label=self.study.sorter_names[scount]
-            )
+            self.ax.scatter([x], [y], c=colors[scount], label=self.study.sorter_names[scount])
             scount += 1
 
         self.ax.set_ylabel("accuracy")
@@ -636,9 +588,7 @@ def plot_gt_study_performances_averages(*args, **kwargs):
     return W
 
 
-plot_gt_study_performances_averages.__doc__ = (
-    StudyComparisonPerformancesAveragesWidget.__doc__
-)
+plot_gt_study_performances_averages.__doc__ = StudyComparisonPerformancesAveragesWidget.__doc__
 
 
 def plot_gt_study_performances_by_template_similarity(*args, **kwargs):
@@ -647,6 +597,4 @@ def plot_gt_study_performances_by_template_similarity(*args, **kwargs):
     return W
 
 
-plot_gt_study_performances_by_template_similarity.__doc__ = (
-    StudyComparisonPerformancesByTemplateSimilarity.__doc__
-)
+plot_gt_study_performances_by_template_similarity.__doc__ = StudyComparisonPerformancesByTemplateSimilarity.__doc__

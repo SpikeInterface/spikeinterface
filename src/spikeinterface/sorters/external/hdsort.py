@@ -57,8 +57,7 @@ class HDSortSorter(BaseSorter):
 
     _params_description = {
         "detect_threshold": "Threshold for spike detection",
-        "detect_sign": "Use -1 (negative) or 1 (positive) depending "
-        "on the sign of the spikes in the recording",
+        "detect_sign": "Use -1 (negative) or 1 (positive) depending " "on the sign of the spikes in the recording",
         "filter": "Enable or disable filter",
         "parfor": "If True, the Matlab parfor is used",
         "freq_min": "High-pass filter cutoff frequency",
@@ -135,9 +134,7 @@ class HDSortSorter(BaseSorter):
         P["legs"] = {
             "maxElPerGroup": float(params["max_el_per_group"]),
             "minElPerGroup": float(params["min_el_per_group"]),
-            "addIfNearerThan": float(
-                params["add_if_nearer_than"]
-            ),  # always add direct neighbors
+            "addIfNearerThan": float(params["add_if_nearer_than"]),  # always add direct neighbors
             "maxDistanceWithinGroup": float(params["max_distance_within_group"]),
         }
 
@@ -207,9 +204,7 @@ class HDSortSorter(BaseSorter):
             # ~ self.params['file_format'] = 'mea1k'
             file_format = "mea1k"
 
-        cls._generate_configs_file(
-            sorter_output_folder, params, trace_file_name, file_format
-        )
+        cls._generate_configs_file(sorter_output_folder, params, trace_file_name, file_format)
 
         # store sample rate in a file
         samplerate = recording.get_sampling_frequency()
@@ -260,9 +255,7 @@ class HDSortSorter(BaseSorter):
     def _get_result_from_folder(cls, sorter_output_folder):
         sorter_output_folder = Path(sorter_output_folder)
         sorting = HDSortSortingExtractor(
-            file_path=str(
-                sorter_output_folder / "hdsort_output" / "hdsort_output_results.mat"
-            )
+            file_path=str(sorter_output_folder / "hdsort_output" / "hdsort_output_results.mat")
         )
         return sorting
 
@@ -310,9 +303,7 @@ class HDSortSorter(BaseSorter):
                 f.create_group("ephys")
                 f.create_dataset("version", data=str(20161003))
                 ephys = f["ephys"]
-                ephys.create_dataset(
-                    "frame_rate", data=recording.get_sampling_frequency()
-                )
+                ephys.create_dataset("frame_rate", data=recording.get_sampling_frequency())
                 ephys.create_dataset(
                     "frame_numbers",
                     data=np.arange(recording.get_num_frames(segment_index=0)),

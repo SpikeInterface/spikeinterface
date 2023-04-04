@@ -18,24 +18,17 @@ def test_BinaryRecordingExtractor():
     sampling_frequency = 10000
     dtype = "int16"
 
-    file_paths = [
-        cache_folder / f"test_BinaryRecordingExtractor_{i}.raw" for i in range(num_seg)
-    ]
+    file_paths = [cache_folder / f"test_BinaryRecordingExtractor_{i}.raw" for i in range(num_seg)]
     for i in range(num_seg):
         np.memmap(file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_chan))
 
     rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
     print(rec)
 
-    file_paths = [
-        cache_folder / f"test_BinaryRecordingExtractor_copied_{i}.raw"
-        for i in range(num_seg)
-    ]
+    file_paths = [cache_folder / f"test_BinaryRecordingExtractor_copied_{i}.raw" for i in range(num_seg)]
     BinaryRecordingExtractor.write_recording(rec, file_paths)
 
-    file_paths = [
-        cache_folder / f"test_BinaryRecordingExtractor_{i}.raw" for i in range(num_seg)
-    ]
+    file_paths = [cache_folder / f"test_BinaryRecordingExtractor_{i}.raw" for i in range(num_seg)]
     assert (cache_folder / "test_BinaryRecordingExtractor_copied_0.raw").is_file()
 
 

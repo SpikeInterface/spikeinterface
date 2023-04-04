@@ -33,9 +33,7 @@ Check if the sinusoidal gets resampled nicely enough
 """
 
 
-def create_sinusoidal_traces(
-    sampling_frequency=3e4, duration=30, freqs_n=10, max_freq=10000, dtype=np.int16
-):
+def create_sinusoidal_traces(sampling_frequency=3e4, duration=30, freqs_n=10, max_freq=10000, dtype=np.int16):
     """Return a sum of sinusoidals to test resampling schemes.
 
     Parameters
@@ -68,10 +66,7 @@ def create_sinusoidal_traces(
     amps_vals = np.logspace(2, 1, num=freqs_n)
     phase_shifts = np.random.uniform(0, np.pi, size=freqs_n)
     # Make a colection of sinusoids
-    ys = [
-        amp * np.sin(2 * np.pi * freq * x + phase)
-        for amp, freq, phase in zip(amps_vals, freqs_vals, phase_shifts)
-    ]
+    ys = [amp * np.sin(2 * np.pi * freq * x + phase) for amp, freq, phase in zip(amps_vals, freqs_vals, phase_shifts)]
     traces = np.sum(ys, axis=0).astype(dtype).reshape([-1, 1])
     return traces, [freqs_vals, amps_vals, phase_shifts]
 
@@ -109,9 +104,7 @@ def test_resample_freq_domain():
     ), msg1
     # They all last 1 second
     msg2 = "The total duration gets distorted by resampling."
-    assert np.allclose(
-        [resamp_rec.get_total_duration() for resamp_rec in resamp_recs], duration
-    ), msg2
+    assert np.allclose([resamp_rec.get_total_duration() for resamp_rec in resamp_recs], duration), msg2
     # check that the first and last time points are similar with tolerance
     msg3 = "The timestamps of key frames are distorted by resampling."
     assert np.all(
@@ -126,9 +119,7 @@ def test_resample_freq_domain():
     ), msg3
     # Test that traces and times are the same lenght
     msg4 = "The time and traces vectors must be of equal length. Non integer resampling rates can lead to this."
-    assert np.all(
-        [rec.get_traces().shape[0] == rec.get_times().shape[0] for rec in resamp_recs]
-    ), msg4
+    assert np.all([rec.get_traces().shape[0] == rec.get_times().shape[0] for rec in resamp_recs]), msg4
     # One can see that they are quite alike, the signals but also their freq domains
 
     if DEBUG:
@@ -160,9 +151,7 @@ def test_resample_freq_domain():
         # Even in fourier
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[10, 7])
 
-        xf, nyf = get_fft(
-            parent_rec.get_traces().ravel(), parent_rec.get_sampling_frequency()
-        )
+        xf, nyf = get_fft(parent_rec.get_traces().ravel(), parent_rec.get_sampling_frequency())
         _ = ax.plot(xf, nyf, color="k", alpha=0.8, label=f"original")
 
         for i, rec in enumerate(resamp_recs):
@@ -198,15 +187,11 @@ def test_resample_by_chunks():
 
     for resample_rate in resample_rates:
         for margin_ms in margins_ms:
-            for chunk_size in [
-                int(resample_rate * chunk_multi) for chunk_multi in chunk_durations
-            ]:
+            for chunk_size in [int(resample_rate * chunk_multi) for chunk_multi in chunk_durations]:
                 # print(f'resmple_rate = {resample_rate}; margin_ms = {margin_ms}; chunk_size={chunk_size}')
                 rec2 = resample(parent_rec, resample_rate, margin_ms=margin_ms)
                 # save by chunk rec3 is the cached version
-                rec3 = rec2.save(
-                    format="memory", chunk_size=chunk_size, n_jobs=1, progress_bar=False
-                )
+                rec3 = rec2.save(format="memory", chunk_size=chunk_size, n_jobs=1, progress_bar=False)
 
                 traces2 = rec2.get_traces()
                 traces3 = rec3.get_traces()

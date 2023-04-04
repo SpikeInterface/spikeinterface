@@ -41,9 +41,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         for seg_index in range(self.waveform_extractor.recording.get_num_segments()):
             amp_data_name = f"amplitude_segment_{seg_index}"
             amps = self._extension_data[amp_data_name]
-            _, all_labels = self.waveform_extractor.sorting.get_all_spike_trains()[
-                seg_index
-            ]
+            _, all_labels = self.waveform_extractor.sorting.get_all_spike_trains()[seg_index]
             filtered_idxs = np.in1d(all_labels, np.array(unit_ids)).nonzero()
             new_extension_data[amp_data_name] = amps[filtered_idxs]
         return new_extension_data
@@ -60,9 +58,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         peak_sign = self._params["peak_sign"]
         return_scaled = self._params["return_scaled"]
 
-        extremum_channels_index = get_template_extremum_channel(
-            we, peak_sign=peak_sign, outputs="index"
-        )
+        extremum_channels_index = get_template_extremum_channel(we, peak_sign=peak_sign, outputs="index")
         peak_shifts = get_template_extremum_channel_peak_shift(we, peak_sign=peak_sign)
 
         # put extremum_channels_index and peak_shifts in vector way
@@ -70,9 +66,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
             [extremum_channels_index[unit_id] for unit_id in sorting.unit_ids],
             dtype="int64",
         )
-        peak_shifts = np.array(
-            [peak_shifts[unit_id] for unit_id in sorting.unit_ids], dtype="int64"
-        )
+        peak_shifts = np.array([peak_shifts[unit_id] for unit_id in sorting.unit_ids], dtype="int64")
 
         if return_scaled:
             # check if has scaled values:
@@ -138,9 +132,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         if outputs == "concatenated":
             amplitudes = []
             for segment_index in range(we.get_num_segments()):
-                amplitudes.append(
-                    self._extension_data[f"amplitude_segment_{segment_index}"]
-                )
+                amplitudes.append(self._extension_data[f"amplitude_segment_{segment_index}"])
             return amplitudes
         elif outputs == "by_unit":
             amplitudes_by_unit = []
@@ -149,9 +141,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
                 for unit_index, unit_id in enumerate(sorting.unit_ids):
                     _, spike_labels = all_spikes[segment_index]
                     mask = spike_labels == unit_index
-                    amps = self._extension_data[f"amplitude_segment_{segment_index}"][
-                        mask
-                    ]
+                    amps = self._extension_data[f"amplitude_segment_{segment_index}"][mask]
                     amplitudes_by_unit[segment_index][unit_id] = amps
             return amplitudes_by_unit
 
@@ -205,12 +195,8 @@ def compute_spike_amplitudes(
             - If 'concatenated' all amplitudes for all spikes and all units are concatenated
             - If 'by_unit', amplitudes are returned as a list (for segments) of dictionaries (for units)
     """
-    if load_if_exists and waveform_extractor.is_extension(
-        SpikeAmplitudesCalculator.extension_name
-    ):
-        sac = waveform_extractor.load_extension(
-            SpikeAmplitudesCalculator.extension_name
-        )
+    if load_if_exists and waveform_extractor.is_extension(SpikeAmplitudesCalculator.extension_name):
+        sac = waveform_extractor.load_extension(SpikeAmplitudesCalculator.extension_name)
     else:
         sac = SpikeAmplitudesCalculator(waveform_extractor)
         sac.set_params(peak_sign=peak_sign, return_scaled=return_scaled)
@@ -223,9 +209,7 @@ def compute_spike_amplitudes(
 compute_spike_amplitudes.__doc__.format(_shared_job_kwargs_doc)
 
 
-def _init_worker_spike_amplitudes(
-    recording, sorting, extremum_channels_index, peak_shifts, return_scaled
-):
+def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, peak_shifts, return_scaled):
     # create a local dict per worker
     worker_ctx = {}
     if isinstance(recording, dict):

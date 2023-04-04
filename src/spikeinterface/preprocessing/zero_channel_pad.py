@@ -41,26 +41,21 @@ class ZeroChannelPaddedRecording(BaseRecording):
                 len(channel_mapping) == parent_recording.get_num_channels()
             ), "The new mapping must be specified for all channels."
             assert max(channel_mapping) < num_channels, (
-                "The new mapping cannot exceed total number of channels "
-                "in the zero-chanenl-padded recording."
+                "The new mapping cannot exceed total number of channels " "in the zero-chanenl-padded recording."
             )
         else:
             if (
                 "locations" in parent_recording.get_property_keys()
                 or "contact_vector" in parent_recording.get_property_keys()
             ):
-                self.channel_mapping = np.argsort(
-                    parent_recording.get_channel_locations()[:, 1]
-                )
+                self.channel_mapping = np.argsort(parent_recording.get_channel_locations()[:, 1])
             else:
                 self.channel_mapping = np.arange(parent_recording.get_num_channels())
 
         self.parent_recording = parent_recording
         self.num_channels = num_channels
         for segment in parent_recording._recording_segments:
-            recording_segment = ZeroChannelPaddedRecordingSegment(
-                segment, self.num_channels, self.channel_mapping
-            )
+            recording_segment = ZeroChannelPaddedRecordingSegment(segment, self.num_channels, self.channel_mapping)
             self.add_recording_segment(recording_segment)
 
         # only copy relevant metadata and properties
@@ -106,6 +101,4 @@ class ZeroChannelPaddedRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-zero_channel_pad = define_function_from_class(
-    source_class=ZeroChannelPaddedRecording, name="zero_channel_pad"
-)
+zero_channel_pad = define_function_from_class(source_class=ZeroChannelPaddedRecording, name="zero_channel_pad")

@@ -42,9 +42,7 @@ def test_filter():
     rec4 = notch_filter(rec, freq=3000, q=30, margin_ms=5.0)
 
     # filter from coefficients
-    coeff = iirfilter(
-        8, [0.02, 0.4], rs=30, btype="band", analog=False, ftype="cheby2", output="sos"
-    )
+    coeff = iirfilter(8, [0.02, 0.4], rs=30, btype="band", analog=False, ftype="cheby2", output="sos")
     rec5 = filter(rec, coeff=coeff, filter_mode="sos")
 
     # compute by chunk
@@ -94,9 +92,7 @@ def test_filter_opencl():
     rec_filtered = rec_filtered.save(chunk_size=1000, progress_bar=True, n_jobs=30)
 
     rec2 = filter(rec, engine="opencl")
-    rec2_cached0 = rec2.save(
-        chunk_size=1000, verbose=False, progress_bar=True, n_jobs=1
-    )
+    rec2_cached0 = rec2.save(chunk_size=1000, verbose=False, progress_bar=True, n_jobs=1)
     # rec2_cached0 = rec2.save(chunk_size=1000,verbose=False, progress_bar=True, n_jobs=4)
 
     # import matplotlib.pyplot as plt

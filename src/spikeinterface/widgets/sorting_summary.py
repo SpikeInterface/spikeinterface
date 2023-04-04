@@ -62,18 +62,14 @@ class SortingSummaryWidget(BaseWidget):
         template_plot_data = UnitTemplatesWidget(
             we, unit_ids=unit_ids, sparsity=sparsity, hide_unit_selector=True
         ).plot_data
-        ccg_plot_data = CrossCorrelogramsWidget(
-            we, unit_ids=unit_ids, hide_unit_selector=True
-        ).plot_data
+        ccg_plot_data = CrossCorrelogramsWidget(we, unit_ids=unit_ids, hide_unit_selector=True).plot_data
         amps_plot_data = AmplitudesWidget(
             we,
             unit_ids=unit_ids,
             max_spikes_per_unit=max_amplitudes_per_unit,
             hide_unit_selector=True,
         ).plot_data
-        locs_plot_data = UnitLocationsWidget(
-            we, unit_ids=unit_ids, hide_unit_selector=True
-        ).plot_data
+        locs_plot_data = UnitLocationsWidget(we, unit_ids=unit_ids, hide_unit_selector=True).plot_data
         sim_plot_data = TemplateSimilarityWidget(we, unit_ids=unit_ids).plot_data
 
         plot_data = dict(

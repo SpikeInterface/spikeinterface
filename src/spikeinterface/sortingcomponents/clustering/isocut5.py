@@ -68,32 +68,16 @@ if HAVE_NUMBA:
             while True:
                 if last_index <= 0:
                     break
-                if (
-                    wsum[last_index - 1] / count[last_index - 1]
-                    < wsum[last_index] / count[last_index]
-                ):
+                if wsum[last_index - 1] / count[last_index - 1] < wsum[last_index] / count[last_index]:
                     break
 
-                prevMSE = (
-                    wsumsqr[last_index - 1]
-                    - wsum[last_index - 1]
-                    * wsum[last_index - 1]
-                    / count[last_index - 1]
-                )
-                prevMSE += (
-                    wsumsqr[last_index]
-                    - wsum[last_index] * wsum[last_index] / count[last_index]
-                )
+                prevMSE = wsumsqr[last_index - 1] - wsum[last_index - 1] * wsum[last_index - 1] / count[last_index - 1]
+                prevMSE += wsumsqr[last_index] - wsum[last_index] * wsum[last_index] / count[last_index]
                 unweightedcount[last_index - 1] += unweightedcount[last_index]
                 count[last_index - 1] += count[last_index]
                 wsum[last_index - 1] += wsum[last_index]
                 wsumsqr[last_index - 1] += wsumsqr[last_index]
-                newMSE = (
-                    wsumsqr[last_index - 1]
-                    - wsum[last_index - 1]
-                    * wsum[last_index - 1]
-                    / count[last_index - 1]
-                )
+                newMSE = wsumsqr[last_index - 1] - wsum[last_index - 1] * wsum[last_index - 1] / count[last_index - 1]
                 MSE[j] += newMSE - prevMSE
                 last_index -= 1
 
@@ -217,12 +201,8 @@ if HAVE_NUMBA:
             critical_range = slice(ks_right_ind, spacings.size)
             dipscore = ks_right
 
-        densities_resid = (
-            densities[critical_range] - densities_unimodal_fit[critical_range]
-        )
-        densities_resid_fit = down_up_isotonic_regression(
-            densities_resid, spacings[critical_range]
-        )
+        densities_resid = densities[critical_range] - densities_unimodal_fit[critical_range]
+        densities_resid_fit = down_up_isotonic_regression(densities_resid, spacings[critical_range])
         cutpoint_ind = critical_range.start + np.argmin(densities_resid_fit)
         cutpoint = (X_sub[cutpoint_ind] + X_sub[cutpoint_ind + 1]) / 2
 

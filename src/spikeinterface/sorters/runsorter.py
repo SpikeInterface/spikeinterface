@@ -155,16 +155,12 @@ def run_sorter_local(
     **sorter_params,
 ):
     if isinstance(recording, list):
-        raise Exception(
-            "You you want to run several sorters/recordings use run_sorters(...)"
-        )
+        raise Exception("You you want to run several sorters/recordings use run_sorters(...)")
 
     SorterClass = sorter_dict[sorter_name]
 
     # only classmethod call not instance (stateless at instance level but state is in folder)
-    output_folder = SorterClass.initialize_folder(
-        recording, output_folder, verbose, remove_existing_folder
-    )
+    output_folder = SorterClass.initialize_folder(recording, output_folder, verbose, remove_existing_folder)
     SorterClass.set_params_to_folder(recording, output_folder, sorter_params, verbose)
     SorterClass.setup_recording(recording, output_folder, verbose=verbose)
     SorterClass.run_from_folder(output_folder, raise_error, verbose)
@@ -248,22 +244,16 @@ class ContainerClient:
             client = docker.from_env()
             if container_requires_gpu is not None:
                 extra_kwargs.pop("container_requires_gpu")
-                extra_kwargs["device_requests"] = [
-                    docker.types.DeviceRequest(count=-1, capabilities=[["gpu"]])
-                ]
+                extra_kwargs["device_requests"] = [docker.types.DeviceRequest(count=-1, capabilities=[["gpu"]])]
 
             if self._get_docker_image(container_image) is None:
                 print(f"Docker: pulling image {container_image}")
                 client.images.pull(container_image)
 
-            self.docker_container = client.containers.create(
-                container_image, tty=True, volumes=volumes, **extra_kwargs
-            )
+            self.docker_container = client.containers.create(container_image, tty=True, volumes=volumes, **extra_kwargs)
 
         elif mode == "singularity":
-            assert (
-                self.py_user_base
-            ), "py_user_base folder must be set in singularity mode"
+            assert self.py_user_base, "py_user_base folder must be set in singularity mode"
             from spython.main import Client
 
             # load local image file if it exists, otherwise search dockerhub
@@ -278,28 +268,17 @@ class ContainerClient:
                     docker_image = self._get_docker_image(container_image)
                     if docker_image and len(docker_image.tags) > 0:
                         tag = docker_image.tags[0]
-                        print(
-                            f"Building singularity image from local docker image: {tag}"
-                        )
-                        singularity_image = Client.build(
-                            f"docker-daemon://{tag}", sif_file, sudo=False
-                        )
+                        print(f"Building singularity image from local docker image: {tag}")
+                        singularity_image = Client.build(f"docker-daemon://{tag}", sif_file, sudo=False)
                 if not singularity_image:
                     print(f"Singularity: pulling image {container_image}")
                     singularity_image = Client.pull(f"docker://{container_image}")
 
             if not Path(singularity_image).exists():
-                raise FileNotFoundError(
-                    f"Unable to locate container image {container_image}"
-                )
+                raise FileNotFoundError(f"Unable to locate container image {container_image}")
 
             # bin options
-            singularity_bind = ",".join(
-                [
-                    f'{volume_src}:{volume["bind"]}'
-                    for volume_src, volume in volumes.items()
-                ]
-            )
+            singularity_bind = ",".join([f'{volume_src}:{volume["bind"]}' for volume_src, volume in volumes.items()])
             options = ["--bind", singularity_bind]
 
             # gpu options
@@ -307,9 +286,7 @@ class ContainerClient:
                 # only nvidia at the moment
                 options += ["--nv"]
 
-            self.client_instance = Client.instance(
-                singularity_image, start=False, options=options
-            )
+            self.client_instance = Client.instance(singularity_image, start=False, options=options)
 
     @staticmethod
     def _get_docker_image(container_image):
@@ -391,9 +368,7 @@ def run_sorter_container(
         if sorter_name in SORTER_DOCKER_MAP:
             container_image = SORTER_DOCKER_MAP[sorter_name]
         else:
-            raise ValueError(
-                f"sorter {sorter_name} not in SORTER_DOCKER_MAP. Please specify a container_image."
-            )
+            raise ValueError(f"sorter {sorter_name} not in SORTER_DOCKER_MAP. Please specify a container_image.")
 
     SorterClass = sorter_dict[sorter_name]
     output_folder = Path(output_folder).absolute().resolve()
@@ -449,14 +424,10 @@ if __name__ == '__main__':
     )
     sorting.save_to_folder(folder='{npz_sorting_path_unix}')
 """
-    (parent_folder / "in_container_sorter_script.py").write_text(
-        py_script, encoding="utf8"
-    )
+    (parent_folder / "in_container_sorter_script.py").write_text(py_script, encoding="utf8")
 
     volumes = {}
-    for recording_folder, recording_folder_unix in zip(
-        recording_input_folders, recording_input_folders_unix
-    ):
+    for recording_folder, recording_folder_unix in zip(recording_input_folders, recording_input_folders_unix):
         # handle duplicates
         if str(recording_folder) not in volumes:
             volumes[str(recording_folder)] = {
@@ -481,9 +452,7 @@ if __name__ == '__main__':
     gpu_capability = SorterClass.gpu_capability
     if use_gpu:
         if gpu_capability == "nvidia-required":
-            assert (
-                has_nvidia()
-            ), "The container requires a NVIDIA GPU capability, but it is not available"
+            assert has_nvidia(), "The container requires a NVIDIA GPU capability, but it is not available"
             extra_kwargs["container_requires_gpu"] = True
         elif gpu_capability == "nvidia-optional":
             if has_nvidia():
@@ -507,9 +476,7 @@ if __name__ == '__main__':
         si_source_folder = f"{py_user_base_unix}/sources"
     else:
         si_source_folder = "/sources"
-    container_client = ContainerClient(
-        mode, container_image, volumes, py_user_base_unix, extra_kwargs
-    )
+    container_client = ContainerClient(mode, container_image, volumes, py_user_base_unix, extra_kwargs)
     if verbose:
         print("Starting container")
     container_client.start()
@@ -576,9 +543,7 @@ if __name__ == '__main__':
     # this do not work with singularity:
     # cmd = 'python "{}"'.format(parent_folder/'in_container_sorter_script.py')
     # this approach is better
-    in_container_script_path_unix = (
-        Path(parent_folder_unix) / "in_container_sorter_script.py"
-    ).as_posix()
+    in_container_script_path_unix = (Path(parent_folder_unix) / "in_container_sorter_script.py").as_posix()
     cmd = ["python", f"{in_container_script_path_unix}"]
     res_output = container_client.run_command(cmd)
     run_sorter_output = res_output
@@ -619,9 +584,7 @@ if __name__ == '__main__':
     sorting = None
     if run_error:
         if raise_error:
-            raise SpikeSortingError(
-                f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}"
-            )
+            raise SpikeSortingError(f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}")
     else:
         if with_output:
             try:
@@ -636,9 +599,7 @@ if __name__ == '__main__':
                 try:
                     sorting = NpzSortingExtractor.load_from_folder(npz_sorting_path)
                 except FileNotFoundError:
-                    SpikeSortingError(
-                        f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}"
-                    )
+                    SpikeSortingError(f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}")
 
     if delete_output_folder:
         shutil.rmtree(output_folder)
@@ -663,9 +624,7 @@ def read_sorter_folder(output_folder, raise_error=True):
     log_file = output_folder / "spikeinterface_log.json"
 
     if not log_file.is_file():
-        raise Exception(
-            f"This folder {output_folder} does not have spikeinterface_log.json"
-        )
+        raise Exception(f"This folder {output_folder} does not have spikeinterface_log.json")
 
     with log_file.open("r", encoding="utf8") as f:
         log = json.load(f)

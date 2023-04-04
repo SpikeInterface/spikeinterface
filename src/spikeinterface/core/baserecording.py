@@ -67,11 +67,7 @@ class BaseRecording(BaseRecordingSnippets):
         return txt
 
     def get_memory_size(self):
-        bytes = (
-            self.get_total_samples()
-            * self.get_num_channels()
-            * self.get_dtype().itemsize
-        )
+        bytes = self.get_total_samples() * self.get_num_channels() * self.get_dtype().itemsize
         return convert_bytes_to_str(bytes)
 
     def get_num_segments(self):
@@ -200,21 +196,20 @@ class BaseRecording(BaseRecordingSnippets):
                 assert itemsize < 8, "Cannot upcast uint64!"
                 nbits = dtype.itemsize * 8
                 # upcast to int with double itemsize
-                traces = traces.astype(f"int{2 * (dtype.itemsize) * 8}") - 2 ** (
-                    nbits - 1
-                )
+                traces = traces.astype(f"int{2 * (dtype.itemsize) * 8}") - 2 ** (nbits - 1)
                 traces = traces.astype(f"int{dtype.itemsize * 8}")
 
         if return_scaled:
             if hasattr(self, "NeoRawIOClass"):
                 if self.has_non_standard_units:
-                    message = f"This extractor based on neo.{self.NeoRawIOClass} has channels with units not in (V, mV, uV)"
+                    message = (
+                        f"This extractor based on neo.{self.NeoRawIOClass} has channels with units not in (V, mV, uV)"
+                    )
                     warnings.warn(message)
 
             if not self.has_scaled():
                 raise ValueError(
-                    "This recording do not support return_scaled=True (need gain_to_uV and offset_"
-                    "to_uV properties)"
+                    "This recording do not support return_scaled=True (need gain_to_uV and offset_" "to_uV properties)"
                 )
             else:
                 gains = self.get_property("gain_to_uV")
@@ -325,15 +320,10 @@ class BaseRecording(BaseRecordingSnippets):
 
         if format == "binary":
             folder = kwargs["folder"]
-            file_paths = [
-                folder / f"traces_cached_seg{i}.raw"
-                for i in range(self.get_num_segments())
-            ]
+            file_paths = [folder / f"traces_cached_seg{i}.raw" for i in range(self.get_num_segments())]
             dtype = kwargs.get("dtype", None) or self.get_dtype()
 
-            write_binary_recording(
-                self, file_paths=file_paths, dtype=dtype, **job_kwargs
-            )
+            write_binary_recording(self, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
 
@@ -377,13 +367,9 @@ class BaseRecording(BaseRecordingSnippets):
             zarr_root = zarr_kwargs["zarr_root"]
             zarr_root.attrs["sampling_frequency"] = float(self.get_sampling_frequency())
             zarr_root.attrs["num_segments"] = int(self.get_num_segments())
-            zarr_root.create_dataset(
-                name="channel_ids", data=self.get_channel_ids(), compressor=None
-            )
+            zarr_root.create_dataset(name="channel_ids", data=self.get_channel_ids(), compressor=None)
 
-            zarr_kwargs["dataset_paths"] = [
-                f"traces_seg{i}" for i in range(self.get_num_segments())
-            ]
+            zarr_kwargs["dataset_paths"] = [f"traces_seg{i}" for i in range(self.get_num_segments())]
             zarr_kwargs["dtype"] = kwargs.get("dtype", None) or self.get_dtype()
 
             if "compressor" not in zarr_kwargs:
@@ -398,9 +384,7 @@ class BaseRecording(BaseRecordingSnippets):
             # save probe
             if self.get_property("contact_vector") is not None:
                 probegroup = self.get_probegroup()
-                zarr_root.attrs["probe"] = check_json(
-                    probegroup.to_dict(array_as_list=True)
-                )
+                zarr_root.attrs["probe"] = check_json(probegroup.to_dict(array_as_list=True))
 
             # save time vector if any
             t_starts = np.zeros(self.get_num_segments(), dtype="float64") * np.nan
@@ -418,13 +402,9 @@ class BaseRecording(BaseRecordingSnippets):
                     t_starts[segment_index] = d["t_start"]
 
             if np.any(~np.isnan(t_starts)):
-                zarr_root.create_dataset(
-                    name="t_starts", data=t_starts, compressor=None
-                )
+                zarr_root.create_dataset(name="t_starts", data=t_starts, compressor=None)
 
-            cached = ZarrRecordingExtractor(
-                zarr_kwargs["zarr_path"], zarr_kwargs["storage_options"]
-            )
+            cached = ZarrRecordingExtractor(zarr_kwargs["zarr_path"], zarr_kwargs["storage_options"])
 
         elif format == "nwb":
             # TODO implement a format based on zarr
@@ -475,26 +455,20 @@ class BaseRecording(BaseRecordingSnippets):
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         from .channelslice import ChannelSliceRecording
 
-        sub_recording = ChannelSliceRecording(
-            self, channel_ids, renamed_channel_ids=renamed_channel_ids
-        )
+        sub_recording = ChannelSliceRecording(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
 
     def _remove_channels(self, remove_channel_ids):
         from .channelslice import ChannelSliceRecording
 
-        new_channel_ids = self.channel_ids[
-            ~np.in1d(self.channel_ids, remove_channel_ids)
-        ]
+        new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, remove_channel_ids)]
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
         return sub_recording
 
     def _frame_slice(self, start_frame, end_frame):
         from .frameslicerecording import FrameSliceRecording
 
-        sub_recording = FrameSliceRecording(
-            self, start_frame=start_frame, end_frame=end_frame
-        )
+        sub_recording = FrameSliceRecording(self, start_frame=start_frame, end_frame=end_frame)
         return sub_recording
 
     def _select_segments(self, segment_indices):
@@ -557,9 +531,7 @@ class BaseRecording(BaseRecordingSnippets):
         if file_offset is not None and file_offset != d["file_offset"]:
             return False
 
-        if file_suffix is not None and not all(
-            Path(e).suffix == file_suffix for e in d["file_paths"]
-        ):
+        if file_suffix is not None and not all(Path(e).suffix == file_suffix for e in d["file_paths"]):
             return False
 
         # good job you pass all crucible
@@ -574,15 +546,11 @@ class BaseRecordingSegment(BaseSegment):
     def __init__(self, sampling_frequency=None, t_start=None, time_vector=None):
         # sampling_frequency and time_vector are exclusive
         if sampling_frequency is None:
-            assert (
-                time_vector is not None
-            ), "Pass either 'sampling_frequency' or 'time_vector'"
+            assert time_vector is not None, "Pass either 'sampling_frequency' or 'time_vector'"
             assert time_vector.ndim == 1, "time_vector should be a 1D array"
 
         if time_vector is None:
-            assert (
-                sampling_frequency is not None
-            ), "Pass either 'sampling_frequency' or 'time_vector'"
+            assert sampling_frequency is not None, "Pass either 'sampling_frequency' or 'time_vector'"
 
         self.sampling_frequency = sampling_frequency
         self.t_start = t_start

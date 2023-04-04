@@ -63,8 +63,7 @@ class CombinatoSorter(BaseSorter):
     }
 
     _params_description = {
-        "detect_sign": "Use -1 (negative) or 1 (positive) depending "
-        "on the sign of the spikes in the recording",
+        "detect_sign": "Use -1 (negative) or 1 (positive) depending " "on the sign of the spikes in the recording",
         "MaxClustersPerTemp": "How many clusters can be selected at one temperature",
         "MinSpikesPerClusterMultiSelect": "How many spikes does a cluster need to be selected",
         "RecursiveDepth": "How many clustering recursions should be run (1 do not recurse)",
@@ -137,9 +136,7 @@ class CombinatoSorter(BaseSorter):
         chid = chan_ids[0]
         vcFile_h5 = str(sorter_output_folder / ("recording.h5"))
         with h5py.File(vcFile_h5, mode="w") as f:
-            f.create_dataset(
-                "sr", data=[recording.get_sampling_frequency()], dtype="float32"
-            )
+            f.create_dataset("sr", data=[recording.get_sampling_frequency()], dtype="float32")
             write_to_h5_dataset_format(
                 recording,
                 dataset_path="/data",
@@ -206,12 +203,8 @@ class CombinatoSorter(BaseSorter):
         sorter_output_folder = Path(sorter_output_folder)
         result_fname = str(sorter_output_folder / "recording")
 
-        with (sorter_output_folder.parent / "spikeinterface_params.json").open(
-            "r"
-        ) as f:
+        with (sorter_output_folder.parent / "spikeinterface_params.json").open("r") as f:
             sorter_params = json.load(f)["sorter_params"]
         keep_good_only = sorter_params.get("keep_good_only", True)
-        sorting = CombinatoSortingExtractor(
-            folder_path=result_fname, keep_good_only=keep_good_only
-        )
+        sorting = CombinatoSortingExtractor(folder_path=result_fname, keep_good_only=keep_good_only)
         return sorting

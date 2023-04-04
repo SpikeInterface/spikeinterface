@@ -25,9 +25,7 @@ class AmplitudeBaseWidget(BaseWidget):
             sac = self.we.load_extension("spike_amplitudes")
             self.amplitudes = sac.get_data(outputs="by_unit")
         else:
-            self.amplitudes = compute_spike_amplitudes(
-                self.we, outputs="by_unit", **compute_kwargs
-            )
+            self.amplitudes = compute_spike_amplitudes(self.we, outputs="by_unit", **compute_kwargs)
 
         if unit_ids is None:
             unit_ids = waveform_extractor.sorting.unit_ids
@@ -70,9 +68,7 @@ class AmplitudeTimeseriesWidget(AmplitudeBaseWidget):
         ax = self.ax
         for i, unit_id in enumerate(self.unit_ids):
             for segment_index in range(num_seg):
-                times = sorting.get_unit_spike_train(
-                    unit_id, segment_index=segment_index
-                )
+                times = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
                 times = times / fs
                 amps = self.amplitudes[segment_index][unit_id]
                 ax.scatter(times, amps, color=self.unit_colors[unit_id], s=3, alpha=1)
@@ -123,9 +119,7 @@ class AmplitudeDistributionWidget(AmplitudeBaseWidget):
                 amps.append(self.amplitudes[segment_index][unit_id])
             amps = np.concatenate(amps)
             unit_amps.append(amps)
-        parts = ax.violinplot(
-            unit_amps, showmeans=False, showmedians=False, showextrema=False
-        )
+        parts = ax.violinplot(unit_amps, showmeans=False, showmedians=False, showextrema=False)
 
         for i, pc in enumerate(parts["bodies"]):
             color = self.unit_colors[unit_ids[i]]

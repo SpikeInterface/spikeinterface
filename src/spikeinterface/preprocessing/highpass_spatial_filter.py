@@ -91,9 +91,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
             order_r = None
         else:
             # sort by x, y to avoid ambiguity
-            order_f, order_r = order_channels_by_depth(
-                recording=recording, dimensions=("x", "y")
-            )
+            order_f, order_r = order_channels_by_depth(recording=recording, dimensions=("x", "y"))
 
         # Fix channel padding and tapering
         n_channels = recording.get_num_channels()
@@ -101,9 +99,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
         assert (
             n_channel_pad <= recording.get_num_channels()
         ), "'n_channel_pad' must be less than the number of channels in recording."
-        n_channel_taper = (
-            n_channel_pad if n_channel_taper is None else int(n_channel_taper)
-        )
+        n_channel_taper = n_channel_pad if n_channel_taper is None else int(n_channel_taper)
         assert (
             n_channel_taper <= recording.get_num_channels()
         ), "'n_channel_taper' must be less than the number of channels in recording."
@@ -114,9 +110,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
             agc_window_length_s = None
 
         # Pre-compute spatial filtering parameters
-        butter_kwargs = dict(
-            btype="highpass", N=highpass_butter_order, Wn=highpass_butter_wn
-        )
+        butter_kwargs = dict(btype="highpass", N=highpass_butter_order, Wn=highpass_butter_wn)
         sos_filter = scipy.signal.butter(**butter_kwargs, output="sos")
 
         for parent_segment in recording._recording_segments:
@@ -163,20 +157,14 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
         self.n_channel_pad = n_channel_pad
         if n_channel_taper > 0:
             num_channels_padded = n_channels + n_channel_pad * 2
-            self.taper = fcn_cosine([0, n_channel_taper])(
-                np.arange(num_channels_padded)
-            )  # taper up
-            self.taper *= 1 - fcn_cosine(
-                [num_channels_padded - n_channel_taper, num_channels_padded]
-            )(
+            self.taper = fcn_cosine([0, n_channel_taper])(np.arange(num_channels_padded))  # taper up
+            self.taper *= 1 - fcn_cosine([num_channels_padded - n_channel_taper, num_channels_padded])(
                 np.arange(num_channels_padded)
             )  # taper down
         else:
             self.taper = None
         if agc_window_length_s is not None:
-            num_samples_window = int(
-                np.round(agc_window_length_s / sampling_interval / 2) * 2 + 1
-            )
+            num_samples_window = int(np.round(agc_window_length_s / sampling_interval / 2) * 2 + 1)
             window = np.hanning(num_samples_window)
             window /= np.sum(window)
             self.window = window
@@ -267,9 +255,7 @@ def agc(traces, window, epsilon=1e-8):
     :param epsilon: whitening (useful mainly for synthetic data)
     :return: AGC data array, gain applied to data
     """
-    gain = scipy.signal.fftconvolve(
-        np.abs(traces), window[:, None], mode="same", axes=0
-    )
+    gain = scipy.signal.fftconvolve(np.abs(traces), window[:, None], mode="same", axes=0)
 
     gain += (np.sum(gain, axis=0) * epsilon / traces.shape[0])[np.newaxis, :]
 

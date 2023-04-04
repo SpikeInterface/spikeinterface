@@ -92,12 +92,8 @@ def test_split_recordings():
     assert rec1.get_num_segments() == 1
     assert np.allclose(rec1.get_traces(), rec0.get_traces(segment_index=1))
 
-    assert np.allclose(
-        rec2.get_traces(segment_index=0), rec0.get_traces(segment_index=1)
-    )
-    assert np.allclose(
-        rec2.get_traces(segment_index=1), rec0.get_traces(segment_index=2)
-    )
+    assert np.allclose(rec2.get_traces(segment_index=0), rec0.get_traces(segment_index=1))
+    assert np.allclose(rec2.get_traces(segment_index=1), rec0.get_traces(segment_index=2))
     assert np.allclose(rec3.get_traces(), rec0.get_traces(segment_index=2))
 
 
@@ -117,12 +113,8 @@ def test_append_concatenate_sortings():
     labels1[2::3] = 2
 
     # Multisegment sortings
-    sorting0 = NumpySorting.from_times_labels(
-        [times0] * 3, [labels0] * 3, sampling_frequency
-    )
-    sorting1 = NumpySorting.from_times_labels(
-        [times1] * 2, [labels1] * 2, sampling_frequency
-    )
+    sorting0 = NumpySorting.from_times_labels([times0] * 3, [labels0] * 3, sampling_frequency)
+    sorting1 = NumpySorting.from_times_labels([times1] * 2, [labels1] * 2, sampling_frequency)
     sorting_list = [sorting0, sorting1]
     # Associated multisegment recordings
     traces0 = np.zeros((nsamp0, 5), dtype="float64")
@@ -130,12 +122,8 @@ def test_append_concatenate_sortings():
     rec0 = NumpyRecording([traces0] * 3, sampling_frequency)
     rec1 = NumpyRecording([traces1] * 2, sampling_frequency)
     # Monosegemnt sortings
-    sorting0_mono = NumpySorting.from_times_labels(
-        [times0], [labels0], sampling_frequency
-    )
-    sorting1_mono = NumpySorting.from_times_labels(
-        [times1], [labels1], sampling_frequency
-    )
+    sorting0_mono = NumpySorting.from_times_labels([times0], [labels0], sampling_frequency)
+    sorting1_mono = NumpySorting.from_times_labels([times1], [labels1], sampling_frequency)
     sorting_list_mono = [sorting0_mono, sorting1_mono]
     # Associated multisegment recordings
     traces0 = np.zeros((nsamp0, 5), dtype="float64")
@@ -176,13 +164,9 @@ def test_append_concatenate_sortings():
     assert_raises(Exception, concatenate_sortings, sorting_list)
     assert_raises(Exception, concatenate_sortings, sorting_list_mono)
     # Fails with total_samples_list for multisegment
-    assert_raises(
-        Exception, concatenate_sortings, sorting_list, total_samples_list="dummy"
-    )
+    assert_raises(Exception, concatenate_sortings, sorting_list, total_samples_list="dummy")
     # Succeeds without registered recording for mono
-    sorting_mono_norec = concatenate_sortings(
-        sorting_list_mono, total_samples_list=[nsamp0, nsamp1]
-    )
+    sorting_mono_norec = concatenate_sortings(sorting_list_mono, total_samples_list=[nsamp0, nsamp1])
     assert sorting_mono_norec.get_num_segments() == 1
     # Fails when excess spikes with total_samples_list
     assert_raises(
@@ -229,39 +213,27 @@ def test_append_concatenate_sortings():
 
     # Within one segment
     assert np.array_equal(
-        sorting.get_unit_spike_train(
-            unit_id=0, segment_index=None, start_frame=0, end_frame=1000
-        ),
+        sorting.get_unit_spike_train(unit_id=0, segment_index=None, start_frame=0, end_frame=1000),
         [t for t in unit_0_train if 0 <= t < 1000],
     )  # Full first
     assert np.array_equal(
-        sorting.get_unit_spike_train(
-            unit_id=0, segment_index=None, start_frame=0, end_frame=300
-        ),
+        sorting.get_unit_spike_train(unit_id=0, segment_index=None, start_frame=0, end_frame=300),
         [t for t in unit_0_train if 0 <= t < 300],
     )  # Part first
     assert np.array_equal(
-        sorting.get_unit_spike_train(
-            unit_id=0, segment_index=None, start_frame=500, end_frame=750
-        ),
+        sorting.get_unit_spike_train(unit_id=0, segment_index=None, start_frame=500, end_frame=750),
         [t for t in unit_0_train if 500 <= t < 750],
     )  # Part first
     assert np.array_equal(
-        sorting.get_unit_spike_train(
-            unit_id=0, segment_index=None, start_frame=1000, end_frame=2000
-        ),
+        sorting.get_unit_spike_train(unit_id=0, segment_index=None, start_frame=1000, end_frame=2000),
         [t for t in unit_0_train if 1000 <= t < 2000],
     )  # Full 2nd segment
     assert np.array_equal(
-        sorting.get_unit_spike_train(
-            unit_id=0, segment_index=None, start_frame=4500, end_frame=6000
-        ),
+        sorting.get_unit_spike_train(unit_id=0, segment_index=None, start_frame=4500, end_frame=6000),
         [t for t in unit_0_train if 4500 <= t < 6000],
     )  # Full last segment
     assert np.array_equal(
-        sorting.get_unit_spike_train(
-            unit_id=0, segment_index=None, start_frame=4550, end_frame=5000
-        ),
+        sorting.get_unit_spike_train(unit_id=0, segment_index=None, start_frame=4550, end_frame=5000),
         [t for t in unit_0_train if 4550 <= t < 5000],
     )  # Part of last segmetn
 
@@ -270,9 +242,7 @@ def test_append_concatenate_sortings():
 
     # Across segments
     assert np.array_equal(
-        sorting.get_unit_spike_train(
-            unit_id=0, segment_index=None, start_frame=950, end_frame=1050
-        ),
+        sorting.get_unit_spike_train(unit_id=0, segment_index=None, start_frame=950, end_frame=1050),
         [t for t in unit_0_train if 950 <= t < 1050],
     )
 
@@ -320,9 +290,7 @@ def test_append_concatenate_sortings():
     sorting0.register_recording(rec0)
     sorting1.register_recording(rec1)
     # Actually, non-trivial time is not handled by concatenate_recordings
-    assert_raises(
-        Exception, concatenate_sortings, [sorting0, sorting1], ignore_times=False
-    )
+    assert_raises(Exception, concatenate_sortings, [sorting0, sorting1], ignore_times=False)
     # sorting = concatenate_sortings([sorting0, sorting1], ignore_times=False)
     # assert np.array_equal(
     #     sorting.get_unit_spike_train(unit_id=0, return_times=True),

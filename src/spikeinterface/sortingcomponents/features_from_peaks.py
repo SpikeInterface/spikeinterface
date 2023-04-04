@@ -88,9 +88,7 @@ class AmplitudeFeature(PipelineNode):
         all_channels=False,
         peak_sign="neg",
     ):
-        PipelineNode.__init__(
-            self, recording, return_output=return_output, parents=parents
-        )
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.all_channels = all_channels
         self.peak_sign = peak_sign
@@ -128,17 +126,13 @@ class PeakToPeakFeature(PipelineNode):
         local_radius_um=150.0,
         all_channels=True,
     ):
-        PipelineNode.__init__(
-            self, recording, return_output=return_output, parents=parents
-        )
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
         self.neighbours_mask = self.channel_distance < local_radius_um
         self.all_channels = all_channels
-        self._kwargs.update(
-            dict(local_radius_um=local_radius_um, all_channels=all_channels)
-        )
+        self._kwargs.update(dict(local_radius_um=local_radius_um, all_channels=all_channels))
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
@@ -167,9 +161,7 @@ class PeakToPeakLagsFeature(PipelineNode):
         local_radius_um=150.0,
         all_channels=True,
     ):
-        PipelineNode.__init__(
-            self, recording, return_output=return_output, parents=parents
-        )
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.all_channels = all_channels
         self.local_radius_um = local_radius_um
@@ -178,9 +170,7 @@ class PeakToPeakLagsFeature(PipelineNode):
         self.channel_distance = get_channel_distances(recording)
         self.neighbours_mask = self.channel_distance < local_radius_um
 
-        self._kwargs.update(
-            dict(local_radius_um=local_radius_um, all_channels=all_channels)
-        )
+        self._kwargs.update(dict(local_radius_um=local_radius_um, all_channels=all_channels))
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
@@ -216,9 +206,7 @@ class RandomProjectionsFeature(PipelineNode):
         local_radius_um=150.0,
         min_values=None,
     ):
-        PipelineNode.__init__(
-            self, recording, return_output=return_output, parents=parents
-        )
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.projections = projections
         self.local_radius_um = local_radius_um
@@ -242,9 +230,7 @@ class RandomProjectionsFeature(PipelineNode):
         return self._dtype
 
     def compute(self, traces, peaks, waveforms):
-        all_projections = np.zeros(
-            (peaks.size, self.projections.shape[1]), dtype=self._dtype
-        )
+        all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
         for main_chan in np.unique(peaks["channel_ind"]):
             (idx,) = np.nonzero(peaks["channel_ind"] == main_chan)
             (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
@@ -257,9 +243,7 @@ class RandomProjectionsFeature(PipelineNode):
             denom = np.sum(wf_ptp, axis=1)
             mask = denom != 0
 
-            all_projections[idx[mask]] = np.dot(wf_ptp[mask], local_projections) / (
-                denom[mask][:, np.newaxis]
-            )
+            all_projections[idx[mask]] = np.dot(wf_ptp[mask], local_projections) / (denom[mask][:, np.newaxis])
         return all_projections
 
 
@@ -274,9 +258,7 @@ class RandomProjectionsEnergyFeature(PipelineNode):
         local_radius_um=150.0,
         min_values=None,
     ):
-        PipelineNode.__init__(
-            self, recording, return_output=return_output, parents=parents
-        )
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
@@ -298,9 +280,7 @@ class RandomProjectionsEnergyFeature(PipelineNode):
         return self._dtype
 
     def compute(self, traces, peaks, waveforms):
-        all_projections = np.zeros(
-            (peaks.size, self.projections.shape[1]), dtype=self._dtype
-        )
+        all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
         for main_chan in np.unique(peaks["channel_ind"]):
             (idx,) = np.nonzero(peaks["channel_ind"] == main_chan)
             (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
@@ -313,9 +293,7 @@ class RandomProjectionsEnergyFeature(PipelineNode):
             denom = np.sum(energies, axis=1)
             mask = denom != 0
 
-            all_projections[idx[mask]] = np.dot(energies[mask], local_projections) / (
-                denom[mask][:, np.newaxis]
-            )
+            all_projections[idx[mask]] = np.dot(energies[mask], local_projections) / (denom[mask][:, np.newaxis])
         return all_projections
 
 
@@ -328,9 +306,7 @@ class StdPeakToPeakFeature(PipelineNode):
         parents=None,
         local_radius_um=150.0,
     ):
-        PipelineNode.__init__(
-            self, recording, return_output=return_output, parents=parents
-        )
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
@@ -362,9 +338,7 @@ class GlobalPeakToPeakFeature(PipelineNode):
         parents=None,
         local_radius_um=150.0,
     ):
-        PipelineNode.__init__(
-            self, recording, return_output=return_output, parents=parents
-        )
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
@@ -396,9 +370,7 @@ class KurtosisPeakToPeakFeature(PipelineNode):
         parents=None,
         local_radius_um=150.0,
     ):
-        PipelineNode.__init__(
-            self, recording, return_output=return_output, parents=parents
-        )
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
@@ -432,9 +404,7 @@ class EnergyFeature(PipelineNode):
         parents=None,
         local_radius_um=50.0,
     ):
-        PipelineNode.__init__(
-            self, recording, return_output=return_output, parents=parents
-        )
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)

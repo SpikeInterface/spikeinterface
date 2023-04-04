@@ -30,9 +30,7 @@ def setup_module():
 
 def test_setup_comparison_study():
     rec0, gt_sorting0 = toy_example(num_channels=4, duration=30, seed=0, num_segments=1)
-    rec1, gt_sorting1 = toy_example(
-        num_channels=32, duration=30, seed=0, num_segments=1
-    )
+    rec1, gt_sorting1 = toy_example(num_channels=32, duration=30, seed=0, num_segments=1)
 
     gt_dict = {
         "toy_tetrode": (rec0, gt_sorting0),
