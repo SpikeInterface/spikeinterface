@@ -1,5 +1,7 @@
 import pytest
 import numpy as np
+from pathlib import Path
+import shutil
 
 import scipy.signal
 
@@ -8,6 +10,12 @@ from spikeinterface.extractors import MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PipelineNode, ExtractDenseWaveforms, ExtractSparseWaveforms
+
+
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "sortingcomponents"
+else:
+    cache_folder = Path("cache_folder") / "sortingcomponents"
 
 
 
@@ -93,8 +101,10 @@ def test_run_peak_pipeline():
         denoised_waveforms_rms,
     ]
     
-        
-    output = run_peak_pipeline(recording, peaks, nodes, job_kwargs)
+
+    
+    # gather memory mode
+    output = run_peak_pipeline(recording, peaks, nodes, job_kwargs, gather_mode='memory')
     amplitudes, waveforms_rms, denoised_waveforms_rms = output
     assert np.allclose(np.abs(peaks['amplitude']), amplitudes['abs_amplitude'])
     
@@ -105,7 +115,22 @@ def test_run_peak_pipeline():
 
     assert waveforms_rms.shape[0] == num_peaks
     assert waveforms_rms.shape[1] == num_channels
-    
+
+    # gather npy mode
+    folder = cache_folder / 'pipeline_folder'
+    if folder.is_dir():
+        shutil.rmtree(folder)
+    output = run_peak_pipeline(recording, peaks, nodes, job_kwargs, gather_mode='npy',
+                               folder=folder, names=['amplitudes', 'waveforms_rms', 'denoised_waveforms_rms'],)
+    amplitudes2, waveforms_rms2, denoised_waveforms_rms2 = output
+
+    amplitudes_file = folder / 'amplitudes.npy'
+    assert amplitudes_file.is_file()
+    amplitudes3 = np.load(amplitudes_file)
+    assert np.array_equal(amplitudes, amplitudes2)
+    assert np.array_equal(amplitudes2, amplitudes3)
+
+
     # Test pickle mechanism
     for node in nodes:
         import pickle

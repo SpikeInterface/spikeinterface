@@ -1,4 +1,7 @@
 import numpy as np
+import shutil
+from pathlib import Path
+import pytest
 
 from spikeinterface import download_dataset
 from spikeinterface.extractors import MEArecRecordingExtractor
@@ -8,6 +11,12 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.features_from_peaks import PeakToPeakFeature
+
+
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "sortingcomponents"
+else:
+    cache_folder = Path("cache_folder") / "sortingcomponents"
 
 try:
     import pyopencl
@@ -93,6 +102,22 @@ def test_detect_peaks():
     assert peaks.shape[0] == ptp.shape[0]
     assert peaks.shape[0] == peak_locations.shape[0]
     assert 'x' in peak_locations.dtype.fields
+
+    # same pipeline but saved to npy
+    folder = cache_folder / 'peak_detection_folder'
+    if folder.is_dir():
+        shutil.rmtree(folder)
+    peaks2, ptp2, peak_locations2 = detect_peaks(recording, method='locally_exclusive',
+                                              peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
+                                              pipeline_nodes=pipeline_nodes, gather_mode='npy',
+                                              folder=folder, names=['peaks', 'ptp', 'peak_locations'],
+                                              **job_kwargs)
+    peak_file = folder / 'peaks.npy'
+    assert peak_file.is_file()
+    peaks3 = np.load(peak_file)
+    assert np.array_equal(peaks, peaks2)
+    assert np.array_equal(peaks2, peaks3)
+
 
     if HAVE_TORCH:
         peaks_torch, ptp_torch, peak_locations_torch = detect_peaks(recording, method='locally_exclusive_torch',
