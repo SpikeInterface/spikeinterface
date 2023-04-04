@@ -31,5 +31,5 @@ jobs:
           pip install -e .[test_core]
       - name: Test core with pytest
         run: |
-          pytest -vv -rA --durations=0 src/core/tests/test_memory_limits.py
+          pytest -vv -rA --durations=0 src/spikeinterface/core/tests/test_memory_limits.py
         shell: bash  # Necessary for pipeline to work on windows
