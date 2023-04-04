@@ -48,7 +48,7 @@ class MergeUnitsSorting(BaseSorting):
 
         if new_unit_ids is None:
             dtype = parents_unit_ids.dtype
-            #select new_units_ids grater that the max id, event greater than the numerical str ids 
+            #select new_units_ids greater that the max id, event greater than the numerical str ids 
             if np.issubdtype(dtype, np.character):
                 # dtype str
                 if all(p.isdigit() for p in parents_unit_ids):
@@ -66,7 +66,7 @@ class MergeUnitsSorting(BaseSorting):
                 new_unit_ids = list(max(parents_unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
         else:
             if np.any(np.in1d(new_unit_ids, keep_unit_ids)):
-                raise ValueError("'new_unit_ids' are already exesting in the sorting.unit_ids. Provide new ones")
+                raise ValueError("'new_unit_ids' already exist in the sorting.unit_ids. Provide new ones")
         
         assert len(new_unit_ids) == num_merge, 'new_unit_ids must have the same size as units_to_merge'
 
