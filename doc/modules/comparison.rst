@@ -2,7 +2,7 @@ Comparison module
 =================
 
 
-SpikeInterface has a :py:mod:`~spikeinterface.comparison` module contains functions and tools to compare 
+SpikeInterface has a :py:mod:`~spikeinterface.comparison` module, which contains functions and tools to compare 
 spike trains and templates (useful for tracking units over multiple sessions).
 
 In addition, the :py:mod:`~spikeinterface.comparison` module contains advanced benchmarking tools to evaluate 
@@ -34,14 +34,14 @@ available ground-truth datasets on a daily basis. For more details see
 This is the main workflow used to compute performance metrics:
 
 Given:
-  * **i = 1, ..., n_gt** the list ground-truth (GT) units
+  * **i = 1, ..., n_gt** the list of ground-truth (GT) units
   * **k = 1, ...., n_tested** the list of tested units from spike sorting output
-  * **event_counts_GT[i]** the number of spikes for each units of GT unit
-  * **event_counts_ST[k]** the number of spikes for each units of tested unit
+  * **event_counts_GT[i]** the number of spikes for each unit of the GT units
+  * **event_counts_ST[k]** the number of spikes for each unit of the tested units
 
   1. **Matching firing events**
 
-    For all pairs of GT unit and tested unit we first count how many
+    For all pairs of a GT unit and a tested unit we first count how many
     events are matched within a *delta_time* tolerance (0.4 ms by default).
 
     This gives a matrix called **match_event_count** of size *(n_gt X n_tested)*. This is an example of the matrix:
@@ -58,7 +58,7 @@ Given:
 
   2. **Compute agreement score**
 
-    Given the **match_event_count** we can then compute the **agreement_score**, which is normalized in the range [0, 1].
+    Given the **match_event_count** we can then compute the **agreement_score**, which is normalized to the range [0, 1].
 
     This is done as follows:
 
@@ -98,12 +98,12 @@ Given:
 
       The `hungarian method <https://en.wikipedia.org/wiki/Hungarian_algorithm>`_
       finds the best association between GT and tested units. With this method, both GT and tested units can be matched
-      only to another unit, or not matched at all.
+      only to one other unit or are not matched at all.
 
       For the **best** method, each GT unit is associated to a tested unit that has
       the **best** agreement_score, independently of all others units. Using this method
       several tested units can be associated to the same GT unit. Note that for the "best match" the minimum
-      score is not the match_Score, but the **chance_score** (0.1 by default).
+      score is not the match_score, but the **chance_score** (0.1 by default).
 
       Here is an example of matching with the **hungarian** method. The first column represents the GT unit id
       and the second column the tested unit id. -1 means that the tested unit is not matched:
@@ -139,7 +139,7 @@ Given:
         * miss_rate = fn / num_gt
 
       The overall performances can be visualised with the **confusion matrix**, where
-      the last columns counts **FN** and the last row counts **FP**.
+      the last column contains the **FN** counts and the last row contains the **FP** counts.
 
     .. image:: ../images/spikecomparison_confusion.png
         :scale: 100 %
@@ -162,11 +162,11 @@ More information about **hungarian** or **best** match methods
         * Hit score near chance levels are set to zero
         * Good FP estimation
 
-
       * Cons
 
         * Does not catch units that are split into several sub-units. Only the best match will be listed
         * More complicated implementation
+
 
     * **Best**
 
@@ -230,7 +230,7 @@ An **over-merged** unit has a relatively high agreement (>= 0.2 by default) for 
 
 
     # The confusion matrix is also a good summary of the score as it has
-    # the same shape as agreement matrix, but it contains an extra column for FN
+    # the same shape as an agreement matrix, but it contains an extra column for FN
     # and an extra row for FP
     plot_confusion_matrix(cmp_gt_HS)
 
@@ -245,23 +245,23 @@ An **over-merged** unit has a relatively high agreement (>= 0.2 by default) for 
 
 **Example: compare many sorters with a Ground Truth Study**
 
-We also have a high level class to compare many sorter against ground truth : 
+We also have a high level class to compare many sorters against ground truth: 
 :py:func:`~spiekinterface.comparison.GroundTruthStudy()`
 
 A study is a systematic performance comparison of several ground truth recordings with several sorters.
 
-The study class proposes high level tool functions to run many groundtruth comparisons with many sorters
+The study class proposes high-level tool functions to run many ground truth comparisons with many sorters
 on many recordings and then collect and aggregate results in an easy way.
 
 The all mechanism is based on an intrinsic organization into a "study_folder" with several subfolder:
 
-  * raw_files : contain a copy in binary format of recordings
-  * sorter_folders : contains output of sorters
-  * ground_truth : contains a copy of sorting ground  in npz format
+  * raw_files : contain a copy of recordings in binary format
+  * sorter_folders : contains outputs of sorters
+  * ground_truth : contains a copy of sorting ground truth in npz format
   * sortings: contains light copy of all sorting in npz format
-  * tables: some table in cvs format
+  * tables: some tables in csv format
 
-In order to run and rerun the computation all gt_sorting and recordings are copied to a fast and universal format :
+In order to run and rerun the computation all gt_sorting and recordings are copied to a fast and universal format:
 binary (for recordings) and npz (for sortings).
 
 
@@ -284,26 +284,26 @@ binary (for recordings) and npz (for sortings).
     study_folder = 'a_study_folder'
     study = GroundTruthStudy.create(study_folder, gt_dict)
 
-    # all sorters on all recordings in one functions.
+    # all sorters for all recordings in one function.
     sorter_list = ['herdingspikes', 'tridesclous', ]
     study.run_sorters(sorter_list, mode_if_folder_exists="keep")
 
-    # You can re run **run_study_sorters** as many time as you want.
-    # By default **mode='keep'** so only uncomputed sorters are rerun.
-    # For instance, so just remove the "sorter_folders/rec1/herdingspikes" to re-run
+    # You can re-run **run_study_sorters** as many times as you want.
+    # By default **mode='keep'** so only uncomputed sorters are re-run.
+    # For instance, just remove the "sorter_folders/rec1/herdingspikes" to re-run
     # only one sorter on one recording.
     #
     # Then we copy the spike sorting outputs into a separate subfolder.
-    # This allow to remove the "large" sorter_folders.
+    # This allow us to remove the "large" sorter_folders.
     study.copy_sortings()
 
     # Collect comparisons
     #  
     # You can collect in one shot all results and run the
     # GroundTruthComparison on it.
-    # So you can access finely to all individual results.
+    # So you can have fine access to all individual results.
     #  
-    # Note that exhaustive_gt=True when you know exactly how many
+    # Note: use exhaustive_gt=True when you know exactly how many
     # units in ground truth (for synthetic datasets)
 
     study.run_comparisons(exhaustive_gt=True)
@@ -355,18 +355,18 @@ binary (for recordings) and npz (for sortings).
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The comparison of two sorters is quite similar to the procedure of **compare to ground truth**.
-The difference is that no assumption is done on which of the units are ground-truth.
+The difference is that no assumption is made on which of the units are ground-truth.
 
 So the procedure is the following:
 
-  * **Matching firing events** : same a ground truth comparison
-  * **Compute agreement score** : same a ground truth comparison
+  * **Matching firing events** : same as the ground truth comparison
+  * **Compute agreement score** : same as the ground truth comparison
   * **Match units** : only with **hungarian** method
 
 As there is no ground-truth information, performance metrics are not computed.
 However, the confusion and agreement matrices can be visualised to assess the level of agreement.
 
-The :py:func:`~spikeinterface.comparison.compare_two_sorters()` return the comparison object to handle this.
+The :py:func:`~spikeinterface.comparison.compare_two_sorters()` returns the comparison object to handle this.
 
 
 **Example: compare 2 sorters**
@@ -378,11 +378,11 @@ The :py:func:`~spikeinterface.comparison.compare_two_sorters()` return the compa
     local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     recording, sorting = se.read_mearec(local_path)
 
-    # Then run two spike sorters and compare their output.
+    # Then run two spike sorters and compare their outputs.
     sorting_HS = ss.run_sorter('herdingspikes', recording)
     sorting_TDC = ss.run_sorter('tridesclous', recording)
 
-    # run the comparison
+    # Run the comparison
     # Let’s see how to inspect and access this matching.
     cmp_HS_TDC = sc.compare_two_sorters(
         sorting1=sorting_HS,
@@ -400,7 +400,7 @@ The :py:func:`~spikeinterface.comparison.compare_two_sorters()` return the compa
     print(cmp_HS_TDC.agreement_scores)
 
     # In order to check which units were matched, the :code:`get_matching`
-    # methods can be used. If units are not matched they are listed as -1.
+    # method can be used. If units are not matched they are listed as -1.
     sc_to_tdc, tdc_to_sc = cmp_HS_TDC.get_matching()
     print('matching HS to TDC')
     print(sc_to_tdc)
@@ -430,7 +430,7 @@ Comparison of multiple sorters uses the following procedure:
 
 .. code-block:: python
 
-    # download a simulated dataset
+    # Download a simulated dataset
     local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     recording, sorting = se.read_mearec(local_path)
 
@@ -446,7 +446,7 @@ Comparison of multiple sorters uses the following procedure:
         verbose=True,
     )
 
-    # The multiple sorters comparison internally computes pairwise comparison,
+    # The multiple sorters comparison internally computes pairwise comparisons,
     # that can be accessed as follows:
     print(mcmp.comparisons[('MS4', 'HS')].sorting1, mcmp.comparisons[('MS4', 'HS')].sorting2)
     print(mcmp.comparisons[('MS4', 'HS')].get_matching())
@@ -461,8 +461,8 @@ Comparison of multiple sorters uses the following procedure:
     #  
     # We can pull the units in agreement with different sorters using the
     # :py:func:`~spikeinterface.comparison.MultiSortingComparison.get_agreement_sorting` method.
-    # This allows to make spike sorting more robust by integrating the output of several algorithms.
-    # On the other hand, it might suffer from weak performance of single algorithms.
+    # This allows us to make spike sorting more robust by integrating the outputs of several algorithms.
+    # On the other hand, it might suffer from weak performances of single algorithms.
     # When extracting the units in agreement, the spike trains are modified so
     # that only the true positive spikes between the comparison with the best
     # match are used.
