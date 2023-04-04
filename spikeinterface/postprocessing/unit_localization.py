@@ -413,7 +413,8 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', radius_um=50.,
             dot_products = np.maximum(0, dot_products)
             scalar_products[intersect] += dot_products
             found_positions += np.dot(dot_products, template_positions[intersect])
-            unit_location[i, :] = found_positions/scalar_products.sum()
+        
+        unit_location[i, :] = found_positions/scalar_products.sum()
 
     return unit_location
 
