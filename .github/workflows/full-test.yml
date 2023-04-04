@@ -154,7 +154,7 @@ jobs:
           python ./.github/build_job_summary.py report_core.txt >> $GITHUB_STEP_SUMMARY  
           rm report_core.txt
       - name: Test extractors
-        if: ${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' }}
+        if: ${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
           source ~/test_env/bin/activate
           pytest -m extractors -vv -ra --durations=0 --durations-min=0.001 | tee report_extractors.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1

@@ -157,7 +157,7 @@ def detect_bad_channels(recording,
         # If location are not sorted, estimate forward and reverse sorting
         channel_locations = recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)
-        assert dim < channel_locations.ndim, f"Direction {direction} is wrong"
+        assert dim < channel_locations.shape[1], f"Direction {direction} is wrong"
         locs_depth = channel_locations[:, dim]
         if np.array_equal(np.sort(locs_depth), locs_depth):
             order_f = None
