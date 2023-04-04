@@ -1,4 +1,7 @@
 import numpy as np
+import shutil
+from pathlib import Path
+import pytest
 
 from spikeinterface import download_dataset
 from spikeinterface.extractors import MEArecRecordingExtractor
@@ -8,6 +11,12 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.features_from_peaks import PeakToPeakFeature
+
+
+if hasattr(pytest, "global_test_folder"):
+    cache_folder = pytest.global_test_folder / "sortingcomponents"
+else:
+    cache_folder = Path("cache_folder") / "sortingcomponents"
 
 try:
     import pyopencl
@@ -21,6 +30,10 @@ try:
 except:
     HAVE_TORCH = False
 
+
+DEBUG = False
+
+
 def test_detect_peaks():
 
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
@@ -30,6 +43,9 @@ def test_detect_peaks():
     recording = MEArecRecordingExtractor(local_path)
     
     job_kwargs = dict(n_jobs=-1, chunk_size=10000, progress_bar=True, verbose=True)
+    torch_job_kwargs = job_kwargs.copy()
+    torch_job_kwargs["n_jobs"] = 2
+
     # by_channel
     by_channel_str = f"By channel:\n"
     peaks_by_channel_np = detect_peaks(recording, method='by_channel',
@@ -40,7 +56,7 @@ def test_detect_peaks():
     if HAVE_TORCH:    
         peaks_by_channel_torch = detect_peaks(recording, method='by_channel_torch',
                                               peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                                              **job_kwargs)
+                                              **torch_job_kwargs)
         # due to the different implementations, we allow a small tolerance
         assert np.isclose(np.array(len(peaks_by_channel_np)), np.array(len(peaks_by_channel_torch)),
                           rtol=0.1)
@@ -59,7 +75,7 @@ def test_detect_peaks():
     if HAVE_TORCH:
         peaks_local_torch = detect_peaks(recording, method='locally_exclusive_torch',
                                          peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                                         **job_kwargs)
+                                         **torch_job_kwargs)
         assert len(peaks_by_channel_torch) > len(peaks_local_torch)
         # due to the different implementations, we allow a small tolerance
         assert np.isclose(np.array(len(peaks_local_numba)), np.array(len(peaks_local_torch)),
@@ -94,11 +110,39 @@ def test_detect_peaks():
     assert peaks.shape[0] == peak_locations.shape[0]
     assert 'x' in peak_locations.dtype.fields
 
+    # same pipeline but saved to npy
+    folder = cache_folder / 'peak_detection_folder'
+    if folder.is_dir():
+        shutil.rmtree(folder)
+    peaks2, ptp2, peak_locations2 = detect_peaks(recording, method='locally_exclusive',
+                                                 peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
+                                                 pipeline_nodes=pipeline_nodes, gather_mode='npy',
+                                                 folder=folder, names=['peaks', 'ptps', 'peak_locations'],
+                                                 **job_kwargs)
+    peak_file = folder / 'peaks.npy'
+    assert peak_file.is_file()
+    peaks3 = np.load(peak_file)
+    assert np.array_equal(peaks, peaks2)
+    assert np.array_equal(peaks2, peaks3)
+
+    ptp_file = folder / 'ptps.npy'
+    assert ptp_file.is_file()
+    ptp3 = np.load(ptp_file)
+    assert np.array_equal(ptp, ptp2)
+    assert np.array_equal(ptp2, ptp3)
+
+    peak_location_file = folder / 'peak_locations.npy'
+    assert peak_location_file.is_file()
+    peak_locations3 = np.load(peak_location_file)
+    assert np.array_equal(peak_locations, peak_locations2)
+    assert np.array_equal(peak_locations2, peak_locations3)
+
+
     if HAVE_TORCH:
         peaks_torch, ptp_torch, peak_locations_torch = detect_peaks(recording, method='locally_exclusive_torch',
                                                                     peak_sign='neg', detect_threshold=5,
                                                                     exclude_sweep_ms=0.1, pipeline_nodes=pipeline_nodes,
-                                                                    **job_kwargs)
+                                                                    **torch_job_kwargs)
         assert peaks_torch.shape[0] == ptp_torch.shape[0]
         assert peaks_torch.shape[0] == peak_locations_torch.shape[0]
         assert 'x' in peak_locations_torch.dtype.fields
@@ -113,36 +157,36 @@ def test_detect_peaks():
         assert 'x' in peak_locations_cl.dtype.fields
     
 
-    # # DEBUG
-    # sample_inds, chan_inds, amplitudes = peaks['sample_ind'], peaks['channel_ind'], peaks['amplitude']
-    # import matplotlib.pyplot as plt
-    # import spikeinterface.widgets as sw
-    # chan_offset = 500
-    # traces = recording.get_traces()
-    # traces += np.arange(traces.shape[1])[None, :] * chan_offset
-    # fig, ax = plt.subplots()
-    # ax.plot(traces, color='k')
-    # ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, color='r')
-    # plt.show()
+    # DEBUG
+    if DEBUG:
+        import matplotlib.pyplot as plt
+        import spikeinterface.widgets as sw
+        from probeinterface.plotting import plot_probe
 
-    # import matplotlib.pyplot as plt
-    # import spikeinterface.widgets as sw
-    # from probeinterface.plotting import plot_probe
-    # probe = recording.get_probe()
-    # fig, ax = plt.subplots()
-    # plot_probe(probe, ax=ax)
-    # ax.scatter(peak_locations['x'], peak_locations['y'], color='k', s=1, alpha=0.5)
-    # # MEArec is "yz" in 2D
-    # import MEArec
-    # recgen = MEArec.load_recordings(recordings=local_path, return_h5_objects=True,
-    # check_suffix=False,
-    # load=['recordings', 'spiketrains', 'channel_positions'],
-    # load_waveforms=False)
-    # soma_positions = np.zeros((len(recgen.spiketrains), 3), dtype='float32')
-    # for i, st in enumerate(recgen.spiketrains):
-    #     soma_positions[i, :] = st.annotations['soma_position']
-    # ax.scatter(soma_positions[:, 1], soma_positions[:, 2], color='g', s=20, marker='*')
-    # plt.show()
+        sample_inds, chan_inds, amplitudes = peaks['sample_ind'], peaks['channel_ind'], peaks['amplitude']
+        chan_offset = 500
+        traces = recording.get_traces()
+        traces += np.arange(traces.shape[1])[None, :] * chan_offset
+        fig, ax = plt.subplots()
+        ax.plot(traces, color='k')
+        ax.scatter(sample_inds, chan_inds * chan_offset + amplitudes, color='r')
+        plt.show()
+
+        fig, ax = plt.subplots()
+        probe = recording.get_probe()
+        plot_probe(probe, ax=ax)
+        ax.scatter(peak_locations['x'], peak_locations['y'], color='k', s=1, alpha=0.5)
+        # MEArec is "yz" in 2D
+        import MEArec
+        recgen = MEArec.load_recordings(recordings=local_path, return_h5_objects=True,
+        check_suffix=False,
+        load=['recordings', 'spiketrains', 'channel_positions'],
+        load_waveforms=False)
+        soma_positions = np.zeros((len(recgen.spiketrains), 3), dtype='float32')
+        for i, st in enumerate(recgen.spiketrains):
+            soma_positions[i, :] = st.annotations['soma_position']
+        ax.scatter(soma_positions[:, 1], soma_positions[:, 2], color='g', s=20, marker='*')
+        plt.show()
 
 
 if __name__ == '__main__':

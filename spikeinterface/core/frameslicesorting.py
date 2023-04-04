@@ -91,7 +91,7 @@ class FrameSliceSorting(BaseSorting):
                                                                           end_frame=end_frame))
 
         # update dump dict
-        self._kwargs = {'parent_sorting': parent_sorting.to_dict(), 'start_frame': int(start_frame),
+        self._kwargs = {'parent_sorting': parent_sorting, 'start_frame': int(start_frame),
                         'end_frame': int(end_frame)}
 
 

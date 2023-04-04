@@ -225,12 +225,9 @@ def distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info
     # and run
     func = _waveform_extractor_chunk
     init_func = _init_worker_waveform_extractor
-    if n_jobs == 1:
-        init_args = (recording, )
-    else:
-        init_args = (recording.to_dict(), )
-    init_args = init_args + (unit_ids, spikes, wfs_arrays_info, nbefore,
-                             nafter, return_scaled, inds_by_unit, mode, sparsity_mask)
+
+    init_args = (recording, unit_ids, spikes, wfs_arrays_info, nbefore,
+                 nafter, return_scaled, inds_by_unit, mode, sparsity_mask)
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=f'extract waveforms {mode}',
                                        **job_kwargs)
     processor.run()

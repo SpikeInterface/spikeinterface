@@ -55,7 +55,7 @@ class ChannelSliceRecording(BaseRecording):
             self.set_property('contact_vector', contact_vector)
 
         # update dump dict
-        self._kwargs = {'parent_recording': parent_recording.to_dict(), 'channel_ids': channel_ids,
+        self._kwargs = {'parent_recording': parent_recording, 'channel_ids': channel_ids,
                         'renamed_channel_ids': renamed_channel_ids}
 
 
@@ -133,7 +133,7 @@ class ChannelSliceSnippets(BaseSnippets):
             self.set_property('contact_vector', contact_vector)
 
         # update dump dict
-        self._kwargs = {'parent_snippets': parent_snippets.to_dict(), 'channel_ids': channel_ids,
+        self._kwargs = {'parent_snippets': parent_snippets, 'channel_ids': channel_ids,
                         'renamed_channel_ids': renamed_channel_ids}
 
 
