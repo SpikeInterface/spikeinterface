@@ -46,7 +46,6 @@ class SpikeAmplitudesExtensionTest(WaveformExtensionCommonTestSuite, unittest.Te
             chunk_size=10000,
             n_jobs=1,
         )
-        # TODO : fix multi processing for spike amplitudes!!!!!!!
         amplitudes2 = self.extension_class.get_extension_function()(
             self.we1,
             peak_sign="neg",
@@ -63,5 +62,3 @@ if __name__ == "__main__":
     test = SpikeAmplitudesExtensionTest()
     test.setUp()
     test.test_extension()
-    # test.test_scaled()
-    # test.test_parallel()

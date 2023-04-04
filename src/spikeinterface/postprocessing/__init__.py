@@ -53,6 +53,11 @@ from .unit_localization import (
     compute_center_of_mass,
 )
 
+from .amplitude_scalings import (
+    compute_amplitude_scalings,
+    AmplitudeScalingsCalculator
+)
+
 from .alignsorting import align_sorting, AlignSortingExtractor
 
 from .noise_level import compute_noise_levels, NoiseLevelsCalculator
