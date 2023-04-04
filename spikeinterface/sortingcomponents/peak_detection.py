@@ -44,11 +44,17 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
     pipeline_nodes: None or list[PipelineNode]
         Optional additional PipelineNode need to computed just after detection time.
         This avoid reading the recording multiple times.
-    gather_mode
+    gather_mode: str
+        How to gather the results:
+        
+        * "memory": results are returned as in-memory numpy arrays
+        
+        * "npy": results are stored to .npy files in `folder`
 
-    folder
-    
-    names
+    folder: str or Path
+        If gather_mode is "npy", the folder where the files are created.
+    names: list
+        List of strings with file stems associated with returns.
 
     {method_doc}
     {job_doc}

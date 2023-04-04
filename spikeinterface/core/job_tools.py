@@ -258,9 +258,9 @@ class ChunkRecordingExecutor:
         If True, a progress bar is printed to monitor the progress of the process
     handle_returns: bool
         If True, the function can return values
-    gather_func: None or function
-        Optional function that is call in the main thread and retrieve every results.
-        This can be used instead of handle_returns to make a custum store-on-the-fly.
+    gather_func: None or callable
+        Optional function that is called in the main thread and retrieves the results of each worker.
+        This function can be used instead of `handle_returns` to implement custom storage on-the-fly.
     n_jobs: int
         Number of jobs to be used (default 1). Use -1 to use as many jobs as number of cores
     total_memory: str
