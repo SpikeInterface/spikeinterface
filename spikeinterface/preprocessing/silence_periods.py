@@ -9,14 +9,15 @@ from ..core import get_random_data_chunks, get_noise_levels
 class SilencedPeriodsRecording(BasePreprocessor):
     """
     Silence user-defined periods from recording extractor traces. By default, 
-    periods are zeroed-out (mode = 'zeros'). This is only recommended 
-    for traces that are centered around zero (e.g. through a prior highpass
-    filter); if this is not the case, you can also fill the periods with noise.
+    periods are zeroed-out (mode = 'zeros'). You can also fill the periods with noise.
+    Note that both methods assume that traces that are centered around zero. 
+    If this is not the case, make sure you apply a filter or center function prior to 
+    silencing periods.
 
     Parameters
     ----------
     recording: RecordingExtractor
-        The recording extractor to remove artifacts from
+        The recording extractor to silance periods
     list_periods: list of lists/arrays
         One list per segment of tuples (start_frame, end_frame) to silence
 
@@ -28,11 +29,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
         - 'noise': The periods are filled with a gaussion noise that has the
                    same variance that the one in the recordings, on a per channel
                    basis
-    num_chunks_per_segment: int
-        Number of chunks per segment for random chunk, by default 20
-    chunk_size : int
-        Size of a chunk in number for random chunk, by default 10000
-    seed : int
+    **random_chunk_kwargs
         Random seed for random chunk, by default None
 
     Returns
@@ -42,8 +39,8 @@ class SilencedPeriodsRecording(BasePreprocessor):
     """
     name = 'silence_periods'
 
-    def __init__(self, recording, list_periods, mode='zeros', num_chunks_per_segment=20,
-                 chunk_size=10000, seed=None):
+    def __init__(self, recording, list_periods, mode='zeros', 
+                 **random_chunk_kwargs):
 
         available_modes = ('zeros', 'noise')
         num_seg = recording.get_num_segments()
@@ -68,9 +65,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
         assert mode in available_modes, f"mode {mode} is not an available mode: {available_modes}"
 
         if mode in ['noise']:
-            noise_levels = get_noise_levels(recording, return_scaled=False, 
-                                    num_chunks_per_segment=num_chunks_per_segment,
-                                    chunk_size=chunk_size, concatenated=True, seed=seed)
+            noise_levels = get_noise_levels(recording, return_scaled=False, concatenated=True, **random_chunk_kwargs)
         else:
             noise_levels = None
 
