@@ -30,9 +30,7 @@ def test_shybrid_extractors():
         cache_folder / "shybridtest",
         initial_sorting_fn=cache_folder / "shybridtest" / "initial_sorting.csv",
     )
-    rec_shybrid = SHYBRIDRecordingExtractor(
-        cache_folder / "shybridtest" / "recording.yml"
-    )
+    rec_shybrid = SHYBRIDRecordingExtractor(cache_folder / "shybridtest" / "recording.yml")
     probe = rec_shybrid.get_probe()
 
     check_recordings_equal(rec, rec_shybrid, return_scaled=False)

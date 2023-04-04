@@ -67,9 +67,7 @@ class RandomProjectionClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params):
-        assert (
-            HAVE_HDBSCAN
-        ), "random projections clustering need hdbscan to be installed"
+        assert HAVE_HDBSCAN, "random projections clustering need hdbscan to be installed"
 
         if "n_jobs" in params["job_kwargs"]:
             if params["job_kwargs"]["n_jobs"] == -1:
@@ -117,9 +115,7 @@ class RandomProjectionClustering:
                             chunk_size=num_samples,
                             seed=42,
                         )
-                        noise_snippets = noise_snippets.reshape(
-                            num_chunks, num_samples, num_chans
-                        )
+                        noise_snippets = noise_snippets.reshape(num_chunks, num_samples, num_chans)
 
                     if proj_type == "energy":
                         data = np.linalg.norm(noise_snippets, axis=1)
@@ -175,16 +171,10 @@ class RandomProjectionClustering:
             if selection_method == "closest_to_centroid":
                 data = hdbscan_data[mask]
                 centroid = np.median(data, axis=0)
-                distances = sklearn.metrics.pairwise_distances(
-                    centroid[np.newaxis, :], data
-                )[0]
-                best_spikes[unit_ind] = all_indices[mask][
-                    np.argsort(distances)[:max_spikes]
-                ]
+                distances = sklearn.metrics.pairwise_distances(centroid[np.newaxis, :], data)[0]
+                best_spikes[unit_ind] = all_indices[mask][np.argsort(distances)[:max_spikes]]
             elif selection_method == "random":
-                best_spikes[unit_ind] = np.random.permutation(all_indices[mask])[
-                    :max_spikes
-                ]
+                best_spikes[unit_ind] = np.random.permutation(all_indices[mask])[:max_spikes]
             nb_spikes += best_spikes[unit_ind].size
 
         spikes = np.zeros(nb_spikes, dtype=peak_dtype)
@@ -203,10 +193,7 @@ class RandomProjectionClustering:
         cleaning_method = params["cleaning_method"]
 
         if verbose:
-            print(
-                "We found %d raw clusters, starting to clean with %s..."
-                % (len(labels), cleaning_method)
-            )
+            print("We found %d raw clusters, starting to clean with %s..." % (len(labels), cleaning_method))
 
         if cleaning_method == "cosine":
             wfs_arrays = extract_waveforms_to_buffers(
@@ -239,16 +226,12 @@ class RandomProjectionClustering:
                 mask = label == peak_labels
                 wfs_arrays[label] = hdbscan_data[mask]
 
-            labels, peak_labels = remove_duplicates_via_dip(
-                wfs_arrays, peak_labels, **params["cleaning_kwargs"]
-            )
+            labels, peak_labels = remove_duplicates_via_dip(wfs_arrays, peak_labels, **params["cleaning_kwargs"])
 
         elif cleaning_method == "matching":
             # create a tmp folder
             if params["tmp_folder"] is None:
-                name = "".join(
-                    random.choices(string.ascii_uppercase + string.digits, k=8)
-                )
+                name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
                 tmp_folder = get_global_tmp_folder() / name
             else:
                 tmp_folder = Path(params["tmp_folder"])
@@ -261,9 +244,7 @@ class RandomProjectionClustering:
                 mode = "folder"
 
             sorting_folder = tmp_folder / "sorting"
-            sorting = NumpySorting.from_times_labels(
-                spikes["sample_ind"], spikes["unit_ind"], fs
-            )
+            sorting = NumpySorting.from_times_labels(spikes["sample_ind"], spikes["unit_ind"], fs)
             sorting = sorting.save(folder=sorting_folder)
             we = extract_waveforms(
                 recording,

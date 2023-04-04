@@ -57,9 +57,7 @@ class PresenceWidget(BaseWidget):
         self._sampling_frequency = sorting.get_sampling_frequency()
         self._max_frame = 0
         for unit_id in self._sorting.get_unit_ids():
-            spike_train = self._sorting.get_unit_spike_train(
-                unit_id, segment_index=self.segment_index
-            )
+            spike_train = self._sorting.get_unit_spike_train(unit_id, segment_index=self.segment_index)
             if len(spike_train) > 0:
                 curr_max_frame = np.max(spike_train)
                 if curr_max_frame > self._max_frame:
@@ -68,12 +66,8 @@ class PresenceWidget(BaseWidget):
         if self._visible_trange is None:
             self._visible_trange = [0, self._max_frame]
         else:
-            assert (
-                len(time_range) == 2
-            ), "'time_range' should be a list with start and end time in seconds"
-            self._visible_trange = [
-                int(t * self._sampling_frequency) for t in time_range
-            ]
+            assert len(time_range) == 2, "'time_range' should be a list with start and end time in seconds"
+            self._visible_trange = [int(t * self._sampling_frequency) for t in time_range]
 
         self._visible_trange = self._fix_trange(self._visible_trange)
         self.name = "Presence"
@@ -88,9 +82,7 @@ class PresenceWidget(BaseWidget):
         visible_start_frame = self._visible_trange[0] / self._sampling_frequency
         visible_end_frame = self._visible_trange[1] / self._sampling_frequency
 
-        time_grid = np.linspace(
-            visible_start_frame, visible_end_frame, self._time_pixels
-        )
+        time_grid = np.linspace(visible_start_frame, visible_end_frame, self._time_pixels)
         time_den = []
 
         self.ax.grid("both")
@@ -112,9 +104,7 @@ class PresenceWidget(BaseWidget):
 
         self.ax.matshow(np.vstack(time_den), cmap=plt.cm.inferno, aspect="auto")
 
-        self.ax.hlines(
-            np.arange(len(units_ids)) + 0.5, 0, len(time_den[0]), color="k", linewidth=4
-        )
+        self.ax.hlines(np.arange(len(units_ids)) + 0.5, 0, len(time_den[0]), color="k", linewidth=4)
 
         self.ax.tick_params(axis="y", which="both", grid_linestyle="None")
 

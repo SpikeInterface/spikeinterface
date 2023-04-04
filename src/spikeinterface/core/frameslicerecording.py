@@ -27,9 +27,7 @@ class FrameSliceRecording(BaseRecording):
     def __init__(self, parent_recording, start_frame=None, end_frame=None):
         channel_ids = parent_recording.get_channel_ids()
 
-        assert (
-            parent_recording.get_num_segments() == 1
-        ), "FrameSliceRecording work only with one segment"
+        assert parent_recording.get_num_segments() == 1, "FrameSliceRecording work only with one segment"
 
         parent_size = parent_recording.get_num_samples(0)
         if start_frame is None:
@@ -42,9 +40,7 @@ class FrameSliceRecording(BaseRecording):
         else:
             assert 0 < end_frame <= parent_size
 
-        assert (
-            end_frame > start_frame
-        ), "'start_frame' must be smaller than 'end_frame'!"
+        assert end_frame > start_frame, "'start_frame' must be smaller than 'end_frame'!"
 
         BaseRecording.__init__(
             self,
@@ -55,9 +51,7 @@ class FrameSliceRecording(BaseRecording):
 
         # link recording segment
         parent_segment = parent_recording._recording_segments[0]
-        sub_segment = FrameSliceRecordingSegment(
-            parent_segment, int(start_frame), int(end_frame)
-        )
+        sub_segment = FrameSliceRecordingSegment(parent_segment, int(start_frame), int(end_frame))
         self.add_recording_segment(sub_segment)
 
         # copy properties and annotations

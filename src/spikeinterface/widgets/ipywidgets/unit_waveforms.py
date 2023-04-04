@@ -29,15 +29,11 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
         with plt.ioff():
             output1 = widgets.Output()
             with output1:
-                fig_wf = plt.figure(
-                    figsize=((ratios[1] * width_cm) * cm, height_cm * cm)
-                )
+                fig_wf = plt.figure(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
             output2 = widgets.Output()
             with output2:
-                fig_probe, ax_probe = plt.subplots(
-                    figsize=((ratios[2] * width_cm) * cm, height_cm * cm)
-                )
+                fig_probe, ax_probe = plt.subplots(figsize=((ratios[2] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
         data_plot["unit_ids"] = data_plot["unit_ids"][:1]
@@ -63,9 +59,7 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
             disabled=False,
         )
 
-        footer = widgets.HBox(
-            [same_axis_button, plot_templates_button, hide_axis_button]
-        )
+        footer = widgets.HBox([same_axis_button, plot_templates_button, hide_axis_button])
 
         self.controller = {
             "same_axis": same_axis_button,
@@ -76,9 +70,7 @@ class UnitWaveformPlotter(IpywidgetsPlotter):
 
         mpl_plotter = MplUnitWaveformPlotter()
 
-        self.updater = PlotUpdater(
-            data_plot, mpl_plotter, fig_wf, ax_probe, self.controller
-        )
+        self.updater = PlotUpdater(data_plot, mpl_plotter, fig_wf, ax_probe, self.controller)
         for w in self.controller.values():
             w.observe(self.updater)
 
@@ -125,15 +117,11 @@ class PlotUpdater:
         data_plot = self.next_data_plot
         data_plot["unit_ids"] = unit_ids
         data_plot["templates"] = self.we.get_all_templates(unit_ids=unit_ids)
-        data_plot["template_stds"] = self.we.get_all_templates(
-            unit_ids=unit_ids, mode="std"
-        )
+        data_plot["template_stds"] = self.we.get_all_templates(unit_ids=unit_ids, mode="std")
         data_plot["same_axis"] = same_axis
         data_plot["plot_templates"] = plot_templates
         if data_plot["plot_waveforms"]:
-            data_plot["wfs_by_ids"] = {
-                unit_id: self.we.get_waveforms(unit_id) for unit_id in unit_ids
-            }
+            data_plot["wfs_by_ids"] = {unit_id: self.we.get_waveforms(unit_id) for unit_id in unit_ids}
 
         backend_kwargs = {}
 
@@ -178,9 +166,7 @@ class PlotUpdater:
                 markersize=3,
                 color=self.next_data_plot["unit_colors"][unit],
             )
-        self.ax_probe.set_xlim(
-            np.min(channel_locations[:, 0]) - 10, np.max(channel_locations[:, 0]) + 10
-        )
+        self.ax_probe.set_xlim(np.min(channel_locations[:, 0]) - 10, np.max(channel_locations[:, 0]) + 10)
         fig_probe = self.ax_probe.get_figure()
 
         self.fig_wf.canvas.draw()

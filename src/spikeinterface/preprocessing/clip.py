@@ -36,9 +36,7 @@ class ClipRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording)
         for parent_segment in recording._recording_segments:
-            rec_segment = ClipRecordingSegment(
-                parent_segment, a_min, value_min, a_max, value_max
-            )
+            rec_segment = ClipRecordingSegment(parent_segment, a_min, value_min, a_max, value_max)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(recording=recording, a_min=a_min, a_max=a_max)
@@ -140,9 +138,7 @@ class BlankSaturationRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording)
         for parent_segment in recording._recording_segments:
-            rec_segment = ClipRecordingSegment(
-                parent_segment, a_min, value_min, a_max, value_max
-            )
+            rec_segment = ClipRecordingSegment(parent_segment, a_min, value_min, a_max, value_max)
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(
@@ -167,9 +163,7 @@ class ClipRecordingSegment(BasePreprocessorSegment):
         self.value_max = value_max
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        traces = self.parent_recording_segment.get_traces(
-            start_frame, end_frame, channel_indices
-        )
+        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
 
         if self.a_min is not None:
@@ -181,6 +175,4 @@ class ClipRecordingSegment(BasePreprocessorSegment):
 
 
 clip = define_function_from_class(source_class=ClipRecording, name="clip")
-blank_staturation = define_function_from_class(
-    source_class=BlankSaturationRecording, name="blank_staturation"
-)
+blank_staturation = define_function_from_class(source_class=BlankSaturationRecording, name="blank_staturation")

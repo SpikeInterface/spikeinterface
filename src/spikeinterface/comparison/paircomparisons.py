@@ -170,9 +170,7 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         if (unit1 is not None) and (unit2 is not None):
             return self.match_event_count.at[unit1, unit2]
         else:
-            raise Exception(
-                "get_matching_event_count: unit1 and unit2 must not be None."
-            )
+            raise Exception("get_matching_event_count: unit1 and unit2 must not be None.")
 
     def get_best_unit_match1(self, unit1):
         return self.best_match_12[unit1]
@@ -193,9 +191,7 @@ class SymmetricSortingComparison(BasePairSorterComparison):
             return self.agreement_scores.at[unit1, unit2]
 
 
-compare_two_sorters = define_function_from_class(
-    source_class=SymmetricSortingComparison, name="compare_two_sorters"
-)
+compare_two_sorters = define_function_from_class(source_class=SymmetricSortingComparison, name="compare_two_sorters")
 
 
 class GroundTruthComparison(BasePairSorterComparison):
@@ -345,9 +341,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         elif self.match_mode == "best":
             match_12 = self.best_match_12
 
-        self.count_score = do_count_score(
-            self.event_counts1, self.event_counts2, match_12, self.match_event_count
-        )
+        self.count_score = do_count_score(self.event_counts1, self.event_counts2, match_12, self.match_event_count)
 
     def _do_confusion_matrix(self):
         if self._verbose:
@@ -376,9 +370,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         return self._confusion_matrix
 
     def _do_score_labels(self):
-        assert (
-            self.match_mode == "hungarian"
-        ), "Labels (TP, FP, FN) can be computed only with hungarian match"
+        assert self.match_mode == "hungarian", "Labels (TP, FP, FN) can be computed only with hungarian match"
 
         if self._verbose:
             print("Adding labels...")
@@ -448,9 +440,7 @@ class GroundTruthComparison(BasePairSorterComparison):
             txt = template_txt_performance.format(method=method, **perf.to_dict())
             print(txt)
 
-    def print_summary(
-        self, well_detected_score=None, redundant_score=None, overmerged_score=None
-    ):
+    def print_summary(self, well_detected_score=None, redundant_score=None, overmerged_score=None):
         """
         Print a global performance summary that depend on the context:
           * exhaustive= True/False
@@ -509,9 +499,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         Count how many well detected units.
         kwargs are the same as get_well_detected_units.
         """
-        return len(
-            self.get_well_detected_units(well_detected_score=well_detected_score)
-        )
+        return len(self.get_well_detected_units(well_detected_score=well_detected_score))
 
     def get_false_positive_units(self, redundant_score=None):
         """
@@ -528,9 +516,7 @@ class GroundTruthComparison(BasePairSorterComparison):
             The agreement score below which tested units
             are counted as "false positive"" (and not "redundant").
         """
-        assert (
-            self.exhaustive_gt
-        ), "false_positive_units list is valid only if exhaustive_gt=True"
+        assert self.exhaustive_gt, "false_positive_units list is valid only if exhaustive_gt=True"
 
         if redundant_score is not None:
             self.redundant_score = redundant_score
@@ -570,9 +556,7 @@ class GroundTruthComparison(BasePairSorterComparison):
             The agreement score above which tested units
             are counted as "redundant" (and not "false positive" ).
         """
-        assert (
-            self.exhaustive_gt
-        ), "redundant_units list is valid only if exhaustive_gt=True"
+        assert self.exhaustive_gt, "redundant_units list is valid only if exhaustive_gt=True"
 
         if redundant_score is not None:
             self.redundant_score = redundant_score
@@ -607,9 +591,7 @@ class GroundTruthComparison(BasePairSorterComparison):
             Tested units with 2 or more agreement scores above 'overmerged_score'
             are counted as "overmerged".
         """
-        assert (
-            self.exhaustive_gt
-        ), "overmerged_units list is valid only if exhaustive_gt=True"
+        assert self.exhaustive_gt, "overmerged_units list is valid only if exhaustive_gt=True"
 
         if overmerged_score is not None:
             self.overmerged_score = overmerged_score
@@ -667,9 +649,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         if self.exhaustive_gt:
             count["num_overmerged"] = self.count_overmerged_units(overmerged_score)
             count["num_redundant"] = self.count_redundant_units(redundant_score)
-            count["num_false_positive"] = self.count_false_positive_units(
-                redundant_score
-            )
+            count["num_false_positive"] = self.count_false_positive_units(redundant_score)
             count["num_bad"] = self.count_bad_units()
 
         return count
@@ -761,9 +741,7 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
             chance_score=chance_score,
             verbose=verbose,
         )
-        MixinTemplateComparison.__init__(
-            self, similarity_method=similarity_method, sparsity_dict=sparsity_dict
-        )
+        MixinTemplateComparison.__init__(self, similarity_method=similarity_method, sparsity_dict=sparsity_dict)
 
         self.we1 = we1
         self.we2 = we2
@@ -798,14 +776,8 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         if self._verbose:
             print("Agreement scores...")
 
-        agreement_scores = compute_template_similarity(
-            self.we1, self.we2, method=self.similarity_method
-        )
-        self.agreement_scores = pd.DataFrame(
-            agreement_scores, index=self.unit_ids[0], columns=self.unit_ids[1]
-        )
+        agreement_scores = compute_template_similarity(self.we1, self.we2, method=self.similarity_method)
+        self.agreement_scores = pd.DataFrame(agreement_scores, index=self.unit_ids[0], columns=self.unit_ids[1])
 
 
-compare_templates = define_function_from_class(
-    source_class=TemplateComparison, name="compare_templates"
-)
+compare_templates = define_function_from_class(source_class=TemplateComparison, name="compare_templates")

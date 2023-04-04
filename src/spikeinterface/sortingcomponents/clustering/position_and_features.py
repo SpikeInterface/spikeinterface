@@ -136,16 +136,10 @@ class PositionAndFeaturesClustering:
             if selection_method == "closest_to_centroid":
                 data = hdbscan_data[mask]
                 centroid = np.median(data, axis=0)
-                distances = sklearn.metrics.pairwise_distances(
-                    centroid[np.newaxis, :], data
-                )[0]
-                best_spikes[unit_ind] = all_indices[mask][
-                    np.argsort(distances)[:max_spikes]
-                ]
+                distances = sklearn.metrics.pairwise_distances(centroid[np.newaxis, :], data)[0]
+                best_spikes[unit_ind] = all_indices[mask][np.argsort(distances)[:max_spikes]]
             elif selection_method == "random":
-                best_spikes[unit_ind] = np.random.permutation(all_indices[mask])[
-                    :max_spikes
-                ]
+                best_spikes[unit_ind] = np.random.permutation(all_indices[mask])[:max_spikes]
             nb_spikes += best_spikes[unit_ind].size
 
         spikes = np.zeros(nb_spikes, dtype=peak_dtype)
@@ -163,10 +157,7 @@ class PositionAndFeaturesClustering:
 
         cleaning_method = params["cleaning_method"]
 
-        print(
-            "We found %d raw clusters, starting to clean with %s..."
-            % (len(labels), cleaning_method)
-        )
+        print("We found %d raw clusters, starting to clean with %s..." % (len(labels), cleaning_method))
 
         if cleaning_method == "cosine":
             num_chans = recording.get_num_channels()
@@ -201,17 +192,13 @@ class PositionAndFeaturesClustering:
                 mask = label == peak_labels
                 wfs_arrays[label] = hdbscan_data[mask]
 
-            labels, peak_labels = remove_duplicates_via_dip(
-                wfs_arrays, peak_labels, **params["cleaning_kwargs"]
-            )
+            labels, peak_labels = remove_duplicates_via_dip(wfs_arrays, peak_labels, **params["cleaning_kwargs"])
 
         elif cleaning_method == "matching":
             name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
             tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
 
-            sorting = NumpySorting.from_times_labels(
-                spikes["sample_ind"], spikes["unit_ind"], fs
-            )
+            sorting = NumpySorting.from_times_labels(spikes["sample_ind"], spikes["unit_ind"], fs)
             we = extract_waveforms(
                 recording,
                 sorting,

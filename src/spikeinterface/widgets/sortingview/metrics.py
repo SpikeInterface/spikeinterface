@@ -36,9 +36,7 @@ class MetricsPlotter(SortingviewPlotter):
                     continue
                 values_skip_nans[k] = v
 
-            units_m.append(
-                vv.UnitMetricsGraphUnit(unit_id=unit_id, values=values_skip_nans)
-            )
+            units_m.append(vv.UnitMetricsGraphUnit(unit_id=unit_id, values=values_skip_nans))
         v_metrics = vv.UnitMetricsGraph(units=units_m, metrics=metrics_sv)
 
         if not dp.hide_unit_selector:
@@ -49,9 +47,7 @@ class MetricsPlotter(SortingviewPlotter):
                     if col not in sorting_copy.get_property_keys():
                         sorting_copy.set_property(col, metrics[col].values)
                 # generate table with properties
-                v_units_table = generate_unit_table_view(
-                    sorting_copy, unit_properties=metric_names
-                )
+                v_units_table = generate_unit_table_view(sorting_copy, unit_properties=metric_names)
             else:
                 v_units_table = generate_unit_table_view(dp.sorting)
 

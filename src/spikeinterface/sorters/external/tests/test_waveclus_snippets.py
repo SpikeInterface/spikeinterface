@@ -13,9 +13,7 @@ from spikeinterface.sorters.tests.common_tests import SnippetsSorterCommonTestSu
 
 
 # This run several tests
-@pytest.mark.skipif(
-    not WaveClusSnippetsSorter.is_installed(), reason="waveclus not installed"
-)
+@pytest.mark.skipif(not WaveClusSnippetsSorter.is_installed(), reason="waveclus not installed")
 class WaveClusSnippetsCommonTestSuite(SnippetsSorterCommonTestSuite, unittest.TestCase):
     SorterClass = WaveClusSnippetsSorter
 

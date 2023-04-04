@@ -162,9 +162,7 @@ def run_sorter_by_property(
             )
 
     aggregate_sorting = aggregate_units(sorting_list)
-    aggregate_sorting.set_property(
-        key=grouping_property, values=grouping_property_values
-    )
+    aggregate_sorting.set_property(key=grouping_property, values=grouping_property_values)
     aggregate_sorting.register_recording(recording)
 
     return aggregate_sorting
@@ -241,10 +239,7 @@ def run_sorters(
 
     if isinstance(recording_dict_or_list, list):
         # in case of list
-        recording_dict = {
-            "recording_{}".format(i): rec
-            for i, rec in enumerate(recording_dict_or_list)
-        }
+        recording_dict = {"recording_{}".format(i): rec for i, rec in enumerate(recording_dict_or_list)}
     elif isinstance(recording_dict_or_list, dict):
         recording_dict = recording_dict_or_list
     else:
@@ -267,9 +262,7 @@ def run_sorters(
             if output_folder.is_dir():
                 # sorter folder exists
                 if mode_if_folder_exists == "raise":
-                    raise Exception(
-                        f"output folder already exists for {rec_name} {sorter_name}"
-                    )
+                    raise Exception(f"output folder already exists for {rec_name} {sorter_name}")
                 elif mode_if_folder_exists == "overwrite":
                     shutil.rmtree(str(output_folder))
                 elif mode_if_folder_exists == "keep":
@@ -285,9 +278,7 @@ def run_sorters(
 
             if need_dump:
                 if not recording.is_dumpable:
-                    raise Exception(
-                        "recording not dumpable call recording.save() before"
-                    )
+                    raise Exception("recording not dumpable call recording.save() before")
                 recording_arg = recording.to_dict()
             else:
                 recording_arg = recording
@@ -314,15 +305,11 @@ def run_sorters(
 
         n_jobs = engine_kwargs.get("n_jobs", -1)
         backend = engine_kwargs.get("backend", "loky")
-        Parallel(n_jobs=n_jobs, backend=backend)(
-            delayed(_run_one)(task_args) for task_args in task_args_list
-        )
+        Parallel(n_jobs=n_jobs, backend=backend)(delayed(_run_one)(task_args) for task_args in task_args_list)
 
     elif engine == "dask":
         client = engine_kwargs.get("client", None)
-        assert (
-            client is not None
-        ), "For dask engine you have to provide : client = dask.distributed.Client(...)"
+        assert client is not None, "For dask engine you have to provide : client = dask.distributed.Client(...)"
 
         tasks = []
         for task_args in task_args_list:
@@ -424,9 +411,7 @@ _run_one(arg_list)
 def is_log_ok(output_folder):
     # log is OK when run_time is not None
     if (output_folder / "spikeinterface_log.json").is_file():
-        with open(
-            output_folder / "spikeinterface_log.json", mode="r", encoding="utf8"
-        ) as logfile:
+        with open(output_folder / "spikeinterface_log.json", mode="r", encoding="utf8") as logfile:
             log = json.load(logfile)
             run_time = log.get("run_time", None)
             ok = run_time is not None
@@ -477,12 +462,6 @@ def collect_sorting_outputs(working_folder):
 
 def _check_container_images(docker_image, singularity_image, sorter_name):
     if docker_image is not None:
-        assert singularity_image is None, (
-            f"Provide either a docker or a singularity image "
-            f"for sorter {sorter_name}"
-        )
+        assert singularity_image is None, f"Provide either a docker or a singularity image " f"for sorter {sorter_name}"
     if singularity_image is not None:
-        assert docker_image is None, (
-            f"Provide either a docker or a singularity image "
-            f"for sorter {sorter_name}"
-        )
+        assert docker_image is None, f"Provide either a docker or a singularity image " f"for sorter {sorter_name}"

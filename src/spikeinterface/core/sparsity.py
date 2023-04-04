@@ -135,9 +135,7 @@ class ChannelSparsity:
         Return a serializable dict.
         """
         return dict(
-            unit_id_to_channel_ids={
-                k: list(v) for k, v in self.unit_id_to_channel_ids.items()
-            },
+            unit_id_to_channel_ids={k: list(v) for k, v in self.unit_id_to_channel_ids.items()},
             channel_ids=list(self.channel_ids),
             unit_ids=list(self.unit_ids),
         )
@@ -147,13 +145,9 @@ class ChannelSparsity:
         unit_id_to_channel_ids_corrected = {}
         for unit_id in d["unit_ids"]:
             if unit_id in d["unit_id_to_channel_ids"]:
-                unit_id_to_channel_ids_corrected[unit_id] = d["unit_id_to_channel_ids"][
-                    unit_id
-                ]
+                unit_id_to_channel_ids_corrected[unit_id] = d["unit_id_to_channel_ids"][unit_id]
             else:
-                unit_id_to_channel_ids_corrected[unit_id] = d["unit_id_to_channel_ids"][
-                    str(unit_id)
-                ]
+                unit_id_to_channel_ids_corrected[unit_id] = d["unit_id_to_channel_ids"][str(unit_id)]
         d["unit_id_to_channel_ids"] = unit_id_to_channel_ids_corrected
 
         return cls.from_unit_id_to_channel_ids(**d)
@@ -185,12 +179,8 @@ class ChannelSparsity:
 
         mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype="bool")
         locations = we.get_channel_locations()
-        distances = np.linalg.norm(
-            locations[:, np.newaxis] - locations[np.newaxis, :], axis=2
-        )
-        best_chan = get_template_extremum_channel(
-            we, peak_sign=peak_sign, outputs="index"
-        )
+        distances = np.linalg.norm(locations[:, np.newaxis] - locations[np.newaxis, :], axis=2)
+        best_chan = get_template_extremum_channel(we, peak_sign=peak_sign, outputs="index")
         for unit_ind, unit_id in enumerate(we.unit_ids):
             chan_ind = best_chan[unit_id]
             (chan_inds,) = np.nonzero(distances[chan_ind, :] <= radius_um)
@@ -221,9 +211,7 @@ class ChannelSparsity:
         Use the 'threshold' argument to specify the SNR threshold.
         """
         mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype="bool")
-        noise = np.sqrt(we.nsamples) * get_noise_levels(
-            we.recording, return_scaled=we.return_scaled
-        )
+        noise = np.sqrt(we.nsamples) * get_noise_levels(we.recording, return_scaled=we.return_scaled)
         for unit_ind, unit_id in enumerate(we.unit_ids):
             wfs = we.get_waveforms(unit_id)
             energies = np.linalg.norm(wfs, axis=(0, 1))
@@ -238,12 +226,8 @@ class ChannelSparsity:
         Use the 'by_property' argument to specify the property name.
         """
         # check consistency
-        assert (
-            by_property in we.recording.get_property_keys()
-        ), f"Property {by_property} is not a recording property"
-        assert (
-            by_property in we.sorting.get_property_keys()
-        ), f"Property {by_property} is not a sorting property"
+        assert by_property in we.recording.get_property_keys(), f"Property {by_property} is not a recording property"
+        assert by_property in we.sorting.get_property_keys(), f"Property {by_property} is not a sorting property"
 
         mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype="bool")
         rec_by = we.recording.split_by(by_property)
@@ -252,9 +236,7 @@ class ChannelSparsity:
             assert (
                 unit_property in rec_by.keys()
             ), f"Unit property {unit_property} cannot be found in the recording properties"
-            chan_inds = we.recording.ids_to_indices(
-                rec_by[unit_property].get_channel_ids()
-            )
+            chan_inds = we.recording.ids_to_indices(rec_by[unit_property].get_channel_ids())
             mask[unit_ind, chan_inds] = True
         return cls(mask, we.unit_ids, we.channel_ids)
 
@@ -292,35 +274,19 @@ def compute_sparsity(
             The estimated sparsity
     """
     if method == "best_channels":
-        assert (
-            num_channels is not None
-        ), "For the 'best_channels' method, 'num_channels' needs to be given"
-        sparsity = ChannelSparsity.from_best_channels(
-            waveform_extractor, num_channels, peak_sign=peak_sign
-        )
+        assert num_channels is not None, "For the 'best_channels' method, 'num_channels' needs to be given"
+        sparsity = ChannelSparsity.from_best_channels(waveform_extractor, num_channels, peak_sign=peak_sign)
     elif method == "radius":
-        assert (
-            radius_um is not None
-        ), "For the 'radius' method, 'radius_um' needs to be given"
-        sparsity = ChannelSparsity.from_radius(
-            waveform_extractor, radius_um, peak_sign=peak_sign
-        )
+        assert radius_um is not None, "For the 'radius' method, 'radius_um' needs to be given"
+        sparsity = ChannelSparsity.from_radius(waveform_extractor, radius_um, peak_sign=peak_sign)
     elif method == "snr":
-        assert (
-            threshold is not None
-        ), "For the 'snr' method, 'threshold' needs to be given"
-        sparsity = ChannelSparsity.from_snr(
-            waveform_extractor, threshold, peak_sign=peak_sign
-        )
+        assert threshold is not None, "For the 'snr' method, 'threshold' needs to be given"
+        sparsity = ChannelSparsity.from_snr(waveform_extractor, threshold, peak_sign=peak_sign)
     elif method == "energy":
-        assert (
-            threshold is not None
-        ), "For the 'energy' method, 'threshold' needs to be given"
+        assert threshold is not None, "For the 'energy' method, 'threshold' needs to be given"
         sparsity = ChannelSparsity.from_energy(waveform_extractor, threshold)
     elif method == "by_property":
-        assert (
-            by_property is not None
-        ), "For the 'by_property' method, 'by_property' needs to be given"
+        assert by_property is not None, "For the 'by_property' method, 'by_property' needs to be given"
         sparsity = ChannelSparsity.from_property(waveform_extractor, by_property)
     else:
         raise ValueError(f"compute_sparsity() method={method} do not exists")

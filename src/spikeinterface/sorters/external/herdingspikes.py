@@ -151,17 +151,13 @@ class HerdingspikesSorter(BaseSorter):
         else:
             new_api = False
 
-        recording = load_extractor(
-            sorter_output_folder.parent / "spikeinterface_recording.json"
-        )
+        recording = load_extractor(sorter_output_folder.parent / "spikeinterface_recording.json")
 
         p = params
 
         # Bandpass filter
         if p["filter"] and p["freq_min"] is not None and p["freq_max"] is not None:
-            recording = bandpass_filter(
-                recording=recording, freq_min=p["freq_min"], freq_max=p["freq_max"]
-            )
+            recording = bandpass_filter(recording=recording, freq_min=p["freq_min"], freq_max=p["freq_max"])
 
         if p["pre_scale"]:
             recording = normalize_by_quantile(
@@ -228,10 +224,7 @@ class HerdingspikesSorter(BaseSorter):
         if p["filter_duplicates"]:
             uids = C.spikes.cl.unique()
             for u in uids:
-                s = (
-                    C.spikes[C.spikes.cl == u].t.diff()
-                    < p["spk_evaluation_time"] / 1000 * Probe.fps
-                )
+                s = C.spikes[C.spikes.cl == u].t.diff() < p["spk_evaluation_time"] / 1000 * Probe.fps
                 C.spikes = C.spikes.drop(s.index[s])
 
         if verbose:

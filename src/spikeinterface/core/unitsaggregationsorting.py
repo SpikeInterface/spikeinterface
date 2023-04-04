@@ -47,34 +47,21 @@ class UnitsAggregationSorting(BaseSorting):
         sampling_frequency = sorting_list[0].get_sampling_frequency()
         num_segments = sorting_list[0].get_num_segments()
 
-        ok1 = all(
-            sampling_frequency == sort.get_sampling_frequency() for sort in sorting_list
-        )
+        ok1 = all(sampling_frequency == sort.get_sampling_frequency() for sort in sorting_list)
         ok2 = all(num_segments == sort.get_num_segments() for sort in sorting_list)
         if not (ok1 and ok2):
-            raise ValueError(
-                "Sortings don't have the same sampling_frequency/num_segments"
-            )
+            raise ValueError("Sortings don't have the same sampling_frequency/num_segments")
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
         annotation_keys = sorting_list[0].get_annotation_keys()
         for annotation_name in annotation_keys:
-            if not all(
-                [annotation_name in sort.get_annotation_keys() for sort in sorting_list]
-            ):
+            if not all([annotation_name in sort.get_annotation_keys() for sort in sorting_list]):
                 continue
 
-            annotations = np.array(
-                [
-                    sort.get_annotation(annotation_name, copy=False)
-                    for sort in sorting_list
-                ]
-            )
+            annotations = np.array([sort.get_annotation(annotation_name, copy=False) for sort in sorting_list])
             if np.all(annotations == annotations[0]):
-                self.set_annotation(
-                    annotation_name, sorting_list[0].get_annotation(annotation_name)
-                )
+                self.set_annotation(annotation_name, sorting_list[0].get_annotation(annotation_name))
 
         property_keys = {}
         property_dict = {}
@@ -85,9 +72,7 @@ class UnitsAggregationSorting(BaseSorting):
                     continue
                 if prop_name in property_keys:
                     if property_keys[prop_name] != sort.get_property(prop_name).dtype:
-                        print(
-                            f"Skipping property '{prop_name}: difference in dtype between sortings'"
-                        )
+                        print(f"Skipping property '{prop_name}: difference in dtype between sortings'")
                         del property_keys[prop_name]
                         deleted_keys.append(prop_name)
                 else:
@@ -110,9 +95,7 @@ class UnitsAggregationSorting(BaseSorting):
                     )
 
                 try:
-                    property_dict[prop_name] = np.concatenate(
-                        (property_dict[prop_name], values)
-                    )
+                    property_dict[prop_name] = np.concatenate((property_dict[prop_name], values))
                 except Exception as e:
                     print(f"Skipping property '{prop_name}' for shape inconsistency")
                     del property_dict[prop_name]
@@ -151,9 +134,7 @@ class UnitsAggregationSortingSegment(BaseSortingSegment):
     ) -> np.ndarray:
         sorting_id = self._unit_map[unit_id]["sorting_id"]
         unit_id_sorting = self._unit_map[unit_id]["unit_id"]
-        times = self._parent_segments[sorting_id].get_unit_spike_train(
-            unit_id_sorting, start_frame, end_frame
-        )
+        times = self._parent_segments[sorting_id].get_unit_spike_train(unit_id_sorting, start_frame, end_frame)
         return times
 
 

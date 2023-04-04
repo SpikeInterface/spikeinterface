@@ -49,11 +49,7 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
 
             # Remove noise units if necessary:
             if keep_good_only:
-                units = [
-                    unit
-                    for unit in units
-                    if unit["ID"].flatten()[0].astype(int) % 1000 != 0
-                ]
+                units = [unit for unit in units if unit["ID"].flatten()[0].astype(int) % 1000 != 0]
 
             if "sortingInfo" in self._data.keys():
                 info = self._data["sortingInfo"]
@@ -80,11 +76,7 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
 
             # Remove noise units if necessary:
             if keep_good_only:
-                units = [
-                    unit
-                    for unit in units
-                    if unit["ID"].flatten()[0].astype(int) % 1000 != 0
-                ]
+                units = [unit for unit in units if unit["ID"].flatten()[0].astype(int) % 1000 != 0]
 
             if "sortingInfo" in self._data.keys():
                 info = self._getfield("sortingInfo")
@@ -100,9 +92,7 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
         spiketrains = []
         for uc, unit in enumerate(units):
             unit_id = int(_squeeze_ds(unit["ID"]))
-            spike_times = (
-                _squeeze(unit["spikeTrain"]).astype("int64") - self.start_frame
-            )
+            spike_times = _squeeze(unit["spikeTrain"]).astype("int64") - self.start_frame
             unit_ids.append(unit_id)
             spiketrains.append(spike_times)
 
@@ -121,9 +111,7 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
             templates.append(template)
             templates_frames_cut_before.append(unit["cutLeft"].flatten())
         self.set_property("template", np.array(templates))
-        self.set_property(
-            "template_frames_cut_before", np.array(templates_frames_cut_before)
-        )
+        self.set_property("template_frames_cut_before", np.array(templates_frames_cut_before))
 
         self._kwargs = {"file_path": str(file_path), "keep_good_only": keep_good_only}
 
@@ -278,6 +266,4 @@ def _squeeze(arr):
     return arr
 
 
-read_hdsort = define_function_from_class(
-    source_class=HDSortSortingExtractor, name="read_hdsort"
-)
+read_hdsort = define_function_from_class(source_class=HDSortSortingExtractor, name="read_hdsort")

@@ -59,13 +59,9 @@ def export_report(
 
     # load or compute spike_amplitudes
     if we.is_extension("spike_amplitudes"):
-        spike_amplitudes = we.load_extension("spike_amplitudes").get_data(
-            outputs="by_unit"
-        )
+        spike_amplitudes = we.load_extension("spike_amplitudes").get_data(outputs="by_unit")
     elif force_computation:
-        spike_amplitudes = compute_spike_amplitudes(
-            we, peak_sign=peak_sign, outputs="by_unit", **job_kwargs
-        )
+        spike_amplitudes = compute_spike_amplitudes(we, peak_sign=peak_sign, outputs="by_unit", **job_kwargs)
     else:
         spike_amplitudes = None
         print(
@@ -107,13 +103,9 @@ def export_report(
     output_folder.mkdir(parents=True, exist_ok=True)
 
     # unit list
-    units = pd.DataFrame(
-        index=unit_ids
-    )  #  , columns=['max_on_channel_id', 'amplitude'])
+    units = pd.DataFrame(index=unit_ids)  #  , columns=['max_on_channel_id', 'amplitude'])
     units.index.name = "unit_id"
-    units["max_on_channel_id"] = pd.Series(
-        get_template_extremum_channel(we, peak_sign="neg", outputs="id")
-    )
+    units["max_on_channel_id"] = pd.Series(get_template_extremum_channel(we, peak_sign="neg", outputs="id"))
     units["amplitude"] = pd.Series(get_template_extremum_amplitude(we, peak_sign="neg"))
     units.to_csv(output_folder / "unit list.csv", sep="\t")
 

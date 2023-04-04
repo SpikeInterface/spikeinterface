@@ -104,9 +104,7 @@ class BenchmarkPeakSelection:
         if self.verbose:
             method = method_kwargs["method"]
             print(f"Localizing peaks with method {method}")
-        self._positions = localize_peaks(
-            self.recording_f, self.peaks, **method_kwargs, **self.job_kwargs
-        )
+        self._positions = localize_peaks(self.recording_f, self.peaks, **method_kwargs, **self.job_kwargs)
 
     def localize_gt_peaks(self, method_kwargs={"method": "center_of_mass"}):
         from spikeinterface.sortingcomponents.peak_localization import localize_peaks
@@ -114,9 +112,7 @@ class BenchmarkPeakSelection:
         if self.verbose:
             method = method_kwargs["method"]
             print(f"Localizing gt peaks with method {method}")
-        self._gt_positions = localize_peaks(
-            self.recording_f, self.gt_peaks, **method_kwargs, **self.job_kwargs
-        )
+        self._gt_positions = localize_peaks(self.recording_f, self.gt_peaks, **method_kwargs, **self.job_kwargs)
 
     def run(self, peaks=None, positions=None, delta=0.2):
         t_start = time.time()
@@ -132,15 +128,9 @@ class BenchmarkPeakSelection:
         times1 = self.gt_sorting.get_all_spike_trains()[0]
         times2 = self.peaks["sample_ind"]
 
-        print(
-            "The gt recording has {} peaks and {} have been detected".format(
-                len(times1[0]), len(times2)
-            )
-        )
+        print("The gt recording has {} peaks and {} have been detected".format(len(times1[0]), len(times2)))
 
-        matches = make_matching_events(
-            times1[0], times2, int(delta * self.sampling_rate / 1000)
-        )
+        matches = make_matching_events(times1[0], times2, int(delta * self.sampling_rate / 1000))
         self.matches = matches
 
         self.deltas = {"labels": [], "delta": matches["delta_frame"]}
@@ -157,9 +147,7 @@ class BenchmarkPeakSelection:
         ratio = 100 * len(gt_matches) / len(times1[0])
         print("Only {0:.2f}% of gt peaks are matched to detected peaks".format(ratio))
 
-        matches = make_matching_events(
-            times2, times1[0], int(delta * self.sampling_rate / 1000)
-        )
+        matches = make_matching_events(times2, times1[0], int(delta * self.sampling_rate / 1000))
         self.good_matches = matches["index1"]
 
         garbage_matches = ~np.in1d(np.arange(len(times2)), self.good_matches)
@@ -168,15 +156,11 @@ class BenchmarkPeakSelection:
         nb_garbage = len(garbage_peaks)
 
         ratio = 100 * len(garbage_peaks) / len(times2)
-        self.garbage_sorting = NumpySorting.from_times_labels(
-            garbage_peaks, garbage_channels, self.sampling_rate
-        )
+        self.garbage_sorting = NumpySorting.from_times_labels(garbage_peaks, garbage_channels, self.sampling_rate)
 
         print("The peaks have {0:.2f}% of garbage (without gt around)".format(ratio))
 
-        self.comp = GroundTruthComparison(
-            self.gt_sorting, self.sliced_gt_sorting, exhaustive_gt=self.exhaustive_gt
-        )
+        self.comp = GroundTruthComparison(self.gt_sorting, self.sliced_gt_sorting, exhaustive_gt=self.exhaustive_gt)
 
         for label, sorting in zip(
             ["gt", "full_gt", "garbage"],
@@ -204,9 +188,7 @@ class BenchmarkPeakSelection:
                     **self.job_kwargs,
                 )
 
-                self.templates[label] = self.waveforms[label].get_all_templates(
-                    mode="median"
-                )
+                self.templates[label] = self.waveforms[label].get_all_templates(mode="median")
 
         if self.gt_peaks is None:
             if self.verbose:
@@ -223,16 +205,10 @@ class BenchmarkPeakSelection:
             )
             self.gt_peaks["sample_ind"] = gt_peaks_["sample_ind"]
             self.gt_peaks["segment_ind"] = gt_peaks_["segment_ind"]
-            max_channels = get_template_extremum_channel(
-                self.waveforms["full_gt"], peak_sign="neg", outputs="index"
-            )
-            max_amplitudes = get_template_extremum_amplitude(
-                self.waveforms["full_gt"], peak_sign="neg"
-            )
+            max_channels = get_template_extremum_channel(self.waveforms["full_gt"], peak_sign="neg", outputs="index")
+            max_amplitudes = get_template_extremum_amplitude(self.waveforms["full_gt"], peak_sign="neg")
 
-            for unit_ind, unit_id in enumerate(
-                self.waveforms["full_gt"].sorting.unit_ids
-            ):
+            for unit_ind, unit_id in enumerate(self.waveforms["full_gt"].sorting.unit_ids):
                 mask = gt_peaks_["unit_ind"] == unit_ind
                 max_channel = max_channels[unit_id]
                 self.gt_peaks["channel_ind"][mask] = max_channel
@@ -383,9 +359,7 @@ class BenchmarkPeakSelection:
             ax.set_yticks([], [])
         ax.set_xlabel("x")
 
-    def plot_clusters_amplitudes(
-        self, title=None, show_probe=False, clim=(-100, 0), cmap="viridis"
-    ):
+    def plot_clusters_amplitudes(self, title=None, show_probe=False, clim=(-100, 0), cmap="viridis"):
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 10))
         if title is not None:
             fig.suptitle(f"Peak selection results with {title}")
@@ -397,9 +371,7 @@ class BenchmarkPeakSelection:
 
         from spikeinterface.widgets import get_unit_colors
 
-        channels = get_template_extremum_channel(
-            self.waveforms["full_gt"], outputs="index"
-        )
+        channels = get_template_extremum_channel(self.waveforms["full_gt"], outputs="index")
 
         # cb = fig.colorbar(cm, ax=ax)
         # cb.set_label(metric)
@@ -479,9 +451,7 @@ class BenchmarkPeakSelection:
 
         from spikeinterface.widgets import get_unit_colors
 
-        channels = get_template_extremum_channel(
-            self.waveforms["garbage"], outputs="index"
-        )
+        channels = get_template_extremum_channel(self.waveforms["garbage"], outputs="index")
 
         for unit_id in self.garbage_sorting.unit_ids:
             wfs = self.waveforms["garbage"].get_waveforms(unit_id)
@@ -522,9 +492,7 @@ class BenchmarkPeakSelection:
         inds_1 = self.comp.sorting1.ids_to_indices(unit_ids1)
         inds_2 = self.comp.sorting2.ids_to_indices(unit_ids2)
 
-        a = self.templates["full_gt"].reshape(len(self.templates["full_gt"]), -1)[
-            inds_1
-        ]
+        a = self.templates["full_gt"].reshape(len(self.templates["full_gt"]), -1)[inds_1]
         b = self.templates["gt"].reshape(len(self.templates["gt"]), -1)[inds_2]
 
         import sklearn
@@ -559,9 +527,7 @@ class BenchmarkPeakSelection:
                 showmedians=False,
                 showextrema=False,
             )
-        ax.set_xticks(
-            np.arange(len(self.gt_sorting.unit_ids)), self.gt_sorting.unit_ids
-        )
+        ax.set_xticks(np.arange(len(self.gt_sorting.unit_ids)), self.gt_sorting.unit_ids)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
 
@@ -569,17 +535,13 @@ class BenchmarkPeakSelection:
 
         noise_levels = get_noise_levels(self.recording_f, return_scaled=False)
         snrs = self.peaks["amplitude"] / noise_levels[self.peaks["channel_ind"]]
-        garbage_snrs = (
-            self.garbage_peaks["amplitude"]
-            / noise_levels[self.garbage_peaks["channel_ind"]]
-        )
+        garbage_snrs = self.garbage_peaks["amplitude"] / noise_levels[self.garbage_peaks["channel_ind"]]
         amin, amax = snrs.min(), snrs.max()
 
         ax.hist(snrs, np.linspace(amin, amax, 100), density=True, label="peaks")
         # ax.hist(garbage_snrs, np.linspace(amin, amax, 100), density=True, label='garbage', alpha=0.5)
         ax.hist(
-            self.sliced_gt_peaks["amplitude"]
-            / noise_levels[self.sliced_gt_peaks["channel_ind"]],
+            self.sliced_gt_peaks["amplitude"] / noise_levels[self.sliced_gt_peaks["channel_ind"]],
             np.linspace(amin, amax, 100),
             density=True,
             alpha=0.5,
@@ -643,9 +605,7 @@ class BenchmarkPeakSelection:
             means += [np.mean(center - centers[real])]
             stds += [np.std(center - centers[real])]
 
-        metrics = compute_quality_metrics(
-            self.waveforms["full_gt"], metric_names=["snr"], load_if_exists=False
-        )
+        metrics = compute_quality_metrics(self.waveforms["full_gt"], metric_names=["snr"], load_if_exists=False)
         ax.errorbar(metrics["snr"][inds_1], means, yerr=stds, ls="none")
 
         ax.set_xlabel("template snr")
@@ -691,9 +651,7 @@ class BenchmarkPeakSelection:
         # ax.set_ylabel('density')
 
         ax = axs[1, 2]
-        metrics = compute_quality_metrics(
-            self.waveforms["full_gt"], metric_names=["snr"], load_if_exists=False
-        )
+        metrics = compute_quality_metrics(self.waveforms["full_gt"], metric_names=["snr"], load_if_exists=False)
         ratios = np.array(nb_spikes) / np.array(nb_spikes_real)
         plt.plot(metrics["snr"][inds_1], ratios, ".")
         ax.set_xlabel("template snr")

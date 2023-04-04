@@ -20,9 +20,7 @@ class AllAmplitudesDistributionsPlotter(MplPlotter):
                 amps.append(dp.amplitudes[segment_index][unit_id])
             amps = np.concatenate(amps)
             unit_amps.append(amps)
-        parts = ax.violinplot(
-            unit_amps, showmeans=False, showmedians=False, showextrema=False
-        )
+        parts = ax.violinplot(unit_amps, showmeans=False, showmedians=False, showextrema=False)
 
         for i, pc in enumerate(parts["bodies"]):
             color = dp.unit_colors[dp.unit_ids[i]]

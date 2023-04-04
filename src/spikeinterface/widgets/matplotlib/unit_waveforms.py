@@ -17,9 +17,7 @@ class UnitWaveformPlotter(MplPlotter):
         if backend_kwargs["axes"] is not None:
             assert len(backend_kwargs) >= len(dp.units)
         elif backend_kwargs["ax"] is not None:
-            assert (
-                dp.same_axis
-            ), "If 'same_axis' is not used, provide as many 'axes' as neurons"
+            assert dp.same_axis, "If 'same_axis' is not used, provide as many 'axes' as neurons"
         else:
             if dp.same_axis:
                 backend_kwargs["num_axes"] = 1
@@ -47,9 +45,7 @@ class UnitWaveformPlotter(MplPlotter):
                     wfs = wfs[dp.unit_selected_waveforms[unit_id]]
                 elif dp.max_spikes_per_unit is not None:
                     if len(wfs) > dp.max_spikes_per_unit:
-                        random_idxs = np.random.permutation(len(wfs))[
-                            : dp.max_spikes_per_unit
-                        ]
+                        random_idxs = np.random.permutation(len(wfs))[: dp.max_spikes_per_unit]
                         wfs = wfs[random_idxs]
                 wfs = wfs * dp.y_scale + dp.y_offset[None, :, chan_inds]
                 wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1).T
@@ -73,10 +69,7 @@ class UnitWaveformPlotter(MplPlotter):
 
             # plot template
             if dp.plot_templates:
-                template = (
-                    dp.templates[i, :, :][:, chan_inds] * dp.y_scale
-                    + dp.y_offset[:, chan_inds]
-                )
+                template = dp.templates[i, :, :][:, chan_inds] * dp.y_scale + dp.y_offset[:, chan_inds]
 
                 if dp.x_offset_units:
                     # 0.7 is to match spacing in xvect
@@ -100,9 +93,7 @@ class UnitWaveformPlotter(MplPlotter):
             # plot channels
             if dp.plot_channels:
                 # TODO enhance this
-                ax.scatter(
-                    dp.channel_locations[:, 0], dp.channel_locations[:, 1], color="k"
-                )
+                ax.scatter(dp.channel_locations[:, 0], dp.channel_locations[:, 1], color="k")
 
             if dp.same_axis and dp.plot_legend:
                 if self.legend is not None:

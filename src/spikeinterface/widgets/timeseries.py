@@ -88,9 +88,7 @@ class TimeseriesWidget(BaseWidget):
             recordings = {f"rec{i}": rec for i, rec in enumerate(recording)}
             rec0 = recordings[0]
         else:
-            raise ValueError(
-                "plot_timeseries recording must be recording or dict or list"
-            )
+            raise ValueError("plot_timeseries recording must be recording or dict or list")
 
         layer_keys = list(recordings.keys())
 
@@ -182,9 +180,7 @@ class TimeseriesWidget(BaseWidget):
                 assert all(layer_key in clim for layer_key in layer_keys), ""
                 clims = clim
             else:
-                raise TypeError(
-                    f"'clim' can be None, tuple, or dict! Unsupported type {type(clim)}"
-                )
+                raise TypeError(f"'clim' can be None, tuple, or dict! Unsupported type {type(clim)}")
 
         plot_data = dict(
             recordings=recordings,
@@ -216,9 +212,7 @@ class TimeseriesWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
-def _get_trace_list(
-    recordings, channel_ids, time_range, segment_index, order=None, return_scaled=False
-):
+def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=None, return_scaled=False):
     # function also used in ipywidgets plotter
     k0 = list(recordings.keys())[0]
     rec0 = recordings[k0]

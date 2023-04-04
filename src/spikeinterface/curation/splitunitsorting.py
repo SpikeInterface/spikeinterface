@@ -49,9 +49,7 @@ class SplitUnitSorting(BaseSorting):
         if new_unit_ids is None:
             # select new_unit_ids grater that the max id, event greater than the numerical str ids
             if np.issubdtype(parents_unit_ids.dtype, np.character):
-                new_unit_ids = (
-                    max([0] + [int(p) for p in parents_unit_ids if p.isdigit()]) + 1
-                )
+                new_unit_ids = max([0] + [int(p) for p in parents_unit_ids if p.isdigit()]) + 1
             else:
                 new_unit_ids = max(parents_unit_ids) + 1
             new_unit_ids = np.array(
@@ -60,19 +58,13 @@ class SplitUnitSorting(BaseSorting):
             )
         else:
             new_unit_ids = np.array(new_unit_ids, dtype=parents_unit_ids.dtype)
-            assert len(np.unique(new_unit_ids)) == len(
-                new_unit_ids
-            ), "Each element in new_unit_ids should be unique"
-            assert (
-                len(new_unit_ids) <= tot_splits
-            ), "indices_list have more ids indices than the length of new_unit_ids"
+            assert len(np.unique(new_unit_ids)) == len(new_unit_ids), "Each element in new_unit_ids should be unique"
+            assert len(new_unit_ids) <= tot_splits, "indices_list have more ids indices than the length of new_unit_ids"
 
         assert parent_sorting.get_num_segments() == len(
             indices_list
         ), "The length of indices_list must be the same as parent_sorting.get_num_segments"
-        assert (
-            split_unit_id in parents_unit_ids
-        ), "Unit to split should be in parent sorting"
+        assert split_unit_id in parents_unit_ids, "Unit to split should be in parent sorting"
         assert properties_policy == "keep" or properties_policy == "remove", (
             "properties_policy must be " "keep" " or " "remove" ""
         )
@@ -92,16 +84,12 @@ class SplitUnitSorting(BaseSorting):
         ), "new_unit_ids should have a compatible format with the parent ids"
 
         for si, parent_segment in enumerate(self._parent_sorting._sorting_segments):
-            sub_segment = SplitSortingUnitSegment(
-                parent_segment, split_unit_id, indices_list[si], new_unit_ids
-            )
+            sub_segment = SplitSortingUnitSegment(parent_segment, split_unit_id, indices_list[si], new_unit_ids)
             self.add_sorting_segment(sub_segment)
 
         # copy properties
         ann_keys = parent_sorting._annotations.keys()
-        self._annotations = deepcopy(
-            {k: parent_sorting._annotations[k] for k in ann_keys}
-        )
+        self._annotations = deepcopy({k: parent_sorting._annotations[k] for k in ann_keys})
 
         # copy properties for unchanged units, and check if units propierties
         keep_parent_inds = parent_sorting.ids_to_indices(unchanged_units)
@@ -138,9 +126,7 @@ class SplitSortingUnitSegment(BaseSortingSegment):
         self._parent_segment = parent_segment
         self._new_unit_ids = new_unit_ids
         self._spike_trains = dict()
-        times = self._parent_segment.get_unit_spike_train(
-            split_unit_id, start_frame=None, end_frame=None
-        )
+        times = self._parent_segment.get_unit_spike_train(split_unit_id, start_frame=None, end_frame=None)
         for idx, unit_id in enumerate(self._new_unit_ids):
             self._spike_trains[unit_id] = times[indices == idx]
 
@@ -154,19 +140,13 @@ class SplitSortingUnitSegment(BaseSortingSegment):
             if start_frame is None:
                 init = 0
             else:
-                init = np.searchsorted(
-                    self._spike_trains[unit_id], start_frame, side="left"
-                )
+                init = np.searchsorted(self._spike_trains[unit_id], start_frame, side="left")
             if end_frame is None:
                 endf = len(self._spike_trains[unit_id])
             else:
-                endf = np.searchsorted(
-                    self._spike_trains[unit_id], end_frame, side="right"
-                )
+                endf = np.searchsorted(self._spike_trains[unit_id], end_frame, side="right")
             times = self._spike_trains[unit_id][init:endf]
         else:
-            times = self._parent_segment.get_unit_spike_train(
-                unit_id, start_frame, end_frame
-            )
+            times = self._parent_segment.get_unit_spike_train(unit_id, start_frame, end_frame)
 
         return times

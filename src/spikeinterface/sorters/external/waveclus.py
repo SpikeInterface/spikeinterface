@@ -161,9 +161,7 @@ class WaveClusSorter(BaseSorter):
         for nch, id in enumerate(recording.get_channel_ids()):
             vcFile_h5 = str(sorter_output_folder / ("raw" + str(nch + 1) + ".h5"))
             with h5py.File(vcFile_h5, mode="w") as f:
-                f.create_dataset(
-                    "sr", data=[recording.get_sampling_frequency()], dtype="float32"
-                )
+                f.create_dataset("sr", data=[recording.get_sampling_frequency()], dtype="float32")
                 rec_sliced = ChannelSliceRecording(recording, channel_ids=[id])
                 write_to_h5_dataset_format(
                     rec_sliced,
@@ -202,9 +200,7 @@ class WaveClusSorter(BaseSorter):
             """
         else:
             source_dir = Path(__file__).parent
-            shutil.copy(
-                str(source_dir / f"waveclus_master.m"), str(sorter_output_folder)
-            )
+            shutil.copy(str(source_dir / f"waveclus_master.m"), str(sorter_output_folder))
 
             sorter_path = Path(cls.waveclus_path).absolute()
             if "win" in sys.platform and sys.platform != "darwin":
@@ -248,9 +244,7 @@ class WaveClusSorter(BaseSorter):
         with params_file.open("r") as f:
             sorter_params = json.load(f)["sorter_params"]
         keep_good_only = sorter_params.get("keep_good_only", True)
-        sorting = WaveClusSortingExtractor(
-            file_path=result_fname, keep_good_only=keep_good_only
-        )
+        sorting = WaveClusSortingExtractor(file_path=result_fname, keep_good_only=keep_good_only)
         return sorting
 
     @staticmethod

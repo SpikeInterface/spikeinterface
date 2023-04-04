@@ -37,8 +37,7 @@ class Mountainsort4Sorter(BaseSorter):
     }
 
     _params_description = {
-        "detect_sign": "Use -1 (negative) or 1 (positive) depending "
-        "on the sign of the spikes in the recording",
+        "detect_sign": "Use -1 (negative) or 1 (positive) depending " "on the sign of the spikes in the recording",
         # Use -1, 0, or 1, depending on the sign of the spikes in the recording
         "adjacency_radius": "Radius in um to build channel neighborhood "
         "(Use -1 to include all channels in every neighborhood)",
@@ -94,9 +93,7 @@ class Mountainsort4Sorter(BaseSorter):
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
         import mountainsort4
 
-        recording = load_extractor(
-            sorter_output_folder.parent / "spikeinterface_recording.json"
-        )
+        recording = load_extractor(sorter_output_folder.parent / "spikeinterface_recording.json")
 
         # alias to params
         p = params
@@ -107,9 +104,7 @@ class Mountainsort4Sorter(BaseSorter):
         if p["filter"] and p["freq_min"] is not None and p["freq_max"] is not None:
             if verbose:
                 print("filtering")
-            recording = bandpass_filter(
-                recording=recording, freq_min=p["freq_min"], freq_max=p["freq_max"]
-            )
+            recording = bandpass_filter(recording=recording, freq_min=p["freq_min"], freq_max=p["freq_max"])
 
         # Whiten
         if p["whiten"]:
@@ -146,13 +141,9 @@ class Mountainsort4Sorter(BaseSorter):
 
         # convert sorting to new API and save it
         unit_ids = old_api_sorting.get_unit_ids()
-        units_dict_list = [
-            {u: old_api_sorting.get_unit_spike_train(u) for u in unit_ids}
-        ]
+        units_dict_list = [{u: old_api_sorting.get_unit_spike_train(u) for u in unit_ids}]
         new_api_sorting = NumpySorting.from_dict(units_dict_list, samplerate)
-        NpzSortingExtractor.write_sorting(
-            new_api_sorting, str(sorter_output_folder / "firings.npz")
-        )
+        NpzSortingExtractor.write_sorting(new_api_sorting, str(sorter_output_folder / "firings.npz"))
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):

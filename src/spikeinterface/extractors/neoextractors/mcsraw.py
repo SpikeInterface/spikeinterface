@@ -55,6 +55,4 @@ class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_mcsraw = define_function_from_class(
-    source_class=MCSRawRecordingExtractor, name="read_maxwell_event"
-)
+read_mcsraw = define_function_from_class(source_class=MCSRawRecordingExtractor, name="read_maxwell_event")

@@ -213,9 +213,7 @@ def aggregate_sorting_comparison(study_folder, exhaustive_gt=False):
     comparisons = {}
     for (rec_name, sorter_name), sorting in results.items():
         gt_sorting = ground_truths[rec_name]
-        sc = compare_sorter_to_ground_truth(
-            gt_sorting, sorting, exhaustive_gt=exhaustive_gt
-        )
+        sc = compare_sorter_to_ground_truth(gt_sorting, sorting, exhaustive_gt=exhaustive_gt)
         comparisons[(rec_name, sorter_name)] = sc
 
     return comparisons
@@ -248,9 +246,7 @@ def aggregate_performances_table(study_folder, exhaustive_gt=False, **karg_thres
     sorter_folders = study_folder / "sorter_folders"
     tables_folder = study_folder / "tables"
 
-    comparisons = aggregate_sorting_comparison(
-        study_folder, exhaustive_gt=exhaustive_gt
-    )
+    comparisons = aggregate_sorting_comparison(study_folder, exhaustive_gt=exhaustive_gt)
     ground_truths = get_ground_truths(study_folder)
     results = collect_study_sorting(study_folder)
 
@@ -303,28 +299,16 @@ def aggregate_performances_table(study_folder, exhaustive_gt=False, **karg_thres
 
         perf_by_spiketrain.append(perf)
 
-        count_units.loc[(rec_name, sorter_name), "num_gt"] = len(
-            gt_sorting.get_unit_ids()
-        )
-        count_units.loc[(rec_name, sorter_name), "num_sorter"] = len(
-            sorting.get_unit_ids()
-        )
-        count_units.loc[
-            (rec_name, sorter_name), "num_well_detected"
-        ] = comp.count_well_detected_units(**karg_thresh)
-        count_units.loc[
-            (rec_name, sorter_name), "num_redundant"
-        ] = comp.count_redundant_units()
+        count_units.loc[(rec_name, sorter_name), "num_gt"] = len(gt_sorting.get_unit_ids())
+        count_units.loc[(rec_name, sorter_name), "num_sorter"] = len(sorting.get_unit_ids())
+        count_units.loc[(rec_name, sorter_name), "num_well_detected"] = comp.count_well_detected_units(**karg_thresh)
+        count_units.loc[(rec_name, sorter_name), "num_redundant"] = comp.count_redundant_units()
         if exhaustive_gt:
-            count_units.loc[
-                (rec_name, sorter_name), "num_false_positive"
-            ] = comp.count_false_positive_units()
+            count_units.loc[(rec_name, sorter_name), "num_false_positive"] = comp.count_false_positive_units()
             count_units.loc[(rec_name, sorter_name), "num_bad"] = comp.count_bad_units()
 
     perf_by_spiketrain = pd.concat(perf_by_spiketrain)
-    perf_by_spiketrain = perf_by_spiketrain.set_index(
-        ["rec_name", "sorter_name", "gt_unit_id"]
-    )
+    perf_by_spiketrain = perf_by_spiketrain.set_index(["rec_name", "sorter_name", "gt_unit_id"])
     dataframes["perf_by_spiketrain"] = perf_by_spiketrain
 
     return dataframes

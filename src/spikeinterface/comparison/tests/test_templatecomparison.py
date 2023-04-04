@@ -27,23 +27,17 @@ def test_compare_multiple_templates():
     duration = 60
     num_channels = 8
 
-    rec, sort = toy_example(
-        duration=duration, num_segments=1, num_channels=num_channels
-    )
+    rec, sort = toy_example(duration=duration, num_segments=1, num_channels=num_channels)
     rec = rec.save(folder=test_dir / "rec")
     sort = sort.save(folder=test_dir / "sort")
 
     # split recording in 3 equal slices
     fs = rec.get_sampling_frequency()
     rec1 = rec.frame_slice(start_frame=0 * fs, end_frame=duration / 3 * fs)
-    rec2 = rec.frame_slice(
-        start_frame=duration / 3 * fs, end_frame=2 / 3 * duration * fs
-    )
+    rec2 = rec.frame_slice(start_frame=duration / 3 * fs, end_frame=2 / 3 * duration * fs)
     rec3 = rec.frame_slice(start_frame=2 / 3 * duration * fs, end_frame=duration * fs)
     sort1 = sort.frame_slice(start_frame=0 * fs, end_frame=duration / 3 * fs)
-    sort2 = sort.frame_slice(
-        start_frame=duration / 3 * fs, end_frame=2 / 3 * duration * fs
-    )
+    sort2 = sort.frame_slice(start_frame=duration / 3 * fs, end_frame=2 / 3 * duration * fs)
     sort3 = sort.frame_slice(start_frame=2 / 3 * duration * fs, end_frame=duration * fs)
     # compute waveforms
     we1 = extract_waveforms(rec1, sort1, test_dir / "wf1", n_jobs=1)

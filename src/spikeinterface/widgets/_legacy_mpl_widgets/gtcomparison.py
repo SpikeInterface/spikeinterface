@@ -49,9 +49,7 @@ class ComparisonPerformancesWidget(BaseWidget):
         )
         import seaborn as sns
 
-        sns.swarmplot(
-            data=df, x="Metric", y="Score", hue="Metric", dodge=True, s=3, ax=ax
-        )  # order=sorter_list,
+        sns.swarmplot(data=df, x="Metric", y="Score", hue="Metric", dodge=True, s=3, ax=ax)  # order=sorter_list,
         # ~ ax.set_xticklabels(sorter_names_short, rotation=30, ha='center')
         # ~ ax.legend(bbox_to_anchor=(1.0, 1), loc=2, borderaxespad=0., frameon=False, fontsize=8, markerscale=0.5)
 
@@ -92,9 +90,7 @@ class ComparisonPerformancesAveragesWidget(BaseWidget):
         ncol = len(columns)
 
         for column in columns:
-            perf_by_units[column] = pd.to_numeric(
-                perf_by_units[column], downcast="float"
-            )
+            perf_by_units[column] = pd.to_numeric(perf_by_units[column], downcast="float")
             to_agg[column] = ["mean", "std"]
 
         data = perf_by_units.agg(to_agg)
@@ -105,18 +101,14 @@ class ComparisonPerformancesAveragesWidget(BaseWidget):
 
         stds = data.std()
 
-        clean_labels = [
-            col.replace("num_", "").replace("_", " ").title() for col in columns
-        ]
+        clean_labels = [col.replace("num_", "").replace("_", " ").title() for col in columns]
 
         width = 1 / (ncol + 2)
 
         for c, col in enumerate(columns):
             x = 1 + c / (ncol + 2)
             yerr = stds[col]
-            ax.bar(
-                x, m[col], yerr=yerr, width=width, color=cmap(c), label=clean_labels[c]
-            )
+            ax.bar(x, m[col], yerr=yerr, width=width, color=cmap(c), label=clean_labels[c])
 
         ax.legend()
         ax.set_ylabel("metric")
@@ -154,9 +146,7 @@ class ComparisonPerformancesByTemplateSimilarity(BaseWidget):
             u2 = comp.best_match_12[u1]
             if u2 != -1:
                 all_results["similarity"] += [
-                    self.similarity_matrix[
-                        comp.sorting1.id_to_index(u1), comp.sorting2.id_to_index(u2)
-                    ]
+                    self.similarity_matrix[comp.sorting1.id_to_index(u1), comp.sorting2.id_to_index(u2)]
                 ]
                 all_results["accuracy"] += [comp.agreement_scores.at[u1, u2]]
 
@@ -195,6 +185,4 @@ def plot_gt_performances_by_template_similarity(*args, **kwargs):
     return W
 
 
-plot_gt_performances_by_template_similarity.__doc__ = (
-    ComparisonPerformancesByTemplateSimilarity.__doc__
-)
+plot_gt_performances_by_template_similarity.__doc__ = ComparisonPerformancesByTemplateSimilarity.__doc__

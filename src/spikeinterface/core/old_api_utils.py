@@ -74,9 +74,7 @@ class NewToOldSorting:
         self.is_dumpable = False
 
         unit_map = {}
-        if np.all(
-            [isinstance(unit_id, int)] for unit_id in self._sorting.get_unit_ids()
-        ):
+        if np.all([isinstance(unit_id, int)] for unit_id in self._sorting.get_unit_ids()):
             for u in self._sorting.get_unit_ids():
                 unit_map[u] = u
         else:
@@ -155,9 +153,7 @@ class NewToOldSorting:
         """
         if unit_ids is None:
             unit_ids = self.get_unit_ids()
-        spike_trains = [
-            self.get_unit_spike_train(uid, start_frame, end_frame) for uid in unit_ids
-        ]
+        spike_trains = [self.get_unit_spike_train(uid, start_frame, end_frame) for uid in unit_ids]
         return spike_trains
 
     def get_sampling_frequency(self):
@@ -190,9 +186,7 @@ class OldToNewRecording(BaseRecording):
     def __init__(self, oldapi_recording_extractor):
         BaseRecording.__init__(
             self,
-            sampling_frequency=float(
-                oldapi_recording_extractor.get_sampling_frequency()
-            ),
+            sampling_frequency=float(oldapi_recording_extractor.get_sampling_frequency()),
             channel_ids=oldapi_recording_extractor.get_channel_ids(),
             dtype=oldapi_recording_extractor.get_dtype(return_scaled=False),
         )
@@ -213,9 +207,7 @@ class OldToNewRecording(BaseRecording):
             skip_properties=["gain", "offset"],
         )
         # set correct gains and offsets
-        gains, offsets = find_old_gains_offsets_recursively(
-            oldapi_recording_extractor.dump_to_dict()
-        )
+        gains, offsets = find_old_gains_offsets_recursively(oldapi_recording_extractor.dump_to_dict())
         if gains is not None:
             if np.any(gains != 1):
                 self.set_channel_gains(gains)
@@ -239,9 +231,7 @@ class OldToNewRecordingSegment(BaseRecordingSegment):
     def __init__(self, oldapi_recording_extractor):
         BaseRecordingSegment.__init__(
             self,
-            sampling_frequency=float(
-                oldapi_recording_extractor.get_sampling_frequency()
-            ),
+            sampling_frequency=float(oldapi_recording_extractor.get_sampling_frequency()),
             t_start=None,
             time_vector=None,
         )
@@ -383,16 +373,12 @@ def copy_properties(oldapi_extractor, new_extractor, skip_properties=None):
                 missing_value=missing_value,
             )
         except Exception as e:
-            warnings.warn(
-                f"Property {property_name} cannot be ported to new API due to missing values."
-            )
+            warnings.warn(f"Property {property_name} cannot be ported to new API due to missing values.")
 
 
 def find_old_gains_offsets_recursively(oldapi_extractor_dict):
     kwargs = oldapi_extractor_dict["kwargs"]
-    if np.any(
-        [isinstance(v, dict) and "dumpable" in v.keys() for (k, v) in kwargs.items()]
-    ):
+    if np.any([isinstance(v, dict) and "dumpable" in v.keys() for (k, v) in kwargs.items()]):
         # check nested
         for k, v in oldapi_extractor_dict["kwargs"].items():
             if isinstance(v, dict) and "dumpable" in v:

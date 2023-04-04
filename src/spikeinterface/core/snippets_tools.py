@@ -4,9 +4,7 @@ from .waveform_tools import extract_waveforms_to_buffers
 from .numpyextractors import NumpySnippets
 
 
-def snippets_from_sorting(
-    recording, sorting, nbefore=20, nafter=44, wf_folder=None, **job_kwargs
-):
+def snippets_from_sorting(recording, sorting, nbefore=20, nafter=44, wf_folder=None, **job_kwargs):
     """
     Extract snippets from recording and sorting instances
 
@@ -56,9 +54,7 @@ def snippets_from_sorting(
     )
     wfs = []
     for i in range(recording.get_num_segments()):
-        wfs.append(
-            wfs_arrays[0][peaks2["segment_ind"] == i, :, :]
-        )  # extract class zero
+        wfs.append(wfs_arrays[0][peaks2["segment_ind"] == i, :, :])  # extract class zero
 
     nse = NumpySnippets(
         snippets_list=wfs,

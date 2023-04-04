@@ -58,9 +58,7 @@ def read_bids(folder_path):
             for stream_id in stream_ids:
                 rec = read_nix(file_path, stream_id=stream_id)
                 rec.extra_requirements.extend("pandas")
-                probegroup = _read_probe_group(
-                    file_path.parent, bids_name, rec.channel_ids
-                )
+                probegroup = _read_probe_group(file_path.parent, bids_name, rec.channel_ids)
                 rec = rec.set_probegroup(probegroup)
                 recordings.append(rec)
 
@@ -95,8 +93,7 @@ def _read_probe_group(folder, bids_name, recording_channel_ids):
         contact_id_to_channel_id.pop("unconnected", None)
         # contact_id > channel_index within recording
         contact_id_to_channel_index = {
-            con_id: rec_chan_ids.index(chan_id)
-            for con_id, chan_id in contact_id_to_channel_id.items()
+            con_id: rec_chan_ids.index(chan_id) for con_id, chan_id in contact_id_to_channel_id.items()
         }
 
         # vector of channel indices within recording ordered by probe contact_ids

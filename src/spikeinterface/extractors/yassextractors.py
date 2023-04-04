@@ -30,7 +30,9 @@ class YassSortingExtractor(BaseSorting):
     extractor_name = "YassExtractor"
     mode = "folder"
     installed = HAVE_YAML  # check at class level if installed or not
-    installation_mesg = "To use the Yass extractor, install pyyaml: \n\n pip install pyyaml\n\n"  # error message when not installed
+    installation_mesg = (
+        "To use the Yass extractor, install pyyaml: \n\n pip install pyyaml\n\n"  # error message when not installed
+    )
     name = "yass"
 
     def __init__(self, folder_path):
@@ -39,9 +41,7 @@ class YassSortingExtractor(BaseSorting):
         folder_path = Path(folder_path)
 
         self.fname_spike_train = folder_path / "tmp" / "output" / "spike_train.npy"
-        self.fname_templates = (
-            folder_path / "tmp" / "output" / "templates" / "templates_0sec.npy"
-        )
+        self.fname_templates = folder_path / "tmp" / "output" / "templates" / "templates_0sec.npy"
         self.fname_config = folder_path / "config.yaml"
 
         # Read CONFIG File
@@ -76,6 +76,4 @@ class YassSortingSegment(BaseSortingSegment):
         return times
 
 
-read_yass = define_function_from_class(
-    source_class=YassSortingExtractor, name="read_yass"
-)
+read_yass = define_function_from_class(source_class=YassSortingExtractor, name="read_yass")

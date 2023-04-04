@@ -28,9 +28,7 @@ def setup_module():
 
 def test_find_recording_folders():
     rec1 = si.load_extractor(cache_folder / "mono")
-    rec2 = si.load_extractor(
-        cache_folder / "multi" / "binary.json", base_folder=cache_folder / "multi"
-    )
+    rec2 = si.load_extractor(cache_folder / "multi" / "binary.json", base_folder=cache_folder / "multi")
 
     d1 = rec1.to_dict()
     d2 = rec2.to_dict()

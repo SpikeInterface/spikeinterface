@@ -78,9 +78,7 @@ def compute_noise_levels(waveform_extractor, load_if_exists=False, **params):
     noise_levels: np.array
         noise level vector.
     """
-    if load_if_exists and waveform_extractor.is_extension(
-        NoiseLevelsCalculator.extension_name
-    ):
+    if load_if_exists and waveform_extractor.is_extension(NoiseLevelsCalculator.extension_name):
         ext = waveform_extractor.load_extension(NoiseLevelsCalculator.extension_name)
     else:
         ext = NoiseLevelsCalculator(waveform_extractor)

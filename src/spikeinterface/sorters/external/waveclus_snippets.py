@@ -118,18 +118,12 @@ class WaveClusSnippetsSorter(BaseSorter):
     def _setup_recording(cls, snippets, sorter_output_folder, params, verbose):
         # Generate mat files in the dataset directory
 
-        WaveClusSnippetsExtractor.write_snippets(
-            snippets, sorter_output_folder / "results_spikes.mat"
-        )
+        WaveClusSnippetsExtractor.write_snippets(snippets, sorter_output_folder / "results_spikes.mat")
 
         if verbose:
             num_snippets = snippets.get_total_snippets()
             num_channels = snippets.get_num_channels()
-            print(
-                "Num. channels = {}, Num. snippets = {}".format(
-                    num_channels, num_snippets
-                )
-            )
+            print("Num. channels = {}, Num. snippets = {}".format(num_channels, num_snippets))
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
@@ -193,9 +187,7 @@ class WaveClusSnippetsSorter(BaseSorter):
         with params_file.open("r") as f:
             sorter_params = json.load(f)["sorter_params"]
         keep_good_only = sorter_params.get("keep_good_only", True)
-        sorting = WaveClusSortingExtractor(
-            file_path=result_fname, keep_good_only=keep_good_only
-        )
+        sorting = WaveClusSortingExtractor(file_path=result_fname, keep_good_only=keep_good_only)
         return sorting
 
     @staticmethod

@@ -121,8 +121,7 @@ def set_global_job_kwargs(**job_kwargs):
     global global_job_kwargs
     for k in job_kwargs:
         assert k in job_keys, (
-            f"{k} is not a valid job keyword argument. "
-            f"Available keyword arguments are: {list(job_keys)}"
+            f"{k} is not a valid job keyword argument. " f"Available keyword arguments are: {list(job_keys)}"
         )
     global_job_kwargs.update(job_kwargs)
     global global_job_kwargs_set
@@ -142,6 +141,4 @@ def is_set_global_job_kwargs_set():
     return global_job_kwargs_set
 
 
-set_global_job_kwargs.__doc__ = set_global_job_kwargs.__doc__.format(
-    _shared_job_kwargs_doc
-)
+set_global_job_kwargs.__doc__ = set_global_job_kwargs.__doc__.format(_shared_job_kwargs_doc)

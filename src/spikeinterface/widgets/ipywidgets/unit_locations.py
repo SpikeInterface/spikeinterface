@@ -28,9 +28,7 @@ class UnitLocationsPlotter(IpywidgetsPlotter):
         with plt.ioff():
             output = widgets.Output()
             with output:
-                fig, ax = plt.subplots(
-                    figsize=((ratios[1] * width_cm) * cm, height_cm * cm)
-                )
+                fig, ax = plt.subplots(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
         data_plot["unit_ids"] = data_plot["unit_ids"][:1]

@@ -183,9 +183,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         templates = self.templates[template_inds, :, :].copy()
         flat_templates = templates.reshape(templates.shape[0], -1)
         if self.metric == "cosine_similarity":
-            similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(
-                flat_templates
-            )
+            similarity_matrix = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
         else:
             raise NotImplementedError("metric=...")
 
@@ -194,11 +192,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
         n = len(self.unit_ids)
 
-        (
-            similarities,
-            recall_scores,
-            pair_names,
-        ) = self.comp.compute_collision_by_similarity(
+        (similarities, recall_scores, pair_names,) = self.comp.compute_collision_by_similarity(
             similarity_matrix,
             unit_ids=self.unit_ids,
             good_only=self.good_only,
@@ -238,9 +232,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
             ax1.set_xlabel("lag (ms)")
         elif self.mode == "lines":
             my_cmap = plt.get_cmap(self.cmap)
-            cNorm = matplotlib.colors.Normalize(
-                vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max()
-            )
+            cNorm = matplotlib.colors.Normalize(vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max())
             scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
 
             # plot by similarity bins
@@ -308,19 +300,13 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
 
     def plot(self):
         my_cmap = plt.get_cmap(self.cmap)
-        cNorm = matplotlib.colors.Normalize(
-            vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max()
-        )
+        cNorm = matplotlib.colors.Normalize(vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
-        self.study.precompute_scores_by_similarities(
-            self.good_only, min_accuracy=self.min_accuracy
-        )
+        self.study.precompute_scores_by_similarities(self.good_only, min_accuracy=self.min_accuracy)
         lags = self.study.get_lags()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
-            curves = self.study.get_lag_profile_over_similarity_bins(
-                self.similarity_bins, sorter_name
-            )
+            curves = self.study.get_lag_profile_over_similarity_bins(self.similarity_bins, sorter_name)
 
             # plot by similarity bins
             ax = self.axes.flatten()[sorter_ind]
@@ -374,15 +360,11 @@ class StudyComparisonCollisionBySimilarityRangeWidget(BaseWidget):
         self.min_accuracy = min_accuracy
 
     def plot(self):
-        self.study.precompute_scores_by_similarities(
-            self.good_only, min_accuracy=self.min_accuracy
-        )
+        self.study.precompute_scores_by_similarities(self.good_only, min_accuracy=self.min_accuracy)
         lags = self.study.get_lags()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
-            mean_recall_scores = self.study.get_mean_over_similarity_range(
-                self.similarity_range, sorter_name
-            )
+            mean_recall_scores = self.study.get_mean_over_similarity_range(self.similarity_range, sorter_name)
             self.ax.plot(
                 lags[:-1] + (lags[1] - lags[0]) / 2,
                 mean_recall_scores,
@@ -425,9 +407,7 @@ class StudyComparisonCollisionBySimilarityRangesWidget(BaseWidget):
         self.min_accuracy = min_accuracy
 
     def plot(self):
-        self.study.precompute_scores_by_similarities(
-            self.good_only, min_accuracy=self.min_accuracy
-        )
+        self.study.precompute_scores_by_similarities(self.good_only, min_accuracy=self.min_accuracy)
         lags = self.study.get_lags()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
@@ -449,9 +429,7 @@ class StudyComparisonCollisionBySimilarityRangesWidget(BaseWidget):
             xaxis = np.diff(self.similarity_ranges) / 2 + self.similarity_ranges[:-1]
 
             if not self.show_std:
-                self.ax.plot(
-                    xaxis, mean_recall_scores, label=sorter_name, c="C%d" % sorter_ind
-                )
+                self.ax.plot(xaxis, mean_recall_scores, label=sorter_name, c="C%d" % sorter_ind)
             else:
                 self.ax.errorbar(
                     xaxis,
@@ -477,9 +455,7 @@ def plot_comparison_collision_pair_by_pair(*args, **kwargs):
     return W
 
 
-plot_comparison_collision_pair_by_pair.__doc__ = (
-    ComparisonCollisionPairByPairWidget.__doc__
-)
+plot_comparison_collision_pair_by_pair.__doc__ = ComparisonCollisionPairByPairWidget.__doc__
 
 
 def plot_comparison_collision_by_similarity(*args, **kwargs):
@@ -488,9 +464,7 @@ def plot_comparison_collision_by_similarity(*args, **kwargs):
     return W
 
 
-plot_comparison_collision_by_similarity.__doc__ = (
-    ComparisonCollisionBySimilarityWidget.__doc__
-)
+plot_comparison_collision_by_similarity.__doc__ = ComparisonCollisionBySimilarityWidget.__doc__
 
 
 def plot_study_comparison_collision_by_similarity(*args, **kwargs):
@@ -499,9 +473,7 @@ def plot_study_comparison_collision_by_similarity(*args, **kwargs):
     return W
 
 
-plot_study_comparison_collision_by_similarity.__doc__ = (
-    StudyComparisonCollisionBySimilarityWidget.__doc__
-)
+plot_study_comparison_collision_by_similarity.__doc__ = StudyComparisonCollisionBySimilarityWidget.__doc__
 
 
 def plot_study_comparison_collision_by_similarity_range(*args, **kwargs):
@@ -510,9 +482,7 @@ def plot_study_comparison_collision_by_similarity_range(*args, **kwargs):
     return W
 
 
-plot_study_comparison_collision_by_similarity_range.__doc__ = (
-    StudyComparisonCollisionBySimilarityRangeWidget.__doc__
-)
+plot_study_comparison_collision_by_similarity_range.__doc__ = StudyComparisonCollisionBySimilarityRangeWidget.__doc__
 
 
 def plot_study_comparison_collision_by_similarity_ranges(*args, **kwargs):
@@ -521,6 +491,4 @@ def plot_study_comparison_collision_by_similarity_ranges(*args, **kwargs):
     return W
 
 
-plot_study_comparison_collision_by_similarity_ranges.__doc__ = (
-    StudyComparisonCollisionBySimilarityRangesWidget.__doc__
-)
+plot_study_comparison_collision_by_similarity_ranges.__doc__ = StudyComparisonCollisionBySimilarityRangesWidget.__doc__

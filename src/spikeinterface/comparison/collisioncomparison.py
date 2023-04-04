@@ -15,16 +15,12 @@ class CollisionGTComparison(GroundTruthComparison):
 
     """
 
-    def __init__(
-        self, gt_sorting, tested_sorting, collision_lag=2.0, nbins=11, **kwargs
-    ):
+    def __init__(self, gt_sorting, tested_sorting, collision_lag=2.0, nbins=11, **kwargs):
         # Force compute labels
         kwargs["compute_labels"] = True
 
         if gt_sorting.get_num_segments() > 1 or tested_sorting.get_num_segments() > 1:
-            raise NotImplementedError(
-                "Collision comparison is only available for mono-segment sorting objects"
-            )
+            raise NotImplementedError("Collision comparison is only available for mono-segment sorting objects")
 
         GroundTruthComparison.__init__(self, gt_sorting, tested_sorting, **kwargs)
 
@@ -48,9 +44,7 @@ class CollisionGTComparison(GroundTruthComparison):
             reversed = False
 
         # events
-        mask = (self.collision_events["unit_id1"] == gt_unit_id1) & (
-            self.collision_events["unit_id2"] == gt_unit_id2
-        )
+        mask = (self.collision_events["unit_id1"] == gt_unit_id1) & (self.collision_events["unit_id2"] == gt_unit_id2)
         event = self.collision_events[mask]
 
         score_label1 = self._labels_st1[gt_unit_id1][0][event["index1"]]
@@ -64,9 +58,7 @@ class CollisionGTComparison(GroundTruthComparison):
         return score_label1, score_label2, delta
 
     def get_label_count_per_collision_bins(self, gt_unit_id1, gt_unit_id2, bins):
-        score_label1, score_label2, delta = self.get_label_for_collision(
-            gt_unit_id1, gt_unit_id2
-        )
+        score_label1, score_label2, delta = self.get_label_for_collision(gt_unit_id1, gt_unit_id2)
 
         tp_count1 = np.zeros(bins.size - 1)
         fn_count1 = np.zeros(bins.size - 1)
@@ -121,9 +113,7 @@ class CollisionGTComparison(GroundTruthComparison):
                 self.all_fn[i, j, :] = fn_count1
                 self.all_fn[j, i, :] = fn_count2
 
-    def compute_collision_by_similarity(
-        self, similarity_matrix, unit_ids=None, good_only=False, min_accuracy=0.9
-    ):
+    def compute_collision_by_similarity(self, similarity_matrix, unit_ids=None, good_only=False, min_accuracy=0.9):
         if unit_ids is None:
             unit_ids = self.sorting1.unit_ids
 
@@ -141,9 +131,7 @@ class CollisionGTComparison(GroundTruthComparison):
                 u2 = unit_ids[c]
 
                 if good_only:
-                    if (performances[u1] < min_accuracy) or (
-                        performances[u2] < min_accuracy
-                    ):
+                    if (performances[u1] < min_accuracy) or (performances[u2] < min_accuracy):
                         continue
 
                 ind1 = self.sorting1.id_to_index(u1)

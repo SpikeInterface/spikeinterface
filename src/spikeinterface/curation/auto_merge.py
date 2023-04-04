@@ -155,24 +155,16 @@ def get_potential_auto_merge(
     # STEP 3 : unit positions are estimated roughly with channel
     if "unit_positions" in steps:
         chan_loc = we.get_channel_locations()
-        unit_max_chan = get_template_extremum_channel(
-            we, peak_sign=peak_sign, mode="extremum", outputs="index"
-        )
+        unit_max_chan = get_template_extremum_channel(we, peak_sign=peak_sign, mode="extremum", outputs="index")
         unit_max_chan = list(unit_max_chan.values())
         unit_locations = chan_loc[unit_max_chan, :]
-        unit_distances = scipy.spatial.distance.cdist(
-            unit_locations, unit_locations, metric="euclidean"
-        )
+        unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
         pair_mask = pair_mask & (unit_distances <= maximum_distance_um)
 
     # STEP 4 : potential auto merge by correlogram
     if "correlogram" in steps:
-        correlograms, bins = compute_correlograms(
-            sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba"
-        )
-        correlograms_smoothed = smooth_correlogram(
-            correlograms, bins, sigma_smooth_ms=sigma_smooth_ms
-        )
+        correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba")
+        correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
         # find correlogram window for each units
         win_sizes = np.zeros(n, dtype=int)
         for unit_ind in range(n):
@@ -286,32 +278,17 @@ def compute_correlogram_diff(
 
             num1, num2 = num_spikes[unit_id1], num_spikes[unit_id2]
             # Weighted window (larger unit imposes its window).
-            win_size = int(
-                round(
-                    (num1 * win_sizes[unit_ind1] + num2 * win_sizes[unit_ind2])
-                    / (num1 + num2)
-                )
-            )
+            win_size = int(round((num1 * win_sizes[unit_ind1] + num2 * win_sizes[unit_ind2]) / (num1 + num2)))
             # Plage of indices where correlograms are inside the window.
             corr_inds = np.arange(m - win_size, m + win_size, dtype=int)
 
             # TODO : for Aurelien
             shift = 0
-            auto_corr1 = normalize_correlogram(
-                correlograms_smoothed[unit_ind1, unit_ind1, :]
-            )
-            auto_corr2 = normalize_correlogram(
-                correlograms_smoothed[unit_ind2, unit_ind2, :]
-            )
-            cross_corr = normalize_correlogram(
-                correlograms_smoothed[unit_ind1, unit_ind2, :]
-            )
-            diff1 = np.sum(
-                np.abs(cross_corr[corr_inds - shift] - auto_corr1[corr_inds])
-            ) / len(corr_inds)
-            diff2 = np.sum(
-                np.abs(cross_corr[corr_inds - shift] - auto_corr2[corr_inds])
-            ) / len(corr_inds)
+            auto_corr1 = normalize_correlogram(correlograms_smoothed[unit_ind1, unit_ind1, :])
+            auto_corr2 = normalize_correlogram(correlograms_smoothed[unit_ind2, unit_ind2, :])
+            cross_corr = normalize_correlogram(correlograms_smoothed[unit_ind1, unit_ind2, :])
+            diff1 = np.sum(np.abs(cross_corr[corr_inds - shift] - auto_corr1[corr_inds])) / len(corr_inds)
+            diff2 = np.sum(np.abs(cross_corr[corr_inds - shift] - auto_corr2[corr_inds])) / len(corr_inds)
             # Weighted difference (larger unit imposes its difference).
             w_diff = (num1 * diff1 + num2 * diff2) / (num1 + num2)
             corr_diff[unit_ind1, unit_ind2] = w_diff
@@ -350,9 +327,7 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     smooth_kernel = np.exp(-(bins**2) / (2 * sigma_smooth_ms**2))
     smooth_kernel /= np.sum(smooth_kernel)
     smooth_kernel = smooth_kernel[None, None, :]
-    correlograms_smoothed = scipy.signal.fftconvolve(
-        correlograms, smooth_kernel, mode="same", axes=2
-    )
+    correlograms_smoothed = scipy.signal.fftconvolve(correlograms, smooth_kernel, mode="same", axes=2)
 
     return correlograms_smoothed
 
@@ -396,9 +371,7 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     return win_size
 
 
-def compute_templates_diff(
-    sorting, templates, num_channels=5, num_shift=5, pair_mask=None
-):
+def compute_templates_diff(sorting, templates, num_channels=5, num_shift=5, pair_mask=None):
     """
     Computes normalilzed template differences.
 
@@ -436,9 +409,7 @@ def compute_templates_diff(
             template1 = templates[unit_ind1]
             template2 = templates[unit_ind2]
             # take best channels
-            chan_inds = np.argsort(np.max(np.abs(template1 + template2), axis=0))[::-1][
-                :num_channels
-            ]
+            chan_inds = np.argsort(np.max(np.abs(template1 + template2), axis=0))[::-1][:num_channels]
             template1 = template1[:, chan_inds]
             template2 = template2[:, chan_inds]
 
@@ -447,9 +418,7 @@ def compute_templates_diff(
             all_shift_diff = []
             for shift in range(-num_shift, num_shift + 1):
                 temp1 = template1[num_shift : num_samples - num_shift, :]
-                temp2 = template2[
-                    num_shift + shift : num_samples - num_shift + shift, :
-                ]
+                temp2 = template2[num_shift + shift : num_samples - num_shift + shift, :]
                 d = np.sum(np.abs(temp1 - temp2)) / (norm)
                 all_shift_diff.append(d)
             templates_diff[unit_ind1, unit_ind2] = np.min(all_shift_diff)
@@ -510,9 +479,9 @@ def check_improve_contaminations_score(
 
         # make a merged sorting and tale one unit (unit_id1 is used)
         unit_id1, unit_id2 = sorting.unit_ids[ind1], sorting.unit_ids[ind2]
-        sorting_merged = MergeUnitsSorting(
-            sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1]
-        ).select_units([unit_id1])
+        sorting_merged = MergeUnitsSorting(sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1]).select_units(
+            [unit_id1]
+        )
         # make a lazy fake WaveformExtractor to compute contamination and firing rate
         we_new = MockWaveformExtractor(recording, sorting_merged)
 

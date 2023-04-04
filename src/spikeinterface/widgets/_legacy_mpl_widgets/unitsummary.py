@@ -36,9 +36,7 @@ class UnitSummaryWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(
-        self, waveform_extractor, unit_id, unit_colors=None, figure=None, ax=None
-    ):
+    def __init__(self, waveform_extractor, unit_id, unit_colors=None, figure=None, ax=None):
         assert ax is None
         # ~ assert axes is None
 
@@ -87,9 +85,7 @@ class UnitSummaryWidget(BaseWidget):
         ax.set_title(None)
 
         ax = fig.add_subplot(gs[0:2, 3:5])
-        plot_unit_waveform_density_map(
-            we, unit_ids=[self.unit_id], max_channels=1, ax=ax, same_axis=True
-        )
+        plot_unit_waveform_density_map(we, unit_ids=[self.unit_id], max_channels=1, ax=ax, same_axis=True)
         ax.set_ylabel(None)
 
         ax = fig.add_subplot(gs[0:2, 5])
@@ -98,9 +94,7 @@ class UnitSummaryWidget(BaseWidget):
 
         if we.is_extension("spike_amplitudes"):
             ax = fig.add_subplot(gs[-1, 1:])
-            plot_amplitudes_timeseries(
-                we, unit_ids=[self.unit_id], ax=ax, unit_colors=self.unit_colors
-            )
+            plot_amplitudes_timeseries(we, unit_ids=[self.unit_id], ax=ax, unit_colors=self.unit_colors)
             ax.set_ylabel(None)
             ax.set_title(None)
 

@@ -82,9 +82,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
             sampling_frequency=sampling_frequency,
             dtype=cbuffer.dtype,
         )
-        recording_segment = CBinIblRecordingSegment(
-            cbuffer, sampling_frequency, load_sync_channel
-        )
+        recording_segment = CBinIblRecordingSegment(cbuffer, sampling_frequency, load_sync_channel)
         self.add_recording_segment(recording_segment)
 
         self.extra_requirements.append("mtscomp")
@@ -109,9 +107,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
             else:  # NP1.0
                 num_channels_per_adc = 12
 
-            sample_shifts = get_neuropixels_sample_shifts(
-                self.get_num_channels(), num_channels_per_adc
-            )
+            sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_channels_per_adc)
             self.set_property("inter_sample_shift", sample_shifts)
 
         self._kwargs = {
@@ -142,6 +138,4 @@ class CBinIblRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-read_cbin_ibl = define_function_from_class(
-    source_class=CompressedBinaryIblExtractor, name="read_cbin_ibl"
-)
+read_cbin_ibl = define_function_from_class(source_class=CompressedBinaryIblExtractor, name="read_cbin_ibl")

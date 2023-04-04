@@ -50,9 +50,7 @@ def test_BaseSnippets():
     assert snippets.get_num_channels() == num_channels
 
     assert np.all(snippets.ids_to_indices([0, 1, 2]) == [0, 1, 2])
-    assert np.all(
-        snippets.ids_to_indices([0, 1, 2], prefer_slice=True) == slice(0, 3, None)
-    )
+    assert np.all(snippets.ids_to_indices([0, 1, 2], prefer_slice=True) == slice(0, 3, None))
 
     # annotations / properties
     snippets.annotate(gre="ta")
@@ -85,9 +83,7 @@ def test_BaseSnippets():
     )
 
     # int properties without missing values raise an error
-    assert_raises(
-        Exception, snippets.set_property, key="int_property", values=[5, 6], ids=[1, 2]
-    )
+    assert_raises(Exception, snippets.set_property, key="int_property", values=[5, 6], ids=[1, 2])
 
     snippets.set_property("int_property", [5, 6], ids=[1, 2], missing_value=200)
     values = snippets.get_property("int_property")
@@ -120,15 +116,9 @@ def test_BaseSnippets():
     snippets3 = load_extractor(d, base_folder=cache_folder)
 
     # dump/load json
-    snippets.dump_to_json(
-        cache_folder / "test_BaseSnippets_rel.json", relative_to=cache_folder
-    )
-    snippets2 = BaseExtractor.load(
-        cache_folder / "test_BaseSnippets_rel.json", base_folder=cache_folder
-    )
-    snippets3 = load_extractor(
-        cache_folder / "test_BaseSnippets_rel.json", base_folder=cache_folder
-    )
+    snippets.dump_to_json(cache_folder / "test_BaseSnippets_rel.json", relative_to=cache_folder)
+    snippets2 = BaseExtractor.load(cache_folder / "test_BaseSnippets_rel.json", base_folder=cache_folder)
+    snippets3 = load_extractor(cache_folder / "test_BaseSnippets_rel.json", base_folder=cache_folder)
 
     # cache to npy
     folder = cache_folder / "simple_snippets"

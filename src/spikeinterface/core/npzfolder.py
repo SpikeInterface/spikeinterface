@@ -52,6 +52,4 @@ class NpzFolderSorting(NpzSortingExtractor):
         self._npz_kwargs = d["kwargs"]
 
 
-read_npz_folder = define_function_from_class(
-    source_class=NpzFolderSorting, name="read_npz_folder"
-)
+read_npz_folder = define_function_from_class(source_class=NpzFolderSorting, name="read_npz_folder")

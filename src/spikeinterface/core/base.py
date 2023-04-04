@@ -136,9 +136,7 @@ class BaseExtractor:
             if overwrite:
                 self._annotations[annotation_key] = value
             else:
-                raise ValueError(
-                    f"{annotation_key} is already an annotation key. Use 'overwrite=True' to overwrite it"
-                )
+                raise ValueError(f"{annotation_key} is already an annotation key. Use 'overwrite=True' to overwrite it")
 
     def get_preferred_mp_context(self):
         """
@@ -207,19 +205,14 @@ class BaseExtractor:
                     shape = (size,) + values.shape[1:]
 
                     if missing_value is None:
-                        if (
-                            dtype_kind
-                            not in self.default_missing_property_values.keys()
-                        ):
+                        if dtype_kind not in self.default_missing_property_values.keys():
                             raise Exception(
                                 "For values dtypes other than float, string, object or unicode, the missing value "
                                 "cannot be automatically inferred. Please specify it with the 'missing_value' "
                                 "argument."
                             )
                         else:
-                            missing_value = self.default_missing_property_values[
-                                dtype_kind
-                            ]
+                            missing_value = self.default_missing_property_values[dtype_kind]
                     else:
                         assert dtype_kind == np.array(missing_value).dtype.kind, (
                             "Mismatch between values and "
@@ -348,17 +341,13 @@ class BaseExtractor:
             dump_dict["annotations"] = self._annotations
         else:
             # include only main annotations
-            dump_dict["annotations"] = {
-                k: self._annotations.get(k, None) for k in self._main_annotations
-            }
+            dump_dict["annotations"] = {k: self._annotations.get(k, None) for k in self._main_annotations}
 
         if include_properties:
             dump_dict["properties"] = self._properties
         else:
             # include only main properties
-            dump_dict["properties"] = {
-                k: self._properties.get(k, None) for k in self._main_properties
-            }
+            dump_dict["properties"] = {k: self._properties.get(k, None) for k in self._main_properties}
 
         if relative_to is not None:
             relative_to = Path(relative_to).absolute()
@@ -367,9 +356,7 @@ class BaseExtractor:
 
         if folder_metadata is not None:
             if relative_to is not None:
-                folder_metadata = (
-                    Path(folder_metadata).absolute().relative_to(relative_to)
-                )
+                folder_metadata = Path(folder_metadata).absolute().relative_to(relative_to)
             dump_dict["folder_metadata"] = str(folder_metadata)
 
         return dump_dict
@@ -392,9 +379,7 @@ class BaseExtractor:
             The loaded extractor object
         """
         if d["relative_paths"]:
-            assert (
-                base_folder is not None
-            ), "When  relative_paths=True, need to provide base_folder"
+            assert base_folder is not None, "When  relative_paths=True, need to provide base_folder"
             d = _make_paths_absolute(d, base_folder)
         extractor = _load_extractor_from_dict(d)
         folder_metadata = d.get("folder_metadata", None)
@@ -468,9 +453,7 @@ class BaseExtractor:
         folder_path = file_path.parent
         if Path(file_path).suffix == "":
             file_path = folder_path / (str(file_path) + ext)
-        assert (
-            file_path.suffix in extensions
-        ), "'file_path' should have one of the following extensions:" " %s" % (
+        assert file_path.suffix in extensions, "'file_path' should have one of the following extensions:" " %s" % (
             ", ".join(extensions)
         )
         return file_path
@@ -487,13 +470,9 @@ class BaseExtractor:
             If not None, file_paths are serialized relative to this path
         """
         if str(file_path).endswith(".json"):
-            self.dump_to_json(
-                file_path, relative_to=relative_to, folder_metadata=folder_metadata
-            )
+            self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
         elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-            self.dump_to_pickle(
-                file_path, relative_to=relative_to, folder_metadata=folder_metadata
-            )
+            self.dump_to_pickle(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
         else:
             raise ValueError("Dump: file must .json or .pkl")
 
@@ -605,9 +584,7 @@ class BaseExtractor:
             return extractor
 
         else:
-            raise ValueError(
-                "spikeinterface.Base.load() file_path must be an existing folder or file"
-            )
+            raise ValueError("spikeinterface.Base.load() file_path must be an existing folder or file")
 
     def __reduce__(self):
         """
@@ -717,9 +694,7 @@ class BaseExtractor:
         if folder is None:
             cache_folder = get_global_tmp_folder()
             if name is None:
-                name = "".join(
-                    random.choices(string.ascii_uppercase + string.digits, k=8)
-                )
+                name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
                 folder = cache_folder / name
                 if verbose:
                     print(f"Use cache_folder={folder}")
@@ -730,9 +705,7 @@ class BaseExtractor:
                         print(f"Use cache_folder={folder}")
         else:
             folder = Path(folder)
-        assert (
-            not folder.exists()
-        ), f"folder {folder} already exists, choose another name"
+        assert not folder.exists(), f"folder {folder} already exists, choose another name"
         folder.mkdir(parents=True, exist_ok=False)
 
         # dump provenance
@@ -813,9 +786,7 @@ class BaseExtractor:
         if folder is None:
             cache_folder = get_global_tmp_folder()
             if name is None:
-                name = "".join(
-                    random.choices(string.ascii_uppercase + string.digits, k=8)
-                )
+                name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
                 zarr_path = cache_folder / f"{name}.zarr"
                 if verbose:
                     print(f"Use zarr_path={zarr_path}")
@@ -836,9 +807,7 @@ class BaseExtractor:
                 zarr_path_init = zarr_path
 
         if isinstance(zarr_path, Path):
-            assert (
-                not zarr_path.exists()
-            ), f"Path {zarr_path} already exists, choose another name"
+            assert not zarr_path.exists(), f"Path {zarr_path} already exists, choose another name"
 
         zarr_root = zarr.open(zarr_path_init, mode="w", storage_options=storage_options)
 
@@ -886,9 +855,7 @@ def _make_paths_absolute(d, base):
 
 def _check_if_dumpable(d):
     kwargs = d["kwargs"]
-    if np.any(
-        [isinstance(v, dict) and "dumpable" in v.keys() for (k, v) in kwargs.items()]
-    ):
+    if np.any([isinstance(v, dict) and "dumpable" in v.keys() for (k, v) in kwargs.items()]):
         # check nested
         for k, v in kwargs.items():
             if isinstance(v, dict) and "dumpable" in v.keys():
@@ -919,9 +886,7 @@ def _load_extractor_from_dict(dic):
     class_name = dic["class"]
     cls = _get_class_from_string(class_name)
 
-    assert (
-        cls is not None and class_name is not None
-    ), "Could not load spikeinterface class"
+    assert cls is not None and class_name is not None, "Could not load spikeinterface class"
     if not _check_same_version(class_name, dic["version"]):
         print(
             "Versions are not the same. This might lead to errors. Use ",
@@ -963,10 +928,7 @@ def _check_same_version(class_string, version):
     saved_version = parse(version)
 
     try:
-        return (
-            current_version.major == saved_version.major
-            and current_version.minor == saved_version.minor
-        )
+        return current_version.major == saved_version.major and current_version.minor == saved_version.minor
     except AttributeError:
         return "unknown"
 

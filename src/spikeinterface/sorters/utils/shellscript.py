@@ -29,9 +29,7 @@ class ShellScript:
                     n = self._get_num_initial_spaces(line)
                     if n < num_initial_spaces:
                         print(script)
-                        raise Exception(
-                            "Problem in script. First line must not be indented relative to others"
-                        )
+                        raise Exception("Problem in script. First line must not be indented relative to others")
                     lines[ii] = lines[ii][num_initial_spaces:]
         self._script = "\n".join(lines)
         self._script_path = script_path
@@ -79,9 +77,7 @@ class ShellScript:
         else:
             script_log_path = Path(self._log_path)
             if script_path.suffix == "":
-                script_log_path = script_log_path.parent / (
-                    script_log_path.name + ".txt"
-                )
+                script_log_path = script_log_path.parent / (script_log_path.name + ".txt")
 
         self.write(script_path)
         cmd = str(script_path)
@@ -106,9 +102,7 @@ class ShellScript:
     def wait(self, timeout=None) -> Optional[int]:
         if not self.isRunning():
             return self.returnCode()
-        assert (
-            self._process is not None
-        ), "Unexpected self._process is None even though it is running."
+        assert self._process is not None, "Unexpected self._process is None even though it is running."
         try:
             retcode = self._process.wait(timeout=timeout)
             return retcode
@@ -124,9 +118,7 @@ class ShellScript:
     def stop(self) -> None:
         if not self.isRunning():
             return
-        assert (
-            self._process is not None
-        ), "Unexpected self._process is None even though it is running."
+        assert self._process is not None, "Unexpected self._process is None even though it is running."
 
         signals = [signal.SIGINT] * 10 + [signal.SIGTERM] * 10 + [signal.SIGKILL] * 10
 
@@ -142,9 +134,7 @@ class ShellScript:
         if not self.isRunning():
             return
 
-        assert (
-            self._process is not None
-        ), "Unexpected self._process is None even though it is running."
+        assert self._process is not None, "Unexpected self._process is None even though it is running."
         self._process.send_signal(signal.SIGKILL)
         try:
             self._process.wait(timeout=1)
@@ -156,9 +146,7 @@ class ShellScript:
         if not self.isRunning():
             return True
 
-        assert (
-            self._process is not None
-        ), "Unexpected self._process is None even though it is running."
+        assert self._process is not None, "Unexpected self._process is None even though it is running."
         self._process.send_signal(sig)
         try:
             self._process.wait(timeout=timeout)
@@ -188,9 +176,7 @@ class ShellScript:
     def returnCode(self) -> Optional[int]:
         if not self.isFinished():
             raise Exception("Cannot get return code before process is finished.")
-        assert (
-            self._process is not None
-        ), "Unexpected self._process is None even though it is finished."
+        assert self._process is not None, "Unexpected self._process is None even though it is finished."
         return self._process.returncode
 
     def scriptPath(self) -> Optional[str]:
@@ -221,8 +207,4 @@ def _rmdir_with_retries(dirname, num_retries, delay_between_tries=1):
                 print("Retrying to remove directory: {}".format(dirname))
                 time.sleep(delay_between_tries)
             else:
-                raise Exception(
-                    "Unable to remove directory after {} tries: {}".format(
-                        num_retries, dirname
-                    )
-                )
+                raise Exception("Unable to remove directory after {} tries: {}".format(num_retries, dirname))

@@ -85,9 +85,7 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
 
     def __init__(self, file_path, sampling_frequency=None):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        NeoBaseSortingExtractor.__init__(
-            self, sampling_frequency=sampling_frequency, **neo_kwargs
-        )
+        NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, **neo_kwargs)
         self._kwargs.update({"file_path": str(file_path)})
 
     @classmethod
@@ -96,9 +94,7 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
         return neo_kwargs
 
 
-read_blackrock = define_function_from_class(
-    source_class=BlackrockRecordingExtractor, name="read_blackrock"
-)
+read_blackrock = define_function_from_class(source_class=BlackrockRecordingExtractor, name="read_blackrock")
 read_blackrock_sorting = define_function_from_class(
     source_class=BlackrockSortingExtractor, name="read_blackrock_sorting"
 )

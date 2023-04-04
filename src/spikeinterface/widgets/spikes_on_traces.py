@@ -121,9 +121,7 @@ class SpikesOnTracesWidget(BaseWidget):
             if sparsity is None:
                 # in this case, we construct a sparsity dictionary only with the best channel
                 extremum_channel_ids = get_template_extremum_channel(we)
-                unit_id_to_channel_ids = {
-                    u: [ch] for u, ch in extremum_channel_ids.items()
-                }
+                unit_id_to_channel_ids = {u: [ch] for u, ch in extremum_channel_ids.items()}
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
                     unit_id_to_channel_ids=unit_id_to_channel_ids,
                     unit_ids=we.unit_ids,

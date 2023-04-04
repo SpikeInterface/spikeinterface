@@ -73,27 +73,17 @@ class MergeUnitsSorting(BaseSorting):
                         )
             else:
                 # dtype int
-                new_unit_ids = list(
-                    max(parents_unit_ids) + 1 + np.arange(num_merge, dtype=dtype)
-                )
+                new_unit_ids = list(max(parents_unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
         else:
             if np.any(np.in1d(new_unit_ids, keep_unit_ids)):
-                raise ValueError(
-                    "'new_unit_ids' are already exesting in the sorting.unit_ids. Provide new ones"
-                )
+                raise ValueError("'new_unit_ids' are already exesting in the sorting.unit_ids. Provide new ones")
 
-        assert (
-            len(new_unit_ids) == num_merge
-        ), "new_unit_ids must have the same size as units_to_merge"
+        assert len(new_unit_ids) == num_merge, "new_unit_ids must have the same size as units_to_merge"
 
         # some checks
         for ids in units_to_merge:
-            assert all(
-                u in parents_unit_ids for u in ids
-            ), "units to merge are not all in parent"
-        assert properties_policy in ("keep", "remove"), (
-            "properties_policy must be " "keep" " or " "remove" ""
-        )
+            assert all(u in parents_unit_ids for u in ids), "units to merge are not all in parent"
+        assert properties_policy in ("keep", "remove"), "properties_policy must be " "keep" " or " "remove" ""
 
         # new units are put at the end
         units_ids = keep_unit_ids + new_unit_ids
@@ -105,15 +95,11 @@ class MergeUnitsSorting(BaseSorting):
         else:
             rm_dup_delta = int(delta_time_ms / 1000 * sampling_frequency)
         for parent_segment in self._parent_sorting._sorting_segments:
-            sub_segment = MergeUnitsSortingSegment(
-                parent_segment, units_to_merge, new_unit_ids, rm_dup_delta
-            )
+            sub_segment = MergeUnitsSortingSegment(parent_segment, units_to_merge, new_unit_ids, rm_dup_delta)
             self.add_sorting_segment(sub_segment)
 
         ann_keys = parent_sorting._annotations.keys()
-        self._annotations = deepcopy(
-            {k: parent_sorting._annotations[k] for k in ann_keys}
-        )
+        self._annotations = deepcopy({k: parent_sorting._annotations[k] for k in ann_keys})
 
         # copy properties for unchanged units, and check if units propierties are the same
         keep_parent_inds = parent_sorting.ids_to_indices(keep_unit_ids)
@@ -190,9 +176,7 @@ class MergeUnitsSortingSegment(BaseSortingSegment):
                 end_i = len(spike_times)
             return spike_times[start_i:end_i]
         else:
-            spike_times = self._parent_segment.get_unit_spike_train(
-                unit_id, start_frame, end_frame
-            )
+            spike_times = self._parent_segment.get_unit_spike_train(unit_id, start_frame, end_frame)
             return spike_times
 
 
@@ -206,14 +190,10 @@ def get_non_duplicated_events(times_list, delta):
 
     if delta is None:
         return times_concat_sorted
-    membership = np.concatenate(
-        [np.ones(t.shape) * i for i, t in enumerate(times_list)]
-    )
+    membership = np.concatenate([np.ones(t.shape) * i for i, t in enumerate(times_list)])
     membership_sorted = membership[indices]
 
-    inds = np.nonzero(
-        (np.diff(times_concat_sorted) > delta) | (np.diff(membership_sorted) == 0)
-    )[0]
+    inds = np.nonzero((np.diff(times_concat_sorted) > delta) | (np.diff(membership_sorted) == 0))[0]
     # always add the first one and realing counting
     inds = np.concatenate([[0], inds + 1])
     return times_concat_sorted[inds]

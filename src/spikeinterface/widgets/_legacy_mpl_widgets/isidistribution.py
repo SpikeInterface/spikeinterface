@@ -29,9 +29,7 @@ class ISIDistributionWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(
-        self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0, ncols=5, axes=None
-    ):
+    def __init__(self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0, ncols=5, axes=None):
         self._sorting = sorting
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
@@ -66,9 +64,7 @@ class ISIDistributionWidget(BaseWidget):
             for segment_index in range(num_seg):
                 # ~ ax = self.get_tiled_ax(num_ax, nrows, ncols)
                 times_ms = (
-                    self._sorting.get_unit_spike_train(
-                        unit_id=unit_id, segment_index=segment_index
-                    )
+                    self._sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                     / float(self._sampling_frequency)
                     * 1000.0
                 )

@@ -37,9 +37,7 @@ def test_BaseRecording():
 
     file_paths = [cache_folder / f"test_base_recording_{i}.raw" for i in range(num_seg)]
     for i in range(num_seg):
-        a = np.memmap(
-            file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_chan)
-        )
+        a = np.memmap(file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_chan))
         a[:] = np.random.randn(*a.shape).astype(dtype)
     rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
 
@@ -81,9 +79,7 @@ def test_BaseRecording():
     )
 
     # int properties without missing values raise an error
-    assert_raises(
-        Exception, rec.set_property, key="int_property", values=[5, 6], ids=[1, 2]
-    )
+    assert_raises(Exception, rec.set_property, key="int_property", values=[5, 6], ids=[1, 2])
 
     rec.set_property("int_property", [5, 6], ids=[1, 2], missing_value=200)
     values = rec.get_property("int_property")
@@ -112,15 +108,9 @@ def test_BaseRecording():
     rec3 = load_extractor(d, base_folder=cache_folder)
 
     # dump/load json
-    rec.dump_to_json(
-        cache_folder / "test_BaseRecording_rel.json", relative_to=cache_folder
-    )
-    rec2 = BaseExtractor.load(
-        cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder
-    )
-    rec3 = load_extractor(
-        cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder
-    )
+    rec.dump_to_json(cache_folder / "test_BaseRecording_rel.json", relative_to=cache_folder)
+    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
+    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
 
     # cache to binary
     folder = cache_folder / "simple_recording"
@@ -230,9 +220,7 @@ def test_BaseRecording():
         rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15),
         rec_i.get_traces().astype("float"),
     )
-    assert np.allclose(
-        rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float")
-    )
+    assert np.allclose(rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float"))
 
     # test with t_start
     rec = BinaryRecordingExtractor(
@@ -279,9 +267,7 @@ def test_BaseRecording():
 
     # Test save to zarr
     compressor = get_default_zarr_compressor()
-    rec_zarr = rec2.save(
-        format="zarr", folder=cache_folder / "recording", compressor=compressor
-    )
+    rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressor=compressor)
     check_recordings_equal(rec2, rec_zarr, return_scaled=False)
 
     rec_zarr2 = rec2.save(
@@ -301,9 +287,7 @@ def test_BaseRecording():
         rec_u.get_traces(cast_unsigned=False).astype("float") - (2**15),
         rec_i.get_traces().astype("float"),
     )
-    assert np.allclose(
-        rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float")
-    )
+    assert np.allclose(rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float"))
 
 
 if __name__ == "__main__":

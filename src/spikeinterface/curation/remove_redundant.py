@@ -68,16 +68,12 @@ def remove_redundant_units(
         sorting = sorting_or_waveform_extractor.sorting
         we = sorting_or_waveform_extractor
     else:
-        assert (
-            not align
-        ), "The 'align' option is only available when a waveform extractor is used as input"
+        assert not align, "The 'align' option is only available when a waveform extractor is used as input"
         sorting = sorting_or_waveform_extractor
         we = None
 
     if align and unit_peak_shifts is None:
-        assert (
-            we is not None
-        ), "For align=True must give a WaveformExtractor or explicit unit_peak_shifts"
+        assert we is not None, "For align=True must give a WaveformExtractor or explicit unit_peak_shifts"
         unit_peak_shifts = get_template_extremum_channel_peak_shift(we)
 
     if align:
@@ -97,9 +93,7 @@ def remove_redundant_units(
     if remove_strategy in ("minimum_shift", "highest_amplitude"):
         # this is the values at spike index !
         peak_values = get_template_amplitudes(we, peak_sign=peak_sign, mode="at_index")
-        peak_values = {
-            unit_id: np.max(np.abs(values)) for unit_id, values in peak_values.items()
-        }
+        peak_values = {unit_id: np.max(np.abs(values)) for unit_id, values in peak_values.items()}
 
     if remove_strategy == "minimum_shift":
         assert align, "remove_strategy with minimum_shift need align=True"
@@ -144,9 +138,7 @@ def remove_redundant_units(
         return sorting_clean
 
 
-def find_redundant_units(
-    sorting, delta_time: float = 0.4, agreement_threshold=0.2, duplicate_threshold=0.8
-):
+def find_redundant_units(sorting, delta_time: float = 0.4, agreement_threshold=0.2, duplicate_threshold=0.8):
     """
     Finds redundant or duplicate units by comparing the sorting output with itself.
 
@@ -186,9 +178,7 @@ def find_redundant_units(
 
         n_coincidents = comparison.match_event_count.at[unit_i, unit_j]
         event_counts = comparison.event_counts1
-        shared = max(
-            n_coincidents / event_counts[unit_i], n_coincidents / event_counts[unit_j]
-        )
+        shared = max(n_coincidents / event_counts[unit_i], n_coincidents / event_counts[unit_j])
         if shared > duplicate_threshold:
             redundant_unit_pairs.append([unit_i, unit_j])
 

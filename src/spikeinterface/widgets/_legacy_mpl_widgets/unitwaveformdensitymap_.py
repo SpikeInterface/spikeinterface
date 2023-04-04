@@ -66,13 +66,9 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         self.unit_colors = unit_colors
 
         if radius_um is not None:
-            assert (
-                max_channels is None
-            ), "radius_um and max_channels are mutually exclusive"
+            assert max_channels is None, "radius_um and max_channels are mutually exclusive"
         if max_channels is not None:
-            assert (
-                radius_um is None
-            ), "radius_um and max_channels are mutually exclusive"
+            assert radius_um is None, "radius_um and max_channels are mutually exclusive"
 
         self.radius_um = radius_um
         self.max_channels = max_channels
@@ -94,9 +90,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
         # channel sparsity
         if self.radius_um is not None:
-            channel_inds = get_template_channel_sparsity(
-                we, method="radius", outputs="index", radius_um=self.radius_um
-            )
+            channel_inds = get_template_channel_sparsity(we, method="radius", outputs="index", radius_um=self.radius_um)
         elif self.max_channels is not None:
             channel_inds = get_template_channel_sparsity(
                 we,
@@ -106,20 +100,12 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             )
         else:
             # all channels
-            channel_inds = {
-                unit_id: np.arange(len(self.channel_ids)) for unit_id in self.unit_ids
-            }
-        channel_inds = {
-            unit_id: inds
-            for unit_id, inds in channel_inds.items()
-            if unit_id in self.unit_ids
-        }
+            channel_inds = {unit_id: np.arange(len(self.channel_ids)) for unit_id in self.unit_ids}
+        channel_inds = {unit_id: inds for unit_id, inds in channel_inds.items() if unit_id in self.unit_ids}
 
         if self.same_axis:
             # channel union
-            inds = np.unique(
-                np.concatenate([inds.tolist() for inds in channel_inds.values()])
-            )
+            inds = np.unique(np.concatenate([inds.tolist() for inds in channel_inds.values()]))
             channel_inds = {unit_id: inds for unit_id in self.unit_ids}
 
         # bins
@@ -201,9 +187,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
                 channel_id = self.recording.channel_ids[chan_ind]
                 x = i * wfs.shape[1] + wfs.shape[1] // 2
                 y = (bin_max + bin_min) / 2.0
-                ax.text(
-                    x, y, f"chan_id {channel_id}", color="w", ha="center", va="center"
-                )
+                ax.text(x, y, f"chan_id {channel_id}", color="w", ha="center", va="center")
 
             ax.set_xticks([])
             ax.set_ylabel(f"unit_id {unit_id}")

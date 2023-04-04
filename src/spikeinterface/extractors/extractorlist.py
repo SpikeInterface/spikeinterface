@@ -124,15 +124,9 @@ event_extractor_full_list += neo_event_extractors_list
 snippets_extractor_full_list = [NpySnippetsExtractor, WaveClusSnippetsExtractor]
 
 
-recording_extractor_full_dict = {
-    recext.name: recext for recext in recording_extractor_full_list
-}
-sorting_extractor_full_dict = {
-    recext.name: recext for recext in sorting_extractor_full_list
-}
-snippets_extractor_full_dict = {
-    recext.name: recext for recext in snippets_extractor_full_list
-}
+recording_extractor_full_dict = {recext.name: recext for recext in recording_extractor_full_list}
+sorting_extractor_full_dict = {recext.name: recext for recext in sorting_extractor_full_list}
+snippets_extractor_full_dict = {recext.name: recext for recext in snippets_extractor_full_list}
 
 
 def get_recording_extractor_from_name(name: str) -> Type[BaseRecording]:

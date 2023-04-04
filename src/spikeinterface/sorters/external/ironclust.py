@@ -181,9 +181,7 @@ class IronClustSorter(BaseSorter):
         num_timepoints = recording.get_num_frames(segment_index=0)
         duration_minutes = num_timepoints / samplerate / 60
         if verbose:
-            print(
-                f"channels = {num_channels}, timepoints = {num_timepoints}, duration = {duration_minutes} minutes"
-            )
+            print(f"channels = {num_channels}, timepoints = {num_timepoints}, duration = {duration_minutes} minutes")
 
         if verbose:
             print("Creating argfile.txt..")
@@ -285,8 +283,6 @@ class IronClustSorter(BaseSorter):
         with open(samplerate_fname, "r") as f:
             samplerate = float(f.read())
 
-        sorting = MdaSortingExtractor(
-            file_path=result_fname, sampling_frequency=samplerate
-        )
+        sorting = MdaSortingExtractor(file_path=result_fname, sampling_frequency=samplerate)
 
         return sorting

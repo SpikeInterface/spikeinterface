@@ -50,9 +50,7 @@ class RecordingCommonTestSuite(CommonTestSuite):
             nblocks = get_neo_num_blocks(extractor_name, full_path)
             stream_names, stream_ids = get_neo_streams(extractor_name, full_path)
 
-            print(
-                f"Num blocks: {nblocks}, Stream names: {stream_names}, Stream IDs: {stream_ids}"
-            )
+            print(f"Num blocks: {nblocks}, Stream names: {stream_names}, Stream IDs: {stream_ids}")
 
             rec = self.ExtractorClass(full_path, **kwargs)
 
@@ -69,9 +67,7 @@ class RecordingCommonTestSuite(CommonTestSuite):
                 assert full_traces.shape == (num_samples, num_chans)
                 assert full_traces.dtype == dtype
 
-                traces_sample_first = rec.get_traces(
-                    segment_index=segment_index, start_frame=0, end_frame=1
-                )
+                traces_sample_first = rec.get_traces(segment_index=segment_index, start_frame=0, end_frame=1)
                 assert traces_sample_first.shape == (1, num_chans)
                 assert np.all(full_traces[0, :] == traces_sample_first[0, :])
 
@@ -88,13 +84,8 @@ class RecordingCommonTestSuite(CommonTestSuite):
                 assert rec.get_property("gain_to_uV") is not None
                 assert rec.get_property("offset_to_uV") is not None
 
-            if (
-                rec.get_property("gain_to_uV") is not None
-                and rec.get_property("offset_to_uV") is not None
-            ):
-                trace_scaled = rec.get_traces(
-                    segment_index=segment_index, return_scaled=True, end_frame=2
-                )
+            if rec.get_property("gain_to_uV") is not None and rec.get_property("offset_to_uV") is not None:
+                trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True, end_frame=2)
                 assert trace_scaled.dtype == "float32"
 
     def test_neo_annotations(self):
@@ -105,9 +96,7 @@ class RecordingCommonTestSuite(CommonTestSuite):
                 path = entity
                 kwargs = {}
             if hasattr(self.ExtractorClass, "NeoRawIOClass"):
-                rec = self.ExtractorClass(
-                    self.get_full_path(path), all_annotations=True, **kwargs
-                )
+                rec = self.ExtractorClass(self.get_full_path(path), all_annotations=True, **kwargs)
 
     def test_pickling(self):
         for entity in self.entities:
@@ -142,9 +131,7 @@ class SortingCommonTestSuite(CommonTestSuite):
 
             for segment_index in range(num_seg):
                 for unit_id in unit_ids:
-                    st = sorting.get_unit_spike_train(
-                        segment_index=segment_index, unit_id=unit_id
-                    )
+                    st = sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id)
 
     def test_pickling(self):
         for entity in self.entities:
@@ -178,8 +165,6 @@ class EventCommonTestSuite(CommonTestSuite):
 
             for segment_index in range(num_seg):
                 for channel_id in channel_ids:
-                    events = event.get_event_times(
-                        segment_index=segment_index, channel_id=channel_id
-                    )
+                    events = event.get_event_times(segment_index=segment_index, channel_id=channel_id)
                     print(channel_id)
                     print(events)

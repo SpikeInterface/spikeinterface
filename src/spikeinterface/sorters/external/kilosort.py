@@ -144,12 +144,8 @@ class KilosortSorter(KilosortBase, BaseSorter):
         """
 
         # TODO: Check GPU option!
-        ops["GPU"] = params[
-            "useGPU"
-        ]  # whether to run this code on an Nvidia GPU (much faster, mexGPUall first)
-        ops[
-            "parfor"
-        ] = 0.0  # whether to use parfor to accelerate some parts of the algorithm
+        ops["GPU"] = params["useGPU"]  # whether to run this code on an Nvidia GPU (much faster, mexGPUall first)
+        ops["parfor"] = 0.0  # whether to use parfor to accelerate some parts of the algorithm
         ops["verbose"] = 1.0  # whether to print command line progress
         ops["showfigures"] = 0.0  # whether to plot figures during optimization
 
@@ -159,9 +155,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         ops["nNeighPC"] = min(
             12.0, ops["Nchan"]
         )  # visualization only (Phy): number of channnels to mask the PCs, leave empty to skip (12)
-        ops[
-            "nNeigh"
-        ] = 16.0  # visualization only (Phy): number of neighboring templates to retain projections of (16)
+        ops["nNeigh"] = 16.0  # visualization only (Phy): number of neighboring templates to retain projections of (16)
 
         # options for channel whitening
         ops[
@@ -176,15 +170,11 @@ class KilosortSorter(KilosortBase, BaseSorter):
 
         # other options for controlling the model and optimization
         ops["Nrank"] = 3.0  # matrix rank of spike template model (3)
-        ops[
-            "nfullpasses"
-        ] = 6.0  # number of complete passes through data during optimization (6)
+        ops["nfullpasses"] = 6.0  # number of complete passes through data during optimization (6)
         ops["maxFR"] = 20000  # maximum number of spikes to extract per batch (20000)
         ops["fshigh"] = params["freq_min"]  # frequency for high pass filtering
         ops["fslow"] = params["freq_max"]  # frequency for low pass filtering (optional)
-        ops["ntbuff"] = params[
-            "ntbuff"
-        ]  # samples of symmetrical buffer for whitening and spike detection
+        ops["ntbuff"] = params["ntbuff"]  # samples of symmetrical buffer for whitening and spike detection
         ops["scaleproc"] = 200.0  # int16 scaling of whitened data
         ops["NT"] = params["NT"]  # 32*1024+ ops.ntbuff;
         # this is the batch size (try decreasing if out of memory)
@@ -213,9 +203,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         ops["splitT"] = 0.1  # lower threshold for splitting (.1)
 
         ops["initialize"] = "fromData"  # 'fromData' or 'no'
-        ops["spkTh"] = -params[
-            "detect_threshold"
-        ]  # spike threshold in standard deviations (-6)
+        ops["spkTh"] = -params["detect_threshold"]  # spike threshold in standard deviations (-6)
         ops["loc_range"] = [
             3.0,
             1.0,
@@ -226,14 +214,10 @@ class KilosortSorter(KilosortBase, BaseSorter):
         ops["nFiltMax"] = 10000.0  # maximum "unique" spikes to consider (10000)
 
         # options for posthoc merges (under construction)
-        ops[
-            "fracse"
-        ] = 0.1  # binning step along discriminant axis for posthoc merges (in units of sd)
+        ops["fracse"] = 0.1  # binning step along discriminant axis for posthoc merges (in units of sd)
         ops["epu"] = np.Inf
 
-        ops[
-            "ForceMaxRAMforDat"
-        ] = 20e9  # maximum RAM the algorithm will try to use; on Windows it will autodetect.
+        ops["ForceMaxRAMforDat"] = 20e9  # maximum RAM the algorithm will try to use; on Windows it will autodetect.
 
         ## option for wavelength
         ops["nt0"] = params[

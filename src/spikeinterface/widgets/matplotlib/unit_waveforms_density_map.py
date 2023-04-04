@@ -68,9 +68,7 @@ class UnitWaveformDensityMapPlotter(MplPlotter):
                 channel_id = dp.channel_ids[chan_ind]
                 x = i * dp.template_width + dp.template_width // 2
                 y = (dp.bin_max + dp.bin_min) / 2.0
-                ax.text(
-                    x, y, f"chan_id {channel_id}", color="w", ha="center", va="center"
-                )
+                ax.text(x, y, f"chan_id {channel_id}", color="w", ha="center", va="center")
 
             ax.set_xticks([])
             ax.set_ylabel(f"unit_id {unit_id}")

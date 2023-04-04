@@ -180,9 +180,7 @@ class SlidingNNClustering:
         channel_distance = get_channel_distances(recording)
 
         # get nearest neighbors of channels
-        channel_neighbors = np.argsort(channel_distance, axis=1)[
-            :, : d["n_channel_neighbors"]
-        ]
+        channel_neighbors = np.argsort(channel_distance, axis=1)[:, : d["n_channel_neighbors"]]
 
         # divide the recording into chunks of time_window_s seconds
         n_chunks = int(np.ceil(n_frames / time_window_frames))
@@ -282,20 +280,14 @@ class SlidingNNClustering:
             if chunk == n_chunks - 1:
                 nn_index_array[peaks_in_chunk_idx[idx_next], 1] = knn_indices[idx_next]
                 # repeat for distances
-                nn_distance_array[peaks_in_chunk_idx[idx_next], 1] = knn_distances[
-                    idx_next
-                ]
+                nn_distance_array[peaks_in_chunk_idx[idx_next], 1] = knn_distances[idx_next]
 
             # create embedding
             if d["create_embedding"]:
                 if d["verbose"]:
-                    print(
-                        "Computing MDE embeddings: {}".format(datetime.datetime.now())
-                    )
+                    print("Computing MDE embeddings: {}".format(datetime.datetime.now()))
 
-                chunk_csr = construct_symmetric_graph_from_idx_vals(
-                    knn_indices, knn_distances
-                )
+                chunk_csr = construct_symmetric_graph_from_idx_vals(knn_indices, knn_distances)
                 # number of current embeddings
                 n_cur = np.sum(idx_cur)
 
@@ -312,9 +304,7 @@ class SlidingNNClustering:
                         prev_idx=None,
                         mde_device=d["mde_device"],
                         embedding_dim=d["embedding_dim"],
-                        negative_to_positive_samples=d[
-                            "mde_negative_to_positive_samples"
-                        ],
+                        negative_to_positive_samples=d["mde_negative_to_positive_samples"],
                     )
                 else:
                     embeddings_chunk = embed_graph(
@@ -323,18 +313,14 @@ class SlidingNNClustering:
                         prev_idx=np.arange(n_cur),
                         mde_device=d["mde_device"],
                         embedding_dim=d["embedding_dim"],
-                        negative_to_positive_samples=d[
-                            "mde_negative_to_positive_samples"
-                        ],
+                        negative_to_positive_samples=d["mde_negative_to_positive_samples"],
                     )
                 embeddings_all[peaks_in_chunk_idx[idx_next]] = embeddings_chunk[n_cur:]
 
                 # cluster embedding
                 if d["cluster_embedding"]:
                     print(
-                        "Clustering MDE embeddings (n={}): {}".format(
-                            embeddings_chunk.shape, datetime.datetime.now()
-                        )
+                        "Clustering MDE embeddings (n={}): {}".format(embeddings_chunk.shape, datetime.datetime.now())
                     )
                     # TODO HDBSCAN can be done on GPU with NVIDIA RAPIDS for speed
                     clusterer = hdbscan.HDBSCAN(
@@ -345,13 +331,13 @@ class SlidingNNClustering:
 
                     # set cluster labels and probabilities for this chunk
                     # put new clusters in first row
-                    clusters[
-                        peaks_in_chunk_idx[peaks_in_chunk_idx > end_last], 0
-                    ] = clusterer.labels_[peaks_in_chunk_idx > end_last]
+                    clusters[peaks_in_chunk_idx[peaks_in_chunk_idx > end_last], 0] = clusterer.labels_[
+                        peaks_in_chunk_idx > end_last
+                    ]
                     # put overlapping neighbors from previous in second row
-                    clusters[
-                        peaks_in_chunk_idx[peaks_in_chunk_idx <= end_last], 1
-                    ] = clusterer.labels_[peaks_in_chunk_idx <= end_last]
+                    clusters[peaks_in_chunk_idx[peaks_in_chunk_idx <= end_last], 1] = clusterer.labels_[
+                        peaks_in_chunk_idx <= end_last
+                    ]
                     # repeat for cluster probabilities
                     cluster_probabilities[
                         peaks_in_chunk_idx[peaks_in_chunk_idx > end_last], 0
@@ -430,9 +416,7 @@ if HAVE_NUMBA:
 
 
 # HACK: this function only exists because I couldn't get the spikeinterface one to work...
-def retrieve_padded_trace(
-    recording, start_frame, end_frame, margin_frames, channel_ids=None
-):
+def retrieve_padded_trace(recording, start_frame, end_frame, margin_frames, channel_ids=None):
     """Grabs a chunk of recording trace, with padding
     NOTE: I tried using the built in spikeinterface function for this but
     recieved an error.
@@ -452,9 +436,7 @@ def retrieve_padded_trace(
     _pre = np.max([0, start_frame - margin_frames])
     _post = np.min([n_frames, end_frame + margin_frames])
 
-    traces = recording.get_traces(
-        start_frame=_pre, end_frame=_post, channel_ids=channel_ids
-    )
+    traces = recording.get_traces(start_frame=_pre, end_frame=_post, channel_ids=channel_ids)
     # append zeros if this chunk exists near the border
     if _pre < margin_frames:
         traces = np.vstack([np.zeros((margin_frames - _pre, traces.shape[1])), traces])
@@ -492,14 +474,10 @@ def get_chunk_spike_waveforms(
         peaks_in_chunk_idx: index of spikes in this chunk
     """
     # grab the trace
-    traces = retrieve_padded_trace(
-        recording, start_frame, end_frame, margin_frames, channel_ids=None
-    )
+    traces = retrieve_padded_trace(recording, start_frame, end_frame, margin_frames, channel_ids=None)
 
     # find the peaks that exist in this sample
-    peaks_in_chunk_mask = (peaks["sample_ind"] >= start_frame) & (
-        peaks["sample_ind"] <= end_frame
-    )
+    peaks_in_chunk_mask = (peaks["sample_ind"] >= start_frame) & (peaks["sample_ind"] <= end_frame)
 
     # get the peaks in this chunk
     peaks_chunk = peaks[peaks_in_chunk_mask]
@@ -522,14 +500,10 @@ def get_chunk_spike_waveforms(
     all_chan_idx = np.zeros((len(peaks_chunk), n_channel_neighbors))
 
     # for each spike in the sample, add it to the
-    for spike_i, (sample_ind, channel_ind, amplitude, segment_ind) in enumerate(
-        peaks_chunk
-    ):
+    for spike_i, (sample_ind, channel_ind, amplitude, segment_ind) in enumerate(peaks_chunk):
         spike_start = sample_ind + margin_frames - spike_pre_frames - start_frame
         spike_end = sample_ind + margin_frames + spike_post_frames - start_frame
-        all_spikes[spike_i] = traces[
-            spike_start:spike_end, channel_neighbors[channel_ind]
-        ].T
+        all_spikes[spike_i] = traces[spike_start:spike_end, channel_neighbors[channel_ind]].T
         all_chan_idx[spike_i] = channel_neighbors[channel_ind]
 
     return all_spikes, all_chan_idx, peaks_in_chunk_idx
@@ -565,9 +539,7 @@ def get_spike_nearest_neighbors(
         return l
 
     # flatten spikes
-    all_spikes_flat = np.reshape(
-        all_spikes, (len(all_spikes), np.product(all_spikes.shape[1:]))
-    )
+    all_spikes_flat = np.reshape(all_spikes, (len(all_spikes), np.product(all_spikes.shape[1:])))
 
     # add channel indices to channel values (for graph construction)
     all_spikes_flat = np.hstack([all_chan_idx, all_spikes_flat])
@@ -608,9 +580,7 @@ def get_spike_nearest_neighbors(
     return knn_indices, knn_distances
 
 
-def merge_nn_dicts(
-    peaks, n_neighbors, peaks_in_chunk_idx_list, knn_indices_list, knn_distances_list
-):
+def merge_nn_dicts(peaks, n_neighbors, peaks_in_chunk_idx_list, knn_indices_list, knn_distances_list):
     """merge together peaks_in_chunk_idx_list and knn_indices_list
     to build final graph
 
@@ -636,21 +606,21 @@ def merge_nn_dicts(
         zip(peaks_in_chunk_idx_list, knn_indices_list, knn_distances_list)
     ):
         # put new neighbors in first 5 rows
-        nn_index_array[
-            peaks_in_chunk_idx[peaks_in_chunk_idx > end_last], :n_neighbors
-        ] = knn_indices[peaks_in_chunk_idx > end_last]
+        nn_index_array[peaks_in_chunk_idx[peaks_in_chunk_idx > end_last], :n_neighbors] = knn_indices[
+            peaks_in_chunk_idx > end_last
+        ]
         # put overlapping neighbors from previous
-        nn_index_array[
-            peaks_in_chunk_idx[peaks_in_chunk_idx <= end_last], n_neighbors:
-        ] = knn_indices[peaks_in_chunk_idx <= end_last]
+        nn_index_array[peaks_in_chunk_idx[peaks_in_chunk_idx <= end_last], n_neighbors:] = knn_indices[
+            peaks_in_chunk_idx <= end_last
+        ]
 
         # repeat for distances
-        nn_distance_array[
-            peaks_in_chunk_idx[peaks_in_chunk_idx > end_last], :n_neighbors
-        ] = knn_distances[peaks_in_chunk_idx > end_last]
-        nn_distance_array[
-            peaks_in_chunk_idx[peaks_in_chunk_idx <= end_last], n_neighbors:
-        ] = knn_distances[peaks_in_chunk_idx <= end_last]
+        nn_distance_array[peaks_in_chunk_idx[peaks_in_chunk_idx > end_last], :n_neighbors] = knn_distances[
+            peaks_in_chunk_idx > end_last
+        ]
+        nn_distance_array[peaks_in_chunk_idx[peaks_in_chunk_idx <= end_last], n_neighbors:] = knn_distances[
+            peaks_in_chunk_idx <= end_last
+        ]
         # double up neighbors the beginning, since we only sample these once
 
         if idxi == 0:
@@ -658,13 +628,13 @@ def merge_nn_dicts(
             nn_distance_array[peaks_in_chunk_idx, n_neighbors:] = knn_distances
         # double up neighbors in the end, since we only sample these once
         if idxi == len(peaks_in_chunk_idx_list) - 1:
-            nn_index_array[
-                peaks_in_chunk_idx[peaks_in_chunk_idx > end_last], n_neighbors:
-            ] = knn_indices[peaks_in_chunk_idx > end_last]
+            nn_index_array[peaks_in_chunk_idx[peaks_in_chunk_idx > end_last], n_neighbors:] = knn_indices[
+                peaks_in_chunk_idx > end_last
+            ]
             # repeat for distances
-            nn_distance_array[
-                peaks_in_chunk_idx[peaks_in_chunk_idx > end_last], n_neighbors:
-            ] = knn_distances[peaks_in_chunk_idx > end_last]
+            nn_distance_array[peaks_in_chunk_idx[peaks_in_chunk_idx > end_last], n_neighbors:] = knn_distances[
+                peaks_in_chunk_idx > end_last
+            ]
 
         end_last = peaks_in_chunk_idx[-1]
     return nn_index_array, nn_distance_array
@@ -706,9 +676,7 @@ def embed_graph(
     if prev_embeddings is not None:
         anchor_constraint = pymde.Anchored(
             anchors=torch.tensor(prev_idx, device=mde_device),
-            values=torch.tensor(
-                prev_embeddings, dtype=torch.float32, device=mde_device
-            ),
+            values=torch.tensor(prev_embeddings, dtype=torch.float32, device=mde_device),
         )
     else:
         anchor_constraint = None
@@ -731,14 +699,10 @@ def embed_graph(
 
     # sample a set of dissimilar edges
     n_dis = int(len(similar_edges) * negative_to_positive_samples)
-    dissimilar_edges = pymde.preprocess.dissimilar_edges(
-        n_items=n_items, num_edges=n_dis, similar_edges=similar_edges
-    )
+    dissimilar_edges = pymde.preprocess.dissimilar_edges(n_items=n_items, num_edges=n_dis, similar_edges=similar_edges)
     # created a list of weights for similar and dissimilar edges
     edges = torch.cat([similar_edges, dissimilar_edges])
-    weights = torch.cat(
-        [knn_graph.weights, -1.0 * torch.ones(dissimilar_edges.shape[0])]
-    )
+    weights = torch.cat([knn_graph.weights, -1.0 * torch.ones(dissimilar_edges.shape[0])])
 
     # create a distortion penalty
     f = pymde.penalties.PushAndPull(

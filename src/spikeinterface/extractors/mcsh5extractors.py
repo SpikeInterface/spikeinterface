@@ -32,7 +32,9 @@ class MCSH5RecordingExtractor(BaseRecording):
     extractor_name = "MCSH5Recording"
     installed = HAVE_MCSH5  # check at class level if installed or not
     mode = "file"
-    installation_mesg = "To use the MCSH5RecordingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
+    installation_mesg = (
+        "To use the MCSH5RecordingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
+    )
     name = "mcsh5"
 
     def __init__(self, file_path, stream_id=0):
@@ -80,37 +82,25 @@ class MCSH5RecordingSegment(BaseRecordingSegment):
         self._rf = rf
         self._stream_id = stream_id
         self._num_samples = int(num_frames)
-        self._stream = self._rf.require_group(
-            "/Data/Recording_0/AnalogStream/Stream_" + str(self._stream_id)
-        )
+        self._stream = self._rf.require_group("/Data/Recording_0/AnalogStream/Stream_" + str(self._stream_id))
 
     def get_num_samples(self):
         return self._num_samples
 
     def get_traces(self, start_frame=None, end_frame=None, channel_indices=None):
         if isinstance(channel_indices, slice):
-            traces = self._stream.get("ChannelData")[
-                channel_indices, start_frame:end_frame
-            ].T
+            traces = self._stream.get("ChannelData")[channel_indices, start_frame:end_frame].T
         else:
             # channel_indices is np.ndarray
-            if np.array(channel_indices).size > 1 and np.any(
-                np.diff(channel_indices) < 0
-            ):
+            if np.array(channel_indices).size > 1 and np.any(np.diff(channel_indices) < 0):
                 # get around h5py constraint that it does not allow datasets
                 # to be indexed out of order
                 sorted_channel_indices = np.sort(channel_indices)
-                resorted_indices = np.array(
-                    [list(sorted_channel_indices).index(ch) for ch in channel_indices]
-                )
-                recordings = self._stream.get("ChannelData")[
-                    sorted_channel_indices, start_frame:end_frame
-                ].T
+                resorted_indices = np.array([list(sorted_channel_indices).index(ch) for ch in channel_indices])
+                recordings = self._stream.get("ChannelData")[sorted_channel_indices, start_frame:end_frame].T
                 traces = recordings[:, resorted_indices]
             else:
-                traces = self._stream.get("ChannelData")[
-                    channel_indices, start_frame:end_frame
-                ].T
+                traces = self._stream.get("ChannelData")[channel_indices, start_frame:end_frame].T
 
         return traces
 
@@ -120,9 +110,7 @@ def openMCSH5File(filename, stream_id):
     rf = h5py.File(filename, "r")
 
     stream_name = "Stream_" + str(stream_id)
-    analog_stream_names = list(
-        rf.require_group("/Data/Recording_0/AnalogStream").keys()
-    )
+    analog_stream_names = list(rf.require_group("/Data/Recording_0/AnalogStream").keys())
     assert stream_name in analog_stream_names, (
         f"Specified stream does not exist. " f"Available streams: {analog_stream_names}"
     )
@@ -141,27 +129,20 @@ def openMCSH5File(filename, stream_id):
 
     nRecCh, nFrames = data.shape
     channel_ids = [f"Ch{ch}" for ch in info["ChannelID"]]
-    assert len(np.unique(channel_ids)) == len(
-        channel_ids
-    ), "Duplicate MCS channel IDs found"
+    assert len(np.unique(channel_ids)) == len(channel_ids), "Duplicate MCS channel IDs found"
     electrodeLabels = [l.decode() for l in info["Label"]]
 
-    assert (
-        timestamps[0][0] < timestamps[0][2]
-    ), "Please check the validity of 'ChannelDataTimeStamps' in the stream."
+    assert timestamps[0][0] < timestamps[0][2], "Please check the validity of 'ChannelDataTimeStamps' in the stream."
     TimeVals = np.arange(timestamps[0][0], timestamps[0][2] + 1, 1) * Tick
 
     if Unit != b"V":
-        print(
-            f"Unexpected units found, expected volts, found {Unit.decode('UTF-8')}. Assuming Volts."
-        )
+        print(f"Unexpected units found, expected volts, found {Unit.decode('UTF-8')}. Assuming Volts.")
 
     timestep_avg = np.mean(TimeVals[1:] - TimeVals[0:-1])
     timestep_min = np.min(TimeVals[1:] - TimeVals[0:-1])
     timestep_max = np.min(TimeVals[1:] - TimeVals[0:-1])
     assert all(
-        np.abs(np.array((timestep_min, timestep_max)) - timestep_avg) / timestep_avg
-        < 1e-6
+        np.abs(np.array((timestep_min, timestep_max)) - timestep_avg) / timestep_avg < 1e-6
     ), "Time steps vary by more than 1 ppm"
     samplingRate = 1.0 / timestep_avg
 
@@ -179,6 +160,4 @@ def openMCSH5File(filename, stream_id):
     return mcs_info
 
 
-read_mcsh5 = define_function_from_class(
-    source_class=MCSH5RecordingExtractor, name="read_mcsh5"
-)
+read_mcsh5 = define_function_from_class(source_class=MCSH5RecordingExtractor, name="read_mcsh5")

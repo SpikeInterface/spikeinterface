@@ -47,9 +47,7 @@ class CrossCorrelogramsWidget(BaseWidget):
             ccgs, bins = ccc.get_data()
         else:
             sorting = waveform_or_sorting_extractor
-            ccgs, bins = compute_correlograms(
-                sorting, window_ms=window_ms, bin_ms=bin_ms
-            )
+            ccgs, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms)
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids

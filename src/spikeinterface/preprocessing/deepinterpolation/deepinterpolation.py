@@ -74,9 +74,7 @@ def define_input_generator_class(use_gpu, disable_tf_logger=True):
             self.end_frame = end_frame
 
             self.batch_size = batch_size
-            self.last_batch_size = (end_frame - start_frame) - (
-                self.__len__() - 1
-            ) * batch_size
+            self.last_batch_size = (end_frame - start_frame) - (self.__len__() - 1) * batch_size
 
             self.pre_frames = pre_frames
             self.post_frames = post_frames
@@ -91,18 +89,8 @@ def define_input_generator_class(use_gpu, disable_tf_logger=True):
         def __getitem__(self, idx):
             n_batches = self.__len__()
             if idx < n_batches - 1:
-                start_frame = (
-                    self.start_frame
-                    + self.batch_size * idx
-                    - self.pre_frames
-                    - self.pre_post_omission
-                )
-                end_frame = (
-                    self.start_frame
-                    + self.batch_size * (idx + 1)
-                    + self.post_frames
-                    + self.pre_post_omission
-                )
+                start_frame = self.start_frame + self.batch_size * idx - self.pre_frames - self.pre_post_omission
+                end_frame = self.start_frame + self.batch_size * (idx + 1) + self.post_frames + self.pre_post_omission
                 traces = self.recording.get_traces(
                     start_frame=start_frame,
                     end_frame=end_frame,
@@ -110,12 +98,7 @@ def define_input_generator_class(use_gpu, disable_tf_logger=True):
                 )
                 batch_size = self.batch_size
             else:
-                start_frame = (
-                    self.end_frame
-                    - self.last_batch_size
-                    - self.pre_frames
-                    - self.pre_post_omission
-                )
+                start_frame = self.end_frame - self.last_batch_size - self.pre_frames - self.pre_post_omission
                 end_frame = self.end_frame + self.post_frames + self.pre_post_omission
                 traces = self.recording.get_traces(
                     start_frame=start_frame,
@@ -127,20 +110,18 @@ def define_input_generator_class(use_gpu, disable_tf_logger=True):
             shape = (traces.shape[0], int(384 / 2), 2)
             traces = np.reshape(traces, newshape=shape)
 
-            di_input = np.zeros(
-                (batch_size, 384, 2, self.pre_frames + self.post_frames)
-            )
+            di_input = np.zeros((batch_size, 384, 2, self.pre_frames + self.post_frames))
             di_label = np.zeros((batch_size, 384, 2, 1))
             for index_frame in range(
                 self.pre_frames + self.pre_post_omission,
                 batch_size + self.pre_frames + self.pre_post_omission,
             ):
-                di_input[
-                    index_frame - self.pre_frames - self.pre_post_omission
-                ] = self.reshape_input_forward(index_frame, traces)
-                di_label[
-                    index_frame - self.pre_frames - self.pre_post_omission
-                ] = self.reshape_label_forward(traces[index_frame])
+                di_input[index_frame - self.pre_frames - self.pre_post_omission] = self.reshape_input_forward(
+                    index_frame, traces
+                )
+                di_label[index_frame - self.pre_frames - self.pre_post_omission] = self.reshape_label_forward(
+                    traces[index_frame]
+                )
             return (di_input, di_label)
 
         def reshape_input_forward(self, index_frame, raw_data):
@@ -163,9 +144,7 @@ def define_input_generator_class(use_gpu, disable_tf_logger=True):
             nb_probes = 384
 
             # We reorganize to follow true geometry of probe for convolution
-            input_full = np.zeros(
-                [1, nb_probes, 2, self.pre_frames + self.post_frames], dtype="float32"
-            )
+            input_full = np.zeros([1, nb_probes, 2, self.pre_frames + self.post_frames], dtype="float32")
 
             input_index = np.arange(
                 index_frame - self.pre_frames - self.pre_post_omission,
@@ -185,9 +164,7 @@ def define_input_generator_class(use_gpu, disable_tf_logger=True):
             even = np.arange(0, nb_probes, 2)
             odd = even + 1
 
-            data_img_input = (
-                data_img_input.astype("float32") - self.local_mean
-            ) / self.local_std
+            data_img_input = (data_img_input.astype("float32") - self.local_mean) / self.local_std
 
             input_full[0, even, 0, :] = data_img_input[:, 0, :]
             input_full[0, odd, 1, :] = data_img_input[:, 1, :]
@@ -217,9 +194,7 @@ def define_input_generator_class(use_gpu, disable_tf_logger=True):
             even = np.arange(0, nb_probes, 2)
             odd = even + 1
 
-            data_img_input = (
-                data_img_input.astype("float32") - self.local_mean
-            ) / self.local_std
+            data_img_input = (data_img_input.astype("float32") - self.local_mean) / self.local_std
 
             input_full[0, even, 0, :] = data_img_input[:, 0, :]
             input_full[0, odd, 1, :] = data_img_input[:, 1, :]
@@ -278,9 +253,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
         random_chunk_kwargs: keyword arguments for get_random_data_chunks
         """
 
-        assert has_tf(
-            use_gpu, disable_tf_logger
-        ), "To use DeepInterpolation, you first need to install `tensorflow`."
+        assert has_tf(use_gpu, disable_tf_logger), "To use DeepInterpolation, you first need to install `tensorflow`."
         assert recording.get_num_channels() <= 384, (
             "DeepInterpolation only works on Neuropixels 1.0-like "
             "recordings with 384 channels. This recording has too many "
@@ -304,8 +277,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
         config = self.model.get_config()
         input_shape = config["layers"][0]["config"]["batch_input_shape"]
         assert input_shape[-1] == pre_frames + post_frames, (
-            "The sum of `pre_frames` and `post_frames` must match "
-            "the last dimension of the model."
+            "The sum of `pre_frames` and `post_frames` must match " "the last dimension of the model."
         )
 
         local_data = get_random_data_chunks(recording, **random_chunk_kwargs)
@@ -370,9 +342,7 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         self.use_gpu = use_gpu
 
         # creating class dynamically to use the imported TF with GPU enabled/disabled based on the use_gpu flag
-        self.DeepInterpolationInputGenerator = define_input_generator_class(
-            use_gpu, disable_tf_logger
-        )
+        self.DeepInterpolationInputGenerator = define_input_generator_class(use_gpu, disable_tf_logger)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         n_frames = self.parent_recording_segment.get_num_samples()
@@ -456,6 +426,4 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-deepinterpolate = define_function_from_class(
-    source_class=DeepInterpolatedRecording, name="deepinterpolate"
-)
+deepinterpolate = define_function_from_class(source_class=DeepInterpolatedRecording, name="deepinterpolate")

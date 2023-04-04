@@ -41,9 +41,7 @@ class TridesclousSortingExtractor(BaseSorting):
         if chan_grp is None:
             # if chan_grp is not provided, take the first one if unique
             chan_grps = list(dataio.channel_groups.keys())
-            assert (
-                len(chan_grps) == 1
-            ), "There are several groups in the folder, specify chan_grp=..."
+            assert len(chan_grps) == 1, "There are several groups in the folder, specify chan_grp=..."
             chan_grp = chan_grps[0]
 
         catalogue = dataio.load_catalogue(name="initial", chan_grp=chan_grp)
@@ -57,9 +55,7 @@ class TridesclousSortingExtractor(BaseSorting):
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         for seg_num in range(dataio.nb_segment):
             # load all spike in memory (this avoid to lock the folder with memmap throug dataio
-            all_spikes = dataio.get_spikes(
-                seg_num=seg_num, chan_grp=chan_grp, i_start=None, i_stop=None
-            ).copy()
+            all_spikes = dataio.get_spikes(seg_num=seg_num, chan_grp=chan_grp, i_start=None, i_stop=None).copy()
             self.add_sorting_segment(TridesclousSortingSegment(all_spikes))
 
         self._kwargs = {
@@ -85,6 +81,4 @@ class TridesclousSortingSegment(BaseSortingSegment):
         return spike_times.copy()
 
 
-read_tridesclous = define_function_from_class(
-    source_class=TridesclousSortingExtractor, name="read_tridesclous"
-)
+read_tridesclous = define_function_from_class(source_class=TridesclousSortingExtractor, name="read_tridesclous")

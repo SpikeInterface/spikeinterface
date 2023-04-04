@@ -63,9 +63,7 @@ class FilterOpenCLRecording(BasePreprocessor):
             Wn = float(band) / sf * 2
         N = filter_order
 
-        coefficients = scipy.signal.iirfilter(
-            N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode
-        )
+        coefficients = scipy.signal.iirfilter(N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode)
 
         BasePreprocessor.__init__(self, recording)
 
@@ -77,9 +75,7 @@ class FilterOpenCLRecording(BasePreprocessor):
         executor = OpenCLFilterExecutor(coefficients, num_channels, dtype, margin)
 
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(
-                FilterOpenCLRecordingSegment(parent_segment, executor, margin)
-            )
+            self.add_recording_segment(FilterOpenCLRecordingSegment(parent_segment, executor, margin))
 
         self._kwargs = dict(
             recording=recording,
@@ -100,9 +96,7 @@ class FilterOpenCLRecordingSegment(BasePreprocessorSegment):
         self.margin = margin
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        assert (
-            start_frame is not None
-        ), "FilterOpenCLRecording work with fixed chunk_size"
+        assert start_frame is not None, "FilterOpenCLRecording work with fixed chunk_size"
         assert end_frame is not None, "FilterOpenCLRecording work with fixed chunk_size"
 
         chunk_size = end_frame - start_frame
@@ -158,9 +152,7 @@ class OpenCLFilterExecutor:
         self.ctx = pyopencl.create_some_context(interactive=False)
         # print(self.ctx)
         self.queue = pyopencl.CommandQueue(self.ctx)
-        self.max_wg_size = self.ctx.devices[0].get_info(
-            pyopencl.device_info.MAX_WORK_GROUP_SIZE
-        )
+        self.max_wg_size = self.ctx.devices[0].get_info(pyopencl.device_info.MAX_WORK_GROUP_SIZE)
 
         self.chunk_size = None
         self.full_size = None
@@ -170,9 +162,7 @@ class OpenCLFilterExecutor:
 
         if traces.shape[0] != self.full_size:
             if self.full_size is not None:
-                print(
-                    f"Warning : chunk_size have change {self.chunk_size} {traces.shape[0]}, need recompile CL!!!"
-                )
+                print(f"Warning : chunk_size have change {self.chunk_size} {traces.shape[0]}, need recompile CL!!!")
             self.create_buffers_and_compile()
 
         event = pyopencl.enqueue_copy(self.queue, self.input_cl, traces)
@@ -204,15 +194,9 @@ class OpenCLFilterExecutor:
         self.output = np.zeros((self.full_size, self.num_channels), dtype=self.dtype)
 
         # GPU buffers
-        self.coefficients_cl = pyopencl.Buffer(
-            self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.coefficients
-        )
-        self.zi1_cl = pyopencl.Buffer(
-            self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=self.zi1
-        )
-        self.zi2_cl = pyopencl.Buffer(
-            self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=self.zi2
-        )
+        self.coefficients_cl = pyopencl.Buffer(self.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.coefficients)
+        self.zi1_cl = pyopencl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=self.zi1)
+        self.zi2_cl = pyopencl.Buffer(self.ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=self.zi2)
         self.input_cl = pyopencl.Buffer(self.ctx, mf.READ_WRITE, size=buffer_nbytes)
         self.output_cl = pyopencl.Buffer(self.ctx, mf.READ_WRITE, size=buffer_nbytes)
 

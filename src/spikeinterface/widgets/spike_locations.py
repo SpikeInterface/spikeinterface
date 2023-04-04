@@ -62,9 +62,7 @@ class SpikeLocationsWidget(BaseWidget):
         probegroup = waveform_extractor.get_probegroup()
 
         if sorting.get_num_segments() > 1:
-            assert (
-                segment_index is not None
-            ), "Specify segment index for multi-segment object"
+            assert segment_index is not None, "Specify segment index for multi-segment object"
         else:
             segment_index = 0
 
@@ -81,9 +79,7 @@ class SpikeLocationsWidget(BaseWidget):
             spike_locs = dict()
             for unit, locs_unit in all_spike_locs.items():
                 if len(locs_unit) > max_spikes_per_unit:
-                    random_idxs = np.random.choice(
-                        len(locs_unit), size=max_spikes_per_unit, replace=False
-                    )
+                    random_idxs = np.random.choice(len(locs_unit), size=max_spikes_per_unit, replace=False)
                     spike_locs[unit] = locs_unit[random_idxs]
                 else:
                     spike_locs[unit] = locs_unit

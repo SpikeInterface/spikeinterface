@@ -44,6 +44,8 @@ include = ["spikeinterface*"]
 namespaces = false
 exclude = ["spikeinterface.*.tests"]
 
+[tool.black]
+line-length = 120
 
 [project.urls]
 homepage = "https://github.com/SpikeInterface/spikeinterface"

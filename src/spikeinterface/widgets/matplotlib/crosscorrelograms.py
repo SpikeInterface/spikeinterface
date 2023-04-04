@@ -29,9 +29,7 @@ class CrossCorrelogramsPlotter(MplPlotter):
                         color = dp.unit_colors[unit_id1]
                 else:
                     color = "k"
-                ax.bar(
-                    x=bins[:-1], height=ccg, width=bin_width, color=color, align="edge"
-                )
+                ax.bar(x=bins[:-1], height=ccg, width=bin_width, color=color, align="edge")
 
         for i, unit_id in enumerate(unit_ids):
             self.axes[0, i].set_title(str(unit_id))

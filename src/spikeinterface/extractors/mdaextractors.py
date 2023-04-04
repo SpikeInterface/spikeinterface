@@ -123,8 +123,7 @@ class MdaRecordingExtractor(BaseRecording):
         """
         job_kwargs = fix_job_kwargs(job_kwargs)
         assert recording.get_num_segments() == 1, (
-            "MdaRecording.write_recording() can only write a single segment "
-            "recording"
+            "MdaRecording.write_recording() can only write a single segment " "recording"
         )
         save_path = Path(save_path)
         save_path.mkdir(parents=True, exist_ok=True)
@@ -221,9 +220,7 @@ class MdaSortingExtractor(BaseSorting):
         firings = readmda(str(file_path))
         labels = firings[2, :]
         unit_ids = np.unique(labels).astype(int)
-        BaseSorting.__init__(
-            self, unit_ids=unit_ids, sampling_frequency=sampling_frequency
-        )
+        BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sampling_frequency)
 
         sorting_segment = MdaSortingSegment(firings)
         self.add_sorting_segment(sorting_segment)
@@ -235,9 +232,7 @@ class MdaSortingExtractor(BaseSorting):
 
     @staticmethod
     def write_sorting(sorting, save_path, write_primary_channels=False):
-        assert sorting.get_num_segments() == 1, (
-            "MdaSorting.write_sorting() can only write a single segment " "sorting"
-        )
+        assert sorting.get_num_segments() == 1, "MdaSorting.write_sorting() can only write a single segment " "sorting"
         unit_ids = sorting.get_unit_ids()
         times_list = []
         labels_list = []
@@ -248,10 +243,7 @@ class MdaSortingExtractor(BaseSorting):
             labels_list.append(np.ones(times.shape) * unit_id)
             if write_primary_channels:
                 if "max_channel" in sorting.get_unit_property_names(unit_id):
-                    primary_channels_list.append(
-                        [sorting.get_unit_property(unit_id, "max_channel")]
-                        * times.shape[0]
-                    )
+                    primary_channels_list.append([sorting.get_unit_property(unit_id, "max_channel")] * times.shape[0])
                 else:
                     raise ValueError(
                         "Unable to write primary channels because 'max_channel' spike feature not set in unit "
@@ -295,19 +287,13 @@ class MdaSortingSegment(BaseSortingSegment):
         if end_frame is None:
             end_frame = np.inf
         inds = np.where(
-            (self._labels == unit_id)
-            & (start_frame <= self._spike_times)
-            & (self._spike_times < end_frame)
+            (self._labels == unit_id) & (start_frame <= self._spike_times) & (self._spike_times < end_frame)
         )
         return np.rint(self._spike_times[inds]).astype(int)
 
 
-read_mda_recording = define_function_from_class(
-    source_class=MdaRecordingExtractor, name="read_mda_recording"
-)
-read_mda_sorting = define_function_from_class(
-    source_class=MdaSortingExtractor, name="read_mda_sorting"
-)
+read_mda_recording = define_function_from_class(source_class=MdaRecordingExtractor, name="read_mda_recording")
+read_mda_sorting = define_function_from_class(source_class=MdaSortingExtractor, name="read_mda_sorting")
 
 
 def _concatenate(list):
@@ -374,9 +360,7 @@ class DiskReadMda:
         self._npy_mode = False
         self._path = path
         if file_extension(path) == ".npy":
-            raise Exception(
-                "DiskReadMda implementation has not been tested for npy files"
-            )
+            raise Exception("DiskReadMda implementation has not been tested for npy files")
             self._npy_mode = True
             if header:
                 raise Exception("header not allowed in npy mode for DiskReadMda")
@@ -449,9 +433,7 @@ class DiskReadMda:
     def _read_chunk_1d(self, i, N):
         offset = self._header.header_size + self._header.num_bytes_per_entry * i
         if is_url(self._path):
-            tmp_fname = _download_bytes_to_tmpfile(
-                self._path, offset, offset + self._header.num_bytes_per_entry * N
-            )
+            tmp_fname = _download_bytes_to_tmpfile(self._path, offset, offset + self._header.num_bytes_per_entry * N)
             try:
                 ret = self._read_chunk_1d_helper(tmp_fname, N, offset=0)
             except:
@@ -770,9 +752,7 @@ def writenpy(X, path, *, dtype):
 
 
 def _writenpy(X, path, *, dtype):
-    np.save(
-        path, X.astype(dtype=dtype, copy=False)
-    )  # astype will always create copy if dtype does not match
+    np.save(path, X.astype(dtype=dtype, copy=False))  # astype will always create copy if dtype does not match
     # apparently allowing pickling is a security issue. (according to the docs) ??
     # np.save(path,X.astype(dtype=dtype,copy=False),allow_pickle=False) # astype will always create copy if dtype does not match
     return True

@@ -114,9 +114,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
                 edges = list(sg.edges(data=True))
                 # Append correct spike train
                 if len(sorter_unit_ids.keys()) == 1:
-                    sorting = self.object_list[
-                        self.name_list.index(list(sorter_unit_ids.keys())[0])
-                    ]
+                    sorting = self.object_list[self.name_list.index(list(sorter_unit_ids.keys())[0])]
                     unit_id = list(sorter_unit_ids.values())[0]
                     spike_train = sorting.get_unit_spike_train(unit_id, seg_index)
                 else:
@@ -144,31 +142,23 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
 
     def _do_agreement_matrix(self, minimum_agreement=1):
         sorted_name_list = sorted(self.name_list)
-        sorting_agr = AgreementSortingExtractor(
-            self.sampling_frequency, self, minimum_agreement
-        )
+        sorting_agr = AgreementSortingExtractor(self.sampling_frequency, self, minimum_agreement)
         unit_ids = sorting_agr.get_unit_ids()
         agreement_matrix = np.zeros((len(unit_ids), len(sorted_name_list)))
 
         for u_i, unit in enumerate(unit_ids):
             for sort_name, sorter in enumerate(sorted_name_list):
                 if sorter in sorting_agr.get_unit_property(unit, "unit_ids").keys():
-                    assigned_unit = sorting_agr.get_unit_property(unit, "unit_ids")[
-                        sorter
-                    ]
+                    assigned_unit = sorting_agr.get_unit_property(unit, "unit_ids")[sorter]
                 else:
                     assigned_unit = -1
                 if assigned_unit == -1:
                     agreement_matrix[u_i, sort_name] = np.nan
                 else:
-                    agreement_matrix[u_i, sort_name] = sorting_agr.get_unit_property(
-                        unit, "avg_agreement"
-                    )
+                    agreement_matrix[u_i, sort_name] = sorting_agr.get_unit_property(unit, "avg_agreement")
         return agreement_matrix
 
-    def get_agreement_sorting(
-        self, minimum_agreement_count=1, minimum_agreement_count_only=False
-    ):
+    def get_agreement_sorting(self, minimum_agreement_count=1, minimum_agreement_count_only=False):
         """
         Returns AgreementSortingExtractor with units with a 'minimum_matching' agreement.
 
@@ -185,9 +175,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         agreement_sorting: AgreementSortingExtractor
             The output AgreementSortingExtractor
         """
-        assert (
-            minimum_agreement_count > 0
-        ), "'minimum_agreement_count' should be greater than 0"
+        assert minimum_agreement_count > 0, "'minimum_agreement_count' should be greater than 0"
         sorting = AgreementSortingExtractor(
             self.sampling_frequency,
             self,
@@ -198,9 +186,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
 
     def save_to_folder(self, save_folder):
         for sorting in self.object_list:
-            assert (
-                sorting.check_if_dumpable()
-            ), "MultiSortingComparison.save_to_folder() need dumpable sortings"
+            assert sorting.check_if_dumpable(), "MultiSortingComparison.save_to_folder() need dumpable sortings"
 
         save_folder = Path(save_folder)
         save_folder.mkdir(parents=True, exist_ok=True)
@@ -269,9 +255,7 @@ class AgreementSortingExtractor(BaseSorting):
                 if self._msc._new_units[u]["agreement_number"] >= min_agreement_count
             )
 
-        BaseSorting.__init__(
-            self, sampling_frequency=sampling_frequency, unit_ids=unit_ids
-        )
+        BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
         if len(unit_ids) > 0:
             for k in ("agreement_number", "avg_agreement", "unit_ids"):
@@ -279,9 +263,7 @@ class AgreementSortingExtractor(BaseSorting):
                 self.set_property(k, values, ids=unit_ids)
 
         for segment_index in range(multisortingcomparison._num_segments):
-            sorting_segment = AgreementSortingSegment(
-                multisortingcomparison._spiketrains[segment_index]
-            )
+            sorting_segment = AgreementSortingSegment(multisortingcomparison._spiketrains[segment_index])
             self.add_sorting_segment(sorting_segment)
 
 
@@ -351,9 +333,7 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
             chance_score=chance_score,
             verbose=verbose,
         )
-        MixinTemplateComparison.__init__(
-            self, similarity_method=similarity_method, sparsity_dict=sparsity_dict
-        )
+        MixinTemplateComparison.__init__(self, similarity_method=similarity_method, sparsity_dict=sparsity_dict)
 
         if do_matching:
             self._compute_all()

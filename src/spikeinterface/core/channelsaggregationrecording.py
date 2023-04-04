@@ -19,8 +19,7 @@ class ChannelsAggregationRecording(BaseRecording):
         num_all_channels = sum([rec.get_num_channels() for rec in recording_list])
         if renamed_channel_ids is not None:
             assert len(np.unique(renamed_channel_ids)) == num_all_channels, (
-                "'renamed_channel_ids' doesn't have the "
-                "right size or has duplicates!"
+                "'renamed_channel_ids' doesn't have the " "right size or has duplicates!"
             )
             channel_ids = list(renamed_channel_ids)
         else:
@@ -39,24 +38,18 @@ class ChannelsAggregationRecording(BaseRecording):
         num_segments = recording_list[0].get_num_segments()
         dtype = recording_list[0].get_dtype()
 
-        ok1 = all(
-            sampling_frequency == rec.get_sampling_frequency() for rec in recording_list
-        )
+        ok1 = all(sampling_frequency == rec.get_sampling_frequency() for rec in recording_list)
         ok2 = all(num_segments == rec.get_num_segments() for rec in recording_list)
         ok3 = all(dtype == rec.get_dtype() for rec in recording_list)
         ok4 = True
         for i_seg in range(num_segments):
             num_samples = recording_list[0].get_num_samples(i_seg)
-            ok4 = all(
-                num_samples == rec.get_num_samples(i_seg) for rec in recording_list
-            )
+            ok4 = all(num_samples == rec.get_num_samples(i_seg) for rec in recording_list)
             if not ok4:
                 break
 
         if not (ok1 and ok2 and ok3 and ok4):
-            raise ValueError(
-                "Sortings don't have the same sampling_frequency/num_segments/dtype/num samples"
-            )
+            raise ValueError("Sortings don't have the same sampling_frequency/num_segments/dtype/num samples")
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
@@ -74,18 +67,14 @@ class ChannelsAggregationRecording(BaseRecording):
                                 (property_dict[prop_name], rec.get_property(prop_name))
                             )
                         except Exception as e:
-                            print(
-                                f"Skipping property '{prop_name}' for shape inconsistency"
-                            )
+                            print(f"Skipping property '{prop_name}' for shape inconsistency")
                             del property_dict[prop_name]
                             break
 
         for prop_name, prop_values in property_dict.items():
             if prop_name == "contact_vector":
                 # remap device channel indices correctly
-                prop_values["device_channel_indices"] = np.arange(
-                    self.get_num_channels()
-                )
+                prop_values["device_channel_indices"] = np.arange(self.get_num_channels())
             self.set_property(key=prop_name, values=prop_values)
 
         # if locations are present, check that they are all different!
@@ -98,9 +87,7 @@ class ChannelsAggregationRecording(BaseRecording):
         # finally add segments
         for i_seg in range(num_segments):
             parent_segments = [rec._recording_segments[i_seg] for rec in recording_list]
-            sub_segment = ChannelsAggregationRecordingSegment(
-                channel_map, parent_segments
-            )
+            sub_segment = ChannelsAggregationRecordingSegment(channel_map, parent_segments)
             self.add_recording_segment(sub_segment)
 
         self._recordings = recording_list
@@ -120,9 +107,7 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
         times_kargs0 = parent_segment0.get_times_kwargs()
         if times_kargs0["time_vector"] is None:
             for ps in parent_segments:
-                assert (
-                    ps.get_times_kwargs()["time_vector"] is None
-                ), "All segment should not have times set"
+                assert ps.get_times_kwargs()["time_vector"] is None, "All segment should not have times set"
         else:
             for ps in parent_segments:
                 assert ps.get_times_kwargs()["t_start"] == times_kargs0["t_start"], (
@@ -155,16 +140,10 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
             if isinstance(channel_indices, slice):
                 # in case channel_indices is slice, it has step 1
                 step = channel_indices.step if channel_indices.step is not None else 1
-                channel_indices = list(
-                    range(channel_indices.start, channel_indices.stop, step)
-                )
+                channel_indices = list(range(channel_indices.start, channel_indices.stop, step))
             for channel_idx in channel_indices:
-                segment = self._parent_segments[
-                    self._channel_map[channel_idx]["recording_id"]
-                ]
-                channel_index_recording = self._channel_map[channel_idx][
-                    "channel_index"
-                ]
+                segment = self._parent_segments[self._channel_map[channel_idx]["recording_id"]]
+                channel_index_recording = self._channel_map[channel_idx]["channel_index"]
                 traces_recording = segment.get_traces(
                     channel_indices=[channel_index_recording],
                     start_frame=start_frame,

@@ -33,9 +33,7 @@ class NumpyRecording(BaseRecording):
     mode = "memory"
     name = "numpy"
 
-    def __init__(
-        self, traces_list, sampling_frequency, t_starts=None, channel_ids=None
-    ):
+    def __init__(self, traces_list, sampling_frequency, t_starts=None, channel_ids=None):
         if isinstance(traces_list, list):
             all_elements_are_list = all(isinstance(e, list) for e in traces_list)
             if all_elements_are_list:
@@ -44,9 +42,7 @@ class NumpyRecording(BaseRecording):
                 isinstance(e, np.ndarray) for e in traces_list
             ), f"must give a list of numpy array but gave {traces_list[0]}"
         else:
-            assert isinstance(
-                traces_list, np.ndarray
-            ), "must give a list of numpy array"
+            assert isinstance(traces_list, np.ndarray), "must give a list of numpy array"
             traces_list = [traces_list]
 
         dtype = traces_list[0].dtype
@@ -60,9 +56,7 @@ class NumpyRecording(BaseRecording):
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
         if t_starts is not None:
-            assert len(t_starts) == len(
-                traces_list
-            ), "t_starts must be a list of same size than traces_list"
+            assert len(t_starts) == len(traces_list), "t_starts must be a list of same size than traces_list"
             t_starts = [float(t_start) for t_start in t_starts]
 
         self.is_dumpable = True
@@ -84,9 +78,7 @@ class NumpyRecording(BaseRecording):
 
 class NumpyRecordingSegment(BaseRecordingSegment):
     def __init__(self, traces, sampling_frequency, t_start):
-        BaseRecordingSegment.__init__(
-            self, sampling_frequency=sampling_frequency, t_start=t_start
-        )
+        BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
         self._traces = traces
 
     def get_num_samples(self):
@@ -120,9 +112,7 @@ class NumpySorting(BaseSorting):
         for segment_index in range(nseg):
             units_dict = {}
             for unit_id in unit_ids:
-                units_dict[unit_id] = source_sorting.get_unit_spike_train(
-                    unit_id, segment_index
-                )
+                units_dict[unit_id] = source_sorting.get_unit_spike_train(unit_id, segment_index)
             sorting.add_sorting_segment(NumpySortingSegment(units_dict))
 
         sorting.copy_metadata(source_sorting)
@@ -157,9 +147,7 @@ class NumpySorting(BaseSorting):
 
         nseg = len(times_list)
         if unit_ids is None:
-            unit_ids = np.unique(
-                np.concatenate([np.unique(labels_list[i]) for i in range(nseg)])
-            )
+            unit_ids = np.unique(np.concatenate([np.unique(labels_list[i]) for i in range(nseg)]))
 
         sorting = NumpySorting(sampling_frequency, unit_ids)
         for i in range(nseg):
@@ -226,9 +214,7 @@ class NumpySorting(BaseSorting):
             units_dict = {}
             for u, unit_id in enumerate(unit_ids):
                 st = neo_spiketrains[seg_index][u]
-                units_dict[unit_id] = (
-                    st.rescale("s").magnitude * sampling_frequency
-                ).astype("int64")
+                units_dict[unit_id] = (st.rescale("s").magnitude * sampling_frequency).astype("int64")
             sorting.add_sorting_segment(NumpySortingSegment(units_dict))
 
         return sorting
@@ -252,9 +238,7 @@ class NumpySorting(BaseSorting):
         sorting
             The NumpySorting object
         """
-        return NumpySorting.from_times_labels(
-            peaks["sample_ind"], peaks["channel_ind"], sampling_frequency
-        )
+        return NumpySorting.from_times_labels(peaks["sample_ind"], peaks["channel_ind"], sampling_frequency)
 
 
 class NumpySortingSegment(BaseSortingSegment):
@@ -364,22 +348,14 @@ class NumpySnippets(BaseSnippets):
         channel_ids=None,
     ):
         if isinstance(snippets_list, list):
-            assert all(
-                isinstance(e, np.ndarray) for e in snippets_list
-            ), "must give a list of numpy array"
+            assert all(isinstance(e, np.ndarray) for e in snippets_list), "must give a list of numpy array"
         else:
-            assert isinstance(
-                snippets_list, np.ndarray
-            ), "must give a list of numpy array"
+            assert isinstance(snippets_list, np.ndarray), "must give a list of numpy array"
             snippets_list = [snippets_list]
         if isinstance(spikesframes_list, list):
-            assert all(
-                isinstance(e, np.ndarray) for e in spikesframes_list
-            ), "must give a list of numpy array"
+            assert all(isinstance(e, np.ndarray) for e in spikesframes_list), "must give a list of numpy array"
         else:
-            assert isinstance(
-                spikesframes_list, np.ndarray
-            ), "must give a list of numpy array"
+            assert isinstance(spikesframes_list, np.ndarray), "must give a list of numpy array"
             spikesframes_list = [spikesframes_list]
 
         dtype = snippets_list[0].dtype
@@ -449,9 +425,7 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
     def get_num_snippets(self):
         return self._spikestimes.shape[0]
 
-    def frames_to_indices(
-        self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None
-    ):
+    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
         """
         Return the slice of snippets
 

@@ -22,12 +22,8 @@ def test_split_merge():
             5: np.arange(40, 140),
         },
     ]
-    parent_sort = NumpySorting.from_dict(
-        spikestimes, sampling_frequency=1000
-    )  # to have 1 sample=1ms
-    parent_sort.set_property(
-        "someprop", [float(k) for k in spikestimes[0].keys()]
-    )  # float
+    parent_sort = NumpySorting.from_dict(spikestimes, sampling_frequency=1000)  # to have 1 sample=1ms
+    parent_sort.set_property("someprop", [float(k) for k in spikestimes[0].keys()])  # float
 
     # %%
     split_index = [v[4] % 2 for v in spikestimes]  # spit class 4 in even and odds
@@ -38,20 +34,15 @@ def test_split_merge():
         new_unit_ids=[8, 10],
         properties_policy="keep",
     )
-    merged = MergeUnitsSorting(
-        splited, units_to_merge=[[8, 10]], new_unit_ids=[4], properties_policy="keep"
-    )
+    merged = MergeUnitsSorting(splited, units_to_merge=[[8, 10]], new_unit_ids=[4], properties_policy="keep")
     for i in range(len(spikestimes)):
         assert (
-            all(
-                parent_sort.get_unit_spike_train(4, segment_index=i)
-                == merged.get_unit_spike_train(4, segment_index=i)
-            )
+            all(parent_sort.get_unit_spike_train(4, segment_index=i) == merged.get_unit_spike_train(4, segment_index=i))
             == True
         ), "splir or merge error"
-    assert parent_sort.get_unit_property(4, "someprop") == merged.get_unit_property(
-        4, "someprop"
-    ), ("property wasn" "t kept")
+    assert parent_sort.get_unit_property(4, "someprop") == merged.get_unit_property(4, "someprop"), (
+        "property wasn" "t kept"
+    )
 
     merged_with_dups = MergeUnitsSorting(
         parent_sort,
@@ -65,9 +56,7 @@ def test_split_merge():
             merged_with_dups.get_unit_spike_train(8, segment_index=i)
             == parent_sort.get_unit_spike_train(1, segment_index=i)
         ), "error removing duplications"
-    assert np.isnan(
-        merged_with_dups.get_unit_property(8, "someprop")
-    ), "error creating empty property"
+    assert np.isnan(merged_with_dups.get_unit_property(8, "someprop")), "error creating empty property"
 
 
 def test_curation():
@@ -79,12 +68,8 @@ def test_curation():
         },
         {"a": np.arange(12, 15), "b": np.arange(3, 17), "c": np.arange(50)},
     ]
-    parent_sort = NumpySorting.from_dict(
-        spikestimes, sampling_frequency=1000
-    )  # to have 1 sample=1ms
-    parent_sort.set_property(
-        "some_names", ["unit_{}".format(k) for k in spikestimes[0].keys()]
-    )  # float
+    parent_sort = NumpySorting.from_dict(spikestimes, sampling_frequency=1000)  # to have 1 sample=1ms
+    parent_sort.set_property("some_names", ["unit_{}".format(k) for k in spikestimes[0].keys()])  # float
     cs = CurationSorting(parent_sort, properties_policy="remove")
     # %%
     cs.merge(["a", "c"])

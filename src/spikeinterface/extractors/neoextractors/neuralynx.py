@@ -25,9 +25,7 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
     NeoRawIOClass = "NeuralynxRawIO"
     name = "neuralynx"
 
-    def __init__(
-        self, folder_path, stream_id=None, stream_name=None, all_annotations=False
-    ):
+    def __init__(self, folder_path, stream_id=None, stream_name=None, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)
         NeoBaseRecordingExtractor.__init__(
             self,
@@ -66,9 +64,7 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
 
     def __init__(self, folder_path, sampling_frequency=None):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)
-        NeoBaseSortingExtractor.__init__(
-            self, sampling_frequency=sampling_frequency, **neo_kwargs
-        )
+        NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, **neo_kwargs)
         self._kwargs.update(dict(folder_path=str(folder_path)))
 
     @classmethod
@@ -77,9 +73,7 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
         return neo_kwargs
 
 
-read_neuralynx = define_function_from_class(
-    source_class=NeuralynxRecordingExtractor, name="read_neuralynx"
-)
+read_neuralynx = define_function_from_class(source_class=NeuralynxRecordingExtractor, name="read_neuralynx")
 read_neuralynx_sorting = define_function_from_class(
     source_class=NeuralynxSortingExtractor, name="read_neuralynx_sorting"
 )

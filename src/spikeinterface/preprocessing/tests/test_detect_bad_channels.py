@@ -49,15 +49,10 @@ def test_remove_bad_channels_std_mad():
     # Check that the noisy channel is taken out
     assert np.array_equal(rec2.get_channel_ids(), [0, 2, 3]), "wrong channel detected."
     # Check that the number of segments is maintained after preprocessor
-    assert np.array_equal(
-        rec2.get_num_segments(), rec.get_num_segments()
-    ), "wrong numbber of segments."
+    assert np.array_equal(rec2.get_num_segments(), rec.get_num_segments()), "wrong numbber of segments."
     # Check that the size of the segments os maintained after preprocessor
     assert np.array_equal(
-        *(
-            [r.get_num_frames(x) for x in range(rec.get_num_segments())]
-            for r in [rec, rec2]
-        )
+        *([r.get_num_frames(x) for x in range(rec.get_num_segments())] for r in [rec, rec2])
     ), "wrong lenght of resulting segments."
     # Check that locations are mantained
     assert np.array_equal(
@@ -123,9 +118,7 @@ def test_remove_bad_channels_ibl(num_channels):
     )
 
     random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
-    channel_flags_ibl = np.zeros(
-        (recording.get_num_channels(), recording.get_num_segments() * 10), dtype=int
-    )
+    channel_flags_ibl = np.zeros((recording.get_num_channels(), recording.get_num_segments() * 10), dtype=int)
     for i, random_chunk in enumerate(random_data):
         traces_uV = random_chunk.T
         traces_V = traces_uV * 1e-6
@@ -135,9 +128,7 @@ def test_remove_bad_channels_ibl(num_channels):
         channel_flags_ibl[:, i] = channel_flags
 
     # Take the mode of the chunk estimates as final result. Convert to binary good / bad channel output.
-    bad_channel_labels_ibl, _ = scipy.stats.mode(
-        channel_flags_ibl, axis=1, keepdims=False
-    )
+    bad_channel_labels_ibl, _ = scipy.stats.mode(channel_flags_ibl, axis=1, keepdims=False)
 
     # Compare
     assert np.array_equal(bad_channel_labels_si == "good", bad_channel_labels_ibl == 0)
@@ -150,9 +141,7 @@ def test_remove_bad_channels_ibl(num_channels):
 
     # Test on randomly sorted channels
     recording_scrambled = recording.channel_slice(
-        np.random.choice(
-            recording.channel_ids, len(recording.channel_ids), replace=False
-        )
+        np.random.choice(recording.channel_ids, len(recording.channel_ids), replace=False)
     )
     bad_channel_ids_scrambled, bad_channel_label_scrambled = detect_bad_channels(
         recording_scrambled,
@@ -163,16 +152,12 @@ def test_remove_bad_channels_ibl(num_channels):
         outside_channel_threshold=-0.75,
         seed=0,
     )
-    assert all(
-        bad_channel in bad_channel_ids for bad_channel in bad_channel_ids_scrambled
-    )
+    assert all(bad_channel in bad_channel_ids for bad_channel in bad_channel_ids_scrambled)
 
 
 def add_noisy_and_dead_channels(recording, is_dead, is_noisy, not_noisy):
     """ """
-    psd_cutoff = reduce_high_freq_power_in_non_noisy_channels(
-        recording, is_noisy, not_noisy
-    )
+    psd_cutoff = reduce_high_freq_power_in_non_noisy_channels(recording, is_noisy, not_noisy)
     recording = add_dead_channels(recording, is_dead)
     # Note this will reduce the PSD for these channels but
     # as noisy have higher freq > 80% nyqist this does not matter

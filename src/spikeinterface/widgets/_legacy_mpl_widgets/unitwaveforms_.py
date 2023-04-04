@@ -87,13 +87,9 @@ class UnitWaveformsWidget(BaseWidget):
         self._plot_channels = plot_channels
 
         if radius_um is not None:
-            assert (
-                max_channels is None
-            ), "radius_um and max_channels are mutually exclusive"
+            assert max_channels is None, "radius_um and max_channels are mutually exclusive"
         if max_channels is not None:
-            assert (
-                radius_um is None
-            ), "radius_um and max_channels are mutually exclusive"
+            assert radius_um is None, "radius_um and max_channels are mutually exclusive"
 
         self.radius_um = radius_um
         self.max_channels = max_channels
@@ -119,22 +115,16 @@ class UnitWaveformsWidget(BaseWidget):
         unit_ids = self._unit_ids
         channel_ids = self._channel_ids
 
-        channel_locations = self._recording.get_channel_locations(
-            channel_ids=channel_ids
-        )
+        channel_locations = self._recording.get_channel_locations(channel_ids=channel_ids)
         templates = we.get_all_templates(unit_ids=unit_ids)
 
-        xvectors, y_scale, y_offset = get_waveforms_scales(
-            we, templates, channel_locations
-        )
+        xvectors, y_scale, y_offset = get_waveforms_scales(we, templates, channel_locations)
 
         ncols = min(self.ncols, len(unit_ids))
         nrows = int(np.ceil(len(unit_ids) / ncols))
 
         if self.radius_um is not None:
-            channel_inds = get_template_channel_sparsity(
-                we, method="radius", outputs="index", radius_um=self.radius_um
-            )
+            channel_inds = get_template_channel_sparsity(we, method="radius", outputs="index", radius_um=self.radius_um)
         elif self.max_channels is not None:
             channel_inds = get_template_channel_sparsity(
                 we,
@@ -166,9 +156,7 @@ class UnitWaveformsWidget(BaseWidget):
 
             # plot template
             if self._plot_templates:
-                template = (
-                    templates[i, :, :][:, chan_inds] * y_scale + y_offset[:, chan_inds]
-                )
+                template = templates[i, :, :][:, chan_inds] * y_scale + y_offset[:, chan_inds]
                 if self._plot_waveforms and self._plot_templates:
                     color = "k"
                 ax.plot(xvectors_flat, template.T.flatten(), lw=1, color=color)

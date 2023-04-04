@@ -52,12 +52,8 @@ class AlignSortingSegment(BaseSortingSegment):
             start_frame = start_frame + self._unit_peak_shifts[unit_id]
         if end_frame is not None:
             end_frame = end_frame + self._unit_peak_shifts[unit_id]
-        original_spike_train = self._parent_segment.get_unit_spike_train(
-            unit_id, start_frame, end_frame
-        )
+        original_spike_train = self._parent_segment.get_unit_spike_train(unit_id, start_frame, end_frame)
         return original_spike_train - self._unit_peak_shifts[unit_id]
 
 
-align_sorting = define_function_from_class(
-    source_class=AlignSortingExtractor, name="align_sorting"
-)
+align_sorting = define_function_from_class(source_class=AlignSortingExtractor, name="align_sorting")

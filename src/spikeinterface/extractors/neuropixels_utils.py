@@ -29,16 +29,14 @@ def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12):
         The relative phase (from 0-1) of each channel
     """
 
-    adc_indices = np.floor(
-        np.arange(num_channels) / (num_channels_per_adc * 2)
-    ) * 2 + np.mod(np.arange(num_channels), 2)
+    adc_indices = np.floor(np.arange(num_channels) / (num_channels_per_adc * 2)) * 2 + np.mod(
+        np.arange(num_channels), 2
+    )
 
     sample_shifts = np.zeros_like(adc_indices)
 
     for a in adc_indices:
-        sample_shifts[adc_indices == a] = (
-            np.arange(num_channels_per_adc) / num_channels_per_adc
-        )
+        sample_shifts[adc_indices == a] = np.arange(num_channels_per_adc) / num_channels_per_adc
 
     return sample_shifts
 
@@ -89,9 +87,7 @@ def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
                     np.concatenate(
                         [
                             np.arange(i * 2, num_channels, num_channels_per_adc * 2),
-                            np.arange(
-                                i * 2 + 1, num_channels, num_channels_per_adc * 2
-                            ),
+                            np.arange(i * 2 + 1, num_channels, num_channels_per_adc * 2),
                         ]
                     )
                 )
@@ -117,16 +113,12 @@ def synchronize_neuropixel_streams(recording_ref, recording_other):
     raise NotImplementedError
 
     synhcro_chan_id = recording_ref.channel_ids[-1]
-    trig_ref = recording_ref.get_traces(
-        channel_ids=[synhcro_chan_id], return_scaled=False
-    )
+    trig_ref = recording_ref.get_traces(channel_ids=[synhcro_chan_id], return_scaled=False)
     trig_ref = trig_ref[:, 0]
     times_ref = recording_ref.get_times()
 
     synhcro_chan_id = recording_other.channel_ids[-1]
-    trig_other = recording_other.get_traces(
-        channel_ids=[synhcro_chan_id], return_scaled=False
-    )
+    trig_other = recording_other.get_traces(channel_ids=[synhcro_chan_id], return_scaled=False)
     trig_other = trig_other[:, 0]
     times_other = recording_other.get_times()
 

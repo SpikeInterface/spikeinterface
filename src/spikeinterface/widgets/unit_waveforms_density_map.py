@@ -65,23 +65,15 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             unit_colors = get_unit_colors(we.sorting)
 
         if use_max_channel:
-            assert (
-                len(unit_ids) == 1
-            ), " UnitWaveformDensity : use_max_channel=True works only with one unit"
-            max_channels = get_template_extremum_channel(
-                we, mode="extremum", peak_sign=peak_sign, outputs="index"
-            )
+            assert len(unit_ids) == 1, " UnitWaveformDensity : use_max_channel=True works only with one unit"
+            max_channels = get_template_extremum_channel(we, mode="extremum", peak_sign=peak_sign, outputs="index")
 
         # sparsity is done on all the units even if unit_ids is a few ones because some backend need then all
         if waveform_extractor.is_sparse():
-            assert (
-                sparsity is None
-            ), "UnitWaveformDensity WaveformExtractor is already sparse"
+            assert sparsity is None, "UnitWaveformDensity WaveformExtractor is already sparse"
             used_sparsity = waveform_extractor.sparsity
         elif sparsity is not None:
-            assert isinstance(
-                sparsity, ChannelSparsity
-            ), "'sparsity' should be a ChannelSparsity object!"
+            assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
             used_sparsity = sparsity
         else:
             # in this case, we construct a dense sparsity
@@ -101,9 +93,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             all_hist2d = None
             # channel union across units
             unit_inds = we.sorting.ids_to_indices(unit_ids)
-            (shared_chan_inds,) = np.nonzero(
-                np.sum(used_sparsity.mask[unit_inds, :], axis=0)
-            )
+            (shared_chan_inds,) = np.nonzero(np.sum(used_sparsity.mask[unit_inds, :], axis=0))
         else:
             all_hist2d = {}
 
@@ -119,9 +109,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
             if same_axis and not np.array_equal(chan_inds, shared_chan_inds):
                 # add more channels if necessary
-                wfs_ = np.zeros(
-                    (wfs.shape[0], wfs.shape[1], shared_chan_inds.size), dtype=float
-                )
+                wfs_ = np.zeros((wfs.shape[0], wfs.shape[1], shared_chan_inds.size), dtype=float)
                 mask = np.in1d(shared_chan_inds, chan_inds)
                 wfs_[:, :, mask] = wfs
                 wfs_[:, :, ~mask] = np.nan

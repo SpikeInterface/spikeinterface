@@ -23,9 +23,7 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
 
     def __init__(self, file_path, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        NeoBaseRecordingExtractor.__init__(
-            self, all_annotations=all_annotations, **neo_kwargs
-        )
+        NeoBaseRecordingExtractor.__init__(self, all_annotations=all_annotations, **neo_kwargs)
         self._kwargs.update({"file_path": file_path})
 
     @classmethod
@@ -34,6 +32,4 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_axona = define_function_from_class(
-    source_class=AxonaRecordingExtractor, name="read_axona"
-)
+read_axona = define_function_from_class(source_class=AxonaRecordingExtractor, name="read_axona")

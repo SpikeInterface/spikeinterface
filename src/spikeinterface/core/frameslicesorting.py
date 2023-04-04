@@ -36,15 +36,11 @@ class FrameSliceSorting(BaseSorting):
     def __init__(self, parent_sorting, start_frame=None, end_frame=None):
         unit_ids = parent_sorting.get_unit_ids()
 
-        assert (
-            parent_sorting.get_num_segments() == 1
-        ), "FrameSliceSorting work only with one segment"
+        assert parent_sorting.get_num_segments() == 1, "FrameSliceSorting work only with one segment"
 
         if start_frame is None:
             start_frame = 0
-        assert (
-            0 <= start_frame
-        ), "Invalid value for start_frame: expected positive integer."
+        assert 0 <= start_frame, "Invalid value for start_frame: expected positive integer."
 
         if parent_sorting.has_recording():
             # Pull df end_frame from recording
@@ -67,9 +63,7 @@ class FrameSliceSorting(BaseSorting):
             if end_frame is None:
                 max_spike_time = 0
                 for u in parent_sorting.get_unit_ids():
-                    max_spike_time = np.max(
-                        [max_spike_time, np.max(parent_sorting.get_unit_spike_train(u))]
-                    )
+                    max_spike_time = np.max([max_spike_time, np.max(parent_sorting.get_unit_spike_train(u))])
                 end_frame = max_spike_time + 1
 
         assert start_frame < end_frame, (
@@ -93,11 +87,7 @@ class FrameSliceSorting(BaseSorting):
         parent_sorting.copy_metadata(self)
 
         if parent_sorting.has_recording():
-            self.register_recording(
-                parent_sorting._recording.frame_slice(
-                    start_frame=start_frame, end_frame=end_frame
-                )
-            )
+            self.register_recording(parent_sorting._recording.frame_slice(start_frame=start_frame, end_frame=end_frame))
 
         # update dump dict
         self._kwargs = {

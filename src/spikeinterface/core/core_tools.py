@@ -120,9 +120,7 @@ class SIJsonEncoder(json.JSONEncoder):
     # This machinery is necessary for overriding the default behavior of the json encoder with keys
     # This is a deep issue that goes deep down to cpython: https://github.com/python/cpython/issues/63020
     def iterencode(self, obj, _one_shot=False):
-        return super().iterencode(
-            self.remove_numpy_scalar_from_object(obj), _one_shot=_one_shot
-        )
+        return super().iterencode(self.remove_numpy_scalar_from_object(obj), _one_shot=_one_shot)
 
     def remove_numpy_scalar_from_object(self, object):
         if isinstance(object, dict):
@@ -190,17 +188,11 @@ def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
     """
     num_chan = int(num_chan)
     with Path(file).open() as f:
-        nsamples = (os.fstat(f.fileno()).st_size - offset) // (
-            num_chan * np.dtype(dtype).itemsize
-        )
+        nsamples = (os.fstat(f.fileno()).st_size - offset) // (num_chan * np.dtype(dtype).itemsize)
     if time_axis == 0:
-        samples = np.memmap(
-            file, np.dtype(dtype), mode="r", offset=offset, shape=(nsamples, num_chan)
-        )
+        samples = np.memmap(file, np.dtype(dtype), mode="r", offset=offset, shape=(nsamples, num_chan))
     else:
-        samples = np.memmap(
-            file, np.dtype(dtype), mode="r", offset=offset, shape=(num_chan, nsamples)
-        ).T
+        samples = np.memmap(file, np.dtype(dtype), mode="r", offset=offset, shape=(num_chan, nsamples)).T
     return samples
 
 
@@ -287,9 +279,7 @@ def write_binary_recording(
         file_paths = [file_paths]
     file_paths = [Path(e) for e in file_paths]
     if add_file_extension:
-        file_paths = [
-            add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_paths
-        ]
+        file_paths = [add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_paths]
 
     if dtype is None:
         dtype = recording.get_dtype()
@@ -306,9 +296,7 @@ def write_binary_recording(
         num_channels = recording.get_num_channels()
         file_path = file_paths[segment_index]
         shape = (num_frames, num_channels)
-        rec_memmap = np.memmap(
-            str(file_path), dtype=dtype, mode="w+", offset=byte_offset, shape=shape
-        )
+        rec_memmap = np.memmap(str(file_path), dtype=dtype, mode="w+", offset=byte_offset, shape=shape)
         rec_memmaps.append(rec_memmap)
         rec_memmaps_dict.append(
             dict(
@@ -336,9 +324,7 @@ def write_binary_recording(
     executor.run()
 
 
-write_binary_recording.__doc__ = write_binary_recording.__doc__.format(
-    _shared_job_kwargs_doc
-)
+write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
 
 
 def write_binary_recording_file_handle(
@@ -358,9 +344,7 @@ def write_binary_recording_file_handle(
     @ SAM useful for writing with time_axis=1!
     """
     assert file_handle is not None
-    assert (
-        recording.get_num_segments() == 1
-    ), "If file_handle is given then only deals with one segment"
+    assert recording.get_num_segments() == 1, "If file_handle is given then only deals with one segment"
 
     if dtype is None:
         dtype = recording.get_dtype()
@@ -385,9 +369,7 @@ def write_binary_recording_file_handle(
         chunks = divide_segment_into_chunks(num_frames, chunk_size)
 
         for start_frame, end_frame in chunks:
-            traces = recording.get_traces(
-                segment_index=0, start_frame=start_frame, end_frame=end_frame
-            )
+            traces = recording.get_traces(segment_index=0, start_frame=start_frame, end_frame=end_frame)
             if time_axis == 1:
                 traces = traces.T
             if dtype is not None:
@@ -462,9 +444,7 @@ def make_shared_array(shape, dtype):
     return arr, shm
 
 
-def write_memory_recording(
-    recording, dtype=None, verbose=False, auto_cast_uint=True, **job_kwargs
-):
+def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=True, **job_kwargs):
     """
     Save the traces into numpy arrays (memory).
     try to use the SharedMemory introduce in py3.8 if n_jobs > 1
@@ -534,9 +514,7 @@ def write_memory_recording(
     return arrays
 
 
-write_memory_recording.__doc__ = write_memory_recording.__doc__.format(
-    _shared_job_kwargs_doc
-)
+write_memory_recording.__doc__ = write_memory_recording.__doc__.format(_shared_job_kwargs_doc)
 
 
 def write_to_h5_dataset_format(
@@ -593,9 +571,7 @@ def write_to_h5_dataset_format(
     import h5py
 
     # ~ assert HAVE_H5, "To write to h5 you need to install h5py: pip install h5py"
-    assert (
-        save_path is not None or file_handle is not None
-    ), "Provide 'save_path' or 'file handle'"
+    assert save_path is not None or file_handle is not None, "Provide 'save_path' or 'file handle'"
 
     if save_path is not None:
         save_path = Path(save_path)
@@ -630,14 +606,10 @@ def write_to_h5_dataset_format(
 
     dset = file_handle.create_dataset(dataset_path, shape=shape, dtype=dtype_file)
 
-    chunk_size = ensure_chunk_size(
-        recording, chunk_size=chunk_size, chunk_memory=chunk_memory, n_jobs=1
-    )
+    chunk_size = ensure_chunk_size(recording, chunk_size=chunk_size, chunk_memory=chunk_memory, n_jobs=1)
 
     if chunk_size is None:
-        traces = recording.get_traces(
-            cast_unsigned=cast_unsigned, return_scaled=return_scaled
-        )
+        traces = recording.get_traces(cast_unsigned=cast_unsigned, return_scaled=return_scaled)
         if dtype is not None:
             traces = traces.astype(dtype_file)
         if time_axis == 1:
@@ -783,9 +755,7 @@ def write_traces_to_zarr(
 
 
 # used by write_zarr_recording + ChunkRecordingExecutor
-def _init_zarr_worker(
-    recording, zarr_path, storage_options, dataset_paths, dtype, cast_unsigned
-):
+def _init_zarr_worker(recording, zarr_path, storage_options, dataset_paths, dtype, cast_unsigned):
     import zarr
 
     # create a local dict per worker
@@ -845,11 +815,7 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
 def determine_cast_unsigned(recording, dtype):
     recording_dtype = np.dtype(recording.get_dtype())
 
-    if (
-        np.dtype(dtype) != recording_dtype
-        and recording_dtype.kind == "u"
-        and np.dtype(dtype).kind == "i"
-    ):
+    if np.dtype(dtype) != recording_dtype and recording_dtype.kind == "u" and np.dtype(dtype).kind == "i":
         cast_unsigned = True
     else:
         cast_unsigned = False
@@ -862,9 +828,7 @@ def is_dict_extractor(d):
     """
     if not isinstance(d, dict):
         return False
-    is_extractor = (
-        ("module" in d) and ("class" in d) and ("version" in d) and ("annotations" in d)
-    )
+    is_extractor = ("module" in d) and ("class" in d) and ("version" in d) and ("annotations" in d)
     return is_extractor
 
 

@@ -63,9 +63,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
     name = "ibl_streaming_recording"
 
     @classmethod
-    def get_stream_names(
-        cls, session: str, cache_folder: Optional[Union[Path, str]] = None
-    ) -> List[str]:
+    def get_stream_names(cls, session: str, cache_folder: Optional[Union[Path, str]] = None) -> List[str]:
         """
         Convenient retrieval of available stream names.
 
@@ -98,21 +96,13 @@ class IblStreamingRecordingExtractor(BaseRecording):
         )
 
         dataset_contents = one.list_datasets(eid=session, collection="raw_ephys_data/*")
-        raw_contents = [
-            dataset_content
-            for dataset_content in dataset_contents
-            if not dataset_content.endswith(".npy")
-        ]
+        raw_contents = [dataset_content for dataset_content in dataset_contents if not dataset_content.endswith(".npy")]
         probe_labels = set([raw_content.split("/")[1] for raw_content in raw_contents])
 
         stream_names = list()
         for probe_label in probe_labels:
             raw_suffixes_by_probe = set(
-                [
-                    Path(raw_content).suffixes[-2]
-                    for raw_content in raw_contents
-                    if probe_label in raw_content
-                ]
+                [Path(raw_content).suffixes[-2] for raw_content in raw_contents if probe_label in raw_content]
             )
             if ".ap" in raw_suffixes_by_probe:
                 stream_names.append(probe_label + ".ap")
@@ -143,9 +133,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
             cache_dir=cache_folder,
         )
 
-        session_names = self.get_stream_names(
-            session=session, cache_folder=cache_folder
-        )
+        session_names = self.get_stream_names(session=session, cache_folder=cache_folder)
         assert stream_name in session_names, (
             f"The `stream_name` '{stream_name}' was not found in the available listing for session '{session}'! "
             f"Please choose one of {session_names}."
@@ -153,11 +141,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
         probe_label, stream_type = stream_name.split(".")
 
         insertions = one.alyx.rest("insertions", "list", session=session)
-        pid = next(
-            insertion["id"]
-            for insertion in insertions
-            if insertion["name"] == probe_label
-        )
+        pid = next(insertion["id"] for insertion in insertions if insertion["name"] == probe_label)
 
         self._file_streamer = Streamer(
             pid=pid,
@@ -168,9 +152,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
         )
 
         # get basic metadata
-        meta_file = (
-            self._file_streamer.file_meta_data
-        )  # streamer downloads uncompressed metadata files on init
+        meta_file = self._file_streamer.file_meta_data  # streamer downloads uncompressed metadata files on init
         meta = read_meta_file(meta_file)
         info = extract_stream_info(meta_file, meta)
         channel_ids = info["channel_names"]
@@ -222,9 +204,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
             shank = np.concatenate((electrodes_geometry["shank"], [np.nan]))
             shank_row = np.concatenate((electrodes_geometry["shank"], [np.nan]))
             shank_col = np.concatenate((electrodes_geometry["shank"], [np.nan]))
-            inter_sample_shift = np.concatenate(
-                (electrodes_geometry["sample_shift"], [np.nan])
-            )
+            inter_sample_shift = np.concatenate((electrodes_geometry["sample_shift"], [np.nan]))
             adc = np.concatenate((electrodes_geometry["adc"], [np.nan]))
             index_on_probe = np.concatenate((electrodes_geometry["ind"], [np.nan]))
             good_channel = np.concatenate((electrodes_geometry["shank"], [1.0]))
@@ -269,9 +249,7 @@ class IblStreamingRecordingSegment(BaseRecordingSegment):
             end_frame = self.get_num_samples()
         if channel_indices is None:
             channel_indices = slice(None)
-        traces = self._file_streamer.read(
-            nsel=slice(start_frame, end_frame), volts=False
-        )
+        traces = self._file_streamer.read(nsel=slice(start_frame, end_frame), volts=False)
         if not self._load_sync_channel:
             traces = traces[:, :-1]
 

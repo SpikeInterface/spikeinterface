@@ -136,9 +136,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         if len(pc_metric_names) > 0 and not self._params["skip_pc_metrics"]:
             if not self.waveform_extractor.is_extension("principal_components"):
                 raise ValueError("waveform_principal_component must be provied")
-            pc_extension = self.waveform_extractor.load_extension(
-                "principal_components"
-            )
+            pc_extension = self.waveform_extractor.load_extension("principal_components")
             pc_metrics = calculate_pc_metrics(
                 pc_extension,
                 metric_names=pc_metric_names,
@@ -217,9 +215,7 @@ def compute_quality_metrics(
     metrics: pandas.DataFrame
         Data frame with the computed metrics
     """
-    if load_if_exists and waveform_extractor.is_extension(
-        QualityMetricCalculator.extension_name
-    ):
+    if load_if_exists and waveform_extractor.is_extension(QualityMetricCalculator.extension_name):
         qmc = waveform_extractor.load_extension(QualityMetricCalculator.extension_name)
     else:
         qmc = QualityMetricCalculator(waveform_extractor)

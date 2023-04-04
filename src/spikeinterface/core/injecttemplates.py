@@ -53,17 +53,9 @@ class InjectTemplatesRecording(BaseRecording):
         templates = np.array(templates)
         self._check_templates(templates)
 
-        channel_ids = (
-            parent_recording.channel_ids
-            if parent_recording is not None
-            else list(range(templates.shape[2]))
-        )
-        dtype = (
-            parent_recording.dtype if parent_recording is not None else templates.dtype
-        )
-        BaseRecording.__init__(
-            self, sorting.get_sampling_frequency(), channel_ids, dtype
-        )
+        channel_ids = parent_recording.channel_ids if parent_recording is not None else list(range(templates.shape[2]))
+        dtype = parent_recording.dtype if parent_recording is not None else templates.dtype
+        BaseRecording.__init__(self, sorting.get_sampling_frequency(), channel_ids, dtype)
 
         n_units = len(sorting.unit_ids)
         assert len(templates) == n_units
@@ -77,9 +69,7 @@ class InjectTemplatesRecording(BaseRecording):
             assert len(nbefore) == n_units
 
         if isinstance(amplitude_factor, float):
-            amplitude_factor = np.array(
-                [1.0] * len(self.spike_vector), dtype=np.float32
-            )
+            amplitude_factor = np.array([1.0] * len(self.spike_vector), dtype=np.float32)
         elif len(amplitude_factor) != len(
             self.spike_vector
         ):  # In this case, it's a list of list for amplitude by unit by spike.
@@ -87,8 +77,7 @@ class InjectTemplatesRecording(BaseRecording):
 
             for segment_index in range(sorting.get_num_segments()):
                 spike_times = [
-                    sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
-                    for unit_id in sorting.unit_ids
+                    sorting.get_unit_spike_train(unit_id, segment_index=segment_index) for unit_id in sorting.unit_ids
                 ]
                 spike_times = np.concatenate(spike_times)
                 spike_amplitudes = np.concatenate(amplitude_factor[segment_index])
@@ -100,10 +89,7 @@ class InjectTemplatesRecording(BaseRecording):
 
         if parent_recording is not None:
             assert parent_recording.get_num_segments() == sorting.get_num_segments()
-            assert (
-                parent_recording.get_sampling_frequency()
-                == sorting.get_sampling_frequency()
-            )
+            assert parent_recording.get_sampling_frequency() == sorting.get_sampling_frequency()
             assert parent_recording.get_num_channels() == templates.shape[2]
             parent_recording.copy_metadata(self)
 
@@ -120,18 +106,12 @@ class InjectTemplatesRecording(BaseRecording):
             num_samples = [num_samples]
 
         for segment_index in range(sorting.get_num_segments()):
-            start = np.searchsorted(
-                self.spike_vector["segment_ind"], segment_index, side="left"
-            )
-            end = np.searchsorted(
-                self.spike_vector["segment_ind"], segment_index, side="right"
-            )
+            start = np.searchsorted(self.spike_vector["segment_ind"], segment_index, side="left")
+            end = np.searchsorted(self.spike_vector["segment_ind"], segment_index, side="right")
             spikes = self.spike_vector[start:end]
 
             parent_recording_segment = (
-                None
-                if parent_recording is None
-                else parent_recording._recording_segments[segment_index]
+                None if parent_recording is None else parent_recording._recording_segments[segment_index]
             )
             recording_segment = InjectTemplatesRecordingSegment(
                 self.sampling_frequency,
@@ -162,10 +142,7 @@ class InjectTemplatesRecording(BaseRecording):
         max_value = np.max(np.abs(templates))
         threshold = 0.01 * max_value
 
-        if (
-            max(np.max(np.abs(templates[:, 0])), np.max(np.abs(templates[:, -1])))
-            > threshold
-        ):
+        if max(np.max(np.abs(templates[:, 0])), np.max(np.abs(templates[:, -1]))) > threshold:
             raise Exception(
                 "Warning!\nYour templates do not go to 0 on the edges in InjectTemplatesRecording.__init__\nPlease make your window bigger."
             )
@@ -186,9 +163,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         BaseRecordingSegment.__init__(
             self,
             sampling_frequency,
-            t_start=0
-            if parent_recording_segment is None
-            else parent_recording_segment.t_start,
+            t_start=0 if parent_recording_segment is None else parent_recording_segment.t_start,
         )
         assert not (parent_recording_segment is None and num_samples is None)
 
@@ -198,11 +173,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         self.nbefore = nbefore
         self.amplitude_factor = amplitude_factor
         self.parent_recording = parent_recording_segment
-        self.num_samples = (
-            parent_recording_segment.get_num_frames()
-            if num_samples is None
-            else num_samples
-        )
+        self.num_samples = parent_recording_segment.get_num_frames() if num_samples is None else num_samples
 
     def get_traces(
         self,
@@ -212,17 +183,9 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
     ) -> np.ndarray:
         start_frame = 0 if start_frame is None else start_frame
         end_frame = self.num_samples if end_frame is None else end_frame
-        channel_indices = (
-            list(range(self.templates.shape[2]))
-            if channel_indices is None
-            else channel_indices
-        )
+        channel_indices = list(range(self.templates.shape[2])) if channel_indices is None else channel_indices
         if isinstance(channel_indices, slice):
-            stop = (
-                channel_indices.stop
-                if channel_indices.stop is not None
-                else self.templates.shape[2]
-            )
+            stop = channel_indices.stop if channel_indices.stop is not None else self.templates.shape[2]
             start = channel_indices.start if channel_indices.start is not None else 0
             step = channel_indices.step if channel_indices.step is not None else 1
             n_channels = math.ceil((stop - start) / step)
@@ -230,9 +193,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
             n_channels = len(channel_indices)
 
         if self.parent_recording is not None:
-            traces = self.parent_recording.get_traces(
-                start_frame, end_frame, channel_indices
-            ).copy()
+            traces = self.parent_recording.get_traces(start_frame, end_frame, channel_indices).copy()
         else:
             traces = np.zeros([end_frame - start_frame, n_channels], dtype=self.dtype)
 
@@ -269,8 +230,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
                 end_traces = end_frame - start_frame
 
             traces[start_traces:end_traces] += (
-                template[start_template:end_template].astype(np.float64)
-                * self.amplitude_factor[i]
+                template[start_template:end_template].astype(np.float64) * self.amplitude_factor[i]
             ).astype(traces.dtype)
 
         return traces.astype(self.dtype)
@@ -279,6 +239,4 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         return self.num_samples
 
 
-inject_templates = define_function_from_class(
-    source_class=InjectTemplatesRecording, name="inject_templates"
-)
+inject_templates = define_function_from_class(source_class=InjectTemplatesRecording, name="inject_templates")

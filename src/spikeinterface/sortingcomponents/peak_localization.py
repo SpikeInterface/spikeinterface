@@ -20,9 +20,7 @@ from ..postprocessing.unit_localization import (
 )
 
 
-def localize_peaks(
-    recording, peaks, method="center_of_mass", ms_before=0.3, ms_after=0.5, **kwargs
-):
+def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.3, ms_after=0.5, **kwargs):
     """Localize peak (spike) in 2D or 3D depending the method.
 
     When a probe is 2D then:
@@ -59,9 +57,7 @@ def localize_peaks(
         )
         pipeline_nodes = [
             extract_dense_waveforms,
-            LocalizeCenterOfMass(
-                recording, parents=[extract_dense_waveforms], **method_kwargs
-            ),
+            LocalizeCenterOfMass(recording, parents=[extract_dense_waveforms], **method_kwargs),
         ]
     elif method == "monopolar_triangulation":
         extract_dense_waveforms = ExtractDenseWaveforms(
@@ -69,9 +65,7 @@ def localize_peaks(
         )
         pipeline_nodes = [
             extract_dense_waveforms,
-            LocalizeMonopolarTriangulation(
-                recording, parents=[extract_dense_waveforms], **method_kwargs
-            ),
+            LocalizeMonopolarTriangulation(recording, parents=[extract_dense_waveforms], **method_kwargs),
         ]
     elif method == "peak_channel":
         pipeline_nodes = [LocalizePeakChannel(recording, **method_kwargs)]
@@ -89,12 +83,8 @@ def localize_peaks(
 
 
 class LocalizeBase(PipelineNode):
-    def __init__(
-        self, recording, return_output=True, parents=None, local_radius_um=75.0
-    ):
-        PipelineNode.__init__(
-            self, recording, return_output=return_output, parents=parents
-        )
+    def __init__(self, recording, return_output=True, parents=None, local_radius_um=75.0):
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.local_radius_um = local_radius_um
         self.contact_locations = recording.get_channel_locations()
@@ -171,9 +161,7 @@ class LocalizeCenterOfMass(LocalizeBase):
             local_contact_locations = self.contact_locations[chan_inds, :]
 
             wf_ptp = (waveforms[idx][:, :, chan_inds]).ptp(axis=1)
-            coms = np.dot(wf_ptp, local_contact_locations) / (
-                np.sum(wf_ptp, axis=1)[:, np.newaxis]
-            )
+            coms = np.dot(wf_ptp, local_contact_locations) / (np.sum(wf_ptp, axis=1)[:, np.newaxis])
             peak_locations["x"][idx] = coms[:, 0]
             peak_locations["y"][idx] = coms[:, 1]
 
@@ -270,6 +258,4 @@ class LocalizeMonopolarTriangulation(PipelineNode):
 _methods_list = [LocalizeCenterOfMass, LocalizeMonopolarTriangulation]
 localize_peak_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)
-localize_peaks.__doc__ = localize_peaks.__doc__.format(
-    method_doc=method_doc, job_doc=_shared_job_kwargs_doc
-)
+localize_peaks.__doc__ = localize_peaks.__doc__.format(method_doc=method_doc, job_doc=_shared_job_kwargs_doc)

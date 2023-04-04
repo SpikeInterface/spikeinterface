@@ -2,9 +2,7 @@ import ipywidgets.widgets as widgets
 import numpy as np
 
 
-def make_timeseries_controller(
-    t_start, t_stop, layer_keys, num_segments, time_range, mode, all_layers, width_cm
-):
+def make_timeseries_controller(t_start, t_stop, layer_keys, num_segments, time_range, mode, all_layers, width_cm):
     time_slider = widgets.FloatSlider(
         orientation="horizontal",
         description="time:",
@@ -15,15 +13,9 @@ def make_timeseries_controller(
         layout=widgets.Layout(width=f"{width_cm}cm"),
     )
     layer_selector = widgets.Dropdown(description="layer", options=layer_keys)
-    segment_selector = widgets.Dropdown(
-        description="segment", options=list(range(num_segments))
-    )
-    window_sizer = widgets.BoundedFloatText(
-        value=np.diff(time_range)[0], step=0.1, min=0.005, description="win (s)"
-    )
-    mode_selector = widgets.Dropdown(
-        options=["line", "map"], description="mode", value=mode
-    )
+    segment_selector = widgets.Dropdown(description="segment", options=list(range(num_segments)))
+    window_sizer = widgets.BoundedFloatText(value=np.diff(time_range)[0], step=0.1, min=0.005, description="win (s)")
+    mode_selector = widgets.Dropdown(options=["line", "map"], description="mode", value=mode)
     all_layers = widgets.Checkbox(description="plot all layers", value=all_layers)
 
     controller = {
@@ -69,9 +61,7 @@ def make_unit_controller(unit_ids, all_unit_ids, width_cm, height_cm):
 
 
 def make_channel_controller(recording, width_cm, height_cm):
-    channel_label = widgets.Label(
-        "channel indices:", layout=widgets.Layout(justify_content="center")
-    )
+    channel_label = widgets.Label("channel indices:", layout=widgets.Layout(justify_content="center"))
     channel_selector = widgets.IntRangeSlider(
         value=[0, recording.get_num_channels()],
         min=0,
@@ -92,9 +82,7 @@ def make_channel_controller(recording, width_cm, height_cm):
 
 
 def make_scale_controller(width_cm, height_cm):
-    scale_label = widgets.Label(
-        "Scale", layout=widgets.Layout(justify_content="center")
-    )
+    scale_label = widgets.Label("Scale", layout=widgets.Layout(justify_content="center"))
 
     plus_selector = widgets.Button(
         description="",
@@ -102,9 +90,7 @@ def make_scale_controller(width_cm, height_cm):
         button_style="",  # 'success', 'info', 'warning', 'danger' or ''
         tooltip="Increase scale",
         icon="arrow-up",
-        layout=widgets.Layout(
-            width=f"{0.8 * width_cm}cm", height=f"{0.4 * height_cm}cm"
-        ),
+        layout=widgets.Layout(width=f"{0.8 * width_cm}cm", height=f"{0.4 * height_cm}cm"),
     )
 
     minus_selector = widgets.Button(
@@ -113,9 +99,7 @@ def make_scale_controller(width_cm, height_cm):
         button_style="",  # 'success', 'info', 'warning', 'danger' or ''
         tooltip="Decrease scale",
         icon="arrow-down",
-        layout=widgets.Layout(
-            width=f"{0.8 * width_cm}cm", height=f"{0.4 * height_cm}cm"
-        ),
+        layout=widgets.Layout(width=f"{0.8 * width_cm}cm", height=f"{0.4 * height_cm}cm"),
     )
 
     controller = {"plus": plus_selector, "minus": minus_selector}

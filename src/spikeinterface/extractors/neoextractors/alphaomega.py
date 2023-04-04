@@ -73,9 +73,5 @@ class AlphaOmegaEventExtractor(NeoBaseEventExtractor):
         return neo_kwargs
 
 
-read_alphaomega = define_function_from_class(
-    source_class=AlphaOmegaRecordingExtractor, name="read_alphaomega"
-)
-read_alphaomega_event = define_function_from_class(
-    source_class=AlphaOmegaEventExtractor, name="read_alphaomega_event"
-)
+read_alphaomega = define_function_from_class(source_class=AlphaOmegaRecordingExtractor, name="read_alphaomega")
+read_alphaomega_event = define_function_from_class(source_class=AlphaOmegaEventExtractor, name="read_alphaomega_event")

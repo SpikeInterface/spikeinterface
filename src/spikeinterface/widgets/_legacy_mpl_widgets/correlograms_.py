@@ -45,9 +45,7 @@ class CrossCorrelogramsWidget(BaseWidget):
                     color = "g"
                 else:
                     color = "k"
-                ax.bar(
-                    x=bins[:-1], height=ccg, width=bin_width, color=color, align="edge"
-                )
+                ax.bar(x=bins[:-1], height=ccg, width=bin_width, color=color, align="edge")
 
         for i, unit_id in enumerate(unit_ids):
             self.axes[0, i].set_title(str(unit_id))
@@ -78,9 +76,7 @@ class AutoCorrelogramsWidget(BaseWidget):
         Window duration in ms
     """
 
-    def __init__(
-        self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0, ncols=5, axes=None
-    ):
+    def __init__(self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0, ncols=5, axes=None):
         if unit_ids is not None:
             sorting = sorting.select_units(unit_ids)
         self.sorting = sorting

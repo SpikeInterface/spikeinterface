@@ -62,9 +62,7 @@ def test_find_spikes_from_templates():
             progress_bar=True,
         )
 
-        result[method] = NumpySorting.from_times_labels(
-            spikes["sample_ind"], spikes["cluster_ind"], sampling_frequency
-        )
+        result[method] = NumpySorting.from_times_labels(spikes["sample_ind"], spikes["cluster_ind"], sampling_frequency)
 
     # debug
     # import matplotlib.pyplot as plt
