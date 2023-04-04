@@ -14,7 +14,7 @@ Most of the :code:`Recording` classes are implemented by wrapping the
 Most of the :code:`Sorting` classes are instead directly implemented in SpikeInterface.
 
 
-Although spikeinterface is object-oriented (class-based), each object can also be loaded with a convenient
+Although SpikeInterface is object-oriented (class-based), each object can also be loaded with a convenient
 :code:`read_XXXXX()` function.
 
 
@@ -76,7 +76,7 @@ The actual reading will be done on demand using the :py:meth:`~spikeinterface.co
 
 .. code-block:: python
 
-    # open a 40GB SpikeGLX dataset is fast
+    # opening a 40GB SpikeGLX dataset is fast
     recording_spikeglx = read_spikeglx("spikeglx-folder")
 
     # this really does load the full 40GB into memory : not recommended!!!!!
@@ -98,12 +98,12 @@ Most formats are supported on top of `NEO <https://github.com/NeuralEnsemble/pyt
 Dependencies
 ------------
 
-The :code:`neo` package is a hard dependency of spikeinterface. So all formats handled by neo directly will be handled
-also in spikeinterface.
+The :code:`neo` package is a hard dependency of SpikeInterface. So all formats handled by Neo directly will also be handled
+in SpikeInterface.
 
-However, some formats are handled directly by spikeinterface and need extra installation.
+However, some formats are handled directly by SpikeInterface and need extra installation.
 
-You can install all extractors dependencies with:
+You can install all extractors' dependencies with:
 
 .. code-block:: python
 

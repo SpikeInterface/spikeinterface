@@ -92,7 +92,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
             self.add_recording_segment(recording_segment)
 
         self._kwargs = dict(
-            parent_recording=parent_recording.to_dict(),
+            parent_recording=parent_recording,
             direction=direction,
             dtype=dtype,
         )
