@@ -83,14 +83,14 @@ if HAVE_NUMBA:
 
 def find_duplicated_spikes(spike_train, censored_period: int, method: str = "random", seed: Optional[int] = None) -> np.ndarray:
     """
-    Finds the indices where there a spike in considered a duplicate.
+    Finds the indices where a spike should be considered a duplicate.
     When two spikes are closer together than the censored period,
-    one of them taken out based on the method provided.
+    one of them is taken out based on the method provided.
 
     Parameters
     ----------
     spike_train: np.ndarray
-        The spike train on which to look for duplicated spikes.
+        The spike train in which to look for duplicated spikes.
     censored_period: int
         The censored period for duplicates (in sample time).
     method: str in ("keep_first", "keep_last", "keep_first_iterative', 'keep_last_iterative", random")
