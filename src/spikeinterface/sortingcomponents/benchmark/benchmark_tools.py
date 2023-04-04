@@ -61,9 +61,7 @@ class BenchmarkBase:
             for key in parent_benchmark.sortings.keys():
                 if isinstance(key, str) and key in self._sorting_names_from_parent:
                     self.sortings[key] = parent_benchmark.sortings[key]
-                elif (
-                    isinstance(key, tuple) and key[0] in self._sorting_names_from_parent
-                ):
+                elif isinstance(key, tuple) and key[0] in self._sorting_names_from_parent:
                     self.sortings[key] = parent_benchmark.sortings[key]
 
     def save_to_folder(self):
@@ -89,15 +87,10 @@ class BenchmarkBase:
             "parent_folder": parent_folder,
         }
         info = check_json(info)
-        (self.folder / "info.json").write_text(
-            json.dumps(info, indent=4), encoding="utf8"
-        )
+        (self.folder / "info.json").write_text(json.dumps(info, indent=4), encoding="utf8")
 
         for name in self._array_names:
-            if (
-                self.parent_benchmark is not None
-                and name in self._array_names_from_parent
-            ):
+            if self.parent_benchmark is not None and name in self._array_names_from_parent:
                 continue
             value = getattr(self, name)
             if value is not None:
@@ -105,9 +98,7 @@ class BenchmarkBase:
 
         if self.run_times is not None:
             run_times_filename = self.folder / "run_times.json"
-            run_times_filename.write_text(
-                json.dumps(self.run_times, indent=4), encoding="utf8"
-            )
+            run_times_filename.write_text(json.dumps(self.run_times, indent=4), encoding="utf8")
 
         for key, sorting in self.sortings.items():
             (self.folder / "sortings").mkdir(exist_ok=True)
@@ -154,16 +145,11 @@ class BenchmarkBase:
             bench.run_times = None
 
         for key in bench._waveform_names:
-            if (
-                parent_benchmark is not None
-                and key in bench._waveform_names_from_parent
-            ):
+            if parent_benchmark is not None and key in bench._waveform_names_from_parent:
                 continue
             waveforms_folder = folder / "waveforms" / key
             if waveforms_folder.exists():
-                bench.waveforms[key] = load_waveforms(
-                    waveforms_folder, with_recording=True
-                )
+                bench.waveforms[key] = load_waveforms(waveforms_folder, with_recording=True)
 
         sorting_folder = folder / "sortings"
         if sorting_folder.exists():

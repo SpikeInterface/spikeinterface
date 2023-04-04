@@ -30,24 +30,14 @@ def get_matlab_shell_name():
     try:
         # Either of "", "bash", "zsh", "fish",...
         # CalledProcessError if not defined
-        matlab_shell_name = (
-            check_output(["which $MATLAB_SHELL"], shell=True)
-            .decode()
-            .strip("\n")
-            .split("/")[-1]
-        )
+        matlab_shell_name = check_output(["which $MATLAB_SHELL"], shell=True).decode().strip("\n").split("/")[-1]
         return matlab_shell_name
     except CalledProcessError as e:
         pass
     try:
         # Either of "", "bash", "zsh", "fish",...
         # CalledProcessError if not defined
-        df_shell_name = (
-            check_output(["which $SHELL"], shell=True)
-            .decode()
-            .strip("\n")
-            .split("/")[-1]
-        )
+        df_shell_name = check_output(["which $SHELL"], shell=True).decode().strip("\n").split("/")[-1]
         return df_shell_name
     except CalledProcessError as e:
         pass
@@ -61,11 +51,7 @@ def get_git_commit(git_folder, shorten=True):
     if git_folder is None:
         return None
     try:
-        commit = (
-            check_output(["git", "rev-parse", "HEAD"], cwd=git_folder)
-            .decode("utf8")
-            .strip()
-        )
+        commit = check_output(["git", "rev-parse", "HEAD"], cwd=git_folder).decode("utf8").strip()
         if shorten:
             commit = commit[:12]
     except:

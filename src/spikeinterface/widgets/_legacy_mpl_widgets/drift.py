@@ -58,9 +58,7 @@ class DriftOverTimeWidget(BaseWidget):
         possible_modes = ("heatmap", "scatter")
         assert mode in possible_modes, f"mode mus be in {possible_modes}"
         if mode == "scatter":
-            assert (
-                not weight_with_amplitudes
-            ), "with scatter mode, weight_with_amplitudes must be False"
+            assert not weight_with_amplitudes, "with scatter mode, weight_with_amplitudes must be False"
         assert recording.get_num_segments() == 1, "Handle only one segment"
 
         self.recording = recording
@@ -104,9 +102,7 @@ class DriftOverTimeWidget(BaseWidget):
 
             peak_density = np.zeros((depth_bins.size - 1, nchunk), dtype="float32")
             for i in range(nchunk):
-                mask = (peaks["sample_ind"] >= (i * bin_size)) & (
-                    peaks["sample_ind"] < ((i + 1) * bin_size)
-                )
+                mask = (peaks["sample_ind"] >= (i * bin_size)) & (peaks["sample_ind"] < ((i + 1) * bin_size))
                 depths = positions[peaks["channel_ind"][mask], self.probe_axis]
 
                 if self.weight_with_amplitudes:

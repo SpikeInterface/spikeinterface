@@ -30,9 +30,7 @@ if DEBUG:
 # -------------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(
-    not HAVE_IBL_NPIX or ON_GITHUB, reason="Only local. Requires ibl-neuropixel install"
-)
+@pytest.mark.skipif(not HAVE_IBL_NPIX or ON_GITHUB, reason="Only local. Requires ibl-neuropixel install")
 def test_compare_real_data_with_ibl():
     """
     Test SI implementation of bad channel interpolation against native IBL.
@@ -58,18 +56,12 @@ def test_compare_real_data_with_ibl():
     si_recording = spre.scale(si_recording, dtype="float32")
 
     # interpolate SI
-    si_interpolated_recording = spre.interpolate_bad_channels(
-        si_recording, bad_channel_ids
-    )
+    si_interpolated_recording = spre.interpolate_bad_channels(si_recording, bad_channel_ids)
 
     # interpolate IBL
-    ibl_bad_channel_labels = get_ibl_bad_channel_labels(
-        num_channels, bad_channel_indexes
-    )
+    ibl_bad_channel_labels = get_ibl_bad_channel_labels(num_channels, bad_channel_indexes)
 
-    ibl_data = ibl_recording.read(slice(None), slice(None), sync=False)[
-        :, :-1
-    ].T  # cut sync channel
+    ibl_data = ibl_recording.read(slice(None), slice(None), sync=False)[:, :-1].T  # cut sync channel
     si_interpolated = si_interpolated_recording.get_traces(return_scaled=True)
     ibl_interpolated = voltage.interpolate_bad_channels(
         ibl_data,
@@ -110,21 +102,15 @@ def test_compare_input_argument_ranges_against_ibl(shanks, p, sigma_um, num_chan
         recording._properties["contact_vector"][idx][1] = x[idx]
 
     # generate random bad channel locations
-    bad_channel_indexes = np.random.choice(
-        num_channels, np.random.randint(1, int(num_channels / 5)), replace=False
-    )
+    bad_channel_indexes = np.random.choice(num_channels, np.random.randint(1, int(num_channels / 5)), replace=False)
     bad_channel_ids = recording.channel_ids[bad_channel_indexes]
 
     # Run SI and IBL interpolation and check against eachother
     recording = spre.scale(recording, dtype="float32")
-    si_interpolated_recording = spre.interpolate_bad_channels(
-        recording, bad_channel_ids, sigma_um=sigma_um, p=p
-    )
+    si_interpolated_recording = spre.interpolate_bad_channels(recording, bad_channel_ids, sigma_um=sigma_um, p=p)
     si_interpolated = si_interpolated_recording.get_traces()
 
-    ibl_bad_channel_labels = get_ibl_bad_channel_labels(
-        num_channels, bad_channel_indexes
-    )
+    ibl_bad_channel_labels = get_ibl_bad_channel_labels(num_channels, bad_channel_indexes)
     x, y = np.hsplit(recording.get_probe().contact_positions, 2)
     ibl_interpolated = voltage.interpolate_bad_channels(
         recording.get_traces().T,
@@ -168,9 +154,7 @@ def test_output_values():
     # Run interpolation in SI and check the interpolated channel
     # 0 is a linear combination of other channels
     recording = spre.scale(recording, dtype="float32")
-    si_interpolated_recording = spre.interpolate_bad_channels(
-        recording, bad_channel_ids, sigma_um=5, p=2
-    )
+    si_interpolated_recording = spre.interpolate_bad_channels(recording, bad_channel_ids, sigma_um=5, p=2)
     si_interpolated = si_interpolated_recording.get_traces()
     expected_ts = np.sum(si_interpolated[:, 1:] / 4, axis=1)
 
@@ -184,9 +168,7 @@ def test_output_values():
     expected_weights = np.r_[np.tile(np.exp(-2), 3), np.exp(-4)]
     expected_weights /= np.sum(expected_weights)
 
-    si_interpolated_recording = spre.interpolate_bad_channels(
-        recording, bad_channel_indexes, sigma_um=1, p=1
-    )
+    si_interpolated_recording = spre.interpolate_bad_channels(recording, bad_channel_indexes, sigma_um=1, p=1)
     si_interpolated = si_interpolated_recording.get_traces()
 
     expected_ts = si_interpolated[:, 1:] @ expected_weights
@@ -207,7 +189,5 @@ def get_ibl_bad_channel_labels(num_channels, bad_channel_indexes):
 
 if __name__ == "__main__":
     test_compare_real_data_with_ibl()
-    test_compare_input_argument_ranges_against_ibl(
-        shanks=4, p=1, sigma_um=1.25, num_channels=32
-    )
+    test_compare_input_argument_ranges_against_ibl(shanks=4, p=1, sigma_um=1.25, num_channels=32)
     test_output_values()

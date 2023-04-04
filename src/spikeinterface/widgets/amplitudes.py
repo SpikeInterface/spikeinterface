@@ -70,8 +70,7 @@ class AmplitudesWidget(BaseWidget):
             segment_index = 0
         amplitudes_segment = amplitudes[segment_index]
         total_duration = (
-            waveform_extractor.recording.get_num_samples(segment_index)
-            / waveform_extractor.sampling_frequency
+            waveform_extractor.recording.get_num_samples(segment_index) / waveform_extractor.sampling_frequency
         )
 
         spiketrains_segment = {}
@@ -88,9 +87,7 @@ class AmplitudesWidget(BaseWidget):
             for unit, st in all_spiketrains.items():
                 amps = all_amplitudes[unit]
                 if len(st) > max_spikes_per_unit:
-                    random_idxs = np.random.choice(
-                        len(st), size=max_spikes_per_unit, replace=False
-                    )
+                    random_idxs = np.random.choice(len(st), size=max_spikes_per_unit, replace=False)
                     spiketrains_to_plot[unit] = st[random_idxs]
                     amplitudes_to_plot[unit] = amps[random_idxs]
                 else:

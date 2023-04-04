@@ -102,12 +102,8 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
                 else:
                     index = (unit_id, chan_ids[i])
                 if upsampling_factor > 1:
-                    assert isinstance(
-                        upsampling_factor, (int, np.integer)
-                    ), "'upsample' must be an integer"
-                    template_upsampled = resample_poly(
-                        template_single, up=upsampling_factor, down=1
-                    )
+                    assert isinstance(upsampling_factor, (int, np.integer)), "'upsample' must be an integer"
+                    template_upsampled = resample_poly(template_single, up=upsampling_factor, down=1)
                     sampling_frequency_up = upsampling_factor * sampling_frequency
                 else:
                     template_upsampled = template_single
@@ -188,12 +184,8 @@ def compute_template_metrics(
         If 'sparsity' is None, the index is the unit_id.
         If 'sparsity' is given, the index is a multi-index (unit_id, channel_id)
     """
-    if load_if_exists and waveform_extractor.is_extension(
-        TemplateMetricsCalculator.extension_name
-    ):
-        tmc = waveform_extractor.load_extension(
-            TemplateMetricsCalculator.extension_name
-        )
+    if load_if_exists and waveform_extractor.is_extension(TemplateMetricsCalculator.extension_name):
+        tmc = waveform_extractor.load_extension(TemplateMetricsCalculator.extension_name)
     else:
         tmc = TemplateMetricsCalculator(waveform_extractor)
         tmc.set_params(
@@ -300,9 +292,7 @@ def get_repolarization_slope(template, **kwargs):
     if return_to_base_idx - trough_idx < 3:
         return np.nan
 
-    res = scipy.stats.linregress(
-        times[trough_idx:return_to_base_idx], template[trough_idx:return_to_base_idx]
-    )
+    res = scipy.stats.linregress(times[trough_idx:return_to_base_idx], template[trough_idx:return_to_base_idx])
     return res.slope
 
 
@@ -343,8 +333,7 @@ _metric_name_to_func = {
 # back-compatibility
 def calculate_template_metrics(*args, **kwargs):
     warnings.warn(
-        "The 'calculate_template_metrics' function is deprecated. "
-        "Use 'compute_template_metrics' instead",
+        "The 'calculate_template_metrics' function is deprecated. " "Use 'compute_template_metrics' instead",
         DeprecationWarning,
         stacklevel=2,
     )

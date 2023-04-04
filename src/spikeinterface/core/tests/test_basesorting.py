@@ -114,15 +114,11 @@ def test_npy_sorting():
 
     assert sorting.get_num_segments() == 2
     assert set(sorting.get_unit_ids()) == set(["0", "1"])
-    check_sorted_arrays_equal(
-        sorting.get_unit_spike_train(segment_index=0, unit_id="1"), [2, 5]
-    )
+    check_sorted_arrays_equal(sorting.get_unit_spike_train(segment_index=0, unit_id="1"), [2, 5])
 
     # Check registering a recording
     seg_nframes = [10, 5]
-    rec = NumpyRecording(
-        [np.zeros((nframes, 10)) for nframes in seg_nframes], sampling_frequency=sfreq
-    )
+    rec = NumpyRecording([np.zeros((nframes, 10)) for nframes in seg_nframes], sampling_frequency=sfreq)
     sorting.register_recording(rec)
     assert sorting.get_num_samples(segment_index=0) == 10
     assert sorting.get_num_samples(segment_index=1) == 5
@@ -130,18 +126,14 @@ def test_npy_sorting():
 
     # Registering too short a recording raises a warning
     seg_nframes = [9, 5]
-    rec = NumpyRecording(
-        [np.zeros((nframes, 10)) for nframes in seg_nframes], sampling_frequency=sfreq
-    )
+    rec = NumpyRecording([np.zeros((nframes, 10)) for nframes in seg_nframes], sampling_frequency=sfreq)
     # assert_raises(Exception, sorting.register_recording, rec)
     with pytest.warns():
         sorting.register_recording(rec)
 
     # Registering a rec with too many segments
     seg_nframes = [9, 5, 10]
-    rec = NumpyRecording(
-        [np.zeros((nframes, 10)) for nframes in seg_nframes], sampling_frequency=sfreq
-    )
+    rec = NumpyRecording([np.zeros((nframes, 10)) for nframes in seg_nframes], sampling_frequency=sfreq)
     assert_raises(Exception, sorting.register_recording, rec)
 
 

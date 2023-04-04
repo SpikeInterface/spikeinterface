@@ -28,9 +28,7 @@ class CorrelogramGTComparison(GroundTruthComparison):
         kwargs["compute_labels"] = True
 
         if gt_sorting.get_num_segments() > 1 or tested_sorting.get_num_segments() > 1:
-            raise NotImplementedError(
-                "Correlogram comparison is only available for mono-segment sorting objects"
-            )
+            raise NotImplementedError("Correlogram comparison is only available for mono-segment sorting objects")
 
         GroundTruthComparison.__init__(self, gt_sorting, tested_sorting, **kwargs)
 
@@ -46,12 +44,8 @@ class CorrelogramGTComparison(GroundTruthComparison):
         return np.linspace(-self.window_ms / 2, self.window_ms / 2, self.nb_timesteps)
 
     def compute_correlograms(self):
-        correlograms_1, bins = compute_correlograms(
-            self.sorting1, **self.compute_kwargs
-        )
-        correlograms_2, bins = compute_correlograms(
-            self.sorting2, **self.compute_kwargs
-        )
+        correlograms_1, bins = compute_correlograms(self.sorting1, **self.compute_kwargs)
+        correlograms_2, bins = compute_correlograms(self.sorting2, **self.compute_kwargs)
 
         self.good_sorting = self.get_well_detected_units(self.well_detected_score)
         self.good_gt = self.hungarian_match_21[self.good_sorting].values
@@ -92,9 +86,7 @@ class CorrelogramGTComparison(GroundTruthComparison):
 
         indices = np.where(self.correlograms["true"][:, :, amin:amax] > 0)
         res[indices] = np.abs(
-            1
-            - self.correlograms["estimated"][:, :, amin:amax]
-            / self.correlograms["true"][:, :, amin:amax]
+            1 - self.correlograms["estimated"][:, :, amin:amax] / self.correlograms["true"][:, :, amin:amax]
         )[indices]
 
         return res

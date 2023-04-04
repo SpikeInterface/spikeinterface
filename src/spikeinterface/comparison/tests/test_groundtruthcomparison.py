@@ -8,9 +8,7 @@ from spikeinterface.comparison import compare_sorter_to_ground_truth
 def make_sorting(times1, labels1, times2, labels2):
     sampling_frequency = 30000.0
     gt_sorting = NumpySorting.from_times_labels([times1], [labels1], sampling_frequency)
-    tested_sorting = NumpySorting.from_times_labels(
-        [times2], [labels2], sampling_frequency
-    )
+    tested_sorting = NumpySorting.from_times_labels([times2], [labels2], sampling_frequency)
     return gt_sorting, tested_sorting
 
 
@@ -46,9 +44,7 @@ def test_compare_sorter_to_ground_truth():
         # ~ print(sc.
         scores = sc.agreement_scores
         ordered_scores = sc.get_ordered_agreement_scores()
-        assert_array_equal(
-            scores.loc[ordered_scores.index, ordered_scores.columns], ordered_scores
-        )
+        assert_array_equal(scores.loc[ordered_scores.index, ordered_scores.columns], ordered_scores)
 
         assert sc.count_score.at[0, "tp"] == 3
         assert sc.count_score.at[1, "tp"] == 3
@@ -71,9 +67,7 @@ def test_compare_sorter_to_ground_truth():
 
         sc.print_summary()
 
-    sc = compare_sorter_to_ground_truth(
-        gt_sorting, tested_sorting, exhaustive_gt=True, match_mode="hungarian"
-    )
+    sc = compare_sorter_to_ground_truth(gt_sorting, tested_sorting, exhaustive_gt=True, match_mode="hungarian")
 
     # test well detected units depending on thresholds
     good_units = sc.get_well_detected_units()  # tp_thresh=0.95 default value
@@ -137,9 +131,7 @@ def test_get_performance():
         ],
         [0, 0, 5],
     )
-    sc = compare_sorter_to_ground_truth(
-        gt_sorting, tested_sorting, exhaustive_gt=True, delta_time=0.3
-    )
+    sc = compare_sorter_to_ground_truth(gt_sorting, tested_sorting, exhaustive_gt=True, delta_time=0.3)
 
     perf = sc.get_performance("raw_count")
     assert perf.loc[0, "tp"] == 2

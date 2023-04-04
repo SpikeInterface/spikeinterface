@@ -112,14 +112,10 @@ class RemoveArtifactsRecording(BasePreprocessor):
         num_seg = recording.get_num_segments()
 
         if num_seg == 1:
-            if isinstance(list_triggers, (list, np.ndarray)) and np.isscalar(
-                list_triggers[0]
-            ):
+            if isinstance(list_triggers, (list, np.ndarray)) and np.isscalar(list_triggers[0]):
                 # when unique segment accept list instead of of list of list/arrays
                 list_triggers = [list_triggers]
-            if isinstance(list_labels, (list, np.ndarray)) and np.isscalar(
-                list_labels[0]
-            ):
+            if isinstance(list_labels, (list, np.ndarray)) and np.isscalar(list_labels[0]):
                 # when unique segment accept list instead of of list of list/arrays
                 list_labels = [list_labels]
 
@@ -128,33 +124,21 @@ class RemoveArtifactsRecording(BasePreprocessor):
             list_labels = [[0] * len(i) for i in list_triggers]
 
         # some checks
-        assert isinstance(
-            list_triggers, list
-        ), "'list_triggers' must be a list (one per segment)"
-        assert (
-            len(list_triggers) == num_seg
-        ), "'list_triggers' must have the same length as the number of segments"
+        assert isinstance(list_triggers, list), "'list_triggers' must be a list (one per segment)"
+        assert len(list_triggers) == num_seg, "'list_triggers' must have the same length as the number of segments"
         assert all(
             isinstance(list_triggers[i], (list, np.ndarray)) for i in range(num_seg)
         ), "Each element of 'list_triggers' must be array-like"
 
         if list_labels is not None:
-            assert isinstance(
-                list_labels, list
-            ), "'list_labels' must be a list (one per segment)"
+            assert isinstance(list_labels, list), "'list_labels' must be a list (one per segment)"
             assert len(list_labels) == num_seg
-            assert all(
-                isinstance(list_labels[i], (list, np.ndarray)) for i in range(num_seg)
-            )
+            assert all(isinstance(list_labels[i], (list, np.ndarray)) for i in range(num_seg))
 
-        assert (
-            mode in available_modes
-        ), f"mode {mode} is not an available mode: {available_modes}"
+        assert mode in available_modes, f"mode {mode} is not an available mode: {available_modes}"
 
         if ms_before is None:
-            assert (
-                ms_after is None
-            ), "To remove a single sample, set both ms_before and ms_after to None"
+            assert ms_after is None, "To remove a single sample, set both ms_before and ms_after to None"
         else:
             ms_before = float(ms_before)
             ms_after = float(ms_after)
@@ -178,16 +162,10 @@ class RemoveArtifactsRecording(BasePreprocessor):
                 for sub_list in list_labels:
                     labels += list(np.unique(sub_list))
                 for l in np.unique(labels):
-                    assert (
-                        l in artifacts.keys()
-                    ), f"Artefacts are provided but label {l} has no value!"
+                    assert l in artifacts.keys(), f"Artefacts are provided but label {l} has no value!"
             else:
-                assert (
-                    "ms_before" != None and "ms_after" != None
-                ), f"ms_before/after should not be None for mode {mode}"
-                sorting = NumpySorting.from_times_labels(
-                    list_triggers, list_labels, recording.get_sampling_frequency()
-                )
+                assert "ms_before" != None and "ms_after" != None, f"ms_before/after should not be None for mode {mode}"
+                sorting = NumpySorting.from_times_labels(list_triggers, list_labels, recording.get_sampling_frequency())
                 sorting = sorting.save()
                 waveforms_kwargs.update({"ms_before": ms_before, "ms_after": ms_after})
                 w = extract_waveforms(recording, sorting, None, **waveforms_kwargs)
@@ -195,9 +173,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
                 artifacts = {}
                 sparsity = {}
                 for label in w.sorting.unit_ids:
-                    artifacts[label] = w.get_template(label, mode=mode).astype(
-                        recording.dtype
-                    )
+                    artifacts[label] = w.get_template(label, mode=mode).astype(recording.dtype)
                     if w.is_sparse():
                         unit_ind = w.sorting.id_to_index(label)
                         sparsity[label] = w.sparsity.mask[unit_ind]
@@ -209,9 +185,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
                 for sub_list in list_labels:
                     labels += list(np.unique(sub_list))
                 for l in np.unique(labels):
-                    assert (
-                        l in sparsity.keys()
-                    ), f"Sparsities are provided but label {l} has no value!"
+                    assert l in sparsity.keys(), f"Sparsities are provided but label {l} has no value!"
         else:
             artifacts = None
             time_pad = None
@@ -234,9 +208,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
             )
             self.add_recording_segment(rec_segment)
 
-        list_triggers_ = [
-            [int(trig) for trig in trig_seg] for trig_seg in list_triggers
-        ]
+        list_triggers_ = [[int(trig) for trig in trig_seg] for trig_seg in list_triggers]
         if list_labels is not None:
             list_labels_ = [list(lab_seg) for lab_seg in list_labels]
         else:
@@ -287,13 +259,9 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if self.mode in ["average", "median"]:
-            traces = self.parent_recording_segment.get_traces(
-                start_frame, end_frame, slice(None)
-            )
+            traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
         else:
-            traces = self.parent_recording_segment.get_traces(
-                start_frame, end_frame, channel_indices
-            )
+            traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
 
         if start_frame is None:
@@ -314,9 +282,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                 else:
                     if trig - pad[0] > 0 and trig + pad[1] < end_frame - start_frame:
                         traces[trig - pad[0] : trig + pad[1] + 1, :] = 0
-                    elif (
-                        trig - pad[0] <= 0 and trig + pad[1] >= end_frame - start_frame
-                    ):
+                    elif trig - pad[0] <= 0 and trig + pad[1] >= end_frame - start_frame:
                         traces[:] = 0
                     elif trig - pad[0] <= 0:
                         traces[: trig + pad[1], :] = 0
@@ -406,19 +372,13 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                     traces[gap_idx, :] = interp_function(gap_idx)
                 elif len(pre_idx) > len(post_idx):
                     # not enough fit points, fill with nearest neighbour on side with the most data points
-                    traces[gap_idx, :] = np.repeat(
-                        traces[[pre_idx[-1]], :], len(gap_idx), axis=0
-                    )
+                    traces[gap_idx, :] = np.repeat(traces[[pre_idx[-1]], :], len(gap_idx), axis=0)
                 elif len(post_idx) > len(pre_idx):
                     # not enough fit points, fill with nearest neighbour on side with the most data points
-                    traces[gap_idx, :] = np.repeat(
-                        traces[[post_idx[0]], :], len(gap_idx), axis=0
-                    )
+                    traces[gap_idx, :] = np.repeat(traces[[post_idx[0]], :], len(gap_idx), axis=0)
                 elif len(all_idx) > 0:
                     # not enough fit points, both sides tied for most data points, fill with last pre value
-                    traces[gap_idx, :] = np.repeat(
-                        traces[[pre_idx[-1]], :], len(gap_idx), axis=0
-                    )
+                    traces[gap_idx, :] = np.repeat(traces[[pre_idx[-1]], :], len(gap_idx), axis=0)
                 else:
                     # No data to interpolate from on either side of gap;
                     # Fill with zeros
@@ -442,18 +402,13 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                 for count, padding in enumerate(jitters):
                     t_trig = trig + padding
 
-                    if (
-                        t_trig - pad[0] >= 0
-                        and t_trig + pad[1] < end_frame - start_frame
-                    ):
+                    if t_trig - pad[0] >= 0 and t_trig + pad[1] < end_frame - start_frame:
                         trace_slice = slice(t_trig - pad[0], t_trig + pad[1])
                         artifact_slice = slice(0, artifact_duration)
                     elif t_trig - pad[0] < 0:
                         trace_slice = slice(0, t_trig + pad[1])
                         duration = t_trig + pad[1]
-                        artifact_slice = slice(
-                            artifact_duration - duration, artifact_duration
-                        )
+                        artifact_slice = slice(artifact_duration - duration, artifact_duration)
                     elif t_trig + pad[1] >= end_frame - start_frame:
                         trace_slice = slice(t_trig - pad[0], end_frame - start_frame)
                         duration = (end_frame - start_frame) - (t_trig - pad[0])
@@ -465,9 +420,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
 
                     artifact_slice_values = self.artifacts[label][artifact_slice]
 
-                    norm = np.linalg.norm(trace_slice_values) * np.linalg.norm(
-                        artifact_slice_values
-                    )
+                    norm = np.linalg.norm(trace_slice_values) * np.linalg.norm(artifact_slice_values)
                     best_amplitudes[count] = (
                         np.dot(
                             trace_slice_values.flatten(),
@@ -480,18 +433,13 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                     idx_best_jitter = np.argmax(best_amplitudes)
                     t_trig = trig + jitters[idx_best_jitter]
 
-                    if (
-                        t_trig - pad[0] >= 0
-                        and t_trig + pad[1] < end_frame - start_frame
-                    ):
+                    if t_trig - pad[0] >= 0 and t_trig + pad[1] < end_frame - start_frame:
                         trace_slice = slice(t_trig - pad[0], t_trig + pad[1])
                         artifact_slice = slice(0, artifact_duration)
                     elif t_trig - pad[0] < 0:
                         trace_slice = slice(0, t_trig + pad[1])
                         duration = t_trig + pad[1]
-                        artifact_slice = slice(
-                            artifact_duration - duration, artifact_duration
-                        )
+                        artifact_slice = slice(artifact_duration - duration, artifact_duration)
                     elif t_trig + pad[1] >= end_frame - start_frame:
                         trace_slice = slice(t_trig - pad[0], end_frame - start_frame)
                         duration = (end_frame - start_frame) - (t_trig - pad[0])
@@ -505,19 +453,15 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                     best_amp = 1
 
                 if mask is not None:
-                    traces[trace_slice][:, mask] -= (
-                        best_amp * self.artifacts[label][artifact_slice]
-                    ).astype(traces.dtype)
+                    traces[trace_slice][:, mask] -= (best_amp * self.artifacts[label][artifact_slice]).astype(
+                        traces.dtype
+                    )
                 else:
-                    traces[trace_slice] -= (
-                        best_amp * self.artifacts[label][artifact_slice]
-                    ).astype(traces.dtype)
+                    traces[trace_slice] -= (best_amp * self.artifacts[label][artifact_slice]).astype(traces.dtype)
             traces = traces[:, channel_indices]
 
         return traces
 
 
 # function for API
-remove_artifacts = define_function_from_class(
-    source_class=RemoveArtifactsRecording, name="remove_artifacts"
-)
+remove_artifacts = define_function_from_class(source_class=RemoveArtifactsRecording, name="remove_artifacts")

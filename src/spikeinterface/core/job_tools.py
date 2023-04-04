@@ -56,8 +56,7 @@ def fix_job_kwargs(runtime_job_kwargs):
 
     for k in runtime_job_kwargs:
         assert k in job_keys, (
-            f"{k} is not a valid job keyword argument. "
-            f"Available keyword arguments are: {list(job_keys)}"
+            f"{k} is not a valid job keyword argument. " f"Available keyword arguments are: {list(job_keys)}"
         )
     # remove None
     runtime_job_kwargs_exclude_none = runtime_job_kwargs.copy()
@@ -140,12 +139,7 @@ def divide_recording_into_chunks(recording, chunk_size):
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
         chunks = divide_segment_into_chunks(num_frames, chunk_size)
-        all_chunks.extend(
-            [
-                (segment_index, frame_start, frame_stop)
-                for frame_start, frame_stop in chunks
-            ]
-        )
+        all_chunks.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
     return all_chunks
 
 
@@ -184,13 +178,7 @@ def ensure_n_jobs(recording, n_jobs=1):
 
 
 def ensure_chunk_size(
-    recording,
-    total_memory=None,
-    chunk_size=None,
-    chunk_memory=None,
-    chunk_duration=None,
-    n_jobs=1,
-    **other_kwargs,
+    recording, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, **other_kwargs
 ):
     """
     'chunk_size' is the traces.shape[0] for each worker.
@@ -250,9 +238,7 @@ def ensure_chunk_size(
             # not chunk computing
             chunk_size = None
         else:
-            raise ValueError(
-                "For n_jobs >1 you must specify total_memory or chunk_size or chunk_memory"
-            )
+            raise ValueError("For n_jobs >1 you must specify total_memory or chunk_size or chunk_memory")
 
     return chunk_size
 
@@ -285,6 +271,9 @@ class ChunkRecordingExecutor:
         If True, a progress bar is printed to monitor the progress of the process
     handle_returns: bool
         If True, the function can return values
+    gather_func: None or callable
+        Optional function that is called in the main thread and retrieves the results of each worker.
+        This function can be used instead of `handle_returns` to implement custom storage on-the-fly.
     n_jobs: int
         Number of jobs to be used (default 1). Use -1 to use as many jobs as number of cores
     total_memory: str
@@ -305,6 +294,7 @@ class ChunkRecordingExecutor:
         This used only when n_jobs>1
         If None, no limits.
 
+
     Returns
     -------
     res: list
@@ -320,6 +310,7 @@ class ChunkRecordingExecutor:
         verbose=False,
         progress_bar=False,
         handle_returns=False,
+        gather_func=None,
         n_jobs=1,
         total_memory=None,
         chunk_size=None,
@@ -345,6 +336,7 @@ class ChunkRecordingExecutor:
         self.progress_bar = progress_bar
 
         self.handle_returns = handle_returns
+        self.gather_func = gather_func
 
         self.n_jobs = ensure_n_jobs(recording, n_jobs=n_jobs)
         self.chunk_size = ensure_chunk_size(
@@ -359,13 +351,7 @@ class ChunkRecordingExecutor:
         self.max_threads_per_process = max_threads_per_process
 
         if verbose:
-            print(
-                self.job_name,
-                "with n_jobs =",
-                self.n_jobs,
-                "and chunk_size =",
-                self.chunk_size,
-            )
+            print(self.job_name, "with n_jobs =", self.n_jobs, "and chunk_size =", self.chunk_size)
 
     def run(self):
         """
@@ -392,6 +378,8 @@ class ChunkRecordingExecutor:
                 res = self.func(segment_index, frame_start, frame_stop, worker_ctx)
                 if self.handle_returns:
                     returns.append(res)
+                if self.gather_func is not None:
+                    self.gather_func(res)
         else:
             n_jobs = min(self.n_jobs, len(all_chunks))
             ######## Do you want to limit the number of threads per process?
@@ -404,24 +392,18 @@ class ChunkRecordingExecutor:
                 max_workers=n_jobs,
                 initializer=worker_initializer,
                 mp_context=mp.get_context(self.mp_context),
-                initargs=(
-                    self.func,
-                    self.init_func,
-                    self.init_args,
-                    self.max_threads_per_process,
-                ),
+                initargs=(self.func, self.init_func, self.init_args, self.max_threads_per_process),
             ) as executor:
                 results = executor.map(function_wrapper, all_chunks)
 
                 if self.progress_bar:
                     results = tqdm(results, desc=self.job_name, total=len(all_chunks))
 
-                if self.handle_returns:
-                    for res in results:
+                for res in results:
+                    if self.handle_returns:
                         returns.append(res)
-                else:
-                    for res in results:
-                        pass
+                    if self.gather_func is not None:
+                        self.gather_func(res)
 
         return returns
 

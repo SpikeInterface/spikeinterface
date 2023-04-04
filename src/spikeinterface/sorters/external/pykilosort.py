@@ -153,9 +153,7 @@ class PyKilosortSorter(BaseSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
-        recording = load_extractor(
-            sorter_output_folder.parent / "spikeinterface_recording.json"
-        )
+        recording = load_extractor(sorter_output_folder.parent / "spikeinterface_recording.json")
 
         if not recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
             # saved by setup recording
@@ -194,9 +192,7 @@ class PyKilosortSorter(BaseSorter):
             if len(np.unique(gains)) == 1:
                 ks_probe.sample2volt = gains[0] * 1e-6
             else:
-                warnings.warn(
-                    "Multiple gains detected for different channels. Median gain will be used"
-                )
+                warnings.warn("Multiple gains detected for different channels. Median gain will be used")
                 ks_probe.sample2volt = np.median(gains) * 1e-6
         else:
             ks_probe.sample2volt = 1e-6
@@ -221,7 +217,5 @@ class PyKilosortSorter(BaseSorter):
         with params_file.open("r") as f:
             sorter_params = json.load(f)["sorter_params"]
         keep_good_only = sorter_params.get("keep_good_only", False)
-        sorting = KiloSortSortingExtractor(
-            folder_path=sorter_output_folder / "output", keep_good_only=keep_good_only
-        )
+        sorting = KiloSortSortingExtractor(folder_path=sorter_output_folder / "output", keep_good_only=keep_good_only)
         return sorting

@@ -72,9 +72,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         recording_short = recording_one.frame_slice(
             start_frame=0, end_frame=int(nsec_short * recording.sampling_frequency)
         )
-        sorting_short = sorting_one.frame_slice(
-            start_frame=0, end_frame=int(nsec_short * recording.sampling_frequency)
-        )
+        sorting_short = sorting_one.frame_slice(start_frame=0, end_frame=int(nsec_short * recording.sampling_frequency))
         we_short = extract_waveforms(
             recording_short,
             sorting_short,
@@ -95,9 +93,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
             we.delete_extension("spike_amplitudes")
 
         # without PC
-        metrics = self.extension_class.get_extension_function()(
-            we, metric_names=["snr"]
-        )
+        metrics = self.extension_class.get_extension_function()(we, metric_names=["snr"])
         assert "snr" in metrics.columns
         assert "isolation_distance" not in metrics.columns
         metrics = self.extension_class.get_extension_function()(
@@ -129,9 +125,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         print(metrics)
 
         # with sparsity
-        metrics_sparse = self.extension_class.get_extension_function()(
-            we, sparsity=self.sparsity_long, n_jobs=1
-        )
+        metrics_sparse = self.extension_class.get_extension_function()(we, sparsity=self.sparsity_long, n_jobs=1)
         assert "isolation_distance" in metrics_sparse.columns
         # for metric_name in metrics.columns:
         #     assert np.allclose(metrics[metric_name], metrics_par[metric_name])
@@ -158,9 +152,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
                 peak_sign="neg",
                 qm_params=qm_params,
             )
-        assert all(
-            not np.isnan(cutoff) for cutoff in metrics["amplitude_cutoff"].values
-        )
+        assert all(not np.isnan(cutoff) for cutoff in metrics["amplitude_cutoff"].values)
 
     def test_presence_ratio(self):
         we = self.we_long
@@ -188,9 +180,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
 
         # if spike_locations is not an extension, raise a warning and set values to NaN
         with pytest.warns(UserWarning) as w:
-            metrics = self.extension_class.get_extension_function()(
-                we, metric_names=["drift"]
-            )
+            metrics = self.extension_class.get_extension_function()(we, metric_names=["drift"])
         assert all(np.isnan(metric) for metric in metrics["drift_ptp"].values)
         assert all(np.isnan(metric) for metric in metrics["drift_std"].values)
         assert all(np.isnan(metric) for metric in metrics["drift_mad"].values)
@@ -206,22 +196,16 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
             )
         )
         with pytest.warns(UserWarning) as w:
-            metrics = self.extension_class.get_extension_function()(
-                we, metric_names=["drift"], qm_params=qm_params
-            )
+            metrics = self.extension_class.get_extension_function()(we, metric_names=["drift"], qm_params=qm_params)
         assert all(np.isnan(metric) for metric in metrics["drift_ptp"].values)
         assert all(np.isnan(metric) for metric in metrics["drift_std"].values)
         assert all(np.isnan(metric) for metric in metrics["drift_mad"].values)
 
         # finally let's use an interval compatible with segment durations
-        qm_params = dict(
-            drift=dict(interval_s=total_duration // 10, min_spikes_per_interval=10)
-        )
+        qm_params = dict(drift=dict(interval_s=total_duration // 10, min_spikes_per_interval=10))
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            metrics = self.extension_class.get_extension_function()(
-                we, metric_names=["drift"], qm_params=qm_params
-            )
+            metrics = self.extension_class.get_extension_function()(we, metric_names=["drift"], qm_params=qm_params)
         print(metrics)
         assert all(not np.isnan(metric) for metric in metrics["drift_ptp"].values)
         assert all(not np.isnan(metric) for metric in metrics["drift_std"].values)
@@ -235,9 +219,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         # invert recording
         rec_inv = scale(rec, gain=-1.0)
 
-        we_inv = WaveformExtractor.create(
-            rec_inv, sort, self.cache_folder / "toy_waveforms_inv"
-        )
+        we_inv = WaveformExtractor.create(rec_inv, sort, self.cache_folder / "toy_waveforms_inv")
         we_inv.set_params(ms_before=3.0, ms_after=4.0, max_spikes_per_unit=None)
         we_inv.run_extract_waveforms(n_jobs=1, chunk_size=30000)
 
@@ -272,18 +254,14 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         metric_names = ["nearest_neighbor", "nn_isolation", "nn_noise_overlap"]
 
         # with external sparsity on dense waveforms
-        _ = compute_principal_components(
-            we_dense, n_components=5, mode="by_channel_local"
-        )
+        _ = compute_principal_components(we_dense, n_components=5, mode="by_channel_local")
         metrics = self.extension_class.get_extension_function()(
             we_dense, metric_names=metric_names, sparsity=sparsity, seed=0
         )
         print(metrics)
 
         # with sparse waveforms
-        _ = compute_principal_components(
-            we_sparse, n_components=5, mode="by_channel_local"
-        )
+        _ = compute_principal_components(we_sparse, n_components=5, mode="by_channel_local")
         metrics = self.extension_class.get_extension_function()(
             we_sparse, metric_names=metric_names, sparsity=None, seed=0
         )
@@ -291,9 +269,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
 
         # with 2 jobs
         # with sparse waveforms
-        _ = compute_principal_components(
-            we_sparse, n_components=5, mode="by_channel_local"
-        )
+        _ = compute_principal_components(we_sparse, n_components=5, mode="by_channel_local")
         metrics_par = self.extension_class.get_extension_function()(
             we_sparse, metric_names=metric_names, sparsity=None, seed=0, n_jobs=2
         )

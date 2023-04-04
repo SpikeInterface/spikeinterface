@@ -57,11 +57,8 @@ def get_neo_extractor(extractor_name):
     from ..extractorlist import recording_extractor_full_dict
 
     assert extractor_name in recording_extractor_full_dict, (
-        f"{extractor_name} not an extractor name:"
-        f"\n{list(recording_extractor_full_dict.keys())}"
+        f"{extractor_name} not an extractor name:" f"\n{list(recording_extractor_full_dict.keys())}"
     )
     neo_extractor = recording_extractor_full_dict[extractor_name]
-    assert issubclass(
-        neo_extractor, NeoBaseRecordingExtractor
-    ), f"{extractor_name} is not a NEO recording extractor!"
+    assert issubclass(neo_extractor, NeoBaseRecordingExtractor), f"{extractor_name} is not a NEO recording extractor!"
     return neo_extractor

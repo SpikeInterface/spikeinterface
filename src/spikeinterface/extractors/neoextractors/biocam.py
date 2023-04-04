@@ -76,6 +76,4 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_biocam = define_function_from_class(
-    source_class=BiocamRecordingExtractor, name="read_biocam"
-)
+read_biocam = define_function_from_class(source_class=BiocamRecordingExtractor, name="read_biocam")

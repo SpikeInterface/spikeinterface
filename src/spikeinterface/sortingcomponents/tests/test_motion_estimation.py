@@ -42,14 +42,10 @@ def setup_module():
     cache_folder.mkdir(parents=True, exist_ok=True)
 
     # detect and localize
-    extract_dense_waveforms = ExtractDenseWaveforms(
-        recording, ms_before=0.1, ms_after=0.3, return_output=False
-    )
+    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=0.1, ms_after=0.3, return_output=False)
     pipeline_nodes = [
         extract_dense_waveforms,
-        LocalizeCenterOfMass(
-            recording, parents=[extract_dense_waveforms], local_radius_um=60.0
-        ),
+        LocalizeCenterOfMass(recording, parents=[extract_dense_waveforms], local_radius_um=60.0),
     ]
     peaks, peak_locations = detect_peaks(
         recording,
@@ -173,9 +169,7 @@ def test_estimate_motion():
         )
         kwargs.update(cases_kwargs)
 
-        motion, temporal_bins, spatial_bins, extra_check = estimate_motion(
-            recording, peaks, peak_locations, **kwargs
-        )
+        motion, temporal_bins, spatial_bins, extra_check = estimate_motion(recording, peaks, peak_locations, **kwargs)
 
         motions[name] = motion
 

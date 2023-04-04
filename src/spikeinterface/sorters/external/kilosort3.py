@@ -186,26 +186,18 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
 
         ## danger, changing these settings can lead to fatal errors
         # options for determining PCs
-        ops["spkTh"] = -params[
-            "detect_threshold"
-        ]  # spike threshold in standard deviations (-6)
+        ops["spkTh"] = -params["detect_threshold"]  # spike threshold in standard deviations (-6)
         ops["reorder"] = 1.0  # whether to reorder batches for drift correction.
         ops["nskip"] = 25.0  # how many batches to skip for determining spike PCs
 
         ops["GPU"] = 1.0  # has to be 1, no CPU version yet, sorry
         # ops['Nfilt'] = 1024 # max number of clusters
-        ops["nfilt_factor"] = params[
-            "nfilt_factor"
-        ]  # max number of clusters per good channel (even temporary ones)
-        ops["ntbuff"] = params[
-            "ntbuff"
-        ]  # samples of symmetrical buffer for whitening and spike detection
+        ops["nfilt_factor"] = params["nfilt_factor"]  # max number of clusters per good channel (even temporary ones)
+        ops["ntbuff"] = params["ntbuff"]  # samples of symmetrical buffer for whitening and spike detection
         ops["NT"] = params[
             "NT"
         ]  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
-        ops[
-            "whiteningRange"
-        ] = 32.0  # number of channels to use for whitening each channel
+        ops["whiteningRange"] = 32.0  # number of channels to use for whitening each channel
         ops["nSkipCov"] = 25.0  # compute whitening matrix from every N-th batch
         ops["scaleproc"] = 200.0  # int16 scaling of whitened data
         ops["nPCs"] = params["nPCs"]  # how many PCs to project the spikes into

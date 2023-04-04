@@ -54,9 +54,7 @@ class SpykingCircusSortingExtractor(BaseSorting):
                     if any([f_.suffix == ".hdf5" for f_ in f.iterdir()]):
                         result_folder = spykingcircus_folder
 
-        assert isinstance(parent_folder, Path) and isinstance(
-            result_folder, Path
-        ), "Not a valid spyking circus folder"
+        assert isinstance(parent_folder, Path) and isinstance(result_folder, Path), "Not a valid spyking circus folder"
 
         # load files
         results = None
@@ -81,9 +79,7 @@ class SpykingCircusSortingExtractor(BaseSorting):
             spiketrains = []
             unit_ids = []
             for temp in f_results["spiketimes"].keys():
-                spiketrains.append(
-                    np.array(f_results["spiketimes"][temp]).astype("int64")
-                )
+                spiketrains.append(np.array(f_results["spiketimes"][temp]).astype("int64"))
                 unit_ids.append(int(temp.split("_")[-1]))
 
         BaseSorting.__init__(self, sample_rate, unit_ids)
@@ -121,6 +117,4 @@ def _load_sample_rate(params_file):
     return sample_rate
 
 
-read_spykingcircus = define_function_from_class(
-    source_class=SpykingCircusSortingExtractor, name="read_spykingcircus"
-)
+read_spykingcircus = define_function_from_class(source_class=SpykingCircusSortingExtractor, name="read_spykingcircus")

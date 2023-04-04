@@ -54,9 +54,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         stream_name=None,
         all_annotations=False,
     ):
-        neo_kwargs = self.map_to_neo_kwargs(
-            folder_path, load_sync_channel=load_sync_channel
-        )
+        neo_kwargs = self.map_to_neo_kwargs(folder_path, load_sync_channel=load_sync_channel)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -68,9 +66,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         # open the corresponding stream probe for LF and AP
         # if load_sync_channel=False
         if "nidq" not in self.stream_id and not load_sync_channel:
-            signals_info_dict = {
-                e["stream_name"]: e for e in self.neo_reader.signals_info_list
-            }
+            signals_info_dict = {e["stream_name"]: e for e in self.neo_reader.signals_info_list}
             meta_filename = signals_info_dict[self.stream_id]["meta_file"]
             # Load probe geometry if available
             if "lf" in self.stream_id:
@@ -94,9 +90,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
             # sample_shifts is generated from total channels (384) channels
             # when only some channels are saved we need to slice this vector (like we do for the probe)
-            sample_shifts = get_neuropixels_sample_shifts(
-                total_channels, num_channels_per_adc
-            )
+            sample_shifts = get_neuropixels_sample_shifts(total_channels, num_channels_per_adc)
             if self.get_num_channels() != total_channels:
                 # need slice because not all channel are saved
                 chans = pi.get_saved_channel_indices_from_spikeglx_meta(meta_filename)
@@ -106,9 +100,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
             self.set_property("inter_sample_shift", sample_shifts)
 
-        self._kwargs.update(
-            dict(folder_path=str(folder_path), load_sync_channel=load_sync_channel)
-        )
+        self._kwargs.update(dict(folder_path=str(folder_path), load_sync_channel=load_sync_channel))
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, load_sync_channel=False):
@@ -119,6 +111,4 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_spikeglx = define_function_from_class(
-    source_class=SpikeGLXRecordingExtractor, name="read_spikeglx"
-)
+read_spikeglx = define_function_from_class(source_class=SpikeGLXRecordingExtractor, name="read_spikeglx")

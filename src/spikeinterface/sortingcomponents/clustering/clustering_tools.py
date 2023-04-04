@@ -21,14 +21,12 @@ def _split_waveforms(
 
     valid_size = wfs_and_noise.shape[0] - noise_size
 
-    local_feature = np.zeros(
-        (wfs_and_noise.shape[0], n_components_by_channel * wfs_and_noise.shape[2])
-    )
+    local_feature = np.zeros((wfs_and_noise.shape[0], n_components_by_channel * wfs_and_noise.shape[2]))
     tsvd = sklearn.decomposition.TruncatedSVD(n_components=n_components_by_channel)
     for c in range(wfs_and_noise.shape[2]):
-        local_feature[
-            :, c * n_components_by_channel : (c + 1) * n_components_by_channel
-        ] = tsvd.fit_transform(wfs_and_noise[:, :, c])
+        local_feature[:, c * n_components_by_channel : (c + 1) * n_components_by_channel] = tsvd.fit_transform(
+            wfs_and_noise[:, :, c]
+        )
     n_components = min(n_components, local_feature.shape[1])
     pca = sklearn.decomposition.PCA(n_components=n_components, whiten=True)
     local_feature = pca.fit_transform(local_feature)
@@ -123,14 +121,12 @@ def _split_waveforms_nested(
 
         # reduce dimention in 2 step
         active_wfs = wfs_and_noise[active_ind, :, :]
-        local_feature = np.zeros(
-            (active_wfs.shape[0], n_components_by_channel * active_wfs.shape[2])
-        )
+        local_feature = np.zeros((active_wfs.shape[0], n_components_by_channel * active_wfs.shape[2]))
         tsvd = sklearn.decomposition.TruncatedSVD(n_components=n_components_by_channel)
         for c in range(wfs_and_noise.shape[2]):
-            local_feature[
-                :, c * n_components_by_channel : (c + 1) * n_components_by_channel
-            ] = tsvd.fit_transform(active_wfs[:, :, c])
+            local_feature[:, c * n_components_by_channel : (c + 1) * n_components_by_channel] = tsvd.fit_transform(
+                active_wfs[:, :, c]
+            )
         # ~ n_components = min(n_components, local_feature.shape[1])
         # ~ pca = sklearn.decomposition.PCA(n_components=n_components, whiten=True)
         # ~ local_feature = pca.fit_transform(local_feature)
@@ -140,9 +136,7 @@ def _split_waveforms_nested(
         active_labels_with_noise = clustering[0]
         cluster_probability = clustering[2]
         (persistent_clusters,) = np.nonzero(clustering[2] > probability_thr)
-        active_labels_with_noise[
-            ~np.in1d(active_labels_with_noise, persistent_clusters)
-        ] = -1
+        active_labels_with_noise[~np.in1d(active_labels_with_noise, persistent_clusters)] = -1
 
         active_labels = active_labels_with_noise[active_ind < valid_size]
         active_labels_set = np.unique(active_labels)
@@ -165,12 +159,8 @@ def _split_waveforms_nested(
             cmap[-1] = "k"
             cmap[-2] = "b"
             for k in unique_lab:
-                plot_mask_1 = (active_ind < valid_size) & (
-                    active_labels_with_noise == k
-                )
-                plot_mask_2 = (active_ind >= valid_size) & (
-                    active_labels_with_noise == k
-                )
+                plot_mask_1 = (active_ind < valid_size) & (active_labels_with_noise == k)
+                plot_mask_2 = (active_ind >= valid_size) & (active_labels_with_noise == k)
                 ax.scatter(
                     local_feature_plot[plot_mask_1, 0],
                     local_feature_plot[plot_mask_1, 1],
@@ -202,9 +192,7 @@ def _split_waveforms_nested(
                     extremum_values.append(v)
             best_label = active_labels_set[np.argmax(extremum_values)]
             # ~ inds = active_ind[active_labels_with_noise == best_label]
-            inds = active_ind[
-                (active_ind < valid_size) & (active_labels_with_noise == best_label)
-            ]
+            inds = active_ind[(active_ind < valid_size) & (active_labels_with_noise == best_label)]
             # ~ inds_no_noise = inds[inds < valid_size]
             if inds.size > 1:
                 # avoid cluster with one spike
@@ -219,9 +207,7 @@ def _split_waveforms_nested(
             best_label = active_labels_set[0]
             # ~ inds = active_ind[active_labels_with_noise == best_label]
             # ~ inds_no_noise = inds[inds < valid_size]
-            inds = active_ind[
-                (active_ind < valid_size) & (active_labels_with_noise == best_label)
-            ]
+            inds = active_ind[(active_ind < valid_size) & (active_labels_with_noise == best_label)]
             if inds.size > 1:
                 # avoid cluster with one spike
                 local_labels_with_noise[inds] = local_count
@@ -320,20 +306,13 @@ def auto_split_clustering(
                 plot_mask = local_labels_with_noise == plot_label
                 color = cmap[plot_label]
 
-                wfs_flat = (
-                    wfs_and_noise[plot_mask, :, :]
-                    .swapaxes(1, 2)
-                    .reshape(np.sum(plot_mask), -1)
-                    .T
-                )
+                wfs_flat = wfs_and_noise[plot_mask, :, :].swapaxes(1, 2).reshape(np.sum(plot_mask), -1).T
                 ax.plot(wfs_flat, color=color, alpha=0.1)
                 if plot_label >= 0:
                     ax.plot(wfs_flat.mean(1), color=color, lw=2)
 
             for c in range(wfs.shape[2]):
-                ax.axvline(
-                    c * (nbefore + nafter) + nbefore, color="k", ls="-", alpha=0.5
-                )
+                ax.axvline(c * (nbefore + nafter) + nbefore, color="k", ls="-", alpha=0.5)
 
             if debug_folder is not None:
                 fig.savefig(debug_folder / f"auto_split_{label}.png")
@@ -414,8 +393,7 @@ def auto_clean_clustering(
 
             # we use
             (radius_chans,) = np.nonzero(
-                (channel_distances[main_chan0, :] <= radius_um)
-                | (channel_distances[main_chan1, :] <= radius_um)
+                (channel_distances[main_chan0, :] <= radius_um) | (channel_distances[main_chan1, :] <= radius_um)
             )
             if radius_chans.size < (intersect_chans.size * ratio_num_channel_intersect):
                 # ~ print('WARNING INTERSECT')
@@ -565,9 +543,7 @@ def remove_duplicates(
         active_channels = np.sort(idx[:channel])
         templates[t, :, idx[channel:]] = 0
 
-    similarities = sklearn.metrics.pairwise.cosine_similarity(
-        templates.reshape(nb_templates, -1)
-    )
+    similarities = sklearn.metrics.pairwise.cosine_similarity(templates.reshape(nb_templates, -1))
     for i in range(nb_templates):
         similarities[i, i] = -1
 
@@ -635,9 +611,7 @@ def remove_duplicates_via_matching(
     f.write(blanck)
     f.close()
 
-    recording = BinaryRecordingExtractor(
-        tmp_filename, num_chan=num_chans, sampling_frequency=fs, dtype="float32"
-    )
+    recording = BinaryRecordingExtractor(tmp_filename, num_chan=num_chans, sampling_frequency=fs, dtype="float32")
     recording.annotate(is_filtered=True)
 
     margin = 2 * max(waveform_extractor.nbefore, waveform_extractor.nafter)
@@ -669,9 +643,7 @@ def remove_duplicates_via_matching(
         t_start = padding + i * duration
         t_stop = padding + (i + 1) * duration
 
-        sub_recording = recording.frame_slice(
-            t_start - half_marging, t_stop + half_marging
-        )
+        sub_recording = recording.frame_slice(t_start - half_marging, t_stop + half_marging)
 
         method_kwargs.update({"ignored_ids": ignore_ids + [i]})
         spikes, computed = find_spikes_from_templates(
@@ -689,9 +661,7 @@ def remove_duplicates_via_matching(
                 "sparsities": computed["sparsities"],
             }
         )
-        valid = (spikes["sample_ind"] >= half_marging) * (
-            spikes["sample_ind"] < duration + half_marging
-        )
+        valid = (spikes["sample_ind"] >= half_marging) * (spikes["sample_ind"] < duration + half_marging)
         if np.sum(valid) > 0:
             if np.sum(valid) == 1:
                 j = spikes[valid]["cluster_ind"][0]
@@ -721,9 +691,7 @@ def remove_duplicates_via_matching(
     return labels, new_labels
 
 
-def remove_duplicates_via_dip(
-    wfs_arrays, peak_labels, dip_threshold=1, cosine_threshold=None
-):
+def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1, cosine_threshold=None):
     import sklearn
 
     from spikeinterface.sortingcomponents.clustering.isocut5 import isocut5

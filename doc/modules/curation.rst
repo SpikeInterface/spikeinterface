@@ -7,8 +7,8 @@ The API of some of the functions could be changed/improved from time to time.
 Manual curation
 ---------------
 
-SpikeInterface offer a machinery to manually curate a sorting and keep track of the curation history.
-The curation has several "steps" that can be be repeated and chained:
+SpikeInterface offers machinery to manually curate a sorting output and keep track of the curation history.
+The curation has several "steps" that can be repeated and chained:
 
   * remove/select units
   * split units
@@ -35,7 +35,7 @@ The merging and splitting operations are handled by the :py:class:`~spikeinterfa
     cs.merge(['#11', '#21'])
 
     # make a split
-    split_index = ... # some creteria on spikes
+    split_index = ... # some criteria on spikes
     cs.split('#20', split_index)
 
     # here the final clean sorting

@@ -98,9 +98,7 @@ class DirectionalDerivativeRecordingSegment(BasePreprocessorSegment):
         geom_other_dims = self.channel_locations[:, np.arange(ndim) != self.dim]
         # column_inds is the column grouping by channel,
         # so that geom_other_dims[i] == unique_pos_other_dims[column_inds[i]]
-        self.unique_pos_other_dims, self.column_inds = np.unique(
-            geom_other_dims, axis=0, return_inverse=True
-        )
+        self.unique_pos_other_dims, self.column_inds = np.unique(geom_other_dims, axis=0, return_inverse=True)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:

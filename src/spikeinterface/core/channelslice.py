@@ -46,15 +46,11 @@ class ChannelSliceRecording(BaseRecording):
             dtype=parent_recording.get_dtype(),
         )
 
-        self._parent_channel_indices = parent_recording.ids_to_indices(
-            self._channel_ids
-        )
+        self._parent_channel_indices = parent_recording.ids_to_indices(self._channel_ids)
 
         # link recording segment
         for parent_segment in self._parent_recording._recording_segments:
-            sub_segment = ChannelSliceRecordingSegment(
-                parent_segment, self._parent_channel_indices
-            )
+            sub_segment = ChannelSliceRecordingSegment(parent_segment, self._parent_channel_indices)
             self.add_recording_segment(sub_segment)
 
         # copy annotation and properties
@@ -63,9 +59,7 @@ class ChannelSliceRecording(BaseRecording):
         # change the wiring of the probe
         contact_vector = self.get_property("contact_vector")
         if contact_vector is not None:
-            contact_vector["device_channel_indices"] = np.arange(
-                len(channel_ids), dtype="int64"
-            )
+            contact_vector["device_channel_indices"] = np.arange(len(channel_ids), dtype="int64")
             self.set_property("contact_vector", contact_vector)
 
         # update dump dict
@@ -82,9 +76,7 @@ class ChannelSliceRecordingSegment(BaseRecordingSegment):
     """
 
     def __init__(self, parent_recording_segment, parent_channel_indices):
-        BaseRecordingSegment.__init__(
-            self, **parent_recording_segment.get_times_kwargs()
-        )
+        BaseRecordingSegment.__init__(self, **parent_recording_segment.get_times_kwargs())
         self._parent_recording_segment = parent_recording_segment
         self._parent_channel_indices = parent_channel_indices
 
@@ -98,9 +90,7 @@ class ChannelSliceRecordingSegment(BaseRecordingSegment):
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
         parent_indices = self._parent_channel_indices[channel_indices]
-        traces = self._parent_recording_segment.get_traces(
-            start_frame, end_frame, parent_indices
-        )
+        traces = self._parent_recording_segment.get_traces(start_frame, end_frame, parent_indices)
         return traces
 
 
@@ -150,9 +140,7 @@ class ChannelSliceSnippets(BaseSnippets):
 
         # link recording segment
         for parent_segment in self._parent_snippets._snippets_segments:
-            sub_segment = ChannelSliceSnippetsSegment(
-                parent_segment, self._parent_channel_indices
-            )
+            sub_segment = ChannelSliceSnippetsSegment(parent_segment, self._parent_channel_indices)
             self.add_snippets_segment(sub_segment)
 
         # copy annotation and properties
@@ -161,9 +149,7 @@ class ChannelSliceSnippets(BaseSnippets):
         # change the wiring of the probe
         contact_vector = self.get_property("contact_vector")
         if contact_vector is not None:
-            contact_vector["device_channel_indices"] = np.arange(
-                len(channel_ids), dtype="int64"
-            )
+            contact_vector["device_channel_indices"] = np.arange(len(channel_ids), dtype="int64")
             self.set_property("contact_vector", contact_vector)
 
         # update dump dict
@@ -187,9 +173,7 @@ class ChannelSliceSnippetsSegment(BaseSnippetsSegment):
     def get_num_snippets(self) -> int:
         return self._parent_snippets_segment.get_num_snippets()
 
-    def frames_to_indices(
-        self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None
-    ):
+    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
         return self._parent_snippets_segment.frames_to_indices(start_frame, end_frame)
 
     def get_frames(self, indices=None):

@@ -125,9 +125,7 @@ def extract_waveforms_to_buffers(
             return wfs_arrays, wfs_arrays_info
 
 
-extract_waveforms_to_buffers.__doc__ = extract_waveforms_to_buffers.__doc__.format(
-    _shared_job_kwargs_doc
-)
+extract_waveforms_to_buffers.__doc__ = extract_waveforms_to_buffers.__doc__.format(_shared_job_kwargs_doc)
 
 
 def allocate_waveforms_buffers(
@@ -198,9 +196,7 @@ def allocate_waveforms_buffers(
 
         if mode == "memmap":
             filename = str(folder / f"waveforms_{unit_id}.npy")
-            arr = np.lib.format.open_memmap(
-                filename, mode="w+", dtype=dtype, shape=shape
-            )
+            arr = np.lib.format.open_memmap(filename, mode="w+", dtype=dtype, shape=shape)
             wfs_arrays[unit_id] = arr
             wfs_arrays_info[unit_id] = filename
         elif mode == "shared_memory":
@@ -299,9 +295,7 @@ def distribute_waveforms_to_buffers(
     processor.run()
 
 
-distribute_waveforms_to_buffers.__doc__ = (
-    distribute_waveforms_to_buffers.__doc__.format(_shared_job_kwargs_doc)
-)
+distribute_waveforms_to_buffers.__doc__ = distribute_waveforms_to_buffers.__doc__.format(_shared_job_kwargs_doc)
 
 
 # used by ChunkRecordingExecutor
@@ -424,9 +418,7 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
 
             for pos in in_chunk_pos:
                 sample_ind = spikes[inds[pos]]["sample_ind"]
-                wf = traces[
-                    sample_ind - start - nbefore : sample_ind - start + nafter, :
-                ]
+                wf = traces[sample_ind - start - nbefore : sample_ind - start + nafter, :]
 
                 if sparsity_mask is None:
                     wfs[pos, :, :] = wf
@@ -456,9 +448,6 @@ def has_exceeding_spikes(recording, sorting):
         end_seg_ind = np.searchsorted(spike_vector["segment_ind"], segment_index + 1)
         spike_vector_seg = spike_vector[start_seg_ind:end_seg_ind]
         if len(spike_vector_seg) > 0:
-            if (
-                spike_vector_seg["sample_ind"][-1]
-                > recording.get_num_samples(segment_index=segment_index) - 1
-            ):
+            if spike_vector_seg["sample_ind"][-1] > recording.get_num_samples(segment_index=segment_index) - 1:
                 return True
     return False

@@ -42,9 +42,7 @@ def test_WaveformExtractor():
     # folder_rec = cache_folder / "wf_rec1"
     # recording = recording.save(folder=folder_rec)
     num_units = 15
-    sorting = generate_sorting(
-        num_units=num_units, sampling_frequency=sampling_frequency, durations=durations
-    )
+    sorting = generate_sorting(num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
 
     # test with dump !!!!
     recording = recording.save()
@@ -158,16 +156,12 @@ def test_WaveformExtractor():
                 shutil.rmtree(cache_folder / f"we_saved_{mode}")
             we_saved = we.save(cache_folder / f"we_saved_{mode}")
             for unit_id in we_saved.unit_ids:
-                assert np.array_equal(
-                    we.get_waveforms(unit_id), we_saved.get_waveforms(unit_id)
-                )
+                assert np.array_equal(we.get_waveforms(unit_id), we_saved.get_waveforms(unit_id))
                 assert np.array_equal(
                     we.get_sampled_indices(unit_id),
                     we_saved.get_sampled_indices(unit_id),
                 )
-                assert np.array_equal(
-                    we.get_all_templates(), we_saved.get_all_templates()
-                )
+                assert np.array_equal(we.get_all_templates(), we_saved.get_all_templates())
             wfs = we_saved.get_waveforms(0)
             assert isinstance(wfs, np.memmap)
             wfs_array = we_saved.get_waveforms(0, lazy=False)
@@ -177,16 +171,12 @@ def test_WaveformExtractor():
                 shutil.rmtree(cache_folder / f"we_saved_{mode}.zarr")
             we_saved_zarr = we.save(cache_folder / f"we_saved_{mode}", format="zarr")
             for unit_id in we_saved_zarr.unit_ids:
-                assert np.array_equal(
-                    we.get_waveforms(unit_id), we_saved_zarr.get_waveforms(unit_id)
-                )
+                assert np.array_equal(we.get_waveforms(unit_id), we_saved_zarr.get_waveforms(unit_id))
                 assert np.array_equal(
                     we.get_sampled_indices(unit_id),
                     we_saved_zarr.get_sampled_indices(unit_id),
                 )
-                assert np.array_equal(
-                    we.get_all_templates(), we_saved_zarr.get_all_templates()
-                )
+                assert np.array_equal(we.get_all_templates(), we_saved_zarr.get_all_templates())
             wfs = we_saved_zarr.get_waveforms(0)
             assert isinstance(wfs, zarr.Array)
             wfs_array = we_saved_zarr.get_waveforms(0, lazy=False)
@@ -225,15 +215,11 @@ def test_extract_waveforms():
     durations = [30, 40]
     sampling_frequency = 30000.0
 
-    recording = generate_recording(
-        num_channels=2, durations=durations, sampling_frequency=sampling_frequency
-    )
+    recording = generate_recording(num_channels=2, durations=durations, sampling_frequency=sampling_frequency)
     recording.annotate(is_filtered=True)
     folder_rec = cache_folder / "wf_rec2"
 
-    sorting = generate_sorting(
-        num_units=5, sampling_frequency=sampling_frequency, durations=durations
-    )
+    sorting = generate_sorting(num_units=5, sampling_frequency=sampling_frequency, durations=durations)
     folder_sort = cache_folder / "wf_sort2"
 
     if folder_rec.is_dir():
@@ -247,9 +233,7 @@ def test_extract_waveforms():
     folder1 = cache_folder / "test_extract_waveforms_1job"
     if folder1.is_dir():
         shutil.rmtree(folder1)
-    we1 = extract_waveforms(
-        recording, sorting, folder1, max_spikes_per_unit=None, return_scaled=False
-    )
+    we1 = extract_waveforms(recording, sorting, folder1, max_spikes_per_unit=None, return_scaled=False)
 
     # 2 job
     folder2 = cache_folder / "test_extract_waveforms_2job"
@@ -358,9 +342,7 @@ def test_recordingless():
     )
     recording.annotate(is_filtered=True)
     num_units = 15
-    sorting = generate_sorting(
-        num_units=num_units, sampling_frequency=sampling_frequency, durations=durations
-    )
+    sorting = generate_sorting(num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
 
     # now save and delete saved file
     recording = recording.save(folder=cache_folder / "recording1")
@@ -370,9 +352,7 @@ def test_recordingless():
     wf_folder = cache_folder / "wf_recordingless"
 
     # save with relative paths
-    we = extract_waveforms(
-        recording, sorting, wf_folder, use_relative_path=True, return_scaled=False
-    )
+    we = extract_waveforms(recording, sorting, wf_folder, use_relative_path=True, return_scaled=False)
     we_loaded = WaveformExtractor.load(wf_folder, with_recording=False)
 
     assert isinstance(we.recording, BaseRecording)
@@ -395,9 +375,7 @@ def test_recordingless():
 
     for key in we.recording.get_property_keys():
         if key != "contact_vector":  # contact vector is saved as probe
-            np.testing.assert_array_equal(
-                we.recording.get_property(key), we_loaded.get_recording_property(key)
-            )
+            np.testing.assert_array_equal(we.recording.get_property(key), we_loaded.get_recording_property(key))
 
     probe = we_loaded.get_probe()
     probegroup = we_loaded.get_probegroup()
@@ -424,9 +402,7 @@ def test_unfiltered_extraction():
     folder_rec = cache_folder / "wf_unfiltered"
     recording = recording.save(folder=folder_rec)
     num_units = 15
-    sorting = generate_sorting(
-        num_units=num_units, sampling_frequency=sampling_frequency, durations=durations
-    )
+    sorting = generate_sorting(num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
 
     # test with dump !!!!
     recording = recording.save()
@@ -443,14 +419,10 @@ def test_unfiltered_extraction():
             wf_folder = folder
 
         with pytest.raises(Exception):
-            we = WaveformExtractor.create(
-                recording, sorting, wf_folder, mode=mode, allow_unfiltered=False
-            )
+            we = WaveformExtractor.create(recording, sorting, wf_folder, mode=mode, allow_unfiltered=False)
         if wf_folder is not None:
             shutil.rmtree(wf_folder)
-        we = WaveformExtractor.create(
-            recording, sorting, wf_folder, mode=mode, allow_unfiltered=True
-        )
+        we = WaveformExtractor.create(recording, sorting, wf_folder, mode=mode, allow_unfiltered=True)
 
         we.set_params(ms_before=3.0, ms_after=4.0, max_spikes_per_unit=500)
 
@@ -508,9 +480,7 @@ def test_portability():
     folder_rec = folder_to_move / "rec"
     recording = recording.save(folder=folder_rec)
     num_units = 15
-    sorting = generate_sorting(
-        num_units=num_units, sampling_frequency=sampling_frequency, durations=durations
-    )
+    sorting = generate_sorting(num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
     folder_sort = folder_to_move / "sort"
     sorting = sorting.save(folder=folder_sort)
 
@@ -524,9 +494,7 @@ def test_portability():
     # move all to a separate folder
     shutil.copytree(folder_to_move, folder_moved)
     wf_folder_moved = folder_moved / "waveform_extractor"
-    we_loaded = load_waveforms(
-        folder=wf_folder_moved, with_recording=True, sorting=sorting
-    )
+    we_loaded = load_waveforms(folder=wf_folder_moved, with_recording=True, sorting=sorting)
 
     assert we_loaded.recording is not None
     assert we_loaded.sorting is not None
@@ -545,9 +513,7 @@ def test_empty_sorting():
     sf = 30000
     num_channels = 2
 
-    recording = generate_recording(
-        num_channels=num_channels, sampling_frequency=sf, durations=[15.32]
-    )
+    recording = generate_recording(num_channels=num_channels, sampling_frequency=sf, durations=[15.32])
     sorting = NumpySorting.from_dict({}, sf)
 
     folder = cache_folder / "empty_sorting"
@@ -574,9 +540,7 @@ def test_compute_sparsity():
     recording.annotate(is_filtered=True)
 
     num_units = 15
-    sorting = generate_sorting(
-        num_units=num_units, sampling_frequency=sampling_frequency, durations=durations
-    )
+    sorting = generate_sorting(num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
 
     # test with dump
     recording = recording.save()

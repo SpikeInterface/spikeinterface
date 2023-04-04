@@ -44,22 +44,16 @@ def test_unitsaggregationsorting():
         )
         assert np.allclose(
             spiketrains2_0,
-            sorting_agg.get_unit_spike_train(
-                num_units + unit_ids[0], segment_index=seg
-            ),
+            sorting_agg.get_unit_spike_train(num_units + unit_ids[0], segment_index=seg),
         )
         assert np.allclose(
             spiketrains3_2,
-            sorting_agg.get_unit_spike_train(
-                2 * num_units + unit_ids[2], segment_index=seg
-            ),
+            sorting_agg.get_unit_spike_train(2 * num_units + unit_ids[2], segment_index=seg),
         )
 
     # test rename units
     renamed_unit_ids = [f"#Unit {i}" for i in range(3 * num_units)]
-    sorting_agg_renamed = aggregate_units(
-        [sorting1, sorting2, sorting3], renamed_unit_ids=renamed_unit_ids
-    )
+    sorting_agg_renamed = aggregate_units([sorting1, sorting2, sorting3], renamed_unit_ids=renamed_unit_ids)
     assert all(unit in renamed_unit_ids for unit in sorting_agg_renamed.get_unit_ids())
 
     # test annotations

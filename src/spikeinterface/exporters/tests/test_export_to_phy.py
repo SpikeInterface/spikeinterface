@@ -44,9 +44,7 @@ def test_export_to_phy():
 
 def test_export_to_phy_by_property():
     num_units = 4
-    recording, sorting = se.toy_example(
-        num_channels=8, duration=10, num_units=num_units, num_segments=1
-    )
+    recording, sorting = se.toy_example(num_channels=8, duration=10, num_units=num_units, num_segments=1)
     recording.set_channel_groups([0, 0, 0, 0, 1, 1, 1, 1])
     sorting.set_property("group", [0, 0, 1, 1])
 
@@ -72,9 +70,7 @@ def test_export_to_phy_by_property():
     sorting = sorting.save(folder=sort_folder)
 
     waveform_extractor = extract_waveforms(recording, sorting, waveform_folder)
-    sparsity_group = compute_sparsity(
-        waveform_extractor, method="by_property", by_property="group"
-    )
+    sparsity_group = compute_sparsity(waveform_extractor, method="by_property", by_property="group")
     export_to_phy(
         waveform_extractor,
         output_folder,
@@ -92,9 +88,7 @@ def test_export_to_phy_by_property():
     # Remove one channel
     recording_rm = recording.channel_slice([0, 2, 3, 4, 5, 6, 7])
     waveform_extractor_rm = extract_waveforms(recording_rm, sorting, waveform_folder_rm)
-    sparsity_group = compute_sparsity(
-        waveform_extractor_rm, method="by_property", by_property="group"
-    )
+    sparsity_group = compute_sparsity(waveform_extractor_rm, method="by_property", by_property="group")
 
     export_to_phy(
         waveform_extractor_rm,
@@ -128,9 +122,7 @@ def test_export_to_phy_by_sparsity():
             shutil.rmtree(f)
 
     waveform_extractor = extract_waveforms(recording, sorting, waveform_folder)
-    sparsity_radius = compute_sparsity(
-        waveform_extractor, method="radius", radius_um=50.0
-    )
+    sparsity_radius = compute_sparsity(waveform_extractor, method="radius", radius_um=50.0)
     export_to_phy(
         waveform_extractor,
         output_folder_radius,
@@ -149,12 +141,8 @@ def test_export_to_phy_by_sparsity():
     assert -1 in pc_ind
 
     # pre-compute PC with another sparsity
-    sparsity_radius_small = compute_sparsity(
-        waveform_extractor, method="radius", radius_um=30.0
-    )
-    pc = compute_principal_components(
-        waveform_extractor, sparsity=sparsity_radius_small
-    )
+    sparsity_radius_small = compute_sparsity(waveform_extractor, method="radius", radius_um=30.0)
+    pc = compute_principal_components(waveform_extractor, sparsity=sparsity_radius_small)
     export_to_phy(
         waveform_extractor,
         output_folder_multi_sparse,

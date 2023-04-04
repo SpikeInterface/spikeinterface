@@ -65,6 +65,4 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         return d
 
 
-read_binary_folder = define_function_from_class(
-    source_class=BinaryFolderRecording, name="read_binary_folder"
-)
+read_binary_folder = define_function_from_class(source_class=BinaryFolderRecording, name="read_binary_folder")

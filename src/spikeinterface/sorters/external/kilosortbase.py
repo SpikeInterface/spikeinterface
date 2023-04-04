@@ -44,9 +44,7 @@ class KilosortBase:
         groups = [1] * recording.get_num_channels()
         positions = np.array(recording.get_channel_locations())
         if positions.shape[1] != 2:
-            raise RuntimeError(
-                "3D 'location' are not supported. Set 2D locations instead"
-            )
+            raise RuntimeError("3D 'location' are not supported. Set 2D locations instead")
 
         nchan = recording.get_num_channels()
         xcoords = ([p[0] for p in positions],)
@@ -68,9 +66,7 @@ class KilosortBase:
         scipy.io.savemat(str(sorter_output_folder / "chanMap.mat"), channel_map)
 
     @classmethod
-    def _generate_ops_file(
-        cls, recording, params, sorter_output_folder, binary_file_path
-    ):
+    def _generate_ops_file(cls, recording, params, sorter_output_folder, binary_file_path):
         """
         This function generates ops (configs) data for kilosort and saves as `ops.mat`
 
@@ -89,23 +85,13 @@ class KilosortBase:
         ops = {}
 
         nchan = float(recording.get_num_channels())
-        ops[
-            "NchanTOT"
-        ] = nchan  # total number of channels (omit if already in chanMap file)
-        ops[
-            "Nchan"
-        ] = nchan  # number of active channels (omit if already in chanMap file)
+        ops["NchanTOT"] = nchan  # total number of channels (omit if already in chanMap file)
+        ops["Nchan"] = nchan  # number of active channels (omit if already in chanMap file)
 
         ops["datatype"] = "dat"  # binary ('dat', 'bin') or 'openEphys'
-        ops["fbinary"] = str(
-            binary_file_path.absolute()
-        )  # will be created for 'openEphys'
-        ops["fproc"] = str(
-            (sorter_output_folder / "temp_wh.dat").absolute()
-        )  # residual from RAM of preprocessed data
-        ops["root"] = str(
-            sorter_output_folder.absolute()
-        )  # 'openEphys' only: where raw files are
+        ops["fbinary"] = str(binary_file_path.absolute())  # will be created for 'openEphys'
+        ops["fproc"] = str((sorter_output_folder / "temp_wh.dat").absolute())  # residual from RAM of preprocessed data
+        ops["root"] = str(sorter_output_folder.absolute())  # 'openEphys' only: where raw files are
         ops["trange"] = [0, np.Inf]  #  time range to sort
         ops["chanMap"] = str((sorter_output_folder / "chanMap.mat").absolute())
 
@@ -132,9 +118,7 @@ class KilosortBase:
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         cls._generate_channel_map_file(recording, sorter_output_folder)
 
-        if recording.binary_compatible_with(
-            dtype="int16", time_axis=0, file_paths_lenght=1
-        ):
+        if recording.binary_compatible_with(dtype="int16", time_axis=0, file_paths_lenght=1):
             # no copy
             d = recording.get_binary_description()
             binary_file_path = Path(d["file_paths"][0])
@@ -149,9 +133,7 @@ class KilosortBase:
                 **get_job_kwargs(params, verbose),
             )
 
-        cls._generate_ops_file(
-            recording, params, sorter_output_folder, binary_file_path
-        )
+        cls._generate_ops_file(recording, params, sorter_output_folder, binary_file_path)
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
@@ -168,9 +150,7 @@ class KilosortBase:
                 str(source_dir / f"{cls.sorter_name}_master.m"),
                 str(sorter_output_folder),
             )
-            shutil.copy(
-                str(external_dir / "utils" / "writeNPY.m"), str(sorter_output_folder)
-            )
+            shutil.copy(str(external_dir / "utils" / "writeNPY.m"), str(sorter_output_folder))
             shutil.copy(
                 str(external_dir / "utils" / "constructNPYheader.m"),
                 str(sorter_output_folder),
@@ -227,7 +207,5 @@ class KilosortBase:
         with params_file.open("r") as f:
             sorter_params = json.load(f)["sorter_params"]
         keep_good_only = sorter_params.get("keep_good_only", False)
-        sorting = KiloSortSortingExtractor(
-            folder_path=sorter_output_folder, keep_good_only=keep_good_only
-        )
+        sorting = KiloSortSortingExtractor(folder_path=sorter_output_folder, keep_good_only=keep_good_only)
         return sorting

@@ -6,9 +6,7 @@ from spikeinterface.postprocessing.tests.common_extension_tests import (
 )
 
 
-class NoiseLevelsCalculatorExtensionTest(
-    WaveformExtensionCommonTestSuite, unittest.TestCase
-):
+class NoiseLevelsCalculatorExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
     extension_class = NoiseLevelsCalculator
     extension_data_names = ["noise_levels"]
 

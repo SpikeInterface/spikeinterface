@@ -32,9 +32,7 @@ def count_matching_events(times1, times2, delta=10):
     times_concat_sorted = times_concat[indices]
     membership_sorted = membership[indices]
     diffs = times_concat_sorted[1:] - times_concat_sorted[:-1]
-    inds = np.where(
-        (diffs <= delta) & (membership_sorted[:-1] != membership_sorted[1:])
-    )[0]
+    inds = np.where((diffs <= delta) & (membership_sorted[:-1] != membership_sorted[1:]))[0]
     if len(inds) == 0:
         return 0
     inds2 = np.where(inds[:-1] + 1 != inds[1:])[0]
@@ -82,19 +80,14 @@ def do_count_event(sorting):
     ev_counts = np.zeros(len(unit_ids), dtype="int64")
     for segment_index in range(sorting.get_num_segments()):
         ev_counts += np.array(
-            [
-                len(sorting.get_unit_spike_train(u, segment_index=segment_index))
-                for u in unit_ids
-            ],
+            [len(sorting.get_unit_spike_train(u, segment_index=segment_index)) for u in unit_ids],
             dtype="int64",
         )
     event_counts = pd.Series(ev_counts, index=unit_ids)
     return event_counts
 
 
-def count_match_spikes(
-    times1, all_times2, delta_frames
-):  # , event_counts1, event_counts2  unit2_ids,
+def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, event_counts2  unit2_ids,
     """
     Computes matching spikes between one spike train and a list of others.
 
@@ -146,10 +139,7 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1):
 
     # preload all spiketrains 2 into a list
     for segment_index in range(sorting1.get_num_segments()):
-        s2_spiketrains = [
-            sorting2.get_unit_spike_train(u2, segment_index=segment_index)
-            for u2 in unit2_ids
-        ]
+        s2_spiketrains = [sorting2.get_unit_spike_train(u2, segment_index=segment_index) for u2 in unit2_ids]
 
         match_event_count_segment = Parallel(n_jobs=n_jobs)(
             delayed(count_match_spikes)(
@@ -161,9 +151,7 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1):
         )
         match_event_counts += np.array(match_event_count_segment)
 
-    match_event_counts_df = pd.DataFrame(
-        np.array(match_event_counts), index=unit1_ids, columns=unit2_ids
-    )
+    match_event_counts_df = pd.DataFrame(np.array(match_event_counts), index=unit1_ids, columns=unit2_ids)
 
     return match_event_counts_df
 
@@ -200,13 +188,9 @@ def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
     event_counts1 = pd.Series(ev_counts1, index=unit1_ids)
     event_counts2 = pd.Series(ev_counts2, index=unit2_ids)
 
-    match_event_count = make_match_count_matrix(
-        sorting1, sorting2, delta_frames, n_jobs=n_jobs
-    )
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=n_jobs)
 
-    agreement_scores = make_agreement_scores_from_count(
-        match_event_count, event_counts1, event_counts2
-    )
+    agreement_scores = make_agreement_scores_from_count(match_event_count, event_counts1, event_counts2)
 
     return agreement_scores
 
@@ -223,11 +207,7 @@ def make_agreement_scores_from_count(match_event_count, event_counts1, event_cou
     """
 
     # numpy broadcast style
-    denom = (
-        event_counts1.values[:, None]
-        + event_counts2.values[None, :]
-        - match_event_count.values
-    )
+    denom = event_counts1.values[:, None] + event_counts2.values[None, :] - match_event_count.values
     # little trick here when denom is 0 to avoid 0 division : lets put -1
     # it will 0 anyway
     denom[denom == 0] = -1
@@ -371,9 +351,7 @@ def make_hungarian_match(agreement_scores, min_score):
     return hungarian_match_12, hungarian_match_21
 
 
-def do_score_labels(
-    sorting1, sorting2, delta_frames, unit_map12, label_misclassification=False
-):
+def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclassification=False):
     """
     Makes the labelling at spike level for each spike train:
       * TP: true positive
@@ -411,20 +389,8 @@ def do_score_labels(
 
     # copy spike trains for faster access from extractors with memmapped data
     num_segments = sorting1.get_num_segments()
-    sts1 = {
-        u1: [
-            sorting1.get_unit_spike_train(u1, seg_index)
-            for seg_index in range(num_segments)
-        ]
-        for u1 in unit1_ids
-    }
-    sts2 = {
-        u2: [
-            sorting2.get_unit_spike_train(u2, seg_index)
-            for seg_index in range(num_segments)
-        ]
-        for u2 in unit2_ids
-    }
+    sts1 = {u1: [sorting1.get_unit_spike_train(u1, seg_index) for seg_index in range(num_segments)] for u1 in unit1_ids}
+    sts2 = {u2: [sorting2.get_unit_spike_train(u2, seg_index) for seg_index in range(num_segments)] for u2 in unit2_ids}
 
     for u1 in unit1_ids:
         lab_st1 = [np.array(["UNPAIRED"] * len(sts), dtype="<U8") for sts in sts1[u1]]
@@ -442,28 +408,19 @@ def do_score_labels(
                 lab_st2 = labels_st2[u2][seg_index]
                 mapped_st = sorting2.get_unit_spike_train(u2, seg_index)
                 times_concat = np.concatenate((sts, mapped_st))
-                membership = np.concatenate(
-                    (np.ones(sts.shape) * 1, np.ones(mapped_st.shape) * 2)
-                )
+                membership = np.concatenate((np.ones(sts.shape) * 1, np.ones(mapped_st.shape) * 2))
                 indices = times_concat.argsort()
                 times_concat_sorted = times_concat[indices]
                 membership_sorted = membership[indices]
                 diffs = times_concat_sorted[1:] - times_concat_sorted[:-1]
-                inds = np.where(
-                    (diffs <= delta_frames)
-                    & (membership_sorted[:-1] != membership_sorted[1:])
-                )[0]
+                inds = np.where((diffs <= delta_frames) & (membership_sorted[:-1] != membership_sorted[1:]))[0]
                 if len(inds) > 0:
                     inds2 = inds[np.where(inds[:-1] + 1 != inds[1:])[0]] + 1
                     inds2 = np.concatenate((inds2, [inds[-1]]))
                     times_matched = times_concat_sorted[inds2]
                     # find and label closest spikes
-                    ind_st1 = np.array(
-                        [np.abs(sts1[u1] - tm).argmin() for tm in times_matched]
-                    )
-                    ind_st2 = np.array(
-                        [np.abs(mapped_st - tm).argmin() for tm in times_matched]
-                    )
+                    ind_st1 = np.array([np.abs(sts1[u1] - tm).argmin() for tm in times_matched])
+                    ind_st2 = np.array([np.abs(mapped_st - tm).argmin() for tm in times_matched])
                     assert len(np.unique(ind_st1)) == len(ind_st1)
                     assert len(np.unique(ind_st2)) == len(ind_st2)
                     lab_st1[ind_st1] = "TP"
@@ -484,18 +441,11 @@ def do_score_labels(
                                 lab_st2 = labels_st2[u2][seg_index]
                                 n_sp = st1[l_gt]
                                 mapped_st = sts2[u2][seg_index]
-                                matches = (
-                                    np.abs(mapped_st.astype(int) - n_sp) <= delta_frames
-                                )
+                                matches = np.abs(mapped_st.astype(int) - n_sp) <= delta_frames
                                 if np.sum(matches) > 0:
-                                    if (
-                                        "CL" not in lab_st1[l_gt]
-                                        and "CL" not in lab_st2[np.where(matches)[0][0]]
-                                    ):
+                                    if "CL" not in lab_st1[l_gt] and "CL" not in lab_st2[np.where(matches)[0][0]]:
                                         lab_st1[l_gt] = "CL_" + str(u1) + "_" + str(u2)
-                                        lab_st2[np.where(matches)[0][0]] = (
-                                            "CL_" + str(u2) + "_" + str(u1)
-                                        )
+                                        lab_st2[np.where(matches)[0][0]] = "CL_" + str(u2) + "_" + str(u1)
 
     for seg_index in range(num_segments):
         for u1 in unit1_ids:
@@ -719,18 +669,14 @@ def make_matching_events(times1, times2, delta):
     """
     times_concat = np.concatenate((times1, times2))
     membership = np.concatenate((np.ones(times1.shape) * 1, np.ones(times2.shape) * 2))
-    spike_idx = np.concatenate(
-        (np.arange(times1.size, dtype="int64"), np.arange(times2.size, dtype="int64"))
-    )
+    spike_idx = np.concatenate((np.arange(times1.size, dtype="int64"), np.arange(times2.size, dtype="int64")))
     indices = times_concat.argsort()
 
     times_concat_sorted = times_concat[indices]
     membership_sorted = membership[indices]
     spike_index_sorted = spike_idx[indices]
 
-    (inds,) = np.nonzero(
-        (np.diff(times_concat_sorted) <= delta) & (np.diff(membership_sorted) != 0)
-    )
+    (inds,) = np.nonzero((np.diff(times_concat_sorted) <= delta) & (np.diff(membership_sorted) != 0))
 
     dtype = [("index1", "int64"), ("index2", "int64"), ("delta_frame", "int64")]
 
@@ -744,18 +690,14 @@ def make_matching_events(times1, times2, delta):
     n1 = np.sum(mask1)
     matching_event[:n1]["index1"] = spike_index_sorted[inds1]
     matching_event[:n1]["index2"] = spike_index_sorted[inds1 + 1]
-    matching_event[:n1]["delta_frame"] = (
-        times_concat_sorted[inds1 + 1] - times_concat_sorted[inds1]
-    )
+    matching_event[:n1]["delta_frame"] = times_concat_sorted[inds1 + 1] - times_concat_sorted[inds1]
 
     mask2 = membership_sorted[inds] == 2
     inds2 = inds[mask2]
     n2 = np.sum(mask2)
     matching_event[n1:]["index1"] = spike_index_sorted[inds2 + 1]
     matching_event[n1:]["index2"] = spike_index_sorted[inds2]
-    matching_event[n1:]["delta_frame"] = (
-        times_concat_sorted[inds2] - times_concat_sorted[inds2 + 1]
-    )
+    matching_event[n1:]["delta_frame"] = times_concat_sorted[inds2] - times_concat_sorted[inds2 + 1]
 
     order = np.argsort(matching_event["index1"])
     matching_event = matching_event[order]

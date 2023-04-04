@@ -67,9 +67,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         d["nbefore"] = we.nbefore
         d["nafter"] = we.nafter
 
-        d["exclude_sweep_size"] = int(
-            d["exclude_sweep_ms"] * recording.get_sampling_frequency() / 1000.0
-        )
+        d["exclude_sweep_size"] = int(d["exclude_sweep_ms"] * recording.get_sampling_frequency() / 1000.0)
 
         return d
 
@@ -124,9 +122,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
 
         spikes = np.zeros(peak_sample_ind.size, dtype=spike_dtype)
         spikes["sample_ind"] = peak_sample_ind
-        spikes[
-            "channel_ind"
-        ] = peak_chan_ind  # TODO need to put the channel from template
+        spikes["channel_ind"] = peak_chan_ind  # TODO need to put the channel from template
 
         # naively take the closest template
         for i in range(peak_sample_ind.size):
@@ -134,9 +130,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
             i1 = peak_sample_ind[i] + nafter
 
             waveforms = traces[i0:i1, :]
-            dist = np.sum(
-                np.sum((templates - waveforms[None, :, :]) ** 2, axis=1), axis=1
-            )
+            dist = np.sum(np.sum((templates - waveforms[None, :, :]) ** 2, axis=1), axis=1)
             cluster_ind = np.argmin(dist)
 
             spikes["cluster_ind"][i] = cluster_ind

@@ -46,9 +46,7 @@ class SortingSummaryPlotter(SortingviewPlotter):
                     vv.UnitSimilarityScore(
                         unit_id1=u1,
                         unit_id2=u2,
-                        similarity=dp.similarity["similarity"][i1, i2].astype(
-                            "float32"
-                        ),
+                        similarity=dp.similarity["similarity"][i1, i2].astype("float32"),
                     )
                 )
 
@@ -87,9 +85,7 @@ class SortingSummaryPlotter(SortingviewPlotter):
         )
 
         # assemble layout
-        v_summary = vv.Splitter(
-            direction="horizontal", item1=vv.LayoutItem(v1), item2=vv.LayoutItem(v2)
-        )
+        v_summary = vv.Splitter(direction="horizontal", item1=vv.LayoutItem(v1), item2=vv.LayoutItem(v2))
 
         self.handle_display_and_url(v_summary, **backend_kwargs)
         return v_summary

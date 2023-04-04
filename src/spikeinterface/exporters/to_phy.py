@@ -68,9 +68,7 @@ def export_to_phy(
     ), "waveform_extractor must be a WaveformExtractor object"
     sorting = waveform_extractor.sorting
 
-    assert (
-        waveform_extractor.get_num_segments() == 1
-    ), "Export to phy only works with one segment"
+    assert waveform_extractor.get_num_segments() == 1, "Export to phy only works with one segment"
     num_chans = waveform_extractor.get_num_channels()
     fs = waveform_extractor.sampling_frequency
 
@@ -138,9 +136,7 @@ def export_to_phy(
             dtype = waveform_extractor.recording.get_dtype()
     else:  # don't save recording.dat
         if copy_binary:
-            warnings.warn(
-                "Recording will not be copied since waveform extractor is recordingless."
-            )
+            warnings.warn("Recording will not be copied since waveform extractor is recordingless.")
         rec_path = "None"
 
     dtype_str = np.dtype(dtype).name
@@ -166,22 +162,16 @@ def export_to_phy(
     # shape (num_units, num_samples, max_num_channels)
     max_num_channels = max(len(chan_inds) for chan_inds in sparse_dict.values())
     num_samples = waveform_extractor.nbefore + waveform_extractor.nafter
-    templates = np.zeros(
-        (len(unit_ids), num_samples, max_num_channels), dtype=waveform_extractor.dtype
-    )
+    templates = np.zeros((len(unit_ids), num_samples, max_num_channels), dtype=waveform_extractor.dtype)
     # here we pad template inds with -1 if len of sparse channels is unequal
     templates_ind = -np.ones((len(unit_ids), max_num_channels), dtype="int64")
     for unit_ind, unit_id in enumerate(unit_ids):
         chan_inds = sparse_dict[unit_id]
-        template = waveform_extractor.get_template(
-            unit_id, mode=template_mode, sparsity=sparsity
-        )
+        template = waveform_extractor.get_template(unit_id, mode=template_mode, sparsity=sparsity)
         templates[unit_ind, :, :][:, : len(chan_inds)] = template
         templates_ind[unit_ind, : len(chan_inds)] = chan_inds
 
-    template_similarity = compute_template_similarity(
-        waveform_extractor, method="cosine_similarity"
-    )
+    template_similarity = compute_template_similarity(waveform_extractor, method="cosine_similarity")
 
     np.save(str(output_folder / "templates.npy"), templates)
     np.save(str(output_folder / "template_ind.npy"), templates_ind)
@@ -226,10 +216,7 @@ def export_to_phy(
         pc_sparsity = pc.get_sparsity()
         if pc_sparsity is None:
             pc_sparsity = used_sparsity
-        max_num_channels_pc = max(
-            len(chan_inds)
-            for chan_inds in pc_sparsity.unit_id_to_channel_indices.values()
-        )
+        max_num_channels_pc = max(len(chan_inds) for chan_inds in pc_sparsity.unit_id_to_channel_indices.values())
 
         pc.run_for_all_spikes(output_folder / "pc_features.npy", **job_kwargs)
 
@@ -247,20 +234,14 @@ def export_to_phy(
         }
     )
     cluster_group.to_csv(output_folder / "cluster_group.tsv", sep="\t", index=False)
-    si_unit_ids = pd.DataFrame(
-        {"cluster_id": [i for i in range(len(unit_ids))], "si_unit_id": unit_ids}
-    )
+    si_unit_ids = pd.DataFrame({"cluster_id": [i for i in range(len(unit_ids))], "si_unit_id": unit_ids})
     si_unit_ids.to_csv(output_folder / "cluster_si_unit_ids.tsv", sep="\t", index=False)
 
     unit_groups = sorting.get_property("group")
     if unit_groups is None:
         unit_groups = np.zeros(len(unit_ids), dtype="int32")
-    channel_group = pd.DataFrame(
-        {"cluster_id": [i for i in range(len(unit_ids))], "channel_group": unit_groups}
-    )
-    channel_group.to_csv(
-        output_folder / "cluster_channel_group.tsv", sep="\t", index=False
-    )
+    channel_group = pd.DataFrame({"cluster_id": [i for i in range(len(unit_ids))], "channel_group": unit_groups})
+    channel_group.to_csv(output_folder / "cluster_channel_group.tsv", sep="\t", index=False)
 
     if waveform_extractor.is_extension("quality_metrics"):
         qm = waveform_extractor.load_extension("quality_metrics")
@@ -274,9 +255,7 @@ def export_to_phy(
                         column_name: qm_data[column_name].values,
                     }
                 )
-                metric.to_csv(
-                    output_folder / f"cluster_{column_name}.tsv", sep="\t", index=False
-                )
+                metric.to_csv(output_folder / f"cluster_{column_name}.tsv", sep="\t", index=False)
 
     if verbose:
         print("Run:\nphy template-gui ", str(output_folder / "params.py"))

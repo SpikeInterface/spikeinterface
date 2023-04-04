@@ -58,9 +58,7 @@ class WaveClusSnippetsExtractor(MatlabHelper, BaseSnippets):
     def write_snippets(snippets_extractor, save_file_path):
         assert snippets_extractor.is_aligned(), "Waveclus requires aligned spikes"
         save_file_path = Path(save_file_path)
-        assert save_file_path.name.endswith(
-            "_spikes.mat"
-        ), "Waveclus snippets files should end with _spikes.mat"
+        assert save_file_path.name.endswith("_spikes.mat"), "Waveclus snippets files should end with _spikes.mat"
         frame_to_ms = snippets_extractor.get_sampling_frequency() / 1000
         index = np.concatenate(
             [
@@ -74,13 +72,10 @@ class WaveClusSnippetsExtractor(MatlabHelper, BaseSnippets):
                 for sinx in range(snippets_extractor.get_num_segments())
             ]
         )
-        spikes = np.swapaxes(spikes, 1, 2).reshape(
-            [spikes.shape[0], spikes.shape[1] * spikes.shape[2]], order="C"
-        )
+        spikes = np.swapaxes(spikes, 1, 2).reshape([spikes.shape[0], spikes.shape[1] * spikes.shape[2]], order="C")
         par = dict(
             sr=snippets_extractor.get_sampling_frequency(),
-            w_pre=snippets_extractor.nbefore
-            + 1,  # waveclus includes the peak in the pre samples
+            w_pre=snippets_extractor.nbefore + 1,  # waveclus includes the peak in the pre samples
             w_post=snippets_extractor.nafter - 1,
         )
         MatlabHelper.write_dict_to_mat(
@@ -124,9 +119,7 @@ class WaveClustSnippetsSegment(BaseSnippetsSegment):
     def get_num_snippets(self):
         return self._spikestimes.shape[0]
 
-    def frames_to_indices(
-        self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None
-    ):
+    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
         """
         Return the slice of snippets
 

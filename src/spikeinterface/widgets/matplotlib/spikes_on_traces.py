@@ -43,9 +43,7 @@ class SpikesOnTracesPlotter(MplPlotter):
         labels = []
 
         for unit in dp.unit_ids:
-            spike_frames = sorting.get_unit_spike_train(
-                unit, segment_index=segment_index
-            )
+            spike_frames = sorting.get_unit_spike_train(unit, segment_index=segment_index)
             spike_start, spike_end = np.searchsorted(spike_frames, frame_range)
 
             chan_ids = dp.sparsity.unit_id_to_channel_ids[unit]
@@ -59,13 +57,8 @@ class SpikesOnTracesPlotter(MplPlotter):
                 unit_y_loc = min_y + max_y - dp.unit_locations[unit][1]
                 # markers = np.ones_like(spike_frames_to_plot) * (min_y + max_y - dp.unit_locations[unit][1])
                 width = 2 * 1e-3
-                ellipse_kwargs = dict(
-                    width=width, height=10, fc="none", ec=dp.unit_colors[unit], lw=2
-                )
-                patches = [
-                    Ellipse((s, unit_y_loc), **ellipse_kwargs)
-                    for s in spike_times_to_plot
-                ]
+                ellipse_kwargs = dict(width=width, height=10, fc="none", ec=dp.unit_colors[unit], lw=2)
+                patches = [Ellipse((s, unit_y_loc), **ellipse_kwargs) for s in spike_times_to_plot]
                 for p in patches:
                     ax.add_patch(p)
                 handles.append(
@@ -87,23 +80,15 @@ class SpikesOnTracesPlotter(MplPlotter):
                 if len(spike_frames_to_plot) > 0:
                     vspacing = dp.timeseries["vspacing"]
                     traces = dp.timeseries["list_traces"][0]
-                    waveform_idxs = (
-                        spike_frames_to_plot[:, None]
-                        + np.arange(-we.nbefore, we.nafter)
-                        - frame_range[0]
-                    )
-                    waveform_idxs = np.clip(
-                        waveform_idxs, 0, len(dp.timeseries["times"]) - 1
-                    )
+                    waveform_idxs = spike_frames_to_plot[:, None] + np.arange(-we.nbefore, we.nafter) - frame_range[0]
+                    waveform_idxs = np.clip(waveform_idxs, 0, len(dp.timeseries["times"]) - 1)
 
                     times = dp.timeseries["times"][waveform_idxs]
                     # discontinuity
                     times[:, -1] = np.nan
                     times_r = times.reshape(times.shape[0] * times.shape[1])
                     waveforms = traces[waveform_idxs]  # [:, :, order]
-                    waveforms_r = waveforms.reshape(
-                        (waveforms.shape[0] * waveforms.shape[1], waveforms.shape[2])
-                    )
+                    waveforms_r = waveforms.reshape((waveforms.shape[0] * waveforms.shape[1], waveforms.shape[2]))
 
                     for i, chan_id in enumerate(dp.timeseries["channel_ids"]):
                         offset = vspacing * (n - 1 - i)

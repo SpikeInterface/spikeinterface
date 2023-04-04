@@ -42,9 +42,7 @@ class CorrelogramGTStudy(GroundTruthStudy):
             for rec_name in self.rec_names:
                 templates = self.get_templates(rec_name)
                 flat_templates = templates.reshape(templates.shape[0], -1)
-                similarity_matrix[
-                    rec_name
-                ] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+                similarity_matrix[rec_name] = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
 
             self.all_similarities = {}
             self.all_errors = {}
@@ -57,17 +55,13 @@ class CorrelogramGTStudy(GroundTruthStudy):
                 for rec_name in self.rec_names:
                     try:
                         comp = self.comparisons[(rec_name, sorter_name)]
-                        similarities, errors = comp.compute_correlogram_by_similarity(
-                            similarity_matrix[rec_name]
-                        )
+                        similarities, errors = comp.compute_correlogram_by_similarity(similarity_matrix[rec_name])
                         all_similarities.append(similarities)
                         all_errors.append(errors)
                     except Exception:
                         pass
 
-                self.all_similarities[sorter_name] = np.concatenate(
-                    all_similarities, axis=0
-                )
+                self.all_similarities[sorter_name] = np.concatenate(all_similarities, axis=0)
                 self.all_errors[sorter_name] = np.concatenate(all_errors, axis=0)
 
     def get_error_profile_over_similarity_bins(self, similarity_bins, sorter_name):

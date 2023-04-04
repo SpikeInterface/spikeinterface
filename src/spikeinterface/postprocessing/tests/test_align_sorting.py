@@ -33,13 +33,8 @@ def test_compute_unit_center_of_mass():
     unit_peak_shifts[unit_ids[-2]] = -5
 
     # sorting to dict
-    d = {
-        unit_id: sorting.get_unit_spike_train(unit_id) + unit_peak_shifts[unit_id]
-        for unit_id in sorting.unit_ids
-    }
-    sorting_unaligned = NumpySorting.from_dict(
-        d, sampling_frequency=sorting.get_sampling_frequency()
-    )
+    d = {unit_id: sorting.get_unit_spike_train(unit_id) + unit_peak_shifts[unit_id] for unit_id in sorting.unit_ids}
+    sorting_unaligned = NumpySorting.from_dict(d, sampling_frequency=sorting.get_sampling_frequency())
     print(sorting_unaligned)
 
     sorting_aligned = align_sorting(sorting_unaligned, unit_peak_shifts)

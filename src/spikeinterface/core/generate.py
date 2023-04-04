@@ -95,17 +95,13 @@ def generate_sorting(
             if unit_id not in empty_units:
                 n_spikes = int(firing_rate * durations[seg_index])
                 n = int(n_spikes + 10 * np.sqrt(n_spikes))
-                spike_times = np.sort(
-                    np.unique(np.random.randint(0, num_timepoints[seg_index], n))
-                )
+                spike_times = np.sort(np.unique(np.random.randint(0, num_timepoints[seg_index], n)))
 
                 violations = np.where(np.diff(spike_times) < t_r)[0]
                 spike_times = np.delete(spike_times, violations)
 
                 if len(spike_times) > n_spikes:
-                    spike_times = np.sort(
-                        np.random.choice(spike_times, n_spikes, replace=False)
-                    )
+                    spike_times = np.sort(np.random.choice(spike_times, n_spikes, replace=False))
 
                 units_dict[unit_id] = spike_times
             else:
@@ -246,11 +242,7 @@ def synthesize_random_firings(
                 ),
             )
         )
-        times0 = times0[
-            np.random.RandomState(seed=seeds[unit_id]).choice(
-                times0.size, int(times0.size / 2)
-            )
-        ]
+        times0 = times0[np.random.RandomState(seed=seeds[unit_id]).choice(times0.size, int(times0.size / 2))]
         times0 = times0[(0 <= times0) & (times0 < N)]
 
         times0 = clean_refractory_period(times0, refractory_sample)
@@ -321,12 +313,8 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
 
 
     """
-    other_ids = np.arange(
-        np.max(sorting.unit_ids) + 1, np.max(sorting.unit_ids) + num + 1
-    )
-    shifts = np.random.RandomState(seed).randint(
-        low=-max_shift, high=max_shift, size=num
-    )
+    other_ids = np.arange(np.max(sorting.unit_ids) + 1, np.max(sorting.unit_ids) + num + 1)
+    shifts = np.random.RandomState(seed).randint(low=-max_shift, high=max_shift, size=num)
     shifts[shifts == 0] += max_shift
     unit_peak_shifts = dict(zip(other_ids, shifts))
 
@@ -334,8 +322,7 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
     for segment_index in range(sorting.get_num_segments()):
         # sorting to dict
         d = {
-            unit_id: sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
-            for unit_id in sorting.unit_ids
+            unit_id: sorting.get_unit_spike_train(unit_id, segment_index=segment_index) for unit_id in sorting.unit_ids
         }
 
         # inject some duplicate
@@ -346,9 +333,7 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
                 # select a portion of then
                 assert 0.0 < ratio <= 1.0
                 n = original_times.size
-                sel = np.random.RandomState(seed).choice(
-                    n, int(n * ratio), replace=False
-                )
+                sel = np.random.RandomState(seed).choice(n, int(n * ratio), replace=False)
                 times = times[sel]
             # clip inside 0 and last spike
             times = np.clip(times, 0, original_times[-1])
@@ -356,16 +341,12 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
             d[unit_id] = times
         spiketrains.append(d)
 
-    sorting_with_dup = NumpySorting.from_dict(
-        spiketrains, sampling_frequency=sorting.get_sampling_frequency()
-    )
+    sorting_with_dup = NumpySorting.from_dict(spiketrains, sampling_frequency=sorting.get_sampling_frequency())
 
     return sorting_with_dup
 
 
-def inject_some_split_units(
-    sorting, split_ids=[], num_split=2, output_ids=False, seed=None
-):
+def inject_some_split_units(sorting, split_ids=[], num_split=2, output_ids=False, seed=None):
     """ """
     assert len(split_ids) > 0, "you need to provide some ids to split"
     unit_ids = sorting.unit_ids
@@ -382,17 +363,14 @@ def inject_some_split_units(
     for segment_index in range(sorting.get_num_segments()):
         # sorting to dict
         d = {
-            unit_id: sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
-            for unit_id in sorting.unit_ids
+            unit_id: sorting.get_unit_spike_train(unit_id, segment_index=segment_index) for unit_id in sorting.unit_ids
         }
 
         new_units = {}
         for unit_id in sorting.unit_ids:
             original_times = d[unit_id]
             if unit_id in split_ids:
-                split_inds = np.random.RandomState().randint(
-                    0, num_split, original_times.size
-                )
+                split_inds = np.random.RandomState().randint(0, num_split, original_times.size)
                 for split in range(num_split):
                     mask = split_inds == split
                     other_id = other_ids[unit_id][split]
@@ -401,18 +379,14 @@ def inject_some_split_units(
                 new_units[unit_id] = original_times
         spiketrains.append(new_units)
 
-    sorting_with_split = NumpySorting.from_dict(
-        spiketrains, sampling_frequency=sorting.get_sampling_frequency()
-    )
+    sorting_with_split = NumpySorting.from_dict(spiketrains, sampling_frequency=sorting.get_sampling_frequency())
     if output_ids:
         return sorting_with_split, other_ids
     else:
         return sorting_with_split
 
 
-def synthetize_spike_train_bad_isi(
-    duration, baseline_rate, num_violations, violation_delta=1e-5
-):
+def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, violation_delta=1e-5):
     """Create a spike train. Has uniform inter-spike intervals, except where isis violations occur.
 
     Parameters
@@ -510,9 +484,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
 
         # Random numbers characterising the channels, need to be done outside for consistency
         self.rng = np.random.default_rng(seed=self.seed)
-        self.channel_phases = self.rng.uniform(
-            low=0, high=2 * np.pi, size=self.num_channels
-        )
+        self.channel_phases = self.rng.uniform(low=0, high=2 * np.pi, size=self.num_channels)
         self.frequencies = 1.0 + self.rng.exponential(scale=1.0, size=self.num_channels)
         self.amplitudes = self.rng.normal(loc=70, scale=10.0, size=self.num_channels)
         self.amplitudes *= self.rng.choice([-1, 1], size=self.num_channels)
@@ -527,13 +499,9 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
         start_frame = 0 if start_frame is None else max(start_frame, 0)
-        end_frame = (
-            self.num_samples if end_frame is None else min(end_frame, self.num_samples)
-        )
+        end_frame = self.num_samples if end_frame is None else min(end_frame, self.num_samples)
 
-        traces = self._deterministic_traces(
-            start_frame=start_frame, end_frame=end_frame
-        )
+        traces = self._deterministic_traces(start_frame=start_frame, end_frame=end_frame)
 
         traces = traces if channel_indices is None else traces[:, channel_indices]
 
@@ -550,9 +518,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         num_samples = end_frame - start_frame
         traces = np.ones((num_samples, self.num_channels), dtype=self.dtype)
 
-        times = np.arange(start=start_frame, stop=end_frame, dtype=self.dtype).reshape(
-            num_samples, 1
-        )
+        times = np.arange(start=start_frame, stop=end_frame, dtype=self.dtype).reshape(num_samples, 1)
         times = np.multiply(times, traces, dtype=self.dtype, out=traces)
         times = np.multiply(
             times,
@@ -573,9 +539,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-def generate_lazy_recording(
-    full_traces_size_GiB: float, seed=None
-) -> GeneratorRecording:
+def generate_lazy_recording(full_traces_size_GiB: float, seed=None) -> GeneratorRecording:
     """
     Generate a large lazy recording.
     This is a convenience wrapper around the GeneratorRecording class where only

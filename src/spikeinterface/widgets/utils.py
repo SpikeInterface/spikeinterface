@@ -174,17 +174,13 @@ def array_to_image(
     cmap = plt.get_cmap(colormap)
     zoomed_data = zoom(data, spatial_zoom)
     num_timepoints_after_scaling, num_channels_after_scaling = zoomed_data.shape
-    num_timepoints_per_row_after_scaling = int(
-        np.min([num_timepoints_per_row, num_timepoints]) * spatial_zoom[0]
-    )
+    num_timepoints_per_row_after_scaling = int(np.min([num_timepoints_per_row, num_timepoints]) * spatial_zoom[0])
 
     scaled_data = zoomed_data
     scaled_data[scaled_data < clim[0]] = clim[0]
     scaled_data[scaled_data > clim[1]] = clim[1]
     scaled_data = (scaled_data - clim[0]) / np.ptp(clim)
-    a = np.flip(
-        (cmap(scaled_data.T)[:, :, :3] * 255).astype(np.uint8), axis=0
-    )  # colorize and convert to uint8
+    a = np.flip((cmap(scaled_data.T)[:, :, :3] * 255).astype(np.uint8), axis=0)  # colorize and convert to uint8
 
     num_rows = int(np.ceil(num_timepoints / num_timepoints_per_row))
 
@@ -202,13 +198,9 @@ def array_to_image(
 
     for ir in range(num_rows):
         i1 = ir * num_timepoints_per_row_after_scaling
-        i2 = min(
-            i1 + num_timepoints_per_row_after_scaling, num_timepoints_after_scaling
-        )
+        i2 = min(i1 + num_timepoints_per_row_after_scaling, num_timepoints_after_scaling)
         output_image[
-            ir
-            * (num_channels_after_scaling + spacing) : ir
-            * (num_channels_after_scaling + spacing)
+            ir * (num_channels_after_scaling + spacing) : ir * (num_channels_after_scaling + spacing)
             + num_channels_after_scaling,
             : i2 - i1,
             :,
@@ -220,9 +212,7 @@ def array_to_image(
         try:
             from PIL import Image, ImageFont, ImageDraw
         except ImportError:
-            raise ImportError(
-                "To add a scalebar, you need pillow: >>> pip install pillow"
-            )
+            raise ImportError("To add a scalebar, you need pillow: >>> pip install pillow")
         import platform
 
         y_scalebar = output_image.shape[0] - 10
@@ -231,15 +221,11 @@ def array_to_image(
 
         try:
             if platform.system() == "Linux":
-                font = ImageFont.truetype(
-                    "/usr/share/fonts/truetype/freefont/FreeMono.ttf", fontsize
-                )
+                font = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeMono.ttf", fontsize)
             else:
                 font = ImageFont.truetype("arial.ttf", fontsize)
         except:
-            print(
-                f"Could not load font to use in scalebar. Scalebar will not be drawn."
-            )
+            print(f"Could not load font to use in scalebar. Scalebar will not be drawn.")
             font = None
 
         if font is not None:
@@ -263,8 +249,6 @@ def array_to_image(
                 fill=(0, 0, 0),
             )
 
-            output_image = np.frombuffer(image.tobytes(), dtype=np.uint8).reshape(
-                output_image.shape
-            )
+            output_image = np.frombuffer(image.tobytes(), dtype=np.uint8).reshape(output_image.shape)
 
     return output_image

@@ -7,7 +7,7 @@ Welcome to SpikeInterface's documentation!
   :align: center
 
 
-Spikeinterface is a Python module to analyze extracellular electrophysiology data.
+SpikeInterface is a Python module to analyze extracellular electrophysiology data.
 
 With a few lines of code, SpikeInterface enables you to load and pre-process the recording, run several 
 state-of-the-art spike sorters, post-process and curate the output, compute quality metrics, and visualize the results.
@@ -29,7 +29,7 @@ SpikeInterface is made of several modules to deal with different aspects of the 
 - compare and benchmark spike sorting outputs.
 - compute quality metrics to validate and curate spike sorting outputs.
 - visualize recordings and spike sorting outputs.
-- export report and export to Phy.
+- export a report and/or export to Phy.
 - offer a powerful Qt-based viewer in a separate package `spikeinterface-gui <https://https://github.com/SpikeInterface/spikeinterface-gui>`_
 - have some powerful sorting components to build your own sorter.
 
@@ -63,7 +63,7 @@ To get started with SpikeInterface, you can take a look at the following additio
   | figures of SpikeInterface-based papers and to showcase the latest features of SpikeInterface.
 
 - | The `2020 eLife paper <https://elifesciences.org/articles/61834>`_ introduces the concept and motivation and 
-  | performs an in-depth comparison of multiple sorters (spolier alert: they strongly disagree between each other!). 
+  | performs an in-depth comparison of multiple sorters (spoiler alert: they strongly disagree with each other!). 
   | **Note**: the code-base and implementation have changed a lot since the "paper" version published in 2020. 
   | For detailed documentation we therefore suggest more recent resources, like this documentation and :code:`spiketutorials`.
 

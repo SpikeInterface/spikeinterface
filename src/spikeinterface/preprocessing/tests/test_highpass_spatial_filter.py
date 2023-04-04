@@ -31,9 +31,7 @@ if DEBUG:
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(
-    not HAVE_IBL_NPIX or ON_GITHUB, reason="Only local. Requires ibl-neuropixel install"
-)
+@pytest.mark.skipif(not HAVE_IBL_NPIX or ON_GITHUB, reason="Only local. Requires ibl-neuropixel install")
 @pytest.mark.parametrize("lagc", [False, 1, 300])
 def test_highpass_spatial_filter_real_data(lagc):
     """
@@ -88,31 +86,23 @@ def test_highpass_spatial_filter_real_data(lagc):
 @pytest.mark.parametrize("lagc", [False, 300, 1232])
 @pytest.mark.parametrize("butter_kwargs", [None, {"N": 5, "Wn": 0.12}])
 @pytest.mark.parametrize("num_channels", [32, 64])
-def test_highpass_spatial_filter_synthetic_data(
-    num_channels, ntr_pad, ntr_tap, lagc, butter_kwargs
-):
+def test_highpass_spatial_filter_synthetic_data(num_channels, ntr_pad, ntr_tap, lagc, butter_kwargs):
     """
     Generate a short recording, run it through SI and IBL version, check outputs match. Used to
     check many combinations of possible inputs.
     """
-    options = dict(
-        lagc=lagc, ntr_pad=ntr_pad, ntr_tap=ntr_tap, butter_kwargs=butter_kwargs
-    )
+    options = dict(lagc=lagc, ntr_pad=ntr_pad, ntr_tap=ntr_tap, butter_kwargs=butter_kwargs)
 
     durations = [2, 2]
     rng = np.random.RandomState(seed=100)
     si_recording = generate_recording(num_channels=num_channels, durations=durations)
 
-    _, si_highpass_spatial_filter = run_si_highpass_filter(
-        si_recording, get_traces=False, **options
-    )
+    _, si_highpass_spatial_filter = run_si_highpass_filter(si_recording, get_traces=False, **options)
     frames = [(0, 500), (30000, 33000), (57000, 60000)]
     # only test trace retrieval here
     for seg in range(si_recording.get_num_segments()):
         for frame in frames:
-            raw_traces = si_recording.get_traces(
-                segment_index=seg, start_frame=frame[0], end_frame=frame[1]
-            )
+            raw_traces = si_recording.get_traces(segment_index=seg, start_frame=frame[0], end_frame=frame[1])
             si_filtered = si_highpass_spatial_filter.get_traces(
                 segment_index=seg, start_frame=frame[0], end_frame=frame[1]
             )
@@ -133,9 +123,7 @@ def get_ibl_si_data():
         local_path / "Noise4Sam_g0_imec0" / "Noise4Sam_g0_t0.imec0.ap.bin",
         ignore_warnings=True,
     )
-    ibl_data = ibl_recording.read(slice(None), slice(None), sync=False)[
-        :, :-1
-    ].T  # cut sync channel
+    ibl_data = ibl_recording.read(slice(None), slice(None), sync=False)[:, :-1].T  # cut sync channel
 
     si_recording = se.read_spikeglx(local_path, stream_id="imec0.ap")
     si_recording = spre.scale(si_recording, dtype="float32")
@@ -177,9 +165,7 @@ def process_args_for_ibl(butter_kwargs, ntr_pad, lagc):
     return butter_kwargs_, ntr_pad, lagc
 
 
-def run_si_highpass_filter(
-    si_recording, ntr_pad, ntr_tap, lagc, butter_kwargs, get_traces=True
-):
+def run_si_highpass_filter(si_recording, ntr_pad, ntr_tap, lagc, butter_kwargs, get_traces=True):
     """"""
     si_lagc = process_args_for_si(si_recording, lagc)
     if butter_kwargs is not None:
@@ -211,9 +197,7 @@ def run_si_highpass_filter(
 def run_ibl_highpass_filter(ibl_data, ntr_pad, ntr_tap, lagc, butter_kwargs):
     butter_kwargs, ntr_pad, lagc = process_args_for_ibl(butter_kwargs, ntr_pad, lagc)
 
-    ibl_filtered = voltage.kfilt(
-        ibl_data, None, ntr_pad, ntr_tap, lagc, butter_kwargs
-    ).T
+    ibl_filtered = voltage.kfilt(ibl_data, None, ntr_pad, ntr_tap, lagc, butter_kwargs).T
 
     return ibl_filtered
 

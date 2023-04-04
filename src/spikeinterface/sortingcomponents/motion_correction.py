@@ -58,9 +58,7 @@ def correct_motion_on_peaks(
     if spatial_bins is None:
         # rigid motion interpolation 1D
         sample_bins = np.searchsorted(times, temporal_bins)
-        f = scipy.interpolate.interp1d(
-            sample_bins, motion[:, 0], bounds_error=False, fill_value="extrapolate"
-        )
+        f = scipy.interpolate.interp1d(sample_bins, motion[:, 0], bounds_error=False, fill_value="extrapolate")
         shift = f(peaks["sample_ind"])
         corrected_peak_locations[direction] -= shift
     else:
@@ -133,9 +131,7 @@ def correct_motion_on_traces(
         traces_corrected = np.zeros(traces.shape, dtype=traces.dtype)
     else:
         channel_inds = np.asarray(channel_inds)
-        traces_corrected = np.zeros(
-            (traces.shape[0], channel_inds.size), dtype=traces.dtype
-        )
+        traces_corrected = np.zeros((traces.shape[0], channel_inds.size), dtype=traces.dtype)
 
     # regroup times by closet temporal_bins
     bin_inds = _get_closest_ind(temporal_bins, times)
@@ -218,8 +214,7 @@ def _get_closest_ind(array, values):
 
     # find indexes where previous index is closer
     prev_idx_is_less = (idxs == len(array)) | (
-        np.fabs(values - array[np.maximum(idxs - 1, 0)])
-        < np.fabs(values - array[np.minimum(idxs, len(array) - 1)])
+        np.fabs(values - array[np.maximum(idxs - 1, 0)]) < np.fabs(values - array[np.minimum(idxs, len(array) - 1)])
     )
     idxs[prev_idx_is_less] -= 1
 
@@ -288,9 +283,7 @@ class CorrectMotionRecording(BasePreprocessor):
         p=1,
         num_closest=3,
     ):
-        assert (
-            recording.get_num_segments() == 1
-        ), "correct_motion() is only available for single-segment recordings"
+        assert recording.get_num_segments() == 1, "correct_motion() is only available for single-segment recordings"
 
         # force as arrays
         temporal_bins = np.asarray(temporal_bins)
@@ -300,17 +293,12 @@ class CorrectMotionRecording(BasePreprocessor):
 
         channel_locations = recording.get_channel_locations()
         assert channel_locations.ndim >= direction, (
-            f"'direction' {direction} not available. "
-            f"Channel locations have {channel_locations.ndim} dimensions."
+            f"'direction' {direction} not available. " f"Channel locations have {channel_locations.ndim} dimensions."
         )
-        spatial_interpolation_kwargs = dict(
-            sigma_um=sigma_um, p=p, num_closest=num_closest
-        )
+        spatial_interpolation_kwargs = dict(sigma_um=sigma_um, p=p, num_closest=num_closest)
         if border_mode == "remove_channels":
             locs = channel_locations[:, direction]
-            l0, l1 = np.min(channel_locations[:, direction]), np.max(
-                channel_locations[:, direction]
-            )
+            l0, l1 = np.min(channel_locations[:, direction]), np.max(channel_locations[:, direction])
 
             # compute max and min motion (with interpolation)
             # and check if channels are inside
@@ -329,9 +317,7 @@ class CorrectMotionRecording(BasePreprocessor):
                         fill_value="extrapolate",
                     )
                     best_motions = f(locs)
-                channel_inside &= ((locs + best_motions) >= l0) & (
-                    (locs + best_motions) <= l1
-                )
+                channel_inside &= ((locs + best_motions) >= l0) & ((locs + best_motions) <= l1)
 
             (channel_inds,) = np.nonzero(channel_inside)
             channel_ids = recording.channel_ids[channel_inds]
@@ -354,9 +340,7 @@ class CorrectMotionRecording(BasePreprocessor):
             # TODO this is also done in ChannelSliceRecording, this should be done in a common place
             contact_vector = self.get_property("contact_vector")
             if contact_vector is not None:
-                contact_vector["device_channel_indices"] = np.arange(
-                    len(channel_ids), dtype="int64"
-                )
+                contact_vector["device_channel_indices"] = np.arange(len(channel_ids), dtype="int64")
                 self.set_property("contact_vector", contact_vector)
 
         for parent_segment in recording._recording_segments:
@@ -428,9 +412,7 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
             #     t0 = t0 + self.t_start
             times += t0
 
-        traces = self.parent_recording_segment.get_traces(
-            start_frame, end_frame, channel_indices=slice(None)
-        )
+        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices=slice(None))
 
         trace2 = correct_motion_on_traces(
             traces,
@@ -451,6 +433,4 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
         return trace2
 
 
-correct_motion = define_function_from_class(
-    source_class=CorrectMotionRecording, name="correct_motion"
-)
+correct_motion = define_function_from_class(source_class=CorrectMotionRecording, name="correct_motion")

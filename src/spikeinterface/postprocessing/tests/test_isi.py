@@ -37,18 +37,14 @@ class ISIHistogramsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Test
 
 def _test_ISI(sorting, window_ms: float, bin_ms: float, methods: List[str]):
     for method in methods:
-        ISI, bins = compute_isi_histograms(
-            sorting, window_ms=window_ms, bin_ms=bin_ms, method=method
-        )
+        ISI, bins = compute_isi_histograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
 
         if method == "numpy":
             ref_ISI = ISI
             ref_bins = bins
         else:
             assert np.all(ISI == ref_ISI), f"Failed with method={method}"
-            assert np.allclose(
-                bins, ref_bins, atol=1e-10
-            ), f"Failed with method={method}"
+            assert np.allclose(bins, ref_bins, atol=1e-10), f"Failed with method={method}"
 
 
 if __name__ == "__main__":

@@ -29,9 +29,7 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
     NeoRawIOClass = "CedRawIO"
     name = "ced"
 
-    def __init__(
-        self, file_path, stream_id=None, stream_name=None, all_annotations=False
-    ):
+    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(
             self,
@@ -49,6 +47,4 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_ced = define_function_from_class(
-    source_class=CedRecordingExtractor, name="read_ced"
-)
+read_ced = define_function_from_class(source_class=CedRecordingExtractor, name="read_ced")

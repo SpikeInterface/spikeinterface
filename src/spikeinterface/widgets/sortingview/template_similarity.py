@@ -27,9 +27,7 @@ class TemplateSimilarityPlotter(SortingviewPlotter):
                     )
                 )
 
-        view = vv.UnitSimilarityMatrix(
-            unit_ids=list(unit_ids), similarity_scores=ss_items
-        )
+        view = vv.UnitSimilarityMatrix(unit_ids=list(unit_ids), similarity_scores=ss_items)
 
         self.handle_display_and_url(view, **backend_kwargs)
         return view

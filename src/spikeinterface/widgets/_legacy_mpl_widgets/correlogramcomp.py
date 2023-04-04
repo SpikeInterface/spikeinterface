@@ -36,18 +36,14 @@ class StudyComparisonCorrelogramBySimilarityWidget(BaseWidget):
 
     def plot(self):
         my_cmap = plt.get_cmap(self.cmap)
-        cNorm = matplotlib.colors.Normalize(
-            vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max()
-        )
+        cNorm = matplotlib.colors.Normalize(vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
 
         self.study.precompute_scores_by_similarities()
         time_bins = self.study.time_bins
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
-            result = self.study.get_error_profile_over_similarity_bins(
-                self.similarity_bins, sorter_name
-            )
+            result = self.study.get_error_profile_over_similarity_bins(self.similarity_bins, sorter_name)
 
             # plot by similarity bins
             ax = self.axes.flatten()[sorter_ind]
@@ -120,9 +116,7 @@ class StudyComparisonCorrelogramBySimilarityRangesMeanErrorWidget(BaseWidget):
             xaxis = np.diff(self.similarity_ranges) / 2 + self.similarity_ranges[:-1]
 
             if not self.show_std:
-                self.ax.plot(
-                    xaxis, mean_rerrors, label=sorter_name, c="C%d" % sorter_ind
-                )
+                self.ax.plot(xaxis, mean_rerrors, label=sorter_name, c="C%d" % sorter_ind)
             else:
                 self.ax.errorbar(
                     xaxis,
@@ -148,9 +142,7 @@ def plot_study_comparison_correlogram_by_similarity(*args, **kwargs):
     return W
 
 
-plot_study_comparison_correlogram_by_similarity.__doc__ = (
-    StudyComparisonCorrelogramBySimilarityWidget.__doc__
-)
+plot_study_comparison_correlogram_by_similarity.__doc__ = StudyComparisonCorrelogramBySimilarityWidget.__doc__
 
 # def plot_study_comparison_Correlogram_by_similarity_range(*args, **kwargs):
 #     W = StudyComparisonCorrelogramBySimilarityRangeWidget(*args, **kwargs)

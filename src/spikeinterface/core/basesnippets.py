@@ -118,8 +118,7 @@ class BaseSnippets(BaseRecordingSnippets):
         if return_scaled:
             if not self.has_scaled():
                 raise ValueError(
-                    "These snippets do not support return_scaled=True (need gain_to_uV and offset_"
-                    "to_uV properties)"
+                    "These snippets do not support return_scaled=True (need gain_to_uV and offset_" "to_uV properties)"
                 )
             else:
                 gains = self.get_property("gain_to_uV")
@@ -141,9 +140,7 @@ class BaseSnippets(BaseRecordingSnippets):
         spts = self._snippets_segments[segment_index]
         indices = spts.frames_to_indices(start_frame, end_frame)
 
-        return self.get_snippets(
-            indices, channel_ids=channel_ids, return_scaled=return_scaled
-        )
+        return self.get_snippets(indices, channel_ids=channel_ids, return_scaled=return_scaled)
 
     def _save(self, format="binary", **save_kwargs):
         raise NotImplementedError
@@ -151,17 +148,13 @@ class BaseSnippets(BaseRecordingSnippets):
     def _channel_slice(self, channel_ids, renamed_channel_ids=None):
         from .channelslice import ChannelSliceSnippets
 
-        sub_recording = ChannelSliceSnippets(
-            self, channel_ids, renamed_channel_ids=renamed_channel_ids
-        )
+        sub_recording = ChannelSliceSnippets(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
         return sub_recording
 
     def _remove_channels(self, remove_channel_ids):
         from .channelslice import ChannelSliceSnippets
 
-        new_channel_ids = self.channel_ids[
-            ~np.in1d(self.channel_ids, remove_channel_ids)
-        ]
+        new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, remove_channel_ids)]
         sub_recording = ChannelSliceSnippets(self, new_channel_ids)
         return sub_recording
 
@@ -182,19 +175,14 @@ class BaseSnippets(BaseRecordingSnippets):
             from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
 
             folder = save_kwargs["folder"]
-            file_paths = [
-                folder / f"traces_cached_seg{i}.npy"
-                for i in range(self.get_num_segments())
-            ]
+            file_paths = [folder / f"traces_cached_seg{i}.npy" for i in range(self.get_num_segments())]
             dtype = save_kwargs.get("dtype", None)
             if dtype is None:
                 dtype = self.get_dtype()
 
             from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
 
-            NpySnippetsExtractor.write_snippets(
-                snippets=self, file_paths=file_paths, dtype=dtype
-            )
+            NpySnippetsExtractor.write_snippets(snippets=self, file_paths=file_paths, dtype=dtype)
             cached = NpySnippetsExtractor(
                 file_paths=file_paths,
                 sampling_frequency=self.get_sampling_frequency(),
@@ -285,9 +273,7 @@ class BaseSnippetsSegment(BaseSegment):
         """
         raise NotImplementedError
 
-    def frames_to_indices(
-        self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None
-    ):
+    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
         """
         Return the slice of snippets
 

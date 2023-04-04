@@ -32,23 +32,17 @@ def _find_duplicated_spikes_numpy(
 
         (indices_of_duplicates,) = np.where(~mask)
     elif method != "keep_last":
-        raise ValueError(
-            f"Method '{method}' isn't a valid method for _find_duplicated_spikes_numpy."
-        )
+        raise ValueError(f"Method '{method}' isn't a valid method for _find_duplicated_spikes_numpy.")
 
     return indices_of_duplicates
 
 
-def _find_duplicated_spikes_random(
-    spike_train: np.ndarray, censored_period: int, seed: int
-) -> np.ndarray:
+def _find_duplicated_spikes_random(spike_train: np.ndarray, censored_period: int, seed: int) -> np.ndarray:
     # random seed
     rng = np.random.RandomState(seed=seed)
 
     indices_of_duplicates = []
-    while not np.all(
-        np.diff(np.delete(spike_train, indices_of_duplicates)) > censored_period
-    ):
+    while not np.all(np.diff(np.delete(spike_train, indices_of_duplicates)) > censored_period):
         (duplicates,) = np.where(np.diff(spike_train) <= censored_period)
         duplicates = np.unique(np.concatenate((duplicates, duplicates + 1)))
         duplicate = rng.choice(duplicates)
@@ -121,27 +115,15 @@ def find_duplicated_spikes(
     """
 
     if method in ("keep_first", "keep_last"):
-        return _find_duplicated_spikes_numpy(
-            spike_train, censored_period, method=method
-        )
+        return _find_duplicated_spikes_numpy(spike_train, censored_period, method=method)
     elif method == "random":
         assert seed is not None, "The 'seed' has to be provided if method=='random'"
         return _find_duplicated_spikes_random(spike_train, censored_period, seed)
     elif method == "keep_first_iterative":
-        assert (
-            HAVE_NUMBA
-        ), "'keep_first' method requires numba. Install it with >>> pip install numba"
-        return _find_duplicated_spikes_keep_first_iterative(
-            spike_train.astype(np.int64), censored_period
-        )
+        assert HAVE_NUMBA, "'keep_first' method requires numba. Install it with >>> pip install numba"
+        return _find_duplicated_spikes_keep_first_iterative(spike_train.astype(np.int64), censored_period)
     elif method == "keep_last_iterative":
-        assert (
-            HAVE_NUMBA
-        ), "'keep_last' method requires numba. Install it with >>> pip install numba"
-        return _find_duplicated_spikes_keep_last_iterative(
-            spike_train.astype(np.int64), censored_period
-        )
+        assert HAVE_NUMBA, "'keep_last' method requires numba. Install it with >>> pip install numba"
+        return _find_duplicated_spikes_keep_last_iterative(spike_train.astype(np.int64), censored_period)
     else:
-        raise ValueError(
-            f"Method '{method}' isn't a valid method for find_duplicated_spikes."
-        )
+        raise ValueError(f"Method '{method}' isn't a valid method for find_duplicated_spikes.")

@@ -58,9 +58,7 @@ class RasterWidget(BaseWidget):
         self._color = color
         self._max_frame = 0
         for unit_id in self._sorting.get_unit_ids():
-            spike_train = self._sorting.get_unit_spike_train(
-                unit_id, segment_index=self.segment_index
-            )
+            spike_train = self._sorting.get_unit_spike_train(unit_id, segment_index=self.segment_index)
             if len(spike_train) > 0:
                 curr_max_frame = np.max(spike_train)
                 if curr_max_frame > self._max_frame:
@@ -69,12 +67,8 @@ class RasterWidget(BaseWidget):
         if self._visible_trange is None:
             self._visible_trange = [0, self._max_frame]
         else:
-            assert (
-                len(time_range) == 2
-            ), "'time_range' should be a list with start and end time in seconds"
-            self._visible_trange = [
-                int(t * self._sampling_frequency) for t in time_range
-            ]
+            assert len(time_range) == 2, "'time_range' should be a list with start and end time in seconds"
+            self._visible_trange = [int(t * self._sampling_frequency) for t in time_range]
 
         self._visible_trange = self._fix_trange(self._visible_trange)
         self.name = "Raster"

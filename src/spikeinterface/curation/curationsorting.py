@@ -73,12 +73,8 @@ class CurationSorting:
         if self._make_graph:
             units = current_sorting.get_unit_ids()
             i = self._sorting_stages_i
-            edges = [
-                (node_t(u, i), node_t(u, i + 1)) for u in units if u != split_unit_id
-            ]
-            edges = edges + [
-                (node_t(split_unit_id, i), node_t(u, i + 1)) for u in new_unit_ids
-            ]
+            edges = [(node_t(u, i), node_t(u, i + 1)) for u in units if u != split_unit_id]
+            edges = edges + [(node_t(split_unit_id, i), node_t(u, i + 1)) for u in new_unit_ids]
         else:
             edges = None
         self.max_used_id = self.max_used_id + 2
@@ -89,9 +85,7 @@ class CurationSorting:
         if new_unit_id is None:
             new_unit_id = self._get_unused_id()[0]
         else:
-            assert (
-                new_unit_id not in current_sorting.unit_ids
-            ), f"new_unit_id already exists!"
+            assert new_unit_id not in current_sorting.unit_ids, f"new_unit_id already exists!"
         new_sorting = MergeUnitsSorting(
             parent_sorting=current_sorting,
             units_to_merge=units_to_merge,
@@ -102,14 +96,8 @@ class CurationSorting:
         if self._make_graph:
             units = current_sorting.get_unit_ids()
             i = self._sorting_stages_i
-            edges = [
-                (node_t(u, i), node_t(u, i + 1))
-                for u in units
-                if u not in units_to_merge
-            ]
-            edges = edges + [
-                (node_t(u, i), node_t(new_unit_id, i + 1)) for u in units_to_merge
-            ]
+            edges = [(node_t(u, i), node_t(u, i + 1)) for u in units if u not in units_to_merge]
+            edges = edges + [(node_t(u, i), node_t(new_unit_id, i + 1)) for u in units_to_merge]
         else:
             edges = None
         self.max_used_id = self.max_used_id + 1
@@ -129,26 +117,19 @@ class CurationSorting:
         self.remove_units([unit_id])
 
     def select_units(self, unit_ids, renamed_unit_ids=None):
-        new_sorting = self._sorting_stages[self._sorting_stages_i].select_units(
-            unit_ids, renamed_unit_ids
-        )
+        new_sorting = self._sorting_stages[self._sorting_stages_i].select_units(unit_ids, renamed_unit_ids)
         if self._make_graph:
             i = self._sorting_stages_i
             if renamed_unit_ids is None:
                 edges = [(node_t(u, i), node_t(u, i + 1)) for u in unit_ids]
             else:
-                edges = [
-                    (node_t(u, i), node_t(v, i + 1))
-                    for u, v in zip(unit_ids, renamed_unit_ids)
-                ]
+                edges = [(node_t(u, i), node_t(v, i + 1)) for u, v in zip(unit_ids, renamed_unit_ids)]
         else:
             edges = None
         self._add_new_stage(new_sorting, edges)
 
     def rename(self, renamed_unit_ids):
-        self.select_units(
-            self.current_sorting.unit_ids, renamed_unit_ids=renamed_unit_ids
-        )
+        self.select_units(self.current_sorting.unit_ids, renamed_unit_ids=renamed_unit_ids)
 
     def _add_new_stage(self, new_sorting, edges):
         # adds the stage to the stage list and creates the associated new graph

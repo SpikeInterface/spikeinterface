@@ -83,21 +83,15 @@ class BenchmarkMatching:
         self.sorting = NumpySorting.from_times_labels(
             self.spikes["sample_ind"], self.spikes["cluster_ind"], self.sampling_rate
         )
-        self.comp = CollisionGTComparison(
-            self.gt_sorting, self.sorting, exhaustive_gt=self.exhaustive_gt
-        )
-        self.metrics = compute_quality_metrics(
-            self.we, metric_names=["snr"], load_if_exists=True
-        )
+        self.comp = CollisionGTComparison(self.gt_sorting, self.sorting, exhaustive_gt=self.exhaustive_gt)
+        self.metrics = compute_quality_metrics(self.we, metric_names=["snr"], load_if_exists=True)
 
     def plot(self, title=None):
         if title is None:
             title = self.method
 
         if self.metrics is None:
-            self.metrics = compute_quality_metrics(
-                self.we, metric_names=["snr"], load_if_exists=True
-            )
+            self.metrics = compute_quality_metrics(self.we, metric_names=["snr"], load_if_exists=True)
 
         fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(10, 10))
         ax = axs[0, 0]
@@ -217,13 +211,9 @@ def plot_errors_matching_all_neurons(benchmark, nb_spikes=200, metric="cosine"):
             if all_spikes > 0:
                 b = wfs_sliced.reshape(all_spikes, -1)
                 if metric == "cosine":
-                    distances = sklearn.metrics.pairwise.cosine_similarity(
-                        a, b
-                    ).flatten()
+                    distances = sklearn.metrics.pairwise.cosine_similarity(a, b).flatten()
                 else:
-                    distances = sklearn.metrics.pairwise_distances(
-                        a, b, metric
-                    ).flatten()
+                    distances = sklearn.metrics.pairwise_distances(a, b, metric).flatten()
                 results[label]["mean"] += [np.nanmean(distances)]
                 results[label]["std"] += [np.nanstd(distances)]
             else:
@@ -249,9 +239,7 @@ def plot_comparison_matching(
     ylim=(0.5, 1),
 ):
     nb_benchmarks = len(benchmarks)
-    fig, axs = plt.subplots(
-        ncols=nb_benchmarks, nrows=nb_benchmarks - 1, figsize=(10, 10)
-    )
+    fig, axs = plt.subplots(ncols=nb_benchmarks, nrows=nb_benchmarks - 1, figsize=(10, 10))
     for i in range(nb_benchmarks - 1):
         for j in range(nb_benchmarks):
             if len(axs.shape) > 1:

@@ -48,9 +48,7 @@ class SpikesOnTracesPlotter(IpywidgetsPlotter):
         for w in self.controller.values():
             w.observe(self.updater)
 
-        self.widget = widgets.AppLayout(
-            center=ts_w, left_sidebar=unit_widget, pane_widths=ratios + [0]
-        )
+        self.widget = widgets.AppLayout(center=ts_w, left_sidebar=unit_widget, pane_widths=ratios + [0])
 
         # a first update
         self.updater(None)

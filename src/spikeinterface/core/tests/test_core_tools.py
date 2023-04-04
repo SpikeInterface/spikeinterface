@@ -91,9 +91,7 @@ def test_write_memory_recording():
 
     if HAVE_SHAREDMEMORY and platform.system() != "Windows":
         # write parrallel
-        write_memory_recording(
-            recording, dtype=None, verbose=False, n_jobs=2, chunk_memory="100k"
-        )
+        write_memory_recording(recording, dtype=None, verbose=False, n_jobs=2, chunk_memory="100k")
 
         # write parrallel
         write_memory_recording(

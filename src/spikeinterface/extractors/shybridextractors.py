@@ -46,8 +46,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
     is_writable = True
     mode = "folder"
     installation_mesg = (
-        "To use the SHYBRID extractors, install SHYBRID and pyyaml: "
-        "\n\n pip install shybrid pyyaml\n\n"
+        "To use the SHYBRID extractors, install SHYBRID and pyyaml: " "\n\n pip install shybrid pyyaml\n\n"
     )
     name = "shybrid"
 
@@ -115,9 +114,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         **write_binary_kwargs: keyword arguments for write_to_binary_dat_format() function
         """
         assert HAVE_SBEX, SHYBRIDRecordingExtractor.installation_mesg
-        assert (
-            recording.get_num_segments() == 1
-        ), "SHYBRID can only write single segment recordings"
+        assert recording.get_num_segments() == 1, "SHYBRID can only write single segment recordings"
         save_path = Path(save_path)
         recording_name = "recording.bin"
         probe_name = "probe.prb"
@@ -181,9 +178,7 @@ class SHYBRIDSortingExtractor(BaseSorting):
     extractor_name = "SHYBRIDSorting"
     installed = HAVE_SBEX
     is_writable = True
-    installation_mesg = (
-        "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
-    )
+    installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
     name = "shybrid"
 
     def __init__(self, file_path, sampling_frequency, delimiter=","):
@@ -194,13 +189,9 @@ class SHYBRIDSortingExtractor(BaseSorting):
             spike_clusters = sbio.SpikeClusters()
             spike_clusters.fromCSV(str(file_path), None, delimiter=delimiter)
         else:
-            raise FileNotFoundError(
-                f"The ground truth file {file_path} could not be found"
-            )
+            raise FileNotFoundError(f"The ground truth file {file_path} could not be found")
 
-        BaseSorting.__init__(
-            self, unit_ids=spike_clusters.keys(), sampling_frequency=sampling_frequency
-        )
+        BaseSorting.__init__(self, unit_ids=spike_clusters.keys(), sampling_frequency=sampling_frequency)
 
         sorting_segment = SHYBRIDSortingSegment(spike_clusters)
         self.add_sorting_segment(sorting_segment)
@@ -224,9 +215,7 @@ class SHYBRIDSortingExtractor(BaseSorting):
             Full path to the desired target folder.
         """
         assert HAVE_SBEX, SHYBRIDSortingExtractor.installation_mesg
-        assert (
-            sorting.get_num_segments() == 1
-        ), "SHYBRID can only write single segment sortings"
+        assert sorting.get_num_segments() == 1, "SHYBRID can only write single segment sortings"
         save_path = Path(save_path)
 
         dump = np.empty((0, 2))
@@ -267,9 +256,7 @@ class SHYBRIDSortingSegment(BaseSortingSegment):
 read_shybrid_recording = define_function_from_class(
     source_class=SHYBRIDRecordingExtractor, name="read_shybrid_recording"
 )
-read_shybrid_sorting = define_function_from_class(
-    source_class=SHYBRIDSortingExtractor, name="read_shybrid_sorting"
-)
+read_shybrid_sorting = define_function_from_class(source_class=SHYBRIDSortingExtractor, name="read_shybrid_sorting")
 
 
 class GeometryNotLoadedError(Exception):

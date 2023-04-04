@@ -54,9 +54,7 @@ class AppendSegmentRecording(BaseRecording):
 
         # check same characteristics
         ok1 = all(dtype == rec.get_dtype() for rec in recording_list)
-        ok2 = all(
-            np.array_equal(channel_ids, rec.channel_ids) for rec in recording_list
-        )
+        ok2 = all(np.array_equal(channel_ids, rec.channel_ids) for rec in recording_list)
         if not (ok1 and ok2):
             raise ValueError("Recording don't have the same dtype or channel_ids")
         _check_sampling_frequencies(
@@ -87,9 +85,7 @@ class ProxyAppendRecordingSegment(BaseRecordingSegment):
         return self.parent_segment.get_traces(*args, **kwargs)
 
 
-append_recordings = define_function_from_class(
-    source_class=AppendSegmentRecording, name="append_segment_recording"
-)
+append_recordings = define_function_from_class(source_class=AppendSegmentRecording, name="append_segment_recording")
 
 
 class ConcatenateSegmentRecording(BaseRecording):
@@ -117,12 +113,8 @@ class ConcatenateSegmentRecording(BaseRecording):
         Maximum allowed difference of sampling frequencies across recordings (default 0)
     """
 
-    def __init__(
-        self, recording_list, ignore_times=True, sampling_frequency_max_diff=0
-    ):
-        one_rec = append_recordings(
-            recording_list, sampling_frequency_max_diff=sampling_frequency_max_diff
-        )
+    def __init__(self, recording_list, ignore_times=True, sampling_frequency_max_diff=0):
+        one_rec = append_recordings(recording_list, sampling_frequency_max_diff=sampling_frequency_max_diff)
 
         BaseRecording.__init__(
             self,
@@ -166,9 +158,7 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
             d = parent_segments[0].get_times_kwargs()
         BaseRecordingSegment.__init__(self, **d)
         self.parent_segments = parent_segments
-        self.all_length = [
-            rec_seg.get_num_samples() for rec_seg in self.parent_segments
-        ]
+        self.all_length = [rec_seg.get_num_samples() for rec_seg in self.parent_segments]
         self.cumsum_length = np.cumsum([0] + self.all_length)
         self.total_length = np.sum(self.all_length)
 
@@ -192,9 +182,7 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
             #  one segment
             rec_seg = self.parent_segments[i0]
             seg_start = self.cumsum_length[i0]
-            traces = rec_seg.get_traces(
-                start_frame - seg_start, end_frame - seg_start, channel_indices
-            )
+            traces = rec_seg.get_traces(start_frame - seg_start, end_frame - seg_start, channel_indices)
         else:
             #  several segments
             all_traces = []
@@ -207,16 +195,12 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
                 seg_start = self.cumsum_length[i]
                 if i == i0:
                     # first
-                    traces_chunk = rec_seg.get_traces(
-                        start_frame - seg_start, None, channel_indices
-                    )
+                    traces_chunk = rec_seg.get_traces(start_frame - seg_start, None, channel_indices)
                     all_traces.append(traces_chunk)
                 elif i == i1:
                     # last
                     if (end_frame - seg_start) > 0:
-                        traces_chunk = rec_seg.get_traces(
-                            None, end_frame - seg_start, channel_indices
-                        )
+                        traces_chunk = rec_seg.get_traces(None, end_frame - seg_start, channel_indices)
                         all_traces.append(traces_chunk)
                 else:
                     # in between
@@ -244,9 +228,7 @@ class SelectSegmentRecording(BaseRecording):
         The segment indices to select
     """
 
-    def __init__(
-        self, recording: BaseRecording, segment_indices: Union[int, List[int]]
-    ):
+    def __init__(self, recording: BaseRecording, segment_indices: Union[int, List[int]]):
         BaseRecording.__init__(
             self,
             recording.get_sampling_frequency(),
@@ -286,9 +268,7 @@ def split_recording(recording: BaseRecording):
     """
     recording_list = []
     for segment_index in range(recording.get_num_segments()):
-        rec_mono = SelectSegmentRecording(
-            recording=recording, segment_indices=[segment_index]
-        )
+        rec_mono = SelectSegmentRecording(recording=recording, segment_indices=[segment_index])
         recording_list.append(rec_mono)
     return recording_list
 
@@ -318,9 +298,7 @@ class AppendSegmentSorting(BaseSorting):
         self.sorting_list = sorting_list
 
         # check same characteristics
-        ok1 = all(
-            np.array_equal(unit_ids, sorting.unit_ids) for sorting in sorting_list
-        )
+        ok1 = all(np.array_equal(unit_ids, sorting.unit_ids) for sorting in sorting_list)
         if not ok1:
             raise ValueError("Sortings don't have the same unit_ids")
         _check_sampling_frequencies(
@@ -348,9 +326,7 @@ class ProxyAppendSortingSegment(BaseSortingSegment):
         return self.parent_segment.get_unit_spike_train(*args, **kwargs)
 
 
-append_sortings = define_function_from_class(
-    source_class=AppendSegmentSorting, name="append_sortings"
-)
+append_sortings = define_function_from_class(source_class=AppendSegmentSorting, name="append_sortings")
 
 
 class ConcatenateSegmentSorting(BaseSorting):
@@ -411,14 +387,10 @@ class ConcatenateSegmentSorting(BaseSorting):
                 "Use ignore_times=True to ignore time information."
             )
         else:
-            assert (
-                total_samples_list is None
-            ), "Sortings have registered recordings: Use `total_samples_list=None`"
+            assert total_samples_list is None, "Sortings have registered recordings: Use `total_samples_list=None`"
 
         # Pull metadata from AppendSorting object
-        one_sorting = append_sortings(
-            sorting_list, sampling_frequency_max_diff=sampling_frequency_max_diff
-        )
+        one_sorting = append_sortings(sorting_list, sampling_frequency_max_diff=sampling_frequency_max_diff)
         BaseSorting.__init__(self, one_sorting.sampling_frequency, one_sorting.unit_ids)
         one_sorting.copy_metadata(self)
 
@@ -437,9 +409,7 @@ class ConcatenateSegmentSorting(BaseSorting):
                     )
                 # Pull num samples for each segment
                 if sorting.has_recording():
-                    segment_num_samples = sorting.get_num_samples(
-                        segment_index=segment_i
-                    )
+                    segment_num_samples = sorting.get_num_samples(segment_index=segment_i)
                 else:
                     segment_num_samples = total_samples_list[sorting_i]
                 # Check consistency between num samples and spike frames
@@ -449,12 +419,7 @@ class ConcatenateSegmentSorting(BaseSorting):
                         start_frame=None,
                         end_frame=None,
                     )
-                    if any(
-                        [
-                            spike_frame >= segment_num_samples
-                            for spike_frame in unit_segment_spikes
-                        ]
-                    ):
+                    if any([spike_frame >= segment_num_samples for spike_frame in unit_segment_spikes]):
                         raise ValueError(
                             "Sortings' spike frames exceed the provided number of samples for some segment. "
                             "If the sortings have registered recordings, you can remove these excess "
@@ -474,9 +439,7 @@ class ConcatenateSegmentSorting(BaseSorting):
         # Assign concatenated recording if possible
         if all_has_recording:
             self.register_recording(
-                concatenate_recordings(
-                    [s._recording for s in sorting_list], ignore_times=ignore_times
-                )
+                concatenate_recordings([s._recording for s in sorting_list], ignore_times=ignore_times)
             )
 
         self._kwargs = {
@@ -526,10 +489,7 @@ class ProxyConcatenateSortingSegment(BaseSortingSegment):
             sorting_seg = self.parent_segments[i0]
             seg_start = self.cumsum_length[i0]
             spike_frames = (
-                sorting_seg.get_unit_spike_train(
-                    unit_id, start_frame - seg_start, end_frame - seg_start
-                )
-                + seg_start
+                sorting_seg.get_unit_spike_train(unit_id, start_frame - seg_start, end_frame - seg_start) + seg_start
             )
         else:
             #  several segments
@@ -544,37 +504,26 @@ class ProxyConcatenateSortingSegment(BaseSortingSegment):
                 if i == i0:
                     # first
                     spike_frames_chunk = (
-                        sorting_seg.get_unit_spike_train(
-                            unit_id, start_frame - seg_start, None
-                        )
-                        + seg_start
+                        sorting_seg.get_unit_spike_train(unit_id, start_frame - seg_start, None) + seg_start
                     )
                     all_spike_frames.append(spike_frames_chunk)
                 elif i == i1:
                     # last
                     if (end_frame - seg_start) > 0:
                         spike_frames_chunk = (
-                            sorting_seg.get_unit_spike_train(
-                                unit_id, None, end_frame - seg_start
-                            )
-                            + seg_start
+                            sorting_seg.get_unit_spike_train(unit_id, None, end_frame - seg_start) + seg_start
                         )
                         all_spike_frames.append(spike_frames_chunk)
                 else:
                     # in between
-                    spike_frames_chunk = (
-                        sorting_seg.get_unit_spike_train(unit_id, None, None)
-                        + seg_start
-                    )
+                    spike_frames_chunk = sorting_seg.get_unit_spike_train(unit_id, None, None) + seg_start
                     all_spike_frames.append(spike_frames_chunk)
             spike_frames = np.concatenate(all_spike_frames, axis=0)
 
         return spike_frames
 
 
-concatenate_sortings = define_function_from_class(
-    source_class=ConcatenateSegmentSorting, name="concatenate_sortings"
-)
+concatenate_sortings = define_function_from_class(source_class=ConcatenateSegmentSorting, name="concatenate_sortings")
 
 
 class SplitSegmentSorting(BaseSorting):
@@ -594,9 +543,7 @@ class SplitSegmentSorting(BaseSorting):
     """
 
     def __init__(self, parent_sorting: BaseSorting, recording_or_recording_list=None):
-        assert (
-            parent_sorting.get_num_segments() == 1
-        ), "The sorting must have only one segment."
+        assert parent_sorting.get_num_segments() == 1, "The sorting must have only one segment."
         sampling_frequency = parent_sorting.get_sampling_frequency()
         unit_ids = parent_sorting.unit_ids
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
@@ -615,8 +562,7 @@ class SplitSegmentSorting(BaseSorting):
             recording_list = recording_or_recording_list.recording_list
         else:
             raise TypeError(
-                "'recording_or_recording_list' must be a list of recordings, "
-                "ConcatenateSegmentRecording, or None"
+                "'recording_or_recording_list' must be a list of recordings, " "ConcatenateSegmentRecording, or None"
             )
 
         num_samples = [0]
@@ -639,9 +585,7 @@ class SplitSegmentSorting(BaseSorting):
         }
 
 
-split_sorting = define_function_from_class(
-    source_class=SplitSegmentSorting, name="split_sorting"
-)
+split_sorting = define_function_from_class(source_class=SplitSegmentSorting, name="split_sorting")
 
 
 class SelectSegmentSorting(BaseSorting):
@@ -678,6 +622,4 @@ class SelectSegmentSorting(BaseSorting):
         }
 
 
-select_segment_sorting = define_function_from_class(
-    source_class=SelectSegmentSorting, name="select_segment_sorting"
-)
+select_segment_sorting = define_function_from_class(source_class=SelectSegmentSorting, name="select_segment_sorting")

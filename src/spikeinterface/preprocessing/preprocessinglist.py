@@ -20,30 +20,20 @@ from .normalize_scale import (
     CenterRecording,
     center,
 )
-from .whiten import WhitenRecording, whiten
+from .silence_periods import SilencedPeriodsRecording, silence_periods
+from .whiten import WhitenRecording, whiten, compute_whitening_matrix
 from .rectify import RectifyRecording, rectify
 from .clip import BlankSaturationRecording, blank_staturation, ClipRecording, clip
 from .common_reference import CommonReferenceRecording, common_reference
 from .remove_artifacts import RemoveArtifactsRecording, remove_artifacts
+from .silence_periods import SilencedPeriodsRecording, silence_periods
 from .phase_shift import PhaseShiftRecording, phase_shift
 from .zero_channel_pad import ZeroChannelPaddedRecording, zero_channel_pad
 from .deepinterpolation import DeepInterpolatedRecording, deepinterpolate
-from .highpass_spatial_filter import (
-    HighpassSpatialFilterRecording,
-    highpass_spatial_filter,
-)
-from .interpolate_bad_channels import (
-    InterpolateBadChannelsRecording,
-    interpolate_bad_channels,
-)
-from .average_across_direction import (
-    AverageAcrossDirectionRecording,
-    average_across_direction,
-)
-from .directional_derivative import (
-    DirectionalDerivativeRecording,
-    directional_derivative,
-)
+from .highpass_spatial_filter import HighpassSpatialFilterRecording, highpass_spatial_filter
+from .interpolate_bad_channels import InterpolateBadChannelsRecording, interpolate_bad_channels
+from .average_across_direction import AverageAcrossDirectionRecording, average_across_direction
+from .directional_derivative import DirectionalDerivativeRecording, directional_derivative
 from .depth_order import DepthOrderRecording, depth_order
 
 
@@ -68,6 +58,7 @@ preprocessers_full_list = [
     ClipRecording,
     BlankSaturationRecording,
     RemoveArtifactsRecording,
+    SilencedPeriodsRecording,
     ZeroChannelPaddedRecording,
     DeepInterpolatedRecording,
     ResampleRecording,

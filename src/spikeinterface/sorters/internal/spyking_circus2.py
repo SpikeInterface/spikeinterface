@@ -60,9 +60,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         job_kwargs["verbose"] = verbose
         job_kwargs["progress_bar"] = verbose
 
-        recording = load_extractor(
-            sorter_output_folder.parent / "spikeinterface_recording.json"
-        )
+        recording = load_extractor(sorter_output_folder.parent / "spikeinterface_recording.json")
         sampling_rate = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()
 
@@ -84,13 +82,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if "local_radius_um" not in detection_params:
             detection_params["local_radius_um"] = params["general"]["local_radius_um"]
         if "exclude_sweep_ms" not in detection_params:
-            detection_params["exclude_sweep_ms"] = max(
-                params["general"]["ms_before"], params["general"]["ms_after"]
-            )
+            detection_params["exclude_sweep_ms"] = max(params["general"]["ms_before"], params["general"]["ms_after"])
 
-        peaks = detect_peaks(
-            recording_f, method="locally_exclusive", **detection_params
-        )
+        peaks = detect_peaks(recording_f, method="locally_exclusive", **detection_params)
 
         if verbose:
             print("We found %d peaks in total" % len(peaks))
@@ -98,12 +92,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## We subselect a subset of all the peaks, by making the distributions os SNRs over all
         ## channels as flat as possible
         selection_params = params["selection"]
-        selection_params["n_peaks"] = (
-            params["selection"]["n_peaks_per_channel"] * num_channels
-        )
-        selection_params["n_peaks"] = max(
-            selection_params["min_n_peaks"], selection_params["n_peaks"]
-        )
+        selection_params["n_peaks"] = params["selection"]["n_peaks_per_channel"] * num_channels
+        selection_params["n_peaks"] = max(selection_params["min_n_peaks"], selection_params["n_peaks"])
 
         noise_levels = np.ones(num_channels, dtype=np.float32)
         selection_params.update({"noise_levels": noise_levels})
@@ -135,9 +125,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## We get the labels for our peaks
         mask = peak_labels > -1
-        sorting = NumpySorting.from_times_labels(
-            selected_peaks["sample_ind"][mask], peak_labels[mask], sampling_rate
-        )
+        sorting = NumpySorting.from_times_labels(selected_peaks["sample_ind"][mask], peak_labels[mask], sampling_rate)
         clustering_folder = sorter_output_folder / "clustering"
         if clustering_folder.exists():
             shutil.rmtree(clustering_folder)
@@ -183,9 +171,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             print("We found %d spikes" % len(spikes))
 
         ## And this is it! We have a spyking circus
-        sorting = NumpySorting.from_times_labels(
-            spikes["sample_ind"], spikes["cluster_ind"], sampling_rate
-        )
+        sorting = NumpySorting.from_times_labels(spikes["sample_ind"], spikes["cluster_ind"], sampling_rate)
         sorting_folder = sorter_output_folder / "sorting"
 
         if sorting_folder.exists():

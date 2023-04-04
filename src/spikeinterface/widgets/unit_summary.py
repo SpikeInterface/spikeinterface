@@ -52,9 +52,7 @@ class UnitSummaryWidget(BaseWidget):
             plot_data_unit_locations = UnitLocationsWidget(
                 we, unit_ids=[unit_id], unit_colors=unit_colors, plot_legend=False
             ).plot_data
-            unit_locations = waveform_extractor.load_extension(
-                "unit_locations"
-            ).get_data(outputs="by_unit")
+            unit_locations = waveform_extractor.load_extension("unit_locations").get_data(outputs="by_unit")
             unit_location = unit_locations[unit_id]
         else:
             plot_data_unit_locations = None

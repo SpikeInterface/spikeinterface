@@ -26,9 +26,7 @@ class EDFRecordingExtractor(NeoBaseRecordingExtractor):
     NeoRawIOClass = "EDFRawIO"
     name = "edf"
 
-    def __init__(
-        self, file_path, stream_id=None, stream_name=None, all_annotations=False
-    ):
+    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
         neo_kwargs = {"filename": str(file_path)}
         NeoBaseRecordingExtractor.__init__(
             self,
@@ -46,6 +44,4 @@ class EDFRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_edf = define_function_from_class(
-    source_class=EDFRecordingExtractor, name="read_edf"
-)
+read_edf = define_function_from_class(source_class=EDFRecordingExtractor, name="read_edf")

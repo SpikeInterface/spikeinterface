@@ -62,22 +62,16 @@ class HybridUnitsRecording(InjectTemplatesRecording):
         injected_sorting_folder: Union[str, Path, None] = None,
     ):
         num_samples = [
-            parent_recording.get_num_frames(seg_index)
-            for seg_index in range(parent_recording.get_num_segments())
+            parent_recording.get_num_frames(seg_index) for seg_index in range(parent_recording.get_num_segments())
         ]
         fs = parent_recording.sampling_frequency
         n_units = len(templates)
 
         if injected_sorting is not None:
             assert injected_sorting.get_num_units() == n_units
-            assert (
-                parent_recording.get_num_segments()
-                == injected_sorting.get_num_segments()
-            )
+            assert parent_recording.get_num_segments() == injected_sorting.get_num_segments()
         else:
-            assert (
-                injected_sorting_folder is not None
-            ), "Provide sorting_folder to save generated sorting object"
+            assert injected_sorting_folder is not None, "Provide sorting_folder to save generated sorting object"
             durations = [
                 parent_recording.get_num_frames(seg_index) / fs
                 for seg_index in range(parent_recording.get_num_segments())
@@ -92,12 +86,8 @@ class HybridUnitsRecording(InjectTemplatesRecording):
         # save injected sorting if necessary
         self.injected_sorting = injected_sorting
         if not self.injected_sorting.is_dumpable:
-            assert (
-                injected_sorting_folder is not None
-            ), "Provide injected_sorting_folder to injected sorting object"
-            self.injected_sorting = self.injected_sorting.save(
-                folder=injected_sorting_folder
-            )
+            assert injected_sorting_folder is not None, "Provide injected_sorting_folder to injected sorting object"
+            self.injected_sorting = self.injected_sorting.save(folder=injected_sorting_folder)
 
         if amplitude_factor is None:
             amplitude_factor = [
@@ -105,11 +95,7 @@ class HybridUnitsRecording(InjectTemplatesRecording):
                     np.random.normal(
                         loc=1.0,
                         scale=amplitude_std,
-                        size=len(
-                            self.injected_sorting.get_unit_spike_train(
-                                unit_id, segment_index=seg_index
-                            )
-                        ),
+                        size=len(self.injected_sorting.get_unit_spike_train(unit_id, segment_index=seg_index)),
                     )
                     for unit_id in self.injected_sorting.unit_ids
                 ]
@@ -198,8 +184,7 @@ class HybridSpikesRecording(InjectTemplatesRecording):
                 injected_sorting_folder is not None
             ), "Provide injected_sorting_folder to save generated injected sorting object"
             num_samples = [
-                target_recording.get_num_frames(seg_index)
-                for seg_index in range(target_recording.get_num_segments())
+                target_recording.get_num_frames(seg_index) for seg_index in range(target_recording.get_num_segments())
             ]
             self.injected_sorting = generate_injected_sorting(
                 target_sorting,
@@ -213,12 +198,8 @@ class HybridSpikesRecording(InjectTemplatesRecording):
 
         # save injected sorting if necessary
         if not self.injected_sorting.is_dumpable:
-            assert (
-                injected_sorting_folder is not None
-            ), "Provide injected_sorting_folder to injected sorting object"
-            self.injected_sorting = self.injected_sorting.save(
-                folder=injected_sorting_folder
-            )
+            assert injected_sorting_folder is not None, "Provide injected_sorting_folder to injected sorting object"
+            self.injected_sorting = self.injected_sorting.save(folder=injected_sorting_folder)
 
         InjectTemplatesRecording.__init__(
             self,
@@ -251,18 +232,12 @@ def generate_injected_sorting(
 
     for segment_index in range(sorting.get_num_segments()):
         for unit_id in sorting.unit_ids:
-            spike_train = sorting.get_unit_spike_train(
-                unit_id, segment_index=segment_index
-            )
-            n_injection = min(
-                max_injected_per_unit, int(round(injected_rate * len(spike_train)))
-            )
+            spike_train = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
+            n_injection = min(max_injected_per_unit, int(round(injected_rate * len(spike_train))))
             # Inject more, then take out all that violate the refractory period.
             n = int(n_injection + 10 * np.sqrt(n_injection))
             injected_spike_train = np.sort(
-                np.random.uniform(
-                    low=0, high=num_samples[segment_index], size=n
-                ).astype(np.int64)
+                np.random.uniform(low=0, high=num_samples[segment_index], size=n).astype(np.int64)
             )
 
             # Remove spikes that are in the refractory period.
@@ -271,22 +246,16 @@ def generate_injected_sorting(
 
             # Remove spikes that violate the refractory period of the real spikes.
             # TODO: Need a better & faster way than this.
-            min_diff = np.min(
-                np.abs(injected_spike_train[:, None] - spike_train[None, :]), axis=1
-            )
+            min_diff = np.min(np.abs(injected_spike_train[:, None] - spike_train[None, :]), axis=1)
             violations = min_diff < t_r
             injected_spike_train = injected_spike_train[~violations]
 
             if len(injected_spike_train) > n_injection:
-                injected_spike_train = np.sort(
-                    np.random.choice(injected_spike_train, n_injection, replace=False)
-                )
+                injected_spike_train = np.sort(np.random.choice(injected_spike_train, n_injection, replace=False))
 
             injected_spike_trains[segment_index][unit_id] = injected_spike_train
 
-    return NumpySorting.from_dict(
-        injected_spike_trains, sorting.get_sampling_frequency()
-    )
+    return NumpySorting.from_dict(injected_spike_trains, sorting.get_sampling_frequency())
 
 
 create_hybrid_units_recording = define_function_from_class(

@@ -89,9 +89,7 @@ class WaveformExtensionCommonTestSuite:
         )
         self.we_memory2 = we_memory
 
-        self.we_zarr2 = we_memory.save(
-            folder=cache_folder / "toy_sorting_2seg", overwrite=True, format="zarr"
-        )
+        self.we_zarr2 = we_memory.save(folder=cache_folder / "toy_sorting_2seg", overwrite=True, format="zarr")
 
         # use best channels for PC-concatenated
         sparsity = compute_sparsity(we_memory, method="best_channels", num_channels=2)
@@ -110,15 +108,10 @@ class WaveformExtensionCommonTestSuite:
 
         for ext_kwargs in extension_function_kwargs_list:
             # ~ print(ext_kwargs)
-            _ = self.extension_class.get_extension_function()(
-                we, load_if_exists=False, **ext_kwargs
-            )
+            _ = self.extension_class.get_extension_function()(we, load_if_exists=False, **ext_kwargs)
 
             # reload as an extension from we
-            assert (
-                self.extension_class.extension_name
-                in we.get_available_extension_names()
-            )
+            assert self.extension_class.extension_name in we.get_available_extension_names()
             assert we.is_extension(self.extension_class.extension_name)
             ext = we.load_extension(self.extension_class.extension_name)
             assert isinstance(ext, self.extension_class)
@@ -132,30 +125,20 @@ class WaveformExtensionCommonTestSuite:
             # test select units
             # print('test select units', we.format)
             if we.format == "binary":
-                new_folder = (
-                    cache_folder
-                    / f"{we.folder.stem}_{self.extension_class.extension_name}_selected"
-                )
+                new_folder = cache_folder / f"{we.folder.stem}_{self.extension_class.extension_name}_selected"
                 if new_folder.is_dir():
                     shutil.rmtree(new_folder)
                 we_new = we.select_units(
                     unit_ids=we.sorting.unit_ids[::2],
-                    new_folder=cache_folder
-                    / f"{we.folder.stem}_{self.extension_class.extension_name}_selected",
+                    new_folder=cache_folder / f"{we.folder.stem}_{self.extension_class.extension_name}_selected",
                 )
                 # check that extension is present after select_units()
-                assert (
-                    self.extension_class.extension_name
-                    in we_new.get_available_extension_names()
-                )
+                assert self.extension_class.extension_name in we_new.get_available_extension_names()
             elif we.folder is None:
                 # test select units in-memory and zarr
                 we_new = we.select_units(unit_ids=we.sorting.unit_ids[::2])
                 # check that extension is present after select_units()
-                assert (
-                    self.extension_class.extension_name
-                    in we_new.get_available_extension_names()
-                )
+                assert self.extension_class.extension_name in we_new.get_available_extension_names()
             else:
                 print("select_units() not supported for Zarr")
 

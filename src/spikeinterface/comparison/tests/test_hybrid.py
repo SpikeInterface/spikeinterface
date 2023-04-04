@@ -59,21 +59,18 @@ def test_hybrid_units_recording():
         600,
         4,
     )
-    assert hybrid_units_recording.get_traces(
-        start_frame=100, end_frame=600, segment_index=1
-    ).shape == (500, 4)
-    assert hybrid_units_recording.get_traces(
-        start_frame=recording.get_num_frames(0) - 200, segment_index=0
-    ).shape == (200, 4)
+    assert hybrid_units_recording.get_traces(start_frame=100, end_frame=600, segment_index=1).shape == (500, 4)
+    assert hybrid_units_recording.get_traces(start_frame=recording.get_num_frames(0) - 200, segment_index=0).shape == (
+        200,
+        4,
+    )
 
     # Check dumpability
     saved_loaded = load_extractor(hybrid_units_recording.to_dict())
     check_recordings_equal(hybrid_units_recording, saved_loaded, return_scaled=False)
 
     saved_1job = hybrid_units_recording.save(folder=cache_folder / "units_1job")
-    saved_2job = hybrid_units_recording.save(
-        folder=cache_folder / "units_2job", n_jobs=2, chunk_duration="1s"
-    )
+    saved_2job = hybrid_units_recording.save(folder=cache_folder / "units_2job", n_jobs=2, chunk_duration="1s")
     check_recordings_equal(hybrid_units_recording, saved_1job, return_scaled=False)
     check_recordings_equal(hybrid_units_recording, saved_2job, return_scaled=False)
 
@@ -95,21 +92,18 @@ def test_hybrid_spikes_recording():
         600,
         4,
     )
-    assert hybrid_spikes_recording.get_traces(
-        start_frame=100, end_frame=600, segment_index=1
-    ).shape == (500, 4)
-    assert hybrid_spikes_recording.get_traces(
-        start_frame=recording.get_num_frames(0) - 200, segment_index=0
-    ).shape == (200, 4)
+    assert hybrid_spikes_recording.get_traces(start_frame=100, end_frame=600, segment_index=1).shape == (500, 4)
+    assert hybrid_spikes_recording.get_traces(start_frame=recording.get_num_frames(0) - 200, segment_index=0).shape == (
+        200,
+        4,
+    )
 
     # Check dumpability
     saved_loaded = load_extractor(hybrid_spikes_recording.to_dict())
     check_recordings_equal(hybrid_spikes_recording, saved_loaded, return_scaled=False)
 
     saved_1job = hybrid_spikes_recording.save(folder=cache_folder / "spikes_1job")
-    saved_2job = hybrid_spikes_recording.save(
-        folder=cache_folder / "spikes_2job", n_jobs=2, chunk_duration="1s"
-    )
+    saved_2job = hybrid_spikes_recording.save(folder=cache_folder / "spikes_2job", n_jobs=2, chunk_duration="1s")
     check_recordings_equal(hybrid_spikes_recording, saved_1job, return_scaled=False)
     check_recordings_equal(hybrid_spikes_recording, saved_2job, return_scaled=False)
 
@@ -119,10 +113,7 @@ def test_generate_injected_sorting():
     sorting = load_extractor(cache_folder / "sorting")
     injected_sorting = generate_injected_sorting(
         sorting,
-        [
-            recording.get_num_frames(seg_index)
-            for seg_index in range(recording.get_num_segments())
-        ],
+        [recording.get_num_frames(seg_index) for seg_index in range(recording.get_num_segments())],
     )
 
 

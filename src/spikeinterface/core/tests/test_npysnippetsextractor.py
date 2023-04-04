@@ -13,19 +13,12 @@ else:
 def test_NpySnippetsExtractor():
     segment_durations = [2, 5]
     sampling_frequency = 30000
-    file_path = [
-        cache_folder / f"test_NpySnippetsExtractor_{i}.npy"
-        for i in range(len(segment_durations))
-    ]
+    file_path = [cache_folder / f"test_NpySnippetsExtractor_{i}.npy" for i in range(len(segment_durations))]
 
-    snippets, _ = generate_snippets(
-        sampling_frequency=sampling_frequency, durations=segment_durations
-    )
+    snippets, _ = generate_snippets(sampling_frequency=sampling_frequency, durations=segment_durations)
 
     NpySnippetsExtractor.write_snippets(snippets, file_path)
-    npy_snippets = NpySnippetsExtractor(
-        file_path, sampling_frequency=sampling_frequency
-    )
+    npy_snippets = NpySnippetsExtractor(file_path, sampling_frequency=sampling_frequency)
 
     assert npy_snippets.get_num_segments() == snippets.get_num_segments()
     assert npy_snippets.get_num_snippets(1) == snippets.get_num_snippets(1)

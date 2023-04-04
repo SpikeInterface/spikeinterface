@@ -98,19 +98,13 @@ def test_CorrectMotionRecording():
     rec = MEArecRecordingExtractor(local_path)
     motion, temporal_bins, spatial_bins = make_fake_motion(rec)
 
-    rec2 = CorrectMotionRecording(
-        rec, motion, temporal_bins, spatial_bins, border_mode="force_extrapolate"
-    )
+    rec2 = CorrectMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="force_extrapolate")
     assert rec2.channel_ids.size == 32
 
-    rec2 = CorrectMotionRecording(
-        rec, motion, temporal_bins, spatial_bins, border_mode="force_zeros"
-    )
+    rec2 = CorrectMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="force_zeros")
     assert rec2.channel_ids.size == 32
 
-    rec2 = CorrectMotionRecording(
-        rec, motion, temporal_bins, spatial_bins, border_mode="remove_channels"
-    )
+    rec2 = CorrectMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="remove_channels")
     assert rec2.channel_ids.size == 26
     for ch_id in ("1", "11", "12", "21", "22", "23"):
         assert ch_id not in rec2.channel_ids
@@ -118,9 +112,7 @@ def test_CorrectMotionRecording():
     traces = rec2.get_traces(segment_index=0, start_frame=0, end_frame=30000)
     assert traces.shape == (30000, 26)
 
-    traces = rec2.get_traces(
-        segment_index=0, start_frame=0, end_frame=30000, channel_ids=["3", "4"]
-    )
+    traces = rec2.get_traces(segment_index=0, start_frame=0, end_frame=30000, channel_ids=["3", "4"])
     assert traces.shape == (30000, 2)
 
     # import matplotlib.pyplot as plt

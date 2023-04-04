@@ -37,9 +37,7 @@ class ZarrRecordingExtractor(BaseRecording):
     installed = HAVE_ZARR  # check at class level if installed or not
     mode = "file"
     # error message when not installed
-    installation_mesg = (
-        "To use the ZarrRecordingExtractor install zarr: \n\n pip install zarr\n\n"
-    )
+    installation_mesg = "To use the ZarrRecordingExtractor install zarr: \n\n pip install zarr\n\n"
     name = "zarr"
 
     def __init__(self, root_path: Union[Path, str], storage_options=None):
@@ -56,18 +54,14 @@ class ZarrRecordingExtractor(BaseRecording):
             root_path_init = root_path
             root_path_kwarg = root_path_init
 
-        self._root = zarr.open(
-            root_path_init, mode="r", storage_options=storage_options
-        )
+        self._root = zarr.open(root_path_init, mode="r", storage_options=storage_options)
 
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
         num_segments = self._root.attrs.get("num_segments", None)
         assert "channel_ids" in self._root.keys(), "'channel_ids' dataset not found!"
         channel_ids = self._root["channel_ids"][:]
 
-        assert (
-            sampling_frequency is not None
-        ), "'sampling_frequency' attiribute not found!"
+        assert sampling_frequency is not None, "'sampling_frequency' attiribute not found!"
         assert num_segments is not None, "'num_segments' attiribute not found!"
 
         channel_ids = np.array(channel_ids)
@@ -164,9 +158,7 @@ class ZarrRecordingSegment(BaseRecordingSegment):
         return traces
 
 
-read_zarr = define_function_from_class(
-    source_class=ZarrRecordingExtractor, name="read_zarr"
-)
+read_zarr = define_function_from_class(source_class=ZarrRecordingExtractor, name="read_zarr")
 
 
 def get_default_zarr_compressor(clevel=5):

@@ -81,9 +81,7 @@ class FilterRecording(BasePreprocessor):
                 Wn = float(band) / sf * 2
             N = filter_order
             # self.coeff is 'sos' or 'ab' style
-            filter_coeff = scipy.signal.iirfilter(
-                N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode
-            )
+            filter_coeff = scipy.signal.iirfilter(N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode)
         else:
             filter_coeff = coeff
             if not isinstance(coeff, list):
@@ -101,11 +99,7 @@ class FilterRecording(BasePreprocessor):
 
         margin = int(margin_ms * sf / 1000.0)
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(
-                FilterRecordingSegment(
-                    parent_segment, filter_coeff, filter_mode, margin, dtype
-                )
-            )
+            self.add_recording_segment(FilterRecordingSegment(parent_segment, filter_coeff, filter_mode, margin, dtype))
 
         self._kwargs = dict(
             recording=recording,
@@ -232,9 +226,7 @@ class HighpassFilterRecording(FilterRecording):
 
     name = "highpass_filter"
 
-    def __init__(
-        self, recording, freq_min=300.0, margin_ms=5.0, dtype=None, **filter_kwargs
-    ):
+    def __init__(self, recording, freq_min=300.0, margin_ms=5.0, dtype=None, **filter_kwargs):
         FilterRecording.__init__(
             self,
             recording,
@@ -245,9 +237,7 @@ class HighpassFilterRecording(FilterRecording):
             **filter_kwargs,
         )
         dtype = fix_dtype(recording, dtype)
-        self._kwargs = dict(
-            recording=recording, freq_min=freq_min, margin_ms=margin_ms, dtype=dtype.str
-        )
+        self._kwargs = dict(recording=recording, freq_min=freq_min, margin_ms=margin_ms, dtype=dtype.str)
         self._kwargs.update(filter_kwargs)
 
 
@@ -292,26 +282,16 @@ class NotchFilterRecording(BasePreprocessor):
         sf = recording.get_sampling_frequency()
         margin = int(margin_ms * sf / 1000.0)
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(
-                FilterRecordingSegment(parent_segment, coeff, "ba", margin, dtype)
-            )
+            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, "ba", margin, dtype))
 
-        self._kwargs = dict(
-            recording=recording, freq=freq, q=q, margin_ms=margin_ms, dtype=dtype.str
-        )
+        self._kwargs = dict(recording=recording, freq=freq, q=q, margin_ms=margin_ms, dtype=dtype.str)
 
 
 # functions for API
 filter = define_function_from_class(source_class=FilterRecording, name="filter")
-bandpass_filter = define_function_from_class(
-    source_class=BandpassFilterRecording, name="bandpass_filter"
-)
-notch_filter = define_function_from_class(
-    source_class=NotchFilterRecording, name="notch_filter"
-)
-highpass_filter = define_function_from_class(
-    source_class=HighpassFilterRecording, name="highpass_filter"
-)
+bandpass_filter = define_function_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
+notch_filter = define_function_from_class(source_class=NotchFilterRecording, name="notch_filter")
+highpass_filter = define_function_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
 
 
 def fix_dtype(recording, dtype):

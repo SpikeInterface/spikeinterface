@@ -44,9 +44,7 @@ class NpzSortingExtractor(BaseSorting):
         units_ids = np.array(sorting.get_unit_ids())
         d["unit_ids"] = units_ids
         d["num_segment"] = np.array([sorting.get_num_segments()], dtype="int64")
-        d["sampling_frequency"] = np.array(
-            [sorting.get_sampling_frequency()], dtype="float64"
-        )
+        d["sampling_frequency"] = np.array([sorting.get_sampling_frequency()], dtype="float64")
 
         for seg_index in range(sorting.get_num_segments()):
             spike_indexes = []
@@ -89,6 +87,4 @@ class NpzSortingSegment(BaseSortingSegment):
         return spike_times.astype("int64")
 
 
-read_npz_sorting = define_function_from_class(
-    source_class=NpzSortingExtractor, name="read_npz_sorting"
-)
+read_npz_sorting = define_function_from_class(source_class=NpzSortingExtractor, name="read_npz_sorting")

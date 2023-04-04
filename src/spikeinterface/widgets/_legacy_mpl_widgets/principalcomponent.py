@@ -17,9 +17,7 @@ class PrincipalComponentWidget(BaseWidget):
         If None then pc are recomputed
     """
 
-    def __init__(
-        self, waveform_extractor, pc=None, figure=None, ax=None, axes=None, **pc_kwargs
-    ):
+    def __init__(self, waveform_extractor, pc=None, figure=None, ax=None, axes=None, **pc_kwargs):
         BaseWidget.__init__(self, figure, ax, axes)
 
         self.we = waveform_extractor

@@ -25,15 +25,11 @@ class TemplateSimilarityCalculator(BaseWaveformExtractorExtension):
     def _select_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.waveform_extractor.sorting.ids_to_indices(unit_ids)
-        new_similarity = self._extension_data["similarity"][unit_indices][
-            :, unit_indices
-        ]
+        new_similarity = self._extension_data["similarity"][unit_indices][:, unit_indices]
         return dict(similarity=new_similarity)
 
     def _run(self):
-        similarity = _compute_template_similarity(
-            self.waveform_extractor, method=self._params["method"]
-        )
+        similarity = _compute_template_similarity(self.waveform_extractor, method=self._params["method"])
         self._extension_data["similarity"] = similarity
 
     def get_data(self):
@@ -74,14 +70,11 @@ def _compute_template_similarity(
             s_other = templates_other.shape
             templates_other_flat = templates_other.reshape(s_other[0], -1)
             assert len(templates_flat[0]) == len(templates_other_flat[0]), (
-                "Templates from second WaveformExtractor "
-                "don't have the correct shape!"
+                "Templates from second WaveformExtractor " "don't have the correct shape!"
             )
         else:
             templates_other_flat = None
-        similarity = sklearn.metrics.pairwise.cosine_similarity(
-            templates_flat, templates_other_flat
-        )
+        similarity = sklearn.metrics.pairwise.cosine_similarity(templates_flat, templates_other_flat)
     # elif method == '':
     else:
         raise ValueError(f"compute_template_similarity(method {method}) not exists")
@@ -114,12 +107,8 @@ def compute_template_similarity(
         The similarity matrix
     """
     if waveform_extractor_other is None:
-        if load_if_exists and waveform_extractor.is_extension(
-            TemplateSimilarityCalculator.extension_name
-        ):
-            tmc = waveform_extractor.load_extension(
-                TemplateSimilarityCalculator.extension_name
-            )
+        if load_if_exists and waveform_extractor.is_extension(TemplateSimilarityCalculator.extension_name):
+            tmc = waveform_extractor.load_extension(TemplateSimilarityCalculator.extension_name)
         else:
             tmc = TemplateSimilarityCalculator(waveform_extractor)
             tmc.set_params(method=method)
@@ -127,9 +116,7 @@ def compute_template_similarity(
         similarity = tmc.get_data()
         return similarity
     else:
-        return _compute_template_similarity(
-            waveform_extractor, waveform_extractor_other, method
-        )
+        return _compute_template_similarity(waveform_extractor, waveform_extractor_other, method)
 
 
 def check_equal_template_with_distribution_overlap(

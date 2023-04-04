@@ -52,9 +52,7 @@ def get_spatial_interpolation_kernel(
     target_is_inside = np.ones(target_location.shape[0], dtype=bool)
     for dim in range(source_location.shape[1]):
         l0, l1 = np.min(source_location[:, dim]), np.max(source_location[:, dim])
-        target_is_inside &= (target_location[:, dim] >= l0) & (
-            target_location[:, dim] <= l1
-        )
+        target_is_inside &= (target_location[:, dim] >= l0) & (target_location[:, dim] <= l1)
 
     if method == "kriging":
         # this is an adaptation of the pykilosort implementation by Kush Benga
@@ -74,12 +72,8 @@ def get_spatial_interpolation_kernel(
         interpolation_kernel[:, target_is_inside] /= s[target_is_inside].reshape(1, -1)
 
     elif method == "idw":
-        distances = scipy.spatial.distance.cdist(
-            source_location, target_location, metric="euclidean"
-        )
-        interpolation_kernel = np.zeros(
-            (source_location.shape[0], target_location.shape[0]), dtype="float64"
-        )
+        distances = scipy.spatial.distance.cdist(source_location, target_location, metric="euclidean")
+        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype="float64")
         for c in range(target_location.shape[0]):
             ind_sorted = np.argsort(distances[:, c])
             chan_closest = ind_sorted[:num_closest]
@@ -95,12 +89,8 @@ def get_spatial_interpolation_kernel(
         interpolation_kernel[:, target_is_inside] /= s[target_is_inside].reshape(1, -1)
 
     elif method == "nearest":
-        distances = scipy.spatial.distance.cdist(
-            source_location, target_location, metric="euclidean"
-        )
-        interpolation_kernel = np.zeros(
-            (source_location.shape[0], target_location.shape[0]), dtype="float64"
-        )
+        distances = scipy.spatial.distance.cdist(source_location, target_location, metric="euclidean")
+        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype="float64")
         for c in range(target_location.shape[0]):
             ind_closest = np.argmin(distances[:, c])
             interpolation_kernel[ind_closest, c] = 1.0
@@ -142,9 +132,7 @@ def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p):
     return kernal_dist
 
 
-def get_kriging_channel_weights(
-    contact_positions1, contact_positions2, sigma_um, p, weight_threshold=0.005
-):
+def get_kriging_channel_weights(contact_positions1, contact_positions2, sigma_um, p, weight_threshold=0.005):
     """
     Calculate weights for kriging interpolation. Weights below weight_threshold are set to 0.
 
@@ -153,9 +141,7 @@ def get_kriging_channel_weights(
     International Brain Laboratory et al. (2022). Spike sorting pipeline for the
     International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
     """
-    weights = get_kriging_kernel_distance(
-        contact_positions1, contact_positions2, sigma_um, p
-    )
+    weights = get_kriging_kernel_distance(contact_positions1, contact_positions2, sigma_um, p)
     weights[weights < weight_threshold] = 0
 
     with np.errstate(divide="ignore", invalid="ignore"):

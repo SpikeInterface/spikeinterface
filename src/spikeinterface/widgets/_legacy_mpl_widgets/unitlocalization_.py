@@ -69,9 +69,7 @@ class UnitLocalizationWidget(BaseWidget):
         if we.is_extension("unit_locations"):
             unit_locations = we.load_extension("unit_locations").get_data()
         else:
-            unit_locations = compute_unit_locations(
-                we, method=self.method, **self.method_kwargs
-            )
+            unit_locations = compute_unit_locations(we, method=self.method, **self.method_kwargs)
 
         ax = self.ax
         probegroup = we.get_probegroup()

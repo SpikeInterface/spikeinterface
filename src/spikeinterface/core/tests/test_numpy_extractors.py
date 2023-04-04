@@ -47,9 +47,7 @@ def test_NumpySorting():
     print(sorting)
     assert sorting.get_num_segments() == 1
 
-    sorting = NumpySorting.from_times_labels(
-        [times] * 3, [labels] * 3, sampling_frequency
-    )
+    sorting = NumpySorting.from_times_labels([times] * 3, [labels] * 3, sampling_frequency)
     # print(sorting)
     assert sorting.get_num_segments() == 3
 

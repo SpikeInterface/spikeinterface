@@ -43,9 +43,7 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     NeoRawIOClass = "NeuroScopeRawIO"
     name = "neuroscope"
 
-    def __init__(
-        self, file_path, stream_id=None, stream_name=None, all_annotations=False
-    ):
+    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(
             self,
@@ -121,9 +119,7 @@ class NeuroScopeSortingExtractor(BaseSorting):
         ), "Either pass a single folder_path location, or a pair of resfile_path and clufile_path! None received."
 
         if resfile_path is not None:
-            assert (
-                clufile_path is not None
-            ), "If passing resfile_path or clufile_path, both are required!"
+            assert clufile_path is not None, "If passing resfile_path or clufile_path, both are required!"
             resfile_path = Path(resfile_path)
             clufile_path = Path(clufile_path)
             assert (
@@ -139,55 +135,35 @@ class NeuroScopeSortingExtractor(BaseSorting):
             res_files = [resfile_path]
             clu_files = [clufile_path]
         else:
-            assert (
-                folder_path is not None
-            ), "Either pass resfile_path and clufile_path, or folder_path!"
+            assert folder_path is not None, "Either pass resfile_path and clufile_path, or folder_path!"
             folder_path = Path(folder_path)
             assert folder_path.is_dir(), "The folder_path must be a directory!"
 
             res_files = sorted(
-                [
-                    f
-                    for f in folder_path.iterdir()
-                    if f.is_file() and ".res" in f.suffixes and not f.name.endswith("~")
-                ]
+                [f for f in folder_path.iterdir() if f.is_file() and ".res" in f.suffixes and not f.name.endswith("~")]
             )
             clu_files = sorted(
-                [
-                    f
-                    for f in folder_path.iterdir()
-                    if f.is_file() and ".clu" in f.suffixes and not f.name.endswith("~")
-                ]
+                [f for f in folder_path.iterdir() if f.is_file() and ".clu" in f.suffixes and not f.name.endswith("~")]
             )
 
-            assert (
-                len(res_files) > 0 or len(clu_files) > 0
-            ), "No .res or .clu files found in the folder_path!"
+            assert len(res_files) > 0 or len(clu_files) > 0, "No .res or .clu files found in the folder_path!"
 
             folder_path_passed = True  # flag for setting kwargs for proper dumping
 
-        if (
-            exclude_shanks is not None
-        ):  # dumping checks do not like having an empty list as default
+        if exclude_shanks is not None:  # dumping checks do not like having an empty list as default
             assert all(
                 [isinstance(x, (int, np.integer)) and x >= 0 for x in exclude_shanks]
             ), "Optional argument 'exclude_shanks' must contain positive integers only!"
         else:
             exclude_shanks = []
-        xml_file_path = _handle_xml_file_path(
-            folder_path=folder_path, initial_xml_file_path=xml_file_path
-        )
+        xml_file_path = _handle_xml_file_path(folder_path=folder_path, initial_xml_file_path=xml_file_path)
         xml_root = et.parse(str(xml_file_path)).getroot()
-        sampling_frequency = float(
-            xml_root.find("acquisitionSystem").find("samplingRate").text
-        )
+        sampling_frequency = float(xml_root.find("acquisitionSystem").find("samplingRate").text)
 
         if len(res_files) > 1:
             res_ids = [int(x.suffix[1:]) for x in res_files]
             clu_ids = [int(x.suffix[1:]) for x in clu_files]
-            assert sorted(res_ids) == sorted(
-                clu_ids
-            ), "Unmatched .clu.%i and .res.%i files detected!"
+            assert sorted(res_ids) == sorted(clu_ids), "Unmatched .clu.%i and .res.%i files detected!"
             if any([x not in res_ids for x in exclude_shanks]):
                 warnings.warn(
                     "Detected indices in exclude_shanks that are not in the directory! These will be ignored."
@@ -243,12 +219,8 @@ class NeuroScopeSortingExtractor(BaseSorting):
                 if shank_ids is not None:
                     all_unit_shank_ids += [shank_id] * len(new_unit_ids)
 
-        BaseSorting.__init__(
-            self, sampling_frequency=sampling_frequency, unit_ids=all_unit_ids
-        )
-        self.add_sorting_segment(
-            NeuroScopeSortingSegment(all_unit_ids, all_spiketrains)
-        )
+        BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=all_unit_ids)
+        self.add_sorting_segment(NeuroScopeSortingSegment(all_unit_ids, all_spiketrains))
 
         self.extra_requirements.append("lxml")
 
@@ -295,9 +267,7 @@ class NeuroScopeSortingSegment(BaseSortingSegment):
 def _find_xml_file_path(folder_path: PathType):
     xml_files = [f for f in folder_path.iterdir() if f.is_file() if f.suffix == ".xml"]
     assert any(xml_files), "No .xml files found in the folder_path."
-    assert (
-        len(xml_files) == 1
-    ), "More than one .xml file found in the folder_path! Specify xml_file_path."
+    assert len(xml_files) == 1, "More than one .xml file found in the folder_path! Specify xml_file_path."
     xml_file_path = xml_files[0]
     return xml_file_path
 
@@ -306,9 +276,7 @@ def _handle_xml_file_path(folder_path: PathType, initial_xml_file_path: PathType
     if initial_xml_file_path is None:
         xml_file_path = _find_xml_file_path(folder_path=folder_path)
     else:
-        assert Path(
-            initial_xml_file_path
-        ).is_file(), f".xml file ({initial_xml_file_path}) not found!"
+        assert Path(initial_xml_file_path).is_file(), f".xml file ({initial_xml_file_path}) not found!"
         xml_file_path = initial_xml_file_path
     return xml_file_path
 
@@ -352,9 +320,7 @@ def read_neuroscope(
     outputs = ()
     # TODO add checks for recording and sorting existence
     if load_recording:
-        recording = NeuroScopeRecordingExtractor(
-            file_path=file_path, stream_id=stream_id
-        )
+        recording = NeuroScopeRecordingExtractor(file_path=file_path, stream_id=stream_id)
         outputs = outputs + (recording,)
     if load_sorting:
         folder_path = Path(file_path).parent

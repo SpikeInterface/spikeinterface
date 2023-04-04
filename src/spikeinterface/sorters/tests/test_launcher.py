@@ -71,9 +71,7 @@ def test_run_sorter_by_property():
     group_names0 = list(rec0_by.keys())
 
     sorter_name = "tridesclous"
-    sorting0 = run_sorter_by_property(
-        sorter_name, rec0, "group", working_folder1, engine="loop", verbose=False
-    )
+    sorting0 = run_sorter_by_property(sorter_name, rec0, "group", working_folder1, engine="loop", verbose=False)
     assert "group" in sorting0.get_property_keys()
     assert all([g in group_names0 for g in sorting0.get_property("group")])
 
@@ -82,9 +80,7 @@ def test_run_sorter_by_property():
     group_names1 = list(rec1_by.keys())
 
     sorter_name = "tridesclous"
-    sorting1 = run_sorter_by_property(
-        sorter_name, rec1, "group", working_folder2, engine="loop", verbose=False
-    )
+    sorting1 = run_sorter_by_property(sorter_name, rec1, "group", working_folder2, engine="loop", verbose=False)
     assert "group" in sorting1.get_property_keys()
     assert all([g in group_names1 for g in sorting1.get_property("group")])
 

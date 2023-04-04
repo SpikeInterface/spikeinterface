@@ -40,9 +40,7 @@ def test_ChannelSparsity():
             assert key in unit_ids
             assert np.all(v < len(channel_ids))
 
-        sparsity2 = ChannelSparsity.from_unit_id_to_channel_ids(
-            sparsity.unit_id_to_channel_ids, unit_ids, channel_ids
-        )
+        sparsity2 = ChannelSparsity.from_unit_id_to_channel_ids(sparsity.unit_id_to_channel_ids, unit_ids, channel_ids)
         # print(sparsity2)
         assert np.array_equal(sparsity.mask, sparsity2.mask)
 

@@ -32,8 +32,7 @@ class MatlabHelper:
     installed = HAVE_MAT  # check at class level if installed or not
     mode = "file"
     installation_mesg = (
-        "To use the MATSortingExtractor install h5py and scipy: "
-        "\n\n pip install h5py scipy\n\n"
+        "To use the MATSortingExtractor install h5py and scipy: " "\n\n pip install h5py scipy\n\n"
     )  # error message when not installed
 
     def __init__(self, file_path):
@@ -41,9 +40,7 @@ class MatlabHelper:
 
         file_path = Path(file_path) if isinstance(file_path, str) else file_path
         if not isinstance(file_path, Path):
-            raise TypeError(
-                f"Expected a str or Path file_path but got '{type(file_path).__name__}'"
-            )
+            raise TypeError(f"Expected a str or Path file_path but got '{type(file_path).__name__}'")
 
         file_path = file_path.resolve()  # get absolute path to this file
         if not file_path.is_file():
@@ -55,17 +52,13 @@ class MatlabHelper:
             self._data = loadmat(file_path, matlab_compatible=True)
             self._old_style_mat = True
         except NameError:  # loadmat not defined
-            raise ImportError(
-                "Old-style .mat file given, but `loadmat` is not defined."
-            )
+            raise ImportError("Old-style .mat file given, but `loadmat` is not defined.")
         except NotImplementedError:  # new style .mat file
             try:
                 self._data = h5py.File(file_path, "r+")
                 self._old_style_mat = False
             except NameError:
-                raise ImportError(
-                    "Version 7.2 .mat file given, but you don't have h5py installed."
-                )
+                raise ImportError("Version 7.2 .mat file given, but you don't have h5py installed.")
 
     def __del__(self):
         if hasattr(self, "_old_style_mat") and not self._old_style_mat:
@@ -84,16 +77,12 @@ class MatlabHelper:
             return self._data[fieldname][()]
 
     @classmethod
-    def write_dict_to_mat(
-        cls, mat_file_path, dict_to_write, version="7.3"
-    ):  # field must be a dict
+    def write_dict_to_mat(cls, mat_file_path, dict_to_write, version="7.3"):  # field must be a dict
         assert HAVE_HDF5STORAGE, (
             "To use the MATSortingExtractor write_dict_to_mat function install hdf5storage: "
             "\n\n pip install hdf5storage\n\n"
         )
         if version == "7.3":
-            hdf5storage.write(
-                dict_to_write, "/", mat_file_path, matlab_compatible=True, options="w"
-            )
+            hdf5storage.write(dict_to_write, "/", mat_file_path, matlab_compatible=True, options="w")
         elif version < "7.3" and version > "4":
             savemat(mat_file_path, dict_to_write)

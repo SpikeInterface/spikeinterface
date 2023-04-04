@@ -123,10 +123,8 @@ class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
     entities = [
         "neuroscope/dataset_1",
         {
-            "resfile_path": local_folder
-            / "neuroscope/dataset_1/YutaMouse42-15111710.res.1",
-            "clufile_path": local_folder
-            / "neuroscope/dataset_1/YutaMouse42-15111710.clu.1",
+            "resfile_path": local_folder / "neuroscope/dataset_1/YutaMouse42-15111710.res.1",
+            "clufile_path": local_folder / "neuroscope/dataset_1/YutaMouse42-15111710.clu.1",
         },
     ]
 

@@ -50,6 +50,4 @@ class TdtRecordingExtractor(NeoBaseRecordingExtractor):
         return neo_kwargs
 
 
-read_tdt = define_function_from_class(
-    source_class=TdtRecordingExtractor, name="read_tdt"
-)
+read_tdt = define_function_from_class(source_class=TdtRecordingExtractor, name="read_tdt")

@@ -62,16 +62,12 @@ class ResampleRecording(BasePreprocessor):
         dtype = fix_dtype(recording, dtype).str
         # Ensure that the requested resample rate is doable:
         if skip_checks:
-            assert check_nyquist(
-                recording, resample_rate
-            ), "The requested resample rate would induce errors!"
+            assert check_nyquist(recording, resample_rate), "The requested resample rate would induce errors!"
 
         # Get a margin to avoid issues later
         margin = int(margin_ms * recording.get_sampling_frequency() / 1000)
 
-        BasePreprocessor.__init__(
-            self, recording, sampling_frequency=resample_rate, dtype=dtype
-        )
+        BasePreprocessor.__init__(self, recording, sampling_frequency=resample_rate, dtype=dtype)
         # in case there was a time_vector, it will be dropped for sanity.
         for parent_segment in recording._recording_segments:
             parent_segment.time_vector = None
@@ -115,11 +111,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         self._dtype = dtype
 
     def get_num_samples(self):
-        return int(
-            self._parent_segment.get_num_samples()
-            / self._parent_rate
-            * self.sampling_frequency
-        )
+        return int(self._parent_segment.get_num_samples() / self._parent_rate * self.sampling_frequency)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:
@@ -129,8 +121,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
 
         # get parent traces with margin
         parent_start_frame, parent_end_frame = [
-            int((frame / self.sampling_frequency) * self._parent_rate)
-            for frame in [start_frame, end_frame]
+            int((frame / self.sampling_frequency) * self._parent_rate) for frame in [start_frame, end_frame]
         ]
         parent_traces, left_margin, right_margin = get_chunk_with_margin(
             self._parent_segment,
@@ -143,8 +134,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         )
         # get left and right margins for the resampled case
         left_margin_rs, right_margin_rs = [
-            int((margin / self._parent_rate) * self.sampling_frequency)
-            for margin in [left_margin, right_margin]
+            int((margin / self._parent_rate) * self.sampling_frequency) for margin in [left_margin, right_margin]
         ]
 
         # get the size for the resampled traces in case of resample:
@@ -186,15 +176,12 @@ def check_nyquist(recording, resample_rate):
             lowpass_cutoff_check = freq_max / 2 > resample_rate
         else:
             # If has been filterd but unknown high cutoff, give warning and asume the best
-            warnings.warn(
-                "The recording is filtered, but we can't ensure that it complies with the Nyquist limit."
-            )
+            warnings.warn("The recording is filtered, but we can't ensure that it complies with the Nyquist limit.")
             lowpass_cutoff_check = True
     else:
         # If it hasn't been filtered, we only depend on the previous test
         warnings.warn(
-            "The recording is not filtered, so cutoff frequencies cannot be checked. "
-            "Use resampling with caution"
+            "The recording is not filtered, so cutoff frequencies cannot be checked. " "Use resampling with caution"
         )
         lowpass_cutoff_check = True
     return all([sampling_frequency_check, lowpass_cutoff_check])

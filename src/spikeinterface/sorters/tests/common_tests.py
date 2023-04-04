@@ -22,15 +22,11 @@ class SorterCommonTestSuite:
     SorterClass = None
 
     def setUp(self):
-        recording, sorting_gt = toy_example(
-            num_channels=4, duration=60, seed=0, num_segments=1
-        )
+        recording, sorting_gt = toy_example(num_channels=4, duration=60, seed=0, num_segments=1)
         rec_folder = cache_folder / "rec"
         if rec_folder.is_dir():
             shutil.rmtree(rec_folder)
-        self.recording = recording.save(
-            folder=cache_folder / "rec", verbose=False, format="binary"
-        )
+        self.recording = recording.save(folder=cache_folder / "rec", verbose=False, format="binary")
         print(self.recording)
 
     def test_with_run(self):
@@ -82,16 +78,12 @@ class SnippetsSorterCommonTestSuite:
     SorterClass = None
 
     def setUp(self):
-        recording, sorting_gt = toy_example(
-            num_channels=4, duration=60, seed=0, num_segments=1
-        )
+        recording, sorting_gt = toy_example(num_channels=4, duration=60, seed=0, num_segments=1)
         snippets_folder = cache_folder / "snippets"
         if snippets_folder.is_dir():
             shutil.rmtree(snippets_folder)
 
-        nse = snippets_from_sorting(
-            recording=recording, sorting=sorting_gt, nbefore=20, nafter=44
-        )
+        nse = snippets_from_sorting(recording=recording, sorting=sorting_gt, nbefore=20, nafter=44)
 
         self.snippets = nse.save(folder=snippets_folder, verbose=False, format="npy")
         print(self.snippets)

@@ -90,13 +90,9 @@ def generate_unit_table_view(sorting, unit_properties=None, similarity_scores=No
             elif val0.dtype.kind == "b":
                 dtype = "bool"
             else:
-                print(
-                    f"Unsupported dtype {val0.dtype} for property {prop_name}. Skipping"
-                )
+                print(f"Unsupported dtype {val0.dtype} for property {prop_name}. Skipping")
                 continue
-            ut_columns.append(
-                vv.UnitsTableColumn(key=prop_name, label=prop_name, dtype=dtype)
-            )
+            ut_columns.append(vv.UnitsTableColumn(key=prop_name, label=prop_name, dtype=dtype))
             valid_unit_properties.append(prop_name)
 
         for ui, unit in enumerate(sorting.unit_ids):
@@ -108,7 +104,5 @@ def generate_unit_table_view(sorting, unit_properties=None, similarity_scores=No
                 values[prop_name] = property_values[ui]
             ut_rows.append(vv.UnitsTableRow(unit_id=unit, values=check_json(values)))
 
-    v_units_table = vv.UnitsTable(
-        rows=ut_rows, columns=ut_columns, similarity_scores=similarity_scores
-    )
+    v_units_table = vv.UnitsTable(rows=ut_rows, columns=ut_columns, similarity_scores=similarity_scores)
     return v_units_table

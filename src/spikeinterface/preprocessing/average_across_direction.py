@@ -71,9 +71,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
         other_dim = np.arange(parent_channel_locations.shape[1]) != dim
         for i in range(dim_unique_pos.size):
             chans_in_group = np.flatnonzero(same_along_dim_chans == i)
-            channel_locations[i, other_dim] = np.mean(
-                parent_channel_locations[chans_in_group, other_dim]
-            )
+            channel_locations[i, other_dim] = np.mean(parent_channel_locations[chans_in_group, other_dim])
         channel_locations[:, dim] = dim_unique_pos
         self.set_channel_locations(channel_locations)
 

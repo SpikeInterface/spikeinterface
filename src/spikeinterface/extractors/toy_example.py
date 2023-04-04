@@ -115,20 +115,12 @@ def toy_example(
             seed=seed,
         )
 
-        amp_index = np.sort(
-            np.argsort(np.max(np.abs(traces[times - 10, :]), 1))[
-                : int(score_detection * len(times))
-            ]
-        )
-        times_list.append(
-            times[amp_index]
-        )  # Keep only a certain percentage of detected spike for sorting
+        amp_index = np.sort(np.argsort(np.max(np.abs(traces[times - 10, :]), 1))[: int(score_detection * len(times))])
+        times_list.append(times[amp_index])  # Keep only a certain percentage of detected spike for sorting
         labels_list.append(labels[amp_index])
         traces_list.append(traces)
 
-    sorting = NumpySorting.from_times_labels(
-        times_list, labels_list, sampling_frequency
-    )
+    sorting = NumpySorting.from_times_labels(times_list, labels_list, sampling_frequency)
 
     recording = NumpyRecording(traces_list, sampling_frequency)
     recording.annotate(is_filtered=True)
@@ -176,9 +168,7 @@ def synthesize_random_waveforms(
         j = 0
         for i in range(num_columns):
             geometry[j : j + num_contact_per_column, 0] = i * contact_spacing_um
-            geometry[j : j + num_contact_per_column, 1] = (
-                np.arange(num_contact_per_column) * contact_spacing_um
-            )
+            geometry[j : j + num_contact_per_column, 1] = np.arange(num_contact_per_column) * contact_spacing_um
             j += num_contact_per_column
 
     avg_durations = np.array(avg_durations)
@@ -201,20 +191,13 @@ def synthesize_random_waveforms(
             durations0 = (
                 np.maximum(
                     np.ones(avg_durations.shape),
-                    avg_durations
-                    + np.random.RandomState(seed=seeds[i]).randn(1, 4)
-                    * rand_durations_stdev,
+                    avg_durations + np.random.RandomState(seed=seeds[i]).randn(1, 4) * rand_durations_stdev,
                 )
                 * upsample_factor
             )
-            amps0 = (
-                avg_amps
-                + np.random.RandomState(seed=seeds[i]).randn(1, 4) * rand_amps_stdev
-            )
+            amps0 = avg_amps + np.random.RandomState(seed=seeds[i]).randn(1, 4) * rand_amps_stdev
             waveform0 = synthesize_single_waveform(full_width, durations0, amps0)
-            waveform0 = np.roll(
-                waveform0, int(timeshift_factor * dist * upsample_factor)
-            )
+            waveform0 = np.roll(waveform0, int(timeshift_factor * dist * upsample_factor))
             waveform0 = waveform0 * np.random.RandomState(seed=seeds[i]).uniform(
                 rand_amp_factor_range[0], rand_amp_factor_range[1]
             )
@@ -280,12 +263,8 @@ def synthesize_single_waveform(full_width, durations, amps):
     t = np.r_[0 : np.sum(durations) + 1]
 
     Y = np.zeros(len(t))
-    Y[timepoints[0] : timepoints[1] + 1] = exp_growth(
-        0, amps[0], timepoints[1] + 1 - timepoints[0], durations[0] / 4
-    )
-    Y[timepoints[1] : timepoints[2] + 1] = exp_growth(
-        amps[0], amps[1], timepoints[2] + 1 - timepoints[1], durations[1]
-    )
+    Y[timepoints[0] : timepoints[1] + 1] = exp_growth(0, amps[0], timepoints[1] + 1 - timepoints[0], durations[0] / 4)
+    Y[timepoints[1] : timepoints[2] + 1] = exp_growth(amps[0], amps[1], timepoints[2] + 1 - timepoints[1], durations[1])
     Y[timepoints[2] : timepoints[3] + 1] = exp_decay(
         amps[1], amps[2], timepoints[3] + 1 - timepoints[2], durations[2] / 4
     )
@@ -322,10 +301,7 @@ def synthesize_timeseries(
     half_width = int(np.ceil((width + 1) / 2 - 1))
 
     if seed is not None:
-        traces = (
-            np.random.RandomState(seed=seed).randn(num_samples, num_channels)
-            * noise_level
-        )
+        traces = np.random.RandomState(seed=seed).randn(num_samples, num_channels) * noise_level
     else:
         traces = np.random.randn(num_samples, num_channels) * noise_level
 

@@ -44,9 +44,7 @@ def test_select_peaks():
     )
 
     n_peaks = 100
-    select_kwargs = dict(
-        n_peaks=n_peaks, noise_levels=noise_levels, peaks_locations=peak_locations
-    )
+    select_kwargs = dict(n_peaks=n_peaks, noise_levels=noise_levels, peaks_locations=peak_locations)
     select_methods = [
         "uniform",
         "smart_sampling_amplitudes",
@@ -59,16 +57,12 @@ def test_select_peaks():
             selected_peaks.size <= n_peaks
         ), "selected_peaks is not the right size when return_indices=False, select_per_channel=False"
 
-        selected_peaks = select_peaks(
-            peaks, method=method, select_per_channel=True, **select_kwargs
-        )
+        selected_peaks = select_peaks(peaks, method=method, select_per_channel=True, **select_kwargs)
         assert selected_peaks.size <= (
             n_peaks * recording.get_num_channels()
         ), "selected_peaks is not the right size when return_indices=False, select_per_channel=True"
 
-        selected_peaks, selected_indices = select_peaks(
-            peaks, method=method, return_indices=True, **select_kwargs
-        )
+        selected_peaks, selected_indices = select_peaks(peaks, method=method, return_indices=True, **select_kwargs)
         assert (
             selected_peaks.size <= n_peaks
         ), "selected_peaks is not the right size when return_indices=True, select_per_channel=False"

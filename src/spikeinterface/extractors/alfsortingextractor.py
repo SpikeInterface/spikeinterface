@@ -31,9 +31,7 @@ class ALFSortingExtractor(BaseSorting):
 
     extractor_name = "ALFSorting"
     installed = HAVE_PANDAS
-    installation_mesg = (
-        "To use the ALF extractors, install pandas: \n\n pip install pandas\n\n"
-    )
+    installation_mesg = "To use the ALF extractors, install pandas: \n\n pip install pandas\n\n"
     name = "alf"
 
     def __init__(self, folder_path, sampling_frequency=30000):
@@ -41,9 +39,7 @@ class ALFSortingExtractor(BaseSorting):
         # check correct parent folder:
         self._folder_path = Path(folder_path)
         if "probe" not in self._folder_path.name:
-            raise ValueError(
-                'folder name should contain "probe", containing channels, clusters.* .npy datasets'
-            )
+            raise ValueError('folder name should contain "probe", containing channels, clusters.* .npy datasets')
         # load datasets as mmap into a dict:
         required_alf_datasets = ["spikes.times", "spikes.clusters"]
         found_alf_datasets = dict()
@@ -53,9 +49,7 @@ class ALFSortingExtractor(BaseSorting):
                     dset = np.load(alf_dataset_name, mmap_mode="r", allow_pickle=True)
                     found_alf_datasets.update({alf_dataset_name.stem: dset})
                 elif "metrics" in alf_dataset_name.stem:
-                    found_alf_datasets.update(
-                        {alf_dataset_name.stem: pd.read_csv(alf_dataset_name)}
-                    )
+                    found_alf_datasets.update({alf_dataset_name.stem: pd.read_csv(alf_dataset_name)})
 
         # check existence of datasets:
         if not any([i in found_alf_datasets for i in required_alf_datasets]):
@@ -71,9 +65,7 @@ class ALFSortingExtractor(BaseSorting):
         for alf_dataset_name, alf_dataset in found_alf_datasets.items():
             if "clusters" in alf_dataset_name:
                 if "clusters.metrics" in alf_dataset_name:
-                    for property_name, property_values in found_alf_datasets[
-                        alf_dataset_name
-                    ].iteritems():
+                    for property_name, property_values in found_alf_datasets[alf_dataset_name].iteritems():
                         properties[property_name] = property_values.tolist()
                 else:
                     property_name = alf_dataset_name.split(".")[1]
@@ -89,12 +81,8 @@ class ALFSortingExtractor(BaseSorting):
         else:
             unit_ids = list(range(total_units))
 
-        BaseSorting.__init__(
-            self, unit_ids=unit_ids, sampling_frequency=sampling_frequency
-        )
-        sorting_segment = ALFSortingSegment(
-            spike_clusters, spike_times, sampling_frequency
-        )
+        BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sampling_frequency)
+        sorting_segment = ALFSortingSegment(spike_clusters, spike_times, sampling_frequency)
         self.add_sorting_segment(sorting_segment)
 
         self.extra_requirements.append("pandas")
@@ -168,6 +156,4 @@ class ALFSortingSegment(BaseSortingSegment):
         return spike_frames[(spike_frames >= start_frame) & (spike_frames < end_frame)]
 
 
-read_alf_sorting = define_function_from_class(
-    source_class=ALFSortingExtractor, name="read_alf_sorting"
-)
+read_alf_sorting = define_function_from_class(source_class=ALFSortingExtractor, name="read_alf_sorting")

@@ -71,9 +71,7 @@ class BinaryRecordingExtractor(BaseRecording):
         if channel_ids is None:
             channel_ids = list(range(num_chan))
         else:
-            assert (
-                len(channel_ids) == num_chan
-            ), "Provided recording channels have the wrong length"
+            assert len(channel_ids) == num_chan, "Provided recording channels have the wrong length"
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
@@ -85,9 +83,7 @@ class BinaryRecordingExtractor(BaseRecording):
             datfiles = [Path(file_paths)]
 
         if t_starts is not None:
-            assert len(t_starts) == len(
-                datfiles
-            ), "t_starts must be a list of same size than file_paths"
+            assert len(t_starts) == len(datfiles), "t_starts must be a list of same size than file_paths"
             t_starts = [float(t_start) for t_start in t_starts]
 
         dtype = np.dtype(dtype)
@@ -146,9 +142,7 @@ class BinaryRecordingExtractor(BaseRecording):
             Type of the saved data. Default float32.
         {}
         """
-        write_binary_recording(
-            recording, file_paths=file_paths, dtype=dtype, **job_kwargs
-        )
+        write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
     def is_binary_compatible(self):
         return True
@@ -164,8 +158,8 @@ class BinaryRecordingExtractor(BaseRecording):
         return d
 
 
-BinaryRecordingExtractor.write_recording.__doc__ = (
-    BinaryRecordingExtractor.write_recording.__doc__.format(_shared_job_kwargs_doc)
+BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.write_recording.__doc__.format(
+    _shared_job_kwargs_doc
 )
 
 
@@ -180,12 +174,8 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         time_axis,
         file_offset,
     ):
-        BaseRecordingSegment.__init__(
-            self, sampling_frequency=sampling_frequency, t_start=t_start
-        )
-        self._timeseries = read_binary_recording(
-            datfile, num_chan, dtype, time_axis, file_offset
-        )
+        BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
+        self._timeseries = read_binary_recording(datfile, num_chan, dtype, time_axis, file_offset)
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal block
@@ -210,6 +200,4 @@ class BinaryRecordingSegment(BaseRecordingSegment):
 # For backward compatibility (old good time)
 BinDatRecordingExtractor = BinaryRecordingExtractor
 
-read_binary = define_function_from_class(
-    source_class=BinaryRecordingExtractor, name="read_binary"
-)
+read_binary = define_function_from_class(source_class=BinaryRecordingExtractor, name="read_binary")

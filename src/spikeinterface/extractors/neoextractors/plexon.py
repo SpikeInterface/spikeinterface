@@ -25,9 +25,7 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
     NeoRawIOClass = "PlexonRawIO"
     name = "plexon"
 
-    def __init__(
-        self, file_path, stream_id=None, stream_name=None, all_annotations=False
-    ):
+    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(
             self,
@@ -68,9 +66,7 @@ class PlexonSortingExtractor(NeoBaseSortingExtractor):
         neo_reader = PlexonRawIO(**neo_kwargs)
         neo_reader.parse_header()
         sampling_frequency = neo_reader._global_ssampling_rate
-        NeoBaseSortingExtractor.__init__(
-            self, sampling_frequency=sampling_frequency, **neo_kwargs
-        )
+        NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, **neo_kwargs)
         self._kwargs.update({"file_path": str(file_path)})
 
     @classmethod
@@ -79,9 +75,5 @@ class PlexonSortingExtractor(NeoBaseSortingExtractor):
         return neo_kwargs
 
 
-read_plexon = define_function_from_class(
-    source_class=PlexonRecordingExtractor, name="read_plexon"
-)
-read_plexon_sorting = define_function_from_class(
-    source_class=PlexonSortingExtractor, name="read_plexon_sorting"
-)
+read_plexon = define_function_from_class(source_class=PlexonRecordingExtractor, name="read_plexon")
+read_plexon_sorting = define_function_from_class(source_class=PlexonSortingExtractor, name="read_plexon_sorting")

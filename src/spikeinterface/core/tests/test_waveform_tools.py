@@ -37,9 +37,7 @@ def test_waveform_tools():
     )
     recording.annotate(is_filtered=True)
     num_units = 15
-    sorting = generate_sorting(
-        num_units=num_units, sampling_frequency=sampling_frequency, durations=durations
-    )
+    sorting = generate_sorting(num_units=num_units, sampling_frequency=sampling_frequency, durations=durations)
 
     # test with dump !!!!
     recording = recording.save()
@@ -114,9 +112,7 @@ def test_waveform_tools():
             for unit_ind, unit_id in enumerate(unit_ids):
                 wf = wfs_arrays[unit_id]
                 assert wf.shape[0] == np.sum(spikes["unit_ind"] == unit_ind)
-            list_wfs.append(
-                {unit_id: wfs_arrays[unit_id].copy() for unit_id in unit_ids}
-            )
+            list_wfs.append({unit_id: wfs_arrays[unit_id].copy() for unit_id in unit_ids})
             # to avoid warning we need to first destroy arrays then sharedmemm object
             # del wfs_arrays
             # del wfs_arrays_info
@@ -128,9 +124,7 @@ def test_waveform_tools():
         shutil.rmtree(wf_folder)
     wf_folder.mkdir()
 
-    sparsity_mask = np.random.randint(
-        0, 2, size=(unit_ids.size, recording.channel_ids.size), dtype="bool"
-    )
+    sparsity_mask = np.random.randint(0, 2, size=(unit_ids.size, recording.channel_ids.size), dtype="bool")
     job_kwargs = {"n_jobs": 1, "chunk_size": 3000, "progress_bar": True}
 
     # wfs_arrays, wfs_arrays_info = allocate_waveforms_buffers(recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=wf_folder, dtype=dtype, sparsity_mask=sparsity_mask)

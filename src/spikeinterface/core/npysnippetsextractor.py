@@ -93,9 +93,7 @@ class NpySnippetsExtractor(BaseSnippets):
             n = snippets.get_num_snippets(i)
             arr = np.empty(n, dtype=snippets_t, order="F")
             arr["frame"] = snippets.get_frames(segment_index=i)
-            arr["snippet"] = snippets.get_snippets(segment_index=i).astype(
-                dtype, copy=False
-            )
+            arr["snippet"] = snippets.get_snippets(segment_index=i).astype(dtype, copy=False)
 
             np.save(file_paths[i], arr)
 
@@ -137,9 +135,7 @@ class NpySnippetsSegment(BaseSnippetsSegment):
     def get_num_snippets(self):
         return self._spikestimes.shape[0]
 
-    def frames_to_indices(
-        self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None
-    ):
+    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
         """
         Return the slice of snippets
 
@@ -177,6 +173,4 @@ class NpySnippetsSegment(BaseSnippetsSegment):
         raise self._spikestimes[indices]
 
 
-read_npy_snippets = define_function_from_class(
-    source_class=NpySnippetsExtractor, name="read_npy_snippets"
-)
+read_npy_snippets = define_function_from_class(source_class=NpySnippetsExtractor, name="read_npy_snippets")

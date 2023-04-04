@@ -73,9 +73,7 @@ class PositionAndPCAClustering:
         tmp_folder = params["tmp_folder"]
         if params["waveform_mode"] == "memmap":
             if tmp_folder is None:
-                name = "".join(
-                    random.choices(string.ascii_uppercase + string.digits, k=8)
-                )
+                name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
                 tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
             else:
                 tmp_folder = Path(tmp_folder)
@@ -149,14 +147,10 @@ class PositionAndPCAClustering:
             peaks2["unit_ind"][mask] = l
 
             center = np.median(locations[spatial_keep][mask], axis=0)
-            main_chan = np.argmin(
-                np.linalg.norm(chan_locs - center[np.newaxis, :], axis=1)
-            )
+            main_chan = np.argmin(np.linalg.norm(chan_locs - center[np.newaxis, :], axis=1))
 
             # TODO take a radius that depend on the cluster dispertion itself
-            (closest_chans,) = np.nonzero(
-                chan_distances[main_chan, :] <= params["radius_um"]
-            )
+            (closest_chans,) = np.nonzero(chan_distances[main_chan, :] <= params["radius_um"])
             sparsity_mask[l, closest_chans] = True
 
         if params["waveform_mode"] == "shared_memory":
@@ -228,9 +222,7 @@ class PositionAndPCAClustering:
         for l, label in enumerate(pre_clean_labels):
             peaks3["unit_ind"][peak_labels == label] = l
             main_chan = main_channels[label]
-            (closest_chans,) = np.nonzero(
-                chan_distances[main_chan, :] <= params["radius_um"]
-            )
+            (closest_chans,) = np.nonzero(chan_distances[main_chan, :] <= params["radius_um"])
             sparsity_mask3[l, closest_chans] = True
 
         if params["waveform_mode"] == "shared_memory":

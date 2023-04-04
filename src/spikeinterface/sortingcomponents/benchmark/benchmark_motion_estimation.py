@@ -117,9 +117,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         )
         t1 = time.perf_counter()
         if self.select_kwargs is not None:
-            self.selected_peaks = select_peaks(
-                self.peaks, **self.select_kwargs, **self.job_kwargs
-            )
+            self.selected_peaks = select_peaks(self.peaks, **self.select_kwargs, **self.job_kwargs)
         else:
             self.selected_peaks = self.peaks
         t2 = time.perf_counter()
@@ -177,13 +175,9 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
             self.save_to_folder()
 
     def compute_gt_motion(self):
-        self.gt_unit_positions, _ = mr.extract_units_drift_vector(
-            self.mearec_filename, time_vector=self.temporal_bins
-        )
+        self.gt_unit_positions, _ = mr.extract_units_drift_vector(self.mearec_filename, time_vector=self.temporal_bins)
 
-        template_locations = np.array(
-            mr.load_recordings(self.mearec_filename).template_locations
-        )
+        template_locations = np.array(mr.load_recordings(self.mearec_filename).template_locations)
         assert len(template_locations.shape) == 3
         mid = template_locations.shape[1] // 2
         unit_mid_positions = template_locations[:, mid, 2]
@@ -204,9 +198,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
             # time, units
             self.gt_motion = np.zeros_like(self.motion)
             for t in range(self.gt_unit_positions.shape[0]):
-                f = scipy.interpolate.interp1d(
-                    unit_mid_positions, unit_motions[t, :], fill_value="extrapolate"
-                )
+                f = scipy.interpolate.interp1d(unit_mid_positions, unit_motions[t, :], fill_value="extrapolate")
                 self.gt_motion[t, :] = f(self.spatial_bins)
 
     def plot_true_drift(self, scaling_probe=1.5, figsize=(15, 10), axes=None):
@@ -225,9 +217,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         for loc in mr_recording.template_locations[::2]:
             if len(mr_recording.template_locations.shape) == 3:
-                ax.plot(
-                    [loc[0, 1], loc[-1, 1]], [loc[0, 2], loc[-1, 2]], alpha=0.7, lw=2
-                )
+                ax.plot([loc[0, 1], loc[-1, 1]], [loc[0, 2], loc[-1, 2]], alpha=0.7, lw=2)
             else:
                 ax.scatter([loc[1]], [loc[2]], alpha=0.7, s=100)
 
@@ -253,9 +243,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         for i in range(self.gt_motion.shape[1]):
             depth = self.spatial_bins[i]
-            ax.plot(
-                self.temporal_bins, self.gt_motion[:, i] + depth, color="green", lw=4
-            )
+            ax.plot(self.temporal_bins, self.gt_motion[:, i] + depth, color="green", lw=4)
 
         # ax.set_ylim(ymin, ymax)
         ax.set_xlabel("time (s)")
@@ -280,9 +268,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         # plot_probe_map(self.recording, ax=ax)
         _simpleaxis(ax)
 
-        ax.hist(
-            self.gt_unit_positions[30, :], 50, orientation="horizontal", color="0.5"
-        )
+        ax.hist(self.gt_unit_positions[30, :], 50, orientation="horizontal", color="0.5")
         ax.set_yticks([])
         ax.set_xlabel("# neurons")
 
@@ -600,9 +586,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
             ax.set_ylim(0, lim)
 
 
-def plot_errors_several_benchmarks(
-    benchmarks, axes=None, show_legend=True, colors=None
-):
+def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colors=None):
     if axes is None:
         fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
@@ -612,9 +596,7 @@ def plot_errors_several_benchmarks(
         mean_error = np.sqrt(np.mean((errors) ** 2, axis=1))
         depth_error = np.sqrt(np.mean((errors) ** 2, axis=0))
 
-        axes[0].plot(
-            benchmark.temporal_bins, mean_error, label=benchmark.title, color=c
-        )
+        axes[0].plot(benchmark.temporal_bins, mean_error, label=benchmark.title, color=c)
         parts = axes[1].violinplot(mean_error, [count], showmeans=True)
         if c is not None:
             for pc in parts["bodies"]:
@@ -624,9 +606,7 @@ def plot_errors_several_benchmarks(
                 if k != "bodies":
                     # for line in parts[k]:
                     parts[k].set_color(c)
-        axes[2].plot(
-            benchmark.spatial_bins, depth_error, label=benchmark.title, color=c
-        )
+        axes[2].plot(benchmark.spatial_bins, depth_error, label=benchmark.title, color=c)
 
     ax0 = ax = axes[0]
     ax.set_xlabel("time (s)")

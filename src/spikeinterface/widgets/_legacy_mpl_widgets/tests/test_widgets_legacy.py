@@ -35,13 +35,9 @@ class TestWidgets(unittest.TestCase):
         if (cache_folder / "mearec_test").is_dir():
             self._we = load_waveforms(cache_folder / "mearec_test")
         else:
-            self._we = extract_waveforms(
-                self._rec, self._sorting, cache_folder / "mearec_test"
-            )
+            self._we = extract_waveforms(self._rec, self._sorting, cache_folder / "mearec_test")
 
-        self._amplitudes = compute_spike_amplitudes(
-            self._we, peak_sign="neg", outputs="by_unit"
-        )
+        self._amplitudes = compute_spike_amplitudes(self._we, peak_sign="neg", outputs="by_unit")
         self._gt_comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
 
     def tearDown(self):
@@ -158,9 +154,7 @@ class TestWidgets(unittest.TestCase):
 
     def test_multicomp_graph(self):
         msc = sc.compare_multiple_sorters([self._sorting, self._sorting, self._sorting])
-        sw.plot_multicomp_graph(
-            msc, edge_cmap="viridis", node_cmap="rainbow", draw_labels=False
-        )
+        sw.plot_multicomp_graph(msc, edge_cmap="viridis", node_cmap="rainbow", draw_labels=False)
         sw.plot_multicomp_agreement(msc)
         sw.plot_multicomp_agreement_by_sorter(msc)
         fig, axes = plt.subplots(len(msc.object_list), 1)
@@ -168,9 +162,7 @@ class TestWidgets(unittest.TestCase):
 
     def test_sorting_performance(self):
         metrics = compute_quality_metrics(self._we, metric_names=["snr"])
-        sw.plot_sorting_performance(
-            self._gt_comp, metrics, performance_name="accuracy", metric_name="snr"
-        )
+        sw.plot_sorting_performance(self._gt_comp, metrics, performance_name="accuracy", metric_name="snr")
 
     # ~ def test_plot_unit_summary(self):
     # ~ unit_id = self._sorting.unit_ids[4]

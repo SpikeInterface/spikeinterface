@@ -50,9 +50,7 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
 
         self.bad_channel_ids = bad_channel_ids
         self._bad_channel_idxs = recording.ids_to_indices(self.bad_channel_ids)
-        self._good_channel_idxs = ~np.in1d(
-            np.arange(recording.get_num_channels()), self._bad_channel_idxs
-        )
+        self._good_channel_idxs = ~np.in1d(np.arange(recording.get_num_channels()), self._bad_channel_idxs)
         self._bad_channel_idxs.setflags(write=False)
 
         if sigma_um is None:
@@ -62,9 +60,7 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
             locations = recording.get_channel_locations()
             locations_good = locations[self._good_channel_idxs]
             locations_bad = locations[self._bad_channel_idxs]
-            weights = preprocessing_tools.get_kriging_channel_weights(
-                locations_good, locations_bad, sigma_um, p
-            )
+            weights = preprocessing_tools.get_kriging_channel_weights(locations_good, locations_bad, sigma_um, p)
 
         for parent_segment in recording._recording_segments:
             rec_segment = InterpolateBadChannelsSegment(
@@ -85,9 +81,7 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
             raise TypeError("'bad_channel_ids' must be a 1d array or list.")
 
         if recording.get_property("contact_vector") is None:
-            raise ValueError(
-                "A probe must be attached to use bad channel interpolation. Use set_probe(...)"
-            )
+            raise ValueError("A probe must be attached to use bad channel interpolation. Use set_probe(...)")
 
         if recording.get_probe().si_units != "um":
             raise NotImplementedError("Channel spacing units must be um")
@@ -111,15 +105,11 @@ class InterpolateBadChannelsSegment(BasePreprocessorSegment):
         if channel_indices is None:
             channel_indices = slice(None)
 
-        traces = self.parent_recording_segment.get_traces(
-            start_frame, end_frame, slice(None)
-        )
+        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
 
         traces = traces.copy()
 
-        traces[:, self._bad_channel_indices] = (
-            traces[:, self._good_channel_indices] @ self._weights
-        )
+        traces[:, self._bad_channel_indices] = traces[:, self._good_channel_indices] @ self._weights
 
         return traces[:, channel_indices]
 
