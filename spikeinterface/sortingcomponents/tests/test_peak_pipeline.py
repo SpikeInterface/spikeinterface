@@ -130,6 +130,18 @@ def test_run_peak_pipeline():
     assert np.array_equal(amplitudes, amplitudes2)
     assert np.array_equal(amplitudes2, amplitudes3)
 
+    waveforms_rms_file = folder / 'waveforms_rms.npy'
+    assert waveforms_rms_file.is_file()
+    waveforms_rms3 = np.load(waveforms_rms_file)
+    assert np.array_equal(waveforms_rms, waveforms_rms2)
+    assert np.array_equal(waveforms_rms2, waveforms_rms3)
+
+    denoised_waveforms_rms_file = folder / 'denoised_waveforms_rms.npy'
+    assert denoised_waveforms_rms_file.is_file()
+    denoised_waveforms_rms3 = np.load(denoised_waveforms_rms_file)
+    assert np.array_equal(denoised_waveforms_rms, denoised_waveforms_rms2)
+    assert np.array_equal(denoised_waveforms_rms2, denoised_waveforms_rms3)
+
 
     # Test pickle mechanism
     for node in nodes:
