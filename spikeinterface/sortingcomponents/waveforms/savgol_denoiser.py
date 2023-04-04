@@ -4,7 +4,7 @@ from typing import List, Optional
 import scipy.signal
 
 from spikeinterface.core import BaseRecording
-from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformExtractorNode
+from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformExtractorNode, find_parent_of_type
 
 
 class SavGolDenoiser(PipelineNode):
@@ -16,10 +16,10 @@ class SavGolDenoiser(PipelineNode):
     ):
         super().__init__(recording, return_output=return_output, parents=parents)
         self.order = order
-        if self.parents is None or not (len(self.parents) == 1 and isinstance(self.parents[0], WaveformExtractorNode)):
-            exception_string = f"SavGolDenoiser should have a single {WaveformExtractorNode.__name__} in its parents"
-            raise TypeError(exception_string)
-        waveform_extractor = self.parents[0]
+
+        waveform_extractor = find_parent_of_type(self, WaveformExtractorNode)
+        if waveform_extractor is None:
+            raise TypeError(f"SavGolDenoiser should have a single {WaveformExtractorNode.__name__} in its parents")
         waveforms_sampling_frequency = waveform_extractor.recording.get_sampling_frequency()
         self.window_length = int(window_length_ms*waveforms_sampling_frequency / 1000)
 

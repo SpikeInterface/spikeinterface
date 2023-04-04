@@ -9,7 +9,8 @@ from spikeinterface import download_dataset, BaseSorting
 from spikeinterface.extractors import MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PipelineNode, ExtractDenseWaveforms, ExtractSparseWaveforms
+from spikeinterface.sortingcomponents.peak_pipeline import (run_pipeline, PeakRetriever,
+                                                            PipelineNode, ExtractDenseWaveforms, ExtractSparseWaveforms)
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -20,8 +21,8 @@ else:
 
 
 class AmplitudeExtractionNode(PipelineNode):
-    def __init__(self, recording, return_output=True, param0=5.5):
-        PipelineNode.__init__(self, recording, return_output=return_output)
+    def __init__(self, recording, parents=None, return_output=True, param0=5.5):
+        PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
         self.param0 = param0
         self._dtype = np.dtype([('abs_amplitude', recording.get_dtype())])
 
@@ -78,22 +79,28 @@ def test_run_peak_pipeline():
                          **job_kwargs)
     
     # one step only : squeeze output
+    peak_retriever = PeakRetriever(recording, peaks)
     nodes = [
-        AmplitudeExtractionNode(recording, param0=6.6),
+        peak_retriever,
+        AmplitudeExtractionNode(recording, parents=[peak_retriever], param0=6.6),
     ]
-    step_one = run_peak_pipeline(recording, peaks, nodes, job_kwargs, squeeze_output=True)
+    step_one = run_pipeline(recording, nodes, job_kwargs, squeeze_output=True)
     assert np.allclose(np.abs(peaks['amplitude']), step_one['abs_amplitude'])
     
     # 3 nodes two have outputs
     ms_before = 0.5
     ms_after = 1.0
-    extract_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after, return_output=False)
-    waveform_denoiser = WaveformDenoiser(recording, parents=[extract_waveforms], return_output=False)
-    amplitue_extraction = AmplitudeExtractionNode(recording, param0=6.6, return_output=True)
-    waveforms_rms = WaveformsRootMeanSquare(recording, parents=[extract_waveforms], return_output=True)
-    denoised_waveforms_rms = WaveformsRootMeanSquare(recording, parents=[waveform_denoiser], return_output=True)
+    peak_retriever = PeakRetriever(recording, peaks)
+    extract_waveforms = ExtractDenseWaveforms(recording, parents=[peak_retriever],
+                                              ms_before=ms_before, ms_after=ms_after, return_output=False)
+    waveform_denoiser = WaveformDenoiser(recording, parents=[peak_retriever, extract_waveforms], return_output=False)
+    amplitue_extraction = AmplitudeExtractionNode(recording, parents=[peak_retriever],
+                                                  param0=6.6, return_output=True)
+    waveforms_rms = WaveformsRootMeanSquare(recording, parents=[peak_retriever, extract_waveforms], return_output=True)
+    denoised_waveforms_rms = WaveformsRootMeanSquare(recording, parents=[peak_retriever, waveform_denoiser], return_output=True)
     
     nodes = [
+        peak_retriever,
         extract_waveforms,
         waveform_denoiser,
         amplitue_extraction,
@@ -101,10 +108,9 @@ def test_run_peak_pipeline():
         denoised_waveforms_rms,
     ]
     
-
     
     # gather memory mode
-    output = run_peak_pipeline(recording, peaks, nodes, job_kwargs, gather_mode='memory')
+    output = run_pipeline(recording, nodes, job_kwargs, gather_mode='memory')
     amplitudes, waveforms_rms, denoised_waveforms_rms = output
     assert np.allclose(np.abs(peaks['amplitude']), amplitudes['abs_amplitude'])
     
@@ -120,7 +126,7 @@ def test_run_peak_pipeline():
     folder = cache_folder / 'pipeline_folder'
     if folder.is_dir():
         shutil.rmtree(folder)
-    output = run_peak_pipeline(recording, peaks, nodes, job_kwargs, gather_mode='npy',
+    output = run_pipeline(recording, nodes, job_kwargs, gather_mode='npy',
                                folder=folder, names=['amplitudes', 'waveforms_rms', 'denoised_waveforms_rms'],)
     amplitudes2, waveforms_rms2, denoised_waveforms_rms2 = output
 
@@ -151,4 +157,3 @@ def test_run_peak_pipeline():
 
 if __name__ == '__main__':
     test_run_peak_pipeline()
-

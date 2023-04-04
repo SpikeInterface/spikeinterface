@@ -267,6 +267,21 @@ class ExtractSparseWaveforms(WaveformExtractorNode):
         return sparse_wfs
 
 
+def find_parent_of_type(node, parent_type, unique=True):
+    if node.parents is None:
+        return None
+    
+    parents = []
+    for parent in node.parents:
+        if isinstance(parent, parent_type):
+            parents.append(parent)
+    
+    if unique and len(parents) == 1:
+        return parents[0]
+    elif not unique and len(parents) > 1:
+        return parents[0]
+    else:
+        None
 
 def check_graph(nodes):
     """

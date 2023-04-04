@@ -35,10 +35,39 @@ TODO:
 def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
                  gather_mode='memory', folder=None, names=None,
                  **kwargs):
-    """
+    """Peak detection based on threshold crossing in term of k x MAD.
+
+    In 'by_channel' : peak are detected in each channel independently
+    In 'locally_exclusive' : a single best peak is taken from a set of neighboring channels
+
+    Parameters
+    ----------
+    recording: RecordingExtractor
+        The recording extractor object.
+    pipeline_nodes: None or list[PipelineNode]
+        Optional additional PipelineNode need to computed just after detection time.
+        This avoid reading the recording multiple times.
+    gather_mode: str
+        How to gather the results:
+        
+        * "memory": results are returned as in-memory numpy arrays
+        
+        * "npy": results are stored to .npy files in `folder`
+    folder: str or Path
+        If gather_mode is "npy", the folder where the files are created.
+    names: list
+        List of strings with file stems associated with returns.
+
     {method_doc}
     {job_doc}
 
+    Returns
+    -------
+    peaks: array
+        Detected peaks.
+    Notes
+    -----
+    This peak detection ported from tridesclous into spikeinterface.
     """
 
 
@@ -52,7 +81,7 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
     node0 = method_class(recording, **method_kwargs)
     nodes = [node0]
 
-    job_name = f'detect_peak using {method}'
+    job_name = f'detect peaks using {method}'
     if pipeline_nodes is None:
         squeeze_output = True
     else:
