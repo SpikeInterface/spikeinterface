@@ -112,7 +112,7 @@ def compute_unit_locations(waveform_extractor,
     load_if_exists : bool, default: False
         Whether to load precomputed unit locations, if they already exist.
     method: str
-        'center_of_mass' / 'monopolar_triangulation' / 'from_templates'
+        'center_of_mass' / 'monopolar_triangulation' / 'grid_convolution'
     outputs: str 
         'numpy' (default) / 'by_unit'
     method_kwargs: 
