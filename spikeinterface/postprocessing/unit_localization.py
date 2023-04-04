@@ -387,7 +387,7 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', radius_um=50.,
     prototype = prototype[:, np.newaxis]
 
     template_positions, weights, neighbours_mask = get_grid_convolution_templates_and_weights(
-                contact_locations, local_radius_um, upsampling_um, 
+                contact_locations, radius_um, upsampling_um, 
                 sigma_um, margin_um)
 
     nb_templates = len(template_positions)
