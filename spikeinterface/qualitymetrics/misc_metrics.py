@@ -1,6 +1,6 @@
 """Various cluster quality metrics.
 
-Some of then come from or the old implementation:
+Some of then come from Allen Institute or the old implementation:
 * https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
 * https://github.com/SpikeInterface/spikemetrics
 
@@ -33,7 +33,7 @@ _default_params = dict()
 
 
 def compute_num_spikes(waveform_extractor, **kwargs):
-    """Compute the number of spike across segments.
+    """Compute the number of spikes across segments.
 
     Parameters
     ----------
@@ -102,7 +102,7 @@ def compute_presence_ratios(waveform_extractor, bin_duration_s=60.0, mean_fr_rat
 
     Returns
     -------
-    presence_ratio : dict of flaots
+    presence_ratio : dict of floats
         The presence ratio for each unit ID.
 
     Notes
@@ -165,7 +165,7 @@ _default_params["presence_ratio"] = dict(
 
 def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "extremum",
                  random_chunk_kwargs_dict=None):
-    """Compute signal to noise ratio.
+    """Compute signal to noise ratio for each unit.
 
     Parameters
     ----------
@@ -175,8 +175,8 @@ def compute_snrs(waveform_extractor, peak_sign: str = 'neg', peak_mode: str = "e
         The sign of the template to compute best channels.
     peak_mode: {'extremum', 'at_index'}
         How to compute the amplitude.
-        Extremum takes the maxima/minima
-        At_index takes the value at t=waveform_extractor.nbefore
+        extremum takes the maxima/minima
+        at_index takes the value at t=waveform_extractor.nbefore
     random_chunk_kwarg_dict: dict or None
         Dictionary to control the get_random_data_chunks() function.
         If None, default values are used
@@ -243,7 +243,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     min_isi_ms : float, default: 0
         Minimum possible inter-spike interval, in ms.
         This is the artificial refractory period enforced
-        by the data acquisition system or post-processing algorithms.
+        by the data acquisition system or post-processing algorithm.
 
     Returns
     -------
@@ -322,7 +322,7 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
         The period (in ms) where no 2 good spikes can occur.
     censored_period_ùs : float, default: 0.0
         The period (in ms) where no 2 spikes can occur (because they are not detected, or
-        because they were removed by another mean).
+        because they were removed by another means).
 
     Returns
     -------
@@ -471,7 +471,7 @@ def compute_amplitude_cutoffs(waveform_extractor, peak_sign='neg',
     num_histogram_bins : int, default: 100
         The number of bins to use to compute the amplitude histogram.
     histogram_smoothing_value : int, default: 3
-        Controls the smoothing applied to the amplitude histogram.
+       Sigma of the gaussian filter that controls the smoothing applied to the amplitude histogram.
     amplitudes_bins_min_ratio : int, default: 5
         The minimum ratio between number of amplitudes for a unit and the number of bins.
         If the ratio is less than this threshold, the amplitude_cutoff for the unit is set 
@@ -835,7 +835,7 @@ def isi_violations(spike_trains, total_duration_s,
     min_isi_s : float, default: 0
         Minimum possible inter-spike interval, in seconds.
         This is the artificial refractory period enforced
-        by the data acquisition system or post-processing algorithms.
+        by the data acquisition system or post-processing algorithm.
 
     Returns
     -------
@@ -888,7 +888,7 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
     num_histogram_bins : int, default: 500
         The number of bins to use to compute the amplitude histogram.
     histogram_smoothing_value : int, default: 3
-        Controls the smoothing applied to the amplitude histogram.
+        Sigma of the gaussian filter that controls the smoothing applied to the amplitude histogram.
     amplitudes_bins_min_ratio : int, default: 5
         The minimum ratio between number of amplitudes for a unit and the number of bins.
         If the ratio is less than this threshold, the amplitude_cutoff for the unit is set 
@@ -928,7 +928,7 @@ def slidingRP_violations(spike_samples, sample_rate, duration, bin_size_ms=0.25,
                          exclude_ref_period_below_ms=0.5, max_ref_period_ms=10,
                          contamination_values=None, return_conf_matrix=False):
     """
-    A metric developed by IBL which determines whether the refractory period violations 
+    A metric developed by IBL which determines the refractory period violations 
     by using sliding refractory periods.
 
     See compute_slidingRP_viol for additional documentation
