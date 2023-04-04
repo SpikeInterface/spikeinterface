@@ -4,18 +4,18 @@ Installing Spike Sorters
 ========================
 
 
-An important aspect of spikeinterface is the :py:mod:`spikeinterface.sorters` module.
+An important aspect of SpikeInterface is the :py:mod:`spikeinterface.sorters` module.
 This module wraps many popular spike sorting tools, allowing you to run multiple sorters on the same dataset with
 only a few lines of code and through Python.
 
 Installing spike sorters can be painful! Many of them come with several requirements that could cause conflicts in 
-your Python environment. To make things easier, we have created docker images for most of these sorters, 
-and in many cases the easiest way to run them is to do so via docker or singularity. 
+your Python environment. To make things easier, we have created Docker images for most of these sorters, 
+and in many cases the easiest way to run them is to do so via Docker or Singularity. 
 **This is the approach we recommend for all users.** 
 To run containerized sorters see our documentation here: :ref:`containerizedsorters`.
 
 There are some cases where users will need to install the spike sorting algorithms in their own environment. If you
-are on a system where it is infeasible to run docker or singularity containers, or if you are actively developing the
+are on a system where it is infeasible to run Docker or Singularity containers, or if you are actively developing the
 spike sorting software, you will likely need to install each spike sorter yourself.
 
 Some of theses sorters are written in Matlab, so you will also need to install Matlab if you want
@@ -50,6 +50,7 @@ Herdingspikes2
 
     pip install herdingspikes
 
+
 HDSort
 ^^^^^^
 
@@ -62,17 +63,19 @@ HDSort
       # provide installation path by setting the HDSORT_PATH environment variable
       # or using HDSortSorter.set_hdsort_path()
 
+
 IronClust
 ^^^^^^^^^
 
 * Matlab
 * Url: https://github.com/jamesjun/ironclust
 * Authors: James J. Jun
-* Installation need Matlab::
+* Installation needs Matlab::
 
       git clone https://github.com/jamesjun/ironclust
       # provide installation path by setting the IRONCLUST_PATH environment variable
       # or using IronClustSorter.set_ironclust_path()
+
 
 Kilosort
 ^^^^^^^^
@@ -86,7 +89,8 @@ Kilosort
       # provide installation path by setting the KILOSORT_PATH environment variable
       # or using KilosortSorter.set_kilosort_path()
 
-* See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
+* See also for Matlab/CUDA: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
+
 
 Kilosort2
 ^^^^^^^^^
@@ -100,7 +104,7 @@ Kilosort2
       # provide installation path by setting the KILOSORT2_PATH environment variable
       # or using Kilosort2Sorter.set_kilosort2_path()
 
-* See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
+* See also for Matlab/CUDA: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
 
 
 Kilosort2.5
@@ -115,7 +119,8 @@ Kilosort2.5
       # provide installation path by setting the KILOSORT2_5_PATH environment variable
       # or using Kilosort2_5Sorter.set_kilosort2_path()
 
-* See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
+* See also for Matlab/CUDA: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
+
 
 Kilosort3
 ^^^^^^^^^
@@ -129,12 +134,13 @@ Kilosort3
       # provide installation path by setting the KILOSORT3_PATH environment variable
       # or using Kilosort3Sorter.set_kilosort3_path()
 
-* See also for Matlab/cuda: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
+* See also for Matlab/CUDA: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html
+
 
 pyKilosort
 ^^^^^^^^^^
 
-* Python, requires cuda
+* Python, requires CUDA
 * Url: https://github.com/int-brain-lab/pykilosort / https://github.com/MouseLand/pykilosort
 * Authors: Marius Pachitariu, Shashwat Sridhar, Alexander Morley, Cyrille Rossant, Kush Bunga
 
@@ -175,9 +181,8 @@ Mountainsort4
       pip install mountainsort4
 
 
-SpykingCircus
+SpyKING CIRCUS
 ^^^^^^^^^^^^^
-
 
 * Python, requires MPICH
 * Url: https://spyking-circus.readthedocs.io
@@ -201,11 +206,12 @@ Tridesclous
 
 * Optional installation of opencl ICD and pyopencl for hardware acceleration::
 
-        sudo apt-get install beignet (optional if intel GPU)
-        sudo apt-get install nvidia-opencl-XXX (optional if nvidia GPU)
+        sudo apt-get install beignet (optional if Intel GPU)
+        sudo apt-get install nvidia-opencl-XXX (optional if NVIDIA GPU)
         sudo apt-get install pocl-opencl-icd (optional for multi core CPU)
         sudo apt-get install opencl-headers ocl-icd-opencl-dev libclc-dev ocl-icd-libopencl1
         pip install pyopencl
+
 
 Waveclus
 ^^^^^^^^
@@ -250,11 +256,11 @@ Klusta (LEGACY)
 
 * See also: https://github.com/kwikteam/phy
 
+
 Yass (LEGACY)
 ^^^^^^^^^^^^^
 
-
-* Python, cuda, torch
+* Python, CUDA, torch
 * Requires SpikeInterface<0.96.0 (and Python 3.7)
 * Url: https://github.com/paninski-lab/yass
 * Authors: JinHyung Lee, Catalin Mitelut, Liam Paninski
