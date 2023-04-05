@@ -2,6 +2,8 @@
 Some simple function to retrieve public datasets with datalad
 """
 
+from pathlib import Path
+
 import warnings
 from .globals import get_global_dataset_folder, is_set_global_dataset_folder
 
@@ -42,7 +44,9 @@ def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_e
         base_local_folder = get_global_dataset_folder()
         base_local_folder.mkdir(exist_ok=True)
         local_folder = base_local_folder / repo.split("/")[-1]
-
+    else:
+        local_folder = Path(local_folder)
+        
     if local_folder.exists() and GitRepo.is_valid_repo(local_folder):
         dataset = datalad.api.Dataset(path=local_folder)
         # make sure git repo is in clean state
