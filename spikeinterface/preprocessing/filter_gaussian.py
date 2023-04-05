@@ -9,6 +9,10 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 class GaussianBandpassFilterRecording(BasePreprocessor):
     """
     Class for performing a bandpass gaussian filtering/smoothing on a recording.
+    This is done by a convolution with a Gaussian kernel, which acts as a lowpass-filter.
+    The highpass-filter can be computed by subtracting the result.
+
+    Here, the bandpass is computed in the Fourier domain to accelerate the computation.
 
     Parameters
     ----------
