@@ -10,6 +10,11 @@ There are two ways for using theses "plugins":
   * when peaks are already detected and reduced with `select_peaks()`
 """
 
+# TODO for later : move part of this inside spikeinterface.core
+# make compatible to use spikes vector instead of peaks
+# and use this machinery for almost all postprocessing function
+# it is lot of work but could be super relevant!
+
 from typing import Optional, List, Type 
 
 import struct
@@ -45,8 +50,11 @@ class PipelineNode:
             The recording object.
         parents : Optional[List[PipelineNode]], optional
             Pass parents nodes to perform a previous computation, by default None
-        return_output : bool, optional
+        return_output : bool or tuple of bool
             Whether or not the output of the node is returned by the pipeline, by default False
+            When a Node have several toutputs then this can be a tuple of bool.
+
+
         """
 
         self.recording = recording
@@ -387,12 +395,23 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     # propagate the output
     pipeline_outputs_tuple = tuple()
     for node in nodes:
-        if node.return_output:
-            out = pipeline_outputs[node]
-            if isinstance(out, tuple):
+        # handle which buffer are given to the output
+        # this is controlled by node.return_output being a bool or tuple of bool
+        out = pipeline_outputs[node]
+        if isinstance(out, tuple):
+            if isinstance(node.return_output, bool) and node.return_output:
                 pipeline_outputs_tuple += out
-            else:
+            elif isinstance(node.return_output, tuple):
+                for flag, e in zip(node.return_output, out):
+                    if flag:
+                        pipeline_outputs_tuple += (e, )
+        else:
+            if isinstance(node.return_output, bool) and node.return_output:
                 pipeline_outputs_tuple += (out, )
+            elif isinstance(node.return_output, tuple):
+                # this should not apppend : maybe a checker somewhere before ?
+                pass
+
 
     if isinstance(nodes[0], PeakDetector):
         # the first out element is the peak vector
