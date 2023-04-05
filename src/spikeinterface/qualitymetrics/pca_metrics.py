@@ -110,6 +110,9 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, qm_params=None,
         pc_metrics['nn_hit_rate'] = {}
         pc_metrics['nn_miss_rate'] = {}
 
+    if 'nn_isolation' in metric_names:
+        pc_metrics['nn_unit_id'] = {}
+
     run_in_parallel = n_jobs > 1
 
     units_loop = enumerate(unit_ids)
@@ -381,6 +384,8 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
     nn_isolation : float
         The calculation nearest neighbor isolation metric for `this_unit_id`.
         If the unit has fewer than `min_spikes`, returns numpy.NaN instead.
+    nn_unit_id : np.int16
+        Id of the "nearest neighbor" unit (unit with lowest isolation score from `this_unit_id`)
 
     Notes
     -----
@@ -424,12 +429,12 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
         warnings.warn(f'Warning: unit {this_unit_id} has fewer spikes than ',
                       f'specified by `min_spikes` ({min_spikes}); ',
                       f'returning NaN as the quality metric...')
-        return np.nan
+        return np.nan, np.nan
     elif fr_all_units[this_unit_id] < min_fr:
         warnings.warn(f'Warning: unit {this_unit_id} has a firing rate ',
                       f'below the specified `min_fr` ({min_fr}Hz); '
                       f'returning NaN as the quality metric...')
-        return np.nan
+        return np.nan, np.nan
     else:
         # first remove the units with too few spikes
         unit_ids_to_keep = np.array([
@@ -502,9 +507,11 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
                                                                                  projected_snippets[n_snippets:, :],
                                                                                  n_neighbors)
             # isolation metric is the minimum of the pairwise isolations
+            # nn_unit_id is the unit with lowest isolation score
             nn_isolation = np.min(isolation)
+            nn_unit_id = other_units_ids[np.argmin(isolation)]
 
-        return nn_isolation
+        return nn_isolation, nn_unit_id
 
 
 def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor, this_unit_id: int,
@@ -749,10 +756,12 @@ def pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id,
 
     if 'nn_isolation' in metric_names:
         try:
-            nn_isolation = nearest_neighbors_isolation(we, unit_id, seed=seed, **qm_params['nn_isolation'])
+            nn_isolation, nn_unit_id = nearest_neighbors_isolation(we, unit_id, seed=seed, **qm_params['nn_isolation'])
         except:
             nn_isolation = np.nan
+            nn_unit_id = np.nan
         pc_metrics['nn_isolation'] = nn_isolation
+        pc_metrics['nn_unit_id'] = nn_unit_id
 
     if 'nn_noise_overlap' in metric_names:
         try:
