@@ -2,7 +2,9 @@ name: S3 NWB Test
 on:
   pull_request:
     types: [synchronize, opened, reopened]
-
+    branches:
+      - master
+      - main
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -44,4 +46,4 @@ jobs:
       - name: Install fsspec, aiohttp and requests
         run: pip install fsspec aiohttp requests
       - name: run tests
-        run: pytest spikeinterface/extractors/tests/test_nwb_s3_extractor.py
+        run: pytest src/spikeinterface/extractors/tests/test_nwb_s3_extractor.py
