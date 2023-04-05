@@ -25,12 +25,12 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         need to specify stream_id='well000' or 'well0001', etc.
     stream_name: str, optional
         If there are several streams, specify the stream name you want to load.
-    all_annotations: bool, optional, default: False
+    all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
     rec_name: str, optional
         When the file contains several recordings you need to specify the one
         you want to extract. (rec_name='rec0000').
-    install_maxwell_plugin: bool, optional, default: False
+    install_maxwell_plugin: bool, default: False
         If True, install the maxwell plugin for neo.
     """
     mode = 'file'

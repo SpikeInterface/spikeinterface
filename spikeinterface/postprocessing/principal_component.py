@@ -333,13 +333,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         # and run
         func = _all_pc_extractor_chunk
         init_func = _init_work_all_pc_extractor
-        n_jobs = ensure_n_jobs(recording, job_kwargs.get('n_jobs', None))
-        if n_jobs == 1:
-            init_args = (recording,)
-        else:
-            init_args = (recording.to_dict(),)
-        init_args = init_args + (all_pcs_args, spike_times, spike_labels, we.nbefore, we.nafter, 
-                                 unit_channels, pca_model)
+        init_args = (recording, all_pcs_args, spike_times, spike_labels, we.nbefore, we.nafter, unit_channels, pca_model)
         processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name='extract PCs', **job_kwargs)
         processor.run()
 

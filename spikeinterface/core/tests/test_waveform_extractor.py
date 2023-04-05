@@ -55,11 +55,10 @@ def test_WaveformExtractor():
             else:
                 wf_folder = folder
 
-            we = WaveformExtractor.create(recording, sorting, wf_folder, mode=mode, sparsity=sparsity)
-            we.set_params(ms_before=1., ms_after=1.6, max_spikes_per_unit=500)
-            we.run_extract_waveforms(n_jobs=1, chunk_size=30000)
-            we.run_extract_waveforms(n_jobs=4, chunk_size=30000, progress_bar=True)
-
+            sparse = sparsity is not None
+            we = extract_waveforms(recording, sorting, wf_folder, mode=mode, sparsity=sparsity, sparse=sparse,
+                                   ms_before=1., ms_after=1.6, max_spikes_per_unit=500,
+                                   n_jobs=4, chunk_size=30000, progress_bar=True)
             num_samples = int(sampling_frequency * (1 + 1.6) / 1000.)
             wfs = we.get_waveforms(0)
             print(wfs.shape, num_samples)
@@ -429,8 +428,7 @@ def test_portability():
     # move all to a separate folder
     shutil.copytree(folder_to_move, folder_moved)
     wf_folder_moved = folder_moved / "waveform_extractor"
-    we_loaded = extract_waveforms(
-        recording, sorting, wf_folder_moved, load_if_exists=True)
+    we_loaded = load_waveforms(folder=wf_folder_moved, with_recording=True, sorting=sorting)
 
     assert we_loaded.recording is not None
     assert we_loaded.sorting is not None

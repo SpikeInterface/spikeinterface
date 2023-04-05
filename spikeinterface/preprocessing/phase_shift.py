@@ -65,7 +65,7 @@ class PhaseShiftRecording(BasePreprocessor):
         # for dumpability
         if inter_sample_shift is not None:
             inter_sample_shift = list(inter_sample_shift)
-        self._kwargs = dict(recording=recording.to_dict(), margin_ms=float(margin_ms),
+        self._kwargs = dict(recording=recording, margin_ms=float(margin_ms),
                              inter_sample_shift=inter_sample_shift)
 
 

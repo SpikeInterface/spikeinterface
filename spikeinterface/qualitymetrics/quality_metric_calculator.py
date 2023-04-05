@@ -168,7 +168,7 @@ def compute_quality_metrics(waveform_extractor, load_if_exists=False,
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor to compute metrics on.
-    load_if_exists : bool, optional, default: False
+    load_if_exists : bool, default: False
         Whether to load precomputed quality metrics, if they already exist.
     metric_names : list or None
         List of quality metrics to compute.

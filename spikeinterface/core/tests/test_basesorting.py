@@ -4,13 +4,16 @@ but check only for BaseRecording general methods.
 """
 import shutil
 from pathlib import Path
-import pytest
+
 import numpy as np
+import pytest
+from numpy.testing import assert_raises
 
-from spikeinterface.core import NumpySorting, NpzSortingExtractor, load_extractor
+from spikeinterface.core import (NpzSortingExtractor, NumpyRecording,
+                                 NumpySorting, create_sorting_npz,
+                                 generate_sorting, load_extractor)
 from spikeinterface.core.base import BaseExtractor
-
-from spikeinterface.core import create_sorting_npz, generate_sorting
+from spikeinterface.core.testing import check_sorted_arrays_equal
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
@@ -89,6 +92,44 @@ def test_BaseSorting():
         assert unit not in empty_units
 
 
+def test_npy_sorting():
+    sfreq = 10
+    spike_times_0 = {
+        "0": np.array([0, 1, 9]), # Max sample idx is 9 for a rec of length 10
+        "1": np.array([2, 5]),
+    }
+    spike_times_1 = {
+        "0": np.array([0, 1]),
+        "1": np.array([], dtype="int64"),
+    }
+    sorting = NumpySorting.from_dict(
+        [spike_times_0, spike_times_1], sfreq,
+    )
+
+    assert sorting.get_num_segments() == 2
+    assert set(sorting.get_unit_ids()) == set(["0", "1"])
+    check_sorted_arrays_equal(sorting.get_unit_spike_train(segment_index=0, unit_id="1"), [2, 5])
+
+    # Check registering a recording
+    seg_nframes = [10, 5]
+    rec = NumpyRecording([np.zeros((nframes, 10)) for nframes in seg_nframes], sampling_frequency=sfreq)
+    sorting.register_recording(rec)
+    assert sorting.get_num_samples(segment_index=0) == 10
+    assert sorting.get_num_samples(segment_index=1) == 5
+    assert sorting.get_total_samples() == 15
+
+    # Registering too short a recording raises a warning
+    seg_nframes = [9, 5]
+    rec = NumpyRecording([np.zeros((nframes, 10)) for nframes in seg_nframes], sampling_frequency=sfreq)
+    # assert_raises(Exception, sorting.register_recording, rec)
+    with pytest.warns():
+        sorting.register_recording(rec)
+
+    # Registering a rec with too many segments
+    seg_nframes = [9, 5, 10]
+    rec = NumpyRecording([np.zeros((nframes, 10)) for nframes in seg_nframes], sampling_frequency=sfreq)
+    assert_raises(Exception, sorting.register_recording, rec)
+
 def test_empty_sorting():
     sorting = NumpySorting.from_dict({}, 30000)
 
@@ -105,4 +146,5 @@ def test_empty_sorting():
 
 if __name__ == '__main__':
     test_BaseSorting()
+    test_npy_sorting()
     test_empty_sorting()

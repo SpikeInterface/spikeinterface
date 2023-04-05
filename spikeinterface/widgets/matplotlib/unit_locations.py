@@ -12,6 +12,8 @@ from matplotlib.patches import Ellipse
 from matplotlib.lines import Line2D
 
 class UnitLocationsPlotter(MplPlotter):
+    def __init__(self) -> None:
+        self.legend = None
 
     def do_plot(self, data_plot, **backend_kwargs):
         dp = to_attr(data_plot)
@@ -68,8 +70,10 @@ class UnitLocationsPlotter(MplPlotter):
                           color=unit_colors[unit]) for unit in dp.unit_ids]
 
         if dp.plot_legend:
-            self.figure.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.),
-                           ncol=5, fancybox=True, shadow=True)
+            if self.legend is not None:
+                self.legend.remove()
+            self.legend = self.figure.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.),
+                                             ncol=5, fancybox=True, shadow=True)
 
         if dp.hide_axis:
             self.ax.axis("off")

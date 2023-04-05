@@ -14,11 +14,11 @@ results.
 
 **Note** : :py:func:`~spikeinterface.exporters.export_to_phy` speed and the size of the folder will highly depend
 on the sparsity of the :code:`WaveformExtractor` itself or the external specified sparsity.
-The Phy viewer enables one to explore PCA projections, spike amplitudes, waveforms and quality of the results. 
-So if these pieces of information have already been computed as extensions as already (see :ref:`waveform_extensions`), 
-then exporting to Phy should be fast (and the user has better control on the parameters for the extensions).
+The Phy viewer enables one to explore PCA projections, spike amplitudes, waveforms and quality of spike sorting results. 
+So if these pieces of information have already been computed as extensions (see :ref:`waveform_extensions`), 
+then exporting to Phy should be fast (and the user has better control of the parameters for the extensions).
 If not pre-computed, then the required extensions (e.g., :code:`spike_amplitudes`, :code:`principal_components`) 
-can be computed direcly at export time.
+can be computed directly at export time.
 
 The input of the :py:func:`~spikeinterface.exporters.export_to_phy` is a :code:`WaveformExtractor` object.
 
@@ -27,7 +27,7 @@ The input of the :py:func:`~spikeinterface.exporters.export_to_phy` is a :code:`
     from spikeinterface.postprocessing import compute_spike_amplitudes, compute_principal_components
     from spikeinterface.exporters import export_to_phy
 
-    # the waveforms is sparse so it is faster to export to phy
+    # the waveforms are sparse so it is faster to export to phy
     folder = 'waveforms'
     we = extract_waveforms(recording, sorting, folder, sparse=True)
 
@@ -71,7 +71,7 @@ with many units!
     from spikeinterface.exporters import export_report
 
 
-    # the waveforms is sparse for better interpretable figures
+    # the waveforms are sparse for more interpretable figures
     we = extract_waveforms(recording, sorting, folder='path/to/wf', sparse=True)
 
     # some computations are done before to control all options

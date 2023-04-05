@@ -15,8 +15,8 @@ Since version 0.95.0, the :py:mod:`spikeinterface.widgets` module supports multi
   | and `FIGURL <https://github.com/flatironinstitute/figurl>`_ packages.
 
 
-Installaling backends
----------------------
+Installing backends
+-------------------
 
 The backends are loaded at run-time and can be installed separately. Alternatively, all dependencies from all 
 backends can be installed with:
@@ -114,7 +114,7 @@ The :code:`plot_*(..., backend="matplotlib")` functions come with the following 
 
 * :code:`figure`: Matplotlib figure. When None, it is created. Default None
 * :code:`ax`: Single matplotlib axis. When None, it is created. Default None
-* :code:`axes`: Multiple matplotlib axes. When None, they is created. Default None
+* :code:`axes`: Multiple matplotlib axes. When None, they are created. Default None
 * :code:`ncols`: Number of columns to create in subplots.  Default 5
 * :code:`figsize`: Size of matplotlib figure. Default None
 * :code:`figtitle`: The figure title. Default None
@@ -146,7 +146,7 @@ Each function has the following additional arguments:
 
     from spikeinterface.preprocessing import common_reference
 
-    # ipywidgets backend also supports multiple "layers" fro plot_timeseries
+    # ipywidgets backend also supports multiple "layers" for plot_timeseries
     rec_dict = dict(filt=recording, cmr=common_reference(recording))
     w = sw.plot_timeseries(rec_dict, backend="ipywidgets")
 
@@ -158,7 +158,7 @@ Each function has the following additional arguments:
 sortingview
 ^^^^^^^^^^^
 
-The :code:`plot_*(..., backend="sortingview")` generate web-based GUIs, which are also shareable link (provided 
+The :code:`plot_*(..., backend="sortingview")` generate web-based GUIs, which are also shareable with a link (provided 
 that :code:`kachery-cloud` is correctly setup, see :ref:`sorting_view`). 
 The functions have the following additional arguments:
 
@@ -234,8 +234,8 @@ Available plotting functions
 * :py:func:`~spikeinterface.widgets.plot_unit_locations` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_unit_summary` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_unit_templates` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
-* :py:func:`~spikeinterface.widgets.plot_unit_waveforms_density_map` (backends: :code:`matplotlib`, :code:`ipywidgets`)
-* :py:func:`~spikeinterface.widgets.plot_unit_waveforms` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_unit_waveforms_density_map` (backends: :code:`matplotlib`)
+* :py:func:`~spikeinterface.widgets.plot_unit_waveforms` (backends: :code:`matplotlib`, :code:`ipywidgets`)
 
 
 Legacy plotting functions

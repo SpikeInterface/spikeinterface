@@ -81,15 +81,15 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     Parameters
     ----------
     folder_path: str
-        The folder path to load the recordings from.
+        The folder path to the root folder (containing the record node folders).
     load_sync_channel : bool
         If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
         If True, the SYNC channel is loaded and can be accessed in the analog signals.
-    load_sync_channel : bool
+    load_sync_timestamps : bool
         If True, the synchronized_timestamps are loaded and set as times to the recording.
         If False (default), only the t_start and sampling rate are set, and timestamps are assumed
         to be uniform and linearly increasing.
-    experiment_name: str, list, or None
+    experiment_names: str, list, or None
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
         E.g. 'experiment_names="experiment2"', 'experiment_names=["experiment1", "experiment2"]'

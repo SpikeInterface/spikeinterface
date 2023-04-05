@@ -75,7 +75,7 @@ class TestWidgets(unittest.TestCase):
         cls.backend_kwargs = {
             'matplotlib': {},
             'sortingview': {},
-            'ipywidgets': {}
+            'ipywidgets': {'display': False}
         }
 
         cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
@@ -247,7 +247,7 @@ if __name__ == '__main__':
     mytest = TestWidgets()
     mytest.setUpClass()
 
-    mytest.test_plot_unit_waveforms_density_map()
+    # mytest.test_plot_unit_waveforms_density_map()
     # mytest.test_plot_unit_summary()
     # mytest.test_plot_all_amplitudes_distributions()
     # mytest.test_plot_timeseries()
@@ -258,7 +258,7 @@ if __name__ == '__main__':
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_summary()
     mytest.test_quality_metrics()
-    mytest.test_sorting_summary()
+    mytest.test_template_metrics()
 
     # plt.ion()
     plt.show()
