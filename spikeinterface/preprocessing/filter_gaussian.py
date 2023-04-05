@@ -42,8 +42,9 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment: BaseRecordingSegment, freq_min: float, freq_max: float):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
-        self.freq_min  = freq_min
+        self.freq_min = freq_min
         self.freq_max = freq_max
+        self.cached_gaussian  = dict()
 
         sf = parent_recording_segment.sampling_frequency
         low_sigma  = sf / (2*np.pi * freq_min)
@@ -69,6 +70,9 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
             return filtered_traces[left_margin:, :].astype(dtype)
 
     def _create_gaussian(self, N: int, cutoff_f: float):
+        if cutoff_f in self.cached_gaussian and N in self.cached_gaussian[cutoff_f]:
+            return self.cached_gaussian[cutoff_f][N]
+
         sf = self.parent_recording_segment.sampling_frequency
         faxis = np.fft.fftfreq(N, d=1/sf)
 
@@ -77,8 +81,14 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
             limit = int(round(6*sigma)) + 1
             xaxis = np.arange(-limit, limit+1) / sigma
             gaussian = norm.pdf(xaxis) / sigma
-            return np.abs(np.fft.fft(gaussian, n=N))
+            gaussian = np.abs(np.fft.fft(gaussian, n=N))
         else:
-            return norm.pdf(faxis / cutoff_f) * np.sqrt(2*np.pi)
+            gaussian = norm.pdf(faxis / cutoff_f) * np.sqrt(2*np.pi)
+
+        if cutoff_f not in self.cached_gaussian:
+            self.cached_gaussian[cutoff_f] = dict()
+        self.cached_gaussian[cutoff_f][N] = gaussian
+
+        return gaussian
 
 gaussian_bandpass_filter = define_function_from_class(source_class=GaussianBandpassFilterRecording, name="gaussian_filter")
