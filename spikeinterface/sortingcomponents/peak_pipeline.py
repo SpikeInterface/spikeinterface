@@ -368,7 +368,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
         if isinstance(node, PeakDetector):
             # to handle compatibility peak detector is a special case
             # with specific margin
-            #  TODO : change this later
+            #  TODO later when in master: change this later
             extra_margin = max_margin - node.get_trace_margin()
             if extra_margin:
                 trace_detection = traces_chunk[extra_margin:-extra_margin]
@@ -380,6 +380,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
         elif isinstance(node, PeakRetriever):
             node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
         else:
+            # TODO later when in master: change the signature of all nodes (or maybe not!)
             node_output = node.compute(traces_chunk,  *node_input_args)
         pipeline_outputs[node] = node_output
 
@@ -404,13 +405,13 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
 def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeline', 
                       gather_mode='memory', squeeze_output=True, folder=None, names=None,
                       ):
-    """
-    Run one or several PeakPipelineStep on already detected peaks.
-    TODO : check that function is useless.
-    """
-    node0 = PeakRetriever(recording, peaks)
+    # TODO remove this soon
+    import warnings
+    warnings.warn("run_peak_pipeline() is deprecated use run_pipeline() instead",
+                  DeprecationWarning, stacklevel=2)
 
-    # because node are modified inplace (insert parent) they need to copy incase
+    node0 = PeakRetriever(recording, peaks)
+    # because nodes are modified inplace (insert parent) they need to copy incase
     # the same pipeline is run several times
     nodes = copy.deepcopy(nodes)
 
@@ -423,7 +424,6 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
     outs = run_pipeline(recording, all_nodes, job_kwargs, job_name=job_name, gather_mode=gather_mode, 
                 squeeze_output=squeeze_output, folder=folder, names=names)
     return outs
-
 
 
 

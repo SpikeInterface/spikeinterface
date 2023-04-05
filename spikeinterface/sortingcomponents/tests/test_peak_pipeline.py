@@ -63,7 +63,7 @@ class WaveformsRootMeanSquare(PipelineNode):
         return rms_by_channels
 
 
-def test_run_peak_pipeline():
+def test_run_pipeline():
 
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
     remote_path = 'mearec/mearec_test_10s.h5'
@@ -156,4 +156,4 @@ def test_run_peak_pipeline():
         unpickled_node = pickle.loads(pickled_node)
 
 if __name__ == '__main__':
-    test_run_peak_pipeline()
+    test_run_pipeline()

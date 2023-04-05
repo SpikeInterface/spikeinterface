@@ -107,6 +107,11 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
 
 class PeakDetectorWrapper(PeakDetector):
     # transitory class to maintain instance based and class method based
+    # TODO later when in master: refactor in every old detector class:
+    #    * check_params
+    #    * get_method_margin
+    #  and move the logic in the init
+    #  but keep the class method "detect_peaks()" because it is convinient in template matching
     def __init__(self, recording, **params):
         PeakDetector.__init__(self, recording, return_output=True)
 
@@ -115,7 +120,6 @@ class PeakDetectorWrapper(PeakDetector):
     def get_trace_margin(self):
         return self.get_method_margin(*self.args)
 
-    # TODO push segment_index in all nodes
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         
         peak_sample_ind, peak_chan_ind = self.detect_peaks(traces, *self.args)
