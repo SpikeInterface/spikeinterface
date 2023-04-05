@@ -3,6 +3,9 @@ name: Testing core
 on:
   pull_request:
     types: [synchronize, opened, reopened]
+    branches:
+      - master
+      - main
 
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -29,7 +32,7 @@ jobs:
           pip install -e .[test_core]
       - name: Test core with pytest
         run: |
-          pytest -vv -ra --durations=0 --durations-min=0.001 spikeinterface/core | tee report.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
+          pytest -vv -ra --durations=0 --durations-min=0.001 src/spikeinterface/core | tee report.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
         shell: bash  # Necessary for pipeline to work on windows
       - name: Build test summary
         run: | 
