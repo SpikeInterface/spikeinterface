@@ -184,11 +184,9 @@ class NwbRecordingExtractor(BaseRecording):
 
         # Fill channel properties dictionary from electrodes table
         if "channel_name" in self._nwbfile.electrodes.colnames:
-            channel_ids = self._es.electrodes["channel_name"][:].astype("str")
+            channel_ids = [self._es.electrodes["channel_name"][i] for i in self._es.electrodes.data]
         else:
             channel_ids = [self._es.electrodes.table.id[x] for x in self._es.electrodes.data]
-        num_traces = self._es.data.shape[1] 
-        channel_ids = channel_ids[0:num_traces]
         
         dtype = self._es.data.dtype
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
