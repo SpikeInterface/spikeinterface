@@ -176,7 +176,6 @@ class NwbRecordingExtractor(BaseRecording):
             times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
 
         num_frames = int(self._es.data.shape[0])
-        num_channels = len(self._es.electrodes.data)
 
         # Extractors channel groups must be integers, but Nwb electrodes group_name can be strings
         if 'group_name' in self._nwbfile.electrodes.colnames:
