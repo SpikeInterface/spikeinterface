@@ -15,11 +15,11 @@ WaveformExtractor extensions
 There are several postprocessing tools available, and all 
 of them are implemented as a :py:class:`~spikeinterface.core.BaseWaveformExtractorExtension`. All computations on top
 of a WaveformExtractor will be saved along side the WaveformExtractor itself (sub  folder, zarr path or sub dict).
-This workflow is convinient to retrieve long computation (such as pca or spike amplitudes) when reloading  
+This workflow is convenient for retrieval of time-consuming computations (such as pca or spike amplitudes) when reloading a 
 WaveformExtractor.
 
-:py:class:`~spikeinterface.core.BaseWaveformExtractorExtension`  objects are tightly  connected to the
-parent :code:`WaveformExtractor` object, so that operations done onc the :code:`WaveformExtractor`, such as saving,
+:py:class:`~spikeinterface.core.BaseWaveformExtractorExtension`  objects are tightly connected to the
+parent :code:`WaveformExtractor` object, so that operations done on the :code:`WaveformExtractor`, such as saving,
 loading, or selecting units, will be automatically applied to all extensions.
 
 To check what extensions are available for a :code:`WaveformExtractor` named :code:`we`, you can use:
@@ -35,7 +35,7 @@ To check what extensions are available for a :code:`WaveformExtractor` named :co
 
     ["principal_components", "spike_amplitudes"]
 
-In this case, for example, principal components and spike amplitudes have been already computed.
+In this case, for example, principal components and spike amplitudes have already been computed.
 To load the extension object you can run:
 
 .. code-block:: python
@@ -56,7 +56,7 @@ We can also delete an extension:
 
 
 
-Available postptocessing extensions
+Available postprocessing extensions
 -----------------------------------
 
 noise_levels
@@ -117,7 +117,7 @@ spike_locations
 ^^^^^^^^^^^^^^^
 
 
-This extension estimates the location of each spike in the sorting output. Spike locations estimates can be done either 
+This extension estimates the location of each spike in the sorting output. Spike location estimates can be done either 
 with center of mass (:code:`method="center_of_mass"` - fast, but less accurate), or using a monopolar triangulation 
 (:code:`method="monopolar_triangulation"` - slow, but more accurate). 
 
@@ -131,8 +131,8 @@ unit locations
 ^^^^^^^^^^^^^^
 
 
-This extension is similar to the :code:`spike_locations`, but instead to estimate a location for each spike it computes 
-at the unit level, using the templates instead of individual waveforms. The same localization methods 
+This extension is similar to the :code:`spike_locations`, but instead of estimating a location for each spike
+based on individual waveforms, it calculates at the unit level using templates. The same localization methods 
 (:code:`method="center_of_mass" | "monopolar_triangulation"`) are available.
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_unit_locations`
@@ -161,7 +161,7 @@ For more information, see :py:func:`~spikeinterface.postprocessing.compute_templ
 correlograms
 ^^^^^^^^^^^^
 
-This extension computes correlograms (both auto- and cross-) from spike trains. The computed output is a 3d array 
+This extension computes correlograms (both auto- and cross-) for spike trains. The computed output is a 3d array 
 with shape (num_units, num_units, num_bins) with all correlograms for each pair of units (diagonals are auto-correlograms).
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_correlograms`
@@ -182,7 +182,7 @@ Other postprocessing tools
 align_sorting
 ^^^^^^^^^^^^^
 
-This function aligns the spike trains a :code:`BaseSorting` object using pre-computed shits of misaligned templates.
+This function aligns the spike trains :code:`BaseSorting` object using pre-computed shifts of misaligned templates.
 To compute shifts, one can use the :py:func:`~spikeinterface.core.get_template_extremum_channel_peak_shift` function.
 
 For more information, see :py:func:`~spikeinterface.postprocessing.align_sorting`

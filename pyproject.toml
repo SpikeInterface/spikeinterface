@@ -39,11 +39,13 @@ package-data = {"spikeinterface.sorters" = ["**/*.m", "**/*.prm", "**/*.params",
 spikeinterface = ["**/tests/test_*"]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 include = ["spikeinterface*"]
 namespaces = false
 exclude = ["spikeinterface.*.tests"]
 
+[tool.black]
+line-length = 120
 
 [project.urls]
 homepage = "https://github.com/SpikeInterface/spikeinterface"
@@ -58,13 +60,13 @@ extractors = [
     "MEArec>=1.8",
     "pynwb>=2.1.0",
     "pyedflib>=0.1.30",
-    "sonpy;python_version>'3.7'",
+    "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
     "hdf5storage", # hdf5storage and scipy for cellexplorer
     "scipy",
     # ONE-api and ibllib for streaming IBL
     "ONE-api>=1.19.1",
-    "ibllib>=2.20.0",
+    "ibllib>=2.21.0",
 ]
 
 full = [
@@ -77,6 +79,7 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
+    "cuda-python",
 ]
 
 widgets = [
@@ -87,6 +90,12 @@ widgets = [
     "figurl-jupyter"
 ]
 
+test_core = [
+    "pytest",
+    "zarr",
+    "psutil",
+]
+
 test = [
     "pytest",
     "pytest-cov",
@@ -94,6 +103,7 @@ test = [
     # zarr is needed for testing
     "zarr",
     "xarray",
+    "huggingface_hub",
 
     # tridesclous
     "numpy<1.24",
@@ -107,14 +117,8 @@ test = [
     # so we use an old one here
     "datalad==0.16.2",
 
-    ## install sorters ##
+    ## install tridesclous for testing ##
     "tridesclous>=1.6.6.1",
-
-    ## spyking-circus - mpi is buggy in 3.9
-    # "spyking-circus",
-
-    ## herdingspikes
-    "herdingspikes<=0.3.99",
 
     ## sliding_nn
     "pymde",
@@ -129,9 +133,6 @@ test = [
 ]
 
 
-
-
-
 [tool.pytest.ini_options]
 markers = [
     "core",
@@ -140,10 +141,15 @@ markers = [
     "postprocessing",
     "qualitymetrics",
     "sorters",
-    "si_sorters",
+    "sorters_external",
+    "sorters_internal",
     "comparison",
     "curation",
     "exporters",
     "widgets",
     "sortingcomponents",
+]
+filterwarnings =[
+    'ignore:.*distutils Version classes are deprecated.*:DeprecationWarning',
+    'ignore:.*the imp module is deprecated in favour of importlib.*:DeprecationWarning',
 ]

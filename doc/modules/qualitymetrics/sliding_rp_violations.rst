@@ -16,8 +16,8 @@ Expectation and use
 -------------------
 
 Similar to the :ref:`ISI violations <ISI>` metric, this metric quantifies the number of refractory period violations seen in the recording of the unit.
-This is an estimate of false positive rate.
-A high number of violations indicates contamination, so a low value is expected for true units.
+This is an estimate of the false positive rate.
+A high number of violations indicates contamination, so a low value is expected for high quality units.
 
 
 Example code

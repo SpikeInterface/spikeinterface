@@ -28,8 +28,8 @@
 <tr>
   <td>Build Status</td>
   <td>
-    <a href="https://github.com/SpikeInterface/spikeinterface/actions/workflows/full-test.yml/badge.svg">
-    <img src="https://github.com/SpikeInterface/spikeinterface/actions/workflows/full-test.yml/badge.svg" alt="travis build status" />
+    <a href="https://github.com/SpikeInterface/spikeinterface/actions/workflows/full-test-with-codecov.yml/badge.svg">
+    <img src="https://github.com/SpikeInterface/spikeinterface/actions/workflows/full-test-with-codecov.yml/badge.svg" alt="CI build status" />
     </a>
   </td>
 </tr>
@@ -90,7 +90,7 @@ The `[full]` option installs all the extra dependencies for all the different su
 To install all interactive widget backends, you can use:
 
 ```bash
- pip install spikeinterface[full, widgets]
+ pip install spikeinterface[full,widgets]
 ```
 
 

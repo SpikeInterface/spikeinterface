@@ -11,10 +11,10 @@ A histogram of spike amplitudes is created and deviations from the expected symm
 Expectation and use
 -------------------
 
-Deviations from the expected Gaussian distributions are used to estimate the number of spikes missing from the unit.
+Deviations from the expected Gaussian distribution are used to estimate the number of spikes missing from the unit.
 This yields an estimate of the number of spikes missing from the unit (false negative rate).
-A smaller value for this metric is preferred, as this indicates few false negatives.
-The distributions can be computed on chunks for larger recording, as drift can impact the spike amplitudes (and thus not give a Gaussian distribution anymore).
+A smaller value for this metric is preferred, as this indicates fewer false negatives.
+The distribution can be computed on chunks for larger recording, as drift can impact the spike amplitudes (and thus not give a Gaussian distribution anymore).
 
 Example code
 ------------
@@ -26,7 +26,7 @@ Example code
 	# It is also recommended to run `compute_spike_amplitudes(wvf_extractor)`
 	# in order to use amplitudes from all spikes
 	fraction_missing = qm.compute_amplitude_cutoffs(wvf_extractor, peak_sign="neg")
-	# fraction_missing is a dict containing the units' ID as keys,
+	# fraction_missing is a dict containing the units' IDs as keys,
 	# and their estimated fraction of missing spikes as values.
 
 Reference

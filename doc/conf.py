@@ -104,6 +104,8 @@ except ImportError:
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = ['_static']
 
+html_favicon = "images/favicon-32x32.png"
+
 
 from sphinx_gallery.sorting import ExplicitOrder
 from sphinx_gallery.sorting import FileNameSortKey
@@ -130,5 +132,5 @@ intersphinx_mapping = {
 }
 
 extlinks = {
-    "probeinterface": ("https://probeinterface.readthedocs.io/", "%s"),
+    "probeinterface": ("https://probeinterface.readthedocs.io/%s", None),
 }
