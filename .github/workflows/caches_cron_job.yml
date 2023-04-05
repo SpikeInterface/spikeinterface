@@ -5,6 +5,7 @@ on:
   push:  # When someting is pushed into main this checks if caches need to re-created
     branches:
       - master
+      - main
   schedule:
     - cron: "0 12 * * *"  # Daily at noon UTC
 
