@@ -110,6 +110,14 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, qm_params=None,
         pc_metrics['nn_hit_rate'] = {}
         pc_metrics['nn_miss_rate'] = {}
 
+    # Compute nspikes and firing rate outside of main loop for speed
+    if any([n in metric_names for n in ["nn_isolation", "nn_noise_overlap"]]):
+        n_spikes_all_units = compute_num_spikes(we)
+        fr_all_units = compute_firing_rates(we)
+    else:
+        n_spikes_all_units = None
+        fr_all_units = None
+
     run_in_parallel = n_jobs > 1
 
     units_loop = enumerate(unit_ids)
@@ -138,7 +146,7 @@ def calculate_pc_metrics(pca, metric_names=None, sparsity=None, qm_params=None,
         pcs = all_pcs[np.in1d(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
         pcs_flat = pcs.reshape(pcs.shape[0], -1)
 
-        func_args = (pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params, seed, we.folder)
+        func_args = (pcs_flat, labels, metric_names, unit_id, unit_ids, qm_params, seed, we.folder, n_spikes_all_units, fr_all_units)
 
         if not run_in_parallel:
             pca_metrics_unit = pca_metrics_one_unit(*func_args)
@@ -338,6 +346,7 @@ def nearest_neighbors_metrics(all_pcs, all_labels, this_unit_id, max_spikes, n_n
 
 
 def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit_id: int,
+                                n_spikes_all_units: dict = None, fr_all_units: dict = None,
                                 max_spikes: int = 1000, min_spikes: int = 10,
                                 min_fr: float = 0.0, n_neighbors: int = 5,
                                 n_components: int = 10, radius_um: float = 100,
@@ -351,6 +360,12 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
         The waveform extractor object.
     this_unit_id : int
         The ID for the unit to calculate these metrics for.
+    n_spikes_all_units: dict, default: None
+        Dictionary of the form ``{<unit_id>: <n_spikes>}`` for the waveform extractor.
+        Recomputed if None.
+    fr_all_units: dict, default: None
+        Dictionary of the form ``{<unit_id>: <firing_rate>}`` for the waveform extractor.
+        Recomputed if None.
     max_spikes : int, default: 1000
         Max number of spikes to use per unit.
     min_spikes : int, optional, default: 10
@@ -416,8 +431,10 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
 
     sorting = waveform_extractor.sorting
     all_units_ids = sorting.get_unit_ids()
-    n_spikes_all_units = compute_num_spikes(waveform_extractor)
-    fr_all_units = compute_firing_rates(waveform_extractor)
+    if n_spikes_all_units is None:
+        n_spikes_all_units = compute_num_spikes(waveform_extractor)
+    if fr_all_units is None:
+        fr_all_units = compute_firing_rates(waveform_extractor)
 
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
@@ -508,6 +525,7 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
 
 
 def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor, this_unit_id: int,
+                                    n_spikes_all_units: dict = None, fr_all_units: dict = None,
                                     max_spikes: int = 1000, min_spikes: int = 10,
                                     min_fr: float = 0.0, n_neighbors: int = 5,
                                     n_components: int = 10, radius_um: float = 100,
@@ -520,6 +538,12 @@ def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor, this_
         The waveform extractor object.
     this_unit_id : int
         The ID of the unit to calculate this metric on.
+    n_spikes_all_units: dict, default: None
+        Dictionary of the form ``{<unit_id>: <n_spikes>}`` for the waveform extractor.
+        Recomputed if None.
+    fr_all_units: dict, default: None
+        Dictionary of the form ``{<unit_id>: <firing_rate>}`` for the waveform extractor.
+        Recomputed if None.
     max_spikes : int, default: 1000
         The max number of spikes to use per cluster.
     min_spikes : int, optional, default: 10
@@ -566,8 +590,10 @@ def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor, this_
     """
     rng = np.random.default_rng(seed=seed)
 
-    n_spikes_all_units = compute_num_spikes(waveform_extractor)
-    fr_all_units = compute_firing_rates(waveform_extractor)
+    if n_spikes_all_units is None:
+        n_spikes_all_units = compute_num_spikes(waveform_extractor)
+    if fr_all_units is None:
+        fr_all_units = compute_firing_rates(waveform_extractor)
 
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
@@ -710,7 +736,8 @@ def _compute_isolation(pcs_target_unit, pcs_other_unit, n_neighbors: int):
 
 
 def pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id,
-                         unit_ids, qm_params, seed, we_folder):
+                         unit_ids, qm_params, seed, we_folder,
+                         n_spikes_all_units, fr_all_units):
     if 'nn_isolation' in metric_names or 'nn_noise_overlap' in metric_names:
         we = load_waveforms(we_folder)
 
@@ -749,14 +776,21 @@ def pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id,
 
     if 'nn_isolation' in metric_names:
         try:
-            nn_isolation = nearest_neighbors_isolation(we, unit_id, seed=seed, **qm_params['nn_isolation'])
+            nn_isolation = nearest_neighbors_isolation(
+                we, unit_id, seed=seed, n_spikes_all_units=n_spikes_all_units,
+                fr_all_units=fr_all_units, **qm_params['nn_isolation']
+            )
         except:
             nn_isolation = np.nan
         pc_metrics['nn_isolation'] = nn_isolation
 
     if 'nn_noise_overlap' in metric_names:
         try:
-            nn_noise_overlap = nearest_neighbors_noise_overlap(we, unit_id, seed=seed, **qm_params['nn_noise_overlap'])
+            nn_noise_overlap = nearest_neighbors_noise_overlap(
+                we, unit_id, n_spikes_all_units=n_spikes_all_units,
+                fr_all_units=fr_all_units, seed=seed,
+                **qm_params['nn_noise_overlap']
+            )
         except:
             nn_noise_overlap = np.nan
         pc_metrics['nn_noise_overlap'] = nn_noise_overlap
