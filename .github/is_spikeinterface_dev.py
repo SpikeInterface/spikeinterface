@@ -1,6 +1,5 @@
-import importlib.metadata
+import spikeinterface
 
-package_name = "spikeinterface"
-version = importlib.metadata.version(package_name)
+version = spikeinterface.__version__
 if version.endswith("dev0"):
     print(True)
