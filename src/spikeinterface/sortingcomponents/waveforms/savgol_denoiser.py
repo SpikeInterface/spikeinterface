@@ -8,6 +8,17 @@ from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, Wavefor
 
 
 class SavGolDenoiser(WaveformExtractorNode):
+    """
+    Waveform Denoiser based on a simple Savitky Golay filtering
+
+    Parameters
+    ----------
+    order: int 
+        the order of the filter (default 3)
+    window_length_ms: float
+        the temporal duration of the filter in ms (default 0.25)
+    """
+
     def __init__(
         self, recording: BaseRecording, return_output: bool = True, 
         parents: Optional[List[PipelineNode]] = None,

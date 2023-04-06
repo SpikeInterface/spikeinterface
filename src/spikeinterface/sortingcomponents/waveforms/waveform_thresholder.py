@@ -12,6 +12,18 @@ from spikeinterface.sortingcomponents.peak_pipeline import (
 
 
 class WaveformThresholder(WaveformExtractorNode):
+    """
+    Waveform Thresholder based on selected feature
+    This allow to perform an adaptive masking, by setting to 0 channels
+    that have a given feature below a given threshold
+
+    Parameters
+    ----------
+    feature: string in ['ptp', 'mean', 'energy', 'v_peak']
+        the feature that should be considered
+    threshold: float
+        the threshold below which channels are set to 0
+    """
 
     def __init__(
         self, recording: BaseRecording, return_output: bool = True, 
@@ -40,7 +52,7 @@ class WaveformThresholder(WaveformExtractorNode):
         elif self.feature == 'energy':
             wf_data = np.linalg.norm(waveforms, axis=1)
         elif self.feature == 'v_peak':
-            wf_data = waveforms[idx][:, self.nbefore, :]
+            wf_data = waveforms[:, self.nbefore, :]
 
         mask = wf_data < self.threshold
         mask = np.repeat(mask[:, np.newaxis, :], waveforms.shape[1], axis=1)
