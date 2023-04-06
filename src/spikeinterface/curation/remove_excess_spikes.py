@@ -8,14 +8,14 @@ from ..core.waveform_tools import has_exceeding_spikes
 class RemoveExcessSpikesSorting(BaseSorting):
     """
     Class to remove excess spikes from the spike trains.
-    Excess spikes are the ones exceeding a recording number of samples, for each segment
+    Excess spikes are the ones exceeding a recording number of samples, for each segment.
 
     Parameters
     ----------
     sorting: BaseSorting
         The parent sorting.
     recording: BaseRecording
-        The recording to use to get number of samples.
+        The recording to use to get the number of samples.
 
     Returns
     -------
@@ -60,14 +60,14 @@ class RemoveExcessSpikesSortingSegment(BaseSortingSegment):
 def remove_excess_spikes(sorting, recording):
     """
     Remove excess spikes from the spike trains.
-    Excess spikes are the ones exceeding a recording number of samples, for each segment
+    Excess spikes are the ones exceeding a recording number of samples, for each segment.
 
     Parameters
     ----------
     sorting: BaseSorting
         The parent sorting.
     recording: BaseRecording
-        The recording to use to get number of samples.
+        The recording to use to get the number of samples.
 
     Returns
     -------
