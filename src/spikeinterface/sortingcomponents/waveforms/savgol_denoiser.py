@@ -14,6 +14,12 @@ class SavGolDenoiser(WaveformExtractorNode):
 
     Parameters
     ----------
+    recording: BaseRecording
+        The recording extractor object.
+    return_output: bool, optional
+        Whether to return output from this node (default True).
+    parents: list of PipelineNodes, optional
+        The parent nodes of this node (default None).
     order: int 
         the order of the filter (default 3)
     window_length_ms: float
