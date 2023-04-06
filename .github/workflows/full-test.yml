@@ -71,6 +71,7 @@ jobs:
       - name: Check if running spikeinterface env and set environment variable
         id: version
         run: |
+          source ~/test_env/bin/activate
           if python ./.github/is_spikeinterface_dev.py; then
             echo "Running spikeinterface dev version"
             echo "DEV_VERSION=true" >> $GITHUB_ENV
@@ -82,6 +83,7 @@ jobs:
       - name: Force installation of key-packages when running dev
         if: steps.version.outputs.dev_version == 'true'
         run: |
+          source ~/test_env/bin/activate
           pip uninstall -y neo
           pip uninstall -y probeinterface
           pip install git+https://github.com/NeuralEnsemble/python-neo
