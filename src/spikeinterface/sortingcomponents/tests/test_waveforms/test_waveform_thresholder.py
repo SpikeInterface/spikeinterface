@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 
 
 from spikeinterface.sortingcomponents.waveforms.waveform_thresholder import WaveformThresholder
@@ -31,4 +32,4 @@ def test_waveform_thresholder(mearec_recording, detected_peaks, chunk_executor_k
     waveforms, tresholded_waveforms = run_peak_pipeline(
         recording, peaks, nodes=pipeline_nodes, job_kwargs=chunk_executor_kwargs
     )
-    assert np.all(tresholded_waveforms.ptp(axis=1) < 3)
+    assert np.all(tresholded_waveforms.ptp(axis=1) > 3)
