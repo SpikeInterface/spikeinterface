@@ -35,7 +35,7 @@ if __name__ == "__main__":
     else:
         mp_context = None # default 
     
-    number_of_files = int(1e3)
+    number_of_files = 1500
     
     job_kwargs = {
         "chunk_duration": "0.05s",
