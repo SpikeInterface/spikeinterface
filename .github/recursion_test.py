@@ -26,7 +26,7 @@ def copy_folder_n_times(directory_path, n_times):
 
 
 if __name__ == "__main__":
-    number_of_files = int(1e4)
+    number_of_files = int(1e3)
     job_kwargs = {
         "chunk_duration": "0.05s",
         "n_jobs": -1,
