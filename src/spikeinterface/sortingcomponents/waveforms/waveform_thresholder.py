@@ -34,8 +34,8 @@ class WaveformThresholder(WaveformExtractorNode):
         The feature to be considered for thresholding (default 'ptp').
     threshold: float, optional
         The threshold value for the selected feature (default 2).
-    operator: function, callable (default is operator.le)
-        Comparison to flag values that should be set to 0 (default less or equal)
+    operator: callable, optional
+        Comparator to flag values that should be set to 0 (default less or equal)
     """
 
     def __init__(

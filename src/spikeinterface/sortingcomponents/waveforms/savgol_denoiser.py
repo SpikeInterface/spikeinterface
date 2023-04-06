@@ -20,9 +20,9 @@ class SavGolDenoiser(WaveformExtractorNode):
         Whether to return output from this node (default True).
     parents: list of PipelineNodes, optional
         The parent nodes of this node (default None).
-    order: int 
+    order: int, optional 
         the order of the filter (default 3)
-    window_length_ms: float
+    window_length_ms: float, optional
         the temporal duration of the filter in ms (default 0.25)
     """
 
