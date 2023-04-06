@@ -468,6 +468,7 @@ def nearest_neighbors_isolation(waveform_extractor: WaveformExtractor, this_unit
         # if no unit is within neighborhood of target unit, then just say isolation is 1 (best possible)
         if not other_units_ids:
             nn_isolation = 1
+            nn_unit_id = np.nan
         # if there are units to compare, then compute isolation with each
         else:
             isolation = np.zeros(len(other_units_ids),)
