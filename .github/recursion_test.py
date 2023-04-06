@@ -35,7 +35,7 @@ if __name__ == "__main__":
     else:
         mp_context = None # default 
     
-    number_of_files = 4 * int(1e3)
+    number_of_files = 2 * int(1e3)
     
     job_kwargs = {
         "chunk_duration": "0.05s",
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         "max_threads_per_process": 1,
     }
 
-    number_of_preprocessing_steps = 5
+    number_of_preprocessing_steps = 10
     pre_processing_function = bandpass_filter
 
     with tempfile.TemporaryDirectory() as tmpdir:
