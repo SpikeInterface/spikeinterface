@@ -32,12 +32,12 @@ jobs:
       - name: Check if running spikeinterface env and set environment variable
         id: version
         run: |
-          if python ./.github/build_job_install_spiked_interface_version_is_devsummary.py; then
+          if python .github/build_job_install_spiked_interface_version_is_devsummary.py; then
             echo "Running spikeinterface dev version"
-            echo "::set-output name=dev_version::true"
+            echo "DEV_VERSION=true" >> $GITHUB_ENV
           else
             echo "Running tests for release"
-            echo "::set-output name=dev_version::false"
+            echo "DEV_VERSION=false" >> $GITHUB_ENV
           fi
         shell: bash
       - name: Get current year-month
