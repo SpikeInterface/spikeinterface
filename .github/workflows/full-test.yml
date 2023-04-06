@@ -71,6 +71,7 @@ jobs:
           pip cache remove numpy
           pip cache remove hdbscan
           pip cache remove numba
+          pip cache remove neo
           pip install -e .[test,extractors,full]
       - name: git-annex install
         run: |
