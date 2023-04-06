@@ -68,12 +68,11 @@ jobs:
           source ~/test_env/bin/activate
           pip install tabulate  # This produces summaries at the end
           ## clean some cache to avoid using old cache
-          pip cache remove numpy
           pip cache remove hdbscan
           pip cache remove numba
           pip cache remove neo
           pip install -e .[test,extractors,full]
-      - name: git-annex install
+          pip install git+https://github.com/NeuralEnsemble/python-neo
         run: |
           wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
           tar xvzf git-annex-standalone-amd64.tar.gz

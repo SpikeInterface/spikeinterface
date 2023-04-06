@@ -66,6 +66,7 @@ jobs:
           pip cache remove numba
           pip cache remove neo
           pip install -e .[test,extractors,full]
+          pip install git+https://github.com/NeuralEnsemble/python-neo
       - name: git-annex install
         run: |
           wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
