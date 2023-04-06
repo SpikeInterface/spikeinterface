@@ -151,7 +151,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         Boundary for distance estimation.
     enforce_decrease : bool (default True)
         Enforce spatial decreasingness for PTP vectors
-    feature: string in ['ptp', 'energy', 'v_peak']
+    feature: string in ['ptp', 'energy']
         Feature to consider for monopolar approximation (default ptp)
 
     """
@@ -175,7 +175,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
             raise TypeError(exception_string)
 
         self.nbefore = waveform_extractor.nbefore
-        if enforce_decrease and self.feature not in ['v_peak']:
+        if enforce_decrease:# and self.feature not in ['v_peak']:
             self.enforce_decrease_radial_parents = make_radial_order_parents(self.contact_locations, self.neighbours_mask)
         else:
             self.enforce_decrease_radial_parents = None
@@ -196,8 +196,8 @@ class LocalizeMonopolarTriangulation(PipelineNode):
                 wf_data = wf.ptp(axis=0)
             elif self.feature == 'energy':
                 wf_data = np.linalg.norm(wf, axis=0)
-            elif self.feature == 'v_peak':
-                wf_data = wf[self.nbefore]
+            # elif self.feature == 'v_peak':
+            #     wf_data = wf[self.nbefore]
 
             if self.enforce_decrease_radial_parents is not None:
                 enforce_decrease_shells_data(wf_data, peak['channel_ind'], self.enforce_decrease_radial_parents, in_place=True)

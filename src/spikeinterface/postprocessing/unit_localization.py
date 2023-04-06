@@ -244,7 +244,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         to make bounddary in x, y, z and also for alpha
     return_alpha: bool default False
         Return or not the alpha value
-    feature: string in ['ptp', 'energy', 'v_peak']
+    feature: string in ['ptp', 'energy']
         Feature to consider for monopolar approximation (default ptp)
 
     Returns
@@ -274,8 +274,8 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
             wf_data = wf.ptp(axis=0)
         elif feature == 'energy':
             wf_data = np.linalg.norm(wf, axis=0)
-        elif feature == 'v_peak':
-            wf_data = wf[nbefore]
+        #elif feature == 'v_peak':
+        #    wf_data = wf[nbefore]
 
         unit_location[i] = solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance_um, optimizer)
 
