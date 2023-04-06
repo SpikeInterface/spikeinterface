@@ -38,7 +38,7 @@ if __name__ == "__main__":
     number_of_files = 1500
     
     job_kwargs = {
-        "chunk_duration": "0.05s",
+        "chunk_duration": "1s",
         "n_jobs": -1,
         "mp_context": mp_context,
         "max_threads_per_process": 1,
