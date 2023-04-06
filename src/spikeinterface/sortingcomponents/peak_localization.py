@@ -2,7 +2,7 @@
 import numpy as np
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 
-from .peak_pipeline import run_peak_pipeline, PipelineNode, ExtractDenseWaveforms
+from .peak_pipeline import run_peak_pipeline, PipelineNode, ExtractDenseWaveforms, WaveformExtractorNode
 from .tools import make_multi_method_doc
 
 from spikeinterface.core import get_channel_distances
@@ -11,7 +11,7 @@ from ..postprocessing.unit_localization import (dtype_localize_by_method,
                                                 possible_localization_methods,
                                                 solve_monopolar_triangulation,
                                                 make_radial_order_parents,
-                                                enforce_decrease_shells_ptp)
+                                                enforce_decrease_shells_data)
 
 
 def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.3, ms_after=.5, **kwargs):
@@ -150,10 +150,14 @@ class LocalizeMonopolarTriangulation(PipelineNode):
     max_distance_um: float, default: 1000
         Boundary for distance estimation.
     enforce_decrease : bool (default True)
-        Enforce spatial decreasingness for PTP vectors.
+        Enforce spatial decreasingness for PTP vectors
+    feature: string in ['ptp', 'energy', 'v_peak']
+        Feature to consider for monopolar approximation (default ptp)
+
     """
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'],
-                            local_radius_um=75., max_distance_um=150., optimizer='minimize_with_log_penality', enforce_decrease=False):
+                            local_radius_um=75., max_distance_um=150., optimizer='minimize_with_log_penality', 
+                            enforce_decrease=True, feature='ptp'):
         LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um)
 
         self._kwargs.update(dict(max_distance_um=max_distance_um,
@@ -162,8 +166,16 @@ class LocalizeMonopolarTriangulation(PipelineNode):
 
         self.max_distance_um = max_distance_um
         self.optimizer = optimizer
+        self.feature = feature
 
-        if enforce_decrease:
+        try:
+            waveform_extractor = next(parent for parent in parents if isinstance(parent, WaveformExtractorNode))
+        except (StopIteration, TypeError):
+            exception_string = f"{self.__name__} should have a {WaveformExtractorNode.__name__} in its parents"
+            raise TypeError(exception_string)
+
+        self.nbefore = waveform_extractor.nbefore
+        if enforce_decrease and self.feature not in ['v_peak']:
             self.enforce_decrease_radial_parents = make_radial_order_parents(self.contact_locations, self.neighbours_mask)
         else:
             self.enforce_decrease_radial_parents = None
@@ -179,14 +191,18 @@ class LocalizeMonopolarTriangulation(PipelineNode):
             chan_inds = np.flatnonzero(chan_mask)
             local_contact_locations = self.contact_locations[chan_inds, :]
 
-            # wf is (nsample, nchan) - chan is only neighbor
-            wf = waveforms[i, :, :][:, chan_inds]
+            wf = waveforms[i, :][:, chan_inds]    
+            if self.feature == 'ptp':
+                wf_data = wf.ptp(axis=0)
+            elif self.feature == 'energy':
+                wf_data = np.linalg.norm(wf, axis=0)
+            elif self.feature == 'v_peak':
+                wf_data = wf[self.nbefore]
 
-            wf_ptp = wf.ptp(axis=0)
             if self.enforce_decrease_radial_parents is not None:
-                enforce_decrease_shells_ptp(wf_ptp, peak['channel_ind'], self.enforce_decrease_radial_parents, in_place=True)
+                enforce_decrease_shells_data(wf_data, peak['channel_ind'], self.enforce_decrease_radial_parents, in_place=True)
 
-            peak_locations[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations,
+            peak_locations[i] = solve_monopolar_triangulation(wf_data, local_contact_locations,
                                                               self.max_distance_um, self.optimizer)
 
         return peak_locations

@@ -130,15 +130,15 @@ def compute_unit_locations(waveform_extractor,
     return unit_locations
 
 
-def make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um, initial_z=20):
+def make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance_um, initial_z=20):
 
     # constant for initial guess and bounds
-    ind_max = np.argmax(wf_ptp)
-    max_ptp = wf_ptp[ind_max]
+    ind_max = np.argmax(wf_data)
+    max_ptp = wf_data[ind_max]
     max_alpha = max_ptp * max_distance_um
 
     # initial guess is the center of mass
-    com = np.sum(wf_ptp[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_ptp)
+    com = np.sum(wf_data[:, np.newaxis] * local_contact_locations, axis=0) / np.sum(wf_data)
     x0 = np.zeros(4, dtype='float32')
     x0[:2] = com
     x0[2] = initial_z
@@ -152,11 +152,11 @@ def make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_
     return x0, bounds
 
 
-def solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_um, optimizer):
-    x0, bounds = make_initial_guess_and_bounds(wf_ptp, local_contact_locations, max_distance_um)
+def solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance_um, optimizer):
+    x0, bounds = make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance_um)
 
     if optimizer == 'least_square':
-        args = (wf_ptp, local_contact_locations)
+        args = (wf_data, local_contact_locations)
         try:
             output = scipy.optimize.least_squares(estimate_distance_error, x0=x0, bounds=bounds, args=args)
             return tuple(output['x'])
@@ -167,13 +167,13 @@ def solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_
     if optimizer == 'minimize_with_log_penality':
         x0 = x0[:3]
         bounds = [(bounds[0][0], bounds[1][0]), (bounds[0][1], bounds[1][1]), (bounds[0][2], bounds[1][2])]
-        maxptp = wf_ptp.max()
-        args = (wf_ptp, local_contact_locations, maxptp)
+        maxptp = wf_data.max()
+        args = (wf_data, local_contact_locations, maxptp)
         try:
             output = scipy.optimize.minimize(estimate_distance_error_with_log, x0=x0, bounds=bounds, args=args)
             # final alpha
-            q = ptp_at(*output['x'], 1.0, local_contact_locations)
-            alpha = (wf_ptp * q).sum() / np.square(q).sum()
+            q = data_at(*output['x'], 1.0, local_contact_locations)
+            alpha = (wf_data * q).sum() / np.square(q).sum()
             return (*output['x'], alpha)
         except Exception as e:
             print(f"scipy.optimize.minimize error: {e}")
@@ -184,12 +184,12 @@ def solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_
 # optimizer "least_square"
 
 
-def estimate_distance_error(vec, wf_ptp, local_contact_locations):
+def estimate_distance_error(vec, wf_data, local_contact_locations):
     # vec dims ar (x, y, z amplitude_factor)
     # given that for contact_location x=dim0 + z=dim1 and y is orthogonal to probe
     dist = np.sqrt(((local_contact_locations - vec[np.newaxis, :2])**2).sum(axis=1) + vec[2]**2)
     ptp_estimated = vec[3] / dist
-    err = wf_ptp - ptp_estimated
+    err = wf_data - ptp_estimated
     return err
 
 
@@ -197,7 +197,7 @@ def estimate_distance_error(vec, wf_ptp, local_contact_locations):
 # optimizer "minimize_with_log_penality"
 
 
-def ptp_at(x, y, z, alpha, local_contact_locations):
+def data_at(x, y, z, alpha, local_contact_locations):
     return alpha / np.sqrt(
         np.square(x - local_contact_locations[:, 0])
         + np.square(y - local_contact_locations[:, 1])
@@ -205,16 +205,16 @@ def ptp_at(x, y, z, alpha, local_contact_locations):
     )
 
 
-def estimate_distance_error_with_log(vec, wf_ptp, local_contact_locations, maxptp):
+def estimate_distance_error_with_log(vec, wf_data, local_contact_locations, maxptp):
     x, y, z = vec
-    q = ptp_at(x, y, z, 1.0, local_contact_locations)
-    alpha = (q * wf_ptp / maxptp).sum() / (q * q).sum()
-    err = np.square(wf_ptp / maxptp - ptp_at(x, y, z, alpha, local_contact_locations)).mean() - np.log1p(10.0 * z) / 10000.0
+    q = data_at(x, y, z, 1.0, local_contact_locations)
+    alpha = (q * wf_data / maxptp).sum() / (q * q).sum()
+    err = np.square(wf_data / maxptp - data_at(x, y, z, alpha, local_contact_locations)).mean() - np.log1p(10.0 * z) / 10000.0
     return err
 
 
 def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with_log_penality',
-                                    radius_um=50, max_distance_um=1000, return_alpha=False):
+                                    radius_um=50, max_distance_um=1000, return_alpha=False, feature='ptp'):
     '''
     Localize unit with monopolar triangulation.
     This method is from Julien Boussard, Erdem Varol and Charlie Windolf
@@ -244,6 +244,8 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         to make bounddary in x, y, z and also for alpha
     return_alpha: bool default False
         Return or not the alpha value
+    feature: string in ['ptp', 'energy', 'v_peak']
+        Feature to consider for monopolar approximation (default ptp)
 
     Returns
     -------
@@ -256,6 +258,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
     unit_ids = waveform_extractor.sorting.unit_ids
 
     contact_locations = waveform_extractor.get_channel_locations()
+    nbefore = waveform_extractor.nbefore
 
     sparsity = compute_sparsity(waveform_extractor, method='radius', radius_um=radius_um)
     templates = waveform_extractor.get_all_templates(mode='average')
@@ -266,9 +269,15 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         local_contact_locations = contact_locations[chan_inds, :]
 
         # wf is (nsample, nchan) - chann is only nieghboor
-        wf = templates[i, :, :]
-        wf_ptp = wf[:, chan_inds].ptp(axis=0)
-        unit_location[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_um, optimizer)
+        wf = templates[i, :, chan_inds]
+        if feature == 'ptp':
+            wf_data = wf.ptp(axis=0)
+        elif feature == 'energy':
+            wf_data = np.linalg.norm(wf, axis=0)
+        elif feature == 'v_peak':
+            wf_data = wf[nbefore]
+
+        unit_location[i] = solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance_um, optimizer)
 
     if not return_alpha:
         unit_location = unit_location[:, :3]
@@ -409,22 +418,22 @@ def make_radial_order_parents(
     return radial_parents
 
 
-def enforce_decrease_shells_ptp(
-    wf_ptp, maxchan, radial_parents, in_place=False
+def enforce_decrease_shells_data(
+    wf_data, maxchan, radial_parents, in_place=False
 ):
     """Radial enforce decrease"""
-    (C,) = wf_ptp.shape
+    (C,) = wf_data.shape
 
-    # allocate storage for decreasing version of PTP
-    decreasing_ptp = wf_ptp if in_place else wf_ptp.copy()
+    # allocate storage for decreasing version of data
+    decreasing_data = wf_data if in_place else wf_data.copy()
 
-    # loop to enforce ptp decrease from parent shells
+    # loop to enforce data decrease from parent shells
     for c, parents_rel in radial_parents[maxchan]:
-        if decreasing_ptp[c] > decreasing_ptp[parents_rel].max():
-            decreasing_ptp[c] *= decreasing_ptp[parents_rel].max() / decreasing_ptp[c]
+        if decreasing_data[c] > decreasing_data[parents_rel].max():
+            decreasing_data[c] *= decreasing_data[parents_rel].max() / decreasing_data[c]
 
-    return decreasing_ptp
+    return decreasing_data
 
 
 if HAVE_NUMBA:
-    enforce_decrease_shells = numba.jit(enforce_decrease_shells_ptp, nopython=True)
+    enforce_decrease_shells = numba.jit(enforce_decrease_shells_data, nopython=True)
