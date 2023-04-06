@@ -9,7 +9,8 @@ from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, Wavefor
 
 class SavGolDenoiser(WaveformExtractorNode):
     """
-    Waveform Denoiser based on a simple Savitky Golay filtering
+    Waveform Denoiser based on a simple Savitzky-Golay filtering
+    https://en.wikipedia.org/wiki/Savitzky%E2%80%93Golay_filter
 
     Parameters
     ----------
