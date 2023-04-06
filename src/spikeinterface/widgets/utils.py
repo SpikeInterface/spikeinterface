@@ -182,7 +182,8 @@ def array_to_image(data,
 
         y_scalebar = output_image.shape[0] - 10
         fontsize = int(0.8 * spacing)
-        row_ms = (num_timepoints_per_row / sampling_frequency) * 1000
+        num_time_points = np.min([num_timepoints_per_row, num_timepoints])
+        row_ms = (num_time_points / sampling_frequency) * 1000
 
         try:
             if platform.system() == "Linux":
@@ -197,14 +198,20 @@ def array_to_image(data,
             image = Image.fromarray(output_image)
             image_editable = ImageDraw.Draw(image)
 
-            # bar should be around 1/5 of row and ultiple of 5
-            bar_ms = int((row_ms / 5) // 5 * 5)
-            bar_px = bar_ms * num_timepoints_per_row / row_ms
+            # bar should be around 1/5 of row and ultiple of 5ms
+            if row_ms / 5 > 5:
+                bar_ms = int(np.ceil((row_ms / 5) // 5 * 5))
+                text_offset = 0.3
+            else:
+                bar_ms = int(np.ceil(row_ms / 5))
+                text_offset = -0.1
+            bar_px = bar_ms * num_time_points / row_ms
 
-            x_offset = int(0.1 * num_timepoints_per_row)
+            x_offset = int(0.1 * num_time_points)
+
             image_editable.line((x_offset, y_scalebar, x_offset + bar_px, y_scalebar), fill=(0, 0, 0), width=10)
-            image_editable.text((x_offset + 0.3 * (bar_px), y_scalebar - 1.1 * fontsize),
-                                text="10 ms", font=font, fill=(0, 0, 0))
+            image_editable.text((x_offset + text_offset * (bar_px), y_scalebar - 1.1 * fontsize),
+                                text=f"{bar_ms}ms", font=font, fill=(0, 0, 0))
 
             output_image = np.frombuffer(image.tobytes(), dtype=np.uint8).reshape(output_image.shape)
 
