@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 from typing import List, Optional
 import scipy.signal
+import numpy as np
 
 from spikeinterface.core import BaseRecording
 from spikeinterface.sortingcomponents.peak_pipeline import (
