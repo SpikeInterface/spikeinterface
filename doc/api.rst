@@ -149,6 +149,8 @@ spikeinterface.preprocessing
     .. autofunction:: correct_lsb
     .. autofunction:: detect_bad_channels
     .. autofunction:: filter
+    .. autofunction:: gaussian_bandpass_filter
+    .. autofunction:: highpass_filter
     .. autofunction:: highpass_spatial_filter
     .. autofunction:: interpolate_bad_channels
     .. autofunction:: normalize_by_quantile
@@ -159,6 +161,7 @@ spikeinterface.preprocessing
     .. autofunction:: scale
     .. autofunction:: whiten
     .. autofunction:: zero_channel_pad
+    .. autofunction:: zscore
 
 
 spikeinterface.postprocessing
