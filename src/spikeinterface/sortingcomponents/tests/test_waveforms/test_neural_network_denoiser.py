@@ -5,7 +5,7 @@ from spikeinterface.extractors import MEArecRecordingExtractor
 from spikeinterface import download_dataset
 
 
-from spikeinterface.sortingcomponents.peak_pipeline import run_pipeline, PeakRetriever, ExtractDenseWaveforms
+from spikeinterface.sortingcomponents.peak_pipeline import run_node_pipeline, PeakRetriever, ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.waveforms.neural_network_denoiser import SingleChannelToyDenoiser
 
 
@@ -27,6 +27,6 @@ def test_single_channel_toy_denoiser_in_peak_pipeline(mearec_recording, detected
 
 
     nodes = [peak_retriever, waveform_extraction, toy_denoiser]
-    waveforms, denoised_waveforms = run_pipeline(recording, nodes=nodes, job_kwargs=chunk_executor_kwargs)
+    waveforms, denoised_waveforms = run_node_pipeline(recording, nodes=nodes, job_kwargs=chunk_executor_kwargs)
 
     assert waveforms.shape == denoised_waveforms.shape

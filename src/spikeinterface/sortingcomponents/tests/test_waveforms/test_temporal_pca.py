@@ -8,7 +8,7 @@ from spikeinterface.sortingcomponents.peak_pipeline import (
     ExtractSparseWaveforms,
     WaveformExtractorNode,
     PipelineNode,
-    run_pipeline,
+    run_node_pipeline,
 )
 
 
@@ -74,7 +74,7 @@ def test_pca_denoising(mearec_recording, detected_peaks, model_path_of_trained_p
     pipeline_nodes = [peak_retriever, extract_waveforms, pca_denoising]
 
     # Extract projected waveforms and compare
-    waveforms, denoised_waveforms = run_pipeline(
+    waveforms, denoised_waveforms = run_node_pipeline(
         recording, nodes=pipeline_nodes, job_kwargs=chunk_executor_kwargs
     )
     assert waveforms.shape == denoised_waveforms.shape
@@ -102,7 +102,7 @@ def test_pca_denoising_sparse(mearec_recording, detected_peaks, model_path_of_tr
     pipeline_nodes = [peak_retriever, extract_waveforms, pca_denoising]
 
     # Extract projected waveforms and compare
-    sparse_waveforms, denoised_waveforms = run_pipeline(
+    sparse_waveforms, denoised_waveforms = run_node_pipeline(
         recording, nodes=pipeline_nodes, job_kwargs=chunk_executor_kwargs
     )
     assert sparse_waveforms.shape == denoised_waveforms.shape
@@ -129,7 +129,7 @@ def test_pca_projection(mearec_recording, detected_peaks, model_path_of_trained_
     pipeline_nodes = [peak_retriever, extract_waveforms, temporal_pca]
 
     # Extract projected waveforms and compare
-    projected_waveforms = run_pipeline(recording, nodes=pipeline_nodes, job_kwargs=chunk_executor_kwargs)
+    projected_waveforms = run_node_pipeline(recording, nodes=pipeline_nodes, job_kwargs=chunk_executor_kwargs)
     extracted_n_peaks, extracted_n_components, extracted_n_channels = projected_waveforms.shape
     n_peaks = peaks.shape[0]
     assert extracted_n_peaks == n_peaks
@@ -161,7 +161,7 @@ def test_pca_projection_sparsity(mearec_recording, detected_peaks, model_path_of
     # Extract features and compare
     
 
-    sparse_waveforms, projected_waveforms = run_pipeline(
+    sparse_waveforms, projected_waveforms = run_node_pipeline(
         recording, nodes=pipeline_nodes, job_kwargs=chunk_executor_kwargs
     )
     extracted_n_peaks, extracted_n_components, extracted_n_channels = projected_waveforms.shape

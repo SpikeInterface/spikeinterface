@@ -2,7 +2,7 @@
 import numpy as np
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 
-from .peak_pipeline import run_pipeline, PeakRetriever, PipelineNode, ExtractDenseWaveforms
+from .peak_pipeline import run_node_pipeline, PeakRetriever, PipelineNode, ExtractDenseWaveforms
 from .tools import make_multi_method_doc
 
 from spikeinterface.core import get_channel_distances
@@ -68,7 +68,7 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.3, ms_
             ]
     
     job_name = f'localize peaks using {method}'
-    peak_locations = run_pipeline(recording, pipeline_nodes, job_kwargs, job_name=job_name, squeeze_output=True)
+    peak_locations = run_node_pipeline(recording, pipeline_nodes, job_kwargs, job_name=job_name, squeeze_output=True)
     
     return peak_locations
 

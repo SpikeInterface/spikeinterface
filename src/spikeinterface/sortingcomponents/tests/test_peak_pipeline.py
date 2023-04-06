@@ -9,7 +9,7 @@ from spikeinterface import download_dataset, BaseSorting
 from spikeinterface.extractors import MEArecRecordingExtractor
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.peak_pipeline import (run_pipeline, PeakRetriever,
+from spikeinterface.sortingcomponents.peak_pipeline import (run_node_pipeline, PeakRetriever,
                                                             PipelineNode, ExtractDenseWaveforms, ExtractSparseWaveforms)
 
 
@@ -63,14 +63,13 @@ class WaveformsRootMeanSquare(PipelineNode):
         return rms_by_channels
 
 
-def test_run_pipeline():
+def test_run_node_pipeline():
 
     repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
     remote_path = 'mearec/mearec_test_10s.h5'
     local_path = download_dataset(
         repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
-
     
     job_kwargs = dict(chunk_duration='0.5s', n_jobs=2, progress_bar=False)
     
@@ -84,7 +83,7 @@ def test_run_pipeline():
         peak_retriever,
         AmplitudeExtractionNode(recording, parents=[peak_retriever], param0=6.6),
     ]
-    step_one = run_pipeline(recording, nodes, job_kwargs, squeeze_output=True)
+    step_one = run_node_pipeline(recording, nodes, job_kwargs, squeeze_output=True)
     assert np.allclose(np.abs(peaks['amplitude']), step_one['abs_amplitude'])
     
     # 3 nodes two have outputs
@@ -110,7 +109,7 @@ def test_run_pipeline():
     
     
     # gather memory mode
-    output = run_pipeline(recording, nodes, job_kwargs, gather_mode='memory')
+    output = run_node_pipeline(recording, nodes, job_kwargs, gather_mode='memory')
     amplitudes, waveforms_rms, denoised_waveforms_rms = output
     assert np.allclose(np.abs(peaks['amplitude']), amplitudes['abs_amplitude'])
     
@@ -126,7 +125,7 @@ def test_run_pipeline():
     folder = cache_folder / 'pipeline_folder'
     if folder.is_dir():
         shutil.rmtree(folder)
-    output = run_pipeline(recording, nodes, job_kwargs, gather_mode='npy',
+    output = run_node_pipeline(recording, nodes, job_kwargs, gather_mode='npy',
                                folder=folder, names=['amplitudes', 'waveforms_rms', 'denoised_waveforms_rms'],)
     amplitudes2, waveforms_rms2, denoised_waveforms_rms2 = output
 
@@ -156,4 +155,4 @@ def test_run_pipeline():
         unpickled_node = pickle.loads(pickled_node)
 
 if __name__ == '__main__':
-    test_run_pipeline()
+    test_run_node_pipeline()

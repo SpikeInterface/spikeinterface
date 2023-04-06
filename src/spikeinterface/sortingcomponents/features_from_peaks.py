@@ -4,7 +4,7 @@ import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core import get_channel_distances
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass, LocalizeMonopolarTriangulation
-from spikeinterface.sortingcomponents.peak_pipeline import (run_pipeline, PeakRetriever, 
+from spikeinterface.sortingcomponents.peak_pipeline import (run_node_pipeline, PeakRetriever, 
                                                             PipelineNode, ExtractDenseWaveforms)
 
 
@@ -60,7 +60,7 @@ def compute_features_from_peaks(
         node = Class(recording, parents=[peak_retriever, extract_dense_waveforms], **params)
         nodes.append(node)
 
-    features = run_pipeline(recording, nodes, job_kwargs, job_name='features_from_peaks', squeeze_output=False)
+    features = run_node_pipeline(recording, nodes, job_kwargs, job_name='features_from_peaks', squeeze_output=False)
 
     return features
 

@@ -5,7 +5,7 @@ from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDen
 from spikeinterface.sortingcomponents.peak_pipeline import (
     PeakRetriever,
     ExtractDenseWaveforms,
-    run_pipeline,
+    run_node_pipeline,
 )
 
 
@@ -32,7 +32,7 @@ def test_savgol_denoising(mearec_recording, detected_peaks, chunk_executor_kwarg
     pipeline_nodes = [peak_retriever, extract_waveforms, spline_denoiser]
 
     # Extract projected waveforms and compare
-    waveforms, denoised_waveforms = run_pipeline(
+    waveforms, denoised_waveforms = run_node_pipeline(
         recording, nodes=pipeline_nodes, job_kwargs=chunk_executor_kwargs
     )
     assert waveforms.shape == denoised_waveforms.shape

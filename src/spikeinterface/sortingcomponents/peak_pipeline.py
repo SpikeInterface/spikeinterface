@@ -124,7 +124,7 @@ class PeakRetriever(PipelineNode):
 
 
 
-class WaveformExtractorNode(PipelineNode):
+class WaveformRetrieverNode(PipelineNode):
     """Base class for waveform extractor"""
 
     def __init__(
@@ -160,7 +160,7 @@ class WaveformExtractorNode(PipelineNode):
         self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.0)
 
 
-class ExtractDenseWaveforms(WaveformExtractorNode):
+class ExtractDenseWaveforms(WaveformRetrieverNode):
     def __init__(
         self,
         recording: BaseRecording,
@@ -188,7 +188,7 @@ class ExtractDenseWaveforms(WaveformExtractorNode):
             The number of milliseconds to include after the peak of the spike, by default 1.
         """
 
-        WaveformExtractorNode.__init__(
+        WaveformRetrieverNode.__init__(
             self,
             recording=recording,
             parents=parents,
@@ -208,7 +208,7 @@ class ExtractDenseWaveforms(WaveformExtractorNode):
         return waveforms
 
 
-class ExtractSparseWaveforms(WaveformExtractorNode):
+class ExtractSparseWaveforms(WaveformRetrieverNode):
     def __init__(
         self,
         recording: BaseRecording,
@@ -244,7 +244,7 @@ class ExtractSparseWaveforms(WaveformExtractorNode):
 
 
         """
-        WaveformExtractorNode.__init__(
+        WaveformRetrieverNode.__init__(
             self,
             recording=recording,
             parents=parents,
@@ -312,7 +312,7 @@ def check_graph(nodes):
 
 
 
-def run_pipeline(recording, nodes, job_kwargs, job_name='peak_pipeline', mp_context=None,
+def run_node_pipeline(recording, nodes, job_kwargs, job_name='peak_pipeline', mp_context=None,
                       gather_mode='memory', squeeze_output=True, folder=None, names=None,
                       ):
     """
@@ -359,7 +359,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     max_margin = worker_ctx['max_margin']
     nodes = worker_ctx['nodes']
 
-    recording_segment = recording._recording_segments[segment_index]
+    recording_segment = recording.select_segments(segment_index)
     traces_chunk, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame,
                                                               None, max_margin, add_zeros=True)
 
@@ -426,7 +426,7 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
                       ):
     # TODO remove this soon
     import warnings
-    warnings.warn("run_peak_pipeline() is deprecated use run_pipeline() instead",
+    warnings.warn("run_peak_pipeline() is deprecated use run_node_pipeline() instead",
                   DeprecationWarning, stacklevel=2)
 
     node0 = PeakRetriever(recording, peaks)
@@ -440,7 +440,7 @@ def run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='peak_pipeli
         else:
             node.parents = [node0] + node.parents
     all_nodes = [ node0 ] + nodes
-    outs = run_pipeline(recording, all_nodes, job_kwargs, job_name=job_name, gather_mode=gather_mode, 
+    outs = run_node_pipeline(recording, all_nodes, job_kwargs, job_name=job_name, gather_mode=gather_mode, 
                 squeeze_output=squeeze_output, folder=folder, names=names)
     return outs
 
