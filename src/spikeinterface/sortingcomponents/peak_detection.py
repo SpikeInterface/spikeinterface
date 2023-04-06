@@ -107,7 +107,7 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
 
 class PeakDetectorWrapper(PeakDetector):
     # transitory class to maintain instance based and class method based
-    # TODO later when in master: refactor in every old detector class:
+    # TODO later when in main: refactor in every old detector class:
     #    * check_params
     #    * get_method_margin
     #  and move the logic in the init
