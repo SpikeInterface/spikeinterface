@@ -6,7 +6,7 @@ from typing import List
 import numpy as np
 from sklearn.decomposition import IncrementalPCA
 
-from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformExtractorNode, find_parent_of_type
+from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformRetrieverNode, find_parent_of_type
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.postprocessing import compute_principal_components
@@ -46,12 +46,12 @@ class TemporalPCBaseNode(PipelineNode):
             self.params = json.load(f)
 
         # Find waveform extractor in the parents
-        waveform_extractor = find_parent_of_type(self, WaveformExtractorNode)
+        waveform_extractor = find_parent_of_type(self, WaveformRetrieverNode)
         if waveform_extractor is None:
-            raise TypeError(f"TemporalPCA should have a single {WaveformExtractorNode.__name__} in its parents")
+            raise TypeError(f"TemporalPCA should have a single {WaveformRetrieverNode.__name__} in its parents")
         self.assert_model_and_waveform_temporal_match(waveform_extractor)
 
-    def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformExtractorNode):
+    def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformRetrieverNode):
         """
         Asserts that the model and the waveform extractor have the same temporal parameters
         """

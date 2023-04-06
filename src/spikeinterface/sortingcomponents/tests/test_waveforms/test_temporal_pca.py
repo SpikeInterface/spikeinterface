@@ -6,7 +6,7 @@ from spikeinterface.sortingcomponents.peak_pipeline import (
     PeakRetriever,
     ExtractDenseWaveforms,
     ExtractSparseWaveforms,
-    WaveformExtractorNode,
+    WaveformRetrieverNode,
     PipelineNode,
     run_node_pipeline,
 )
@@ -181,7 +181,7 @@ def test_initialization_with_wrong_parents_failure(mearec_recording, model_path_
         recording=recording, ms_before=1, ms_after=1, local_radius_um=40, return_output=True
     )
 
-    match_error = f"TemporalPCA should have a single {WaveformExtractorNode.__name__} in its parents"
+    match_error = f"TemporalPCA should have a single {WaveformRetrieverNode.__name__} in its parents"
 
     # Parents without waveform extraction
     with pytest.raises(TypeError, match=match_error):
