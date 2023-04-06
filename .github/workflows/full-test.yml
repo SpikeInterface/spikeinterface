@@ -67,11 +67,21 @@ jobs:
           python -m pip install -U pip  # Official recommended way
           source ~/test_env/bin/activate
           pip install tabulate  # This produces summaries at the end
-          ## clean some cache to avoid using old cache
-          pip cache remove numpy
-          pip cache remove hdbscan
-          pip cache remove numba
           pip install -e .[test,extractors,full]
+      - name: Force installation of latest dev from key-packages when running dev (not release)
+        id: version
+        run: |
+          source ~/test_env/bin/activate
+          if python ./.github/is_spikeinterface_dev.py; then
+            echo "Running spikeinterface dev version"
+            pip uninstall -y neo
+            pip uninstall -y probeinterface
+            pip install git+https://github.com/NeuralEnsemble/python-neo
+            pip install git+https://github.com/SpikeInterface/probeinterface
+          else
+            echo "Running tests for release"
+          fi
+        shell: bash
       - name: git-annex install
         run: |
           wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
