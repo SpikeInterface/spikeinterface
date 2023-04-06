@@ -25,7 +25,7 @@ def test_waveform_thresholder(mearec_recording, detected_peaks, chunk_executor_k
     )
 
     tresholded_waveforms = WaveformThresholder(recording=recording, parents=[extract_waveforms], feature='ptp', threshold=3, return_output=True)
-    pipeline_nodes = [extract_waveforms, spline_denoiser]
+    pipeline_nodes = [extract_waveforms, tresholded_waveforms]
 
     # Extract projected waveforms and compare
     waveforms, tresholded_waveforms = run_peak_pipeline(
