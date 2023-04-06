@@ -29,6 +29,17 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.10'
+      - name: Check if running spikeinterface env and set environment variable
+        id: version
+        run: |
+          if python ./.github/build_job_install_spiked_interface_version_is_devsummary.py; then
+            echo "Running spikeinterface dev version"
+            echo "::set-output name=dev_version::true"
+          else
+            echo "Running tests for release"
+            echo "::set-output name=dev_version::false"
+          fi
+        shell: bash
       - name: Get current year-month
         id: date
         run: echo "date=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
@@ -68,15 +79,13 @@ jobs:
           source ~/test_env/bin/activate
           pip install tabulate  # This produces summaries at the end
           pip install -e .[test,extractors,full]
-      - name: Check if dev 
-        run: echo 'SPIKEINTERFACE_DEV=$(python -c "import spikeinterface; print(spikeinterface.__version__.endswith(\"dev0\"))")' >> $GITHUB_ENV
       - name: Force installation of key-packages when running dev
+        if: steps.version.outputs.dev_version == 'true'
         run: |
           pip uninstall -y neo
           pip uninstall -y probeinterface
           pip install git+https://github.com/NeuralEnsemble/python-neo
           pip install git+https://github.com/SpikeInterface/probeinterface
-        if: ${{ env.SPIKEINTERFACE_DEV == 'True' }}
       - name: git-annex install
         run: |
           wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz

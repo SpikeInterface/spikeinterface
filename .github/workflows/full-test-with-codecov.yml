@@ -69,7 +69,7 @@ jobs:
           pip uninstall -y neo
           pip uninstall -y probeinterface
           pip install git+https://github.com/NeuralEnsemble/python-neo
-          pip install https://github.com/SpikeInterface/probeinterface
+          pip install git+https://github.com/SpikeInterface/probeinterface
         if: ${{ env.SPIKEINTERFACE_DEV == 'True' }}
       - name: git-annex install
         run: |
