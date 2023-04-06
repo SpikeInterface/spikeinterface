@@ -17,7 +17,7 @@ class CurationSorting:
         passed to the new units (if the original units have the same value). If 'remove' the new units will have 
         an empty value for all the properties. Default: 'keep'
     make_graph: bool
-        True to keep a networkx graph with the curation history
+        True to keep a Networkx graph instance with the curation history
     Returns
     -------
     sorting: Sorting
@@ -38,7 +38,7 @@ class CurationSorting:
             self._nx = nx
             self._graphs = [self._nx.DiGraph()]
             self._graphs[0].add_nodes_from([node_t(u,0) for u in parent_units])
-        # check the maximum numeric id used, strings with digits will be casted to int to reduce confusion
+        # check the maximum numeric id used, strings with digits will be cast to int to reduce confusion
         if np.issubdtype(parent_units.dtype, np.character):
             self.max_used_id = max([-1]+[int(p) for p in parent_units if p.isdigit()])
         else:
@@ -152,7 +152,7 @@ class CurationSorting:
             self._sorting_stages_i +=1
 
     def draw_graph(self, **kwargs):
-        assert self._make_graph, 'to make graph make_graph=True'
+        assert self._make_graph, 'to make a graph make_graph=True'
         graph = self.graph
         ids = [c.unit_id for c in graph.nodes]
         pos = {n:(n.stage_id, -ids.index(n.unit_id)) for n in graph.nodes}
