@@ -28,7 +28,7 @@ jobs:
             git config --global user.email "CI@example.com"
             git config --global user.name "CI Almighty"
             python -m pip install -U pip  # Official recommended way
-            pip install -e .[test_core]
+            pip install -e .[test]
             pip install h5py
       - name: Installad datalad
         run: |
