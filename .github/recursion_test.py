@@ -1,6 +1,7 @@
 import tempfile
 import os
 import shutil
+import platform
 
 from pathlib import Path
 from tempfile import tempdir
@@ -26,11 +27,20 @@ def copy_folder_n_times(directory_path, n_times):
 
 
 if __name__ == "__main__":
-    number_of_files = int(1e3)
+
+    if platform.system() == 'Linux' or platform.system() == 'Darwin':
+        mp_context = "fork"
+    elif platform.system() == 'Windows':
+        mp_context = "spawn"
+    else:
+        mp_context = None # default 
+    
+    number_of_files = 4 * int(1e3)
+    
     job_kwargs = {
         "chunk_duration": "0.05s",
         "n_jobs": -1,
-        "mp_context": "fork",
+        "mp_context": mp_context,
         "max_threads_per_process": 1,
     }
 

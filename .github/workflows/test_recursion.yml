@@ -46,3 +46,4 @@ jobs:
       - name: Test recursion
         run: |
             python ./.github/recursion_test.py
+        shell: bash
