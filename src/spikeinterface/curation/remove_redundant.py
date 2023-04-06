@@ -18,7 +18,7 @@ def remove_redundant_units(sorting_or_waveform_extractor,
     """
     Removes redundant or duplicate units by comparing the sorting output with itself.
     
-    When a redundant pair is found, there are several strategy to choice which one the best:
+    When a redundant pair is found, there are several strategies to choose which unit is the best:
 
        * 'minimum_shift'
        * 'highest_amplitude'
@@ -39,13 +39,13 @@ def remove_redundant_units(sorting_or_waveform_extractor,
         Threshold on the agreement scores to flag possible redundant/duplicate units, by default 0.2
     duplicate_threshold : float, optional
         Final threshold on the portion of coincident events over the number of spikes above which the  
-        unit is removed, by default 0.84
+        unit is removed, by default 0.8
     remove_strategy: str
-        Which stragtegy to remove one of the two duplicated units:
+        Which strategy to remove one of the two duplicated units:
 
             * 'minimum_shift': keep the unit with best peak alignment (minimum shift)
-                             If shift are equal then the 'highest_amplitude' is used
-            * 'highest_amplitude': keep the unit with the best amplitude on un shifted max.
+                             If shifts are equal then the 'highest_amplitude' is used
+            * 'highest_amplitude': keep the unit with the best amplitude on unshifted max.
             * 'max_spikes': keep the unit with more spikes
 
     peak_sign: str  ('neg', 'pos', 'both')
@@ -63,7 +63,7 @@ def remove_redundant_units(sorting_or_waveform_extractor,
         sorting = sorting_or_waveform_extractor.sorting
         we = sorting_or_waveform_extractor
     else:
-        assert not align, "The 'align' option is only available when a waveform extractor is used as input"
+        assert not align, "The 'align' option is only available when a WaveformExtractor is used as input"
         sorting = sorting_or_waveform_extractor
         we = None
 
