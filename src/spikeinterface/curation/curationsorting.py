@@ -17,7 +17,7 @@ class CurationSorting:
         passed to the new units (if the original units have the same value). If 'remove' the new units will have 
         an empty value for all the properties. Default: 'keep'
     make_graph: bool
-        True to keep a network graph with the curation history
+        True to keep a Networkx graph instance with the curation history
     Returns
     -------
     sorting: Sorting
