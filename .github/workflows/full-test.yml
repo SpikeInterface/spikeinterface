@@ -72,7 +72,7 @@ jobs:
           pip cache remove numba
           pip cache remove neo
           pip install -e .[test,extractors,full]
-          pip uninstall neo
+          pip uninstall -y neo
           pip install git+https://github.com/NeuralEnsemble/python-neo
       - name: git-annex install
         run: |
