@@ -69,7 +69,7 @@ jobs:
           pip install tabulate  # This produces summaries at the end
           pip install -e .[test,extractors,full]
       - name: Check if dev 
-        run: echo "SPIKEINTERFACE_DEV=$(python -c \"import spikeinterface; print(spikeinterface.__version__.endswith('dev0'))\")" >> $GITHUB_ENV
+        run: echo 'SPIKEINTERFACE_DEV=$(python -c "import spikeinterface; print(spikeinterface.__version__.endswith(\"dev0\"))")' >> $GITHUB_ENV
       - name: Force installation of key-packages when running dev
         run: |
           pip uninstall -y neo
