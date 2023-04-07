@@ -447,8 +447,7 @@ def _compute_peak_step_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     # make sample index local to traces
     local_peaks = local_peaks.copy()
-    local_peaks['sample_ind'] -= (start_frame - left_margin)
-    
+    local_peaks['sample_ind'] -= (start_frame - left_margin)    
     
     outs = run_nodes(traces_chunk, local_peaks, nodes)
     
