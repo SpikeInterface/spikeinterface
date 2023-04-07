@@ -359,7 +359,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     max_margin = worker_ctx['max_margin']
     nodes = worker_ctx['nodes']
 
-    recording_segment = recording.select_segments(segment_index)
+    recording_segment = recording._recording_segments[segment_index]
     traces_chunk, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame,
                                                               None, max_margin, add_zeros=True)
 
