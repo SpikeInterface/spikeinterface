@@ -2,7 +2,9 @@
 import numpy as np
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 
-from .peak_pipeline import run_node_pipeline, PeakRetriever, PipelineNode, ExtractDenseWaveforms
+from .peak_pipeline import (run_node_pipeline, find_parent_of_type,
+                            PeakRetriever, PipelineNode, WaveformsNode,
+                            ExtractDenseWaveforms)
 from .tools import make_multi_method_doc
 
 from spikeinterface.core import get_channel_distances
@@ -49,34 +51,39 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.5, ms_
     peak_retriever = PeakRetriever(recording, peaks)
     if method == 'center_of_mass':
         extract_dense_waveforms = ExtractDenseWaveforms(recording, parents=[peak_retriever],
-                                                        ms_before=ms_before, ms_after=ms_after,  return_output=False)
+                                                        ms_before=ms_before, ms_after=ms_after, return_output=False)
         pipeline_nodes = [
             peak_retriever,
             extract_dense_waveforms,
-            LocalizeCenterOfMass(recording, parents=[peak_retriever, extract_dense_waveforms], **method_kwargs)
+            LocalizeCenterOfMass(recording, parents=[peak_retriever, extract_dense_waveforms],
+                                 **method_kwargs)
         ]
     elif method == 'monopolar_triangulation':
         extract_dense_waveforms = ExtractDenseWaveforms(recording, parents=[peak_retriever],
-                                                        ms_before=ms_before, ms_after=ms_after,  return_output=False)
+                                                        ms_before=ms_before, ms_after=ms_after, return_output=False)
         pipeline_nodes = [
             peak_retriever,
             extract_dense_waveforms,
             LocalizeMonopolarTriangulation(recording, parents=[peak_retriever, extract_dense_waveforms],
-                                            **method_kwargs)
+                                           **method_kwargs)
         ]
     elif method == "peak_channel":
         pipeline_nodes = [
             peak_retriever,
-            LocalizePeakChannel(recording, parents=[peak_retriever], **method_kwargs)
+            LocalizePeakChannel(recording, parents=[peak_retriever],
+                                **method_kwargs)
             ]
     elif method == "grid_convolution":
         if 'prototype' not in method_kwargs:
-            method_kwargs['prototype'] = get_prototype_spike(recording, peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs)
-        extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_output=False)
+            method_kwargs['prototype'] = get_prototype_spike(recording, peaks, ms_before=ms_before, ms_after=ms_after,
+                                                             job_kwargs=job_kwargs)
+        extract_dense_waveforms = ExtractDenseWaveforms(recording, parents=[peak_retriever],
+                                                        ms_before=ms_before, ms_after=ms_after, return_output=False)
         pipeline_nodes = [
             peak_retriever,
             extract_dense_waveforms,
-            LocalizeGridConvolution(recording, parents=[extract_dense_waveforms], **method_kwargs)
+            LocalizeGridConvolution(recording, parents=[peak_retriever, extract_dense_waveforms],
+                                    **method_kwargs)
         ]
     
     job_name = f'localize peaks using {method}'
@@ -146,11 +153,11 @@ class LocalizeCenterOfMass(LocalizeBase):
 
         assert feature in ['ptp', 'mean', 'energy', 'v_peak'], f'{feature} is not a valid feature'
         self.feature = feature
-        try:
-            waveform_extractor = next(parent for parent in parents if isinstance(parent, WaveformExtractorNode))
-        except (StopIteration, TypeError):
-            exception_string = f"{self.__name__} should have a {WaveformExtractorNode.__name__} in its parents"
-            raise TypeError(exception_string)
+
+        # Find waveform extractor in the parents
+        waveform_extractor = find_parent_of_type(self, WaveformsNode)
+        if waveform_extractor is None:
+            raise TypeError(f"{self.name} should have a single {WaveformsNode.__name__} in its parents")
 
         self.nbefore = waveform_extractor.nbefore
         self._kwargs.update(dict(feature=feature))
@@ -273,11 +280,10 @@ class LocalizeGridConvolution(PipelineNode):
         self.upsampling_um = upsampling_um
         contact_locations = recording.get_channel_locations()
 
-        try:
-            waveform_extractor = next(parent for parent in parents if isinstance(parent, WaveformExtractorNode))
-        except (StopIteration, TypeError):
-            exception_string = f"{self.__name__} should have a {WaveformExtractorNode.__name__} in its parents"
-            raise TypeError(exception_string)
+        # Find waveform extractor in the parents
+        waveform_extractor = find_parent_of_type(self, WaveformsNode)
+        if waveform_extractor is None:
+            raise TypeError(f"{self.name} should have a single {WaveformsNode.__name__} in its parents")
 
         self.nbefore = waveform_extractor.nbefore
         self.nafter = waveform_extractor.nafter
