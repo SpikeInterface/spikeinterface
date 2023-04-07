@@ -59,6 +59,10 @@ class WobbleParameters:
     scale_max : float = np.inf
     scale_amplitudes: bool = False
 
+    def __post_init__(self):
+        assert (self.amplitude_variance >= 0, "amplitude_variance must be a non-negative scalar")
+        self.scale_amplitudes = self.amplitude_variance > 0
+
 
 @dataclass
 class TemplateMetadata:
@@ -68,21 +72,21 @@ class TemplateMetadata:
     ----------
     num_samples : int
         Template duration in samples/frames.
-    n_chan : int
+    num_channels : int
         Number of channels.
-    n_units : int
+    num_units : int
         Number of units.
-    n_templates : int
+    num_templates : int
         Number of templates.
-    n_jittered : int
+    num_jittered : int
         Number of jittered templates.
-    unit_ids : ndarray (n_units,)
+    unit_ids : ndarray (num_units,)
         Indexes corresponding to each unit.
-    template_ids : ndarray (n_templates,)
+    template_ids : ndarray (num_templates,)
         Indexes corresponding to each template.
-    jittered_ids : ndarray (n_jittered,)
+    jittered_ids : ndarray (num_jittered,)
         Indexes corresponding to each jittered template.
-    template_ids2unit_ids : ndarray (n_templates,)
+    template_ids2unit_ids : ndarray (num_templates,)
         Maps from the index of provided templates to their corresponding units.
     unit_ids2template_ids : list[set]
         Maps each unit index to the set of its corresponding templates.
@@ -105,10 +109,10 @@ class TemplateMetadata:
     Each 'template' may have many upsampled 'jittered_templates' depending on the 'jitter_factor'.
     """
     num_samples : int
-    n_chan : int
-    n_units : int
-    n_templates : int
-    n_jittered : int
+    num_channels : int
+    num_units : int
+    num_templates : int
+    num_jittered : int
     unit_ids : np.ndarray
     template_ids : np.ndarray
     jittered_ids : np.ndarray
@@ -121,6 +125,61 @@ class TemplateMetadata:
     jitter2template_shift : np.ndarray
     jitter2spike_time_shift : np.ndarray
 
+    @classmethod
+    def from_parameters_and_templates(cls, params, templates):
+        """Alternate constructor of TemplateMetadata that extracts info from the given parameters and templates.
+
+        Parameters
+        ----------
+        params : WobbleParameters
+            Parameters for WobbleMatch algorithm.
+        templates : ndarray (num_templates, num_samples, num_channels)
+            Spike template waveforms.
+
+        Returns
+        -------
+        template_meta : TemplateMetadata
+            Dataclass object for aggregating template metadata together.
+        """
+        num_templates, num_samples, num_channels = templates.shape
+        # handle units with many templates, as in the super-resolution case
+        if params.template_ids2unit_ids is None:  # Trivial grouping of templates = units
+            template_ids2unit_ids = np.arange(num_templates)
+        else:
+            assert params.template_ids2unit_ids.shape == (templates.shape[0],), \
+                "template_ids2unit_ids must have shape (num_templates,)"
+            template_ids2unit_ids = params.template_ids2unit_ids
+        unit_ids = np.unique(template_ids2unit_ids)
+        num_units = len(unit_ids)
+        template_ids = np.arange(num_templates)
+        unit_ids2template_ids = []
+        for unit_id in unit_ids:
+            template_ids_of_unit = set(template_ids[template_ids2unit_ids == unit_id])
+            unit_ids2template_ids.append(template_ids_of_unit)
+        num_jittered = num_templates * params.jitter_factor
+        jittered_ids = np.arange(num_jittered)
+        overlapping_spike_buffer = num_samples - 1  # makes sure two overlapping spikes aren't subtracted at the same time
+
+        # TODO: Benchmark peak_radius with alternative expressions
+        peak_radius = (params.jitter_factor // 2) + (params.jitter_factor % 2)  # Empirical --> needs to be benchmarked
+        peak_window = np.arange(-peak_radius, peak_radius + 1)
+        peak_window_len = len(peak_window)
+        jitter_window = peak_radius * params.jitter_factor + peak_window
+        jitter2template_shift = np.concatenate(
+            (np.arange(peak_radius, -1, -1), (params.jitter_factor - 1) - np.arange(peak_radius))
+        )
+        jitter2spike_time_shift = np.concatenate(([0], np.array([0, 1]).repeat(peak_radius)))
+        template_meta = cls(
+            num_samples=num_samples, num_channels=num_channels, num_units=num_units, num_templates=num_templates,
+            num_jittered=num_jittered,
+            unit_ids=unit_ids, template_ids=template_ids, jittered_ids=jittered_ids,
+            template_ids2unit_ids=template_ids2unit_ids, unit_ids2template_ids=unit_ids2template_ids,
+            overlapping_spike_buffer=overlapping_spike_buffer, peak_window=peak_window, peak_window_len=peak_window_len,
+            jitter_window=jitter_window, jitter2template_shift=jitter2template_shift,
+            jitter2spike_time_shift=jitter2spike_time_shift
+        )
+        return template_meta
+
 
 @dataclass
 class Sparsity:
@@ -128,14 +187,35 @@ class Sparsity:
 
     Parameters
     ----------
-    vis_chan : ndarray (n_units, n_chan)
-        vis_chan[unit, channel] is True if the unit's template has sufficient amplitude on that channel.
-    unit_overlap : ndarray (n_jittered, n_jittered)
+    visible_channels : ndarray (num_units, num_channels)
+        visible_channels[unit, channel] is True if the unit's template has sufficient amplitude on that channel.
+    unit_overlap : ndarray (num_jittered, num_jittered)
         unit_overlap[i, j] is True if there exists at least one channel on which both template i and template j are
         visible.
     """
-    vis_chan : np.ndarray
+    visible_channels : np.ndarray
     unit_overlap : np.ndarray
+
+    @classmethod
+    def from_paramters_and_templates(cls, params, templates):
+        """Aggregate variables relevant to sparse representation of templates.
+
+        Parameters
+        ----------
+        params : WobbleParameters
+            Dataclass object for aggregating the parameters together.
+        templates : ndarray (num_templates, num_samples, num_channels)
+            Spike template waveforms.
+
+        Returns
+        -------
+        sparsity : Sparsity
+            Dataclass object for aggregating channel sparsity variables together.
+        """
+        visible_channels = spatially_mask_templates(templates, params.visibility_threshold)
+        unit_overlap = template_overlaps(visible_channels, params.jitter_factor)
+        sparsity = cls(visible_channels=visible_channels, unit_overlap=unit_overlap)
+        return sparsity
 
 
 @dataclass
@@ -149,7 +229,7 @@ class TemplateData:
         components.
     pairwise_convolution : list[ndarray]
         For each jittered template, pairwise_convolution of that template with each other overlapping template.
-    norm : ndarray (n_templates,)
+    norm : ndarray (num_templates,)
         Magnitude of each template for normalization.
     """
     compressed_templates : Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
@@ -203,9 +283,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         templates = templates.astype(np.float32, casting='safe')
 
         # Aggregate useful parameters/variables for handy access in downstream functions
-        params = cls.aggregate_parameters(parameters)
-        template_meta = cls.aggregate_template_metadata(params, templates)
-        sparsity = cls.aggregate_sparsity(params, templates) # TODO: replace with spikeinterface sparsity
+        params = WobbleParameters(**parameters)
+        template_meta = TemplateMetadata.from_parameters_and_templates(params, templates)
+        sparsity = Sparsity.from_paramters_and_templates(params, templates) # TODO: replace with spikeinterface sparsity
 
         # Perform initial computations on templates necessary for computing the objective
         compressed_templates = compress_templates(templates, params, template_meta)
@@ -222,103 +302,6 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         kwargs['template_data'] = template_data
         d.update(kwargs)
         return d
-
-
-    @staticmethod
-    def aggregate_parameters(parameters):
-        """Aggregate parameters from parameters into dataclass object.
-
-        Parameters
-        ----------
-        parameters : dict
-            Keyword arguments for WobbleMatch algorithm.
-
-        Returns
-        -------
-        params : WobbleParameters
-            Dataclass object for aggregating the parameters together.
-        """
-        params = WobbleParameters(**parameters)
-        assert(params.amplitude_variance >= 0, "amplitude_variance must be a non-negative scalar")
-        params.scale_amplitudes = params.amplitude_variance > 0
-        return params
-
-
-    @staticmethod
-    def aggregate_template_metadata(params, templates):
-        """Aggregate template metadata into dataclass object.
-
-        Parameters
-        ----------
-        params : WobbleParameters
-            Parameters for WobbleMatch algorithm.
-        templates : ndarray (n_templates, num_samples, n_chan)
-            Spike template waveforms.
-
-        Returns
-        -------
-        template_meta : TemplateMetadata
-            Dataclass object for aggregating template metadata together.
-        """
-        n_templates, num_samples, n_chan = templates.shape
-        # handle units with many templates, as in the super-resolution case
-        if params.template_ids2unit_ids is None: # Trivial grouping of templates = units
-            template_ids2unit_ids = np.arange(n_templates)
-        else:
-            assert params.template_ids2unit_ids.shape == (templates.shape[0],), \
-                "template_ids2unit_ids must have shape (n_templates,)"
-            template_ids2unit_ids = params.template_ids2unit_ids
-        unit_ids = np.unique(template_ids2unit_ids)
-        n_units = len(unit_ids)
-        template_ids = np.arange(n_templates)
-        unit_ids2template_ids = []
-        for unit_id in unit_ids:
-            template_ids_of_unit = set(template_ids[template_ids2unit_ids == unit_id])
-            unit_ids2template_ids.append(template_ids_of_unit)
-        n_jittered = n_templates * params.jitter_factor
-        jittered_ids = np.arange(n_jittered)
-        overlapping_spike_buffer = num_samples - 1  # makes sure two overlapping spikes aren't subtracted at the same time
-
-        # TODO: Benchmark peak_radius with alternative expressions
-        peak_radius = (params.jitter_factor // 2) + (params.jitter_factor % 2) # Empirical --> needs to be benchmarked
-        peak_window = np.arange(-peak_radius, peak_radius + 1)
-        peak_window_len = len(peak_window)
-        jitter_window = peak_radius * params.jitter_factor + peak_window
-        jitter2template_shift = np.concatenate(
-            (np.arange(peak_radius, -1, -1), (params.jitter_factor - 1) - np.arange(peak_radius))
-        )
-        jitter2spike_time_shift = np.concatenate( ([0], np.array([0, 1]).repeat(peak_radius)) )
-        template_meta = TemplateMetadata(
-            num_samples=num_samples, n_chan=n_chan, n_units=n_units, n_templates=n_templates, n_jittered=n_jittered,
-            unit_ids=unit_ids, template_ids=template_ids, jittered_ids=jittered_ids,
-            template_ids2unit_ids=template_ids2unit_ids, unit_ids2template_ids=unit_ids2template_ids,
-            overlapping_spike_buffer=overlapping_spike_buffer, peak_window=peak_window, peak_window_len=peak_window_len,
-            jitter_window=jitter_window, jitter2template_shift=jitter2template_shift,
-            jitter2spike_time_shift=jitter2spike_time_shift
-        )
-        return template_meta
-
-
-    @staticmethod
-    def aggregate_sparsity(params, templates):
-        """Aggregate variables relevant to sparse representation of templates.
-
-        Parameters
-        ----------
-        params : WobbleParameters
-            Dataclass object for aggregating the parameters together.
-        templates : ndarray (n_templates, num_samples, n_chan)
-            Spike template waveforms.
-
-        Returns
-        -------
-        sparsity : Sparsity
-            Dataclass object for aggregating channel sparsity variables together.
-        """
-        vis_chan = spatially_mask_templates(templates, params.visibility_threshold)
-        unit_overlap = template_overlaps(vis_chan, params.jitter_factor)
-        sparsity = Sparsity(vis_chan=vis_chan, unit_overlap=unit_overlap)
-        return sparsity
 
 
     @classmethod
@@ -359,14 +342,14 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         Parameters
         ----------
-        traces : ndarray (chunk_len + 2*margin, n_chan)
+        traces : ndarray (chunk_len + 2*margin, num_channels)
             Voltage traces for a chunk of the recording.
         method_kwargs : dict
             Keyword arguments for matching method.
 
         Returns
         -------
-        spikes : ndarray (n_spikes,)
+        spikes : ndarray (num_spikes,)
             Resulting spike train.
         """
         # Unpack method_kwargs
@@ -381,7 +364,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         # Compute objective
         objective, objective_normalized = compute_objective(traces, template_data, params.conv_approx_rank,
-                                                            template_meta.n_templates, template_meta.num_samples)
+                                                            template_meta.num_templates, template_meta.num_samples)
 
         # Compute spike train
         spike_trains, scalings, distance_metrics = [], [], []
@@ -444,9 +427,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         Parameters
         ----------
-        objective : ndarray (n_templates, traces.shape[0]+template_meta.num_samples-1)
+        objective : ndarray (num_templates, traces.shape[0]+template_meta.num_samples-1)
             Template matching objective for each template.
-        objective_normalized : ndarray (n_templates, traces.shape[0]+template_meta.num_samples-1)
+        objective_normalized : ndarray (num_templates, traces.shape[0]+template_meta.num_samples-1)
             Template matching objective normalized by the magnitude of each template.
         params : WobbleParameters
             Dataclass object for aggregating the parameters together.
@@ -455,11 +438,11 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         Returns
         -------
-        new_spike_train : ndarray (n_spikes, 2)
+        new_spike_train : ndarray (num_spikes, 2)
             Spike train from template matching with newly detected spikes added.
-        scalings : ndarray (n_spikes,)
+        scalings : ndarray (num_spikes,)
             Amplitude scaling used for each spike.
-        distance_metric : ndarray (n_spikes)
+        distance_metric : ndarray (num_spikes)
             A metric that describes how good of a 'fit' each spike is to its corresponding template
 
         Notes
@@ -513,13 +496,13 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         Parameters
         ----------
-        spike_train : ndarray (n_spikes, 2)
+        spike_train : ndarray (num_spikes, 2)
             Spike train from template matching.
-        scalings : ndarray (n_spikes,)
+        scalings : ndarray (num_spikes,)
             Amplitude scaling used for each spike.
-        objective : ndarray (n_templates, traces.shape[0]+num_samples-1)
+        objective : ndarray (num_templates, traces.shape[0]+num_samples-1)
             Template matching objective for each template.
-        objective_normalized : ndarray (n_templates, traces.shape[0]+num_samples-1)
+        objective_normalized : ndarray (num_templates, traces.shape[0]+num_samples-1)
             Template matching objective normalized by the magnitude of each template.
         params : WobbleParameters
             Dataclass object for aggregating the parameters together.
@@ -555,13 +538,13 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         Parameters
         ----------
-        spike_time_indices : ndarray (n_spikes,)
+        spike_time_indices : ndarray (num_spikes,)
             Indices in the voltage traces corresponding to the time of each spike.
-        spike_unit_ids : ndarray (n_spikes)
+        spike_unit_ids : ndarray (num_spikes)
             Units corresponding to each spike.
-        objective : ndarray (n_templates, traces.shape[0]+num_samples-1)
+        objective : ndarray (num_templates, traces.shape[0]+num_samples-1)
             Template matching objective for each template.
-        objective_normalized : ndarray (n_templates, traces.shape[0]+num_samples-1)
+        objective_normalized : ndarray (num_templates, traces.shape[0]+num_samples-1)
             Template matching objective normalized by the magnitude of each template.
         template_data : TemplateData
             Dataclass object for aggregating template data together.
@@ -572,13 +555,13 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         Returns
         -------
-        template_shift : ndarray (n_spikes,)
+        template_shift : ndarray (num_spikes,)
             Indices to shift each spike template_id to the correct jittered_id.
-        time_shift : ndarray (n_spikes,)
+        time_shift : ndarray (num_spikes,)
             Indices to shift each spike time index to the adjusted time index.
         non_refractory_indices : ndarray
             Indices of the spike train that correspond to non-refractory spikes.
-        scalings : ndarray (n_spikes,)
+        scalings : ndarray (num_spikes,)
             Amplitude scaling used for each spike.
         """
         # Return identities if no high-resolution templates are necessary
@@ -639,11 +622,11 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         Parameters
         ----------
-        spike_train : ndarray (n_spikes, 2)
+        spike_train : ndarray (num_spikes, 2)
             Spike train from template matching.
-        objective : ndarray (n_templates, traces.shape[0]+num_samples-1)
+        objective : ndarray (num_templates, traces.shape[0]+num_samples-1)
             Template matching objective for each template.
-        objective_normalized : ndarray (n_templates, traces.shape[0]+num_samples-1)
+        objective_normalized : ndarray (num_templates, traces.shape[0]+num_samples-1)
             Template matching objective normalized by the magnitude of each template.
         params : WobbleParameters
             Dataclass object for aggregating the parameters together.
@@ -680,18 +663,18 @@ def compute_template_norm(sparsity, template_meta, templates):
         Dataclass object for aggregating the parameters together.
     template_meta : TemplateMetadata
         Dataclass object for aggregating template metadata together.
-    templates : ndarray (n_templates, num_samples, n_chan)
+    templates : ndarray (num_templates, num_samples, num_channels)
         Spike template waveforms.
 
     Returns
     -------
-    norm : ndarray (n_templates,)
+    norm : ndarray (num_templates,)
     Magnitude of each template for normalization.
     """
-    norm = np.zeros(template_meta.n_templates, dtype=np.float32)
-    for i in range(template_meta.n_templates):
+    norm = np.zeros(template_meta.num_templates, dtype=np.float32)
+    for i in range(template_meta.num_templates):
         norm[i] = np.sum(
-            np.square(templates[i, :, sparsity.vis_chan[i, :]])
+            np.square(templates[i, :, sparsity.visible_channels[i, :]])
         )
     return norm
 
@@ -702,7 +685,7 @@ def spatially_mask_templates(templates, visibility_threshold):
 
     Parameters
     ----------
-    templates : ndarray (n_templates, num_samples, n_chan)
+    templates : ndarray (num_templates, num_samples, num_channels)
         Spike template waveforms.
     visibility_thresold : float
         Minimum peak amplitude to determine channel sparsity for a given unit. Units depend on the underlying units
@@ -710,33 +693,33 @@ def spatially_mask_templates(templates, visibility_threshold):
 
     Returns
     -------
-    vis_chan : ndarray (n_units, n_chan)
-        vis_chan[unit, channel] is True if the unit's template has sufficient amplitude on that channel.
+    visible_channels : ndarray (num_units, num_channels)
+        visible_channels[unit, channel] is True if the unit's template has sufficient amplitude on that channel.
     """
-    vis_chan = np.ptp(templates, axis=1) > visibility_threshold
-    invisible_channels = np.logical_not(vis_chan)
+    visible_channels = np.ptp(templates, axis=1) > visibility_threshold
+    invisible_channels = np.logical_not(visible_channels)
     for i in range(templates.shape[0]):
         templates[i, :, invisible_channels[i, :]] = 0.0
-    return vis_chan
+    return visible_channels
 
 
-def template_overlaps(vis_chan, jitter_factor):
+def template_overlaps(visible_channels, jitter_factor):
     """Finds overlapping templates based on peak-to-peak amplitude at different channels.
 
     Parameters
     ----------
-    vis_chan : ndarray (n_units, n_chan)
-        vis_chan[unit, channel] is True if the unit's template has sufficient amplitude on that channel.
+    visible_channels : ndarray (num_units, num_channels)
+        visible_channels[unit, channel] is True if the unit's template has sufficient amplitude on that channel.
     jitter_factor : int
         Number of upsampled jittered templates for each distinct provided template.
 
     Returns
     -------
-    unit_overlap : ndarray (n_jittered, n_jittered)
+    unit_overlap : ndarray (num_jittered, num_jittered)
         unit_overlap[i, j] is True if there exists at least one channel on which both template i and template j are
         visible.
     """
-    unit_overlap = np.sum(np.logical_and(vis_chan[:, np.newaxis, :], vis_chan[np.newaxis, :, :]), axis=2)
+    unit_overlap = np.sum(np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]), axis=2)
     unit_overlap = unit_overlap > 0
     unit_overlap = np.repeat(unit_overlap, jitter_factor, axis=0)
     return unit_overlap
@@ -748,7 +731,7 @@ def compress_templates(templates, params, template_meta):
 
     Parameters
     ----------
-    templates : ndarray (n_templates, num_samples, n_chan)
+    templates : ndarray (num_templates, num_samples, num_channels)
         Spike template waveforms.
     params : WobbleParameters
         Parameters for WobbleMatch algorithm.
@@ -819,9 +802,9 @@ def convolve_templates(compressed_templates, params, template_meta, sparsity):
     conv_res_len = get_convolution_len(template_meta.num_samples, template_meta.num_samples)
     pairwise_convolution = []
     for jittered_id in template_meta.jittered_ids:
-        n_overlap = np.sum(sparsity.unit_overlap[jittered_id, :])
+        num_overlap = np.sum(sparsity.unit_overlap[jittered_id, :])
         template_id = jittered_id // params.jitter_factor
-        pconv = np.zeros([n_overlap, conv_res_len], dtype=np.float32)
+        pconv = np.zeros([num_overlap, conv_res_len], dtype=np.float32)
 
         # Reconstruct unit template from SVD Matrices
         temporal_jittered_scaled = temporal_jittered[jittered_id] * singular[template_id][np.newaxis, :]
@@ -834,7 +817,7 @@ def convolve_templates(compressed_templates, params, template_meta, sparsity):
             temporal_overlapped = temporal[jittered_id2]
             singular_overlapped = singular[jittered_id2]
             spatial_overlapped = spatial[jittered_id2]
-            visible_overlapped_channels = sparsity.vis_chan[jittered_id2, :]
+            visible_overlapped_channels = sparsity.visible_channels[jittered_id2, :]
             visible_template = template_reconstructed[:, visible_overlapped_channels]
             spatial_filters = spatial_overlapped[:params.conv_approx_rank, visible_overlapped_channels].T
             spatially_filtered_template = np.matmul(visible_template, spatial_filters)
@@ -846,25 +829,25 @@ def convolve_templates(compressed_templates, params, template_meta, sparsity):
     return pairwise_convolution
 
 
-def compute_objective(traces, template_data, conv_approx_rank, n_templates, num_samples):
+def compute_objective(traces, template_data, conv_approx_rank, num_templates, num_samples):
     """Compute objective by convolving templates with voltage traces.
 
     Operates on objective in-place.
 
     Parameters
     ----------
-    traces : ndarray (chunk_len + 2*margin, n_chan)
+    traces : ndarray (chunk_len + 2*margin, num_channels)
         Voltage traces for a chunk of the recording.
     template_data : TemplateData
         Dataclass object for aggregating template data together.
     conv_approx_rank : int
         Rank of the compressed template matrices.
-    n_templates : int
+    num_templates : int
         Number of templates.
     """
     temporal, singular, spatial, temporal_jittered = template_data.compressed_templates
     objective_len = get_convolution_len(traces.shape[0], num_samples)
-    conv_shape = (n_templates, objective_len)
+    conv_shape = (num_templates, objective_len)
     objective = np.zeros(conv_shape, dtype=np.float32)
     # TODO: vectorize this loop
     for rank in range(conv_approx_rank):
@@ -873,7 +856,7 @@ def compute_objective(traces, template_data, conv_approx_rank, n_templates, num_
         spatially_filtered_data = np.matmul(spatial_filters, traces.T)
         scaled_filtered_data = spatially_filtered_data * singular[:, [rank]]
         # TODO: vectorize this loop
-        for template_id in range(n_templates):
+        for template_id in range(num_templates):
             template_temporal_filter = temporal_filters[template_id]
             objective[template_id, :] += np.convolve(scaled_filtered_data[template_id, :],
                                                      template_temporal_filter,
@@ -899,7 +882,7 @@ def compute_scale_amplitudes(high_resolution_conv, norm_peaks, scale_min, scale_
     high_resolution_conv : ndarray
         Super-resolution upsampled convolution of the spike templates with the traces, but only for a small window
         in time around the peak of the spike.
-    norm_peaks : ndarray (n_spikes,)
+    norm_peaks : ndarray (num_spikes,)
         Magnitude of the template corresponding to each spike in the spike train.
     scale_min : float
         Minimum value for amplitude scaling of templates.
@@ -912,7 +895,7 @@ def compute_scale_amplitudes(high_resolution_conv, norm_peaks, scale_min, scale_
     -------
     high_res_obj : ndarray
         Super-resolution upsampled objective, but only for a small window in time around the peak of each spike.
-    scalings : ndarray (n_spikes,)
+    scalings : ndarray (num_spikes,)
         Amplitude scaling used for each spike.
     """
     b = high_resolution_conv + 1 / amplitude_variance
