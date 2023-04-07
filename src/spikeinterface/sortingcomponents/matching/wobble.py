@@ -218,6 +218,52 @@ class Sparsity:
         return sparsity
 
 
+def spatially_mask_templates(templates, visibility_threshold):
+    """Determine which channels are 'visible' for each template, based on peak-to-peak amplitude, and
+    set the template to 0 for 'invisible' channels.
+
+    Parameters
+    ----------
+    templates : ndarray (num_templates, num_samples, num_channels)
+        Spike template waveforms.
+    visibility_thresold : float
+        Minimum peak amplitude to determine channel sparsity for a given unit. Units depend on the underlying units
+        of voltage trace and templates.
+
+    Returns
+    -------
+    visible_channels : ndarray (num_units, num_channels)
+        visible_channels[unit, channel] is True if the unit's template has sufficient amplitude on that channel.
+    """
+    visible_channels = np.ptp(templates, axis=1) > visibility_threshold
+    invisible_channels = np.logical_not(visible_channels)
+    for i in range(templates.shape[0]):
+        templates[i, :, invisible_channels[i, :]] = 0.0
+    return visible_channels
+
+
+def template_overlaps(visible_channels, jitter_factor):
+    """Finds overlapping templates based on peak-to-peak amplitude at different channels.
+
+    Parameters
+    ----------
+    visible_channels : ndarray (num_units, num_channels)
+        visible_channels[unit, channel] is True if the unit's template has sufficient amplitude on that channel.
+    jitter_factor : int
+        Number of upsampled jittered templates for each distinct provided template.
+
+    Returns
+    -------
+    unit_overlap : ndarray (num_jittered, num_jittered)
+        unit_overlap[i, j] is True if there exists at least one channel on which both template i and template j are
+        visible.
+    """
+    unit_overlap = np.sum(np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]), axis=2)
+    unit_overlap = unit_overlap > 0
+    unit_overlap = np.repeat(unit_overlap, jitter_factor, axis=0)
+    return unit_overlap
+
+
 @dataclass
 class TemplateData:
     """Data derived from the set of templates.
@@ -242,6 +288,24 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
     Templates are jittered or 'wobbled' in time and amplitude to capture variability in spike amplitude and
     super-resolution jitter in spike timing.
+
+    Algorithm
+    ---------
+    At initialization:
+        1. Compute channel sparsity to determine which units are 'visible' to each other
+        2. Compress Templates using Singular Value Decomposition into rank conv_approx_rank
+        3. Upsample the temporal component of compressed templates and re-index to obtain many super-resolution-jittered
+            temporal components for each template
+        3. Convolve each pair of jittered compressed templates together (subject to channel sparsity)
+    For each chunk of traces:
+        1. Compute the 'objective function' to be minimized by convolving each true template with the traces
+        2. Normalize the objective relative to the magnitude of each true template
+        3. Detect spikes by indexing peaks in the objective corresponding to 'matches' between the spike and a template
+        4. Determine which super-resolution-jittered template best matches each spike and scale the amplitude to match
+        5. Subtract scaled pairwise convolved jittered templates from the objective(s) to account for the effect of
+            removing detected spikes from the traces
+        6. Enforce a refractory period around each spike by setting the objective to -inf
+        7. Repeat Steps 3-6 until no more spikes are detected above the threshold OR max_iter is reached
 
     Notes
     -----
@@ -363,8 +427,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         traces = traces.astype(np.float32, casting='safe') # ensure traces are specified as np.float32
 
         # Compute objective
-        objective, objective_normalized = compute_objective(traces, template_data, params.conv_approx_rank,
-                                                            template_meta.num_templates, template_meta.num_samples)
+        objective, objective_normalized = compute_objective(traces, template_data, template_meta,
+                                                            params.conv_approx_rank)
 
         # Compute spike train
         spike_trains, scalings, distance_metrics = [], [], []
@@ -492,8 +556,6 @@ class WobbleMatch(BaseTemplateMatchingEngine):
                              params, template_meta, sparsity):
         """Subtract spike train of templates from the objective directly.
 
-        Operates in-place on the objective.
-
         Parameters
         ----------
         spike_train : ndarray (num_spikes, 2)
@@ -510,6 +572,10 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             Dataclass object for aggregating template metadata together.
         sparsity : Sparsity
             Dataclass object for aggregating channel sparsity variables together.
+
+        Notes
+        -----
+        Operates in-place on the objective and objective_normalized.
         """
         present_jittered_ids = np.unique(spike_train[:, 1])
         convolution_resolution_len = get_convolution_len(template_meta.num_samples, template_meta.num_samples)
@@ -679,53 +745,6 @@ def compute_template_norm(sparsity, template_meta, templates):
     return norm
 
 
-def spatially_mask_templates(templates, visibility_threshold):
-    """Determine which channels are 'visible' for each template, based on peak-to-peak amplitude, and
-    set the template to 0 for 'invisible' channels.
-
-    Parameters
-    ----------
-    templates : ndarray (num_templates, num_samples, num_channels)
-        Spike template waveforms.
-    visibility_thresold : float
-        Minimum peak amplitude to determine channel sparsity for a given unit. Units depend on the underlying units
-        of voltage trace and templates.
-
-    Returns
-    -------
-    visible_channels : ndarray (num_units, num_channels)
-        visible_channels[unit, channel] is True if the unit's template has sufficient amplitude on that channel.
-    """
-    visible_channels = np.ptp(templates, axis=1) > visibility_threshold
-    invisible_channels = np.logical_not(visible_channels)
-    for i in range(templates.shape[0]):
-        templates[i, :, invisible_channels[i, :]] = 0.0
-    return visible_channels
-
-
-def template_overlaps(visible_channels, jitter_factor):
-    """Finds overlapping templates based on peak-to-peak amplitude at different channels.
-
-    Parameters
-    ----------
-    visible_channels : ndarray (num_units, num_channels)
-        visible_channels[unit, channel] is True if the unit's template has sufficient amplitude on that channel.
-    jitter_factor : int
-        Number of upsampled jittered templates for each distinct provided template.
-
-    Returns
-    -------
-    unit_overlap : ndarray (num_jittered, num_jittered)
-        unit_overlap[i, j] is True if there exists at least one channel on which both template i and template j are
-        visible.
-    """
-    unit_overlap = np.sum(np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]), axis=2)
-    unit_overlap = unit_overlap > 0
-    unit_overlap = np.repeat(unit_overlap, jitter_factor, axis=0)
-    return unit_overlap
-
-
-
 def compress_templates(templates, params, template_meta):
     """Compress templates using singular value decomposition.
 
@@ -829,10 +848,8 @@ def convolve_templates(compressed_templates, params, template_meta, sparsity):
     return pairwise_convolution
 
 
-def compute_objective(traces, template_data, conv_approx_rank, num_templates, num_samples):
+def compute_objective(traces, template_data, template_meta, conv_approx_rank):
     """Compute objective by convolving templates with voltage traces.
-
-    Operates on objective in-place.
 
     Parameters
     ----------
@@ -840,14 +857,21 @@ def compute_objective(traces, template_data, conv_approx_rank, num_templates, nu
         Voltage traces for a chunk of the recording.
     template_data : TemplateData
         Dataclass object for aggregating template data together.
+    template_meta : TemplateMetadata
+        Dataclass object for aggregating template metadata together.
     conv_approx_rank : int
         Rank of the compressed template matrices.
-    num_templates : int
-        Number of templates.
+
+    Returns
+    -------
+    objective : ndarray (template_meta.num_templates, traces.shape[0]+template_meta.num_samples-1)
+            Template matching objective for each template.
+    objective_normalized : ndarray (template_meta.num_templates, traces.shape[0]+template_meta.num_samples-1)
+        Template matching objective normalized by the magnitude of each template.
     """
     temporal, singular, spatial, temporal_jittered = template_data.compressed_templates
-    objective_len = get_convolution_len(traces.shape[0], num_samples)
-    conv_shape = (num_templates, objective_len)
+    objective_len = get_convolution_len(traces.shape[0], template_meta.num_samples)
+    conv_shape = (template_meta.num_templates, objective_len)
     objective = np.zeros(conv_shape, dtype=np.float32)
     # TODO: vectorize this loop
     for rank in range(conv_approx_rank):
@@ -856,7 +880,7 @@ def compute_objective(traces, template_data, conv_approx_rank, num_templates, nu
         spatially_filtered_data = np.matmul(spatial_filters, traces.T)
         scaled_filtered_data = spatially_filtered_data * singular[:, [rank]]
         # TODO: vectorize this loop
-        for template_id in range(num_templates):
+        for template_id in range(template_meta.num_templates):
             template_temporal_filter = temporal_filters[template_id]
             objective[template_id, :] += np.convolve(scaled_filtered_data[template_id, :],
                                                      template_temporal_filter,
