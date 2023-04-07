@@ -42,7 +42,7 @@ def test_waveform_thresholder_mean(extract_waveforms, mearec_recording, detected
     recording = mearec_recording
     peaks = detected_peaks
 
-    tresholded_waveforms_mean = WaveformThresholder(recording=recording, parents=[extract_waveforms], feature='mean', threshold=3, return_output=True)
+    tresholded_waveforms_mean = WaveformThresholder(recording=recording, parents=[extract_waveforms], feature='mean', threshold=0, return_output=True)
 
     pipeline_nodes = [extract_waveforms, tresholded_waveforms_mean]
     # Extract projected waveforms and compare
