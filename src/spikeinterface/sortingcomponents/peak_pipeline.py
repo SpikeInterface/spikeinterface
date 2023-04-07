@@ -289,7 +289,7 @@ def find_parent_of_type(node, parent_type, unique=True):
     elif not unique and len(parents) > 1:
         return parents[0]
     else:
-        None
+        return None
 
 def check_graph(nodes):
     """
