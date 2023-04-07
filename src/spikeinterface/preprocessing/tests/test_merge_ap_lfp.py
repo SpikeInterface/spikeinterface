@@ -29,8 +29,7 @@ def test_MergeApLfpRecording():
     T = 10
 
     # Generate a 10-seconds 2-channels white noise recording.
-    rng = np.random.RandomState(seed=420)
-    original_traces = np.array([rng.normal(loc=0.0, scale=1.0, size=T*sf), np.random.normal(loc=0.0, scale=1.0, size=T*sf)]).T
+    original_traces = np.array([np.random.normal(loc=0.0, scale=1.0, size=T*sf), np.random.normal(loc=0.0, scale=1.0, size=T*sf)]).T
     original_fourier = np.fft.rfft(original_traces, axis=0)
     freq = np.fft.rfftfreq(original_traces.shape[0], d=1/sf)
 
