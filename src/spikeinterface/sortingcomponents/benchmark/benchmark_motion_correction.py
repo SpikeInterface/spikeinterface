@@ -30,7 +30,7 @@ import MEArec as mr
 
 class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     
-    _array_names = ('motion', 'temporal_bins', 'spatial_bins')
+    _array_names = ('gt_motion', 'estimated_motion', 'temporal_bins', 'spatial_bins')
     _waveform_names = ('static', 'drifting', 'corrected')
     _sorting_names = ()
 
@@ -38,8 +38,9 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     _waveform_names_from_parent = ('static', 'drifting')
     _sorting_names_from_parent = ('static', 'drifting')
 
-    def __init__(self, mearec_filename_drifting, mearec_filename_static, 
-                motion,
+    def __init__(self, mearec_filename_drifting, mearec_filename_static,
+                gt_motion,
+                estimated_motion,
                 temporal_bins,
                 spatial_bins,
                 do_preprocessing=True,
@@ -56,7 +57,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite, job_kwargs=job_kwargs,
                                parent_benchmark=parent_benchmark)
 
-        self._args.extend([str(mearec_filename_drifting), str(mearec_filename_static), None, None, None ])
+        self._args.extend([str(mearec_filename_drifting), str(mearec_filename_static), None, None, None, None ])
         
 
         self.sorter_cases = sorter_cases.copy()
@@ -66,7 +67,8 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         self.mearec_filenames['static'] = mearec_filename_static
         self.temporal_bins = temporal_bins
         self.spatial_bins = spatial_bins
-        self.motion = motion
+        self.gt_motion = gt_motion
+        self.estimated_motion = estimated_motion
         self.do_preprocessing = do_preprocessing
         self.delete_output_folder = delete_output_folder
 
@@ -93,6 +95,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             self._recordings = {}
             for key in ('drifting', 'static',):
                 rec, _  = read_mearec(self.mearec_filenames[key])
+                self._recordings['raw_'+key] = rec
                 if self.do_preprocessing:
                     # all computation are done in float32
                     # rec = bandpass_filter(rec)
@@ -100,19 +103,22 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                     rec = highpass_filter(rec, freq_min=150.)
                     # rec = zscore(rec)
                     # 150um is more or less 30 channels
-                    rec = whiten(rec, mode='local', radius_um=150.)
+                    rec = whiten(rec, mode='local', radius_um=150., num_chunks_per_segment=40, chunk_size=32000)
                     rec = scale(rec, gain=200, dtype='int16')
                 self._recordings[key] = rec
 
             rec = self._recordings['drifting']
-            self._recordings['corrected'] = CorrectMotionRecording(rec, self.motion, 
+            self._recordings['corrected_gt'] = CorrectMotionRecording(rec, self.gt_motion, 
+                        self.temporal_bins, self.spatial_bins, **self.correct_motion_kwargs)
+
+            self._recordings['corrected_estimated'] = CorrectMotionRecording(rec, self.estimated_motion, 
                         self.temporal_bins, self.spatial_bins, **self.correct_motion_kwargs)
 
         return self._recordings
 
     def run(self):
-        self.extract_waveforms()
-        self.save_to_folder()
+        # self.extract_waveforms()
+        # self.save_to_folder()
         self.run_sorters()
         self.save_to_folder()
 
