@@ -5,7 +5,7 @@ from copy import deepcopy
 
 class MergeUnitsSorting(BaseSorting):
     """
-    Class that handles several merges of units from a Sorting object based on a list of list of unit_ids.
+    Class that handles several merges of units from a Sorting object based on a list of lists of unit_ids.
 
     Parameters
     ----------
@@ -17,12 +17,12 @@ class MergeUnitsSorting(BaseSorting):
     new_unit_ids: None or list
         A new unit_ids for merged units. If given, it needs to have the same length as `units_to_merge`
     properties_policy: str ('keep', 'remove')
-        Policy used to propagate propierties. If 'keep' the properties will be pass to the new units
+        Policy used to propagate properties. If 'keep' the properties will be passed to the new units
          (if the units_to_merge have the same value). If 'remove' the new units will have an empty 
          value for all the properties of the new unit.
          Default: 'keep'
     delta_time_ms: float or None
-        Number of ms to consider duplicated spikes. None to don't check duplications
+        Number of ms to consider for duplicated spikes. None won't check for duplications
     Returns
     -------
     sorting: Sorting
@@ -48,7 +48,7 @@ class MergeUnitsSorting(BaseSorting):
 
         if new_unit_ids is None:
             dtype = parents_unit_ids.dtype
-            #select new_units_ids grater that the max id, event greater than the numerical str ids 
+            #select new_units_ids greater that the max id, event greater than the numerical str ids 
             if np.issubdtype(dtype, np.character):
                 # dtype str
                 if all(p.isdigit() for p in parents_unit_ids):
@@ -66,7 +66,7 @@ class MergeUnitsSorting(BaseSorting):
                 new_unit_ids = list(max(parents_unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
         else:
             if np.any(np.in1d(new_unit_ids, keep_unit_ids)):
-                raise ValueError("'new_unit_ids' are already exesting in the sorting.unit_ids. Provide new ones")
+                raise ValueError("'new_unit_ids' already exist in the sorting.unit_ids. Provide new ones")
         
         assert len(new_unit_ids) == num_merge, 'new_unit_ids must have the same size as units_to_merge'
 
