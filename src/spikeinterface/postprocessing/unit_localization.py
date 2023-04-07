@@ -269,7 +269,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         local_contact_locations = contact_locations[chan_inds, :]
 
         # wf is (nsample, nchan) - chann is only nieghboor
-        wf = templates[i, :, chan_inds]
+        wf = templates[i, :, :][:, chan_inds]
         if feature == 'ptp':
             wf_data = wf.ptp(axis=0)
         elif feature == 'energy':
