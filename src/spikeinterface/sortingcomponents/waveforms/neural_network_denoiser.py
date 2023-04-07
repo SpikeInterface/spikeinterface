@@ -21,7 +21,7 @@ class SingleChannelToyDenoiser(WaveformExtractorNode):
         try:
             waveform_extractor = next(parent for parent in parents if isinstance(parent, WaveformExtractorNode))
         except (StopIteration, TypeError):
-            exception_string = f"Model should have a {WaveformExtractorNode.__name__} in its parents"
+            exception_string = f"SingleChannelToyDenoiser should have a {WaveformExtractorNode.__name__} in its parents"
             raise TypeError(exception_string)
 
         super().__init__(recording, waveform_extractor.ms_before, waveform_extractor.ms_after,

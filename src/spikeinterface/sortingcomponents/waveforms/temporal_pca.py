@@ -29,13 +29,11 @@ class TemporalPCBaseNode(WaveformExtractorNode):
         try:
             waveform_extractor = next(parent for parent in parents if isinstance(parent, WaveformExtractorNode))
         except (StopIteration, TypeError):
-            exception_string = f"Model should have a {WaveformExtractorNode.__name__} in its parents"
+            exception_string = f"TemporalPCA should have a {WaveformExtractorNode.__name__} in its parents"
             raise TypeError(exception_string)
 
         super().__init__(recording, waveform_extractor.ms_before, waveform_extractor.ms_after,
             return_output=return_output, parents=parents)
-
-        self.assert_model_and_waveform_temporal_match(waveform_extractor)
 
         self.model_folder_path = model_folder_path
 
@@ -53,6 +51,8 @@ class TemporalPCBaseNode(WaveformExtractorNode):
         params_path = Path(model_folder_path) / "params.json"
         with open(params_path, "rb") as f:
             self.params = json.load(f)
+
+        self.assert_model_and_waveform_temporal_match(waveform_extractor)
 
 
     def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformExtractorNode):
