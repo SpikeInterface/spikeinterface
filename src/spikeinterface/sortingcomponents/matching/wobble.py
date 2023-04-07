@@ -81,11 +81,11 @@ class TemplateMetadata:
     num_jittered : int
         Number of jittered templates.
     unit_indices : ndarray (num_units,)
-        Indexes corresponding to each unit.
+        indices corresponding to each unit.
     template_indices : ndarray (num_templates,)
-        Indexes corresponding to each template.
+        indices corresponding to each template.
     jittered_indices : ndarray (num_jittered,)
-        Indexes corresponding to each jittered template.
+        indices corresponding to each jittered template.
     template_indices2unit_indices : ndarray (num_templates,)
         Maps from the index of provided templates to their corresponding units.
     unit_indices2template_indices : list[set]
@@ -93,11 +93,11 @@ class TemplateMetadata:
     overlapping_spike_buffer : int
         Buffer to prevent adjacent spikes from being subtracted from the objective at the same time.
     peak_window : ndarray
-        Window of indexes around the peak in each spike waveform used to perform upsampling.
+        Window of indices around the peak in each spike waveform used to perform upsampling.
     peak_window_len : int
         Length of peak_window.
     jitter_window : ndarray
-        Window of indexes around around the maximum of the upsampled peak waveform.
+        Window of indices around around the maximum of the upsampled peak waveform.
     jitter2template_shift : ndarray
         Maps the optimal jitter from the jitter_window to the optimal template shift.
     jitter2spike_time_shift : ndarray
