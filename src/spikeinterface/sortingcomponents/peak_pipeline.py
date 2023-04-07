@@ -122,14 +122,13 @@ class PeakRetriever(PipelineNode):
         return (local_peaks, )
 
 
-
-
 class WaveformsNode(PipelineNode):
     """
     Base class for waveforms in a node pipeline.
     
-    Nodes that output waveforms (ExtractDenseEaveforms/ExtractSparseWaveforms)
-    or modifying waveforms (Denoisers) need to inherit from this base class.
+    Nodes that output waveforms either extracting them from the traces 
+    (e.g., ExtractDenseWaveforms/ExtractSparseWaveforms)or modifying existing 
+    waveforms (e.g., Denoisers) need to inherit from this base class.
     """
 
     def __init__(
