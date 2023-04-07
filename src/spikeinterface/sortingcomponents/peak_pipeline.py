@@ -124,8 +124,13 @@ class PeakRetriever(PipelineNode):
 
 
 
-class WaveformRetrieverNode(PipelineNode):
-    """Base class for waveform extractor"""
+class WaveformsNode(PipelineNode):
+    """
+    Base class for waveforms in a node pipeline.
+    
+    Nodes that output waveforms (ExtractDenseEaveforms/ExtractSparseWaveforms)
+    or modifying waveforms (Denoisers) need to inherit from this base class.
+    """
 
     def __init__(
         self,
@@ -160,7 +165,7 @@ class WaveformRetrieverNode(PipelineNode):
         self.nafter = int(ms_after * recording.get_sampling_frequency() / 1000.0)
 
 
-class ExtractDenseWaveforms(WaveformRetrieverNode):
+class ExtractDenseWaveforms(WaveformsNode):
     def __init__(
         self,
         recording: BaseRecording,
@@ -188,7 +193,7 @@ class ExtractDenseWaveforms(WaveformRetrieverNode):
             The number of milliseconds to include after the peak of the spike, by default 1.
         """
 
-        WaveformRetrieverNode.__init__(
+        WaveformsNode.__init__(
             self,
             recording=recording,
             parents=parents,
@@ -208,7 +213,7 @@ class ExtractDenseWaveforms(WaveformRetrieverNode):
         return waveforms
 
 
-class ExtractSparseWaveforms(WaveformRetrieverNode):
+class ExtractSparseWaveforms(WaveformsNode):
     def __init__(
         self,
         recording: BaseRecording,
@@ -244,7 +249,7 @@ class ExtractSparseWaveforms(WaveformRetrieverNode):
 
 
         """
-        WaveformRetrieverNode.__init__(
+        WaveformsNode.__init__(
             self,
             recording=recording,
             parents=parents,
