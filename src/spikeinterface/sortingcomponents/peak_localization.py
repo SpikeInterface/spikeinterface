@@ -142,7 +142,7 @@ class LocalizeCenterOfMass(LocalizeBase):
             raise TypeError(exception_string)
 
         self.nbefore = waveform_extractor.nbefore
-        self._kwargs.update(dict(feature=self.feature, nbefore=self.nbefore))
+        self._kwargs.update(dict(feature=feature))
 
     def get_dtype(self):
         return self._dtype
