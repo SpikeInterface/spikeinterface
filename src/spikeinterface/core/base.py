@@ -856,8 +856,8 @@ def _load_extractor_from_dict(dic):
 
     assert cls is not None and class_name is not None, "Could not load spikeinterface class"
     if not _check_same_version(class_name, dic['version']):
-        print('Versions are not the same. This might lead to errors. Use ', class_name.split('.')[0],
-              'version', dic['version'])
+        warnings.warn(f"Versions are not the same. This might lead compatibility errors. "
+                      f"Using {class_name.split('.')[0]}=={dic['version']} is recommended")
 
     # instantiate extrator object
     extractor = cls(**kwargs)
