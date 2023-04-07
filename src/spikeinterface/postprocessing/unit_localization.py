@@ -320,6 +320,8 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=75, fe
     recording = waveform_extractor.recording
     contact_locations = recording.get_channel_locations()
 
+    assert feature in ['ptp', 'mean', 'energy', 'v_peak'], f'{feature} is not a valid feature'
+
     sparsity = compute_sparsity(waveform_extractor, peak_sign=peak_sign, method='radius', radius_um=radius_um)
     templates = waveform_extractor.get_all_templates(mode='average')
 
