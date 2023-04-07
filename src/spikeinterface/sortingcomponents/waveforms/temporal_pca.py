@@ -17,7 +17,7 @@ from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from .waveform_utils import to_temporal_representation, from_temporal_representation
 
 
-class TemporalPCBaseNode(PipelineNode):
+class TemporalPCBaseNode(WaveformExtractorNode):
     def __init__(
         self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_output=True
     ):
@@ -26,7 +26,16 @@ class TemporalPCBaseNode(PipelineNode):
         child classess. The child should implement a compute method that does a specific operation
         (e.g. project, denoise, etc)
         """
-        PipelineNode.__init__(self, recording=recording, parents=parents, return_output=return_output)
+        try:
+            waveform_extractor = next(parent for parent in parents if isinstance(parent, WaveformExtractorNode))
+        except (StopIteration, TypeError):
+            exception_string = f"Model should have a {WaveformExtractorNode.__name__} in its parents"
+            raise TypeError(exception_string)
+
+        super().__init__(recording, waveform_extractor.ms_before, waveform_extractor.ms_after,
+            return_output=return_output, parents=parents)
+
+        self.assert_model_and_waveform_temporal_match(waveform_extractor)
 
         self.model_folder_path = model_folder_path
 
@@ -45,11 +54,6 @@ class TemporalPCBaseNode(PipelineNode):
         with open(params_path, "rb") as f:
             self.params = json.load(f)
 
-        # Find waveform extractor in the parents
-        if self.parents is None or not (len(self.parents) == 1 and isinstance(self.parents[0], WaveformExtractorNode)):
-            exception_string = f"TemporalPCA should have a single {WaveformExtractorNode.__name__} in its parents"
-            raise TypeError(exception_string)
-        self.assert_model_and_waveform_temporal_match(self.parents[0])
 
     def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformExtractorNode):
         """

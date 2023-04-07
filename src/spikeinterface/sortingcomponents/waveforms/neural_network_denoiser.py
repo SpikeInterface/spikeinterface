@@ -19,7 +19,7 @@ class SingleChannelToyDenoiser(WaveformExtractorNode):
 
         # Find waveform extractor in the parents
         try:
-            waveform_extractor = next(parent for parent in self.parents if isinstance(parent, WaveformExtractorNode))
+            waveform_extractor = next(parent for parent in parents if isinstance(parent, WaveformExtractorNode))
         except (StopIteration, TypeError):
             exception_string = f"Model should have a {WaveformExtractorNode.__name__} in its parents"
             raise TypeError(exception_string)
