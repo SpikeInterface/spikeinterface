@@ -112,7 +112,7 @@ def compute_unit_locations(waveform_extractor,
     load_if_exists : bool, default: False
         Whether to load precomputed unit locations, if they already exist.
     method: str
-        'center_of_mass' / 'monopolar_triangulation' / 'from_templates'
+        'center_of_mass' / 'monopolar_triangulation' / 'grid_convolution'
     outputs: str 
         'numpy' (default) / 'by_unit'
     method_kwargs: 
@@ -267,11 +267,12 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
     templates = waveform_extractor.get_all_templates(mode='average')
 
     if enforce_decrease:
-       neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
-       for i, unit_id in enumerate(unit_ids):
-           neighbours_mask[i][channel_sparsity[unit_id]] = True
-       enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
-       best_channels = get_template_extremum_channel(waveform_extractor, outputs='index')
+        neighbours_mask = np.zeros((templates.shape[0], templates.shape[2]), dtype=bool)
+        for i, unit_id in enumerate(unit_ids):
+            chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
+            neighbours_mask[i, chan_inds] = True
+        enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
+        best_channels = get_template_extremum_channel(waveform_extractor, outputs='index')
 
     unit_location = np.zeros((unit_ids.size, 4), dtype='float64')
     for i, unit_id in enumerate(unit_ids):
@@ -282,10 +283,10 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         wf = templates[i, :, :]
         wf_ptp = wf[:, chan_inds].ptp(axis=0)
 
-        if enforce_decrease:
-           enforce_decrease_shells_ptp(
-               wf_ptp, best_channels[unit_id], enforce_decrease_radial_parents, in_place=True
-           )
+        # if enforce_decrease:
+        #    enforce_decrease_shells_ptp(
+        #        wf_ptp, best_channels[unit_id], enforce_decrease_radial_parents, in_place=True
+        #    )
 
         unit_location[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations, max_distance_um, optimizer)
 
@@ -318,6 +319,8 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=75, fe
 
     recording = waveform_extractor.recording
     contact_locations = recording.get_channel_locations()
+
+    assert feature in ['ptp', 'mean', 'energy', 'v_peak'], f'{feature} is not a valid feature'
 
     sparsity = compute_sparsity(waveform_extractor, peak_sign=peak_sign, method='radius', radius_um=radius_um)
     templates = waveform_extractor.get_all_templates(mode='average')
@@ -387,7 +390,7 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', radius_um=50.,
     prototype = prototype[:, np.newaxis]
 
     template_positions, weights, neighbours_mask = get_grid_convolution_templates_and_weights(
-                contact_locations, local_radius_um, upsampling_um, 
+                contact_locations, radius_um, upsampling_um, 
                 sigma_um, margin_um)
 
     nb_templates = len(template_positions)

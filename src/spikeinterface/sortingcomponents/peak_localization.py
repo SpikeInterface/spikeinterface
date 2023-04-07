@@ -2,7 +2,7 @@
 import numpy as np
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 
-from .peak_pipeline import run_peak_pipeline, PipelineNode, ExtractDenseWaveforms
+from .peak_pipeline import run_peak_pipeline, PipelineNode, ExtractDenseWaveforms, WaveformExtractorNode
 from .tools import make_multi_method_doc
 
 from spikeinterface.core import get_channel_distances
@@ -132,8 +132,16 @@ class LocalizeCenterOfMass(LocalizeBase):
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=75., feature='ptp'):
         LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
+
+        assert feature in ['ptp', 'mean', 'energy', 'v_peak'], f'{feature} is not a valid feature'
         self.feature = feature
-        self.nbefore = self.parents[-1].nbefore
+        try:
+            waveform_extractor = next(parent for parent in parents if isinstance(parent, WaveformExtractorNode))
+        except (StopIteration, TypeError):
+            exception_string = f"{self.__name__} should have a {WaveformExtractorNode.__name__} in its parents"
+            raise TypeError(exception_string)
+
+        self.nbefore = waveform_extractor.nbefore
         self._kwargs.update(dict(feature=feature))
 
     def get_dtype(self):
@@ -254,8 +262,14 @@ class LocalizeGridConvolution(PipelineNode):
         self.upsampling_um = upsampling_um
         contact_locations = recording.get_channel_locations()
 
-        self.nbefore = self.parents[-1].nbefore
-        self.nafter = self.parents[-1].nafter
+        try:
+            waveform_extractor = next(parent for parent in parents if isinstance(parent, WaveformExtractorNode))
+        except (StopIteration, TypeError):
+            exception_string = f"{self.__name__} should have a {WaveformExtractorNode.__name__} in its parents"
+            raise TypeError(exception_string)
+
+        self.nbefore = waveform_extractor.nbefore
+        self.nafter = waveform_extractor.nafter
         fs = self.recording.get_sampling_frequency()
         
         if prototype is None:
