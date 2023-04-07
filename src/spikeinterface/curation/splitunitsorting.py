@@ -17,18 +17,18 @@ class SplitUnitSorting(BaseSorting):
     indices_list: list
         A list of index arrays selecting the spikes to split in each segment. 
         Each array can contain more than 2 indices (e.g. for splitting in 3 or more units) and it should 
-        be the exact same length as the spike train (for each segment)
+        be the same length as the spike train (for each segment)
     new_unit_ids: int
-        Units id of the new units to be created.
+        Unit ids of the new units to be created.
     properties_policy: str
-        Policy used to propagate propierties. If 'keep' the properties will be pass to the new units
+        Policy used to propagate properties. If 'keep' the properties will be passed to the new units
          (if the units_to_merge have the same value). If 'remove' the new units will have an empty 
          value for all the properties of the new unit.
          Default: 'keep'
     Returns
     -------
     sorting: Sorting
-        Sorting object with the selected unit splited
+        Sorting object with the selected units split
     """
 
     def __init__(self, parent_sorting, split_unit_id, indices_list, new_unit_ids=None,properties_policy='keep'):
@@ -39,7 +39,7 @@ class SplitUnitSorting(BaseSorting):
         unchanged_units = parents_unit_ids[parents_unit_ids!=split_unit_id]
 
         if new_unit_ids is None:
-            #select new_unit_ids grater that the max id, event greater than the numerical str ids 
+            #select new_unit_ids greater that the max id, event greater than the numerical str ids 
             if np.issubdtype(parents_unit_ids.dtype, np.character):
                 new_unit_ids = max([0]+[int(p) for p in parents_unit_ids if p.isdigit()])+1
             else:

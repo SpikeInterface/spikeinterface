@@ -9,7 +9,7 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
     """
     Class to remove duplicated spikes from the spike trains.
     Spikes are considered duplicated if they are less than x
-    ms appart where x is the censored period.
+    ms apart where x is the censored period.
 
     Parameters
     ----------
@@ -24,8 +24,8 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
         If method = "keep_last", for each ISI violation, will remove the first spike.
         If method = "keep_first_iterative", will iteratively keep the first spike and remove the following violations.
         If method = "keep_last_iterative", does the same as "keep_first_iterative" but starting from the end.
-        In the iterative methods, if there is a triplet A, B, C where (A, B) and (A, C) are in the censored period
-        (but not (A, C)), then only B is removed. In the non iterative method however, only one spike remains.
+        In the iterative methods, if there is a triplet A, B, C where (A, B) and (B, C) are in the censored period
+        (but not (A, C)), then only B is removed. In the non iterative methods however, only one spike remains.
 
     Returns
     -------
