@@ -152,8 +152,10 @@ class LocalizeMonopolarTriangulation(PipelineNode):
     enforce_decrease : bool (default True)
         Enforce spatial decreasingness for PTP vectors
     feature: string in ['ptp', 'energy', 'v_peak']
-        Feature to consider for monopolar approximation (default ptp)
-
+        The available features to consider for estimating the position via
+        monopolar triangulation are peak-to-peak amplitudes (ptp, default), 
+        energy ('energy', as L2 norm) or voltages at the center of the waveform
+        (v_peak)
     """
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'],
                             local_radius_um=75., max_distance_um=150., optimizer='minimize_with_log_penality', 
