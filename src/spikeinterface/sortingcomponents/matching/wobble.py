@@ -28,7 +28,7 @@ class WobbleParameters:
         voltage trace and templates.
     verbose : bool
         If True, print out informative messages.
-    template_ids2unit_ids : numpy.ndarray
+    template_indices2unit_indices : numpy.ndarray
         Maps from the index of provided templates to their corresponding units.
     refractory_period_frames : int
         Duration of refractory period in frames/samples.
@@ -53,7 +53,7 @@ class WobbleParameters:
     conv_approx_rank: int = 5
     visibility_threshold: float = 1
     verbose: bool = False
-    template_ids2unit_ids: Optional[np.ndarray] = None
+    template_indices2unit_indices: Optional[np.ndarray] = None
     refractory_period_frames: int = 10 # TODO : convert to refractory_period_ms --> benchmark
     scale_min : float = 0
     scale_max : float = np.inf
@@ -80,15 +80,15 @@ class TemplateMetadata:
         Number of templates.
     num_jittered : int
         Number of jittered templates.
-    unit_ids : ndarray (num_units,)
+    unit_indices : ndarray (num_units,)
         Indexes corresponding to each unit.
-    template_ids : ndarray (num_templates,)
+    template_indices : ndarray (num_templates,)
         Indexes corresponding to each template.
-    jittered_ids : ndarray (num_jittered,)
+    jittered_indices : ndarray (num_jittered,)
         Indexes corresponding to each jittered template.
-    template_ids2unit_ids : ndarray (num_templates,)
+    template_indices2unit_indices : ndarray (num_templates,)
         Maps from the index of provided templates to their corresponding units.
-    unit_ids2template_ids : list[set]
+    unit_indices2template_indices : list[set]
         Maps each unit index to the set of its corresponding templates.
     overlapping_spike_buffer : int
         Buffer to prevent adjacent spikes from being subtracted from the objective at the same time.
@@ -113,11 +113,11 @@ class TemplateMetadata:
     num_units : int
     num_templates : int
     num_jittered : int
-    unit_ids : np.ndarray
-    template_ids : np.ndarray
-    jittered_ids : np.ndarray
-    template_ids2unit_ids : np.ndarray
-    unit_ids2template_ids : List[set]
+    unit_indices : np.ndarray
+    template_indices : np.ndarray
+    jittered_indices : np.ndarray
+    template_indices2unit_indices : np.ndarray
+    unit_indices2template_indices : List[set]
     overlapping_spike_buffer : int
     peak_window : np.ndarray
     peak_window_len : int
@@ -143,21 +143,21 @@ class TemplateMetadata:
         """
         num_templates, num_samples, num_channels = templates.shape
         # handle units with many templates, as in the super-resolution case
-        if params.template_ids2unit_ids is None:  # Trivial grouping of templates = units
-            template_ids2unit_ids = np.arange(num_templates)
+        if params.template_indices2unit_indices is None:  # Trivial grouping of templates = units
+            template_indices2unit_indices = np.arange(num_templates)
         else:
-            assert params.template_ids2unit_ids.shape == (templates.shape[0],), \
-                "template_ids2unit_ids must have shape (num_templates,)"
-            template_ids2unit_ids = params.template_ids2unit_ids
-        unit_ids = np.unique(template_ids2unit_ids)
-        num_units = len(unit_ids)
-        template_ids = np.arange(num_templates)
-        unit_ids2template_ids = []
-        for unit_id in unit_ids:
-            template_ids_of_unit = set(template_ids[template_ids2unit_ids == unit_id])
-            unit_ids2template_ids.append(template_ids_of_unit)
+            assert params.template_indices2unit_indices.shape == (templates.shape[0],), \
+                "template_indices2unit_indices must have shape (num_templates,)"
+            template_indices2unit_indices = params.template_indices2unit_indices
+        unit_indices = np.unique(template_indices2unit_indices)
+        num_units = len(unit_indices)
+        template_indices = np.arange(num_templates)
+        unit_indices2template_indices = []
+        for unit_id in unit_indices:
+            template_indices_of_unit = set(template_indices[template_indices2unit_indices == unit_id])
+            unit_indices2template_indices.append(template_indices_of_unit)
         num_jittered = num_templates * params.jitter_factor
-        jittered_ids = np.arange(num_jittered)
+        jittered_indices = np.arange(num_jittered)
         overlapping_spike_buffer = num_samples - 1  # makes sure two overlapping spikes aren't subtracted at the same time
 
         # TODO: Benchmark peak_radius with alternative expressions
@@ -172,8 +172,8 @@ class TemplateMetadata:
         template_meta = cls(
             num_samples=num_samples, num_channels=num_channels, num_units=num_units, num_templates=num_templates,
             num_jittered=num_jittered,
-            unit_ids=unit_ids, template_ids=template_ids, jittered_ids=jittered_ids,
-            template_ids2unit_ids=template_ids2unit_ids, unit_ids2template_ids=unit_ids2template_ids,
+            unit_indices=unit_indices, template_indices=template_indices, jittered_indices=jittered_indices,
+            template_indices2unit_indices=template_indices2unit_indices, unit_indices2template_indices=unit_indices2template_indices,
             overlapping_spike_buffer=overlapping_spike_buffer, peak_window=peak_window, peak_window_len=peak_window_len,
             jitter_window=jitter_window, jitter2template_shift=jitter2template_shift,
             jitter2spike_time_shift=jitter2spike_time_shift
@@ -455,10 +455,10 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             spike_train = np.zeros((0, 2), dtype=np.int32)
 
         # order spike times
-        idx = np.argsort(spike_train[:, 0])
-        spike_train = spike_train[idx]
-        scalings = scalings[idx]
-        distance_metric = distance_metric[idx]
+        index = np.argsort(spike_train[:, 0])
+        spike_train = spike_train[index]
+        scalings = scalings[index]
+        distance_metric = distance_metric[index]
 
         # adjust spike_train
         spike_train[:, 0] += nbefore # beginning of template --> center of template
@@ -467,9 +467,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         # TODO : Benchmark spike amplitudes
         # Find spike amplitudes / channels
         amplitudes, channel_inds = [], []
-        for i, spike_idx in enumerate(spike_train[:, 0]):
-            best_ch = np.argmax(np.abs(traces[spike_idx, :]))
-            amp = np.abs(traces[spike_idx, best_ch])
+        for i, spike_index in enumerate(spike_train[:, 0]):
+            best_ch = np.argmax(np.abs(traces[spike_index, :]))
+            amp = np.abs(traces[spike_index, best_ch])
             amplitudes.append(amp)
             channel_inds.append(best_ch)
 
@@ -530,23 +530,23 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         scalings = np.ones(len(spike_time_indices), dtype=objective_normalized.dtype)
 
         # Find the best upsampled template
-        spike_template_ids = np.argmax(objective_normalized[:, spike_time_indices], axis=0)
-        high_res_shifts = cls.calculate_high_res_shift(spike_time_indices, spike_template_ids, objective,
+        spike_template_indices = np.argmax(objective_normalized[:, spike_time_indices], axis=0)
+        high_res_shifts = cls.calculate_high_res_shift(spike_time_indices, spike_template_indices, objective,
                                                        objective_normalized, template_data, params, template_meta)
         template_shift, time_shift, non_refractory_indices, scaling = high_res_shifts
 
-        # Update unit_ids, spike_times, and scalings
-        spike_jittered_ids = spike_template_ids * params.jitter_factor
+        # Update unit_indices, spike_times, and scalings
+        spike_jittered_indices = spike_template_indices * params.jitter_factor
         at_least_one_spike = bool(len(non_refractory_indices))
         if at_least_one_spike:
-            spike_jittered_ids[non_refractory_indices] += template_shift
+            spike_jittered_indices[non_refractory_indices] += template_shift
             spike_time_indices[non_refractory_indices] += time_shift
             scalings[non_refractory_indices] = scaling
 
         # Generate new spike train from spike times (indices)
         convolution_correction = -1*(template_meta.num_samples - 1) # convolution indices --> raw_indices
         spike_time_indices += convolution_correction
-        new_spike_train = np.array([spike_time_indices, spike_jittered_ids]).T
+        new_spike_train = np.array([spike_time_indices, spike_jittered_indices]).T
 
         return new_spike_train, scalings, distance_metric
 
@@ -577,9 +577,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         -----
         Operates in-place on the objective and objective_normalized.
         """
-        present_jittered_ids = np.unique(spike_train[:, 1])
+        present_jittered_indices = np.unique(spike_train[:, 1])
         convolution_resolution_len = get_convolution_len(template_meta.num_samples, template_meta.num_samples)
-        for jittered_id in present_jittered_ids:
+        for jittered_id in present_jittered_indices:
             id_mask = spike_train[:, 1] == jittered_id
             id_spiketrain = spike_train[id_mask, 0]
             id_scaling = scalings[id_mask]
@@ -587,18 +587,18 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             # Note: pairwise_conv only has overlapping template convolutions already
             pconv = template_data.pairwise_convolution[jittered_id]
             # TODO: If optimizing for speed -- check this loop
-            for spike_start_idx, spike_scaling in zip(id_spiketrain, id_scaling):
-                spike_stop_idx = spike_start_idx + convolution_resolution_len
-                objective_normalized[overlapping_templates, spike_start_idx:spike_stop_idx] -= 2*pconv
+            for spike_start_index, spike_scaling in zip(id_spiketrain, id_scaling):
+                spike_stop_index = spike_start_index + convolution_resolution_len
+                objective_normalized[overlapping_templates, spike_start_index:spike_stop_index] -= 2*pconv
                 if params.scale_amplitudes:
                     pconv_scaled = pconv * spike_scaling
-                    objective[overlapping_templates, spike_start_idx:spike_stop_idx] -= pconv_scaled
+                    objective[overlapping_templates, spike_start_index:spike_stop_index] -= pconv_scaled
 
             cls.enforce_refractory(spike_train, objective, objective_normalized, params, template_meta)
 
 
     @classmethod
-    def calculate_high_res_shift(cls, spike_time_indices, spike_unit_ids, objective, objective_normalized,
+    def calculate_high_res_shift(cls, spike_time_indices, spike_unit_indices, objective, objective_normalized,
                                  template_data, params, template_meta):
         """Determines optimal shifts when super-resolution, scaled templates are used.
 
@@ -606,7 +606,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         ----------
         spike_time_indices : ndarray (num_spikes,)
             Indices in the voltage traces corresponding to the time of each spike.
-        spike_unit_ids : ndarray (num_spikes)
+        spike_unit_indices : ndarray (num_spikes)
             Units corresponding to each spike.
         objective : ndarray (num_templates, traces.shape[0]+num_samples-1)
             Template matching objective for each template.
@@ -634,20 +634,20 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         not_high_res = params.jitter_factor == 1 and not params.scale_amplitudes
         at_least_one_spike = bool(len(spike_time_indices))
         if not_high_res or not at_least_one_spike:
-            upsampled_template_idx = np.zeros_like(spike_time_indices)
+            template_shift = np.zeros_like(spike_time_indices)
             time_shift = np.zeros_like(spike_time_indices)
             non_refractory_indices = range(len(spike_time_indices))
             scalings = np.ones_like(spike_time_indices)
-            return upsampled_template_idx, time_shift, non_refractory_indices, scalings
+            return template_shift, time_shift, non_refractory_indices, scalings
 
         peak_indices = spike_time_indices + template_meta.peak_window[:, np.newaxis]
-        obj_peaks = objective_normalized[spike_unit_ids, peak_indices]
+        obj_peaks = objective_normalized[spike_unit_indices, peak_indices]
 
         # Omit refractory spikes
         peak_is_refractory = np.logical_or(np.isinf(obj_peaks[0, :]), np.isinf(obj_peaks[-1, :]))
         refractory_before_spike = np.arange(-template_meta.overlapping_spike_buffer, 1)[:, np.newaxis]
         refractory_indices = spike_time_indices[peak_is_refractory] + refractory_before_spike
-        objective_normalized[spike_unit_ids[peak_is_refractory], refractory_indices] = -1 * np.inf
+        objective_normalized[spike_unit_indices[peak_is_refractory], refractory_indices] = -1 * np.inf
         non_refractory_indices = np.flatnonzero(np.logical_not(peak_is_refractory))
         obj_peaks = obj_peaks[:, non_refractory_indices]
         if obj_peaks.shape[1] == 0: # no non-refractory peaks --> exit function
@@ -662,12 +662,12 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             scalings = np.ones(len(non_refractory_indices))
         else:
             # upsampled the convolution for the detected peaks only
-            obj_peaks_high_res = objective[spike_unit_ids, peak_indices]
+            obj_peaks_high_res = objective[spike_unit_indices, peak_indices]
             obj_peaks_high_res = obj_peaks_high_res[:, non_refractory_indices]
             high_resolution_conv = signal.resample(obj_peaks_high_res, window_len_upsampled, axis=0)
 
             # Find template norms for detected peaks only
-            norm_peaks = template_data.norm[spike_unit_ids[non_refractory_indices]]
+            norm_peaks = template_data.norm[spike_unit_indices[non_refractory_indices]]
 
             high_res_obj, scalings = compute_scale_amplitudes(high_resolution_conv, norm_peaks, params.scale_min,
                                                               params.scale_max, params.amplitude_variance)
@@ -703,21 +703,21 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         # Adjust cluster IDs so that they match original templates
         spike_times = spike_train[:, 0]
-        spike_template_ids = spike_train[:, 1] // params.jitter_factor
+        spike_template_indices = spike_train[:, 1] // params.jitter_factor
 
-        # We want to enforce refractory conditions on unit_ids rather than template_ids for units with many templates
-        spike_unit_ids = spike_template_ids.copy()
-        for template_id in set(spike_template_ids):
-            unit_id = template_meta.template_ids2unit_ids[template_id] # unit_id corresponding to this template
-            spike_unit_ids[spike_template_ids==template_id] = unit_id
+        # We want to enforce refractory conditions on unit_indices rather than template_indices for units with many templates
+        spike_unit_indices = spike_template_indices.copy()
+        for template_id in set(spike_template_indices):
+            unit_id = template_meta.template_indices2unit_indices[template_id] # unit_id corresponding to this template
+            spike_unit_indices[spike_template_indices==template_id] = unit_id
 
         # Get the samples (time indices) that correspond to the waveform for each spike
         waveform_samples = get_convolution_len(spike_times[:, np.newaxis], template_meta.num_samples) + window
 
         # Enforce refractory by setting objective to negative infinity in invalid regions
-        objective_normalized[spike_unit_ids[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
+        objective_normalized[spike_unit_indices[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
         if params.scale_amplitudes: # template_convolution is only used with amplitude scaling
-            objective[spike_unit_ids[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
+            objective[spike_unit_indices[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
 
 
 def compute_template_norm(sparsity, template_meta, templates):
@@ -779,12 +779,12 @@ def compress_templates(templates, params, template_meta):
     num_samples = template_meta.num_samples * params.jitter_factor
     temporal_jittered = signal.resample(temporal, num_samples, axis=1)
 
-    original_idx = np.arange(0, num_samples, params.jitter_factor)  # indices of original data
-    shift_idx = np.arange(params.jitter_factor)[:, np.newaxis]  # shift for each super-res template
-    shifted_idx = original_idx + shift_idx  # array of all shifted template indices
+    original_index = np.arange(0, num_samples, params.jitter_factor)  # indices of original data
+    shift_index = np.arange(params.jitter_factor)[:, np.newaxis]  # shift for each super-res template
+    shifted_index = original_index + shift_index  # array of all shifted template indices
 
     shape_temporal_jittered = [-1, template_meta.num_samples, params.conv_approx_rank]
-    temporal_jittered = np.reshape(temporal_jittered[:, shifted_idx, :], shape_temporal_jittered)
+    temporal_jittered = np.reshape(temporal_jittered[:, shifted_index, :], shape_temporal_jittered)
 
     temporal = np.flip(temporal, axis=1)
     temporal_jittered = np.flip(temporal_jittered, axis=1)
@@ -820,7 +820,7 @@ def convolve_templates(compressed_templates, params, template_meta, sparsity):
     temporal, singular, spatial, temporal_jittered = compressed_templates
     conv_res_len = get_convolution_len(template_meta.num_samples, template_meta.num_samples)
     pairwise_convolution = []
-    for jittered_id in template_meta.jittered_ids:
+    for jittered_id in template_meta.jittered_indices:
         num_overlap = np.sum(sparsity.unit_overlap[jittered_id, :])
         template_id = jittered_id // params.jitter_factor
         pconv = np.zeros([num_overlap, conv_res_len], dtype=np.float32)
