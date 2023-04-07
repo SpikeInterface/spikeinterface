@@ -249,7 +249,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         to make bounddary in x, y, z and also for alpha
     return_alpha: bool default False
         Return or not the alpha value
-    enforce_decrease : bool (default True)
+    enforce_decrease : bool (default False)
         Enforce spatial decreasingness for PTP vectors
     feature: string in ['ptp', 'energy']
         Feature to consider for monopolar approximation (default ptp)
