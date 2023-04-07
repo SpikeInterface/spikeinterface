@@ -57,7 +57,7 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
         Kxx = get_kriging_kernel_distance(source_location, source_location, sigma_um, p)
         Kyx = get_kriging_kernel_distance(target_location, source_location, sigma_um, p)
 
-        interpolation_kernel = Kyx @ np.linalg.pinv(Kxx + 0.01 * np.eye(Kxx.shape[0]))
+        interpolation_kernel = Kyx @ np.linalg.pinv(Kxx + 1e-6 * np.eye(Kxx.shape[0]))
         interpolation_kernel = interpolation_kernel.T.copy()
 
         # sparsify
