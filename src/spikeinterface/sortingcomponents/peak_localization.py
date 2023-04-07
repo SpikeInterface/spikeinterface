@@ -160,9 +160,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
                             enforce_decrease=True, feature='ptp'):
         LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um)
 
-        self._kwargs.update(dict(max_distance_um=max_distance_um,
-                                 optimizer=optimizer,
-                                 enforce_decrease=enforce_decrease))
+        
 
         assert feature in ['ptp', 'energy', 'v_peak'], f'{feature} is not a valid feature'
         self.max_distance_um = max_distance_um
@@ -180,6 +178,12 @@ class LocalizeMonopolarTriangulation(PipelineNode):
             self.enforce_decrease_radial_parents = make_radial_order_parents(self.contact_locations, self.neighbours_mask)
         else:
             self.enforce_decrease_radial_parents = None
+
+        self._kwargs.update(dict(max_distance_um=max_distance_um,
+                                 optimizer=optimizer,
+                                 enforce_decrease=enforce_decrease,
+                                 feature=feature,
+                                 nbefore=self.nbefore))
 
         self._dtype = np.dtype(dtype_localize_by_method['monopolar_triangulation'])
 
