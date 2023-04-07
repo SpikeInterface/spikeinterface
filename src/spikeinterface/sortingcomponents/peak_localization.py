@@ -164,6 +164,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
                                  optimizer=optimizer,
                                  enforce_decrease=enforce_decrease))
 
+        assert feature in ['ptp', 'energy', 'v_peak'], f'{feature} is not a valid feature'
         self.max_distance_um = max_distance_um
         self.optimizer = optimizer
         self.feature = feature

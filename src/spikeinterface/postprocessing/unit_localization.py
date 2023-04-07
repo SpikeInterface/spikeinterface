@@ -262,6 +262,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
     '''
     assert optimizer in ('least_square', 'minimize_with_log_penality')
 
+    assert feature in ['ptp', 'energy', 'v_peak'], f'{feature} is not a valid feature'
     unit_ids = waveform_extractor.sorting.unit_ids
 
     contact_locations = waveform_extractor.get_channel_locations()
