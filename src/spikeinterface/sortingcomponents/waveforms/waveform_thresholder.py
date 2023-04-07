@@ -58,6 +58,10 @@ class WaveformThresholder(WaveformExtractorNode):
         self.threshold = threshold
         self.feature = feature
         self.operator = operator
+
+        self._kwargs.update(dict(feature=feature,
+                                 threshold=threshold,
+                                 operator=operator))
         
     def compute(self, traces, peaks, waveforms):
         

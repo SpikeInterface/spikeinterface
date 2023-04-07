@@ -45,6 +45,9 @@ class SavGolDenoiser(WaveformExtractorNode):
         waveforms_sampling_frequency = self.recording.get_sampling_frequency()
         self.window_length = int(window_length_ms*waveforms_sampling_frequency / 1000)
 
+        self._kwargs.update(dict(order=order,
+                                 window_length_ms=window_length_ms))
+
     def compute(self, traces, peaks, waveforms):
         # Denoise
         denoised_waveforms = scipy.signal.savgol_filter(waveforms, self.window_length, self.order, axis=1)
