@@ -171,8 +171,8 @@ def solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance
     if optimizer == 'minimize_with_log_penality':
         x0 = x0[:3]
         bounds = [(bounds[0][0], bounds[1][0]), (bounds[0][1], bounds[1][1]), (bounds[0][2], bounds[1][2])]
-        maxptp = wf_data.max()
-        args = (wf_data, local_contact_locations, maxptp)
+        max_data = wf_data.max()
+        args = (wf_data, local_contact_locations, max_data)
         try:
             output = scipy.optimize.minimize(estimate_distance_error_with_log, x0=x0, bounds=bounds, args=args)
             # final alpha
@@ -192,8 +192,8 @@ def estimate_distance_error(vec, wf_data, local_contact_locations):
     # vec dims ar (x, y, z amplitude_factor)
     # given that for contact_location x=dim0 + z=dim1 and y is orthogonal to probe
     dist = np.sqrt(((local_contact_locations - vec[np.newaxis, :2])**2).sum(axis=1) + vec[2]**2)
-    ptp_estimated = vec[3] / dist
-    err = wf_data - ptp_estimated
+    data_estimated = vec[3] / dist
+    err = wf_data - data_estimated
     return err
 
 
@@ -209,11 +209,11 @@ def data_at(x, y, z, alpha, local_contact_locations):
     )
 
 
-def estimate_distance_error_with_log(vec, wf_data, local_contact_locations, maxptp):
+def estimate_distance_error_with_log(vec, wf_data, local_contact_locations, max_data):
     x, y, z = vec
     q = data_at(x, y, z, 1.0, local_contact_locations)
-    alpha = (q * wf_data / maxptp).sum() / (q * q).sum()
-    err = np.square(wf_data / maxptp - data_at(x, y, z, alpha, local_contact_locations)).mean() - np.log1p(10.0 * z) / 10000.0
+    alpha = (q * wf_data / max_data).sum() / (q * q).sum()
+    err = np.square(wf_data / max_data - data_at(x, y, z, alpha, local_contact_locations)).mean() - np.log1p(10.0 * z) / 10000.0
     return err
 
 
