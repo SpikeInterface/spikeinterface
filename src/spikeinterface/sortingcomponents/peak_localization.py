@@ -182,8 +182,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         self._kwargs.update(dict(max_distance_um=max_distance_um,
                                  optimizer=optimizer,
                                  enforce_decrease=enforce_decrease,
-                                 feature=feature,
-                                 nbefore=self.nbefore))
+                                 feature=feature))
 
         self._dtype = np.dtype(dtype_localize_by_method['monopolar_triangulation'])
 
