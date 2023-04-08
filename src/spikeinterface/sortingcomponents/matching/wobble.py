@@ -427,8 +427,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         traces = traces.astype(np.float32, casting='safe') # ensure traces are specified as np.float32
 
         # Compute objective
-        objective, objective_normalized = compute_objective(traces, template_data, template_meta,
-                                                            params.conv_approx_rank)
+        objective, objective_normalized = compute_objective(traces, template_data, params.conv_approx_rank)
 
         # Compute spike train
         spike_trains, scalings, distance_metrics = [], [], []
@@ -848,7 +847,7 @@ def convolve_templates(compressed_templates, params, template_meta, sparsity):
     return pairwise_convolution
 
 
-def compute_objective(traces, template_data, template_meta, conv_approx_rank):
+def compute_objective(traces, template_data, conv_approx_rank):
     """Compute objective by convolving templates with voltage traces.
 
     Parameters
@@ -870,8 +869,10 @@ def compute_objective(traces, template_data, template_meta, conv_approx_rank):
         Template matching objective normalized by the magnitude of each template.
     """
     temporal, singular, spatial, temporal_jittered = template_data.compressed_templates
-    objective_len = get_convolution_len(traces.shape[0], template_meta.num_samples)
-    conv_shape = (template_meta.num_templates, objective_len)
+    num_templates = temporal.shape[0]
+    num_samples = temporal.shape[1]
+    objective_len = get_convolution_len(traces.shape[0], num_samples)
+    conv_shape = (num_templates, objective_len)
     objective = np.zeros(conv_shape, dtype=np.float32)
     # TODO: vectorize this loop
     for rank in range(conv_approx_rank):
@@ -880,7 +881,7 @@ def compute_objective(traces, template_data, template_meta, conv_approx_rank):
         spatially_filtered_data = np.matmul(spatial_filters, traces.T)
         scaled_filtered_data = spatially_filtered_data * singular[:, [rank]]
         # TODO: vectorize this loop
-        for template_id in range(template_meta.num_templates):
+        for template_id in range(num_templates):
             template_temporal_filter = temporal_filters[template_id]
             objective[template_id, :] += np.convolve(scaled_filtered_data[template_id, :],
                                                      template_temporal_filter,
