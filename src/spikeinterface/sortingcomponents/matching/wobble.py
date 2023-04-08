@@ -354,7 +354,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         # Perform initial computations on templates necessary for computing the objective
         compressed_templates = compress_templates(templates, params, template_meta)
         pairwise_convolution = convolve_templates(compressed_templates, params, template_meta, sparsity)
-        norm = compute_template_norm(sparsity, template_meta, templates)
+        norm = compute_template_norm(sparsity.visible_channels, templates)
         template_data = TemplateData(compressed_templates=compressed_templates,
                               pairwise_convolution=pairwise_convolution,
                               norm=norm)
@@ -719,15 +719,13 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             objective[spike_unit_indices[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
 
 
-def compute_template_norm(sparsity, template_meta, templates):
+def compute_template_norm(visible_channels, templates):
     """Computes norm of each template.
 
     Parameters
     ----------
-    params : WobbleParameters
-        Dataclass object for aggregating the parameters together.
-    template_meta : TemplateMetadata
-        Dataclass object for aggregating template metadata together.
+    visible_channels : ndarray (num_units, num_channels)
+        visible_channels[unit, channel] is True if the unit's template has sufficient amplitude on that channel.
     templates : ndarray (num_templates, num_samples, num_channels)
         Spike template waveforms.
 
@@ -736,10 +734,11 @@ def compute_template_norm(sparsity, template_meta, templates):
     norm : ndarray (num_templates,)
     Magnitude of each template for normalization.
     """
-    norm = np.zeros(template_meta.num_templates, dtype=np.float32)
-    for i in range(template_meta.num_templates):
+    num_templates = templates.shape[0]
+    norm = np.zeros(num_templates, dtype=np.float32)
+    for i in range(num_templates):
         norm[i] = np.sum(
-            np.square(templates[i, :, sparsity.visible_channels[i, :]])
+            np.square(templates[i, :, visible_channels[i, :]])
         )
     return norm
 
