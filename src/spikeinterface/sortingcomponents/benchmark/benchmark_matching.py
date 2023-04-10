@@ -25,8 +25,7 @@ class BenchmarkMatching:
         self.gt_sorting = gt_sorting
         self.job_kwargs = job_kwargs
         self.exhaustive_gt = exhaustive_gt
-        self.recording_f = recording
-        self.sampling_rate = self.recording_f.get_sampling_frequency()
+        self.sampling_rate = self.recording.get_sampling_frequency()
         self.job_kwargs = job_kwargs
         self.method_kwargs = method_kwargs
         self.metrics = None
@@ -35,7 +34,7 @@ class BenchmarkMatching:
         if self.tmp_folder is None:
             self.tmp_folder = os.path.join('.', ''.join(random.choices(string.ascii_uppercase + string.digits, k=8)))
 
-        self.we = extract_waveforms(self.recording_f, self.gt_sorting, self.tmp_folder, load_if_exists=False,
+        self.we = extract_waveforms(self.recording, self.gt_sorting, self.tmp_folder, load_if_exists=False,
                                    ms_before=2.5, ms_after=2.5, max_spikes_per_unit=500, return_scaled=False,
                                    **self.job_kwargs)
 
@@ -48,7 +47,7 @@ class BenchmarkMatching:
 
     def run(self):
         t_start = time.time()
-        self.spikes = find_spikes_from_templates(self.recording_f, method=self.method, method_kwargs=self.method_kwargs, **self.job_kwargs)
+        self.spikes = find_spikes_from_templates(self.recording, method=self.method, method_kwargs=self.method_kwargs, **self.job_kwargs)
         self.run_time = time.time() - t_start
         self.sorting = NumpySorting.from_times_labels(self.spikes['sample_ind'], self.spikes['cluster_ind'], self.sampling_rate)
         self.comp = CollisionGTComparison(self.gt_sorting, self.sorting, exhaustive_gt=self.exhaustive_gt)
