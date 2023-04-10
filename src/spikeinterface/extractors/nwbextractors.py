@@ -53,6 +53,8 @@ def get_electrical_series(nwbfile, electrical_series_name):
     return es
 
 
+    
+    
 class NwbRecordingExtractor(BaseRecording):
     """Load an NWBFile as a RecordingExtractor.
 
@@ -120,31 +122,8 @@ class NwbRecordingExtractor(BaseRecording):
         self.stream_cache_path = stream_cache_path
         self._electrical_series_name = electrical_series_name
 
-        if stream_mode == "fsspec":
-            import fsspec
-            from fsspec.implementations.cached import CachingFileSystem
-            
-            self.stream_cache_path = stream_cache_path if stream_cache_path is not None else get_global_tmp_folder()
-            self.cfs = CachingFileSystem(
-                fs=fsspec.filesystem("http"),
-                cache_storage=str(self.stream_cache_path),
-            )
-            self._file_path = self.cfs.open(str(file_path), "rb")
-            f = h5py.File(self._file_path)
-            self.io = NWBHDF5IO(file=f, mode='r', load_namespaces=True)
-        
-        elif stream_mode == "ros3":
-            drivers = h5py.registered_drivers()
-            assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
-            assert "ros3" in drivers, assertion_msg
-            self._file_path = str(file_path)
-            self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True, driver="ros3")
-
-        else:
-            self._file_path = str(file_path)
-            self.io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
-
-        self._nwbfile = self.io.read()
+        self.file_path = file_path
+        self._nwbfile = self.read_nwb_file(file_path=file_path, stream_mode=stream_mode, stream_cache_path=stream_cache_path)
         self._es = get_electrical_series(
             self._nwbfile, self._electrical_series_name)
 
@@ -282,6 +261,34 @@ class NwbRecordingExtractor(BaseRecording):
             'stream_cache_path': stream_cache_path,
         }
 
+    def read_nwb_file(self, file_path, stream_mode="fsspec", stream_cache_path=None):
+    
+        if stream_mode == "fsspec":
+            import fsspec
+            from fsspec.implementations.cached import CachingFileSystem
+            
+            self.stream_cache_path = stream_cache_path if stream_cache_path is not None else get_global_tmp_folder()
+            self.cfs = CachingFileSystem(
+                fs=fsspec.filesystem("http"),
+                cache_storage=str(self.stream_cache_path),
+            )
+            self._file_path = self.cfs.open(str(file_path), "rb")
+            f = h5py.File(self._file_path)
+            io = NWBHDF5IO(file=f, mode='r', load_namespaces=True)
+
+        elif stream_mode == "ros3":
+            drivers = h5py.registered_drivers()
+            assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
+            assert "ros3" in drivers, assertion_msg
+            self._file_path = str(file_path)
+            io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True, driver="ros3")
+
+        else:
+            self._file_path = str(file_path)
+            io = NWBHDF5IO(self._file_path, mode='r', load_namespaces=True)
+
+        nwbfile = io.read()
+        return nwbfile
 
 class NwbRecordingSegment(BaseRecordingSegment):
     def __init__(self, nwbfile, electrical_series_name, num_frames, times_kwargs):
