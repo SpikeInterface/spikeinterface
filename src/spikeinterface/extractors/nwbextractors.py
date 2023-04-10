@@ -124,9 +124,11 @@ class NwbRecordingExtractor(BaseRecording):
 
         self.file_path = file_path
         self._nwbfile = self.read_nwb_file(file_path=file_path, stream_mode=stream_mode, stream_cache_path=stream_cache_path)
-        electrical_series = get_electrical_series(
-            self._nwbfile, electrical_series_name)
-
+        electrical_series = get_electrical_series(self._nwbfile, electrical_series_name)
+        # The indices in the electrode table corresponding to this electrical series
+        electrodes_indices = electrical_series.electrodes.data[:]  
+        # The table for all the electrodes in the nwbfile 
+        electrodes_table = self._nwbfile.electrodes
         sampling_frequency = None
         if hasattr(electrical_series, 'rate'):
             sampling_frequency = electrical_series.rate
@@ -162,9 +164,9 @@ class NwbRecordingExtractor(BaseRecording):
 
         # Fill channel properties dictionary from electrodes table
         if "channel_name" in self._nwbfile.electrodes.colnames:
-            channel_ids = [electrical_series.electrodes["channel_name"][i] for i in electrical_series.electrodes.data]
+            channel_ids = [electrical_series.electrodes["channel_name"][i] for i in electrodes_indices]
         else:
-            channel_ids = [electrical_series.electrodes.table.id[x] for x in electrical_series.electrodes.data]
+            channel_ids = [electrical_series.electrodes.table.id[x] for x in electrodes_indices]
         
         dtype = electrical_series.data.dtype
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
@@ -173,7 +175,6 @@ class NwbRecordingExtractor(BaseRecording):
                                                 num_frames=num_frames, times_kwargs=times_kwargs)
         self.add_recording_segment(recording_segment)
 
-        self.extra_requirements.extend(['pandas', 'pynwb', 'hdmf'])
 
         # Channels gains - for RecordingExtractor, these are values to cast traces to uV
         gains = electrical_series.conversion * 1e6
@@ -186,14 +187,13 @@ class NwbRecordingExtractor(BaseRecording):
         # Set offsets
         offset = electrical_series.offset if hasattr(electrical_series, "offset") else 0
         if offset == 0 and "offset" in self._nwbfile.electrodes:
-            electrode_table_index = electrical_series.electrodes.data[:]
-            offset = self._nwbfile.electrodes["offset"].data[electrode_table_index]
+            offset = self._nwbfile.electrodes["offset"].data[electrodes_indices]
 
         self.set_channel_offsets(offset * 1e6)
 
         # Add properties
         properties = dict()
-        for es_ind, (channel_id, electrode_table_index) in enumerate(zip(channel_ids, electrical_series.electrodes.data)):
+        for es_ind, (channel_id, electrode_table_index) in enumerate(zip(channel_ids, electrodes_indices)):
             if 'rel_x' in self._nwbfile.electrodes:
                 ndim = 2  # assume 2 dimensions
                 if 'rel_z' in self._nwbfile.electrodes:
@@ -253,6 +253,7 @@ class NwbRecordingExtractor(BaseRecording):
             if stream_cache_path is not None:
                 stream_cache_path = str(Path(self.stream_cache_path).absolute())
         
+        self.extra_requirements.extend(['pandas', 'pynwb', 'hdmf'])
         self._electrical_series = electrical_series
         self._kwargs = {
             'file_path': file_path,
