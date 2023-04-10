@@ -48,14 +48,14 @@ def nwbfile_with_ecephys_content():
     offset = 1.0
     electrical_series_name = "ElectricalSeries1"
     electrode_indices = [0, 1, 2, 3, 4]
-    
+
     electrodes_info = dict(
         group=electrode_group,
         location="brain",
         rel_x=rel_x,
         property=property_value,
         electrical_series_name=electrical_series_name,
-        offset = offset
+        offset=offset,
     )
 
     for index in electrode_indices:
@@ -66,7 +66,6 @@ def nwbfile_with_ecephys_content():
     electrode_region = nwbfile.create_electrode_table_region(region=electrode_indices, description="electrodes")
     electrical_series = mock_ElectricalSeries(name=electrical_series_name, electrodes=electrode_region)
     nwbfile.add_acquisition(electrical_series)
-
 
     electrode_group = mock_ElectrodeGroup(device=device)
     nwbfile.add_electrode_group(electrode_group)
@@ -83,9 +82,8 @@ def nwbfile_with_ecephys_content():
         rel_x=rel_x,
         property=property_value,
         electrical_series_name=electrical_series_name,
-        offset = offset
+        offset=offset,
     )
-
 
     for index in electrode_indices:
         electrodes_info["channel_name"] = f"{index}"
@@ -97,7 +95,9 @@ def nwbfile_with_ecephys_content():
     rng = np.random.default_rng(0)
     data = rng.random(size=(num_frames, len(electrode_indices)))
     rate = 30_000.0
-    electrical_series = ElectricalSeries(name=electrical_series_name, data=data, electrodes=electrode_region, rate=rate, offset=offset + 1.0)
+    electrical_series = ElectricalSeries(
+        name=electrical_series_name, data=data, electrodes=electrode_region, rate=rate, offset=offset + 1.0
+    )
     nwbfile.add_acquisition(electrical_series)
 
     return nwbfile
@@ -113,46 +113,64 @@ def path_to_nwbfile(nwbfile_with_ecephys_content, tmp_path_factory):
 
 
 def test_nwb_extractor_channel_ids_retrieval(path_to_nwbfile, nwbfile_with_ecephys_content):
+    """
+    Test that the channel_ids are retrieved from the electrodes table ONLY from the corresponding
+    region of the electrical series
+    """
     electrical_series_name_list = ["ElectricalSeries1", "ElectricalSeries2"]
     for electrical_series_name in electrical_series_name_list:
         recording_extractor = NwbRecordingExtractor(path_to_nwbfile, electrical_series_name=electrical_series_name)
 
         nwbfile = nwbfile_with_ecephys_content
-        electrodes = nwbfile.electrodes.to_dataframe()
-        query_string = f"electrical_series_name == '{electrical_series_name}'"
-        expected_channel_ids = electrodes.query(query_string)["channel_name"].values
-
+        electrical_series = nwbfile.acquisition[electrical_series_name]
+        electrical_series_electrode_indices = electrical_series.electrodes.data[:]
+        electrodes_table = nwbfile.electrodes.to_dataframe()
+        sub_electrodes_table = electrodes_table.iloc[electrical_series_electrode_indices]
+        
+        expected_channel_ids = sub_electrodes_table["channel_name"].values
         extracted_channel_ids = recording_extractor.channel_ids
         assert np.array_equal(extracted_channel_ids, expected_channel_ids)
 
 
 def test_nwb_extractor_property_retrieval(path_to_nwbfile, nwbfile_with_ecephys_content):
+    """
+    Test that the property is retrieved from the electrodes table ONLY from the corresponding
+    region of the electrical series
+    """
+
     electrical_series_name_list = ["ElectricalSeries1", "ElectricalSeries2"]
     for electrical_series_name in electrical_series_name_list:
         recording_extractor = NwbRecordingExtractor(path_to_nwbfile, electrical_series_name=electrical_series_name)
 
         nwbfile = nwbfile_with_ecephys_content
-        electrodes = nwbfile.electrodes.to_dataframe()
-        query_string = f"electrical_series_name == '{electrical_series_name}'"
-        expected_property = electrodes.query(query_string)["property"].values
+        electrical_series = nwbfile.acquisition[electrical_series_name]
+        electrical_series_electrode_indices = electrical_series.electrodes.data[:]
+        electrodes_table = nwbfile.electrodes.to_dataframe()
+        sub_electrodes_table = electrodes_table.iloc[electrical_series_electrode_indices]
         
+        expected_property = sub_electrodes_table["property"].values
         extracted_property = recording_extractor.get_property("property")
         assert np.array_equal(extracted_property, expected_property)
 
 
 def test_nwb_extractor_offset_from_electrodes_table(path_to_nwbfile, nwbfile_with_ecephys_content):
+    """Test that the offset is retrieved from the electrodes table if it is not present in the ElectricalSeries."""
     electrical_series_name = "ElectricalSeries1"
     recording_extractor = NwbRecordingExtractor(path_to_nwbfile, electrical_series_name=electrical_series_name)
 
     nwbfile = nwbfile_with_ecephys_content
-    electrodes = nwbfile.electrodes.to_dataframe()
-    query_string = f"electrical_series_name == '{electrical_series_name}'"
-    expected_offsets_uV = electrodes.query(query_string)["offset"].values * 1e6
+    electrical_series = nwbfile.acquisition[electrical_series_name]
+    electrical_series_electrode_indices = electrical_series.electrodes.data[:]
+    electrodes_table = nwbfile.electrodes.to_dataframe()
+    sub_electrodes_table = electrodes_table.iloc[electrical_series_electrode_indices]
     
+    expected_offsets_uV = sub_electrodes_table["offset"].values * 1e6
     extracted_offsets_uV = recording_extractor.get_channel_offsets()
     assert np.array_equal(extracted_offsets_uV, expected_offsets_uV)
 
+
 def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_content):
+    """Test that the offset is retrieved from the ElectricalSeries if it is present."""
     electrical_series_name = "ElectricalSeries2"
     recording_extractor = NwbRecordingExtractor(path_to_nwbfile, electrical_series_name=electrical_series_name)
 
@@ -162,6 +180,7 @@ def test_nwb_extractor_offset_from_series(path_to_nwbfile, nwbfile_with_ecephys_
     expected_offsets_uV = np.ones(recording_extractor.get_num_channels()) * expected_offsets_uV
     extracted_offsets_uV = recording_extractor.get_channel_offsets()
     assert np.array_equal(extracted_offsets_uV, expected_offsets_uV)
+
 
 if __name__ == "__main__":
     test = NwbRecordingTest()
