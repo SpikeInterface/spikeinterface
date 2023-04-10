@@ -26,34 +26,38 @@ class NwbSortingTest(SortingCommonTestSuite, unittest.TestCase):
     
 class GainsAndOffsetTest(unittest.TestCase):
     
-    def setUp(self):
-        self.nwbfile_path = Path(mkdtemp()) / "test.nwb" 
-        self.nwbfile = NWBFile(session_description='test', identifier='test', session_start_time=datetime.now().astimezone())
+    @classmethod
+    def setUpClass(cls):
+        cls.rng = np.random.default_rng(41)
 
-        device = self.nwbfile.create_device(name='recorder')
-        electrode_group = self.nwbfile.create_electrode_group('electrode', device=device, location='brain', description='fake')
+        cls.nwbfile_path = Path(mkdtemp()) / "test.nwb" 
+        cls.nwbfile = NWBFile(session_description='test', identifier='test', session_start_time=datetime.now().astimezone())
+
+        device = cls.nwbfile.create_device(name='recorder')
+        electrode_group = cls.nwbfile.create_electrode_group('electrode', device=device, location='brain', description='fake')
+
         info = dict(group=electrode_group, location='brain')
-
-        #nwbfile.add_electrode_column(name='offset', index=False, description='Level offset')
-        self.rng = np.random.default_rng(41)
-        self.number_of_electrodes = 10
-        for id in range(self.number_of_electrodes):
-            self.nwbfile.add_electrode(id=id, **info)
+        cls.number_of_electrodes = 10
+        for id in range(cls.number_of_electrodes):
+            cls.nwbfile.add_electrode(id=id, **info)
 
     def test_offset_extraction_from_electrode_table(self):
-        offset_data = self.rng.integers(low=0, high=20, size=self.number_of_electrodes).astype('float')
-        self.nwbfile.add_electrode_column(name="offset", data=offset_data, description="Level offset" )
+        
+        offset_values = self.rng.integers(low=0, high=20, size=self.number_of_electrodes, ).astype('float')
+        self.nwbfile.add_electrode_column(name="offset", data=offset_values, description="offset" )
+        
         number_of_electrodes_in_electrical_series = 5
         options = range(self.number_of_electrodes)
         region_indexes = sorted(self.rng.choice(options, size=number_of_electrodes_in_electrical_series, replace=False).tolist())
         electrode_region = self.nwbfile.create_electrode_table_region(region_indexes, 'record electrodes')
 
-        num_frames = 10_000
+        num_frames = 1_000
         data = self.rng.random((num_frames, number_of_electrodes_in_electrical_series))
         electrical_series_name = "test_electrical_series"
-        electrical_series = ElectricalSeries(name=electrical_series_name , data=data, electrodes=electrode_region, rate=20_000.0)
-
+        rate = 30_000.0
+        electrical_series = ElectricalSeries(name=electrical_series_name , data=data, electrodes=electrode_region, rate=rate)
         self.nwbfile.add_acquisition(electrical_series)
+        
         with NWBHDF5IO(self.nwbfile_path, mode='w') as io:
             io.write(self.nwbfile)
             
