@@ -28,7 +28,7 @@ from ..postprocessing import WaveformPrincipalComponent
 
 
 _possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime',
-                             'nearest_neighbor', 'nn_isolation', 'nn_noise_overlap']
+                             'nearest_neighbor', 'nn_isolation', 'nn_noise_overlap', 'silhouette_score', 'simplified_silhouette_score']
 
 
 _default_params = dict(
@@ -653,6 +653,96 @@ def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor, this_
                                                   n_neighbors)
 
         return nn_noise_overlap
+def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
+    """Calculates the simplified silhouette score for each cluster. The value ranges
+    from -1 (bad clustering) to 1 (good clustering). The simplified silhoutte score
+    utilizes the centroids for distance calculations rather than pairwise calculations.
+    Parameters
+    ----------
+    all_pcs : 2d array
+        The PCs for all spikes, organized as [num_spikes, PCs].
+    all_labels : 1d array
+        The cluster labels for all spikes. Must have length of number of spikes.
+    this_unit_id : int
+        The ID for the unit to calculate this metric for.
+    Returns
+    -------
+    unit_silhouette_score : float
+        Simplified Silhouette Score for this unit
+    References
+    ------------
+    Based on simplified silhouette score suggested by [Hruschka]_
+    """
+
+    pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
+    centroid_for_this_unit = np.expand_dims(np.mean(pcs_for_this_unit, 0), 0)
+    distances_for_this_unit = scipy.spatial.distance.cdist(
+        centroid_for_this_unit, pcs_for_this_unit
+    )
+    distance = np.inf
+
+    # find centroid of other cluster and measure distances to that rather than pairwise
+    # if less than current minimum distance update
+    for label in np.unique(all_labels):
+        pcs_for_other_cluster = all_pcs[all_labels == label, :]
+        centroid_for_other_cluster = np.expand_dims(
+            np.mean(pcs_for_other_cluster, 0), 0
+        )
+        distances_for_other_cluster = scipy.spatial.distance.cdist(
+            centroid_for_other_cluster, pcs_for_this_unit
+        )
+        if np.mean(distances_for_other_cluster) < distance:
+            distances_for_minimum_cluster = distances_for_other_cluster
+
+    sil_distances = (
+        distances_for_minimum_cluster - distances_for_this_unit
+    ) / np.maximum(distances_for_minimum_cluster , distances_for_this_unit)
+
+    unit_silhouette_score = np.mean(sil_distances)
+    return unit_silhouette_score
+
+def silhouette_score(all_pcs, all_labels, this_unit_id):
+    """Calculates the silhouette score which is a marker of cluster quality ranging from
+    -1 (bad clustering) to 1 (good clustering).
+    Parameters
+    ----------
+    all_pcs : 2d array
+        The PCs for all spikes, organized as [num_spikes, PCs].
+    all_labels : 1d array
+        The cluster labels for all spikes. Must have length of number of spikes.
+    this_unit_id : int
+        The ID for the unit to calculate this metric for.
+    Returns
+    -------
+    unit_silhouette_score : float
+        Silhouette Score for this unit
+    References
+    ------------
+    Based on [Rousseeuw]_
+    """
+
+    pcs_for_this_unit = all_pcs[all_labels == this_unit_id, :]
+    distances_for_this_unit = scipy.spatial.distance.cdist(
+        pcs_for_this_unit, pcs_for_this_unit
+    )
+    distance = np.inf
+
+    # iterate through all other clusters and do pairwise distance comparisons
+    # if current cluster distances < current mimimum update
+    for label in np.unique(all_labels):
+        pcs_for_other_cluster = all_pcs[all_labels == label, :]
+        distances_for_other_cluster = scipy.spatial.distance.cdist(
+            pcs_for_other_cluster, pcs_for_this_unit
+        )
+        if np.mean(distances_for_other_cluster) < distance:
+            distances_for_minimum_cluster = distances_for_other_cluster
+
+    sil_distances = (
+        distances_for_minimum_cluster - distances_for_this_unit
+    ) / np.maximum(distances_for_minimum_cluster , distances_for_this_unit)
+
+    unit_silhouette_score = np.mean(sil_distances)
+    return unit_silhouette_score
 
 
 def _subtract_clip_component(clip1, component):
@@ -770,5 +860,19 @@ def pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id,
         except:
             nn_noise_overlap = np.nan
         pc_metrics['nn_noise_overlap'] = nn_noise_overlap
+        
+    if 'silhouette_score' in metrics_names:
+        try:
+            unit_silhouette_score = silhouette_score(pcs_flat, labels, unit_id)
+        except:
+            unit_silhouette_score = np.nan
+        pc_metrics['silhouette_score'] = unit_silhouette_score
+        
+    if 'simplified_silhouette_score' in metrics_name:
+        try:
+            unit_silhouette_score = simplified_silhouette_score(pcs_flat, labels, unit_id)
+        except:
+            unit_silhouette_score = np.nan
+        pc_metrics['simplified_silhouette_score'] = unit_silhouette_score
 
     return pc_metrics
