@@ -130,7 +130,7 @@ class NwbRecordingExtractor(BaseRecording):
         # The table for all the electrodes in the nwbfile 
         electrodes_table = self._nwbfile.electrodes
         
-        #################333
+        ###################
         # Extract temporal information TODO: Should be a function
         ###################
         sampling_frequency = None
@@ -201,18 +201,17 @@ class NwbRecordingExtractor(BaseRecording):
         #########
         # Extract and re-name properties from nwbfile TODO: Should be a function
         ########
-        properties = dict() 
         
+        properties = dict() 
         # Extract rel_x, rel_y and rel_z and assign to location
         
+        # TODO: Refactor ALL of this and add tests. This is a mess.
+        if 'rel_x' in electrodes_table:
+            ndim = 3 if 'rel_z' in electrodes_table else 2
+            properties['location'] = np.zeros((self.get_num_channels(), ndim), dtype=float)
+    
         for es_ind, (channel_id, electrode_table_index) in enumerate(zip(channel_ids, electrodes_indices)):
             if 'rel_x' in electrodes_table:
-                ndim = 2  # assume 2 dimensions
-                if 'rel_z' in electrodes_table:
-                    ndim = 3  # if we have rel_z, it is 3 dimensions
-
-                if 'location' not in properties:
-                    properties['location'] = np.zeros((self.get_num_channels(), ndim), dtype=float)
                 properties['location'][es_ind, 0] = electrodes_table['rel_x'][electrode_table_index]
                 if 'rel_y' in electrodes_table:
                     properties['location'][es_ind, 1] = electrodes_table['rel_y'][electrode_table_index]
