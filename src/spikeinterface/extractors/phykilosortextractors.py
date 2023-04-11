@@ -151,6 +151,8 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 if load_all_cluster_properties:
                     self.set_property(key=prop_name, values=cluster_info[prop_name])
 
+        self.set_property(key="original_cluster_id", values=cluster_info.index.values)
+
         self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
 
 
