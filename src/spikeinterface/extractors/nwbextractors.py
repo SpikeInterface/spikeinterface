@@ -176,7 +176,6 @@ class NwbRecordingExtractor(BaseRecording):
             times_kwargs = dict(sampling_frequency=sampling_frequency, t_start=t_start)
 
         num_frames = int(self._es.data.shape[0])
-        num_channels = len(self._es.electrodes.data)
 
         # Extractors channel groups must be integers, but Nwb electrodes group_name can be strings
         if 'group_name' in self._nwbfile.electrodes.colnames:
@@ -184,10 +183,10 @@ class NwbRecordingExtractor(BaseRecording):
 
         # Fill channel properties dictionary from electrodes table
         if "channel_name" in self._nwbfile.electrodes.colnames:
-            channel_ids = self._es.electrodes["channel_name"][:].astype("str")
+            channel_ids = [self._es.electrodes["channel_name"][i] for i in self._es.electrodes.data]
         else:
             channel_ids = [self._es.electrodes.table.id[x] for x in self._es.electrodes.data]
-
+        
         dtype = self._es.data.dtype
         BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
         recording_segment = NwbRecordingSegment(nwbfile=self._nwbfile,
