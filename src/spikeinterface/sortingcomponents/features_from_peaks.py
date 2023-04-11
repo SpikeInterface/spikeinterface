@@ -4,7 +4,8 @@ import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core import get_channel_distances
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass, LocalizeMonopolarTriangulation
-from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PipelineNode, ExtractDenseWaveforms
+from spikeinterface.sortingcomponents.peak_pipeline import (run_node_pipeline, PeakRetriever, 
+                                                            PipelineNode, ExtractDenseWaveforms)
 
 
 
@@ -46,17 +47,20 @@ def compute_features_from_peaks(
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_output=False)
+    peak_retriever = PeakRetriever(recording, peaks)
+    extract_dense_waveforms = ExtractDenseWaveforms(recording, parents=[peak_retriever],
+                                                    ms_before=ms_before, ms_after=ms_after,  return_output=False)
     nodes = [
+        peak_retriever,
         extract_dense_waveforms,
     ]
     for feature_name in feature_list:
         Class = _features_class[feature_name]
         params = feature_params.get(feature_name, {}).copy()
-        node = Class(recording, parents=[extract_dense_waveforms], **params)
+        node = Class(recording, parents=[peak_retriever, extract_dense_waveforms], **params)
         nodes.append(node)
 
-    features = run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='features_from_peaks', squeeze_output=False)
+    features = run_node_pipeline(recording, nodes, job_kwargs, job_name='features_from_peaks', squeeze_output=False)
 
     return features
 
