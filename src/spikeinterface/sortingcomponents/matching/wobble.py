@@ -228,9 +228,16 @@ class TemplateData:
 
     Parameters
     ----------
+    temporal : ndarray (num_templates, num_samples, approx_rank)
+        Temporal component of compressed templates.
+    singular : ndarray (num_templates, approx_rank)
+        Singular component of compressed templates.
+    spatial : ndarray (num_templates, approx_rank, num_channels)
+        Spatial component of compressed templates.
+    temporal_jittered : ndarray (num_jittered, num_samples, approx_rank)
+        Temporal component of the compressed templates jittered at super-resolution in time.
     compressed_templates : (ndarray, ndarray, ndarray, ndarray)
-        Templates compressed by singular value decomposition into temporal, singular, spatial, and upsampled_temporal
-        components.
+        Compressed templates with temporal, singular, spatial, and temporal_jittered components.
     pairwise_convolution : list[ndarray]
         For each jittered template, pairwise_convolution of that template with each other overlapping template.
     norm_squared : ndarray (num_templates,)
@@ -239,6 +246,13 @@ class TemplateData:
     compressed_templates : Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
     pairwise_convolution : List[np.ndarray]
     norm_squared : np.ndarray
+    temporal: Optional[np.ndarray] = None
+    singular: Optional[np.ndarray] = None
+    spatial: Optional[np.ndarray] = None
+    temporal_jittered: Optional[np.ndarray] = None
+
+    def __post_init__(self):
+        self.temporal, self.singular, self.spatial, self.temporal_jittered = self.compressed_templates
 
 
 class WobbleMatch(BaseTemplateMatchingEngine):
@@ -311,9 +325,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         # Perform initial computations on templates necessary for computing the objective
         sparse_templates = np.where(sparsity.visible_channels[:, np.newaxis, :], templates, 0)
-        temporal, spatial, singular = compress_templates(sparse_templates, params.approx_rank)
+        temporal, singular, spatial = compress_templates(sparse_templates, params.approx_rank)
         temporal_jittered = upsample_and_jitter(temporal, params.jitter_factor, template_meta.num_samples)
-        compressed_templates = (temporal, spatial, singular, temporal_jittered)
+        compressed_templates = (temporal, singular, spatial, temporal_jittered)
         pairwise_convolution = convolve_templates(compressed_templates, params, template_meta, sparsity)
         norm_squared = compute_template_norm(sparsity.visible_channels, templates)
         template_data = TemplateData(compressed_templates=compressed_templates,
@@ -742,7 +756,7 @@ def upsample_and_jitter(temporal, jitter_factor, num_samples):
 
     Returns
     -------
-    temporal_jittered : ndarray (num_templates * jitter_factor, num_samples, approx_rank)
+    temporal_jittered : ndarray (num_jittered, num_samples, approx_rank)
         Temporal component of the compressed templates jittered at super-resolution in time."""
 
     # Upsample the temporal components of the SVD -- i.e. upsample the reconstruction
@@ -775,9 +789,8 @@ def convolve_templates(compressed_templates, params, template_meta, sparsity):
 
     Parameters
     ----------
-    compressed_templates : (ndarray, ndarray, ndarray, ndarray)
-        Templates compressed by singular value decomposition into temporal, singular, spatial, and
-        upsampled_temporal components.
+    compressed_templates : list[ndarray]
+        Compressed templates with temporal, singular, spatial, and temporal_jittered components.
     params : WobbleParameters
         Dataclass object for aggregating the parameters together.
     template_meta : TemplateMetadata
@@ -842,7 +855,10 @@ def compute_objective(traces, template_data, approx_rank):
     objective_normalized : ndarray (template_meta.num_templates, traces.shape[0]+template_meta.num_samples-1)
         Template matching objective normalized by the magnitude of each template.
     """
-    temporal, singular, spatial, temporal_jittered = template_data.compressed_templates
+    temporal = template_data.temporal
+    singular = template_data.singular
+    spatial = template_data.spatial
+    temporal_jittered = template_data.temporal_jittered
     num_templates = temporal.shape[0]
     num_samples = temporal.shape[1]
     objective_len = get_convolution_len(traces.shape[0], num_samples)
