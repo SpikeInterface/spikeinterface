@@ -57,7 +57,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-datasets
       - name: Install packages
-        uses: ./build-test-environment.yml
+        uses: ./.github/actions/build-test-environment
       - name: Force installation of latest dev from key-packages when running dev (not release)
         id: version
         run: |
