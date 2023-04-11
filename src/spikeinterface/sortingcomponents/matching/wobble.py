@@ -60,7 +60,7 @@ class WobbleParameters:
     scale_amplitudes: bool = False
 
     def __post_init__(self):
-        assert (self.amplitude_variance >= 0, "amplitude_variance must be a non-negative scalar")
+        assert self.amplitude_variance >= 0, "amplitude_variance must be a non-negative scalar"
         self.scale_amplitudes = self.amplitude_variance > 0
 
 
@@ -420,8 +420,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             distance_metrics.extend(list(distance_metric))
 
             # subtract newly detected spike train from traces (via the objective)
-            cls.subtract_spike_train(spike_train, scaling, template_data, objective, objective_normalized, params,
-                                     template_meta, sparsity)
+            objective, objective_normalized = cls.subtract_spike_train(spike_train, scaling, template_data, objective,
+                                                                       objective_normalized, params, template_meta,
+                                                                       sparsity)
 
         spike_train = np.array(spike_trains)
         scalings = np.array(scalings)
@@ -548,9 +549,12 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         sparsity : Sparsity
             Dataclass object for aggregating channel sparsity variables together.
 
-        Notes
-        -----
-        Operates in-place on the objective and objective_normalized.
+        Returns
+        -------
+        objective : ndarray (template_meta.num_templates, traces.shape[0]+template_meta.num_samples-1)
+            Template matching objective for each template.
+        objective_normalized : ndarray (num_templates, traces.shape[0]+template_meta.num_samples-1)
+            Template matching objective normalized by the magnitude of each template.
         """
         present_jittered_indices = np.unique(spike_train[:, 1])
         convolution_resolution_len = get_convolution_len(template_meta.num_samples, template_meta.num_samples)
@@ -569,7 +573,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
                     pconv_scaled = pconv * spike_scaling
                     objective[overlapping_templates, spike_start_index:spike_stop_index] -= pconv_scaled
 
-            cls.enforce_refractory(spike_train, objective, objective_normalized, params, template_meta)
+            objective, objective_normalized = cls.enforce_refractory(spike_train, objective, objective_normalized,
+                                                                     params, template_meta)
+        return objective, objective_normalized
 
 
     @classmethod
@@ -659,8 +665,6 @@ class WobbleMatch(BaseTemplateMatchingEngine):
     def enforce_refractory(cls, spike_train, objective, objective_normalized, params, template_meta):
         """Enforcing the refractory period for each unit by setting the objective to -infinity.
 
-        Operates in-place on the objective.
-
         Parameters
         ----------
         spike_train : ndarray (num_spikes, 2)
@@ -673,6 +677,13 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             Dataclass object for aggregating the parameters together.
         template_meta : TemplateMetadata
             Dataclass object for aggregating template metadata together.
+
+        Returns
+        -------
+        objective : ndarray (template_meta.num_templates, traces.shape[0]+template_meta.num_samples-1)
+            Template matching objective for each template.
+        objective_normalized : ndarray (num_templates, traces.shape[0]+template_meta.num_samples-1)
+            Template matching objective normalized by the magnitude of each template.
         """
         window = np.arange(-params.refractory_period_frames, params.refractory_period_frames+1)
 
@@ -693,6 +704,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         objective_normalized[spike_unit_indices[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
         if params.scale_amplitudes: # template_convolution is only used with amplitude scaling
             objective[spike_unit_indices[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
+        return objective, objective_normalized
 
 
 def compute_template_norm(visible_channels, templates):
