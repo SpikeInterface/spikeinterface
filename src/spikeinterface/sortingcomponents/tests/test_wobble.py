@@ -101,6 +101,19 @@ def test_upsample_and_jitter():
         upsampled_template = temporal_jittered[i * jitter_factor, :, :]
         assert np.allclose(original_template, upsampled_template)
 
+def test_get_convolution_len():
+    # Arrange: generate random 'data'
+    seed = 0
+    rng = np.random.default_rng(seed)
+    x = rng.integers(1, 100)
+    y = rng.integers(1, 100)
+
+    # Act: run get_convolution_len
+    convolution_len = wobble.get_convolution_len(x, y)
+
+    # Assert: check that the convolution length is correct
+    assert convolution_len == x + y - 1
+
 
 def compute_objective_loopy(traces, template_data, approx_rank):
     """Compute objective by convolving templates with voltage traces.
@@ -174,6 +187,6 @@ if __name__ == '__main__':
     test_compute_template_norm()
     test_compress_templates()
     test_upsample_and_jitter()
-
+    test_get_convolution_len()
 
     test_compute_objective()
