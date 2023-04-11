@@ -856,8 +856,6 @@ def compute_objective(traces, template_data, approx_rank):
         Voltage traces for a chunk of the recording.
     template_data : TemplateData
         Dataclass object for aggregating template data together.
-    template_meta : TemplateMetadata
-        Dataclass object for aggregating template metadata together.
     approx_rank : int
         Rank of the compressed template matrices.
 
