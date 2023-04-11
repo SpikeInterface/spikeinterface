@@ -684,7 +684,7 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
     # find centroid of other cluster and measure distances to that rather than pairwise
     # if less than current minimum distance update
     for label in np.unique(all_labels):
-        if label != this_unit_id
+        if label != this_unit_id:
             pcs_for_other_cluster = all_pcs[all_labels == label, :]
             centroid_for_other_cluster = np.expand_dims(np.mean(pcs_for_other_cluster, 0), 0)
             distances_for_other_cluster = scipy.spatial.distance.cdist(
