@@ -26,7 +26,7 @@ class TemporalPCBaseNode(WaveformsNode):
         child classess. The child should implement a compute method that does a specific operation
         (e.g. project, denoise, etc)
         """
-        waveform_extractor = find_parent_of_type(self, WaveformsNode)
+        waveform_extractor = find_parent_of_type(parents, WaveformsNode)
         if waveform_extractor is None:
             raise TypeError(f"TemporalPCA should have a single {WaveformsNode.__name__} in its parents")
 

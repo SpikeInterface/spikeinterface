@@ -7,7 +7,7 @@ from spikeinterface.sortingcomponents.waveforms.waveform_thresholder import Wave
 from spikeinterface.sortingcomponents.peak_pipeline import (
     ExtractDenseWaveforms,
     ExtractSparseWaveforms,
-    WaveformExtractorNode,
+    WaveformsNode,
     PipelineNode,
     run_peak_pipeline,
 )

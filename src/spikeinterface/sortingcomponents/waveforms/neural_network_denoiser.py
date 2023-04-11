@@ -17,7 +17,7 @@ class SingleChannelToyDenoiser(WaveformsNode):
         self, recording: BaseRecording, return_output: bool = True, parents: Optional[List[PipelineNode]] = None
     ):
 
-        waveform_extractor = find_parent_of_type(self, WaveformsNode)
+        waveform_extractor = find_parent_of_type(parents, WaveformsNode)
         if waveform_extractor is None:
             raise TypeError(f"Model should have a {WaveformsNode.__name__} in its parents")
 

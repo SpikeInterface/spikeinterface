@@ -9,11 +9,12 @@ from typing import Literal
 from spikeinterface.core import BaseRecording
 from spikeinterface.sortingcomponents.peak_pipeline import (
     PipelineNode,
-    WaveformExtractorNode,
+    WaveformsNode,
+    find_parent_of_type
 )
 
 
-class WaveformThresholder(WaveformExtractorNode):
+class WaveformThresholder(WaveformsNode):
     """
     A node that performs waveform thresholding based on a selected feature.
 
@@ -45,11 +46,9 @@ class WaveformThresholder(WaveformExtractorNode):
         threshold: float = 2,
         operator: callable = operator.le
     ):
-        try:
-            waveform_extractor = next(parent for parent in parents if isinstance(parent, WaveformExtractorNode))
-        except (StopIteration, TypeError):
-            exception_string = f"{self.__name__} should have a {WaveformExtractorNode.__name__} in its parents"
-            raise TypeError(exception_string)
+        waveform_extractor = find_parent_of_type(parents, WaveformsNode)
+        if waveform_extractor is None:
+            raise TypeError(f"SavGolDenoiser should have a single {WaveformsNode.__name__} in its parents")
 
         super().__init__(recording, waveform_extractor.ms_before, waveform_extractor.ms_after,
             return_output=return_output, parents=parents)
