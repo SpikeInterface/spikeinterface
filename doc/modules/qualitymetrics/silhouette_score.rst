@@ -1,4 +1,4 @@
-Silhouette score
+Silhouette score (silhouette_score, simplified_silhouette_score)
 ============================================
 
 Calculation
@@ -16,8 +16,11 @@ the following equations:
 
 .. math::
     a(i) = \frac{1}{C_i-1} \sum_{j \in C_i, j \neq i} d(i,j)
+    
     b(i) = \min {J \neq I} \frac{1}{C_j} \sum_{j \in C_j} d(i, j)
+    
     s(i) = \frac{a(i)-b(i)}{\max(a(i), b(i))}
+    
     Silhouette Score = \frac{1}{N} \sum^{N} s(i)
 
 In order to improve computational complexity an alternative approach was proposed by [Hruschka]_
@@ -27,8 +30,11 @@ is determined by distances from each point :math:`i` to the centroid of :math:`C
 
 .. math::
     a(i) = d(i, \mu_{C_I})
+    
     b(i) = \min {C_J \neq C_I}  d(i, \mu_{C_J})
+    
     s(i) = \frac{a(i)-b(i)}{\max(a(i), b(i))}
+    
     Silhouette Score = \frac{1}{N} \sum^{N} s(i)
 
 Expectation and use
