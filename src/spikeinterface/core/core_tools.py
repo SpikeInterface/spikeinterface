@@ -448,7 +448,7 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     func = _write_memory_chunk
     init_func = _init_memory_worker
     if n_jobs > 1:
-        init_args = (recording.to_dict(), None, shm_names, shapes, dtype, cast_unsigned)
+        init_args = (recording, None, shm_names, shapes, dtype, cast_unsigned)
     else:
         init_args = (recording, arrays, None, None, dtype, cast_unsigned)
 
