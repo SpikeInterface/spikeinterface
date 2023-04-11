@@ -402,7 +402,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         traces = traces.astype(np.float32, casting='safe') # ensure traces are specified as np.float32
 
         # Compute objective
-        objective, objective_normalized = compute_objective(traces, template_data, params.approx_rank)
+        objective = compute_objective(traces, template_data, params.approx_rank)
+        objective_normalized = 2 * objective - template_data.norm_squared[:, np.newaxis]
 
         # Compute spike train
         spike_trains, scalings, distance_metrics = [], [], []
@@ -852,13 +853,8 @@ def compute_objective(traces, template_data, approx_rank):
     -------
     objective : ndarray (template_meta.num_templates, traces.shape[0]+template_meta.num_samples-1)
             Template matching objective for each template.
-    objective_normalized : ndarray (template_meta.num_templates, traces.shape[0]+template_meta.num_samples-1)
-        Template matching objective normalized by the magnitude of each template.
     """
-    temporal = template_data.temporal
-    singular = template_data.singular
-    spatial = template_data.spatial
-    temporal_jittered = template_data.temporal_jittered
+    temporal, singular, spatial, temporal_jittered = template_data.compressed_templates
     num_templates = temporal.shape[0]
     num_samples = temporal.shape[1]
     objective_len = get_convolution_len(traces.shape[0], num_samples)
@@ -876,8 +872,7 @@ def compute_objective(traces, template_data, approx_rank):
             objective[template_id, :] += np.convolve(scaled_filtered_data[template_id, :],
                                                      template_temporal_filter,
                                                      mode='full')
-    objective_normalized = 2 * objective - template_data.norm_squared[:, np.newaxis]
-    return objective, objective_normalized
+    return objective
 
 
 def compute_scale_amplitudes(high_resolution_conv, norm_peaks, scale_min, scale_max, amplitude_variance):
