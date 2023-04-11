@@ -8,7 +8,7 @@ from huggingface_hub import hf_hub_download
 
 
 from spikeinterface.core import BaseRecording
-from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformExtractorNode
+from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
 from .waveform_utils import to_temporal_representation, from_temporal_representation
 
 
@@ -18,19 +18,16 @@ class SingleChannelToyDenoiser(PipelineNode):
     ):
         super().__init__(recording, return_output=return_output, parents=parents)
 
-        # Find waveform extractor in the parents
-        try:
-            waveform_extractor = next(parent for parent in self.parents if isinstance(parent, WaveformExtractorNode))
-        except (StopIteration, TypeError):
-            exception_string = f"Model should have a {WaveformExtractorNode.__name__} in its parents"
-            raise TypeError(exception_string)
+        waveform_extractor = find_parent_of_type(self, WaveformsNode)
+        if waveform_extractor is None:
+            raise TypeError(f"Model should have a {WaveformsNode.__name__} in its parents")
 
         self.assert_model_and_waveform_temporal_match(waveform_extractor)
 
         # Load model
         self.denoiser = self.load_model()
 
-    def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformExtractorNode):
+    def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformsNode):
         """
         Asserts that the model and the waveform extractor have the same temporal parameters
         """
