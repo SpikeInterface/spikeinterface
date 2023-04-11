@@ -4,10 +4,10 @@ from typing import List, Optional
 import scipy.signal
 
 from spikeinterface.core import BaseRecording
-from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformExtractorNode
+from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
 
 
-class SavGolDenoiser(WaveformExtractorNode):
+class SavGolDenoiser(WaveformsNode):
     """
     Waveform Denoiser based on a simple Savitzky-Golay filtering
     https://en.wikipedia.org/wiki/Savitzky%E2%80%93Golay_filter
@@ -32,11 +32,10 @@ class SavGolDenoiser(WaveformExtractorNode):
         order : int = 3,
         window_length_ms : float = 0.25
     ):
-        try:
-            waveform_extractor = next(parent for parent in parents if isinstance(parent, WaveformExtractorNode))
-        except (StopIteration, TypeError):
-            exception_string = f"{self.__name__} should have a {WaveformExtractorNode.__name__} in its parents"
-            raise TypeError(exception_string)
+
+        waveform_extractor = find_parent_of_type(self, WaveformsNode)
+        if waveform_extractor is None:
+            raise TypeError(f"SavGolDenoiser should have a single {WaveformsNode.__name__} in its parents")
 
         super().__init__(recording, waveform_extractor.ms_before, waveform_extractor.ms_after,
             return_output=return_output, parents=parents)

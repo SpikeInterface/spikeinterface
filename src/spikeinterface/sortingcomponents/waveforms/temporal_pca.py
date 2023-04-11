@@ -6,7 +6,7 @@ from typing import List
 import numpy as np
 from sklearn.decomposition import IncrementalPCA
 
-from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformExtractorNode
+from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.postprocessing import compute_principal_components
@@ -17,7 +17,7 @@ from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from .waveform_utils import to_temporal_representation, from_temporal_representation
 
 
-class TemporalPCBaseNode(WaveformExtractorNode):
+class TemporalPCBaseNode(WaveformsNode):
     def __init__(
         self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_output=True
     ):
@@ -26,11 +26,9 @@ class TemporalPCBaseNode(WaveformExtractorNode):
         child classess. The child should implement a compute method that does a specific operation
         (e.g. project, denoise, etc)
         """
-        try:
-            waveform_extractor = next(parent for parent in parents if isinstance(parent, WaveformExtractorNode))
-        except (StopIteration, TypeError):
-            exception_string = f"TemporalPCA should have a {WaveformExtractorNode.__name__} in its parents"
-            raise TypeError(exception_string)
+        waveform_extractor = find_parent_of_type(self, WaveformsNode)
+        if waveform_extractor is None:
+            raise TypeError(f"TemporalPCA should have a single {WaveformsNode.__name__} in its parents")
 
         super().__init__(recording, waveform_extractor.ms_before, waveform_extractor.ms_after,
             return_output=return_output, parents=parents)
@@ -54,8 +52,7 @@ class TemporalPCBaseNode(WaveformExtractorNode):
 
         self.assert_model_and_waveform_temporal_match(waveform_extractor)
 
-
-    def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformExtractorNode):
+    def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformsNode):
         """
         Asserts that the model and the waveform extractor have the same temporal parameters
         """
