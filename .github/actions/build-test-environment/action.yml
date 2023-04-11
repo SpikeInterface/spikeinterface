@@ -1,4 +1,4 @@
-name: 'Install packages'
+name: Install packages
 description: This action installs the package and its dependencies for testing
 
 inputs:
@@ -10,7 +10,7 @@ runs:
   using: "composite"
   steps:
     - name: Set up Python ${{ inputs.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ inputs.python-version }}
     - name: Install dependencies
