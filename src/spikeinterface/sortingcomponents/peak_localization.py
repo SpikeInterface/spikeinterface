@@ -224,11 +224,9 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         self.optimizer = optimizer
         self.feature = feature
 
-        try:
-            waveform_extractor = next(parent for parent in parents if isinstance(parent, WaveformExtractorNode))
-        except (StopIteration, TypeError):
-            exception_string = f"{self.__name__} should have a {WaveformExtractorNode.__name__} in its parents"
-            raise TypeError(exception_string)
+        waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
+        if waveform_extractor is None:
+            raise TypeError(f"{self.name} should have a single {WaveformsNode.__name__} in its parents")
 
         self.nbefore = waveform_extractor.nbefore
         if enforce_decrease:
