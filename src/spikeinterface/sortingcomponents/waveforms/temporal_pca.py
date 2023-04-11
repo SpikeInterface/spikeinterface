@@ -17,7 +17,7 @@ from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from .waveform_utils import to_temporal_representation, from_temporal_representation
 
 
-class TemporalPCBaseNode(PipelineNode):
+class TemporalPCBaseNode(WaveformsNode):
     def __init__(
         self, recording: BaseRecording, parents: List[PipelineNode], model_folder_path: str, return_output=True
     ):
@@ -26,7 +26,12 @@ class TemporalPCBaseNode(PipelineNode):
         child classess. The child should implement a compute method that does a specific operation
         (e.g. project, denoise, etc)
         """
-        PipelineNode.__init__(self, recording=recording, parents=parents, return_output=return_output)
+        waveform_extractor = find_parent_of_type(parents, WaveformsNode)
+        if waveform_extractor is None:
+            raise TypeError(f"TemporalPCA should have a single {WaveformsNode.__name__} in its parents")
+
+        super().__init__(recording, waveform_extractor.ms_before, waveform_extractor.ms_after,
+            return_output=return_output, parents=parents)
 
         self.model_folder_path = model_folder_path
 
@@ -45,10 +50,6 @@ class TemporalPCBaseNode(PipelineNode):
         with open(params_path, "rb") as f:
             self.params = json.load(f)
 
-        # Find waveform extractor in the parents
-        waveform_extractor = find_parent_of_type(self, WaveformsNode)
-        if waveform_extractor is None:
-            raise TypeError(f"TemporalPCA should have a single {WaveformsNode.__name__} in its parents")
         self.assert_model_and_waveform_temporal_match(waveform_extractor)
 
     def assert_model_and_waveform_temporal_match(self, waveform_extractor: WaveformsNode):

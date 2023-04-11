@@ -155,7 +155,7 @@ class LocalizeCenterOfMass(LocalizeBase):
         self.feature = feature
 
         # Find waveform extractor in the parents
-        waveform_extractor = find_parent_of_type(self, WaveformsNode)
+        waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
         if waveform_extractor is None:
             raise TypeError(f"{self.name} should have a single {WaveformsNode.__name__} in its parents")
 
@@ -303,7 +303,7 @@ class LocalizeGridConvolution(PipelineNode):
         contact_locations = recording.get_channel_locations()
 
         # Find waveform extractor in the parents
-        waveform_extractor = find_parent_of_type(self, WaveformsNode)
+        waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
         if waveform_extractor is None:
             raise TypeError(f"{self.name} should have a single {WaveformsNode.__name__} in its parents")
 
