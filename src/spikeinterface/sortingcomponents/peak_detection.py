@@ -1,4 +1,5 @@
 """Sorting components: peak detection."""
+import copy
 
 import numpy as np
 
@@ -8,7 +9,7 @@ from spikeinterface.core.recording_tools import get_noise_levels, get_channel_di
 
 from ..core import get_chunk_with_margin
 
-from .peak_pipeline import PipelineNode, check_graph, run_nodes, GatherToMemory, GatherToNpy
+from .peak_pipeline import PeakDetector, run_node_pipeline, base_peak_dtype
 from .tools import make_multi_method_doc
 
 try:
@@ -24,9 +25,12 @@ try:
 except ImportError:
     HAVE_TORCH = False
 
-base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
-                   ('amplitude', 'float64'), ('segment_ind', 'int64')]
+"""
+TODO:
+    * remove the wrapper class and move  all implementation to instance
+    * 
 
+"""
 
 def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
                  gather_mode='memory', folder=None, names=None,
@@ -35,7 +39,6 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
 
     In 'by_channel' : peak are detected in each channel independently
     In 'locally_exclusive' : a single best peak is taken from a set of neighboring channels
-
 
     Parameters
     ----------
@@ -50,7 +53,6 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
         * "memory": results are returned as in-memory numpy arrays
         
         * "npy": results are stored to .npy files in `folder`
-
     folder: str or Path
         If gather_mode is "npy", the folder where the files are created.
     names: list
@@ -63,121 +65,76 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
     -------
     peaks: array
         Detected peaks.
-
     Notes
     -----
     This peak detection ported from tridesclous into spikeinterface.
     """
+
 
     assert method in detect_peak_methods
 
     method_class = detect_peak_methods[method]
     
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
-    mp_context = method_class.preferred_mp_context
+    job_kwargs['mp_context'] = method_class.preferred_mp_context
 
-    # prepare args
-    method_args = method_class.check_params(recording, **method_kwargs)
+    node0 = method_class(recording, **method_kwargs)
+    nodes = [node0]
 
-    extra_margin = 0
+    job_name = f'detect peaks using {method}'
     if pipeline_nodes is None:
         squeeze_output = True
     else:
-        check_graph(pipeline_nodes)
-        extra_margin = max(node.get_trace_margin() for node in pipeline_nodes)
         squeeze_output = False
-    
-    if gather_mode == 'memory':
-        gather_func = GatherToMemory()
-    elif gather_mode == 'npy':
-        gather_func = GatherToNpy(folder, names)
-    else:
-        raise ValueError(f"Wrong gather_mode : {gather_mode}. Available gather modes: 'memory' | 'npy'")
-        
-    func = _detect_peaks_chunk
-    init_func = _init_worker_detect_peaks
-    init_args = (recording, method, method_args, extra_margin, pipeline_nodes)
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args,
-                                       gather_func=gather_func, job_name='detect peaks',
-                                       mp_context=mp_context, **job_kwargs)
-    processor.run()
+        job_name += f'  + {len(pipeline_nodes)} nodes'
 
-    outs = gather_func.finalize_buffers(squeeze_output=squeeze_output)
+        # because node are modified inplace (insert parent) they need to copy incase
+        # the same pipeline is run several times
+        pipeline_nodes = copy.deepcopy(pipeline_nodes)
+        for node in pipeline_nodes:
+            if node.parents is None:
+                node.parents = [node0]
+            else:
+                node.parents = [node0] + node.parents
+            nodes.append(node)
+    
+    
+    outs = run_node_pipeline(recording, nodes, job_kwargs, job_name=job_name,
+                      gather_mode=gather_mode, squeeze_output=squeeze_output, folder=folder, names=names,
+                      )
     return outs
+
+
+class PeakDetectorWrapper(PeakDetector):
+    # transitory class to maintain instance based and class method based
+    # TODO later when in main: refactor in every old detector class:
+    #    * check_params
+    #    * get_method_margin
+    #  and move the logic in the init
+    #  but keep the class method "detect_peaks()" because it is convinient in template matching
+    def __init__(self, recording, **params):
+        PeakDetector.__init__(self, recording, return_output=True)
+
+        self.args = self.check_params(recording, **params)
+
+    def get_trace_margin(self):
+        return self.get_method_margin(*self.args)
+
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         
+        peak_sample_ind, peak_chan_ind = self.detect_peaks(traces, *self.args)
+        peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
+        local_peaks = np.zeros(peak_sample_ind.size, dtype=base_peak_dtype)
+        local_peaks['sample_ind'] = peak_sample_ind
+        local_peaks['channel_ind'] = peak_chan_ind
+        local_peaks['amplitude'] = peak_amplitude
+        local_peaks['segment_ind'] = segment_index
 
-def _init_worker_detect_peaks(recording, method, method_args, extra_margin, pipeline_nodes):
-    """Initialize a worker for detecting peaks."""
-
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-        recording = load_extractor(recording)
-
-        if pipeline_nodes is not None:
-            pipeline_nodes = [cls.from_dict(recording, kwargs) for cls, kwargs in pipeline_nodes]
-
-    # create a local dict per worker
-    worker_ctx = {}
-    worker_ctx['recording'] = recording
-    worker_ctx['method'] = method
-    worker_ctx['method_class'] = detect_peak_methods[method]
-    worker_ctx['method_args'] = method_args
-    worker_ctx['extra_margin'] = extra_margin
-    worker_ctx['pipeline_nodes'] = pipeline_nodes
-    
-    return worker_ctx
+        # return is always a tuple
+        return (local_peaks, )
 
 
-def _detect_peaks_chunk(segment_index, start_frame, end_frame, worker_ctx):
-
-    # recover variables of the worker
-    recording = worker_ctx['recording']
-    method_class = worker_ctx['method_class']
-    method_args = worker_ctx['method_args']
-    extra_margin = worker_ctx['extra_margin']
-    pipeline_nodes = worker_ctx['pipeline_nodes']
-
-    margin = method_class.get_method_margin(*method_args) + extra_margin
-
-    # load trace in memory
-    recording_segment = recording._recording_segments[segment_index]
-    traces, left_margin, right_margin = get_chunk_with_margin(recording_segment, start_frame, end_frame,
-                                                              None, margin, add_zeros=True)
-
-    if extra_margin > 0:
-        # remove extra margin for detection node
-        trace_detection = traces[extra_margin:-extra_margin]
-    else:
-        trace_detection = traces
-
-    # TODO: handle waveform returns
-    peak_sample_ind, peak_chan_ind = method_class.detect_peaks(trace_detection, *method_args)
-
-    if extra_margin > 0:
-        peak_sample_ind += extra_margin
-
-    peak_dtype = base_peak_dtype
-    peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
-
-    peaks = np.zeros(peak_sample_ind.size, dtype=peak_dtype)
-    peaks['sample_ind'] = peak_sample_ind
-    peaks['channel_ind'] = peak_chan_ind
-    peaks['amplitude'] = peak_amplitude
-    peaks['segment_ind'] = segment_index
-
-    if pipeline_nodes is not None:
-        outs = run_nodes(traces, peaks, pipeline_nodes)
-
-    # make absolute sample index
-    peaks['sample_ind'] += (start_frame - left_margin)
-
-    if pipeline_nodes is None:
-        return peaks
-    else:
-        return (peaks, ) + outs
-
-
-class DetectPeakByChannel:
+class DetectPeakByChannel(PeakDetectorWrapper):
     """Detect peaks using the 'by channel' method.
     """
 
@@ -251,7 +208,7 @@ class DetectPeakByChannel:
         return peak_sample_ind, peak_chan_ind
 
 
-class DetectPeakByChannelTorch:
+class DetectPeakByChannelTorch(PeakDetectorWrapper):
     """Detect peaks using the 'by channel' method with pytorch.
     """
 
@@ -309,7 +266,7 @@ class DetectPeakByChannelTorch:
         return sample_inds, chan_inds
 
 
-class DetectPeakLocallyExclusive:
+class DetectPeakLocallyExclusive(PeakDetectorWrapper):
     """Detect peaks using the 'locally exclusive' method."""
 
     name = 'locally_exclusive'
@@ -367,7 +324,7 @@ class DetectPeakLocallyExclusive:
         return peak_sample_ind, peak_chan_ind
 
 
-class DetectPeakLocallyExclusiveTorch:
+class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
     """Detect peaks using the 'locally exclusive' method with pytorch.
     """
 
@@ -596,7 +553,7 @@ if HAVE_TORCH:
         return sample_inds, chan_inds
 
 
-class DetectPeakLocallyExclusiveOpenCL:
+class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
     name = 'locally_exclusive_cl'
     engine = 'opencl'
     preferred_mp_context = None
