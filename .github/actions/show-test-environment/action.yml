@@ -13,12 +13,15 @@ runs:
     - name: git-annex version
       run: |
         git-annex version
+      shell: bash
     - name: Packages installed
       run: |
         source ~/test_env/bin/activate
         pip list
+      shell: bash
     - name: Check ephy_testing_data files
       run: |
         if [ -d "$HOME/spikeinterface_datasets" ]; then
           find $HOME/spikeinterface_datasets
         fi
+      shell: bash

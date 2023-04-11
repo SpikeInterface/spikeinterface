@@ -40,3 +40,4 @@ runs:
         wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
         tar xvzf git-annex-standalone-amd64.tar.gz
         echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
+      shell: bash
