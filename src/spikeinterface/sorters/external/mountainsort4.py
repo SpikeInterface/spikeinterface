@@ -105,7 +105,7 @@ class Mountainsort4Sorter(BaseSorter):
         if p['whiten']:
             if verbose:
                 print('whitening')
-            recording = whiten(recording=recording)
+            recording = whiten(recording=recording, dtype='float32')
 
         print('Mountainsort4 use the OLD spikeextractors mapped with NewToOldRecording')
         old_api_recording = NewToOldRecording(recording)
