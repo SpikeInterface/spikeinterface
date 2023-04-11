@@ -311,7 +311,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         # Perform initial computations on templates necessary for computing the objective
         sparse_templates = np.where(sparsity.visible_channels[:, np.newaxis, :], templates, 0)
-        compressed_templates = compress_templates(sparse_templates, params, template_meta)
+        temporal, spatial, singular = compress_templates(sparse_templates, params.approx_rank)
+        temporal_jittered = upsample_and_jitter(temporal, params.jitter_factor, template_meta.num_samples)
+        compressed_templates = (temporal, spatial, singular, temporal_jittered)
         pairwise_convolution = convolve_templates(compressed_templates, params, template_meta, sparsity)
         norm_squared = compute_template_norm(sparsity.visible_channels, templates)
         template_data = TemplateData(compressed_templates=compressed_templates,
@@ -702,51 +704,65 @@ def compute_template_norm(visible_channels, templates):
     return norm_squared
 
 
-def compress_templates(templates, params, template_meta):
+def compress_templates(templates, approx_rank):
     """Compress templates using singular value decomposition.
 
     Parameters
     ----------
     templates : ndarray (num_templates, num_samples, num_channels)
         Spike template waveforms.
-    params : WobbleParameters
-        Parameters for WobbleMatch algorithm.
-    template_meta : TemplateMetadata
-        Dataclass object for aggregating template metadata together.
+    approx_rank : int
+        Rank of the compressed template matrices.
 
     Returns
     -------
-    compressed_templates : (ndarray, ndarray, ndarray, ndarray)
-        Templates compressed by singular value decomposition into temporal, singular, spatial, and
-        upsampled_temporal components.
+    compressed_templates : (ndarray, ndarray, ndarray)
+        Templates compressed by singular value decomposition into temporal, singular, and spatial components.
     """
     temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
 
     # Keep only the strongest components
-    temporal = temporal[:, :, :params.approx_rank]
-    singular = singular[:, :params.approx_rank]
-    spatial = spatial[:, :params.approx_rank, :]
+    temporal = temporal[:, :, :approx_rank]
+    temporal = np.flip(temporal, axis=1)
+    singular = singular[:, :approx_rank]
+    spatial = spatial[:, :approx_rank, :]
+    return temporal, singular, spatial
+
+def upsample_and_jitter(temporal, jitter_factor, num_samples):
+    """Upsample the temporal components of the templates and re-index to obtain the jittered templates.
+
+    Parameters
+    ----------
+    temporal : ndarray (num_templates, num_samples, approx_rank)
+        Temporal components of the templates.
+    jitter_factor : int
+        Number of upsampled jittered templates for each distinct provided template.
+    num_samples : int
+        Template duration in samples/frames.
+
+    Returns
+    -------
+    temporal_jittered : ndarray (num_templates * jitter_factor, num_samples, approx_rank)
+        Temporal component of the compressed templates jittered at super-resolution in time."""
 
     # Upsample the temporal components of the SVD -- i.e. upsample the reconstruction
-    if params.jitter_factor == 1:  # Trivial Case
-        temporal = np.flip(temporal, axis=1)
-        temporal_jittered = temporal
-        return temporal, singular, spatial, temporal_jittered
+    if jitter_factor == 1:  # Trivial Case
+        return temporal
 
-    num_samples = template_meta.num_samples * params.jitter_factor
-    temporal_jittered = signal.resample(temporal, num_samples, axis=1)
+    approx_rank = temporal.shape[2]
+    num_samples_up = num_samples * jitter_factor
+    temporal_flipped = np.flip(temporal, axis=1) # TODO: why do we need to flip the temporal components?
+    temporal_jittered = signal.resample(temporal_flipped, num_samples_up, axis=1)
 
-    original_index = np.arange(0, num_samples, params.jitter_factor)  # indices of original data
-    shift_index = np.arange(params.jitter_factor)[:, np.newaxis]  # shift for each super-res template
+    original_index = np.arange(0, num_samples_up, jitter_factor)  # indices of original data
+    shift_index = np.arange(jitter_factor)[:, np.newaxis]  # shift for each super-res template
     shifted_index = original_index + shift_index  # array of all shifted template indices
 
-    shape_temporal_jittered = (-1, template_meta.num_samples, params.approx_rank)
+    shape_temporal_jittered = (-1, num_samples, approx_rank)
     temporal_jittered = np.reshape(temporal_jittered[:, shifted_index, :], shape_temporal_jittered)
 
-    temporal = np.flip(temporal, axis=1)
     temporal_jittered = np.flip(temporal_jittered, axis=1)
-    compressed_templates = temporal, singular, spatial, temporal_jittered
-    return compressed_templates
+    return temporal_jittered
 
 
 def get_convolution_len(x, y):
