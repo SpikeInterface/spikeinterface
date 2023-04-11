@@ -899,14 +899,14 @@ def pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id,
             nn_noise_overlap = np.nan
         pc_metrics['nn_noise_overlap'] = nn_noise_overlap
         
-    if 'silhouette_score' in metrics_names:
+    if 'silhouette_score' in metric_names:
         try:
             unit_silhouette_score = silhouette_score(pcs_flat, labels, unit_id)
         except:
             unit_silhouette_score = np.nan
         pc_metrics['silhouette_score'] = unit_silhouette_score
         
-    if 'simplified_silhouette_score' in metrics_name:
+    if 'simplified_silhouette_score' in metric_names:
         try:
             unit_silhouette_score = simplified_silhouette_score(pcs_flat, labels, unit_id)
         except:
