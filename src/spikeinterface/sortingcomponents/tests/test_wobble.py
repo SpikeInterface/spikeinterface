@@ -115,6 +115,49 @@ def test_get_convolution_len():
     assert convolution_len == x + y - 1
 
 
+def test_convolve_templates():
+    # Arrange: generate random 'data'
+    seed = 0
+    rng = np.random.default_rng(seed)
+    num_templates = rng.integers(1, 100)
+    num_samples = rng.integers(1, 100)
+    num_channels = rng.integers(1, 100)
+    jitter_factor = rng.integers(1, 10)
+    jittered_indices = np.arange(num_templates * jitter_factor)
+    conv_res_len = wobble.get_convolution_len(num_samples, num_samples)
+    full_rank = np.minimum(num_samples, num_channels)
+    approx_rank = rng.integers(1, full_rank)
+    temporal = rng.random((num_templates, num_samples, approx_rank))
+    singular = rng.random((num_templates, approx_rank))
+    spatial = rng.random((num_templates, approx_rank, num_channels))
+    temporal_jittered = rng.random((num_templates * jitter_factor, num_samples, approx_rank))
+    compressed_templates = temporal, singular, spatial, temporal_jittered
+    rand_visible_channels = rng.choice(a=[True, False], size=(num_templates, num_channels), p=[0.5, 0.5])
+    true_visible_channels = np.ones((num_templates, num_channels), dtype=bool)
+    false_visible_channels = np.zeros((num_templates, num_channels), dtype=bool)
+
+    for visible_channels in (rand_visible_channels, true_visible_channels, false_visible_channels):
+        unit_overlap = np.sum(np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]),
+                              axis=2)
+        unit_overlap = unit_overlap > 0
+        unit_overlap = np.repeat(unit_overlap, jitter_factor, axis=0)
+        sparsity = wobble.Sparsity(visible_channels, unit_overlap)
+
+        # Act: run convolve_templates
+        pairwise_convolution = wobble.convolve_templates(compressed_templates, jitter_factor, approx_rank,
+                                                         jittered_indices, sparsity)
+
+        # Assert: check shapes
+        assert len(pairwise_convolution) == num_templates * jitter_factor
+        for jittered_index in jittered_indices:
+            num_overlap = np.sum(sparsity.unit_overlap[jittered_index, :])
+            assert pairwise_convolution[jittered_index].shape == (num_overlap, conv_res_len)
+            if visible_channels is true_visible_channels:
+                assert pairwise_convolution[jittered_index].shape[0] == num_templates
+            elif visible_channels is false_visible_channels:
+                assert pairwise_convolution[jittered_index].shape[0] == 0
+
+
 def compute_objective_loopy(traces, template_data, approx_rank):
     """Compute objective by convolving templates with voltage traces.
 
@@ -188,5 +231,6 @@ if __name__ == '__main__':
     test_compress_templates()
     test_upsample_and_jitter()
     test_get_convolution_len()
+    test_convolve_templates()
 
     test_compute_objective()

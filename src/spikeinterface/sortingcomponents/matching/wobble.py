@@ -153,8 +153,8 @@ class TemplateMetadata:
         num_units = len(unit_indices)
         template_indices = np.arange(num_templates)
         unit_indices2template_indices = []
-        for unit_id in unit_indices:
-            template_indices_of_unit = set(template_indices[template_indices2unit_indices == unit_id])
+        for unit_index in unit_indices:
+            template_indices_of_unit = set(template_indices[template_indices2unit_indices == unit_index])
             unit_indices2template_indices.append(template_indices_of_unit)
         num_jittered = num_templates * params.jitter_factor
         jittered_indices = np.arange(num_jittered)
@@ -189,9 +189,9 @@ class Sparsity:
     ----------
     visible_channels : ndarray (num_units, num_channels)
         visible_channels[unit, channel] is True if the unit's template has sufficient amplitude on that channel.
-    unit_overlap : ndarray (num_jittered, num_jittered)
-        unit_overlap[i, j] is True if there exists at least one channel on which both template i and template j are
-        visible.
+    unit_overlap : ndarray (num_jittered, num_templates)
+        unit_overlap[i, j] is True if there exists at least one channel on which both jittered template i and template j
+        are visible.
     """
     visible_channels : np.ndarray
     unit_overlap : np.ndarray
@@ -328,7 +328,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         temporal, singular, spatial = compress_templates(sparse_templates, params.approx_rank)
         temporal_jittered = upsample_and_jitter(temporal, params.jitter_factor, template_meta.num_samples)
         compressed_templates = (temporal, singular, spatial, temporal_jittered)
-        pairwise_convolution = convolve_templates(compressed_templates, params, template_meta, sparsity)
+        pairwise_convolution = convolve_templates(compressed_templates, params.jitter_factor, params.approx_rank,
+                                                  template_meta.jittered_indices, sparsity)
         norm_squared = compute_template_norm(sparsity.visible_channels, templates)
         template_data = TemplateData(compressed_templates=compressed_templates,
                                      pairwise_convolution=pairwise_convolution,
@@ -438,7 +439,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         # adjust spike_train
         spike_train[:, 0] += nbefore # beginning of template --> center of template
-        spike_train[:, 1] //= params.jitter_factor # jittered_id --> template_id
+        spike_train[:, 1] //= params.jitter_factor # jittered_index --> template_index
 
         # TODO : Benchmark spike amplitudes
         # Find spike amplitudes / channels
@@ -558,13 +559,13 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         """
         present_jittered_indices = np.unique(spike_train[:, 1])
         convolution_resolution_len = get_convolution_len(template_meta.num_samples, template_meta.num_samples)
-        for jittered_id in present_jittered_indices:
-            id_mask = spike_train[:, 1] == jittered_id
+        for jittered_index in present_jittered_indices:
+            id_mask = spike_train[:, 1] == jittered_index
             id_spiketrain = spike_train[id_mask, 0]
             id_scaling = scalings[id_mask]
-            overlapping_templates = sparsity.unit_overlap[jittered_id]
+            overlapping_templates = sparsity.unit_overlap[jittered_index]
             # Note: pairwise_conv only has overlapping template convolutions already
-            pconv = template_data.pairwise_convolution[jittered_id]
+            pconv = template_data.pairwise_convolution[jittered_index]
             # TODO: If optimizing for speed -- check this loop
             for spike_start_index, spike_scaling in zip(id_spiketrain, id_scaling):
                 spike_stop_index = spike_start_index + convolution_resolution_len
@@ -603,7 +604,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         Returns
         -------
         template_shift : ndarray (num_spikes,)
-            Indices to shift each spike template_id to the correct jittered_id.
+            Indices to shift each spike template_index to the correct jittered_index.
         time_shift : ndarray (num_spikes,)
             Indices to shift each spike time index to the adjusted time index.
         non_refractory_indices : ndarray
@@ -693,9 +694,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         # We want to enforce refractory conditions on unit_indices rather than template_indices for units with many templates
         spike_unit_indices = spike_template_indices.copy()
-        for template_id in set(spike_template_indices):
-            unit_id = template_meta.template_indices2unit_indices[template_id] # unit_id corresponding to this template
-            spike_unit_indices[spike_template_indices==template_id] = unit_id
+        for template_index in set(spike_template_indices):
+            unit_index = template_meta.template_indices2unit_indices[template_index] # unit_index corresponding to this template
+            spike_unit_indices[spike_template_indices==template_index] = unit_index
 
         # Get the samples (time indices) that correspond to the waveform for each spike
         waveform_samples = get_convolution_len(spike_times[:, np.newaxis], template_meta.num_samples) + window
@@ -797,17 +798,19 @@ def get_convolution_len(x, y):
     return x + y - 1
 
 
-def convolve_templates(compressed_templates, params, template_meta, sparsity):
+def convolve_templates(compressed_templates, jitter_factor, approx_rank, jittered_indices, sparsity):
     """Perform pairwise convolution on the compressed templates.
 
     Parameters
     ----------
     compressed_templates : list[ndarray]
         Compressed templates with temporal, singular, spatial, and temporal_jittered components.
-    params : WobbleParameters
-        Dataclass object for aggregating the parameters together.
-    template_meta : TemplateMetadata
-        Dataclass object for aggregating template metadata together.
+    jitter_factor : int
+        Number of upsampled jittered templates for each distinct provided template.
+    approx_rank : int
+        Rank of the compressed template matrices.
+    jittered_indices : ndarray (num_jittered,)
+        indices corresponding to each jittered template.
     sparsity : Sparsity
         Dataclass object for aggregating channel sparsity variables together.
 
@@ -817,30 +820,31 @@ def convolve_templates(compressed_templates, params, template_meta, sparsity):
         For each jittered template, pairwise_convolution of that template with each other overlapping template.
     """
     temporal, singular, spatial, temporal_jittered = compressed_templates
-    conv_res_len = get_convolution_len(template_meta.num_samples, template_meta.num_samples)
+    num_samples = temporal.shape[1]
+    conv_res_len = get_convolution_len(num_samples, num_samples)
     pairwise_convolution = []
-    for jittered_id in template_meta.jittered_indices:
-        num_overlap = np.sum(sparsity.unit_overlap[jittered_id, :])
-        template_id = jittered_id // params.jitter_factor
+    for jittered_index in jittered_indices:
+        num_overlap = np.sum(sparsity.unit_overlap[jittered_index, :])
+        template_index = jittered_index // jitter_factor
         pconv = np.zeros([num_overlap, conv_res_len], dtype=np.float32)
 
         # Reconstruct unit template from SVD Matrices
-        temporal_jittered_scaled = temporal_jittered[jittered_id] * singular[template_id][np.newaxis, :]
-        template_reconstructed = np.matmul(temporal_jittered_scaled, spatial[template_id, :, :])
+        temporal_jittered_scaled = temporal_jittered[jittered_index] * singular[template_index][np.newaxis, :]
+        template_reconstructed = np.matmul(temporal_jittered_scaled, spatial[template_index, :, :])
         template_reconstructed = np.flipud(template_reconstructed)
 
-        units_are_overlapping = sparsity.unit_overlap[jittered_id, :]
+        units_are_overlapping = sparsity.unit_overlap[jittered_index, :]
         overlapping_units = np.where(units_are_overlapping)[0]
-        for j, jittered_id2 in enumerate(overlapping_units):
-            temporal_overlapped = temporal[jittered_id2]
-            singular_overlapped = singular[jittered_id2]
-            spatial_overlapped = spatial[jittered_id2]
-            visible_overlapped_channels = sparsity.visible_channels[jittered_id2, :]
+        for j, jittered_index2 in enumerate(overlapping_units):
+            temporal_overlapped = temporal[jittered_index2]
+            singular_overlapped = singular[jittered_index2]
+            spatial_overlapped = spatial[jittered_index2]
+            visible_overlapped_channels = sparsity.visible_channels[jittered_index2, :]
             visible_template = template_reconstructed[:, visible_overlapped_channels]
-            spatial_filters = spatial_overlapped[:params.approx_rank, visible_overlapped_channels].T
+            spatial_filters = spatial_overlapped[:approx_rank, visible_overlapped_channels].T
             spatially_filtered_template = np.matmul(visible_template, spatial_filters)
             scaled_filtered_template = spatially_filtered_template * singular_overlapped
-            for i in range(params.approx_rank):
+            for i in range(approx_rank):
                 pconv[j, :] += np.convolve(scaled_filtered_template[:, i], temporal_overlapped[:, i],
                                                    'full')
         pairwise_convolution.append(pconv)
@@ -877,9 +881,9 @@ def compute_objective(traces, template_data, approx_rank):
         spatially_filtered_data = np.matmul(spatial_filters, traces.T)
         scaled_filtered_data = spatially_filtered_data * singular[:, [rank]]
         # TODO: vectorize this loop
-        for template_id in range(num_templates):
-            template_temporal_filter = temporal_filters[template_id]
-            objective[template_id, :] += np.convolve(scaled_filtered_data[template_id, :],
+        for template_index in range(num_templates):
+            template_temporal_filter = temporal_filters[template_index]
+            objective[template_index, :] += np.convolve(scaled_filtered_data[template_index, :],
                                                      template_temporal_filter,
                                                      mode='full')
     return objective
