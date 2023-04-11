@@ -1,4 +1,5 @@
-name: Show environment
+name: 'Show environment'
+description: 'A generic description'
 
 inputs: {}
 

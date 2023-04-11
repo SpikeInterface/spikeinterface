@@ -1,4 +1,5 @@
 name: 'Install packages'
+description: This action installs the package and its dependencies for testing
 
 inputs: {}
 
