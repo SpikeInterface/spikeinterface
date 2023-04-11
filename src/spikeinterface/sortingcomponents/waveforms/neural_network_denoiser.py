@@ -12,15 +12,17 @@ from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, Wavefor
 from .waveform_utils import to_temporal_representation, from_temporal_representation
 
 
-class SingleChannelToyDenoiser(PipelineNode):
+class SingleChannelToyDenoiser(WaveformsNode):
     def __init__(
         self, recording: BaseRecording, return_output: bool = True, parents: Optional[List[PipelineNode]] = None
     ):
-        super().__init__(recording, return_output=return_output, parents=parents)
 
-        waveform_extractor = find_parent_of_type(self, WaveformsNode)
+        waveform_extractor = find_parent_of_type(parents, WaveformsNode)
         if waveform_extractor is None:
             raise TypeError(f"Model should have a {WaveformsNode.__name__} in its parents")
+
+        super().__init__(recording, waveform_extractor.ms_before, waveform_extractor.ms_after,
+            return_output=return_output, parents=parents)
 
         self.assert_model_and_waveform_temporal_match(waveform_extractor)
 
