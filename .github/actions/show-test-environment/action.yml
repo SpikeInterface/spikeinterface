@@ -1,5 +1,5 @@
-name: 'Show environment'
-description: 'A generic description'
+name: Show environment
+description: Prints the environment variables and the installed packages
 
 inputs: {}
 
