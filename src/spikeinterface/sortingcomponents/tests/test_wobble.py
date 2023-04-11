@@ -47,6 +47,7 @@ def test_compute_template_norm():
     assert np.all(true_norm >= 0)
     assert np.all(false_norm >= 0)
 
+
 if __name__ == '__main__':
     test_compute_objective()
     test_compute_template_norm()
