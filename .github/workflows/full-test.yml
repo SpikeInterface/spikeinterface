@@ -58,37 +58,8 @@ jobs:
             ${{ runner.os }}-datasets
       - name: Install packages
         uses: ./.github/actions/build-test-environment
-      - name: Force installation of latest dev from key-packages when running dev (not release)
-        id: version
-        run: |
-          source ~/test_env/bin/activate
-          if python ./.github/is_spikeinterface_dev.py; then
-            echo "Running spikeinterface dev version"
-            pip uninstall -y neo
-            pip uninstall -y probeinterface
-            pip install git+https://github.com/NeuralEnsemble/python-neo
-            pip install git+https://github.com/SpikeInterface/probeinterface
-          else
-            echo "Running tests for release"
-          fi
-        shell: bash
-      - name: git-annex install
-        run: |
-          wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
-          tar xvzf git-annex-standalone-amd64.tar.gz
-          echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
-      - name: git-annex version
-        run: |
-          git-annex version
-      - name: Packages installed
-        run: |
-          source ~/test_env/bin/activate
-          pip list
-      - name: Check ephy_testing_data files
-        run: |
-          if [ -d "$HOME/spikeinterface_datasets" ]; then
-            find $HOME/spikeinterface_datasets
-          fi
+      - name: Show environment  # This prints pip installed packages, git-annexed version, etc
+        uses: ./github/actions/show-test-environment
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v35

@@ -1,0 +1,24 @@
+name: Show environment
+
+inputs: {}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+    - name: git-annex version
+      run: |
+        git-annex version
+    - name: Packages installed
+      run: |
+        source ~/test_env/bin/activate
+        pip list
+    - name: Check ephy_testing_data files
+      run: |
+        if [ -d "$HOME/spikeinterface_datasets" ]; then
+          find $HOME/spikeinterface_datasets
+        fi
