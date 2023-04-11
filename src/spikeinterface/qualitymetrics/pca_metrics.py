@@ -28,7 +28,7 @@ from ..postprocessing import WaveformPrincipalComponent
 
 
 _possible_pc_metric_names = ['isolation_distance', 'l_ratio', 'd_prime',
-                             'nearest_neighbor', 'nn_isolation', 'nn_noise_overlap', 'silhouette_score', 'simplified_silhouette_score']
+                             'nearest_neighbor', 'nn_isolation', 'nn_noise_overlap', 'silhouette']
 
 
 _default_params = dict(
@@ -53,7 +53,10 @@ _default_params = dict(
         n_components=10,
         radius_um=100,
         peak_sign='neg'
-    )
+    ),
+    silhouette=dict(
+        method='simplified'
+  )
 )
 
 
@@ -730,7 +733,8 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
 
 def silhouette_score(all_pcs, all_labels, this_unit_id):
     """Calculates the silhouette score which is a marker of cluster quality ranging from
-    -1 (bad clustering) to 1 (good clustering).
+    -1 (bad clustering) to 1 (good clustering). Distances are all calculated as pairwise
+    comparisons of all data points.
     Parameters
     ----------
     all_pcs : 2d array
@@ -899,18 +903,19 @@ def pca_metrics_one_unit(pcs_flat, labels, metric_names, unit_id,
             nn_noise_overlap = np.nan
         pc_metrics['nn_noise_overlap'] = nn_noise_overlap
         
-    if 'silhouette_score' in metric_names:
-        try:
-            unit_silhouette_score = silhouette_score(pcs_flat, labels, unit_id)
-        except:
-            unit_silhouette_score = np.nan
-        pc_metrics['silhouette_score'] = unit_silhouette_score
-        
-    if 'simplified_silhouette_score' in metric_names:
-        try:
-            unit_silhouette_score = simplified_silhouette_score(pcs_flat, labels, unit_id)
-        except:
-            unit_silhouette_score = np.nan
-        pc_metrics['simplified_silhouette_score'] = unit_silhouette_score
-
+    if 'silhouette' in metric_names:
+        silhouette_method = qm_params['silhouette']['method']
+        if 'simplified' in silhouette_method:
+            try:
+                unit_silhouette_score = simplified_silhouette_score(pcs_flat, labels, unit_id)
+            except:
+                unit_silhouette_score = np.nan
+            pc_metrics['silhouette'] = unit_silhouette_score
+        if 'full' in silhouette_method:
+            try:
+                unit_silhouette_score = silhouette_score(pcs_flat, labels, unit_id)
+            except:
+                unit_silhouette_score = np.nan
+            pc_metrics['silhouette_full'] = unit_silhouette_socre
+  
     return pc_metrics
