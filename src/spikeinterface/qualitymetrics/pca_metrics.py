@@ -684,15 +684,16 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
     # find centroid of other cluster and measure distances to that rather than pairwise
     # if less than current minimum distance update
     for label in np.unique(all_labels):
-        pcs_for_other_cluster = all_pcs[all_labels == label, :]
-        centroid_for_other_cluster = np.expand_dims(
-            np.mean(pcs_for_other_cluster, 0), 0
-        )
-        distances_for_other_cluster = scipy.spatial.distance.cdist(
+        if label != this_unit_id
+            pcs_for_other_cluster = all_pcs[all_labels == label, :]
+            centroid_for_other_cluster = np.expand_dims(np.mean(pcs_for_other_cluster, 0), 0)
+            distances_for_other_cluster = scipy.spatial.distance.cdist(
             centroid_for_other_cluster, pcs_for_this_unit
-        )
-        if np.mean(distances_for_other_cluster) < distance:
-            distances_for_minimum_cluster = distances_for_other_cluster
+            )
+            mean_distance_for_other_cluster = np.mean(distances_for_other_cluster)
+            if mean_distance_for_other_cluster < distance:
+                distance = mean_distance_for_other_cluster
+                distances_for_minimum_cluster = distances_for_other_cluster
 
     sil_distances = (
         distances_for_minimum_cluster - distances_for_this_unit
@@ -730,12 +731,15 @@ def silhouette_score(all_pcs, all_labels, this_unit_id):
     # iterate through all other clusters and do pairwise distance comparisons
     # if current cluster distances < current mimimum update
     for label in np.unique(all_labels):
-        pcs_for_other_cluster = all_pcs[all_labels == label, :]
-        distances_for_other_cluster = scipy.spatial.distance.cdist(
+        if label != this_unit_id: 
+            pcs_for_other_cluster = all_pcs[all_labels == label, :]
+            distances_for_other_cluster = scipy.spatial.distance.cdist(
             pcs_for_other_cluster, pcs_for_this_unit
-        )
-        if np.mean(distances_for_other_cluster) < distance:
-            distances_for_minimum_cluster = distances_for_other_cluster
+            )
+            mean_distance_for_other_cluster = np.mean(distances_for_other_cluster)
+            if mean_distance_for_other_cluster < distance:
+                distance = mean_distance_for_other_cluster
+                distances_for_minimum_cluster = distances_for_other_cluster
 
     sil_distances = (
         distances_for_minimum_cluster - distances_for_this_unit
