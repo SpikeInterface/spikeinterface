@@ -51,7 +51,7 @@ def test_compress_templates():
         # Act: run compress_templates
         temporal, singular, spatial = wobble.compress_templates(templates, approx_rank)
         temporal_full, singular_full, spatial_full = wobble.compress_templates(templates, full_rank)
-        # temporal_full = np.flip(temporal_full, axis=1)
+        temporal_full = np.flip(temporal_full, axis=1)
 
         # Assert: check shapes, SVD properties, and equivalence(s) for full rank
         # check that the shapes are correct
@@ -75,6 +75,31 @@ def test_compress_templates():
             # check that the full rank svd matrices reconstruct the original templates
             reconstructed_templates = np.matmul(temporal_full * singular_full[:, np.newaxis, :], spatial_full)
             assert np.allclose(reconstructed_templates, templates)
+
+
+def test_upsample_and_jitter():
+    # Arrange: generate random 'data'
+    seed = 0
+    rng = np.random.default_rng(seed)
+    num_templates = rng.integers(1, 100)
+    num_samples = rng.integers(1, 100)
+    approx_rank = rng.integers(1, num_samples)
+    jitter_factor = rng.integers(1, 10)
+    temporal = rng.random((num_templates, num_samples, approx_rank))
+
+    # Act: run upsample_and_jitter
+    temporal_jittered = wobble.upsample_and_jitter(temporal, jitter_factor, num_samples)
+    trivial_temporal = wobble.upsample_and_jitter(temporal, 1, num_samples)
+
+    # Assert: check shapes and equivalence
+    assert temporal_jittered.shape == (num_templates * jitter_factor, num_samples, approx_rank)
+    assert trivial_temporal.shape == (num_templates, num_samples, approx_rank)
+    assert np.allclose(trivial_temporal, temporal)
+    # check that the original templates are preserved
+    for i in range(num_templates):
+        original_template = temporal[i, :, :]
+        upsampled_template = temporal_jittered[i * jitter_factor, :, :]
+        assert np.allclose(original_template, upsampled_template)
 
 
 def compute_objective_loopy(traces, template_data, approx_rank):
@@ -147,5 +172,8 @@ def test_compute_objective():
 
 if __name__ == '__main__':
     test_compute_template_norm()
-    test_compute_objective()
     test_compress_templates()
+    test_upsample_and_jitter()
+
+
+    test_compute_objective()

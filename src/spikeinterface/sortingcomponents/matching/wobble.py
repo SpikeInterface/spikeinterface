@@ -777,11 +777,11 @@ def upsample_and_jitter(temporal, jitter_factor, num_samples):
         return temporal
 
     approx_rank = temporal.shape[2]
-    num_samples_up = num_samples * jitter_factor
+    num_samples_super_res = num_samples * jitter_factor
     temporal_flipped = np.flip(temporal, axis=1) # TODO: why do we need to flip the temporal components?
-    temporal_jittered = signal.resample(temporal_flipped, num_samples_up, axis=1)
+    temporal_jittered = signal.resample(temporal_flipped, num_samples_super_res, axis=1)
 
-    original_index = np.arange(0, num_samples_up, jitter_factor)  # indices of original data
+    original_index = np.arange(0, num_samples_super_res, jitter_factor)  # indices of original data
     shift_index = np.arange(jitter_factor)[:, np.newaxis]  # shift for each super-res template
     shifted_index = original_index + shift_index  # array of all shifted template indices
 
