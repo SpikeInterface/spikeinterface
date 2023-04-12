@@ -1,7 +1,7 @@
 import numpy as np
 import scipy
-from spikeinterface.core import (WaveformExtractor, get_noise_levels, get_channel_distances)
-from spikeinterface.postprocessing import (get_template_channel_sparsity, get_template_extremum_channel)
+from spikeinterface.core import (WaveformExtractor, get_noise_levels, get_channel_distances,
+                                 compute_sparsity, get_template_extremum_channel)
 
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 
@@ -95,13 +95,9 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
     
         channel_distance = get_channel_distances(recording)
         d['neighbours_mask'] = channel_distance < d['local_radius_um']
-        
-        #
-        #~ template_sparsity_inds = get_template_channel_sparsity(we, method='radius',
-                                  #~ peak_sign=d['peak_sign'], outputs='index', radius_um=d['local_radius_um'])
-        template_sparsity_inds = get_template_channel_sparsity(we, method='snr',
-                                                               peak_sign=d['peak_sign'], outputs='index',
-                                                               threshold=d['detect_threshold'])
+
+        sparsity = compute_sparsity(we, method='snr', peak_sign=d['peak_sign'], threshold=d['detect_threshold'])
+        template_sparsity_inds = sparsity.unit_id_to_channel_indices
         template_sparsity = np.zeros((unit_ids.size, channel_ids.size), dtype='bool')
         for unit_index, unit_id in enumerate(unit_ids):
             chan_inds = template_sparsity_inds[unit_id]
