@@ -311,11 +311,11 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             Updated Keyword arguments.
         """
         d = cls.default_params.copy()
-        required_kwargs_keys = ['nbefore', 'nafter', 'templates']
-        for required_key in required_kwargs_keys:
-            assert required_key in kwargs, f"`{required_key}` is a required key in the kwargs"
-        parameters = kwargs.get('parameters', {})
-        templates = kwargs['templates']
+        d.update(kwargs)
+        parameters = d.get('parameters', {})
+        templates = d['waveform_extractor'].get_all_templates()
+        d['nbefore'] = d['waveform_extractor'].nbefore
+        d['nafter'] = d['waveform_extractor'].nafter
         templates = templates.astype(np.float32, casting='safe')
 
         # Aggregate useful parameters/variables for handy access in downstream functions
@@ -336,11 +336,10 @@ class WobbleMatch(BaseTemplateMatchingEngine):
                                      norm_squared=norm_squared)
 
         # Pack initial data into kwargs
-        kwargs['params'] = params
-        kwargs['template_meta'] = template_meta
-        kwargs['sparsity'] = sparsity
-        kwargs['template_data'] = template_data
-        d.update(kwargs)
+        d['params'] = params
+        d['template_meta'] = template_meta
+        d['sparsity'] = sparsity
+        d['template_data'] = template_data
         return d
 
 
@@ -348,6 +347,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
     def serialize_method_kwargs(cls, kwargs):
         # This function does nothing without a waveform extractor -- candidate for refactor
         kwargs = dict(kwargs)
+        # remove waveform_extractor
+        kwargs.pop('waveform_extractor')
         return kwargs
 
     @classmethod
