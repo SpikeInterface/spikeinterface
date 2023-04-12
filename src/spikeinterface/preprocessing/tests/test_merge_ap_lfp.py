@@ -33,7 +33,7 @@ def test_MergeApLfpRecording():
     original_fourier = np.fft.rfft(original_traces, axis=0)
     freq = np.fft.rfftfreq(original_traces.shape[0], d=1/sf)
 
-    # Remove 0Hz (can't be reconstructed) and Nyquist frequency (behave weirdly).
+    # Remove 0Hz (can't be reconstructed) and Nyquist frequency (behaves weirdly).
     original_fourier[0] = 0.0
     original_fourier[-1] = 0.0
     original_traces = np.fft.irfft(original_fourier, axis=0)
@@ -64,7 +64,7 @@ def test_MergeApLfpRecording():
     chunked_recording = merged_recording.save(folder=cache_folder / "chunked", n_jobs=2, chunk_duration='1s')
     chunked_traces = chunked_recording.get_traces()
 
-    assert np.all(np.abs(merged_traces - chunked_traces)[500:-500] < 0.05)
+    assert np.all(np.abs(merged_traces - chunked_traces)[1000:-1000] < 0.04)
 
     # import plotly.graph_objects as go
     # fig = go.Figure()
