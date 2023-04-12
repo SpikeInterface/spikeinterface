@@ -1,5 +1,5 @@
-name: Show environment
-description: Prints the environment variables and the installed packages
+name: Log test environment
+description: Shows installed packages by pip, git-annex and cached testing files
 
 inputs: {}
 

@@ -4,7 +4,10 @@ description: This action installs the package and its dependencies for testing
 inputs:
   python-version:
     description: 'Python version to set up'
-    required: true
+    required: false
+  os:
+    description: 'Operating system to set up'
+    required: false
     
 runs:
   using: "composite"

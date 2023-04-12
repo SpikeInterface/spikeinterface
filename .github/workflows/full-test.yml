@@ -58,9 +58,7 @@ jobs:
             ${{ runner.os }}-datasets
       - name: Install packages
         uses: ./.github/actions/build-test-environment
-        with:
-          python-version: '3.10'
-      - name: Show environment  # This prints pip installed packages, git-annexed version, etc
+      - name: Shows installed packages by pip, git-annex and cached testing files
         uses: ./.github/actions/show-test-environment
       - name: Get changed files
         id: changed-files
