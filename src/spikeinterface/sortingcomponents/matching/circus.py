@@ -15,7 +15,7 @@ try:
 except ImportError:
     HAVE_SKLEARN = False
 
-from spikeinterface.core import get_noise_levels, get_random_data_chunks
+from spikeinterface.core import get_noise_levels, get_random_data_chunks, compute_sparsity
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakByChannel
 
 potrs, = scipy.linalg.get_lapack_funcs(('potrs',), dtype=np.float32)
@@ -153,11 +153,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         (Minimal, Maximal) amplitudes allowed for every template
     omp_min_sps: float
         Stopping criteria of the OMP algorithm, in percentage of the norm
-    sparsify_threshold: float
-        Templates are sparsified in order to keep only the channels necessary
-        to explain. ptp limit for considering a channel as silent
-    smoothing_factor: float
-        Templates are smoothed via Spline Interpolation
     noise_levels: array
         The noise levels, for every channels. If None, they will be automatically
         computed
@@ -165,7 +160,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
     """
 
     _default_params = {
-        'sparsify_threshold': 1,
         'amplitudes' : [0.6, 2],
         'omp_min_sps' : 0.1,
         'waveform_extractor': None,
@@ -173,31 +167,10 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         'overlaps' : None,
         'norms' : None,
         'random_chunk_kwargs': {},
-        'noise_levels': None, 
-        'smoothing_factor' : 0.25,
-        'ignored_ids' : []
+        'noise_levels': None,
+        'ignored_ids' : [],
+        'sparsity' : {'method' : 'energy', 'threshold' : 1}
     }
-
-    @classmethod
-    def _sparsify_template(cls, template, sparsify_threshold):
-
-        is_silent = template.ptp(0) < sparsify_threshold
-        template[:, is_silent] = 0
-        active_channels, = np.where(np.logical_not(is_silent))
-
-        return template, active_channels
-
-    @classmethod
-    def _regularize_template(cls, template, smoothing_factor=0.25):
-
-        nb_channels = template.shape[1]
-        nb_timesteps = template.shape[0]
-        xaxis = np.arange(nb_timesteps)
-        for i in range(nb_channels):
-            z = scipy.interpolate.UnivariateSpline(xaxis, template[:, i])
-            z.set_smoothing_factor(smoothing_factor)
-            template[:, i] = z(xaxis)
-        return template
 
     @classmethod
     def _prepare_templates(cls, d):
@@ -209,20 +182,22 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         templates = waveform_extractor.get_all_templates(mode='median').copy()
 
-        d['sparsities'] = {}
+        if waveform_extractor.is_sparse():
+            sparsity = waveform_extractor.sparsity
+        else:
+            sparsity = compute_sparsity(waveform_extractor, **d['sparsity'])
+        
         d['templates'] = {}
+        d['sparsities'] = {}
         d['norms'] = np.zeros(num_templates, dtype=np.float32)
 
-        for count, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
+        for unit_ind, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
             
-            if d['smoothing_factor'] > 0:
-                template = cls._regularize_template(templates[count], d['smoothing_factor'])
-            else:
-                template = templates[count]
-            template, active_channels = cls._sparsify_template(template, d['sparsify_threshold'])
-            d['sparsities'][count] = active_channels
-            d['norms'][count] = np.linalg.norm(template)
-            d['templates'][count] = template[:, active_channels]/d['norms'][count]
+            template = templates[unit_ind]
+            active_channels, = np.nonzero(sparsity.mask[unit_ind])
+            d['sparsities'][unit_ind] = active_channels
+            d['norms'][unit_ind] = np.linalg.norm(template)
+            d['templates'][unit_ind] = template[:, active_channels]/d['norms'][unit_ind]
 
         return d
 
@@ -303,7 +278,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         norms = d['norms']
         sparsities = d['sparsities']
 
-        nb_active_channels = np.array([len(sparsities[i]) for i in range(d['num_templates'])])
         d['stop_criteria'] = omp_min_sps * np.sqrt(d['noise_levels'].sum() * d['num_samples'])
 
         return d        
@@ -522,9 +496,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         Maximal amplitude allowed for every template
     min_amplitude: float
         Minimal amplitude allowed for every template
-    sparsify_threshold: float
-        Templates are sparsified in order to keep only the channels necessary
-        to explain a given fraction of the total norm
     use_sparse_matrix_threshold: float
         If density of the templates is below a given threshold, sparse matrix
         are used (memory efficient)
@@ -542,43 +513,13 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'detect_threshold': 5,
         'noise_levels': None, 
         'random_chunk_kwargs': {},
-        'sparsify_threshold': 0.99,
         'max_amplitude' : 1.5,
         'min_amplitude' : 0.5,
         'use_sparse_matrix_threshold' : 0.25,
         'progess_bar_steps' : False,
         'waveform_extractor': None,
-        'smoothing_factor' : 0.25
+        'sparsity' : {'method' : 'energy', 'threshold' : 1}
     }
-
-    @classmethod
-    def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
-
-        is_silent = template.std(0) < 0.1*noise_levels
-
-        template[:, is_silent] = 0
-
-        channel_norms = np.linalg.norm(template, axis=0)**2
-        total_norm = np.linalg.norm(template)**2
-
-        idx = np.argsort(channel_norms)[::-1]
-        explained_norms = np.cumsum(channel_norms[idx]/total_norm)
-        channel = np.searchsorted(explained_norms, sparsify_threshold)
-        active_channels = np.sort(idx[:channel])
-        template[:, idx[channel:]] = 0
-        return template, active_channels
-
-    @classmethod
-    def _regularize_template(cls, template, smoothing_factor=0.25):
-
-        nb_channels = template.shape[1]
-        nb_timesteps = template.shape[0]
-        xaxis = np.arange(nb_timesteps)
-        for i in range(nb_channels):
-            z = scipy.interpolate.UnivariateSpline(xaxis, template[:, i])
-            z.set_smoothing_factor(smoothing_factor)
-            template[:, i] = z(xaxis)
-        return template
 
     @classmethod
     def _prepare_templates(cls, d):
@@ -593,18 +534,18 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         d['norms'] = np.zeros(num_templates, dtype=np.float32)
 
-        all_units = list(d['waveform_extractor'].sorting.unit_ids)
-
         templates = waveform_extractor.get_all_templates(mode='median').copy()
-        
-        for count, unit_id in enumerate(all_units):
-            
-            if d['smoothing_factor'] > 0:
-                templates[count] = cls._regularize_template(templates[count], d['smoothing_factor'])
 
-            templates[count], _ = cls._sparsify_template(templates[count], d['sparsify_threshold'], d['noise_levels'])            
-            d['norms'][count] = np.linalg.norm(templates[count])
-            templates[count] /= d['norms'][count]
+        if waveform_extractor.is_sparse():
+            sparsity = waveform_extractor.sparsity
+        else:
+            sparsity = compute_sparsity(waveform_extractor, **d['sparsity'])
+        
+        for unit_ind, unit_id in enumerate(d['waveform_extractor'].sorting.unit_ids):
+            active_channels, = np.nonzero(sparsity.mask[unit_ind])
+            templates[unit_ind, ~active_channels] = 0
+            d['norms'][unit_ind] = np.linalg.norm(templates[unit_ind])
+            templates[unit_ind] /= d['norms'][unit_ind]
 
         templates = templates.reshape(num_templates, -1)
 
@@ -736,7 +677,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         #assert isinstance(d['waveform_extractor'], WaveformExtractor)
 
-        for v in ['sparsify_threshold', 'use_sparse_matrix_threshold']:
+        for v in ['use_sparse_matrix_threshold']:
             assert (d[v] >= 0) and (d[v] <= 1), f'{v} should be in [0, 1]'
         
         d['num_channels'] = d['waveform_extractor'].recording.get_num_channels()

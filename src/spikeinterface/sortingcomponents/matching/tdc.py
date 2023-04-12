@@ -37,13 +37,15 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         'peak_shift_ms':  0.2,
         'detect_threshold': 5,
         'noise_levels': None,
-        'local_radius_um': 100,
+        'local_radius_um': 75,
+        'random_chunk_kwargs': {},
         'num_closest' : 5,
         'sample_shift': 3,
         'ms_before': 0.8,
         'ms_after': 1.2,
         'num_peeler_loop':  2,
         'num_template_try' : 1,
+        'sparsity' : {'method' : 'snr'}
     }
     
     @classmethod
@@ -89,14 +91,19 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
         if d['noise_levels'] is None:
             print('TridesclousPeeler : noise should be computed outside')
-            d['noise_levels'] = get_noise_levels(recording)
+            d['noise_levels'] = get_noise_levels(recording, **d['random_chunk_kwargs'])
 
         d['abs_threholds'] = d['noise_levels'] * d['detect_threshold']
     
         channel_distance = get_channel_distances(recording)
         d['neighbours_mask'] = channel_distance < d['local_radius_um']
 
-        sparsity = compute_sparsity(we, method='snr', peak_sign=d['peak_sign'], threshold=d['detect_threshold'])
+        if we.is_sparse():
+            sparsity = we.sparsity
+        else:
+            d['sparsity'].update({'peak_sign' : d['peak_sign'], 'threshold' : d['detect_threshold']})
+            sparsity = compute_sparsity(we, **d['sparsity'])
+
         template_sparsity_inds = sparsity.unit_id_to_channel_indices
         template_sparsity = np.zeros((unit_ids.size, channel_ids.size), dtype='bool')
         for unit_index, unit_id in enumerate(unit_ids):

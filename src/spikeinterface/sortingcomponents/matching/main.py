@@ -6,7 +6,6 @@ from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs
 from spikeinterface.core import get_chunk_with_margin
 
 
-
 def find_spikes_from_templates(recording, method='naive', method_kwargs={}, extra_outputs=False,
                               **job_kwargs):
     """Find spike from a recording from given templates.
