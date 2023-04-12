@@ -279,12 +279,12 @@ class ExtractSparseWaveforms(WaveformsNode):
         return sparse_wfs
 
 
-def find_parent_of_type(node, parent_type, unique=True):
-    if node.parents is None:
+def find_parent_of_type(list_of_parents, parent_type, unique=True):
+    if list_of_parents is None:
         return None
     
     parents = []
-    for parent in node.parents:
+    for parent in list_of_parents:
         if isinstance(parent, parent_type):
             parents.append(parent)
     
