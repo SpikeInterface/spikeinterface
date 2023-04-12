@@ -506,7 +506,7 @@ class NwbSortingSegment(BaseSortingSegment):
             frames = np.searchsorted(times, self.timestamps).astype("int64")
         else:
             frames = np.round(times * self._sampling_frequency).astype("int64")
-        return frames[(frames > start_frame) & (frames < end_frame)]
+        return frames[(frames >= start_frame) & (frames < end_frame)]
 
 
 read_nwb_recording = define_function_from_class(source_class=NwbRecordingExtractor, name="read_nwb_recording")
