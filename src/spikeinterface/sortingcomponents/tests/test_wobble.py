@@ -226,11 +226,35 @@ def test_compute_objective():
     assert np.allclose(objective, expected_objective)
 
 
+def test_compute_scale_amplitudes():
+    # Arrange: Generate random 'data'
+    seed = 0
+    rng = np.random.default_rng(seed)
+    num_spikes = rng.integers(0, 100)
+    norm_peaks = rng.random(num_spikes)
+    num_jittered = rng.integers(1, 100)
+    peak_window_size = rng.integers(1, 100)
+    high_resolution_conv = rng.random((peak_window_size, num_spikes))
+    scale_min = rng.random() * 10
+    scale_max = rng.random() * 1000 + scale_min
+    amplitude_variance = rng.random() * 100
+
+    # Act: run compute_scale_amplitudes
+    high_res_objective, scale_amplitudes = wobble.compute_scale_amplitudes(high_resolution_conv, norm_peaks, scale_min,
+                                                                           scale_max, amplitude_variance)
+
+    # Assert: check shapes
+    assert high_res_objective.shape == (peak_window_size, num_spikes)
+    assert scale_amplitudes.shape == (peak_window_size, num_spikes)
+
+
+
+
 if __name__ == '__main__':
     test_compute_template_norm()
     test_compress_templates()
     test_upsample_and_jitter()
     test_get_convolution_len()
     test_convolve_templates()
-
     test_compute_objective()
+    test_compute_scale_amplitudes()

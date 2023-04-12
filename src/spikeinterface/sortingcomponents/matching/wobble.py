@@ -647,6 +647,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             objective_peaks_high_res = objective[spike_unit_indices, peak_indices]
             objective_peaks_high_res = objective_peaks_high_res[:, non_refractory_indices]
             high_resolution_conv = signal.resample(objective_peaks_high_res, window_len_upsampled, axis=0)
+            print(high_resolution_conv.shape)
 
             # Find template norms for detected peaks only
             norm_peaks = template_data.norm_squared[spike_unit_indices[non_refractory_indices]]
