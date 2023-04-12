@@ -124,7 +124,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 unit_ids[i] = new_si_id
 
             # Little hack to replace values in spike_clusters_clean to spike_clusters_new very efficiently.
-            from_values = cluster_info['cluster_id'].values
+            from_values = cluster_info["cluster_id"].values
             sort_idx = np.argsort(from_values)
             idx = np.searchsorted(from_values, spike_clusters_clean, sorter=sort_idx)
             spike_clusters_new = unit_ids[sort_idx][idx]
@@ -138,10 +138,11 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.extra_requirements.append('pandas')
 
-        del cluster_info["cluster_id"]
         for prop_name in cluster_info.columns:
             if prop_name in ['chan_grp', 'ch_group']:
                 self.set_property(key="group", values=cluster_info[prop_name])
+            elif prop_name == "cluster_id":
+                self.set_property(key="original_cluster_id", values=cluster_info[prop_name])
             elif prop_name != "group":
                 self.set_property(key=prop_name, values=cluster_info[prop_name])
             elif prop_name == "group":
@@ -150,8 +151,6 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             else:
                 if load_all_cluster_properties:
                     self.set_property(key=prop_name, values=cluster_info[prop_name])
-
-        self.set_property(key="original_cluster_id", values=cluster_info.index.values)
 
         self.add_sorting_segment(PhySortingSegment(spike_times_clean, spike_clusters_clean))
 
