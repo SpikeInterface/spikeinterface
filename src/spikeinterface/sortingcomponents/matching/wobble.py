@@ -23,7 +23,7 @@ class WobbleParameters:
         underlying units of voltage trace and templates.
     approx_rank : int
         Rank of the compressed template matrices.
-    visibility_thresold : float
+    visibility_threshold : float
         Minimum peak amplitude to determine channel sparsity for a given unit. Units depend on the underlying units of
         voltage trace and templates.
     verbose : bool
