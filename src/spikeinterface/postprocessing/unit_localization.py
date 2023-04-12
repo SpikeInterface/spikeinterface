@@ -253,9 +253,9 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         Enforce spatial decreasingness for PTP vectors
     feature: string in ['ptp', 'energy', 'v_peak']
         The available features to consider for estimating the position via
-        monopolar triangulation are peak-to-peak amplitudes (ptp, default), 
+        monopolar triangulation are peak-to-peak amplitudes ('ptp', default), 
         energy ('energy', as L2 norm) or voltages at the center of the waveform
-        (v_peak)
+        ('v_peak')
 
     Returns
     -------
