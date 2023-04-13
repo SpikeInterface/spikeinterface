@@ -110,29 +110,30 @@ class SIJsonEncoder(json.JSONEncoder):
 
     # This machinery is necessary for overriding the default behavior of the json encoder with keys
     # This is a deep issue that goes deep down to cpython: https://github.com/python/cpython/issues/63020
+    # This object is called before encoding (so it pre-processes the object to not have numpy scalars)
     def iterencode(self, obj, _one_shot=False):
-        return super().iterencode(self.remove_numpy_scalar(obj), _one_shot=_one_shot)
+        return super().iterencode(self.remove_numpy_scalars(obj), _one_shot=_one_shot)
 
-    def remove_numpy_scalar(self, object):
+    def remove_numpy_scalars(self, object):
         from spikeinterface.core.base import BaseExtractor
 
         if isinstance(object, dict):
-            return self.remove_numpy_scalar_in_dict(object)
+            return self.remove_numpy_scalars_in_dict(object)
         elif isinstance(object, (list, tuple, set)):
-            return self.remove_numpy_scalar_in_list(object)
+            return self.remove_numpy_scalars_in_list(object)
         elif isinstance(object, BaseExtractor):
-            return self.remove_numpy_scalar_in_dict(object.to_dict())
+            return self.remove_numpy_scalars_in_dict(object.to_dict())
         else:
             return object.item() if isinstance(object, np.generic) else object
 
-    def remove_numpy_scalar_in_list(self, list_: Union[list, tuple, set]) -> list:
-        return [self.remove_numpy_scalar(obj) for obj in list_]
+    def remove_numpy_scalars_in_list(self, list_: Union[list, tuple, set]) -> list:
+        return [self.remove_numpy_scalars(obj) for obj in list_]
 
-    def remove_numpy_scalar_in_dict(self, dictionary: dict) -> dict:
+    def remove_numpy_scalars_in_dict(self, dictionary: dict) -> dict:
         dict_copy = dict()
         for key, value in dictionary.items():
-            key = self.remove_numpy_scalar(key)
-            value = self.remove_numpy_scalar(value)
+            key = self.remove_numpy_scalars(key)
+            value = self.remove_numpy_scalars(value)
             dict_copy[key] = value
 
         return dict_copy
@@ -734,7 +735,7 @@ def is_dict_extractor(d):
     return is_extractor
 
 
-def recursive_path_modifier(d, func, target='path', copy=True):
+def recursive_path_modifier(d, func, target='path', copy=True) -> dict:
     """
     Generic function for recursive modification of paths in an extractor dict.
     A recording can be nested and this function explores the dictionary recursively
