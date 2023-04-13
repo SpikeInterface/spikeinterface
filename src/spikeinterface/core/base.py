@@ -281,7 +281,7 @@ class BaseExtractor:
             other._preferred_mp_context = self._preferred_mp_context
 
     def to_dict(self, include_annotations=False, include_properties=False,
-                relative_to=None, folder_metadata=None):
+                relative_to=None, folder_metadata=None) -> dict:
         """
         Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize 
         an extractor using load_extractor_from_dict(dump_dict)

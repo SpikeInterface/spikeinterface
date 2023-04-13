@@ -146,28 +146,32 @@ class DummyExtractor(BaseExtractor):
 
 
 @pytest.fixture(scope="module")
-def dictionary_with_numpy_scalars(numpy_array_integer, numpy_array_float, numpy_array_bool):
+def dictionary_with_numpy_scalar_keys(numpy_array_integer, numpy_array_float, numpy_array_bool):
+    numpy_integer_scalar = numpy_array_integer[0]
+    numpy_float_scalar = numpy_array_float[0]
+    numpy_boolean_scalar = numpy_array_bool[1]
+    
     dictionary = {
-        numpy_integer_scalar: "first_string",
-        numpy_float_scalar: "second_string",
-        numpy_boolean_scalar: "third_string",
+        numpy_integer_scalar: "value_of_numpy_integer_scalar",
+        numpy_float_scalar: "value_of_numpy_float_scalar",
+        numpy_boolean_scalar: "value_of_boolean_scalar",
     }
 
     return dictionary
 
 
 @pytest.fixture(scope="module")
-def nested_extractor(dictionary_with_numpy_scalars):
-    inner_extractor = DummyExtractor(attribute=dictionary_with_numpy_scalars)
+def nested_extractor(dictionary_with_numpy_scalar_keys):
+    inner_extractor = DummyExtractor(attribute=dictionary_with_numpy_scalar_keys)
     extractor = DummyExtractor(attribute="a random attribute", other_extractor=inner_extractor)
 
     return extractor
 
 
 @pytest.fixture(scope="module")
-def nested_extractor_list(dictionary_with_numpy_scalars):
-    inner_extractor1 = DummyExtractor(attribute=dictionary_with_numpy_scalars)
-    inner_extractor2 = DummyExtractor(attribute=dictionary_with_numpy_scalars)
+def nested_extractor_list(dictionary_with_numpy_scalar_keys):
+    inner_extractor1 = DummyExtractor(attribute=dictionary_with_numpy_scalar_keys)
+    inner_extractor2 = DummyExtractor(attribute=dictionary_with_numpy_scalar_keys)
 
     extractor = DummyExtractor(attribute="a random attribute", extractor_list=[inner_extractor1, inner_extractor2])
 
@@ -175,9 +179,9 @@ def nested_extractor_list(dictionary_with_numpy_scalars):
 
 
 @pytest.fixture(scope="module")
-def nested_extractor_dict(dictionary_with_numpy_scalars):
-    inner_extractor1 = DummyExtractor(attribute=dictionary_with_numpy_scalars)
-    inner_extractor2 = DummyExtractor(attribute=dictionary_with_numpy_scalars)
+def nested_extractor_dict(dictionary_with_numpy_scalar_keys):
+    inner_extractor1 = DummyExtractor(attribute=dictionary_with_numpy_scalar_keys)
+    inner_extractor2 = DummyExtractor(attribute=dictionary_with_numpy_scalar_keys)
 
     extractor = DummyExtractor(
         attribute="a random attribute",

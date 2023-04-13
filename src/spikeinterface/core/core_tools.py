@@ -1,7 +1,7 @@
 from pathlib import Path
+from typing import Union
 import os
 import sys
-import warnings
 import datetime
 import json
 from copy import deepcopy
@@ -111,24 +111,28 @@ class SIJsonEncoder(json.JSONEncoder):
     # This machinery is necessary for overriding the default behavior of the json encoder with keys
     # This is a deep issue that goes deep down to cpython: https://github.com/python/cpython/issues/63020
     def iterencode(self, obj, _one_shot=False):
-        return super().iterencode(self.remove_numpy_scalar_from_object(obj), _one_shot=_one_shot)
+        return super().iterencode(self.remove_numpy_scalar(obj), _one_shot=_one_shot)
 
-    def remove_numpy_scalar_from_object(self, object):
+    def remove_numpy_scalar(self, object):
+        from spikeinterface.core.base import BaseExtractor
+
         if isinstance(object, dict):
-            return self.remove_python_scalar_in_dict(object)
-        elif isinstance(object, list):
+            return self.remove_numpy_scalar_in_dict(object)
+        elif isinstance(object, (list, tuple, set)):
             return self.remove_numpy_scalar_in_list(object)
+        elif isinstance(object, BaseExtractor):
+            return self.remove_numpy_scalar_in_dict(object.to_dict())
         else:
             return object.item() if isinstance(object, np.generic) else object
 
-    def remove_numpy_scalar_in_list(self, list_: list) -> list:
-        return [self.remove_numpy_scalar_from_object(obj) for obj in list_]
+    def remove_numpy_scalar_in_list(self, list_: Union[list, tuple, set]) -> list:
+        return [self.remove_numpy_scalar(obj) for obj in list_]
 
-    def remove_python_scalar_in_dict(self, dictionary: dict) -> dict:
+    def remove_numpy_scalar_in_dict(self, dictionary: dict) -> dict:
         dict_copy = dict()
         for key, value in dictionary.items():
-            key = self.remove_numpy_scalar_from_object(key)
-            value = self.remove_numpy_scalar_from_object(value)
+            key = self.remove_numpy_scalar(key)
+            value = self.remove_numpy_scalar(value)
             dict_copy[key] = value
 
         return dict_copy
