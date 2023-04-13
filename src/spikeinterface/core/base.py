@@ -489,28 +489,45 @@ class BaseExtractor:
         except TypeError as e:
             accepted_type = [str, int, float, bool or None]
             def log_value_types_of_dict(dictionary):
-                result = {}
-                for key, value in dictionary.items():
-                    key_type = type(key)
-                    if key_type in accepted_type:
-                        key_to_log = key
-                    else:
-                        key_to_log = (key, "possible_trouble", type(key).__name__ )
-                    if isinstance(value, dict): # Other dicts
-                        result[key_to_log] = log_value_types_of_dict(value)
-                    elif isinstance(value, (list, tuple)): # Iterables
-                        result[key_to_log] = [(element, log_value_types_of_dict(element)) for element in value]                
-                    elif isinstance(value, BaseExtractor): # Expand extractors
-                        extractor = value
-                        result[key_to_log] = (extractor, log_value_types_of_dict(extractor.to_dict()))
-                    else:  # Base case
-                        value_type = type(value)
-                        if value_type in accepted_type:
-                            value_to_log = value
+                
+                if isinstance(dictionary, dict):
+                    result = {}
+                
+                    for key, value in dictionary.items():
+                        key_type = type(key)
+                        if key_type in accepted_type:
+                            key_to_log = key
                         else:
-                            value_to_log = (value, "possible_trouble", value_type.__name__)
-                        result[key_to_log] = value_to_log
-                return result
+                            key_to_log = (key, "possible_trouble", type(key).__name__ )
+                        if isinstance(value, dict): # Other dicts
+                            result[key_to_log] = log_value_types_of_dict(value)
+                        elif isinstance(value, (list, tuple)): # Iterables
+                            result[key_to_log] = [log_value_types_of_dict(element) for element in value]                
+                        elif isinstance(value, BaseExtractor): # Expand extractors
+                            extractor = value
+                            result[key_to_log] = (extractor, log_value_types_of_dict(extractor.to_dict()))
+                        else:  # Base case
+                            value_type = type(value)
+                            if value_type in accepted_type:
+                                value_to_log = value
+                            else:
+                                value_to_log = (value, "possible_trouble", value_type.__name__)
+                            result[key_to_log] = value_to_log
+                            
+                    return result
+                
+                elif isinstance(dictionary, (list, tuple)):
+                    return [log_value_types_of_dict(element) for element in dictionary]
+
+                else:
+                    bottom_value = dictionary
+                    bottom_value_type = type(bottom_value)
+                    if bottom_value_type in accepted_type:
+                        bottom_value_to_log = bottom_value
+                    else:
+                        bottom_value_to_log = (bottom_value, "possible_trouble", bottom_value_type.__name__)
+                    return bottom_value_to_log
+        
             raise Exception(f'Error while dumping to json {str(e)}. \n \n \n  Dump dict : {log_value_types_of_dict(dump_dict)}')
 
     def dump_to_pickle(self, file_path=None, include_properties=True,
