@@ -82,10 +82,10 @@ class CircusClustering:
 
         chan_locs = recording.get_channel_locations()
 
-        peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
+        peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_index', 'int64')]
         spikes = np.zeros(peaks.size, dtype=peak_dtype)
         spikes['sample_ind'] = peaks['sample_ind']
-        spikes['segment_ind'] = peaks['segment_ind']
+        spikes['segment_index'] = peaks['segment_index']
         spikes['unit_ind'] = peaks['channel_ind']
 
         num_chans = recording.get_num_channels()
@@ -194,7 +194,7 @@ class CircusClustering:
         mask = mask[idx]
 
         spikes['sample_ind'] = peaks[mask]['sample_ind']
-        spikes['segment_ind'] = peaks[mask]['segment_ind']
+        spikes['segment_index'] = peaks[mask]['segment_index']
         spikes['unit_ind'] = peak_labels[mask]
 
         if params['waveform_mode'] == 'shared_memory':

@@ -365,7 +365,7 @@ class BaseSorting(BaseExtractor):
 
         n = np.sum([e[0].size for e in spikes_])
         spike_dtype = [('sample_ind', 'int64'), ('unit_ind',
-                                                 'int64'), ('segment_ind', 'int64')]
+                                                 'int64'), ('segment_index', 'int64')]
         
         if extremum_channel_inds is not None:
             spike_dtype += [('channel_ind', 'int64')]
@@ -378,7 +378,7 @@ class BaseSorting(BaseExtractor):
             n = spike_times.size
             spikes[pos:pos+n]['sample_ind'] = spike_times
             spikes[pos:pos+n]['unit_ind'] = spike_labels
-            spikes[pos:pos+n]['segment_ind'] = segment_index
+            spikes[pos:pos+n]['segment_index'] = segment_index
             pos += n
         
 

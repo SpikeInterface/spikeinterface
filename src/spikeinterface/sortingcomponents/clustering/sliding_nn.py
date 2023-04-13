@@ -112,11 +112,11 @@ class SlidingNNClustering:
             sparsity_mask[c, chans] = True
         
         # create a new peak vector to extract waveforms
-        dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
+        dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_index', 'int64')]
         peaks2 = np.zeros(peaks.size, dtype=dtype)
         peaks2['sample_ind'] = peaks['sample_ind']
         peaks2['unit_ind'] = peaks['channel_ind']
-        peaks2['segment_ind'] = peaks['segment_ind']
+        peaks2['segment_index'] = peaks['segment_index']
         
         fs = recording.get_sampling_frequency()
         dtype = recording.get_dtype()
@@ -505,7 +505,7 @@ def get_chunk_spike_waveforms(
     all_chan_idx = np.zeros((len(peaks_chunk), n_channel_neighbors))
 
     # for each spike in the sample, add it to the
-    for spike_i, (sample_ind, channel_ind, amplitude, segment_ind) in enumerate(
+    for spike_i, (sample_ind, channel_ind, amplitude, segment_index) in enumerate(
         peaks_chunk
     ):
         spike_start = sample_ind + margin_frames - spike_pre_frames - start_frame

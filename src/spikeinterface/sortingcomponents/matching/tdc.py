@@ -6,7 +6,7 @@ from spikeinterface.core import (WaveformExtractor, get_noise_levels, get_channe
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 
 spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind', 'int64'),
-               ('amplitude', 'float64'), ('segment_ind', 'int64')]
+               ('amplitude', 'float64'), ('segment_index', 'int64')]
 
 from .main import BaseTemplateMatchingEngine
 

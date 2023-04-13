@@ -102,10 +102,10 @@ class PositionAndPCAClustering:
 
         keep_peak_labels = spatial_peak_labels[spatial_keep]
         
-        peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
+        peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_index', 'int64')]
         peaks2 = np.zeros(spatial_keep.size, dtype=peak_dtype)
         peaks2['sample_ind'] = peaks['sample_ind'][spatial_keep]
-        peaks2['segment_ind'] = peaks['segment_ind'][spatial_keep]
+        peaks2['segment_index'] = peaks['segment_index'][spatial_keep]
 
         num_chans = recording.get_num_channels()
         sparsity_mask = np.zeros((spatial_labels.size, num_chans), dtype='bool')
@@ -162,7 +162,7 @@ class PositionAndPCAClustering:
 
         peaks3 = np.zeros(peaks.size, dtype=peak_dtype)
         peaks3['sample_ind'] = peaks['sample_ind']
-        peaks3['segment_ind'] = peaks['segment_ind']
+        peaks3['segment_index'] = peaks['segment_index']
         peaks3['unit_ind'][:] = -1
         sparsity_mask3 = np.zeros((pre_clean_labels.size, num_chans), dtype='bool')
         for l, label in enumerate(pre_clean_labels):

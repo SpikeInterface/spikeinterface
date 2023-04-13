@@ -89,8 +89,8 @@ class InjectTemplatesRecording(BaseRecording):
 
 
         for segment_index in range(sorting.get_num_segments()):
-            start = np.searchsorted(self.spike_vector['segment_ind'], segment_index, side="left")
-            end = np.searchsorted(self.spike_vector['segment_ind'], segment_index, side="right")
+            start = np.searchsorted(self.spike_vector['segment_index'], segment_index, side="left")
+            end = np.searchsorted(self.spike_vector['segment_index'], segment_index, side="right")
             spikes = self.spike_vector[start : end]
 
             parent_recording_segment = None if parent_recording is None else parent_recording._recording_segments[segment_index]

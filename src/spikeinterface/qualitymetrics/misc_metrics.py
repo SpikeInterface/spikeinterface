@@ -721,8 +721,8 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
         spike_vector = sorting.to_spike_vector()
 
         # retrieve spikes in segment
-        i0 = np.searchsorted(spike_vector['segment_ind'], segment_index)
-        i1 = np.searchsorted(spike_vector['segment_ind'], segment_index + 1)
+        i0 = np.searchsorted(spike_vector['segment_index'], segment_index)
+        i1 = np.searchsorted(spike_vector['segment_index'], segment_index + 1)
         spikes_in_segment = spike_vector[i0:i1]
         spike_locations_in_segment = spike_locations[i0:i1]
 

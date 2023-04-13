@@ -128,7 +128,7 @@ class PeakDetectorWrapper(PeakDetector):
         local_peaks['sample_ind'] = peak_sample_ind
         local_peaks['channel_ind'] = peak_chan_ind
         local_peaks['amplitude'] = peak_amplitude
-        local_peaks['segment_ind'] = segment_index
+        local_peaks['segment_index'] = segment_index
 
         # return is always a tuple
         return (local_peaks, )
