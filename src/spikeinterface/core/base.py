@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Union, Optional
 import importlib
 import warnings
 import weakref
@@ -348,7 +349,7 @@ class BaseExtractor:
         return dump_dict
 
     @staticmethod
-    def from_dict(d, base_folder=None):
+    def from_dict(dictionary: dict, base_folder: Optional[Union[Path, str]] = None) -> "BaseExtractor":
         """
         Instantiate extractor from dictionary
 
@@ -364,14 +365,14 @@ class BaseExtractor:
         extractor: RecordingExtractor or SortingExtractor
             The loaded extractor object
         """
-        if d['relative_paths']:
+        if dictionary['relative_paths']:
             assert base_folder is not None, 'When  relative_paths=True, need to provide base_folder'
-            d = _make_paths_absolute(d, base_folder)
-        extractor = _load_extractor_from_dict(d)
-        folder_metadata = d.get('folder_metadata', None)
+            dictionary = _make_paths_absolute(dictionary, base_folder)
+        extractor = _load_extractor_from_dict(dictionary)
+        folder_metadata = dictionary.get('folder_metadata', None)
         if folder_metadata is not None:
             folder_metadata = Path(folder_metadata)
-            if d['relative_paths']:
+            if dictionary['relative_paths']:
                 folder_metadata = base_folder / folder_metadata
             extractor.load_metadata_from_folder(folder_metadata)
         return extractor
@@ -480,7 +481,7 @@ class BaseExtractor:
                                  relative_to=relative_to,
                                  folder_metadata=folder_metadata)
         file_path = self._get_file_path(file_path, ['.json'])
-        
+    
         try:
             file_path.write_text(
                 json.dumps(dump_dict, indent=4, cls=SIJsonEncoder),
@@ -529,6 +530,7 @@ class BaseExtractor:
                     return bottom_value_to_log
         
             raise Exception(f'Error while dumping to json {str(e)}. \n \n \n  Dump dict : {log_value_types_of_dict(dump_dict)}')
+
 
     def dump_to_pickle(self, file_path=None, include_properties=True,
                        relative_to=None, folder_metadata=None):
@@ -853,7 +855,7 @@ class BaseExtractor:
         return cached
 
 
-def _make_paths_relative(d, relative):
+def _make_paths_relative(d, relative) -> dict:
     relative = str(Path(relative).absolute())
     func = lambda p: os.path.relpath(str(p), start=relative)
     return recursive_path_modifier(d,  func, target='path', copy=True)
