@@ -36,7 +36,7 @@ jobs:
         uses: actions/cache/restore@v3
         id: cache-venv
         with:
-          path: ~/test_env
+          path: ${{ github.workspace }}/test_env
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
           restore-keys: |
             ${{ runner.os }}-venv-
@@ -122,7 +122,7 @@ jobs:
           done
       - name: Test core
         run: |
-          source ~/test_env/bin/activate
+          source ${{ github.workspace }}/test_env/bin/activate
           pytest -m core -vv -ra --durations=0 --durations-min=0.001 | tee report_core.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of core tests" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_core.txt >> $GITHUB_STEP_SUMMARY  
@@ -130,7 +130,7 @@ jobs:
       - name: Test extractors
         if: ${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
-          source ~/test_env/bin/activate
+          source ${{ github.workspace }}/test_env/bin/activate
           pytest -m extractors -vv -ra --durations=0 --durations-min=0.001 | tee report_extractors.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of extractors" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_extractors.txt >> $GITHUB_STEP_SUMMARY  
@@ -138,7 +138,7 @@ jobs:
       - name: Test preprocessing
         if: ${{ steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
-          source ~/test_env/bin/activate
+          source ${{ github.workspace }}/test_env/bin/activate
           pytest -m preprocessing -vv -ra --durations=0 --durations-min=0.001 | tee report_preprocessing.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of preprocessing" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_preprocessing.txt >> $GITHUB_STEP_SUMMARY  
@@ -146,7 +146,7 @@ jobs:
       - name: Test postprocessing
         if: ${{ steps.modules-changed.outputs.POSTPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
-          source ~/test_env/bin/activate
+          source ${{ github.workspace }}/test_env/bin/activate
           pytest -m postprocessing -vv -ra --durations=0 --durations-min=0.001 | tee report_postprocessing.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of postprocessing" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_postprocessing.txt >> $GITHUB_STEP_SUMMARY  
@@ -154,7 +154,7 @@ jobs:
       - name: Test quality metrics
         if: ${{ steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
-          source ~/test_env/bin/activate
+          source ${{ github.workspace }}/test_env/bin/activate
           pytest -m qualitymetrics -vv -ra --durations=0 --durations-min=0.001 | tee report_qualitymetrics.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of qualitymetrics" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_qualitymetrics.txt >> $GITHUB_STEP_SUMMARY  
