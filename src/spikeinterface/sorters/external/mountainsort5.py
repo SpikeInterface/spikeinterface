@@ -28,7 +28,6 @@ class Mountainsort5Sorter(BaseSorter):
         'snippet_T2': 20,
         'npca_per_branch': 12,
         'snippet_mask_radius': 250,
-        'pairwise_merge_step': True,
         'scheme1_detect_channel_radius': 150,
         'scheme2_phase1_detect_channel_radius': 200,
         'scheme2_detect_channel_radius': 50,
@@ -51,7 +50,6 @@ class Mountainsort5Sorter(BaseSorter):
         'snippet_T2': 'Number of samples after the peak to include in the snippet',
         'npca_per_branch': 'Number of PCA features to compute at each stage of branch clustering',
         'snippet_mask_radius': 'Radius of the mask to apply to the extracted snippets',
-        'pairwise_merge_step': 'Whether to perform the pairwise merge step',
         'scheme1_detect_channel_radius': 'Channel radius for excluding events that are too close in time in scheme 1',
         'scheme2_phase1_detect_channel_radius': 'Channel radius for excluding events that are too close in time during phase 1 of scheme 2',
         'scheme2_detect_channel_radius': 'Channel radius for excluding events that are too close in time during phase 2 of scheme 2',
@@ -129,8 +127,7 @@ class Mountainsort5Sorter(BaseSorter):
             snippet_T1=p['snippet_T1'],
             snippet_T2=p['snippet_T2'],
             snippet_mask_radius=p['snippet_mask_radius'],
-            npca_per_branch=p['npca_per_branch'],
-            pairwise_merge_step=p['pairwise_merge_step']
+            npca_per_branch=p['npca_per_branch']
         )
 
         scheme2_sorting_parameters = ms5.Scheme2SortingParameters(
@@ -140,7 +137,6 @@ class Mountainsort5Sorter(BaseSorter):
             phase1_detect_time_radius_msec=p['detect_time_radius_msec'],
             detect_time_radius_msec=p['detect_time_radius_msec'],
             phase1_npca_per_branch=p['npca_per_branch'],
-            phase1_pairwise_merge_step=p['pairwise_merge_step'],
             detect_sign=p['detect_sign'],
             detect_threshold=p['detect_threshold'],
             snippet_T1=p['snippet_T1'],
