@@ -30,7 +30,7 @@ jobs:
         uses: actions/cache/restore@v3
         id: cache-venv
         with:
-          path: "${{ github.workspace }}/test_env"
+          path: ${{ github.workspace }}/test_env
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
           restore-keys: |
             ${{ runner.os }}-venv-

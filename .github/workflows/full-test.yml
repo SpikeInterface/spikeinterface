@@ -36,7 +36,7 @@ jobs:
         uses: actions/cache/restore@v3
         id: cache-venv
         with:
-          path: "${{ github.workspace }}/test_env"
+          path: ${{ github.workspace }}/test_env
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
           restore-keys: |
             ${{ runner.os }}-venv-
@@ -162,7 +162,7 @@ jobs:
       - name: Test core sorters
         if: ${{ steps.modules-changed.outputs.SORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
-          source ${{ github.workspace }}/test_env/bin/activate
+          source ~/test_env/bin/activate
           pytest -m sorters -vv -ra --durations=0 --durations-min=0.001 | tee report_sorters.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of sorters" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_sorters.txt >> $GITHUB_STEP_SUMMARY  
@@ -170,7 +170,7 @@ jobs:
       - name: Test comparison
         if: ${{ steps.modules-changed.outputs.COMPARISON_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
-          source ${{ github.workspace }}/test_env/bin/activate
+          source ~/test_env/bin/activate
           pytest -m comparison -vv -ra --durations=0 --durations-min=0.001 | tee report_comparison.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of comparison" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_comparison.txt >> $GITHUB_STEP_SUMMARY  
@@ -178,7 +178,7 @@ jobs:
       - name: Test curation
         if: ${{ steps.modules-changed.outputs.CURATION_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
-          source ${{ github.workspace }}/test_env/bin/activate
+          source ~/test_env/bin/activate
           pytest -m curation -vv -ra --durations=0 --durations-min=0.001 | tee report_curation.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of curation" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_curation.txt >> $GITHUB_STEP_SUMMARY  
@@ -186,7 +186,7 @@ jobs:
       - name: Test widgets
         if: ${{ steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.QUALITYMETRICS_CHANGED == 'true' ||  steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true'}}
         run: |
-          source ${{ github.workspace }}/test_env/bin/activate
+          source ~/test_env/bin/activate
           pytest -m widgets -vv -ra --durations=0 --durations-min=0.001 | tee report_widgets.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of widgets" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_widgets.txt >> $GITHUB_STEP_SUMMARY  
@@ -194,7 +194,7 @@ jobs:
       - name: Test exporters
         if: ${{ steps.modules-changed.outputs.EXPORTERS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' || steps.modules-changed.outputs.WIDGETS_CHANGED == 'true' }}
         run: |
-          source ${{ github.workspace }}/test_env/bin/activate
+          source ~/test_env/bin/activate
           pytest -m exporters -vv -ra --durations=0 --durations-min=0.001 | tee report_exporters.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of exporters" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_exporters.txt >> $GITHUB_STEP_SUMMARY  
@@ -202,7 +202,7 @@ jobs:
       - name: Test sortingcomponents
         if: ${{ steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
-          source ${{ github.workspace }}/test_env/bin/activate
+          source ~/test_env/bin/activate
           pytest -m sortingcomponents -vv -ra --durations=0 --durations-min=0.001 | tee report_sortingcomponents.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of sortingcomponents" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_sortingcomponents.txt >> $GITHUB_STEP_SUMMARY  
@@ -210,7 +210,7 @@ jobs:
       - name: Test internal sorters
         if: ${{ steps.modules-changed.outputs.SORTERS_INTERNAL_CHANGED == 'true' || steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: |
-          source ${{ github.workspace }}/test_env/bin/activate
+          source ~/test_env/bin/activate
           pytest -m sorters_internal -vv -ra --durations=0 --durations-min=0.001 | tee report_sorters_internal.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
           echo "# Timing profile of sorters_internal" >> $GITHUB_STEP_SUMMARY 
           python ./.github/build_job_summary.py report_sorters_internal.txt >> $GITHUB_STEP_SUMMARY 
