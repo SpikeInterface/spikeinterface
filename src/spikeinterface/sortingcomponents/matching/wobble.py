@@ -313,9 +313,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         d = cls.default_params.copy()
         d.update(kwargs)
         parameters = d.get('parameters', {})
-        templates = d['waveform_extractor'].get_all_templates()
-        d['nbefore'] = d['waveform_extractor'].nbefore
-        d['nafter'] = d['waveform_extractor'].nafter
+        templates = d['templates']
         templates = templates.astype(np.float32, casting='safe')
 
         # Aggregate useful parameters/variables for handy access in downstream functions

@@ -47,7 +47,7 @@ class BenchmarkMatching:
 
     def run(self):
         t_start = time.time()
-        self.spikes = find_spikes_from_templates(self.recording, method=self.method, method_kwargs=self.method_kwargs, **self.job_kwargs)
+        self.spikes = find_spikes_from_templates(self.recording, self.we, method=self.method, method_kwargs=self.method_kwargs, **self.job_kwargs)
         self.run_time = time.time() - t_start
         self.sorting = NumpySorting.from_times_labels(self.spikes['sample_ind'], self.spikes['cluster_ind'], self.sampling_rate)
         self.comp = CollisionGTComparison(self.gt_sorting, self.sorting, exhaustive_gt=self.exhaustive_gt)
