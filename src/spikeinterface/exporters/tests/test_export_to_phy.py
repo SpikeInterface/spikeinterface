@@ -41,6 +41,7 @@ def test_export_to_phy():
                   n_jobs=1, chunk_size=10000,
                   progress_bar=True)
 
+# Test for previous crash when copy_binary=False.
     export_to_phy(waveform_extractor, output_folder2,
                   compute_pc_features=False,
                   compute_amplitudes=False,
