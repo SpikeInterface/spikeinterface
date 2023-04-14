@@ -23,19 +23,29 @@ def test_export_to_phy():
     sorting = se.MEArecSortingExtractor(local_path)
 
     waveform_folder = cache_folder / 'waveforms'
-    output_folder = cache_folder / 'phy_output'
+    output_folder1 = cache_folder / 'phy_output_1'
+    output_folder2 = cache_folder / 'phy_output_2'
 
-    for f in (waveform_folder, output_folder):
+    for f in (waveform_folder, output_folder1):
+        if f.is_dir():
+            shutil.rmtree(f)
+    for f in (waveform_folder, output_folder2):
         if f.is_dir():
             shutil.rmtree(f)
 
     waveform_extractor = extract_waveforms(recording, sorting, waveform_folder)
 
-    export_to_phy(waveform_extractor, output_folder,
+    export_to_phy(waveform_extractor, output_folder1,
                   compute_pc_features=True,
                   compute_amplitudes=True,
                   n_jobs=1, chunk_size=10000,
                   progress_bar=True)
+
+    export_to_phy(waveform_extractor, output_folder2,
+                  compute_pc_features=False,
+                  compute_amplitudes=False,
+                  n_jobs=2, chunk_size=10000,
+                  progress_bar=False, copy_binary=False)
 
 
 def test_export_to_phy_by_property():
