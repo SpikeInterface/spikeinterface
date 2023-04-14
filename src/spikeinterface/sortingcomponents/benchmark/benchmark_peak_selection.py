@@ -25,8 +25,7 @@ class BenchmarkPeakSelection:
         self.gt_sorting = gt_sorting
         self.job_kwargs = job_kwargs
         self.exhaustive_gt = exhaustive_gt
-        self.recording_f = recording
-        self.sampling_rate = self.recording_f.get_sampling_frequency()
+        self.sampling_rate = self.recording.get_sampling_frequency()
 
         self.tmp_folder = tmp_folder
         if self.tmp_folder is None:
@@ -75,21 +74,21 @@ class BenchmarkPeakSelection:
         if self.verbose:
             method = method_kwargs['method']
             print(f'Detecting peaks with method {method}')
-        self._peaks = detect_peaks(self.recording_f, **method_kwargs, **self.job_kwargs)
+        self._peaks = detect_peaks(self.recording, **method_kwargs, **self.job_kwargs)
 
     def localize_peaks(self, method_kwargs = {'method' : 'center_of_mass'}):
         from spikeinterface.sortingcomponents.peak_localization import localize_peaks
         if self.verbose:
             method = method_kwargs['method']
             print(f'Localizing peaks with method {method}')
-        self._positions = localize_peaks(self.recording_f, self.peaks, **method_kwargs, **self.job_kwargs)
+        self._positions = localize_peaks(self.recording, self.peaks, **method_kwargs, **self.job_kwargs)
 
     def localize_gt_peaks(self, method_kwargs = {'method' : 'center_of_mass'}):
         from spikeinterface.sortingcomponents.peak_localization import localize_peaks
         if self.verbose:
             method = method_kwargs['method']
             print(f'Localizing gt peaks with method {method}')
-        self._gt_positions = localize_peaks(self.recording_f, self.gt_peaks, **method_kwargs, **self.job_kwargs)
+        self._gt_positions = localize_peaks(self.recording, self.gt_peaks, **method_kwargs, **self.job_kwargs)
 
     def run(self, peaks=None, positions=None, delta=0.2):
         t_start = time.time()
@@ -147,7 +146,7 @@ class BenchmarkPeakSelection:
                 if self.verbose:
                     print(f"Extracting waveforms for {label}")
 
-                self.waveforms[label] = extract_waveforms(self.recording_f, sorting, tmp_folder, load_if_exists=True,
+                self.waveforms[label] = extract_waveforms(self.recording, sorting, tmp_folder, load_if_exists=True,
                                        ms_before=2.5, ms_after=3.5, max_spikes_per_unit=500, return_scaled=False, 
                                        **self.job_kwargs)
 
@@ -242,7 +241,7 @@ class BenchmarkPeakSelection:
         ax = axs[0]
         ax.set_title('Full gt clusters')
         if show_probe:
-            plot_probe_map(self.recording_f, ax=ax)
+            plot_probe_map(self.recording, ax=ax)
 
         from spikeinterface.widgets import get_unit_colors
         colors = get_unit_colors(self.gt_sorting)
@@ -255,7 +254,7 @@ class BenchmarkPeakSelection:
         ax = axs[1]
         ax.set_title('Sliced gt clusters')
         if show_probe:
-            plot_probe_map(self.recording_f, ax=ax)
+            plot_probe_map(self.recording, ax=ax)
 
         self._scatter_clusters(self.sliced_gt_positions['x'], self.sliced_gt_positions['y'],  self.sliced_gt_sorting, colors, s=1, alpha=0.5, ax=ax, show_ellipses=show_ellipses)
         if self.exhaustive_gt:
@@ -267,7 +266,7 @@ class BenchmarkPeakSelection:
         ax = axs[2]
         ax.set_title('Garbage')
         if show_probe:
-            plot_probe_map(self.recording_f, ax=ax)
+            plot_probe_map(self.recording, ax=ax)
 
         ax.scatter(self.garbage_positions['x'], self.garbage_positions['y'],  c='k', s=1, alpha=0.5)
         if self.exhaustive_gt:
@@ -285,7 +284,7 @@ class BenchmarkPeakSelection:
         ax = axs[0]
         ax.set_title('Full gt clusters')
         if show_probe:
-            plot_probe_map(self.recording_f, ax=ax)
+            plot_probe_map(self.recording, ax=ax)
         
         from spikeinterface.widgets import get_unit_colors
         channels = get_template_extremum_channel(self.waveforms['full_gt'], outputs='index')
@@ -320,7 +319,7 @@ class BenchmarkPeakSelection:
         ax = axs[1]
         ax.set_title('Sliced gt clusters')
         if show_probe:
-            plot_probe_map(self.recording_f, ax=ax)
+            plot_probe_map(self.recording, ax=ax)
         
         from spikeinterface.widgets import get_unit_colors
         channels = get_template_extremum_channel(self.waveforms['gt'], outputs='index')
@@ -346,7 +345,7 @@ class BenchmarkPeakSelection:
         ax = axs[2]
         ax.set_title('Garbage')
         if show_probe:
-            plot_probe_map(self.recording_f, ax=ax)
+            plot_probe_map(self.recording, ax=ax)
         
         from spikeinterface.widgets import get_unit_colors
         channels = get_template_extremum_channel(self.waveforms['garbage'], outputs='index')
@@ -417,7 +416,7 @@ class BenchmarkPeakSelection:
 
         ax = axs[1, 0]
 
-        noise_levels = get_noise_levels(self.recording_f, return_scaled=False)
+        noise_levels = get_noise_levels(self.recording, return_scaled=False)
         snrs = self.peaks['amplitude']/noise_levels[self.peaks['channel_ind']]
         garbage_snrs = self.garbage_peaks['amplitude']/noise_levels[self.garbage_peaks['channel_ind']]
         amin, amax = snrs.min(), snrs.max()

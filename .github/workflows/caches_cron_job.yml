@@ -30,23 +30,14 @@ jobs:
       - uses: actions/cache@v3
         id: cache-venv
         with:
-          path: ~/test_env
+          path: ${{ github.workspace }}/test_env
           key: ${{ runner.os }}-venv-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-venv.outputs.cache-hit == 'true'}}"
       - name: Create the virtual environment to be cached 
         if: steps.cache-venv.outputs.cache-hit != 'true'
-        run: |
-          git config --global user.email "CI@example.com"
-          git config --global user.name "CI Almighty"
-          python -m venv ~/test_env  # Environment used in the caching step
-          source ~/test_env/bin/activate
-          python -m pip install -U pip  # Official recommended way
-          # herdingspikes need numpy to installed first (!)
-          pip install numpy==1.22
-          pip install -e .[test,extractors,full]
-  
-  create-data-cache-if-missing:
+        uses: ./.github/actions/build-test-environment
+  create-gin-data-cache-if-missing:
     name: Caching data env
     runs-on: "ubuntu-latest"
     steps:
@@ -61,7 +52,7 @@ jobs:
       - uses: actions/cache@v3
         id: cache-datasets
         with:
-          path: ~/spikeinterface_datasets
+          path: ${{ github.workspace }}/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}}"
@@ -82,11 +73,11 @@ jobs:
       - name: Move the downloaded data to the right directory
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          mkdir --parents --verbose ~/spikeinterface_datasets/ephy_testing_data/
-          mv --force ./ephy_testing_data ~/spikeinterface_datasets/
+          mkdir --parents --verbose ${{ github.workspace }}/spikeinterface_datasets/ephy_testing_data/
+          mv --force ./ephy_testing_data ${{ github.workspace }}/spikeinterface_datasets/
       - name: Show size of the cache to assert data is downloaded
         run: |
-          cd ~
+          cd ${{ github.workspace }}
           pwd 
           du -hs spikeinterface_datasets
           cd spikeinterface_datasets

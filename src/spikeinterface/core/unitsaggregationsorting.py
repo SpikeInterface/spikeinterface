@@ -104,7 +104,7 @@ class UnitsAggregationSorting(BaseSorting):
             self.add_sorting_segment(sub_segment)
 
         self._sortings = sorting_list
-        self._kwargs = {'sorting_list': [sort.to_dict() for sort in sorting_list],
+        self._kwargs = {'sorting_list': sorting_list,
                         'renamed_unit_ids': renamed_unit_ids}
 
     @property
