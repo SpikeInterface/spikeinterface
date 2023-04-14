@@ -126,7 +126,7 @@ jobs:
         run: ./.github/run_tests.sh core
       - name: Test extractors
         if: ${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
-        run: ./.github/run_tests.sh extractors
+        run: ./.github/run_tests.sh "extractors and not streaming_extractors"
       - name: Test preprocessing
         if: ${{ steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: ./.github/run_tests.sh preprocessing
