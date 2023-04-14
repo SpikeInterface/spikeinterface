@@ -10,7 +10,7 @@ env:
   KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
 
 jobs:
-  build-and-test:
+  full-tests-with-codecov:
     name: Codecov in Ubuntu
     runs-on: ${{ matrix.os }}
     strategy:
@@ -46,7 +46,7 @@ jobs:
           # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
           HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
         with:
-          path: ~/spikeinterface_datasets
+          path: ${{ github.workspace }}/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
           restore-keys: |
             ${{ runner.os }}-datasets
