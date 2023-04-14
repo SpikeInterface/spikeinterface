@@ -57,7 +57,7 @@ as :code:`spikeinterface` strongly relies on these packages to interface with va
 
     git clone https://github.com/SpikeInterface/spikeinterface.git
     cd spikeinterface
-    python setup.py install (or develop)
+    pip install -e .
     cd ..
 
 

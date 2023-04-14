@@ -296,11 +296,10 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         elif feature == 'v_peak':
             wf_data = np.abs(wf[nbefore])
 
-        # if enforce_decrease:
-        #    enforce_decrease_shells_ptp(
-        #        wf_ptp, best_channels[unit_id], enforce_decrease_radial_parents, in_place=True
+        #if enforce_decrease:
+        #    enforce_decrease_shells_data(
+        #        wf_data, best_channels[unit_id], enforce_decrease_radial_parents, in_place=True
         #    )
-
 
         unit_location[i] = solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance_um, optimizer)
 
@@ -542,34 +541,6 @@ def enforce_decrease_shells_data(
             decreasing_data[c] *= decreasing_data[parents_rel].max() / decreasing_data[c]
 
     return decreasing_data
-
-def get_grid_convolution_templates_and_weights(contact_locations, local_radius_um=50, upsampling_um=5, 
-    sigma_um=[np.linspace(10, 50., 5)], margin_um=50):
-    
-    x_min, x_max = contact_locations[:,0].min(), contact_locations[:,0].max()
-    y_min, y_max = contact_locations[:,1].min(), contact_locations[:,1].max()
-
-    x_min -= margin_um
-    x_max += margin_um
-    y_min -= margin_um
-    y_max += margin_um
-
-    dx = np.abs(x_max - x_min)
-    dy = np.abs(y_max - y_min)
-
-    eps = upsampling_um/10
-
-    all_x, all_y = np.meshgrid(np.arange(x_min, x_max+eps, upsampling_um), np.arange(y_min, y_max+eps, upsampling_um))
-
-    nb_templates = all_x.size
-
-    template_positions = np.zeros((nb_templates, 2))
-    template_positions[:, 0] = all_x.flatten()
-    template_positions[:, 1] = all_y.flatten()
-
-    import sklearn
-    dist = sklearn.metrics.pairwise_distances(template_positions, contact_locations)
-    neighbours_mask = dist < local_radius_um
 
 def get_grid_convolution_templates_and_weights(contact_locations, local_radius_um=50, upsampling_um=5, 
     sigma_um=[np.linspace(10, 50., 5)], margin_um=50):
