@@ -37,7 +37,7 @@ From source
 -----------
 
 As :code:`spikeinterface` is undergoing a heavy development phase, it is sometimes convenient to install from source
-to get THE latest bug fixes and improvements. We recommend constructing the package within a 
+to get the latest bug fixes and improvements. We recommend constructing the package within a 
 [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) 
 to prevent potential conflicts with local dependencies. 
 
