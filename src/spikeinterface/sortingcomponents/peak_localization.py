@@ -13,7 +13,7 @@ from ..postprocessing.unit_localization import (dtype_localize_by_method,
                                                 possible_localization_methods,
                                                 solve_monopolar_triangulation,
                                                 make_radial_order_parents,
-                                                enforce_decrease_shells_ptp,
+                                                enforce_decrease_shells_data,
                                                 get_grid_convolution_templates_and_weights)
 
 from .tools import get_prototype_spike
@@ -204,24 +204,40 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         For channel sparsity.
     max_distance_um: float, default: 1000
         Boundary for distance estimation.
-    enforce_decrease : bool (default False)
-        Enforce spatial decreasingness for PTP vectors.
+    enforce_decrease : bool (default True)
+        Enforce spatial decreasingness for PTP vectors
+    feature: string in ['ptp', 'energy', 'v_peak']
+        The available features to consider for estimating the position via
+        monopolar triangulation are peak-to-peak amplitudes (ptp, default), 
+        energy ('energy', as L2 norm) or voltages at the center of the waveform
+        (v_peak)
     """
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'],
-                            local_radius_um=75., max_distance_um=150., optimizer='minimize_with_log_penality', enforce_decrease=False):
+                            local_radius_um=75., max_distance_um=150., optimizer='minimize_with_log_penality', 
+                            enforce_decrease=True, feature='ptp'):
         LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um)
 
-        self._kwargs.update(dict(max_distance_um=max_distance_um,
-                                 optimizer=optimizer,
-                                 enforce_decrease=enforce_decrease))
+        
 
+        assert feature in ['ptp', 'energy', 'v_peak'], f'{feature} is not a valid feature'
         self.max_distance_um = max_distance_um
         self.optimizer = optimizer
+        self.feature = feature
 
+        waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
+        if waveform_extractor is None:
+            raise TypeError(f"{self.name} should have a single {WaveformsNode.__name__} in its parents")
+
+        self.nbefore = waveform_extractor.nbefore
         if enforce_decrease:
             self.enforce_decrease_radial_parents = make_radial_order_parents(self.contact_locations, self.neighbours_mask)
         else:
             self.enforce_decrease_radial_parents = None
+
+        self._kwargs.update(dict(max_distance_um=max_distance_um,
+                                 optimizer=optimizer,
+                                 enforce_decrease=enforce_decrease,
+                                 feature=feature))
 
         self._dtype = np.dtype(dtype_localize_by_method['monopolar_triangulation'])
 
@@ -234,14 +250,18 @@ class LocalizeMonopolarTriangulation(PipelineNode):
             chan_inds = np.flatnonzero(chan_mask)
             local_contact_locations = self.contact_locations[chan_inds, :]
 
-            # wf is (nsample, nchan) - chan is only neighbor
-            wf = waveforms[i, :, :][:, chan_inds]
+            wf = waveforms[i, :][:, chan_inds]    
+            if self.feature == 'ptp':
+                wf_data = wf.ptp(axis=0)
+            elif self.feature == 'energy':
+                wf_data = np.linalg.norm(wf, axis=0)
+            elif self.feature == 'v_peak':
+                wf_data = np.abs(wf[self.nbefore])
 
-            wf_ptp = wf.ptp(axis=0)
             if self.enforce_decrease_radial_parents is not None:
-                enforce_decrease_shells_ptp(wf_ptp, peak['channel_ind'], self.enforce_decrease_radial_parents, in_place=True)
+                enforce_decrease_shells_data(wf_data, peak['channel_ind'], self.enforce_decrease_radial_parents, in_place=True)
 
-            peak_locations[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations,
+            peak_locations[i] = solve_monopolar_triangulation(wf_data, local_contact_locations,
                                                               self.max_distance_um, self.optimizer)
 
         return peak_locations
