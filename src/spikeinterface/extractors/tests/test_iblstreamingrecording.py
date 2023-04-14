@@ -1,5 +1,6 @@
 from re import escape
 from unittest import TestCase
+import pytest
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -9,7 +10,7 @@ from spikeinterface.extractors import IblStreamingRecordingExtractor
 
 from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite, SortingCommonTestSuite
 
-
+@pytest.mark.streaming_extractors
 class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -79,6 +80,7 @@ class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
         assert self.small_unscaled_trace.dtype == expected_dtype
 
 
+@pytest.mark.streaming_extractors
 class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
     @classmethod
     def setUpClass(cls):
