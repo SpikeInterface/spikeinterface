@@ -33,7 +33,7 @@ jobs:
         run: sudo apt install libopenblas-dev  # Necessary for ROS3 support
       - name: Install package and streaming extractor dependencies
         run: |
-          pip install -e .[test_core, streaming_extractors]
+          pip install -e .[test_core,streaming_extractors]
       # Temporary disabled because of complicated error with path
       # - name: Install h5py with ROS3 support and test it works
       #   run: |
