@@ -2,10 +2,17 @@ from pathlib import Path
 import json
 from typing import List, Optional
 
-import torch
-from torch import nn
-from huggingface_hub import hf_hub_download
-
+try:
+    import torch
+    from torch import nn
+    HAVE_TORCH = True
+except ImportError:
+    HAVE_TORCH = False
+try:
+    from huggingface_hub import hf_hub_download
+    HAVE_HUGGINFACE = True
+except ImportError:
+    HAVE_HUGGINFACE = False
 
 from spikeinterface.core import BaseRecording
 from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
@@ -16,7 +23,7 @@ class SingleChannelToyDenoiser(WaveformsNode):
     def __init__(
         self, recording: BaseRecording, return_output: bool = True, parents: Optional[List[PipelineNode]] = None
     ):
-
+        assert HAVE_TORCH, "To use the SingleChannelToyDenoiser you need to install torch"
         waveform_extractor = find_parent_of_type(parents, WaveformsNode)
         if waveform_extractor is None:
             raise TypeError(f"Model should have a {WaveformsNode.__name__} in its parents")
@@ -65,6 +72,8 @@ class SingleChannelToyDenoiser(WaveformsNode):
             raise ValueError(exception_string)
 
     def load_model(self):
+        assert HAVE_HUGGINFACE, "To download models from Hugginface you need to install huggingface_hub"
+
         repo_id = "SpikeInterface/test_repo"
         subfolder = "mearec_toy_model"
         filename = "toy_model_marec.pt"
@@ -91,27 +100,28 @@ class SingleChannelToyDenoiser(WaveformsNode):
         return denoised_waveforms
 
 
-class SingleChannel1dCNNDenoiser(nn.Module):
-    def __init__(self, pretrained_path=None, n_filters=[16, 8], filter_sizes=[5, 11], spike_size=121):
-        super().__init__()
+if HAVE_TORCH:
+    class SingleChannel1dCNNDenoiser(nn.Module):
+        def __init__(self, pretrained_path=None, n_filters=[16, 8], filter_sizes=[5, 11], spike_size=121):
+            super().__init__()
 
-        out_channels_conv1, out_channels_conv_2 = n_filters
-        kernel_size_conv1, kernel_size_conv2 = filter_sizes
-        self.conv1 = nn.Sequential(nn.Conv1d(1, out_channels_conv1, kernel_size_conv1), nn.ReLU())
-        self.conv2 = nn.Sequential(nn.Conv1d(out_channels_conv1, out_channels_conv_2, kernel_size_conv2), nn.ReLU())
-        n_input_feat = out_channels_conv_2 * (spike_size - kernel_size_conv1 - kernel_size_conv2 + 2)
-        self.out = nn.Linear(n_input_feat, spike_size)
-        self.pretrained_path = pretrained_path
+            out_channels_conv1, out_channels_conv_2 = n_filters
+            kernel_size_conv1, kernel_size_conv2 = filter_sizes
+            self.conv1 = nn.Sequential(nn.Conv1d(1, out_channels_conv1, kernel_size_conv1), nn.ReLU())
+            self.conv2 = nn.Sequential(nn.Conv1d(out_channels_conv1, out_channels_conv_2, kernel_size_conv2), nn.ReLU())
+            n_input_feat = out_channels_conv_2 * (spike_size - kernel_size_conv1 - kernel_size_conv2 + 2)
+            self.out = nn.Linear(n_input_feat, spike_size)
+            self.pretrained_path = pretrained_path
 
-    def forward(self, x):
-        x = x[:, None]
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = x.view(x.shape[0], -1)
-        x = self.out(x)
-        return x
+        def forward(self, x):
+            x = x[:, None]
+            x = self.conv1(x)
+            x = self.conv2(x)
+            x = x.view(x.shape[0], -1)
+            x = self.out(x)
+            return x
 
-    def load(self, device="cpu"):
-        checkpoint = torch.load(self.pretrained_path, map_location=device)
-        self.load_state_dict(checkpoint)
-        return self
+        def load(self, device="cpu"):
+            checkpoint = torch.load(self.pretrained_path, map_location=device)
+            self.load_state_dict(checkpoint)
+            return self
