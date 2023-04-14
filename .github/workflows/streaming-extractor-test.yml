@@ -41,4 +41,4 @@ jobs:
       #     conda install -c conda-forge "h5py>=3.2"
       #     python -c "import h5py; assert 'ros3' in h5py.registered_drivers(), f'ros3 suppport not available, failed to install'"
       - name: run tests
-        run: pytest -m "streaming_extractors" -vv -ra
+        run: pytest -m "streaming_extractors and not ros3_test" -vv -ra
