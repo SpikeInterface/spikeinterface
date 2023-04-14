@@ -10,7 +10,7 @@ env:
   KACHERY_CLOUD_PRIVATE_KEY: ${{ secrets.KACHERY_CLOUD_PRIVATE_KEY }}
 
 jobs:
-  build-and-test:
+  full-tests-with-codecov:
     name: Codecov in Ubuntu
     runs-on: ${{ matrix.os }}
     strategy:
