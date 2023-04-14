@@ -69,6 +69,17 @@ extractors = [
     "ibllib>=2.21.0",
 ]
 
+streaming_extractors = [
+    # ONE-api and ibllib for streaming IBL
+    "ONE-api>=1.19.1",
+    "ibllib>=2.21.0",
+    # Following dependencies are for streaming with nwb files
+    "fsspec", 
+    "aiohttp",
+    "requests",
+    "pynwb",
+]
+
 full = [
     "zarr",
     "h5py",
@@ -148,6 +159,7 @@ markers = [
     "exporters",
     "widgets",
     "sortingcomponents",
+    "streaming_extractors: extractors that require streaming such as ross and fsspec",
 ]
 filterwarnings =[
     'ignore:.*distutils Version classes are deprecated.*:DeprecationWarning',
