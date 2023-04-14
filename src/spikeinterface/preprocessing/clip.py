@@ -1,7 +1,7 @@
 import numpy as np
 
 try:
-    from numba import njit, guvectorize, float64
+    from numba import njit
     HAVE_NUMBA = True
 except ModuleNotFoundError as err:
     HAVE_NUMBA = False
@@ -77,6 +77,10 @@ class BlankSaturationRecording(BasePreprocessor):
     fill_value: float or None
         The value to write instead of the saturating signal. If None, then the value is
         automatically computed as the median signal value
+    ms_before: float (default 0)
+        Time (ms) to replace before the saturation signal
+    ms_after: float (default 0)
+        Time (ms) to replace after the saturation signal
     num_chunks_per_segment: int (default 50)
         The number of chunks per segments to consider to estimate the threshold/fill_values
     chunk_size: int (default 500)
@@ -179,14 +183,12 @@ class ClipRecordingSegment(BasePreprocessorSegment):
         return traces
 
 def replace_slice_min(traces, a_min, frames_before, frames_after, value_min):
-    print('numba: ', HAVE_NUMBA)
     if HAVE_NUMBA:
         return _replace_slice_min_numba(traces, a_min, frames_before, frames_after, value_min)
     else:
         return _replace_slice_min_for_loop(traces, a_min, frames_before, frames_after, value_min)
 
 def replace_slice_max(traces, a_max, frames_before, frames_after, value_max):
-    print('numba: ', HAVE_NUMBA)
     if HAVE_NUMBA:
         return _replace_slice_max_numba(traces, a_max, frames_before, frames_after, value_max)
     else:
@@ -207,24 +209,6 @@ def _replace_slice_max_for_loop(traces, a_max, frames_before, frames_after, valu
 
 if HAVE_NUMBA:
     # Numba
-    # @njit(cache=True)
-    # def _replace_slice_min_numba(traces, res, a_min, frames_before, frames_after, value_min):
-    #     m, n = traces.shape
-    #     for i in range(m):
-    #         for j in range(n):
-    #             if traces[i, j] <= a_min:
-    #                 res[max(0, i - frames_before):min(m, i + frames_after + 1), j] = value_min
-    #     return res
-
-    # @njit(cache=True)
-    # def _replace_slice_max_numba(traces, res, a_max, frames_before, frames_after, value_max):
-    #     m, n = traces.shape
-    #     for i in range(m):
-    #         for j in range(n):
-    #             if traces[i, j] >= a_max:
-    #                 res[max(0, i - frames_before):min(m, i + frames_after + 1), j] = value_max
-    #     return res
-
     @njit(cache=True)
     def _replace_slice_max_numba(traces, a_max, frames_before, frames_after, value_max):
         m, n = traces.shape
@@ -256,30 +240,6 @@ if HAVE_NUMBA:
                 if to_clear[i]:
                     traces[i, j] = value_min
         return traces
-
-    # @guvectorize(
-    # [(float64[:], float64, float64, float64, float64, float64[:])],
-    # "(n),(),(),(),()->(n)", cache=True, nopython=True
-    # )
-    # def _replace_slice_max_numba(traces, a_max, frames_before, frames_after, value_max, res):
-    #     m = traces.shape[0]
-    #     res[:] = traces
-    #     for i in range(m):
-    #         if traces[i] >= a_max:
-    #             res[max(0, i - frames_before) : min(m, i + frames_after + 1)] = value_max
-    #     return
-    
-    # @guvectorize(
-    # [(float64[:], float64, float64, float64, float64, float64[:])],
-    # "(n),(),(),(),()->(n)", cache=True, nopython=True
-    # )
-    # def _replace_slice_min_numba(traces, a_min, frames_before, frames_after, value_min, res):
-    #     m = traces.shape[0]
-    #     res[:] = traces
-    #     for i in range(m):
-    #         if traces[i] <= a_min:
-    #             res[max(0, i - frames_before) : min(m, i + frames_after + 1)] = value_min
-    #     return
     
 clip = define_function_from_class(source_class=ClipRecording, name="clip")
 blank_staturation = define_function_from_class(source_class=BlankSaturationRecording, name="blank_staturation")
