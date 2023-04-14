@@ -37,8 +37,9 @@ From source
 -----------
 
 As :code:`spikeinterface` is undergoing a heavy development phase, it is sometimes convenient to install from source
-to get latest bug fixes and improvements. We recommend building this in a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/)
-so you avoid conflicts with your local dependencies
+to get THE latest bug fixes and improvements. We recommend constructing the package within a 
+[virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) 
+to prevent potential conflicts with local dependencies. 
 
 .. code-block:: bash
 
@@ -62,7 +63,7 @@ as :code:`spikeinterface` strongly relies on these packages to interface with va
 
 
 It is also sometimes useful to have local copies of :code: `neo` and :code:`probeinterface` to make changes to the code. To achieve this, repeat the first set of commands, 
-replacing `https://github.com/SpikeInterface/spikeinterface.git` with the appropriate repository in the first block above.
+replacing `https://github.com/SpikeInterface/spikeinterface.git` with the appropriate repository in the first code block of this section.
 
 For beginners
 -------------
