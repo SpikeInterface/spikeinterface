@@ -172,7 +172,7 @@ def compute_spike_amplitudes(waveform_extractor, load_if_exists=False,
             - If 'concatenated' all amplitudes for all spikes and all units are concatenated
             - If 'by_unit', amplitudes are returned as a list (for segments) of dictionaries (for units)
     """
-    if load_if_exists and waveform_extractor.is_extensionSpikeAmplitudesCalculator.extension_name(SpikeAmplitudesCalculator.extension_name):
+    if load_if_exists and waveform_extractor.is_extension(SpikeAmplitudesCalculator.extension_name):
         sac = waveform_extractor.load_extension(SpikeAmplitudesCalculator.extension_name)
     else:
         sac = SpikeAmplitudesCalculator(waveform_extractor)
