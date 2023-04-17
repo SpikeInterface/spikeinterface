@@ -17,8 +17,6 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
     extension_name = 'spike_amplitudes'
     
     def __init__(self, waveform_extractor):
-        assert waveform_extractor.has_recording(), "compute_spike_amplitudes() requires a waveform_extractor with a recording"
-      
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
         self._all_spikes = None
@@ -41,6 +39,10 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         return new_extension_data
         
     def _run(self, **job_kwargs):
+        if not self.waveform_extractor.has_recording():
+            self.waveform_extractor.delete_extension(SpikeAmplitudesCalculator.extension_name)
+            raise ValueError("compute_spike_amplitudes() cannot run with a WaveformExtractor in recordless mode.")
+    
         job_kwargs = fix_job_kwargs(job_kwargs)
         we = self.waveform_extractor
         recording = we.recording
@@ -170,7 +172,7 @@ def compute_spike_amplitudes(waveform_extractor, load_if_exists=False,
             - If 'concatenated' all amplitudes for all spikes and all units are concatenated
             - If 'by_unit', amplitudes are returned as a list (for segments) of dictionaries (for units)
     """
-    if load_if_exists and waveform_extractor.is_extension(SpikeAmplitudesCalculator.extension_name):
+    if load_if_exists and waveform_extractor.is_extensionSpikeAmplitudesCalculator.extension_name(SpikeAmplitudesCalculator.extension_name):
         sac = waveform_extractor.load_extension(SpikeAmplitudesCalculator.extension_name)
     else:
         sac = SpikeAmplitudesCalculator(waveform_extractor)
