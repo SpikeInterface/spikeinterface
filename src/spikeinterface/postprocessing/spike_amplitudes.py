@@ -39,6 +39,10 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         return new_extension_data
         
     def _run(self, **job_kwargs):
+        if not self.waveform_extractor.has_recording():
+            self.waveform_extractor.delete_extension(SpikeAmplitudesCalculator.extension_name)
+            raise ValueError("compute_spike_amplitudes() cannot run with a WaveformExtractor in recordless mode.")
+    
         job_kwargs = fix_job_kwargs(job_kwargs)
         we = self.waveform_extractor
         recording = we.recording
