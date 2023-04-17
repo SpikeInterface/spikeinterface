@@ -1469,8 +1469,10 @@ def load_waveforms(folder, with_recording=True, sorting=None):
     ----------
     folder : str or Path
         The folder / zarr folder where the waveform extractor is stored
-    with_recording : bool, optional
+    with_recording : bool | BaseRecording, optional
         If True, the recording is loaded, by default True
+        If False, the WaveformExtractor object in recordless
+        If BaseRecording, the given recording is used
     sorting : BaseSorting, optional
         If passed, the sorting object associated to the waveform extractor, by default None
 
