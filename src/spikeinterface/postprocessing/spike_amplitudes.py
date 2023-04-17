@@ -17,6 +17,8 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
     extension_name = 'spike_amplitudes'
     
     def __init__(self, waveform_extractor):
+        assert waveform_extractor.has_recording(), "compute_spike_amplitudes() requires a waveform_extractor with a recording"
+      
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
         self._all_spikes = None
