@@ -371,7 +371,7 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
         nb_violations[unit_id] = n_v = nb_rp_violations[i]
         N = num_spikes[unit_id]
         if N == 0:
-            rp_contamination[unit_id] = 0.0
+            rp_contamination[unit_id] = np.nan
         else:
             D = 1 - n_v * (T - 2*N*t_c) / (N**2 * (t_r - t_c))
             rp_contamination[unit_id] = 1 - math.sqrt(D) if D >= 0 else 1.0
