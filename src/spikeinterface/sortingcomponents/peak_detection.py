@@ -104,20 +104,8 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
                       )
     return outs
 
-def peakify_peak_chunks(peaks_chunk, traces_chunk, segment_index):
-    peak_sample_ind, peak_chan_ind = peaks_chunk 
 
-    peak_amplitude = traces_chunk[peak_sample_ind, peak_chan_ind]
-
-    peaks = np.zeros(peak_sample_ind.size, dtype=base_peak_dtype)
-    peaks['sample_ind'] = peak_sample_ind
-    peaks['channel_ind'] = peak_chan_ind
-    peaks['amplitude'] = peak_amplitude
-    peaks['segment_ind'] = segment_index
-
-    return peaks
-
-
+expanded_base_peak_dtype = np.dtype(base_peak_dtype + [('iteration', 'int8')])
 class IterativePeakDetector(PeakDetector):
     
     def __init__(self, recording, peak_detector_node, waveform_extraction_node, waveform_denoising_node, num_iterations=2):
@@ -126,36 +114,74 @@ class IterativePeakDetector(PeakDetector):
         self.waveform_extraction_node = waveform_extraction_node
         self.waveform_denoising_node =  waveform_denoising_node
         self.num_iterations = num_iterations
+
+    def get_trace_margin(self):
+        return self.peak_detector_node.get_trace_margin()
         
     def compute(self, traces_chunk, start_frame, end_frame, segment_index, max_margin):
         
         local_peaks_list = []
-        for _ in range(self.num_iterations):
-            local_peaks, traces_chunk, *_ = self.single_pass(traces_chunk, start_frame, end_frame, segment_index, max_margin)
-            local_peaks_list.append(local_peaks)
+        for iteration in range(self.num_iterations):
+            iteration_output = self.single_pass(traces_chunk, start_frame, end_frame, segment_index, max_margin)
+            local_peaks, traces_chunk_minus_peak_waveforms, *_ = iteration_output
+            
+            # Expand dtype to contain iteration
+            local_peaks_expanded = np.zeros_like(local_peaks, dtype=expanded_base_peak_dtype)
+            for field in np.dtype(base_peak_dtype).names:
+                local_peaks_expanded[field] = local_peaks[field]
+            local_peaks_expanded["iteration"] = iteration
+            
+            # update traces_chunk to run the algorithm again and store local_peaks
+            traces_chunk = traces_chunk_minus_peak_waveforms
+            local_peaks_list.append(local_peaks_expanded)
+            
+        all_local_peaks = np.concatenate(local_peaks_list, axis=0)
         
-        
-        return local_peaks_list
+        return all_local_peaks
     
     def single_pass(self, traces_chunk, start_frame, end_frame, segment_index, max_margin):
+        
         local_peaks,  = self.peak_detector_node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
-
         waveforms = self.waveform_extraction_node.compute(traces=traces_chunk, peaks=local_peaks)
         denoised_waveforms = self.waveform_denoising_node.compute(traces=traces_chunk, peaks=local_peaks, waveforms=waveforms)
         
-        denoised_waveforms_in_traces = self.build_trace_chunk_with_waveforms(peaks_chunk=local_peaks, traces_chunk=traces_chunk, 
+        denoised_waveforms_as_traces = self.build_trace_chunk_with_waveforms(sample_indices=local_peaks["sample_ind"], traces_chunk=traces_chunk, 
                                                                             waveforms=denoised_waveforms, 
                                                                             extract_dense_waveforms=self.waveform_extraction_node)
-        residual_traces_chunk = traces_chunk - denoised_waveforms_in_traces
+        traces_chunk_minus_peak_waveforms = traces_chunk - denoised_waveforms_as_traces
         
-        return local_peaks, residual_traces_chunk, waveforms, denoised_waveforms_in_traces, residual_traces_chunk
+        return local_peaks, traces_chunk_minus_peak_waveforms, waveforms, denoised_waveforms_as_traces
     
-    def build_trace_chunk_with_waveforms(self, peaks_chunk, traces_chunk, waveforms, extract_dense_waveforms):
-        waveforms_in_traces = np.zeros_like(traces_chunk)
-        for sample_index, wf in zip(peaks_chunk["sample_ind"], waveforms):
-            start_frame = sample_index - extract_dense_waveforms.nbefore 
-            end_frame = sample_index + extract_dense_waveforms.nafter 
-            waveforms_in_traces[start_frame:end_frame, :] = wf
+    
+    def build_trace_chunk_with_waveforms(self, sample_indices, traces_chunk, waveforms, extract_dense_waveforms):
+        """
+        This function gets a set of waveforms and builds a trace chunk with them. That is, it builds 
+        a trace chunk including only the extracted waveforms and zeros everywhere else. 
+        This is mainly used in this detector to substract the waveforms from the original traces. 
+        
+        In case that two waveforms overlap in time (that is, they share the same domain). The trace with
+        waveforms will have the sum of both waveforms in that domain.
+
+        Parameters
+        ----------
+        sample_indices : _type_
+        traces_chunk : _type_
+            _description_
+        waveforms : _type_
+            _description_
+        extract_dense_waveforms : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
+        waveforms_in_traces = np.zeros_like(traces_chunk, dtype=traces_chunk.dtype)
+        for sample_index, wf in zip(sample_indices, waveforms):
+            first_sample = sample_index - extract_dense_waveforms.nbefore 
+            last_sample = sample_index + extract_dense_waveforms.nafter 
+            waveforms_in_traces[first_sample:last_sample, :] += wf
         
         return waveforms_in_traces
 
