@@ -10,6 +10,7 @@ from warnings import warn
 import probeinterface
 
 from .base import load_extractor
+from .baserecording import BaseRecording
 from .core_tools import check_json
 from .job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 from .recording_tools import check_probe_do_not_overlap
@@ -84,7 +85,7 @@ class WaveformExtractor:
                                            sorting.get_sampling_frequency(), decimal=2)
             if not recording.is_filtered() and not allow_unfiltered:
                 raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
-                                'If the recording is already filtered, you can also do '
+                           3     'If the recording is already filtered, you can also do '
                                 '`recording.annotate(is_filtered=True).\n'
                                 'If you trully want to extract unfiltered waveforms, use `allow_unfiltered=True`.')
             self._rec_attributes = rec_attributes
@@ -146,7 +147,10 @@ class WaveformExtractor:
         folder = Path(folder)
         assert folder.is_dir(), f'This waveform folder does not exists {folder}'
 
-        if not with_recording:
+        if isinstance(with_recording, BaseRecording):
+            recording = with_recording
+            rec_attributes = None
+        elif not with_recording:
             # load
             recording = None
             rec_attributes_file = folder / 'recording_info' / 'recording_attributes.json'
