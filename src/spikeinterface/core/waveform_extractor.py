@@ -85,7 +85,7 @@ class WaveformExtractor:
                                            sorting.get_sampling_frequency(), decimal=2)
             if not recording.is_filtered() and not allow_unfiltered:
                 raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
-                           3     'If the recording is already filtered, you can also do '
+                                'If the recording is already filtered, you can also do '
                                 '`recording.annotate(is_filtered=True).\n'
                                 'If you trully want to extract unfiltered waveforms, use `allow_unfiltered=True`.')
             self._rec_attributes = rec_attributes
