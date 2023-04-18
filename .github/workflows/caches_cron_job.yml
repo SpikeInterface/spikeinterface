@@ -10,6 +10,8 @@ on:
 
 jobs:
   
+
+  
   create-virtual-env-cache-if-missing:
     name: Caching virtual env
     runs-on: "ubuntu-latest"
@@ -36,6 +38,10 @@ jobs:
       - name: Create the virtual environment to be cached 
         if: steps.cache-venv.outputs.cache-hit != 'true'
         uses: ./.github/actions/build-test-environment
+  
+  
+  
+  
   create-gin-data-cache-if-missing:
     name: Caching data env
     runs-on: "ubuntu-latest"
@@ -51,7 +57,7 @@ jobs:
       - uses: actions/cache@v3
         id: cache-datasets
         with:
-          path: ${{ github.workspace }}/spikeinterface_datasets
+          path: $HOME/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}}"
