@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 import numpy as np
 from spikeinterface import extract_waveforms, load_waveforms
-from spikeinterface.core import synthetize_spike_train_bad_isi
+from spikeinterface.core import NumpySorting, synthetize_spike_train_bad_isi
 from spikeinterface.extractors.toy_example import toy_example
 from spikeinterface.qualitymetrics.utils import create_ground_truth_pc_distributions
 
@@ -208,6 +208,7 @@ def test_calculate_sliding_rp_violations(simulated_data):
     print(contaminations)
     assert np.allclose(list(contaminations_gt.values()), list(contaminations.values()), rtol=0.05)
 
+
 def test_calculate_rp_violations(simulated_data):
     rp_contamination_gt = {0: 0.10534956502609294, 1: 1.0, 2: 1.0}
     counts_gt = {0: 2, 1: 4, 2: 10}
@@ -217,6 +218,12 @@ def test_calculate_rp_violations(simulated_data):
     print(rp_contamination)
     assert np.allclose(list(rp_contamination_gt.values()), list(rp_contamination.values()), rtol=0.05)
     np.testing.assert_array_equal(list(counts_gt.values()), list(counts.values()))
+
+    sorting = NumpySorting.from_dict({0: np.array([28, 150], dtype=np.int16), 1: np.array([], dtype=np.int16)}, 30000)
+    we.sorting = sorting
+    rp_contamination, counts = compute_refrac_period_violations(we, 1, 0.0)
+    assert np.isnan(rp_contamination[1])
+    
 
 @pytest.mark.sortingcomponents
 def test_calculate_drift_metrics(simulated_data):
