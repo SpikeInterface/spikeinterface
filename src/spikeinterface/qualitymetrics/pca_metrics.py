@@ -55,7 +55,7 @@ _default_params = dict(
         peak_sign='neg'
     ),
     silhouette=dict(
-        method='simplified'
+        method=('simplified',)
   )
 )
 
@@ -682,6 +682,8 @@ def nearest_neighbors_noise_overlap(waveform_extractor: WaveformExtractor, this_
                                                   n_neighbors)
 
         return nn_noise_overlap
+      
+      
 def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
     """Calculates the simplified silhouette score for each cluster. The value ranges
     from -1 (bad clustering) to 1 (good clustering). The simplified silhoutte score
@@ -731,6 +733,7 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
     unit_silhouette_score = np.mean(sil_distances)
     return unit_silhouette_score
 
+  
 def silhouette_score(all_pcs, all_labels, this_unit_id):
     """Calculates the silhouette score which is a marker of cluster quality ranging from
     -1 (bad clustering) to 1 (good clustering). Distances are all calculated as pairwise
