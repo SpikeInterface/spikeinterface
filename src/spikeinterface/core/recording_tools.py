@@ -138,7 +138,7 @@ def get_noise_levels(recording, return_scaled: bool = True, method: str = "mad",
         )
     elif method == "std":
         mean = np.mean(random_chunks, axis=0, keepdims=True)
-        noise_levels = np.mean(random_chunks - mean, axis=0)  # std = E(X - E(X))
+        noise_levels = np.sqrt(np.mean((random_chunks - mean)**2, axis=0))  # std = sqrt( E( (X - E(X))^2 ) )
     return noise_levels
 
 
