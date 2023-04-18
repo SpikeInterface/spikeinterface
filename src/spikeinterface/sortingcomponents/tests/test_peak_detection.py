@@ -163,7 +163,7 @@ def test_detect_peaks():
         import spikeinterface.widgets as sw
         from probeinterface.plotting import plot_probe
 
-        sample_inds, chan_inds, amplitudes = peaks['sample_ind'], peaks['channel_ind'], peaks['amplitude']
+        sample_inds, chan_inds, amplitudes = peaks['sample_ind'], peaks['channel_index'], peaks['amplitude']
         chan_offset = 500
         traces = recording.get_traces()
         traces += np.arange(traces.shape[1])[None, :] * chan_offset
