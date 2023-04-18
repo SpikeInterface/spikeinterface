@@ -50,6 +50,11 @@ def sorting():
     return sorting
 
 @pytest.fixture(scope="module")
+def spike_trains(sorting):
+    spike_trains = sorting.get_all_spike_trains()[0][0]
+    return spike_trains
+
+@pytest.fixture(scope="module")
 def job_kwargs():
     return dict(n_jobs=-1, chunk_size=10000, progress_bar=True, verbose=True)
 
@@ -61,33 +66,41 @@ def torch_job_kwargs(job_kwargs):
     return torch_job_kwargs
 
 
-def calculate_peaks_spike_recall(peaks, sorting, tolerance_ms=0.4):
+
+def calculate_peaks_spike_recall(peaks, spike_trains, recording_sampling_frequency, tolerance_ms=0.4):
     """
-    Calculate the spike recall of a given peak_detection method.
+    Calculate the spike recall of the peaks (which are the output of a peak detection method)
+    against a ground truth of spike_trains. This function is used to test the quality of a peak detection method
+    in the context of a specific sorting. 
     
-    That is, it calculates the number of True positives divided by 
+    Recall close to 1 means that all the spike in the spike_train are present in a peak whereas recall
+    close to 0 means that no spike in the spike_train are present in a peak. 
+    
+    More technically, this calculates the number of True positives divided by 
     the total number of positive examples (i.e. the number of spikes) 
     within a given tolerance.
     
     The tolerance is given in milliseconds and means that the detected peak 
     time should be less than the tolerance away from the real spike time.
+    
     """    
     
     sample_indices = peaks["sample_ind"]
-    spike_trains = sorting.get_all_spike_trains()[0][0]
-
-    tolerance_number_samples = tolerance_ms * sorting.get_sampling_frequency() / 1000.
+    tolerance_number_samples = tolerance_ms * recording_sampling_frequency / 1_000.0
     are_spikes_close_any_peaks = np.any(np.abs(sample_indices - spike_trains[:, np.newaxis]) < tolerance_number_samples, axis=1)
     
     return are_spikes_close_any_peaks.mean()
 
 
-def test_detect_peaks_by_channel(recording, sorting, job_kwargs, torch_job_kwargs):
+def test_detect_peaks_by_channel(recording, spike_trains, job_kwargs, torch_job_kwargs):
     peaks_by_channel_np = detect_peaks(
         recording, method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
     )
-    method_recall = calculate_peaks_spike_recall(peaks_by_channel_np, sorting)
+        
     # Test with pytest that method_recall is close to 1
+    sampling_frequency = recording.get_sampling_frequency()
+    peaks = peaks_by_channel_np
+    method_recall = calculate_peaks_spike_recall(peaks, spike_trains, sampling_frequency)
     pytest.approx(method_recall, 1)
     
     if HAVE_TORCH:
@@ -103,17 +116,21 @@ def test_detect_peaks_by_channel(recording, sorting, job_kwargs, torch_job_kwarg
         # Test that torch and numpy implementation match
         assert np.isclose(np.array(len(peaks_by_channel_np)), np.array(len(peaks_by_channel_torch)), rtol=0.1)
         
-        method_recall = calculate_peaks_spike_recall(peaks_by_channel_torch, sorting)
         # Test with pytest that method_recall is close to 1
+        sampling_frequency = recording.get_sampling_frequency()
+        peaks = peaks_by_channel_torch
+        method_recall = calculate_peaks_spike_recall(peaks, spike_trains, sampling_frequency)
         pytest.approx(method_recall, 1)
 
-def test_detect_peaks_locally_exclusive(recording, sorting, job_kwargs, torch_job_kwargs):
+def test_detect_peaks_locally_exclusive(recording, spike_trains, job_kwargs, torch_job_kwargs):
     peaks_by_channel_np = detect_peaks(
         recording, method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
     )
 
-    method_recall = calculate_peaks_spike_recall(peaks_by_channel_np, sorting)
     # Test with pytest that method_recall is close to 1
+    sampling_frequency = recording.get_sampling_frequency()
+    peaks = peaks_by_channel_np
+    method_recall = calculate_peaks_spike_recall(peaks, spike_trains, sampling_frequency)
     pytest.approx(method_recall, 1)
 
     peaks_local_numba = detect_peaks(
@@ -121,8 +138,10 @@ def test_detect_peaks_locally_exclusive(recording, sorting, job_kwargs, torch_jo
     )
     assert len(peaks_by_channel_np) > len(peaks_local_numba)
 
-    method_recall = calculate_peaks_spike_recall(peaks_local_numba, sorting)
     # Test with pytest that method_recall is close to 1
+    sampling_frequency = recording.get_sampling_frequency()
+    peaks = peaks_local_numba
+    method_recall = calculate_peaks_spike_recall(peaks, spike_trains, sampling_frequency)
     pytest.approx(method_recall, 1)
 
     if HAVE_TORCH:
@@ -137,10 +156,12 @@ def test_detect_peaks_locally_exclusive(recording, sorting, job_kwargs, torch_jo
         )
         assert np.isclose(np.array(len(peaks_local_numba)), np.array(len(peaks_local_torch)), rtol=0.1)
         
-        method_recall = calculate_peaks_spike_recall(peaks_local_torch, sorting)
         # Test with pytest that method_recall is close to 1
+        sampling_frequency = recording.get_sampling_frequency()
+        peaks = peaks_local_torch
+        method_recall = calculate_peaks_spike_recall(peaks, spike_trains, sampling_frequency)
         pytest.approx(method_recall, 1)
-
+    
     if HAVE_PYOPENCL:
         peaks_local_cl = detect_peaks(
             recording,
@@ -152,8 +173,10 @@ def test_detect_peaks_locally_exclusive(recording, sorting, job_kwargs, torch_jo
         )
         assert len(peaks_local_numba) == len(peaks_local_cl)
         
-        method_recall = calculate_peaks_spike_recall(peaks_local_cl, sorting)
         # Test with pytest that method_recall is close to 1
+        sampling_frequency = recording.get_sampling_frequency()
+        peaks = peaks_local_cl
+        method_recall = calculate_peaks_spike_recall(peaks, spike_trains, sampling_frequency)
         pytest.approx(method_recall, 1)
 
 # Fixture for pipeline nodes
