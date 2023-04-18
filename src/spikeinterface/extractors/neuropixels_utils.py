@@ -26,6 +26,7 @@ def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12, num
         The number of cycles in the ADC on the probe.
         Neuropixels 1.0 probes have 13 cycles for AP and 12 for LFP.
         Neuropixels 2.0 probes have 16 cycles.
+        If None, the num_channels_per_adc is used.
 
     Returns
     -------
