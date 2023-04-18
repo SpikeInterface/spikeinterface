@@ -123,7 +123,7 @@ class BenchmarkPeakSelection:
         self.good_matches = matches['index1']
 
         garbage_matches = ~np.in1d(np.arange(len(times2)), self.good_matches)
-        garbage_channels = self.peaks['channel_ind'][garbage_matches]
+        garbage_channels = self.peaks['channel_index'][garbage_matches]
         garbage_peaks = times2[garbage_matches]
         nb_garbage = len(garbage_peaks)
 
@@ -156,7 +156,7 @@ class BenchmarkPeakSelection:
             if self.verbose:
                 print("Computing gt peaks")
             gt_peaks_ = self.gt_sorting.to_spike_vector()
-            self.gt_peaks = np.zeros(gt_peaks_.size, dtype=[('sample_ind', '<i8'), ('channel_ind', '<i8'), ('segment_index', '<i8'), ('amplitude', '<f8')])
+            self.gt_peaks = np.zeros(gt_peaks_.size, dtype=[('sample_ind', '<i8'), ('channel_index', '<i8'), ('segment_index', '<i8'), ('amplitude', '<f8')])
             self.gt_peaks['sample_ind'] = gt_peaks_['sample_ind']
             self.gt_peaks['segment_index'] = gt_peaks_['segment_index']
             max_channels = get_template_extremum_channel(self.waveforms['full_gt'], peak_sign='neg', outputs='index')
@@ -165,7 +165,7 @@ class BenchmarkPeakSelection:
             for unit_ind, unit_id in enumerate(self.waveforms['full_gt'].sorting.unit_ids):
                 mask = gt_peaks_['unit_ind'] == unit_ind
                 max_channel = max_channels[unit_id]
-                self.gt_peaks['channel_ind'][mask] = max_channel
+                self.gt_peaks['channel_index'][mask] = max_channel
                 self.gt_peaks['amplitude'][mask] = max_amplitudes[unit_id]
 
         self.sliced_gt_peaks = self.gt_peaks[gt_matches]
@@ -417,13 +417,13 @@ class BenchmarkPeakSelection:
         ax = axs[1, 0]
 
         noise_levels = get_noise_levels(self.recording, return_scaled=False)
-        snrs = self.peaks['amplitude']/noise_levels[self.peaks['channel_ind']]
-        garbage_snrs = self.garbage_peaks['amplitude']/noise_levels[self.garbage_peaks['channel_ind']]
+        snrs = self.peaks['amplitude']/noise_levels[self.peaks['channel_index']]
+        garbage_snrs = self.garbage_peaks['amplitude']/noise_levels[self.garbage_peaks['channel_index']]
         amin, amax = snrs.min(), snrs.max()
         
         ax.hist(snrs, np.linspace(amin, amax, 100), density=True, label='peaks')
         #ax.hist(garbage_snrs, np.linspace(amin, amax, 100), density=True, label='garbage', alpha=0.5)
-        ax.hist(self.sliced_gt_peaks['amplitude']/noise_levels[self.sliced_gt_peaks['channel_ind']], np.linspace(amin, amax, 100), density=True, alpha=0.5, label='matched gt')
+        ax.hist(self.sliced_gt_peaks['amplitude']/noise_levels[self.sliced_gt_peaks['channel_index']], np.linspace(amin, amax, 100), density=True, alpha=0.5, label='matched gt')
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         ax.legend()
@@ -517,7 +517,7 @@ class BenchmarkPeakSelection:
         # ax.set_xlabel('time (s)')
         # ax.set_ylabel('density')
 
-        # for channel_ind in       
+        # for channel_index in       
         #     ax.hist(snrs, np.linspace(amin, amax, 100), density=True, label='peaks')
         # ax.spines['top'].set_visible(False)
         # ax.spines['right'].set_visible(False)
@@ -543,8 +543,8 @@ class BenchmarkPeakSelection:
             ymin, ymax = ax.get_ylim()
             ax.plot([detect_threshold, detect_threshold], [ymin, ymax], 'k--')
 
-    def explore_garbage(self, channel_ind, nb_bins=None, dt=None):
-        mask = self.garbage_peaks['channel_ind'] == channel_ind
+    def explore_garbage(self, channel_index, nb_bins=None, dt=None):
+        mask = self.garbage_peaks['channel_index'] == channel_index
         times2 = self.garbage_peaks[mask]['sample_ind']
         times1 = self.gt_sorting.get_all_spike_trains()[0]
         from spikeinterface.comparison.comparisontools import make_matching_events

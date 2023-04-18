@@ -105,7 +105,7 @@ class SlidingHdbscanClustering:
         dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_index', 'int64')]
         peaks2 = np.zeros(peaks.size, dtype=dtype)
         peaks2['sample_ind'] = peaks['sample_ind']
-        peaks2['unit_ind'] = peaks['channel_ind']
+        peaks2['unit_ind'] = peaks['channel_index']
         peaks2['segment_index'] = peaks['segment_index']
         
         fs = recording.get_sampling_frequency()
@@ -144,7 +144,7 @@ class SlidingHdbscanClustering:
         
         
         
-        possible_channel_inds = np.unique(peaks['channel_ind'])
+        possible_channel_inds = np.unique(peaks['channel_index'])
         
         # channel neighborhood
         chan_distances = get_channel_distances(recording)
@@ -163,7 +163,7 @@ class SlidingHdbscanClustering:
         remain_percent = np.zeros(num_chans, dtype='float64')
         total_count = np.zeros(num_chans, dtype='int64')
         for chan_ind in range(num_chans):
-            total_count[chan_ind] = np.sum(peaks['channel_ind'] == chan_ind)
+            total_count[chan_ind] = np.sum(peaks['channel_index'] == chan_ind)
 
         # this force compute compute at forst loop
         prev_local_chan_inds = np.arange(num_chans, dtype='int64')
@@ -175,8 +175,8 @@ class SlidingHdbscanClustering:
             for chan_ind in prev_local_chan_inds:
                 if total_count[chan_ind] == 0:
                     continue
-                #~ inds, = np.nonzero(np.in1d(peaks['channel_ind'], closest_channels[chan_ind]) & (peak_labels==0))
-                inds, = np.nonzero((peaks['channel_ind'] == chan_ind) & (peak_labels==0))
+                #~ inds, = np.nonzero(np.in1d(peaks['channel_index'], closest_channels[chan_ind]) & (peak_labels==0))
+                inds, = np.nonzero((peaks['channel_index'] == chan_ind) & (peak_labels==0))
                 if inds.size <= d['min_spike_on_channel']:
                     chan_amps[chan_ind] = 0.
                 else:
@@ -202,7 +202,7 @@ class SlidingHdbscanClustering:
             wfs = []
             local_peak_ind = []
             for chan_ind in local_chan_inds:
-                sel,  = np.nonzero(peaks['channel_ind'] == chan_ind)
+                sel,  = np.nonzero(peaks['channel_index'] == chan_ind)
                 inds,  = np.nonzero(peak_labels[sel] == 0)
                 local_peak_ind.append(sel[inds])
                 # here a unit is a channel index!!!
@@ -282,7 +282,7 @@ class SlidingHdbscanClustering:
                 final_peak_inds = local_peak_ind[local_labels == best_label]
 
                 # trash outliers from this channel (propably some collision)
-                outlier_inds, = np.nonzero((local_labels == -1) & (peaks[local_peak_ind]['channel_ind'] == local_chan_ind))
+                outlier_inds, = np.nonzero((local_labels == -1) & (peaks[local_peak_ind]['channel_index'] == local_chan_ind))
                 if outlier_inds.size > 0:
                     peak_labels[local_peak_ind[outlier_inds]] = -1
             elif num_cluster == 1:
@@ -292,7 +292,7 @@ class SlidingHdbscanClustering:
                 best_label = None
                 final_peak_inds = np.array([], dtype='int64')
                 # trash all peaks from this channel
-                to_trash_ind,  = np.nonzero(peaks[local_peak_ind]['channel_ind'] == local_chan_ind)
+                to_trash_ind,  = np.nonzero(peaks[local_peak_ind]['channel_index'] == local_chan_ind)
                 peak_labels[local_peak_ind[to_trash_ind]] = -1
                 
             if best_label is not None:
@@ -358,7 +358,7 @@ class SlidingHdbscanClustering:
                 ax.set_title(f'n={local_peak_ind.size} labeled={final_peak_inds.size} chans={local_chan_ind} {local_chan_inds}')
 
                 ax = axs[2]
-                sel, = np.nonzero((peaks['channel_ind'] == local_chan_ind) & (peak_labels == 0))
+                sel, = np.nonzero((peaks['channel_index'] == local_chan_ind) & (peak_labels == 0))
                 count, bins = np.histogram(np.abs(peaks['amplitude'][sel]), bins=200)
                 ax.plot(bins[:-1], count, color='k', alpha=0.5)
 
@@ -385,7 +385,7 @@ class SlidingHdbscanClustering:
         nbefore = int(d['ms_before'] * fs / 1000.)
         nafter = int(d['ms_after'] * fs / 1000.)
         
-        possible_channel_inds = np.unique(peaks['channel_ind'])
+        possible_channel_inds = np.unique(peaks['channel_index'])
         chan_distances = get_channel_distances(recording)
         closest_channels = []
         for c in range(num_chans):
@@ -454,7 +454,7 @@ class SlidingHdbscanClustering:
 def _collect_sparse_waveforms(peaks, wfs_arrays, closest_channels, peak_labels, sparsity_mask, label):
     inds, = np.nonzero(peak_labels == label)
     local_peaks = peaks[inds]
-    label_chan_inds, count = np.unique(local_peaks['channel_ind'], return_counts=True)
+    label_chan_inds, count = np.unique(local_peaks['channel_index'], return_counts=True)
     main_chan = label_chan_inds[np.argmax(count)]
 
     #only main channel sparsity
@@ -467,7 +467,7 @@ def _collect_sparse_waveforms(peaks, wfs_arrays, closest_channels, peak_labels, 
 
     wfs = []
     for chan_ind in label_chan_inds:
-        sel,  = np.nonzero(peaks['channel_ind'] == chan_ind)
+        sel,  = np.nonzero(peaks['channel_index'] == chan_ind)
 
         inds,  = np.nonzero(peak_labels[sel] == label)
         

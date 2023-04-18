@@ -86,7 +86,7 @@ class CircusClustering:
         spikes = np.zeros(peaks.size, dtype=peak_dtype)
         spikes['sample_ind'] = peaks['sample_ind']
         spikes['segment_index'] = peaks['segment_index']
-        spikes['unit_ind'] = peaks['channel_ind']
+        spikes['unit_ind'] = peaks['channel_index']
 
         num_chans = recording.get_num_channels()
         sparsity_mask = np.zeros((peaks.size, num_chans), dtype='bool')

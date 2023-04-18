@@ -348,7 +348,7 @@ class BaseSorting(BaseExtractor):
         Parameters
         ----------
         extremum_channel_inds: None or dict
-            If a dictionnary of unit_id to channel_ind is given then an extra field 'channel_ind'.
+            If a dictionnary of unit_id to channel_ind is given then an extra field 'channel_index'.
             This can be convinient for computing spikes postion after sorter.
             
             This dict can be computed with `get_template_extremum_channel(we, outputs="index")`
@@ -357,7 +357,7 @@ class BaseSorting(BaseExtractor):
         -------
         spikes: np.array
             Structured numpy array ('sample_ind', 'unit_index', 'segment_index') with all spikes
-            Or ('sample_ind', 'unit_index', 'segment_index', 'channel_ind') if extremum_channel_inds
+            Or ('sample_ind', 'unit_index', 'segment_index', 'channel_index') if extremum_channel_inds
             is given
             
         """
@@ -368,7 +368,7 @@ class BaseSorting(BaseExtractor):
                                                  'int64'), ('segment_index', 'int64')]
         
         if extremum_channel_inds is not None:
-            spike_dtype += [('channel_ind', 'int64')]
+            spike_dtype += [('channel_index', 'int64')]
         
         
         spikes = np.zeros(n, dtype=spike_dtype)
@@ -385,7 +385,7 @@ class BaseSorting(BaseExtractor):
         if extremum_channel_inds is not None:
             ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
             # vector way
-            spikes['channel_ind'] = ext_channel_inds[spikes['unit_ind']]
+            spikes['channel_index'] = ext_channel_inds[spikes['unit_ind']]
 
 
         return spikes

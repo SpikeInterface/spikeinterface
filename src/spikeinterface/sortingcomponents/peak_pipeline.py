@@ -30,7 +30,7 @@ from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs
 from spikeinterface.core import get_channel_distances
 
 
-base_peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'),
+base_peak_dtype = [('sample_ind', 'int64'), ('channel_index', 'int64'),
                    ('amplitude', 'float64'), ('segment_index', 'int64')]
 
 
@@ -271,7 +271,7 @@ class ExtractSparseWaveforms(WaveformsNode):
         sparse_wfs = np.zeros((peaks.shape[0], self.nbefore + self.nafter, self.max_num_chans), dtype=traces.dtype)
 
         for i, peak in enumerate(peaks):
-            (chans,) = np.nonzero(self.neighbours_mask[peak["channel_ind"]])
+            (chans,) = np.nonzero(self.neighbours_mask[peak["channel_index"]])
             sparse_wfs[i, :, : len(chans)] = traces[
                 peak["sample_ind"] - self.nbefore : peak["sample_ind"] + self.nafter, :
             ][:, chans]
