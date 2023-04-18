@@ -115,7 +115,7 @@ class SlidingNNClustering:
         dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
         peaks2 = np.zeros(peaks.size, dtype=dtype)
         peaks2['sample_ind'] = peaks['sample_ind']
-        peaks2['unit_ind'] = peaks['channel_ind']
+        peaks2['unit_ind'] = peaks['channel_index']
         peaks2['segment_ind'] = peaks['segment_ind']
         
         fs = recording.get_sampling_frequency()
@@ -505,15 +505,15 @@ def get_chunk_spike_waveforms(
     all_chan_idx = np.zeros((len(peaks_chunk), n_channel_neighbors))
 
     # for each spike in the sample, add it to the
-    for spike_i, (sample_ind, channel_ind, amplitude, segment_ind) in enumerate(
+    for spike_i, (sample_ind, channel_index, amplitude, segment_ind) in enumerate(
         peaks_chunk
     ):
         spike_start = sample_ind + margin_frames - spike_pre_frames - start_frame
         spike_end = sample_ind + margin_frames + spike_post_frames - start_frame
         all_spikes[spike_i] = traces[
-            spike_start:spike_end, channel_neighbors[channel_ind]
+            spike_start:spike_end, channel_neighbors[channel_index]
         ].T
-        all_chan_idx[spike_i] = channel_neighbors[channel_ind]
+        all_chan_idx[spike_i] = channel_neighbors[channel_index]
 
     return all_spikes, all_chan_idx, peaks_in_chunk_idx
 
