@@ -136,16 +136,18 @@ class BaseRecordingSnippets(BaseExtractor):
         order = np.argsort(device_channel_indices)
         device_channel_indices = device_channel_indices[order]
 
-        # check
-        if np.max(list(device_channel_indices) + [0]) >= self.get_num_channels():
+        # check TODO: Where did this came from?
+        number_of_device_channel_indices = np.max(list(device_channel_indices) + [0])
+        if number_of_device_channel_indices >= self.get_num_channels():
             error_msg = (
                 f"The given Probe have 'device_channel_indices' that do not match channel count \n"
-                ""
+                f"{number_of_device_channel_indices} vs {self.get_num_channels()} \n"
                 f"device_channel_indices are the following: {device_channel_indices} \n"
-                f"recording channels: {self.get_channel_ids()} \n"
+                f"recording channels are the following: {self.get_channel_ids()} \n"
             )
             raise ValueError(error_msg)
-        new_channel_ids = self.get_channel_ids()[indices]
+        
+        new_channel_ids = self.get_channel_ids()[device_channel_indices]
         probe_as_numpy_array = probe_as_numpy_array[order]
         probe_as_numpy_array['device_channel_indices'] = np.arange(probe_as_numpy_array.size, dtype='int64')
 
