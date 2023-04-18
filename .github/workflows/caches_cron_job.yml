@@ -76,7 +76,17 @@ jobs:
           mv --force ./ephy_testing_data $HOME/spikeinterface_datasets/
       - name: Show size of the cache to assert data is downloaded
         run: |
-          cd ${{ github.workspace }}
+          cd $HOME
+          pwd 
+          du -hs spikeinterface_datasets
+          cd spikeinterface_datasets
+          pwd
+          ls -lh  # Should show ephy_testing_data
+          cd ephy_testing_data
+          ls -lh
+      - name: Duplicated to test equivalence between ~ and $HOME
+        run: |
+          cd ~
           pwd 
           du -hs spikeinterface_datasets
           cd spikeinterface_datasets
