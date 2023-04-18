@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import Optional, Union, Dict, Any
 
 import numpy as np
 import importlib
@@ -38,7 +38,6 @@ def get_neo_io_reader(raw_class: str, **neo_kwargs):
 class _NeoBaseExtractor:
     NeoRawIOClass = None
 
-
     def __init__(self, block_index, **neo_kwargs):
         self.neo_reader = get_neo_io_reader(self.NeoRawIOClass, **neo_kwargs)
 
@@ -55,9 +54,29 @@ class _NeoBaseExtractor:
 
 
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
-    def __init__(self, stream_id=None, stream_name=None, 
-                 block_index=None, all_annotations=False, use_names_as_ids=None,
-                 **neo_kwargs):
+    def __init__(self, stream_id: Optional[str] = None, stream_name: Optional[str] = None,
+                 block_index: Optional[int] = None, all_annotations: bool = False,
+                 use_names_as_ids: Optional[bool] = None,
+                 **neo_kwargs: Dict[str, Any]) -> None:
+        """
+        Initialize a NeoBaseRecordingExtractor instance.
+
+        Parameters
+        ----------
+        stream_id : Optional[str], default=None
+            The ID of the stream to extract from the data.
+        stream_name : Optional[str], default=None
+            The name of the stream to extract from the data.
+        block_index : Optional[int], default=None
+            The index of the block to extract from the data.
+        all_annotations : bool, default=False
+            If True, include all annotations in the extracted data.
+        use_names_as_ids : Optional[bool], default=None
+            If True, use channel names as IDs. Otherwise, use default IDs.
+        neo_kwargs : Dict[str, Any]
+            Additional keyword arguments to pass to the NeoBaseExtractor for initialization.
+
+        """
 
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
 
