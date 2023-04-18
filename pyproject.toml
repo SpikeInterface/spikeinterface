@@ -139,7 +139,7 @@ test = [
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    "neo @ git+https://github.com/h-mayorquin/python-neo.git@improve_mearec",
     
 ]
 
