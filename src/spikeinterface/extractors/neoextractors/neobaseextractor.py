@@ -1,17 +1,16 @@
 from typing import Union, List
 
 import numpy as np
-
-import neo
+import importlib
 
 from spikeinterface.core import (BaseRecording, BaseSorting, BaseEvent,
                                  BaseRecordingSegment, BaseSortingSegment, BaseEventSegment)
 
 
 def get_reader(raw_class, **neo_kwargs):
-    neoIOclass = eval('neo.rawio.' + raw_class)
+    rawio_module = importlib.import_module('neo.rawio')
+    neoIOclass = getattr(rawio_module, raw_class)
     neo_reader = neoIOclass(**neo_kwargs)
-    neo_reader.parse_header()
 
     return neo_reader
 
@@ -22,6 +21,7 @@ class _NeoBaseExtractor:
 
     def __init__(self, block_index, **neo_kwargs):
         self.neo_reader = get_reader(self.NeoRawIOClass, **neo_kwargs)
+        self.neo_reader.parse_header()
 
         if self.neo_reader.block_count() > 1 and block_index is None:
             raise Exception("This dataset is multi-block. Spikeinterface can load one block at a time. "
