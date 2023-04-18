@@ -1,5 +1,5 @@
-Silhouette score (silhouette_score, simplified_silhouette_score)
-============================================
+Silhouette score (:code:`silhouette`, :code:`silhouette_full`)
+==============================================================
 
 Calculation
 -----------
@@ -8,7 +8,7 @@ Gives the ratio between the cohesiveness of a cluster and its separation from ot
 Values for silhouette score range from -1 to 1. 
 
 For the full method as proposed by [Rouseeuw]_, the pairwise distances between each point 
-and every other point :math:`a(i)` in a cluster :math:`C_i` and then iterating through 
+and every other point :math:`a(i)` in a cluster :math:`C_i` are calculated and then iterating through 
 every other cluster's distances between the points in :math:`C_i` and the points in :math:`C_j` 
 are calculated. The cluster with the minimal mean distance is taken to be :math:`b(i)`. The
 average value of :math:`s(i)` is taken to give the final silhouette score for a cluster with
@@ -46,7 +46,7 @@ SpikeInterface provides access to both implementations of silhouette score.
 
 To reduce complexity the default implementation in SpikeInterface is to use the simplified silhouette score.
 This can be changes by switching the silhouette method to either 'full' (the Rousseeuw implementation) or
-('simplified', 'full') for both methods.
+('simplified', 'full') for both methods when entering the qm_params parameter.
 
 
 Literature
