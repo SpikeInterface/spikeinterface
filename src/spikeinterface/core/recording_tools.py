@@ -118,7 +118,7 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
     return np.array(closest_channels_inds), np.array(dists)
 
 
-def get_noise_levels(recording, return_scaled=True, **random_chunk_kwargs):
+def get_noise_levels(recording, return_scaled: bool = True, method: str = "mad", **random_chunk_kwargs):
     """
     Estimate noise for each channel using MAD methods.
 
@@ -129,11 +129,16 @@ def get_noise_levels(recording, return_scaled=True, **random_chunk_kwargs):
     random_chunks = get_random_data_chunks(
         recording, return_scaled=return_scaled, **random_chunk_kwargs
     )
-    med = np.median(random_chunks, axis=0, keepdims=True)
-    # hard-coded so that core doesn't depend on scipy
-    noise_levels = (
-        np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
-    )
+    
+    if method == "mad":
+        med = np.median(random_chunks, axis=0, keepdims=True)
+        # hard-coded so that core doesn't depend on scipy
+        noise_levels = (
+            np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
+        )
+    elif method == "std":
+        mean = np.mean(random_chunks, axis=0, keepdims=True)
+        noise_levels = np.mean(random_chunks - mean, axis=0)  # std = E(X - E(X))
     return noise_levels
 
 
