@@ -46,7 +46,7 @@ jobs:
           # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
           HASH_EPHY_DATASET: git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1
         with:
-          path: ${{ github.workspace }}/spikeinterface_datasets
+          path: $HOME/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
           restore-keys: |
             ${{ runner.os }}-datasets

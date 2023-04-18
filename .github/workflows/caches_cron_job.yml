@@ -73,8 +73,8 @@ jobs:
       - name: Move the downloaded data to the right directory
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          mkdir --parents --verbose ${{ github.workspace }}/spikeinterface_datasets/ephy_testing_data/
-          mv --force ./ephy_testing_data ${{ github.workspace }}/spikeinterface_datasets/
+          mkdir --parents --verbose $HOME/spikeinterface_datasets/ephy_testing_data/
+          mv --force ./ephy_testing_data $HOME/spikeinterface_datasets/
       - name: Show size of the cache to assert data is downloaded
         run: |
           cd ${{ github.workspace }}
