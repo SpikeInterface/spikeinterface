@@ -15,12 +15,14 @@ try:
     from hdmf.data_utils import DataChunkIterator
     from hdmf.backends.hdf5.h5_utils import H5DataIO
 
+
     HAVE_NWB = True
 except ModuleNotFoundError:
     HAVE_NWB = False
 
 try:
     import fsspec
+
 
     HAVE_FSSPEC = True
 except ModuleNotFoundError:
@@ -41,6 +43,7 @@ def get_electrical_series(nwbfile, electrical_series_name):
     if electrical_series_name is not None:
         es_dict = {i.name: i for i in nwbfile.all_children() if isinstance(i, ElectricalSeries)}
         assert electrical_series_name in es_dict, "electrical series name not present in nwbfile"
+        assert electrical_series_name in es_dict, "electrical series name not present in nwbfile"
         es = es_dict[electrical_series_name]
     else:
         es_list = []
@@ -48,6 +51,9 @@ def get_electrical_series(nwbfile, electrical_series_name):
             if isinstance(series, ElectricalSeries):
                 es_list.append(series)
         if len(es_list) > 1:
+            raise ValueError(
+                f"More than one acquisition found! You must specify 'electrical_series_name'. Options in current file are: {[e.name for e in es_list]}"
+            )
             raise ValueError(
                 f"More than one acquisition found! You must specify 'electrical_series_name'. Options in current file are: {[e.name for e in es_list]}"
             )
@@ -103,9 +109,11 @@ class NwbRecordingExtractor(BaseRecording):
     """
 
     extractor_name = "NwbRecording"
+    extractor_name = "NwbRecording"
     has_default_locations = True
     installed = HAVE_NWB  # check at class level if installed or not
     is_writable = True
+    mode = "file"
     mode = "file"
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
     name = "nwb"
@@ -114,7 +122,13 @@ class NwbRecordingExtractor(BaseRecording):
         self,
         file_path: PathType,
         electrical_series_name: str = None,
+        self,
+        file_path: PathType,
+        electrical_series_name: str = None,
         load_time_vector: bool = False,
+        samples_for_rate_estimation: int = 100000,
+        stream_mode: str = None,
+        stream_cache_path: PathType = None,
         samples_for_rate_estimation: int = 100000,
         stream_mode: str = None,
         stream_cache_path: PathType = None,
@@ -160,6 +174,12 @@ class NwbRecordingExtractor(BaseRecording):
                 "Use the 'sampling_frequency' argument."
             )
             sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
+            assert timestamps is not None, (
+                "Could not find rate information as both 'rate' and "
+                "'timestamps' are missing from the file. "
+                "Use the 'sampling_frequency' argument."
+            )
+            sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
 
         if load_time_vector and timestamps is not None:
             times_kwargs = dict(time_vector=electrical_series.timestamps)
@@ -198,6 +218,7 @@ class NwbRecordingExtractor(BaseRecording):
 
         # Set gains
         self.set_channel_gains(gains)
+
 
         # Set offsets
         offset = electrical_series.offset if hasattr(electrical_series, "offset") else 0
@@ -267,6 +288,7 @@ class NwbRecordingExtractor(BaseRecording):
             else:
                 self.set_property(prop_name, values)
 
+
         if stream_mode not in ["fsspec", "ros3"]:
             file_path = str(Path(file_path).absolute())
         if stream_mode == "fsspec":
@@ -277,6 +299,12 @@ class NwbRecordingExtractor(BaseRecording):
         self.extra_requirements.extend(["pandas", "pynwb", "hdmf"])
         self._electrical_series = electrical_series
         self._kwargs = {
+            "file_path": file_path,
+            "electrical_series_name": self._electrical_series_name,
+            "load_time_vector": load_time_vector,
+            "samples_for_rate_estimation": samples_for_rate_estimation,
+            "stream_mode": stream_mode,
+            "stream_cache_path": stream_cache_path,
             "file_path": file_path,
             "electrical_series_name": self._electrical_series_name,
             "load_time_vector": load_time_vector,
