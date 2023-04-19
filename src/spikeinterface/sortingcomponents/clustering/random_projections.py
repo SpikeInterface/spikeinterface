@@ -58,7 +58,7 @@ class RandomProjectionClustering:
         d = params
         verbose = d['job_kwargs']['verbose']
         
-        peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
+        peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_index', 'int64')]
 
         fs = recording.get_sampling_frequency()
         nbefore = int(params['ms_before'] * fs / 1000.)
@@ -146,7 +146,7 @@ class RandomProjectionClustering:
         mask = mask[idx]
 
         spikes['sample_ind'] = peaks[mask]['sample_ind']
-        spikes['segment_ind'] = peaks[mask]['segment_ind']
+        spikes['segment_index'] = peaks[mask]['segment_index']
         spikes['unit_ind'] = peak_labels[mask]
 
         cleaning_method = params["cleaning_method"]

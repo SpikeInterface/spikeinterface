@@ -295,10 +295,10 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
 
     seg_size = recording.get_num_samples(segment_index=segment_index)
 
-    # take only spikes with the correct segment_ind
+    # take only spikes with the correct segment_index
     # this is a slice so no copy!!
-    s0 = np.searchsorted(spikes['segment_ind'], segment_index)
-    s1 = np.searchsorted(spikes['segment_ind'], segment_index + 1)
+    s0 = np.searchsorted(spikes['segment_index'], segment_index)
+    s1 = np.searchsorted(spikes['segment_index'], segment_index + 1)
     in_seg_spikes = spikes[s0:s1]
 
     # take only spikes in range [start_frame, end_frame]
@@ -369,8 +369,8 @@ def has_exceeding_spikes(recording, sorting):
     """
     spike_vector = sorting.to_spike_vector()
     for segment_index in range(recording.get_num_segments()):
-        start_seg_ind = np.searchsorted(spike_vector["segment_ind"], segment_index)
-        end_seg_ind = np.searchsorted(spike_vector["segment_ind"], segment_index + 1)
+        start_seg_ind = np.searchsorted(spike_vector["segment_index"], segment_index)
+        end_seg_ind = np.searchsorted(spike_vector["segment_index"], segment_index + 1)
         spike_vector_seg = spike_vector[start_seg_ind:end_seg_ind]
         if len(spike_vector_seg) > 0:
             if spike_vector_seg["sample_ind"][-1] > recording.get_num_samples(segment_index=segment_index) - 1:

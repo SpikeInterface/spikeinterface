@@ -114,7 +114,7 @@ def _find_spikes_chunk(segment_index, start_frame, end_frame, worker_ctx):
         spikes = spikes[keep]
 
     spikes['sample_ind'] += (start_frame - margin)
-    spikes['segment_ind'] = segment_index
+    spikes['segment_index'] = segment_index
     return spikes
 
 # generic class for template engine
