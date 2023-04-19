@@ -66,7 +66,7 @@ def has_nvidia():
     try:
         from cuda import cuda
     except ModuleNotFoundError as err:
-        raise Exception("This container requires cuda, but the package is not installed. You can install it with:\npip install cuda-python") from err
+        raise Exception("This sorter requires cuda, but the package is not installed. You can install it with:\npip install cuda-python") from err
         
     try:
         cu_result_init,  = cuda.cuInit(0)
