@@ -240,7 +240,7 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
             else:
 
                 preprocessing = QuantileTransformer(output_distribution='uniform', n_quantiles=min(100, nb_spikes))
-                data = np.array([params['peaks_locations']['x'], params['peaks_locations']['y'], peaks['sample_ind']]).T
+                data = np.array([params['peaks_locations']['x'], params['peaks_locations']['y'], peaks['sample_index']]).T
                 data = preprocessing.fit_transform(data)
 
                 my_selection = np.zeros(0, dtype=np.int32)
@@ -267,5 +267,5 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
         raise NotImplementedError(f"No method {method} for peaks selection")
 
     selected_indices = np.concatenate(selected_indices)
-    selected_indices = selected_indices[np.argsort(peaks[selected_indices]['sample_ind'])]
+    selected_indices = selected_indices[np.argsort(peaks[selected_indices]['sample_index'])]
     return selected_indices
