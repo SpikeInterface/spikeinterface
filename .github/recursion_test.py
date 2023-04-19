@@ -29,7 +29,7 @@ def copy_folder_n_times(directory_path, n_times):
 if __name__ == "__main__":
 
     if platform.system() == 'Linux' or platform.system() == 'Darwin':
-        mp_context = "fork"
+        mp_context = "spawn"
     elif platform.system() == 'Windows':
         mp_context = "spawn"
     else:
