@@ -183,9 +183,9 @@ class BenchmarkClustering:
             if self.verbose:
                 print("Computing gt peaks")
             gt_peaks_ = self.gt_sorting.to_spike_vector()
-            self.gt_peaks = np.zeros(gt_peaks_.size, dtype=[('sample_ind', '<i8'), ('channel_index', '<i8'), ('segment_ind', '<i8')])
+            self.gt_peaks = np.zeros(gt_peaks_.size, dtype=[('sample_ind', '<i8'), ('channel_index', '<i8'), ('segment_index', '<i8')])
             self.gt_peaks['sample_ind'] = gt_peaks_['sample_ind']
-            self.gt_peaks['segment_ind'] = gt_peaks_['segment_ind']
+            self.gt_peaks['segment_index'] = gt_peaks_['segment_index']
             max_channels = get_template_extremum_channel(self.waveforms['full_gt'], peak_sign='neg', outputs='index')
 
             for unit_ind, unit_id in enumerate(self.waveforms['full_gt'].sorting.unit_ids):

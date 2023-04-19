@@ -292,7 +292,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         'waveform_extractor' : None,
     }
     spike_dtype = [('sample_ind', 'int64'), ('channel_index', 'int64'), ('cluster_ind', 'int64'),
-                   ('amplitude', 'float64'), ('segment_ind', 'int64')]
+                   ('amplitude', 'float64'), ('segment_index', 'int64')]
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
