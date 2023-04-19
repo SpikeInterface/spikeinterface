@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union, List
+from typing import Union, List, Optional, Literal
 
 import numpy as np
 import h5py
@@ -22,8 +22,6 @@ except ModuleNotFoundError:
 
 try:
     import fsspec
-
-
     HAVE_FSSPEC = True
 except ModuleNotFoundError:
     HAVE_FSSPEC = False
@@ -43,7 +41,6 @@ def get_electrical_series(nwbfile, electrical_series_name):
     if electrical_series_name is not None:
         es_dict = {i.name: i for i in nwbfile.all_children() if isinstance(i, ElectricalSeries)}
         assert electrical_series_name in es_dict, "electrical series name not present in nwbfile"
-        assert electrical_series_name in es_dict, "electrical series name not present in nwbfile"
         es = es_dict[electrical_series_name]
     else:
         es_list = []
@@ -51,9 +48,6 @@ def get_electrical_series(nwbfile, electrical_series_name):
             if isinstance(series, ElectricalSeries):
                 es_list.append(series)
         if len(es_list) > 1:
-            raise ValueError(
-                f"More than one acquisition found! You must specify 'electrical_series_name'. Options in current file are: {[e.name for e in es_list]}"
-            )
             raise ValueError(
                 f"More than one acquisition found! You must specify 'electrical_series_name'. Options in current file are: {[e.name for e in es_list]}"
             )
@@ -109,11 +103,9 @@ class NwbRecordingExtractor(BaseRecording):
     """
 
     extractor_name = "NwbRecording"
-    extractor_name = "NwbRecording"
     has_default_locations = True
     installed = HAVE_NWB  # check at class level if installed or not
     is_writable = True
-    mode = "file"
     mode = "file"
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
     name = "nwb"
@@ -124,7 +116,7 @@ class NwbRecordingExtractor(BaseRecording):
         electrical_series_name: str = None,
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 100000,
-        stream_mode: str = None,
+        stream_mode: Optional[str] = None,
         stream_cache_path: PathType = None,
     ):
         check_nwb_install()
@@ -160,14 +152,8 @@ class NwbRecordingExtractor(BaseRecording):
                 timestamps = electrical_series.timestamps
                 t_start = electrical_series.timestamps[0]
 
-        # if rate is unknown, estimate from timestamps
+        # if rate is unknown, estimate from timestamps TODO: Is this possible?
         if sampling_frequency is None:
-            assert timestamps is not None, (
-                "Could not find rate information as both 'rate' and "
-                "'timestamps' are missing from the file. "
-                "Use the 'sampling_frequency' argument."
-            )
-            sampling_frequency = 1.0 / np.median(np.diff(timestamps[:samples_for_rate_estimation]))
             assert timestamps is not None, (
                 "Could not find rate information as both 'rate' and "
                 "'timestamps' are missing from the file. "
@@ -203,7 +189,7 @@ class NwbRecordingExtractor(BaseRecording):
 
         #################
         # Extract gains and offsets TODO: Should be a function
-        ###############3
+        #################
 
         # Channels gains - for RecordingExtractor, these are values to cast traces to uV
         gains = electrical_series.conversion * 1e6
@@ -228,7 +214,7 @@ class NwbRecordingExtractor(BaseRecording):
         properties = dict()
         # Extract rel_x, rel_y and rel_z and assign to location
 
-        # TODO: Refactor ALL of this and add tests. This is a mess.
+        # TODO: Refactor ALL of this and add tests. This is difficult to read.
         if "rel_x" in electrodes_table:
             ndim = 3 if "rel_z" in electrodes_table else 2
             properties["location"] = np.zeros((self.get_num_channels(), ndim), dtype=float)
@@ -299,15 +285,40 @@ class NwbRecordingExtractor(BaseRecording):
             "samples_for_rate_estimation": samples_for_rate_estimation,
             "stream_mode": stream_mode,
             "stream_cache_path": stream_cache_path,
-            "file_path": file_path,
-            "electrical_series_name": self._electrical_series_name,
-            "load_time_vector": load_time_vector,
-            "samples_for_rate_estimation": samples_for_rate_estimation,
-            "stream_mode": stream_mode,
-            "stream_cache_path": stream_cache_path,
         }
 
-    def read_nwb_file(self, file_path, stream_mode="fsspec", stream_cache_path=None):
+    def read_nwb_file(self, file_path: str, stream_mode: Literal[None, "ffspec", "ros3"] = None, stream_cache_path: Optional[str] = None) -> NWBFile:
+        """
+        Read an NWB file and return the NWBFile object.
+
+        Parameters
+        ----------
+        file_path : str
+            The path to the NWB file.
+        stream_mode : str, optional
+            The streaming mode to use. Default is None.
+        stream_cache_path : str, optional
+            The path to the cache storage. Default is None.
+
+        Returns
+        -------
+        nwbfile : NWBFile
+            The NWBFile object.
+
+        Raises
+        ------
+        AssertionError
+            If ROS3 support is not enabled.
+
+        Notes
+        -----
+        This function can stream data from either the "fsspec" or "ros3" protocols.
+
+
+        Examples
+        --------
+        >>> nwbfile = read_nwb_file("data.nwb", stream_mode="ros3")
+        """
         if stream_mode == "fsspec":
             import fsspec
             from fsspec.implementations.cached import CachingFileSystem
