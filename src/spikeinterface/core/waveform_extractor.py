@@ -17,7 +17,7 @@ from .basesorting import BaseSorting
 from .core_tools import check_json
 from .job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 from .recording_tools import check_probe_do_not_overlap
-from .waveform_tools import extract_waveforms_to_buffers, has_exceeding_spikes
+from .waveform_tools import extract_waveforms_to_buffers, has_exceeding_spikes, get_rec_attributes
 from .sparsity import ChannelSparsity, compute_sparsity, _sparsity_doc
 
 _possible_template_modes = ('average', 'std', 'median')
@@ -144,8 +144,8 @@ class WaveformExtractor:
         else:
             try:
                 recording = load_extractor(folder / 'recording.json',
-                                        base_folder=folder)
-                rec_attributes = None
+                                           base_folder=folder)
+                rec_attributes = get_rec_attributes(recording)
             except:
                 raise Exception("The recording could not be loaded. You can use the `with_recording=False` argument")
 
@@ -195,7 +195,7 @@ class WaveformExtractor:
             try:
                 recording_dict = waveforms_root.attrs['recording']
                 recording = load_extractor(recording_dict, base_folder=folder)
-                rec_attributes = None
+                rec_attributes = get_rec_attributes(recording)
             except:
                 raise Exception("The recording could not be loaded. You can use the `with_recording=False` argument")
 
@@ -222,23 +222,12 @@ class WaveformExtractor:
                use_relative_path=False, allow_unfiltered=False, sparsity=None):
         assert mode in ("folder", "memory")
         # create rec_attributes
-        properties_to_attrs = deepcopy(recording._properties)
-        if 'contact_vector' in properties_to_attrs:
-            del properties_to_attrs['contact_vector']
         if has_exceeding_spikes(recording, sorting):
             raise ValueError(
                     "The sorting object has spikes exceeding the recording duration. You have to remove those spikes "
                     "with the `spikeinterface.curation.remove_excess_spikes()` function"
                 )
-        rec_attributes = dict(
-            channel_ids=recording.channel_ids,
-            sampling_frequency=recording.get_sampling_frequency(),
-            num_channels=recording.get_num_channels(),
-            num_samples=[recording.get_num_samples(seg_index)
-                            for seg_index in range(recording.get_num_segments())],
-            is_filtered=recording.is_filtered(),
-            properties=properties_to_attrs
-        )
+        rec_attributes = get_rec_attributes(recording)
         if mode == "folder":
             folder = Path(folder)
             if folder.is_dir():
@@ -601,14 +590,12 @@ class WaveformExtractor:
                 raise ValueError(f"Couldn't set the WaveformExtractor recording: sampling frequency doesn't match!\n{self.sampling_frequency} != {recording.sampling_frequency}")
             if self._rec_attributes is not None:
                 reference_channel_ids = self._rec_attributes['channel_ids']
-                if not np.array_equal(self.channel_ids, recording.channel_ids):
-                    raise ValueError(f"Couldn't set the WaveformExtractor recording: channel_ids do not match!\n{self.channel_ids} != {recording.channel_ids}")
             elif rec_attributes is not None:
                 reference_channel_ids = rec_attributes['channel_ids']
             else:
                 raise ValueError("WaveformExtractor: rec_attributes is None")
-            if not np.array_equal(rec_attributes['channel_ids'], recording.channel_ids):
-                raise ValueError(f"Couldn't set the WaveformExtractor recording: channel_ids do not match!\n{rec_attributes['channel_ids']} != {recording.channel_ids}")
+            if not np.array_equal(reference_channel_ids, recording.channel_ids):
+                raise ValueError(f"Couldn't set the WaveformExtractor recording: channel_ids do not match!\n{reference_channel_ids}")
 
             if not recording.is_filtered() and not allow_unfiltered:
                 raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
