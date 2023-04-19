@@ -5,8 +5,8 @@ from spikeinterface.core import (WaveformExtractor, get_noise_levels, get_channe
 
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 
-spike_dtype = [('sample_ind', 'int64'), ('channel_index', 'int64'), ('cluster_ind', 'int64'),
-               ('amplitude', 'float64'), ('segment_ind', 'int64')]
+spike_dtype = [('sample_index', 'int64'), ('channel_index', 'int64'), ('cluster_ind', 'int64'),
+               ('amplitude', 'float64'), ('segment_index', 'int64')]
 
 from .main import BaseTemplateMatchingEngine
 
@@ -197,7 +197,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         
         if len(all_spikes) > 0:
             all_spikes = np.concatenate(all_spikes)
-            order = np.argsort(all_spikes['sample_ind'])
+            order = np.argsort(all_spikes['sample_index'])
             all_spikes = all_spikes[order]
         else:
             all_spikes = np.zeros(0, dtype=spike_dtype)
@@ -224,26 +224,26 @@ def _tdc_find_spikes(traces, d, level=0):
         peak_chan_ind = peak_chan_ind[order]
 
         spikes = np.zeros(peak_sample_ind.size, dtype=spike_dtype)
-        spikes['sample_ind'] = peak_sample_ind
+        spikes['sample_index'] = peak_sample_ind
         spikes['channel_index'] = peak_chan_ind  # TODO need to put the channel from template
 
         possible_shifts = d['possible_shifts']
         distances_shift = np.zeros(possible_shifts.size)
 
         for i in range(peak_sample_ind.size):
-            sample_ind = peak_sample_ind[i]
+            sample_index = peak_sample_ind[i]
 
             chan_ind = peak_chan_ind[i]
             possible_clusters = possible_clusters_by_channel[chan_ind]
             
             if possible_clusters.size > 0:
-                #~ s0 = sample_ind - d['nbefore']
-                #~ s1 = sample_ind + d['nafter']
+                #~ s0 = sample_index - d['nbefore']
+                #~ s1 = sample_index + d['nafter']
 
                 #~ wf = traces[s0:s1, :]
 
-                s0 = sample_ind - d['nbefore_short']
-                s1 = sample_ind + d['nafter_short']
+                s0 = sample_index - d['nbefore_short']
+                s1 = sample_index + d['nafter_short']
                 wf_short = traces[s0:s1, :]
                 
                 ## pure numpy with cluster spasity
@@ -279,14 +279,14 @@ def _tdc_find_spikes(traces, d, level=0):
                     # shift = possible_shifts[ind_shift]
                     
                     ## numba version
-                    numba_best_shift(traces, templates[cluster_ind, :, :], sample_ind, d['nbefore'],
+                    numba_best_shift(traces, templates[cluster_ind, :, :], sample_index, d['nbefore'],
                                      possible_shifts, distances_shift, chan_sparsity)
                     ind_shift = np.argmin(distances_shift)
                     shift = possible_shifts[ind_shift]
 
-                    sample_ind = sample_ind + shift
-                    s0 = sample_ind - d['nbefore']
-                    s1 = sample_ind + d['nafter']
+                    sample_index = sample_index + shift
+                    s0 = sample_index - d['nbefore']
+                    s1 = sample_index + d['nafter']
                     wf_sparse = traces[s0:s1, chan_sparsity]
 
                     # accept or not
@@ -309,8 +309,8 @@ def _tdc_find_spikes(traces, d, level=0):
                     
                     # remove template
                     template = templates[cluster_ind, :, :]
-                    s0 = sample_ind - d['nbefore']
-                    s1 = sample_ind + d['nafter']
+                    s0 = sample_index - d['nbefore']
+                    s1 = sample_index + d['nafter']
                     traces[s0:s1, :] -= template * amplitude
                     
                 else:
@@ -350,7 +350,7 @@ if HAVE_NUMBA:
         return distances
 
     @jit(nopython=True)
-    def numba_best_shift(traces, template, sample_ind, nbefore, possible_shifts, distances_shift, chan_sparsity):
+    def numba_best_shift(traces, template, sample_index, nbefore, possible_shifts, distances_shift, chan_sparsity):
         """
         numba implementation to compute several sample shift before template substraction
         """
@@ -362,7 +362,7 @@ if HAVE_NUMBA:
             for chan_ind in range(num_chan):
                 if chan_sparsity[chan_ind]:
                     for s in range(width):
-                        v = traces[sample_ind - nbefore + s +shift, chan_ind]
+                        v = traces[sample_index - nbefore + s +shift, chan_ind]
                         t = template[s, chan_ind]
                         sum_dist += (v - t) ** 2
             distances_shift[i] = sum_dist

@@ -49,7 +49,7 @@ def test_correct_motion_on_peaks():
 
     # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
-    # ax.plot(times[peaks['sample_ind']], corrected_peak_locations['y'])
+    # ax.plot(times[peaks['sample_index']], corrected_peak_locations['y'])
     # ax.plot(temporal_bins, motion[:, 1])
     # plt.show()
 
