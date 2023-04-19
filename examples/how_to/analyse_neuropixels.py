@@ -190,7 +190,7 @@ peak_locations = localize_peaks(rec, peaks, method='center_of_mass', local_radiu
 # check for drift
 fs = rec.sampling_frequency
 fig, ax = plt.subplots(figsize=(10, 8))
-ax.scatter(peaks['sample_ind'] / fs, peak_locations['y'], color='k', marker='.',  alpha=0.002)
+ax.scatter(peaks['sample_index'] / fs, peak_locations['y'], color='k', marker='.',  alpha=0.002)
 
 
 # +
