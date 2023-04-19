@@ -98,7 +98,7 @@ class PeakActivityMapWidget(BaseWidget):
         # TODO: @alessio weight_with_amplitudes is not implemented yet
         rates = np.zeros(rec.get_num_channels(), dtype='float64')
         for chan_ind, chan_id in enumerate(rec.channel_ids):
-            mask = peaks['channel_ind'] == chan_ind
+            mask = peaks['channel_index'] == chan_ind
             num_spike = np.sum(mask)
             rates[chan_ind] = num_spike / duration
 

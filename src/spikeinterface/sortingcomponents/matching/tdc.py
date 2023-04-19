@@ -5,7 +5,7 @@ from spikeinterface.core import (WaveformExtractor, get_noise_levels, get_channe
 
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 
-spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind', 'int64'),
+spike_dtype = [('sample_ind', 'int64'), ('channel_index', 'int64'), ('cluster_ind', 'int64'),
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 from .main import BaseTemplateMatchingEngine
@@ -149,8 +149,8 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
         # nearby cluster for each channel
         possible_clusters_by_channel = []
-        for channel_ind in range(distances.shape[0]):
-            cluster_inds, = np.nonzero(near_cluster_mask[channel_ind, :])
+        for channel_index in range(distances.shape[0]):
+            cluster_inds, = np.nonzero(near_cluster_mask[channel_index, :])
             possible_clusters_by_channel.append(cluster_inds)
         
         d['possible_clusters_by_channel'] = possible_clusters_by_channel
@@ -225,7 +225,7 @@ def _tdc_find_spikes(traces, d, level=0):
 
         spikes = np.zeros(peak_sample_ind.size, dtype=spike_dtype)
         spikes['sample_ind'] = peak_sample_ind
-        spikes['channel_ind'] = peak_chan_ind  # TODO need to put the channel from template
+        spikes['channel_index'] = peak_chan_ind  # TODO need to put the channel from template
 
         possible_shifts = d['possible_shifts']
         distances_shift = np.zeros(possible_shifts.size)
