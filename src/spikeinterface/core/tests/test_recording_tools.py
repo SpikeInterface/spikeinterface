@@ -32,6 +32,9 @@ def test_get_noise_levels():
     noise_levels = get_noise_levels(rec, return_scaled=True)
     print(noise_levels)
 
+    noise_levels = get_noise_levels(rec, return_scaled=True, method="std")
+    print(noise_levels)
+
 def test_get_chunk_with_margin():
     rec = generate_recording(num_channels=1, sampling_frequency=1000., durations=[10.])
     rec_seg = rec._recording_segments[0]
