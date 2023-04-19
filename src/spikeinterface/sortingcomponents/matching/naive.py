@@ -7,7 +7,7 @@ from spikeinterface.postprocessing import (get_template_channel_sparsity, get_te
 
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 
-spike_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('cluster_ind', 'int64'),
+spike_dtype = [('sample_ind', 'int64'), ('channel_index', 'int64'), ('cluster_ind', 'int64'),
                ('amplitude', 'float64'), ('segment_ind', 'int64')]
 
 
@@ -110,7 +110,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
 
         spikes = np.zeros(peak_sample_ind.size, dtype=spike_dtype)
         spikes['sample_ind'] = peak_sample_ind
-        spikes['channel_ind'] = peak_chan_ind  # TODO need to put the channel from template
+        spikes['channel_index'] = peak_chan_ind  # TODO need to put the channel from template
         
         # naively take the closest template
         for i in range(peak_sample_ind.size):
