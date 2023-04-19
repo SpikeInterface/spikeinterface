@@ -472,6 +472,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             Template matching objective for each template.
         objective_normalized : ndarray (num_templates, traces.shape[0]+template_meta.num_samples-1)
             Template matching objective normalized by the magnitude of each template.
+        spike_trains : ndarray (n_spikes, 2)
+            Spike train from template matching.
         params : WobbleParameters
             Dataclass object for aggregating the parameters together.
         template_meta : TemplateMetadata
