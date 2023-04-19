@@ -1,3 +1,4 @@
+import math
 import pickle
 from pathlib import Path
 import shutil
@@ -595,7 +596,7 @@ class WaveformExtractor:
         else:
             if recording.get_num_segments() != self.get_num_segments():
                 raise ValueError(f"Couldn't set the WaveformExtractor recording: num_segments do not match!\n{self.get_num_segments()} != {recording.get_num_segments()}")
-            if abs(recording.sampling_frequency - self.sampling_frequency) > 1e-2:
+            if not math.isclose(recording.sampling_frequency, self.sampling_frequency, abs_tol=1e-2, rel_tol=1e-5):
                 raise ValueError(f"Couldn't set the WaveformExtractor recording: sampling frequency doesn't match!\n{self.sampling_frequency} != {recording.sampling_frequency}")
             try:  # Will fail if called from __init__ because can't check from previous channel_ids.
                 if np.array_equal(self.channel_ids, recording.channel_ids):
@@ -1477,7 +1478,7 @@ def load_waveforms(folder, with_recording: bool = True, sorting: Optional[BaseSo
     ----------
     folder : str or Path
         The folder / zarr folder where the waveform extractor is stored
-    with_recording : bool | BaseRecording, optional
+    with_recording : bool, optional
         If True, the recording is loaded, by default True.
         If False, the WaveformExtractor object in recordingless mode.
     sorting : BaseSorting, optional
