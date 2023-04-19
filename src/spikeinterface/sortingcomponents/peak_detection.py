@@ -145,7 +145,7 @@ class IterativePeakDetector(PeakDetector):
         waveforms = self.waveform_extraction_node.compute(traces=traces_chunk, peaks=local_peaks)
         denoised_waveforms = self.waveform_denoising_node.compute(traces=traces_chunk, peaks=local_peaks, waveforms=waveforms)
         
-        denoised_waveforms_as_traces = self.build_trace_chunk_with_waveforms(sample_indices=local_peaks["sample_ind"], traces_chunk=traces_chunk, 
+        denoised_waveforms_as_traces = self.build_trace_chunk_with_waveforms(sample_indices=local_peaks["sample_index"], traces_chunk=traces_chunk, 
                                                                             waveforms=denoised_waveforms, 
                                                                             extract_dense_waveforms=self.waveform_extraction_node)
         traces_chunk_minus_peak_waveforms = traces_chunk - denoised_waveforms_as_traces
