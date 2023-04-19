@@ -69,6 +69,7 @@ class WaveformExtractor:
     def __init__(self, recording: BaseRecording, sorting: BaseSorting,
                  folder=None, rec_attributes=None, allow_unfiltered=False, sparsity=None):
         self.sorting = sorting
+        self._rec_attributes = None
         self.set_recording(recording, rec_attributes, allow_unfiltered)
 
         # cache in memory
@@ -598,11 +599,17 @@ class WaveformExtractor:
                 raise ValueError(f"Couldn't set the WaveformExtractor recording: num_segments do not match!\n{self.get_num_segments()} != {recording.get_num_segments()}")
             if not math.isclose(recording.sampling_frequency, self.sampling_frequency, abs_tol=1e-2, rel_tol=1e-5):
                 raise ValueError(f"Couldn't set the WaveformExtractor recording: sampling frequency doesn't match!\n{self.sampling_frequency} != {recording.sampling_frequency}")
-            try:  # Will fail if called from __init__ because can't check from previous channel_ids.
-                if np.array_equal(self.channel_ids, recording.channel_ids):
+            if self._rec_attributes is not None:
+                reference_channel_ids = self._rec_attributes['channel_ids']
+                if not np.array_equal(self.channel_ids, recording.channel_ids):
                     raise ValueError(f"Couldn't set the WaveformExtractor recording: channel_ids do not match!\n{self.channel_ids} != {recording.channel_ids}")
-            except:
-                pass
+            elif rec_attributes is not None:
+                reference_channel_ids = rec_attributes['channel_ids']
+            else:
+                raise ValueError("WaveformExtractor: rec_attributes is None")
+            if not np.array_equal(rec_attributes['channel_ids'], recording.channel_ids):
+                raise ValueError(f"Couldn't set the WaveformExtractor recording: channel_ids do not match!\n{rec_attributes['channel_ids']} != {recording.channel_ids}")
+
             if not recording.is_filtered() and not allow_unfiltered:
                 raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
                                 'If the recording is already filtered, you can also do '
