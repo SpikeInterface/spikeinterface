@@ -295,23 +295,23 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
 
     seg_size = recording.get_num_samples(segment_index=segment_index)
 
-    # take only spikes with the correct segment_ind
+    # take only spikes with the correct segment_index
     # this is a slice so no copy!!
-    s0 = np.searchsorted(spikes['segment_ind'], segment_index)
-    s1 = np.searchsorted(spikes['segment_ind'], segment_index + 1)
+    s0 = np.searchsorted(spikes['segment_index'], segment_index)
+    s1 = np.searchsorted(spikes['segment_index'], segment_index + 1)
     in_seg_spikes = spikes[s0:s1]
 
     # take only spikes in range [start_frame, end_frame]
     # this is a slice so no copy!!
-    i0 = np.searchsorted(in_seg_spikes['sample_ind'], start_frame)
-    i1 = np.searchsorted(in_seg_spikes['sample_ind'], end_frame)
+    i0 = np.searchsorted(in_seg_spikes['sample_index'], start_frame)
+    i1 = np.searchsorted(in_seg_spikes['sample_index'], end_frame)
     if i0 != i1:
         # protect from spikes on border :  spike_time<0 or spike_time>seg_size
         # useful only when max_spikes_per_unit is not None
         # waveform will not be extracted and a zeros will be left in the memmap file
-        while (in_seg_spikes[i0]['sample_ind'] - nbefore) < 0 and (i0 != i1):
+        while (in_seg_spikes[i0]['sample_index'] - nbefore) < 0 and (i0 != i1):
             i0 = i0 + 1
-        while (in_seg_spikes[i1-1]['sample_ind'] + nafter) > seg_size and (i0 != i1):
+        while (in_seg_spikes[i1-1]['sample_index'] + nafter) > seg_size and (i0 != i1):
             i1 = i1 - 1
 
     # slice in absolut in spikes vector
@@ -319,8 +319,8 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
     l1 = i1 + s0
 
     if l1 > l0:
-        start = spikes[l0]['sample_ind'] - nbefore
-        end = spikes[l1-1]['sample_ind'] + nafter
+        start = spikes[l0]['sample_index'] - nbefore
+        end = spikes[l1-1]['sample_index'] + nafter
 
         # load trace in memory
         traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index,
@@ -341,9 +341,9 @@ def _waveform_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx)
                 wfs = worker_ctx['wfs_arrays'][unit_id]
 
             for pos in in_chunk_pos:
-                sample_ind = spikes[inds[pos]]['sample_ind']
-                wf = traces[sample_ind - start -
-                            nbefore:sample_ind - start + nafter, :]
+                sample_index = spikes[inds[pos]]['sample_index']
+                wf = traces[sample_index - start -
+                            nbefore:sample_index - start + nafter, :]
 
                 if sparsity_mask is None:
                     wfs[pos, :, :] = wf
@@ -369,10 +369,10 @@ def has_exceeding_spikes(recording, sorting):
     """
     spike_vector = sorting.to_spike_vector()
     for segment_index in range(recording.get_num_segments()):
-        start_seg_ind = np.searchsorted(spike_vector["segment_ind"], segment_index)
-        end_seg_ind = np.searchsorted(spike_vector["segment_ind"], segment_index + 1)
+        start_seg_ind = np.searchsorted(spike_vector["segment_index"], segment_index)
+        end_seg_ind = np.searchsorted(spike_vector["segment_index"], segment_index + 1)
         spike_vector_seg = spike_vector[start_seg_ind:end_seg_ind]
         if len(spike_vector_seg) > 0:
-            if spike_vector_seg["sample_ind"][-1] > recording.get_num_samples(segment_index=segment_index) - 1:
+            if spike_vector_seg["sample_index"][-1] > recording.get_num_samples(segment_index=segment_index) - 1:
                 return True
     return False

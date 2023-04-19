@@ -124,7 +124,7 @@ class LocalizePeakChannel(PipelineNode):
     def compute(self, traces, peaks):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
-        for index, main_chan in enumerate(peaks['channel_ind']):
+        for index, main_chan in enumerate(peaks['channel_index']):
             locations = self.contact_locations[main_chan, :]
             peak_locations['x'][index] = locations[0]
             peak_locations['y'][index] = locations[1]
@@ -168,8 +168,8 @@ class LocalizeCenterOfMass(LocalizeBase):
     def compute(self, traces, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
-        for main_chan in np.unique(peaks['channel_ind']):
-            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+        for main_chan in np.unique(peaks['channel_index']):
+            idx, = np.nonzero(peaks['channel_index'] == main_chan)
             chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
             local_contact_locations = self.contact_locations[chan_inds, :]
 
@@ -245,8 +245,8 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
         for i, peak in enumerate(peaks):
-            sample_ind = peak['sample_ind']
-            chan_mask = self.neighbours_mask[peak['channel_ind'], :]
+            sample_index = peak['sample_index']
+            chan_mask = self.neighbours_mask[peak['channel_index'], :]
             chan_inds = np.flatnonzero(chan_mask)
             local_contact_locations = self.contact_locations[chan_inds, :]
 
@@ -259,7 +259,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
                 wf_data = np.abs(wf[self.nbefore])
 
             if self.enforce_decrease_radial_parents is not None:
-                enforce_decrease_shells_data(wf_data, peak['channel_ind'], self.enforce_decrease_radial_parents, in_place=True)
+                enforce_decrease_shells_data(wf_data, peak['channel_index'], self.enforce_decrease_radial_parents, in_place=True)
 
             peak_locations[i] = solve_monopolar_triangulation(wf_data, local_contact_locations,
                                                               self.max_distance_um, self.optimizer)
@@ -335,8 +335,8 @@ class LocalizeGridConvolution(PipelineNode):
     def compute(self, traces, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
-        for main_chan in np.unique(peaks['channel_ind']):
-            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+        for main_chan in np.unique(peaks['channel_index']):
+            idx, = np.nonzero(peaks['channel_index'] == main_chan)
             if 'amplitude' in peaks.dtype.names:
                 amplitudes = peaks['amplitude'][idx]
             else:

@@ -110,6 +110,8 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
         elif isinstance(waveform_extractor.recording, BinaryRecordingExtractor):
             rec_path = waveform_extractor.recording._kwargs['file_paths'][0]
             dtype = waveform_extractor.recording.get_dtype()
+        else:
+          rec_path = 'None'
     else:  # don't save recording.dat
         if copy_binary:
             warnings.warn("Recording will not be copied since waveform extractor is recordingless.")
