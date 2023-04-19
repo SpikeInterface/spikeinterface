@@ -62,7 +62,7 @@ jobs:
       - uses: actions/cache@v3
         id: cache-datasets
         with:
-          path: ~/spikeinterface_datasets  # Hope this works at least for this
+          path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}}"
