@@ -8,7 +8,7 @@ from spikeinterface.postprocessing import (get_template_channel_sparsity, get_te
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 
 spike_dtype = [('sample_ind', 'int64'), ('channel_index', 'int64'), ('cluster_ind', 'int64'),
-               ('amplitude', 'float64'), ('segment_ind', 'int64')]
+               ('amplitude', 'float64'), ('segment_index', 'int64')]
 
 
 from .main import BaseTemplateMatchingEngine

@@ -31,7 +31,7 @@ from spikeinterface.core import get_channel_distances
 
 
 base_peak_dtype = [('sample_ind', 'int64'), ('channel_index', 'int64'),
-                   ('amplitude', 'float64'), ('segment_ind', 'int64')]
+                   ('amplitude', 'float64'), ('segment_index', 'int64')]
 
 
 class PipelineNode:
@@ -97,8 +97,8 @@ class PeakRetriever(PipelineNode):
         # precompute segment slice
         self.segment_slices = []
         for segment_index in range(recording.get_num_segments()):
-            i0 = np.searchsorted(peaks['segment_ind'], segment_index)
-            i1 = np.searchsorted(peaks['segment_ind'], segment_index + 1)
+            i0 = np.searchsorted(peaks['segment_index'], segment_index)
+            i1 = np.searchsorted(peaks['segment_index'], segment_index + 1)
             self.segment_slices.append(slice(i0, i1))
 
     def get_trace_margin(self):
