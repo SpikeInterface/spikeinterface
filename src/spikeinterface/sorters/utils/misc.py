@@ -62,7 +62,11 @@ def has_nvidia():
     """
     Checks if the machine has nvidia capability.
     """
-    from cuda import cuda
+    
+    try:
+        from cuda import cuda
+    except ModuleNotFoundError as err:
+        raise Exception("This container requires cuda, but the package is not installed. You can install it with:\npip install cuda-python") from err
         
     try:
         cu_result_init,  = cuda.cuInit(0)
