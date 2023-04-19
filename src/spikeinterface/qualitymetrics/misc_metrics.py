@@ -732,8 +732,8 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
         # compute median positions (if less than min_spikes_per_interval, median position is 0)
         median_positions = np.nan * np.zeros((len(unit_ids), num_bin_edges - 1))
         for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
-            i0 = np.searchsorted(spikes_in_segment['sample_ind'], start_frame)
-            i1 = np.searchsorted(spikes_in_segment['sample_ind'], end_frame)
+            i0 = np.searchsorted(spikes_in_segment['sample_index'], start_frame)
+            i1 = np.searchsorted(spikes_in_segment['sample_index'], end_frame)
             spikes_in_bin = spikes_in_segment[i0:i1]
             spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
 

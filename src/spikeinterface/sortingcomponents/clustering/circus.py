@@ -82,9 +82,9 @@ class CircusClustering:
 
         chan_locs = recording.get_channel_locations()
 
-        peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_index', 'int64')]
+        peak_dtype = [('sample_index', 'int64'), ('unit_ind', 'int64'), ('segment_index', 'int64')]
         spikes = np.zeros(peaks.size, dtype=peak_dtype)
-        spikes['sample_ind'] = peaks['sample_ind']
+        spikes['sample_index'] = peaks['sample_index']
         spikes['segment_index'] = peaks['segment_index']
         spikes['unit_ind'] = peaks['channel_index']
 
@@ -193,7 +193,7 @@ class CircusClustering:
         idx = np.argsort(mask)
         mask = mask[idx]
 
-        spikes['sample_ind'] = peaks[mask]['sample_ind']
+        spikes['sample_index'] = peaks[mask]['sample_index']
         spikes['segment_index'] = peaks[mask]['segment_index']
         spikes['unit_ind'] = peak_labels[mask]
 
@@ -231,7 +231,7 @@ class CircusClustering:
             name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
             tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
 
-            sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['unit_ind'], fs)
+            sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['unit_ind'], fs)
             we = extract_waveforms(recording, sorting, tmp_folder, overwrite=True, ms_before=params['ms_before'], 
                 ms_after=params['ms_after'], **params['job_kwargs'])
             labels, peak_labels = remove_duplicates_via_matching(we, peak_labels, job_kwargs=params['job_kwargs'])

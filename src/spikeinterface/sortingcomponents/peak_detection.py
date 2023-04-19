@@ -125,7 +125,7 @@ class PeakDetectorWrapper(PeakDetector):
         peak_sample_ind, peak_chan_ind = self.detect_peaks(traces, *self.args)
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
         local_peaks = np.zeros(peak_sample_ind.size, dtype=base_peak_dtype)
-        local_peaks['sample_ind'] = peak_sample_ind
+        local_peaks['sample_index'] = peak_sample_ind
         local_peaks['channel_index'] = peak_chan_ind
         local_peaks['amplitude'] = peak_amplitude
         local_peaks['segment_index'] = segment_index

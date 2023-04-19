@@ -30,7 +30,7 @@ from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs
 from spikeinterface.core import get_channel_distances
 
 
-base_peak_dtype = [('sample_ind', 'int64'), ('channel_index', 'int64'),
+base_peak_dtype = [('sample_index', 'int64'), ('channel_index', 'int64'),
                    ('amplitude', 'float64'), ('segment_index', 'int64')]
 
 
@@ -111,13 +111,13 @@ class PeakRetriever(PipelineNode):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        i0 = np.searchsorted(peaks_in_segment['sample_ind'], start_frame)
-        i1 = np.searchsorted(peaks_in_segment['sample_ind'], end_frame)
+        i0 = np.searchsorted(peaks_in_segment['sample_index'], start_frame)
+        i1 = np.searchsorted(peaks_in_segment['sample_index'], end_frame)
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
         local_peaks = local_peaks.copy()
-        local_peaks['sample_ind'] -= (start_frame - max_margin)
+        local_peaks['sample_index'] -= (start_frame - max_margin)
 
         return (local_peaks, )
 
@@ -208,7 +208,7 @@ class ExtractDenseWaveforms(WaveformsNode):
         return max(self.nbefore, self.nafter)
 
     def compute(self, traces, peaks):
-        waveforms = traces[peaks["sample_ind"][:, None] + np.arange(-self.nbefore, self.nafter)]
+        waveforms = traces[peaks["sample_index"][:, None] + np.arange(-self.nbefore, self.nafter)]
         return waveforms
 
 
@@ -273,7 +273,7 @@ class ExtractSparseWaveforms(WaveformsNode):
         for i, peak in enumerate(peaks):
             (chans,) = np.nonzero(self.neighbours_mask[peak["channel_index"]])
             sparse_wfs[i, :, : len(chans)] = traces[
-                peak["sample_ind"] - self.nbefore : peak["sample_ind"] + self.nafter, :
+                peak["sample_index"] - self.nbefore : peak["sample_index"] + self.nafter, :
             ][:, chans]
 
         return sparse_wfs
@@ -388,7 +388,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
                 trace_detection = traces_chunk
             node_output = node.compute(trace_detection, start_frame, end_frame, segment_index, max_margin)
             # set sample index to local
-            node_output[0]['sample_ind'] += extra_margin
+            node_output[0]['sample_index'] += extra_margin
         elif isinstance(node, PeakRetriever):
             node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
         else:
@@ -420,7 +420,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     if isinstance(nodes[0], PeakDetector):
         # the first out element is the peak vector
         # we need to go back to absolut sample index
-        pipeline_outputs_tuple[0]['sample_ind'] += (start_frame - left_margin)
+        pipeline_outputs_tuple[0]['sample_index'] += (start_frame - left_margin)
 
     return pipeline_outputs_tuple
 
