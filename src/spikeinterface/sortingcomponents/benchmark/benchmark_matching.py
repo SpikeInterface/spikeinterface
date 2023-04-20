@@ -19,7 +19,7 @@ import shutil
 
 class BenchmarkMatching:
 
-    def __init__(self, recording, gt_sorting, method, exhaustive_gt=True, method_kwargs={}, tmp_folder=None, job_kwargs={}):
+    def __init__(self, recording, gt_sorting, waveform_extractor, method, exhaustive_gt=True, method_kwargs={}, tmp_folder=None, **job_kwargs):
         self.method = method
         self.method_kwargs = method_kwargs
         self.recording = recording
@@ -27,31 +27,25 @@ class BenchmarkMatching:
         self.job_kwargs = job_kwargs
         self.exhaustive_gt = exhaustive_gt
         self.sampling_rate = self.recording.get_sampling_frequency()
-        self.job_kwargs = job_kwargs
         self.method_kwargs = method_kwargs
-        self.metrics = None
 
         self.tmp_folder = tmp_folder
         if self.tmp_folder is None:
             self.tmp_folder = os.path.join('.', ''.join(random.choices(string.ascii_uppercase + string.digits, k=8)))
 
-        self.we = extract_waveforms(self.recording, self.gt_sorting, self.tmp_folder, load_if_exists=False,
-                                   ms_before=2.5, ms_after=2.5, max_spikes_per_unit=500, return_scaled=False,
-                                   **self.job_kwargs)
-
-        self.method_kwargs.update({'waveform_extractor' : self.we})
+        self.we = waveform_extractor
+        self.method_kwargs['waveform_extractor'] = self.wes
         self.templates = self.we.get_all_templates(mode='median')
+        self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
    
     def __del__(self):
         shutil.rmtree(self.tmp_folder)
 
-    def run(self):
-        t_start = time.time()
-        self.spikes = find_spikes_from_templates(self.recording, method=self.method, method_kwargs=self.method_kwargs, **self.job_kwargs)
-        self.run_time = time.time() - t_start
-        self.sorting = NumpySorting.from_times_labels(self.spikes['sample_index'], self.spikes['cluster_index'], self.sampling_rate)
-        self.comp = CollisionGTComparison(self.gt_sorting, self.sorting, exhaustive_gt=self.exhaustive_gt)
-        self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
+    def run_matching_collision(self):
+        spikes = find_spikes_from_templates(self.recording, method=self.method, method_kwargs=self.method_kwargs, **self.job_kwargs)
+        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
+        comp = CollisionGTComparison(self.gt_sorting, self.sorting, exhaustive_gt=self.exhaustive_gt)
+        return comp
 
     def vary_number_of_spikes(self, num_spikes, num_replicates=1):
         tmp_folder = os.path.join(self.tmp_folder, 'vary_num_spikes')
