@@ -1,5 +1,6 @@
 """Sorting components: peak detection."""
 import copy
+from typing import Tuple, Union, List, Dict, Any, Optional, Callable
 
 import numpy as np
 
@@ -108,77 +109,182 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
     return outs
 
 
-expanded_base_peak_dtype = np.dtype(base_peak_dtype + [('iteration', 'int8')])
+expanded_base_peak_dtype = np.dtype(base_peak_dtype + [("iteration", "int8")])
+
+
 class IterativePeakDetector(PeakDetector):
-    
-    def __init__(self, recording: BaseRecording, peak_detector_node: PeakDetector, waveform_extraction_node: WaveformsNode, waveform_denoising_node, num_iterations: int=2):
-        PeakDetector.__init__(self, recording, return_output=True)
+    """
+    A class that iteratively detects peaks in the recording by applying a peak detector, waveform extraction,
+    and waveform denoising node. The algorithm runs for a specified number of iterations or until no peaks are found.
+    """
+
+    def __init__(
+        self,
+        recording: BaseRecording,
+        peak_detector_node: PeakDetector,
+        waveform_extraction_node: WaveformsNode,
+        waveform_denoising_node,
+        num_iterations: int = 2,
+        return_output: bool = True,
+    ):
+        """
+        Initialize the iterative peak detector.
+
+        Parameters
+        ----------
+        recording : BaseRecording
+            The recording to process.
+        peak_detector_node : PeakDetector
+            The peak detector node to use.
+        waveform_extraction_node : WaveformsNode
+            The waveform extraction node to use.
+        waveform_denoising_node
+            The waveform denoising node to use.
+        num_iterations : int, optional, default=2
+            The number of iterations to run the algorithm.
+        return_output : bool, optional, default=True
+        """
+        PeakDetector.__init__(self, recording, return_output=return_output)
         self.peak_detector_node = peak_detector_node
         self.waveform_extraction_node = waveform_extraction_node
-        self.waveform_denoising_node =  waveform_denoising_node
+        self.waveform_denoising_node = waveform_denoising_node
         self.num_iterations = num_iterations
 
-    def get_trace_margin(self):
-        # Same strategy as use by the Node pipeline
+    def get_trace_margin(self) -> int:
+        """
+        Calculate the maximum trace margin from the internal pipeline.
+        Using the strategy as use by the Node pipeline
+
+
+        Returns
+        -------
+        int
+            The maximum trace margin.
+        """
         internal_pipeline = (self.peak_detector_node, self.waveform_extraction_node, self.waveform_denoising_node)
-        pipeline_margin = (component.get_trace_margin() for component in internal_pipeline if hasattr(component, 'get_trace_margin'))
+        pipeline_margin = (
+            component.get_trace_margin() for component in internal_pipeline if hasattr(component, "get_trace_margin")
+        )
         return max(pipeline_margin)
-        
-    def compute(self, traces_chunk, start_frame, end_frame, segment_index, max_margin):
-        
+
+    def compute(self, traces_chunk, start_frame, end_frame, segment_index, max_margin) -> Tuple[np.ndarray]:
+        """
+        Perform the iterative peak detection, waveform extraction, and denoising.
+
+        Parameters
+        ----------
+        traces_chunk : array-like
+            The chunk of traces to process.
+        start_frame : int
+            The starting frame for the chunk.
+        end_frame : int
+            The ending frame for the chunk.
+        segment_index : int
+            The segment index.
+        max_margin : int
+            The maximum margin for the traces.
+
+        Returns
+        -------
+        tuple of ndarray
+            A tuple containing a single ndarray with the detected peaks.
+        """
+
         traces_chunk = traces_chunk.astype("float32")
         local_peaks_list = []
         all_waveforms = []
-        
+
         for iteration in range(self.num_iterations):
-            local_peaks,  = self.peak_detector_node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
-            
-            local_peaks = self.add_iteration_field_to_peaks(local_peaks, iteration)
+            (local_peaks,) = self.peak_detector_node.compute(
+                traces_chunk, start_frame, end_frame, segment_index, max_margin
+            )
+
+            local_peaks = self.add_iteration_to_peaks_dtype(local_peaks, iteration)
             local_peaks_list.append(local_peaks)
 
             # End algorith if no peak is found
             if local_peaks.size == 0:
                 break
-            
+
             waveforms = self.waveform_extraction_node.compute(traces=traces_chunk, peaks=local_peaks)
-            denoised_waveforms = self.waveform_denoising_node.compute(traces=traces_chunk, peaks=local_peaks, waveforms=waveforms)   
-            traces_chunk_minus_waveforms, _ = self.substract_waveforms_from_traces(traces_chunk, local_peaks, denoised_waveforms)            
-            
+            denoised_waveforms = self.waveform_denoising_node.compute(
+                traces=traces_chunk, peaks=local_peaks, waveforms=waveforms
+            )
+            traces_chunk_minus_waveforms, _ = self.substract_waveforms_from_traces(
+                traces_chunk, local_peaks, denoised_waveforms
+            )
+
             # update traces_chunk to run the algorithm again and store local_peaks
             traces_chunk = traces_chunk_minus_waveforms
-            
+
             all_waveforms.append(waveforms)
-            
+
         all_local_peaks = np.concatenate(local_peaks_list, axis=0)
         all_waveforms = np.concatenate(all_waveforms, axis=0) if len(all_waveforms) != 0 else np.empty((0, 0, 0))
-        
-        return (all_local_peaks, )
-    
-    def add_iteration_field_to_peaks(self, local_peaks, iteration):
+
+        return (all_local_peaks,)
+
+    def add_iteration_to_peaks_dtype(self, local_peaks, iteration) -> np.ndarray:
+        """
+        Add the iteration number to the peaks dtype.
+
+        Parameters
+        ----------
+        local_peaks : ndarray
+            The array of local peaks.
+        iteration : int
+            The iteration number.
+
+        Returns
+        -------
+        ndarray
+            An array of local peaks with the iteration number added.
+        """
         # Expand dtype to also contain an iteration field
         local_peaks_expanded = np.zeros_like(local_peaks, dtype=expanded_base_peak_dtype)
         fields_in_base_type = np.dtype(base_peak_dtype).names
         for field in fields_in_base_type:
             local_peaks_expanded[field] = local_peaks[field]
         local_peaks_expanded["iteration"] = iteration
-        
+
         return local_peaks_expanded
-    
-    def substract_waveforms_from_traces(self, traces_chunk, local_peaks, denoised_waveforms):   
-        denoised_waveforms_as_traces = self.build_trace_chunk_with_waveforms(sample_indices=local_peaks["sample_index"], traces_chunk=traces_chunk, 
-                                                                            waveforms=denoised_waveforms, 
-                                                                            extract_dense_waveforms=self.waveform_extraction_node)
+
+    def substract_waveforms_from_traces(
+        self, traces_chunk, local_peaks, denoised_waveforms
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Subtract denoised waveforms from traces.
+
+        Parameters
+        ----------
+        traces_chunk : ndarray
+            The chunk of traces to process.
+        local_peaks : ndarray
+            The array of local peaks.
+        denoised_waveforms : ndarray
+            The denoised waveforms.
+
+        Returns
+        -------
+        tuple of ndarray
+            A tuple containing the traces chunk with denoised waveforms subtracted and the denoised waveforms as traces.
+        """
+        denoised_waveforms_as_traces = self.build_trace_chunk_with_waveforms(
+            sample_indices=local_peaks["sample_index"],
+            traces_chunk=traces_chunk,
+            waveforms=denoised_waveforms,
+            extract_dense_waveforms=self.waveform_extraction_node,
+        )
         traces_chunk_minus_peak_waveforms = traces_chunk - denoised_waveforms_as_traces
-        
+
         return traces_chunk_minus_peak_waveforms, denoised_waveforms_as_traces
-    
-    
+
     def build_trace_chunk_with_waveforms(self, sample_indices, traces_chunk, waveforms, extract_dense_waveforms):
         """
-        This function gets a set of waveforms and builds a trace chunk with them. That is, it builds 
-        a trace chunk including only the extracted waveforms and zeros everywhere else. 
-        This is mainly used in this detector to substract the waveforms from the original traces. 
-        
+        This function gets a set of waveforms and builds a trace chunk with them. That is, it builds
+        a trace chunk including only the extracted waveforms and zeros everywhere else.
+        This is mainly used in this detector to substract the waveforms from the original traces.
+
         In case that two waveforms overlap in time (that is, they share the same domain). The trace with
         waveforms will have the sum of both waveforms in that domain.
 
@@ -195,12 +301,11 @@ class IterativePeakDetector(PeakDetector):
         """
         waveforms_in_traces = np.zeros_like(traces_chunk, dtype=traces_chunk.dtype)
         for sample_index, wf in zip(sample_indices, waveforms):
-            first_sample = sample_index - extract_dense_waveforms.nbefore 
-            last_sample = sample_index + extract_dense_waveforms.nafter 
+            first_sample = sample_index - extract_dense_waveforms.nbefore
+            last_sample = sample_index + extract_dense_waveforms.nafter
             waveforms_in_traces[first_sample:last_sample, :] += wf
-        
-        return waveforms_in_traces
 
+        return waveforms_in_traces
 
 class PeakDetectorWrapper(PeakDetector):
     # transitory class to maintain instance based and class method based
