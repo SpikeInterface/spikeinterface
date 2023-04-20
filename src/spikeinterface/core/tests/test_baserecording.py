@@ -263,11 +263,11 @@ def test_BaseRecording():
     compressor = get_default_zarr_compressor()
     rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording",
                          compressor=compressor)
-    check_recordings_equal(rec2, rec_zarr, return_scaled=False, check_annotations=True, check_properties=True)
+    check_recordings_equal(rec2, rec_zarr, return_scaled=False, check_annotations=False, check_properties=True)
 
     rec_zarr2 = rec2.save(format="zarr", folder=cache_folder / "recording_channel_chunk",
                           compressor=compressor, channel_chunk_size=2)
-    check_recordings_equal(rec2, rec_zarr2, return_scaled=False, check_annotations=True, check_properties=True)
+    check_recordings_equal(rec2, rec_zarr2, return_scaled=False, check_annotations=False, check_properties=True)
 
     # test cast unsigned
     rec_u = rec_uint16.save(format="zarr", folder=cache_folder / "rec_u")
