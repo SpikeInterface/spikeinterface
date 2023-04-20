@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from spikeinterface import download_dataset
-from spikeinterface.extractors import MEArecRecordingExtractor
+from spikeinterface.extractors.neoextractors.mearec import MEArecRecordingExtractor, MEArecSortingExtractor
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
@@ -20,83 +20,108 @@ else:
 
 try:
     import pyopencl
+
     HAVE_PYOPENCL = True
 except:
     HAVE_PYOPENCL = False
 
 try:
     import torch
+
     HAVE_TORCH = True
 except:
     HAVE_TORCH = False
 
 
-DEBUG = False
-
-
-def test_detect_peaks():
-
-    repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
-    remote_path = 'mearec/mearec_test_10s.h5'
-    local_path = download_dataset(
-        repo=repo, remote_path=remote_path, local_folder=None)
+@pytest.fixture(scope="module")
+def recording():
+    repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
+    remote_path = "mearec/mearec_test_10s.h5"
+    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
     recording = MEArecRecordingExtractor(local_path)
-    
-    job_kwargs = dict(n_jobs=-1, chunk_size=10000, progress_bar=True, verbose=True)
+    return recording
+
+@pytest.fixture(scope="module")
+def sorting():
+    repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
+    remote_path = "mearec/mearec_test_10s.h5"
+    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
+    sorting = MEArecSortingExtractor(local_path)
+    return sorting
+
+@pytest.fixture(scope="module")
+def spike_trains(sorting):
+    spike_trains = sorting.get_all_spike_trains()[0][0]
+    return spike_trains
+
+@pytest.fixture(scope="module")
+def job_kwargs():
+    return dict(n_jobs=-1, chunk_size=10000, progress_bar=True, verbose=True)
+
+# Don't know why this was different normal job_kwargs
+@pytest.fixture(scope="module")
+def torch_job_kwargs(job_kwargs):
     torch_job_kwargs = job_kwargs.copy()
     torch_job_kwargs["n_jobs"] = 2
+    return torch_job_kwargs
 
-    # by_channel
-    by_channel_str = f"By channel:\n"
-    peaks_by_channel_np = detect_peaks(recording, method='by_channel',
-                                       peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                                       **job_kwargs)
-    by_channel_str += f"- numpy - {len(peaks_by_channel_np)}\n"
 
-    if HAVE_TORCH:    
-        peaks_by_channel_torch = detect_peaks(recording, method='by_channel_torch',
-                                              peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                                              **torch_job_kwargs)
-        # due to the different implementations, we allow a small tolerance
-        assert np.isclose(np.array(len(peaks_by_channel_np)), np.array(len(peaks_by_channel_torch)),
-                          rtol=0.1)
-        by_channel_str += f"- torch - {len(peaks_by_channel_torch)}\n"
-    print(by_channel_str)
 
-    # locally_exclusive
-    locally_exclusive_str = f"Locally exclusive:\n"
-    peaks_local_numba = detect_peaks(recording, method='locally_exclusive',
-                                     peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                                     **job_kwargs)
+def test_detect_peaks_by_channel(recording, spike_trains, job_kwargs, torch_job_kwargs):
+    peaks_by_channel_np = detect_peaks(
+        recording, method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
+    )
+            
+    if HAVE_TORCH:
+        peaks_by_channel_torch = detect_peaks(
+            recording,
+            method="by_channel_torch",
+            peak_sign="neg",
+            detect_threshold=5,
+            exclude_sweep_ms=0.1,
+            **torch_job_kwargs,
+        )
+
+        # Test that torch and numpy implementation match
+        assert np.isclose(np.array(len(peaks_by_channel_np)), np.array(len(peaks_by_channel_torch)), rtol=0.1)
+        
+def test_detect_peaks_locally_exclusive(recording, spike_trains, job_kwargs, torch_job_kwargs):
+    peaks_by_channel_np = detect_peaks(
+        recording, method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
+    )
+
+
+    peaks_local_numba = detect_peaks(
+        recording, method="locally_exclusive", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
+    )
     assert len(peaks_by_channel_np) > len(peaks_local_numba)
 
-    locally_exclusive_str += f"- numba - {len(peaks_local_numba)}\n"
-
     if HAVE_TORCH:
-        peaks_local_torch = detect_peaks(recording, method='locally_exclusive_torch',
-                                         peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                                         **torch_job_kwargs)
-        assert len(peaks_by_channel_torch) > len(peaks_local_torch)
-        # due to the different implementations, we allow a small tolerance
-        assert np.isclose(np.array(len(peaks_local_numba)), np.array(len(peaks_local_torch)),
-                          rtol=0.1)
-        locally_exclusive_str += f"- torch - {len(peaks_local_torch)}\n"
 
-    
-    # locally_exclusive + opencl
+        peaks_local_torch = detect_peaks(
+            recording,
+            method="locally_exclusive_torch",
+            peak_sign="neg",
+            detect_threshold=5,
+            exclude_sweep_ms=0.1,
+            **torch_job_kwargs,
+        )
+        assert np.isclose(np.array(len(peaks_local_numba)), np.array(len(peaks_local_torch)), rtol=0.1)
+            
     if HAVE_PYOPENCL:
-        peaks_local_cl = detect_peaks(recording, method='locally_exclusive_cl',
-                                      peak_sign='neg', detect_threshold=5, exclude_sweep_ms=0.1,
-                                      **job_kwargs)
-        locally_exclusive_str += f"- opencl - {len(peaks_local_cl)}\n"
-        # in this case implementations are exactly the same
+        peaks_local_cl = detect_peaks(
+            recording,
+            method="locally_exclusive_cl",
+            peak_sign="neg",
+            detect_threshold=5,
+            exclude_sweep_ms=0.1,
+            **job_kwargs,
+        )
         assert len(peaks_local_numba) == len(peaks_local_cl)
-    print(locally_exclusive_str)
-
-    # locally_exclusive + pipeline steps LocalizeCenterOfMass + PeakToPeakFeature
-    print("With peak pipeline")
-    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1., ms_after=1.,
-                                                    return_output=False)
+        
+def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs):
+    
+    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1.0, ms_after=1.0, return_output=False)
 
     pipeline_nodes = [
         extract_dense_waveforms,
@@ -158,6 +183,7 @@ def test_detect_peaks():
     
 
     # DEBUG
+    DEBUG = False
     if DEBUG:
         import matplotlib.pyplot as plt
         import spikeinterface.widgets as sw
@@ -188,7 +214,6 @@ def test_detect_peaks():
         ax.scatter(soma_positions[:, 1], soma_positions[:, 2], color='g', s=20, marker='*')
         plt.show()
 
-
 if __name__ == '__main__':
-    test_detect_peaks()
+    pass
     
