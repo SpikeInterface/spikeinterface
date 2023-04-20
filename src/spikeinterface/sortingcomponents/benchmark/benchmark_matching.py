@@ -4,7 +4,7 @@ from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.core import NumpySorting
 from spikeinterface.qualitymetrics import compute_quality_metrics
-from spikeinterface.comparison import CollisionGTComparison
+from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_ground_truth
 from spikeinterface.widgets import (plot_sorting_performance,
     plot_agreement_matrix, plot_comparison_collision_by_similarity,
     plot_unit_templates, plot_unit_waveforms, plot_gt_performances)
@@ -15,6 +15,7 @@ import os
 import string, random
 import pylab as plt
 import numpy as np
+from tqdm import tqdm
 
 class BenchmarkMatching:
 
@@ -52,6 +53,34 @@ class BenchmarkMatching:
         self.sorting = NumpySorting.from_times_labels(self.spikes['sample_index'], self.spikes['cluster_index'], self.sampling_rate)
         self.comp = CollisionGTComparison(self.gt_sorting, self.sorting, exhaustive_gt=self.exhaustive_gt)
         self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
+
+    def vary_number_of_spikes(self, num_spikes):
+        tmp_folder = os.path.join(self.tmp_folder, 'vary_num_spikes')
+        comparisons = []
+        for spike_num in num_spikes:
+            print(f"{spike_num = }")
+            # Generate New Waveform Extractor with New Spike Numbers
+            we = extract_waveforms(self.recording, self.gt_sorting, tmp_folder, load_if_exists=False, overwrite=True,
+                                   ms_before=2.5, ms_after=2.5, max_spikes_per_unit=spike_num, return_scaled=False,
+                                   **self.job_kwargs)
+            templates = we.get_all_templates(we.unit_ids, mode='median')
+
+            # Update method_kwargs
+            if self.method == 'wobble':
+                self.method_kwargs['templates'] = templates
+            else:
+                self.method_kwargs['waveform_extractor'] = we
+
+            # Run Template Matching and Generate Sorting
+            spikes = find_spikes_from_templates(self.recording, method=self.method, method_kwargs=self.method_kwargs,
+                                                **self.job_kwargs)
+            sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
+
+            # Evaluate Performance
+            comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
+            comparisons.append(comp)
+
+        return comparisons
 
     def plot(self, title=None):
         
