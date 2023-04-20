@@ -184,7 +184,7 @@ Mountainsort5
 ^^^^^^^^^^^^^
 
 * Python
-* Url: https://github.com/magland/mountainsort5
+* Url: https://github.com/flatironinstitute/mountainsort5
 * Authors: 	Jeremy Magland
 * Installation::
 

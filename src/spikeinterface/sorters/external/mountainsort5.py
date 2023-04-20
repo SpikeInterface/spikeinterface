@@ -69,7 +69,7 @@ class Mountainsort5Sorter(BaseSorter):
        >>> pip install mountainsort5
 
     More information on mountainsort5 at:
-      * https://github.com/magland/mountainsort5
+      * https://github.com/flatironinstitute/mountainsort5
     """
 
     @classmethod
@@ -78,6 +78,11 @@ class Mountainsort5Sorter(BaseSorter):
             import mountainsort5
             HAVE_MS5 = True
         except ImportError:
+            HAVE_MS5 = False
+        import semantic_version
+        vv = semantic_version.Version.coerce(mountainsort5.__version__)
+        if vv.major != 0 or vv.minor != 1:
+            print(f'WARNING: This version of SpikeInterface expects Mountainsort5 version 0.1.x. You have version {mountainsort5.__version__}')
             HAVE_MS5 = False
         return HAVE_MS5
 
