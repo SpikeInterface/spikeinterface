@@ -120,37 +120,46 @@ class IterativePeakDetector(PeakDetector):
         
     def compute(self, traces_chunk, start_frame, end_frame, segment_index, max_margin):
         
+        traces_chunk = traces_chunk.astype("float32")
         local_peaks_list = []
         for iteration in range(self.num_iterations):
-            iteration_output = self.single_pass(traces_chunk, start_frame, end_frame, segment_index, max_margin)
-            local_peaks, traces_chunk_minus_peak_waveforms, *_ = iteration_output
+            local_peaks,  = self.peak_detector_node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
             
-            # Expand dtype to contain iteration
-            local_peaks_expanded = np.zeros_like(local_peaks, dtype=expanded_base_peak_dtype)
-            for field in np.dtype(base_peak_dtype).names:
-                local_peaks_expanded[field] = local_peaks[field]
-            local_peaks_expanded["iteration"] = iteration
+            local_peaks = self.add_iteration_field_to_peaks(local_peaks, iteration)
+            local_peaks_list.append(local_peaks)
+
+            # End algorith if no peak is found
+            if local_peaks.size == 0:
+                break
+            
+            waveforms = self.waveform_extraction_node.compute(traces=traces_chunk, peaks=local_peaks)
+            denoised_waveforms = self.waveform_denoising_node.compute(traces=traces_chunk, peaks=local_peaks, waveforms=waveforms)   
+            traces_chunk_without_waveforms, _ = self.substract_waveforms_from_traces(traces_chunk, local_peaks, denoised_waveforms)            
             
             # update traces_chunk to run the algorithm again and store local_peaks
-            traces_chunk = traces_chunk_minus_peak_waveforms
-            local_peaks_list.append(local_peaks_expanded)
+            traces_chunk = traces_chunk_without_waveforms
             
         all_local_peaks = np.concatenate(local_peaks_list, axis=0)
         
-        return all_local_peaks
+        return (all_local_peaks, )
     
-    def single_pass(self, traces_chunk, start_frame, end_frame, segment_index, max_margin):
+    def add_iteration_field_to_peaks(self, local_peaks, iteration):
+        # Expand dtype to also contain an iteration field
+        local_peaks_expanded = np.zeros_like(local_peaks, dtype=expanded_base_peak_dtype)
+        fields_in_base_type = np.dtype(base_peak_dtype).names
+        for field in fields_in_base_type:
+            local_peaks_expanded[field] = local_peaks[field]
+        local_peaks_expanded["iteration"] = iteration
         
-        local_peaks,  = self.peak_detector_node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
-        waveforms = self.waveform_extraction_node.compute(traces=traces_chunk, peaks=local_peaks)
-        denoised_waveforms = self.waveform_denoising_node.compute(traces=traces_chunk, peaks=local_peaks, waveforms=waveforms)
-        
+        return local_peaks_expanded
+    
+    def substract_waveforms_from_traces(self, traces_chunk, local_peaks, denoised_waveforms):   
         denoised_waveforms_as_traces = self.build_trace_chunk_with_waveforms(sample_indices=local_peaks["sample_index"], traces_chunk=traces_chunk, 
                                                                             waveforms=denoised_waveforms, 
                                                                             extract_dense_waveforms=self.waveform_extraction_node)
         traces_chunk_minus_peak_waveforms = traces_chunk - denoised_waveforms_as_traces
         
-        return local_peaks, traces_chunk_minus_peak_waveforms, waveforms, denoised_waveforms_as_traces
+        return traces_chunk_minus_peak_waveforms, denoised_waveforms_as_traces
     
     
     def build_trace_chunk_with_waveforms(self, sample_indices, traces_chunk, waveforms, extract_dense_waveforms):
@@ -204,6 +213,7 @@ class PeakDetectorWrapper(PeakDetector):
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         
         peak_sample_ind, peak_chan_ind = self.detect_peaks(traces, *self.args)
+        # TODO: Wat do on empty peak_sample_ind or peak_chan_ind?
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
         local_peaks = np.zeros(peak_sample_ind.size, dtype=base_peak_dtype)
         local_peaks['sample_index'] = peak_sample_ind
@@ -448,7 +458,7 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
     def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, device, return_tensor, neighbor_idxs):
         sample_inds, chan_inds = _torch_detect_peaks(traces, peak_sign, abs_threholds, exclude_sweep_size, 
                                                      neighbor_idxs, device)
-        if not return_tensor:
+        if not return_tensor and isinstance(sample_inds, torch.Tensor) and isinstance(chan_inds, torch.Tensor): 
             sample_inds = np.array(sample_inds.cpu())
             chan_inds = np.array(chan_inds.cpu())
         return sample_inds, chan_inds
@@ -572,7 +582,7 @@ if HAVE_TORCH:
         max_amps_at_inds = max_amps.view(-1)[window_max_inds]
         crossings = torch.nonzero(max_amps_at_inds > 1).squeeze()
         if not crossings.numel():
-            return np.array([]), np.array([]), np.array([])
+            return np.array([]), np.array([])
 
         # -- unravel the spike index
         # (right now the indices are into flattened recording)
@@ -586,7 +596,7 @@ if HAVE_TORCH:
             (0 < sample_inds) & (sample_inds < traces.shape[0] - 1)
         ).squeeze()
         if not sample_inds.numel():
-            return np.array([]), np.array([]), np.array([])
+            return np.array([]), np.array([])
         sample_inds = sample_inds[valid_inds]
         chan_inds = chan_inds[valid_inds]
         amplitudes = amplitudes[valid_inds]
@@ -626,7 +636,7 @@ if HAVE_TORCH:
                 amplitudes >= max_amps[sample_inds, chan_inds] - 1e-8
             ).squeeze()
             if not dedup.numel():
-                return np.array([]), np.array([]), np.array([])
+                return np.array([]), np.array([])
             sample_inds = sample_inds[dedup]
             chan_inds = chan_inds[dedup]
             amplitudes = amplitudes[dedup]
