@@ -196,7 +196,11 @@ class IterativePeakDetector(PeakDetector):
 
         for iteration in range(self.num_iterations):
             (local_peaks,) = self.peak_detector_node.compute(
-                traces_chunk, start_frame, end_frame, segment_index, max_margin
+                traces=traces_chunk, 
+                start_frame=start_frame, 
+                end_frame=end_frame,
+                segment_index=segment_index,
+                max_margin=max_margin,
             )
 
             local_peaks = self.add_iteration_to_peaks_dtype(local_peaks, iteration)
@@ -208,10 +212,13 @@ class IterativePeakDetector(PeakDetector):
 
             waveforms = self.waveform_extraction_node.compute(traces=traces_chunk, peaks=local_peaks)
             denoised_waveforms = self.waveform_denoising_node.compute(
-                traces=traces_chunk, peaks=local_peaks, waveforms=waveforms
+                traces=traces_chunk, 
+                peaks=local_peaks, 
+                waveforms=waveforms
             )
             traces_chunk_minus_waveforms, _ = self.substract_waveforms_from_traces(
-                traces_chunk, local_peaks, denoised_waveforms
+                traces_chunk, local_peaks, 
+                denoised_waveforms
             )
 
             # update traces_chunk to run the algorithm again and store local_peaks
@@ -279,25 +286,34 @@ class IterativePeakDetector(PeakDetector):
 
         return traces_chunk_minus_peak_waveforms, denoised_waveforms_as_traces
 
-    def build_trace_chunk_with_waveforms(self, sample_indices, traces_chunk, waveforms, extract_dense_waveforms):
+    def build_trace_chunk_with_waveforms(
+        self,
+        sample_indices: np.ndarray,
+        traces_chunk: np.ndarray,
+        waveforms: np.ndarray,
+        extract_dense_waveforms: WaveformsNode,
+    ) -> np.ndarray:
         """
-        This function gets a set of waveforms and builds a trace chunk with them. That is, it builds
-        a trace chunk including only the extracted waveforms and zeros everywhere else.
-        This is mainly used in this detector to substract the waveforms from the original traces.
-
-        In case that two waveforms overlap in time (that is, they share the same domain). The trace with
-        waveforms will have the sum of both waveforms in that domain.
+        Build a trace chunk containing only the extracted waveforms and zeros everywhere else. This function
+        is mainly used in this detector to subtract the waveforms from the original traces. In case two
+        waveforms overlap in time (i.e., they share the same domain), the resulting trace will have the
+        sum of both waveforms in that domain.
 
         Parameters
         ----------
-        sample_indices : The index where the waveform are maximum (peaks["sample_index"])
-        traces_chunk : A chunk of the traces
-        waveforms : The waveforms extracted from the traces
-        extract_dense_waveforms : An instance of the WaveformExtractor class for nbefore and nafter
+        sample_indices : ndarray
+            The indices where the waveforms are maximum (peaks["sample_index"]).
+        traces_chunk : ndarray
+            A chunk of the traces.
+        waveforms : ndarray
+            The waveforms extracted from the traces.
+        extract_dense_waveforms : WaveformsNode
+            An instance of the WaveformsNode class for nbefore and nafter.
 
         Returns
         -------
-        An array that is as long as the traces but contains only the waveforms and zeros everywhere else.
+        ndarray
+            An array that is as long as the traces but contains only the waveforms and zeros everywhere else.
         """
         waveforms_in_traces = np.zeros_like(traces_chunk, dtype=traces_chunk.dtype)
         for sample_index, wf in zip(sample_indices, waveforms):
@@ -306,6 +322,7 @@ class IterativePeakDetector(PeakDetector):
             waveforms_in_traces[first_sample:last_sample, :] += wf
 
         return waveforms_in_traces
+
 
 class PeakDetectorWrapper(PeakDetector):
     # transitory class to maintain instance based and class method based
