@@ -7,6 +7,9 @@ from spikeinterface.core.job_tools import (ChunkRecordingExecutor, _shared_job_k
                                            split_job_kwargs, fix_job_kwargs)
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 
+from spikeinterface.core.baserecording import BaseRecording
+from spikeinterface.sortingcomponents.peak_pipeline import PeakDetector, WaveformsNode
+
 from ..core import get_chunk_with_margin
 
 from .peak_pipeline import PeakDetector, run_node_pipeline, base_peak_dtype
@@ -108,7 +111,7 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
 expanded_base_peak_dtype = np.dtype(base_peak_dtype + [('iteration', 'int8')])
 class IterativePeakDetector(PeakDetector):
     
-    def __init__(self, recording, peak_detector_node, waveform_extraction_node, waveform_denoising_node, num_iterations=2):
+    def __init__(self, recording: BaseRecording, peak_detector_node: PeakDetector, waveform_extraction_node: WaveformsNode, waveform_denoising_node, num_iterations: int=2):
         PeakDetector.__init__(self, recording, return_output=True)
         self.peak_detector_node = peak_detector_node
         self.waveform_extraction_node = waveform_extraction_node
@@ -116,12 +119,17 @@ class IterativePeakDetector(PeakDetector):
         self.num_iterations = num_iterations
 
     def get_trace_margin(self):
-        return self.peak_detector_node.get_trace_margin()
+        # Same strategy as use by the Node pipeline
+        internal_pipeline = (self.peak_detector_node, self.waveform_extraction_node, self.waveform_denoising_node)
+        pipeline_margin = (component.get_trace_margin() for component in internal_pipeline if hasattr(component, 'get_trace_margin'))
+        return max(pipeline_margin)
         
     def compute(self, traces_chunk, start_frame, end_frame, segment_index, max_margin):
         
         traces_chunk = traces_chunk.astype("float32")
         local_peaks_list = []
+        all_waveforms = []
+        
         for iteration in range(self.num_iterations):
             local_peaks,  = self.peak_detector_node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
             
@@ -134,12 +142,15 @@ class IterativePeakDetector(PeakDetector):
             
             waveforms = self.waveform_extraction_node.compute(traces=traces_chunk, peaks=local_peaks)
             denoised_waveforms = self.waveform_denoising_node.compute(traces=traces_chunk, peaks=local_peaks, waveforms=waveforms)   
-            traces_chunk_without_waveforms, _ = self.substract_waveforms_from_traces(traces_chunk, local_peaks, denoised_waveforms)            
+            traces_chunk_minus_waveforms, _ = self.substract_waveforms_from_traces(traces_chunk, local_peaks, denoised_waveforms)            
             
             # update traces_chunk to run the algorithm again and store local_peaks
-            traces_chunk = traces_chunk_without_waveforms
+            traces_chunk = traces_chunk_minus_waveforms
+            
+            all_waveforms.append(waveforms)
             
         all_local_peaks = np.concatenate(local_peaks_list, axis=0)
+        all_waveforms = np.concatenate(all_waveforms, axis=0) if len(all_waveforms) != 0 else np.empty((0, 0, 0))
         
         return (all_local_peaks, )
     
@@ -173,18 +184,14 @@ class IterativePeakDetector(PeakDetector):
 
         Parameters
         ----------
-        sample_indices : _type_
-        traces_chunk : _type_
-            _description_
-        waveforms : _type_
-            _description_
-        extract_dense_waveforms : _type_
-            _description_
+        sample_indices : The index where the waveform are maximum (peaks["sample_index"])
+        traces_chunk : A chunk of the traces
+        waveforms : The waveforms extracted from the traces
+        extract_dense_waveforms : An instance of the WaveformExtractor class for nbefore and nafter
 
         Returns
         -------
-        _type_
-            _description_
+        An array that is as long as the traces but contains only the waveforms and zeros everywhere else.
         """
         waveforms_in_traces = np.zeros_like(traces_chunk, dtype=traces_chunk.dtype)
         for sample_index, wf in zip(sample_indices, waveforms):
