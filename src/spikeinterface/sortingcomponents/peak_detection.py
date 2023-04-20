@@ -162,9 +162,7 @@ class IterativePeakDetector(PeakDetector):
             The maximum trace margin.
         """
         internal_pipeline = (self.peak_detector_node, self.waveform_extraction_node, self.waveform_denoising_node)
-        pipeline_margin = (
-            component.get_trace_margin() for component in internal_pipeline if hasattr(component, "get_trace_margin")
-        )
+        pipeline_margin = (node.get_trace_margin() for node in internal_pipeline if hasattr(node, "get_trace_margin"))
         return max(pipeline_margin)
 
     def compute(self, traces_chunk, start_frame, end_frame, segment_index, max_margin) -> Tuple[np.ndarray]:
@@ -203,7 +201,7 @@ class IterativePeakDetector(PeakDetector):
                 max_margin=max_margin,
             )
 
-            local_peaks = self.add_iteration_to_peaks_dtype(local_peaks, iteration)
+            local_peaks = self.add_iteration_to_peaks_dtype(local_peaks=local_peaks, iteration=iteration)
             local_peaks_list.append(local_peaks)
 
             # End algorith if no peak is found
@@ -286,6 +284,7 @@ class IterativePeakDetector(PeakDetector):
 
         return traces_chunk_minus_peak_waveforms, denoised_waveforms_as_traces
 
+    #TODO: Check how this could work with sparse waveforms
     def build_trace_chunk_with_waveforms(
         self,
         sample_indices: np.ndarray,
