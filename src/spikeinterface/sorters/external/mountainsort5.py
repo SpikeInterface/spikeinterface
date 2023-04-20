@@ -11,6 +11,7 @@ from spikeinterface.core import load_extractor
 
 from spikeinterface.extractors import NpzSortingExtractor, NumpySorting
 
+from packaging.version import parse
 
 class Mountainsort5Sorter(BaseSorter):
     """Mountainsort5 Sorter object."""
@@ -79,9 +80,9 @@ class Mountainsort5Sorter(BaseSorter):
             HAVE_MS5 = True
         except ImportError:
             HAVE_MS5 = False
-        import semantic_version
-        vv = semantic_version.Version.coerce(mountainsort5.__version__)
-        if vv.major != 0 or vv.minor != 1:
+        
+        vv = parse(mountainsort5.__version__)
+        if vv < parse("0.1") or vv >= parse("0.2"):
             print(f'WARNING: This version of SpikeInterface expects Mountainsort5 version 0.1.x. You have version {mountainsort5.__version__}')
             HAVE_MS5 = False
         return HAVE_MS5
