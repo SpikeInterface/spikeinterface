@@ -88,4 +88,4 @@ def check_extractor_properties_equal(EX1, EX2) -> None:
     assert np.array_equal(sorted(EX1.get_property_keys()), sorted(EX2.get_property_keys()))
 
     for property_name in EX1.get_property_keys():
-        np.assert_array_equal(EX1.get_property(property_name), EX2.get_property(property_name))
+        assert_array_equal(EX1.get_property(property_name), EX2.get_property(property_name))
