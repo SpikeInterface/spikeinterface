@@ -59,32 +59,33 @@ class BenchmarkMatching:
         for spike_num in num_spikes:
             print(f"{spike_num = }")
             comps = []
-            for i in range(num_replicates):
+            for i in range(1, num_replicates):
                 print(f"{i = }")
-                # Generate New Waveform Extractor with New Spike Numbers
-                we = extract_waveforms(self.recording, self.gt_sorting, tmp_folder, load_if_exists=False, overwrite=True,
-                                       ms_before=2.5, ms_after=2.5, max_spikes_per_unit=spike_num, return_scaled=False,
-                                       seed=i, **self.job_kwargs)
-                templates = we.get_all_templates(we.unit_ids, mode='median')
-
-                # Update method_kwargs
-                if self.method == 'wobble':
-                    self.method_kwargs['templates'] = templates
-                else:
-                    self.method_kwargs['waveform_extractor'] = we
-
-                # Run Template Matching and Generate Sorting
-                spikes = find_spikes_from_templates(self.recording, method=self.method, method_kwargs=self.method_kwargs,
-                                                    **self.job_kwargs)
-                sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
-
-                # Evaluate Performance
-                comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
+                comp = self.run_matching_num_spikes(i, spike_num, tmp_folder)
                 comps.append(comp)
             comparisons.append(comps)
 
         shutil.rmtree(tmp_folder)
         return comparisons
+
+    def run_matching_num_spikes(self, iter_num, spike_num, tmp_folder):
+        # Generate New Waveform Extractor with New Spike Numbers
+        we = extract_waveforms(self.recording, self.gt_sorting, tmp_folder, load_if_exists=False, overwrite=True,
+                               ms_before=2.5, ms_after=2.5, max_spikes_per_unit=spike_num, return_scaled=False,
+                               seed=iter_num, **self.job_kwargs)
+        templates = we.get_all_templates(we.unit_ids, mode='median')
+        # Update method_kwargs
+        if self.method == 'wobble':
+            self.method_kwargs['templates'] = templates
+        else:
+            self.method_kwargs['waveform_extractor'] = we
+        # Run Template Matching and Generate Sorting
+        spikes = find_spikes_from_templates(self.recording, method=self.method, method_kwargs=self.method_kwargs,
+                                            **self.job_kwargs)
+        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
+        # Evaluate Performance
+        comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
+        return comp
 
     def vary_fraction_misclassed(self, fractions, num_replicates=1):
         tmp_folder = os.path.join(self.tmp_folder, 'vary_fraction_misclassed')
@@ -92,52 +93,53 @@ class BenchmarkMatching:
         for fraction in fractions:
             print(f"{fraction = }")
             comps = []
-            for i in range(num_replicates):
+            for i in range(1, num_replicates):
                 print(f"{i = }")
-                np.random.seed(i)
-                # Randomly misclass spike trains
-                spike_time_indices, labels = [], []
-                for unit_id in self.gt_sorting.get_unit_ids():
-                    unit_sorting = self.gt_sorting.get_unit_spike_train(unit_id=unit_id)
-                    num_spikes = int(len(unit_sorting) * fraction)
-                    unit_misclass_index = np.random.choice(np.arange(len(unit_sorting)), size=num_spikes, replace=False)
-                    for i, spike in enumerate(unit_sorting):
-                        spike_time_indices.append(spike)
-                        if i in unit_misclass_index:
-                            alt_id = np.random.choice(we.unit_ids)
-                            labels.append(alt_id)
-                        else:
-                            labels.append(unit_id)
-                spike_time_indices = np.array(spike_time_indices)
-                labels = np.array(labels)
-                sort_index = np.argsort(spike_time_indices)
-                spike_time_indices = spike_time_indices[sort_index]
-                labels = labels[sort_index]
-                sorting_misclassed = NumpySorting.from_times_labels(spike_time_indices, labels, self.sampling_rate)
-                # Generate New Waveform Extractor with Misclassed Spike Trains
-                we = extract_waveforms(self.recording, sorting_misclassed, tmp_folder, load_if_exists=False, overwrite=True,
-                                       ms_before=2.5, ms_after=2.5, max_spikes_per_unit=500, return_scaled=False,
-                                       seed=i, **self.job_kwargs)
-                templates = we.get_all_templates(we.unit_ids, mode='median')
-
-                # Update method_kwargs
-                if self.method == 'wobble':
-                    self.method_kwargs['templates'] = templates
-                else:
-                    self.method_kwargs['waveform_extractor'] = we
-
-                # Run Template Matching and Generate Sorting
-                spikes = find_spikes_from_templates(self.recording, method=self.method, method_kwargs=self.method_kwargs,
-                                                    **self.job_kwargs)
-                sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
-
-                # Evaluate Performance
-                comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
+                comp = self.run_matching_misclassed(fraction, i, tmp_folder)
                 comps.append(comp)
             comparisons.append(comps)
 
         shutil.rmtree(tmp_folder)
         return comparisons
+
+    def run_matching_misclassed(self, fraction_misclassed, iter_num , tmp_folder):
+        np.random.seed(iter_num)
+        # Randomly misclass spike trains
+        spike_time_indices, labels = [], []
+        for unit_id in self.gt_sorting.get_unit_ids():
+            unit_sorting = self.gt_sorting.get_unit_spike_train(unit_id=unit_id)
+            num_spikes = int(len(unit_sorting) * fraction_misclassed)
+            unit_misclass_index = np.random.choice(np.arange(len(unit_sorting)), size=num_spikes, replace=False)
+            for i, spike in enumerate(unit_sorting):
+                spike_time_indices.append(spike)
+                if i in unit_misclass_index:
+                    alt_id = np.random.choice(self.we.unit_ids)
+                    labels.append(alt_id)
+                else:
+                    labels.append(unit_id)
+        spike_time_indices = np.array(spike_time_indices)
+        labels = np.array(labels)
+        sort_index = np.argsort(spike_time_indices)
+        spike_time_indices = spike_time_indices[sort_index]
+        labels = labels[sort_index]
+        sorting_misclassed = NumpySorting.from_times_labels(spike_time_indices, labels, self.sampling_rate)
+        # Generate New Waveform Extractor with Misclassed Spike Trains
+        we = extract_waveforms(self.recording, sorting_misclassed, tmp_folder, load_if_exists=False, overwrite=True,
+                               ms_before=2.5, ms_after=2.5, max_spikes_per_unit=500, return_scaled=False,
+                               seed=iter_num, **self.job_kwargs)
+        templates = we.get_all_templates(we.unit_ids, mode='median')
+        # Update method_kwargs
+        if self.method == 'wobble':
+            self.method_kwargs['templates'] = templates
+        else:
+            self.method_kwargs['waveform_extractor'] = we
+        # Run Template Matching and Generate Sorting
+        spikes = find_spikes_from_templates(self.recording, method=self.method, method_kwargs=self.method_kwargs,
+                                            **self.job_kwargs)
+        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
+        # Evaluate Performance
+        comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
+        return comp
 
     def plot(self, title=None):
         
