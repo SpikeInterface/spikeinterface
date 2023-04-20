@@ -83,8 +83,8 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         elif outputs == 'by_unit':
             locations_by_unit = []
             for segment_index in range(self.waveform_extractor.get_num_segments()):
-                i0 =np.searchsorted(self.spikes['segment_ind'], segment_index, side="left")
-                i1 =np.searchsorted(self.spikes['segment_ind'], segment_index, side="right")
+                i0 =np.searchsorted(self.spikes['segment_index'], segment_index, side="left")
+                i1 =np.searchsorted(self.spikes['segment_index'], segment_index, side="right")
                 spikes = self.spikes[i0: i1]
                 locations = self._extension_data['spike_locations'][i0: i1]
                 
