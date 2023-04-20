@@ -543,22 +543,26 @@ class BaseExtractor:
             # case from a folder after a calling extractor.save(...)
             folder = file_path
             file = None
-            
-            # the is spikeinterface<=0.94.0
-            # a folder came with 'cached.sjon'
-            for dump_ext in ('json', 'pkl', 'pickle'):
-                f = folder / f'cached.{dump_ext}'
+
+            if folder.suffix == ".zarr":
+                from .zarrrecordingextractor import read_zarr
+                extractor = read_zarr(folder)
+            else:
+                # the is spikeinterface<=0.94.0
+                # a folder came with 'cached.json'
+                for dump_ext in ('json', 'pkl', 'pickle'):
+                    f = folder / f'cached.{dump_ext}'
+                    if f.is_file():
+                        file = f
+
+                # spikeinterface>=0.95.0
+                f = folder / f'si_folder.json'
                 if f.is_file():
                     file = f
-            
-            # spikeinterface>=0.95.0
-            f = folder / f'si_folder.json'
-            if f.is_file():
-                file = f
 
-            if file is None:
-                raise ValueError(f'This folder is not a cached folder {file_path}')
-            extractor = BaseExtractor.load(file, base_folder=folder)
+                if file is None:
+                    raise ValueError(f'This folder is not a cached folder {file_path}')
+                extractor = BaseExtractor.load(file, base_folder=folder)
 
             return extractor
 
@@ -745,6 +749,7 @@ class BaseExtractor:
             Saved copy of the extractor.
         """
         import zarr
+        from .zarrrecordingextractor import read_zarr
 
         if zarr_path is not None:
             warnings.warn("The 'zarr_path' argument is deprecated. "
@@ -792,7 +797,6 @@ class BaseExtractor:
         save_kwargs['storage_options'] = storage_options
         save_kwargs['channel_chunk_size'] = channel_chunk_size
         cached = self._save(verbose=verbose, **save_kwargs)
-        cached_annotations = deepcopy(cached._annotations)
 
         # save properties
         prop_group = zarr_root.create_group('properties')
@@ -803,10 +807,7 @@ class BaseExtractor:
         # save annotations
         zarr_root.attrs["annotations"] = check_json(self._annotations)
 
-        # copy properties/
-        self.copy_metadata(cached)
-        # append annotations on compression
-        cached._annotations.update(cached_annotations)
+        cached = read_zarr(zarr_path)
 
         return cached
 
@@ -906,6 +907,7 @@ def load_extractor(file_or_folder_or_dict, base_folder=None):
       * a json file
       * a pickle file
       * folder (after save)
+      * a zarr folder (after save)
 
     Parameters
     ----------
