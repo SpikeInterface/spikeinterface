@@ -19,7 +19,9 @@ from .pca_metrics import (
     lda_metrics,
     nearest_neighbors_metrics,
     nearest_neighbors_isolation,
-    nearest_neighbors_noise_overlap
+    nearest_neighbors_noise_overlap,
+    silhouette_score,
+    simplified_silhouette_score
 )
 
 from .pca_metrics import _possible_pc_metric_names

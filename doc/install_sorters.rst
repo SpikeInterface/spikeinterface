@@ -180,6 +180,15 @@ Mountainsort4
 
       pip install mountainsort4
 
+Mountainsort5
+^^^^^^^^^^^^^
+
+* Python
+* Url: https://github.com/flatironinstitute/mountainsort5
+* Authors: 	Jeremy Magland
+* Installation::
+
+      pip install mountainsort5
 
 SpyKING CIRCUS
 ^^^^^^^^^^^^^

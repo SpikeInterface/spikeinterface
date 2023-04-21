@@ -1,15 +1,34 @@
-from typing import Union, List
+from typing import Optional, Union, Dict, Any, List
 
 import numpy as np
-
-import neo
+import importlib
 
 from spikeinterface.core import (BaseRecording, BaseSorting, BaseEvent,
                                  BaseRecordingSegment, BaseSortingSegment, BaseEventSegment)
 
 
-def get_reader(raw_class, **neo_kwargs):
-    neoIOclass = eval('neo.rawio.' + raw_class)
+def get_neo_io_reader(raw_class: str, **neo_kwargs):
+    """
+    Dynamically creates an instance of a NEO IO reader class using the specified class name and keyword arguments.
+    
+    Note that the function parses the header which makes all the information available to the extractor.
+
+    Parameters
+    ----------
+    raw_class : str
+        The name of the NEO IO reader class to create an instance of.
+    **neo_kwargs : dict
+        Initialization keyword arguments to be passed to the NEO IO reader class constructor.
+
+    Returns
+    -------
+    BaseRawIO
+        An instance of the specified NEO IO reader class
+    
+    """ 
+    
+    rawio_module = importlib.import_module('neo.rawio')
+    neoIOclass = getattr(rawio_module, raw_class)
     neo_reader = neoIOclass(**neo_kwargs)
     neo_reader.parse_header()
 
@@ -19,9 +38,8 @@ def get_reader(raw_class, **neo_kwargs):
 class _NeoBaseExtractor:
     NeoRawIOClass = None
 
-
     def __init__(self, block_index, **neo_kwargs):
-        self.neo_reader = get_reader(self.NeoRawIOClass, **neo_kwargs)
+        self.neo_reader = get_neo_io_reader(self.NeoRawIOClass, **neo_kwargs)
 
         if self.neo_reader.block_count() > 1 and block_index is None:
             raise Exception("This dataset is multi-block. Spikeinterface can load one block at a time. "
@@ -36,9 +54,29 @@ class _NeoBaseExtractor:
 
 
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
-    def __init__(self, stream_id=None, stream_name=None, 
-                 block_index=None, all_annotations=False, use_names_as_ids=None,
-                 **neo_kwargs):
+    def __init__(self, stream_id: Optional[str] = None, stream_name: Optional[str] = None,
+                 block_index: Optional[int] = None, all_annotations: bool = False,
+                 use_names_as_ids: Optional[bool] = None,
+                 **neo_kwargs: Dict[str, Any]) -> None:
+        """
+        Initialize a NeoBaseRecordingExtractor instance.
+
+        Parameters
+        ----------
+        stream_id : Optional[str], default=None
+            The ID of the stream to extract from the data.
+        stream_name : Optional[str], default=None
+            The name of the stream to extract from the data.
+        block_index : Optional[int], default=None
+            The index of the block to extract from the data.
+        all_annotations : bool, default=False
+            If True, include all annotations in the extracted data.
+        use_names_as_ids : Optional[bool], default=None
+            If True, use channel names as IDs. Otherwise, use default IDs.
+        neo_kwargs : Dict[str, Any]
+            Additional keyword arguments to pass to the NeoBaseExtractor for initialization.
+
+        """
 
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
 
@@ -152,7 +190,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
     @classmethod
     def get_streams(cls, *args, **kwargs):
         neo_kwargs = cls.map_to_neo_kwargs(*args, **kwargs)
-        neo_reader = get_reader(cls.NeoRawIOClass, **neo_kwargs)
+        neo_reader = get_neo_io_reader(cls.NeoRawIOClass, **neo_kwargs)
 
         stream_channels = neo_reader.header['signal_streams']
         stream_names = list(stream_channels['name'])
@@ -163,7 +201,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
     @classmethod
     def get_num_blocks(cls, *args, **kwargs):
         neo_kwargs = cls.map_to_neo_kwargs(*args, **kwargs)
-        neo_reader = get_reader(cls.NeoRawIOClass, **neo_kwargs)
+        neo_reader = get_neo_io_reader(cls.NeoRawIOClass, **neo_kwargs)
         return neo_reader.block_count()
 
 
