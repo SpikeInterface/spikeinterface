@@ -25,6 +25,7 @@ SORTER_DOCKER_MAP = dict(
     herdingspikes='herdingspikes',
     klusta='klusta',
     mountainsort4='mountainsort4',
+    mountainsort5='mountainsort5',
     pykilosort='pykilosort',
     spykingcircus='spyking-circus',
     spykingcircus2='spyking-circus2',
@@ -662,6 +663,13 @@ def run_mountainsort4(*args, **kwargs):
 
 
 run_mountainsort4.__doc__ = _common_run_doc.format('mountainsort4')
+
+
+def run_mountainsort5(*args, **kwargs):
+    return run_sorter('mountainsort5', *args, **kwargs)
+
+
+run_mountainsort5.__doc__ = _common_run_doc.format('mountainsort5')
 
 
 def run_ironclust(*args, **kwargs):
