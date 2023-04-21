@@ -29,7 +29,7 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         old_unit_ids = self.waveform_extractor.sorting.unit_ids
         unit_inds = np.flatnonzero(np.in1d(old_unit_ids, unit_ids))
 
-        spike_mask = np.in1d(self.spikes["unit_ind"], unit_inds)
+        spike_mask = np.in1d(self.spikes["unit_index"], unit_inds)
         new_amplitude_scalings = self._extension_data["amplitude_scalings"][spike_mask]
         return dict(amplitude_scalings=new_amplitude_scalings)
 
@@ -66,6 +66,13 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         sparsity_inds = sparsity.unit_id_to_channel_indices
         all_templates = we.get_all_templates()
 
+        # precompute segment slice
+        segment_slices = []
+        for segment_index in range(we.get_num_segments()):
+            i0 = np.searchsorted(self.spikes['segment_index'], segment_index)
+            i1 = np.searchsorted(self.spikes['segment_index'], segment_index + 1)
+            segment_slices.append(slice(i0, i1))
+
         # and run
         func = _amplitude_scalings_chunk
         init_func = _init_worker_amplitude_scalings
@@ -76,6 +83,7 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
             self.spikes,
             all_templates,
             we.unit_ids,
+            segment_slices,
             sparsity_inds,
             nbefore,
             nafter,
@@ -120,11 +128,11 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
             amplitudes_by_unit = []
             for segment_index in range(we.get_num_segments()):
                 amplitudes_by_unit.append({})
-                segment_mask = self.spikes["segment_ind"] == segment_index
+                segment_mask = self.spikes["segment_index"] == segment_index
                 spikes_segment = self.spikes[segment_mask]
                 amp_scalings_segment = self._extension_data[f"amplitude_scalings"][segment_mask]
                 for unit_index, unit_id in enumerate(sorting.unit_ids):
-                    unit_mask = spikes_segment["unit_ind"] == unit_index
+                    unit_mask = spikes_segment["unit_index"] == unit_index
                     amp_scalings = amp_scalings_segment[unit_mask]
                     amplitudes_by_unit[segment_index][unit_id] = amp_scalings
             return amplitudes_by_unit
@@ -209,6 +217,7 @@ def _init_worker_amplitude_scalings(
     spikes,
     all_templates,
     unit_ids,
+    segment_slices,
     unit_ids_to_channel_indices,
     nbefore,
     nafter,
@@ -221,6 +230,7 @@ def _init_worker_amplitude_scalings(
     worker_ctx["recording"] = recording
     worker_ctx["spikes"] = spikes
     worker_ctx["all_templates"] = all_templates
+    worker_ctx["segment_slices"] = segment_slices
     worker_ctx["nbefore"] = nbefore
     worker_ctx["nafter"] = nafter
     worker_ctx["cut_out_before"] = cut_out_before
@@ -241,6 +251,7 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
     spikes = worker_ctx["spikes"]
     recording = worker_ctx["recording"]
     all_templates = worker_ctx["all_templates"]
+    segment_slices = worker_ctx["segment_slices"]
     unit_inds_to_channel_indices = worker_ctx["unit_inds_to_channel_indices"]
     nbefore = worker_ctx["nbefore"]
     cut_out_before = worker_ctx["cut_out_before"]
@@ -248,20 +259,13 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
     margin = worker_ctx["margin"]
     return_scaled = worker_ctx["return_scaled"]
 
-    i0 = np.searchsorted(spikes["segment_ind"], segment_index)
-    i1 = np.searchsorted(spikes["segment_ind"], segment_index + 1)
-    spikes_in_segment = spikes[i0:i1]
+    spikes_in_segment = spikes[segment_slices[segment_index]]
 
-    i0 = np.searchsorted(spikes["segment_ind"], segment_index)
-    i1 = np.searchsorted(spikes["segment_ind"], segment_index + 1)
-    spikes_in_segment = spikes[i0:i1]
-
-    i0 = np.searchsorted(spikes_in_segment["sample_ind"], start_frame)
-    i1 = np.searchsorted(spikes_in_segment["sample_ind"], end_frame)
+    i0 = np.searchsorted(spikes_in_segment["sample_index"], start_frame)
+    i1 = np.searchsorted(spikes_in_segment["sample_index"], end_frame)
 
     local_waveforms = []
     templates = []
-
     scalings = []
 
     if i0 != i1:
@@ -278,8 +282,8 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
 
         # get all waveforms
         for spike in local_spikes:
-            unit_index = spike["unit_ind"]
-            sample_index = spike["sample_ind"]
+            unit_index = spike["unit_index"]
+            sample_index = spike["sample_index"]
             sparse_indices = unit_inds_to_channel_indices[unit_index]
             template = all_templates[unit_index][:, sparse_indices]
             template = template[nbefore - cut_out_before : nbefore + cut_out_after]
