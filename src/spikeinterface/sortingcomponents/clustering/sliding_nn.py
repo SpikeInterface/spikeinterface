@@ -112,10 +112,10 @@ class SlidingNNClustering:
             sparsity_mask[c, chans] = True
         
         # create a new peak vector to extract waveforms
-        dtype = [('sample_index', 'int64'), ('unit_ind', 'int64'), ('segment_index', 'int64')]
+        dtype = [('sample_index', 'int64'), ("unit_index", 'int64'), ('segment_index', 'int64')]
         peaks2 = np.zeros(peaks.size, dtype=dtype)
         peaks2['sample_index'] = peaks['sample_index']
-        peaks2['unit_ind'] = peaks['channel_index']
+        peaks2["unit_index"] = peaks['channel_index']
         peaks2['segment_index'] = peaks['segment_index']
         
         fs = recording.get_sampling_frequency()

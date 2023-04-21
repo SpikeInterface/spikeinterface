@@ -163,15 +163,15 @@ class BenchmarkPeakSelection:
             max_amplitudes = get_template_extremum_amplitude(self.waveforms['full_gt'], peak_sign='neg')
 
             for unit_ind, unit_id in enumerate(self.waveforms['full_gt'].sorting.unit_ids):
-                mask = gt_peaks_['unit_ind'] == unit_ind
+                mask = gt_peaks_["unit_index"] == unit_ind
                 max_channel = max_channels[unit_id]
                 self.gt_peaks['channel_index'][mask] = max_channel
                 self.gt_peaks['amplitude'][mask] = max_amplitudes[unit_id]
 
         self.sliced_gt_peaks = self.gt_peaks[gt_matches]
         self.sliced_gt_positions = self.gt_positions[gt_matches]
-        self.sliced_gt_labels = self.sliced_gt_sorting.to_spike_vector()['unit_ind']
-        self.gt_labels = self.gt_sorting.to_spike_vector()['unit_ind']
+        self.sliced_gt_labels = self.sliced_gt_sorting.to_spike_vector()["unit_index"]
+        self.gt_labels = self.gt_sorting.to_spike_vector()["unit_index"]
         self.garbage_positions = self.positions[garbage_matches]
         self.garbage_peaks = self.peaks[garbage_matches]
 
