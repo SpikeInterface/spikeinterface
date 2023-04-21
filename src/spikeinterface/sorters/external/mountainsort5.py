@@ -80,11 +80,13 @@ class Mountainsort5Sorter(BaseSorter):
             HAVE_MS5 = True
         except ImportError:
             HAVE_MS5 = False
-        
-        vv = parse(mountainsort5.__version__)
-        if vv < parse("0.1") or vv >= parse("0.2"):
-            print(f'WARNING: This version of SpikeInterface expects Mountainsort5 version 0.1.x. You have version {mountainsort5.__version__}')
-            HAVE_MS5 = False
+
+        if HAVE_MS5:
+            vv = parse(mountainsort5.__version__)
+            if vv < parse("0.1") or vv >= parse("0.2"):
+                print(f'WARNING: This version of SpikeInterface expects Mountainsort5 version 0.1.x. '
+                      f'You have version {mountainsort5.__version__}')
+                HAVE_MS5 = False
         return HAVE_MS5
 
     @staticmethod
