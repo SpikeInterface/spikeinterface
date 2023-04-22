@@ -15,26 +15,30 @@ import os
 import string, random
 import pylab as plt
 import numpy as np
+import pandas as pd
 import shutil
 
 class BenchmarkMatching:
 
-    def __init__(self, recording, gt_sorting, waveform_extractor, method, exhaustive_gt=True, method_kwargs={}, tmp_folder=None, **job_kwargs):
-        self.method = method
-        self.method_kwargs = method_kwargs
+    def __init__(self, recording, gt_sorting, waveform_extractor, methods, methods_kwargs=None, exhaustive_gt=True,
+                 tmp_folder=None, **job_kwargs):
+        self.methods = methods
+        if methods_kwargs is None:
+            methods_kwargs = {method:{} for method in methods}
+        self.methods_kwargs = methods_kwargs
         self.recording = recording
         self.gt_sorting = gt_sorting
         self.job_kwargs = job_kwargs
         self.exhaustive_gt = exhaustive_gt
         self.sampling_rate = self.recording.get_sampling_frequency()
-        self.method_kwargs = method_kwargs
 
+        if tmp_folder is None:
+            tmp_folder = os.path.join('.', ''.join(random.choices(string.ascii_uppercase + string.digits, k=8)))
         self.tmp_folder = tmp_folder
-        if self.tmp_folder is None:
-            self.tmp_folder = os.path.join('.', ''.join(random.choices(string.ascii_uppercase + string.digits, k=8)))
 
         self.we = waveform_extractor
-        self.method_kwargs['waveform_extractor'] = self.wes
+        for method in self.methods:
+            self.methods_kwargs[method]['waveform_extractor'] = self.we
         self.templates = self.we.get_all_templates(mode='median')
         self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
    
@@ -42,39 +46,49 @@ class BenchmarkMatching:
         shutil.rmtree(self.tmp_folder)
 
     def run_matching_collision(self):
-        spikes = find_spikes_from_templates(self.recording, method=self.method, method_kwargs=self.method_kwargs, **self.job_kwargs)
-        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
-        comp = CollisionGTComparison(self.gt_sorting, self.sorting, exhaustive_gt=self.exhaustive_gt)
-        return comp
+        comparisons = {}
+        for method in self.methods:
+            spikes = find_spikes_from_templates(self.recording, method=method,
+                                                method_kwargs=self.methods_kwargs[method], **self.job_kwargs)
+            sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
+            comp = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt)
+            comparisons[method] = comp
+        return comparisons
 
     def vary_number_of_spikes(self, num_spikes, num_replicates=1):
         tmp_folder = os.path.join(self.tmp_folder, 'vary_num_spikes')
-        comparisons = []
+        comps, spike_nums, iter_nums, methods = [], [], [], []
         for spike_num in num_spikes:
             print(f"{spike_num = }")
-            comps = []
-            for i in range(1, num_replicates):
+            for i in range(1, num_replicates+1):
                 print(f"{i = }")
-                comp = self.run_matching_num_spikes(i, spike_num, tmp_folder)
-                comps.append(comp)
-            comparisons.append(comps)
-
+                for method in self.methods:
+                    comp = self.run_matching_num_spikes(i, spike_num, tmp_folder, method)
+                    comps.append(comp)
+                    spike_nums.append(spike_num)
+                    iter_nums.append(i)
+                    methods.append(method)
+        comparisons = pd.DataFrame({'comp': comps,
+                                    'spike_num': spike_nums,
+                                    'iter_num': iter_nums,
+                                    'method': methods})
         shutil.rmtree(tmp_folder)
         return comparisons
 
-    def run_matching_num_spikes(self, iter_num, spike_num, tmp_folder):
+    def run_matching_num_spikes(self, iter_num, spike_num, tmp_folder, method):
         # Generate New Waveform Extractor with New Spike Numbers
         we = extract_waveforms(self.recording, self.gt_sorting, tmp_folder, load_if_exists=False, overwrite=True,
                                ms_before=2.5, ms_after=2.5, max_spikes_per_unit=spike_num, return_scaled=False,
                                seed=iter_num, **self.job_kwargs)
         templates = we.get_all_templates(we.unit_ids, mode='median')
         # Update method_kwargs
-        if self.method == 'wobble':
-            self.method_kwargs['templates'] = templates
+        method_kwargs = self.methods_kwargs[method]
+        if method == 'wobble':
+            method_kwargs['templates'] = templates
         else:
-            self.method_kwargs['waveform_extractor'] = we
+            method_kwargs['waveform_extractor'] = we
         # Run Template Matching and Generate Sorting
-        spikes = find_spikes_from_templates(self.recording, method=self.method, method_kwargs=self.method_kwargs,
+        spikes = find_spikes_from_templates(self.recording, method=method, method_kwargs=method_kwargs,
                                             **self.job_kwargs)
         sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
         # Evaluate Performance
@@ -83,20 +97,26 @@ class BenchmarkMatching:
 
     def vary_fraction_misclassed(self, fractions, num_replicates=1):
         tmp_folder = os.path.join(self.tmp_folder, 'vary_fraction_misclassed')
-        comparisons = []
+        comps, misclassed_fracs, iter_nums, methods = [], [], [], []
         for fraction in fractions:
             print(f"{fraction = }")
-            comps = []
-            for i in range(1, num_replicates):
+            for i in range(1, num_replicates+1):
                 print(f"{i = }")
-                comp = self.run_matching_misclassed(fraction, i, tmp_folder)
-                comps.append(comp)
-            comparisons.append(comps)
+                for method in self.methods:
+                    comp = self.run_matching_misclassed(fraction, i, tmp_folder, method)
+                    comps.append(comp)
+                    misclassed_fracs.append(fraction)
+                    iter_nums.append(i)
+                    methods.append(method)
+        comparisons = pd.DataFrame({'comp': comps,
+                                    'misclassed_fracs': misclassed_fracs,
+                                    'iter_num': iter_nums,
+                                    'method': methods})
 
         shutil.rmtree(tmp_folder)
         return comparisons
 
-    def run_matching_misclassed(self, fraction_misclassed, iter_num , tmp_folder):
+    def run_matching_misclassed(self, fraction_misclassed, iter_num , tmp_folder, method):
         np.random.seed(iter_num)
         # Randomly misclass spike trains
         spike_time_indices, labels = [], []
@@ -123,47 +143,41 @@ class BenchmarkMatching:
                                seed=iter_num, **self.job_kwargs)
         templates = we.get_all_templates(we.unit_ids, mode='median')
         # Update method_kwargs
-        if self.method == 'wobble':
-            self.method_kwargs['templates'] = templates
+        method_kwargs = self.methods_kwargs[method]
+        if method == 'wobble':
+            method_kwargs['templates'] = templates
         else:
-            self.method_kwargs['waveform_extractor'] = we
+            method_kwargs['waveform_extractor'] = we
         # Run Template Matching and Generate Sorting
-        spikes = find_spikes_from_templates(self.recording, method=self.method, method_kwargs=self.method_kwargs,
+        spikes = find_spikes_from_templates(self.recording, method=method, method_kwargs=method_kwargs,
                                             **self.job_kwargs)
         sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
         # Evaluate Performance
         comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
         return comp
 
-    def plot(self, title=None):
-        
-        if title is None:
-            title = self.method
-
-        if self.metrics is None:
-            self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
-
+    def plot(self, comp, title=None):
         fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(10, 10))
         ax = axs[0, 0]
         ax.set_title(title)
-        plot_agreement_matrix(self.comp, ax=ax)
+        plot_agreement_matrix(comp, ax=ax)
         ax.set_title(title)
         
         ax = axs[1, 0]
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        plot_sorting_performance(self.comp, self.metrics, performance_name='accuracy', metric_name='snr', ax=ax, color='r')
-        plot_sorting_performance(self.comp, self.metrics, performance_name='recall', metric_name='snr', ax=ax, color='g')
-        plot_sorting_performance(self.comp, self.metrics, performance_name='precision', metric_name='snr', ax=ax, color='b')        
-        #ax.set_ylim(0.8, 1)
+        plot_sorting_performance(comp, self.metrics, performance_name='accuracy', metric_name='snr', ax=ax, color='r')
+        plot_sorting_performance(comp, self.metrics, performance_name='recall', metric_name='snr', ax=ax, color='g')
+        plot_sorting_performance(comp, self.metrics, performance_name='precision', metric_name='snr', ax=ax, color='b')
         ax.legend(['accuracy', 'recall', 'precision'])
         
         ax = axs[1, 1]
-        plot_gt_performances(self.comp, ax=ax)
+        plot_gt_performances(comp, ax=ax)
 
         ax = axs[0, 1]
         if self.exhaustive_gt:
-            plot_comparison_collision_by_similarity(self.comp, self.templates, ax=ax, show_legend=True, mode='lines', good_only=False)
+            plot_comparison_collision_by_similarity(comp, self.templates, ax=ax, show_legend=True, mode='lines', good_only=False)
+        return fig, axs
 
 def plot_errors_matching(benchmark, unit_id, nb_spikes=200, metric='cosine'):
     fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(15, 10))
