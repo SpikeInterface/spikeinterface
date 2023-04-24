@@ -65,39 +65,6 @@ def torch_job_kwargs(job_kwargs):
     torch_job_kwargs["n_jobs"] = 2
     return torch_job_kwargs
 
-
-
-def test_detect_peaks_by_channel(recording, spike_trains, job_kwargs, torch_job_kwargs):
-    peaks_by_channel_np = detect_peaks(
-        recording, method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
-    )
-            
-    if HAVE_TORCH:
-        peaks_by_channel_torch = detect_peaks(
-            recording,
-            method="by_channel_torch",
-            peak_sign="neg",
-            detect_threshold=5,
-            exclude_sweep_ms=0.1,
-            **torch_job_kwargs,
-        )
-
-        # Test that torch and numpy implementation match
-        assert np.isclose(np.array(len(peaks_by_channel_np)), np.array(len(peaks_by_channel_torch)), rtol=0.1)
-        
-def test_detect_peaks_locally_exclusive(recording, spike_trains, job_kwargs, torch_job_kwargs):
-    peaks_by_channel_np = detect_peaks(
-        recording, method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
-    )
-
-
-    peaks_local_numba = detect_peaks(
-        recording, method="locally_exclusive", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
-    )
-    return torch_job_kwargs
-
-
-
 def calculate_peaks_spike_recall(peaks, spike_trains, recording_sampling_frequency, tolerance_ms=0.4):
     """
     Calculate the spike recall of the peaks (which are the output of a peak detection method)
@@ -116,7 +83,7 @@ def calculate_peaks_spike_recall(peaks, spike_trains, recording_sampling_frequen
     
     """    
     
-    sample_indices = peaks["sample_ind"]
+    sample_indices = peaks["sample_index"]
     tolerance_number_samples = tolerance_ms * recording_sampling_frequency / 1_000.0
     are_spikes_close_any_peaks = np.any(np.abs(sample_indices - spike_trains[:, np.newaxis]) < tolerance_number_samples, axis=1)
     
