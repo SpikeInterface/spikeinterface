@@ -83,8 +83,10 @@ def test_zscore():
     rec4 = zscore(rec_int, dtype='float32', mode="mean+std")
     rec4 = zscore(rec_int, dtype='int16', int_scale=256, mode="mean+std")
     tr = rec4.get_traces(segment_index=0)
-    assert np.all(np.abs(np.mean(tr, axis=0)) < 1)
-    assert np.all(np.abs(np.std(tr, axis=0) - 256) < 1)
+    trace_mean = np.mean(tr, axis=0)
+    trace_std = np.std(tr, axis=0)
+    assert np.all(np.abs(trace_mean) < 1)
+    assert np.all(np.abs(trace_std - 256) < 1)
 
 
 

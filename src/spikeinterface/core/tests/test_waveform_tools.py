@@ -70,7 +70,7 @@ def test_waveform_tools():
                                 sparsity_mask=None,  copy=False, **job_kwargs)
         for unit_ind, unit_id in enumerate(unit_ids):
             wf = wfs_arrays[unit_id]
-            assert wf.shape[0] == np.sum(spikes['unit_ind'] == unit_ind)
+            assert wf.shape[0] == np.sum(spikes["unit_index"] == unit_ind)
         list_wfs.append(
             {unit_id: wfs_arrays[unit_id].copy() for unit_id in unit_ids})
     _check_all_wf_equal(list_wfs)
@@ -87,7 +87,7 @@ def test_waveform_tools():
                                 sparsity_mask=None,  copy=True, **job_kwargs)
             for unit_ind, unit_id in enumerate(unit_ids):
                 wf = wfs_arrays[unit_id]
-                assert wf.shape[0] == np.sum(spikes['unit_ind'] == unit_ind)
+                assert wf.shape[0] == np.sum(spikes["unit_index"] == unit_ind)
             list_wfs.append(
                 {unit_id: wfs_arrays[unit_id].copy() for unit_id in unit_ids})
             # to avoid warning we need to first destroy arrays then sharedmemm object
