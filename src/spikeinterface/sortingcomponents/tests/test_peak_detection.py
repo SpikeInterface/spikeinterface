@@ -67,6 +67,37 @@ def torch_job_kwargs(job_kwargs):
 
 
 
+def test_detect_peaks_by_channel(recording, spike_trains, job_kwargs, torch_job_kwargs):
+    peaks_by_channel_np = detect_peaks(
+        recording, method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
+    )
+            
+    if HAVE_TORCH:
+        peaks_by_channel_torch = detect_peaks(
+            recording,
+            method="by_channel_torch",
+            peak_sign="neg",
+            detect_threshold=5,
+            exclude_sweep_ms=0.1,
+            **torch_job_kwargs,
+        )
+
+        # Test that torch and numpy implementation match
+        assert np.isclose(np.array(len(peaks_by_channel_np)), np.array(len(peaks_by_channel_torch)), rtol=0.1)
+        
+def test_detect_peaks_locally_exclusive(recording, spike_trains, job_kwargs, torch_job_kwargs):
+    peaks_by_channel_np = detect_peaks(
+        recording, method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
+    )
+
+
+    peaks_local_numba = detect_peaks(
+        recording, method="locally_exclusive", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
+    )
+    return torch_job_kwargs
+
+
+
 def calculate_peaks_spike_recall(peaks, spike_trains, recording_sampling_frequency, tolerance_ms=0.4):
     """
     Calculate the spike recall of the peaks (which are the output of a peak detection method)
@@ -163,6 +194,14 @@ def test_detect_peaks_locally_exclusive(recording, spike_trains, job_kwargs, tor
         pytest.approx(method_recall, 1)
     
     if HAVE_PYOPENCL:
+        peaks_local_cl = detect_peaks(
+            recording,
+            method="locally_exclusive_cl",
+            peak_sign="neg",
+            detect_threshold=5,
+            exclude_sweep_ms=0.1,
+            **job_kwargs,
+        )
         peaks_local_cl = detect_peaks(
             recording,
             method="locally_exclusive_cl",
@@ -268,12 +307,13 @@ def test_peak_detection_with_pipeline(recording, pipeline_nodes, job_kwargs, tor
         assert "x" in peak_locations_cl.dtype.fields
 
     # DEBUG
+    DEBUG = False
     if DEBUG:
         import matplotlib.pyplot as plt
         import spikeinterface.widgets as sw
         from probeinterface.plotting import plot_probe
 
-        sample_inds, chan_inds, amplitudes = peaks["sample_ind"], peaks["channel_index"], peaks["amplitude"]
+        sample_inds, chan_inds, amplitudes = peaks['sample_index'], peaks['channel_index'], peaks['amplitude']
         chan_offset = 500
         traces = recording.get_traces()
         traces += np.arange(traces.shape[1])[None, :] * chan_offset
@@ -302,6 +342,6 @@ def test_peak_detection_with_pipeline(recording, pipeline_nodes, job_kwargs, tor
         ax.scatter(soma_positions[:, 1], soma_positions[:, 2], color="g", s=20, marker="*")
         plt.show()
 
-
-if __name__ == "__main__":
-    test_detect_peaks()
+if __name__ == '__main__':
+    pass
+    

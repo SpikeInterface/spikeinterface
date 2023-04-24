@@ -1,3 +1,4 @@
+from typing import Literal
 import numpy as np
 
 
@@ -118,22 +119,27 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
     return np.array(closest_channels_inds), np.array(dists)
 
 
-def get_noise_levels(recording, return_scaled=True, **random_chunk_kwargs):
+def get_noise_levels(recording: 'BaseRecording', return_scaled: bool = True, method: Literal['mad', 'std'] = "mad", **random_chunk_kwargs):
     """
     Estimate noise for each channel using MAD methods.
+    You can use standard deviation with `method='std'`
 
-    Internally it sample some chunk across segment.
+    Internally it samples some chunk across segment.
     And then, it use MAD estimator (more robust than STD)
 
     """
     random_chunks = get_random_data_chunks(
         recording, return_scaled=return_scaled, **random_chunk_kwargs
     )
-    med = np.median(random_chunks, axis=0, keepdims=True)
-    # hard-coded so that core doesn't depend on scipy
-    noise_levels = (
-        np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
-    )
+    
+    if method == "mad":
+        med = np.median(random_chunks, axis=0, keepdims=True)
+        # hard-coded so that core doesn't depend on scipy
+        noise_levels = (
+            np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
+        )
+    elif method == "std":
+        noise_levels = np.std(random_chunks, axis=0)
     return noise_levels
 
 
