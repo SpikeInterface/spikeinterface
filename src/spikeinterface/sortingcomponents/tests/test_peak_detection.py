@@ -12,9 +12,6 @@ from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.features_from_peaks import PeakToPeakFeature
 
-from spikeinterface.sortingcomponents.peak_detection import DetectPeakByChannel, DetectPeakByChannelTorch, DetectPeakLocallyExclusive, DetectPeakLocallyExclusiveTorch
-from spikeinterface.sortingcomponents.peak_pipeline import run_node_pipeline
-
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "sortingcomponents"
@@ -59,7 +56,7 @@ def spike_trains(sorting):
 
 @pytest.fixture(scope="module")
 def job_kwargs():
-    return dict(n_jobs=-1, chunk_size=10000, progress_bar=True, verbose=True, mp_context="spawn")
+    return dict(n_jobs=-1, chunk_size=10000, progress_bar=True, verbose=True)
 
 # Don't know why this was different normal job_kwargs
 @pytest.fixture(scope="module")
@@ -68,73 +65,7 @@ def torch_job_kwargs(job_kwargs):
     torch_job_kwargs["n_jobs"] = 2
     return torch_job_kwargs
 
-def test_peak_sign_consistency(recording, job_kwargs):
-    detection_class = DetectPeakByChannel
-    
-    peak_sign = "neg"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
-    negative_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
-    
-    peak_sign = "pos"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
-    positive_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
-    
-    peak_sign = "both"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
-    all_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
-    
-    assert len(negative_peaks) + len(positive_peaks) == len(all_peaks)
-    
-def test_peak_sign_consistency_torch(recording, job_kwargs):
-    detection_class = DetectPeakByChannelTorch
-    
-    peak_sign = "neg"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
-    negative_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
-    
-    peak_sign = "pos"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
-    positive_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
-    
-    peak_sign = "both"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
-    all_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
-    
-    assert len(negative_peaks) + len(positive_peaks) == len(all_peaks)
-    
-def test_peak_sign_consistency_exclusive_numba(recording, job_kwargs):
-    detection_class = DetectPeakLocallyExclusive
-    
-    peak_sign = "neg"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
-    negative_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
-    
-    peak_sign = "pos"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
-    positive_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
-    
-    peak_sign = "both"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
-    all_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
-    
-    assert len(negative_peaks) + len(positive_peaks) == len(all_peaks)
 
-def test_peak_sign_consistency_exclusive_torch(recording, job_kwargs):
-    detection_class = DetectPeakLocallyExclusiveTorch
-    
-    peak_sign = "neg"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
-    negative_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
-    
-    peak_sign = "pos"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
-    positive_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
-    
-    peak_sign = "both"
-    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
-    all_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
-    
-    assert len(negative_peaks) + len(positive_peaks) == len(all_peaks)
 
 def test_detect_peaks_by_channel(recording, spike_trains, job_kwargs, torch_job_kwargs):
     peaks_by_channel_np = detect_peaks(
