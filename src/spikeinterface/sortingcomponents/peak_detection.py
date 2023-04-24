@@ -223,10 +223,14 @@ class IterativePeakDetector(PeakDetector):
             traces_chunk = traces_chunk_minus_waveforms
 
             all_waveforms.append(waveforms)
-
         all_local_peaks = np.concatenate(local_peaks_list, axis=0)
         all_waveforms = np.concatenate(all_waveforms, axis=0) if len(all_waveforms) != 0 else np.empty((0, 0, 0))
 
+        # Sort as iterative method implies peaks might not be discovered ordered in time
+        sorting_indices = np.argsort(all_local_peaks['sample_index'])
+        all_local_peaks = all_local_peaks[sorting_indices]
+        all_waveforms = all_waveforms[sorting_indices]
+        
         return (all_local_peaks, all_waveforms)
 
     def add_iteration_to_peaks_dtype(self, local_peaks, iteration) -> np.ndarray:
