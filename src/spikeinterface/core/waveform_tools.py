@@ -151,7 +151,7 @@ def allocate_waveforms_buffers(recording, spikes, unit_ids, nbefore, nafter, mod
     wfs_arrays = {}
     wfs_arrays_info = {}
     for unit_ind, unit_id in enumerate(unit_ids):
-        n_spikes = np.sum(spikes['unit_ind'] == unit_ind)
+        n_spikes = np.sum(spikes["unit_index"] == unit_ind)
         if sparsity_mask is None:
             num_chans = recording.get_num_channels()
         else:
@@ -220,7 +220,7 @@ def distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info
 
     inds_by_unit = {}
     for unit_ind, unit_id in enumerate(unit_ids):
-        inds,  = np.nonzero(spikes['unit_ind'] == unit_ind)
+        inds,  = np.nonzero(spikes["unit_index"] == unit_ind)
         inds_by_unit[unit_id] = inds
 
     # and run
