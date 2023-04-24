@@ -126,11 +126,7 @@ def test_iterative_peak_detection(recording, job_kwargs, tmp_path):
     # Assert there is a field call iteration in structured array peaks
     assert "iteration" in peaks.dtype.names
     assert peaks.shape[0] == waveforms.shape[0]
-    
-    sample_indices = peaks["sample_index"]
-    # Assert that sample_indices are ordered
-    # assert np.all(np.diff(sample_indices) >= 0)
-    
+        
     num_peaks_in_first_iteration = peaks[peaks["iteration"] == 0].size
     num_peaks_in_second_iteration = peaks[peaks["iteration"] == 1].size
     num_total_peaks = peaks.size
