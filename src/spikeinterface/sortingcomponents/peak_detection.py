@@ -165,7 +165,7 @@ class IterativePeakDetector(PeakDetector):
         pipeline_margin = (node.get_trace_margin() for node in internal_pipeline if hasattr(node, "get_trace_margin"))
         return max(pipeline_margin)
 
-    def compute(self, traces_chunk, start_frame, end_frame, segment_index, max_margin) -> Tuple[np.ndarray]:
+    def compute(self, traces_chunk, start_frame, end_frame, segment_index, max_margin) -> Tuple[np.ndarray, np.ndarray]:
         """
         Perform the iterative peak detection, waveform extraction, and denoising.
 
@@ -227,7 +227,7 @@ class IterativePeakDetector(PeakDetector):
         all_local_peaks = np.concatenate(local_peaks_list, axis=0)
         all_waveforms = np.concatenate(all_waveforms, axis=0) if len(all_waveforms) != 0 else np.empty((0, 0, 0))
 
-        return (all_local_peaks,)
+        return (all_local_peaks, all_waveforms)
 
     def add_iteration_to_peaks_dtype(self, local_peaks, iteration) -> np.ndarray:
         """
