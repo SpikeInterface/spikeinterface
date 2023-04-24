@@ -50,6 +50,11 @@ def sorting_ground_truth():
     return sorting
 
 @pytest.fixture(scope="module")
+def spike_trains(sorting):
+    spike_trains = sorting.get_all_spike_trains()[0][0]
+    return spike_trains
+
+@pytest.fixture(scope="module")
 def job_kwargs():
     return dict(n_jobs=-1, chunk_size=10000, progress_bar=True, verbose=True)
 
@@ -95,7 +100,7 @@ def test_detect_peaks_by_channel(recording, sorting_ground_truth, job_kwargs, to
     # Test with pytest that method_recall is close to 1
     peaks = peaks_by_channel_np
     method_recall = calculate_peaks_spike_recall(peaks, sorting_ground_truth)
-    pytest.approx(method_recall, 1)
+    pytest.approx(method_recall, 1.0)
     
     if HAVE_TORCH:
         peaks_by_channel_torch = detect_peaks(
@@ -113,7 +118,7 @@ def test_detect_peaks_by_channel(recording, sorting_ground_truth, job_kwargs, to
         # Test with pytest that method_recall is close to 1
         peaks = peaks_by_channel_np
         method_recall = calculate_peaks_spike_recall(peaks, sorting_ground_truth)
-        pytest.approx(method_recall, 1)
+        pytest.approx(method_recall, 1.0)
 
 def test_detect_peaks_locally_exclusive(recording, sorting_ground_truth, job_kwargs, torch_job_kwargs):
     peaks_by_channel_np = detect_peaks(
@@ -123,7 +128,7 @@ def test_detect_peaks_locally_exclusive(recording, sorting_ground_truth, job_kwa
     # Test with pytest that method_recall is close to 1
     peaks = peaks_by_channel_np
     method_recall = calculate_peaks_spike_recall(peaks, sorting_ground_truth)
-    pytest.approx(method_recall, 1)
+    pytest.approx(method_recall, 1.0)
 
     peaks_local_numba = detect_peaks(
         recording, method="locally_exclusive", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
@@ -133,7 +138,7 @@ def test_detect_peaks_locally_exclusive(recording, sorting_ground_truth, job_kwa
     # Test with pytest that method_recall is close to 1
     peaks = peaks_by_channel_np
     method_recall = calculate_peaks_spike_recall(peaks, sorting_ground_truth)
-    pytest.approx(method_recall, 1)
+    pytest.approx(method_recall, 1.0)
 
     if HAVE_TORCH:
 
@@ -150,7 +155,7 @@ def test_detect_peaks_locally_exclusive(recording, sorting_ground_truth, job_kwa
         # Test with pytest that method_recall is close to 1
         peaks = peaks_by_channel_np
         method_recall = calculate_peaks_spike_recall(peaks, sorting_ground_truth)
-        pytest.approx(method_recall, 1)
+        pytest.approx(method_recall, 1.0)
     
     if HAVE_PYOPENCL:
         peaks_local_cl = detect_peaks(
@@ -174,21 +179,18 @@ def test_detect_peaks_locally_exclusive(recording, sorting_ground_truth, job_kwa
         # Test with pytest that method_recall is close to 1
         peaks = peaks_by_channel_np
         method_recall = calculate_peaks_spike_recall(peaks, sorting_ground_truth)
-        pytest.approx(method_recall, 1)
+        pytest.approx(method_recall, 1.0)
 
-# Fixture for pipeline nodes
-@pytest.fixture(scope="module")
-def pipeline_nodes(recording):
+DEBUG = False
+def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs):
+    
     extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1.0, ms_after=1.0, return_output=False)
-
-    return [
+    pipeline_nodes = [
         extract_dense_waveforms,
         PeakToPeakFeature(recording, all_channels=False, parents=[extract_dense_waveforms]),
         LocalizeCenterOfMass(recording, local_radius_um=50.0, parents=[extract_dense_waveforms]),
     ]
-
-DEBUG = False
-def test_peak_detection_with_pipeline(recording, pipeline_nodes, job_kwargs, torch_job_kwargs):
+    
     peaks, ptp, peak_locations = detect_peaks(
         recording,
         method="locally_exclusive",
