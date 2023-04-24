@@ -51,7 +51,7 @@ class PositionAndFeaturesClustering:
 
         d = params
 
-        peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_ind', 'int64')]
+        peak_dtype = [('sample_index', 'int64'), ("unit_index", 'int64'), ('segment_index', 'int64')]
 
         fs = recording.get_sampling_frequency()
         nbefore = int(params['ms_before'] * fs / 1000.)
@@ -112,9 +112,9 @@ class PositionAndFeaturesClustering:
         idx = np.argsort(mask)
         mask = mask[idx]
 
-        spikes['sample_ind'] = peaks[mask]['sample_ind']
-        spikes['segment_ind'] = peaks[mask]['segment_ind']
-        spikes['unit_ind'] = peak_labels[mask]
+        spikes['sample_index'] = peaks[mask]['sample_index']
+        spikes['segment_index'] = peaks[mask]['segment_index']
+        spikes["unit_index"] = peak_labels[mask]
 
         cleaning_method = params["cleaning_method"]
 
@@ -144,7 +144,7 @@ class PositionAndFeaturesClustering:
             name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
             tmp_folder = Path(os.path.join(get_global_tmp_folder(), name))
 
-            sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['unit_ind'], fs)
+            sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes["unit_index"], fs)
             we = extract_waveforms(recording, sorting, tmp_folder, overwrite=True, ms_before=params['ms_before'], 
                 ms_after=params['ms_after'], **params['job_kwargs'], return_scaled=False)
             labels, peak_labels = remove_duplicates_via_matching(we, peak_labels, job_kwargs=params['job_kwargs'], **params['cleaning_kwargs'])

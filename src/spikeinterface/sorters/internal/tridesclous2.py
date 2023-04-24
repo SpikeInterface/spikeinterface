@@ -105,7 +105,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         labels = np.unique(peak_labels[mask])
         
         # extract waveform for template matching
-        sorting_temp = NumpySorting.from_times_labels(some_peaks['sample_ind'][mask], peak_labels[mask],
+        sorting_temp = NumpySorting.from_times_labels(some_peaks['sample_index'][mask], peak_labels[mask],
                                                       sampling_frequency)
         sorting_temp = sorting_temp.save(folder=sorter_output_folder / 'sorting_temp')
         waveforms_params = params['waveforms'].copy()
@@ -136,7 +136,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if verbose:
             print('We found %d spikes' %len(spikes))
 
-        sorting = NumpySorting.from_times_labels(spikes['sample_ind'], spikes['cluster_ind'], sampling_frequency)
+        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], sampling_frequency)
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
 
         return sorting
