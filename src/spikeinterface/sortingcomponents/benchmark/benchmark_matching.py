@@ -45,15 +45,12 @@ class BenchmarkMatching:
     def __del__(self):
         shutil.rmtree(self.tmp_folder)
 
-    def run_matching_collision(self):
-        comparisons = {}
-        for method in self.methods:
-            spikes = find_spikes_from_templates(self.recording, method=method,
-                                                method_kwargs=self.methods_kwargs[method], **self.job_kwargs)
-            sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
-            comp = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt)
-            comparisons[method] = comp
-        return comparisons
+    def run_matching_collision(self, method):
+        spikes = find_spikes_from_templates(self.recording, method=method,
+                                            method_kwargs=self.methods_kwargs[method], **self.job_kwargs)
+        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
+        comp = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt)
+        return comp
 
 
     def run_matching_num_spikes(self, iter_num, spike_num, tmp_folder, method):
@@ -168,7 +165,7 @@ class BenchmarkMatching:
             plot_comparison_collision_by_similarity(comp, self.templates, ax=ax, show_legend=True, mode='lines', good_only=False)
         return fig, axs
 
-def plot_errors_matching(benchmark, unit_id, nb_spikes=200, metric='cosine'):
+def plot_errors_matching(benchmark, comp, unit_id, nb_spikes=200, metric='cosine'):
     fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(15, 10))
     
     benchmark.we.sorting.get_unit_spike_train(unit_id)
@@ -177,7 +174,7 @@ def plot_errors_matching(benchmark, unit_id, nb_spikes=200, metric='cosine'):
     count = 0
     colors = ['r', 'b']
     for label in ['TP', 'FN']:
-        idx_1 = np.where(benchmark.comp.get_labels1(unit_id) == label)
+        idx_1 = np.where(comp.get_labels1(unit_id) == label)
         idx_2 = benchmark.we.get_sampled_indices(unit_id)['spike_index']
         intersection = np.where(np.in1d(idx_2, idx_1))[0]
         intersection = np.random.permutation(intersection)[:nb_spikes]
@@ -204,7 +201,7 @@ def plot_errors_matching(benchmark, unit_id, nb_spikes=200, metric='cosine'):
         
         count += 1
 
-def plot_errors_matching_all_neurons(benchmark, nb_spikes=200, metric='cosine'):
+def plot_errors_matching_all_neurons(benchmark, comp, nb_spikes=200, metric='cosine'):
     templates = benchmark.templates
     nb_units = len(benchmark.we.unit_ids)
     colors = ['r', 'b']
@@ -220,7 +217,7 @@ def plot_errors_matching_all_neurons(benchmark, nb_spikes=200, metric='cosine'):
         a = template.reshape(template.size, 1).T
         
         for label in ['TP', 'FN']:
-            idx_1 = np.where(benchmark.comp.get_labels1(unit_id) == label)[0] 
+            idx_1 = np.where(comp.get_labels1(unit_id) == label)[0]
             intersection = np.where(np.in1d(idx_2, idx_1))[0]
             intersection = np.random.permutation(intersection)[:nb_spikes]            
             wfs_sliced = wfs[intersection, :, :]
