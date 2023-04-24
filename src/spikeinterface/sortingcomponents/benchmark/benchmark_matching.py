@@ -55,25 +55,6 @@ class BenchmarkMatching:
             comparisons[method] = comp
         return comparisons
 
-    def vary_number_of_spikes(self, num_spikes, num_replicates=1):
-        tmp_folder = os.path.join(self.tmp_folder, 'vary_num_spikes')
-        comps, spike_nums, iter_nums, methods = [], [], [], []
-        for spike_num in num_spikes:
-            print(f"{spike_num = }")
-            for i in range(1, num_replicates+1):
-                print(f"{i = }")
-                for method in self.methods:
-                    comp = self.run_matching_num_spikes(i, spike_num, tmp_folder, method)
-                    comps.append(comp)
-                    spike_nums.append(spike_num)
-                    iter_nums.append(i)
-                    methods.append(method)
-        comparisons = pd.DataFrame({'comp': comps,
-                                    'spike_num': spike_nums,
-                                    'iter_num': iter_nums,
-                                    'method': methods})
-        shutil.rmtree(tmp_folder)
-        return comparisons
 
     def run_matching_num_spikes(self, iter_num, spike_num, tmp_folder, method):
         # Generate New Waveform Extractor with New Spike Numbers
@@ -94,27 +75,6 @@ class BenchmarkMatching:
         # Evaluate Performance
         comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
         return comp
-
-    def vary_fraction_misclassed(self, fractions, num_replicates=1):
-        tmp_folder = os.path.join(self.tmp_folder, 'vary_fraction_misclassed')
-        comps, misclassed_fracs, iter_nums, methods = [], [], [], []
-        for fraction in fractions:
-            print(f"{fraction = }")
-            for i in range(1, num_replicates+1):
-                print(f"{i = }")
-                for method in self.methods:
-                    comp = self.run_matching_misclassed(fraction, i, tmp_folder, method)
-                    comps.append(comp)
-                    misclassed_fracs.append(fraction)
-                    iter_nums.append(i)
-                    methods.append(method)
-        comparisons = pd.DataFrame({'comp': comps,
-                                    'misclassed_fracs': misclassed_fracs,
-                                    'iter_num': iter_nums,
-                                    'method': methods})
-
-        shutil.rmtree(tmp_folder)
-        return comparisons
 
     def run_matching_misclassed(self, fraction_misclassed, iter_num , tmp_folder, method):
         np.random.seed(iter_num)
@@ -155,6 +115,35 @@ class BenchmarkMatching:
         # Evaluate Performance
         comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
         return comp
+
+
+    def run_matching_vary_parameter(self, parameters, parameter_name, num_replicates=1, verbose=False):
+        if parameter_name == 'num_spikes':
+            run_matching_fn = self.run_matching_num_spikes
+        elif parameter_name == 'fraction_misclassed':
+            run_matching_fn = self.run_matching_misclassed
+        comps, parameter_values, parameter_names, iter_nums, methods = [], [], [], [], []
+        for parameter in parameters:
+            if verbose:
+                print(f"{parameter = }")
+            for i in range(1, num_replicates+1):
+                if verbose:
+                    print(f"{i = }")
+                for method in self.methods:
+                    comp = run_matching_fn(parameter, i, self.tmp_folder, method)
+                    comps.append(comp)
+                    parameter_values.append(parameter)
+                    parameter_names.append(parameter_name)
+                    iter_nums.append(i)
+                    methods.append(method)
+        comparisons = pd.DataFrame({'comp': comps,
+                                    'parameter_value': parameter_values,
+                                    'parameter_name' : parameter_names,
+                                    'iter_num': iter_nums,
+                                    'method': methods})
+        shutil.rmtree(self.tmp_folder)
+        return comparisons
+
 
     def plot(self, comp, title=None):
         fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(10, 10))
