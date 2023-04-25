@@ -476,13 +476,13 @@ if HAVE_TORCH:
         thresholds_torch = torch.as_tensor(abs_thresholds, device=device, dtype=torch.float)
         normalized_traces = traces_tensor / thresholds_torch
 
-        max_ampltidues, indices = F.max_pool2d_with_indices(
+        max_amplitudes, indices = F.max_pool2d_with_indices(
             input=normalized_traces[None, None],
             kernel_size=[2 * exclude_sweep_size + 1, 1],
             stride=1,
             padding=[exclude_sweep_size, 0],
         )
-        max_ampltidues = max_ampltidues[0, 0]
+        max_amplitudes = max_amplitudes[0, 0]
         indices = indices[0, 0]
         # torch `indices` gives loc of argmax at each position
         # find those which actually *were* the max
@@ -490,8 +490,8 @@ if HAVE_TORCH:
         window_max_indices = unique_indices[indices.view(-1)[unique_indices] == unique_indices]
 
         # voltage threshold
-        max_ampltidues_at_indices = max_ampltidues.view(-1)[window_max_indices]
-        crossings = torch.nonzero(max_ampltidues_at_indices > 1).squeeze()
+        max_ampltidues_at_iitudes = max_amplitudes.view(-1)[window_max_indices]
+        crossings = torch.nonzero(max_ampltidues_at_iitudes > 1).squeeze()
         if not crossings.numel():
             return empty_return_value
 
@@ -500,7 +500,7 @@ if HAVE_TORCH:
         peak_indices = window_max_indices[crossings]
         sample_indices = torch.div(peak_indices, num_channels, rounding_mode="floor")
         channel_indices = peak_indices % num_channels
-        amplitudes = max_ampltidues_at_indices[crossings]
+        amplitudes = max_ampltidues_at_iitudes[crossings]
 
         # we need this due to the padding in convolution
         valid_indices = torch.nonzero(
@@ -520,13 +520,13 @@ if HAVE_TORCH:
             )
 
             # -- temporal max pool
-            # still not sure why we can't just use `max_ampltidues` instead of making
+            # still not sure why we can't just use `max_amplitudes` instead of making
             # this sparsely populated array, but it leads to a different result.
-            max_ampltidues[:] = 0
-            max_ampltidues[sample_indices, channel_indices] = amplitudes
+            max_amplitudes[:] = 0
+            max_amplitudes[sample_indices, channel_indices] = amplitudes
             max_window = 2 * exclude_sweep_size
-            max_ampltidues = F.max_pool2d(
-                max_ampltidues[None, None],
+            max_amplitudes = F.max_pool2d(
+                max_amplitudes[None, None],
                 kernel_size=[2 * max_window + 1, 1],
                 stride=1,
                 padding=[max_window, 0],
@@ -538,12 +538,12 @@ if HAVE_TORCH:
             batch_size = int(np.ceil(num_samples / (max_neighbs / MAXCOPY)))
             for bs in range(0, num_samples, batch_size):
                 be = min(num_samples, bs + batch_size)
-                max_ampltidues[bs:be] = torch.max(
-                    F.pad(max_ampltidues[bs:be], (0, 1))[:, neighbours_mask], 2
+                max_amplitudes[bs:be] = torch.max(
+                    F.pad(max_amplitudes[bs:be], (0, 1))[:, neighbours_mask], 2
                 )[0]
 
             # -- deduplication
-            deduplication_indices = torch.nonzero(amplitudes >= max_ampltidues[sample_indices, channel_indices] - 1e-8).squeeze()
+            deduplication_indices = torch.nonzero(amplitudes >= max_amplitudes[sample_indices, channel_indices] - 1e-8).squeeze()
             if not deduplication_indices.numel():
                 return empty_return_value
             sample_indices = sample_indices[deduplication_indices]
