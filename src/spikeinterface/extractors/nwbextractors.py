@@ -15,13 +15,13 @@ try:
     from hdmf.data_utils import DataChunkIterator
     from hdmf.backends.hdf5.h5_utils import H5DataIO
 
-
     HAVE_NWB = True
 except ModuleNotFoundError:
     HAVE_NWB = False
 
 try:
     import fsspec
+
     HAVE_FSSPEC = True
 except ModuleNotFoundError:
     HAVE_FSSPEC = False
@@ -125,7 +125,7 @@ class NwbRecordingExtractor(BaseRecording):
         self._electrical_series_name = electrical_series_name
 
         self.file_path = file_path
-        self._nwbfile = self.read_nwb_file(
+        self._nwbfile = self.read_nwbfile(
             file_path=file_path, stream_mode=stream_mode, stream_cache_path=stream_cache_path
         )
         electrical_series = get_electrical_series(self._nwbfile, electrical_series_name)
@@ -168,11 +168,14 @@ class NwbRecordingExtractor(BaseRecording):
 
         # Extractors channel groups must be integers, but Nwb electrodes group_name can be strings
         if "group_name" in electrodes_table.colnames:
-            unique_grp_names = list(np.unique(electrodes_table["group_name"][:]))
+            unique_electrode_group_names = list(np.unique(electrodes_table["group_name"][:]))
 
         # Fill channel properties dictionary from electrodes table
         if "channel_name" in electrodes_table.colnames:
-            channel_ids = [electrical_series.electrodes["channel_name"][electrodes_index] for electrodes_index in electrodes_indices]
+            channel_ids = [
+                electrical_series.electrodes["channel_name"][electrodes_index]
+                for electrodes_index in electrodes_indices
+            ]
         else:
             channel_ids = [electrical_series.electrodes.table.id[x] for x in electrodes_indices]
 
@@ -199,7 +202,6 @@ class NwbRecordingExtractor(BaseRecording):
         # Set gains
         self.set_channel_gains(gains)
 
-
         # Set offsets
         offset = electrical_series.offset if hasattr(electrical_series, "offset") else 0
         if offset == 0 and "offset" in electrodes_table:
@@ -219,41 +221,49 @@ class NwbRecordingExtractor(BaseRecording):
             ndim = 3 if "rel_z" in electrodes_table else 2
             properties["location"] = np.zeros((self.get_num_channels(), ndim), dtype=float)
 
-        for es_ind, (channel_id, electrode_table_index) in enumerate(zip(channel_ids, electrodes_indices)):
+        for electrical_series_index, (channel_id, electrode_table_index) in enumerate(
+            zip(channel_ids, electrodes_indices)
+        ):
             if "rel_x" in electrodes_table:
-                properties["location"][es_ind, 0] = electrodes_table["rel_x"][electrode_table_index]
+                properties["location"][electrical_series_index, 0] = electrodes_table["rel_x"][electrode_table_index]
                 if "rel_y" in electrodes_table:
-                    properties["location"][es_ind, 1] = electrodes_table["rel_y"][electrode_table_index]
+                    properties["location"][electrical_series_index, 1] = electrodes_table["rel_y"][
+                        electrode_table_index
+                    ]
                 if "rel_z" in electrodes_table:
-                    properties["location"][es_ind, 2] = electrodes_table["rel_z"][electrode_table_index]
+                    properties["location"][electrical_series_index, 2] = electrodes_table["rel_z"][
+                        electrode_table_index
+                    ]
 
         # Extract all the other properties
-        for es_ind, (channel_id, electrode_table_index) in enumerate(zip(channel_ids, electrodes_indices)):
+        for electrical_series_index, (channel_id, electrode_table_index) in enumerate(
+            zip(channel_ids, electrodes_indices)
+        ):
             for column in electrodes_table.colnames:
                 if isinstance(electrodes_table[column][electrode_table_index], ElectrodeGroup):
                     continue
                 elif column == "group_name":
-                    group = unique_grp_names.index(electrodes_table[column][electrode_table_index])
+                    group = unique_electrode_group_names.index(electrodes_table[column][electrode_table_index])
                     if "group" not in properties:
                         properties["group"] = np.zeros(self.get_num_channels(), dtype=type(group))
-                    properties["group"][es_ind] = group
+                    properties["group"][electrical_series_index] = group
                 elif column == "location":
                     brain_area = electrodes_table[column][electrode_table_index]
                     if "brain_area" not in properties:
                         properties["brain_area"] = np.zeros(self.get_num_channels(), dtype=type(brain_area))
-                    properties["brain_area"][es_ind] = brain_area
+                    properties["brain_area"][electrical_series_index] = brain_area
                 elif column == "offset":
                     offset = electrodes_table[column][electrode_table_index]
                     if "offset" not in properties:
                         properties["offset"] = np.zeros(self.get_num_channels(), dtype=type(offset))
-                    properties["offset"][es_ind] = offset
+                    properties["offset"][electrical_series_index] = offset
                 elif column in ["x", "y", "z", "rel_x", "rel_y", "rel_z"]:
                     continue
                 else:
                     val = electrodes_table[column][electrode_table_index]
                     if column not in properties:
                         properties[column] = np.zeros(self.get_num_channels(), dtype=type(val))
-                    properties[column][es_ind] = val
+                    properties[column][electrical_series_index] = val
 
         # Set the properties in the recorder
         for prop_name, values in properties.items():
@@ -267,7 +277,6 @@ class NwbRecordingExtractor(BaseRecording):
                 self.set_channel_groups(groups)
             else:
                 self.set_property(prop_name, values)
-
 
         if stream_mode not in ["fsspec", "ros3"]:
             file_path = str(Path(file_path).absolute())
@@ -287,7 +296,9 @@ class NwbRecordingExtractor(BaseRecording):
             "stream_cache_path": stream_cache_path,
         }
 
-    def read_nwb_file(self, file_path: str, stream_mode: Literal[None, "ffspec", "ros3"] = None, stream_cache_path: Optional[str] = None) -> NWBFile:
+    def read_nwbfile(
+        self, file_path: str, stream_mode: Literal["ffspec", "ros3"] = None, stream_cache_path: Optional[str] = None
+    ) -> NWBFile:
         """
         Read an NWB file and return the NWBFile object.
 
@@ -317,7 +328,7 @@ class NwbRecordingExtractor(BaseRecording):
 
         Examples
         --------
-        >>> nwbfile = read_nwb_file("data.nwb", stream_mode="ros3")
+        >>> nwbfile = read_nwbfile("data.nwb", stream_mode="ros3")
         """
         if stream_mode == "fsspec":
             import fsspec
