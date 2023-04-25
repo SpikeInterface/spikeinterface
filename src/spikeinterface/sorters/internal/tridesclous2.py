@@ -136,7 +136,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         if verbose:
             print('We found %d spikes' %len(spikes))
 
-        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], sampling_frequency)
+        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'], sampling_frequency)
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
 
         return sorting

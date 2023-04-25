@@ -148,7 +148,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             print('We found %d spikes' %len(spikes))
 
         ## And this is it! We have a spyking circus
-        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], sampling_rate)
+        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'], sampling_rate)
         sorting_folder = sorter_output_folder / "sorting"
 
         if sorting_folder.exists():
