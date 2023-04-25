@@ -4,27 +4,25 @@ Development
 How to contribute
 -----------------
 
-To contribute to SpikeInterface, a user/developer there are many tasks that you could help us with:
+There are various ways to contribute to SpikeInterface as a user or developer. Some tasks you can help us with include:
 
-* Implement a new extractor for a new file format.
-* Implement a new spike sorter.
-* Implement a new post-processing algorithm.
-* Improve the documentation including docstrings, tutorials and examples.
-* Write tutorials for common pipelines (e.g., spike sorting, post-processing, etc.)
-* Write unit tests for the code to increase coverage and use cases.
-* Report bugs and issues.
+* Developing a new extractor for a different file format.
+* Creating a new spike sorter.
+* Designing a new post-processing algorithm.
+* Enhancing documentation, including docstrings, tutorials, and examples.
+* Crafting tutorials for common workflows (e.g., spike sorting, post-processing, etc.).
+* Writing unit tests to expand code coverage and use case scenarios.
+* Reporting bugs and issues.
 
-In order to make a contribution we work with a `forking worflow <https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow>`_ 
-In summary you do the following steps which you can check in detail in the link above:
+We use a forking workflow <https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow>_ to manage contributions. Here's a summary of the steps involved, with more details available in the provided link:
 
-* For Spikeinterface repository. 
-* Make a new branch (e.g. :code:`git switch -c my-contribution`).
-* Make changes to the code, commit and push to your fork.
-* Next, you can open a pull request from the "Pull Requests" tab of your fork to :code:`spikeinterface/main`.
+* Fork the SpikeInterface repository.
+* Create a new branch (e.g., :code:git switch -c my-contribution).
+* Modify the code, commit, and push changes to your fork.
+* Open a pull request from the "Pull Requests" tab of your fork to :code:spikeinterface/main.
+* By following this process, we can review the code and even make changes as necessary. 
 
-This way, we'll be able to review the code and even make changes.
-
-Please be mindful of the cost of `reviewing pull requests <https://rgommers.github.io/2019/06/the-cost-of-an-open-source-contribution/>`_.
+While we appreciate all the contributions please be mindful of the cost of reviewing pull requests <https://rgommers.github.io/2019/06/the-cost-of-an-open-source-contribution/>_ .
 
 How to run tests locally
 -------------------------
@@ -124,7 +122,7 @@ Stylistic conventions
 The following are some styling conventions that we follow in SpikeInterface:
 
 #. Avoid using abreviations in variable names (e.g., use :code:`recording` instead of :code:`rec`). It is specially important to avoid single letter variables.
-#. Use index as singular and indices for plural following Numpy. Avoid id, idx, ids, etc.
+#. Use index as singular and indices for plural following Numpy. Avoid idx or indexes. Plus, id and ids are reserved for identifiers (i.e. channel_ids)
 #. We use file_path and folder_path (instead of file_name and folder_name) for clarity.
 #. Use the `numpy docstring standard <https://numpydoc.readthedocs.io/en/latest/format.html#numpydoc-docstring-guide>`_ in all the docstrings.
 
