@@ -13,6 +13,7 @@ class UnitWaveformPlotter(MplPlotter):
         dp = to_attr(data_plot)
 
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
+
         if backend_kwargs["axes"] is not None:
             assert len(backend_kwargs["axes"]) >= len(dp.unit_ids), "Provide as many 'axes' as neurons"
         elif backend_kwargs["ax"] is not None:
