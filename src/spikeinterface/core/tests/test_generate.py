@@ -104,3 +104,65 @@ def test_generate_lazy_recording_under_giga():
     
     recording = generate_lazy_recording(full_traces_size_GiB=0.5)
     assert recording.get_memory_size() == "512.00 MiB"
+
+def test_generate_recording_correct_sizes():
+    sampling_frequency = 30000  # Hz
+    durations = [1.0]
+    dtype = np.dtype("float32")
+    num_channels = 384
+    seed = 0
+
+
+    lazy_recording = GeneratorRecording(
+        durations=durations, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype, seed=seed
+    )
+    
+    
+    num_frames = lazy_recording.get_num_frames(segment_index=0)
+    assert num_frames == sampling_frequency * durations[0]
+    
+    traces = lazy_recording.get_traces(start_frame=0, end_frame=None)
+
+    assert traces.shape[0] == num_frames
+
+def test_generator_recording_consistency():
+    sampling_frequency = 30000  # Hz
+    durations = [1.0]
+    dtype = np.dtype("float32")
+    num_channels = 384
+    seed = 0
+
+
+    lazy_recording = GeneratorRecording(
+        durations=durations, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype, seed=seed
+    )
+
+    traces = lazy_recording.get_traces(start_frame=0, end_frame=None)
+    assert np.allclose(lazy_recording.get_traces(), traces)
+    
+    start_frame = 25
+    end_frame = 80
+    traces = lazy_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    same_traces = lazy_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    assert np.allclose(traces, same_traces)
+
+
+def test_generator_recording_consistency_across_traces():
+    
+    sampling_frequency = 30000  # Hz
+    durations = [1.0]
+    dtype = np.dtype("float32")
+    num_channels = 384
+    seed = 0
+
+
+    lazy_recording = GeneratorRecording(
+        durations=durations, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype, seed=seed
+    )
+    
+    extra_samples = 10
+    start_frame = 0
+    end_frame = 1000
+    traces = lazy_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    lager_traces = lazy_recording.get_traces(start_frame=start_frame, end_frame=end_frame + extra_samples)
+    assert np.allclose(traces, lager_traces[:end_frame, :]) 
