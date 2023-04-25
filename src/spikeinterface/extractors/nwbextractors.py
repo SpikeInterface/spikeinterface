@@ -208,7 +208,7 @@ class NwbRecordingExtractor(BaseRecording):
         electrical_series_name: str = None,
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 100000,
-        stream_mode: Optional[str] = None,
+        stream_mode: Optional[Literal["fsspec", "ros3"]] = None,
         stream_cache_path: PathType = None,
     ):
         check_nwb_install()
