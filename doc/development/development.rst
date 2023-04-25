@@ -5,6 +5,7 @@ How to contribute
 -----------------
 
 To contribute to SpikeInterface, a user/developer there are many tasks that you could help us with:
+
 * Implement a new extractor for a new file format.
 * Implement a new spike sorter.
 * Implement a new post-processing algorithm.
