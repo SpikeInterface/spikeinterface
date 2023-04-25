@@ -306,8 +306,8 @@ class NwbRecordingExtractor(BaseRecording):
         ----------
         file_path : str
             The path to the NWB file.
-        stream_mode : str, optional
-            The streaming mode to use. Default is None.
+        stream_mode : "fsspec" or "ros3", optional
+            The streaming mode to use. Default assumes the file is on the local disk.
         stream_cache_path : str, optional
             The path to the cache storage. Default is None.
 
