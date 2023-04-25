@@ -24,6 +24,7 @@ We use a forking workflow <https://www.atlassian.com/git/tutorials/comparing-wor
 
 While we appreciate all the contributions please be mindful of the cost of reviewing pull requests <https://rgommers.github.io/2019/06/the-cost-of-an-open-source-contribution/>_ .
 
+
 How to run tests locally
 -------------------------
 Before submitting a pull request, we recommend running the tests locally. In the CI we use pytest to run the tests so it is a good idea to do the same.
@@ -135,6 +136,22 @@ We use Sphinx to build the documentation. To build the documentation locally, yo
     sphinx-build -b html doc ./doc/_build/
 
 This will build the documentation in the :code:`doc/_build/html` folder. You can open the :code:`index.html` file in your browser to see the documentation.
+
+How to run code coverage locally
+--------------------------------
+To run code coverage locally, you can use the following command:
+
+.. code-block:: bash
+
+    pytest --cov=spikeinterface --cov-report html
+
+This will run the tests and generate a report in the :code:`htmlcov` folder. You can open the :code:`index.html` file in your browser to see the report.
+
+Note, however, that the running time of the command above will be slow. If you want to run the tests for a specific module, you can use the following command:
+
+.. code-block:: bash
+
+    pytest src/spikeinterface/core/ --cov=spikeinterface/core --cov-report html
 
 Implement a new extractor
 -------------------------
