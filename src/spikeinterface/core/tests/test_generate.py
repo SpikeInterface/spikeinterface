@@ -121,9 +121,9 @@ def test_generate_recording_correct_sizes():
     num_frames = lazy_recording.get_num_frames(segment_index=0)
     assert num_frames == sampling_frequency * durations[0]
     
-    traces = lazy_recording.get_traces(start_frame=0, end_frame=None)
+    traces = lazy_recording.get_traces()
 
-    assert traces.shape[0] == num_frames
+    assert traces.shape == (num_frames, num_channels)
 
 def test_generator_recording_consistency():
     sampling_frequency = 30000  # Hz

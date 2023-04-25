@@ -384,6 +384,7 @@ def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, viol
 
     return spike_train
 
+from typing import Union, Optional, List, Literal
 
 class GeneratorRecording(BaseRecording):
     def __init__(
@@ -393,6 +394,7 @@ class GeneratorRecording(BaseRecording):
         num_channels: int,
         dtype: Optional[Union[np.dtype, str]] = "float32",
         seed: Optional[int] = None,
+        mode: Literal['pure_noise', 'deterministic'] = 'pure_noise'
     ):
         """
         A lazy recording that generates random samples if and only if `get_traces` is called.
@@ -414,6 +416,7 @@ class GeneratorRecording(BaseRecording):
         """
         channel_ids = list(range(num_channels))
         dtype = np.dtype(dtype).name   # Cast to string for serialization
+        self.mode = mode
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
 
         self.seed = seed if seed is not None else 0
@@ -422,7 +425,7 @@ class GeneratorRecording(BaseRecording):
             segment_seed = self.seed + index
             rec_segment = GeneratorRecordingSegment(
                 duration=duration, sampling_frequency=sampling_frequency, num_channels=num_channels,
-                dtype=dtype, seed=segment_seed
+                dtype=dtype, seed=segment_seed, mode=mode,
             )
             self.add_recording_segment(rec_segment)
 
@@ -432,16 +435,18 @@ class GeneratorRecording(BaseRecording):
             "sampling_frequency": sampling_frequency,
             "dtype": dtype,
             "seed": seed,
+            "mode": mode,
         }
 
 class GeneratorRecordingSegment(BaseRecordingSegment):
-    def __init__(self, duration, sampling_frequency, num_channels, dtype, seed):
+    def __init__(self, duration, sampling_frequency, num_channels, dtype, seed, mode):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
         self.sampling_frequency = sampling_frequency
         self.num_samples = int(duration * sampling_frequency)
         self.seed = seed
         self.num_channels = num_channels
         self.dtype = dtype 
+        self.mode = mode
 
         # Random numbers characterising the channels, need to be done outside for consistency
         self.rng = np.random.default_rng(seed=self.seed)        
@@ -449,6 +454,9 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         self.frequencies = 1.0 + self.rng.exponential(scale=1.0, size=self.num_channels)
         self.amplitudes = self.rng.normal(loc=70, scale=10.0, size=self.num_channels)
         self.amplitudes *= self.rng.choice([-1, 1], size=self.num_channels)
+        
+        noise_size = 1000
+        self.basic_noise = self.rng.random(size=(noise_size, self.num_channels))
         
     def get_num_samples(self):
         return self.num_samples
@@ -458,11 +466,44 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         start_frame = 0 if start_frame is None else max(start_frame, 0)
         end_frame = self.num_samples if end_frame is None else min(end_frame, self.num_samples)
         
-        traces = self._deterministic_traces(start_frame=start_frame, end_frame=end_frame)
+        if self.mode == 'pure_noise':
+            traces = self._random_traces(start_frame=start_frame, end_frame=end_frame)
+        else:
+            traces = self._deterministic_traces(start_frame=start_frame, end_frame=end_frame)
         
         traces = traces if channel_indices is None else traces[:, channel_indices]
         
         return traces 
+    
+    def _random_traces(self, start_frame: int, end_frame: int) -> np.ndarray:
+
+        array  = self.basic_noise
+        random_noise_samples = self.basic_noise.shape[0]
+        
+        start_frame_mod = start_frame % random_noise_samples
+        end_frame_mod = end_frame % random_noise_samples
+
+        larger_than_basic_noise = end_frame - start_frame >= random_noise_samples
+
+        num_samples = end_frame - start_frame
+        traces = np.ones((num_samples, self.num_channels), dtype=self.dtype)
+
+        if not larger_than_basic_noise:
+            if start_frame_mod <= end_frame_mod:
+                traces = array[start_frame_mod:end_frame_mod]
+            else:
+                traces = np.concatenate((array[start_frame_mod:], array[:end_frame_mod]))
+        else:
+            first_block = array[start_frame_mod:]
+            repeat_count = (end_frame - start_frame - (random_noise_samples - start_frame_mod)) // random_noise_samples
+            middle_block = np.repeat(array, repeats=repeat_count, axis=0)
+            last_block = array[:end_frame_mod]
+
+            traces = np.concatenate((first_block, middle_block, last_block), out=traces)
+
+        return traces
+        
+
     
     def _deterministic_traces(self, start_frame: int, end_frame: int) -> np.ndarray:
         """
