@@ -37,83 +37,116 @@ def check_fsspec_install():
     assert HAVE_FSSPEC, "To stream NWB data with fsspec, install fsspec: \n\n pip install fsspec aiohttp requests\n\n"
 
 
-def get_electrical_series(nwbfile, electrical_series_name):
+def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optional[str] = None) -> ElectricalSeries:
+    """
+    Get an ElectricalSeries object from an NWBFile.
+
+    Parameters
+    ----------
+    nwbfile : NWBFile
+        The NWBFile object from which to extract the ElectricalSeries.
+    electrical_series_name : str, optional
+        The name of the ElectricalSeries to extract. If not specified, it will return the first found ElectricalSeries
+        if there's only one; otherwise, it raises an error.
+
+    Returns
+    -------
+    ElectricalSeries
+        The requested ElectricalSeries object.
+
+    Raises
+    ------
+    ValueError
+        If no acquisitions are found in the NWBFile or if multiple acquisitions are found but no electrical_series_name
+        is provided.
+    AssertionError
+        If the specified electrical_series_name is not present in the NWBFile.
+    """
     if electrical_series_name is not None:
-        es_dict = {i.name: i for i in nwbfile.all_children() if isinstance(i, ElectricalSeries)}
-        assert electrical_series_name in es_dict, "electrical series name not present in nwbfile"
-        es = es_dict[electrical_series_name]
-    else:
-        es_list = []
-        for name, series in nwbfile.acquisition.items():
-            if isinstance(series, ElectricalSeries):
-                es_list.append(series)
-        if len(es_list) > 1:
+        # TODO note that this case does not handle repetitions of the same name
+        electrical_series_dict: Dict[str, ElectricalSeries] = {
+            item.name: item for item in nwbfile.all_children() if isinstance(item, ElectricalSeries)
+        }
+        if electrical_series_name not in electrical_series_dict:
             raise ValueError(
-                f"More than one acquisition found! You must specify 'electrical_series_name'. Options in current file are: {[e.name for e in es_list]}"
+                f"{electrical_series_name} not found in the NWBFile. "
             )
-        if len(es_list) == 0:
+        electrical_series = electrical_series_dict[electrical_series_name]
+    else:
+        electrical_series_list: List[ElectricalSeries] = [
+            series for series in nwbfile.acquisition.values() if isinstance(series, ElectricalSeries)
+        ]
+        if len(electrical_series_list) > 1:
+            raise ValueError(
+                f"More than one acquisition found! You must specify 'electrical_series_name'. \n"
+                f"Options in current file are: {[e.name for e in electrical_series_list]}"
+            )
+        if len(electrical_series_list) == 0:
             raise ValueError("No acquisitions found in the .nwb file.")
-        es = es_list[0]
-    return es
+        electrical_series = electrical_series_list[0]
 
-def read_nwbfile(file_path: str, stream_mode: Literal["ffspec", "ros3"] = None, stream_cache_path: Optional[str] = None
-    ) -> NWBFile:
-        """
-        Read an NWB file and return the NWBFile object.
-
-        Parameters
-        ----------
-        file_path : Path, str
-            The path to the NWB file.
-        stream_mode : "fsspec" or "ros3", optional
-            The streaming mode to use. Default assumes the file is on the local disk.
-        stream_cache_path : str, optional
-            The path to the cache storage. Default is None.
-
-        Returns
-        -------
-        nwbfile : NWBFile
-            The NWBFile object.
-
-        Raises
-        ------
-        AssertionError
-            If ROS3 support is not enabled.
-
-        Notes
-        -----
-        This function can stream data from either the "fsspec" or "ros3" protocols.
+    return electrical_series
 
 
-        Examples
-        --------
-        >>> nwbfile = read_nwbfile("data.nwb", stream_mode="ros3")
-        """
-        file_path = str(file_path)
-        if stream_mode == "fsspec":
-            import fsspec
-            from fsspec.implementations.cached import CachingFileSystem
+def read_nwbfile(
+    file_path: str, stream_mode: Literal["ffspec", "ros3"] = None, stream_cache_path: Optional[str] = None
+) -> NWBFile:
+    """
+    Read an NWB file and return the NWBFile object.
 
-            stream_cache_path = stream_cache_path if stream_cache_path is not None else str(get_global_tmp_folder())
-            caching_file_system = CachingFileSystem(
-                fs=fsspec.filesystem("http"),
-                cache_storage=str(stream_cache_path),
-            )
-            cached_file = caching_file_system.open(path=file_path, mode="rb")
-            file_path = h5py.File(cached_file)
-            io = NWBHDF5IO(file=file_path, mode="r", load_namespaces=True)
+    Parameters
+    ----------
+    file_path : Path, str
+        The path to the NWB file.
+    stream_mode : "fsspec" or "ros3", optional
+        The streaming mode to use. Default assumes the file is on the local disk.
+    stream_cache_path : str, optional
+        The path to the cache storage. Default is None.
 
-        elif stream_mode == "ros3":
-            drivers = h5py.registered_drivers()
-            assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
-            assert "ros3" in drivers, assertion_msg
-            io = NWBHDF5IO(path=file_path, mode="r", load_namespaces=True, driver="ros3")
+    Returns
+    -------
+    nwbfile : NWBFile
+        The NWBFile object.
 
-        else:
-            io = NWBHDF5IO(path=file_path, mode="r", load_namespaces=True)
+    Raises
+    ------
+    AssertionError
+        If ROS3 support is not enabled.
 
-        nwbfile = io.read()
-        return nwbfile
+    Notes
+    -----
+    This function can stream data from either the "fsspec" or "ros3" protocols.
+
+
+    Examples
+    --------
+    >>> nwbfile = read_nwbfile("data.nwb", stream_mode="ros3")
+    """
+    file_path = str(file_path)
+    if stream_mode == "fsspec":
+        import fsspec
+        from fsspec.implementations.cached import CachingFileSystem
+
+        stream_cache_path = stream_cache_path if stream_cache_path is not None else str(get_global_tmp_folder())
+        caching_file_system = CachingFileSystem(
+            fs=fsspec.filesystem("http"),
+            cache_storage=str(stream_cache_path),
+        )
+        cached_file = caching_file_system.open(path=file_path, mode="rb")
+        file_path = h5py.File(cached_file)
+        io = NWBHDF5IO(file=file_path, mode="r", load_namespaces=True)
+
+    elif stream_mode == "ros3":
+        drivers = h5py.registered_drivers()
+        assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
+        assert "ros3" in drivers, assertion_msg
+        io = NWBHDF5IO(path=file_path, mode="r", load_namespaces=True, driver="ros3")
+
+    else:
+        io = NWBHDF5IO(path=file_path, mode="r", load_namespaces=True)
+
+    nwbfile = io.read()
+    return nwbfile
 
 
 class NwbRecordingExtractor(BaseRecording):
@@ -184,10 +217,8 @@ class NwbRecordingExtractor(BaseRecording):
         self._electrical_series_name = electrical_series_name
 
         self.file_path = file_path
-        self._nwbfile = read_nwbfile(
-            file_path=file_path, stream_mode=stream_mode, stream_cache_path=stream_cache_path
-        )
-        electrical_series = get_electrical_series(self._nwbfile, electrical_series_name)
+        self._nwbfile = read_nwbfile(file_path=file_path, stream_mode=stream_mode, stream_cache_path=stream_cache_path)
+        electrical_series = retrieve_electrical_series(self._nwbfile, electrical_series_name)
         # The indices in the electrode table corresponding to this electrical series
         electrodes_indices = electrical_series.electrodes.data[:]
         # The table for all the electrodes in the nwbfile
@@ -361,7 +392,7 @@ class NwbRecordingSegment(BaseRecordingSegment):
         BaseRecordingSegment.__init__(self, **times_kwargs)
         self._nwbfile = nwbfile
         self._electrical_series_name = electrical_series_name
-        self.electrical_series = get_electrical_series(self._nwbfile, self._electrical_series_name)
+        self.electrical_series = retrieve_electrical_series(self._nwbfile, self._electrical_series_name)
         self._num_samples = num_frames
 
     def get_num_samples(self):
@@ -442,22 +473,20 @@ class NwbSortingExtractor(BaseSorting):
         self._electrical_series_name = electrical_series_name
 
         self.file_path = file_path
-        self._nwbfile = read_nwbfile(
-            file_path=file_path, stream_mode=stream_mode, stream_cache_path=stream_cache_path
-        )
-        
+        self._nwbfile = read_nwbfile(file_path=file_path, stream_mode=stream_mode, stream_cache_path=stream_cache_path)
+
         timestamps = None
         if sampling_frequency is None:
             # defines the electrical series from where the sorting came from
             # important to know the sampling_frequency
-            self._es = get_electrical_series(self._nwbfile, self._electrical_series_name)
+            self.electrical_series = retrieve_electrical_series(self._nwbfile, self._electrical_series_name)
             # get rate
-            if self._es.rate is not None:
-                sampling_frequency = self._es.rate
+            if self.electrical_series.rate is not None:
+                sampling_frequency = self.electrical_series.rate
             else:
-                if hasattr(self._es, "timestamps"):
-                    if self._es.timestamps is not None:
-                        timestamps = self._es.timestamps
+                if hasattr(self.electrical_series, "timestamps"):
+                    if self.electrical_series.timestamps is not None:
+                        timestamps = self.electrical_series.timestamps
                         sampling_frequency = 1 / np.median(np.diff(timestamps[samples_for_rate_estimation]))
 
         assert sampling_frequency is not None, (
