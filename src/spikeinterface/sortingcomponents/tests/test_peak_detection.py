@@ -143,7 +143,14 @@ def test_peak_sign_consistency(recording, job_kwargs, detection_class):
     all_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
     
     
-    assert negative_peaks.size + positive_peaks.size == all_peaks.size
+    # To account for exclusion of positive peaks that are to close to negative peaks.
+    # This should be excluded by the detection method when is exclusive so using peak_sign="both" should
+    # Generate less peaks in this case
+    assert (negative_peaks.size + positive_peaks.size) >= all_peaks.size
+    
+    # Original case that prompted this test
+    if negative_peaks.size > 0 or positive_peaks.size > 0:
+        assert all_peaks.size > 0
                 
 def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs):
     
