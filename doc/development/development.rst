@@ -1,15 +1,141 @@
-Contribute
+Development
 ==========
 
-To contribute to SpikeInterface, a user/developer can help us integrate in a new recorded file
-format, a new sorted file format, or a new spike sorting algorithm or more!
+How to contribute
+-----------------
 
-In order to make a contribution, you first need to **fork** the SpikeInterface repository.
-Then you can clone from your fork, make a new branch (e.g. :code:`git checkout -b my-contribution`),
-make changes to the code, commit and push to your fork.
-Next, you can open a pull request (PR) from the "Pull Requests" tab of your fork to :code:`spikeinterface/master`.
+To contribute to SpikeInterface, a user/developer there are many tasks that you could help us with:
+* Implement a new extractor for a new file format.
+* Implement a new spike sorter.
+* Implement a new post-processing algorithm.
+* Improve the documentation including docstrings, tutorials and examples.
+* Write tutorials for common pipelines (e.g., spike sorting, post-processing, etc.)
+* Write unit tests for the code to increase coverage and use cases.
+* Report bugs and issues.
+
+In order to make a contribution we work with a `forking worflow <https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow>`_ 
+In summary you do the following steps which you can check in detail in the link above:
+
+* For Spikeinterface repository. 
+* Make a new branch (e.g. :code:`git switch -c my-contribution`).
+* Make changes to the code, commit and push to your fork.
+* Next, you can open a pull request from the "Pull Requests" tab of your fork to :code:`spikeinterface/main`.
+
 This way, we'll be able to review the code and even make changes.
 
+Please be mindful of the cost of `reviewing pull requests <https://rgommers.github.io/2019/06/the-cost-of-an-open-source-contribution/>`_.
+
+How to run tests locally
+-------------------------
+Before submitting a pull request, we recommend running the tests locally. In the CI we use pytest to run the tests so it is a good idea to do the same.
+To run the tests locally, you can use the following command:
+
+.. code-block:: bash
+
+    pytest
+
+From your local repository. This will run all the tests in the repository. If you want to run a specific test, you can use the following command:
+
+.. code-block:: bash
+
+    pytest path/to/test.py
+
+For example, if you want to run the tests for the :code:`spikeinterface.extractors` module, you can use the following command:
+
+.. code-block:: bash
+
+    pytest src/spikeinterface/extractors
+
+If you want to run a specific test in a specific file, you can use the following command:
+
+.. code-block:: bash
+
+    pytest pytest src/spikeinterface/core/tests/test_baserecording.py::specific_test_in_this_module
+
+We also mantain pytest markers to run specific tests. For example, if you want to run only the tests 
+for the :code:`spikeinterface.extractors` module, you can use the following command:
+
+.. code-block:: bash
+
+    pytest -m "extractors"
+
+The markers are located in the :code:`pyproject.toml` file in the root of the repository.
+
+Note that you should install the package before running the tests. You can do this by running the following command:
+
+.. code-block:: bash
+
+    pip install -e .[test,extractors,full]
+
+You can change the :code:`[test,extractors,full]` to install only the dependencies you need. The dependencies are specified in the :code:`pyproject.toml` file in the root of the repository.
+
+The specific environment for the CI is specified in the :code:`.github/actions/build-test-environment/action.yml` and you can 
+find the full tests in the :code:`.github/workflows/full_test.yml` file.
+
+The extractor tests require datalad for some of the tests. Here are instructions for installing datalad:
+
+Installing Datalad
+------------------
+
+First install the datalad-installer package using pip:
+
+.. code-block:: shell
+
+    pip install datalad-installer
+
+The following instructions depend on the operating system you are using:
+
+Linux
+^^^^^
+.. code-block:: shell
+
+    datalad-installer --sudo ok git-annex --method datalad/packages
+
+Mac OS
+^^^^^^
+.. code-block:: shell
+
+    datalad-installer --sudo ok git-annex --method brew
+
+Windows
+^^^^^^^
+
+.. code-block:: shell
+
+    datalad-installer --sudo ok git-annex --method datalad/git-annex:release
+
+
+The following steps are common to all operating systems:
+
+.. code-block:: shell
+
+    pip install datalad
+
+(Optional) Configure Git to use git-annex for large files for efficiency:
+
+.. code-block:: shell
+
+    git config --global filter.annex.process "git-annex filter-process"
+
+Stylistic conventions
+---------------------
+
+The following are some styling conventions that we follow in SpikeInterface:
+
+#. Avoid using abreviations in variable names (e.g., use :code:`recording` instead of :code:`rec`). It is specially important to avoid single letter variables.
+#. Use index as singular and indices for plural following Numpy. Avoid id, idx, ids, etc.
+#. We use file_path and folder_path (instead of file_name and folder_name) for clarity.
+#. Use the `numpy docstring standard <https://numpydoc.readthedocs.io/en/latest/format.html#numpydoc-docstring-guide>`_ in all the docstrings.
+
+How to build the documentation
+------------------------------
+We use Sphinx to build the documentation. To build the documentation locally, you can use the following command:
+
+.. code-block:: bash
+
+    sphinx-build -b html doc ./doc/_build/
+
+This will build the documentation in the :code:`doc/_build/html` folder. You can open the :code:`index.html` file in your browser to see the documentation.
 
 Implement a new extractor
 -------------------------
