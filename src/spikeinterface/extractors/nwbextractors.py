@@ -172,7 +172,7 @@ class NwbRecordingExtractor(BaseRecording):
 
         # Fill channel properties dictionary from electrodes table
         if "channel_name" in electrodes_table.colnames:
-            channel_ids = [electrical_series.electrodes["channel_name"][i] for i in electrodes_indices]
+            channel_ids = [electrical_series.electrodes["channel_name"][electrodes_index] for electrodes_index in electrodes_indices]
         else:
             channel_ids = [electrical_series.electrodes.table.id[x] for x in electrodes_indices]
 
