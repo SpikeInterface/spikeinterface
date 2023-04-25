@@ -89,7 +89,7 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
 
 
 def read_nwbfile(
-    file_path: str, stream_mode: Literal["ffspec", "ros3"] = None, stream_cache_path: Optional[str] = None
+    file_path: str, stream_mode: Optional[Literal["ffspec", "ros3"]] = None, stream_cache_path: Optional[str] = None
 ) -> NWBFile:
     """
     Read an NWB file and return the NWBFile object.
