@@ -9,11 +9,12 @@ _sparsity_doc = """
                          number of channels.
         * "radius": radius around the best channel. Use the 'radius_um' argument to specify the radius in um
         * "snr": threshold based on template signal-to-noise ratio. Use the 'threshold' argument
-                 to specify the SNR threshold.
+                 to specify the SNR threshold (in units of noise levels)
         * "ptp": threshold based on the peak-to-peak values on every channels. Use the 'threshold' argument
-                to specify the ptp threshold
+                to specify the ptp threshold (in units of noise levels)
         * "energy": threshold based on the expected energy that should be present on the channels, 
-                    given their noise levels. Use the 'threshold' argument to specify the SNR threshold
+                    given their noise levels. Use the 'threshold' argument to specify the SNR threshold 
+                    (in units of noise levels)
         * "by_property": sparsity is given by a property of the recording and sorting(e.g. 'group').
                          Use the 'by_property' argument to specify the property name.
 
@@ -214,8 +215,9 @@ class ChannelSparsity:
 
         mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
         templates_ptps = np.ptp(we.get_all_templates(), axis=1)
+        noise = get_noise_levels(we.recording, return_scaled=we.return_scaled)
         for unit_ind, unit_id in enumerate(we.unit_ids):
-            chan_inds = np.nonzero(templates_ptps[unit_ind] >= threshold)
+            chan_inds = np.nonzero(templates_ptps[unit_ind] / noise >= threshold)
             mask[unit_ind, chan_inds] = True
         return cls(mask, we.unit_ids, we.channel_ids)
 
