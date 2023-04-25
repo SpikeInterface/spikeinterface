@@ -490,8 +490,8 @@ if HAVE_TORCH:
         window_max_indices = unique_indices[indices.view(-1)[unique_indices] == unique_indices]
 
         # voltage threshold
-        max_ampltidues_at_iitudes = max_amplitudes.view(-1)[window_max_indices]
-        crossings = torch.nonzero(max_ampltidues_at_iitudes > 1).squeeze()
+        max_ampltidues_at_indices = max_amplitudes.view(-1)[window_max_indices]
+        crossings = torch.nonzero(max_ampltidues_at_indices > 1).squeeze()
         if not crossings.numel():
             return empty_return_value
 
@@ -500,7 +500,7 @@ if HAVE_TORCH:
         peak_indices = window_max_indices[crossings]
         sample_indices = torch.div(peak_indices, num_channels, rounding_mode="floor")
         channel_indices = peak_indices % num_channels
-        amplitudes = max_ampltidues_at_iitudes[crossings]
+        amplitudes = max_ampltidues_at_indices[crossings]
 
         # we need this due to the padding in convolution
         valid_indices = torch.nonzero(
