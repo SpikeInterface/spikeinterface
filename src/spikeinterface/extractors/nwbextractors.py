@@ -56,6 +56,65 @@ def get_electrical_series(nwbfile, electrical_series_name):
         es = es_list[0]
     return es
 
+def read_nwbfile(file_path: str, stream_mode: Literal["ffspec", "ros3"] = None, stream_cache_path: Optional[str] = None
+    ) -> NWBFile:
+        """
+        Read an NWB file and return the NWBFile object.
+
+        Parameters
+        ----------
+        file_path : Path, str
+            The path to the NWB file.
+        stream_mode : "fsspec" or "ros3", optional
+            The streaming mode to use. Default assumes the file is on the local disk.
+        stream_cache_path : str, optional
+            The path to the cache storage. Default is None.
+
+        Returns
+        -------
+        nwbfile : NWBFile
+            The NWBFile object.
+
+        Raises
+        ------
+        AssertionError
+            If ROS3 support is not enabled.
+
+        Notes
+        -----
+        This function can stream data from either the "fsspec" or "ros3" protocols.
+
+
+        Examples
+        --------
+        >>> nwbfile = read_nwbfile("data.nwb", stream_mode="ros3")
+        """
+        file_path = str(file_path)
+        if stream_mode == "fsspec":
+            import fsspec
+            from fsspec.implementations.cached import CachingFileSystem
+
+            stream_cache_path = stream_cache_path if stream_cache_path is not None else str(get_global_tmp_folder())
+            caching_file_system = CachingFileSystem(
+                fs=fsspec.filesystem("http"),
+                cache_storage=str(stream_cache_path),
+            )
+            cached_file = caching_file_system.open(path=file_path, mode="rb")
+            file_path = h5py.File(cached_file)
+            io = NWBHDF5IO(file=file_path, mode="r", load_namespaces=True)
+
+        elif stream_mode == "ros3":
+            drivers = h5py.registered_drivers()
+            assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
+            assert "ros3" in drivers, assertion_msg
+            io = NWBHDF5IO(path=file_path, mode="r", load_namespaces=True, driver="ros3")
+
+        else:
+            io = NWBHDF5IO(path=file_path, mode="r", load_namespaces=True)
+
+        nwbfile = io.read()
+        return nwbfile
+
 
 class NwbRecordingExtractor(BaseRecording):
     """Load an NWBFile as a RecordingExtractor.
@@ -125,7 +184,7 @@ class NwbRecordingExtractor(BaseRecording):
         self._electrical_series_name = electrical_series_name
 
         self.file_path = file_path
-        self._nwbfile = self.read_nwbfile(
+        self._nwbfile = read_nwbfile(
             file_path=file_path, stream_mode=stream_mode, stream_cache_path=stream_cache_path
         )
         electrical_series = get_electrical_series(self._nwbfile, electrical_series_name)
@@ -266,17 +325,17 @@ class NwbRecordingExtractor(BaseRecording):
                     properties[column][electrical_series_index] = val
 
         # Set the properties in the recorder
-        for prop_name, values in properties.items():
-            if prop_name == "location":
+        for property_name, values in properties.items():
+            if property_name == "location":
                 self.set_dummy_probe_from_locations(values)
-            elif prop_name == "group":
+            elif property_name == "group":
                 if np.isscalar(values):
                     groups = [values] * len(channel_ids)
                 else:
                     groups = values
                 self.set_channel_groups(groups)
             else:
-                self.set_property(prop_name, values)
+                self.set_property(property_name, values)
 
         if stream_mode not in ["fsspec", "ros3"]:
             file_path = str(Path(file_path).absolute())
@@ -295,67 +354,6 @@ class NwbRecordingExtractor(BaseRecording):
             "stream_mode": stream_mode,
             "stream_cache_path": stream_cache_path,
         }
-
-    def read_nwbfile(
-        self, file_path: str, stream_mode: Literal["ffspec", "ros3"] = None, stream_cache_path: Optional[str] = None
-    ) -> NWBFile:
-        """
-        Read an NWB file and return the NWBFile object.
-
-        Parameters
-        ----------
-        file_path : str
-            The path to the NWB file.
-        stream_mode : "fsspec" or "ros3", optional
-            The streaming mode to use. Default assumes the file is on the local disk.
-        stream_cache_path : str, optional
-            The path to the cache storage. Default is None.
-
-        Returns
-        -------
-        nwbfile : NWBFile
-            The NWBFile object.
-
-        Raises
-        ------
-        AssertionError
-            If ROS3 support is not enabled.
-
-        Notes
-        -----
-        This function can stream data from either the "fsspec" or "ros3" protocols.
-
-
-        Examples
-        --------
-        >>> nwbfile = read_nwbfile("data.nwb", stream_mode="ros3")
-        """
-        if stream_mode == "fsspec":
-            import fsspec
-            from fsspec.implementations.cached import CachingFileSystem
-
-            self.stream_cache_path = stream_cache_path if stream_cache_path is not None else get_global_tmp_folder()
-            self.cfs = CachingFileSystem(
-                fs=fsspec.filesystem("http"),
-                cache_storage=str(self.stream_cache_path),
-            )
-            self._file_path = self.cfs.open(str(file_path), "rb")
-            f = h5py.File(self._file_path)
-            io = NWBHDF5IO(file=f, mode="r", load_namespaces=True)
-
-        elif stream_mode == "ros3":
-            drivers = h5py.registered_drivers()
-            assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
-            assert "ros3" in drivers, assertion_msg
-            self._file_path = str(file_path)
-            io = NWBHDF5IO(self._file_path, mode="r", load_namespaces=True, driver="ros3")
-
-        else:
-            self._file_path = str(file_path)
-            io = NWBHDF5IO(self._file_path, mode="r", load_namespaces=True)
-
-        nwbfile = io.read()
-        return nwbfile
 
 
 class NwbRecordingSegment(BaseRecordingSegment):
@@ -443,30 +441,11 @@ class NwbSortingExtractor(BaseSorting):
         self.stream_cache_path = stream_cache_path
         self._electrical_series_name = electrical_series_name
 
-        if stream_mode == "fsspec":
-            check_fsspec_install()
-            import fsspec
-            from fsspec.implementations.cached import CachingFileSystem
-            import h5py
-
-            self.stream_cache_path = stream_cache_path if stream_cache_path is not None else "cache"
-            self.cfs = CachingFileSystem(
-                fs=fsspec.filesystem("http"),
-                cache_storage=self.stream_cache_path,
-            )
-            self._file_path = self.cfs.open(str(file_path), "rb")
-            f = h5py.File(self._file_path)
-            self.io = NWBHDF5IO(file=f, mode="r", load_namespaces=True)
-
-        elif stream_mode == "ros3":
-            self._file_path = str(file_path)
-            self.io = NWBHDF5IO(self._file_path, mode="r", load_namespaces=True, driver="ros3")
-
-        else:
-            self._file_path = str(file_path)
-            self.io = NWBHDF5IO(self._file_path, mode="r", load_namespaces=True)
-
-        self._nwbfile = self.io.read()
+        self.file_path = file_path
+        self._nwbfile = read_nwbfile(
+            file_path=file_path, stream_mode=stream_mode, stream_cache_path=stream_cache_path
+        )
+        
         timestamps = None
         if sampling_frequency is None:
             # defines the electrical series from where the sorting came from
