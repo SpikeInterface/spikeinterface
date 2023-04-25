@@ -4,7 +4,7 @@ class DummyClustering:
     """
     Stupid clustering.
     peak are clustered from there channel detection
-    So peak['channel_ind'] will be the peak_labels
+    So peak['channel_index'] will be the peak_labels
     """
     _default_params = {
     }
@@ -12,5 +12,5 @@ class DummyClustering:
     @classmethod
     def main_function(cls, recording, peaks, params):
         labels = np.arange(recording.get_num_channels(), dtype='int64')
-        peak_labels = peaks['channel_ind']
+        peak_labels = peaks['channel_index']
         return labels, peak_labels
