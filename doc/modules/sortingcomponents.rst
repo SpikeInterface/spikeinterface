@@ -63,7 +63,7 @@ The output :code:`peaks` is a NumPy array with a length of the number of peaks f
 
 .. code-block:: python
 
-    peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('amplitude', 'float64'), ('segment_ind', 'int64')]
+    peak_dtype = [('sample_index', 'int64'), ('channel_index', 'int64'), ('amplitude', 'float64'), ('segment_index', 'int64')]
 
 
 Different methods are available with the :code:`method` argument:
