@@ -110,11 +110,11 @@ def _find_spikes_chunk(segment_index, start_frame, end_frame, worker_ctx):
     
     # remove spikes in margin
     if margin > 0:
-        keep = (spikes['sample_ind']  >= margin) & (spikes['sample_ind']  < (traces.shape[0] - margin))
+        keep = (spikes['sample_index']  >= margin) & (spikes['sample_index']  < (traces.shape[0] - margin))
         spikes = spikes[keep]
 
-    spikes['sample_ind'] += (start_frame - margin)
-    spikes['segment_ind'] = segment_index
+    spikes['sample_index'] += (start_frame - margin)
+    spikes['segment_index'] = segment_index
     return spikes
 
 # generic class for template engine

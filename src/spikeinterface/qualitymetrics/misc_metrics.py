@@ -370,8 +370,11 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
     for i, unit_id in enumerate(sorting.unit_ids):
         nb_violations[unit_id] = n_v = nb_rp_violations[i]
         N = num_spikes[unit_id]
-        D = 1 - n_v * (T - 2*N*t_c) / (N**2 * (t_r - t_c))
-        rp_contamination[unit_id] = 1 - math.sqrt(D) if D >= 0 else 1.0
+        if N == 0:
+            rp_contamination[unit_id] = np.nan
+        else:
+            D = 1 - n_v * (T - 2*N*t_c) / (N**2 * (t_r - t_c))
+            rp_contamination[unit_id] = 1 - math.sqrt(D) if D >= 0 else 1.0
 
     return res(rp_contamination, nb_violations)
 
@@ -721,21 +724,21 @@ def compute_drift_metrics(waveform_extractor, interval_s=60,
         spike_vector = sorting.to_spike_vector()
 
         # retrieve spikes in segment
-        i0 = np.searchsorted(spike_vector['segment_ind'], segment_index)
-        i1 = np.searchsorted(spike_vector['segment_ind'], segment_index + 1)
+        i0 = np.searchsorted(spike_vector['segment_index'], segment_index)
+        i1 = np.searchsorted(spike_vector['segment_index'], segment_index + 1)
         spikes_in_segment = spike_vector[i0:i1]
         spike_locations_in_segment = spike_locations[i0:i1]
 
         # compute median positions (if less than min_spikes_per_interval, median position is 0)
         median_positions = np.nan * np.zeros((len(unit_ids), num_bin_edges - 1))
         for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
-            i0 = np.searchsorted(spikes_in_segment['sample_ind'], start_frame)
-            i1 = np.searchsorted(spikes_in_segment['sample_ind'], end_frame)
+            i0 = np.searchsorted(spikes_in_segment['sample_index'], start_frame)
+            i1 = np.searchsorted(spikes_in_segment['sample_index'], end_frame)
             spikes_in_bin = spikes_in_segment[i0:i1]
             spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
 
             for unit_ind in np.arange(len(unit_ids)):
-                mask = spikes_in_bin['unit_ind'] == unit_ind
+                mask = spikes_in_bin["unit_index"] == unit_ind
                 if np.sum(mask) >= min_spikes_per_interval:
                     median_positions[unit_ind, bin_index] = np.median(spike_locations_in_bin[mask])
         if median_position_segments is None:

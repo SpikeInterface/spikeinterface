@@ -30,7 +30,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     folder_path: str
         The folder path to load the recordings from.
-    load_sync_channel: bool dafult False
+    load_sync_channel: bool default False
         Whether or not to load the last channel in the stream, which is typically used for synchronization.
         If True, then the probe is not loaded.
     stream_id: str, optional
@@ -76,14 +76,16 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
             if ptype in [21, 24]: # NP2.0
                 num_channels_per_adc = 16
+                num_cycles_in_adc = 16  # TODO: Check this.
                 total_channels = 384
             else: # NP1.0
                 num_channels_per_adc = 12
+                num_cycles_in_adc = 13 if "ap" in self.stream_id else 12
                 total_channels = 384
             
             # sample_shifts is generated from total channels (384) channels
             # when only some channels are saved we need to slice this vector (like we do for the probe)
-            sample_shifts = get_neuropixels_sample_shifts(total_channels, num_channels_per_adc)
+            sample_shifts = get_neuropixels_sample_shifts(total_channels, num_channels_per_adc, num_cycles_in_adc)
             if self.get_num_channels() != total_channels:
                 # need slice because not all channel are saved
                 chans = pi.get_saved_channel_indices_from_spikeglx_meta(meta_filename)
