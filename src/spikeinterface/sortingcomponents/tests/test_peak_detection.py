@@ -143,7 +143,7 @@ def test_peak_sign_consistency(recording, job_kwargs, detection_class):
     all_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
     
     difference_in_size = all_peaks.size - (positive_peaks.size + negative_peaks.size)
-    assert difference_in_size <= 1
+    assert abs(difference_in_size) <= 1
                 
 def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs):
     
