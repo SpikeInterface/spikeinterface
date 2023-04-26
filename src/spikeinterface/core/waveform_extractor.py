@@ -16,8 +16,8 @@ from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 from .core_tools import check_json
 from .job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
-from .recording_tools import check_probe_do_not_overlap
-from .waveform_tools import extract_waveforms_to_buffers, has_exceeding_spikes, get_rec_attributes
+from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
+from .waveform_tools import extract_waveforms_to_buffers, has_exceeding_spikes
 from .sparsity import ChannelSparsity, compute_sparsity, _sparsity_doc
 
 _possible_template_modes = ('average', 'std', 'median')

@@ -11,7 +11,6 @@ It is a 2-step approach:
 from pathlib import Path
 
 import numpy as np
-from copy import deepcopy
 
 from .job_tools import ChunkRecordingExecutor, ensure_n_jobs, _shared_job_kwargs_doc
 from .core_tools import make_shared_array
