@@ -447,16 +447,20 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         self.num_channels = num_channels
         self.dtype = dtype 
         self.mode = mode
-
-        # Random numbers characterising the channels, need to be done outside for consistency
         self.rng = np.random.default_rng(seed=self.seed)        
-        self.channel_phases = self.rng.uniform(low=0, high=2*np.pi, size=self.num_channels)
-        self.frequencies = 1.0 + self.rng.exponential(scale=1.0, size=self.num_channels)
-        self.amplitudes = self.rng.normal(loc=70, scale=10.0, size=self.num_channels)
-        self.amplitudes *= self.rng.choice([-1, 1], size=self.num_channels)
         
-        noise_size = 1000
-        self.basic_noise = self.rng.random(size=(noise_size, self.num_channels))
+        if self.mode == 'deterministic':
+            # Random numbers characterising the channels, need to be done outside for consistency
+            self.channel_phases = self.rng.uniform(low=0, high=2*np.pi, size=self.num_channels)
+            self.frequencies = 1.0 + self.rng.exponential(scale=1.0, size=self.num_channels)
+            self.amplitudes = self.rng.normal(loc=70, scale=10.0, size=self.num_channels)
+            self.amplitudes *= self.rng.choice([-1, 1], size=self.num_channels)    
+            self.traces_generator = self._deterministic_traces
+        elif self.mode == "pure_noise":
+            noise_size = 1000
+            self.basic_noise = self.rng.random(size=(noise_size, self.num_channels))
+            self.traces_generator = self._random_traces
+
         
     def get_num_samples(self):
         return self.num_samples
@@ -466,18 +470,39 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         start_frame = 0 if start_frame is None else max(start_frame, 0)
         end_frame = self.num_samples if end_frame is None else min(end_frame, self.num_samples)
         
-        if self.mode == 'pure_noise':
-            traces = self._random_traces(start_frame=start_frame, end_frame=end_frame)
-        else:
-            traces = self._deterministic_traces(start_frame=start_frame, end_frame=end_frame)
-        
+        # Trace generator determined by mode at init
+        traces = self.traces_generator(start_frame=start_frame, end_frame=end_frame)
         traces = traces if channel_indices is None else traces[:, channel_indices]
         
         return traces 
     
     def _random_traces(self, start_frame: int, end_frame: int) -> np.ndarray:
+        """
+        Generate a numpy array of random noise traces for a specified range of frames.
 
-        array  = self.basic_noise
+        This function uses the pre-generated basic_noise array to create random noise traces
+        based on the specified start_frame and end_frame indices. The resulting traces numpy array
+        has a shape (num_samples, num_channels), where num_samples is the number of samples between
+        the start and end frames, and num_channels is the number of channels in the recording.
+
+        Parameters
+        ----------
+        start_frame : int
+            The starting frame index for generating the random noise traces.
+        end_frame : int
+            The ending frame index for generating the random noise traces.
+
+        Returns
+        -------
+        np.ndarray
+            A numpy array containing the random noise traces with shape (num_samples, num_channels).
+
+        Notes
+        -----
+        This is a helper method and should not be called directly from outside the class.
+        """
+
+        noise_block  = self.basic_noise
         random_noise_samples = self.basic_noise.shape[0]
         
         start_frame_mod = start_frame % random_noise_samples
@@ -490,14 +515,14 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
 
         if not larger_than_basic_noise:
             if start_frame_mod <= end_frame_mod:
-                traces = array[start_frame_mod:end_frame_mod]
+                traces = noise_block[start_frame_mod:end_frame_mod]
             else:
-                traces = np.concatenate((array[start_frame_mod:], array[:end_frame_mod]))
+                traces = np.concatenate((noise_block[start_frame_mod:], noise_block[:end_frame_mod]))
         else:
-            first_block = array[start_frame_mod:]
+            first_block = noise_block[start_frame_mod:]
             repeat_count = (end_frame - start_frame - (random_noise_samples - start_frame_mod)) // random_noise_samples
-            middle_block = np.repeat(array, repeats=repeat_count, axis=0)
-            last_block = array[:end_frame_mod]
+            middle_block = np.repeat(noise_block, repeats=repeat_count, axis=0)
+            last_block = noise_block[:end_frame_mod]
 
             traces = np.concatenate((first_block, middle_block, last_block), out=traces)
 

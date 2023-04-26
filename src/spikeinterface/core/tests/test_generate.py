@@ -5,7 +5,7 @@ import numpy as np
 
 from spikeinterface.core.generate import GeneratorRecording, generate_lazy_recording
 
-mode_list = ["random", "pure_noise"]
+mode_list = ["deterministic", "pure_noise"]
 
 
 def measure_memory_allocation(measure_in_process: bool = True) -> float:
