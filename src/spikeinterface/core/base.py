@@ -28,11 +28,10 @@ class BaseExtractor:
     default_missing_property_values = {"f": np.nan, "O": None, "S": "", "U": ""}
 
     # This replaces the old key_properties
-    # These are annotations/properties/features that always need to be
+    # These are annotations/properties that always need to be
     # dumped (for instance locations, groups, is_fileterd, etc.)
     _main_annotations = []
     _main_properties = []
-    _main_features = []
 
     installed = True
     installation_mesg = ""
@@ -44,7 +43,7 @@ class BaseExtractor:
         self._kwargs = {}
 
         # 'main_ids' will either be channel_ids or units_ids
-        # They is used for properties and features
+        # They is used for properties
         self._main_ids = np.array(main_ids)
 
         # dict at object level
@@ -55,9 +54,6 @@ class BaseExtractor:
         #  * number of channel for recording
         #  * number of units for sorting
         self._properties = {}
-
-        # features is a dict of arrays (at spike level)
-        self._features = {}
 
         self.is_dumpable = True
 
@@ -87,7 +83,6 @@ class BaseExtractor:
         Useful to manipulate:
           * data
           * properties
-          * features
 
         'prefer_slice' is an efficient option that tries to make a slice object
         when indices are consecutive.
@@ -248,9 +243,9 @@ class BaseExtractor:
 
     def copy_metadata(self, other, only_main=False, ids=None):
         """
-        Copy annotations/properties/features to another extractor.
+        Copy annotations/properties to another extractor.
 
-        If 'only main' is True, then only "main" annotations/properties/features one are copied.
+        If 'only main' is True, then only "main" annotations/properties one are copied.
         """
 
         if ids is None:
@@ -263,12 +258,9 @@ class BaseExtractor:
         if only_main:
             ann_keys = BaseExtractor._main_annotations
             prop_keys = BaseExtractor._main_properties
-            # feat_keys = BaseExtractor._main_features
         else:
             ann_keys = self._annotations.keys()
             prop_keys = self._properties.keys()
-            # TODO include features
-            # feat_keys = ExtractorBase._features.keys()
 
         other._annotations = deepcopy({k: self._annotations[k] for k in ann_keys})
         for k in prop_keys:
@@ -869,7 +861,6 @@ def _load_extractor_from_dict(dic):
     for k, v in dic['properties'].items():
         # print(k, v)
         extractor.set_property(k, v)
-    # TODO features
 
     return extractor
 

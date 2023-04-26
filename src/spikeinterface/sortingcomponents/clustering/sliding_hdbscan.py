@@ -102,10 +102,10 @@ class SlidingHdbscanClustering:
             sparsity_mask[c, chans] = True
         
         # create a new peak vector to extract waveforms
-        dtype = [('sample_index', 'int64'), ('unit_ind', 'int64'), ('segment_index', 'int64')]
+        dtype = [('sample_index', 'int64'), ("unit_index", 'int64'), ('segment_index', 'int64')]
         peaks2 = np.zeros(peaks.size, dtype=dtype)
         peaks2['sample_index'] = peaks['sample_index']
-        peaks2['unit_ind'] = peaks['channel_index']
+        peaks2["unit_index"] = peaks['channel_index']
         peaks2['segment_index'] = peaks['segment_index']
         
         fs = recording.get_sampling_frequency()
@@ -406,7 +406,7 @@ class SlidingHdbscanClustering:
         # extact again waveforms based on new sparsity mask depending on main_chan
         dtype = recording.get_dtype()
         #~ return_scaled = False
-        peak_dtype = [('sample_index', 'int64'), ('unit_ind', 'int64'), ('segment_index', 'int64')]
+        peak_dtype = [('sample_index', 'int64'), ("unit_index", 'int64'), ('segment_index', 'int64')]
         keep = peak_labels>=0
         num_keep = np.sum(keep)
         keep_peak_labels = peak_labels[keep]
@@ -417,7 +417,7 @@ class SlidingHdbscanClustering:
         for l, label in enumerate(labels):
             main_chan = main_channels[l]
             mask = keep_peak_labels == label
-            peaks2['unit_ind'][mask] = l
+            peaks2["unit_index"][mask] = l
             # here we take a twice radius
             closest_chans, = np.nonzero(chan_distances[main_chan, :] <= d['radius_um'] * 2)
             sparsity_mask2[l, closest_chans] = True
