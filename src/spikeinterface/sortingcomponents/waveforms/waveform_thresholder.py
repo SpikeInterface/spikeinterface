@@ -32,7 +32,7 @@ class WaveformThresholder(WaveformsNode):
     parents: list of PipelineNodes, optional
         The parent nodes of this node (default None).
     feature: {'ptp', 'mean', 'energy', 'peak_voltage'}, optional
-        The feature to be considered for thresholding (default 'ptp').
+        The feature to be considered for thresholding (default 'ptp'). Features are normalized with the channel noise levels.
     threshold: float, optional
         The threshold value for the selected feature (default 2).
     noise_levels: array, optional
