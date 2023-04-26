@@ -149,6 +149,7 @@ def read_nwbfile(
     return nwbfile
 
 
+
 class NwbRecordingExtractor(BaseRecording):
     """Load an NWBFile as a RecordingExtractor.
 
@@ -242,7 +243,7 @@ class NwbRecordingExtractor(BaseRecording):
                 timestamps = electrical_series.timestamps
                 t_start = electrical_series.timestamps[0]
 
-        # if rate is unknown, estimate from timestamps TODO: Is this possible?
+        # TimeSeries need to have either timestamps or rate
         if sampling_frequency is None:
             assert timestamps is not None, (
                 "Could not find rate information as both 'rate' and "
@@ -473,7 +474,31 @@ class NwbSortingExtractor(BaseSorting):
         self._electrical_series_name = electrical_series_name
 
         self.file_path = file_path
-        self._nwbfile = read_nwbfile(file_path=file_path, stream_mode=stream_mode, stream_cache_path=stream_cache_path)
+        if stream_mode == "fsspec":
+            check_fsspec_install()
+            import fsspec
+            from fsspec.implementations.cached import CachingFileSystem
+            import h5py
+
+            self.stream_cache_path = stream_cache_path if stream_cache_path is not None else "cache"
+            self.cfs = CachingFileSystem(
+                fs=fsspec.filesystem("http"),
+                cache_storage=self.stream_cache_path,
+            )
+            self._file_path = self.cfs.open(str(file_path), "rb")
+            f = h5py.File(self._file_path)
+            self.io = NWBHDF5IO(file=f, mode="r", load_namespaces=True)
+
+        elif stream_mode == "ros3":
+            self._file_path = str(file_path)
+            self.io = NWBHDF5IO(self._file_path, mode="r", load_namespaces=True, driver="ros3")
+
+        else:
+            self._file_path = str(file_path)
+            self.io = NWBHDF5IO(self._file_path, mode="r", load_namespaces=True)
+
+        self._nwbfile = self.io.read()
+        units_ids = list(self._nwbfile.units.id[:])
 
         timestamps = None
         if sampling_frequency is None:
@@ -494,7 +519,6 @@ class NwbSortingExtractor(BaseSorting):
         )
 
         # get all units ids
-        units_ids = list(self._nwbfile.units.id[:])
 
         # store units properties and spike features to dictionaries
         properties = dict()
