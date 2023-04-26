@@ -81,9 +81,10 @@ def test_lazy_random_recording(mode):
 
 @pytest.mark.parametrize("mode", mode_list)
 def test_generate_lazy_recording(mode):
+    # Test that get_traces does not consume more memory than allocated. 
     bytes_to_MiB_factor = 1024**2
-    full_traces_size_GiB = 1.0
-    relative_tolerance = 0.05  # relative tolerance of 5 per cent
+    full_traces_size_GiB = 3.0
+    relative_tolerance = 0.01  # Tolerance of 1 % is used for large memory consumption
 
     initial_memory_MiB = measure_memory_allocation() / bytes_to_MiB_factor
 
@@ -110,12 +111,19 @@ def test_generate_lazy_recording(mode):
 
 @pytest.mark.parametrize("mode", mode_list)
 def test_generate_lazy_recording_under_giga(mode):
+    # Test that the recording has the correct size in memory when calling smaller than 1 GiB
     recording = generate_lazy_recording(full_traces_size_GiB=0.5, mode=mode)
     assert recording.get_memory_size() == "512.00 MiB"
 
+    recording = generate_lazy_recording(full_traces_size_GiB=0.3, mode=mode)
+    assert recording.get_memory_size() == "307.20 MiB"
+    
+    recording = generate_lazy_recording(full_traces_size_GiB=0.1, mode=mode)
+    assert recording.get_memory_size() == "102.40 MiB"
 
 @pytest.mark.parametrize("mode", mode_list)
 def test_generate_recording_correct_sizes(mode):
+    # Test that the recording has the correct size in shape
     sampling_frequency = 30000  # Hz
     durations = [1.0]
     dtype = np.dtype("float32")
@@ -141,6 +149,7 @@ def test_generate_recording_correct_sizes(mode):
 
 @pytest.mark.parametrize("mode", mode_list)
 def test_generator_recording_consistency(mode):
+    # Calling the get_traces twice should return the same result
     sampling_frequency = 30000  # Hz
     durations = [1.0]
     dtype = np.dtype("float32")
@@ -168,6 +177,8 @@ def test_generator_recording_consistency(mode):
 
 @pytest.mark.parametrize("mode", mode_list)
 def test_generator_recording_consistency_across_traces(mode):
+    # Test that the generated traces behave like true arrays. Calling a larger array and then slicing it should
+    # give the same result as calling a smaller array.
     sampling_frequency = 30000  # Hz
     durations = [1.0]
     dtype = np.dtype("float32")
@@ -188,4 +199,5 @@ def test_generator_recording_consistency_across_traces(mode):
     end_frame = 1000
     traces = lazy_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
     lager_traces = lazy_recording.get_traces(start_frame=start_frame, end_frame=end_frame + extra_samples)
-    assert np.allclose(traces, lager_traces[:end_frame, :])
+    equivalent_trace_from_larger_traces = lager_traces[:end_frame - start_frame, :]
+    assert np.allclose(traces, equivalent_trace_from_larger_traces)
