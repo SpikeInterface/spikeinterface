@@ -48,7 +48,7 @@ class BenchmarkMatching:
     def run_matching_collision(self, method):
         spikes = find_spikes_from_templates(self.recording, method=method,
                                             method_kwargs=self.methods_kwargs[method], **self.job_kwargs)
-        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
+        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'], self.sampling_rate)
         comp = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt)
         return comp
 
@@ -68,7 +68,7 @@ class BenchmarkMatching:
         # Run Template Matching and Generate Sorting
         spikes = find_spikes_from_templates(self.recording, method=method, method_kwargs=method_kwargs,
                                             **self.job_kwargs)
-        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
+        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'], self.sampling_rate)
         # Evaluate Performance
         comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
         return comp
@@ -108,7 +108,7 @@ class BenchmarkMatching:
         # Run Template Matching and Generate Sorting
         spikes = find_spikes_from_templates(self.recording, method=method, method_kwargs=method_kwargs,
                                             **self.job_kwargs)
-        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_ind'], self.sampling_rate)
+        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'], self.sampling_rate)
         # Evaluate Performance
         comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
         return comp
