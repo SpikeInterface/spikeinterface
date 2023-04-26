@@ -160,7 +160,7 @@ def get_noise_levels(recording: 'BaseRecording', return_scaled: bool = True, met
 
     """
     
-    if 'noise_levels' in recording._properties and not force_recompute:
+    if 'noise_levels' in recording.get_property_keys() and not force_recompute:
         noise_levels = recording.get_property(key="noise_levels")
         return noise_levels
     else:
