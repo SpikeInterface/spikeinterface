@@ -54,7 +54,7 @@ class BenchmarkMatching:
         return comp
 
 
-    def run_matching_num_spikes(self, spike_num, tmp_folder, method, seed=0, we_kwargs=None, template_mode='median'):
+    def run_matching_num_spikes(self, spike_num, seed=0, we_kwargs=None, template_mode='median'):
         if we_kwargs is None:
             we_kwargs = {}
         we_kwargs.update(dict(max_spikes_per_unit=spike_num, seed=seed, overwrite=True, load_if_exists=False,
@@ -62,24 +62,29 @@ class BenchmarkMatching:
         np.random.seed(seed)
 
         # Generate New Waveform Extractor with New Spike Numbers
-        we = extract_waveforms(self.recording, self.gt_sorting, tmp_folder, **we_kwargs)
+        we = extract_waveforms(self.recording, self.gt_sorting, self.tmp_folder, **we_kwargs)
         templates = we.get_all_templates(we.unit_ids, mode=template_mode)
-        # Update method_kwargs
-        method_kwargs = self.methods_kwargs[method].copy()
-        if method == 'wobble':
-            method_kwargs.update(dict(templates=templates, nbefore=we.nbefore, nafter=we.nafter))
-        else:
-            method_kwargs['waveform_extractor'] = we
-        # Run Template Matching and Generate Sorting
-        spikes = find_spikes_from_templates(self.recording, method=method, method_kwargs=method_kwargs,
-                                            **self.job_kwargs)
-        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'], self.sampling_rate)
-        # Evaluate Performance
-        comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
-        return comp
 
-    def run_matching_misclassed(self, fraction_misclassed, tmp_folder, method, fraction_similar=1, seed=0,
-                                we_kwargs=None, template_mode='median'):
+        # Run Template Matching for each method
+        comps = {}
+        for method in self.methods:
+            method_kwargs = self.methods_kwargs[method].copy()
+            if method == 'wobble':
+                method_kwargs.update(dict(templates=templates, nbefore=we.nbefore, nafter=we.nafter))
+            else:
+                method_kwargs['waveform_extractor'] = we
+            spikes = find_spikes_from_templates(self.recording, method=method, method_kwargs=method_kwargs,
+                                                **self.job_kwargs)
+            sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'],
+                                                     self.sampling_rate)
+            comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
+            comps[method] = comp
+
+        shutil.rmtree(self.tmp_folder)
+        return comps
+
+    def run_matching_misclassed(self, fraction_misclassed, fraction_similar=1, seed=0, we_kwargs=None,
+                                template_mode='median'):
         if we_kwargs is None:
             we_kwargs = {}
         we_kwargs.update(dict(seed=seed, overwrite=True, load_if_exists=False, **self.job_kwargs))
@@ -109,22 +114,28 @@ class BenchmarkMatching:
         spike_time_indices = spike_time_indices[sort_idx]
         labels = labels[sort_idx]
         sorting_misclassed = NumpySorting.from_times_labels(spike_time_indices, labels, self.sampling_rate)
+
         # Generate New Waveform Extractor with Misclassed Spike Trains
         we = extract_waveforms(self.recording, sorting_misclassed, tmp_folder, **we_kwargs)
         templates = we.get_all_templates(we.unit_ids, mode=template_mode)
-        # Update method_kwargs
-        method_kwargs = self.methods_kwargs[method].copy()
-        if method == 'wobble':
-            method_kwargs.update(dict(templates=templates, nbefore=we.nbefore, nafter=we.nafter))
-        else:
-            method_kwargs['waveform_extractor'] = we
-        # Run Template Matching and Generate Sorting
-        spikes = find_spikes_from_templates(self.recording, method=method, method_kwargs=method_kwargs,
-                                            **self.job_kwargs)
-        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'], self.sampling_rate)
-        # Evaluate Performance
-        comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
-        return comp
+
+        # Run Template Matching for each method
+        comps = {}
+        for method in self.methods:
+            method_kwargs = self.methods_kwargs[method].copy()
+            if method == 'wobble':
+                method_kwargs.update(dict(templates=templates, nbefore=we.nbefore, nafter=we.nafter))
+            else:
+                method_kwargs['waveform_extractor'] = we
+            spikes = find_spikes_from_templates(self.recording, method=method, method_kwargs=method_kwargs,
+                                                **self.job_kwargs)
+            sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'],
+                                                     self.sampling_rate)
+            comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
+            comps[method] = comp
+
+        shutil.rmtree(self.tmp_folder)
+        return comps
 
 
     def run_matching_vary_parameter(self, parameters, parameter_name, num_replicates=1, we_kwargs=None,
@@ -136,14 +147,14 @@ class BenchmarkMatching:
         comps, parameter_values, parameter_names, iter_nums, methods = [], [], [], [], []
         for parameter in parameters:
             if verbose:
-                print(f"{parameter = }")
+                print(f"{parameter_name} = {parameter}")
             for i in range(1, num_replicates+1):
                 if verbose:
                     print(f"{i = }")
+                comp_per_method = run_matching_fn(parameter, seed=i, we_kwargs=we_kwargs, template_mode=template_mode,
+                                                  **kwargs)
                 for method in self.methods:
-                    comp = run_matching_fn(parameter, self.tmp_folder, method, seed=i, we_kwargs=we_kwargs,
-                                           template_mode=template_mode, **kwargs)
-                    comps.append(comp)
+                    comps.append(comp_per_method[method])
                     parameter_values.append(parameter)
                     parameter_names.append(parameter_name)
                     iter_nums.append(i)
