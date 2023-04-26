@@ -389,7 +389,7 @@ from typing import Union, Optional, List, Literal
 class GeneratorRecording(BaseRecording):
     def __init__(
         self,
-        durations: List[int],
+        durations: List[float],
         sampling_frequency: float,
         num_channels: int,
         dtype: Optional[Union[np.dtype, str]] = "float32",
@@ -531,12 +531,14 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         
         return traces
 
-def generate_lazy_recording(full_traces_size_GiB: float, seed=None) -> GeneratorRecording:
+def generate_lazy_recording(
+    full_traces_size_GiB: float, seed: Optional[int] = None, mode: Literal["pure_noise", "deterministic"] = "pure_noise"
+) -> GeneratorRecording:
     """
     Generate a large lazy recording.
     This is a convenience wrapper around the GeneratorRecording class where only
     the size in GiB (NOT GB!) is specified.
-    
+
     It is generated with 1024 channels and a sampling frequency of 1 Hz. The duration is manipulted to
     produced the desired size.
 
@@ -551,20 +553,27 @@ def generate_lazy_recording(full_traces_size_GiB: float, seed=None) -> Generator
     GeneratorRecording
         A lazy random recording with the specified size.
     """
-    
+
     dtype = np.dtype("float32")
-    sampling_frequency = 30_000.0 # Hz 
-    num_channels = 1024    
-    
-    GiB_to_bytes = 1024** 3
-    full_traces_size_bytes = int(full_traces_size_GiB * GiB_to_bytes) 
+    sampling_frequency = 30_000.0  # Hz
+    num_channels = 1024
+
+    GiB_to_bytes = 1024**3
+    full_traces_size_bytes = int(full_traces_size_GiB * GiB_to_bytes)
     num_samples = int(full_traces_size_bytes / (num_channels * dtype.itemsize))
     durations = [num_samples / sampling_frequency]
 
-    recording = GeneratorRecording(durations=durations, sampling_frequency=sampling_frequency, 
-                        num_channels=num_channels, dtype=dtype, seed=seed)
+    recording = GeneratorRecording(
+        durations=durations,
+        sampling_frequency=sampling_frequency,
+        num_channels=num_channels,
+        dtype=dtype,
+        seed=seed,
+        mode=mode,
+    )
 
     return recording
+
 
 
 if __name__ == '__main__':
