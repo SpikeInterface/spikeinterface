@@ -80,6 +80,7 @@ full = [
     "distinctipy",
     "matplotlib",
     "cuda-python",
+    "numba",
 ]
 
 widgets = [
