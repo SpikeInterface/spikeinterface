@@ -43,6 +43,25 @@ def test_get_noise_levels():
     assert np.allclose(get_noise_levels(recording, method="std", return_scaled=False), [std, std], rtol=1e-2, atol=1e-3)
 
 
+def test_get_noise_levels_output():
+
+    # Generate a recording following a gaussian distribution to check the result of get_noise.
+    std = 6.0
+    seed = 0 
+    rng = np.random.default_rng(seed=seed)
+    num_channels = 2
+    num_samples = 10_000
+    sampling_frequency = 30_000.0
+    traces = rng.normal(loc=10.0, scale=std, size=(num_samples, num_channels))
+    recording = NumpyRecording(traces_list=traces, sampling_frequency=sampling_frequency)
+
+    std_estimated_with_mad = get_noise_levels(recording, method="mad", return_scaled=False, chunk_size=1_000)
+    assert np.allclose(std_estimated_with_mad, [std, std], rtol=1e-2, atol=1e-3)
+    
+    std_estimated_with_std = get_noise_levels(recording, method="std", return_scaled=False, chunk_size=1_000)
+    assert np.allclose(std_estimated_with_std, [std, std], rtol=1e-2, atol=1e-3)
+
+
 
 def test_get_chunk_with_margin():
     rec = generate_recording(num_channels=1, sampling_frequency=1000., durations=[10.])

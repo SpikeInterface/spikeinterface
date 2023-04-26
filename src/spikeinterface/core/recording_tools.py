@@ -1,4 +1,6 @@
 from typing import Literal
+import warnings
+
 import numpy as np
 
 
@@ -12,7 +14,7 @@ def get_random_data_chunks(
     margin_frames=0,
 ):
     """
-    Exctract random chunks across segments
+    Extract random chunks across segments
 
     This is used for instance in get_noise_levels() to estimate noise on traces.
 
@@ -38,36 +40,64 @@ def get_random_data_chunks(
     # TODO: if segment have differents length make another sampling that dependant on the length of the segment
     # Should be done by changing kwargs with total_num_chunks=XXX and total_duration=YYYY
     # And randomize the number of chunk per segment weighted by segment duration
-
+    
     # check chunk size
-    for segment_index in range(recording.get_num_segments()):
-        assert chunk_size < recording.get_num_samples(segment_index), (
-            f"chunk_size is greater than the number "
-            f"of samples for segment index {segment_index}. "
-            f"Use a smaller chunk_size!"
-        )
+    num_segments = recording.get_num_segments()
+    for segment_index in range(num_segments):
+        if chunk_size > recording.get_num_frames(segment_index) - 2 * margin_frames:
+            error_message = (
+                f"chunk_size is greater than the number "
+                f"of samples for segment index {segment_index}. "
+                f"Use a smaller chunk_size!"
+            )
+            raise ValueError(error_message)
 
+    rng = np.random.default_rng(seed)
     chunk_list = []
-    for segment_index in range(recording.get_num_segments()):
-        length = recording.get_num_frames(segment_index)
-
-        random_starts = np.random.RandomState(seed=seed).randint(
-            margin_frames,
-            length - chunk_size - margin_frames,
-            size=num_chunks_per_segment,
-        )
-        for start_frame in random_starts:
-            chunk = recording.get_traces(
+    low = margin_frames
+    size=num_chunks_per_segment
+    for segment_index in range(num_segments):
+        num_frames = recording.get_num_frames(segment_index)
+        high = num_frames - chunk_size - margin_frames
+        random_starts = rng.integers(low=low, high=high, size=size)
+        segment_trace_chunk = [
+            recording.get_traces(
                 start_frame=start_frame,
-                end_frame=start_frame + chunk_size,
+                end_frame=(start_frame + chunk_size),
                 segment_index=segment_index,
                 return_scaled=return_scaled,
             )
-            chunk_list.append(chunk)
+            for start_frame in random_starts
+        ]
+
+        chunk_list.extend(segment_trace_chunk)
+    
     if concatenated:
         return np.concatenate(chunk_list, axis=0)
     else:
         return chunk_list
+
+def get_noise_levels(recording: 'BaseRecording', return_scaled: bool = True, method: Literal['mad', 'std'] = "mad", **random_chunk_kwargs):
+    """
+    Estimate signal std for each channel using median absolute deviation (MAD) and std.
+
+    Internally it samples some chunk across segment.
+    And then, it use MAD estimator (more robust than STD)
+
+    """
+    random_chunks = get_random_data_chunks(
+        recording, return_scaled=return_scaled, **random_chunk_kwargs
+    )
+    
+    if method == "mad":
+        med = np.median(random_chunks, axis=0, keepdims=True)
+        # hard-coded so that core doesn't depend on scipy
+        noise_levels = (
+            np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
+        )
+    elif method == "std":
+        noise_levels = np.std(random_chunks, axis=0)
+    return noise_levels
 
 
 def get_channel_distances(recording):
