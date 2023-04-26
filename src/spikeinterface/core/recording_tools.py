@@ -160,9 +160,8 @@ def get_noise_levels(recording: 'BaseRecording', return_scaled: bool = True, met
 
     """
     
-    if 'noise_levels' in recording._properties and not force_recompute:
-        noise_levels = recording.get_property(key="noise_levels")
-        return noise_levels
+    if 'noise_level' in recording._properties and not force_recompute:
+        noise_levels = recording.get_property(key="noise_level")
     else:
         random_chunks = get_random_data_chunks(
             recording, return_scaled=return_scaled, **random_chunk_kwargs
@@ -176,7 +175,7 @@ def get_noise_levels(recording: 'BaseRecording', return_scaled: bool = True, met
             )
         elif method == "std":
             noise_levels = np.std(random_chunks, axis=0)
-        recording.set_property('noise_levels', noise_levels)
+        recording.set_property('noise_level', noise_levels)
 
     return noise_levels
 
