@@ -25,7 +25,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         extremum_channel_inds = get_template_extremum_channel(self.waveform_extractor, outputs="index")
         self.spikes = self.waveform_extractor.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
 
-    def _set_params(self, ms_before=1., ms_after=1., method='center_of_mass',
+    def _set_params(self, ms_before=0.5, ms_after=0.5, method='center_of_mass',
                     method_kwargs={}):
 
         params = dict(ms_before=ms_before,
@@ -38,7 +38,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         old_unit_ids = self.waveform_extractor.sorting.unit_ids
         unit_inds = np.flatnonzero(np.in1d(old_unit_ids, unit_ids))
 
-        spike_mask = np.in1d(self.spikes['unit_ind'], unit_inds)
+        spike_mask = np.in1d(self.spikes["unit_index"], unit_inds)
         new_spike_locations = self._extension_data['spike_locations'][spike_mask]
         return dict(spike_locations=new_spike_locations)
         
@@ -83,14 +83,14 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         elif outputs == 'by_unit':
             locations_by_unit = []
             for segment_index in range(self.waveform_extractor.get_num_segments()):
-                i0 =np.searchsorted(self.spikes['segment_ind'], segment_index, side="left")
-                i1 =np.searchsorted(self.spikes['segment_ind'], segment_index, side="right")
+                i0 =np.searchsorted(self.spikes['segment_index'], segment_index, side="left")
+                i1 =np.searchsorted(self.spikes['segment_index'], segment_index, side="right")
                 spikes = self.spikes[i0: i1]
                 locations = self._extension_data['spike_locations'][i0: i1]
                 
                 locations_by_unit.append({})
                 for unit_ind, unit_id in enumerate(sorting.unit_ids):
-                    mask = spikes['unit_ind'] == unit_ind
+                    mask = spikes["unit_index"] == unit_ind
                     locations_by_unit[segment_index][unit_id] = locations[mask]
             return locations_by_unit
 
@@ -103,7 +103,7 @@ WaveformExtractor.register_extension(SpikeLocationsCalculator)
 
 
 def compute_spike_locations(waveform_extractor, load_if_exists=False, 
-                            ms_before=1., ms_after=1, 
+                            ms_before=0.5, ms_after=0.5, 
                             method='center_of_mass',
                             method_kwargs={},
                             outputs='concatenated',
@@ -122,7 +122,7 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
     ms_after : float
         The right window, after a peak, in milliseconds.
     method : str
-        'center_of_mass' / 'monopolar_triangulation' / 'from_templates'
+        'center_of_mass' / 'monopolar_triangulation' / 'grid_convolution'
     method_kwargs : dict 
         Other kwargs depending on the method.
     outputs : str 

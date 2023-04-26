@@ -1,6 +1,6 @@
 import numpy as np
 
-from spikeinterface.core import generate_recording
+from spikeinterface.core import NumpyRecording, generate_recording
 
 from spikeinterface.core.recording_tools import (get_random_data_chunks, get_chunk_with_margin,
                                                  get_closest_channels, get_channel_distances, get_noise_levels,
@@ -25,12 +25,32 @@ def test_get_noise_levels():
     rec = generate_recording(num_channels=2, sampling_frequency=1000., durations=[60.])
 
     noise_levels = get_noise_levels(rec, return_scaled=False)
-    print(noise_levels)
 
     rec.set_channel_gains(0.1)
     rec.set_channel_offsets(0)
     noise_levels = get_noise_levels(rec, return_scaled=True)
-    print(noise_levels)
+
+    noise_levels = get_noise_levels(rec, return_scaled=True, method="std")
+
+def test_get_noise_levels_output():
+
+    # Generate a recording following a gaussian distribution to check the result of get_noise.
+    std = 6.0
+    seed = 0 
+    rng = np.random.default_rng(seed=seed)
+    num_channels = 2
+    num_samples = 10_000
+    sampling_frequency = 30_000.0
+    traces = rng.normal(loc=10.0, scale=std, size=(num_samples, num_channels))
+    recording = NumpyRecording(traces_list=traces, sampling_frequency=sampling_frequency)
+
+    std_estimated_with_mad = get_noise_levels(recording, method="mad", return_scaled=False, chunk_size=1_000)
+    assert np.allclose(std_estimated_with_mad, [std, std], rtol=1e-2, atol=1e-3)
+    
+    std_estimated_with_std = get_noise_levels(recording, method="std", return_scaled=False, chunk_size=1_000)
+    assert np.allclose(std_estimated_with_std, [std, std], rtol=1e-2, atol=1e-3)
+
+
 
 def test_get_chunk_with_margin():
     rec = generate_recording(num_channels=1, sampling_frequency=1000., durations=[10.])

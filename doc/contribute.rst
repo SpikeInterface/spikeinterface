@@ -138,7 +138,7 @@ Now you can start filling out the required methods:
     def _run_from_folder(cls, output_folder, params, verbose):
 
         # Fill code to run your spike sorter based on the files created in the _setup_recording()
-        # You can run CLI commands (e.g. klusta, spykingcircus, tridesclous), pure Python code (e.g. Mountainsort4,
+        # You can run CLI commands (e.g. klusta, spykingcircus, tridesclous), pure Python code (e.g. Mountainsort5,
         # Herding Spikes), or even MATLAB code (e.g. Kilosort, Kilosort2, Ironclust)
 
     @classmethod

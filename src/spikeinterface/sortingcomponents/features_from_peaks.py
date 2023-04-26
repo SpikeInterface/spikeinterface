@@ -4,7 +4,8 @@ import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core import get_channel_distances
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass, LocalizeMonopolarTriangulation
-from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, PipelineNode, ExtractDenseWaveforms
+from spikeinterface.sortingcomponents.peak_pipeline import (run_node_pipeline, PeakRetriever, 
+                                                            PipelineNode, ExtractDenseWaveforms)
 
 
 
@@ -46,17 +47,20 @@ def compute_features_from_peaks(
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_output=False)
+    peak_retriever = PeakRetriever(recording, peaks)
+    extract_dense_waveforms = ExtractDenseWaveforms(recording, parents=[peak_retriever],
+                                                    ms_before=ms_before, ms_after=ms_after,  return_output=False)
     nodes = [
+        peak_retriever,
         extract_dense_waveforms,
     ]
     for feature_name in feature_list:
         Class = _features_class[feature_name]
         params = feature_params.get(feature_name, {}).copy()
-        node = Class(recording, parents=[extract_dense_waveforms], **params)
+        node = Class(recording, parents=[peak_retriever, extract_dense_waveforms], **params)
         nodes.append(node)
 
-    features = run_peak_pipeline(recording, peaks, nodes, job_kwargs, job_name='features_from_peaks', squeeze_output=False)
+    features = run_node_pipeline(recording, nodes, job_kwargs, job_name='features_from_peaks', squeeze_output=False)
 
     return features
 
@@ -112,8 +116,8 @@ class PeakToPeakFeature(PipelineNode):
             all_ptps = np.ptp(waveforms, axis=1)
         else:
             all_ptps = np.zeros(peaks.size)
-            for main_chan in np.unique(peaks['channel_ind']):
-                idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+            for main_chan in np.unique(peaks['channel_index']):
+                idx, = np.nonzero(peaks['channel_index'] == main_chan)
                 chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
                 wfs = waveforms[idx][:, :, chan_inds]
                 all_ptps[idx] = np.max(np.ptp(wfs, axis=1))
@@ -145,8 +149,8 @@ class PeakToPeakLagsFeature(PipelineNode):
             all_lags = all_maxs - all_mins
         else:
             all_lags = np.zeros(peaks.size)
-            for main_chan in np.unique(peaks['channel_ind']):
-                idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+            for main_chan in np.unique(peaks['channel_index']):
+                idx, = np.nonzero(peaks['channel_index'] == main_chan)
                 chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
                 wfs = waveforms[idx][:, :, chan_inds]
                 maxs = np.argmax(wfs, axis=1)
@@ -180,8 +184,8 @@ class RandomProjectionsFeature(PipelineNode):
 
     def compute(self, traces, peaks, waveforms):
         all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
-        for main_chan in np.unique(peaks['channel_ind']):
-            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+        for main_chan in np.unique(peaks['channel_index']):
+            idx, = np.nonzero(peaks['channel_index'] == main_chan)
             chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
             local_projections = self.projections[chan_inds, :]
             wf_ptp = (waveforms[idx][:, :, chan_inds]).ptp(axis=1)
@@ -216,8 +220,8 @@ class RandomProjectionsEnergyFeature(PipelineNode):
 
     def compute(self, traces, peaks, waveforms):
         all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
-        for main_chan in np.unique(peaks['channel_ind']):
-            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+        for main_chan in np.unique(peaks['channel_index']):
+            idx, = np.nonzero(peaks['channel_index'] == main_chan)
             chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
             local_projections = self.projections[chan_inds, :]
             energies = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
@@ -250,8 +254,8 @@ class StdPeakToPeakFeature(PipelineNode):
 
     def compute(self, traces, peaks, waveforms):
         all_ptps = np.zeros(peaks.size)
-        for main_chan in np.unique(peaks['channel_ind']):
-            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+        for main_chan in np.unique(peaks['channel_index']):
+            idx, = np.nonzero(peaks['channel_index'] == main_chan)
             chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
             wfs = waveforms[idx][:, :, chan_inds]
             all_ptps[idx] = np.std(np.ptp(wfs, axis=1), axis=1)
@@ -276,8 +280,8 @@ class GlobalPeakToPeakFeature(PipelineNode):
 
     def compute(self, traces, peaks, waveforms):
         all_ptps = np.zeros(peaks.size)
-        for main_chan in np.unique(peaks['channel_ind']):
-            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+        for main_chan in np.unique(peaks['channel_index']):
+            idx, = np.nonzero(peaks['channel_index'] == main_chan)
             chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
             wfs = waveforms[idx][:, :, chan_inds]
             all_ptps[idx] = np.max(wfs, axis=(1, 2)) - np.min(wfs, axis=(1, 2))
@@ -302,8 +306,8 @@ class KurtosisPeakToPeakFeature(PipelineNode):
     def compute(self, traces, peaks, waveforms):
         all_ptps = np.zeros(peaks.size)
         import scipy
-        for main_chan in np.unique(peaks['channel_ind']):
-            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+        for main_chan in np.unique(peaks['channel_index']):
+            idx, = np.nonzero(peaks['channel_index'] == main_chan)
             chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
             wfs = waveforms[idx][:, :, chan_inds]
             all_ptps[idx] = scipy.stats.kurtosis(np.ptp(wfs, axis=1), axis=1)
@@ -326,8 +330,8 @@ class EnergyFeature(PipelineNode):
 
     def compute(self, traces, peaks, waveforms):
         energy = np.zeros(peaks.size, dtype='float32')
-        for main_chan in np.unique(peaks['channel_ind']):
-            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+        for main_chan in np.unique(peaks['channel_index']):
+            idx, = np.nonzero(peaks['channel_index'] == main_chan)
             chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
 
             wfs = waveforms[idx][:, :, chan_inds]

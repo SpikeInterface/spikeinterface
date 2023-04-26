@@ -3,17 +3,17 @@ import shutil
 from pathlib import Path
 import numpy as np
 from spikeinterface import extract_waveforms, load_waveforms
-from spikeinterface.core import synthetize_spike_train_bad_isi
+from spikeinterface.core import NumpySorting, synthetize_spike_train_bad_isi
 from spikeinterface.extractors.toy_example import toy_example
 from spikeinterface.qualitymetrics.utils import create_ground_truth_pc_distributions
 
 from spikeinterface.qualitymetrics import calculate_pc_metrics
 from spikeinterface.postprocessing import compute_principal_components, compute_spike_locations, compute_spike_amplitudes
 
-from spikeinterface.qualitymetrics import (mahalanobis_metrics, lda_metrics, nearest_neighbors_metrics, 
-        compute_amplitude_cutoffs, compute_presence_ratios, compute_isi_violations, compute_firing_rates, 
-        compute_num_spikes, compute_snrs, compute_refrac_period_violations, compute_sliding_rp_violations,
-        compute_drift_metrics, compute_amplitude_medians)
+from spikeinterface.qualitymetrics import (mahalanobis_metrics, lda_metrics, nearest_neighbors_metrics,
+        silhouette_score, simplified_silhouette_score, compute_amplitude_cutoffs, compute_presence_ratios, 
+        compute_isi_violations, compute_firing_rates, compute_num_spikes, compute_snrs, compute_refrac_period_violations, 
+        compute_sliding_rp_violations, compute_drift_metrics, compute_amplitude_medians)
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -102,6 +102,27 @@ def test_nearest_neighbors_metrics():
 
     assert hit_rate1 < hit_rate2
     assert miss_rate1 > miss_rate2
+        
+        
+def test_silhouette_score_metrics():
+    all_pcs1, all_labels1 = create_ground_truth_pc_distributions([1, -1], [1000, 1000])
+    all_pcs2, all_labels2 = create_ground_truth_pc_distributions([1, -2],
+                                                                 [1000, 1000])  # increase distance between clusters
+
+    sil_score1 = silhouette_score(all_pcs1, all_labels1, 0)
+    sil_score2 = silhouette_score(all_pcs2, all_labels2, 0)
+
+    assert sil_score1 < sil_score2
+
+def test_simplified_silhouette_score_metrics():
+    all_pcs1, all_labels1 = create_ground_truth_pc_distributions([1, -1], [1000, 1000])
+    all_pcs2, all_labels2 = create_ground_truth_pc_distributions([1, -2],
+                                                                 [1000, 1000])  # increase distance between clusters
+
+    sim_sil_score1 = simplified_silhouette_score(all_pcs1, all_labels1, 0)
+    sim_sil_score2 = simplified_silhouette_score(all_pcs2, all_labels2, 0)
+
+    assert sim_sil_score1 < sim_sil_score2
 
 @pytest.fixture
 def simulated_data():
@@ -187,6 +208,7 @@ def test_calculate_sliding_rp_violations(simulated_data):
     print(contaminations)
     assert np.allclose(list(contaminations_gt.values()), list(contaminations.values()), rtol=0.05)
 
+
 def test_calculate_rp_violations(simulated_data):
     rp_contamination_gt = {0: 0.10534956502609294, 1: 1.0, 2: 1.0}
     counts_gt = {0: 2, 1: 4, 2: 10}
@@ -197,11 +219,17 @@ def test_calculate_rp_violations(simulated_data):
     assert np.allclose(list(rp_contamination_gt.values()), list(rp_contamination.values()), rtol=0.05)
     np.testing.assert_array_equal(list(counts_gt.values()), list(counts.values()))
 
+    sorting = NumpySorting.from_dict({0: np.array([28, 150], dtype=np.int16), 1: np.array([], dtype=np.int16)}, 30000)
+    we.sorting = sorting
+    rp_contamination, counts = compute_refrac_period_violations(we, 1, 0.0)
+    assert np.isnan(rp_contamination[1])
+    
+
 @pytest.mark.sortingcomponents
 def test_calculate_drift_metrics(simulated_data):
-    drift_ptps_gt = {0: 0.46840681501541326, 1: 0.6777238017179599, 2: 0.8942870016859388}
-    drift_stds_gt = {0: 0.1524300978308216, 1: 0.2000278046705443, 2: 0.2515466033662633}
-    drift_mads_gt = {0: 0.09958965007876515, 1: 0.15344260957426314, 2: 0.15754859427461837}
+    drift_ptps_gt = {0: 0.7155675636836349, 1: 0.8163672125409391, 2: 1.0224792180505773}
+    drift_stds_gt = {0: 0.17536888672049475, 1: 0.24508522219800638, 2: 0.29252984101193136}
+    drift_mads_gt = {0: 0.06894539993542423, 1: 0.1072587408373451, 2: 0.13237607989318861}
 
     we = setup_dataset(simulated_data)
     spike_locs = compute_spike_locations(we)

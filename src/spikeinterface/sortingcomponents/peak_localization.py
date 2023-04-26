@@ -2,7 +2,9 @@
 import numpy as np
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 
-from .peak_pipeline import run_peak_pipeline, PipelineNode, ExtractDenseWaveforms
+from .peak_pipeline import (run_node_pipeline, find_parent_of_type,
+                            PeakRetriever, PipelineNode, WaveformsNode,
+                            ExtractDenseWaveforms)
 from .tools import make_multi_method_doc
 
 from spikeinterface.core import get_channel_distances
@@ -11,7 +13,8 @@ from ..postprocessing.unit_localization import (dtype_localize_by_method,
                                                 possible_localization_methods,
                                                 solve_monopolar_triangulation,
                                                 make_radial_order_parents,
-                                                enforce_decrease_shells_ptp)
+                                                enforce_decrease_shells_data,
+                                                get_grid_convolution_templates_and_weights)
 
 from .tools import get_prototype_spike
 
@@ -45,30 +48,46 @@ def localize_peaks(recording, peaks, method='center_of_mass',  ms_before=.5, ms_
 
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
     
+    peak_retriever = PeakRetriever(recording, peaks)
     if method == 'center_of_mass':
-        extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_output=False)
+        extract_dense_waveforms = ExtractDenseWaveforms(recording, parents=[peak_retriever],
+                                                        ms_before=ms_before, ms_after=ms_after, return_output=False)
         pipeline_nodes = [
+            peak_retriever,
             extract_dense_waveforms,
-            LocalizeCenterOfMass(recording, parents=[extract_dense_waveforms], **method_kwargs)
+            LocalizeCenterOfMass(recording, parents=[peak_retriever, extract_dense_waveforms],
+                                 **method_kwargs)
         ]
     elif method == 'monopolar_triangulation':
-        extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_output=False)
+        extract_dense_waveforms = ExtractDenseWaveforms(recording, parents=[peak_retriever],
+                                                        ms_before=ms_before, ms_after=ms_after, return_output=False)
         pipeline_nodes = [
+            peak_retriever,
             extract_dense_waveforms,
-            LocalizeMonopolarTriangulation(recording, parents=[extract_dense_waveforms], **method_kwargs)
+            LocalizeMonopolarTriangulation(recording, parents=[peak_retriever, extract_dense_waveforms],
+                                           **method_kwargs)
         ]
     elif method == "peak_channel":
-        pipeline_nodes = [LocalizePeakChannel(recording,  **method_kwargs)]
-    elif method == "from_templates":
-        if 'prototype' not in method_kwargs:
-            method_kwargs['prototype'] = get_prototype_spike(recording, peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs)
-        extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=ms_before, ms_after=ms_after,  return_output=False)
         pipeline_nodes = [
+            peak_retriever,
+            LocalizePeakChannel(recording, parents=[peak_retriever],
+                                **method_kwargs)
+            ]
+    elif method == "grid_convolution":
+        if 'prototype' not in method_kwargs:
+            method_kwargs['prototype'] = get_prototype_spike(recording, peaks, ms_before=ms_before, ms_after=ms_after,
+                                                             job_kwargs=job_kwargs)
+        extract_dense_waveforms = ExtractDenseWaveforms(recording, parents=[peak_retriever],
+                                                        ms_before=ms_before, ms_after=ms_after, return_output=False)
+        pipeline_nodes = [
+            peak_retriever,
             extract_dense_waveforms,
-            LocalizeFromTemplates(recording, parents=[extract_dense_waveforms], **method_kwargs)
+            LocalizeGridConvolution(recording, parents=[peak_retriever, extract_dense_waveforms],
+                                    **method_kwargs)
         ]
     
-    peak_locations = run_peak_pipeline(recording, peaks, pipeline_nodes, job_kwargs, job_name='localize peaks', squeeze_output=True)
+    job_name = f'localize peaks using {method}'
+    peak_locations = run_node_pipeline(recording, pipeline_nodes, job_kwargs, job_name=job_name, squeeze_output=True)
     
     return peak_locations
 
@@ -93,8 +112,8 @@ class LocalizePeakChannel(PipelineNode):
     params_doc = """
     """
 
-    def __init__(self, recording, return_output=True):
-        PipelineNode.__init__(self, recording, return_output, parents=None)
+    def __init__(self, recording, parents=None, return_output=True):
+        PipelineNode.__init__(self, recording, return_output, parents=parents)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
         
         self.contact_locations = recording.get_channel_locations()
@@ -105,7 +124,7 @@ class LocalizePeakChannel(PipelineNode):
     def compute(self, traces, peaks):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
-        for index, main_chan in enumerate(peaks['channel_ind']):
+        for index, main_chan in enumerate(peaks['channel_index']):
             locations = self.contact_locations[main_chan, :]
             peak_locations['x'][index] = locations[0]
             peak_locations['y'][index] = locations[1]
@@ -131,7 +150,16 @@ class LocalizeCenterOfMass(LocalizeBase):
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=75., feature='ptp'):
         LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
+
+        assert feature in ['ptp', 'mean', 'energy', 'v_peak'], f'{feature} is not a valid feature'
         self.feature = feature
+
+        # Find waveform extractor in the parents
+        waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
+        if waveform_extractor is None:
+            raise TypeError(f"{self.name} should have a single {WaveformsNode.__name__} in its parents")
+
+        self.nbefore = waveform_extractor.nbefore
         self._kwargs.update(dict(feature=feature))
 
     def get_dtype(self):
@@ -140,8 +168,8 @@ class LocalizeCenterOfMass(LocalizeBase):
     def compute(self, traces, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
-        for main_chan in np.unique(peaks['channel_ind']):
-            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+        for main_chan in np.unique(peaks['channel_index']):
+            idx, = np.nonzero(peaks['channel_index'] == main_chan)
             chan_inds, = np.nonzero(self.neighbours_mask[main_chan])
             local_contact_locations = self.contact_locations[chan_inds, :]
 
@@ -152,8 +180,7 @@ class LocalizeCenterOfMass(LocalizeBase):
             elif self.feature == 'energy':
                 wf_data = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
             elif self.feature == 'v_peak':
-                nbefore = waveforms[idx].shape[1] // 2
-                wf_data = waveforms[idx][:, nbefore, chan_inds]
+                wf_data = waveforms[idx][:, self.nbefore, chan_inds]
 
             coms = np.dot(wf_data, local_contact_locations)/(np.sum(wf_data, axis=1)[:,np.newaxis])
             peak_locations['x'][idx] = coms[:, 0]
@@ -177,24 +204,40 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         For channel sparsity.
     max_distance_um: float, default: 1000
         Boundary for distance estimation.
-    enforce_decrease : bool (default False)
-        Enforce spatial decreasingness for PTP vectors.
+    enforce_decrease : bool (default True)
+        Enforce spatial decreasingness for PTP vectors
+    feature: string in ['ptp', 'energy', 'v_peak']
+        The available features to consider for estimating the position via
+        monopolar triangulation are peak-to-peak amplitudes (ptp, default), 
+        energy ('energy', as L2 norm) or voltages at the center of the waveform
+        (v_peak)
     """
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'],
-                            local_radius_um=75., max_distance_um=150., optimizer='minimize_with_log_penality', enforce_decrease=False):
+                            local_radius_um=75., max_distance_um=150., optimizer='minimize_with_log_penality', 
+                            enforce_decrease=True, feature='ptp'):
         LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um)
 
-        self._kwargs.update(dict(max_distance_um=max_distance_um,
-                                 optimizer=optimizer,
-                                 enforce_decrease=enforce_decrease))
+        
 
+        assert feature in ['ptp', 'energy', 'v_peak'], f'{feature} is not a valid feature'
         self.max_distance_um = max_distance_um
         self.optimizer = optimizer
+        self.feature = feature
 
+        waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
+        if waveform_extractor is None:
+            raise TypeError(f"{self.name} should have a single {WaveformsNode.__name__} in its parents")
+
+        self.nbefore = waveform_extractor.nbefore
         if enforce_decrease:
             self.enforce_decrease_radial_parents = make_radial_order_parents(self.contact_locations, self.neighbours_mask)
         else:
             self.enforce_decrease_radial_parents = None
+
+        self._kwargs.update(dict(max_distance_um=max_distance_um,
+                                 optimizer=optimizer,
+                                 enforce_decrease=enforce_decrease,
+                                 feature=feature))
 
         self._dtype = np.dtype(dtype_localize_by_method['monopolar_triangulation'])
 
@@ -202,25 +245,29 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
         for i, peak in enumerate(peaks):
-            sample_ind = peak['sample_ind']
-            chan_mask = self.neighbours_mask[peak['channel_ind'], :]
+            sample_index = peak['sample_index']
+            chan_mask = self.neighbours_mask[peak['channel_index'], :]
             chan_inds = np.flatnonzero(chan_mask)
             local_contact_locations = self.contact_locations[chan_inds, :]
 
-            # wf is (nsample, nchan) - chan is only neighbor
-            wf = waveforms[i, :, :][:, chan_inds]
+            wf = waveforms[i, :][:, chan_inds]    
+            if self.feature == 'ptp':
+                wf_data = wf.ptp(axis=0)
+            elif self.feature == 'energy':
+                wf_data = np.linalg.norm(wf, axis=0)
+            elif self.feature == 'v_peak':
+                wf_data = np.abs(wf[self.nbefore])
 
-            wf_ptp = wf.ptp(axis=0)
             if self.enforce_decrease_radial_parents is not None:
-                enforce_decrease_shells_ptp(wf_ptp, peak['channel_ind'], self.enforce_decrease_radial_parents, in_place=True)
+                enforce_decrease_shells_data(wf_data, peak['channel_index'], self.enforce_decrease_radial_parents, in_place=True)
 
-            peak_locations[i] = solve_monopolar_triangulation(wf_ptp, local_contact_locations,
+            peak_locations[i] = solve_monopolar_triangulation(wf_data, local_contact_locations,
                                                               self.max_distance_um, self.optimizer)
 
         return peak_locations
 
 
-class LocalizeFromTemplates(PipelineNode):
+class LocalizeGridConvolution(PipelineNode):
     """Localize peaks using convlution with a grid of fake templates
 
     Notes
@@ -228,7 +275,7 @@ class LocalizeFromTemplates(PipelineNode):
     See spikeinterface.postprocessing.unit_localization.
     """
     need_waveforms = True
-    name = 'from_templates'
+    name = 'grid_convolution'
     params_doc = """
     local_radius_um: float
         Radius in um for channel sparsity.
@@ -244,17 +291,22 @@ class LocalizeFromTemplates(PipelineNode):
         Fake waveforms for the templates. If None, generated as Gaussian
     """
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=50., upsampling_um=5,
-        sigma_um=np.linspace(10, 100, 5), sigma_ms=0.25, margin_um=100., prototype=None):
+        sigma_um=np.linspace(10, 50., 5), sigma_ms=0.25, margin_um=50., prototype=None):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         
         self.local_radius_um = local_radius_um
         self.sigma_um = sigma_um
         self.margin_um = margin_um
         self.upsampling_um = upsampling_um
-        self.contact_locations = recording.get_channel_locations()
+        contact_locations = recording.get_channel_locations()
 
-        self.nbefore = self.parents[-1].nbefore
-        self.nafter = self.parents[-1].nafter
+        # Find waveform extractor in the parents
+        waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
+        if waveform_extractor is None:
+            raise TypeError(f"{self.name} should have a single {WaveformsNode.__name__} in its parents")
+
+        self.nbefore = waveform_extractor.nbefore
+        self.nafter = waveform_extractor.nafter
         fs = self.recording.get_sampling_frequency()
         
         if prototype is None:
@@ -264,52 +316,27 @@ class LocalizeFromTemplates(PipelineNode):
             self.prototype = prototype
         self.prototype = self.prototype[:, np.newaxis]
 
-        x_min, x_max = self.contact_locations[:,0].min(), self.contact_locations[:,0].max()
-        y_min, y_max = self.contact_locations[:,1].min(), self.contact_locations[:,1].max()
+        self.template_positions, self.weights, self.neighbours_mask = get_grid_convolution_templates_and_weights(
+                contact_locations, self.local_radius_um, self.upsampling_um, 
+                self.sigma_um, self.margin_um)
 
-        x_min -= self.margin_um
-        x_max += self.margin_um
-        y_min -= self.margin_um
-        y_max += self.margin_um
-
-        dx = np.abs(x_max - x_min)
-        dy = np.abs(y_max - y_min)
-
-        eps = upsampling_um/10
-
-        all_x, all_y = np.meshgrid(np.arange(x_min, x_max+eps, upsampling_um), np.arange(y_min, y_max+eps, upsampling_um))
-
-        self.nb_templates = all_x.size
-
-        self.template_positions = np.zeros((self.nb_templates, 2))
-        self.template_positions[:, 0] = all_x.flatten()
-        self.template_positions[:, 1] = all_y.flatten()
-
-        import sklearn
-        dist = sklearn.metrics.pairwise_distances(self.template_positions, self.contact_locations)
-        self.neighbours_mask = dist < self.local_radius_um
-
-        self.weights = np.zeros((len(self.sigma_um), len(self.contact_locations), self.nb_templates), dtype=np.float32)
-        for count, sigma in enumerate(self.sigma_um):
-            self.weights[count] = (self.neighbours_mask * np.exp(-dist**2/(2*(sigma**2)))).T
-
-        self._dtype = np.dtype(dtype_localize_by_method['from_templates'])
+        self._dtype = np.dtype(dtype_localize_by_method['grid_convolution'])
         self._kwargs.update(dict(local_radius_um=self.local_radius_um,
                                  prototype=self.prototype,
                                  template_positions=self.template_positions,
                                  neighbours_mask=self.neighbours_mask,
                                  weights=self.weights,
                                  nbefore=self.nbefore))
-        np.seterr(divide='ignore', invalid='ignore')
 
     def get_dtype(self):
         return self._dtype
 
+    @np.errstate(divide='ignore', invalid='ignore')
     def compute(self, traces, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
-        for main_chan in np.unique(peaks['channel_ind']):
-            idx, = np.nonzero(peaks['channel_ind'] == main_chan)
+        for main_chan in np.unique(peaks['channel_index']):
+            idx, = np.nonzero(peaks['channel_index'] == main_chan)
             if 'amplitude' in peaks.dtype.names:
                 amplitudes = peaks['amplitude'][idx]
             else:
@@ -317,22 +344,24 @@ class LocalizeFromTemplates(PipelineNode):
 
             intersect = self.neighbours_mask[:, main_chan] == True
             global_products = (waveforms[idx]/(amplitudes[:, np.newaxis, np.newaxis]) * self.prototype).sum(axis=1)
+            nb_templates = len(self.template_positions)
+            found_positions = np.zeros((len(idx), 2), dtype=np.float32)
+            scalar_products = np.zeros((len(idx), nb_templates), dtype=np.float32)
 
-            found_positions = np.zeros((len(self.weights), len(idx), 2), dtype=np.float32)
             for count, weights in enumerate(self.weights):
                 dot_products = np.dot(global_products, weights[:, intersect])
                 dot_products = np.maximum(0, dot_products)
-                denominators = dot_products.sum(1)
-                found_positions[count, :] = np.dot(dot_products, self.template_positions[intersect])/(denominators[:, np.newaxis])
+                scalar_products[:, intersect] += dot_products
+                found_positions += np.dot(dot_products, self.template_positions[intersect])
 
-            found_positions = np.mean(found_positions, axis=0)
+            found_positions /= scalar_products.sum(1)[:, np.newaxis]
             peak_locations['x'][idx] = found_positions[:, 0]
             peak_locations['y'][idx] = found_positions[:, 1]
 
         return peak_locations
 
 # LocalizePeakChannel is not include in doc because it is not a good idea to use it
-_methods_list = [LocalizeCenterOfMass, LocalizeMonopolarTriangulation, LocalizeFromTemplates]
+_methods_list = [LocalizeCenterOfMass, LocalizeMonopolarTriangulation, LocalizeGridConvolution]
 localize_peak_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)
 localize_peaks.__doc__ = localize_peaks.__doc__.format(
