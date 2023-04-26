@@ -42,16 +42,23 @@ class BenchmarkMatching:
             self.methods_kwargs[method]['waveform_extractor'] = self.we
         self.templates = self.we.get_all_templates(mode='median')
         self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
-   
-    def __del__(self):
-        shutil.rmtree(self.tmp_folder)
+        self.similarity = compute_template_similarity(self.we)
 
-    def run_matching_collision(self, method):
-        spikes = find_spikes_from_templates(self.recording, method=method,
-                                            method_kwargs=self.methods_kwargs[method], **self.job_kwargs)
-        sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'], self.sampling_rate)
-        comp = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt)
-        return comp
+
+    def run_matching(self, methods_kwargs, collision=False):
+        comps = {}
+        for method in self.methods:
+            spikes = find_spikes_from_templates(self.recording, method=method,
+                                                method_kwargs=methods_kwargs[method],
+                                                **self.job_kwargs)
+            sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'],
+                                                     self.sampling_rate)
+            if collision:
+                comp = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt)
+            else:
+                comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
+            comps[method] = comp
+        return comps
 
 
     def run_matching_num_spikes(self, spike_num, seed=0, we_kwargs=None, template_mode='median'):
@@ -63,25 +70,23 @@ class BenchmarkMatching:
 
         # Generate New Waveform Extractor with New Spike Numbers
         we = extract_waveforms(self.recording, self.gt_sorting, self.tmp_folder, **we_kwargs)
-        templates = we.get_all_templates(we.unit_ids, mode=template_mode)
+        methods_kwargs = self.update_methods_kwargs(we, template_mode)
 
-        # Run Template Matching for each method
-        comps = {}
+        comps = self.run_matching(methods_kwargs)
+        shutil.rmtree(self.tmp_folder)
+        return comps
+
+    def update_methods_kwargs(self, we, template_mode='median'):
+        templates = we.get_all_templates(we.unit_ids, mode=template_mode)
+        methods_kwargs = self.methods_kwargs.copy()
         for method in self.methods:
-            method_kwargs = self.methods_kwargs[method].copy()
+            method_kwargs = methods_kwargs[method]
             if method == 'wobble':
                 method_kwargs.update(dict(templates=templates, nbefore=we.nbefore, nafter=we.nafter))
             else:
                 method_kwargs['waveform_extractor'] = we
-            spikes = find_spikes_from_templates(self.recording, method=method, method_kwargs=method_kwargs,
-                                                **self.job_kwargs)
-            sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'],
-                                                     self.sampling_rate)
-            comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
-            comps[method] = comp
+        return methods_kwargs
 
-        shutil.rmtree(self.tmp_folder)
-        return comps
 
     def run_matching_misclassed(self, fraction_misclassed, fraction_similar=1, seed=0, we_kwargs=None,
                                 template_mode='median'):
@@ -91,11 +96,10 @@ class BenchmarkMatching:
         np.random.seed(seed)
 
         # Randomly misclass spike trains
-        similarity = compute_template_similarity(self.we)
         spike_time_indices, labels = [], []
         for unit_index, unit_id in enumerate(self.gt_sorting.get_unit_ids()):
             unit_sorting = self.gt_sorting.get_unit_spike_train(unit_id=unit_id)
-            unit_similarity = similarity[unit_index, :]
+            unit_similarity = self.similarity[unit_index, :]
             similar_unit_ids = self.we.unit_ids[np.flip(np.argsort(unit_similarity))]
             similar_unit_ids = similar_unit_ids[1:int(fraction_similar * len(similar_unit_ids))] # skip closest bc it's self
             num_spikes = int(len(unit_sorting) * fraction_misclassed)
@@ -116,24 +120,10 @@ class BenchmarkMatching:
         sorting_misclassed = NumpySorting.from_times_labels(spike_time_indices, labels, self.sampling_rate)
 
         # Generate New Waveform Extractor with Misclassed Spike Trains
-        we = extract_waveforms(self.recording, sorting_misclassed, tmp_folder, **we_kwargs)
-        templates = we.get_all_templates(we.unit_ids, mode=template_mode)
+        we = extract_waveforms(self.recording, sorting_misclassed, self.tmp_folder, **we_kwargs)
+        methods_kwargs = self.update_methods_kwargs(we, template_mode)
 
-        # Run Template Matching for each method
-        comps = {}
-        for method in self.methods:
-            method_kwargs = self.methods_kwargs[method].copy()
-            if method == 'wobble':
-                method_kwargs.update(dict(templates=templates, nbefore=we.nbefore, nafter=we.nafter))
-            else:
-                method_kwargs['waveform_extractor'] = we
-            spikes = find_spikes_from_templates(self.recording, method=method, method_kwargs=method_kwargs,
-                                                **self.job_kwargs)
-            sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'],
-                                                     self.sampling_rate)
-            comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
-            comps[method] = comp
-
+        comps = self.run_matching(methods_kwargs)
         shutil.rmtree(self.tmp_folder)
         return comps
 
@@ -164,7 +154,6 @@ class BenchmarkMatching:
                                     'parameter_name' : parameter_names,
                                     'iter_num': iter_nums,
                                     'method': methods})
-        shutil.rmtree(self.tmp_folder)
         return comparisons
 
 
