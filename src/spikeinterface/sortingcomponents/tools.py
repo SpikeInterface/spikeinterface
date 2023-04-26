@@ -17,12 +17,15 @@ def make_multi_method_doc(methods, ident='    '):
 
 
 def get_prototype_spike(recording, peaks, job_kwargs, nb_peaks=1000, ms_before=0.5, ms_after=0.5):
-    from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline, ExtractSparseWaveforms
-    sparse_waveforms = ExtractSparseWaveforms(recording, ms_before=ms_before, ms_after=ms_after, 
-                                                      return_output=True, local_radius_um=5)
-    nbefore = sparse_waveforms.nbefore
-    idx = np.sort(np.random.choice(len(peaks), nb_peaks, replace=False))
+    from spikeinterface.sortingcomponents.peak_pipeline import run_node_pipeline, ExtractSparseWaveforms, PeakRetriever
     
-    waveforms = run_peak_pipeline(recording, peaks[idx], [sparse_waveforms], job_kwargs=job_kwargs)
+    idx = np.sort(np.random.choice(len(peaks), nb_peaks, replace=False))
+    peak_retriever = PeakRetriever(recording, peaks[idx])
+
+    sparse_waveforms = ExtractSparseWaveforms(recording, parents=[peak_retriever], 
+        ms_before=ms_before, ms_after=ms_after, return_output=True, local_radius_um=5)
+
+    nbefore = sparse_waveforms.nbefore    
+    waveforms = run_node_pipeline(recording, [peak_retriever, sparse_waveforms], job_kwargs=job_kwargs)
     prototype =  np.median(waveforms[:, :, 0]/(waveforms[:, nbefore, 0][:, np.newaxis]), axis=0)
     return prototype
