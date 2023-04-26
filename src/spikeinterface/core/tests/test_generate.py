@@ -124,7 +124,7 @@ def test_generate_lazy_recording_under_giga(mode):
     assert recording.get_memory_size() == "102.40 MiB"
 
 @pytest.mark.parametrize("mode", mode_list)
-def test_generate_recording_correct_sizes(mode):
+def test_generate_recording_correct_shape(mode):
     # Test that the recording has the correct size in shape
     sampling_frequency = 30000  # Hz
     durations = [1.0]
@@ -186,7 +186,7 @@ def test_generator_recording_consistency(mode):
 ])
 def test_generator_recording_consistency_across_traces(mode, start_frame, end_frame, extra_samples):
     # Test that the generated traces behave like true arrays. Calling a larger array and then slicing it should
-    # give the same result as calling a smaller array.
+    # give the same result as calling the slice directly
     sampling_frequency = 30000  # Hz
     durations = [1.0]
     dtype = np.dtype("float32")
