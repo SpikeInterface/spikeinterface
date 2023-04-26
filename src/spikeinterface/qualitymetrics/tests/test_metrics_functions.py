@@ -10,10 +10,10 @@ from spikeinterface.qualitymetrics.utils import create_ground_truth_pc_distribut
 from spikeinterface.qualitymetrics import calculate_pc_metrics
 from spikeinterface.postprocessing import compute_principal_components, compute_spike_locations, compute_spike_amplitudes
 
-from spikeinterface.qualitymetrics import (mahalanobis_metrics, lda_metrics, nearest_neighbors_metrics, 
-        compute_amplitude_cutoffs, compute_presence_ratios, compute_isi_violations, compute_firing_rates, 
-        compute_num_spikes, compute_snrs, compute_refrac_period_violations, compute_sliding_rp_violations,
-        compute_drift_metrics, compute_amplitude_medians)
+from spikeinterface.qualitymetrics import (mahalanobis_metrics, lda_metrics, nearest_neighbors_metrics,
+        silhouette_score, simplified_silhouette_score, compute_amplitude_cutoffs, compute_presence_ratios, 
+        compute_isi_violations, compute_firing_rates, compute_num_spikes, compute_snrs, compute_refrac_period_violations, 
+        compute_sliding_rp_violations, compute_drift_metrics, compute_amplitude_medians)
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -102,6 +102,27 @@ def test_nearest_neighbors_metrics():
 
     assert hit_rate1 < hit_rate2
     assert miss_rate1 > miss_rate2
+        
+        
+def test_silhouette_score_metrics():
+    all_pcs1, all_labels1 = create_ground_truth_pc_distributions([1, -1], [1000, 1000])
+    all_pcs2, all_labels2 = create_ground_truth_pc_distributions([1, -2],
+                                                                 [1000, 1000])  # increase distance between clusters
+
+    sil_score1 = silhouette_score(all_pcs1, all_labels1, 0)
+    sil_score2 = silhouette_score(all_pcs2, all_labels2, 0)
+
+    assert sil_score1 < sil_score2
+
+def test_simplified_silhouette_score_metrics():
+    all_pcs1, all_labels1 = create_ground_truth_pc_distributions([1, -1], [1000, 1000])
+    all_pcs2, all_labels2 = create_ground_truth_pc_distributions([1, -2],
+                                                                 [1000, 1000])  # increase distance between clusters
+
+    sim_sil_score1 = simplified_silhouette_score(all_pcs1, all_labels1, 0)
+    sim_sil_score2 = simplified_silhouette_score(all_pcs2, all_labels2, 0)
+
+    assert sim_sil_score1 < sim_sil_score2
 
 @pytest.fixture
 def simulated_data():

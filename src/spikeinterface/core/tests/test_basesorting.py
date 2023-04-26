@@ -13,7 +13,7 @@ from spikeinterface.core import (NpzSortingExtractor, NumpyRecording,
                                  NumpySorting, create_sorting_npz,
                                  generate_sorting, load_extractor)
 from spikeinterface.core.base import BaseExtractor
-from spikeinterface.core.testing import check_sorted_arrays_equal
+from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
@@ -42,19 +42,25 @@ def test_BaseSorting():
     assert np.all(values == [-20, -40., -55.5])
 
     # dump/load dict
-    d = sorting.to_dict()
+    d = sorting.to_dict(include_annotations=True, include_properties=True)
     sorting2 = BaseExtractor.from_dict(d)
     sorting3 = load_extractor(d)
+    check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=True)
+    check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=True)
 
     # dump/load json
     sorting.dump_to_json(cache_folder / 'test_BaseSorting.json')
     sorting2 = BaseExtractor.load(cache_folder / 'test_BaseSorting.json')
     sorting3 = load_extractor(cache_folder / 'test_BaseSorting.json')
+    check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=False)
+    check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=False)
 
     # dump/load pickle
     sorting.dump_to_pickle(cache_folder / 'test_BaseSorting.pkl')
     sorting2 = BaseExtractor.load(cache_folder / 'test_BaseSorting.pkl')
     sorting3 = load_extractor(cache_folder / 'test_BaseSorting.pkl')
+    check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=True)
+    check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=True)
 
     # cache
     folder = cache_folder / 'simple_sorting'
@@ -63,12 +69,12 @@ def test_BaseSorting():
     sorting2 = BaseExtractor.load_from_folder(folder)
     # but also possible
     sorting3 = BaseExtractor.load(folder)
-    assert "test" in sorting2.get_property_keys()
-    assert "test" in sorting3.get_property_keys()
+    check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=True)
+    check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=True)
 
     # save to memory
     sorting4 = sorting.save(format="memory")
-    assert "test" in sorting4.get_property_keys()
+    check_sortings_equal(sorting, sorting4, check_annotations=True, check_properties=True)
 
     spikes = sorting.get_all_spike_trains()
     # print(spikes)

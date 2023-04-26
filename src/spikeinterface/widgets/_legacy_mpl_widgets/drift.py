@@ -94,7 +94,7 @@ class DriftOverTimeWidget(BaseWidget):
 
             peak_density = np.zeros((depth_bins.size - 1, nchunk), dtype='float32')
             for i in range(nchunk):
-                mask = (peaks['sample_ind'] >= (i * bin_size)) & (peaks['sample_ind'] < ((i + 1) * bin_size))
+                mask = (peaks['sample_index'] >= (i * bin_size)) & (peaks['sample_index'] < ((i + 1) * bin_size))
                 depths = positions[peaks['channel_index'][mask], self.probe_axis]
 
                 if self.weight_with_amplitudes:
@@ -110,7 +110,7 @@ class DriftOverTimeWidget(BaseWidget):
             self.ax.imshow(peak_density, interpolation='nearest',
                            origin='lower', aspect='auto', extent=extent, **kwargs)
         elif self.mode == 'scatter':
-            times = peaks['sample_ind'] / fs
+            times = peaks['sample_index'] / fs
             depths = positions[peaks['channel_index'], self.probe_axis]
             # add fake depth jitter
             factor = np.min(np.diff(all_depth))

@@ -4,12 +4,13 @@ on:
   workflow_dispatch:
   push:  # When someting is pushed into main this checks if caches need to re-created
     branches:
-      - master
       - main
   schedule:
     - cron: "0 12 * * *"  # Daily at noon UTC
 
 jobs:
+  
+
   
   create-virtual-env-cache-if-missing:
     name: Caching virtual env
@@ -37,6 +38,10 @@ jobs:
       - name: Create the virtual environment to be cached 
         if: steps.cache-venv.outputs.cache-hit != 'true'
         uses: ./.github/actions/build-test-environment
+  
+  
+  
+  
   create-gin-data-cache-if-missing:
     name: Caching data env
     runs-on: "ubuntu-latest"
@@ -44,6 +49,11 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.10'
+      - name: Create the directory to store the data
+        run: |
+          mkdir --parents --verbose $HOME/spikeinterface_datasets/ephy_testing_data/
+          chmod -R 777 $HOME/spikeinterface_datasets
+          ls -l $HOME/spikeinterface_datasets
       - name: Get current hash (SHA) of the ephy_testing_data repo 
         id: repo_hash
         run: |
@@ -52,7 +62,7 @@ jobs:
       - uses: actions/cache@v3
         id: cache-datasets
         with:
-          path: ${{ github.workspace }}/spikeinterface_datasets
+          path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}}"
@@ -73,11 +83,10 @@ jobs:
       - name: Move the downloaded data to the right directory
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          mkdir --parents --verbose ${{ github.workspace }}/spikeinterface_datasets/ephy_testing_data/
-          mv --force ./ephy_testing_data ${{ github.workspace }}/spikeinterface_datasets/
+          mv --force ./ephy_testing_data $HOME/spikeinterface_datasets/
       - name: Show size of the cache to assert data is downloaded
         run: |
-          cd ${{ github.workspace }}
+          cd $HOME
           pwd 
           du -hs spikeinterface_datasets
           cd spikeinterface_datasets

@@ -569,10 +569,10 @@ def remove_duplicates_via_matching(waveform_extractor, noise_levels, peak_labels
                               'templates' : computed['templates'],
                               'norms' : computed['norms'],
                               'sparsities' : computed['sparsities']})
-        valid = (spikes['sample_ind'] >= half_marging) * (spikes['sample_ind'] < duration + half_marging)
+        valid = (spikes['sample_index'] >= half_marging) * (spikes['sample_index'] < duration + half_marging)
         if np.sum(valid) > 0:
             if np.sum(valid) == 1:
-                j = spikes[valid]['cluster_ind'][0]
+                j = spikes[valid]['cluster_index'][0]
                 ignore_ids += [i]
                 similar_templates[1] += [i]
                 similar_templates[0] += [j]

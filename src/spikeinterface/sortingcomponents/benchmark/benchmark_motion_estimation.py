@@ -259,7 +259,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
 
         ax = ax1 = fig.add_subplot(gs[1:3])
-        x = self.selected_peaks['sample_ind']/self.recording.get_sampling_frequency()
+        x = self.selected_peaks['sample_index']/self.recording.get_sampling_frequency()
         y = self.peak_locations['y']
         ax.scatter(x, y, s=1, color='k', alpha=alpha)
         
@@ -353,7 +353,7 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
 
         _simpleaxis(ax)
 
-        x = self.selected_peaks['sample_ind']/self.recording.get_sampling_frequency()
+        x = self.selected_peaks['sample_index']/self.recording.get_sampling_frequency()
         y = self.peak_locations['y']
         ax.scatter(x, y, s=1, color='k', alpha=alpha)
         ax.set_title(self.title)

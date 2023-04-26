@@ -38,7 +38,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         old_unit_ids = self.waveform_extractor.sorting.unit_ids
         unit_inds = np.flatnonzero(np.in1d(old_unit_ids, unit_ids))
 
-        spike_mask = np.in1d(self.spikes['unit_ind'], unit_inds)
+        spike_mask = np.in1d(self.spikes["unit_index"], unit_inds)
         new_spike_locations = self._extension_data['spike_locations'][spike_mask]
         return dict(spike_locations=new_spike_locations)
         
@@ -83,14 +83,14 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         elif outputs == 'by_unit':
             locations_by_unit = []
             for segment_index in range(self.waveform_extractor.get_num_segments()):
-                i0 =np.searchsorted(self.spikes['segment_ind'], segment_index, side="left")
-                i1 =np.searchsorted(self.spikes['segment_ind'], segment_index, side="right")
+                i0 =np.searchsorted(self.spikes['segment_index'], segment_index, side="left")
+                i1 =np.searchsorted(self.spikes['segment_index'], segment_index, side="right")
                 spikes = self.spikes[i0: i1]
                 locations = self._extension_data['spike_locations'][i0: i1]
                 
                 locations_by_unit.append({})
                 for unit_ind, unit_id in enumerate(sorting.unit_ids):
-                    mask = spikes['unit_ind'] == unit_ind
+                    mask = spikes["unit_index"] == unit_ind
                     locations_by_unit[segment_index][unit_id] = locations[mask]
             return locations_by_unit
 

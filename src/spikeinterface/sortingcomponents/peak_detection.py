@@ -123,12 +123,15 @@ class PeakDetectorWrapper(PeakDetector):
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         
         peak_sample_ind, peak_chan_ind = self.detect_peaks(traces, *self.args)
+        if peak_sample_ind.size == 0 or peak_chan_ind.size == 0:
+            return (np.zeros(0, dtype=base_peak_dtype), )
+        
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
         local_peaks = np.zeros(peak_sample_ind.size, dtype=base_peak_dtype)
-        local_peaks['sample_ind'] = peak_sample_ind
+        local_peaks['sample_index'] = peak_sample_ind
         local_peaks['channel_index'] = peak_chan_ind
         local_peaks['amplitude'] = peak_amplitude
-        local_peaks['segment_ind'] = segment_index
+        local_peaks['segment_index'] = segment_index
 
         # return is always a tuple
         return (local_peaks, )
@@ -457,6 +460,8 @@ if HAVE_TORCH:
         MAXCOPY = 8
 
         num_samples, num_channels = traces.shape
+        dtype = torch.float32
+        empty_return_value = (torch.tensor([], dtype=dtype) , torch.tensor([], dtype=dtype))
 
         # -- torch argrelmin
         if peak_sign == "neg":
@@ -491,7 +496,7 @@ if HAVE_TORCH:
         max_amps_at_inds = max_amps.view(-1)[window_max_inds]
         crossings = torch.nonzero(max_amps_at_inds > 1).squeeze()
         if not crossings.numel():
-            return np.array([]), np.array([]), np.array([])
+            return empty_return_value
 
         # -- unravel the spike index
         # (right now the indices are into flattened recording)
@@ -505,7 +510,7 @@ if HAVE_TORCH:
             (0 < sample_inds) & (sample_inds < traces.shape[0] - 1)
         ).squeeze()
         if not sample_inds.numel():
-            return np.array([]), np.array([]), np.array([])
+            return empty_return_value
         sample_inds = sample_inds[valid_inds]
         chan_inds = chan_inds[valid_inds]
         amplitudes = amplitudes[valid_inds]
@@ -545,7 +550,7 @@ if HAVE_TORCH:
                 amplitudes >= max_amps[sample_inds, chan_inds] - 1e-8
             ).squeeze()
             if not dedup.numel():
-                return np.array([]), np.array([]), np.array([])
+                return empty_return_value
             sample_inds = sample_inds[dedup]
             chan_inds = chan_inds[dedup]
             amplitudes = amplitudes[dedup]
