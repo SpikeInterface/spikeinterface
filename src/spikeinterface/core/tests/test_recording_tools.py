@@ -35,7 +35,9 @@ def test_get_noise_levels():
 
     # Generate a recording following a gaussian distribution to check the result of get_noise.
     std = 6.0
-    traces = np.random.normal(loc=10.0, scale=std, size=(1_000_000, 2))
+    seed = 0
+    rng = np.random.default_rng(seed=seed)
+    traces = rng.normal(loc=10.0, scale=std, size=(1_000_000, 2))
     recording = NumpyRecording(traces, 30000)
 
     assert np.all(noise_levels_1 == noise_levels_2)
