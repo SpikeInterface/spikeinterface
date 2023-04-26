@@ -1,6 +1,7 @@
 
 from spikeinterface.core import extract_waveforms
 from spikeinterface.preprocessing import bandpass_filter, common_reference
+from spikeinterface.postprocessing import compute_template_similarity
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.core import NumpySorting
 from spikeinterface.qualitymetrics import compute_quality_metrics
@@ -56,16 +57,17 @@ class BenchmarkMatching:
     def run_matching_num_spikes(self, spike_num, tmp_folder, method, seed=0, we_kwargs=None, template_mode='median'):
         if we_kwargs is None:
             we_kwargs = {}
-        we_kwargs.update(dict(seed=seed, overwrite=True, load_if_exists=False, **self.job_kwargs))
+        we_kwargs.update(dict(max_spikes_per_unit=spike_num, seed=seed, overwrite=True, load_if_exists=False,
+                              **self.job_kwargs))
         np.random.seed(seed)
 
         # Generate New Waveform Extractor with New Spike Numbers
         we = extract_waveforms(self.recording, self.gt_sorting, tmp_folder, **we_kwargs)
         templates = we.get_all_templates(we.unit_ids, mode=template_mode)
         # Update method_kwargs
-        method_kwargs = self.methods_kwargs[method]
+        method_kwargs = self.methods_kwargs[method].copy()
         if method == 'wobble':
-            method_kwargs['templates'] = templates
+            method_kwargs.update(dict(templates=templates, nbefore=we.nbefore, nafter=we.nafter))
         else:
             method_kwargs['waveform_extractor'] = we
         # Run Template Matching and Generate Sorting
@@ -76,31 +78,36 @@ class BenchmarkMatching:
         comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
         return comp
 
-    def run_matching_misclassed(self, fraction_misclassed, tmp_folder, method, seed=0, we_kwargs=None,
-                                template_mode='median'):
+    def run_matching_misclassed(self, fraction_misclassed, tmp_folder, method, fraction_similar=1, seed=0,
+                                we_kwargs=None, template_mode='median'):
         if we_kwargs is None:
             we_kwargs = {}
         we_kwargs.update(dict(seed=seed, overwrite=True, load_if_exists=False, **self.job_kwargs))
         np.random.seed(seed)
 
         # Randomly misclass spike trains
+        similarity = compute_template_similarity(self.we)
         spike_time_indices, labels = [], []
-        for unit_id in self.gt_sorting.get_unit_ids():
+        for unit_index, unit_id in enumerate(self.gt_sorting.get_unit_ids()):
             unit_sorting = self.gt_sorting.get_unit_spike_train(unit_id=unit_id)
+            unit_similarity = similarity[unit_index, :]
+            similar_unit_ids = self.we.unit_ids[np.flip(np.argsort(unit_similarity))]
+            similar_unit_ids = similar_unit_ids[1:int(fraction_similar * len(similar_unit_ids))] # skip closest bc it's self
             num_spikes = int(len(unit_sorting) * fraction_misclassed)
-            unit_misclass_index = np.random.choice(np.arange(len(unit_sorting)), size=num_spikes, replace=False)
+
+            unit_misclass_idx = np.random.choice(np.arange(len(unit_sorting)), size=num_spikes, replace=False)
             for i, spike in enumerate(unit_sorting):
                 spike_time_indices.append(spike)
-                if i in unit_misclass_index:
-                    alt_id = np.random.choice(self.we.unit_ids)
+                if i in unit_misclass_idx:
+                    alt_id = np.random.choice(similar_unit_ids)
                     labels.append(alt_id)
                 else:
                     labels.append(unit_id)
         spike_time_indices = np.array(spike_time_indices)
         labels = np.array(labels)
-        sort_index = np.argsort(spike_time_indices)
-        spike_time_indices = spike_time_indices[sort_index]
-        labels = labels[sort_index]
+        sort_idx = np.argsort(spike_time_indices)
+        spike_time_indices = spike_time_indices[sort_idx]
+        labels = labels[sort_idx]
         sorting_misclassed = NumpySorting.from_times_labels(spike_time_indices, labels, self.sampling_rate)
         # Generate New Waveform Extractor with Misclassed Spike Trains
         we = extract_waveforms(self.recording, sorting_misclassed, tmp_folder, **we_kwargs)
@@ -108,7 +115,7 @@ class BenchmarkMatching:
         # Update method_kwargs
         method_kwargs = self.methods_kwargs[method].copy()
         if method == 'wobble':
-            method_kwargs['templates'] = templates
+            method_kwargs.update(dict(templates=templates, nbefore=we.nbefore, nafter=we.nafter))
         else:
             method_kwargs['waveform_extractor'] = we
         # Run Template Matching and Generate Sorting
@@ -121,7 +128,7 @@ class BenchmarkMatching:
 
 
     def run_matching_vary_parameter(self, parameters, parameter_name, num_replicates=1, we_kwargs=None,
-                                    template_mode='median', verbose=False):
+                                    template_mode='median', verbose=False, **kwargs):
         if parameter_name == 'num_spikes':
             run_matching_fn = self.run_matching_num_spikes
         elif parameter_name == 'fraction_misclassed':
@@ -135,7 +142,7 @@ class BenchmarkMatching:
                     print(f"{i = }")
                 for method in self.methods:
                     comp = run_matching_fn(parameter, self.tmp_folder, method, seed=i, we_kwargs=we_kwargs,
-                                           template_mode=template_mode)
+                                           template_mode=template_mode, **kwargs)
                     comps.append(comp)
                     parameter_values.append(parameter)
                     parameter_names.append(parameter_name)
