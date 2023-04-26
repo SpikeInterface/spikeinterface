@@ -30,7 +30,7 @@ class WaveformExtractor:
 
     Parameters
     ----------
-    recording: Recording
+    recording: Recording | None
         The recording object
     sorting: Sorting
         The sorting object
@@ -66,7 +66,7 @@ class WaveformExtractor:
 
     """
     extensions = []
-    def __init__(self, recording: BaseRecording, sorting: BaseSorting,
+    def __init__(self, recording: Optional[BaseRecording], sorting: BaseSorting,
                  folder=None, rec_attributes=None, allow_unfiltered=False, sparsity=None):
         self.sorting = sorting
         self._rec_attributes = None
@@ -570,7 +570,18 @@ class WaveformExtractor:
 
     def set_recording(self, recording: Optional[BaseRecording], rec_attributes: Optional[dict] = None, allow_unfiltered: bool = False) -> None:
         """
+        Sets the recording object and attributes for the WaveformExtractor.
 
+        Parameters
+        ----------
+        recording: Recording | None
+            The recording object
+        rec_attributes: None or dict
+            When recording is None then a minimal dict with some attributes
+            is needed.
+        allow_unfiltered: bool
+            If true, will accept unfiltered recording.
+            False by default.
         """
 
         if recording is None:  # Recordless mode.
