@@ -53,11 +53,14 @@ class BenchmarkMatching:
         return comp
 
 
-    def run_matching_num_spikes(self, iter_num, spike_num, tmp_folder, method):
+    def run_matching_num_spikes(self, spike_num, tmp_folder, method, seed=0, we_kwargs=None):
+        if we_kwargs is None:
+            we_kwargs = {}
+        we_kwargs.update(dict(seed=seed, overwrite=True, load_if_exists=False, **self.job_kwargs))
+        np.random.seed(seed)
+
         # Generate New Waveform Extractor with New Spike Numbers
-        we = extract_waveforms(self.recording, self.gt_sorting, tmp_folder, load_if_exists=False, overwrite=True,
-                               ms_before=2.5, ms_after=2.5, max_spikes_per_unit=spike_num, return_scaled=False,
-                               seed=iter_num, **self.job_kwargs)
+        we = extract_waveforms(self.recording, self.gt_sorting, tmp_folder, **we_kwargs)
         templates = we.get_all_templates(we.unit_ids, mode='median')
         # Update method_kwargs
         method_kwargs = self.methods_kwargs[method]
@@ -73,8 +76,12 @@ class BenchmarkMatching:
         comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
         return comp
 
-    def run_matching_misclassed(self, fraction_misclassed, iter_num , tmp_folder, method):
-        np.random.seed(iter_num)
+    def run_matching_misclassed(self, fraction_misclassed, tmp_folder, method, seed=0, we_kwargs=None):
+        if we_kwargs is None:
+            we_kwargs = {}
+        we_kwargs.update(dict(seed=seed, overwrite=True, load_if_exists=False, **self.job_kwargs))
+        np.random.seed(seed)
+
         # Randomly misclass spike trains
         spike_time_indices, labels = [], []
         for unit_id in self.gt_sorting.get_unit_ids():
@@ -95,12 +102,10 @@ class BenchmarkMatching:
         labels = labels[sort_index]
         sorting_misclassed = NumpySorting.from_times_labels(spike_time_indices, labels, self.sampling_rate)
         # Generate New Waveform Extractor with Misclassed Spike Trains
-        we = extract_waveforms(self.recording, sorting_misclassed, tmp_folder, load_if_exists=False, overwrite=True,
-                               ms_before=2.5, ms_after=2.5, max_spikes_per_unit=500, return_scaled=False,
-                               seed=iter_num, **self.job_kwargs)
+        we = extract_waveforms(self.recording, sorting_misclassed, tmp_folder, **we_kwargs)
         templates = we.get_all_templates(we.unit_ids, mode='median')
         # Update method_kwargs
-        method_kwargs = self.methods_kwargs[method]
+        method_kwargs = self.methods_kwargs[method].copy()
         if method == 'wobble':
             method_kwargs['templates'] = templates
         else:
@@ -114,7 +119,7 @@ class BenchmarkMatching:
         return comp
 
 
-    def run_matching_vary_parameter(self, parameters, parameter_name, num_replicates=1, verbose=False):
+    def run_matching_vary_parameter(self, parameters, parameter_name, num_replicates=1, we_kwargs=None, verbose=False):
         if parameter_name == 'num_spikes':
             run_matching_fn = self.run_matching_num_spikes
         elif parameter_name == 'fraction_misclassed':
@@ -127,7 +132,7 @@ class BenchmarkMatching:
                 if verbose:
                     print(f"{i = }")
                 for method in self.methods:
-                    comp = run_matching_fn(parameter, i, self.tmp_folder, method)
+                    comp = run_matching_fn(parameter, self.tmp_folder, method, seed=i, we_kwargs=we_kwargs)
                     comps.append(comp)
                     parameter_values.append(parameter)
                     parameter_names.append(parameter_name)
