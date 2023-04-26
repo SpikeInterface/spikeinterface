@@ -403,23 +403,25 @@ class GeneratorRecording(BaseRecording):
         A lazy recording that generates random samples if and only if `get_traces` is called.
         Intended for testing memory problems.
 
-
         Parameters
         ----------
-        durations : List[int]
+        durations : List[float]
             The durations of each segment in seconds. Note that the length of this list is the number of segments.
         sampling_frequency : float
-            The sampling frequency of the recorder
+            The sampling frequency of the recorder.
         num_channels : int
-            The number of channels
-        dtype : np.dtype
-            The dtype of the recording, by default np.float32. Note that only np.float32 and np.float65 are supported
-        seed : int, optional
-            The seed for np.random.default_rng, by default None
-            
-        Note:
-        If modifying this function, ensure that only one call to malloc is made per function call to 
-        maintain the optimized memory profile.    
+            The number of channels.
+        dtype : Optional[Union[np.dtype, str]], default='float32'
+            The dtype of the recording. Note that only np.float32 and np.float64 are supported.
+        seed : Optional[int], default=None
+            The seed for np.random.default_rng.
+        mode : Literal['pure_noise', 'random_peaks'], default='pure_noise'
+            The mode of the recording segment.
+
+        Note
+        ----
+        If modifying this function, ensure that only one call to malloc is made per call get_traces to 
+        maintain the optimized memory profile.
         """
         channel_ids = list(range(num_channels))
         dtype = np.dtype(dtype).name   # Cast to string for serialization
@@ -448,7 +450,36 @@ class GeneratorRecording(BaseRecording):
         
 
 class GeneratorRecordingSegment(BaseRecordingSegment):
-    def __init__(self, duration, sampling_frequency, num_channels, dtype, seed, mode):
+    
+    def __init__(self, 
+                 duration: float,
+                sampling_frequency: float,
+                num_channels: int,
+                dtype: Optional[Union[np.dtype, str]] = "float32",
+                seed: Optional[int] = None,
+                mode: Literal['pure_noise', 'random_peaks'] = 'pure_noise'
+                ):
+        """
+        Initialize a GeneratorRecordingSegment instance.
+
+        This class is a subclass of BaseRecordingSegment and is used to generate synthetic recordings
+        with different modes, such as 'random_peaks' and 'pure_noise'.
+
+        Parameters
+        ----------
+        duration : float
+            The duration of the recording segment in seconds.
+        sampling_frequency : float
+            The sampling frequency of the recording in Hz.
+        num_channels : int
+            The number of channels in the recording.
+        dtype : numpy.dtype
+            The data type of the generated traces.
+        seed : int
+            The seed for the random number generator used in generating the traces.
+        mode : str
+            The mode of the generated recording, either 'random_peaks' or 'pure_noise'.
+        """
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
         self.sampling_frequency = sampling_frequency
         self.num_samples = int(duration * sampling_frequency)
@@ -459,15 +490,21 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         self.rng = np.random.default_rng(seed=self.seed)        
         
         if self.mode == 'random_peaks':
+            self.traces_generator = self._random_peaks_generator
+            
+            # Configuration of mode
             self.channel_phases = self.rng.uniform(low=0, high=2*np.pi, size=self.num_channels)
             self.frequencies = 1.0 + self.rng.exponential(scale=1.0, size=self.num_channels)
             self.amplitudes = self.rng.normal(loc=70, scale=10.0, size=self.num_channels)  # Amplitudes of 70 +- 10
             self.amplitudes *= self.rng.choice([-1, 1], size=self.num_channels)    # Both negative and positive peaks
-            self.traces_generator = self._random_peaks_generator
+        
         elif self.mode == "pure_noise":
-            noise_size = 1000
-            self.basic_noise = self.rng.random(size=(noise_size, self.num_channels))
             self.traces_generator = self._random_traces_generator
+
+            # Configuration of mode
+            noise_size_ms = 50.0
+            noise_size_frames = int(noise_size_ms * self.sampling_frequency / 1000)
+            self.basic_noise_block = self.rng.random(size=(noise_size_frames, self.num_channels))
 
         
     def get_num_samples(self):
@@ -488,7 +525,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         """
         Generate a numpy array of random noise traces for a specified range of frames.
 
-        This function uses the pre-generated basic_noise array to create random noise traces
+        This function uses the pre-generated basic_noise_block array to create random noise traces
         based on the specified start_frame and end_frame indices. The resulting traces numpy array
         has a shape (num_samples, num_channels), where num_samples is the number of samples between
         the start and end frames, and num_channels is the number of channels in the recording.
@@ -513,18 +550,18 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         creating memory allocations .
         """
 
-        noise_block  = self.basic_noise
+        noise_block  = self.basic_noise_block
         random_noise_samples = self.basic_noise.shape[0]
         
         start_frame_mod = start_frame % random_noise_samples
         end_frame_mod = end_frame % random_noise_samples
 
-        larger_than_basic_noise = end_frame - start_frame >= random_noise_samples
+        larger_than_noise_block = end_frame - start_frame >= random_noise_samples
 
         num_samples = end_frame - start_frame
         traces = np.ones((num_samples, self.num_channels), dtype=self.dtype)
 
-        if not larger_than_basic_noise:
+        if not larger_than_noise_block:
             if start_frame_mod <= end_frame_mod:
                 traces = noise_block[start_frame_mod:end_frame_mod]
             else:
@@ -573,7 +610,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         Notes
         -----
         - This is a helper method and should not be called directly from outside the class.
-        - The 'out' arguments in the numpy functions are important for minimizing memory allocations. 
+        - The 'out' arguments in the numpy functions are important for minimizing memory allocations
         """
 
         # Allocate memory for the traces and reuse this reference throughout the function to minimize memory allocations
@@ -588,9 +625,9 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         
         # Each channel has its own phase
         times = np.add(times, self.channel_phases, dtype=self.dtype, out=traces)
-        traces = np.sin(times, dtype=self.dtype, out=traces)
         
-        # Sharpen the peaks
+        # Create and sharpen the peaks
+        traces = np.sin(times, dtype=self.dtype, out=traces)
         traces = np.power(traces, 10, dtype=self.dtype, out=traces)
         # Add amplitude diversity to the traces
         traces = np.multiply(self.amplitudes, traces, dtype=self.dtype, out=traces)   
@@ -598,7 +635,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         return traces
 
 def generate_lazy_recording(
-    full_traces_size_GiB: float, seed: Optional[int] = None, mode: Literal["pure_noise", "deterministic"] = "pure_noise"
+    full_traces_size_GiB: float, seed: Optional[int] = None, mode: Literal["pure_noise", "random_peaks"] = "pure_noise"
 ) -> GeneratorRecording:
     """
     Generate a large lazy recording.
