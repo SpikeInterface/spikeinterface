@@ -77,28 +77,6 @@ def get_random_data_chunks(
     else:
         return chunk_list
 
-def get_noise_levels(recording: 'BaseRecording', return_scaled: bool = True, method: Literal['mad', 'std'] = "mad", **random_chunk_kwargs):
-    """
-    Estimate signal std for each channel using median absolute deviation (MAD) and std.
-
-    Internally it samples some chunk across segment.
-    And then, it use MAD estimator (more robust than STD)
-
-    """
-    random_chunks = get_random_data_chunks(
-        recording, return_scaled=return_scaled, **random_chunk_kwargs
-    )
-    
-    if method == "mad":
-        med = np.median(random_chunks, axis=0, keepdims=True)
-        # hard-coded so that core doesn't depend on scipy
-        noise_levels = (
-            np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
-        )
-    elif method == "std":
-        noise_levels = np.std(random_chunks, axis=0)
-    return noise_levels
-
 
 def get_channel_distances(recording):
     """
@@ -160,8 +138,13 @@ def get_noise_levels(recording: 'BaseRecording', return_scaled: bool = True, met
 
     """
     
-    if 'noise_level' in recording._properties and not force_recompute:
-        noise_levels = recording.get_property(key="noise_level")
+    if return_scaled:
+        key = 'noise_level_scaled'
+    else:
+        key = 'noise_level_raw'
+
+    if key in recording._properties and not force_recompute:
+        noise_levels = recording.get_property(key=key)
     else:
         random_chunks = get_random_data_chunks(
             recording, return_scaled=return_scaled, **random_chunk_kwargs
@@ -175,7 +158,7 @@ def get_noise_levels(recording: 'BaseRecording', return_scaled: bool = True, met
             )
         elif method == "std":
             noise_levels = np.std(random_chunks, axis=0)
-        recording.set_property('noise_level', noise_levels)
+        recording.set_property(key, noise_levels)
 
     return noise_levels
 
