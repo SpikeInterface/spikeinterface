@@ -184,6 +184,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
     noise_levels: array
         The noise levels, for every channels. If None, they will be automatically
         computed
+    random_chunk_kwargs: dict
+        Parameters for computing noise levels, if not provided (sub optimal)
     -----
     """
 
