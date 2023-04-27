@@ -339,27 +339,3 @@ def plot_comparison_matching(benchmarks, performance_names=['accuracy', 'recall'
                         ax.plot([0,0],[0,0],c=color)
                     ax.legend(performance_names)
     plt.tight_layout()
-
-    # def plot_average_comparison_matching(benchmarks, performance_names=['recall'], ylim=(0, 1)):    
-    #     nb_benchmarks = len(benchmarks)
-    #     results = {}
-    #     for i in range(nb_benchmarks):
-    #         results[benchmarks[i].method] = {}
-    #         for performance in performance_names:
-    #             results[benchmarks[i].method][performance] = benchmarks[i].comp.get_performance()[performance]
-        
-    #     width = 1/(ncol+2)
-    #     methods = [i.method for i in benchmarks]
-        
-    #     for c, col in enumerate(methods):
-    #         x = np.arange(performances) + 1 + c / (ncol + 2)
-    #         yerr = results[]
-    #         ax.bar(x, m[col].values.flatten(), yerr=yerr.flatten(), width=width, color=cmap(c), label=clean_labels[c])
-
-    #     ax.legend()
-
-    #     ax.set_xticks(np.arange(sorter_names.size) + 1 + width)
-    #     ax.set_xticklabels(sorter_names, rotation=45)
-    #     ax.set_ylabel('metric')
-    #     ax.set_xlim(0, sorter_names.size + 1)
-    #
