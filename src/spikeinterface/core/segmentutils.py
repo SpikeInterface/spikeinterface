@@ -299,7 +299,7 @@ class AppendSegmentSorting(BaseSorting):
                 sorting_seg = ProxyAppendSortingSegment(parent_segment)
                 self.add_sorting_segment(sorting_seg)
 
-        self._kwargs = {'sorting_list': [sorting.to_dict() for sorting in sorting_list]}
+        self._kwargs = {'sorting_list': sorting_list}
 
 
 class ProxyAppendSortingSegment(BaseSortingSegment):
@@ -417,7 +417,7 @@ class ConcatenateSegmentSorting(BaseSorting):
                 concatenate_recordings([s._recording for s in sorting_list], ignore_times=ignore_times)
             )
 
-        self._kwargs = {'sorting_list': [sorting.to_dict() for sorting in sorting_list],
+        self._kwargs = {'sorting_list': sorting_list,
                         'ignore_times': ignore_times}
 
     def get_num_samples(self, segment_index=None):
@@ -539,8 +539,8 @@ class SplitSegmentSorting(BaseSorting):
             sliced_segment = sliced_parent_sorting._sorting_segments[0]
             self.add_sorting_segment(sliced_segment)
 
-        self._kwargs = {'parent_sorting': parent_sorting.to_dict(),
-                        'recording_list': [recording.to_dict() for recording in recording_list]}
+        self._kwargs = {'parent_sorting': parent_sorting,
+                        'recording_list': recording_list}
 
 split_sorting = define_function_from_class(source_class=SplitSegmentSorting, name='split_sorting')
 
@@ -573,7 +573,7 @@ class SelectSegmentSorting(BaseSorting):
             sort_seg = sorting._sorting_segments[segment_index]
             self.add_sorting_segment(sort_seg)
 
-        self._kwargs = {'sorting': sorting.to_dict(),
+        self._kwargs = {'sorting': sorting,
                         'segment_indices': [int(s) for s in segment_indices]}
 
 

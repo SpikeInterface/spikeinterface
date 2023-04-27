@@ -30,7 +30,7 @@ SpikeInterface is made of several modules to deal with different aspects of the 
 - compute quality metrics to validate and curate spike sorting outputs.
 - visualize recordings and spike sorting outputs.
 - export a report and/or export to Phy.
-- offer a powerful Qt-based viewer in a separate package `spikeinterface-gui <https://https://github.com/SpikeInterface/spikeinterface-gui>`_
+- offer a powerful Qt-based viewer in a separate package `spikeinterface-gui <https://github.com/SpikeInterface/spikeinterface-gui>`_
 - have some powerful sorting components to build your own sorter.
 
 
@@ -45,7 +45,7 @@ SpikeInterface is made of several modules to deal with different aspects of the 
     modules_gallery/index
     install_sorters
     viewers
-    contribute
+    development/development
     api
     whatisnew
     authors

@@ -66,6 +66,12 @@ def test_mountainsort4(run_kwargs):
     print(sorting)
 
 
+def test_mountainsort5(run_kwargs):
+    sorting = ss.run_sorter("mountainsort5", output_folder=cache_folder / "mountainsort5", **run_kwargs)
+    print("resulting sorting")
+    print(sorting)
+
+
 def test_tridesclous(run_kwargs):
     sorting = ss.run_sorter("tridesclous", output_folder=cache_folder / "tridesclous", **run_kwargs)
     print("resulting sorting")

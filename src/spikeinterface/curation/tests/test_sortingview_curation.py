@@ -51,7 +51,7 @@ def test_gh_curation():
     # from GH
     # curated link:
     # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://bd53f6b707f8121cadc901562a89b67aec81cc81&label=SpikeInterface%20-%20Sorting%20Summary&s={%22sortingCuration%22:%22gh://alejoe91/spikeinterface/fix-codecov/spikeinterface/curation/tests/sv-sorting-curation.json%22}
-    gh_uri = "gh://SpikeInterface/spikeinterface/master/spikeinterface/curation/tests/sv-sorting-curation.json"
+    gh_uri = "gh://SpikeInterface/spikeinterface/main/src/spikeinterface/curation/tests/sv-sorting-curation.json"
     sorting_curated_gh = apply_sortingview_curation(sorting, uri_or_json=gh_uri, verbose=True)
     print(f"From GH: {sorting_curated_gh}")
 

@@ -43,7 +43,7 @@ class UnitsSelectionSorting(BaseSorting):
         if parent_sorting.has_recording():
             self.register_recording(parent_sorting._recording)
 
-        self._kwargs = dict(parent_sorting=parent_sorting.to_dict(), unit_ids=unit_ids,
+        self._kwargs = dict(parent_sorting=parent_sorting, unit_ids=unit_ids,
                             renamed_unit_ids=renamed_unit_ids)
 
 
