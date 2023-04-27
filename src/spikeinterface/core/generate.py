@@ -417,6 +417,16 @@ class GeneratorRecording(BaseRecording):
             The seed for np.random.default_rng.
         mode : Literal['pure_noise', 'random_peaks'], default='pure_noise'
             The mode of the recording segment.
+            
+            mode: 'pure_noise'
+                The recording segment is pure noise sampled from a normal distribution.
+                See `GeneratorRecordingSegment._random_traces_generator` for more details.
+            mode: 'random_peaks'
+                The recording segment is composed of a signal with bumpy peaks.
+                The peaks are non biologically realistic but are useful for testing memory problems with
+                spike sorting algorithms.
+                
+                See `GeneratorRecordingSegment._random_peaks_generator` for more details.
 
         Note
         ----
