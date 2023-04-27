@@ -128,12 +128,44 @@ class BenchmarkMatching:
         return comps
 
 
+    def run_matching_snr_threshold(self, snr_threshold, seed=0, we_kwargs=None, template_mode='median'):
+        if we_kwargs is None:
+            we_kwargs = {}
+        we_kwargs.update(dict(seed=seed, overwrite=True, load_if_exists=False, **self.job_kwargs))
+
+        # Omit Lowest SNR units
+        metrics = self.metrics.sort_values('snr')
+        present_units = np.array(metrics.index[metrics.snr >= snr_threshold])
+        spike_time_indices, spike_cluster_ids = [], []
+        for unit in present_units:
+            spike_train = self.gt_sorting.get_unit_spike_train(unit)
+            for time_index in spike_train:
+                spike_time_indices.append(time_index)
+                spike_cluster_ids.append(unit)
+        spike_time_indices = np.array(spike_time_indices)
+        spike_cluster_ids = np.array(spike_cluster_ids)
+        sorting = NumpySorting.from_times_labels(spike_time_indices, spike_cluster_ids, self.sampling_rate)
+
+        # Generate New Waveform Extractor with Missing Units
+        we = extract_waveforms(self.recording, sorting, self.tmp_folder, **we_kwargs)
+        methods_kwargs = self.update_methods_kwargs(we, template_mode)
+
+        comps = self.run_matching(methods_kwargs)
+        shutil.rmtree(self.tmp_folder)
+        return comps
+
+
     def run_matching_vary_parameter(self, parameters, parameter_name, num_replicates=1, we_kwargs=None,
                                     template_mode='median', verbose=False, **kwargs):
         if parameter_name == 'num_spikes':
             run_matching_fn = self.run_matching_num_spikes
         elif parameter_name == 'fraction_misclassed':
             run_matching_fn = self.run_matching_misclassed
+        elif parameter_name == 'snr_threshold':
+            run_matching_fn = self.run_matching_snr_threshold
+        else:
+            raise ValueError(
+                "parameter_name must be one of ['num_spikes', 'fraction_misclassed', 'snr_threshold'],")
         comps, parameter_values, parameter_names, iter_nums, methods = [], [], [], [], []
         for parameter in parameters:
             if verbose:
