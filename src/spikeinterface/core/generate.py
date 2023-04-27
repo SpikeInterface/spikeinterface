@@ -503,8 +503,8 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
 
             # Configuration of mode
             noise_size_ms = 50.0
-            noise_size_frames = int(noise_size_ms * self.sampling_frequency / 1000)
-            self.basic_noise_block = self.rng.random(size=(noise_size_frames, self.num_channels))
+            noise_frames = int(noise_size_ms * self.sampling_frequency / 1000)
+            self.basic_noise_block = self.rng.normal(size=(noise_frames, self.num_channels))
 
         
     def get_num_samples(self):
@@ -551,13 +551,13 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         """
 
         noise_block  = self.basic_noise_block
-        num_noise_frames = noise_block.shape[0]
+        noise_frames = noise_block.shape[0]
         
-        start_frame_mod = start_frame % num_noise_frames
-        end_frame_mod = end_frame % num_noise_frames
+        start_frame_mod = start_frame % noise_frames
+        end_frame_mod = end_frame % noise_frames
         traces_chunk_size = end_frame - start_frame
         
-        larger_than_noise_block = traces_chunk_size >= num_noise_frames
+        larger_than_noise_block = traces_chunk_size >= noise_frames
 
         num_samples = traces_chunk_size
         traces = np.ones((num_samples, self.num_channels), dtype=self.dtype)
@@ -569,7 +569,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
                 traces = np.concatenate((noise_block[start_frame_mod:], noise_block[:end_frame_mod]))
         else:
             first_block = noise_block[start_frame_mod:]
-            repeat_count = (traces_chunk_size - (num_noise_frames - start_frame_mod)) // num_noise_frames
+            repeat_count = (traces_chunk_size - (noise_frames - start_frame_mod)) // noise_frames
             middle_block = np.repeat(noise_block, repeats=repeat_count, axis=0)
             last_block = noise_block[:end_frame_mod]
 
