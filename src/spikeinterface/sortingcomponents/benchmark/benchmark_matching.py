@@ -15,6 +15,7 @@ import time
 import os
 import string, random
 import pylab as plt
+import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 import shutil
@@ -209,7 +210,8 @@ class BenchmarkMatching:
 
         ax = axs[0, 1]
         if self.exhaustive_gt:
-            plot_comparison_collision_by_similarity(comp, self.templates, ax=ax, show_legend=True, mode='lines', good_only=False)
+            plot_comparison_collision_by_similarity(comp, self.templates, ax=ax, show_legend=True, mode='lines',
+                                                    good_only=False)
         return fig, axs
 
 def plot_errors_matching(benchmark, comp, unit_id, nb_spikes=200, metric='cosine'):
@@ -300,42 +302,36 @@ def plot_errors_matching_all_neurons(benchmark, comp, nb_spikes=200, metric='cos
         ax.set_ylabel(metric)
 
 
-def plot_comparison_matching(benchmarks, performance_names=['accuracy', 'recall', 'precision'], colors = ['g', 'b', 'r'], ylim=(0.5, 1)):
-    nb_benchmarks = len(benchmarks)
-    fig, axs = plt.subplots(ncols=nb_benchmarks, nrows=nb_benchmarks - 1, figsize=(10, 10))
-    for i in range(nb_benchmarks - 1):
-        for j in range(nb_benchmarks):
+def plot_comparison_matching(benchmark, comp_per_method, performance_names=['accuracy', 'recall', 'precision'],
+                             colors = ['g', 'b', 'r'], ylim=(0.5, 1)):
+    num_methods = len(benchmark.methods)
+    fig, axs = plt.subplots(ncols=num_methods, nrows=num_methods, figsize=(10, 10))
+    for i, method1 in enumerate(benchmark.methods):
+        for j, method2 in enumerate(benchmark.methods):
             if len(axs.shape) > 1:
                 ax = axs[i, j]
             else:
                 ax = axs[j]
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
-            ax.spines['left'].set_visible(False)
-            ax.spines['bottom'].set_visible(False)
-            if j > i:
-                for performance, color in zip(performance_names, colors):
-                    perf1 = benchmarks[i].comp.get_performance()[performance]
-                    perf2 = benchmarks[j].comp.get_performance()[performance]
-                    ax.plot(perf2, perf1, '.', label=performance, color=color)
-                ax.plot([0, 1], [0, 1], 'k--', alpha=0.5)
-                ax.spines['left'].set_visible(True)
-                ax.spines['bottom'].set_visible(True)
-                ax.set_ylim(ylim)
-                ax.set_xlim(ylim)
-                
-                if j > i + 1:
-                    ax.set_yticks([], [])
-                    ax.set_xticks([], [])
-            
-                if j == i + 1:
-                    ax.set_ylabel(f'{benchmarks[i].method}')
-                    ax.set_xlabel(f'{benchmarks[j].method}')
-            else:                    
-                ax.set_yticks([], [])
-                ax.set_xticks([], [])
-                if (i == 0) and (j == 0):
-                    for color, k in zip(colors, range(len(performance_names))):
-                        ax.plot([0,0],[0,0],c=color)
-                    ax.legend(performance_names)
-    plt.tight_layout()
+            comp1, comp2 = comp_per_method[method1], comp_per_method[method2]
+            for performance, color in zip(performance_names, colors):
+                perf1 = comp1.get_performance()[performance]
+                perf2 = comp2.get_performance()[performance]
+                ax.plot(perf2, perf1, '.', label=performance, color=color)
+            ax.plot([0, 1], [0, 1], 'k--', alpha=0.5)
+            ax.set_ylim(ylim)
+            ax.set_xlim(ylim)
+
+            if j == 0:
+                ax.set_ylabel(f'{method1}')
+            else:
+                ax.set_yticks([])
+            if i == num_methods - 1:
+                ax.set_xlabel(f'{method2}')
+            else:
+                ax.set_xticks([])
+            if i == num_methods - 1 and j == num_methods - 1:
+                patches = []
+                for color, name in zip(colors, performance_names):
+                    patches.append(mpatches.Patch(color=color, label=name))
+                ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+    plt.tight_layout(h_pad=0, w_pad=0)
