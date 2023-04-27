@@ -263,11 +263,28 @@ def test_BaseRecording():
     compressor = get_default_zarr_compressor()
     rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording",
                          compressor=compressor)
-    check_recordings_equal(rec2, rec_zarr, return_scaled=False, check_annotations=False, check_properties=True)
+    rec_zarr_loaded = load_extractor(cache_folder / "recording.zarr")
+    # annotations is False because Zarr adds compression ratios
+    check_recordings_equal(rec2, rec_zarr, return_scaled=False,
+                           check_annotations=False, check_properties=True)
+    check_recordings_equal(rec_zarr, rec_zarr_loaded, return_scaled=False,
+                           check_annotations=False, check_properties=True)
+    for annotation_name in rec2.get_annotation_keys():
+        assert rec2.get_annotation(annotation_name) == rec_zarr.get_annotation(annotation_name)
+        assert rec2.get_annotation(annotation_name) == rec_zarr_loaded.get_annotation(annotation_name)
 
     rec_zarr2 = rec2.save(format="zarr", folder=cache_folder / "recording_channel_chunk",
                           compressor=compressor, channel_chunk_size=2)
-    check_recordings_equal(rec2, rec_zarr2, return_scaled=False, check_annotations=False, check_properties=True)
+    rec_zarr2_loaded = load_extractor(cache_folder / "recording_channel_chunk.zarr")
+
+    # annotations is False because Zarr adds compression ratios
+    check_recordings_equal(rec2, rec_zarr2, return_scaled=False,
+                           check_annotations=False, check_properties=True)
+    check_recordings_equal(rec_zarr2, rec_zarr2_loaded, return_scaled=False,
+                           check_annotations=False, check_properties=True)
+    for annotation_name in rec2.get_annotation_keys():
+        assert rec2.get_annotation(annotation_name) == rec_zarr2.get_annotation(annotation_name)
+        assert rec2.get_annotation(annotation_name) == rec_zarr2_loaded.get_annotation(annotation_name)
 
     # test cast unsigned
     rec_u = rec_uint16.save(format="zarr", folder=cache_folder / "rec_u")

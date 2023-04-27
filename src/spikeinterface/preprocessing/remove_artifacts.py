@@ -290,8 +290,8 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                         idxs = np.arange(idx - 3, idx + 1)
                     else:
                         idxs = np.arange(idx - 2, idx + 3)
-                    if np.min(idx) < 0:
-                        idx = idx[idx >= 0]
+                    if np.min(idxs) < 0:
+                        idxs = idxs[idxs >= 0]
                     median_vals = np.median(traces[idxs, :], axis=0, keepdims=True)
                     pre_vals.append(median_vals)
                 post_vals = []
@@ -300,8 +300,8 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                         idxs = np.arange(idx, idx + 4)
                     else:
                         idxs = np.arange(idx - 2, idx + 3)
-                    if np.max(idx) >= traces.shape[0]:
-                        idx = idx[idx < traces.shape[0]]
+                    if np.max(idxs) >= traces.shape[0]:
+                        idxs = idxs[idxs < traces.shape[0]]
                     median_vals = np.median(traces[idxs, :], axis=0, keepdims=True)
                     post_vals.append(median_vals)
 

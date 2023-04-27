@@ -58,7 +58,7 @@ def test_localize_peaks():
 
     peak_locations = localize_peaks(recording, peaks, method='monopolar_triangulation', 
                                     optimizer='minimize_with_log_penality',
-                                    enforce_decrease=True, feature='v_peak', **job_kwargs)
+                                    enforce_decrease=True, feature='peak_voltage', **job_kwargs)
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(('minimize_with_log_penality_v_peak', peak_locations))
     
