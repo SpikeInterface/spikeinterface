@@ -75,19 +75,25 @@ def test_BaseRecording():
     times0 = rec.get_times(segment_index=0)
 
     # dump/load dict
-    d = rec.to_dict()
+    d = rec.to_dict(include_annotations=True, include_properties=True)
     rec2 = BaseExtractor.from_dict(d)
     rec3 = load_extractor(d)
+    check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True, check_properties=True)
+    check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True, check_properties=True)
 
     # dump/load json
     rec.dump_to_json(cache_folder / 'test_BaseRecording.json')
     rec2 = BaseExtractor.load(cache_folder / 'test_BaseRecording.json')
     rec3 = load_extractor(cache_folder / 'test_BaseRecording.json')
+    check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True, check_properties=False)
+    check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True, check_properties=False)
 
     # dump/load pickle
     rec.dump_to_pickle(cache_folder / 'test_BaseRecording.pkl')
     rec2 = BaseExtractor.load(cache_folder / 'test_BaseRecording.pkl')
     rec3 = load_extractor(cache_folder / 'test_BaseRecording.pkl')
+    check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True, check_properties=True)
+    check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True, check_properties=True)
 
     # dump/load dict - relative
     d = rec.to_dict(relative_to=cache_folder)
@@ -257,11 +263,28 @@ def test_BaseRecording():
     compressor = get_default_zarr_compressor()
     rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording",
                          compressor=compressor)
-    check_recordings_equal(rec2, rec_zarr, return_scaled=False)
+    rec_zarr_loaded = load_extractor(cache_folder / "recording.zarr")
+    # annotations is False because Zarr adds compression ratios
+    check_recordings_equal(rec2, rec_zarr, return_scaled=False,
+                           check_annotations=False, check_properties=True)
+    check_recordings_equal(rec_zarr, rec_zarr_loaded, return_scaled=False,
+                           check_annotations=False, check_properties=True)
+    for annotation_name in rec2.get_annotation_keys():
+        assert rec2.get_annotation(annotation_name) == rec_zarr.get_annotation(annotation_name)
+        assert rec2.get_annotation(annotation_name) == rec_zarr_loaded.get_annotation(annotation_name)
 
     rec_zarr2 = rec2.save(format="zarr", folder=cache_folder / "recording_channel_chunk",
                           compressor=compressor, channel_chunk_size=2)
-    check_recordings_equal(rec2, rec_zarr2, return_scaled=False)
+    rec_zarr2_loaded = load_extractor(cache_folder / "recording_channel_chunk.zarr")
+
+    # annotations is False because Zarr adds compression ratios
+    check_recordings_equal(rec2, rec_zarr2, return_scaled=False,
+                           check_annotations=False, check_properties=True)
+    check_recordings_equal(rec_zarr2, rec_zarr2_loaded, return_scaled=False,
+                           check_annotations=False, check_properties=True)
+    for annotation_name in rec2.get_annotation_keys():
+        assert rec2.get_annotation(annotation_name) == rec_zarr2.get_annotation(annotation_name)
+        assert rec2.get_annotation(annotation_name) == rec_zarr2_loaded.get_annotation(annotation_name)
 
     # test cast unsigned
     rec_u = rec_uint16.save(format="zarr", folder=cache_folder / "rec_u")

@@ -30,7 +30,7 @@ def snippets_from_sorting(recording, sorting, nbefore=20,
     strains = sorting.get_all_spike_trains()
 
     peaks2 = sorting.to_spike_vector()
-    peaks2['unit_ind'] = 0
+    peaks2["unit_index"] = 0
 
     if wf_folder is None:
         mode = "shared_memory"
@@ -45,7 +45,7 @@ def snippets_from_sorting(recording, sorting, nbefore=20,
                                               copy=True, **job_kwargs)
     wfs = []
     for i in range(recording.get_num_segments()):
-        wfs.append(wfs_arrays[0][peaks2['segment_ind'] == i, :, :])  # extract class zero
+        wfs.append(wfs_arrays[0][peaks2['segment_index'] == i, :, :])  # extract class zero
 
     nse = NumpySnippets(snippets_list=wfs, spikesframes_list=[np.sort(s[0]) for s in strains],
                         sampling_frequency=recording.get_sampling_frequency(),
