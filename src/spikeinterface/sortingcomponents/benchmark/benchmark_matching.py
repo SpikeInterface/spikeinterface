@@ -21,7 +21,7 @@ import pandas as pd
 import shutil
 
 class BenchmarkMatching:
-
+    """Benchmark a set of template matching methods on a given recording and ground-truth sorting."""
     def __init__(self, recording, gt_sorting, waveform_extractor, methods, methods_kwargs=None, exhaustive_gt=True,
                  tmp_folder=None, **job_kwargs):
         self.methods = methods
@@ -47,11 +47,29 @@ class BenchmarkMatching:
 
 
     def run_matching(self, methods_kwargs, collision=False):
-        comps = {}
+        """Run template matching on the recording and gt_sorting, and compare to the gt_sorting.
+
+        Parameters
+        ----------
+        methods_kwargs: dict
+            A dictionary of method_kwargs for each method.
+        collision: bool
+            If True, use CollisionGTComparison instead of compare_sorter_to_ground_truth. (Default: False)
+
+        Returns
+        -------
+        comps: dict
+            A dictionary of Comparison objects for each method.
+        runtimes: dict
+            A dictionary of runtimes for each method.
+        """
+        comps, runtimes = {}, {}
         for method in self.methods:
+            t0 = time.time()
             spikes = find_spikes_from_templates(self.recording, method=method,
                                                 method_kwargs=methods_kwargs[method],
                                                 **self.job_kwargs)
+            runtimes[method] = time.time() - t0
             sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'],
                                                      self.sampling_rate)
             if collision:
@@ -59,10 +77,28 @@ class BenchmarkMatching:
             else:
                 comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
             comps[method] = comp
-        return comps
+        return comps, runtimes
 
 
     def run_matching_num_spikes(self, spike_num, seed=0, we_kwargs=None, template_mode='median'):
+        """Run template matching with a given number of spikes per unit.
+
+        Parameters
+        ----------
+        spike_num: int
+            The maximum number of spikes per unit.
+        seed: int
+            Random seed. (Default: 0)
+        we_kwargs: dict
+            A dictionary of keyword arguments for the WaveformExtractor.
+        template_mode: {'mean' | 'median' | 'std'}
+            The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
+
+        Returns
+        -------
+        comps: dict
+            A dictionary of Comparison objects for each method.
+        """
         if we_kwargs is None:
             we_kwargs = {}
         we_kwargs.update(dict(max_spikes_per_unit=spike_num, seed=seed, overwrite=True, load_if_exists=False,
@@ -73,11 +109,25 @@ class BenchmarkMatching:
         we = extract_waveforms(self.recording, self.gt_sorting, self.tmp_folder, **we_kwargs)
         methods_kwargs = self.update_methods_kwargs(we, template_mode)
 
-        comps = self.run_matching(methods_kwargs)
+        comps, _ = self.run_matching(methods_kwargs)
         shutil.rmtree(self.tmp_folder)
         return comps
 
     def update_methods_kwargs(self, we, template_mode='median'):
+        """Update the methods_kwargs dictionary with the new WaveformExtractor.
+
+        Parameters
+        ----------
+        we: WaveformExtractor
+            The new WaveformExtractor.
+        template_mode: {'mean' | 'median' | 'std'}
+            The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
+
+        Returns
+        -------
+        methods_kwargs: dict
+            A dictionary of method_kwargs for each method.
+        """
         templates = we.get_all_templates(we.unit_ids, mode=template_mode)
         methods_kwargs = self.methods_kwargs.copy()
         for method in self.methods:
@@ -91,6 +141,26 @@ class BenchmarkMatching:
 
     def run_matching_misclassed(self, fraction_misclassed, min_similarity=-1, seed=0, we_kwargs=None,
                                 template_mode='median'):
+        """Run template matching with a given fraction of misclassified spikes.
+
+        Parameters
+        ----------
+        fraction_misclassed: float
+            The fraction of misclassified spikes.
+        min_similarity: float
+            The minimum cosine similarity between templates to be considered similar. (Default: -1)
+        seed: int
+            Random seed. (Default: 0)
+        we_kwargs: dict
+            A dictionary of keyword arguments for the WaveformExtractor.
+        template_mode: {'mean' | 'median' | 'std'}
+            The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
+
+        Returns
+        -------
+        comps: dict
+            A dictionary of Comparison objects for each method.
+        """
         if we_kwargs is None:
             we_kwargs = {}
         we_kwargs.update(dict(seed=seed, overwrite=True, load_if_exists=False, **self.job_kwargs))
@@ -125,12 +195,33 @@ class BenchmarkMatching:
         we = extract_waveforms(self.recording, sorting_misclassed, self.tmp_folder, **we_kwargs)
         methods_kwargs = self.update_methods_kwargs(we, template_mode)
 
-        comps = self.run_matching(methods_kwargs)
+        comps, _ = self.run_matching(methods_kwargs)
         shutil.rmtree(self.tmp_folder)
         return comps
 
 
-    def run_matching_missing_units(self, fraction_missing, snr_threshold=0, seed=0, we_kwargs=None, template_mode='median'):
+    def run_matching_missing_units(self, fraction_missing, snr_threshold=0, seed=0, we_kwargs=None,
+                                   template_mode='median'):
+        """Run template matching with a given fraction of missing units.
+
+        Parameters
+        ----------
+        fraction_missing: float
+            The fraction of missing units.
+        snr_threshold: float
+            The SNR threshold below which units are considered missing. (Default: 0)
+        seed: int
+            Random seed. (Default: 0)
+        we_kwargs: dict
+            A dictionary of keyword arguments for the WaveformExtractor.
+        template_mode: {'mean' | 'median' | 'std'}
+            The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
+
+        Returns
+        -------
+        comps: dict
+            A dictionary of Comparison objects for each method.
+        """
         if we_kwargs is None:
             we_kwargs = {}
         we_kwargs.update(dict(seed=seed, overwrite=True, load_if_exists=False, **self.job_kwargs))
@@ -156,13 +247,37 @@ class BenchmarkMatching:
         we = extract_waveforms(self.recording, sorting, self.tmp_folder, **we_kwargs)
         methods_kwargs = self.update_methods_kwargs(we, template_mode)
 
-        comps = self.run_matching(methods_kwargs)
+        comps, _ = self.run_matching(methods_kwargs)
         shutil.rmtree(self.tmp_folder)
         return comps
 
 
     def run_matching_vary_parameter(self, parameters, parameter_name, num_replicates=1, we_kwargs=None,
                                     template_mode='median', verbose=False, **kwargs):
+        """Run template matching varying the values of a given parameter.
+
+        Parameters
+        ----------
+        parameters: array-like
+            The values of the parameter to vary.
+        parameter_name: {'num_spikes', 'fraction_misclassed', 'fraction_missing}
+            The name of the parameter to vary.
+        num_replicates: int
+            The number of replicates to run for each parameter value. (Default: 1)
+        we_kwargs: dict
+            A dictionary of keyword arguments for the WaveformExtractor.
+        template_mode: {'mean' | 'median' | 'std'}
+            The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
+        verbose: bool
+            If True, print progress. (Default: False)
+        **kwargs
+            Keyword arguments for the run_matching method.
+
+        Returns
+        -------
+        comparisons : pandas.DataFrame
+            A dataframe of Comparison objects for each method/parameter_value/iteration combination.
+        """
         if parameter_name == 'num_spikes':
             run_matching_fn = self.run_matching_num_spikes
         elif parameter_name == 'fraction_misclassed':
