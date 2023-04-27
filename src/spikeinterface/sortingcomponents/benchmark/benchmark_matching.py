@@ -98,7 +98,7 @@ class BenchmarkMatching:
 
         # Randomly misclass spike trains
         spike_time_indices, labels = [], []
-        for unit_index, unit_id in enumerate(self.gt_sorting.get_unit_ids()):
+        for unit_index, unit_id in enumerate(self.we.unit_ids):
             unit_sorting = self.gt_sorting.get_unit_spike_train(unit_id=unit_id)
             unit_similarity = self.similarity[unit_index, :]
             unit_similarity[unit_index] = min_similarity - 1  # skip self
@@ -130,14 +130,18 @@ class BenchmarkMatching:
         return comps
 
 
-    def run_matching_snr_threshold(self, snr_threshold, seed=0, we_kwargs=None, template_mode='median'):
+    def run_matching_missing_units(self, fraction_missing, snr_threshold=0, seed=0, we_kwargs=None, template_mode='median'):
         if we_kwargs is None:
             we_kwargs = {}
         we_kwargs.update(dict(seed=seed, overwrite=True, load_if_exists=False, **self.job_kwargs))
+        np.random.seed(seed)
 
-        # Omit Lowest SNR units
+        # Omit fraction_missing of units with lowest SNR
         metrics = self.metrics.sort_values('snr')
-        present_units = np.array(metrics.index[metrics.snr >= snr_threshold])
+        missing_units = np.array(metrics.index[metrics.snr < snr_threshold])
+        num_missing = int(len(missing_units) * fraction_missing)
+        missing_units = np.random.choice(missing_units, size=num_missing, replace=False)
+        present_units = np.setdiff1d(self.we.unit_ids, missing_units)
         spike_time_indices, spike_cluster_ids = [], []
         for unit in present_units:
             spike_train = self.gt_sorting.get_unit_spike_train(unit)
@@ -163,8 +167,8 @@ class BenchmarkMatching:
             run_matching_fn = self.run_matching_num_spikes
         elif parameter_name == 'fraction_misclassed':
             run_matching_fn = self.run_matching_misclassed
-        elif parameter_name == 'snr_threshold':
-            run_matching_fn = self.run_matching_snr_threshold
+        elif parameter_name == 'fraction_missing':
+            run_matching_fn = self.run_matching_missing_units
         else:
             raise ValueError(
                 "parameter_name must be one of ['num_spikes', 'fraction_misclassed', 'snr_threshold'],")
