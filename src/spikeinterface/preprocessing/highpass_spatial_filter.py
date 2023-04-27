@@ -27,8 +27,8 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
     recording : BaseRecording
         The parent recording
     n_channel_pad : int
-        Number of channels to pad prior to filtering. 
-        Channels are padded with mirroring. 
+        Number of channels to pad prior to filtering.
+        Channels are padded with mirroring.
         If None, no padding is applied, by default 5
     n_channel_taper : int
         Number of channels to perform cosine tapering on
@@ -60,8 +60,8 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
     """
     name = 'highpass_spatial_filter'
 
-    def __init__(self, recording, n_channel_pad=None, n_channel_taper=5, direction="y",
-                 apply_agc=True, agc_window_length_s=0.01, highpass_butter_order=3,
+    def __init__(self, recording, n_channel_pad=None, n_channel_taper=0, direction="y",
+                 apply_agc=True, agc_window_length_s=0.1, highpass_butter_order=3,
                  highpass_butter_wn=0.01):
         BasePreprocessor.__init__(self, recording)
 
