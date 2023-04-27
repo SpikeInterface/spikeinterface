@@ -303,7 +303,7 @@ def plot_errors_matching_all_neurons(benchmark, comp, nb_spikes=200, metric='cos
 
 
 def plot_comparison_matching(benchmark, comp_per_method, performance_names=['accuracy', 'recall', 'precision'],
-                             colors = ['g', 'b', 'r'], ylim=(0.5, 1)):
+                             colors = ['g', 'b', 'r'], ylim=(-0.1, 1.1)):
     num_methods = len(benchmark.methods)
     fig, axs = plt.subplots(ncols=num_methods, nrows=num_methods, figsize=(10, 10))
     for i, method1 in enumerate(benchmark.methods):
@@ -320,6 +320,8 @@ def plot_comparison_matching(benchmark, comp_per_method, performance_names=['acc
             ax.plot([0, 1], [0, 1], 'k--', alpha=0.5)
             ax.set_ylim(ylim)
             ax.set_xlim(ylim)
+            ax.spines[['right', 'top']].set_visible(False)
+            ax.set_aspect('equal')
 
             if j == 0:
                 ax.set_ylabel(f'{method1}')
