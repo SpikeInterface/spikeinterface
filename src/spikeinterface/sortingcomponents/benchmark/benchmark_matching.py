@@ -89,7 +89,7 @@ class BenchmarkMatching:
         return methods_kwargs
 
 
-    def run_matching_misclassed(self, fraction_misclassed, fraction_similar=1, seed=0, we_kwargs=None,
+    def run_matching_misclassed(self, fraction_misclassed, min_similarity=-1, seed=0, we_kwargs=None,
                                 template_mode='median'):
         if we_kwargs is None:
             we_kwargs = {}
@@ -101,14 +101,15 @@ class BenchmarkMatching:
         for unit_index, unit_id in enumerate(self.gt_sorting.get_unit_ids()):
             unit_sorting = self.gt_sorting.get_unit_spike_train(unit_id=unit_id)
             unit_similarity = self.similarity[unit_index, :]
-            similar_unit_ids = self.we.unit_ids[np.flip(np.argsort(unit_similarity))]
-            similar_unit_ids = similar_unit_ids[1:int(fraction_similar * len(similar_unit_ids))] # skip closest bc it's self
+            unit_similarity[unit_index] = min_similarity - 1  # skip self
+            similar_unit_ids = self.we.unit_ids[unit_similarity >= min_similarity]
+            at_least_one_similar_unit = len(similar_unit_ids)
             num_spikes = int(len(unit_sorting) * fraction_misclassed)
 
             unit_misclass_idx = np.random.choice(np.arange(len(unit_sorting)), size=num_spikes, replace=False)
             for i, spike in enumerate(unit_sorting):
                 spike_time_indices.append(spike)
-                if i in unit_misclass_idx:
+                if i in unit_misclass_idx and at_least_one_similar_unit:
                     alt_id = np.random.choice(similar_unit_ids)
                     labels.append(alt_id)
                 else:
