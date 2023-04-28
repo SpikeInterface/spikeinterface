@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pylab as plt
 
 from .basewidget import BaseWidget
 
@@ -32,6 +31,7 @@ class ProbeMapWidget(BaseWidget):
 
     def __init__(self, recording, channel_ids=None, with_channel_ids=False, figure=None, ax=None,
                  **plot_probe_kwargs):
+        import matplotlib.pylab as plt
         BaseWidget.__init__(self, figure, ax)
 
         if channel_ids is not None:

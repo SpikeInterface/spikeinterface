@@ -1,6 +1,4 @@
 import numpy as np
-import matplotlib
-from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
@@ -36,6 +34,8 @@ class MultiCompGraphWidget(BaseWidget):
 
     def __init__(self, multi_comparison, draw_labels=False, node_cmap='viridis',
                  edge_cmap='hot', alpha_edges=0.5, colorbar=False, figure=None, ax=None):
+        import matplotlib
+        from matplotlib import pyplot as plt
         BaseWidget.__init__(self, figure, ax)
         self._msc = multi_comparison
         self._draw_labels = draw_labels
@@ -116,6 +116,8 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
     def __init__(self, multi_comparison, plot_type='pie', cmap='YlOrRd', fs=10,
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
+        import matplotlib
+        import matplotlib.pyplot as plt
         self._msc = multi_comparison
         self._type = plot_type
         self._cmap = cmap
@@ -174,13 +176,14 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
 
     def __init__(self, multi_comparison, plot_type='pie', cmap='YlOrRd', fs=9,
                  axes=None, show_legend=True):
+        import matplotlib.pyplot as plt
         self._msc = multi_comparison
         self._type = plot_type
         self._cmap = cmap
         self._fs = fs
         self._show_legend = show_legend
         self.name = 'MultiCompAgreementBySorterWidget'
-
+        
         if axes is None:
             ncols = len(self._msc.name_list)
             fig, axes = plt.subplots(nrows=1, ncols=ncols, sharex=True, sharey=True)

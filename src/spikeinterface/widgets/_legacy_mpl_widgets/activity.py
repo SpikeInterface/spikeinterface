@@ -1,11 +1,5 @@
 import numpy as np
-import matplotlib.pylab as plt
 from .basewidget import BaseWidget
-
-from matplotlib.animation import FuncAnimation
-
-from probeinterface.plotting import plot_probe
-
 
 class PeakActivityMapWidget(BaseWidget):
     """
@@ -49,6 +43,10 @@ class PeakActivityMapWidget(BaseWidget):
                  with_contact_color=True, with_interpolated_map=True,
                  with_channel_ids=False, with_color_bar=True,
                  figure=None, ax=None):
+        import matplotlib.pylab as plt
+        from matplotlib.animation import FuncAnimation
+        from probeinterface.plotting import plot_probe
+
         BaseWidget.__init__(self, figure, ax)
 
         assert recording.get_num_segments() == 1, 'Handle only one segment'

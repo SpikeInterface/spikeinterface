@@ -1,5 +1,4 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
@@ -33,6 +32,8 @@ class RasterWidget(BaseWidget):
 
     def __init__(self, sorting, segment_index=None, unit_ids=None,
                  time_range=None, color='k', figure=None, ax=None):
+        from matplotlib import pyplot as plt
+
         BaseWidget.__init__(self, figure, ax)
         self._sorting = sorting
 

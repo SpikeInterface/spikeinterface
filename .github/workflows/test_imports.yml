@@ -30,5 +30,19 @@ jobs:
           python -m pip install -U pip  # Official recommended way 
           pip install -e .  # This should install core only
       - name: Profile Imports
-        run: python ./.github/profile_and_test_imports.py >> $GITHUB_STEP_SUMMARY 
+        run: |
+          echo "OS: ${{ matrix.os }}" >> $GITHUB_STEP_SUMMARY
+          echo "======================" >> $GITHUB_STEP_SUMMARY
+          echo "Import times when installing with core dependencies in " >> $GITHUB_STEP_SUMMARY
+          python ./.github/profile_and_test_imports.py >> $GITHUB_STEP_SUMMARY 
         shell: bash  # Necessary for pipeline to work on windows
+      - name: Install in full mode
+        run: pip install -e .[full]
+      - name: Profile Imports with full
+        run: |
+          # Add a header to separate the two profiles
+          echo "======================" >> $GITHUB_STEP_SUMMARY
+          echo "Import times when installing with full dependencies in " >> $GITHUB_STEP_SUMMARY
+          python ./.github/profile_and_test_imports.py >> $GITHUB_STEP_SUMMARY 
+        shell: bash  # Necessary for pipeline to work on windows
+      

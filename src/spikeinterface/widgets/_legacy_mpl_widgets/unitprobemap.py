@@ -1,10 +1,7 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
-from matplotlib.animation import FuncAnimation
 
-from probeinterface.plotting import plot_probe
 
 
 class UnitProbeMapWidget(BaseWidget):
@@ -29,6 +26,9 @@ class UnitProbeMapWidget(BaseWidget):
     def __init__(self, waveform_extractor, unit_ids=None, channel_ids=None,
                  animated=None, with_channel_ids=False, colorbar=True,
                  ncols=5,  axes=None):
+        from matplotlib.animation import FuncAnimation
+        from matplotlib import pyplot as plt
+        from probeinterface.plotting import plot_probe
 
         self.waveform_extractor = waveform_extractor
         if unit_ids is None:
