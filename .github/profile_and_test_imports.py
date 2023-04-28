@@ -1,5 +1,5 @@
 import subprocess
-import numpy as np
+import math
 
 import_statement_list = [
     "import spikeinterface",
@@ -15,6 +15,8 @@ import_statement_list = [
 
 markdown_output = "## Import Profiling\n\n| Module | Time (seconds) | Standard Deviation |\n| ------ | -------------- | ------------------ |\n"
 n_samples = 10
+
+exceptions = []
 
 for import_statement in import_statement_list:
     time_taken_list = []
@@ -33,13 +35,19 @@ for import_statement in import_statement_list:
                 f"Error when running {import_statement} \n"
                 f"Error in subprocess: {result.stderr.strip()}\n"
             )
-            raise ImportError(error_message)
+            exceptions.append(error_message)
+            break
 
         time_taken = float(result.stdout.strip())
         time_taken_list.append(time_taken)
 
-    avg_time_taken = np.mean(time_taken_list)
-    std_dev_time_taken = np.std(time_taken_list)
-    markdown_output += f"| {import_statement} | {avg_time_taken:.2f} | {std_dev_time_taken:.2f} |\n"
+    if time_taken_list:
+        avg_time_taken = sum(time_taken_list) / len(time_taken_list)
+        std_dev_time_taken = math.sqrt(sum((x - avg_time_taken) ** 2 for x in time_taken_list) / len(time_taken_list))
+        markdown_output += f"| {import_statement} | {avg_time_taken:.2f} | {std_dev_time_taken:.2f} |\n"
 
+if exceptions:
+    raise Exception("\n".join(exceptions))
+
+# This is displayed to GithubSummary
 print(markdown_output)

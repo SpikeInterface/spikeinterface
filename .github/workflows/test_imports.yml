@@ -30,10 +30,5 @@ jobs:
           python -m pip install -U pip  # Official recommended way 
           pip install -e .  # This should install core only
       - name: Profile Imports
-        run: python ./.github/profile_and_test_imports.py
-      - name: Read Report
-        run: |
-          report=$(<report.md)
-          echo "GITHUB_STEP_SUMMARY=${report}" >> $GITHUB_ENV
-      - name: Display Report
-        run: echo "$GITHUB_STEP_SUMMARY"
+        run: python ./.github/profile_and_test_imports.py >> $GITHUB_STEP_SUMMARY 
+        shell: bash  # Necessary for pipeline to work on windows
