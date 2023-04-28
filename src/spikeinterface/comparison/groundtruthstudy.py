@@ -154,6 +154,7 @@ class GroundTruthStudy:
     def aggregate_count_units(self, well_detected_score=None, redundant_score=None, overmerged_score=None):
         assert self.comparisons is not None, 'run_comparisons first'
 
+        import pandas as pd
         index = pd.MultiIndex.from_tuples(self.computed_names, names=['rec_name', 'sorter_name'])
 
         count_units = pd.DataFrame(index=index, columns=['num_gt', 'num_sorter', 'num_well_detected', 'num_redundant',
