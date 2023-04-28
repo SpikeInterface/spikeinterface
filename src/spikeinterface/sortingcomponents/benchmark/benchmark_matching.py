@@ -263,7 +263,7 @@ class BenchmarkMatching:
 
 
     def run_matching_vary_parameter(self, parameters, parameter_name, num_replicates=1, we_kwargs=None,
-                                    template_mode='median', progress_bars=None, **kwargs):
+                                    template_mode='median', progress_bars=[], **kwargs):
         """Run template matching varying the values of a given parameter.
 
         Parameters
@@ -304,7 +304,11 @@ class BenchmarkMatching:
         if progress_bar:
             parameters = tqdm(parameters, desc=f"Vary Parameter ({parameter_name})")
         for parameter in parameters:
-            for i in range(1, num_replicates+1):
+            if progress_bar and num_replicates > 1:
+                replicates = tqdm(range(1, num_replicates+1), desc=f"Replicating for Variability")
+            else:
+                replicates = range(1, num_replicates+1)
+            for i in replicates:
                 comp_per_method = run_matching_fn(parameter, seed=i, we_kwargs=we_kwargs, template_mode=template_mode,
                                                   **kwargs)
                 for method in self.methods:
@@ -313,12 +317,13 @@ class BenchmarkMatching:
                     parameter_names.append(parameter_name)
                     iter_nums.append(i)
                     methods.append(method)
-            if running_in_notebook():
-                from IPython.display import clear_output
-                clear_output(wait=True)
-                for bar in progress_bars:
-                    display(bar.container)
-                display(parameters.container)
+                if running_in_notebook():
+                    from IPython.display import clear_output
+                    clear_output(wait=True)
+                    for bar in progress_bars:
+                        display(bar.container)
+                    display(parameters.container)
+                    display(replicates.container)
         comparisons = pd.DataFrame({'comp': comps,
                                     'parameter_value': parameter_values,
                                     'parameter_name' : parameter_names,
@@ -474,3 +479,41 @@ def plot_comparison_matching(benchmark, comp_per_method, performance_names=['acc
                     patches.append(mpatches.Patch(color=color, label=name))
                 ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
     plt.tight_layout(h_pad=0, w_pad=0)
+
+def plot_vary_parameter(comparisons, performance_metric='accuracy', method_colors=None):
+    parameter_names = comparisons.parameter_name.unique()
+    methods = comparisons.method.unique()
+    for parameter_name in parameter_names:
+        comparisons_parameter = comparisons[comparisons.parameter_name==parameter_name]
+        parameters = comparisons_parameter.parameter_value.unique()
+        method_means = {method: [] for method in methods}
+        method_stds = {method: [] for method in methods}
+        for parameter in parameters:
+            for method in methods:
+                method_param_mask = np.logical_and(comparisons_parameter.method == method,
+                                      comparisons_parameter.parameter_value == parameter)
+                comps = comparisons_parameter.comp[method_param_mask]
+                performance_metrics = []
+                for comp in comps:
+                    perf_metric = comp.get_performance(method='pooled_with_average')[performance_metric]
+                    performance_metrics.append(perf_metric)
+                # Average / STD over replicates
+                method_means[method].append(np.mean(performance_metrics))
+                method_stds[method].append(np.std(performance_metrics))
+
+        plt.figure()
+        for method in methods:
+            mean_accs = tmatch_mean_accs[method]
+            std_accs = tmatch_std_accs[method]
+            plt.errorbar(frac_spikes, mean_accs, std_accs, color=method_colors[method], marker='o', markersize=5,
+                         label=method)
+        if parameter_name == 'num_spikes':
+            xlabel = "Number of Spikes"
+        elif parameter_name == 'fraction_misclassed':
+            xlabel = "Fraction of Spikes Misclassified"
+        elif parameter_name == 'fraction_missing':
+            xlabel = "Fraction of Low SNR Units Missing"
+        plt.xlabel(xlabel)
+        plt.ylabel(f"Average Unit {performance_metric}")
+        plt.legend(bbox_to_anchor=(1, 1, 0, 0))
+
