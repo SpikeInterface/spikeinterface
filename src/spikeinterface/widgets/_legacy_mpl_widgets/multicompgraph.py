@@ -63,7 +63,7 @@ class MultiCompGraphWidget(BaseWidget):
         for node in sorted(g.nodes):
             nodes_col.append(nodes_col_dict[node[0]])
         nodes_col = np.array(nodes_col) / len(self._msc.name_list)
-
+        import matplotlib.pyplot as plt
         _ = plt.set_cmap(self._node_cmap)
         _ = nx.draw_networkx_nodes(g, pos=nx.circular_layout(sorted(g)), nodelist=sorted(g.nodes),
                                    node_color=nodes_col, node_size=20, ax=self.ax)

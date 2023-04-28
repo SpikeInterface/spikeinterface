@@ -106,7 +106,7 @@ class PeakActivityMapWidget(BaseWidget):
             if self.with_channel_ids:
                 text_on_contact = self.recording.channel_ids
             
-                
+            from probeinterface.plotting import plot_probe
             poly, poly_contour = plot_probe(probe, ax=self.ax, contacts_values=rates,
                                             probe_shape_kwargs={'facecolor': 'w', 'alpha': .1},
                                             contacts_kargs={'alpha': 1.},

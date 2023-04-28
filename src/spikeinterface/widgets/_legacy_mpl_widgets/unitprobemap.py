@@ -100,7 +100,8 @@ class UnitProbeMapWidget(BaseWidget):
                     poly_contact = all_poly_contact[i]
                     poly_contact.set_array(contacts_values)
                 return all_poly_contact
-
+            
+            from matplotlib.animation import FuncAnimation
             self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames,
                                            interval=20, blit=True)
 
