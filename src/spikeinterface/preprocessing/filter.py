@@ -55,7 +55,6 @@ class FilterRecording(BasePreprocessor):
 
     """
     name = 'filter'
-    import scipy.signal
 
     def __init__(self, recording, band=[300., 6000.], btype='bandpass',
                  filter_order=5, ftype='butter', filter_mode='sos', margin_ms=5.0,

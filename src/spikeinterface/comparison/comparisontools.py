@@ -4,7 +4,6 @@ Some functions internally use by SortingComparison.
 
 import numpy as np
 from joblib import Parallel, delayed
-from scipy.optimize import linear_sum_assignment
 
 
 def count_matching_events(times1, times2, delta=10):
@@ -330,6 +329,7 @@ def make_hungarian_match(agreement_scores, min_score):
     scores = agreement_scores.values.copy()
     scores[scores < min_score] = 0
 
+    from scipy.optimize import linear_sum_assignment
     [inds1, inds2] = linear_sum_assignment(-scores)
 
     hungarian_match_12 = pd.Series(index=unit1_ids, dtype=unit2_ids.dtype)
