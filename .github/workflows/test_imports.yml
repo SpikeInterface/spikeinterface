@@ -1,9 +1,10 @@
 name: Profile Imports
 
 on:
-  push:
-    branches:
-      - main
+    pull_request:
+      types: [synchronize, opened, reopened]
+      branches:
+        - main
 
 jobs:
 build-and-test:
