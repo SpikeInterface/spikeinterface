@@ -480,9 +480,13 @@ def plot_comparison_matching(benchmark, comp_per_method, performance_names=['acc
                 ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
     plt.tight_layout(h_pad=0, w_pad=0)
 
-def plot_vary_parameter(comparisons, performance_metric='accuracy', method_colors=None):
+def plot_vary_parameter(comparisons, performance_metric='accuracy', method_colors=None,
+                        parameter_transform=lambda x:x):
     parameter_names = comparisons.parameter_name.unique()
     methods = comparisons.method.unique()
+    if method_colors is None:
+        method_colors = {method: f'C{i}' for i, method in enumerate(methods)}
+    figs, axs = [], []
     for parameter_name in parameter_names:
         comparisons_parameter = comparisons[comparisons.parameter_name==parameter_name]
         parameters = comparisons_parameter.parameter_value.unique()
@@ -501,19 +505,23 @@ def plot_vary_parameter(comparisons, performance_metric='accuracy', method_color
                 method_means[method].append(np.mean(performance_metrics))
                 method_stds[method].append(np.std(performance_metrics))
 
-        plt.figure()
+        parameters_transformed = parameter_transform(parameters)
+        fig, ax = plt.subplots()
         for method in methods:
-            mean_accs = tmatch_mean_accs[method]
-            std_accs = tmatch_std_accs[method]
-            plt.errorbar(frac_spikes, mean_accs, std_accs, color=method_colors[method], marker='o', markersize=5,
-                         label=method)
+            mean, std = method_means[method], method_stds[method]
+            ax.errorbar(parameters_transformed, mean, std, color=method_colors[method], marker='o', markersize=5,
+                        label=method)
         if parameter_name == 'num_spikes':
             xlabel = "Number of Spikes"
         elif parameter_name == 'fraction_misclassed':
             xlabel = "Fraction of Spikes Misclassified"
         elif parameter_name == 'fraction_missing':
             xlabel = "Fraction of Low SNR Units Missing"
-        plt.xlabel(xlabel)
-        plt.ylabel(f"Average Unit {performance_metric}")
-        plt.legend(bbox_to_anchor=(1, 1, 0, 0))
+        ax.set_xticks(parameters_transformed, parameters)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(f"Average Unit {performance_metric}")
+        fig.legend(bbox_to_anchor=(1, 1, 0, 0))
+        figs.append(fig)
+        axs.append(ax)
+    return figs, axs
 
