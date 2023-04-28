@@ -65,6 +65,7 @@ class BenchmarkMatching:
         """
         comps, runtimes = {}, {}
         for method in self.methods:
+            print(f"{method = }")
             t0 = time.time()
             spikes = find_spikes_from_templates(self.recording, method=method,
                                                 method_kwargs=methods_kwargs[method],
@@ -75,7 +76,7 @@ class BenchmarkMatching:
             if collision:
                 comp = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt)
             else:
-                comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting)
+                comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt)
             comps[method] = comp
         return comps, runtimes
 
