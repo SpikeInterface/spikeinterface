@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 
 from spikeinterface.core.core_tools import define_function_from_class
 from .basecomparison import BasePairComparison, MixinSpikeTrainComparison, MixinTemplateComparison
@@ -216,7 +215,7 @@ class GroundTruthComparison(BasePairSorterComparison):
                  delta_time=0.4, sampling_frequency=None, match_score=0.5, well_detected_score=0.8,
                  redundant_score=0.2, overmerged_score=0.2, chance_score=0.1, exhaustive_gt=False, n_jobs=-1,
                  match_mode='hungarian', compute_labels=False, compute_misclassifications=False, verbose=False):
-
+        import pandas as pd
         if gt_name is None:
             gt_name = 'ground truth'
         if tested_name is None:

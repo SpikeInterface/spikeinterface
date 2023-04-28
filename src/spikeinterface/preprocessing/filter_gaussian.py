@@ -1,6 +1,7 @@
 from typing import Iterable, Union
+
 import numpy as np
-from scipy.stats import norm
+
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, get_chunk_with_margin
 from spikeinterface.core.core_tools import define_function_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -44,6 +45,7 @@ class GaussianBandpassFilterRecording(BasePreprocessor):
 class GaussianFilterRecordingSegment(BasePreprocessorSegment):
 
     def __init__(self, parent_recording_segment: BaseRecordingSegment, freq_min: float, freq_max: float):
+        from scipy.stats import norm
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.freq_min = freq_min
