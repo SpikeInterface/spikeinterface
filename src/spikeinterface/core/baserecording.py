@@ -9,11 +9,10 @@ from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probein
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
-from .job_tools import split_job_kwargs, fix_job_kwargs
-from .core_tools import convert_bytes_to_str
+from .job_tools import split_job_kwargs
+from .core_tools import convert_bytes_to_str, convert_seconds_to_string
 
 from warnings import warn
-
 
 class BaseRecording(BaseRecordingSnippets):
     """
@@ -37,23 +36,66 @@ class BaseRecording(BaseRecordingSnippets):
         # initialize main annotation and properties
         self.annotate(is_filtered=False)
 
+
     def __repr__(self):
-        clsname = self.__class__.__name__
-        nseg = self.get_num_segments()
-        nchan = self.get_num_channels()
-        sf_khz = self.get_sampling_frequency() / 1000.
-        duration = self.get_total_duration()
+        extractor_name = self.__class__.__name__
+        num_segments = self.get_num_segments()
+        num_channels = self.get_num_channels()
+        sf_khz = self.get_sampling_frequency() / 1000.0
         dtype = self.get_dtype()
-        memory_size = self.get_memory_size()
-        txt = f"{clsname}: {nchan} channels - {nseg} segments - {sf_khz:0.1f}kHz - {duration:0.3f}s - {dtype} type - {memory_size}"
+
+        samples_per_segment = [self.get_num_samples(i) for i in range(num_segments)]
+        total_samples = sum(samples_per_segment)
+
+        durations = [num_samples / self.get_sampling_frequency() for num_samples in samples_per_segment]
+        total_duration = sum(durations)
+
+        memory_per_segment_bytes = self.get_memory_per_segment_bytes()
+        total_memory_size = sum(memory_per_segment_bytes)
+
+        txt = (
+            f"{extractor_name}: " 
+            f"{num_channels} channels - "
+            f"{sf_khz:0.1f}kHz - "
+            f"{num_segments} segments - "
+            f"{total_samples:,} samples - "
+            f"{convert_seconds_to_string(total_duration)} - "
+            f"{dtype} type - "
+            f"{convert_bytes_to_str(total_memory_size)}"
+        )
+
+        if num_segments > 1:
+            samples_per_segment_formated = [f"{samples:,}" for samples in samples_per_segment]
+            durations_per_segment_formated = [convert_seconds_to_string(d) for d in durations]
+            memory_per_segment_formated = [convert_bytes_to_str(mem) for mem in memory_per_segment_bytes]
+
+            list_to_string = lambda lst: '[' + ', '.join(str(x) for x in lst) + ']'
+            txt += (
+                f"\n"
+                f"Segments: "
+                f"Samples {list_to_string(samples_per_segment_formated)} - "
+                f"Durations {list_to_string(durations_per_segment_formated)} - "
+                f"Memory {list_to_string(memory_per_segment_formated)}"
+            )        
+            
         if 'file_paths' in self._kwargs:
-            txt += '\n  file_paths: {}'.format(self._kwargs['file_paths'])
+            txt += f"\n  file_paths: {self._kwargs['file_paths']}"
         if 'file_path' in self._kwargs:
-            txt += '\n  file_path: {}'.format(self._kwargs['file_path'])
+            txt += f"\n  file_path: {self._kwargs['file_path']}"
+
         return txt
+            
+    def get_memory_per_segment_bytes(self):
+        dtype_size_bytes = self.get_dtype().itemsize
+        num_channels = self.get_num_channels()
+        num_segments = self.get_num_segments()
+        
+        samples_per_segment = (self.get_num_samples(segment_index) for segment_index in range(num_segments))
+        return [num_samples * num_channels * dtype_size_bytes for num_samples in samples_per_segment]
+        
     
     def get_memory_size(self):
-        bytes = self.get_total_samples() * self.get_num_channels() * self.get_dtype().itemsize 
+        bytes = sum(self.get_memory_per_segment_bytes())
         return convert_bytes_to_str(bytes)
 
     def get_num_segments(self):
