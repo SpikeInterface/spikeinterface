@@ -263,7 +263,7 @@ class BenchmarkMatching:
 
 
     def run_matching_vary_parameter(self, parameters, parameter_name, num_replicates=1, we_kwargs=None,
-                                    template_mode='median', **kwargs):
+                                    template_mode='median', progress_bars=None, **kwargs):
         """Run template matching varying the values of a given parameter.
 
         Parameters
@@ -302,7 +302,7 @@ class BenchmarkMatching:
 
         comps, parameter_values, parameter_names, iter_nums, methods = [], [], [], [], []
         if progress_bar:
-            parameters = tqdm(parameters)
+            parameters = tqdm(parameters, desc=f"Vary Parameter ({parameter_name})")
         for parameter in parameters:
             for i in range(1, num_replicates+1):
                 comp_per_method = run_matching_fn(parameter, seed=i, we_kwargs=we_kwargs, template_mode=template_mode,
@@ -317,6 +317,8 @@ class BenchmarkMatching:
                 from IPython.display import clear_output
                 clear_output(wait=True)
                 display(parameters.container)
+                for bar in progress_bars:
+                    display(bar.container)
         comparisons = pd.DataFrame({'comp': comps,
                                     'parameter_value': parameter_values,
                                     'parameter_name' : parameter_names,
