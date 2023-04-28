@@ -19,14 +19,14 @@ n_samples = 10
 for import_statement in import_statement_list:
     time_taken_list = []
     for _ in range(n_samples):
-        code = f"""
-                import timeit
-                import_statement = "{import_statement}"
-                time_taken = timeit.timeit(import_statement, number=1)
-                print(time_taken)
-                """
+        script_to_execute = (
+                f"import timeit \n"
+                f"import_statement = '{import_statement}' \n"
+                f"time_taken = timeit.timeit(import_statement, number=1) \n"
+                f"print(time_taken) \n"
+               ) 
 
-        result = subprocess.run(["python", "-c", code], capture_output=True, text=True)
+        result = subprocess.run(["python", "-c", script_to_execute], capture_output=True, text=True)
 
         if result.returncode != 0:
             error_message  = (
