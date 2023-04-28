@@ -1222,15 +1222,15 @@ class WaveformExtractor:
         spikes = []
         for segment_index in range(self.sorting.get_num_segments()):
             num_in_seg = np.sum([selected_spikes[unit_id][segment_index].size for unit_id in unit_ids], dtype=np.int64)
-            spike_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_index', 'int64')]
+            spike_dtype = [('sample_index', 'int64'), ("unit_index", 'int64'), ('segment_index', 'int64')]
             spikes_ = np.zeros(num_in_seg,  dtype=spike_dtype)
             pos = 0
             for unit_ind, unit_id in enumerate(unit_ids):
                 spike_times = self.sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 sel = selected_spikes[unit_id][segment_index]
                 n = sel.size
-                spikes_[pos:pos+n]['sample_ind'] = spike_times[sel]
-                spikes_[pos:pos+n]['unit_ind'] = unit_ind
+                spikes_[pos:pos+n]['sample_index'] = spike_times[sel]
+                spikes_[pos:pos+n]["unit_index"] = unit_ind
                 spikes_[pos:pos+n]['segment_index'] = segment_index
                 pos += n
             order = np.argsort(spikes_)

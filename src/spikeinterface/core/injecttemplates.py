@@ -80,7 +80,7 @@ class InjectTemplatesRecording(BaseRecording):
 
         if num_samples is None:
             if parent_recording is None:
-                num_samples = [self.spike_vector['sample_ind'][-1] + templates.shape[1]]
+                num_samples = [self.spike_vector['sample_index'][-1] + templates.shape[1]]
             else:
                 num_samples = [parent_recording.get_num_frames(segment_index) for segment_index in range(sorting.get_num_segments())]
         if isinstance(num_samples, int):
@@ -155,13 +155,13 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         else:
             traces = np.zeros([end_frame - start_frame, n_channels], dtype=self.dtype)
 
-        start = np.searchsorted(self.spike_vector['sample_ind'], start_frame - self.templates.shape[1], side="left")
-        end   = np.searchsorted(self.spike_vector['sample_ind'], end_frame   + self.templates.shape[1], side="right")
+        start = np.searchsorted(self.spike_vector['sample_index'], start_frame - self.templates.shape[1], side="left")
+        end   = np.searchsorted(self.spike_vector['sample_index'], end_frame   + self.templates.shape[1], side="right")
 
         for i in range(start, end):
             spike = self.spike_vector[i]
-            t = spike['sample_ind']
-            unit_ind = spike['unit_ind']
+            t = spike['sample_index']
+            unit_ind = spike['unit_index']
             template = self.templates[unit_ind][:, channel_indices]
 
             start_traces = t - self.nbefore[unit_ind] - start_frame

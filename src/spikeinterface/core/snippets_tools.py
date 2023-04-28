@@ -30,7 +30,7 @@ def snippets_from_sorting(recording, sorting, nbefore=20,
     strains = sorting.get_all_spike_trains()
 
     peaks2 = sorting.to_spike_vector()
-    peaks2['unit_ind'] = 0
+    peaks2["unit_index"] = 0
 
     if wf_folder is None:
         mode = "shared_memory"

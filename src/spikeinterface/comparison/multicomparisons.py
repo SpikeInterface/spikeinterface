@@ -94,8 +94,8 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
                 # Append correct spike train
                 if len(sorter_unit_ids.keys()) == 1:
                     sorting = self.object_list[self.name_list.index(list(sorter_unit_ids.keys())[0])]
-                    unit_id = list(sorter_unit_ids.values())[0]
-                    spike_train = sorting.get_unit_spike_train(unit_id, seg_index)
+                    this_sorting_unit_id = list(sorter_unit_ids.values())[0]
+                    spike_train = sorting.get_unit_spike_train(this_sorting_unit_id, seg_index)
                 else:
                     max_edge = edges[int(np.argmax([d['weight']
                                         for u, v, d in edges]))]

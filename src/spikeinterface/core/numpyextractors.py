@@ -88,7 +88,7 @@ class NumpySorting(BaseSorting):
         self.is_dumpable = False
 
     @staticmethod
-    def from_extractor(source_sorting):
+    def from_extractor(source_sorting: BaseSorting) -> 'NumpySorting':
         """
         Create a numpy sorting from another extractor
         """
@@ -108,7 +108,7 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None):
+    def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> 'NumpySorting':
         """
         Construct sorting extractor from:
           * an array of spike times (in frames)
@@ -149,7 +149,7 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_dict(units_dict_list, sampling_frequency):
+    def from_dict(units_dict_list, sampling_frequency) -> 'NumpySorting':
         """
         Construct sorting extractor from a list of dict.
         The list lenght is the segment count
@@ -171,7 +171,7 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_neo_spiketrain_list(neo_spiketrains, sampling_frequency, unit_ids=None):
+    def from_neo_spiketrain_list(neo_spiketrains, sampling_frequency, unit_ids=None) -> 'NumpySorting':
         """
         Construct a sorting with a neo spiketrain list.
 
@@ -209,7 +209,7 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_peaks(peaks, sampling_frequency):
+    def from_peaks(peaks, sampling_frequency) -> 'NumpySorting':
         """
         Construct a sorting from peaks returned by 'detect_peaks()' function.
         The unit ids correspond to the recording channel ids and spike trains are the
@@ -227,7 +227,7 @@ class NumpySorting(BaseSorting):
         sorting
             The NumpySorting object
         """
-        return NumpySorting.from_times_labels(peaks['sample_ind'], peaks['channel_index'], sampling_frequency)
+        return NumpySorting.from_times_labels(peaks['sample_index'], peaks['channel_index'], sampling_frequency)
 
 
 class NumpySortingSegment(BaseSortingSegment):

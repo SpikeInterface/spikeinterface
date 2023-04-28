@@ -144,14 +144,14 @@ class LocalizeCenterOfMass(LocalizeBase):
     params_doc = """
     local_radius_um: float
         Radius in um for channel sparsity.
-    feature: str ['ptp', 'mean', 'energy', 'v_peak']
+    feature: str ['ptp', 'mean', 'energy', 'peak_voltage']
         Feature to consider for computation. Default is 'ptp'
     """
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=75., feature='ptp'):
         LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um)
         self._dtype = np.dtype(dtype_localize_by_method['center_of_mass'])
 
-        assert feature in ['ptp', 'mean', 'energy', 'v_peak'], f'{feature} is not a valid feature'
+        assert feature in ['ptp', 'mean', 'energy', 'peak_voltage'], f'{feature} is not a valid feature'
         self.feature = feature
 
         # Find waveform extractor in the parents
@@ -179,7 +179,7 @@ class LocalizeCenterOfMass(LocalizeBase):
                 wf_data = (waveforms[idx][:, :, chan_inds]).mean(axis=1)
             elif self.feature == 'energy':
                 wf_data = np.linalg.norm(waveforms[idx][:, :, chan_inds], axis=1)
-            elif self.feature == 'v_peak':
+            elif self.feature == 'peak_voltage':
                 wf_data = waveforms[idx][:, self.nbefore, chan_inds]
 
             coms = np.dot(wf_data, local_contact_locations)/(np.sum(wf_data, axis=1)[:,np.newaxis])
@@ -206,11 +206,11 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         Boundary for distance estimation.
     enforce_decrease : bool (default True)
         Enforce spatial decreasingness for PTP vectors
-    feature: string in ['ptp', 'energy', 'v_peak']
+    feature: string in ['ptp', 'energy', 'peak_voltage']
         The available features to consider for estimating the position via
         monopolar triangulation are peak-to-peak amplitudes (ptp, default), 
         energy ('energy', as L2 norm) or voltages at the center of the waveform
-        (v_peak)
+        (peak_voltage)
     """
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'],
                             local_radius_um=75., max_distance_um=150., optimizer='minimize_with_log_penality', 
@@ -219,7 +219,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
 
         
 
-        assert feature in ['ptp', 'energy', 'v_peak'], f'{feature} is not a valid feature'
+        assert feature in ['ptp', 'energy', 'peak_voltage'], f'{feature} is not a valid feature'
         self.max_distance_um = max_distance_um
         self.optimizer = optimizer
         self.feature = feature
@@ -245,7 +245,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
         for i, peak in enumerate(peaks):
-            sample_ind = peak['sample_ind']
+            sample_index = peak['sample_index']
             chan_mask = self.neighbours_mask[peak['channel_index'], :]
             chan_inds = np.flatnonzero(chan_mask)
             local_contact_locations = self.contact_locations[chan_inds, :]
@@ -255,7 +255,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
                 wf_data = wf.ptp(axis=0)
             elif self.feature == 'energy':
                 wf_data = np.linalg.norm(wf, axis=0)
-            elif self.feature == 'v_peak':
+            elif self.feature == 'peak_voltage':
                 wf_data = np.abs(wf[self.nbefore])
 
             if self.enforce_decrease_radial_parents is not None:

@@ -404,6 +404,7 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **PyKilosort** :code:`run_sorter('pykilosort')`
 * **Klusta** :code:`run_sorter('klusta')`
 * **Mountainsort4** :code:`run_sorter('mountainsort4')`
+* **Mountainsort5** :code:`run_sorter('mountainsort5')`
 * **SpyKING Circus** :code:`run_sorter('spykingcircus')`
 * **Tridesclous** :code:`run_sorter('tridesclous')`
 * **Wave clus** :code:`run_sorter('waveclus')`
@@ -441,6 +442,7 @@ which outputs,
   ['herdingspikes',
    'klusta',
    'mountainsort4',
+   'mountainsort5',
    'spykingcircus',
    'tridesclous']
 

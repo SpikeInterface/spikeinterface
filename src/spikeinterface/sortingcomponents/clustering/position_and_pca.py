@@ -102,9 +102,9 @@ class PositionAndPCAClustering:
 
         keep_peak_labels = spatial_peak_labels[spatial_keep]
         
-        peak_dtype = [('sample_ind', 'int64'), ('unit_ind', 'int64'), ('segment_index', 'int64')]
+        peak_dtype = [('sample_index', 'int64'), ("unit_index", 'int64'), ('segment_index', 'int64')]
         peaks2 = np.zeros(spatial_keep.size, dtype=peak_dtype)
-        peaks2['sample_ind'] = peaks['sample_ind'][spatial_keep]
+        peaks2['sample_index'] = peaks['sample_index'][spatial_keep]
         peaks2['segment_index'] = peaks['segment_index'][spatial_keep]
 
         num_chans = recording.get_num_channels()
@@ -113,7 +113,7 @@ class PositionAndPCAClustering:
         chan_distances = get_channel_distances(recording)
         for l, label in enumerate(spatial_labels):
             mask = keep_peak_labels == label
-            peaks2['unit_ind'][mask] = l
+            peaks2["unit_index"][mask] = l
 
             center = np.median(locations[spatial_keep][mask], axis=0)
             main_chan = np.argmin(np.linalg.norm(chan_locs - center[np.newaxis, :], axis=1))
@@ -161,12 +161,12 @@ class PositionAndPCAClustering:
         #~ print('labels before auto clean', pre_clean_labels.size, pre_clean_labels)
 
         peaks3 = np.zeros(peaks.size, dtype=peak_dtype)
-        peaks3['sample_ind'] = peaks['sample_ind']
+        peaks3['sample_index'] = peaks['sample_index']
         peaks3['segment_index'] = peaks['segment_index']
-        peaks3['unit_ind'][:] = -1
+        peaks3["unit_index"][:] = -1
         sparsity_mask3 = np.zeros((pre_clean_labels.size, num_chans), dtype='bool')
         for l, label in enumerate(pre_clean_labels):
-            peaks3['unit_ind'][peak_labels == label] = l
+            peaks3["unit_index"][peak_labels == label] = l
             main_chan = main_channels[label]
             closest_chans, = np.nonzero(chan_distances[main_chan, :] <= params['radius_um'])
             sparsity_mask3[l, closest_chans] = True
