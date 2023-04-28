@@ -6,6 +6,10 @@ on:
       branches:
         - main
 
+concurrency:  # Cancel previous workflows on the same pull request
+group: ${{ github.workflow }}-${{ github.ref }}
+cancel-in-progress: true
+
 jobs:
 build-and-test:
     name: Test on ${{ matrix.os }} OS
