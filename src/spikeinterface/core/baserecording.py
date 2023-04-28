@@ -60,9 +60,16 @@ class BaseRecording(BaseRecordingSnippets):
             f"{num_segments} segments - "
             f"{total_samples:,} samples - "
             f"{convert_seconds_to_string(total_duration)} - "
-            f"{dtype} type - "
+            f"{dtype} dtype - "
             f"{convert_bytes_to_str(total_memory_size)}"
         )
+        
+        # Split if too long
+        if len(txt) > 100:
+            split_index = txt.rfind("-", 0, 100)  # Find the last "-" before character 100
+            if split_index != -1:
+                prefix_spaces = len(extractor_name) + 2  # Length of extractor_name plus ": "
+                txt = txt[:split_index] + "\n" + " " * prefix_spaces + txt[split_index+1:].lstrip()
 
         if num_segments > 1:
             samples_per_segment_formated = [f"{samples:,}" for samples in samples_per_segment]
