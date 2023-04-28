@@ -689,6 +689,7 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
 
         agreement_scores = compute_template_similarity(self.we1, self.we2,
                                                        method=self.similarity_method)
+        import pandas as pd
         self.agreement_scores = pd.DataFrame(agreement_scores,
                                              index=self.unit_ids[0],
                                              columns=self.unit_ids[1])

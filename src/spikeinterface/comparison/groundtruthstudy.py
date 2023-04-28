@@ -145,6 +145,7 @@ class GroundTruthStudy:
             perf = perf.reset_index()
             perf_by_unit.append(perf)
 
+        import pandas as pd
         perf_by_unit = pd.concat(perf_by_unit)
         perf_by_unit = perf_by_unit.set_index(['rec_name', 'sorter_name', 'gt_unit_id'])
 
@@ -263,6 +264,7 @@ class GroundTruthStudy:
         metrics_folder.mkdir(parents=True, exist_ok=True)
 
         filename = self.study_folder / 'metrics' / f'metrics _{rec_name}.txt'
+        import pandas as pd
         if filename.is_file():
             metrics = pd.read_csv(filename, sep='\t', index_col=0)
             gt_sorting = self.get_ground_truth(rec_name)

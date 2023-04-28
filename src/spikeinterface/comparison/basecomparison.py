@@ -104,7 +104,8 @@ class BaseMultiComparison(BaseComparison):
     def _do_graph(self):
         if self._verbose:
             print('Multicomparison step 2: make graph')
-
+        
+        import networkx as nx
         self.graph = nx.Graph()
         # nodes
         self._populate_nodes()
@@ -127,6 +128,7 @@ class BaseMultiComparison(BaseComparison):
         if self._verbose:
             print('Multicomaprison step 3: clean graph')
         clean_graph = self.graph.copy()
+        import networkx as nx
         subgraphs = (clean_graph.subgraph(c).copy()
                      for c in nx.connected_components(clean_graph))
         removed_nodes = 0
@@ -184,6 +186,7 @@ class BaseMultiComparison(BaseComparison):
         self._new_units = {}
 
         # save new units
+        import networkx as nx
         self.subgraphs = [self.clean_graph.subgraph(c).copy()
                           for c in nx.connected_components(self.clean_graph)]
         for new_unit, sg in enumerate(self.subgraphs):

@@ -209,6 +209,7 @@ def make_agreement_scores_from_count(match_event_count, event_counts1, event_cou
     denom[denom == 0] = -1
 
     agreement_scores = match_event_count.values / denom
+    import pandas as pd
     agreement_scores = pd.DataFrame(agreement_scores,
                                     index=match_event_count.index, columns=match_event_count.columns)
     return agreement_scores
@@ -626,7 +627,7 @@ def compute_performance(count_score):
       * 'accuracy' = 'tp_rate' because TN=0
       * 'recall' = 'sensitivity'
     """
-
+    import pandas as pd
     perf = pd.DataFrame(index=count_score.index, columns=_perf_keys)
     perf.index.name = 'gt_unit_id'
     perf[:] = 0

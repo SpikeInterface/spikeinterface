@@ -17,6 +17,7 @@ import_statement_list = [
 ]
 
 n_samples = 10
+# Note that the symbols at the end are for centering the table
 markdown_output = f"## \n\n| Imported Module ({n_samples=}) | Importing Time (seconds) | Standard Deviation (seconds) |\n| :--: | :--------------: | :------------------: |\n"
 
 exceptions = []
