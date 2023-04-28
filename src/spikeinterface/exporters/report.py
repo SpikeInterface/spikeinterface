@@ -9,7 +9,6 @@ from spikeinterface.postprocessing import (compute_spike_amplitudes,
                                            compute_correlograms)
 from spikeinterface.qualitymetrics import compute_quality_metrics
 
-import matplotlib.pyplot as plt
 
 
 def export_report(waveform_extractor, output_folder, remove_if_exists=False, format="png",
@@ -39,6 +38,7 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
     {}
     """
     import pandas as pd
+    import matplotlib.pyplot as plt
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     we = waveform_extractor

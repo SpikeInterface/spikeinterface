@@ -1,11 +1,6 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
-
-from matplotlib import pyplot as plt
-import matplotlib.gridspec as gridspec
-import matplotlib.colors
 
 
 class StudyComparisonCorrelogramBySimilarityWidget(BaseWidget):
@@ -13,7 +8,9 @@ class StudyComparisonCorrelogramBySimilarityWidget(BaseWidget):
     def __init__(self, study, metric='cosine_similarity',
                  similarity_bins=np.linspace(-0.4, 1, 8), show_legend=False,
                  ncols=3, axes=None, cmap='winter', ylim=(0,0.5)):
-
+        from matplotlib import pyplot as plt
+        import matplotlib.gridspec as gridspec
+        import matplotlib.colors
         if axes is None:
             num_axes = len(study.sorter_names)
         else:
@@ -71,7 +68,9 @@ class StudyComparisonCorrelogramBySimilarityRangesMeanErrorWidget(BaseWidget):
     def __init__(self, study, metric='cosine_similarity',
                  similarity_ranges=np.linspace(-0.4, 1, 8), show_legend=False,
                  ax=None, show_std=False, ylim=(0,0.5)):
-
+        from matplotlib import pyplot as plt
+        import matplotlib.gridspec as gridspec
+        import matplotlib.colors
         BaseWidget.__init__(self, None, ax)
 
         self.study = study

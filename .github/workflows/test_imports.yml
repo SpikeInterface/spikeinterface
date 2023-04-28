@@ -12,7 +12,7 @@ concurrency:  # Cancel previous workflows on the same pull request
 
 jobs:
   test-and-profile-main-imports:
-    name: Test on ${{ matrix.os }} OS
+    name: Profile imports on ${{ matrix.os }} OS
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: "3.10"
       - name: Install Spikeinterface with only core dependencies
         run: |
           git config --global user.email "CI@example.com"
@@ -31,9 +31,9 @@ jobs:
           pip install -e .  # This should install core only
       - name: Profile Imports
         run: |
-          echo "OS: ${{ matrix.os }}" >> $GITHUB_STEP_SUMMARY
-          echo "======================" >> $GITHUB_STEP_SUMMARY
-          echo "Import times when installing with core dependencies in " >> $GITHUB_STEP_SUMMARY
+          echo "## OS: ${{ matrix.os }}" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "### Import times when only installing with core dependencies " >> $GITHUB_STEP_SUMMARY
           python ./.github/profile_and_test_imports.py >> $GITHUB_STEP_SUMMARY 
         shell: bash  # Necessary for pipeline to work on windows
       - name: Install in full mode
@@ -41,8 +41,8 @@ jobs:
       - name: Profile Imports with full
         run: |
           # Add a header to separate the two profiles
-          echo "======================" >> $GITHUB_STEP_SUMMARY
-          echo "Import times when installing with full dependencies in " >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "### Import times when installing with full dependencies in " >> $GITHUB_STEP_SUMMARY
           python ./.github/profile_and_test_imports.py >> $GITHUB_STEP_SUMMARY 
         shell: bash  # Necessary for pipeline to work on windows
       

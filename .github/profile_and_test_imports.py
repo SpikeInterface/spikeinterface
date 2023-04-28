@@ -11,9 +11,12 @@ import_statement_list = [
     "import spikeinterface.postprocessing",
     "import spikeinterface.sortingcomponents",
     "import spikeinterface.curation",
+    "import spikeinterface.exporters",
+    "import spikeinterface.widgets",
+    "import sipkeinterface.full",
 ]
 
-markdown_output = "## Import Profiling\n\n| Module | Time (seconds) | Standard Deviation |\n| ------ | -------------- | ------------------ |\n"
+markdown_output = "## \n\n| Module | Time (seconds) | Standard Deviation |\n| ------ | -------------- | ------------------ |\n"
 n_samples = 10
 
 exceptions = []
@@ -49,5 +52,5 @@ for import_statement in import_statement_list:
 if exceptions:
     raise Exception("\n".join(exceptions))
 
-# This is displayed to GithubSummary
+# This is displayed to GITHUB_STEP_SUMMARY
 print(markdown_output)
