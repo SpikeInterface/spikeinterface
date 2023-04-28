@@ -2,7 +2,6 @@ import numpy as np
 
 from .basewidget import BaseWidget
 
-from probeinterface.plotting import plot_probe, get_auto_lims
 
 
 class ProbeMapWidget(BaseWidget):
@@ -32,6 +31,8 @@ class ProbeMapWidget(BaseWidget):
     def __init__(self, recording, channel_ids=None, with_channel_ids=False, figure=None, ax=None,
                  **plot_probe_kwargs):
         import matplotlib.pylab as plt
+        from probeinterface.plotting import plot_probe, get_auto_lims
+
         BaseWidget.__init__(self, figure, ax)
 
         if channel_ids is not None:

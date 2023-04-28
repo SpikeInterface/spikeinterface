@@ -16,7 +16,7 @@ import_statement_list = [
     "import spikeinterface.full",
 ]
 
-markdown_output = "## \n\n| Module | Time (seconds) | Standard Deviation |\n| ------ | -------------- | ------------------ |\n"
+markdown_output = "## \n\n| Module | Time (seconds) | Standard Deviation (seconds) |\n| ------ | -------------- | ------------------ |\n"
 n_samples = 10
 
 exceptions = []
