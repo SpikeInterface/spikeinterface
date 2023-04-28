@@ -316,9 +316,9 @@ class BenchmarkMatching:
             if running_in_notebook():
                 from IPython.display import clear_output
                 clear_output(wait=True)
-                display(parameters.container)
                 for bar in progress_bars:
                     display(bar.container)
+                display(parameters.container)
         comparisons = pd.DataFrame({'comp': comps,
                                     'parameter_value': parameter_values,
                                     'parameter_name' : parameter_names,
