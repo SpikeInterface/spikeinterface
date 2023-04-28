@@ -13,7 +13,7 @@ import_statement_list = [
     "import spikeinterface.curation",
     "import spikeinterface.exporters",
     "import spikeinterface.widgets",
-    "import sipkeinterface.full",
+    "import spikeinterface.full",
 ]
 
 markdown_output = "## \n\n| Module | Time (seconds) | Standard Deviation |\n| ------ | -------------- | ------------------ |\n"
