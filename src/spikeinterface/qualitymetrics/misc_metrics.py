@@ -12,7 +12,6 @@ from collections import namedtuple
 import math
 import numpy as np
 import warnings
-from scipy.stats import poisson
 
 from ..postprocessing import correlogram_for_one_segment
 from ..core import get_noise_levels
@@ -1009,6 +1008,8 @@ def slidingRP_violations(spike_samples, sample_rate, duration, bin_size_ms=0.25,
 def _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, contamination_prop):
     contamination_rate = firing_rate * contamination_prop 
     expected_viol = contamination_rate * ref_period_dur * 2 * spike_count
+    
+    from scipy.stats import poisson
     confidence_score = 1 - poisson.cdf(obs_viol, expected_viol)
 
     return confidence_score
