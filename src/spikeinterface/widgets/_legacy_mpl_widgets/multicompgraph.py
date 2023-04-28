@@ -82,6 +82,8 @@ class MultiCompGraphWidget(BaseWidget):
             _ = nx.draw_networkx_labels(g, pos=pos_extended, labels=labels, ax=self.ax)
 
         if self._colorbar:
+            import matplotlib
+            import matplotlib.pyplot as plt
             norm = matplotlib.colors.Normalize(vmin=self._msc.match_score, vmax=1)
             cmap = plt.cm.get_cmap(self._edge_cmap)
             m = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
@@ -128,6 +130,7 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
         self._do_plot()
 
     def _do_plot(self):
+        import matplotlib.pyplot as plt
         cmap = plt.get_cmap(self._cmap)
         colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(self._msc.name_list))])
         sg_names, sg_units = self._msc.compute_subgraphs()

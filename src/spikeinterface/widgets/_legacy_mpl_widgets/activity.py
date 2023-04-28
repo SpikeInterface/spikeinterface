@@ -87,7 +87,8 @@ class PeakActivityMapWidget(BaseWidget):
                 local_peaks = peaks[i0:i1]
                 artists = self._plot_one_bin(rec, probe, local_peaks, self.bin_duration_s)
                 return artists
-
+            
+            from matplotlib.animation import FuncAnimation
             self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames,
                                            interval=100, blit=True)
 
