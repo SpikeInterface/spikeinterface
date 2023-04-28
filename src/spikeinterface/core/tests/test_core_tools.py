@@ -1,12 +1,13 @@
 import platform
-import pytest
 from pathlib import Path
 
-from spikeinterface.core import generate_recording
+import pytest
+import numpy as np
 
+from spikeinterface.core import generate_recording
 from spikeinterface.core.core_tools import write_binary_recording, write_memory_recording, recursive_path_modifier
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
-
+from spikeinterface.core.generate import GeneratorRecording
 try:
     from multiprocessing.shared_memory import SharedMemory
 
@@ -22,33 +23,107 @@ else:
 
 
 def test_write_binary_recording(tmp_path):
-    # 2 segments
-    from spikeinterface.core.generate import GeneratorRecording
+    # Test write_binary_recording() with loop (n_jobs=1)
+    # Setup
     sampling_frequency = 30_000
     num_channels = 2
     dtype = "float32"
-    recording = GeneratorRecording(durations=[10.325, 3.5], num_channels=num_channels, 
-                                   sampling_frequency=sampling_frequency)
 
-    # write with loop
-    file_paths = [tmp_path / 'binary01.raw', tmp_path / 'binary02.raw']
-    write_binary_recording(recording, file_paths=file_paths,
-                           dtype=dtype, verbose=True, n_jobs=1)
+    durations = [25.0]
+    recording = GeneratorRecording(
+        durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency
+    )
+    file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
-    recorder_binary = BinaryRecordingExtractor(file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype)
-    import numpy as np
-    assert np.allclose(recorder_binary.get_traces(segment_index=0), recording.get_traces(segment_index=0))
-    
-    write_binary_recording(recording, file_paths=file_paths,
-                           dtype=dtype, verbose=True, n_jobs=1, chunk_memory='100k', progress_bar=True)
+    # Write binary recording
+    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=True, n_jobs=1)
 
-    # write parrallel
-    write_binary_recording(recording, file_paths=file_paths,
-                           dtype=dtype, verbose=False, n_jobs=2, chunk_memory='100k')
+    # Check if written data matches original data
+    recorder_binary = BinaryRecordingExtractor(
+        file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
+    )
+    assert np.allclose(recorder_binary.get_traces(), recording.get_traces())
 
-    # write parrallel
-    write_binary_recording(recording, file_paths=file_paths,
-                           dtype=dtype, verbose=False, n_jobs=2, total_memory='200k', progress_bar=True)
+
+def test_write_binary_recording_multiple_segment(tmp_path):
+    # Test write_binary_recording() with loop (n_jobs=1)
+    # Setup
+    sampling_frequency = 30_000
+    num_channels = 2
+    dtype = "float32"
+
+    durations = [10.30, 3.5]
+    recording = GeneratorRecording(
+        durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency
+    )
+    file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
+
+    # Write binary recording
+    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=True, n_jobs=1)
+
+    # Check if written data matches original data
+    recorder_binary = BinaryRecordingExtractor(
+        file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
+    )
+    for segment_index in recording.get_num_segments():
+        assert np.allclose(
+            recorder_binary.get_traces(segment_index=segment_index), recording.get_traces(segment_index=segment_index)
+        )
+
+
+def test_write_binary_recording_parallel(tmp_path):
+    # Test write_binary_recording() with parallel processing (n_jobs=2)
+
+    # Setup
+    sampling_frequency = 30_000
+    num_channels = 2
+    dtype = "float32"
+    durations = [10.30, 3.5]
+    recording = GeneratorRecording(
+        durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency
+    )
+    file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
+
+    # Write binary recording
+    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=False, n_jobs=2, chunk_memory="100k")
+
+    # Check if written data matches original data
+    recorder_binary = BinaryRecordingExtractor(
+        file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
+    )
+    for segment_index in recording.get_num_segments():
+        assert np.allclose(
+            recorder_binary.get_traces(segment_index=segment_index), recording.get_traces(segment_index=segment_index)
+        )
+
+
+def test_write_binary_recording_int_dtype(tmp_path):
+    # Test write_binary_recording() for another dtype (int16)
+
+    # Setup
+    sampling_frequency = 30_000
+    num_channels = 2
+    dtype = "int16"
+    durations = [10.30, 3.5]
+    recording = GeneratorRecording(
+        durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency
+    )
+    file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
+
+    # Write binary recording
+    write_binary_recording(
+        recording, file_paths=file_paths, dtype=dtype, verbose=True, n_jobs=1, chunk_memory="100k", progress_bar=True
+    )
+
+    # Check if written data matches original data
+    recorder_binary = BinaryRecordingExtractor(
+        file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
+    )
+    for segment_index in recording.get_num_segments():
+        assert np.allclose(
+            recorder_binary.get_traces(segment_index=segment_index), recording.get_traces(segment_index=segment_index)
+        )
+
 
 
 
@@ -103,6 +178,6 @@ if __name__ == '__main__':
     import tempfile
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp_path = Path(tmpdirname)
-        test_write_binary_recording(tmp_path)
+        test_write_binary_recording_with_chunk_memory(tmp_path)
         #test_write_memory_recording()
         #test_recursive_path_modifier()
