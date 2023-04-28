@@ -19,12 +19,18 @@ class TemplateSimilarityWidget(BaseWidget):
     display_diagonal_values : bool
         If False, the diagonal is displayed as zeros.
         If True, the similarity values (all 1s) are displayed. Default False
-    cmap : Matplotlib colormap
-        The matplotlib colormap. Default 'viridis'. (matplotlib backend)
+    cmap : str
+        The matplotlib colormap. Default 'viridis'. 
     show_unit_ticks : bool
-        If True, ticks display unit ids. Default False. (matplotlib backend)
+        If True, ticks display unit ids. Default False. 
     show_colorbar : bool
-        If True, color bar is displayed. Default True. (matplotlib backend)
+        If True, color bar is displayed. Default True. 
+    backend : None or str
+        Three possible options:
+        * 'matplotlib': uses matplotlib backend
+        * 'ipywidgets': can only be used in Jupyter notebooks/Jupyter lab
+        * 'sortingview': for web-based GUIs
+        Default is None which uses the matplotlib backend
     """
     possible_backends = {}
 

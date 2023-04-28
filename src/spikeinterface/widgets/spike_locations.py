@@ -14,12 +14,12 @@ class SpikeLocationsWidget(BaseWidget):
     ----------
     waveform_extractor : WaveformExtractor
         The object to compute/get spike locations from
-    unit_ids: list
-        List of unit ids.
-    max_spikes_per_unit: int
+    unit_ids : list
+        List of unit ids, default None
+    max_spikes_per_unit : int
         Number of max spikes per unit to display. Use None for all spikes.
         Default 500.
-    with_channel_ids: bool False default
+    with_channel_ids : bool False default
         Add channel ids text on the probe
     unit_colors :  dict or None
         If given, a dictionary with unit ids as keys and colors as values

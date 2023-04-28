@@ -13,6 +13,8 @@ class MetricsBaseWidget(BaseWidget):
     ----------
     metrics: pandas.DataFrame
         Data frame with metrics
+    sorting: BaseSorting
+        The sorting object used for metrics calculations
     unit_ids: list
         List of unit ids.
     skip_metrics: list or None

@@ -10,9 +10,11 @@ class QualityMetricsWidget(MetricsBaseWidget):
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
-        The object to compute/get crosscorrelograms from
+        The object to compute/get quality metrics from
     unit_ids: list
         List of unit ids.
+    include_metrics: list
+        If given, a list of quality metrics to include
     skip_metrics: list or None
         If given, a list of quality metrics to skip
     unit_colors :  dict or None

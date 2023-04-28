@@ -18,13 +18,19 @@ class CrossCorrelogramsWidget(BaseWidget):
     unit_ids: list
         List of unit ids.
     window_ms : float
-        Window for CCGs in ms, by default 100 ms
+        Window for CCGs in ms, by default 100.0 ms
     bin_ms : float
-        Bin size in ms, by default 1 ms
+        Bin size in ms, by default 1.0 ms
     hide_unit_selector : bool
-        For sortingview backend, if True the unit selector is not displayed
+        For sortingview backend, if True the unit selector is not displayed. Default False
     unit_colors: dict or None
-        Optional dict of colors for units.
+        Optional dict of colors for units key: unit, value:color, by default None
+    backend : None or str
+        Three possible options:
+        * 'matplotlib': uses matplotlib backend
+        * 'ipywidgets': can only be used in Jupyter notebooks/Jupyter lab
+        * 'sortingview': for web-based GUIs
+        Default is None which uses the matplotlib backend
     """
     possible_backends = {}
 

@@ -15,38 +15,48 @@ class TimeseriesWidget(BaseWidget):
         The recording extractor object. If dict (or list) then it is a multi-layer display to compare, for example, 
         different processing steps
     segment_index: None or int
-        The segment index (required for multi-segment recordings)
+        The segment index (required for multi-segment recordings), default None
     channel_ids: list
-        The channel ids to display.
+        The channel ids to display, default None
     order_channel_by_depth: bool
-        Reorder channel by depth.
+        Reorder channel by depth, default False
     time_range: list
-        List with start time and end time
+        List with start time and end time, default None
     mode: str
-        Three possible modes:
-
+        Three possible modes, default 'auto':
         * 'line': classical for low channel count
         * 'map': for high channel count use color heat map
-        * 'auto': auto switch depending the channel count ('line' if less than 64 channels, 'map' otherwise)
+        * 'auto': auto switch depending on the channel count ('line' if less than 64 channels, 'map' otherwise)
     return_scaled: bool
-        If True and the recording has scaled traces, it plots the scaled traces, by default False
+        If True and the recording has scaled traces, it plots the scaled traces, default False
     cmap: str
-        matplotlib colormap used in mode 'map', by default 'RdBu'
+        matplotlib colormap used in mode 'map', default 'RdBu'
     show_channel_ids: bool
-        Set yticks with channel ids
+        Set yticks with channel ids, default False
     color_groups: bool
-        If True groups are plotted with different colors, by default False
+        If True groups are plotted with different colors, default False
     color: str
-        The color used to draw the traces, by default None
+        The color used to draw the traces, default None
     clim: None, tuple or dict
         When mode is 'map', this argument controls color limits.
         If dict, keys should be the same as recording keys
+        Default None
     with_colorbar: bool
         When mode is 'map', a colorbar is added, by default True
     tile_size: int
-        For sortingview backend, the size of each tile in the rendered image
+        For sortingview backend, the size of each tile in the rendered image, default 1500
     seconds_per_row: float
-        For 'map' mode and sortingview backend, seconds to reder in each row
+        For 'map' mode and sortingview backend, seconds to render in each row, default 0.2
+    add_legend : bool
+        If True adds legend to figures, default False
+    backend : None or str
+        Three possible options:
+        * 'matplotlib': uses matplotlib backend
+        * 'ipywidgets': can only be used in Jupyter notebooks/Jupyter lab
+        * 'sortingview': for web-based GUIs
+        Default is None which uses the matplotlib backend
+
+        
 
     Returns
     -------
