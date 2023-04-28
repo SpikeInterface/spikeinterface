@@ -37,7 +37,7 @@ def check_fsspec_install():
     assert HAVE_FSSPEC, "To stream NWB data with fsspec, install fsspec: \n\n pip install fsspec aiohttp requests\n\n"
 
 
-def retrieve_electrical_series(nwbfile: "NWBFile", electrical_series_name: Optional[str] = None) -> ElectricalSeries:
+def retrieve_electrical_series(nwbfile: "NWBFile", electrical_series_name: Optional[str] = None) -> "ElectricalSeries":
     """
     Get an ElectricalSeries object from an NWBFile.
 
