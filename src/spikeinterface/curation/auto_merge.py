@@ -107,7 +107,7 @@ def get_potential_auto_merge(
         Returned only when extra_outputs=True
         A dictionary that contains data for debugging and plotting.
     """
-    
+    import scipy
     we = waveform_extractor
     sorting = we.sorting
     unit_ids = sorting.unit_ids
