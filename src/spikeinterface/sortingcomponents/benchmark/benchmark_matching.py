@@ -19,6 +19,16 @@ import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 import shutil
+from tqdm.auto import tqdm
+
+def running_in_notebook():
+    try:
+        shell = get_ipython().__class__.__name__
+        notebook_shells = {"ZMQInteractiveShell", "TerminalInteractiveShell"}
+        # if a shell is missing from this set just check get_ipython().__class__.__name__ and add it to the set
+        return shell in notebook_shells
+    except NameError:
+        return False
 
 class BenchmarkMatching:
     """Benchmark a set of template matching methods on a given recording and ground-truth sorting."""
@@ -65,7 +75,6 @@ class BenchmarkMatching:
         """
         comps, runtimes = {}, {}
         for method in self.methods:
-            print(f"{method = }")
             t0 = time.time()
             spikes = find_spikes_from_templates(self.recording, method=method,
                                                 method_kwargs=methods_kwargs[method],
@@ -254,7 +263,7 @@ class BenchmarkMatching:
 
 
     def run_matching_vary_parameter(self, parameters, parameter_name, num_replicates=1, we_kwargs=None,
-                                    template_mode='median', verbose=False, **kwargs):
+                                    template_mode='median', **kwargs):
         """Run template matching varying the values of a given parameter.
 
         Parameters
@@ -269,8 +278,6 @@ class BenchmarkMatching:
             A dictionary of keyword arguments for the WaveformExtractor.
         template_mode: {'mean' | 'median' | 'std'}
             The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
-        verbose: bool
-            If True, print progress. (Default: False)
         **kwargs
             Keyword arguments for the run_matching method.
 
@@ -288,13 +295,16 @@ class BenchmarkMatching:
         else:
             raise ValueError(
                 "parameter_name must be one of ['num_spikes', 'fraction_misclassed', 'snr_threshold'],")
+        try:
+            progress_bar = self.job_kwargs['progress_bar']
+        except KeyError:
+            progress_bar = False
+
         comps, parameter_values, parameter_names, iter_nums, methods = [], [], [], [], []
+        if progress_bar:
+            parameters = tqdm(parameters)
         for parameter in parameters:
-            if verbose:
-                print(f"{parameter_name} = {parameter}")
             for i in range(1, num_replicates+1):
-                if verbose:
-                    print(f"{i = }")
                 comp_per_method = run_matching_fn(parameter, seed=i, we_kwargs=we_kwargs, template_mode=template_mode,
                                                   **kwargs)
                 for method in self.methods:
@@ -303,6 +313,10 @@ class BenchmarkMatching:
                     parameter_names.append(parameter_name)
                     iter_nums.append(i)
                     methods.append(method)
+            if running_in_notebook():
+                from IPython.display import clear_output
+                clear_output(wait=True)
+                display(parameters.container)
         comparisons = pd.DataFrame({'comp': comps,
                                     'parameter_value': parameter_values,
                                     'parameter_name' : parameter_names,
