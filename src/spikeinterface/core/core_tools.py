@@ -850,7 +850,7 @@ def convert_bytes_to_str(byte_value:int ) -> str:
     return f"{byte_value:.2f} {suffixes[i]}"
 
 
-def convert_seconds_to_string(seconds: float, long_notation: bool = True) -> str:
+def convert_seconds_to_str(seconds: float, long_notation: bool = True) -> str:
     """
     Convert seconds to a human-readable string representation.
 

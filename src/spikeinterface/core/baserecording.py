@@ -10,7 +10,7 @@ from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
 from .job_tools import split_job_kwargs
-from .core_tools import convert_bytes_to_str, convert_seconds_to_string
+from .core_tools import convert_bytes_to_str, convert_seconds_to_str
 
 from warnings import warn
 
@@ -59,7 +59,7 @@ class BaseRecording(BaseRecordingSnippets):
             f"{sf_khz:0.1f}kHz - "
             f"{num_segments} segments - "
             f"{total_samples:,} samples - "
-            f"{convert_seconds_to_string(total_duration)} - "
+            f"{convert_seconds_to_str(total_duration)} - "
             f"{dtype} dtype - "
             f"{convert_bytes_to_str(total_memory_size)}"
         )
@@ -73,7 +73,7 @@ class BaseRecording(BaseRecordingSnippets):
 
         if num_segments > 1:
             samples_per_segment_formated = [f"{samples:,}" for samples in samples_per_segment]
-            durations_per_segment_formated = [convert_seconds_to_string(d) for d in durations]
+            durations_per_segment_formated = [convert_seconds_to_str(d) for d in durations]
             memory_per_segment_formated = [convert_bytes_to_str(mem) for mem in memory_per_segment_bytes]
 
             list_to_string = lambda lst: '[' + ', '.join(str(x) for x in lst) + ']'

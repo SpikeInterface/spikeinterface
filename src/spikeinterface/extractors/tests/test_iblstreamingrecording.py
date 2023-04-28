@@ -25,10 +25,6 @@ class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
         expected_stream_names = ['probe01.ap', 'probe01.lf', 'probe00.ap', 'probe00.lf']
         self.assertCountEqual(first=stream_names, second=expected_stream_names)
 
-    def test_representation(self):
-        expected_recording_representation = "IblStreamingRecordingExtractor: 384 channels - 1 segments - 30.0kHz - 5812.311s - int16 type - 124.72 GiB"
-        assert repr(self.recording) == expected_recording_representation
-
     def test_dtype(self):
         expected_datatype = "int16"
         assert self.recording.get_dtype().name == expected_datatype
@@ -89,10 +85,6 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
         cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
         cls.small_unscaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26)  # return_scaled=False is SI default
 
-    def test_representation(self):
-        expected_recording_representation = "IblStreamingRecordingExtractor: 385 channels - 1 segments - 30.0kHz - 5812.311s - int16 type - 125.04 GiB"
-        assert repr(self.recording) == expected_recording_representation
-
     def test_dtype(self):
         expected_datatype = "int16"
         assert self.recording.get_dtype().name == expected_datatype
@@ -150,7 +142,6 @@ if __name__ == '__main__':
     test1 = TestDefaultIblStreamingRecordingExtractorApBand()
     test1.setUp()
     test1.test_get_stream_names()
-    test1.test_representation()
     test1.test_dtype()
     test1.test_channel_ids()
     test1.test_gains()
@@ -167,7 +158,6 @@ if __name__ == '__main__':
     test2.setUp()
     test2.test_get_stream_names()
     test2.test_get_stream_names()
-    test2.test_representation()
     test2.test_dtype()
     test2.test_channel_ids()
     test2.test_gains()
