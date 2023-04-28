@@ -101,7 +101,6 @@ class FilterRecording(BasePreprocessor):
 class FilterRecordingSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment, coeff, filter_mode, margin, dtype):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
-        import scipy.signal
 
         self.coeff = coeff
         self.filter_mode = filter_mode
@@ -118,6 +117,7 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         if traces_dtype.kind == "u":
             traces_chunk = traces_chunk.astype("float32")
 
+        import scipy.signal
         if self.filter_mode == 'sos':
             filtered_traces = scipy.signal.sosfiltfilt(self.coeff, traces_chunk, axis=0)
         elif self.filter_mode == 'ba':

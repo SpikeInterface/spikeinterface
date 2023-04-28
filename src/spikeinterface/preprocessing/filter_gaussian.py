@@ -45,7 +45,6 @@ class GaussianBandpassFilterRecording(BasePreprocessor):
 class GaussianFilterRecordingSegment(BasePreprocessorSegment):
 
     def __init__(self, parent_recording_segment: BaseRecordingSegment, freq_min: float, freq_max: float):
-        from scipy.stats import norm
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.freq_min = freq_min
@@ -82,6 +81,7 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         sf = self.parent_recording_segment.sampling_frequency
         faxis = np.fft.fftfreq(N, d=1/sf)
 
+        from scipy.stats import norm
         if cutoff_f > sf / 8:  # The Fourier transform of a Gaussian with a very low sigma isn't a Gaussian.
             sigma = sf / (2*np.pi * cutoff_f)
             limit = int(round(6*sigma)) + 1

@@ -247,6 +247,7 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold,
     _, nc = raw.shape
     raw = raw - np.mean(raw, axis=0)[np.newaxis, :]
     nperseg = int(welch_window_ms * fs / 1000)
+    import scipy.signal
     fscale, psd = scipy.signal.welch(raw, fs=fs, axis=0, window='hann', nperseg=nperseg)
 
     # compute similarities
@@ -294,5 +295,6 @@ def detrend(x, nmed):
     ntap = int(np.ceil(nmed / 2))
     xf = np.r_[np.zeros(ntap) + x[0], x, np.zeros(ntap) + x[-1]]
 
+    import scipy.signal
     xf = scipy.signal.medfilt(xf, nmed)[ntap:-ntap]
     return x - xf

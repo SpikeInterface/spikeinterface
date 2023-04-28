@@ -122,6 +122,7 @@ def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p):
                   distances (gaussian kernel) between locations 1 and 2.
 
     """
+    import scipy
     dist = scipy.spatial.distance.cdist(locations_1, locations_2, metric='euclidean')
     kernal_dist = np.exp(-(dist / sigma_um) ** p)
     return kernal_dist
