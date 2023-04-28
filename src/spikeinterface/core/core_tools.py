@@ -859,41 +859,32 @@ def convert_seconds_to_string(seconds: float, long_notation: bool = True) -> str
     seconds : float
         The duration in seconds.
     long_notation : bool, optional, default: True
-        Whether to display the time in parentheses with other units. If set to True, the function will
-        display a more detailed representation of the duration, including other units (such as minutes,
-        hours, or days) in parentheses alongside the primary seconds representation.
+        Whether to display the time with additional units (such as milliseconds, minutes,
+        hours, or days). If set to True, the function will display a more detailed
+        representation of the duration, including other units alongside the primary
+        seconds representation.
 
     Returns
     -------
     str
-        A string representing the duration in seconds with other units in parentheses, if applicable and
+        A string representing the duration, with additional units included if
         requested by the `long_notation` parameter.
-
-    Examples
-    --------
-    >>> seconds_to_string(45)
-    '45.000s'
-    >>> seconds_to_string(45, long_notation=True)
-    '45.000s (45.0s)'
-    >>> seconds_to_string(90)
-    '90.00s'
-    >>> seconds_to_string(90, long_notation=True)
-    '90.00s (1 minutes)'
-    >>> seconds_to_string(7200)
-    '7200s'
-    >>> seconds_to_string(7200, long_notation=True)
-    '7200s (2 hours)'
     """
-    if seconds < 0.5:
-        return f"{seconds:.3f}s" if not long_notation else f"{seconds:.3f}s ({seconds * 1000:.0f} ms)"
-    elif seconds < 60:
-        return f"{seconds:.2f}s"
-    elif seconds < 3600:
-        minutes = seconds // 60
-        return f"{seconds:.1f}s" if not long_notation else f"{seconds:.0f}s ({minutes:.0f} minutes)"
-    elif seconds < 86400 * 2:  # Crazy long recording
-        hours = seconds // 3600
-        return f"{seconds:.0f}s" if not long_notation else f"{seconds:.0f}s ({hours:.0f} hours)"
-    else:
-        days = seconds // 86400
-        return f"{seconds:.0f}s" if not long_notation else f"{seconds:.0f}s ({days:.0f} days)"
+    base_str = f"{seconds:,.2f}s"
+    
+    if long_notation:
+        if seconds < 1.0:
+            base_str += f" ({seconds * 1000:,.2f} ms)"
+        elif seconds < 60:
+            pass # seconds is already the primary representation
+        elif seconds < 3600:
+            minutes = seconds // 60
+            base_str += f" ({minutes:,.2f} minutes)"
+        elif seconds < 86400 * 2:  # 2 days
+            hours = seconds // 3600
+            base_str += f" ({hours:,.2f} hours)"
+        else:
+            days = seconds // 86400
+            base_str += f" ({days:,.2f} days)"
+
+    return base_str

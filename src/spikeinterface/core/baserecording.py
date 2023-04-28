@@ -72,10 +72,10 @@ class BaseRecording(BaseRecordingSnippets):
             list_to_string = lambda lst: '[' + ', '.join(str(x) for x in lst) + ']'
             txt += (
                 f"\n"
-                f"Segments: "
-                f"Samples {list_to_string(samples_per_segment_formated)} - "
-                f"Durations {list_to_string(durations_per_segment_formated)} - "
-                f"Memory {list_to_string(memory_per_segment_formated)}"
+                f"Segments:"
+                f"\nSamples   {list_to_string(samples_per_segment_formated)}"
+                f"\nDurations {list_to_string(durations_per_segment_formated)}"
+                f"\nMemory    {list_to_string(memory_per_segment_formated)}"
             )        
             
         if 'file_paths' in self._kwargs:
