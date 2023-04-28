@@ -31,7 +31,6 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
     extension_name = 'quality_metrics'
 
     def __init__(self, waveform_extractor):
-        import pandas as pd
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
         if waveform_extractor.has_recording():
@@ -93,6 +92,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         progress_bar = job_kwargs['progress_bar']
 
         unit_ids = self.sorting.unit_ids
+        import pandas as pd
         metrics = pd.DataFrame(index=unit_ids)
 
         # simple metrics not based on PCs
