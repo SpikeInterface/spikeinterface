@@ -54,6 +54,9 @@ class BenchmarkMatching:
         self.templates = self.we.get_all_templates(mode='median')
         self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
         self.similarity = compute_template_similarity(self.we)
+        self.parameter_name2matching_fn = dict(num_spikes=self.run_matching_num_spikes,
+                                               fraction_misclassed=self.run_matching_misclassed,
+                                               fraction_missing=self.run_matching_missing_units)
 
 
     def run_matching(self, methods_kwargs, collision=False):
@@ -286,15 +289,10 @@ class BenchmarkMatching:
         comparisons : pandas.DataFrame
             A dataframe of Comparison objects for each method/parameter_value/iteration combination.
         """
-        if parameter_name == 'num_spikes':
-            run_matching_fn = self.run_matching_num_spikes
-        elif parameter_name == 'fraction_misclassed':
-            run_matching_fn = self.run_matching_misclassed
-        elif parameter_name == 'fraction_missing':
-            run_matching_fn = self.run_matching_missing_units
-        else:
-            raise ValueError(
-                "parameter_name must be one of ['num_spikes', 'fraction_misclassed', 'snr_threshold'],")
+        try:
+            run_matching_fn = self.parameter_name2matching_fn[parameter_name]
+        except KeyError:
+            raise ValueError(f"Parameter name must be one of {list(parameter_name2matching_fn.keys())}")
         try:
             progress_bar = self.job_kwargs['progress_bar']
         except KeyError:
