@@ -73,6 +73,7 @@ class UnitProbeMapWidget(BaseWidget):
             text_on_contact = None
             if self.with_channel_ids:
                 text_on_contact = self.channel_ids
+            from probeinterface.plotting import plot_probe
             poly_contact, poly_contour = plot_probe(probe, contacts_values=contacts_values,
                                                     ax=ax, probe_shape_kwargs=probe_shape_kwargs,
                                                     text_on_contact=text_on_contact)
