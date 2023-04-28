@@ -1,8 +1,6 @@
-import numpy as np
-import networkx as nx
-
 from copy import deepcopy
 from typing import OrderedDict
+import numpy as np
 
 from .comparisontools import (make_possible_match, make_best_match, make_hungarian_match)
 
@@ -31,6 +29,7 @@ class BaseMultiComparison(BaseComparison):
     def __init__(self, object_list, name_list,
                  match_score=0.5, chance_score=0.1,
                  verbose=False):
+        import networkx as nx
         BaseComparison.__init__(self, object_list=object_list,
                                 name_list=name_list,
                                 match_score=match_score,

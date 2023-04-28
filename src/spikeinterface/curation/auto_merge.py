@@ -1,7 +1,6 @@
 from re import template
 import numpy as np
-import scipy.signal
-import scipy.spatial
+
 
 from ..core.template_tools import get_template_extremum_channel
 from ..postprocessing import compute_correlograms
@@ -289,6 +288,7 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     """
     Smooths cross-correlogram with a Gaussian kernel.
     """
+    import scipy.spatial
     # OLD implementation : smooth correlogram by low pass filter
     # b, a = scipy.signal.butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype='low')
     # correlograms_smoothed = scipy.signal.filtfilt(b, a, correlograms, axis=2)
@@ -320,6 +320,8 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float):
     unit_window (int):
         Index at which the adaptive window has been calculated.
     """
+    import scipy.signal
+    
     if np.sum(np.abs(auto_corr)) == 0:
         return 20.0
 
