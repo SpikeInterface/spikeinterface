@@ -1,5 +1,5 @@
 import numpy as np
-import scipy.signal
+
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from ..core import order_channels_by_depth, get_chunk_with_margin
 from ..core.core_tools import define_function_from_class
@@ -65,6 +65,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
                  highpass_butter_wn=0.01):
         BasePreprocessor.__init__(self, recording)
 
+        import scipy.signal
         # Check single group
         channel_groups = recording.get_channel_groups()
         assert len(np.unique(channel_groups)) == 1, \

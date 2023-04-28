@@ -1,8 +1,7 @@
 from pathlib import Path
-import os
 import shutil
+
 import numpy as np
-import pandas as pd
 
 from spikeinterface.core import load_extractor
 from spikeinterface.extractors import NpzSortingExtractor
@@ -11,7 +10,6 @@ from spikeinterface.sorters import sorter_dict, run_sorters
 from spikeinterface import WaveformExtractor
 from spikeinterface.qualitymetrics import compute_quality_metrics
 
-from .comparisontools import _perf_keys
 from .paircomparisons import compare_sorter_to_ground_truth
 
 from .studytools import (setup_comparison_study, get_rec_names, get_recordings,
@@ -20,6 +18,7 @@ from .studytools import (setup_comparison_study, get_rec_names, get_recordings,
 
 class GroundTruthStudy:
     def __init__(self, study_folder=None):
+        import pandas as pd
         self.study_folder = Path(study_folder)
         self._is_scanned = False
         self.computed_names = None

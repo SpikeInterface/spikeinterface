@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.spatial
 
 
 def get_spatial_interpolation_kernel(source_location, target_location, method='kriging',
@@ -41,6 +40,7 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
     -------
     interpolation_kernel: array (m, n)
     """
+    import scipy.spatial
 
     target_is_inside = np.ones(target_location.shape[0], dtype=bool)
     for dim in range(source_location.shape[1]):

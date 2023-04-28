@@ -3,7 +3,6 @@
 from copy import deepcopy
 
 import numpy as np
-import pandas as pd
 
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
@@ -32,6 +31,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
     extension_name = 'quality_metrics'
 
     def __init__(self, waveform_extractor):
+        import pandas as pd
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
         if waveform_extractor.has_recording():

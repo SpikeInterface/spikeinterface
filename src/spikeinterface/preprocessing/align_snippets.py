@@ -1,7 +1,8 @@
-from spikeinterface.core import BaseSnippets, BaseSnippetsSegment
 from typing import List, Union
+
 import numpy as np
-from scipy.interpolate import CubicSpline
+
+from spikeinterface.core import BaseSnippets, BaseSnippetsSegment
 
 
 class AlignSnippets(BaseSnippets):
@@ -30,6 +31,7 @@ class AlignSnippets(BaseSnippets):
 
 class AlignSnippetsSegment(BaseSnippetsSegment):
     def __init__(self, parent_snippets_segment, org_splen, new_nbefore, new_nafter, mode, interpolate, det_sign):
+        from scipy.interpolate import CubicSpline
         BaseSnippetsSegment.__init__(self)
         self.parent_snippets_segment = parent_snippets_segment
         self._interpolate = interpolate
