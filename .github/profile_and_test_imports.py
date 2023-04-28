@@ -17,7 +17,7 @@ import_statement_list = [
 ]
 
 n_samples = 10
-markdown_output = f"## \n\n| Module {n_samples=} | Time (seconds) | Standard Deviation (seconds) |\n| ------ | -------------- | ------------------ |\n"
+markdown_output = f"## \n\n| Imported Module ({n_samples=}) | Importing Time (seconds) | Standard Deviation (seconds) |\n| :--: | :--------------: | :------------------: |\n"
 
 exceptions = []
 
@@ -47,7 +47,7 @@ for import_statement in import_statement_list:
     if time_taken_list:
         avg_time_taken = sum(time_taken_list) / len(time_taken_list)
         std_dev_time_taken = math.sqrt(sum((x - avg_time_taken) ** 2 for x in time_taken_list) / len(time_taken_list))
-        markdown_output += f"| {import_statement} | {avg_time_taken:.2f} | {std_dev_time_taken:.2f} |\n"
+        markdown_output += f"| `{import_statement}` | {avg_time_taken:.2f} | {std_dev_time_taken:.2f} |\n"
 
 if exceptions:
     raise Exception("\n".join(exceptions))
