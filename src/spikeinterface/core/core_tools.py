@@ -6,10 +6,11 @@ import datetime
 import json
 from copy import deepcopy
 import gc
+import mmap
+import inspect
 
 import numpy as np
 from tqdm import tqdm
-import inspect
 
 from .job_tools import (ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, fix_job_kwargs, 
                         ChunkRecordingExecutor, _shared_job_kwargs_doc)
@@ -192,44 +193,9 @@ def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
     return samples
 
 
-# used by write_binary_recording + ChunkRecordingExecutor
-def _init_binary_worker(recording, rec_memmaps_dict, dtype, cast_unsigned):
-    # create a local dict per worker
-    worker_ctx = {}
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-        worker_ctx['recording'] = load_extractor(recording)
-    else:
-        worker_ctx['recording'] = recording
-
-    rec_memmaps = []
-    for d in rec_memmaps_dict:
-        rec_memmaps.append(np.memmap(**d))
-
-    worker_ctx['rec_memmaps'] = rec_memmaps
-    worker_ctx['dtype'] = np.dtype(dtype)
-    worker_ctx['cast_unsigned'] = cast_unsigned
-
-    return worker_ctx
-
-
-# used by write_binary_recording + ChunkRecordingExecutor
-def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
-    # recover variables of the worker
-    recording = worker_ctx['recording']
-    dtype = worker_ctx['dtype']
-    rec_memmap = worker_ctx['rec_memmaps'][segment_index]
-    cast_unsigned = worker_ctx['cast_unsigned']
-
-    # apply function
-    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index,
-                                  cast_unsigned=cast_unsigned)
-    traces = traces.astype(dtype)
-    rec_memmap[start_frame:end_frame, :] = traces
-
 
 def write_binary_recording(recording, file_paths=None, dtype=None, add_file_extension=True,
-                           verbose=False, byte_offset=0, auto_cast_uint=True, **job_kwargs):
+                           verbose=False, auto_cast_uint=True, **job_kwargs):
     '''
     Save the trace of a recording extractor in several binary .dat format.
 
@@ -249,8 +215,6 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
         If True (default), file the '.raw' file extension is added if the file name is not a 'raw', 'bin', or 'dat'
     verbose: bool
         If True, output is verbose (when chunks are used)
-    byte_offset: int
-        Offset in bytes (default 0) to for the binary file (e.g. to write a header)
     auto_cast_uint: bool
         If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
     {}
@@ -258,35 +222,30 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
     assert file_paths is not None, "Provide 'file_path'"
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    if not isinstance(file_paths, list):
-        file_paths = [file_paths]
-    file_paths = [Path(e) for e in file_paths]
+    file_path_list = [file_paths] if not isinstance(file_paths, list) else file_paths
+    file_path_list = [Path(e) for e in file_path_list]
     if add_file_extension:
-        file_paths = [add_suffix(file_path, ['raw', 'bin', 'dat']) for file_path in file_paths]
+        file_path_list = [add_suffix(file_path, ['raw', 'bin', 'dat']) for file_path in file_paths]
 
-    if dtype is None:
-        dtype = recording.get_dtype()
+    dtype = dtype if dtype is not None else recording.get_dtype()
+    cast_unsigned = False
     if auto_cast_uint:
         cast_unsigned = determine_cast_unsigned(recording, dtype)
-    else:
-        cast_unsigned = False
 
-    # create memmap files
-    rec_memmaps = []
-    rec_memmaps_dict = []
-    for segment_index in range(recording.get_num_segments()):
-        num_frames = recording.get_num_samples(segment_index)
-        num_channels = recording.get_num_channels()
-        file_path = file_paths[segment_index]
-        shape = (num_frames, num_channels)
-        rec_memmap = np.memmap(str(file_path), dtype=dtype, mode='w+', offset=byte_offset, shape=shape)
-        rec_memmaps.append(rec_memmap)
-        rec_memmaps_dict.append(dict(filename=str(file_path), dtype=dtype, mode='r+', offset=byte_offset, shape=shape))
-
+    num_segments = recording.get_num_segments()
+    file_path_dict = {segment_index: file_path_list[segment_index] for segment_index in range(num_segments)}
+    
+    # Create the files
+    for file_path in file_path_list:
+        file = open(file_path, "w+")        
+        file.close()
+        assert Path(file_path).is_file()    
+    
+    
     # use executor (loop or workers)
     func = _write_binary_chunk
     init_func = _init_binary_worker
-    init_args = (recording, rec_memmaps_dict, dtype, cast_unsigned)
+    init_args = (recording, file_path_dict, dtype, cast_unsigned)
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_binary_recording', **job_kwargs)
     executor.run()
@@ -294,50 +253,53 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
 
 write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
 
+# used by write_binary_recording + ChunkRecordingExecutor
+def _init_binary_worker(recording, file_path_dict, dtype, cast_unsigned):
+    # create a local dict per worker
+    worker_ctx = {}
+    worker_ctx['recording'] = recording
+    worker_ctx["file_path_dict"] = file_path_dict
 
-def write_binary_recording_file_handle(recording, file_handle=None,
-                                       time_axis=0, dtype=None, byte_offset=0, verbose=False, **job_kwargs):
-    """
-    Old variant version of write_binary_recording with one file handle.
-    Can be useful in some case ???
-    Not used anymore at the moment.
 
-    @ SAM useful for writing with time_axis=1!
-    """
-    assert file_handle is not None
-    assert recording.get_num_segments() == 1, 'If file_handle is given then only deals with one segment'
+    worker_ctx['dtype'] = np.dtype(dtype)
+    worker_ctx['cast_unsigned'] = cast_unsigned
 
-    if dtype is None:
-        dtype = recording.get_dtype()
+    return worker_ctx
 
-    job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_chunk_size(recording, **job_kwargs)
+# used by write_binary_recording + ChunkRecordingExecutor
+def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    # recover variables of the worker
+    recording = worker_ctx['recording']
+    dtype = worker_ctx['dtype']
+    file_path = worker_ctx["file_path_dict"][segment_index]
+    cast_unsigned = worker_ctx['cast_unsigned']
 
-    if chunk_size is not None and time_axis == 1:
-        print("Chunking disabled due to 'time_axis' == 1")
-        chunk_size = None
+    assert Path(file_path).is_file()    
 
-    if chunk_size is None:
-        # no chunking
-        traces = recording.get_traces(segment_index=0)
-        if time_axis == 1:
-            traces = traces.T
-        if dtype is not None:
-            traces = traces.astype(dtype)
-        traces.tofile(file_handle)
-    else:
+    
+    # Open the memmap
+    # What we need is the file_path
+    num_channels = recording.get_num_channels()
+    num_frames = recording.get_num_frames(segment_index=segment_index)
+    shape = (num_frames, num_channels)
+    dtype_size_bytes = np.dtype(dtype).itemsize 
+    file_size_bytes = dtype_size_bytes * num_frames * num_channels
+    
+    file = open(file_path, "r+")
+    file.truncate(file_size_bytes)
+    memmap_obj = mmap.mmap(file.fileno(), length=file_size_bytes, access=mmap.ACCESS_WRITE)
+    array = np.ndarray.__new__(np.ndarray, shape=shape, dtype=dtype, buffer=memmap_obj, order="C")
+    # apply function
+    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index,
+                                  cast_unsigned=cast_unsigned)
+    traces = traces.astype(dtype)
+    array[start_frame:end_frame, :] = traces
 
-        num_frames = recording.get_num_samples(segment_index=0)
-        chunks = divide_segment_into_chunks(num_frames, chunk_size)
+    # Close the memmap
+    memmap_obj.close()
+    file.close()
+    
 
-        for start_frame, end_frame in chunks:
-            traces = recording.get_traces(segment_index=0,
-                                          start_frame=start_frame, end_frame=end_frame)
-            if time_axis == 1:
-                traces = traces.T
-            if dtype is not None:
-                traces = traces.astype(dtype)
-            file_handle.write(traces.tobytes())
 
 
 # used by write_memory_recording
