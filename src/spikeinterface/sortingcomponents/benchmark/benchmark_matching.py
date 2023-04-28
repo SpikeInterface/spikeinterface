@@ -323,7 +323,8 @@ class BenchmarkMatching:
                     for bar in progress_bars:
                         display(bar.container)
                     display(parameters.container)
-                    display(replicates.container)
+                    if num_replicates > 1:
+                        display(replicates.container)
         comparisons = pd.DataFrame({'comp': comps,
                                     'parameter_value': parameter_values,
                                     'parameter_name' : parameter_names,
@@ -395,6 +396,7 @@ def plot_errors_matching(benchmark, comp, unit_id, nb_spikes=200, metric='cosine
         ax.set_xlabel(metric)
         
         count += 1
+    return fig, axs
 
 def plot_errors_matching_all_neurons(benchmark, comp, nb_spikes=200, metric='cosine'):
     templates = benchmark.templates
@@ -442,7 +444,7 @@ def plot_errors_matching_all_neurons(benchmark, comp, nb_spikes=200, metric='cos
         ax.set_title(label)
         ax.set_xlabel('snr')
         ax.set_ylabel(metric)
-
+    return fig, axs
 
 def plot_comparison_matching(benchmark, comp_per_method, performance_names=['accuracy', 'recall', 'precision'],
                              colors = ['g', 'b', 'r'], ylim=(-0.1, 1.1)):
@@ -479,6 +481,7 @@ def plot_comparison_matching(benchmark, comp_per_method, performance_names=['acc
                     patches.append(mpatches.Patch(color=color, label=name))
                 ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
     plt.tight_layout(h_pad=0, w_pad=0)
+    return fig, axs
 
 def plot_vary_parameter(comparisons, performance_metric='accuracy', method_colors=None,
                         parameter_transform=lambda x:x):
