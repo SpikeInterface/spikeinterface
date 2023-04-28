@@ -4,7 +4,6 @@ https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spik
 22/04/2020
 """
 import numpy as np
-import pandas as pd
 from copy import deepcopy
 
 import scipy.stats
@@ -54,6 +53,8 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
         return dict(metrics=new_metrics)
         
     def _run(self):
+        import pandas as pd
+
         metric_names = self._params['metric_names']
         sparsity = self._params['sparsity']
         peak_sign = self._params['peak_sign']

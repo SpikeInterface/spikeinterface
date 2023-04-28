@@ -12,7 +12,6 @@ from collections import namedtuple
 import math
 import numpy as np
 import warnings
-from scipy.ndimage import gaussian_filter1d
 from scipy.stats import poisson
 
 from ..postprocessing import correlogram_for_one_segment
@@ -909,6 +908,7 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
         h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
 
         # TODO : use something better than scipy.ndimage.gaussian_filter1d
+        from scipy.ndimage import gaussian_filter1d
         pdf = gaussian_filter1d(h, histogram_smoothing_value)
         support = b[:-1]
         bin_size = np.mean(np.diff(support))

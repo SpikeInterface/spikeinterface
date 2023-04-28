@@ -3,7 +3,6 @@ Some functions internally use by SortingComparison.
 """
 
 import numpy as np
-import pandas as pd
 from joblib import Parallel, delayed
 from scipy.optimize import linear_sum_assignment
 
@@ -76,6 +75,7 @@ def do_count_event(sorting):
     event_count: pd.Series
         Nb of spike by units.
     """
+    import pandas as pd
     unit_ids = sorting.get_unit_ids()
     ev_counts = np.zeros(len(unit_ids), dtype="int64")
     for segment_index in range(sorting.get_num_segments()):
@@ -130,6 +130,8 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1):
     match_event_count: array (int64)
         Matrix of match count spike
     """
+    import pandas as pd
+
     unit1_ids = np.array(sorting1.get_unit_ids())
     unit2_ids = np.array(sorting2.get_unit_ids())
 
@@ -174,6 +176,7 @@ def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
     agreement_scores: array (float)
         The agreement score matrix.
     """
+    import pandas as pd
     unit1_ids = np.array(sorting1.get_unit_ids())
     unit2_ids = np.array(sorting2.get_unit_ids())
 
@@ -274,6 +277,7 @@ def make_best_match(agreement_scores, min_score):
     best_match_21: pd.Series
 
     """
+    import pandas as pd
     unit1_ids = np.array(agreement_scores.index)
     unit2_ids = np.array(agreement_scores.columns)
 
@@ -318,6 +322,7 @@ def make_hungarian_match(agreement_scores, min_score):
     hungarian_match_21: pd.Series
 
     """
+    import pandas as pd
     unit1_ids = np.array(agreement_scores.index)
     unit2_ids = np.array(agreement_scores.columns)
 
@@ -531,6 +536,7 @@ def do_confusion_matrix(event_counts1, event_counts2, match_12, match_event_coun
     ordered_units1 = np.hstack([matched_units1, unmatched_units1])
     ordered_units2 = np.hstack([matched_units2, unmatched_units2])
 
+    import pandas as pd
     conf_matrix = pd.DataFrame(np.zeros((N1 + 1, N2 + 1), dtype=int),
                                index=list(ordered_units1) + ['FP'],
                                columns=list(ordered_units2) + ['FN'])
@@ -579,6 +585,7 @@ def do_count_score(event_counts1, event_counts2, match_12, match_event_count):
 
     columns = ['tp', 'fn', 'fp', 'num_gt', 'num_tested', 'tested_id']
 
+    import pandas as pd
     count_score = pd.DataFrame(index=unit1_ids, columns=columns)
     count_score.index.name = 'gt_unit_id'
     for i1, u1 in enumerate(unit1_ids):
