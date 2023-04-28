@@ -874,17 +874,17 @@ def convert_seconds_to_str(seconds: float, long_notation: bool = True) -> str:
     
     if long_notation:
         if seconds < 1.0:
-            base_str += f" ({seconds * 1000:,.2f} ms)"
+            base_str += f" ({seconds * 1000:.2f} ms)"
         elif seconds < 60:
             pass # seconds is already the primary representation
         elif seconds < 3600:
-            minutes = seconds // 60
-            base_str += f" ({minutes:,.2f} minutes)"
+            minutes = seconds / 60
+            base_str += f" ({minutes:.2f} minutes)"
         elif seconds < 86400 * 2:  # 2 days
-            hours = seconds // 3600
-            base_str += f" ({hours:,.2f} hours)"
+            hours = seconds / 3600
+            base_str += f" ({hours:.2f} hours)"
         else:
-            days = seconds // 86400
-            base_str += f" ({days:,.2f} days)"
+            days = seconds / 86400
+            base_str += f" ({days:.2f} days)"
 
     return base_str
