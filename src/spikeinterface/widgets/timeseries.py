@@ -48,15 +48,7 @@ class TimeseriesWidget(BaseWidget):
     seconds_per_row: float
         For 'map' mode and sortingview backend, seconds to render in each row, default 0.2
     add_legend : bool
-        If True adds legend to figures, default False
-    backend : None or str
-        Three possible options:
-        * 'matplotlib': uses matplotlib backend
-        * 'ipywidgets': can only be used in Jupyter notebooks/Jupyter lab
-        * 'sortingview': for web-based GUIs
-        Default is None which uses the matplotlib backend
-
-        
+        If True adds legend to figures, default True
 
     Returns
     -------

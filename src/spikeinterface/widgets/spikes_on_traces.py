@@ -20,16 +20,18 @@ class SpikesOnTracesWidget(BaseWidget):
     waveform_extractor : WaveformExtractor
         The waveform extractor
     channel_ids : list
-        The channel ids to display
+        The channel ids to display, default None
     unit_ids : list
-        List of unit ids.
+        List of unit ids, default None
+    order_channel_by_depth : bool
+        If true orders channel by depth, default False
+    time_range: list
+        List with start time and end time, default None
     sparsity : ChannelSparsity or None
         Optional ChannelSparsity to apply.
         If WaveformExtractor is already sparse, the argument is ignored, default None
-    axis_equal : bool
-        Equal aspect ratio for x and y axis, to visualize the array geometry to scale.
-    unit_colors : None or dict
-        A dict key is unit_id and value is any color format handled by matplotlib.
+       unit_colors :  dict or None
+        If given, a dictionary with unit ids as keys and colors as values, default None
         If None, then the get_unit_colors() is internally used. (matplotlib backend)
     mode : str
         Three possible modes, default 'auto':
@@ -53,17 +55,9 @@ class SpikesOnTracesWidget(BaseWidget):
     with_colorbar : bool
         When mode is 'map', a colorbar is added, by default True
     tile_size : int
-        For sortingview backend, the size of each tile in the rendered image, default 1500
+        For sortingview backend, the size of each tile in the rendered image, default 512
     seconds_per_row : float
         For 'map' mode and sortingview backend, seconds to render in each row, default 0.2
-    add_legend : bool
-        If True adds legend to figures, default False
-    backend : None or str
-        Three possible options:
-        * 'matplotlib': uses matplotlib backend
-        * 'ipywidgets': can only be used in Jupyter notebooks/Jupyter lab
-        * 'sortingview': for web-based GUIs
-        Default is None which uses the matplotlib backend
     """
     possible_backends = {}
 

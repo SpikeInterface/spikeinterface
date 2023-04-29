@@ -19,12 +19,6 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
         List of unit ids, default None
     unit_colors: None or dict
         Dict of colors with key: unit, value: color, default None
-    backend : None or str
-        Three possible options:
-        * 'matplotlib': uses matplotlib backend
-        * 'ipywidgets': can only be used in Jupyter notebooks/Jupyter lab
-        * 'sortingview': for web-based GUIs
-        Default is None which uses the matplotlib backend
     """
     possible_backends = {}
 
