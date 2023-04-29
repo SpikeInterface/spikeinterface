@@ -65,7 +65,7 @@ def test_write_binary_recording_multiple_segment(tmp_path):
     recorder_binary = BinaryRecordingExtractor(
         file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
     )
-    for segment_index in recording.get_num_segments():
+    for segment_index in range(recording.get_num_segments()):
         assert np.allclose(
             recorder_binary.get_traces(segment_index=segment_index), recording.get_traces(segment_index=segment_index)
         )
@@ -91,7 +91,7 @@ def test_write_binary_recording_parallel(tmp_path):
     recorder_binary = BinaryRecordingExtractor(
         file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
     )
-    for segment_index in recording.get_num_segments():
+    for segment_index in range(recording.get_num_segments()):
         assert np.allclose(
             recorder_binary.get_traces(segment_index=segment_index), recording.get_traces(segment_index=segment_index)
         )
@@ -119,7 +119,7 @@ def test_write_binary_recording_int_dtype(tmp_path):
     recorder_binary = BinaryRecordingExtractor(
         file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
     )
-    for segment_index in recording.get_num_segments():
+    for segment_index in range(recording.get_num_segments()):
         assert np.allclose(
             recorder_binary.get_traces(segment_index=segment_index), recording.get_traces(segment_index=segment_index)
         )
