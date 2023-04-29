@@ -69,6 +69,8 @@ class BaseMultiComparison(BaseComparison):
             g = self.clean_graph
         else:
             g = self.graph
+        
+        import networkx as nx
         subgraphs = (g.subgraph(c).copy() for c in nx.connected_components(g))
         sg_object_names = []
         sg_units = []
