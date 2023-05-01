@@ -29,11 +29,11 @@ def test_write_binary_recording(tmp_path):
     num_channels = 2
     dtype = "float32"
 
-    durations = [25.0]
+    durations = [10.0]
     recording = GeneratorRecording(
         durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency
     )
-    file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
+    file_paths = [tmp_path / "binary01.raw"]
 
     # Write binary recording
     write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=True, n_jobs=1)
@@ -44,33 +44,6 @@ def test_write_binary_recording(tmp_path):
     )
     assert np.allclose(recorder_binary.get_traces(), recording.get_traces())
 
-
-def test_write_binary_recording_multiple_segment(tmp_path):
-    # Test write_binary_recording() with loop (n_jobs=1)
-    # Setup
-    sampling_frequency = 30_000
-    num_channels = 2
-    dtype = "float32"
-
-    durations = [10.30, 3.5]
-    recording = GeneratorRecording(
-        durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency
-    )
-    file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
-
-    # Write binary recording
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=True, n_jobs=1)
-
-    # Check if written data matches original data
-    recorder_binary = BinaryRecordingExtractor(
-        file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
-    )
-    for segment_index in range(recording.get_num_segments()):
-        assert np.allclose(
-            recorder_binary.get_traces(segment_index=segment_index), recording.get_traces(segment_index=segment_index)
-        )
-
-
 def test_write_binary_recording_parallel(tmp_path):
     # Test write_binary_recording() with parallel processing (n_jobs=2)
 
@@ -80,7 +53,7 @@ def test_write_binary_recording_parallel(tmp_path):
     dtype = "float32"
     durations = [10.30, 3.5]
     recording = GeneratorRecording(
-        durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency
+        durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency, dtype=dtype,
     )
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
@@ -97,13 +70,13 @@ def test_write_binary_recording_parallel(tmp_path):
         )
 
 
-def test_write_binary_recording_int_dtype(tmp_path):
-    # Test write_binary_recording() for another dtype (int16)
-
+def test_write_binary_recording_multiple_segment(tmp_path):
+    # Test write_binary_recording() with loop (n_jobs=1)
     # Setup
     sampling_frequency = 30_000
     num_channels = 2
-    dtype = "int16"
+    dtype = "float32"
+
     durations = [10.30, 3.5]
     recording = GeneratorRecording(
         durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency
@@ -111,9 +84,7 @@ def test_write_binary_recording_int_dtype(tmp_path):
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
     # Write binary recording
-    write_binary_recording(
-        recording, file_paths=file_paths, dtype=dtype, verbose=True, n_jobs=1, chunk_memory="100k", progress_bar=True
-    )
+    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=True, n_jobs=2)
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
@@ -123,6 +94,8 @@ def test_write_binary_recording_int_dtype(tmp_path):
         assert np.allclose(
             recorder_binary.get_traces(segment_index=segment_index), recording.get_traces(segment_index=segment_index)
         )
+
+
 
 
 

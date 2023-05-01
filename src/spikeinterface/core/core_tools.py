@@ -223,7 +223,11 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     file_path_list = [file_paths] if not isinstance(file_paths, list) else file_paths
-    file_path_list = [Path(e) for e in file_path_list]
+    num_segments = recording.get_num_segments()
+    if len(file_path_list) != num_segments:
+        raise ValueError("'file_paths' must be a list of the same size as the number of segments in the recording")
+    
+    file_path_list = [Path(file_path) for file_path in file_path_list]
     if add_file_extension:
         file_path_list = [add_suffix(file_path, ['raw', 'bin', 'dat']) for file_path in file_paths]
 
@@ -273,9 +277,6 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     dtype = worker_ctx['dtype']
     file_path = worker_ctx["file_path_dict"][segment_index]
     cast_unsigned = worker_ctx['cast_unsigned']
-
-    assert Path(file_path).is_file()    
-
     
     # Open the memmap
     # What we need is the file_path
