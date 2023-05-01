@@ -13,6 +13,7 @@ from spikeinterface.widgets import (plot_sorting_performance,
 
 import time
 import os
+from pathlib import Path
 import string, random
 import pylab as plt
 import matplotlib.patches as mpatches
@@ -46,7 +47,8 @@ class BenchmarkMatching:
 
         if tmp_folder is None:
             tmp_folder = os.path.join('.', ''.join(random.choices(string.ascii_uppercase + string.digits, k=8)))
-        self.tmp_folder = tmp_folder
+        self.tmp_folder = Path(tmp_folder)
+        self.sort_folder = Path(self.tmp_folder.stem + '_sorting')
 
         self.we = waveform_extractor
         for method in self.methods:
@@ -60,11 +62,14 @@ class BenchmarkMatching:
 
 
     def __enter__(self):
-        os.makedirs(self.tmp_folder, exist_ok=True)
+        self.tmp_folder.mkdir(exist_ok=True)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        shutil.rmtree(self.tmp_folder)
+        if self.tmp_folder.exists():
+            shutil.rmtree(self.tmp_folder)
+        if self.sort_folder.exists():
+            shutil.rmtree(self.sort_folder)
 
 
     def run_matching(self, methods_kwargs, collision=False):
@@ -210,14 +215,16 @@ class BenchmarkMatching:
         sort_idx = np.argsort(spike_time_indices)
         spike_time_indices = spike_time_indices[sort_idx]
         labels = labels[sort_idx]
-        sorting_misclassed = NumpySorting.from_times_labels(spike_time_indices, labels, self.sampling_rate)
+        sorting = NumpySorting.from_times_labels(spike_time_indices, labels, self.sampling_rate)
+        sorting = sorting.save(folder=self.sort_folder)
 
         # Generate New Waveform Extractor with Misclassed Spike Trains
-        we = extract_waveforms(self.recording, sorting_misclassed, self.tmp_folder, **we_kwargs)
+        we = extract_waveforms(self.recording, sorting, self.tmp_folder, **we_kwargs)
         methods_kwargs = self.update_methods_kwargs(we, template_mode)
 
         comps, _ = self.run_matching(methods_kwargs)
         shutil.rmtree(self.tmp_folder)
+        shutil.rmtree(self.sort_folder)
         return comps
 
 
@@ -263,6 +270,7 @@ class BenchmarkMatching:
         spike_time_indices = np.array(spike_time_indices)
         spike_cluster_ids = np.array(spike_cluster_ids)
         sorting = NumpySorting.from_times_labels(spike_time_indices, spike_cluster_ids, self.sampling_rate)
+        sorting = sorting.save(folder=self.sort_folder)
 
         # Generate New Waveform Extractor with Missing Units
         we = extract_waveforms(self.recording, sorting, self.tmp_folder, **we_kwargs)
@@ -270,6 +278,7 @@ class BenchmarkMatching:
 
         comps, _ = self.run_matching(methods_kwargs)
         shutil.rmtree(self.tmp_folder)
+        shutil.rmtree(self.sort_folder)
         return comps
 
 
