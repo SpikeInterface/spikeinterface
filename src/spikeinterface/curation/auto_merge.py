@@ -178,9 +178,9 @@ def get_potential_auto_merge(
 
     # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
     if 'check_increase_score' in steps:
-        pair_mask = check_improve_contaminations_score(we, pair_mask, contaminations,
-                                                       firing_contamination_balance, refractory_period_ms,
-                                                       censored_period_ms)
+        pair_mask, pairs_decreased_score = check_improve_contaminations_score(we, pair_mask, contaminations,
+                                                                              firing_contamination_balance, refractory_period_ms,
+                                                                              censored_period_ms)
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
@@ -194,6 +194,7 @@ def get_potential_auto_merge(
             correlogram_diff=correlogram_diff,
             win_sizes=win_sizes,
             templates_diff=templates_diff,
+            pairs_decreased_score=pairs_decreased_score
         )
         return potential_merges, outs
     else:
@@ -427,6 +428,7 @@ def check_improve_contaminations_score(we, pair_mask, contaminations, firing_con
     recording = we.recording
     sorting = we.sorting
     pair_mask = pair_mask.copy()
+    pairs_removed = []
 
     firing_rates = list(compute_firing_rates(we).values())
 
@@ -460,5 +462,6 @@ def check_improve_contaminations_score(we, pair_mask, contaminations, firing_con
         if score_new < score_1 or score_new < score_2:
             # the score is not improved
             pair_mask[ind1, ind2] = False
+            pairs_removed.append((sorting.unit_ids[ind1], sorting.unit_ids[ind2))
 
-    return pair_mask
+    return pair_mask, pairs_removed
