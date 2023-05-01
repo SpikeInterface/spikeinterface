@@ -59,7 +59,7 @@ class BenchmarkMatching:
                                                fraction_missing=self.run_matching_missing_units)
 
 
-    def __del__(self):
+    def __exit__(self):
         shutil.rmtree(self.tmp_folder)
 
 
