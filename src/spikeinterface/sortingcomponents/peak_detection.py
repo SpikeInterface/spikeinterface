@@ -126,6 +126,7 @@ class IterativePeakDetector(PeakDetector):
         waveform_denoising_node,
         num_iterations: int = 2,
         return_output: bool = True,
+        tresholds: Optional[List[float]] = None,
     ):
         """
         Initialize the iterative peak detector.
@@ -149,6 +150,7 @@ class IterativePeakDetector(PeakDetector):
         self.waveform_extraction_node = waveform_extraction_node
         self.waveform_denoising_node = waveform_denoising_node
         self.num_iterations = num_iterations
+        self.tresholds = tresholds
 
     def get_trace_margin(self) -> int:
         """
@@ -193,6 +195,18 @@ class IterativePeakDetector(PeakDetector):
         all_waveforms = []
 
         for iteration in range(self.num_iterations):
+            
+            # Hack because of lack of either attribute or named references
+            # I welcome suggestions on how to improve this
+            if self.tresholds is not None:
+                old_args = self.peak_detector_node.args
+                old_detect_treshold = self.peak_detector_node.params["detect_threshold"]
+                old_abs_treshold = old_args[1]
+                new_abs_treshold = old_abs_treshold  * self.tresholds[iteration]  / old_detect_treshold
+
+                new_args = tuple(val if index!= 1 else new_abs_treshold for index, val in enumerate(old_args))
+                self.peak_detector_node.args = new_args
+
             (local_peaks,) = self.peak_detector_node.compute(
                 traces=traces_chunk, 
                 start_frame=start_frame, 
@@ -349,6 +363,7 @@ class PeakDetectorWrapper(PeakDetector):
     def __init__(self, recording, **params):
         PeakDetector.__init__(self, recording, return_output=True)
 
+        self.params = params
         self.args = self.check_params(recording, **params)
 
     def get_trace_margin(self):
