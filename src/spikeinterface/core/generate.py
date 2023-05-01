@@ -435,6 +435,9 @@ class GeneratorRecording(BaseRecording):
         """
         channel_ids = list(range(num_channels))
         dtype = np.dtype(dtype).name   # Cast to string for serialization
+        if dtype not in ("float32", "float64"):
+            raise ValueError(f"'dtype' must be 'float32' or 'float64' but is {dtype}")
+        
         self.mode = mode
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
 
