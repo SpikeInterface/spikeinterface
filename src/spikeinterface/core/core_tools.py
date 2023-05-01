@@ -241,9 +241,17 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
     num_segments = recording.get_num_segments()
     file_path_dict = {segment_index: file_path_list[segment_index] for segment_index in range(num_segments)}
     
-    # Create the files so they are accessed later by the workers
-    for file_path in file_path_list:
-        file = open(file_path, "w+")        
+    # Create the files of the correct size so they are accessed later by the workers
+    num_channels = recording.get_num_channels()
+    dtype_size_bytes = np.dtype(dtype).itemsize 
+    
+    for segment_index, file_path in file_path_dict.items():
+        num_frames = recording.get_num_frames(segment_index=segment_index)
+        data_size_bytes = dtype_size_bytes * num_frames * num_channels 
+        file_size_bytes = data_size_bytes + byte_offset   
+        
+        file = open(file_path, "wb+")
+        file.truncate(file_size_bytes)
         file.close()
         assert Path(file_path).is_file()    
     
@@ -288,12 +296,12 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     shape = (num_frames, num_channels)
     dtype_size_bytes = np.dtype(dtype).itemsize 
     data_size_bytes = dtype_size_bytes * num_frames * num_channels 
-    file_size_bytes = data_size_bytes + byte_offset   
     
     file = open(file_path, "r+")
-    file.truncate(file_size_bytes)
     
     # Offset (The offset needs to be multiple of the page size)
+    # The mmap offset is associated to be as big as possible but still a multiple of the page size
+    # The array offset takes care of the reminder
     mmap_offset, array_offset = divmod(byte_offset, mmap.ALLOCATIONGRANULARITY)
     mmmap_length = data_size_bytes + array_offset
     memmap_obj = mmap.mmap(file.fileno(), length=mmmap_length, access=mmap.ACCESS_WRITE, offset=mmap_offset)
