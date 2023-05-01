@@ -48,7 +48,7 @@ class BenchmarkMatching:
         if tmp_folder is None:
             tmp_folder = os.path.join('.', ''.join(random.choices(string.ascii_uppercase + string.digits, k=8)))
         self.tmp_folder = Path(tmp_folder)
-        self.sort_folder = Path(self.tmp_folder.stem + '_sorting')
+        self.sort_folders = []
 
         self.we = waveform_extractor
         for method in self.methods:
@@ -68,28 +68,27 @@ class BenchmarkMatching:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.tmp_folder.exists():
             shutil.rmtree(self.tmp_folder)
-        if self.sort_folder.exists():
-            shutil.rmtree(self.sort_folder)
+        for sort_folder in self.sort_folders:
+            if sort_folder.exists():
+                shutil.rmtree(sort_folder)
 
 
-    def run_matching(self, methods_kwargs, collision=False):
-        """Run template matching on the recording and gt_sorting, and compare to the gt_sorting.
+    def run_matching(self, methods_kwargs):
+        """Run template matching on the recording with settings in methods_kwargs.
 
         Parameters
         ----------
         methods_kwargs: dict
             A dictionary of method_kwargs for each method.
-        collision: bool
-            If True, use CollisionGTComparison instead of compare_sorter_to_ground_truth. (Default: False)
 
         Returns
         -------
-        comps: dict
-            A dictionary of Comparison objects for each method.
+        sortings: dict
+            A dictionary that maps method --> NumpySorting.
         runtimes: dict
-            A dictionary of runtimes for each method.
+            A dictionary that maps method --> runtime.
         """
-        comps, runtimes = {}, {}
+        sortings, runtimes = {}, {}
         for method in self.methods:
             t0 = time.time()
             spikes = find_spikes_from_templates(self.recording, method=method,
@@ -98,12 +97,8 @@ class BenchmarkMatching:
             runtimes[method] = time.time() - t0
             sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'],
                                                      self.sampling_rate)
-            if collision:
-                comp = CollisionGTComparison(self.gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt)
-            else:
-                comp = compare_sorter_to_ground_truth(self.gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt)
-            comps[method] = comp
-        return comps, runtimes
+            sortings[method] = sorting
+        return sortings, runtimes
 
 
     def run_matching_num_spikes(self, spike_num, seed=0, we_kwargs=None, template_mode='median'):
@@ -122,8 +117,11 @@ class BenchmarkMatching:
 
         Returns
         -------
-        comps: dict
-            A dictionary of Comparison objects for each method.
+
+        sortings: dict
+            A dictionary that maps method --> NumpySorting.
+        gt_sorting: NumpySorting
+            The ground-truth sorting used for template matching (= self.gt_sorting).
         """
         if we_kwargs is None:
             we_kwargs = {}
@@ -135,9 +133,9 @@ class BenchmarkMatching:
         we = extract_waveforms(self.recording, self.gt_sorting, self.tmp_folder, **we_kwargs)
         methods_kwargs = self.update_methods_kwargs(we, template_mode)
 
-        comps, _ = self.run_matching(methods_kwargs)
+        sortings, _ = self.run_matching(methods_kwargs)
         shutil.rmtree(self.tmp_folder)
-        return comps
+        return sortings, self.gt_sorting
 
     def update_methods_kwargs(self, we, template_mode='median'):
         """Update the methods_kwargs dictionary with the new WaveformExtractor.
@@ -184,8 +182,10 @@ class BenchmarkMatching:
 
         Returns
         -------
-        comps: dict
-            A dictionary of Comparison objects for each method.
+        sortings: dict
+            A dictionary that maps method --> NumpySorting.
+        gt_sorting: NumpySorting
+            The ground-truth sorting used for template matching (with misclassified spike trains).
         """
         if we_kwargs is None:
             we_kwargs = {}
@@ -215,17 +215,18 @@ class BenchmarkMatching:
         sort_idx = np.argsort(spike_time_indices)
         spike_time_indices = spike_time_indices[sort_idx]
         labels = labels[sort_idx]
-        sorting = NumpySorting.from_times_labels(spike_time_indices, labels, self.sampling_rate)
-        sorting = sorting.save(folder=self.sort_folder)
+        gt_sorting = NumpySorting.from_times_labels(spike_time_indices, labels, self.sampling_rate)
+        sort_folder = Path(self.tmp_folder.stem + f'_sorting{len(self.sort_folders)}')
+        gt_sorting = gt_sorting.save(folder=sort_folder)
+        self.sort_folders.append(sort_folder)
 
         # Generate New Waveform Extractor with Misclassed Spike Trains
-        we = extract_waveforms(self.recording, sorting, self.tmp_folder, **we_kwargs)
+        we = extract_waveforms(self.recording, gt_sorting, self.tmp_folder, **we_kwargs)
         methods_kwargs = self.update_methods_kwargs(we, template_mode)
 
-        comps, _ = self.run_matching(methods_kwargs)
+        sortings, _ = self.run_matching(methods_kwargs)
         shutil.rmtree(self.tmp_folder)
-        shutil.rmtree(self.sort_folder)
-        return comps
+        return sortings, gt_sorting
 
 
     def run_matching_missing_units(self, fraction_missing, snr_threshold=0, seed=0, we_kwargs=None,
@@ -247,8 +248,10 @@ class BenchmarkMatching:
 
         Returns
         -------
-        comps: dict
-            A dictionary of Comparison objects for each method.
+        sortings: dict
+            A dictionary that maps method --> NumpySorting.
+        gt_sorting: NumpySorting
+            The ground-truth sorting used for template matching (with missing units).
         """
         if we_kwargs is None:
             we_kwargs = {}
@@ -269,17 +272,18 @@ class BenchmarkMatching:
                 spike_cluster_ids.append(unit)
         spike_time_indices = np.array(spike_time_indices)
         spike_cluster_ids = np.array(spike_cluster_ids)
-        sorting = NumpySorting.from_times_labels(spike_time_indices, spike_cluster_ids, self.sampling_rate)
-        sorting = sorting.save(folder=self.sort_folder)
+        gt_sorting = NumpySorting.from_times_labels(spike_time_indices, spike_cluster_ids, self.sampling_rate)
+        sort_folder = Path(self.tmp_folder.stem + f'_sorting{len(self.sort_folders)}')
+        gt_sorting = gt_sorting.save(folder=sort_folder)
+        self.sort_folders.append(sort_folder)
 
         # Generate New Waveform Extractor with Missing Units
-        we = extract_waveforms(self.recording, sorting, self.tmp_folder, **we_kwargs)
+        we = extract_waveforms(self.recording, gt_sorting, self.tmp_folder, **we_kwargs)
         methods_kwargs = self.update_methods_kwargs(we, template_mode)
 
-        comps, _ = self.run_matching(methods_kwargs)
+        sortings, _ = self.run_matching(methods_kwargs)
         shutil.rmtree(self.tmp_folder)
-        shutil.rmtree(self.sort_folder)
-        return comps
+        return sortings, gt_sorting
 
 
     def run_matching_vary_parameter(self, parameters, parameter_name, num_replicates=1, we_kwargs=None,
@@ -303,8 +307,8 @@ class BenchmarkMatching:
 
         Returns
         -------
-        comparisons : pandas.DataFrame
-            A dataframe of Comparison objects for each method/parameter_value/iteration combination.
+        matching_df : pandas.DataFrame
+            A dataframe of NumpySortings for each method/parameter_value/iteration combination.
         """
         try:
             run_matching_fn = self.parameter_name2matching_fn[parameter_name]
@@ -315,7 +319,7 @@ class BenchmarkMatching:
         except KeyError:
             progress_bar = False
 
-        comps, parameter_values, parameter_names, iter_nums, methods = [], [], [], [], []
+        sortings, gt_sortings, parameter_values, parameter_names, iter_nums, methods = [], [], [], [], [], []
         if progress_bar:
             parameters = tqdm(parameters, desc=f"Vary Parameter ({parameter_name})")
         for parameter in parameters:
@@ -324,10 +328,11 @@ class BenchmarkMatching:
             else:
                 replicates = range(1, num_replicates+1)
             for i in replicates:
-                comp_per_method = run_matching_fn(parameter, seed=i, we_kwargs=we_kwargs, template_mode=template_mode,
-                                                  **kwargs)
+                sorting_per_method, gt_sorting = run_matching_fn(parameter, seed=i, we_kwargs=we_kwargs,
+                                                                 template_mode=template_mode, **kwargs)
                 for method in self.methods:
-                    comps.append(comp_per_method[method])
+                    sortings.append(sorting_per_method[method])
+                    gt_sortings.append(gt_sorting)
                     parameter_values.append(parameter)
                     parameter_names.append(parameter_name)
                     iter_nums.append(i)
@@ -340,13 +345,91 @@ class BenchmarkMatching:
                     display(parameters.container)
                     if num_replicates > 1:
                         display(replicates.container)
-        comparisons = pd.DataFrame({'comp': comps,
+        matching_df = pd.DataFrame({'sorting': sortings,
+                                    'gt_sorting': gt_sortings,
                                     'parameter_value': parameter_values,
                                     'parameter_name' : parameter_names,
                                     'iter_num': iter_nums,
                                     'method': methods})
+        return matching_df
+
+    def compare_sortings(self, gt_sorting, sorting, collision=False, **kwargs):
+        """Compare a sorting to a ground-truth sorting.
+
+        Parameters
+        ----------
+        gt_sorting: SortingExtractor
+            The ground-truth sorting extractor.
+        sorting: SortingExtractor
+            The sorting extractor to compare to the ground-truth.
+        collision: bool
+            If True, use the CollisionGTComparison class. If False, use the compare_sorter_to_ground_truth function.
+        **kwargs
+            Keyword arguments for the comparison function.
+
+        Returns
+        -------
+        comparison: GroundTruthComparison
+            The comparison object.
+        """
+        if collision:
+            return CollisionGTComparison(gt_sorting, sorting, exhaustive_gt=True, **kwargs)
+        else:
+            return compare_sorter_to_ground_truth(gt_sorting, sorting, exhaustive_gt=True, **kwargs)
+
+    def compare_sortings_by_method(self, gt_sorting, sortings, collision=False, **kwargs):
+        """Compare sortings from several different methods to a single ground-truth sorting.
+
+        Parameters
+        ----------
+        gt_sorting: SortingExtractor
+            The ground-truth sorting extractor.
+        sortings: dict
+            A dictionary that maps method --> NumpySorting.
+        collision: bool
+            If True, use the CollisionGTComparison class. If False, use the compare_sorter_to_ground_truth function.
+        **kwargs
+            Keyword arguments for the comparison function.
+
+        Returns
+        -------
+        comparisons: dict
+            A dictionary that maps method --> GroundTruthComparison.
+        """
+        comparisons = {}
+        for method, sorting in sortings.items():
+            comparisons[method] = self.compare_sortings(gt_sorting, sorting, collision=collision, **kwargs)
         return comparisons
 
+    def compare_all_sortings(self, matching_df, collision=False, ground_truth="from_self", **kwargs):
+        """Compare all sortings in a matching dataframe to their ground-truth sortings.
+
+        Parameters
+        ----------
+        matching_df: pandas.DataFrame
+            A dataframe of NumpySortings for each method/parameter_value/iteration combination.
+        collision: bool
+            If True, use the CollisionGTComparison class. If False, use the compare_sorter_to_ground_truth function.
+        ground_truth: {'from_self' | 'from_df'}
+            If 'from_self', use the ground-truth sorting stored in the BenchmarkMatching object. If 'from_df', use the
+            ground-truth sorting stored in the matching_df.
+        **kwargs
+            Keyword arguments for the comparison function.
+
+        Returns
+        -------
+        matching_df: pandas.DataFrame
+            The matching dataframe with a new column 'comparison' that contains the GroundTruthComparison object.
+        """
+        if ground_truth == "from_self":
+            comparison_fn = lambda row : self.compare_sortings(self.gt_sorting, row['sorting'],
+                                                               collision=collision, **kwargs)
+        elif ground_truth == "from_df":
+            comparison_fn = lambda row : self.compare_sortings(row['gt_sorting'], row['sorting'],
+                                                               collision=collision, **kwargs)
+        else:
+            raise ValueError("'ground_truth' must be either 'from_self' or 'from_df'")
+        matching_df['comparison'] = matching_df.apply(comparison_fn, axis=1)
 
     def plot(self, comp, title=None):
         fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(10, 10))
@@ -498,23 +581,23 @@ def plot_comparison_matching(benchmark, comp_per_method, performance_names=['acc
     plt.tight_layout(h_pad=0, w_pad=0)
     return fig, axs
 
-def plot_vary_parameter(comparisons, performance_metric='accuracy', method_colors=None,
+def plot_vary_parameter(matching_df, performance_metric='accuracy', method_colors=None,
                         parameter_transform=lambda x:x):
-    parameter_names = comparisons.parameter_name.unique()
-    methods = comparisons.method.unique()
+    parameter_names = matching_df.parameter_name.unique()
+    methods = matching_df.method.unique()
     if method_colors is None:
         method_colors = {method: f'C{i}' for i, method in enumerate(methods)}
     figs, axs = [], []
     for parameter_name in parameter_names:
-        comparisons_parameter = comparisons[comparisons.parameter_name==parameter_name]
-        parameters = comparisons_parameter.parameter_value.unique()
+        df_parameter = matching_df[matching_df.parameter_name == parameter_name]
+        parameters = df_parameter.parameter_value.unique()
         method_means = {method: [] for method in methods}
         method_stds = {method: [] for method in methods}
         for parameter in parameters:
             for method in methods:
-                method_param_mask = np.logical_and(comparisons_parameter.method == method,
-                                      comparisons_parameter.parameter_value == parameter)
-                comps = comparisons_parameter.comp[method_param_mask]
+                method_param_mask = np.logical_and(df_parameter.method == method,
+                                      df_parameter.parameter_value == parameter)
+                comps = df_parameter.comparison[method_param_mask]
                 performance_metrics = []
                 for comp in comps:
                     perf_metric = comp.get_performance(method='pooled_with_average')[performance_metric]
