@@ -195,7 +195,7 @@ def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
 
 
 def write_binary_recording(recording, file_paths=None, dtype=None, add_file_extension=True,
-                           verbose=False, auto_cast_uint=True, **job_kwargs):
+                           verbose=False, byte_offset=0, auto_cast_uint=True, **job_kwargs):
     '''
     Save the trace of a recording extractor in several binary .dat format.
 
@@ -215,6 +215,8 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
         If True (default), file the '.raw' file extension is added if the file name is not a 'raw', 'bin', or 'dat'
     verbose: bool
         If True, output is verbose (when chunks are used)
+    byte_offset: int
+        Offset in bytes (default 0) to for the binary file (e.g. to write a header)
     auto_cast_uint: bool
         If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
     {}
@@ -239,7 +241,7 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
     num_segments = recording.get_num_segments()
     file_path_dict = {segment_index: file_path_list[segment_index] for segment_index in range(num_segments)}
     
-    # Create the files
+    # Create the files so they are accessed later by the workers
     for file_path in file_path_list:
         file = open(file_path, "w+")        
         file.close()
@@ -249,7 +251,7 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
     # use executor (loop or workers)
     func = _write_binary_chunk
     init_func = _init_binary_worker
-    init_args = (recording, file_path_dict, dtype, cast_unsigned)
+    init_args = (recording, file_path_dict, dtype, byte_offset, cast_unsigned)
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_binary_recording', **job_kwargs)
     executor.run()
@@ -258,12 +260,12 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
 write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
 
 # used by write_binary_recording + ChunkRecordingExecutor
-def _init_binary_worker(recording, file_path_dict, dtype, cast_unsigned):
+def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsigned):
     # create a local dict per worker
     worker_ctx = {}
     worker_ctx['recording'] = recording
     worker_ctx["file_path_dict"] = file_path_dict
-
+    worker_ctx["byte_offset"] = byte_offest
 
     worker_ctx['dtype'] = np.dtype(dtype)
     worker_ctx['cast_unsigned'] = cast_unsigned
@@ -275,6 +277,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
     recording = worker_ctx['recording']
     dtype = worker_ctx['dtype']
+    byte_offset = worker_ctx["byte_offset"]
     file_path = worker_ctx["file_path_dict"][segment_index]
     cast_unsigned = worker_ctx['cast_unsigned']
     
@@ -284,12 +287,18 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     num_frames = recording.get_num_frames(segment_index=segment_index)
     shape = (num_frames, num_channels)
     dtype_size_bytes = np.dtype(dtype).itemsize 
-    file_size_bytes = dtype_size_bytes * num_frames * num_channels
+    data_size_bytes = dtype_size_bytes * num_frames * num_channels 
+    file_size_bytes = data_size_bytes + byte_offset   
     
     file = open(file_path, "r+")
     file.truncate(file_size_bytes)
-    memmap_obj = mmap.mmap(file.fileno(), length=file_size_bytes, access=mmap.ACCESS_WRITE)
-    array = np.ndarray.__new__(np.ndarray, shape=shape, dtype=dtype, buffer=memmap_obj, order="C")
+    
+    # Offset (The offset needs to be multiple of the page size)
+    mmap_offset, array_offset = divmod(byte_offset, mmap.ALLOCATIONGRANULARITY)
+    mmmap_length = data_size_bytes + array_offset
+    memmap_obj = mmap.mmap(file.fileno(), length=mmmap_length, access=mmap.ACCESS_WRITE, offset=mmap_offset)
+
+    array = np.ndarray.__new__(np.ndarray, shape=shape, dtype=dtype, buffer=memmap_obj, order="C", offset=array_offset)
     # apply function
     traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index,
                                   cast_unsigned=cast_unsigned)
@@ -300,8 +309,6 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     memmap_obj.close()
     file.close()
     
-
-
 
 # used by write_memory_recording
 def _init_memory_worker(recording, arrays, shm_names, shapes, dtype, cast_unsigned):
