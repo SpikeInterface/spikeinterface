@@ -59,6 +59,10 @@ class BenchmarkMatching:
                                                fraction_missing=self.run_matching_missing_units)
 
 
+    def __del__(self):
+        shutil.rmtree(self.tmp_folder)
+
+
     def run_matching(self, methods_kwargs, collision=False):
         """Run template matching on the recording and gt_sorting, and compare to the gt_sorting.
 
