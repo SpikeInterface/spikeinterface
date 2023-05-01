@@ -59,6 +59,10 @@ class BenchmarkMatching:
                                                fraction_missing=self.run_matching_missing_units)
 
 
+    def __enter__(self):
+        os.makedirs(self.tmp_folder, exist_ok=True)
+        return self
+
     def __exit__(self):
         shutil.rmtree(self.tmp_folder)
 
