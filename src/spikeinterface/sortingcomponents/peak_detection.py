@@ -193,11 +193,13 @@ class IterativePeakDetector(PeakDetector):
         traces_chunk = traces_chunk.astype("float32")
         local_peaks_list = []
         all_waveforms = []
-
+        
+        # To do in place operations inside the loop
+        traces_chunk_buffer = np.empty_like(traces_chunk)
         for iteration in range(self.num_iterations):
             
             # Hack because of lack of either attribute or named references
-            # I welcome suggestions on how to improve this
+            # I welcome suggestions on how to improve this but I think it is an architectural issue
             if self.tresholds is not None:
                 old_args = self.peak_detector_node.args
                 old_detect_treshold = self.peak_detector_node.params["detect_threshold"]
@@ -228,13 +230,18 @@ class IterativePeakDetector(PeakDetector):
                 peaks=local_peaks, 
                 waveforms=waveforms
             )
-            traces_chunk_minus_waveforms, _ = self.substract_waveforms_from_traces(
-                traces_chunk, local_peaks, 
-                denoised_waveforms
+            denoised_waveforms_as_traces = self.build_trace_chunk_with_waveforms(
+            local_peaks=local_peaks,
+            traces_chunk=traces_chunk,
+            waveforms=denoised_waveforms,
             )
+            
+            # Update traces_chunk_buffer inplace
+            np.subtract(traces_chunk, denoised_waveforms_as_traces, out=traces_chunk_buffer)
 
             # update traces_chunk to run the algorithm again and store local_peaks
-            traces_chunk = traces_chunk_minus_waveforms
+            traces_chunk = traces_chunk_buffer
+
 
             all_waveforms.append(waveforms)
         all_local_peaks = np.concatenate(local_peaks_list, axis=0)
@@ -246,61 +253,6 @@ class IterativePeakDetector(PeakDetector):
         all_waveforms = all_waveforms[sorting_indices]
         
         return (all_local_peaks, all_waveforms)
-
-    def add_iteration_to_peaks_dtype(self, local_peaks, iteration) -> np.ndarray:
-        """
-        Add the iteration number to the peaks dtype.
-
-        Parameters
-        ----------
-        local_peaks : ndarray
-            The array of local peaks.
-        iteration : int
-            The iteration number.
-
-        Returns
-        -------
-        ndarray
-            An array of local peaks with the iteration number added.
-        """
-        # Expand dtype to also contain an iteration field
-        local_peaks_expanded = np.zeros_like(local_peaks, dtype=expanded_base_peak_dtype)
-        fields_in_base_type = np.dtype(base_peak_dtype).names
-        for field in fields_in_base_type:
-            local_peaks_expanded[field] = local_peaks[field]
-        local_peaks_expanded["iteration"] = iteration
-
-        return local_peaks_expanded
-
-    def substract_waveforms_from_traces(
-        self, traces_chunk, 
-        local_peaks, denoised_waveforms,
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Subtract denoised waveforms from traces.
-
-        Parameters
-        ----------
-        traces_chunk : ndarray
-            The chunk of traces to process.
-        local_peaks : ndarray
-            The array of local peaks.
-        denoised_waveforms : ndarray
-            The denoised waveforms.
-
-        Returns
-        -------
-        tuple of ndarray
-            A tuple containing the traces chunk with denoised waveforms subtracted and the denoised waveforms as traces.
-        """
-        denoised_waveforms_as_traces = self.build_trace_chunk_with_waveforms(
-            local_peaks=local_peaks,
-            traces_chunk=traces_chunk,
-            waveforms=denoised_waveforms,
-        )
-        traces_chunk_minus_peak_waveforms = traces_chunk - denoised_waveforms_as_traces
-
-        return traces_chunk_minus_peak_waveforms, denoised_waveforms_as_traces
 
     def build_trace_chunk_with_waveforms(
         self,
@@ -352,6 +304,30 @@ class IterativePeakDetector(PeakDetector):
 
         return waveforms_in_traces
 
+    def add_iteration_to_peaks_dtype(self, local_peaks, iteration) -> np.ndarray:
+        """
+        Add the iteration number to the peaks dtype.
+
+        Parameters
+        ----------
+        local_peaks : ndarray
+            The array of local peaks.
+        iteration : int
+            The iteration number.
+
+        Returns
+        -------
+        ndarray
+            An array of local peaks with the iteration number added.
+        """
+        # Expand dtype to also contain an iteration field
+        local_peaks_expanded = np.zeros_like(local_peaks, dtype=expanded_base_peak_dtype)
+        fields_in_base_type = np.dtype(base_peak_dtype).names
+        for field in fields_in_base_type:
+            local_peaks_expanded[field] = local_peaks[field]
+        local_peaks_expanded["iteration"] = iteration
+
+        return local_peaks_expanded
 
 class PeakDetectorWrapper(PeakDetector):
     # transitory class to maintain instance based and class method based
