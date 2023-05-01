@@ -63,7 +63,7 @@ class BenchmarkMatching:
         os.makedirs(self.tmp_folder, exist_ok=True)
         return self
 
-    def __exit__(self):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         shutil.rmtree(self.tmp_folder)
 
 
