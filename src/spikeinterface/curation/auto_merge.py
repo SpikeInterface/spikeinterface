@@ -462,6 +462,6 @@ def check_improve_contaminations_score(we, pair_mask, contaminations, firing_con
         if score_new < score_1 or score_new < score_2:
             # the score is not improved
             pair_mask[ind1, ind2] = False
-            pairs_removed.append((sorting.unit_ids[ind1], sorting.unit_ids[ind2])
+            pairs_removed.append((sorting.unit_ids[ind1], sorting.unit_ids[ind2]))
 
     return pair_mask, pairs_removed
