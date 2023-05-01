@@ -9,7 +9,7 @@ from spikeinterface.core.job_tools import (ChunkRecordingExecutor, _shared_job_k
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 
 from spikeinterface.core.baserecording import BaseRecording
-from spikeinterface.sortingcomponents.peak_pipeline import PeakDetector, WaveformsNode
+from spikeinterface.sortingcomponents.peak_pipeline import PeakDetector, WaveformsNode, ExtractSparseWaveforms
 
 from ..core import get_chunk_with_margin
 
@@ -259,7 +259,8 @@ class IterativePeakDetector(PeakDetector):
         return local_peaks_expanded
 
     def substract_waveforms_from_traces(
-        self, traces_chunk, local_peaks, denoised_waveforms
+        self, traces_chunk, 
+        local_peaks, denoised_waveforms,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Subtract denoised waveforms from traces.
@@ -279,22 +280,19 @@ class IterativePeakDetector(PeakDetector):
             A tuple containing the traces chunk with denoised waveforms subtracted and the denoised waveforms as traces.
         """
         denoised_waveforms_as_traces = self.build_trace_chunk_with_waveforms(
-            sample_indices=local_peaks["sample_index"],
+            local_peaks=local_peaks,
             traces_chunk=traces_chunk,
             waveforms=denoised_waveforms,
-            extract_dense_waveforms=self.waveform_extraction_node,
         )
         traces_chunk_minus_peak_waveforms = traces_chunk - denoised_waveforms_as_traces
 
         return traces_chunk_minus_peak_waveforms, denoised_waveforms_as_traces
 
-    #TODO: Check how this could work with sparse waveforms
     def build_trace_chunk_with_waveforms(
         self,
-        sample_indices: np.ndarray,
+        local_peaks: np.ndarray,
         traces_chunk: np.ndarray,
         waveforms: np.ndarray,
-        extract_dense_waveforms: WaveformsNode,
     ) -> np.ndarray:
         """
         Build a trace chunk containing only the extracted waveforms and zeros everywhere else. This function
@@ -319,10 +317,24 @@ class IterativePeakDetector(PeakDetector):
             An array that is as long as the traces but contains only the waveforms and zeros everywhere else.
         """
         waveforms_in_traces = np.zeros_like(traces_chunk, dtype=traces_chunk.dtype)
-        for sample_index, wf in zip(sample_indices, waveforms):
-            first_sample = sample_index - extract_dense_waveforms.nbefore
-            last_sample = sample_index + extract_dense_waveforms.nafter
-            waveforms_in_traces[first_sample:last_sample, :] += wf
+
+        nbefore = self.waveform_extraction_node.nbefore
+        nafter = self.waveform_extraction_node.nafter
+        if isinstance(self.waveform_extraction_node, ExtractSparseWaveforms):
+            neighbours_mask = self.waveform_extraction_node.neighbours_mask
+            channels_in_dense_representation = lambda x: np.nonzero(neighbours_mask[x["channel_index"]])[0]
+        else:
+            channels_in_dense_representation = lambda x: None
+            
+        for peak_index, peak in enumerate(local_peaks):
+            center_sample = peak["sample_index"]
+            first_sample = center_sample - nbefore
+            last_sample = center_sample + nafter
+            channels = channels_in_dense_representation(peak)
+            # Gives slice (0, None) if channels is None else it gives slice (0, len(channels)))
+            arrangment_of_channels_in_sparse = slice(0, len(channels)) if channels is not None else None
+            wf = waveforms[peak_index, :, :]
+            waveforms_in_traces[first_sample:last_sample, channels] += wf[:, arrangment_of_channels_in_sparse]
 
         return waveforms_in_traces
 
