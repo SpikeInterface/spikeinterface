@@ -58,7 +58,7 @@ changelog = "https://spikeinterface.readthedocs.io/en/latest/whatisnew.html"
 
 extractors = [
     "MEArec>=1.8",
-    "pynwb>=2.1.0",
+    "pynwb>=2.3.0",
     "pyedflib>=0.1.30",
     "sonpy;python_version<'3.10'",
     "lxml", # lxml for neuroscope
@@ -77,7 +77,7 @@ streaming_extractors = [
     "fsspec", 
     "aiohttp",
     "requests",
-    "pynwb",
+    "pynwb>=2.3.0",
 ]
 
 full = [
