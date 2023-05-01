@@ -231,7 +231,7 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
     
     file_path_list = [Path(file_path) for file_path in file_path_list]
     if add_file_extension:
-        file_path_list = [add_suffix(file_path, ['raw', 'bin', 'dat']) for file_path in file_paths]
+        file_path_list = [add_suffix(file_path, ['raw', 'bin', 'dat']) for file_path in file_path_list]
 
     dtype = dtype if dtype is not None else recording.get_dtype()
     cast_unsigned = False
