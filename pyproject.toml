@@ -91,6 +91,7 @@ full = [
     "distinctipy",
     "matplotlib",
     "cuda-python; sys_platform != 'darwin'",
+    "numba",
 ]
 
 widgets = [
