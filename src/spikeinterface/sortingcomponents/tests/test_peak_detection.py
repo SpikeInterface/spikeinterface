@@ -12,6 +12,9 @@ from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.features_from_peaks import PeakToPeakFeature
 
+from spikeinterface.sortingcomponents.peak_detection import DetectPeakByChannel, DetectPeakByChannelTorch, DetectPeakLocallyExclusive, DetectPeakLocallyExclusiveTorch
+from spikeinterface.sortingcomponents.peak_pipeline import run_node_pipeline
+
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "sortingcomponents"
@@ -56,7 +59,7 @@ def spike_trains(sorting):
 
 @pytest.fixture(scope="module")
 def job_kwargs():
-    return dict(n_jobs=-1, chunk_size=10000, progress_bar=True, verbose=True)
+    return dict(n_jobs=-1, chunk_size=10000, progress_bar=True, verbose=True, mp_context="spawn")
 
 # Don't know why this was different normal job_kwargs
 @pytest.fixture(scope="module")
@@ -181,6 +184,37 @@ def test_detect_peaks_locally_exclusive(recording, sorting_ground_truth, job_kwa
         method_recall = calculate_peaks_spike_recall(peaks, sorting_ground_truth)
         pytest.approx(method_recall, 1.0)
 
+detection_classes = [
+    DetectPeakByChannel,
+    DetectPeakByChannelTorch,
+    DetectPeakLocallyExclusive,
+    DetectPeakLocallyExclusiveTorch
+]
+@pytest.mark.parametrize("detection_class", detection_classes)
+def test_peak_sign_consistency(recording, job_kwargs, detection_class):
+    
+    peak_sign = "neg"
+    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
+    negative_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
+    
+    peak_sign = "pos"
+    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
+    positive_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
+    
+    peak_sign = "both"
+    peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
+    all_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
+    
+    
+    # To account for exclusion of positive peaks that are to close to negative peaks.
+    # This should be excluded by the detection method when is exclusive so using peak_sign="both" should
+    # Generate less peaks in this case
+    assert (negative_peaks.size + positive_peaks.size) >= all_peaks.size
+    
+    # Original case that prompted this test
+    if negative_peaks.size > 0 or positive_peaks.size > 0:
+        assert all_peaks.size > 0
+                
 def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs):
     
     extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1.0, ms_after=1.0, return_output=False)

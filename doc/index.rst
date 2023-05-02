@@ -45,7 +45,7 @@ SpikeInterface is made of several modules to deal with different aspects of the 
     modules_gallery/index
     install_sorters
     viewers
-    contribute
+    development/development
     api
     whatisnew
     authors
