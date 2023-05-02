@@ -71,16 +71,14 @@ def torch_job_kwargs(job_kwargs):
     torch_job_kwargs["n_jobs"] = 2
     return torch_job_kwargs
 
-
-def test_iterative_peak_detection(recording, job_kwargs, tmp_path):
-    # Train a PCA denoised model as a temporary solution
+@pytest.fixture(scope="module")
+def pca_model_folder_path(recording, job_kwargs, tmp_path_factory):
+    
+    tmp_path = tmp_path_factory.mktemp("my_temp_dir")
     ms_before = 1.0
     ms_after = 1.0
-    waveform_extractor_instance = ExtractDenseWaveforms(recording=recording, ms_before=ms_before, ms_after=ms_after)
-
     model_folder_path = tmp_path / "temporal_pca_model"
-    model_folder_path.mkdir()
-    # model_folder_path.mkdir(parents=True, exist_ok=True)
+    model_folder_path.mkdir(parents=True, exist_ok=True)
     # Fit the model
     n_components = 3
     n_peaks = 100  # Heuristic for extracting around 1k waveforms per channel
@@ -96,11 +94,12 @@ def test_iterative_peak_detection(recording, job_kwargs, tmp_path):
         peak_selection_params=peak_selection_params,
         job_kwargs=job_kwargs,
     )
+    
+    
+    return model_folder_path
 
-    waveform_denoising = TemporalPCADenoising(
-        recording=recording, parents=[waveform_extractor_instance], model_folder_path=model_folder_path
-    )
-
+@pytest.fixture(scope="module")
+def peak_detector_node(recording):
     # Peak detection parameters
     exclude_sweep_ms = 1.0
     peak_sign = "both"
@@ -108,18 +107,33 @@ def test_iterative_peak_detection(recording, job_kwargs, tmp_path):
     local_radius_um = 50
     detect_threshold = 5
 
-    detect_peaks_instance = DetectPeakLocallyExclusive(
+    detect_peaks_node_instance = DetectPeakLocallyExclusive(
         recording=recording,
         detect_threshold=detect_threshold,
         peak_sign=peak_sign,
         local_radius_um=local_radius_um,
         exclude_sweep_ms=exclude_sweep_ms,
     )
+    
+    return detect_peaks_node_instance
+
+
+
+def test_iterative_peak_detection(recording, job_kwargs, pca_model_folder_path, peak_detector_node):
+
+    ms_before = 1.0
+    ms_after = 1.0
+    waveform_extractor_node = ExtractDenseWaveforms(recording=recording, ms_before=ms_before, ms_after=ms_after)
+
+    waveform_denoising = TemporalPCADenoising(
+        recording=recording, parents=[waveform_extractor_node], model_folder_path=pca_model_folder_path
+    )
+
     num_iterations = 2
     iterative_peak_detector = IterativePeakDetector(
         recording=recording,
-        peak_detector_node=detect_peaks_instance,
-        waveform_extraction_node=waveform_extractor_instance,
+        peak_detector_node=peak_detector_node,
+        waveform_extraction_node=waveform_extractor_node,
         waveform_denoising_node=waveform_denoising,
         num_iterations=num_iterations,
         return_output=(True, True)
@@ -140,56 +154,21 @@ def test_iterative_peak_detection(recording, job_kwargs, tmp_path):
     num_total_peaks = peaks.size
     assert num_total_peaks == (num_peaks_in_first_iteration + num_peaks_in_second_iteration)
     
-def test_iterative_peak_detection_sparse(recording, job_kwargs, tmp_path):
-    # Train a PCA denoised model as a temporary solution
+def test_iterative_peak_detection_sparse(recording, job_kwargs, pca_model_folder_path, peak_detector_node):
     ms_before = 1.0
     ms_after = 1.0
-    
     local_radius_um = 40 
-    waveform_extraction_instance = ExtractSparseWaveforms(recording=recording, ms_before=ms_before, ms_after=ms_after, local_radius_um=local_radius_um)
-
-    model_folder_path = tmp_path / "temporal_pca_model"
-    model_folder_path.mkdir()
-    # model_folder_path.mkdir(parents=True, exist_ok=True)
-    # Fit the model
-    n_components = 3
-    n_peaks = 100  # Heuristic for extracting around 1k waveforms per channel
-    peak_selection_params = dict(method="uniform", select_per_channel=True, n_peaks=n_peaks)
-    detect_peaks_params = dict(method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1)
-    TemporalPCADenoising.fit(
-        recording=recording,
-        model_folder_path=model_folder_path,
-        n_components=n_components,
-        ms_before=ms_before,
-        ms_after=ms_after,
-        detect_peaks_params=detect_peaks_params,
-        peak_selection_params=peak_selection_params,
-        job_kwargs=job_kwargs,
-    )
+    waveform_extraction_node = ExtractSparseWaveforms(recording=recording, ms_before=ms_before, ms_after=ms_after, local_radius_um=local_radius_um)
 
     waveform_denoising = TemporalPCADenoising(
-        recording=recording, parents=[waveform_extraction_instance], model_folder_path=model_folder_path
+        recording=recording, parents=[waveform_extraction_node], model_folder_path=pca_model_folder_path
     )
 
-    # Peak detection parameters
-    exclude_sweep_ms = 1.0
-    peak_sign = "both"
-    detect_threshold = 5
-    local_radius_um = 50
-    detect_threshold = 5
-
-    detect_peaks_instance = DetectPeakLocallyExclusive(
-        recording=recording,
-        detect_threshold=detect_threshold,
-        peak_sign=peak_sign,
-        local_radius_um=local_radius_um,
-        exclude_sweep_ms=exclude_sweep_ms,
-    )
     num_iterations = 2
     iterative_peak_detector = IterativePeakDetector(
         recording=recording,
-        peak_detector_node=detect_peaks_instance,
-        waveform_extraction_node=waveform_extraction_instance,
+        peak_detector_node=peak_detector_node,
+        waveform_extraction_node=waveform_extraction_node,
         waveform_denoising_node=waveform_denoising,
         num_iterations=num_iterations,
         return_output=(True, True)
@@ -200,8 +179,8 @@ def test_iterative_peak_detection_sparse(recording, job_kwargs, tmp_path):
     assert "iteration" in peaks.dtype.names
     assert peaks.shape[0] == waveforms.shape[0]
     
-    sample_indices = peaks["sample_index"]
     # Assert that sample_indices are ordered 
+    sample_indices = peaks["sample_index"]
     ordered_sample_indices = np.sort(sample_indices)
     assert np.array_equal(sample_indices, ordered_sample_indices)
         
@@ -211,56 +190,24 @@ def test_iterative_peak_detection_sparse(recording, job_kwargs, tmp_path):
     assert num_total_peaks == (num_peaks_in_first_iteration + num_peaks_in_second_iteration)
     
     
-def test_iterative_peak_detection_thresholds(recording, job_kwargs, tmp_path):
+def test_iterative_peak_detection_thresholds(recording, job_kwargs, pca_model_folder_path, peak_detector_node):
     # Train a PCA denoised model as a temporary solution
     ms_before = 1.0
     ms_after = 1.0
     
-    extract_dense_waveforms = ExtractDenseWaveforms(recording=recording, ms_before=ms_before, ms_after=ms_after)
-
-    model_folder_path = tmp_path / "temporal_pca_model"
-    model_folder_path.mkdir()
-    # model_folder_path.mkdir(parents=True, exist_ok=True)
-    # Fit the model
-    n_components = 3
-    n_peaks = 100  # Heuristic for extracting around 1k waveforms per channel
-    peak_selection_params = dict(method="uniform", select_per_channel=True, n_peaks=n_peaks)
-    detect_peaks_params = dict(method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1)
-    TemporalPCADenoising.fit(
-        recording=recording,
-        model_folder_path=model_folder_path,
-        n_components=n_components,
-        ms_before=ms_before,
-        ms_after=ms_after,
-        detect_peaks_params=detect_peaks_params,
-        peak_selection_params=peak_selection_params,
-        job_kwargs=job_kwargs,
-    )
+    waveform_extraction_node = ExtractDenseWaveforms(recording=recording, ms_before=ms_before, ms_after=ms_after)
 
     waveform_denoising = TemporalPCADenoising(
-        recording=recording, parents=[extract_dense_waveforms], model_folder_path=model_folder_path
+        recording=recording, parents=[waveform_extraction_node], model_folder_path=pca_model_folder_path
     )
 
-    # Peak detection parameters
-    exclude_sweep_ms = 1.0
-    peak_sign = "both"
-    detect_threshold = 5
-    local_radius_um = 50
-    detect_threshold = 5
 
-    detect_peaks_instance = DetectPeakLocallyExclusive(
-        recording=recording,
-        detect_threshold=detect_threshold,
-        peak_sign=peak_sign,
-        local_radius_um=local_radius_um,
-        exclude_sweep_ms=exclude_sweep_ms,
-    )
     num_iterations = 3
-    tresholds = [5, 3, 1]
+    tresholds = [5.0, 3.0, 1.0]
     iterative_peak_detector = IterativePeakDetector(
         recording=recording,
-        peak_detector_node=detect_peaks_instance,
-        waveform_extraction_node=extract_dense_waveforms,
+        peak_detector_node=peak_detector_node,
+        waveform_extraction_node=waveform_extraction_node,
         waveform_denoising_node=waveform_denoising,
         num_iterations=num_iterations,
         return_output=(True, True),
@@ -271,9 +218,9 @@ def test_iterative_peak_detection_thresholds(recording, job_kwargs, tmp_path):
     # Assert there is a field call iteration in structured array peaks
     assert "iteration" in peaks.dtype.names
     assert peaks.shape[0] == waveforms.shape[0]
-    
+
+    # Assert that sample_indices are ordered     
     sample_indices = peaks["sample_index"]
-    # Assert that sample_indices are ordered 
     ordered_sample_indices = np.sort(sample_indices)
     assert np.array_equal(sample_indices, ordered_sample_indices)
         
@@ -283,6 +230,7 @@ def test_iterative_peak_detection_thresholds(recording, job_kwargs, tmp_path):
     num_total_peaks = peaks.size
     num_cumulative_peaks = num_peaks_in_first_iteration + num_peaks_in_second_iteration + num_peaks_in_third_iteration
     assert num_total_peaks == num_cumulative_peaks
+
 
 def test_detect_peaks_by_channel(recording, spike_trains, job_kwargs, torch_job_kwargs):
     peaks_by_channel_np = detect_peaks(
