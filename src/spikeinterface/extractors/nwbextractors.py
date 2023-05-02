@@ -1,23 +1,25 @@
+from __future__ import annotations
 from pathlib import Path
-from typing import Union, List, Optional, Literal
+from typing import Union, List, Optional, Literal, Dict
 
 import numpy as np
-import h5py
 
 from spikeinterface import get_global_tmp_folder
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 try:
-    import pynwb
     from pynwb import NWBHDF5IO, NWBFile
-    from pynwb.ecephys import ElectricalSeries, FilteredEphys, LFP, ElectrodeGroup
-    from hdmf.data_utils import DataChunkIterator
-    from hdmf.backends.hdf5.h5_utils import H5DataIO
-
+    from pynwb.ecephys import ElectricalSeries, ElectrodeGroup
     HAVE_NWB = True
 except ModuleNotFoundError:
     HAVE_NWB = False
+
+try:
+    import h5py
+    HAVE_H5PY = True
+except:
+    HAVE_H5PY = False
 
 try:
     import fsspec
