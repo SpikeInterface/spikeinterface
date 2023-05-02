@@ -60,7 +60,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
     """
     name = 'highpass_spatial_filter'
 
-    def __init__(self, recording, n_channel_pad=None, n_channel_taper=0, direction="y",
+    def __init__(self, recording, n_channel_pad=60, n_channel_taper=0, direction="y",
                  apply_agc=True, agc_window_length_s=0.1, highpass_butter_order=3,
                  highpass_butter_wn=0.01):
         BasePreprocessor.__init__(self, recording)
