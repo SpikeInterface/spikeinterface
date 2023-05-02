@@ -63,6 +63,7 @@ class BenchmarkMatching:
 
     def __enter__(self):
         self.tmp_folder.mkdir(exist_ok=True)
+        self.sort_folders = []
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -71,7 +72,6 @@ class BenchmarkMatching:
         for sort_folder in self.sort_folders:
             if sort_folder.exists():
                 shutil.rmtree(sort_folder)
-
 
     def run_matching(self, methods_kwargs):
         """Run template matching on the recording with settings in methods_kwargs.
@@ -187,6 +187,14 @@ class BenchmarkMatching:
         gt_sorting: NumpySorting
             The ground-truth sorting used for template matching (with misclassified spike trains).
         """
+        try:
+            assert 0 <= fraction_misclassed <= 1
+        except AssertionError:
+            raise ValueError("'fraction_misclassed' must be between 0 and 1.")
+        try:
+            assert -1 <= min_similarity <= 1
+        except AssertionError:
+            raise ValueError("'min_similarity' must be between -1 and 1.")
         if we_kwargs is None:
             we_kwargs = {}
         we_kwargs.update(dict(seed=seed, overwrite=True, load_if_exists=False, **self.job_kwargs))
@@ -253,6 +261,14 @@ class BenchmarkMatching:
         gt_sorting: NumpySorting
             The ground-truth sorting used for template matching (with missing units).
         """
+        try:
+            assert 0 <= fraction_missing <= 1
+        except AssertionError:
+            raise ValueError("'fraction_missing' must be between 0 and 1.")
+        try:
+            assert snr_threshold >= 0
+        except AssertionError:
+            raise ValueError("'snr_threshold' must be greater than or equal to 0.")
         if we_kwargs is None:
             we_kwargs = {}
         we_kwargs.update(dict(seed=seed, overwrite=True, load_if_exists=False, **self.job_kwargs))
@@ -313,11 +329,16 @@ class BenchmarkMatching:
         try:
             run_matching_fn = self.parameter_name2matching_fn[parameter_name]
         except KeyError:
-            raise ValueError(f"Parameter name must be one of {list(parameter_name2matching_fn.keys())}")
+            raise ValueError(f"Parameter name must be one of {list(self.parameter_name2matching_fn.keys())}")
         try:
             progress_bar = self.job_kwargs['progress_bar']
         except KeyError:
             progress_bar = False
+        try:
+            assert isinstance(num_replicates, int)
+            assert num_replicates > 0
+        except AssertionError:
+            raise ValueError("num_replicates must be a positive integer")
 
         sortings, gt_sortings, parameter_values, parameter_names, iter_nums, methods = [], [], [], [], [], []
         if progress_bar:
@@ -377,29 +398,6 @@ class BenchmarkMatching:
         else:
             return compare_sorter_to_ground_truth(gt_sorting, sorting, exhaustive_gt=True, **kwargs)
 
-    def compare_sortings_by_method(self, gt_sorting, sortings, collision=False, **kwargs):
-        """Compare sortings from several different methods to a single ground-truth sorting.
-
-        Parameters
-        ----------
-        gt_sorting: SortingExtractor
-            The ground-truth sorting extractor.
-        sortings: dict
-            A dictionary that maps method --> NumpySorting.
-        collision: bool
-            If True, use the CollisionGTComparison class. If False, use the compare_sorter_to_ground_truth function.
-        **kwargs
-            Keyword arguments for the comparison function.
-
-        Returns
-        -------
-        comparisons: dict
-            A dictionary that maps method --> GroundTruthComparison.
-        """
-        comparisons = {}
-        for method, sorting in sortings.items():
-            comparisons[method] = self.compare_sortings(gt_sorting, sorting, collision=collision, **kwargs)
-        return comparisons
 
     def compare_all_sortings(self, matching_df, collision=False, ground_truth="from_self", **kwargs):
         """Compare all sortings in a matching dataframe to their ground-truth sortings.
@@ -416,10 +414,10 @@ class BenchmarkMatching:
         **kwargs
             Keyword arguments for the comparison function.
 
-        Returns
-        -------
-        matching_df: pandas.DataFrame
-            The matching dataframe with a new column 'comparison' that contains the GroundTruthComparison object.
+        Notes
+        -----
+        This function adds a new column to the matching_df called 'comparison' that contains the GroundTruthComparison
+        object for each row.
         """
         if ground_truth == "from_self":
             comparison_fn = lambda row : self.compare_sortings(self.gt_sorting, row['sorting'],
