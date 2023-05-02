@@ -900,7 +900,7 @@ class WaveformExtractor:
 
         return new_we
 
-    def get_waveforms(self, unit_id, with_index=False, cache=False, lazy=True, sparsity=None):
+    def get_waveforms(self, unit_id, with_index=False, cache=False, lazy=True, sparsity=None, force_dense=False):
         """
         Return waveforms for the specified unit id.
 
@@ -918,6 +918,8 @@ class WaveformExtractor:
             If False, waveforms are loaded as np.array objects (default True)
         sparsity: ChannelSparsity, optional
             Sparsity to apply to the waveforms (if WaveformExtractor is not sparse)
+        force_dense: bool (False)
+            Return dense waveforms even if the waveform extractor is sparse
 
         Returns
         -------
@@ -958,6 +960,19 @@ class WaveformExtractor:
         if sparsity is not None:
             assert not self.is_sparse(), "Waveforms are alreayd sparse! Cannot apply an additional sparsity."
             wfs = wfs[:, :, sparsity.mask[self.sorting.id_to_index(unit_id)]]
+
+        if force_dense:
+            num_channels = self.get_num_channels()
+            dense_wfs = np.zeros((wfs.shape[0], wfs.shape[1], num_channels), dtype=np.float32)
+            unit_ind = self.sorting.id_to_index(unit_id)
+            if sparsity is not None:
+                unit_sparsity = sparsity.mask[unit_ind]
+                dense_wfs[:, :, unit_sparsity] = wfs
+                wfs = dense_wfs
+            elif self.is_sparse():  
+                unit_sparsity = self.sparsity.mask[unit_ind]
+                dense_wfs[:, :, unit_sparsity] = wfs
+                wfs = dense_wfs
 
         if with_index:
             sampled_index = self.get_sampled_indices(unit_id)
@@ -1088,7 +1103,7 @@ class WaveformExtractor:
 
         return np.array(templates)
 
-    def get_template(self, unit_id, mode='average', sparsity=None):
+    def get_template(self, unit_id, mode='average', sparsity=None, force_dense=False):
         """
         Return template (average waveform).
 
@@ -1100,6 +1115,8 @@ class WaveformExtractor:
             'average' (default), 'median' , 'std'(standard deviation)
         sparsity: ChannelSparsity, optional
             Sparsity to apply to the waveforms (if WaveformExtractor is not sparse)
+        force_dense: bool (False)
+            Return a dense template even if the waveform extractor is sparse
 
         Returns
         -------
@@ -1124,19 +1141,22 @@ class WaveformExtractor:
                 unit_sparsity = self.sparsity.mask[unit_ind]
             else:
                 unit_sparsity = slice(None)
-            template = template[:, unit_sparsity]
+            if not force_dense:
+                template = template[:, unit_sparsity]
             return template
 
         # compute from waveforms
-        wfs = self.get_waveforms(unit_id)
-        if sparsity is not None:
+        wfs = self.get_waveforms(unit_id, force_dense=force_dense)
+        if sparsity is not None and not force_dense:
             wfs = wfs[:, :, sparsity.mask[unit_ind]]
+
         if mode == 'median':
             template = np.median(wfs, axis=0)
         elif mode == 'average':
             template = np.average(wfs, axis=0)
         elif mode == 'std':
             template = np.std(wfs, axis=0)
+
         return np.array(template)
 
     def get_template_segment(self, unit_id, segment_index, mode='average', sparsity=None):
