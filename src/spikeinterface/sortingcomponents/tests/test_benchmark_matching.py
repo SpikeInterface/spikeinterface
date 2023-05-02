@@ -21,12 +21,11 @@ def benchmarks_and_kwargs():
     we = sc.extract_waveforms(recording, sorting, we_path, overwrite=True)
     templates = we.get_all_templates()
     noise_levels = sc.get_noise_levels(recording, return_scaled=False)
-    # TODO : Fix circus-omp
     methods_kwargs = {
         'naive': dict(waveform_extractor=we, noise_levels=noise_levels),
         'tridesclous': dict(waveform_extractor=we, noise_levels=noise_levels),
         'circus': dict(waveform_extractor=we, noise_levels=noise_levels),
-        # 'circus-omp': dict(waveform_extractor=we, noise_levels=noise_levels),
+        # 'circus-omp': dict(waveform_extractor=we, noise_levels=noise_levels), # TODO : Fix circus-omp
         'wobble': dict(templates=templates, nbefore=we.nbefore, nafter=we.nafter)
     }
     methods = list(methods_kwargs.keys())
@@ -41,10 +40,8 @@ def benchmarks_and_kwargs():
 
 def test_run_matching(benchmarks_and_kwargs):
     benchmark, benchmark_not_exhaustive, methods_kwargs = benchmarks_and_kwargs
-    benchmark.run_matching(methods_kwargs, collision=False)
-    # for benchmark in [benchmark, benchmark_not_exhaustive]:
-    #     benchmark.run_matching(methods_kwargs, collision=False)
-    #     benchmark.run_matching(methods_kwargs, collision=True)
+    benchmark.run_matching(methods_kwargs)
+    benchmark_not_exhaustive.run_matching(methods_kwargs)
 
 if __name__ == '__main__':
     test_run_matching(benchmarks_and_kwargs)
