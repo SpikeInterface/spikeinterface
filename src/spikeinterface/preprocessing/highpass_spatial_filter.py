@@ -29,7 +29,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
     n_channel_pad : int
         Number of channels to pad prior to filtering.
         Channels are padded with mirroring.
-        If None, no padding is applied, by default 5
+        If None, no padding is applied, by default 60
     n_channel_taper : int
         Number of channels to perform cosine tapering on
         prior to filtering. If None and n_channel_pad is set,
