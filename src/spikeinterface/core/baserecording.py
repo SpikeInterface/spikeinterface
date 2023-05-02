@@ -76,13 +76,13 @@ class BaseRecording(BaseRecordingSnippets):
             durations_per_segment_formated = [convert_seconds_to_str(d) for d in durations]
             memory_per_segment_formated = [convert_bytes_to_str(mem) for mem in memory_per_segment_bytes]
 
-            list_to_string = lambda lst: '[' + ', '.join(str(x) for x in lst) + ']'
+            list_to_string = lambda lst: ' - '.join(x for x in lst)
             txt += (
                 f"\n"
                 f"Segments:"
-                f"\nSamples   {list_to_string(samples_per_segment_formated)}"
-                f"\nDurations {list_to_string(durations_per_segment_formated)}"
-                f"\nMemory    {list_to_string(memory_per_segment_formated)}"
+                f"\nSamples:   {list_to_string(samples_per_segment_formated)}"
+                f"\nDurations: {list_to_string(durations_per_segment_formated)}"
+                f"\nMemory:    {list_to_string(memory_per_segment_formated)}"
             )        
             
         if 'file_paths' in self._kwargs:
