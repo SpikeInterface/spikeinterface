@@ -396,8 +396,8 @@ class GeneratorRecording(BaseRecording):
         sampling_frequency: float,
         num_channels: int,
         dtype: Optional[Union[np.dtype, str]] = "float32",
-        seed: Optional[int] = None,
-        mode: Literal['white_noise', 'random_peaks'] = 'white_noise'
+        seed: float = 0,
+        mode: Literal['white_noise', 'random_peaks'] = 'random_peaks'
     ):
         """
         A lazy recording that generates random samples if and only if `get_traces` is called.
@@ -413,9 +413,9 @@ class GeneratorRecording(BaseRecording):
             The number of channels.
         dtype : Optional[Union[np.dtype, str]], default='float32'
             The dtype of the recording. Note that only np.float32 and np.float64 are supported.
-        seed : Optional[int], default=None
+        seed : float, default=0
             The seed for np.random.default_rng.
-        mode : Literal['white_noise', 'random_peaks'], default='white_noise'
+        mode : Literal['white_noise', 'random_peaks'], default='random_peaks'
             The mode of the recording segment.
             
             mode: 'white_noise'
@@ -441,7 +441,7 @@ class GeneratorRecording(BaseRecording):
         self.mode = mode
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
 
-        self.seed = seed if seed is not None else 0
+        self.seed = seed
 
         for index, duration in enumerate(durations):
             segment_seed = self.seed + index
@@ -469,8 +469,8 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
                 sampling_frequency: float,
                 num_channels: int,
                 dtype: Optional[Union[np.dtype, str]] = "float32",
-                seed: Optional[int] = None,
-                mode: Literal['white_noise', 'random_peaks'] = 'white_noise'
+                seed: float = 0,
+                mode: Literal['white_noise', 'random_peaks'] = 'random_peaks'
                 ):
         """
         Initialize a GeneratorRecordingSegment instance.
@@ -518,7 +518,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
             noise_size_ms = 50.0
             noise_frames = int(noise_size_ms * self.sampling_frequency / 1000)
             self.basic_noise_block = self.rng.normal(size=(noise_frames, self.num_channels))
-
+            self.noise_frames = noise_frames
         
     def get_num_samples(self):
         return self.num_samples
@@ -649,7 +649,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         return traces
 
 def generate_lazy_recording(
-    full_traces_size_GiB: float, seed: Optional[int] = None, mode: Literal["white_noise", "random_peaks"] = "white_noise"
+    full_traces_size_GiB: float, seed: Optional[int] = None, mode: Literal["white_noise", "random_peaks"] = "random_peaks"
 ) -> GeneratorRecording:
     """
     Generate a large lazy recording.
