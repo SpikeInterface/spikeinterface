@@ -76,7 +76,7 @@ class BaseRecording(BaseRecordingSnippets):
             durations_per_segment_formated = [convert_seconds_to_str(d) for d in durations]
             memory_per_segment_formated = [convert_bytes_to_str(mem) for mem in memory_per_segment_bytes]
 
-            list_to_string = lambda lst: ' - '.join(x for x in lst)
+            list_to_string = lambda lst: ' | '.join(x for x in lst)
             txt += (
                 f"\n"
                 f"Segments:"
