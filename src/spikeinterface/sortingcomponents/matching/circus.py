@@ -22,7 +22,7 @@ potrs, = scipy.linalg.get_lapack_funcs(('potrs',), dtype=np.float32)
 
 nrm2, = scipy.linalg.get_blas_funcs(('nrm2', ), dtype=np.float32)
 
-spike_dtype = [('sample_index', 'int64'), ('channel_index', 'int64'), ('cluster_ind', 'int64'),
+spike_dtype = [('sample_index', 'int64'), ('channel_index', 'int64'), ('cluster_index', 'int64'),
                ('amplitude', 'float64'), ('segment_index', 'int64')]
 
 from .main import BaseTemplateMatchingEngine
@@ -161,6 +161,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
     noise_levels: array
         The noise levels, for every channels. If None, they will be automatically
         computed
+    random_chunk_kwargs: dict
+        Parameters for computing noise levels, if not provided (sub optimal)
     -----
     """
 
@@ -476,7 +478,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         num_spikes = len(valid_indices[0])
         spikes['sample_index'][:num_spikes] = valid_indices[1] + d['nbefore']
         spikes['channel_index'][:num_spikes] = 0
-        spikes['cluster_ind'][:num_spikes] = valid_indices[0]
+        spikes['cluster_index'][:num_spikes] = valid_indices[0]
         spikes['amplitude'][:num_spikes] = final_amplitudes[valid_indices[0], valid_indices[1]]
         
         spikes = spikes[:num_spikes]
@@ -872,13 +874,13 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
             spikes['sample_index'][num_spikes] = best_peak_sample_ind
             spikes['channel_index'][num_spikes] = best_peak_chan_ind
-            spikes['cluster_ind'][num_spikes] = best_cluster_ind
+            spikes['cluster_index'][num_spikes] = best_cluster_ind
             spikes['amplitude'][num_spikes] = best_amplitude
             num_spikes += 1
 
             is_valid = (scalar_products > min_sps) & (scalar_products < max_sps)
 
-        spikes['amplitude'][:num_spikes] /= norms[spikes['cluster_ind'][:num_spikes]]
+        spikes['amplitude'][:num_spikes] /= norms[spikes['cluster_index'][:num_spikes]]
         
         spikes = spikes[:num_spikes]
         order = np.argsort(spikes['sample_index'])
