@@ -649,7 +649,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         return traces
 
 def generate_lazy_recording(
-    full_traces_size_GiB: float, seed: Optional[int] = None, mode: Literal["white_noise", "random_peaks"] = "random_peaks"
+    full_traces_size_GiB: float, seed: Optional[float] = 0, mode: Literal["white_noise", "random_peaks"] = "random_peaks"
 ) -> GeneratorRecording:
     """
     Generate a large lazy recording.
