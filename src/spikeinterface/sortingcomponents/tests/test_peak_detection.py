@@ -1,6 +1,8 @@
 import numpy as np
 import shutil
 from pathlib import Path
+import tempfile
+
 import pytest
 
 from spikeinterface import download_dataset
@@ -44,7 +46,6 @@ except:
     HAVE_TORCH = False
 
 
-@pytest.fixture(scope="module")
 def recording():
     repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
     remote_path = "mearec/mearec_test_10s.h5"
@@ -52,8 +53,11 @@ def recording():
     recording = MEArecRecordingExtractor(local_path)
     return recording
 
+@pytest.fixture(name="recording", scope="module")
+def recording_fixture():
+    return recording()
 
-@pytest.fixture(scope="module")
+
 def sorting():
     repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
     remote_path = "mearec/mearec_test_10s.h5"
@@ -61,32 +65,43 @@ def sorting():
     sorting = MEArecSortingExtractor(local_path)
     return sorting
 
+@pytest.fixture(name="sorting", scope="module")
+def sorting_fixture():
+    return sorting()
 
-@pytest.fixture(scope="module")
+
 def spike_trains(sorting):
     spike_trains = sorting.get_all_spike_trains()[0][0]
     return spike_trains
 
+@pytest.fixture(name="spike_trains", scope="module")
+def spike_trains_fixture(sorting):
+    return spike_trains(sorting)
 
-@pytest.fixture(scope="module")
+
 def job_kwargs():
     return dict(n_jobs=1, chunk_size=10000, progress_bar=True, verbose=True, mp_context="spawn")
 
+@pytest.fixture(name="job_kwargs", scope="module")
+def job_kwargs_fixture():
+    return job_kwargs()
 
-# Don't know why this was different normal job_kwargs
-@pytest.fixture(scope="module")
+
 def torch_job_kwargs(job_kwargs):
     torch_job_kwargs = job_kwargs.copy()
     torch_job_kwargs["n_jobs"] = 2
     return torch_job_kwargs
 
+@pytest.fixture(name="torch_job_kwargs", scope="module")
+def torch_job_kwargs_fixture(job_kwargs):
+    return torch_job_kwargs(job_kwargs)
 
-@pytest.fixture(scope="module")
-def pca_model_folder_path(recording, job_kwargs, tmp_path_factory):
-    tmp_path = tmp_path_factory.mktemp("my_temp_dir")
+
+def pca_model_folder_path(recording, job_kwargs, tmp_path):
     ms_before = 1.0
     ms_after = 1.0
-    model_folder_path = tmp_path / "temporal_pca_model"
+    
+    model_folder_path = Path(tmp_path) / "temporal_pca_model"
     model_folder_path.mkdir(parents=True, exist_ok=True)
     # Fit the model
     n_components = 3
@@ -106,10 +121,13 @@ def pca_model_folder_path(recording, job_kwargs, tmp_path_factory):
 
     return model_folder_path
 
+@pytest.fixture(name="pca_model_folder_path", scope="module")
+def pca_model_folder_path_fixture(recording, job_kwargs, tmp_path_factory):
+    tmp_path = tmp_path_factory.mktemp("my_temp_dir")
+    return pca_model_folder_path(recording, job_kwargs, tmp_path)
 
-@pytest.fixture(scope="module")
+
 def peak_detector_kwargs(recording):
-    # Peak detection parameters
     peak_detector_keyword_arguments = dict(
         recording=recording,
         exclude_sweep_ms=1.0,
@@ -119,6 +137,10 @@ def peak_detector_kwargs(recording):
     )
 
     return peak_detector_keyword_arguments
+
+@pytest.fixture(name="peak_detector_kwargs", scope="module")
+def peak_detector_kwargs_fixture(recording):
+    return peak_detector_kwargs(recording)
 
 
 def test_iterative_peak_detection(recording, job_kwargs, pca_model_folder_path, peak_detector_kwargs):
@@ -427,6 +449,15 @@ def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs):
         ax.scatter(soma_positions[:, 1], soma_positions[:, 2], color='g', s=20, marker='*')
         plt.show()
 
-if __name__ == '__main__':
-    pass
+if __name__ == "__main__":
+    recording_main = recording()
+    sorting_main = sorting()
+    spike_trains_main = spike_trains(sorting_main)
+    job_kwargs_main = job_kwargs()
+    torch_job_kwargs_main = torch_job_kwargs(job_kwargs_main)
+    # Create a temporary directory using the standard library
+    tmp_dir_main = tempfile.mkdtemp()    
+    pca_model_folder_path_main = pca_model_folder_path(recording_main, job_kwargs_main, tmp_dir_main)
+    peak_detector_kwargs_main = peak_detector_kwargs(recording_main)
     
+    test_iterative_peak_detection(recording_main, job_kwargs_main, pca_model_folder_path_main, peak_detector_kwargs_main)
