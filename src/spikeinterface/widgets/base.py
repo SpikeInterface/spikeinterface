@@ -6,9 +6,7 @@ default_backend_ = 'matplotlib'
 def get_default_plotter_backend():
     """Return the default backend for spikeinterface widgets.
     The default backend is 'matplotlib' at init.
-    It can be be globaly set with `set_default_plotter_backend(backend)`
-
-    @jeremy: we could also used ENV variable if you prefer
+    It can be be globally set with `set_default_plotter_backend(backend)`
     """
 
     global default_backend_
