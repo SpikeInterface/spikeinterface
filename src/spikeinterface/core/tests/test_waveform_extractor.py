@@ -83,7 +83,10 @@ def test_WaveformExtractor():
             wfs_array = we.get_waveforms(0, lazy=False)
             assert isinstance(wfs_array, np.ndarray)
 
-            
+            ## Test force dense mode
+            wfs = we.get_waveforms(0, force_dense=True)
+            assert wfs.shape[2] == num_channels
+
             template = we.get_template(0)
             if sparsity is None:
                 assert template.shape == (num_samples, num_channels)
@@ -91,6 +94,9 @@ def test_WaveformExtractor():
                 assert template.shape == (num_samples, num_sparse_channels)
             templates = we.get_all_templates()
             assert templates.shape == (num_units, num_samples, num_channels)
+
+            template = we.get_template(0, force_dense=True)
+            assert template.shape == (num_samples, num_channels)
 
             if sparsity is not None:
                 assert np.all(templates[:, :, 1] == 0)
@@ -483,9 +489,9 @@ def test_compute_sparsity():
 
 
 if __name__ == '__main__':
-    # test_WaveformExtractor()
+    test_WaveformExtractor()
     # test_extract_waveforms()
     # test_sparsity()
     # test_portability()
-    test_recordingless()
+    # test_recordingless()
     # test_compute_sparsity()
