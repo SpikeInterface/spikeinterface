@@ -516,10 +516,11 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
 
             # Configuration of mode
             
+            noise_size_MiB = 100.0
             noise_size_ms = 50.0
             noise_frames = int(noise_size_ms * self.sampling_frequency / 1000)
             self.basic_noise_block = self.rng.normal(size=(noise_frames, self.num_channels))
-
+            self.noise_frames = noise_frames
         
     def get_num_samples(self):
         return self.num_samples
@@ -584,7 +585,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         else:
             first_block = noise_block[start_frame_mod:]
             repeat_count = (traces_chunk_size - (noise_frames - start_frame_mod)) // noise_frames
-            middle_block = np.repeat(noise_block, repeats=repeat_count, axis=0)
+            middle_block = np.tile(noise_block, reps=(repeat_count, 1))  # Repeat repeat_count across axis 1
             last_block = noise_block[:end_frame_mod]
 
             traces = np.concatenate((first_block, middle_block, last_block), out=traces)

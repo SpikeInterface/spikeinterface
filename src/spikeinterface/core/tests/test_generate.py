@@ -178,6 +178,7 @@ def test_generator_recording_consistency(mode, start_frame, end_frame):
     assert np.allclose(traces, same_traces)
 
 
+
 @pytest.mark.parametrize("mode", mode_list)
 @pytest.mark.parametrize("start_frame, end_frame, extra_samples", [
     (0, 1000, 10),
@@ -210,3 +211,10 @@ def test_generator_recording_consistency_across_traces(mode, start_frame, end_fr
     larger_traces = lazy_recording.get_traces(start_frame=start_frame, end_frame=end_frame_larger_array)
     equivalent_trace_from_larger_traces = larger_traces[:-extra_samples, :]  # Remove the extra samples
     assert np.allclose(traces, equivalent_trace_from_larger_traces)
+    
+if __name__ == "__main__":
+    mode = "random_peaks"
+    start_frame = 0
+    end_frame = 3000
+    extra_samples = 1000
+    test_generator_recording_consistency_across_traces(mode, start_frame, end_frame, extra_samples)
