@@ -523,7 +523,6 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
             total_noise_samples = noise_size_bytes / (self.num_channels * self.dtype.itemsize)
             # When multiple segments are used, the noise is split into equal sized segments to keep memory constant
             self.noise_segment_samples = int(total_noise_samples / self.num_segments)
-            self.noise_segment_samples = int(total_noise_samples)
             self.basic_noise_block = self.rng.standard_normal(size=(self.noise_segment_samples, self.num_channels))
         
     def get_num_samples(self):
