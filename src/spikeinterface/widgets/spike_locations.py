@@ -14,17 +14,19 @@ class SpikeLocationsWidget(BaseWidget):
     ----------
     waveform_extractor : WaveformExtractor
         The object to compute/get spike locations from
-    unit_ids: list
-        List of unit ids.
-    max_spikes_per_unit: int
+    unit_ids : list
+        List of unit ids, default None
+    segment_index : int or None
+        The segment index (or None if mono-segment), default None
+    max_spikes_per_unit : int
         Number of max spikes per unit to display. Use None for all spikes.
         Default 500.
-    with_channel_ids: bool False default
-        Add channel ids text on the probe
+    with_channel_ids : bool 
+        Add channel ids text on the probe, default False
     unit_colors :  dict or None
-        If given, a dictionary with unit ids as keys and colors as values
+        If given, a dictionary with unit ids as keys and colors as values, default None
     hide_unit_selector : bool
-        For sortingview backend, if True the unit selector is not displayed
+        For sortingview backend, if True the unit selector is not displayed, default False
     plot_all_units : bool
         If True, all units are plotted. The unselected ones (not in unit_ids),
         are plotted in grey. Default True (matplotlib backend)
