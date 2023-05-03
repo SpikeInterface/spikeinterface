@@ -190,12 +190,12 @@ class IterativePeakDetector(PeakDetector):
             A tuple containing a single ndarray with the detected peaks.
         """
 
-        traces_chunk = traces_chunk.astype("float32")
+        
+        traces_chunk = np.array(traces_chunk, copy=True, dtype="float32")
         local_peaks_list = []
         all_waveforms = []
         
-        # To do in place operations inside the loop
-        traces_chunk_buffer = np.empty_like(traces_chunk)
+        
         for iteration in range(self.num_iterations):
             
             # Hack because of lack of either attribute or named references
@@ -230,18 +230,11 @@ class IterativePeakDetector(PeakDetector):
                 peaks=local_peaks, 
                 waveforms=waveforms
             )
-            denoised_waveforms_as_traces = self.build_trace_chunk_with_waveforms(
-            local_peaks=local_peaks,
-            traces_chunk=traces_chunk,
-            waveforms=denoised_waveforms,
+
+            self.substract_waveforms_from_traces(local_peaks=local_peaks,
+                traces_chunk=traces_chunk,
+                waveforms=denoised_waveforms,
             )
-            
-            # Update traces_chunk_buffer inplace
-            np.subtract(traces_chunk, denoised_waveforms_as_traces, out=traces_chunk_buffer)
-
-            # update traces_chunk to run the algorithm again and store local_peaks
-            traces_chunk = traces_chunk_buffer
-
 
             all_waveforms.append(waveforms)
         all_local_peaks = np.concatenate(local_peaks_list, axis=0)
@@ -254,17 +247,15 @@ class IterativePeakDetector(PeakDetector):
         
         return (all_local_peaks, all_waveforms)
 
-    def build_trace_chunk_with_waveforms(
+
+    def substract_waveforms_from_traces(
         self,
         local_peaks: np.ndarray,
         traces_chunk: np.ndarray,
         waveforms: np.ndarray,
-    ) -> np.ndarray:
+    ):
         """
-        Build a trace chunk containing only the extracted waveforms and zeros everywhere else. This function
-        is mainly used in this detector to subtract the waveforms from the original traces. In case two
-        waveforms overlap in time (i.e., they share the same domain), the resulting trace will have the
-        sum of both waveforms in that domain.
+        Substract inplace the cleaned waveforms from the traces_chunk.
 
         Parameters
         ----------
@@ -274,35 +265,25 @@ class IterativePeakDetector(PeakDetector):
             A chunk of the traces.
         waveforms : ndarray
             The waveforms extracted from the traces.
-        extract_dense_waveforms : WaveformsNode
-            An instance of the WaveformsNode class for nbefore and nafter.
-
-        Returns
-        -------
-        ndarray
-            An array that is as long as the traces but contains only the waveforms and zeros everywhere else.
         """
-        waveforms_in_traces = np.zeros_like(traces_chunk, dtype=traces_chunk.dtype)
 
         nbefore = self.waveform_extraction_node.nbefore
         nafter = self.waveform_extraction_node.nafter
         if isinstance(self.waveform_extraction_node, ExtractSparseWaveforms):
             neighbours_mask = self.waveform_extraction_node.neighbours_mask
-            channels_in_dense_representation = lambda x: np.nonzero(neighbours_mask[x["channel_index"]])[0]
         else:
-            channels_in_dense_representation = lambda x: None
+            neighbours_mask = None
             
         for peak_index, peak in enumerate(local_peaks):
             center_sample = peak["sample_index"]
             first_sample = center_sample - nbefore
             last_sample = center_sample + nafter
-            channels = channels_in_dense_representation(peak)
-            # Gives slice (0, None) if channels is None else it gives slice (0, len(channels)))
-            arrangment_of_channels_in_sparse = slice(0, len(channels)) if channels is not None else None
-            wf = waveforms[peak_index, :, :]
-            waveforms_in_traces[first_sample:last_sample, channels] += wf[:, arrangment_of_channels_in_sparse]
+            if neighbours_mask is None:
+                traces_chunk[first_sample:last_sample, :] -= waveforms[peak_index, :, :]
+            else:
+                channels, = np.nonzero(neighbours_mask[peak["channel_index"]])
+                traces_chunk[first_sample:last_sample, channels] -= waveforms[peak_index, :, :len(channels)]
 
-        return waveforms_in_traces
 
     def add_iteration_to_peaks_dtype(self, local_peaks, iteration) -> np.ndarray:
         """
