@@ -9,7 +9,7 @@ import numpy as np
 from sklearn.decomposition import IncrementalPCA
 from sklearn.exceptions import NotFittedError
 
-from spikeinterface.core.job_tools import (ChunkRecordingExecutor, ensure_n_jobs,
+from spikeinterface.core.job_tools import (ChunkRecordingExecutor,
                                            _shared_job_kwargs_doc, fix_job_kwargs)
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
