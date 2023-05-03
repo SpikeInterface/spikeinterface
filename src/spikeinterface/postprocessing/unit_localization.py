@@ -1,9 +1,7 @@
 import warnings
 
 import numpy as np
-import scipy.optimize
 
-from scipy.spatial.distance import cdist
 
 try:
     import numba
@@ -157,6 +155,7 @@ def make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance
 
 
 def solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance_um, optimizer):
+    import scipy.optimize
     x0, bounds = make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance_um)
 
     if optimizer == 'least_square':
@@ -451,6 +450,7 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', radius_um=50.,
 
 def make_shell(channel, geom, n_jumps=1):
     """See make_shells"""
+    from scipy.spatial.distance import cdist
     pt = geom[channel]
     dists = cdist([pt], geom).ravel()
     radius = np.unique(dists)[1 : n_jumps + 1][-1]
