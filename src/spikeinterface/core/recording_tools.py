@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Literal
 import warnings
 
@@ -370,3 +371,32 @@ def check_probe_do_not_overlap(probes):
                 raise Exception(
                     "Probes are overlapping! Retrieve locations of single probes separately"
                 )
+
+
+def get_rec_attributes(recording):
+    """
+    Construct rec_attributes from recording object
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording object
+
+    Returns
+    -------
+    dict
+        The rec_attributes dictionary
+    """
+    properties_to_attrs = deepcopy(recording._properties)
+    if 'contact_vector' in properties_to_attrs:
+        del properties_to_attrs['contact_vector']
+    rec_attributes = dict(
+            channel_ids=recording.channel_ids,
+            sampling_frequency=recording.get_sampling_frequency(),
+            num_channels=recording.get_num_channels(),
+            num_samples=[recording.get_num_samples(seg_index)
+                         for seg_index in range(recording.get_num_segments())],
+            is_filtered=recording.is_filtered(),
+            properties=properties_to_attrs
+        )
+    return rec_attributes
