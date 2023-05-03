@@ -2,7 +2,6 @@ from pathlib import Path
 
 import numpy as np
 import shutil
-import pandas as pd
 import warnings
 
 import spikeinterface
@@ -46,6 +45,8 @@ def export_to_phy(waveform_extractor, output_folder, compute_pc_features=True,
     {}
     
     """
+    import pandas as pd
+
     assert isinstance(waveform_extractor, spikeinterface.core.waveform_extractor.WaveformExtractor), \
         'waveform_extractor must be a WaveformExtractor object'
     sorting = waveform_extractor.sorting
