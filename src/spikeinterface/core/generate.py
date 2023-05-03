@@ -515,6 +515,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
             self.traces_generator = self._white_noise_generator
 
             # Configuration of mode
+            
             noise_size_ms = 50.0
             noise_frames = int(noise_size_ms * self.sampling_frequency / 1000)
             self.basic_noise_block = self.rng.normal(size=(noise_frames, self.num_channels))

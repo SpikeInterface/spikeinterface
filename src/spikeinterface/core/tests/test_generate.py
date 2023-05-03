@@ -150,7 +150,13 @@ def test_generate_recording_correct_shape(mode):
 
 
 @pytest.mark.parametrize("mode", mode_list)
-def test_generator_recording_consistency(mode):
+@pytest.mark.parametrize("start_frame, end_frame", [
+    (0, None),
+    (0, 80),
+    (20_000, 30_000),
+    
+])
+def test_generator_recording_consistency(mode, start_frame, end_frame):
     # Calling the get_traces twice should return the same result
     sampling_frequency = 30000  # Hz
     durations = [1.0]
@@ -167,11 +173,6 @@ def test_generator_recording_consistency(mode):
         mode=mode,
     )
 
-    traces = lazy_recording.get_traces(start_frame=0, end_frame=None)
-    assert np.allclose(lazy_recording.get_traces(), traces)
-
-    start_frame = 25
-    end_frame = 80
     traces = lazy_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
     same_traces = lazy_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
     assert np.allclose(traces, same_traces)
@@ -180,9 +181,11 @@ def test_generator_recording_consistency(mode):
 @pytest.mark.parametrize("mode", mode_list)
 @pytest.mark.parametrize("start_frame, end_frame, extra_samples", [
     (0, 1000, 10),
-    (0, 2000, 20),
-    (1000, 2000, 5),
-    (250, 750, 15),
+    (0, 10_000, 1_000),
+    (0, 20_000, 10_000),
+    (1_000, 2_000, 300),
+    (250, 750, 800),
+    (10_000, 25_000, 3_000)
 ])
 def test_generator_recording_consistency_across_traces(mode, start_frame, end_frame, extra_samples):
     # Test that the generated traces behave like true arrays. Calling a larger array and then slicing it should
