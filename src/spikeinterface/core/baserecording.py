@@ -77,6 +77,13 @@ class BaseRecording(BaseRecordingSnippets):
             memory_per_segment_formated = [convert_bytes_to_str(mem) for mem in memory_per_segment_bytes]
 
             list_to_string = lambda lst: ' | '.join(x for x in lst)
+            def list_to_string(lst, max_size=6):
+                if len(lst) <= max_size:
+                    return ' | '.join(x for x in lst)
+                else:
+                    half = max_size // 2
+                    return ' | '.join(x for x in lst[:half]) + ' ... ' + ' | '.join(x for x in lst[-half:])
+
             txt += (
                 f"\n"
                 f"Segments:"
