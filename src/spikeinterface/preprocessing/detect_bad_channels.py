@@ -1,6 +1,6 @@
 import warnings
+
 import numpy as np
-import scipy.stats
 
 from .filter import highpass_filter
 from ..core import get_random_data_chunks, order_channels_by_depth
@@ -106,6 +106,8 @@ def detect_bad_channels(recording,
     International Brain Laboratory et al. (2022). Spike sorting pipeline for the International Brain Laboratory.
     https://www.internationalbrainlab.com/repro-ephys
     """
+    import scipy.stats
+
     method_list = ("std", "mad", "coherence+psd")
     assert method in method_list, f"{method} is not a valid method. Available methods are {method_list}"
 
@@ -245,6 +247,7 @@ def detect_bad_channels_ibl(raw, fs, psd_hf_threshold,
     _, nc = raw.shape
     raw = raw - np.mean(raw, axis=0)[np.newaxis, :]
     nperseg = int(welch_window_ms * fs / 1000)
+    import scipy.signal
     fscale, psd = scipy.signal.welch(raw, fs=fs, axis=0, window='hann', nperseg=nperseg)
 
     # compute similarities
@@ -292,5 +295,6 @@ def detrend(x, nmed):
     ntap = int(np.ceil(nmed / 2))
     xf = np.r_[np.zeros(ntap) + x[0], x, np.zeros(ntap) + x[-1]]
 
+    import scipy.signal
     xf = scipy.signal.medfilt(xf, nmed)[ntap:-ntap]
     return x - xf

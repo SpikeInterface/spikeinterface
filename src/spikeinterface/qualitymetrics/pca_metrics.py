@@ -1,15 +1,20 @@
 """Cluster quality metrics computed from principal components."""
 
 from cmath import nan
+from copy import deepcopy
+
 import numpy as np
 from tqdm.auto import tqdm
-import scipy.stats
-import scipy.spatial.distance
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.neighbors import NearestNeighbors
-from sklearn.decomposition import IncrementalPCA
-from joblib import delayed, Parallel
-from copy import deepcopy
+
+try:
+    import scipy.stats
+    import scipy.spatial.distance
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+    from sklearn.neighbors import NearestNeighbors
+    from sklearn.decomposition import IncrementalPCA
+    from joblib import delayed, Parallel
+except:
+    pass 
 
 import spikeinterface as si
 from ..core import get_random_data_chunks, compute_sparsity, WaveformExtractor
