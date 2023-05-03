@@ -604,8 +604,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
                 
                 # Assign the repeated noise block values to traces without an additional allocation
                 end_repeat_block = end_first_block + repeat_block_count * noise_frames
-                slice_repeated_block = slice(end_first_block, end_repeat_block)
-                traces[slice_repeated_block] = np.concatenate(repeated_block, axis=0, out=traces[slice_repeated_block])
+                np.concatenate(repeated_block, axis=0, out=traces[end_first_block:end_repeat_block])
             
             # Fill traces with the last block
             traces[end_repeat_block:] = noise_block[:end_frame_mod]
