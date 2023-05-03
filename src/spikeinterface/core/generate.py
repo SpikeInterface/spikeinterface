@@ -469,7 +469,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
                 sampling_frequency: float,
                 num_channels: int,
                 num_segments: int,
-                dtype: Optional[Union[np.dtype, str]] = "float32",
+                dtype: Union[np.dtype, str] = "float32",
                 seed: Optional[int] = None,
                 mode: Literal['white_noise', 'random_peaks'] = 'white_noise'
                 ):
@@ -499,7 +499,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         self.num_samples = int(duration * sampling_frequency)
         self.seed = seed
         self.num_channels = num_channels
-        self.dtype = dtype 
+        self.dtype = np.dtype(dtype)
         self.mode = mode
         self.num_segments = num_segments
         self.rng = np.random.default_rng(seed=self.seed)        
@@ -520,7 +520,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
             noise_size_MiB = 50  # This corresponds to approximately one second of noise for 384 channels and 30 KHz
             noise_size_MiB /= 2 # Somehow the malloc corresponds to twice the size of the array
             noise_size_bytes = noise_size_MiB * 1024 * 1024
-            total_noise_samples = noise_size_bytes / (self.num_channels * np.dtype(self.dtype).itemsize)
+            total_noise_samples = noise_size_bytes / (self.num_channels * self.dtype.itemsize)
             # When multiple segments are used, the noise is split into equal sized segments to keep memory constant
             self.noise_segment_samples = int(total_noise_samples / self.num_segments)
             self.noise_segment_samples = int(total_noise_samples)
@@ -569,7 +569,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         creating memory allocations .
         """
 
-        noise_block  = self.basic_noise_block
+        noise_block = self.basic_noise_block
         noise_frames = noise_block.shape[0]
         num_channels = noise_block.shape[1]
         
@@ -579,13 +579,13 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
 
         larger_than_noise_block = num_samples >= noise_frames
 
-        traces = np.empty((num_samples, num_channels), dtype=self.dtype)
+        traces = np.empty(shape=(num_samples, num_channels), dtype=self.dtype)
         
         if not larger_than_noise_block:
             if start_frame_mod <= end_frame_mod:
-                traces[:] = noise_block[start_frame_mod:end_frame_mod]
+                traces = noise_block[start_frame_mod:end_frame_mod]
             else:
-                # The starting frame is one block and the ending frame is the next block
+                # The starting frame is on one block and the ending frame is the next block
                 traces[:noise_frames - start_frame_mod] = noise_block[start_frame_mod:]
                 traces[noise_frames - start_frame_mod:] = noise_block[:end_frame_mod]
         else:
@@ -594,19 +594,19 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
             traces[:end_first_block] = noise_block[start_frame_mod:]
             
             # Calculate the number of times to repeat the noise block
-            num_repeat_noise_block = (num_samples - end_first_block) // noise_frames
+            repeat_block_count = (num_samples - end_first_block) // noise_frames
             
-            if num_repeat_noise_block ==  0:
+            if repeat_block_count ==  0:
                 end_repeat_block = end_first_block
             else: # Repeat block as many times as necessary
                 
                 # Create a broadcasted view of the noise block repeated along the first axis
-                middle_block = np.broadcast_to(noise_block, (num_repeat_noise_block, noise_frames, num_channels))
+                repeated_block = np.broadcast_to(noise_block, shape=(repeat_block_count, noise_frames, num_channels))
                 
                 # Assign the repeated noise block values to traces without an additional allocation
-                end_repeat_block = end_first_block + num_repeat_noise_block * noise_frames
-                slice_middle_block = slice(end_first_block, end_repeat_block)
-                traces[slice_middle_block] = np.concatenate(middle_block, axis=0, out=traces[slice_middle_block])
+                end_repeat_block = end_first_block + repeat_block_count * noise_frames
+                slice_repeated_block = slice(end_first_block, end_repeat_block)
+                traces[slice_repeated_block] = np.concatenate(repeated_block, axis=0, out=traces[slice_repeated_block])
             
             # Fill traces with the last block
             traces[end_repeat_block:] = noise_block[:end_frame_mod]
