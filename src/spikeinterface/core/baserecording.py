@@ -82,7 +82,7 @@ class BaseRecording(BaseRecordingSnippets):
                     return ' | '.join(x for x in lst)
                 else:
                     half = max_size // 2
-                    return ' | '.join(x for x in lst[:half]) + ' ... ' + ' | '.join(x for x in lst[-half:])
+                    return ' | '.join(x for x in lst[:half]) + ' | ... | ' + ' | '.join(x for x in lst[-half:])
 
             txt += (
                 f"\n"
