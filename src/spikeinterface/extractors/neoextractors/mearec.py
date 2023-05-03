@@ -1,3 +1,8 @@
+from pathlib import Path
+from typing import Union
+
+import numpy as np
+
 import probeinterface as pi
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
@@ -20,7 +25,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
     NeoRawIOClass = 'MEArecRawIO'
     name = "mearec"
 
-    def __init__(self, file_path, all_annotations=False):
+    def __init__(self, file_path: Union[str, Path], all_annotations: bool=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(self, 
                                            all_annotations=all_annotations,
@@ -50,10 +55,12 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
     handle_spike_frame_directly = False
     name = "mearec"
 
-    def __init__(self, file_path):
+    def __init__(self, file_path: Union[str, Path]):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
+        
+        sampling_frequency = self.read_sampling_frequency(file_path=file_path)
         NeoBaseSortingExtractor.__init__(self,
-                                         sampling_frequency=None,  # auto guess is correct here
+                                         sampling_frequency=sampling_frequency,  # auto guess is correct here
                                          use_natural_unit_ids=True,
                                          **neo_kwargs)
 
@@ -63,7 +70,21 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
     def map_to_neo_kwargs(cls, file_path):
         neo_kwargs = {'filename': str(file_path), "load_spiketrains": True, "load_analogsignal": False}
         return neo_kwargs
+    
 
+    def read_sampling_frequency(self, file_path: Union[str, Path]) -> float:
+        from h5py import File
+        with File(file_path, 'r') as f:
+            info = f["info"]  
+            recordings = info["recordings"]  
+            sampling_frequency = recordings["fs"][()]
+            
+            if isinstance(sampling_frequency, bytes):
+                sampling_frequency = sampling_frequency.decode('utf-8')
+            elif isinstance(sampling_frequency, np.generic):
+                sampling_frequency = sampling_frequency.item()
+
+        return float(sampling_frequency)
 
 def read_mearec(file_path):
     """Read a MEArec file.
