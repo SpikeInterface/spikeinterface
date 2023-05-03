@@ -518,6 +518,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
 
             # Configuration of mode
             noise_size_MiB = 50  # This corresponds to approximately one second of noise for 384 channels and 30 KHz
+            noise_size_MiB /= 2 # Somehow the malloc corresponds to twice the size of the array
             noise_size_bytes = noise_size_MiB * 1024 * 1024
             total_noise_samples = noise_size_bytes / (self.num_channels * np.dtype(self.dtype).itemsize)
             # When multiple segments are used, the noise is split into equal sized segments to keep memory constant
@@ -570,6 +571,7 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
 
         noise_block  = self.basic_noise_block
         noise_frames = noise_block.shape[0]
+        num_channels = noise_block.shape[1]
         
         start_frame_mod = start_frame % noise_frames
         end_frame_mod = end_frame % noise_frames
@@ -578,23 +580,26 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         larger_than_noise_block = traces_chunk_size >= noise_frames
 
         num_samples = traces_chunk_size
-        traces = np.empty((num_samples, self.num_channels), dtype=self.dtype)
+        traces = np.empty((num_samples, num_channels), dtype=self.dtype)
 
         if not larger_than_noise_block:
             if start_frame_mod <= end_frame_mod:
                 traces = noise_block[start_frame_mod:end_frame_mod]
             else:
-                traces = np.concatenate((noise_block[start_frame_mod:], noise_block[:end_frame_mod]))
+                traces = np.concatenate((noise_block[start_frame_mod:], noise_block[:end_frame_mod]), out=traces)
         else:
             end_first_block = noise_frames - start_frame_mod
             first_block = noise_block[start_frame_mod:]
             traces[:end_first_block] = first_block
             
-            repeat_count = (traces_chunk_size - (noise_frames - start_frame_mod)) // noise_frames
-            start_repeat_block = end_first_block
-            end_repeat_block = start_repeat_block + repeat_count * noise_frames
-            middle_block = np.tile(noise_block, reps=(repeat_count, 1))  # Repeat repeat_count across axis 1
-            traces[start_repeat_block:end_repeat_block] = middle_block            
+            repeat_count = (traces_chunk_size - end_first_block) // noise_frames
+            if repeat_count > 0:
+                start_repeat_block = end_first_block
+                end_repeat_block = start_repeat_block + repeat_count * noise_frames
+                middle_block =  np.tile(noise_block, reps=(repeat_count, 1))
+                traces[start_repeat_block:end_repeat_block] = middle_block            
+            else:
+                end_repeat_block = end_first_block
             
             last_block = noise_block[:end_frame_mod]
             traces[end_repeat_block:] = last_block
