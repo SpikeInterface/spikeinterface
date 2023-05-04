@@ -1,5 +1,4 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
@@ -33,6 +32,8 @@ class RasterWidget(BaseWidget):
 
     def __init__(self, sorting, segment_index=None, unit_ids=None,
                  time_range=None, color='k', figure=None, ax=None):
+        from matplotlib import pyplot as plt
+
         BaseWidget.__init__(self, figure, ax)
         self._sorting = sorting
 
@@ -73,7 +74,7 @@ class RasterWidget(BaseWidget):
         units_ids = self._unit_ids
         if units_ids is None:
             units_ids = self._sorting.get_unit_ids()
-
+        import matplotlib.pyplot as plt
         with plt.rc_context({'axes.edgecolor': 'gray'}):
             for u_i, unit_id in enumerate(units_ids):
                 spiketrain = self._sorting.get_unit_spike_train(unit_id,

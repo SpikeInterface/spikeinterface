@@ -1,8 +1,6 @@
-import numpy as np
-import networkx as nx
-
 from copy import deepcopy
 from typing import OrderedDict
+import numpy as np
 
 from .comparisontools import (make_possible_match, make_best_match, make_hungarian_match)
 
@@ -31,6 +29,7 @@ class BaseMultiComparison(BaseComparison):
     def __init__(self, object_list, name_list,
                  match_score=0.5, chance_score=0.1,
                  verbose=False):
+        import networkx as nx
         BaseComparison.__init__(self, object_list=object_list,
                                 name_list=name_list,
                                 match_score=match_score,
@@ -70,6 +69,8 @@ class BaseMultiComparison(BaseComparison):
             g = self.clean_graph
         else:
             g = self.graph
+        
+        import networkx as nx
         subgraphs = (g.subgraph(c).copy() for c in nx.connected_components(g))
         sg_object_names = []
         sg_units = []
@@ -105,7 +106,8 @@ class BaseMultiComparison(BaseComparison):
     def _do_graph(self):
         if self._verbose:
             print('Multicomparison step 2: make graph')
-
+        
+        import networkx as nx
         self.graph = nx.Graph()
         # nodes
         self._populate_nodes()
@@ -128,6 +130,7 @@ class BaseMultiComparison(BaseComparison):
         if self._verbose:
             print('Multicomaprison step 3: clean graph')
         clean_graph = self.graph.copy()
+        import networkx as nx
         subgraphs = (clean_graph.subgraph(c).copy()
                      for c in nx.connected_components(clean_graph))
         removed_nodes = 0
@@ -185,6 +188,7 @@ class BaseMultiComparison(BaseComparison):
         self._new_units = {}
 
         # save new units
+        import networkx as nx
         self.subgraphs = [self.clean_graph.subgraph(c).copy()
                           for c in nx.connected_components(self.clean_graph)]
         for new_unit, sg in enumerate(self.subgraphs):
