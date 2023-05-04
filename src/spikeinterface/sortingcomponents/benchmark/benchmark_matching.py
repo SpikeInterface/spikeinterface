@@ -20,6 +20,7 @@ import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 import shutil
+import copy
 from tqdm.auto import tqdm
 
 def running_in_notebook():
@@ -153,7 +154,7 @@ class BenchmarkMatching:
             A dictionary of method_kwargs for each method.
         """
         templates = we.get_all_templates(we.unit_ids, mode=template_mode)
-        methods_kwargs = self.methods_kwargs.copy()
+        methods_kwargs = copy.deepcopy(self.methods_kwargs)
         for method in self.methods:
             method_kwargs = methods_kwargs[method]
             if method == 'wobble':
@@ -223,7 +224,8 @@ class BenchmarkMatching:
         sort_idx = np.argsort(spike_time_indices)
         spike_time_indices = spike_time_indices[sort_idx]
         labels = labels[sort_idx]
-        gt_sorting = NumpySorting.from_times_labels(spike_time_indices, labels, self.sampling_rate)
+        gt_sorting = NumpySorting.from_times_labels(spike_time_indices, labels, self.sampling_rate,
+                                                    unit_ids=self.we.unit_ids)
         sort_folder = Path(self.tmp_folder.stem + f'_sorting{len(self.sort_folders)}')
         gt_sorting = gt_sorting.save(folder=sort_folder)
         self.sort_folders.append(sort_folder)
@@ -288,7 +290,8 @@ class BenchmarkMatching:
                 spike_cluster_ids.append(unit)
         spike_time_indices = np.array(spike_time_indices)
         spike_cluster_ids = np.array(spike_cluster_ids)
-        gt_sorting = NumpySorting.from_times_labels(spike_time_indices, spike_cluster_ids, self.sampling_rate)
+        gt_sorting = NumpySorting.from_times_labels(spike_time_indices, spike_cluster_ids, self.sampling_rate,
+                                                    unit_ids=self.we.unit_ids)
         sort_folder = Path(self.tmp_folder.stem + f'_sorting{len(self.sort_folders)}')
         gt_sorting = gt_sorting.save(folder=sort_folder)
         self.sort_folders.append(sort_folder)
