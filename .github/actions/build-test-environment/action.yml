@@ -31,7 +31,7 @@ runs:
           echo "Running spikeinterface dev version"
           pip uninstall -y neo
           pip uninstall -y probeinterface
-          pip install git+https://github.com/NeuralEnsemble/python-neo
+          pip install git+https://github.com/samuelgarcia/python-neo.git@memmap
           pip install git+https://github.com/SpikeInterface/probeinterface
         else
           echo "Running tests for release"
