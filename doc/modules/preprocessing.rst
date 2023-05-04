@@ -310,7 +310,7 @@ Here is a recipe to mimic the **IBL destriping**:
 .. code-block:: python
 
     rec = read_spikeglx('my_spikeglx_folder')
-    rec = highpass_filter(rec)
+    rec = highpass_filter(rec, n_channel_pad=60)
     rec = phase_shift(rec)
     bad_channel_ids = detect_bad_channels(rec)
     rec = interpolate_bad_channels(rec, bad_channel_ids)

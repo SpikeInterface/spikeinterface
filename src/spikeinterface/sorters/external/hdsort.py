@@ -5,7 +5,6 @@ import shutil
 import sys
 
 import numpy as np
-import scipy.io
 
 from spikeinterface.core.core_tools import write_to_h5_dataset_format
 from ..basesorter import BaseSorter
@@ -194,7 +193,7 @@ class HDSortSorter(BaseSorter):
             'P': P,
             **cfgs
         }
-
+        import scipy.io
         scipy.io.savemat(str(sorter_output_folder / 'configsParams.mat'), data)
 
     @classmethod

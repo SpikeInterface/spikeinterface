@@ -90,7 +90,8 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
-    "cuda-python",
+    "cuda-python; sys_platform != 'darwin'",
+    "numba",
 ]
 
 widgets = [
