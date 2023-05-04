@@ -30,6 +30,10 @@ jobs:
             python -m pip install -U pip  # Official recommended way
             pip install -e .[test]
             pip install h5py
+            pip uninstall -y neo
+            pip uninstall -y probeinterface
+            pip install git+https://github.com/samuelgarcia/python-neo.git@memmap
+            pip install git+https://github.com/SpikeInterface/probeinterface
       - name: Installad datalad
         run: |
             pip install datalad-installer

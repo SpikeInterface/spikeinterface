@@ -56,8 +56,11 @@ if __name__ == "__main__":
         local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=local_folder, unlock=True)
 
         folder_with_copies = copy_folder_n_times(local_path, n_times=number_of_files)
+        print("Done copying files")
+        # Display cumulative size of folder_with_copies
+        print(f"Size of folder_with_copies: {sum(f.stat().st_size for f in folder_with_copies.glob('**/*') if f.is_file()) / 1e9} GB")
+        
         spikeglx_folder_list = [path for path in folder_with_copies.iterdir() if path.is_dir()]
-
         stream_id = "imec0.ap"
         extractor = SpikeGLXRecordingExtractor
         extractor_list = [extractor(folder_path=path, stream_id=stream_id) for path in spikeglx_folder_list]
