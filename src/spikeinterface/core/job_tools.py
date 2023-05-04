@@ -223,6 +223,9 @@ def ensure_chunk_size(recording, total_memory=None, chunk_size=None, chunk_memor
     else:
         if n_jobs == 1:
             # not chunk computing
+            #TODO Discuss, Sam, is this something that we want to do?
+            # Even in single process mode, we should chunk the data to avoid loading the whole thing into memory I feel
+            # Am I wrong?
             chunk_size = None
         else:
             raise ValueError('For n_jobs >1 you must specify total_memory or chunk_size or chunk_memory')
@@ -330,10 +333,6 @@ class ChunkRecordingExecutor:
             returns = []
         else:
             returns = None
-
-        import sys
-        if self.n_jobs != 1 and not (sys.version_info >= (3, 8)):
-            self.n_jobs = 1
 
         if self.n_jobs == 1:
             if self.progress_bar:

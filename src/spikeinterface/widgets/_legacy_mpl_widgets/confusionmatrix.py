@@ -1,5 +1,4 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
@@ -29,6 +28,8 @@ class ConfusionMatrixWidget(BaseWidget):
 
     def __init__(self, gt_comparison, count_text=True, unit_ticks=True,
                  figure=None, ax=None):
+        
+        from matplotlib import pyplot as plt
         BaseWidget.__init__(self, figure, ax)
         self._gtcomp = gt_comparison
         self._count_text = count_text

@@ -4,11 +4,7 @@ https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spik
 22/04/2020
 """
 import numpy as np
-import pandas as pd
 from copy import deepcopy
-
-import scipy.stats
-from scipy.signal import resample_poly
 
 from ..core import WaveformExtractor
 from ..core.template_tools import get_template_extremum_channel
@@ -54,6 +50,8 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
         return dict(metrics=new_metrics)
         
     def _run(self):
+        import pandas as pd
+        from scipy.signal import resample_poly
         metric_names = self._params['metric_names']
         sparsity = self._params['sparsity']
         peak_sign = self._params['peak_sign']
@@ -275,7 +273,8 @@ def get_repolarization_slope(template, **kwargs):
 
     if return_to_base_idx - trough_idx < 3:
         return np.nan
-
+    
+    import scipy.stats
     res = scipy.stats.linregress(
         times[trough_idx:return_to_base_idx], template[trough_idx:return_to_base_idx])
     return res.slope
@@ -302,6 +301,8 @@ def get_recovery_slope(template, window_ms=0.7, **kwargs):
         return np.nan
     max_idx = int(peak_idx + ((window_ms / 1000) * sampling_frequency))
     max_idx = np.min([max_idx, template.shape[0]])
+    
+    import scipy.stats
     res = scipy.stats.linregress(
         times[peak_idx:max_idx], template[peak_idx:max_idx])
     return res.slope
