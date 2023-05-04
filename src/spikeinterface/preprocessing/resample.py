@@ -1,5 +1,4 @@
 import numpy as np
-from scipy import signal
 import warnings
 
 from spikeinterface.core.core_tools import (
@@ -17,7 +16,7 @@ class ResampleRecording(BasePreprocessor):
     Resample the recording extractor traces.
 
     If the original sampling rate is multiple of the resample_rate, it will use
-    the signal.decimate method. In other cases, it uses signal.resample. In the
+    the signal.decimate method from scipy. In other cases, it uses signal.resample. In the
     later case, the resulting signal can have issues on the edges, mainly on the
     rightmost.
 
@@ -154,6 +153,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
 
         # Decimate can misbehave on some cases, while resample always looks nice enough.
         # Check which method to use:
+        from scipy import signal
         if np.mod(self._parent_rate, self.sampling_frequency) == 0:
             # Ratio between sampling frequencies
             q = int(self._parent_rate / self.sampling_frequency)
