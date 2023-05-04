@@ -279,9 +279,11 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
     local_radius_um: float
         The radius to use to select neighbour channels for locally exclusive detection.
     """
+    
     @classmethod
     def check_params(cls, recording, peak_sign='neg', detect_threshold=5,
                      exclude_sweep_ms=0.1, local_radius_um=50, noise_levels=None, random_chunk_kwargs={}):
+
 
         if not HAVE_NUMBA:
             raise ModuleNotFoundError('"locally_exclusive" needs numba which is not installed')
@@ -298,15 +300,18 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
     def get_method_margin(cls, *args):
         exclude_sweep_size = args[2]
         return exclude_sweep_size
-
+    
     @classmethod
     def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask):
+        
+        numba_detect_peak = numba.jit(parallel=False)(_numba_detect_peak)
+
         assert HAVE_NUMBA, 'You need to install numba'
         traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
 
         if peak_sign in ('pos', 'both'):
             peak_mask = traces_center > abs_threholds[None, :]
-            peak_mask = _numba_detect_peak_pos(traces, traces_center, peak_mask, exclude_sweep_size,
+            peak_mask = numba_detect_peak(traces, traces_center, peak_mask, exclude_sweep_size,
                                             abs_threholds, peak_sign, neighbours_mask)
 
         if peak_sign in ('neg', 'both'):
@@ -314,7 +319,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
                 peak_mask_pos = peak_mask.copy()
 
             peak_mask = traces_center < -abs_threholds[None, :]
-            peak_mask = _numba_detect_peak_neg(traces, traces_center, peak_mask, exclude_sweep_size,
+            peak_mask = numba_detect_peak(traces, traces_center, peak_mask, exclude_sweep_size,
                                             abs_threholds, peak_sign, neighbours_mask)
 
             if peak_sign == 'both':
@@ -326,6 +331,58 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
 
         return peak_sample_ind, peak_chan_ind
 
+def _numba_detect_peak(traces, traces_center, peak_mask, exclude_sweep_size,
+                abs_thresholds, peak_sign, neighbours_mask):
+    
+    num_channels = traces_center.shape[1]
+    num_samples = traces_center.shape[0]
+
+    for channel_index in range(num_channels):
+        for sample_index in range(num_samples):
+            # Skip the sample if the peak_mask value is False
+            if not peak_mask[sample_index, channel_index]:
+                continue
+
+            # Iterate through all neighboring channels
+            for neighbour in range(num_channels):
+                # Skip the neighbor if it's not in the neighbours_mask
+                if not neighbours_mask[channel_index, neighbour]:
+                    continue
+
+                # Iterate through the range of the exclude_sweep_size
+                for neighbor_index in range(exclude_sweep_size):
+                    current_trace_center = traces_center[sample_index, channel_index]
+                    neighbor_trace_center = traces_center[sample_index, neighbour]
+
+                    # If the current channel is different from the neighbor channel
+                    if channel_index != neighbour:
+                        # Adjust peak_mask based on the peak sign
+                        if peak_sign == 'pos':
+                            peak_mask[sample_index, channel_index] &= current_trace_center >= neighbor_trace_center
+                        else:  
+                            peak_mask[sample_index, channel_index] &= current_trace_center <= neighbor_trace_center
+
+                    neighbor_trace = traces[sample_index + neighbor_index, neighbour]
+                    neighbor_trace_next = traces[exclude_sweep_size + sample_index + neighbor_index + 1, neighbour]
+
+                    # Further adjust peak_mask based on the peak sign
+                    if peak_sign == 'pos':
+                        peak_mask[sample_index, channel_index] &= current_trace_center > neighbor_trace
+                        peak_mask[sample_index, channel_index] &= current_trace_center >= neighbor_trace_next
+                    else:  
+                        peak_mask[sample_index, channel_index] &= current_trace_center < neighbor_trace
+                        peak_mask[sample_index, channel_index] &= current_trace_center <= neighbor_trace_next
+
+                    # Break the loop if peak_mask value becomes False
+                    if not peak_mask[sample_index, channel_index]:
+                        break
+
+                # Break the loop if peak_mask value becomes False
+                if not peak_mask[sample_index, channel_index]:
+                    break
+
+                    
+    return peak_mask
 
 class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
     """Detect peaks using the 'locally exclusive' method with pytorch.
@@ -374,52 +431,6 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
             sample_inds = np.array(sample_inds.cpu())
             chan_inds = np.array(chan_inds.cpu())
         return sample_inds, chan_inds
-
-
-if HAVE_NUMBA:
-    @numba.jit(parallel=False)
-    def _numba_detect_peak_pos(traces, traces_center, peak_mask, exclude_sweep_size,
-                               abs_threholds, peak_sign, neighbours_mask):
-        num_chans = traces_center.shape[1]
-        for chan_ind in range(num_chans):
-            for s in range(peak_mask.shape[0]):
-                if not peak_mask[s, chan_ind]:
-                    continue
-                for neighbour in range(num_chans):
-                    if not neighbours_mask[chan_ind, neighbour]:
-                        continue
-                    for i in range(exclude_sweep_size):
-                        if chan_ind != neighbour:
-                            peak_mask[s, chan_ind] &= traces_center[s, chan_ind] >= traces_center[s, neighbour]
-                        peak_mask[s, chan_ind] &= traces_center[s, chan_ind] > traces[s + i, neighbour]
-                        peak_mask[s, chan_ind] &= traces_center[s, chan_ind] >= traces[exclude_sweep_size + s + i + 1, neighbour]
-                        if not peak_mask[s, chan_ind]:
-                            break
-                    if not peak_mask[s, chan_ind]:
-                        break
-        return peak_mask
-
-    @numba.jit(parallel=False)
-    def _numba_detect_peak_neg(traces, traces_center, peak_mask, exclude_sweep_size,
-                               abs_threholds, peak_sign, neighbours_mask):
-        num_chans = traces_center.shape[1]
-        for chan_ind in range(num_chans):
-            for s in range(peak_mask.shape[0]):
-                if not peak_mask[s, chan_ind]:
-                    continue
-                for neighbour in range(num_chans):
-                    if not neighbours_mask[chan_ind, neighbour]:
-                        continue
-                    for i in range(exclude_sweep_size):
-                        if chan_ind != neighbour:
-                            peak_mask[s, chan_ind] &= traces_center[s, chan_ind] <= traces_center[s, neighbour]
-                        peak_mask[s, chan_ind] &= traces_center[s, chan_ind] < traces[s + i, neighbour]
-                        peak_mask[s, chan_ind] &= traces_center[s, chan_ind] <= traces[exclude_sweep_size + s + i + 1, neighbour]
-                        if not peak_mask[s, chan_ind]:
-                            break
-                    if not peak_mask[s, chan_ind]:
-                        break
-        return peak_mask
 
 
 if HAVE_TORCH:

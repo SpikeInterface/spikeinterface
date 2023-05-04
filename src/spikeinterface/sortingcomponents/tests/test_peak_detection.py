@@ -69,7 +69,7 @@ def torch_job_kwargs(job_kwargs):
     return torch_job_kwargs
 
 
-def test_detect_peaks_by_channel(recording, spike_trains, job_kwargs, torch_job_kwargs):
+def test_detect_peaks_by_channel(recording, job_kwargs, torch_job_kwargs):
     peaks_by_channel_np = detect_peaks(
         recording, method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
     )
@@ -87,11 +87,10 @@ def test_detect_peaks_by_channel(recording, spike_trains, job_kwargs, torch_job_
         # Test that torch and numpy implementation match
         assert np.isclose(np.array(len(peaks_by_channel_np)), np.array(len(peaks_by_channel_torch)), rtol=0.1)
         
-def test_detect_peaks_locally_exclusive(recording, spike_trains, job_kwargs, torch_job_kwargs):
+def test_detect_peaks_locally_exclusive(recording, job_kwargs, torch_job_kwargs):
     peaks_by_channel_np = detect_peaks(
         recording, method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
     )
-
 
     peaks_local_numba = detect_peaks(
         recording, method="locally_exclusive", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
