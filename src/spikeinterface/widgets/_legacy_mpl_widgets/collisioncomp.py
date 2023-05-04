@@ -1,9 +1,5 @@
 import numpy as np
 
-from matplotlib import pyplot as plt
-import matplotlib.gridspec as gridspec
-import matplotlib.colors
-
 from .basewidget import BaseWidget
 from spikeinterface.comparison.collisioncomparison import CollisionGTComparison
 
@@ -30,7 +26,9 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
         The output widget
     """
     def __init__(self, comp, unit_ids=None, figure=None, ax=None):
-
+        from matplotlib import pyplot as plt
+        import matplotlib.gridspec as gridspec
+        import matplotlib.colors
         BaseWidget.__init__(self, figure, ax)
         if unit_ids is None:
             # take all units
@@ -134,8 +132,12 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
     """
 
     def __init__(self, comp, templates, unit_ids=None, metric='cosine_similarity', figure=None, ax=None, 
-        mode='heatmap', similarity_bins=np.linspace(-0.4, 1, 8), cmap='winter', good_only=True,  min_accuracy=0.9, show_legend=False,
-        ylim = (0, 1)):
+                mode='heatmap', similarity_bins=np.linspace(-0.4, 1, 8), cmap='winter', good_only=True,  min_accuracy=0.9, show_legend=False,
+                ylim = (0, 1)
+        ):
+        from matplotlib import pyplot as plt
+        import matplotlib.gridspec as gridspec
+        import matplotlib.colors
         BaseWidget.__init__(self, figure, ax)
 
         assert mode in ['heatmap', 'lines']
@@ -255,7 +257,9 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
                  good_only=True,
                  min_accuracy=0.9,
                  ncols=3, axes=None, cmap='winter'):
-
+        from matplotlib import pyplot as plt
+        import matplotlib.gridspec as gridspec
+        import matplotlib.colors
         if axes is None:
             num_axes = len(study.sorter_names)
         else:
@@ -316,7 +320,9 @@ class StudyComparisonCollisionBySimilarityRangeWidget(BaseWidget):
     def __init__(self, study, metric='cosine_similarity',
                  similarity_range=[0, 1], show_legend=False, ylim=(0.5, 1),
                  good_only=True, min_accuracy=0.9, ax=None):
-
+        from matplotlib import pyplot as plt
+        import matplotlib.gridspec as gridspec
+        import matplotlib.colors
         BaseWidget.__init__(self, None, ax)
 
         self.study = study
@@ -354,7 +360,9 @@ class StudyComparisonCollisionBySimilarityRangesWidget(BaseWidget):
     def __init__(self, study, metric='cosine_similarity',
                  similarity_ranges=np.linspace(-0.4, 1, 8), show_legend=False, ylim=(0.5, 1),
                  good_only=True, min_accuracy=0.9, ax=None, show_std=False):
-
+        from matplotlib import pyplot as plt
+        import matplotlib.gridspec as gridspec
+        import matplotlib.colors
         BaseWidget.__init__(self, None, ax)
 
         self.study = study

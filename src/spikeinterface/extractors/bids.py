@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 
 import neo
 from probeinterface import read_BIDS_probe
@@ -65,6 +64,8 @@ def _read_probe_group(folder, bids_name, recording_channel_ids):
     probegroup = read_BIDS_probe(folder)
 
     # make maps between : channel_id and contact_id using _channels.tsv
+    import pandas as pd
+
     for probe in probegroup.probes:
         channels_file = folder / bids_name.replace('_ephys', '_channels.tsv')
         channels = pd.read_csv(channels_file, sep='\t', dtype='str')
