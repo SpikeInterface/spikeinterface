@@ -4,6 +4,7 @@ import psutil
 import numpy as np
 
 from spikeinterface.core.generate import GeneratorRecording, generate_lazy_recording
+from spikeinterface.core.core_tools import convert_bytes_to_str
 
 mode_list = GeneratorRecording.available_modes
 
@@ -115,13 +116,16 @@ def test_generate_lazy_recording(mode):
 def test_generate_lazy_recording_under_giga(mode):
     # Test that the recording has the correct size in memory when calling smaller than 1 GiB
     recording = generate_lazy_recording(full_traces_size_GiB=0.5, mode=mode)
-    assert recording.get_memory_size() == "512.00 MiB"
+    recording_total_memory = convert_bytes_to_str(recording.get_memory_size())
+    assert recording_total_memory == "512.00 MiB"
 
     recording = generate_lazy_recording(full_traces_size_GiB=0.3, mode=mode)
-    assert recording.get_memory_size() == "307.20 MiB"
+    recording_total_memory = convert_bytes_to_str(recording.get_memory_size())
+    assert recording_total_memory == "307.20 MiB"
     
     recording = generate_lazy_recording(full_traces_size_GiB=0.1, mode=mode)
-    assert recording.get_memory_size() == "102.40 MiB"
+    recording_total_memory = convert_bytes_to_str(recording.get_memory_size())
+    assert recording_total_memory == "102.40 MiB"
 
 @pytest.mark.parametrize("mode", mode_list)
 def test_generate_recording_correct_shape(mode):
