@@ -339,7 +339,9 @@ class NeoSortingSegment(BaseSortingSegment):
         spike_timestamps = self.neo_reader.get_spike_timestamps(block_index=self.block_index,
                                                                 seg_index=self.segment_index,
                                                                 spike_channel_index=unit_index)
-        if self.handle_spike_frame_directly:
+        
+        # The second conditions is for Plexon. I think it is wrong
+        if self.handle_spike_frame_directly or self._t_start is None:  
             spike_frames = spike_timestamps
         else:
             # Convert timestamps to seconds
