@@ -18,9 +18,9 @@ from .job_tools import (ensure_chunk_size, ensure_n_jobs, divide_segment_into_ch
 
 def define_function_from_class(source_class, name):
     "Wrapper to change the name of a class"
-    source_class.__name__ = name
+    new_class = type(name, source_class.__bases__, dict(source_class.__dict__))
 
-    return source_class
+    return new_class
 
 
 def read_python(path):
