@@ -54,7 +54,6 @@ class BenchmarkMatching:
         self.we = waveform_extractor
         for method in self.methods:
             self.methods_kwargs[method]['waveform_extractor'] = self.we
-        print(f"{template_mode = }")
         self.templates = self.we.get_all_templates(mode=template_mode)
         self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
         self.similarity = compute_template_similarity(self.we)
