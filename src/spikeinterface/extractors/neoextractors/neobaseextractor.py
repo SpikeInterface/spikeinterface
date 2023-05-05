@@ -243,7 +243,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
     handle_spike_frame_directly = True
 
     def __init__(self, block_index=None,
-                 sampling_frequency=None, t_start=None, use_natural_unit_ids=False,
+                 sampling_frequency=None, use_natural_unit_ids=False,
                  **neo_kwargs):
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
 
@@ -304,7 +304,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         # here the generic case
         #  all channels are in the same neo group so
         sig_channels = self.neo_reader.header['signal_channels']
-        assert sig_channels.size > 0, 'No signal streams to infer the the sampling frequency. Set it manually'
+        assert sig_channels.size > 0, 'No signal streams to infer the sampling frequency. Set it manually'
         argmax = np.argmax(sig_channels['sampling_rate'])
         sampling_frequency = sig_channels[argmax]["sampling_rate"]
         stream_id = sig_channels[argmax]["stream_id"]
