@@ -18,7 +18,10 @@ from .job_tools import (ensure_chunk_size, ensure_n_jobs, divide_segment_into_ch
 
 def define_function_from_class(source_class, name):
     "Wrapper to change the name of a class"
-    new_class = type(name, source_class.__bases__, dict(source_class.__dict__))
+    source_class_name = source_class.__name__
+    new_class_dict = source_class.__dict__.copy()
+    new_class_dict["name"] = name
+    new_class = type(source_class_name, source_class.__bases__, new_class_dict)
 
     return new_class
 
