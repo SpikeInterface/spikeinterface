@@ -35,7 +35,7 @@ def running_in_notebook():
 class BenchmarkMatching:
     """Benchmark a set of template matching methods on a given recording and ground-truth sorting."""
     def __init__(self, recording, gt_sorting, waveform_extractor, methods, methods_kwargs=None, exhaustive_gt=True,
-                 tmp_folder=None, **job_kwargs):
+                 tmp_folder=None, template_mode='median', **job_kwargs):
         self.methods = methods
         if methods_kwargs is None:
             methods_kwargs = {method:{} for method in methods}
@@ -54,7 +54,8 @@ class BenchmarkMatching:
         self.we = waveform_extractor
         for method in self.methods:
             self.methods_kwargs[method]['waveform_extractor'] = self.we
-        self.templates = self.we.get_all_templates(mode='median')
+        print(f"{template_mode = }")
+        self.templates = self.we.get_all_templates(mode=template_mode)
         self.metrics = compute_quality_metrics(self.we, metric_names=['snr'], load_if_exists=True)
         self.similarity = compute_template_similarity(self.we)
         self.parameter_name2matching_fn = dict(num_spikes=self.run_matching_num_spikes,
