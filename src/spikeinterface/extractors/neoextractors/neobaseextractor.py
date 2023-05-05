@@ -243,16 +243,28 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
     handle_spike_frame_directly = True
 
     def __init__(self, block_index=None,
-                 sampling_frequency=None, use_natural_unit_ids=False,
+                 sampling_frequency=None, t_start=None, use_natural_unit_ids=False,
                  **neo_kwargs):
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
 
         self.use_natural_unit_ids = use_natural_unit_ids
-        if sampling_frequency is None:
+        num_segments = self.neo_reader.segment_count(block_index=self.block_index)
+
+        stream_index = None
+        guess_sampling_frequency_from_signal = sampling_frequency is None
+        if guess_sampling_frequency_from_signal:
             sampling_frequency, stream_id = self._auto_guess_sampling_frequency()
             stream_index = np.where(self.neo_reader.header["signal_streams"]["id"] == stream_id)[0][0]
+        
+        if isinstance(t_start, (list, np.ndarray)):
+            assert len(t_start) == num_segments, "t_start must have the same length as the number of segments"
+            t_start_per_segment = t_start
         else:
-            stream_index = None
+            t_start_per_segment = [t_start] * num_segments
+
+        guess_t_start_from_signal = stream_index is not None and t_start is None and not self.handle_spike_frame_directly
+        if guess_t_start_from_signal:
+            t_start_per_segment = [self.neo_reader.get_signal_t_start(block_index=self.block_index,seg_index=segment_index, stream_index=stream_index) for segment_index in range(num_segments)]
         
         # Get the stream index corresponding to the extracted frequency
         spike_channels = self.neo_reader.header['spike_channels']
@@ -266,20 +278,11 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        nseg = self.neo_reader.segment_count(block_index=self.block_index)
-        for segment_index in range(nseg):
-            if self.handle_spike_frame_directly:
-                t_start = None
-            elif stream_index is None:
-                t_start = None
-            else:
-                t_start = self.neo_reader.get_signal_t_start(block_index=self.block_index,
-                                                             seg_index=segment_index,
-                                                             stream_index=stream_index)
-
+        for segment_index in range(num_segments):
+            t_start = t_start_per_segment[segment_index]
             sorting_segment = NeoSortingSegment(self.neo_reader, self.block_index, segment_index,
-                                                self.use_natural_unit_ids, t_start, 
-                                                sampling_frequency)
+                                                self.use_natural_unit_ids, t_start,
+                                                sampling_frequency, self.handle_spike_frame_directly)
             self.add_sorting_segment(sorting_segment)
 
     def _auto_guess_sampling_frequency(self):
@@ -310,7 +313,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
 class NeoSortingSegment(BaseSortingSegment):
     def __init__(self, neo_reader, block_index, segment_index, use_natural_unit_ids, t_start,
-                 sampling_frequency):
+                 sampling_frequency, handle_spike_frame_directly):
         BaseSortingSegment.__init__(self)
         self.neo_reader = neo_reader
         self.segment_index = segment_index
@@ -319,6 +322,7 @@ class NeoSortingSegment(BaseSortingSegment):
         self._t_start = t_start
         self._sampling_frequency = sampling_frequency
         self._natural_ids = None
+        self.handle_spike_frame_directly = handle_spike_frame_directly
 
     def get_natural_ids(self):
         if self._natural_ids is None:
@@ -335,8 +339,7 @@ class NeoSortingSegment(BaseSortingSegment):
         spike_timestamps = self.neo_reader.get_spike_timestamps(block_index=self.block_index,
                                                                 seg_index=self.segment_index,
                                                                 spike_channel_index=unit_index)
-        if self._t_start is None:
-            # When handle_spike_frame_directly=True, the extractors handles timestamps as frames
+        if self.handle_spike_frame_directly:
             spike_frames = spike_timestamps
         else:
             # Convert timestamps to seconds

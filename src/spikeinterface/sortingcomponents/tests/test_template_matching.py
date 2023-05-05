@@ -37,8 +37,8 @@ def test_find_spikes_from_templates(method, waveform_extractor):
 
 
     recording = waveform_extractor._recording
-    waveform_extractor.get_waveforms("#0")
-    num_waveforms, _, _ = waveform_extractor.shape
+    waveform = waveform_extractor.get_waveforms("#0")
+    num_waveforms, _, _ = waveform.shape
     assert num_waveforms != 0
     method_kwargs_all = {
         'waveform_extractor': waveform_extractor,
