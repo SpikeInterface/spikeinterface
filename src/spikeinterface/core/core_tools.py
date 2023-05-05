@@ -14,23 +14,13 @@ import inspect
 from .job_tools import (ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, fix_job_kwargs, 
                         ChunkRecordingExecutor, _shared_job_kwargs_doc)
 
-def copy_signature(source_fct):
-    def copy(target_fct):
-        target_fct.__signature__ = inspect.signature(source_fct)
-        return target_fct
-    return copy
 
 
 def define_function_from_class(source_class, name):
+    "Wrapper to change the name of a class"
+    source_class.__name__ = name
 
-    @copy_signature(source_class)
-    def reader_func(*args, **kwargs):
-        return source_class(*args, **kwargs)
-
-    reader_func.__doc__ = source_class.__doc__
-    reader_func.__name__ = name
-
-    return reader_func
+    return source_class
 
 
 def read_python(path):
