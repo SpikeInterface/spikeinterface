@@ -258,20 +258,20 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         else:
             # use interger based unit_ids
             unit_ids = np.arange(spike_channels.size, dtype='int64')
-
-        guess_t_start_from_signal = False
-        stream_index = None 
-        if sampling_frequency is None:
+        
+        sampling_not_provided = sampling_frequency is None 
+        stream_index = None
+        if sampling_not_provided:
             sampling_frequency, stream_id = self._auto_guess_sampling_frequency()
             stream_index = np.where(self.neo_reader.header["signal_streams"]["id"] == stream_id)[0][0]
-            guess_t_start_from_signal = True if not self.handle_spike_frame_directly else False 
-        
+                
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         
+        guess_t_start_from_analog_signal = sampling_not_provided and not self.handle_spike_frame_directly
         num_segments = self.neo_reader.segment_count(block_index=self.block_index)
         for segment_index in range(num_segments):
-            t_start = None
-            if guess_t_start_from_signal:
+            t_start = None  # This means t_start will be 0 for practical purposes
+            if guess_t_start_from_analog_signal:
                 t_start = self.neo_reader.get_signal_t_start(block_index=self.block_index,seg_index=segment_index, stream_index=stream_index)
             
             sorting_segment = NeoSortingSegment(neo_reader=self.neo_reader,
@@ -342,8 +342,7 @@ class NeoSortingSegment(BaseSortingSegment):
         
         if self.handle_spike_frame_directly:  
             spike_frames = spike_timestamps
-        else:
-            # Convert timestamps to seconds
+        else:  # Neo return times, convert timestamps to seconds
             spike_times = self.neo_reader.rescale_spike_timestamp(spike_timestamps, dtype='float64')
             # Re-center to zero for each segment and multiply by frequency to convert seconds to frames
             t_start = 0 if self._t_start is None else self._t_start
