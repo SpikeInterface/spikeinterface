@@ -264,7 +264,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         if sampling_frequency is None:
             sampling_frequency, stream_id = self._auto_guess_sampling_frequency()
             stream_index = np.where(self.neo_reader.header["signal_streams"]["id"] == stream_id)[0][0]
-            guess_t_start_from_signal = True
+            guess_t_start_from_signal = True if not self.handle_spike_frame_directly else False 
         
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         
