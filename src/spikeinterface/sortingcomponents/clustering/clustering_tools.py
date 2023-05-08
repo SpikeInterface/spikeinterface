@@ -26,7 +26,7 @@ def _split_waveforms(wfs_and_noise, noise_size, n_components_by_channel, n_compo
     clustering = hdbscan.hdbscan(local_feature, **hdbscan_params)
     local_labels_with_noise = clustering[0]
     cluster_probability = clustering[2]
-    persistent_clusters, = np.nonzero(clustering[2] > probability_thr)
+    persistent_clusters, = np.nonzero(cluster_probability> probability_thr)
     local_labels_with_noise[~np.in1d(local_labels_with_noise, persistent_clusters)] = -1
     
     # remove super small cluster
@@ -448,10 +448,10 @@ def auto_clean_clustering(wfs_arrays, sparsity_mask, labels, peak_labels, nbefor
 
 def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, cosine_threshold=0.975, sparsify_threshold=0.99):
 
-    import sklearn
-    nb_templates = len(wfs_arrays.keys())
-    templates = np.zeros((nb_templates, num_samples, num_chans), dtype=np.float32)
+    num_templates = len(wfs_arrays.keys())
+    templates = np.zeros((num_templates, num_samples, num_chans), dtype=np.float32)
 
+    # All of this is to sparsity the templates
     for t, wfs in wfs_arrays.items():
 
         templates[t] = np.median(wfs, axis=0)
@@ -468,11 +468,14 @@ def remove_duplicates(wfs_arrays, noise_levels, peak_labels, num_samples, num_ch
         active_channels = np.sort(idx[:channel])
         templates[t, :, idx[channel:]] = 0
 
-    similarities = sklearn.metrics.pairwise.cosine_similarity(templates.reshape(nb_templates, -1))
-    for i in range(nb_templates):
+    from sklearn.metrics.pairwise import cosine_similarity
+    similarities = cosine_similarity(templates.reshape(num_templates, -1))
+    
+    # Set the diagonal to -1 
+    for i in range(num_templates):
         similarities[i, i] = -1
 
-    similar_templates = np.where(similarities > cosine_threshold)
+    similar_templates = np.nonzero(similarities > cosine_threshold)
 
     new_labels = peak_labels.copy()
 

@@ -91,11 +91,12 @@ class PositionAndPCAClustering:
         else:
             to_cluster_from = locations
 
-        clustering = hdbscan.hdbscan(to_cluster_from, **params['hdbscan_global_kwargs'])
-        spatial_peak_labels = clustering[0]
+        clusterer = hdbscan.HDBSCAN(**params['hdbscan_global_kwargs'])
+        clusterer.fit(X=to_cluster_from)
+        spatial_peak_labels = clusterer.labels_
         
         spatial_labels = np.unique(spatial_peak_labels)
-        spatial_labels = spatial_labels[spatial_labels >= 0]
+        spatial_labels = spatial_labels[spatial_labels >= 0]  #  Noisy samples are given the label -1 in hdbscan
 
         # step2 : extract waveform by cluster
         spatial_keep, = np.nonzero(spatial_peak_labels >= 0)

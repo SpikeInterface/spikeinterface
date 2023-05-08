@@ -73,11 +73,12 @@ class PositionPTPScaledClustering:
         to_cluster_from = np.hstack((locations, logmaxptps[:, np.newaxis]))
         to_cluster_from = to_cluster_from * d["scales"]
 
-        clustering = hdbscan.hdbscan(to_cluster_from, **d["hdbscan_kwargs"])
-        peak_labels = clustering[0]
-
+        clusterer = hdbscan.HDBSCAN(**d['hdbscan_kwargs'])
+        clusterer.fit(X=to_cluster_from)
+        peak_labels = clusterer.labels_
+        
         labels = np.unique(peak_labels)
-        labels = labels[labels >= 0]
+        labels = labels[labels >= 0] #  Noisy samples are given the label -1 in hdbscan
 
         if d["debug"]:
             import matplotlib.pyplot as plt
