@@ -497,43 +497,12 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         """
         # Get spike times (indices) using peaks in the objective
         objective_template_max = np.max(objective_normalized, axis=0)
-        if len(spike_trains) == 0:  # Brand New spike train
-            spike_window = (template_meta.num_samples - 1, objective_normalized.shape[1] - template_meta.num_samples)
-            objective_windowed = objective_template_max[spike_window[0]:spike_window[1]]
-            spike_time_indices = np.where(objective_windowed > params.threshold)[0]
-            unique_spike_time_indices = []
-            for spike_index in spike_time_indices:
-                try:
-                    prev_spike_idx = unique_spike_time_indices[-1]
-                except IndexError:  # First spike
-                    assert len(unique_spike_time_indices) == 0
-                    unique_spike_time_indices.append(spike_index)
-                    continue
-                if spike_index - prev_spike_idx >= template_meta.num_samples:
-                    unique_spike_time_indices.append(spike_index)
-                else:  # If spikes are close enough, check amplitudes
-                    amp = objective_windowed[spike_index]
-                    prev_amp = objective_windowed[prev_spike_idx]
-                    if amp > prev_amp:
-                        unique_spike_time_indices[-1] = spike_index
-            spike_time_indices = np.array(unique_spike_time_indices)
-            spike_time_indices += template_meta.num_samples - 1
-        else:  # Updating existing spike train
-            convolution_resolution_len = get_convolution_len(template_meta.num_samples, template_meta.num_samples)
-            convolution_spike_times = spike_trains[:, 0] + template_meta.num_samples - 1  # correct for time-shift of convolution
-            spike_start_indices = convolution_spike_times - convolution_resolution_len
-            spike_stop_indices = spike_start_indices + 2 * convolution_resolution_len
-            spike_start_indices = np.maximum(spike_start_indices, template_meta.num_samples - 1)
-            spike_stop_indices = np.minimum(spike_stop_indices, len(objective_template_max) - template_meta.num_samples)
-            spike_time_indices = set()
-            for spike_start_index, spike_stop_index in zip(spike_start_indices, spike_stop_indices):
-                objective_windowed = objective_template_max[spike_start_index:spike_stop_index]
-                new_spike_time_ind = np.argmax(objective_windowed)
-                new_spike_time_ind += spike_start_index
-                spike_time_indices.add(new_spike_time_ind)
-            spike_time_indices = np.array(list(spike_time_indices), dtype=np.int32)
-            objective_spikes = objective_template_max[spike_time_indices]
-            spike_time_indices = spike_time_indices[objective_spikes > params.threshold]
+        spike_window = (template_meta.num_samples - 1, objective_normalized.shape[1] - template_meta.num_samples)
+        objective_windowed = objective_template_max[spike_window[0]:spike_window[1]]
+        spike_time_indices = signal.argrelmax(objective_windowed, order=template_meta.num_samples - 1)[0]
+        spike_time_indices += template_meta.num_samples - 1
+        objective_spikes = objective_template_max[spike_time_indices]
+        spike_time_indices = spike_time_indices[objective_spikes > params.threshold]
 
         if len(spike_time_indices) == 0:  # No new spikes found
             return np.zeros((0, 2), dtype=np.int32), np.zeros(0), np.zeros(0)
