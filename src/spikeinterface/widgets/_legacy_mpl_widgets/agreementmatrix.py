@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
@@ -27,7 +28,6 @@ class AgreementMatrixWidget(BaseWidget):
 
     def __init__(self, sorting_comparison, ordered=True, count_text=True, unit_ticks=True,
                  figure=None, ax=None):
-        from matplotlib import pyplot as plt
         BaseWidget.__init__(self, figure, ax)
         self._sc = sorting_comparison
         self._ordered = ordered

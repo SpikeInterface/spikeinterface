@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.fft import rfft, irfft
 
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -141,8 +142,6 @@ def apply_fshift_ibl(w, s, axis=0, ns=None):
      is an ambiguity
     :return: w
     """
-    from scipy.fft import rfft, irfft
-
     # create a vector that contains a 1 sample shift on the axis
     ns = ns or w.shape[axis]
     shape = np.array(w.shape) * 0 + 1

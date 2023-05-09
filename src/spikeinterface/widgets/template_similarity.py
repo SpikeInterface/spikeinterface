@@ -8,23 +8,23 @@ from ..core.basesorting import BaseSorting
 
 class TemplateSimilarityWidget(BaseWidget):
     """
-    Plots unit template similarity.
+    Plots unit cross correlograms.
 
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
         The object to compute/get template similarity from
     unit_ids : list
-        List of unit ids default None
+        List of unit ids.
     display_diagonal_values : bool
         If False, the diagonal is displayed as zeros.
-        If True, the similarity values (all 1s) are displayed, default False
-    cmap : str
-        The matplotlib colormap. Default 'viridis'. 
+        If True, the similarity values (all 1s) are displayed. Default False
+    cmap : Matplotlib colormap
+        The matplotlib colormap. Default 'viridis'. (matplotlib backend)
     show_unit_ticks : bool
-        If True, ticks display unit ids, default False. 
+        If True, ticks display unit ids. Default False. (matplotlib backend)
     show_colorbar : bool
-        If True, color bar is displayed, default True. 
+        If True, color bar is displayed. Default True. (matplotlib backend)
     """
     possible_backends = {}
 

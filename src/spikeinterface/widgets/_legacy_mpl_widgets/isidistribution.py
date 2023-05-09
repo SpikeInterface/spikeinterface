@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import pyplot as plt
 from .basewidget import BaseWidget
 
 
@@ -30,7 +31,7 @@ class ISIDistributionWidget(BaseWidget):
 
     def __init__(self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0,
                  ncols=5, axes=None):
-        from matplotlib import pyplot as plt
+
         self._sorting = sorting
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()

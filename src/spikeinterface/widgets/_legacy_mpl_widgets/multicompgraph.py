@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib
+from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
@@ -34,8 +36,6 @@ class MultiCompGraphWidget(BaseWidget):
 
     def __init__(self, multi_comparison, draw_labels=False, node_cmap='viridis',
                  edge_cmap='hot', alpha_edges=0.5, colorbar=False, figure=None, ax=None):
-        import matplotlib
-        from matplotlib import pyplot as plt
         BaseWidget.__init__(self, figure, ax)
         self._msc = multi_comparison
         self._draw_labels = draw_labels
@@ -63,7 +63,7 @@ class MultiCompGraphWidget(BaseWidget):
         for node in sorted(g.nodes):
             nodes_col.append(nodes_col_dict[node[0]])
         nodes_col = np.array(nodes_col) / len(self._msc.name_list)
-        import matplotlib.pyplot as plt
+
         _ = plt.set_cmap(self._node_cmap)
         _ = nx.draw_networkx_nodes(g, pos=nx.circular_layout(sorted(g)), nodelist=sorted(g.nodes),
                                    node_color=nodes_col, node_size=20, ax=self.ax)
@@ -82,8 +82,6 @@ class MultiCompGraphWidget(BaseWidget):
             _ = nx.draw_networkx_labels(g, pos=pos_extended, labels=labels, ax=self.ax)
 
         if self._colorbar:
-            import matplotlib
-            import matplotlib.pyplot as plt
             norm = matplotlib.colors.Normalize(vmin=self._msc.match_score, vmax=1)
             cmap = plt.cm.get_cmap(self._edge_cmap)
             m = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
@@ -118,8 +116,6 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
     def __init__(self, multi_comparison, plot_type='pie', cmap='YlOrRd', fs=10,
                  figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
-        import matplotlib
-        import matplotlib.pyplot as plt
         self._msc = multi_comparison
         self._type = plot_type
         self._cmap = cmap
@@ -130,7 +126,6 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
         self._do_plot()
 
     def _do_plot(self):
-        import matplotlib.pyplot as plt
         cmap = plt.get_cmap(self._cmap)
         colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(self._msc.name_list))])
         sg_names, sg_units = self._msc.compute_subgraphs()
@@ -179,14 +174,13 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
 
     def __init__(self, multi_comparison, plot_type='pie', cmap='YlOrRd', fs=9,
                  axes=None, show_legend=True):
-        import matplotlib.pyplot as plt
         self._msc = multi_comparison
         self._type = plot_type
         self._cmap = cmap
         self._fs = fs
         self._show_legend = show_legend
         self.name = 'MultiCompAgreementBySorterWidget'
-        
+
         if axes is None:
             ncols = len(self._msc.name_list)
             fig, axes = plt.subplots(nrows=1, ncols=ncols, sharex=True, sharey=True)
@@ -197,7 +191,6 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
 
     def _do_plot(self):
         name_list = self._msc.name_list
-        import matplotlib.pyplot as plt
         cmap = plt.get_cmap(self._cmap)
         colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(self._msc.name_list))])
         sg_names, sg_units = self._msc.compute_subgraphs()

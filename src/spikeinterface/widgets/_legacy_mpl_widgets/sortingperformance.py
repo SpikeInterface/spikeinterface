@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
@@ -36,7 +37,6 @@ class SortingPerformanceWidget(BaseWidget):
     def __init__(self, sorting_comparison, metrics,
                  performance_name='accuracy', metric_name='snr',
                  color='b', markersize=10, marker='.', figure=None, ax=None):
-        from matplotlib import pyplot as plt
         assert isinstance(sorting_comparison, GroundTruthComparison), \
             "The 'sorting_comparison' object should be a GroundTruthComparison instance"
         BaseWidget.__init__(self, figure, ax)

@@ -3,6 +3,7 @@
 from copy import deepcopy
 
 import numpy as np
+import pandas as pd
 
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
@@ -92,7 +93,6 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         progress_bar = job_kwargs['progress_bar']
 
         unit_ids = self.sorting.unit_ids
-        import pandas as pd
         metrics = pd.DataFrame(index=unit_ids)
 
         # simple metrics not based on PCs

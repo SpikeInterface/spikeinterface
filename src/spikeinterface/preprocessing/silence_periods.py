@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.interpolate
 
 from spikeinterface.core.core_tools import define_function_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -39,7 +40,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
 
     def __init__(self, recording, list_periods, mode='zeros', 
                  **random_chunk_kwargs):
-        import scipy.interpolate
+
         available_modes = ('zeros', 'noise')
         num_seg = recording.get_num_segments()
 

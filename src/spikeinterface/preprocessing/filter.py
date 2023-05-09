@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.signal
 
 from spikeinterface.core.core_tools import define_function_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -59,7 +60,7 @@ class FilterRecording(BasePreprocessor):
     def __init__(self, recording, band=[300., 6000.], btype='bandpass',
                  filter_order=5, ftype='butter', filter_mode='sos', margin_ms=5.0,
                  coeff=None, dtype=None):
-        import scipy.signal
+
         assert filter_mode in ('sos', 'ba')
         sf = recording.get_sampling_frequency()
         if coeff is None:
@@ -117,7 +118,6 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         if traces_dtype.kind == "u":
             traces_chunk = traces_chunk.astype("float32")
 
-        import scipy.signal
         if self.filter_mode == 'sos':
             filtered_traces = scipy.signal.sosfiltfilt(self.coeff, traces_chunk, axis=0)
         elif self.filter_mode == 'ba':
@@ -214,7 +214,6 @@ class NotchFilterRecording(BasePreprocessor):
     def __init__(self, recording, freq=3000, q=30, margin_ms=5.0, dtype=None):
         # coeef is 'ba' type
         fn = 0.5 * float(recording.get_sampling_frequency())
-        import scipy.signal
         coeff = scipy.signal.iirnotch(freq / fn, q)
 
         if dtype is None:

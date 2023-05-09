@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.interpolate
 
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -93,7 +94,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
     def __init__(self, recording, list_triggers, ms_before=0.5, ms_after=3.0, mode='zeros', fit_sample_spacing=1.,
                  list_labels=None, artifacts=None, sparsity=None, scale_amplitude=False, time_jitter=0,
                  waveforms_kwargs={'allow_unfiltered' : True, 'mode':'memory'}):
-        import scipy.interpolate
+
         available_modes = ('zeros', 'linear', 'cubic', 'average', 'median')
         num_seg = recording.get_num_segments()
 
@@ -200,8 +201,6 @@ class RemoveArtifactsRecording(BasePreprocessor):
 class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment, triggers, pad, mode, fit_samples, artifacts,
                  labels, scale_amplitude, time_pad, sparsity):
-        
-        import scipy.interpolate
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.triggers = np.asarray(triggers, dtype='int64')

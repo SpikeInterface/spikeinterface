@@ -1,5 +1,6 @@
 from pathlib import Path
 import shutil
+import pandas as pd
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 import spikeinterface.widgets as sw
@@ -9,6 +10,7 @@ from spikeinterface.postprocessing import (compute_spike_amplitudes,
                                            compute_correlograms)
 from spikeinterface.qualitymetrics import compute_quality_metrics
 
+import matplotlib.pyplot as plt
 
 
 def export_report(waveform_extractor, output_folder, remove_if_exists=False, format="png",
@@ -37,9 +39,6 @@ def export_report(waveform_extractor, output_folder, remove_if_exists=False, for
         Force or not some heavy computaion before exporting.
     {}
     """
-    import pandas as pd
-    import matplotlib.pyplot as plt
-
     job_kwargs = fix_job_kwargs(job_kwargs)
     we = waveform_extractor
     sorting = we.sorting

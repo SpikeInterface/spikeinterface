@@ -489,9 +489,9 @@ def test_compute_sparsity():
 
 
 if __name__ == '__main__':
-    test_WaveformExtractor()
+    # test_WaveformExtractor()
     # test_extract_waveforms()
     # test_sparsity()
     # test_portability()
-    # test_recordingless()
+    test_recordingless()
     # test_compute_sparsity()

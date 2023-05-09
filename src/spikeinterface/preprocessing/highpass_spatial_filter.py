@@ -1,5 +1,5 @@
 import numpy as np
-
+import scipy.signal
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from ..core import order_channels_by_depth, get_chunk_with_margin
 from ..core.core_tools import define_function_from_class
@@ -65,7 +65,6 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
                  highpass_butter_wn=0.01):
         BasePreprocessor.__init__(self, recording)
 
-        import scipy.signal
         # Check single group
         channel_groups = recording.get_channel_groups()
         assert len(np.unique(channel_groups)) == 1, \
@@ -183,7 +182,6 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
             traces = traces * self.taper[np.newaxis, :]
 
         # apply actual HP filter
-        import scipy
         traces = scipy.signal.sosfiltfilt(self.sos_filter, traces, axis=1)
 
         # remove padding
@@ -224,7 +222,6 @@ def agc(traces, window, epsilon=1e-8):
     :param epsilon: whitening (useful mainly for synthetic data)
     :return: AGC data array, gain applied to data
     """
-    import scipy.signal
     gain = scipy.signal.fftconvolve(np.abs(traces), window[:, None], mode='same', axes=0)
 
     gain += (np.sum(gain, axis=0) * epsilon / traces.shape[0])[np.newaxis, :]

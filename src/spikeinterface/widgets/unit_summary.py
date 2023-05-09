@@ -20,14 +20,14 @@ class UnitSummaryWidget(BaseWidget):
     
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
+    waveform_extractor: WaveformExtractor
         The waveform extractor object
-    unit_id : int or str
+    unit_id: into or str
         The unit id to plot the summary of
     unit_colors :  dict or None
-        If given, a dictionary with unit ids as keys and colors as values, default None
+        If given, a dictionary with unit ids as keys and colors as values
     sparsity : ChannelSparsity or None
-        Optional ChannelSparsity to apply, default None
+        Optional ChannelSparsity to apply.
         If WaveformExtractor is already sparse, the argument is ignored
     """
     possible_backends = {}

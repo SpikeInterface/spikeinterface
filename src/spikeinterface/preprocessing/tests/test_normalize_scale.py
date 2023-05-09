@@ -61,11 +61,10 @@ def test_center():
     
 
 def test_zscore():
-    seed = 0
     rec = generate_recording()
     tr = rec.get_traces(segment_index=0)
 
-    rec2 = zscore(rec, seed=seed)
+    rec2 = zscore(rec)
     tr = rec2.get_traces(segment_index=0)
     meds = np.median(tr, axis=0)
     mads = np.median(np.abs(tr - meds), axis=0) / 0.6744897501960817
@@ -73,7 +72,7 @@ def test_zscore():
     assert np.all(np.abs(mads - 1) < 0.01)
     assert 'gain' in rec2._kwargs
     
-    rec3 = zscore(rec, mode="mean+std", seed=seed)
+    rec3 = zscore(rec, mode="mean+std")
     tr = rec3.get_traces(segment_index=0)
     assert np.all(np.abs(np.mean(tr, axis=0)) < 0.01)
     assert np.all(np.abs(np.std(tr, axis=0) - 1) < 0.01)
@@ -81,8 +80,8 @@ def test_zscore():
     rec_int = scale(rec, dtype="int16", gain=100)
     with pytest.raises(AssertionError):
         rec4 = zscore(rec_int, dtype=None)
-    rec4 = zscore(rec_int, dtype='float32', mode="mean+std", seed=seed)
-    rec4 = zscore(rec_int, dtype='int16', int_scale=256, mode="mean+std", seed=seed)
+    rec4 = zscore(rec_int, dtype='float32', mode="mean+std")
+    rec4 = zscore(rec_int, dtype='int16', int_scale=256, mode="mean+std")
     tr = rec4.get_traces(segment_index=0)
     trace_mean = np.mean(tr, axis=0)
     trace_std = np.std(tr, axis=0)

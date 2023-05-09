@@ -124,32 +124,25 @@ class BaseRecordingSnippets(BaseExtractor):
             'Probe must have device_channel_indices'
 
         # this is a vector with complex fileds (dataframe like) that handle all contact attr
-        probe_as_numpy_array = probegroup.to_numpy(complete=True)
+        arr = probegroup.to_numpy(complete=True)
 
         # keep only connected contact ( != -1)
-        keep = probe_as_numpy_array['device_channel_indices'] >= 0
+        keep = arr['device_channel_indices'] >= 0
         if np.any(~keep):
             warn('The given probes have unconnected contacts: they are removed')
 
-        probe_as_numpy_array = probe_as_numpy_array[keep]
-        device_channel_indices = probe_as_numpy_array['device_channel_indices']
-        order = np.argsort(device_channel_indices)
-        device_channel_indices = device_channel_indices[order]
+        arr = arr[keep]
+        inds = arr['device_channel_indices']
+        order = np.argsort(inds)
+        inds = inds[order]
 
-        # check TODO: Where did this came from?
-        number_of_device_channel_indices = np.max(list(device_channel_indices) + [0])
-        if number_of_device_channel_indices >= self.get_num_channels():
-            error_msg = (
-                f"The given Probe have 'device_channel_indices' that do not match channel count \n"
-                f"{number_of_device_channel_indices} vs {self.get_num_channels()} \n"
-                f"device_channel_indices are the following: {device_channel_indices} \n"
-                f"recording channels are the following: {self.get_channel_ids()} \n"
-            )
-            raise ValueError(error_msg)
-        
-        new_channel_ids = self.get_channel_ids()[device_channel_indices]
-        probe_as_numpy_array = probe_as_numpy_array[order]
-        probe_as_numpy_array['device_channel_indices'] = np.arange(probe_as_numpy_array.size, dtype='int64')
+        # check
+        if np.max(list(inds) + [0]) >= self.get_num_channels():
+            raise ValueError(
+                'The given Probe have "device_channel_indices" that do not match channel count')
+        new_channel_ids = self.get_channel_ids()[inds]
+        arr = arr[order]
+        arr['device_channel_indices'] = np.arange(arr.size, dtype='int64')
 
         # create recording : channel slice or clone or self
         if in_place:
@@ -164,7 +157,7 @@ class BaseRecordingSnippets(BaseExtractor):
                 sub_recording = self.channel_slice(new_channel_ids)
 
         # create a vector that handle all contacts in property
-        sub_recording.set_property('contact_vector', probe_as_numpy_array, ids=None)
+        sub_recording.set_property('contact_vector', arr, ids=None)
 
         # planar_contour is saved in annotations
         for probe_index, probe in enumerate(probegroup.probes):
@@ -175,23 +168,23 @@ class BaseRecordingSnippets(BaseExtractor):
 
         # duplicate positions to "locations" property
         ndim = probegroup.ndim
-        locations = np.zeros((probe_as_numpy_array.size, ndim), dtype='float64')
+        locations = np.zeros((arr.size, ndim), dtype='float64')
         for i, dim in enumerate(['x', 'y', 'z'][:ndim]):
-            locations[:, i] = probe_as_numpy_array[dim]
+            locations[:, i] = arr[dim]
         sub_recording.set_property('location', locations, ids=None)
 
         # handle groups
-        groups = np.zeros(probe_as_numpy_array.size, dtype='int64')
+        groups = np.zeros(arr.size, dtype='int64')
         if group_mode == 'by_probe':
-            for group, probe_index in enumerate(np.unique(probe_as_numpy_array['probe_index'])):
-                mask = probe_as_numpy_array['probe_index'] == probe_index
+            for group, probe_index in enumerate(np.unique(arr['probe_index'])):
+                mask = arr['probe_index'] == probe_index
                 groups[mask] = group
         elif group_mode == 'by_shank':
             assert all(probe.shank_ids is not None for probe in probegroup.probes), \
                 'shank_ids is None in probe, you cannot group by shank'
-            for group, a in enumerate(np.unique(probe_as_numpy_array[['probe_index', 'shank_ids']])):
-                mask = (probe_as_numpy_array['probe_index'] == a['probe_index']) & (
-                    probe_as_numpy_array['shank_ids'] == a['shank_ids'])
+            for group, a in enumerate(np.unique(arr[['probe_index', 'shank_ids']])):
+                mask = (arr['probe_index'] == a['probe_index']) & (
+                    arr['shank_ids'] == a['shank_ids'])
                 groups[mask] = group
         sub_recording.set_property('group', groups, ids=None)
 

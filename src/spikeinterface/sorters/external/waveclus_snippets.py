@@ -5,6 +5,7 @@ import shutil
 import sys
 import json
 
+import scipy.io
 
 from ..basesorter import BaseSorter
 from ..utils import ShellScript
@@ -213,5 +214,4 @@ class WaveClusSnippetsSorter(BaseSorter):
                 par_input[k] = float(v)
 
         par_input = {'par_input': par_input}
-        import scipy.io
         scipy.io.savemat(str(sorter_output_folder / 'par_input.mat'), par_input)

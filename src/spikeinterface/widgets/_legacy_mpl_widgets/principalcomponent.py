@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 from ...postprocessing import WaveformPrincipalComponent, compute_principal_components

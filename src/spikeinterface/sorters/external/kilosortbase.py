@@ -5,6 +5,7 @@ import shutil
 import sys
 
 import numpy as np
+import scipy.io
 
 from ..utils import ShellScript, get_matlab_shell_name, get_bash_path
 from ..basesorter import get_job_kwargs
@@ -61,7 +62,6 @@ class KilosortBase:
 
         sample_rate = recording.get_sampling_frequency()
         channel_map['fs'] = float(sample_rate)
-        import scipy.io
         scipy.io.savemat(str(sorter_output_folder / 'chanMap.mat'), channel_map)
 
     @classmethod
@@ -106,7 +106,6 @@ class KilosortBase:
                 ops[k] = float(v)
 
         ops = {'ops': ops}
-        import scipy.io
         scipy.io.savemat(str(sorter_output_folder / 'ops.mat'), ops)
 
     @classmethod

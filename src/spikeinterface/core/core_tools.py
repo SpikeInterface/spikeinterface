@@ -423,6 +423,8 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     arrays: one arrays per segment
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
+    chunk_size = ensure_chunk_size(recording, **job_kwargs)
+    n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
 
     if dtype is None:
         dtype = recording.get_dtype()
@@ -435,8 +437,6 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     arrays = []
     shm_names = []
     shapes = []
-    
-    n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
         num_channels = recording.get_num_channels()
@@ -638,6 +638,7 @@ def write_traces_to_zarr(recording, zarr_root, zarr_path, storage_options,
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
+    n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
 
     # create zarr datasets files
     for segment_index in range(recording.get_num_segments()):

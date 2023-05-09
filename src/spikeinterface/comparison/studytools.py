@@ -17,6 +17,7 @@ import shutil
 import json
 import os
 
+import pandas as pd
 
 from spikeinterface.core import load_extractor
 from spikeinterface.core.job_tools import fix_job_kwargs
@@ -162,8 +163,6 @@ def collect_run_times(study_folder):
 
     The output is list of (rec_name, sorter_name, run_time)
     """
-    import pandas as pd
-
     study_folder = Path(study_folder)
     sorting_folders = study_folder / 'sortings'
     log_folder = sorting_folders / 'run_log'
@@ -243,8 +242,6 @@ def aggregate_performances_table(study_folder, exhaustive_gt=False, **karg_thres
         Return several useful DataFrame to compare all results.
         Note that count_units depend on karg_thresh.
     """
-    import pandas as pd
-
     study_folder = Path(study_folder)
     sorter_folders = study_folder / 'sorter_folders'
     tables_folder = study_folder / 'tables'

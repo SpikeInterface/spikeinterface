@@ -1,10 +1,10 @@
 from re import escape
 from unittest import TestCase
+import pytest
 
 import numpy as np
 from numpy.testing import assert_array_equal
-import pytest
-import requests
+
 from spikeinterface.extractors import IblStreamingRecordingExtractor
 
 
@@ -15,21 +15,7 @@ class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.session = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
-        try:
-            cls.recording = IblStreamingRecordingExtractor(session=cls.session, stream_name="probe00.ap")
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 503:
-                pytest.skip("Skipping test due to server being down (HTTP 503).")
-            else:
-                raise
-        except KeyError as e:
-            # This is another error which I think is caused by server problems. I think that ONE is not handling their
-            # Exceptions properly so this is a workaround.
-            expected_error_message = "None of [Index(['e2b845a1-e313-4a08-bc61-a5f662ed295e', '012bf9d0-765c-4743-81da-4f8db39c9a19'], dtype='object')] are in the [index]"
-            if str(e) == expected_error_message:
-                pytest.skip(f"Skipping test due to KeyError: {e}")
-            else:
-                raise        
+        cls.recording = IblStreamingRecordingExtractor(session=cls.session, stream_name="probe00.ap")
         cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
         cls.small_unscaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26)  # return_scaled=False is SI default
 

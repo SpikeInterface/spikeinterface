@@ -1,6 +1,8 @@
 import numpy as np
+from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
+from scipy.stats import gaussian_kde
 
 
 class PresenceWidget(BaseWidget):
@@ -32,8 +34,6 @@ class PresenceWidget(BaseWidget):
 
     def __init__(self, sorting, segment_index=None, unit_ids=None,
                  time_range=None, figure=None, time_pixels=200, ax=None):
-        from matplotlib import pyplot as plt
-        from scipy.stats import gaussian_kde
         BaseWidget.__init__(self, figure, ax)
         self._sorting = sorting
         self._time_pixels = time_pixels

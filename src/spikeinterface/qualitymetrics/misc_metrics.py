@@ -12,6 +12,8 @@ from collections import namedtuple
 import math
 import numpy as np
 import warnings
+from scipy.ndimage import gaussian_filter1d
+from scipy.stats import poisson
 
 from ..postprocessing import correlogram_for_one_segment
 from ..core import get_noise_levels
@@ -354,7 +356,7 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
 
     t_c = int(round(censored_period_ms * fs * 1e-3))
     t_r = int(round(refractory_period_ms * fs * 1e-3))
-    nb_rp_violations = np.zeros((num_units), dtype=np.int64)
+    nb_rp_violations = np.zeros((num_units), dtype=np.int32)
 
     for seg_index in range(num_segments):
         _compute_rp_violations_numba(nb_rp_violations, spikes[seg_index][0].astype(np.int64),
@@ -907,7 +909,6 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
         h, b = np.histogram(amplitudes, num_histogram_bins, density=True)
 
         # TODO : use something better than scipy.ndimage.gaussian_filter1d
-        from scipy.ndimage import gaussian_filter1d
         pdf = gaussian_filter1d(h, histogram_smoothing_value)
         support = b[:-1]
         bin_size = np.mean(np.diff(support))
@@ -1008,8 +1009,6 @@ def slidingRP_violations(spike_samples, sample_rate, duration, bin_size_ms=0.25,
 def _compute_violations(obs_viol, firing_rate, spike_count, ref_period_dur, contamination_prop):
     contamination_rate = firing_rate * contamination_prop 
     expected_viol = contamination_rate * ref_period_dur * 2 * spike_count
-    
-    from scipy.stats import poisson
     confidence_score = 1 - poisson.cdf(obs_viol, expected_viol)
 
     return confidence_score
@@ -1035,7 +1034,7 @@ if HAVE_NUMBA:
 
         return n_v
 
-    @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
+    @numba.jit((numba.int32[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
                nopython=True, nogil=True, cache=True, parallel=True)
     def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r):
         n_units = len(nb_rp_violations)

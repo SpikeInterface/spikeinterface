@@ -1,7 +1,8 @@
 from pathlib import Path
+import os
 import shutil
-
 import numpy as np
+import pandas as pd
 
 from spikeinterface.core import load_extractor
 from spikeinterface.extractors import NpzSortingExtractor
@@ -10,6 +11,7 @@ from spikeinterface.sorters import sorter_dict, run_sorters
 from spikeinterface import WaveformExtractor
 from spikeinterface.qualitymetrics import compute_quality_metrics
 
+from .comparisontools import _perf_keys
 from .paircomparisons import compare_sorter_to_ground_truth
 
 from .studytools import (setup_comparison_study, get_rec_names, get_recordings,
@@ -18,7 +20,6 @@ from .studytools import (setup_comparison_study, get_rec_names, get_recordings,
 
 class GroundTruthStudy:
     def __init__(self, study_folder=None):
-        import pandas as pd
         self.study_folder = Path(study_folder)
         self._is_scanned = False
         self.computed_names = None
@@ -145,7 +146,6 @@ class GroundTruthStudy:
             perf = perf.reset_index()
             perf_by_unit.append(perf)
 
-        import pandas as pd
         perf_by_unit = pd.concat(perf_by_unit)
         perf_by_unit = perf_by_unit.set_index(['rec_name', 'sorter_name', 'gt_unit_id'])
 
@@ -154,7 +154,6 @@ class GroundTruthStudy:
     def aggregate_count_units(self, well_detected_score=None, redundant_score=None, overmerged_score=None):
         assert self.comparisons is not None, 'run_comparisons first'
 
-        import pandas as pd
         index = pd.MultiIndex.from_tuples(self.computed_names, names=['rec_name', 'sorter_name'])
 
         count_units = pd.DataFrame(index=index, columns=['num_gt', 'num_sorter', 'num_well_detected', 'num_redundant',
@@ -265,7 +264,6 @@ class GroundTruthStudy:
         metrics_folder.mkdir(parents=True, exist_ok=True)
 
         filename = self.study_folder / 'metrics' / f'metrics _{rec_name}.txt'
-        import pandas as pd
         if filename.is_file():
             metrics = pd.read_csv(filename, sep='\t', index_col=0)
             gt_sorting = self.get_ground_truth(rec_name)

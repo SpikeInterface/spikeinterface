@@ -10,17 +10,15 @@ class QualityMetricsWidget(MetricsBaseWidget):
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
-        The object to compute/get quality metrics from
+        The object to compute/get crosscorrelograms from
     unit_ids: list
-        List of unit ids, default None
-    include_metrics: list
-        If given, a list of quality metrics to include, default None
+        List of unit ids.
     skip_metrics: list or None
-        If given, a list of quality metrics to skip, default None
+        If given, a list of quality metrics to skip
     unit_colors :  dict or None
-        If given, a dictionary with unit ids as keys and colors as values, default None
+        If given, a dictionary with unit ids as keys and colors as values
     hide_unit_selector : bool
-        For sortingview backend, if True the unit selector is not displayed, default False
+        For sortingview backend, if True the unit selector is not displayed
     """
 
     possible_backends = {}

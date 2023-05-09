@@ -12,25 +12,30 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveformextractor for calculating waveforms
-    channel_ids : list
-        The channel ids to display, default None
-    unit_ids : list
-        List of unit ids, default None
+    waveform_extractor: WaveformExtractor
+    channel_ids: list
+        The channel ids to display
+    unit_ids: list
+        List of unit ids.
+    plot_templates: bool
+        If True, templates are plotted over the waveforms
     sparsity : ChannelSparsity or None
-        Optional ChannelSparsity to apply, default None
+        Optional ChannelSparsity to apply.
         If WaveformExtractor is already sparse, the argument is ignored
-    use_max_channel : bool
-        Use only the max channel, default False
-    peak_sign : str (neg/pos/both)
-        Used to detect max channel only when use_max_channel=True, default 'neg'
-    unit_colors : None or dict
+    use_max_channel: bool default False
+        Use only the max channel
+    peak_sign: str "neg"
+        Used to detect max channel only when use_max_channel=True 
+    unit_colors: None or dict
         A dict key is unit_id and value is any color format handled by matplotlib.
-        If None, then the get_unit_colors() is internally used, default None
-    same_axis : bool
+        If None, then the get_unit_colors() is internally used.
+    same_axis: bool
         If True then all density are plot on the same axis and then channels is the union
-        all channel per units, default False
+        all channel per units.
+    set_title: bool
+        Create a plot title with the unit number if True.
+    plot_channels: bool
+        Plot channel locations below traces, only used if channel_locs is True
     """
     possible_backends = {}
 
@@ -54,7 +59,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             max_channels = get_template_extremum_channel(we,  mode="extremum", peak_sign=peak_sign, outputs="index")
 
 
-        # sparsity is done on all the units even if unit_ids is a few ones because some backends need them all
+        # sparsity is done on all the units even if unit_ids is a few ones because some backend need then all
         if waveform_extractor.is_sparse():
             assert sparsity is None, 'UnitWaveformDensity WaveformExtractor is already sparse'
             used_sparsity = waveform_extractor.sparsity

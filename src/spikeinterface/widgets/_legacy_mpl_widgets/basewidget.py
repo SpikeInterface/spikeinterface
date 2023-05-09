@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+from matplotlib import gridspec
 import numpy as np
 
 
@@ -7,10 +9,6 @@ class BaseWidget:
         """
         figure/ax/axes : only one of then can be not None
         """
-        import matplotlib.pyplot as plt
-
-        from matplotlib import gridspec
-
         if figure is not None:
             assert ax is None and axes is None, 'figure/ax/axes : only one of then can be not None'
             ax = figure.add_subplot(111)

@@ -1,8 +1,6 @@
-import math
 import pickle
 from pathlib import Path
 import shutil
-from typing import Optional
 import json
 
 import numpy as np
@@ -12,11 +10,9 @@ from warnings import warn
 import probeinterface
 
 from .base import load_extractor
-from .baserecording import BaseRecording
-from .basesorting import BaseSorting
 from .core_tools import check_json
 from .job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
-from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
+from .recording_tools import check_probe_do_not_overlap
 from .waveform_tools import extract_waveforms_to_buffers, has_exceeding_spikes
 from .sparsity import ChannelSparsity, compute_sparsity, _sparsity_doc
 
@@ -30,7 +26,7 @@ class WaveformExtractor:
 
     Parameters
     ----------
-    recording: Recording | None
+    recording: Recording
         The recording object
     sorting: Sorting
         The sorting object
@@ -66,11 +62,35 @@ class WaveformExtractor:
 
     """
     extensions = []
-    def __init__(self, recording: Optional[BaseRecording], sorting: BaseSorting,
-                 folder=None, rec_attributes=None, allow_unfiltered=False, sparsity=None):
+    def __init__(self, recording, sorting, folder=None, rec_attributes=None, allow_unfiltered=False,
+                 sparsity=None):
+        if recording is None:
+            # this is for the mode when recording is not accessible anymore
+            if rec_attributes is None:
+                raise ValueError('WaveformExtractor: if recording is None then rec_attributes must be provied')
+            # some check on minimal attributes (probegroup is not mandatory)
+            for k in ('channel_ids', 'sampling_frequency', 'num_channels'):
+                if k not in rec_attributes:
+                    raise ValueError(f'Missing key in rec_attributes {k}')
+            for k in ('num_samples', 'properties', 'is_filtered'):
+                if k not in rec_attributes:
+                    warn(f'Missing optional key in rec_attributes {k}: '
+                         f'some recordingless functions might not be available')
+            self._rec_attributes = rec_attributes
+        else:
+            assert recording.get_num_segments() == sorting.get_num_segments(), \
+                "The recording and sorting objects must have the same number of segments!"
+            np.testing.assert_almost_equal(recording.get_sampling_frequency(),
+                                           sorting.get_sampling_frequency(), decimal=2)
+            if not recording.is_filtered() and not allow_unfiltered:
+                raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
+                                'If the recording is already filtered, you can also do '
+                                '`recording.annotate(is_filtered=True).\n'
+                                'If you trully want to extract unfiltered waveforms, use `allow_unfiltered=True`.')
+            self._rec_attributes = rec_attributes
+
+        self._recording = recording
         self.sorting = sorting
-        self._rec_attributes = None
-        self.set_recording(recording, rec_attributes, allow_unfiltered)
 
         # cache in memory
         self._waveforms = {}
@@ -144,8 +164,8 @@ class WaveformExtractor:
         else:
             try:
                 recording = load_extractor(folder / 'recording.json',
-                                           base_folder=folder)
-                rec_attributes = get_rec_attributes(recording)
+                                        base_folder=folder)
+                rec_attributes = None
             except:
                 raise Exception("The recording could not be loaded. You can use the `with_recording=False` argument")
 
@@ -195,7 +215,7 @@ class WaveformExtractor:
             try:
                 recording_dict = waveforms_root.attrs['recording']
                 recording = load_extractor(recording_dict, base_folder=folder)
-                rec_attributes = get_rec_attributes(recording)
+                rec_attributes = None
             except:
                 raise Exception("The recording could not be loaded. You can use the `with_recording=False` argument")
 
@@ -222,12 +242,23 @@ class WaveformExtractor:
                use_relative_path=False, allow_unfiltered=False, sparsity=None):
         assert mode in ("folder", "memory")
         # create rec_attributes
+        properties_to_attrs = deepcopy(recording._properties)
+        if 'contact_vector' in properties_to_attrs:
+            del properties_to_attrs['contact_vector']
         if has_exceeding_spikes(recording, sorting):
             raise ValueError(
                     "The sorting object has spikes exceeding the recording duration. You have to remove those spikes "
                     "with the `spikeinterface.curation.remove_excess_spikes()` function"
                 )
-        rec_attributes = get_rec_attributes(recording)
+        rec_attributes = dict(
+            channel_ids=recording.channel_ids,
+            sampling_frequency=recording.get_sampling_frequency(),
+            num_channels=recording.get_num_channels(),
+            num_samples=[recording.get_num_samples(seg_index)
+                            for seg_index in range(recording.get_num_segments())],
+            is_filtered=recording.is_filtered(),
+            properties=properties_to_attrs
+        )
         if mode == "folder":
             folder = Path(folder)
             if folder.is_dir():
@@ -567,55 +598,6 @@ class WaveformExtractor:
         else:
             # remove shared objects
             self._memory_objects = None
-
-    def set_recording(self, recording: Optional[BaseRecording], rec_attributes: Optional[dict] = None, allow_unfiltered: bool = False) -> None:
-        """
-        Sets the recording object and attributes for the WaveformExtractor.
-
-        Parameters
-        ----------
-        recording: Recording | None
-            The recording object
-        rec_attributes: None or dict
-            When recording is None then a minimal dict with some attributes
-            is needed.
-        allow_unfiltered: bool
-            If true, will accept unfiltered recording.
-            False by default.
-        """
-
-        if recording is None:  # Recordless mode.
-            if rec_attributes is None:
-                raise ValueError("WaveformExtractor: if recording is None, then rec_attributes must be provided.")
-            for k in ('channel_ids', 'sampling_frequency', 'num_channels'):  # Some check on minimal attributes (probegroup is not mandatory)
-                if k not in rec_attributes:
-                    raise ValueError(f"WaveformExtractor: Missing key '{k}' in rec_attributes")
-            for k in ('num_samples', 'properties', 'is_filtered'):
-                if k not in rec_attributes:
-                    warn(f'Missing optional key in rec_attributes {k}: '
-                         f'some recordingless functions might not be available')
-        else:
-            if recording.get_num_segments() != self.get_num_segments():
-                raise ValueError(f"Couldn't set the WaveformExtractor recording: num_segments do not match!\n{self.get_num_segments()} != {recording.get_num_segments()}")
-            if not math.isclose(recording.sampling_frequency, self.sampling_frequency, abs_tol=1e-2, rel_tol=1e-5):
-                raise ValueError(f"Couldn't set the WaveformExtractor recording: sampling frequency doesn't match!\n{self.sampling_frequency} != {recording.sampling_frequency}")
-            if self._rec_attributes is not None:
-                reference_channel_ids = self._rec_attributes['channel_ids']
-            elif rec_attributes is not None:
-                reference_channel_ids = rec_attributes['channel_ids']
-            else:
-                raise ValueError("WaveformExtractor: rec_attributes is None")
-            if not np.array_equal(reference_channel_ids, recording.channel_ids):
-                raise ValueError(f"Couldn't set the WaveformExtractor recording: channel_ids do not match!\n{reference_channel_ids}")
-
-            if not recording.is_filtered() and not allow_unfiltered:
-                raise Exception('The recording is not filtered, you must filter it using `bandpass_filter()`.'
-                                'If the recording is already filtered, you can also do '
-                                '`recording.annotate(is_filtered=True).\n'
-                                'If you trully want to extract unfiltered waveforms, use `allow_unfiltered=True`.')
-
-        self._recording = recording
-        self._rec_attributes = rec_attributes
 
     def set_params(self, ms_before=1., ms_after=2., max_spikes_per_unit=500, return_scaled=False, dtype=None):
         """
@@ -1395,7 +1377,7 @@ def extract_waveforms(recording, sorting, folder=None,
     dtype: dtype or None
         Dtype of the output waveforms. If None, the recording dtype is maintained.
     sparse: bool (default False)
-        If True, before extracting all waveforms the `precompute_sparsity()` function is run using 
+        If True, before extracting all waveforms the `precompute_sparsity()` functio is run using 
         a few spikes to get an estimate of dense templates to create a ChannelSparsity object. 
         Then, the waveforms will be sparse at extraction time, which saves a lot of memory.
         When True, you must some provide kwargs handle `precompute_sparsity()` to control the kind of 
@@ -1495,7 +1477,7 @@ def extract_waveforms(recording, sorting, folder=None,
 extract_waveforms.__doc__ = extract_waveforms.__doc__.format(_sparsity_doc, _shared_job_kwargs_doc)
 
 
-def load_waveforms(folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None) -> WaveformExtractor:
+def load_waveforms(folder, with_recording=True, sorting=None):
     """
     Load a waveform extractor object from disk.
 
@@ -1504,8 +1486,7 @@ def load_waveforms(folder, with_recording: bool = True, sorting: Optional[BaseSo
     folder : str or Path
         The folder / zarr folder where the waveform extractor is stored
     with_recording : bool, optional
-        If True, the recording is loaded, by default True.
-        If False, the WaveformExtractor object in recordingless mode.
+        If True, the recording is loaded, by default True
     sorting : BaseSorting, optional
         If passed, the sorting object associated to the waveform extractor, by default None
 

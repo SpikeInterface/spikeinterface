@@ -20,21 +20,22 @@ def get_some_colors(keys, color_engine='auto', map_name='gist_ncar', format='RGB
     """
     Return a dict of colors for given keys
     
-    Parameters
-    ----------
-    color_engine : str 'auto' / 'matplotlib' / 'colorsys' / 'distinctipy'
+    Params
+    ------
+    color_engine: str 'auto' / 'matplotlib' / 'colorsys' / 'distinctipy'
         The engine to generate colors
-    map_name : str
+    map_name: str
         Used for matplotlib
-    format: str 
-        The output formats, default 'RGBA'
-    shuffle : bool or None
-        Shuffle or not, default None
+    format: 'RGBA'
+        The output fomrats
+    shuffle: bool or None
+        Shuffle or not.
         If None then:
+
         * set to True for matplotlib and colorsys
         * set to False for distinctipy
     seed: int or None
-        Set the seed, default None
+        Eventually a seed
 
     Returns
     -------
@@ -113,8 +114,8 @@ def array_to_image(data,
 
     Useful for visualizing data before/after preprocessing
 
-    Parameters
-    ----------
+    Params
+    ------
     data : np.array
         2D numpy array
     colormap : str 

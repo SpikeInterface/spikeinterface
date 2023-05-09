@@ -1,7 +1,6 @@
 from typing import Iterable, Union
-
 import numpy as np
-
+from scipy.stats import norm
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, get_chunk_with_margin
 from spikeinterface.core.core_tools import define_function_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -81,7 +80,6 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         sf = self.parent_recording_segment.sampling_frequency
         faxis = np.fft.fftfreq(N, d=1/sf)
 
-        from scipy.stats import norm
         if cutoff_f > sf / 8:  # The Fourier transform of a Gaussian with a very low sigma isn't a Gaussian.
             sigma = sf / (2*np.pi * cutoff_f)
             limit = int(round(6*sigma)) + 1

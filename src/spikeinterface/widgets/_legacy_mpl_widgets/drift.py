@@ -1,6 +1,9 @@
 import numpy as np
+import matplotlib.pylab as plt
+import scipy.sparse
 
 from .basewidget import BaseWidget
+
 
 
 class DriftOverTimeWidget(BaseWidget):
@@ -43,7 +46,6 @@ class DriftOverTimeWidget(BaseWidget):
                  bin_duration_s=60.,
                  scatter_plot_kwargs={}, imshow_kwargs={},
                  figure=None, ax=None):
-        import matplotlib.pylab as plt
         BaseWidget.__init__(self, figure, ax)
 
         possible_modes = ('heatmap', 'scatter')
@@ -162,8 +164,6 @@ class PairwiseDisplacementWidget(BaseWidget):
 
     def __init__(self, motion, temporal_bins, spatial_bins, extra_check,
                  figure=None, ax=None, ncols=5):
-        import matplotlib.pylab as plt
-        import scipy.sparse
         BaseWidget.__init__(self, figure, num_axes=motion.shape[1], ncols=ncols)
 
         self.motion = motion

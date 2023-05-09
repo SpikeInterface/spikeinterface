@@ -1,7 +1,8 @@
+import pandas as pd
 import numpy as np
-
 from .paircomparisons import GroundTruthComparison
 from .comparisontools import make_collision_events
+
 
 class CollisionGTComparison(GroundTruthComparison):
     """

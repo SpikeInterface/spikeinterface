@@ -21,7 +21,7 @@ class SortingSummaryWidget(BaseWidget):
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
     sparsity : ChannelSparsity or None
-        Optional ChannelSparsity to apply, default None
+        Optional ChannelSparsity to apply.
         If WaveformExtractor is already sparse, the argument is ignored
     max_amplitudes_per_unit : int or None
         Maximum number of spikes per unit for plotting amplitudes,

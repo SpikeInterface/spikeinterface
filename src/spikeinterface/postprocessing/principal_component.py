@@ -6,9 +6,10 @@ from tqdm.auto import tqdm
 
 import numpy as np
 
+from sklearn.decomposition import IncrementalPCA
+from sklearn.exceptions import NotFittedError
 
-
-from spikeinterface.core.job_tools import (ChunkRecordingExecutor,
+from spikeinterface.core.job_tools import (ChunkRecordingExecutor, ensure_n_jobs,
                                            _shared_job_kwargs_doc, fix_job_kwargs)
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
@@ -337,7 +338,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         processor.run()
 
     def _fit_by_channel_local(self, n_jobs, progress_bar):
-        from sklearn.decomposition import IncrementalPCA
         from joblib import delayed, Parallel
         
         we = self.waveform_extractor
@@ -345,6 +345,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         unit_ids = we.unit_ids
         channel_ids = we.channel_ids
+
         # there is one PCA per channel for independent fit per channel
         pca_models = [IncrementalPCA(n_components=p['n_components'], whiten=p['whiten']) for _ in channel_ids]
         
@@ -399,7 +400,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         In this mode each PCA is "fit" and "transform" by channel.
         The output is then (n_spike, n_components, n_channels)
         """
-        from sklearn.exceptions import NotFittedError
         we = self.waveform_extractor
         unit_ids = we.unit_ids
 
@@ -433,7 +433,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         unit_ids = we.unit_ids
 
         # there is one unique PCA accross channels
-        from sklearn.decomposition import IncrementalPCA
         pca_model = IncrementalPCA(n_components=p['n_components'], whiten=p['whiten'])
 
         # fit
@@ -494,7 +493,6 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 "When using sparsity in concatenated mode, make sure each unit has the same number of sparse channels"
         
         # there is one unique PCA accross channels
-        from sklearn.decomposition import IncrementalPCA
         pca_model = IncrementalPCA(n_components=p['n_components'], whiten=p['whiten'])
 
         # fit
