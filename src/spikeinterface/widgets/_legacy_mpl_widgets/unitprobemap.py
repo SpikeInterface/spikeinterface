@@ -1,10 +1,7 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
-from matplotlib.animation import FuncAnimation
 
-from probeinterface.plotting import plot_probe
 
 
 class UnitProbeMapWidget(BaseWidget):
@@ -29,6 +26,9 @@ class UnitProbeMapWidget(BaseWidget):
     def __init__(self, waveform_extractor, unit_ids=None, channel_ids=None,
                  animated=None, with_channel_ids=False, colorbar=True,
                  ncols=5,  axes=None):
+        from matplotlib.animation import FuncAnimation
+        from matplotlib import pyplot as plt
+        from probeinterface.plotting import plot_probe
 
         self.waveform_extractor = waveform_extractor
         if unit_ids is None:
@@ -73,6 +73,7 @@ class UnitProbeMapWidget(BaseWidget):
             text_on_contact = None
             if self.with_channel_ids:
                 text_on_contact = self.channel_ids
+            from probeinterface.plotting import plot_probe
             poly_contact, poly_contour = plot_probe(probe, contacts_values=contacts_values,
                                                     ax=ax, probe_shape_kwargs=probe_shape_kwargs,
                                                     text_on_contact=text_on_contact)
@@ -99,7 +100,8 @@ class UnitProbeMapWidget(BaseWidget):
                     poly_contact = all_poly_contact[i]
                     poly_contact.set_array(contacts_values)
                 return all_poly_contact
-
+            
+            from matplotlib.animation import FuncAnimation
             self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames,
                                            interval=20, blit=True)
 
