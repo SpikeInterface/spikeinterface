@@ -74,13 +74,15 @@ class BenchmarkMatching:
             if sort_folder.exists():
                 shutil.rmtree(sort_folder)
 
-    def run_matching(self, methods_kwargs):
+    def run_matching(self, methods_kwargs, unit_ids):
         """Run template matching on the recording with settings in methods_kwargs.
 
         Parameters
         ----------
         methods_kwargs: dict
             A dictionary of method_kwargs for each method.
+        unit_ids: array-like
+            The unit ids to use for the output sorting.
 
         Returns
         -------
@@ -96,7 +98,7 @@ class BenchmarkMatching:
                                                 method_kwargs=methods_kwargs[method],
                                                 **self.job_kwargs)
             runtimes[method] = time.time() - t0
-            sorting = NumpySorting.from_times_labels(spikes['sample_index'], spikes['cluster_index'],
+            sorting = NumpySorting.from_times_labels(spikes['sample_index'], unit_ids[spikes['cluster_index']],
                                                      self.sampling_rate)
             sortings[method] = sorting
         return sortings, runtimes
@@ -134,7 +136,7 @@ class BenchmarkMatching:
         we = extract_waveforms(self.recording, self.gt_sorting, self.tmp_folder, **we_kwargs)
         methods_kwargs = self.update_methods_kwargs(we, template_mode)
 
-        sortings, _ = self.run_matching(methods_kwargs)
+        sortings, _ = self.run_matching(methods_kwargs, we.unit_ids)
         shutil.rmtree(self.tmp_folder)
         return sortings, self.gt_sorting
 
@@ -234,7 +236,7 @@ class BenchmarkMatching:
         we = extract_waveforms(self.recording, gt_sorting, self.tmp_folder, **we_kwargs)
         methods_kwargs = self.update_methods_kwargs(we, template_mode)
 
-        sortings, _ = self.run_matching(methods_kwargs)
+        sortings, _ = self.run_matching(methods_kwargs, we.unit_ids)
         shutil.rmtree(self.tmp_folder)
         return sortings, gt_sorting
 
@@ -291,7 +293,7 @@ class BenchmarkMatching:
         spike_time_indices = np.array(spike_time_indices)
         spike_cluster_ids = np.array(spike_cluster_ids)
         gt_sorting = NumpySorting.from_times_labels(spike_time_indices, spike_cluster_ids, self.sampling_rate,
-                                                    unit_ids=self.we.unit_ids)
+                                                    unit_ids=present_units)
         sort_folder = Path(self.tmp_folder.stem + f'_sorting{len(self.sort_folders)}')
         gt_sorting = gt_sorting.save(folder=sort_folder)
         self.sort_folders.append(sort_folder)
@@ -300,7 +302,7 @@ class BenchmarkMatching:
         we = extract_waveforms(self.recording, gt_sorting, self.tmp_folder, **we_kwargs)
         methods_kwargs = self.update_methods_kwargs(we, template_mode)
 
-        sortings, _ = self.run_matching(methods_kwargs)
+        sortings, _ = self.run_matching(methods_kwargs, we.unit_ids)
         shutil.rmtree(self.tmp_folder)
         return sortings, gt_sorting
 
@@ -397,9 +399,9 @@ class BenchmarkMatching:
             The comparison object.
         """
         if collision:
-            return CollisionGTComparison(gt_sorting, sorting, exhaustive_gt=True, **kwargs)
+            return CollisionGTComparison(gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt, **kwargs)
         else:
-            return compare_sorter_to_ground_truth(gt_sorting, sorting, exhaustive_gt=True, **kwargs)
+            return compare_sorter_to_ground_truth(gt_sorting, sorting, exhaustive_gt=self.exhaustive_gt, **kwargs)
 
 
     def compare_all_sortings(self, matching_df, collision=False, ground_truth="from_self", **kwargs):
@@ -582,6 +584,21 @@ def plot_comparison_matching(benchmark, comp_per_method, performance_names=['acc
     plt.tight_layout(h_pad=0, w_pad=0)
     return fig, axs
 
+
+def compute_rejection_rate(comp, method='by_unit'):
+    missing_unit_ids = set(comp.unit1_ids) - set(comp.unit2_ids)
+    performance = comp.get_performance()
+    rejection_rates = np.zeros(len(missing_unit_ids))
+    for i, missing_unit_id in enumerate(missing_unit_ids):
+        rejection_rates[i] = performance.miss_rate[performance.index == missing_unit_id]
+    if method == 'by_unit':
+        return rejection_rates
+    elif method == 'pooled_with_average':
+        return np.mean(rejection_rates)
+    else:
+        raise ValueError(f'method must be "by_unit" or "pooled_with_average" but got {method}')
+
+
 def plot_vary_parameter(matching_df, performance_metric='accuracy', method_colors=None,
                         parameter_transform=lambda x:x):
     parameter_names = matching_df.parameter_name.unique()
@@ -601,7 +618,11 @@ def plot_vary_parameter(matching_df, performance_metric='accuracy', method_color
                 comps = df_parameter.comparison[method_param_mask]
                 performance_metrics = []
                 for comp in comps:
-                    perf_metric = comp.get_performance(method='pooled_with_average')[performance_metric]
+                    try:
+                        perf_metric = comp.get_performance(method='pooled_with_average')[performance_metric]
+                    except KeyError: # benchmarking-specific metric
+                        assert performance_metric == 'rejection_rate', f"{performance_metric} is not a valid metric"
+                        perf_metric = compute_rejection_rate(comp, method='pooled_with_average')
                     performance_metrics.append(perf_metric)
                 # Average / STD over replicates
                 method_means[method].append(np.mean(performance_metrics))
@@ -622,7 +643,7 @@ def plot_vary_parameter(matching_df, performance_metric='accuracy', method_color
         ax.set_xticks(parameters_transformed, parameters)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(f"Average Unit {performance_metric}")
-        fig.legend(bbox_to_anchor=(1, 1, 0, 0))
+        ax.legend()
         figs.append(fig)
         axs.append(ax)
     return figs, axs
