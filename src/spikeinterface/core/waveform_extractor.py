@@ -1395,7 +1395,7 @@ def extract_waveforms(recording, sorting, folder=None,
     dtype: dtype or None
         Dtype of the output waveforms. If None, the recording dtype is maintained.
     sparse: bool (default False)
-        If True, before extracting all waveforms the `precompute_sparsity()` functio is run using 
+        If True, before extracting all waveforms the `precompute_sparsity()` function is run using 
         a few spikes to get an estimate of dense templates to create a ChannelSparsity object. 
         Then, the waveforms will be sparse at extraction time, which saves a lot of memory.
         When True, you must some provide kwargs handle `precompute_sparsity()` to control the kind of 
