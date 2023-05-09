@@ -9,16 +9,16 @@ from ..core.waveform_extractor import WaveformExtractor
 
 class AllAmplitudesDistributionsWidget(BaseWidget):
     """
-    Plots distributions of amplitudes as violon plot for all or some units.
+    Plots distributions of amplitudes as violin plot for all or some units.
 
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
         The input waveform extractor
     unit_ids: list
-        List of unit ids.
+        List of unit ids, default None
     unit_colors: None or dict
-        Dict of colors
+        Dict of colors with key: unit, value: color, default None
     """
     possible_backends = {}
 

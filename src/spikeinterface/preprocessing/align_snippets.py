@@ -1,7 +1,8 @@
-from spikeinterface.core import BaseSnippets, BaseSnippetsSegment
 from typing import List, Union
+
 import numpy as np
-from scipy.interpolate import CubicSpline
+
+from spikeinterface.core import BaseSnippets, BaseSnippetsSegment
 
 
 class AlignSnippets(BaseSnippets):
@@ -61,6 +62,7 @@ class AlignSnippetsSegment(BaseSnippetsSegment):
         snippets = self.parent_snippets_segment.get_snippets(indices=indices, channel_indices=channel_indices)
         if self._interpolate > 1:
             xs = np.arange(0, self._org_splen, 1/self._interpolate)
+            from scipy.interpolate import CubicSpline
             snippets = CubicSpline(xs[::self._interpolate], snippets, axis=1, bc_type='natural')(xs)
 
         peaks_pos = self._find_peak(snippets)

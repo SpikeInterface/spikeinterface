@@ -3,7 +3,6 @@ import numpy as np
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.preprocessing import preprocessing_tools
-import scipy.stats
 
 
 class InterpolateBadChannelsRecording(BasePreprocessor):
@@ -118,7 +117,7 @@ def estimate_recommended_sigma_um(recording):
     Get the most common distance between channels on the y-axis
     """
     y_sorted = np.sort(recording.get_channel_locations()[:, 1])
-
+    import scipy.stats
     return scipy.stats.mode(np.diff(np.unique(y_sorted)), keepdims=False)[0]
 
 

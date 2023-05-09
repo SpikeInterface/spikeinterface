@@ -13,16 +13,18 @@ class MetricsBaseWidget(BaseWidget):
     ----------
     metrics: pandas.DataFrame
         Data frame with metrics
+    sorting: BaseSorting
+        The sorting object used for metrics calculations
     unit_ids: list
-        List of unit ids.
+        List of unit ids, default None
     skip_metrics: list or None
-        If given, a list of quality metrics to skip
+        If given, a list of quality metrics to skip, default None
     include_metrics: list or None
-        If given, a list of quality metrics to include
+        If given, a list of quality metrics to include, default None
     unit_colors :  dict or None
-        If given, a dictionary with unit ids as keys and colors as values
+        If given, a dictionary with unit ids as keys and colors as values, default None
     hide_unit_selector : bool
-        For sortingview backend, if True the unit selector is not displayed
+        For sortingview backend, if True the unit selector is not displayed, default False
     include_metrics_data :  bool
         If True, metrics data are included in unit table, by default True
     """
