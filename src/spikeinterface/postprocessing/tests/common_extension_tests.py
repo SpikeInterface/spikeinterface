@@ -81,7 +81,7 @@ class WaveformExtensionCommonTestSuite:
             extension_function_kwargs_list = self.extension_function_kwargs_list
 
         for ext_kwargs in extension_function_kwargs_list:
-            #~ print(ext_kwargs)
+            # print(ext_kwargs)
             _ = self.extension_class.get_extension_function()(we, load_if_exists=False, **ext_kwargs)
             
             # reload as an extension from we
