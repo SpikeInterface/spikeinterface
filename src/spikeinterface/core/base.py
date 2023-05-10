@@ -488,7 +488,7 @@ class BaseExtractor:
         )
     
 
-    def dump_to_pickle(self, file_path=None, include_properties=True,
+    def dump_to_pickle(self, file_path=None, include_properties: bool = True,
                        relative_to=None, folder_metadata=None):
         """
         Dump recording extractor to a pickle file.
@@ -507,7 +507,8 @@ class BaseExtractor:
         dump_dict = self.to_dict(include_annotations=True,
                                  include_properties=include_properties,
                                  relative_to=relative_to,
-                                 folder_metadata=folder_metadata)
+                                 folder_metadata=folder_metadata,
+                                 recursive=True)
         file_path = self._get_file_path(file_path, ['.pkl', '.pickle'])
 
         file_path.write_bytes(pickle.dumps(dump_dict))
