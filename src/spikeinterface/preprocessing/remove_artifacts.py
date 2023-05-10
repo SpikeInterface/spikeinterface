@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.interpolate
 
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -94,7 +93,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
     def __init__(self, recording, list_triggers, ms_before=0.5, ms_after=3.0, mode='zeros', fit_sample_spacing=1.,
                  list_labels=None, artifacts=None, sparsity=None, scale_amplitude=False, time_jitter=0,
                  waveforms_kwargs={'allow_unfiltered' : True, 'mode':'memory'}):
-
+        import scipy.interpolate
         available_modes = ('zeros', 'linear', 'cubic', 'average', 'median')
         num_seg = recording.get_num_segments()
 
@@ -201,6 +200,8 @@ class RemoveArtifactsRecording(BasePreprocessor):
 class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment, triggers, pad, mode, fit_samples, artifacts,
                  labels, scale_amplitude, time_pad, sparsity):
+        
+        import scipy.interpolate
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.triggers = np.asarray(triggers, dtype='int64')
@@ -290,8 +291,8 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                         idxs = np.arange(idx - 3, idx + 1)
                     else:
                         idxs = np.arange(idx - 2, idx + 3)
-                    if np.min(idx) < 0:
-                        idx = idx[idx >= 0]
+                    if np.min(idxs) < 0:
+                        idxs = idxs[idxs >= 0]
                     median_vals = np.median(traces[idxs, :], axis=0, keepdims=True)
                     pre_vals.append(median_vals)
                 post_vals = []
@@ -300,8 +301,8 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                         idxs = np.arange(idx, idx + 4)
                     else:
                         idxs = np.arange(idx - 2, idx + 3)
-                    if np.max(idx) >= traces.shape[0]:
-                        idx = idx[idx < traces.shape[0]]
+                    if np.max(idxs) >= traces.shape[0]:
+                        idxs = idxs[idxs < traces.shape[0]]
                     median_vals = np.median(traces[idxs, :], axis=0, keepdims=True)
                     post_vals.append(median_vals)
 

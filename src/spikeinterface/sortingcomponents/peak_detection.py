@@ -1,11 +1,15 @@
 """Sorting components: peak detection."""
 import copy
+from typing import Tuple, Union, List, Dict, Any, Optional, Callable
 
 import numpy as np
 
 from spikeinterface.core.job_tools import (ChunkRecordingExecutor, _shared_job_kwargs_doc,
                                            split_job_kwargs, fix_job_kwargs)
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
+
+from spikeinterface.core.baserecording import BaseRecording
+from spikeinterface.sortingcomponents.peak_pipeline import PeakDetector, WaveformsNode, ExtractSparseWaveforms
 
 from ..core import get_chunk_with_margin
 
@@ -105,6 +109,207 @@ def detect_peaks(recording, method='by_channel', pipeline_nodes=None,
     return outs
 
 
+expanded_base_peak_dtype = np.dtype(base_peak_dtype + [("iteration", "int8")])
+
+
+class IterativePeakDetector(PeakDetector):
+    """
+    A class that iteratively detects peaks in the recording by applying a peak detector, waveform extraction,
+    and waveform denoising node. The algorithm runs for a specified number of iterations or until no peaks are found.
+    """
+
+    def __init__(
+        self,
+        recording: BaseRecording,
+        peak_detector_node: PeakDetector,
+        waveform_extraction_node: WaveformsNode,
+        waveform_denoising_node,
+        num_iterations: int = 2,
+        return_output: bool = True,
+        tresholds: Optional[List[float]] = None,
+    ):
+        """
+        Initialize the iterative peak detector.
+
+        Parameters
+        ----------
+        recording : BaseRecording
+            The recording to process.
+        peak_detector_node : PeakDetector
+            The peak detector node to use.
+        waveform_extraction_node : WaveformsNode
+            The waveform extraction node to use.
+        waveform_denoising_node
+            The waveform denoising node to use.
+        num_iterations : int, optional, default=2
+            The number of iterations to run the algorithm.
+        return_output : bool, optional, default=True
+        """
+        PeakDetector.__init__(self, recording, return_output=return_output)
+        self.peak_detector_node = peak_detector_node
+        self.waveform_extraction_node = waveform_extraction_node
+        self.waveform_denoising_node = waveform_denoising_node
+        self.num_iterations = num_iterations
+        self.tresholds = tresholds
+
+    def get_trace_margin(self) -> int:
+        """
+        Calculate the maximum trace margin from the internal pipeline.
+        Using the strategy as use by the Node pipeline
+
+
+        Returns
+        -------
+        int
+            The maximum trace margin.
+        """
+        internal_pipeline = (self.peak_detector_node, self.waveform_extraction_node, self.waveform_denoising_node)
+        pipeline_margin = (node.get_trace_margin() for node in internal_pipeline if hasattr(node, "get_trace_margin"))
+        return max(pipeline_margin)
+
+    def compute(self, traces_chunk, start_frame, end_frame, segment_index, max_margin) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Perform the iterative peak detection, waveform extraction, and denoising.
+
+        Parameters
+        ----------
+        traces_chunk : array-like
+            The chunk of traces to process.
+        start_frame : int
+            The starting frame for the chunk.
+        end_frame : int
+            The ending frame for the chunk.
+        segment_index : int
+            The segment index.
+        max_margin : int
+            The maximum margin for the traces.
+
+        Returns
+        -------
+        tuple of ndarray
+            A tuple containing a single ndarray with the detected peaks.
+        """
+
+        
+        traces_chunk = np.array(traces_chunk, copy=True, dtype="float32")
+        local_peaks_list = []
+        all_waveforms = []
+        
+        
+        for iteration in range(self.num_iterations):
+            
+            # Hack because of lack of either attribute or named references
+            # I welcome suggestions on how to improve this but I think it is an architectural issue
+            if self.tresholds is not None:
+                old_args = self.peak_detector_node.args
+                old_detect_treshold = self.peak_detector_node.params["detect_threshold"]
+                old_abs_treshold = old_args[1]
+                new_abs_treshold = old_abs_treshold  * self.tresholds[iteration]  / old_detect_treshold
+
+                new_args = tuple(val if index!= 1 else new_abs_treshold for index, val in enumerate(old_args))
+                self.peak_detector_node.args = new_args
+
+            (local_peaks,) = self.peak_detector_node.compute(
+                traces=traces_chunk, 
+                start_frame=start_frame, 
+                end_frame=end_frame,
+                segment_index=segment_index,
+                max_margin=max_margin,
+            )
+
+            local_peaks = self.add_iteration_to_peaks_dtype(local_peaks=local_peaks, iteration=iteration)
+            local_peaks_list.append(local_peaks)
+
+            # End algorith if no peak is found
+            if local_peaks.size == 0:
+                break
+
+            waveforms = self.waveform_extraction_node.compute(traces=traces_chunk, peaks=local_peaks)
+            denoised_waveforms = self.waveform_denoising_node.compute(
+                traces=traces_chunk, 
+                peaks=local_peaks, 
+                waveforms=waveforms
+            )
+
+            self.substract_waveforms_from_traces(local_peaks=local_peaks,
+                traces_chunk=traces_chunk,
+                waveforms=denoised_waveforms,
+            )
+
+            all_waveforms.append(waveforms)
+        all_local_peaks = np.concatenate(local_peaks_list, axis=0)
+        all_waveforms = np.concatenate(all_waveforms, axis=0) if len(all_waveforms) != 0 else np.empty((0, 0, 0))
+
+        # Sort as iterative method implies peaks might not be discovered ordered in time
+        sorting_indices = np.argsort(all_local_peaks['sample_index'])
+        all_local_peaks = all_local_peaks[sorting_indices]
+        all_waveforms = all_waveforms[sorting_indices]
+        
+        return (all_local_peaks, all_waveforms)
+
+
+    def substract_waveforms_from_traces(
+        self,
+        local_peaks: np.ndarray,
+        traces_chunk: np.ndarray,
+        waveforms: np.ndarray,
+    ):
+        """
+        Substract inplace the cleaned waveforms from the traces_chunk.
+
+        Parameters
+        ----------
+        sample_indices : ndarray
+            The indices where the waveforms are maximum (peaks["sample_index"]).
+        traces_chunk : ndarray
+            A chunk of the traces.
+        waveforms : ndarray
+            The waveforms extracted from the traces.
+        """
+
+        nbefore = self.waveform_extraction_node.nbefore
+        nafter = self.waveform_extraction_node.nafter
+        if isinstance(self.waveform_extraction_node, ExtractSparseWaveforms):
+            neighbours_mask = self.waveform_extraction_node.neighbours_mask
+        else:
+            neighbours_mask = None
+            
+        for peak_index, peak in enumerate(local_peaks):
+            center_sample = peak["sample_index"]
+            first_sample = center_sample - nbefore
+            last_sample = center_sample + nafter
+            if neighbours_mask is None:
+                traces_chunk[first_sample:last_sample, :] -= waveforms[peak_index, :, :]
+            else:
+                channels, = np.nonzero(neighbours_mask[peak["channel_index"]])
+                traces_chunk[first_sample:last_sample, channels] -= waveforms[peak_index, :, :len(channels)]
+
+
+    def add_iteration_to_peaks_dtype(self, local_peaks, iteration) -> np.ndarray:
+        """
+        Add the iteration number to the peaks dtype.
+
+        Parameters
+        ----------
+        local_peaks : ndarray
+            The array of local peaks.
+        iteration : int
+            The iteration number.
+
+        Returns
+        -------
+        ndarray
+            An array of local peaks with the iteration number added.
+        """
+        # Expand dtype to also contain an iteration field
+        local_peaks_expanded = np.zeros_like(local_peaks, dtype=expanded_base_peak_dtype)
+        fields_in_base_type = np.dtype(base_peak_dtype).names
+        for field in fields_in_base_type:
+            local_peaks_expanded[field] = local_peaks[field]
+        local_peaks_expanded["iteration"] = iteration
+
+        return local_peaks_expanded
+
 class PeakDetectorWrapper(PeakDetector):
     # transitory class to maintain instance based and class method based
     # TODO later when in main: refactor in every old detector class:
@@ -115,6 +320,7 @@ class PeakDetectorWrapper(PeakDetector):
     def __init__(self, recording, **params):
         PeakDetector.__init__(self, recording, return_output=True)
 
+        self.params = params
         self.args = self.check_params(recording, **params)
 
     def get_trace_margin(self):
@@ -123,6 +329,9 @@ class PeakDetectorWrapper(PeakDetector):
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
         
         peak_sample_ind, peak_chan_ind = self.detect_peaks(traces, *self.args)
+        if peak_sample_ind.size == 0 or peak_chan_ind.size == 0:
+            return (np.zeros(0, dtype=base_peak_dtype), )
+        
         peak_amplitude = traces[peak_sample_ind, peak_chan_ind]
         local_peaks = np.zeros(peak_sample_ind.size, dtype=base_peak_dtype)
         local_peaks['sample_index'] = peak_sample_ind
@@ -367,7 +576,7 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
     def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, device, return_tensor, neighbor_idxs):
         sample_inds, chan_inds = _torch_detect_peaks(traces, peak_sign, abs_threholds, exclude_sweep_size, 
                                                      neighbor_idxs, device)
-        if not return_tensor:
+        if not return_tensor and isinstance(sample_inds, torch.Tensor) and isinstance(chan_inds, torch.Tensor): 
             sample_inds = np.array(sample_inds.cpu())
             chan_inds = np.array(chan_inds.cpu())
         return sample_inds, chan_inds
@@ -457,58 +666,57 @@ if HAVE_TORCH:
         MAXCOPY = 8
 
         num_samples, num_channels = traces.shape
+        dtype = torch.float32
+        empty_return_value = (torch.tensor([], dtype=dtype) , torch.tensor([], dtype=dtype))
 
-        # -- torch argrelmin
+        
+        # The function uses maxpooling to look for maximum
         if peak_sign == "neg":
-            neg_traces = torch.as_tensor(
-                -traces, device=device, dtype=torch.float
-            )
+            traces = -traces
         elif peak_sign == "pos":
-            neg_traces = torch.as_tensor(
-                traces, device=device, dtype=torch.float
-            )
+            traces = traces
         elif peak_sign == "both":
-            neg_traces = torch.as_tensor(
-                -np.abs(traces), device=device, dtype=torch.float
-            )
+            traces = np.abs(traces)
+        
+        traces_tensor = torch.as_tensor(traces, device=device, dtype=torch.float)
         thresholds_torch = torch.as_tensor(abs_thresholds, device=device, dtype=torch.float)
-        traces_norm = neg_traces / thresholds_torch
+        normalized_traces = traces_tensor / thresholds_torch
 
-        max_amps, inds = F.max_pool2d_with_indices(
-            traces_norm[None, None],
+        max_amplitudes, indices = F.max_pool2d_with_indices(
+            input=normalized_traces[None, None],
             kernel_size=[2 * exclude_sweep_size + 1, 1],
             stride=1,
             padding=[exclude_sweep_size, 0],
         )
-        max_amps = max_amps[0, 0]
-        inds = inds[0, 0]
-        # torch `inds` gives loc of argmax at each position
+        max_amplitudes = max_amplitudes[0, 0]
+        indices = indices[0, 0]
+        # torch `indices` gives loc of argmax at each position
         # find those which actually *were* the max
-        unique_inds = inds.unique()
-        window_max_inds = unique_inds[inds.view(-1)[unique_inds] == unique_inds]
+        unique_indices = indices.unique()
+        window_max_indices = unique_indices[indices.view(-1)[unique_indices] == unique_indices]
 
         # voltage threshold
-        max_amps_at_inds = max_amps.view(-1)[window_max_inds]
-        crossings = torch.nonzero(max_amps_at_inds > 1).squeeze()
+        max_amplitudes_at_indices = max_amplitudes.view(-1)[window_max_indices]
+        crossings = torch.nonzero(max_amplitudes_at_indices > 1).squeeze()
         if not crossings.numel():
-            return np.array([]), np.array([]), np.array([])
+            return empty_return_value
 
         # -- unravel the spike index
         # (right now the indices are into flattened recording)
-        peak_inds = window_max_inds[crossings]
-        sample_inds = torch.div(peak_inds, num_channels, rounding_mode="floor")
-        chan_inds = peak_inds % num_channels
-        amplitudes = max_amps_at_inds[crossings]
+        peak_indices = window_max_indices[crossings]
+        sample_indices = torch.div(peak_indices, num_channels, rounding_mode="floor")
+        channel_indices = peak_indices % num_channels
+        amplitudes = max_amplitudes_at_indices[crossings]
 
         # we need this due to the padding in convolution
-        valid_inds = torch.nonzero(
-            (0 < sample_inds) & (sample_inds < traces.shape[0] - 1)
+        valid_indices = torch.nonzero(
+            (0 < sample_indices) & (sample_indices < traces.shape[0] - 1)
         ).squeeze()
-        if not sample_inds.numel():
-            return np.array([]), np.array([]), np.array([])
-        sample_inds = sample_inds[valid_inds]
-        chan_inds = chan_inds[valid_inds]
-        amplitudes = amplitudes[valid_inds]
+        if not sample_indices.numel():
+            return empty_return_value
+        sample_indices = sample_indices[valid_indices]
+        channel_indices = channel_indices[valid_indices]
+        amplitudes = amplitudes[valid_indices]
 
         # -- deduplication
         # We deduplicate if the channel index is provided.
@@ -518,13 +726,13 @@ if HAVE_TORCH:
             )
 
             # -- temporal max pool
-            # still not sure why we can't just use `max_amps` instead of making
+            # still not sure why we can't just use `max_amplitudes` instead of making
             # this sparsely populated array, but it leads to a different result.
-            max_amps[:] = 0
-            max_amps[sample_inds, chan_inds] = amplitudes
+            max_amplitudes[:] = 0
+            max_amplitudes[sample_indices, channel_indices] = amplitudes
             max_window = 2 * exclude_sweep_size
-            max_amps = F.max_pool2d(
-                max_amps[None, None],
+            max_amplitudes = F.max_pool2d(
+                max_amplitudes[None, None],
                 kernel_size=[2 * max_window + 1, 1],
                 stride=1,
                 padding=[max_window, 0],
@@ -536,21 +744,19 @@ if HAVE_TORCH:
             batch_size = int(np.ceil(num_samples / (max_neighbs / MAXCOPY)))
             for bs in range(0, num_samples, batch_size):
                 be = min(num_samples, bs + batch_size)
-                max_amps[bs:be] = torch.max(
-                    F.pad(max_amps[bs:be], (0, 1))[:, neighbours_mask], 2
+                max_amplitudes[bs:be] = torch.max(
+                    F.pad(max_amplitudes[bs:be], (0, 1))[:, neighbours_mask], 2
                 )[0]
 
             # -- deduplication
-            dedup = torch.nonzero(
-                amplitudes >= max_amps[sample_inds, chan_inds] - 1e-8
-            ).squeeze()
-            if not dedup.numel():
-                return np.array([]), np.array([]), np.array([])
-            sample_inds = sample_inds[dedup]
-            chan_inds = chan_inds[dedup]
-            amplitudes = amplitudes[dedup]
+            deduplication_indices = torch.nonzero(amplitudes >= max_amplitudes[sample_indices, channel_indices] - 1e-8).squeeze()
+            if not deduplication_indices.numel():
+                return empty_return_value
+            sample_indices = sample_indices[deduplication_indices]
+            channel_indices = channel_indices[deduplication_indices]
+            amplitudes = amplitudes[deduplication_indices]
 
-        return sample_inds, chan_inds
+        return sample_indices, channel_indices
 
 
 class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):

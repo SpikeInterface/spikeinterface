@@ -5,8 +5,6 @@ Various widgets on top of GroundTruthStudy to summary results:
   * count units
 """
 import numpy as np
-from matplotlib import pyplot as plt
-import pandas as pd
 
 from .basewidget import BaseWidget
 
@@ -25,6 +23,8 @@ class ComparisonPerformancesWidget(BaseWidget):
 
     """
     def __init__(self, gt_comp, palette='Set1',  ax=None):
+        from matplotlib import pyplot as plt
+        import pandas as pd
 
         self.gt_comp = gt_comp
         self.palette = palette
@@ -67,6 +67,8 @@ class ComparisonPerformancesAveragesWidget(BaseWidget):
 
     """
     def __init__(self, gt_comp, cmap_name='Set1',  ax=None):
+        from matplotlib import pyplot as plt
+        import pandas as pd
 
         self.gt_comp = gt_comp
         self.cmap_name = cmap_name
@@ -127,6 +129,8 @@ class ComparisonPerformancesByTemplateSimilarity(BaseWidget):
 
     """
     def __init__(self, gt_comp, similarity_matrix, ax=None, ylim=(0.6, 1)):
+        from matplotlib import pyplot as plt
+        import pandas as pd
 
         self.gt_comp = gt_comp
         self.similarity_matrix = similarity_matrix

@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.spatial
 
 
 def get_spatial_interpolation_kernel(source_location, target_location, method='kriging',
@@ -41,6 +40,7 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
     -------
     interpolation_kernel: array (m, n)
     """
+    import scipy.spatial
 
     target_is_inside = np.ones(target_location.shape[0], dtype=bool)
     for dim in range(source_location.shape[1]):
@@ -122,6 +122,7 @@ def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p):
                   distances (gaussian kernel) between locations 1 and 2.
 
     """
+    import scipy
     dist = scipy.spatial.distance.cdist(locations_1, locations_2, metric='euclidean')
     kernal_dist = np.exp(-(dist / sigma_um) ** p)
     return kernal_dist

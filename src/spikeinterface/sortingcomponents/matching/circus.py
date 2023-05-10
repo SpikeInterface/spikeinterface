@@ -22,7 +22,7 @@ potrs, = scipy.linalg.get_lapack_funcs(('potrs',), dtype=np.float32)
 
 nrm2, = scipy.linalg.get_blas_funcs(('nrm2', ), dtype=np.float32)
 
-spike_dtype = [('sample_index', 'int64'), ('channel_index', 'int64'), ('cluster_ind', 'int64'),
+spike_dtype = [('sample_index', 'int64'), ('channel_index', 'int64'), ('cluster_index', 'int64'),
                ('amplitude', 'float64'), ('segment_index', 'int64')]
 
 from .main import BaseTemplateMatchingEngine
@@ -161,6 +161,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
     noise_levels: array
         The noise levels, for every channels. If None, they will be automatically
         computed
+    random_chunk_kwargs: dict
+        Parameters for computing noise levels, if not provided (sub optimal)
     -----
     """
 
@@ -476,7 +478,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         num_spikes = len(valid_indices[0])
         spikes['sample_index'][:num_spikes] = valid_indices[1] + d['nbefore']
         spikes['channel_index'][:num_spikes] = 0
-        spikes['cluster_ind'][:num_spikes] = valid_indices[0]
+        spikes['cluster_index'][:num_spikes] = valid_indices[0]
         spikes['amplitude'][:num_spikes] = final_amplitudes[valid_indices[0], valid_indices[1]]
         
         spikes = spikes[:num_spikes]
@@ -582,29 +584,29 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _prepare_templates(cls, d):
-        
-        waveform_extractor = d['waveform_extractor']
-        num_samples = d['num_samples']
-        num_channels = d['num_channels']
-        num_templates = d['num_templates']
-        max_amplitude = d['max_amplitude']
-        min_amplitude = d['min_amplitude']
-        use_sparse_matrix_threshold = d['use_sparse_matrix_threshold']
+        parameters = d
+        waveform_extractor = parameters['waveform_extractor']
+        num_samples = parameters['num_samples']
+        num_channels = parameters['num_channels']
+        num_templates = parameters['num_templates']
+        max_amplitude = parameters['max_amplitude']
+        min_amplitude = parameters['min_amplitude']
+        use_sparse_matrix_threshold = parameters['use_sparse_matrix_threshold']
 
-        d['norms'] = np.zeros(num_templates, dtype=np.float32)
+        parameters['norms'] = np.zeros(num_templates, dtype=np.float32)
 
-        all_units = list(d['waveform_extractor'].sorting.unit_ids)
+        all_units = list(parameters['waveform_extractor'].sorting.unit_ids)
 
         templates = waveform_extractor.get_all_templates(mode='median').copy()
         
         for count, unit_id in enumerate(all_units):
             
-            if d['smoothing_factor'] > 0:
-                templates[count] = cls._regularize_template(templates[count], d['smoothing_factor'])
+            if parameters['smoothing_factor'] > 0:
+                templates[count] = cls._regularize_template(templates[count], parameters['smoothing_factor'])
 
-            templates[count], _ = cls._sparsify_template(templates[count], d['sparsify_threshold'], d['noise_levels'])            
-            d['norms'][count] = np.linalg.norm(templates[count])
-            templates[count] /= d['norms'][count]
+            templates[count], _ = cls._sparsify_template(templates[count], parameters['sparsify_threshold'], parameters['noise_levels'])            
+            parameters['norms'][count] = np.linalg.norm(templates[count])
+            templates[count] /= parameters['norms'][count]
 
         templates = templates.reshape(num_templates, -1)
 
@@ -612,13 +614,13 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         if nnz <= use_sparse_matrix_threshold:
             templates = scipy.sparse.csr_matrix(templates)
             print(f'Templates are automatically sparsified (sparsity level is {nnz})')
-            d['is_dense'] = False
+            parameters['is_dense'] = False
         else:
-            d['is_dense'] = True
+            parameters['is_dense'] = True
 
-        d['templates'] = templates
+        parameters['templates'] = templates
 
-        return d
+        return parameters
 
     @classmethod
     def _prepare_overlaps(cls, d):
@@ -685,25 +687,25 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _optimize_amplitudes(cls, noise_snippets, d):
-
-        waveform_extractor = d['waveform_extractor']
-        templates = d['templates']
-        num_templates = d['num_templates']
-        max_amplitude = d['max_amplitude']
-        min_amplitude = d['min_amplitude']
+        parameters = d
+        waveform_extractor = parameters['waveform_extractor']
+        templates = parameters['templates']
+        num_templates = parameters['num_templates']
+        max_amplitude = parameters['max_amplitude']
+        min_amplitude = parameters['min_amplitude']
         alpha = 0.5
-        norms = d['norms']
+        norms = parameters['norms']
         all_units = list(waveform_extractor.sorting.unit_ids)
-        if d['progess_bar_steps']:
+        if parameters['progess_bar_steps']:
             all_units = tqdm(all_units, desc='[2] compute amplitudes')
 
-        d['amplitudes'] = np.zeros((num_templates, 2), dtype=np.float32)
+        parameters['amplitudes'] = np.zeros((num_templates, 2), dtype=np.float32)
         noise = templates.dot(noise_snippets)/norms[:, np.newaxis]
 
         all_amps = {}
         for count, unit_id in enumerate(all_units):
-            w = waveform_extractor.get_waveforms(unit_id)
-            snippets = w.reshape(w.shape[0], -1).T
+            waveform = waveform_extractor.get_waveforms(unit_id)
+            snippets = waveform.reshape(waveform.shape[0], -1).T
             amps = templates.dot(snippets)/norms[:, np.newaxis]
             good = amps[count, :].flatten()
 
@@ -713,7 +715,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             cost_kwargs = [good, bad, max_amplitude - min_amplitude, alpha]
             cost_bounds = [(min_amplitude, 1), (1, max_amplitude)]
             res = scipy.optimize.differential_evolution(cls._cost_function_mcc, bounds=cost_bounds, args=cost_kwargs)
-            d['amplitudes'][count] = res.x
+            parameters['amplitudes'][count] = res.x
 
             # import pylab as plt
             # plt.hist(good, 100, alpha=0.5)
@@ -731,47 +733,47 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     def initialize_and_check_kwargs(cls, recording, kwargs):
 
         assert HAVE_SKLEARN, "CircusPeeler needs sklearn to work"
-        d = cls._default_params.copy()
-        d.update(kwargs)
+        default_parameters = cls._default_params.copy()
+        default_parameters.update(kwargs)
 
         #assert isinstance(d['waveform_extractor'], WaveformExtractor)
 
         for v in ['sparsify_threshold', 'use_sparse_matrix_threshold']:
-            assert (d[v] >= 0) and (d[v] <= 1), f'{v} should be in [0, 1]'
+            assert (default_parameters[v] >= 0) and (default_parameters[v] <= 1), f'{v} should be in [0, 1]'
         
-        d['num_channels'] = d['waveform_extractor'].recording.get_num_channels()
-        d['num_samples'] = d['waveform_extractor'].nsamples
-        d['num_templates'] = len(d['waveform_extractor'].sorting.unit_ids)
+        default_parameters['num_channels'] = default_parameters['waveform_extractor'].recording.get_num_channels()
+        default_parameters['num_samples'] = default_parameters['waveform_extractor'].nsamples
+        default_parameters['num_templates'] = len(default_parameters['waveform_extractor'].sorting.unit_ids)
 
-        if d['noise_levels'] is None:
+        if default_parameters['noise_levels'] is None:
             print('CircusPeeler : noise should be computed outside')
-            d['noise_levels'] = get_noise_levels(recording, **d['random_chunk_kwargs'], return_scaled=False)
+            default_parameters['noise_levels'] = get_noise_levels(recording, **default_parameters['random_chunk_kwargs'], return_scaled=False)
 
-        d['abs_threholds'] = d['noise_levels'] * d['detect_threshold']
+        default_parameters['abs_threholds'] = default_parameters['noise_levels'] * default_parameters['detect_threshold']
 
-        d = cls._prepare_templates(d)
-        d = cls._prepare_overlaps(d)
+        default_parameters = cls._prepare_templates(default_parameters)
+        default_parameters = cls._prepare_overlaps(default_parameters)
 
-        d['exclude_sweep_size'] = int(d['exclude_sweep_ms'] * recording.get_sampling_frequency() / 1000.)
+        default_parameters['exclude_sweep_size'] = int(default_parameters['exclude_sweep_ms'] * recording.get_sampling_frequency() / 1000.)
 
-        d['nbefore'] = d['waveform_extractor'].nbefore
-        d['nafter'] = d['waveform_extractor'].nafter
-        d['patch_sizes'] = (d['waveform_extractor'].nsamples, d['num_channels'])
-        d['sym_patch'] = d['nbefore'] == d['nafter']
-        d['jitter'] = int(d['jitter_ms'] * recording.get_sampling_frequency() / 1000.)
+        default_parameters['nbefore'] = default_parameters['waveform_extractor'].nbefore
+        default_parameters['nafter'] = default_parameters['waveform_extractor'].nafter
+        default_parameters['patch_sizes'] = (default_parameters['waveform_extractor'].nsamples, default_parameters['num_channels'])
+        default_parameters['sym_patch'] = default_parameters['nbefore'] == default_parameters['nafter']
+        default_parameters['jitter'] = int(default_parameters['jitter_ms'] * recording.get_sampling_frequency() / 1000.)
 
         num_segments = recording.get_num_segments()
-        if d['waveform_extractor']._params['max_spikes_per_unit'] is None:
+        if default_parameters['waveform_extractor']._params['max_spikes_per_unit'] is None:
             num_snippets = 1000
         else:
-            num_snippets = 2*d['waveform_extractor']._params['max_spikes_per_unit']
+            num_snippets = 2*default_parameters['waveform_extractor']._params['max_spikes_per_unit']
 
         num_chunks = num_snippets // num_segments
-        noise_snippets = get_random_data_chunks(recording, num_chunks_per_segment=num_chunks, chunk_size=d['num_samples'], seed=42)
-        noise_snippets = noise_snippets.reshape(num_chunks, d['num_samples'], d['num_channels']).reshape(num_chunks, -1).T
-        d = cls._optimize_amplitudes(noise_snippets, d)
+        noise_snippets = get_random_data_chunks(recording, num_chunks_per_segment=num_chunks, chunk_size=default_parameters['num_samples'], seed=42)
+        noise_snippets = noise_snippets.reshape(num_chunks, default_parameters['num_samples'], default_parameters['num_channels']).reshape(num_chunks, -1).T
+        parameters = cls._optimize_amplitudes(noise_snippets, default_parameters)
 
-        return d        
+        return parameters      
 
     @classmethod
     def serialize_method_kwargs(cls, kwargs):
@@ -872,13 +874,13 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
             spikes['sample_index'][num_spikes] = best_peak_sample_ind
             spikes['channel_index'][num_spikes] = best_peak_chan_ind
-            spikes['cluster_ind'][num_spikes] = best_cluster_ind
+            spikes['cluster_index'][num_spikes] = best_cluster_ind
             spikes['amplitude'][num_spikes] = best_amplitude
             num_spikes += 1
 
             is_valid = (scalar_products > min_sps) & (scalar_products < max_sps)
 
-        spikes['amplitude'][:num_spikes] /= norms[spikes['cluster_ind'][:num_spikes]]
+        spikes['amplitude'][:num_spikes] /= norms[spikes['cluster_index'][:num_spikes]]
         
         spikes = spikes[:num_spikes]
         order = np.argsort(spikes['sample_index'])

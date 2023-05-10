@@ -1,9 +1,7 @@
 import warnings
 
 import numpy as np
-import scipy.optimize
 
-from scipy.spatial.distance import cdist
 
 try:
     import numba
@@ -157,6 +155,7 @@ def make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance
 
 
 def solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance_um, optimizer):
+    import scipy.optimize
     x0, bounds = make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance_um)
 
     if optimizer == 'least_square':
@@ -251,11 +250,11 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
         Return or not the alpha value
     enforce_decrease : bool (default False)
         Enforce spatial decreasingness for PTP vectors
-    feature: string in ['ptp', 'energy', 'v_peak']
+    feature: string in ['ptp', 'energy', 'peak_voltage']
         The available features to consider for estimating the position via
         monopolar triangulation are peak-to-peak amplitudes ('ptp', default), 
         energy ('energy', as L2 norm) or voltages at the center of the waveform
-        ('v_peak')
+        ('peak_voltage')
 
     Returns
     -------
@@ -265,7 +264,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
     '''
     assert optimizer in ('least_square', 'minimize_with_log_penality')
 
-    assert feature in ['ptp', 'energy', 'v_peak'], f'{feature} is not a valid feature'
+    assert feature in ['ptp', 'energy', 'peak_voltage'], f'{feature} is not a valid feature'
     unit_ids = waveform_extractor.sorting.unit_ids
 
     contact_locations = waveform_extractor.get_channel_locations()
@@ -293,7 +292,7 @@ def compute_monopolar_triangulation(waveform_extractor, optimizer='minimize_with
             wf_data = wf.ptp(axis=0)
         elif feature == 'energy':
             wf_data = np.linalg.norm(wf, axis=0)
-        elif feature == 'v_peak':
+        elif feature == 'peak_voltage':
             wf_data = np.abs(wf[nbefore])
 
         #if enforce_decrease:
@@ -321,7 +320,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=75, fe
         Sign of the template to compute best channels ('neg', 'pos', 'both')
     radius_um: float
         Radius to consider in order to estimate the COM
-    feature: str ['ptp', 'mean', 'energy', 'v_peak']
+    feature: str ['ptp', 'mean', 'energy', 'peak_voltage']
         Feature to consider for computation. Default is 'ptp'
 
     Returns
@@ -333,7 +332,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=75, fe
     recording = waveform_extractor.recording
     contact_locations = recording.get_channel_locations()
 
-    assert feature in ['ptp', 'mean', 'energy', 'v_peak'], f'{feature} is not a valid feature'
+    assert feature in ['ptp', 'mean', 'energy', 'peak_voltage'], f'{feature} is not a valid feature'
 
     sparsity = compute_sparsity(waveform_extractor, peak_sign=peak_sign, method='radius', radius_um=radius_um)
     templates = waveform_extractor.get_all_templates(mode='average')
@@ -351,7 +350,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=75, fe
             wf_data = (wf[:, chan_inds]).mean(axis=0)
         elif feature == 'energy':
             wf_data = np.linalg.norm(wf[:, chan_inds], axis=0)
-        elif feature == 'v_peak':
+        elif feature == 'peak_voltage':
             wf_data = wf[waveform_extractor.nbefore, chan_inds]
 
         # center of mass
@@ -441,6 +440,7 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', radius_um=50.,
 
 def make_shell(channel, geom, n_jumps=1):
     """See make_shells"""
+    from scipy.spatial.distance import cdist
     pt = geom[channel]
     dists = cdist([pt], geom).ravel()
     radius = np.unique(dists)[1 : n_jumps + 1][-1]

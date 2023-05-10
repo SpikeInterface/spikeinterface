@@ -291,7 +291,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
     default_params = {
         'waveform_extractor' : None,
     }
-    spike_dtype = [('sample_index', 'int64'), ('channel_index', 'int64'), ('cluster_ind', 'int64'),
+    spike_dtype = [('sample_index', 'int64'), ('channel_index', 'int64'), ('cluster_index', 'int64'),
                    ('amplitude', 'float64'), ('segment_index', 'int64')]
 
     @classmethod
@@ -453,7 +453,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         # assign result to spikes array
         spikes = np.zeros(spike_train.shape[0], dtype=cls.spike_dtype)
         spikes['sample_index'] = spike_train[:, 0]
-        spikes['cluster_ind'] = spike_train[:, 1]
+        spikes['cluster_index'] = spike_train[:, 1]
         spikes['channel_index'] = channel_inds
         spikes['amplitude'] = amplitudes
 

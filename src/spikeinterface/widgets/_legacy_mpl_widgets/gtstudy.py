@@ -5,8 +5,7 @@ Various widgets on top of GroundTruthStudy to summary results:
   * count units
 """
 import numpy as np
-from matplotlib import pyplot as plt
-import pandas as pd
+
 
 from .basewidget import BaseWidget
 
@@ -27,7 +26,8 @@ class StudyComparisonRunTimesWidget(BaseWidget):
 
     """
     def __init__(self, study, color='#F7DC6F',  ax=None):
-
+        from matplotlib import pyplot as plt
+        import pandas as pd
         self.study = study
         self.color = color
 
@@ -79,7 +79,8 @@ class StudyComparisonUnitCountsAveragesWidget(BaseWidget):
 
     """
     def __init__(self, study, cmap_name='Set2', log_scale=False, ax=None):
-
+        from matplotlib import pyplot as plt
+        import pandas as pd
         self.study = study
         self.cmap_name = cmap_name
         self.log_scale = log_scale
@@ -152,7 +153,8 @@ class StudyComparisonUnitCountsWidget(BaseWidget):
 
     """
     def __init__(self, study, cmap_name='Set2',  log_scale=False, ax=None):
-
+        from matplotlib import pyplot as plt
+        import pandas as pd
         self.study = study
         self.cmap_name = cmap_name
         self.log_scale = log_scale
@@ -240,7 +242,8 @@ class StudyComparisonPerformancesWidget(BaseWidget):
 
     """
     def __init__(self, study, palette='Set1',  ax=None):
-
+        from matplotlib import pyplot as plt
+        import pandas as pd
         self.study = study
         self.palette = palette
 
@@ -297,7 +300,8 @@ class StudyComparisonTemplateSimilarityWidget(BaseWidget):
 
     """
     def __init__(self, study, cmap_name='Set1',  ax=None):
-
+        from matplotlib import pyplot as plt
+        import pandas as pd
         self.study = study
         self.cmap_name = cmap_name
 
@@ -367,7 +371,8 @@ class StudyComparisonPerformancesAveragesWidget(BaseWidget):
 
     """
     def __init__(self, study, cmap_name='Set1',  ax=None):
-
+        from matplotlib import pyplot as plt
+        import pandas as pd
         self.study = study
         self.cmap_name = cmap_name
 
@@ -438,7 +443,8 @@ class StudyComparisonPerformancesByTemplateSimilarity(BaseWidget):
 
     """
     def __init__(self, study, cmap_name='Set1', ax=None, ylim=(0.6, 1), show_legend=True):
-
+        from matplotlib import pyplot as plt
+        import pandas as pd
         self.study = study
         self.cmap_name = cmap_name
         self.show_legend = show_legend
