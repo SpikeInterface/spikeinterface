@@ -1319,27 +1319,27 @@ def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbef
         total = np.sum(n_per_segment)
         if max_spikes_per_unit is not None:
             if total > max_spikes_per_unit:
-                global_inds = np.random.choice(total, size=max_spikes_per_unit, replace=False)
-                global_inds = np.sort(global_inds)
+                global_indices = np.random.choice(total, size=max_spikes_per_unit, replace=False)
+                global_indices = np.sort(global_indices)
             else:
-                global_inds = np.arange(total)
+                global_indices = np.arange(total)
         else:
-            global_inds = np.arange(total)
+            global_indices = np.arange(total)
         sel_spikes = []
         for segment_index in range(num_seg):
-            in_segment = (global_inds >= cum_sum[segment_index]) & (global_inds < cum_sum[segment_index + 1])
-            inds = global_inds[in_segment] - cum_sum[segment_index]
+            in_segment = (global_indices >= cum_sum[segment_index]) & (global_indices < cum_sum[segment_index + 1])
+            indices = global_indices[in_segment] - cum_sum[segment_index]
 
             if max_spikes_per_unit is not None:
                 # clean border when sub selection
                 assert nafter is not None
                 spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                sampled_spike_times = spike_times[inds]
+                sampled_spike_times = spike_times[indices]
                 num_samples = recording.get_num_samples(segment_index=segment_index)
                 mask = (sampled_spike_times >= nbefore) & (sampled_spike_times < (num_samples - nafter))
-                inds = inds[mask]
+                indices = indices[mask]
 
-            sel_spikes.append(inds)
+            sel_spikes.append(indices)
         selected_spikes[unit_id] = sel_spikes
     return selected_spikes
 
