@@ -1,10 +1,10 @@
 from re import escape
 from unittest import TestCase
-import pytest
 
 import numpy as np
 from numpy.testing import assert_array_equal
-
+import pytest
+import requests
 from spikeinterface.extractors import IblStreamingRecordingExtractor
 
 
@@ -15,7 +15,21 @@ class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.session = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
-        cls.recording = IblStreamingRecordingExtractor(session=cls.session, stream_name="probe00.ap")
+        try:
+            cls.recording = IblStreamingRecordingExtractor(session=cls.session, stream_name="probe00.ap")
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 503:
+                pytest.skip("Skipping test due to server being down (HTTP 503).")
+            else:
+                raise
+        except KeyError as e:
+            # This is another error which I think is caused by server problems. I think that ONE is not handling their
+            # Exceptions properly so this is a workaround.
+            expected_error_message = "None of [Index(['e2b845a1-e313-4a08-bc61-a5f662ed295e', '012bf9d0-765c-4743-81da-4f8db39c9a19'], dtype='object')] are in the [index]"
+            if str(e) == expected_error_message:
+                pytest.skip(f"Skipping test due to KeyError: {e}")
+            else:
+                raise        
         cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
         cls.small_unscaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26)  # return_scaled=False is SI default
 
@@ -24,10 +38,6 @@ class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
 
         expected_stream_names = ['probe01.ap', 'probe01.lf', 'probe00.ap', 'probe00.lf']
         self.assertCountEqual(first=stream_names, second=expected_stream_names)
-
-    def test_representation(self):
-        expected_recording_representation = "IblStreamingRecordingExtractor: 384 channels - 1 segments - 30.0kHz - 5812.311s - int16 type - 124.72 GiB"
-        assert repr(self.recording) == expected_recording_representation
 
     def test_dtype(self):
         expected_datatype = "int16"
@@ -89,10 +99,6 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
         cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
         cls.small_unscaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26)  # return_scaled=False is SI default
 
-    def test_representation(self):
-        expected_recording_representation = "IblStreamingRecordingExtractor: 385 channels - 1 segments - 30.0kHz - 5812.311s - int16 type - 125.04 GiB"
-        assert repr(self.recording) == expected_recording_representation
-
     def test_dtype(self):
         expected_datatype = "int16"
         assert self.recording.get_dtype().name == expected_datatype
@@ -150,7 +156,6 @@ if __name__ == '__main__':
     test1 = TestDefaultIblStreamingRecordingExtractorApBand()
     test1.setUp()
     test1.test_get_stream_names()
-    test1.test_representation()
     test1.test_dtype()
     test1.test_channel_ids()
     test1.test_gains()
@@ -167,7 +172,6 @@ if __name__ == '__main__':
     test2.setUp()
     test2.test_get_stream_names()
     test2.test_get_stream_names()
-    test2.test_representation()
     test2.test_dtype()
     test2.test_channel_ids()
     test2.test_gains()

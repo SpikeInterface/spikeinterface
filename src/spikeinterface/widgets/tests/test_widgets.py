@@ -132,9 +132,20 @@ class TestWidgets(unittest.TestCase):
                 unit_ids = self.sorting.unit_ids[:2]
                 sw.plot_unit_waveforms_density_map(self.we, unit_ids=unit_ids, backend=backend,
                                                    **self.backend_kwargs[backend])
+    def test_plot_unit_waveforms_density_map_sparsity_radius(self):
+        possible_backends = list(sw.UnitWaveformDensityMapWidget.possible_backends.keys())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                unit_ids = self.sorting.unit_ids[:2]     
                 sw.plot_unit_waveforms_density_map(self.we, sparsity=self.sparsity_radius, same_axis=False,
                                                    unit_ids=unit_ids, backend=backend,
                                                    **self.backend_kwargs[backend])
+
+    def test_plot_unit_waveforms_density_map_sparsity_None_same_axis(self):
+        possible_backends = list(sw.UnitWaveformDensityMapWidget.possible_backends.keys())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                unit_ids = self.sorting.unit_ids[:2]
                 sw.plot_unit_waveforms_density_map(self.we_sparse, sparsity=None, same_axis=True,
                                                    unit_ids=unit_ids, backend=backend,
                                                    **self.backend_kwargs[backend])

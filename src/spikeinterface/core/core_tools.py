@@ -423,8 +423,6 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     arrays: one arrays per segment
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_chunk_size(recording, **job_kwargs)
-    n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
 
     if dtype is None:
         dtype = recording.get_dtype()
@@ -437,6 +435,8 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     arrays = []
     shm_names = []
     shapes = []
+    
+    n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
         num_channels = recording.get_num_channels()
@@ -638,7 +638,6 @@ def write_traces_to_zarr(recording, zarr_root, zarr_path, storage_options,
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     chunk_size = ensure_chunk_size(recording, **job_kwargs)
-    n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
 
     # create zarr datasets files
     for segment_index in range(recording.get_num_segments()):
@@ -848,3 +847,43 @@ def convert_bytes_to_str(byte_value:int ) -> str:
         byte_value /= 1024
         i += 1
     return f"{byte_value:.2f} {suffixes[i]}"
+
+
+def convert_seconds_to_str(seconds: float, long_notation: bool = True) -> str:
+    """
+    Convert seconds to a human-readable string representation.
+
+    Parameters
+    ----------
+    seconds : float
+        The duration in seconds.
+    long_notation : bool, optional, default: True
+        Whether to display the time with additional units (such as milliseconds, minutes,
+        hours, or days). If set to True, the function will display a more detailed
+        representation of the duration, including other units alongside the primary
+        seconds representation.
+
+    Returns
+    -------
+    str
+        A string representing the duration, with additional units included if
+        requested by the `long_notation` parameter.
+    """
+    base_str = f"{seconds:,.2f}s"
+    
+    if long_notation:
+        if seconds < 1.0:
+            base_str += f" ({seconds * 1000:.2f} ms)"
+        elif seconds < 60:
+            pass # seconds is already the primary representation
+        elif seconds < 3600:
+            minutes = seconds / 60
+            base_str += f" ({minutes:.2f} minutes)"
+        elif seconds < 86400 * 2:  # 2 days
+            hours = seconds / 3600
+            base_str += f" ({hours:.2f} hours)"
+        else:
+            days = seconds / 86400
+            base_str += f" ({days:.2f} days)"
+
+    return base_str
