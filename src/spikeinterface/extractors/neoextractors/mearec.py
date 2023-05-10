@@ -52,7 +52,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
 class MEArecSortingExtractor(NeoBaseSortingExtractor):
     mode = 'file'
     NeoRawIOClass = 'MEArecRawIO'
-    handle_spike_frame_directly = False
+    neo_returns_timestamps = True
     name = "mearec"
 
     def __init__(self, file_path: Union[str, Path]):

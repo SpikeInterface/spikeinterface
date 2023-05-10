@@ -1,4 +1,4 @@
-from typing import Optional, Union, Dict, Any, List
+from typing import Optional, Union, Dict, Any, List, Tuple
 
 import numpy as np
 import importlib
@@ -239,8 +239,13 @@ class NeoRecordingSegment(BaseRecordingSegment):
 
 
 class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
-    # this will depend on each reader
-    handle_spike_frame_directly = True
+    
+    # Class attribute indicating whether `neo_reader.get_spike_timestamps` returns timestamps instead of frames,
+    # This should be modified in subclasses if it is known that a specific format returns timestamps (e.g. Mearec)
+    # Suprisingly, it seems that most formats return frames 
+    # even if the method is called get_spike_timestamps so double check when implementing a new extractor
+    
+    neo_returns_timestamps = False
 
     def __init__(self, block_index=None,
                  sampling_frequency=None, use_natural_unit_ids=False,
@@ -262,12 +267,12 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         sampling_frequency_not_provided = sampling_frequency is None 
         stream_index = None
         if sampling_frequency_not_provided:
-            sampling_frequency, stream_id = self._auto_guess_sampling_frequency()
+            sampling_frequency, stream_id = self._infer_sampling_frequency_from_analog_signal()
             stream_index = np.where(self.neo_reader.header["signal_streams"]["id"] == stream_id)[0][0]
                 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         
-        get_t_start_from_analog_signal = sampling_frequency_not_provided and not self.handle_spike_frame_directly
+        get_t_start_from_analog_signal = sampling_frequency_not_provided and self.neo_returns_timestamps
         num_segments = self.neo_reader.segment_count(block_index=self.block_index)
         for segment_index in range(num_segments):
             t_start = None  # This means t_start will be 0 for practical purposes
@@ -280,29 +285,42 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                                                 use_natural_unit_ids=self.use_natural_unit_ids, 
                                                 t_start=t_start,
                                                 sampling_frequency=sampling_frequency, 
-                                                handle_spike_frame_directly=self.handle_spike_frame_directly
+                                                neo_returns_timestamps=self.neo_returns_timestamps
                                                 )
             
             self.add_sorting_segment(sorting_segment)
 
-    def _auto_guess_sampling_frequency(self):
+    def _infer_sampling_frequency_from_analog_signal(self) -> Tuple[float, str]:
         """
-        When the signal channels are available the sampling rate is set that of the channel with the higher frequency
-        and the corresponding stream_id from which the frequency was extracted.
-        
-        Because neo handle spike in times (s or ms) but spikeinterface in frames related to signals, spikeinterface 
-        need the sampling frequency. 
-        
-        Internally many format do have the spike timestamps at the same speed as the signal but at a higher
-        clocks speed. Here in spikeinterface we need spike index to be at the same speed that signal, therefore it does
-        not make sense to have spikes at 50kHz when the signal is 10kHz. Neo handles this, but not spikeinterface.
+        Infer the sampling rate from available signal channels.
 
-        In neo spikes can have diffrents sampling rate than signals so conversion from signals frames to times is
-        format dependent.
+        The function finds the channel with the highest frequency and sets that as the sampling rate. 
+        It also identifies the corresponding stream_id from which the frequency was extracted.
+        This is essential as SpikeInterface needs the sampling frequency, while Neo handles spikes in 
+        either seconds or milliseconds but SpikeInterface deals with frames related to signals.
+
+        Many internal formats have spike timestamps at the same speed as the signal but at a higher
+        clock speed. However, in SpikeInterface, spike indexes need to be at the same speed as the 
+        signal. Hence, it does not make sense to have spikes at 50kHz when the signal is 10kHz. 
+        Neo can handle this discrepancy, but SpikeInterface cannot.
+
+        It's also important to note that in Neo, spikes can have different sampling rates than signals, 
+        so conversion from signal frames to times is format dependent.
+
+        Returns
+        -------
+        float
+            The inferred sampling frequency.
+        str
+            The ID of the stream from which the sampling frequency was extracted.
+
+        Raises
+        ------
+        AssertionError
+            If there are no signal streams available to infer the sampling frequency.
         """
-
         # here the generic case
-        #  all channels are in the same neo group so
+        #  all channels are in the same neo group so
         sig_channels = self.neo_reader.header['signal_channels']
         assert sig_channels.size > 0, 'No signal streams to infer the sampling frequency. Set it manually'
         argmax = np.argmax(sig_channels['sampling_rate'])
@@ -313,7 +331,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
 class NeoSortingSegment(BaseSortingSegment):
     def __init__(self, neo_reader, block_index, segment_index, use_natural_unit_ids, t_start,
-                 sampling_frequency, handle_spike_frame_directly):
+                 sampling_frequency, neo_returns_timestamps):
         BaseSortingSegment.__init__(self)
         self.neo_reader = neo_reader
         self.segment_index = segment_index
@@ -322,7 +340,7 @@ class NeoSortingSegment(BaseSortingSegment):
         self._t_start = t_start
         self._sampling_frequency = sampling_frequency
         self._natural_ids = None
-        self.handle_spike_frame_directly = handle_spike_frame_directly
+        self.neo_returns_timestamps = neo_returns_timestamps
 
     def get_natural_ids(self):
         if self._natural_ids is None:
@@ -339,14 +357,13 @@ class NeoSortingSegment(BaseSortingSegment):
         spike_timestamps = self.neo_reader.get_spike_timestamps(block_index=self.block_index,
                                                                 seg_index=self.segment_index,
                                                                 spike_channel_index=unit_index)
-        
-        if self.handle_spike_frame_directly:  
-            spike_frames = spike_timestamps
-        else:  # Neo return times, convert timestamps to seconds
-            spike_times = self.neo_reader.rescale_spike_timestamp(spike_timestamps, dtype='float64')
+        if self.neo_returns_timestamps:
+            spike_times_seconds = self.neo_reader.rescale_spike_timestamp(spike_timestamps, dtype='float64')
             # Re-center to zero for each segment and multiply by frequency to convert seconds to frames
             t_start = 0 if self._t_start is None else self._t_start
-            spike_frames = ((spike_times - t_start) * self._sampling_frequency).astype('int64')
+            spike_frames = ((spike_times_seconds - t_start) * self._sampling_frequency).astype('int64')
+        else:  # Neo already return spikes in frames
+            spike_frames = spike_timestamps
 
         # clip
         if start_frame is not None:

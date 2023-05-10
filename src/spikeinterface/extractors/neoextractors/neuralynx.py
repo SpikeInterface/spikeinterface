@@ -54,7 +54,7 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
     """
     mode = 'folder'
     NeoRawIOClass = 'NeuralynxRawIO'
-    handle_spike_frame_directly = False
+    neo_returns_timestamps = True
     name = "neuralynx"
 
     def __init__(self, folder_path, sampling_frequency=None):
