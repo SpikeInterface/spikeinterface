@@ -52,7 +52,6 @@ class PlexonSortingExtractor(NeoBaseSortingExtractor):
 
     mode = "file"
     NeoRawIOClass = "PlexonRawIO"
-    handle_spike_frame_directly = True
     name = "plexon"
 
     def __init__(self, file_path):
