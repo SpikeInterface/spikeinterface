@@ -354,7 +354,7 @@ def compute_refrac_period_violations(waveform_extractor, refractory_period_ms: f
 
     t_c = int(round(censored_period_ms * fs * 1e-3))
     t_r = int(round(refractory_period_ms * fs * 1e-3))
-    nb_rp_violations = np.zeros((num_units), dtype=np.int32)
+    nb_rp_violations = np.zeros((num_units), dtype=np.int64)
 
     for seg_index in range(num_segments):
         _compute_rp_violations_numba(nb_rp_violations, spikes[seg_index][0].astype(np.int64),
@@ -1035,7 +1035,7 @@ if HAVE_NUMBA:
 
         return n_v
 
-    @numba.jit((numba.int32[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
+    @numba.jit((numba.int64[::1], numba.int64[::1], numba.int32[::1], numba.int32, numba.int32),
                nopython=True, nogil=True, cache=True, parallel=True)
     def _compute_rp_violations_numba(nb_rp_violations, spike_trains, spike_clusters, t_c, t_r):
         n_units = len(nb_rp_violations)
