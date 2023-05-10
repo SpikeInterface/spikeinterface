@@ -400,7 +400,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         template_data = method_kwargs['template_data']
 
         # Check traces
-        traces = traces.astype(np.float32, casting='safe') # ensure traces are specified as np.float32
+        assert traces.dtype == np.float32, "traces must be specified as np.float32"
 
         # Compute objective
         objective = compute_objective(traces, template_data, params.approx_rank)
@@ -410,8 +410,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         spike_trains, scalings, distance_metrics = [], [], []
         for i in range(params.max_iter):
             # find peaks
-            spike_train, scaling, distance_metric = cls.find_peaks(objective, objective_normalized, params,
-                                                                   template_data, template_meta)
+            spike_train, scaling, distance_metric = cls.find_peaks(objective, objective_normalized, np.array(spike_trains),
+                                                                   params, template_data, template_meta)
             if len(spike_train) == 0:
                 break
 
@@ -428,8 +428,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         spike_train = np.array(spike_trains)
         scalings = np.array(scalings)
         distance_metric = np.array(distance_metrics)
-        if len(spike_train) == 0:
-            spike_train = np.zeros((0, 2), dtype=np.int32)
+        if len(spike_train) == 0: # no spikes found
+            return np.zeros(0, dtype=cls.spike_dtype)
 
         # order spike times
         index = np.argsort(spike_train[:, 0])
@@ -463,7 +463,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
     # TODO: Replace this method with equivalent from spikeinterface
     @classmethod
-    def find_peaks(cls, objective, objective_normalized, params, template_data, template_meta):
+    def find_peaks(cls, objective, objective_normalized, spike_trains, params, template_data, template_meta):
         """Find new peaks in the objective and update spike train accordingly.
 
         Parameters
@@ -472,6 +472,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             Template matching objective for each template.
         objective_normalized : ndarray (num_templates, traces.shape[0]+template_meta.num_samples-1)
             Template matching objective normalized by the magnitude of each template.
+        spike_trains : ndarray (n_spikes, 2)
+            Spike train from template matching.
         params : WobbleParameters
             Dataclass object for aggregating the parameters together.
         template_meta : TemplateMetadata
@@ -501,6 +503,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         spike_time_indices += template_meta.num_samples - 1
         objective_spikes = objective_template_max[spike_time_indices]
         spike_time_indices = spike_time_indices[objective_spikes > params.threshold]
+
+        if len(spike_time_indices) == 0:  # No new spikes found
+            return np.zeros((0, 2), dtype=np.int32), np.zeros(0), np.zeros(0)
 
         # Extract metrics using spike times (indices)
         distance_metric = objective_template_max[spike_time_indices]
@@ -647,7 +652,6 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             objective_peaks_high_res = objective[spike_unit_indices, peak_indices]
             objective_peaks_high_res = objective_peaks_high_res[:, non_refractory_indices]
             high_resolution_conv = signal.resample(objective_peaks_high_res, window_len_upsampled, axis=0)
-            print(high_resolution_conv.shape)
 
             # Find template norms for detected peaks only
             norm_peaks = template_data.norm_squared[spike_unit_indices[non_refractory_indices]]
@@ -875,18 +879,15 @@ def compute_objective(traces, template_data, approx_rank):
     objective_len = get_convolution_len(traces.shape[0], num_samples)
     conv_shape = (num_templates, objective_len)
     objective = np.zeros(conv_shape, dtype=np.float32)
-    # TODO: vectorize this loop
-    for rank in range(approx_rank):
-        spatial_filters = spatial[:, rank, :]
-        temporal_filters = temporal[:, :, rank]
-        spatially_filtered_data = np.matmul(spatial_filters, traces.T)
-        scaled_filtered_data = spatially_filtered_data * singular[:, [rank]]
-        # TODO: vectorize this loop
-        for template_index in range(num_templates):
-            template_temporal_filter = temporal_filters[template_index]
-            objective[template_index, :] += np.convolve(scaled_filtered_data[template_index, :],
-                                                     template_temporal_filter,
-                                                     mode='full')
+    spatial_filters = np.moveaxis(spatial[:, :approx_rank, :], [0, 1, 2], [1, 0, 2])
+    temporal_filters = np.moveaxis(temporal[:, :, :approx_rank], [0, 1, 2], [1, 2, 0])
+    singular_filters = singular.T[:, :, np.newaxis]
+
+    # Filter using overlap-and-add convolution
+    spatially_filtered_data = np.matmul(spatial_filters, traces.T[np.newaxis, :, :])
+    scaled_filtered_data = spatially_filtered_data * singular_filters
+    objective_by_rank = signal.oaconvolve(scaled_filtered_data, temporal_filters, axes=2, mode='full')
+    objective += np.sum(objective_by_rank, axis=0)
     return objective
 
 
