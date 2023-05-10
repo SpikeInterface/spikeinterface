@@ -74,24 +74,24 @@ def test_compare_all_sortings(benchmark_and_kwargs):
     parameter_name = "num_spikes"
     num_replicates = 2
     num_spikes = [1, 10, 100]
-    np.random.seed(0)
+    rng = np.random.default_rng(0)
     sortings, gt_sortings, parameter_values, parameter_names, iter_nums, methods = [], [], [], [], [], []
     for replicate in range(num_replicates):
         for spike_num in num_spikes:
             for method in list(methods_kwargs.keys()):
                 len_spike_train = 100
-                spike_time_inds = np.random.choice(benchmark.recording.get_num_frames(), len_spike_train,
+                spike_time_inds = rng.choice(benchmark.recording.get_num_frames(), len_spike_train,
                                                    replace=False)
-                unit_ids = np.random.choice(benchmark.gt_sorting.get_unit_ids(), len_spike_train,
+                unit_ids = rng.choice(benchmark.gt_sorting.get_unit_ids(), len_spike_train,
                                             replace=True)
                 sort_index = np.argsort(spike_time_inds)
                 spike_time_inds = spike_time_inds[sort_index]
                 unit_ids = unit_ids[sort_index]
                 sorting = sc.NumpySorting.from_times_labels(spike_time_inds, unit_ids,
                                                             benchmark.recording.sampling_frequency)
-                spike_time_inds = np.random.choice(benchmark.recording.get_num_frames(), len_spike_train,
+                spike_time_inds = rng.choice(benchmark.recording.get_num_frames(), len_spike_train,
                                                    replace=False)
-                unit_ids = np.random.choice(benchmark.gt_sorting.get_unit_ids(), len_spike_train,
+                unit_ids = rng.choice(benchmark.gt_sorting.get_unit_ids(), len_spike_train,
                                             replace=True)
                 sort_index = np.argsort(spike_time_inds)
                 spike_time_inds = spike_time_inds[sort_index]
