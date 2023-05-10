@@ -130,7 +130,6 @@ class BenchmarkMatching:
             we_kwargs = {}
         we_kwargs.update(dict(max_spikes_per_unit=spike_num, seed=seed, overwrite=True, load_if_exists=False,
                               **self.job_kwargs))
-        np.random.seed(seed)
 
         # Generate New Waveform Extractor with New Spike Numbers
         we = extract_waveforms(self.recording, self.gt_sorting, self.tmp_folder, **we_kwargs)
@@ -201,7 +200,7 @@ class BenchmarkMatching:
         if we_kwargs is None:
             we_kwargs = {}
         we_kwargs.update(dict(seed=seed, overwrite=True, load_if_exists=False, **self.job_kwargs))
-        np.random.seed(seed)
+        rng = np.random.default_rng(seed)
 
         # Randomly misclass spike trains
         spike_time_indices, labels = [], []
@@ -213,11 +212,11 @@ class BenchmarkMatching:
             at_least_one_similar_unit = len(similar_unit_ids)
             num_spikes = int(len(unit_sorting) * fraction_misclassed)
 
-            unit_misclass_idx = np.random.choice(np.arange(len(unit_sorting)), size=num_spikes, replace=False)
+            unit_misclass_idx = rng.choice(np.arange(len(unit_sorting)), size=num_spikes, replace=False)
             for i, spike in enumerate(unit_sorting):
                 spike_time_indices.append(spike)
                 if i in unit_misclass_idx and at_least_one_similar_unit:
-                    alt_id = np.random.choice(similar_unit_ids)
+                    alt_id = rng.choice(similar_unit_ids)
                     labels.append(alt_id)
                 else:
                     labels.append(unit_id)
@@ -276,13 +275,13 @@ class BenchmarkMatching:
         if we_kwargs is None:
             we_kwargs = {}
         we_kwargs.update(dict(seed=seed, overwrite=True, load_if_exists=False, **self.job_kwargs))
-        np.random.seed(seed)
+        rng = np.random.default_rng(seed)
 
         # Omit fraction_missing of units with lowest SNR
         metrics = self.metrics.sort_values('snr')
         missing_units = np.array(metrics.index[metrics.snr < snr_threshold])
         num_missing = int(len(missing_units) * fraction_missing)
-        missing_units = np.random.choice(missing_units, size=num_missing, replace=False)
+        missing_units = rng.choice(missing_units, size=num_missing, replace=False)
         present_units = np.setdiff1d(self.we.unit_ids, missing_units)
         spike_time_indices, spike_cluster_ids = [], []
         for unit in present_units:
