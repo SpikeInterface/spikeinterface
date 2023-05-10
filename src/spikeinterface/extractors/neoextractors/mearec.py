@@ -53,7 +53,7 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
     def __init__(self, file_path):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseSortingExtractor.__init__(self,
-                                         sampling_frequency=None,  # auto guess is correct here
+                                         sampling_frequency=sampling_frequency,
                                          use_natural_unit_ids=True,
                                          **neo_kwargs)
 
