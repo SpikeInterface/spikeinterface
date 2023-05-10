@@ -31,42 +31,61 @@ def benchmark_and_kwargs(tmp_path_factory):
     benchmark = benchmark_matching.BenchmarkMatching(recording, sorting, we, methods, methods_kwargs)
     return benchmark, methods_kwargs
 
-def test_run_matching_vary_parameter(benchmark_and_kwargs):
+@pytest.mark.parametrize("parameters, parameter_name", [
+                                                        ([1, 10, 100], "num_spikes"),
+                                                        ([0, 0.5, 1], "fraction_misclassed"),
+                                                        ([0, 0.5, 1], "fraction_missing"),
+                                                        ])
+def test_run_matching_vary_parameter(benchmark_and_kwargs, parameters, parameter_name):
     # Arrange
     benchmark, methods_kwargs = benchmark_and_kwargs
-    parameter_names = list(benchmark.parameter_name2matching_fn.keys())
-    num_spikes = [1, 10, 100]
-    fractions = [0, 0.5, 1]
-    parameter_sets = [num_spikes, fractions, fractions]
     num_replicates = 2
 
-    for parameters, parameter_name in zip(parameter_sets, parameter_names):
-        # Act
-        with benchmark as bmk:
-            matching_df = bmk.run_matching_vary_parameter(parameters, parameter_name, num_replicates=num_replicates)
+    # Act
+    with benchmark as bmk:
+        matching_df = bmk.run_matching_vary_parameter(parameters, parameter_name, num_replicates=num_replicates)
 
-        # Assert
-        assert matching_df.shape[0] == len(parameters) * num_replicates * len(methods_kwargs)
-        assert matching_df.shape[1] == 6
+    # Assert
+    assert matching_df.shape[0] == len(parameters) * num_replicates * len(methods_kwargs)
+    assert matching_df.shape[1] == 6
 
-    # Check invalid inputs
+
+@pytest.mark.parametrize(
+    "parameter_name, num_replicates", [
+        ("invalid_parameter_name", 1),
+        ("num_spikes", -1),
+        ("num_spikes", 0.5),
+        ])
+def test_run_matching_vary_parameter_invalid_inputs(benchmark_and_kwargs, parameter_name, num_replicates):
+    parameters = [1, 2]
+    benchmark, methods_kwargs = benchmark_and_kwargs
     with benchmark as bmk:
         with pytest.raises(ValueError):
-            bmk.run_matching_vary_parameter([1, 2], 'invalid_parameter_name')
+            bmk.run_matching_vary_parameter(parameters, parameter_name, num_replicates=num_replicates)
+
+
+@pytest.mark.parametrize("fraction_misclassed, min_similarity", [
+    (-1, -1),
+    (2, -1),
+    (0, 2),
+    ])
+def test_run_matching_misclassed_invalid_inputs(benchmark_and_kwargs, fraction_misclassed, min_similarity):
+    benchmark, methods_kwargs = benchmark_and_kwargs
+    with benchmark as bmk:
         with pytest.raises(ValueError):
-            bmk.run_matching_vary_parameter([1, 2], 'num_spikes', num_replicates=-1)
+            bmk.run_matching_misclassed(fraction_misclassed, min_similarity=min_similarity)
+
+@pytest.mark.parametrize("fraction_missing, snr_threshold", [
+    (-1, 0),
+    (2, 0),
+    (0, -1),
+    ])
+def test_run_matching_missing_units_invalid_inputs(benchmark_and_kwargs, fraction_missing, snr_threshold):
+    benchmark, methods_kwargs = benchmark_and_kwargs
+    with benchmark as bmk:
         with pytest.raises(ValueError):
-            bmk.run_matching_vary_parameter([1, 2], 'num_spikes', num_replicates=0.5)
-        with pytest.raises(ValueError):
-            bmk.run_matching_vary_parameter([0, -1], 'num_spikes')
-        with pytest.raises(ValueError):
-            bmk.run_matching_vary_parameter([-1, 2], 'fraction_misclassed')
-        with pytest.raises(ValueError):
-            bmk.run_matching_vary_parameter([0, 1], 'fraction_misclassed', min_similarity=2)
-        with pytest.raises(ValueError):
-            bmk.run_matching_vary_parameter([-1, 2], 'fraction_missing')
-        with pytest.raises(ValueError):
-            bmk.run_matching_vary_parameter([0, 1], 'fraction_missing', snr_threshold=-1)
+            bmk.run_matching_missing_units(fraction_missing, snr_threshold=snr_threshold)
+
 
 def test_compare_all_sortings(benchmark_and_kwargs):
     # Arrange
@@ -130,10 +149,17 @@ def test_compare_all_sortings(benchmark_and_kwargs):
     for comp in comparison_from_self['comparison']:
         comp.sorting1 == benchmark.gt_sorting
 
-    # Check invalid inputs
+
+def test_compare_all_sortings_invalid_inputs(benchmark_and_kwargs):
+    benchmark, methods_kwargs = benchmark_and_kwargs
     with pytest.raises(ValueError):
-        benchmark.compare_all_sortings(comparison_from_df, ground_truth='invalid')
+        benchmark.compare_all_sortings(pd.DataFrame(), ground_truth='invalid')
+
 
 if __name__ == '__main__':
     test_run_matching_vary_parameter(benchmark_and_kwargs)
+    test_run_matching_vary_parameter_invalid_inputs(benchmark_and_kwargs)
+    test_run_matching_misclassed_invalid_inputs(benchmark_and_kwargs)
+    test_run_matching_missing_units_invalid_inputs(benchmark_and_kwargs)
     test_compare_all_sortings(benchmark_and_kwargs)
+    test_compare_all_sortings_invalid_inputs(benchmark_and_kwargs)
