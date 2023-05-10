@@ -273,8 +273,8 @@ class BaseExtractor:
         if self._preferred_mp_context is not None:
             other._preferred_mp_context = self._preferred_mp_context
 
-    def to_dict(self, include_annotations=False, include_properties=False,
-                relative_to=None, folder_metadata=None) -> dict:
+    def to_dict(self, include_annotations: bool = False, include_properties: bool = False,
+                relative_to=None, folder_metadata=None, recursive: bool = False) -> dict:
         """
         Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize 
         an extractor using load_extractor_from_dict(dump_dict)
@@ -287,6 +287,10 @@ class BaseExtractor:
             If True, all properties are added to the dict, by default False
         relative_to: str, Path, or None
             If not None, file_paths are serialized relative to this path, by default None
+        folder_metadata: ???
+            ???
+        recursive: bool
+            If True, will recursively call to_dict to all other extractors in kwargs, by default False
 
         Returns
         -------
@@ -327,6 +331,10 @@ class BaseExtractor:
         else:
             # include only main properties
             dump_dict['properties'] = {k: self._properties.get(k, None) for k in self._main_properties}
+
+        if recursive:
+            dump_dict = _to_dict_iterative(dump_dict, include_annotations=include_annotations, include_properties=include_properties,
+                                           relative_to=relative_to, folder_metadata=folder_metadata)
 
         if relative_to is not None:
             relative_to = Path(relative_to).absolute()
@@ -940,3 +948,18 @@ class BaseSegment:
 
     def set_parent_extractor(self, parent_extractor):
         self._parent_extractor = weakref.ref(parent_extractor)
+
+
+# I don't know where to put this
+def _to_dict_iterative(obj, **kwargs):
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            obj[key] = _to_dict_iterative(value)
+    elif isinstance(obj, (list, np.ndarray)):
+        for i in range(len(obj)):
+            obj[i] = _to_dict_iterative(obj[i])
+    elif isinstance(obj, BaseExtractor):
+        obj = obj.to_dict(**kwargs)
+        obj = _to_dict_iterative(obj)
+
+    return obj
