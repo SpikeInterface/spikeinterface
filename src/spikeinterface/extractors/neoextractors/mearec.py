@@ -60,7 +60,7 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
         
         sampling_frequency = self.read_sampling_frequency(file_path=file_path)
         NeoBaseSortingExtractor.__init__(self,
-                                         sampling_frequency=sampling_frequency,  # auto guess is correct here
+                                         sampling_frequency=sampling_frequency,
                                          use_natural_unit_ids=True,
                                          **neo_kwargs)
 
