@@ -6,40 +6,12 @@ import importlib
 from spikeinterface.core import (BaseRecording, BaseSorting, BaseEvent,
                                  BaseRecordingSegment, BaseSortingSegment, BaseEventSegment)
 
-
-def get_neo_io_reader(raw_class: str, **neo_kwargs):
-    """
-    Dynamically creates an instance of a NEO IO reader class using the specified class name and keyword arguments.
-    
-    Note that the function parses the header which makes all the information available to the extractor.
-
-    Parameters
-    ----------
-    raw_class : str
-        The name of the NEO IO reader class to create an instance of.
-    **neo_kwargs : dict
-        Initialization keyword arguments to be passed to the NEO IO reader class constructor.
-
-    Returns
-    -------
-    BaseRawIO
-        An instance of the specified NEO IO reader class
-    
-    """ 
-    
-    rawio_module = importlib.import_module('neo.rawio')
-    neoIOclass = getattr(rawio_module, raw_class)
-    neo_reader = neoIOclass(**neo_kwargs)
-    neo_reader.parse_header()
-
-    return neo_reader
-
-
 class _NeoBaseExtractor:
     NeoRawIOClass = None
 
     def __init__(self, block_index, **neo_kwargs):
-        self.neo_reader = get_neo_io_reader(self.NeoRawIOClass, **neo_kwargs)
+        if not hasattr(self, "neo_reader"): # Avoid double initialization
+            self.neo_reader = self.get_neo_io_reader(self.NeoRawIOClass, **neo_kwargs)
 
         if self.neo_reader.block_count() > 1 and block_index is None:
             raise Exception("This dataset is multi-block. Spikeinterface can load one block at a time. "
@@ -51,8 +23,35 @@ class _NeoBaseExtractor:
     @classmethod
     def map_to_neo_kwargs(cls, *args, **kwargs):
         raise NotImplementedError
+    
+    @classmethod
+    def get_neo_io_reader(cls, raw_class: str, **neo_kwargs):
+        """
+        Dynamically creates an instance of a NEO IO reader class using the specified class name and keyword arguments.
+        
+        Note that the function parses the header which makes all the information available to the extractor.
 
+        Parameters
+        ----------
+        raw_class : str
+            The name of the NEO IO reader class to create an instance of.
+        **neo_kwargs : dict
+            Initialization keyword arguments to be passed to the NEO IO reader class constructor.
 
+        Returns
+        -------
+        BaseRawIO
+            An instance of the specified NEO IO reader class
+        
+        """ 
+        
+        rawio_module = importlib.import_module('neo.rawio')
+        neoIOclass = getattr(rawio_module, raw_class)
+        neo_reader = neoIOclass(**neo_kwargs)
+        neo_reader.parse_header()
+
+        return neo_reader
+    
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
     def __init__(self, stream_id: Optional[str] = None, stream_name: Optional[str] = None,
                  block_index: Optional[int] = None, all_annotations: bool = False,
@@ -190,7 +189,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
     @classmethod
     def get_streams(cls, *args, **kwargs):
         neo_kwargs = cls.map_to_neo_kwargs(*args, **kwargs)
-        neo_reader = get_neo_io_reader(cls.NeoRawIOClass, **neo_kwargs)
+        neo_reader = cls.get_neo_io_reader(cls.NeoRawIOClass, **neo_kwargs)
 
         stream_channels = neo_reader.header['signal_streams']
         stream_names = list(stream_channels['name'])
@@ -201,7 +200,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
     @classmethod
     def get_num_blocks(cls, *args, **kwargs):
         neo_kwargs = cls.map_to_neo_kwargs(*args, **kwargs)
-        neo_reader = get_neo_io_reader(cls.NeoRawIOClass, **neo_kwargs)
+        neo_reader = cls.get_neo_io_reader(cls.NeoRawIOClass, **neo_kwargs)
         return neo_reader.block_count()
 
 
@@ -217,10 +216,10 @@ class NeoRecordingSegment(BaseRecordingSegment):
         self.block_index = block_index
 
     def get_num_samples(self):
-        n = self.neo_reader.get_signal_size(block_index=self.block_index,
+        num_samples = self.neo_reader.get_signal_size(block_index=self.block_index,
                                             seg_index=self.segment_index,
                                             stream_index=self.stream_index)
-        return n
+        return num_samples
 
     def get_traces(self,
                    start_frame: Union[int, None] = None,
@@ -240,13 +239,14 @@ class NeoRecordingSegment(BaseRecordingSegment):
 
 class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
     
+    neo_returns_timestamps = False
     # Class attribute indicating whether `neo_reader.get_spike_timestamps` returns timestamps instead of frames,
     # This should be modified in subclasses if it is known that a specific format returns timestamps (e.g. Mearec)
-    # Suprisingly, it seems that most formats return frames 
-    # even if the method is called get_spike_timestamps so double check when implementing a new extractor
     
-    neo_returns_timestamps = False
-
+    need_t_start_from_signal_stream = False
+    # Class attribute indicating whether `neo_reader.get_signal_t_start` is needed to get the t_start of the sorting
+    # Examples of this neuralynx and blackrock
+    
     def __init__(self, block_index=None,
                  sampling_frequency=None, use_natural_unit_ids=False,
                  **neo_kwargs):
@@ -276,7 +276,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         num_segments = self.neo_reader.segment_count(block_index=self.block_index)
         for segment_index in range(num_segments):
             t_start = None  # This means t_start will be 0 for practical purposes
-            if get_t_start_from_analog_signal:
+            if self.need_t_start_from_signal_stream:
                 t_start = self.neo_reader.get_signal_t_start(block_index=self.block_index,seg_index=segment_index, stream_index=stream_index)
             
             sorting_segment = NeoSortingSegment(neo_reader=self.neo_reader,
@@ -371,7 +371,6 @@ class NeoSortingSegment(BaseSortingSegment):
 
         if end_frame is not None:
             spike_frames = spike_frames[spike_frames <= end_frame]
-
         return spike_frames
 
 
