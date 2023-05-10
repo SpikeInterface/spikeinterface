@@ -9,11 +9,10 @@ from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probein
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
-from .job_tools import split_job_kwargs, fix_job_kwargs
-from .core_tools import convert_bytes_to_str
+from .job_tools import split_job_kwargs
+from .core_tools import convert_bytes_to_str, convert_seconds_to_str
 
 from warnings import warn
-
 
 class BaseRecording(BaseRecordingSnippets):
     """
@@ -37,27 +36,77 @@ class BaseRecording(BaseRecordingSnippets):
         # initialize main annotation and properties
         self.annotate(is_filtered=False)
 
-    def __repr__(self):
-        clsname = self.__class__.__name__
-        nseg = self.get_num_segments()
-        nchan = self.get_num_channels()
-        sf_khz = self.get_sampling_frequency() / 1000.
-        duration = self.get_total_duration()
-        dtype = self.get_dtype()
-        memory_size = self.get_memory_size()
-        txt = f"{clsname}: {nchan} channels - {nseg} segments - {sf_khz:0.1f}kHz - {duration:0.3f}s - {dtype} type - {memory_size}"
-        if 'file_paths' in self._kwargs:
-            txt += '\n  file_paths: {}'.format(self._kwargs['file_paths'])
-        if 'file_path' in self._kwargs:
-            txt += '\n  file_path: {}'.format(self._kwargs['file_path'])
-        return txt
-    
-    def get_memory_size(self):
-        bytes = self.get_total_samples() * self.get_num_channels() * self.get_dtype().itemsize 
-        return convert_bytes_to_str(bytes)
 
-    def get_num_segments(self):
-        """Returns the number of segments.
+    def __repr__(self):
+        extractor_name = self.__class__.__name__
+        num_segments = self.get_num_segments()
+        num_channels = self.get_num_channels()
+        sf_khz = self.get_sampling_frequency() / 1000.0
+        dtype = self.get_dtype()
+
+        total_samples = self.get_total_samples()
+        total_duration = self.get_total_duration()
+        total_memory_size = self.get_total_memory_size()
+
+        txt = (
+            f"{extractor_name}: " 
+            f"{num_channels} channels - "
+            f"{sf_khz:0.1f}kHz - "
+            f"{num_segments} segments - "
+            f"{total_samples:,} samples - "
+            f"{convert_seconds_to_str(total_duration)} - "
+            f"{dtype} dtype - "
+            f"{convert_bytes_to_str(total_memory_size)}"
+        )
+        
+        # Split if too long
+        if len(txt) > 100:
+            split_index = txt.rfind("-", 0, 100)  # Find the last "-" before character 100
+            if split_index != -1:
+                first_line = txt[:split_index]
+                recording_string_space = len(extractor_name) + 2  # Length of extractor_name plus ": "
+                white_space_to_align_with_first_line = " " * recording_string_space
+                second_line = white_space_to_align_with_first_line + txt[split_index+1:].lstrip()
+                txt = first_line +  "\n" + second_line
+
+        # Add segments info for multisegment
+        if num_segments > 1:
+            samples_per_segment = [self.get_num_samples(segment_index) for segment_index in range(num_segments)]
+            memory_per_segment_bytes = (self.get_memory_size(segment_index) for segment_index in range(num_segments))
+            durations = [self.get_duration(segment_index) for segment_index in range(num_segments)]
+
+            samples_per_segment_formated = [f"{samples:,}" for samples in samples_per_segment]
+            durations_per_segment_formated = [convert_seconds_to_str(d) for d in durations]
+            memory_per_segment_formated = [convert_bytes_to_str(mem) for mem in memory_per_segment_bytes]
+
+            def list_to_string(lst, max_size=6):
+                """Add elipsis ... notation in the middle if recording has more than six segments """
+                if len(lst) <= max_size:
+                    return ' | '.join(x for x in lst)
+                else:
+                    half = max_size // 2
+                    return ' | '.join(x for x in lst[:half]) + ' | ... | ' + ' | '.join(x for x in lst[-half:])
+
+            txt += (
+                f"\n"
+                f"Segments:"
+                f"\nSamples:   {list_to_string(samples_per_segment_formated)}"
+                f"\nDurations: {list_to_string(durations_per_segment_formated)}"
+                f"\nMemory:    {list_to_string(memory_per_segment_formated)}"
+            )        
+        
+        # Display where path from where recording was loaded
+        if 'file_paths' in self._kwargs:
+            txt += f"\n  file_paths: {self._kwargs['file_paths']}"
+        if 'file_path' in self._kwargs:
+            txt += f"\n  file_path: {self._kwargs['file_path']}"
+
+        return txt
+
+
+    def get_num_segments(self) -> int:
+        """
+        Returns the number of segments.
 
         Returns
         -------
@@ -78,14 +127,16 @@ class BaseRecording(BaseRecordingSnippets):
         self._recording_segments.append(recording_segment)
         recording_segment.set_parent_extractor(self)
 
-    def get_num_samples(self, segment_index=None):
-        """Returns the number of samples for a segment.
+    def get_num_samples(self, segment_index=None) -> int:
+        """
+        Returns the number of samples for a segment.
 
         Parameters
         ----------
         segment_index : int, optional
             The segment index to retrieve the number of samples for. 
             For multi-segment objects, it is required, by default None
+            With single segment recording returns the number of samples in the segment
 
         Returns
         -------
@@ -97,21 +148,44 @@ class BaseRecording(BaseRecordingSnippets):
 
     get_num_frames = get_num_samples
 
-    def get_total_samples(self):
-        """Returns the total number of samples
+    def get_total_samples(self) -> int:
+        """
+        Returns the sum of the number of samples in each segment.
 
         Returns
         -------
         int
             The total number of samples
         """
-        s = 0
-        for segment_index in range(self.get_num_segments()):
-            s += self.get_num_samples(segment_index)
-        return s
+        num_segments = self.get_num_segments()
+        samples_per_segment = (self.get_num_samples(segment_index) for segment_index in range(num_segments))
 
-    def get_total_duration(self):
-        """Returns the total duration in s
+        return sum(samples_per_segment)
+
+    def get_duration(self, segment_index=None) -> float:
+        """
+        Returns the duration in seconds.
+
+        Parameters
+        ----------
+        segment_index : int, optional
+            The sample index to retrieve the duration for. 
+            For multi-segment objects, it is required, by default None
+            With single segment recording returns the duration of the single segment
+
+        Returns
+        -------
+        float
+            The duration in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        segment_num_samples = self.get_num_samples(segment_index=segment_index)
+        segment_duration = segment_num_samples / self.get_sampling_frequency()
+        return segment_duration
+
+    def get_total_duration(self) -> float:
+        """
+        Returns the total duration in seconds
 
         Returns
         -------
@@ -120,6 +194,43 @@ class BaseRecording(BaseRecordingSnippets):
         """
         duration = self.get_total_samples() / self.get_sampling_frequency()
         return duration
+
+    def get_memory_size(self, segment_index=None) -> int:
+        """
+        Returns the memory size of segment_index in bytes.
+
+        Parameters
+        ----------
+        segment_index : int, optional
+            The index of the segment for which the memory size should be calculated.
+            For multi-segment objects, it is required, by default None
+            With single segment recording returns the memory size of the single segment
+
+        Returns
+        -------
+        int
+            The memory size of the specified segment in bytes.
+        """
+        segment_index = self._check_segment_index(segment_index)
+        num_samples = self.get_num_samples(segment_index=segment_index)
+        num_channels = self.get_num_channels()
+        dtype_size_bytes = self.get_dtype().itemsize
+
+        memory_bytes = num_samples * num_channels * dtype_size_bytes
+        
+        return memory_bytes
+    
+    def get_total_memory_size(self) -> int:
+        """
+        Returns the sum in bytes of all the memory sizes of the segments.
+
+        Returns
+        -------
+        int
+            The total memory size in bytes for all segments.
+        """
+        memory_per_segment = (self.get_memory_size(segment_index) for segment_index in range(self.get_num_segments()))
+        return  sum(memory_per_segment)
 
     def get_traces(self,
                    segment_index: Union[int, None] = None,
@@ -555,6 +666,7 @@ class BaseRecordingSegment(BaseSegment):
         """
         # must be implemented in subclass
         raise NotImplementedError
+    
 
     def get_traces(self,
                    start_frame: Union[int, None] = None,
