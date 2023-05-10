@@ -1,6 +1,8 @@
 import numpy as np
 import shutil
 from pathlib import Path
+import tempfile
+
 import pytest
 
 from spikeinterface import download_dataset
@@ -11,8 +13,16 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.features_from_peaks import PeakToPeakFeature
+from spikeinterface.sortingcomponents.peak_pipeline import ExtractSparseWaveforms
 
-from spikeinterface.sortingcomponents.peak_detection import DetectPeakByChannel, DetectPeakByChannelTorch, DetectPeakLocallyExclusive, DetectPeakLocallyExclusiveTorch
+from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCADenoising
+from spikeinterface.sortingcomponents.peak_detection import IterativePeakDetector
+from spikeinterface.sortingcomponents.peak_detection import (
+    DetectPeakByChannel,
+    DetectPeakByChannelTorch,
+    DetectPeakLocallyExclusive,
+    DetectPeakLocallyExclusiveTorch,
+)
 from spikeinterface.sortingcomponents.peak_pipeline import run_node_pipeline
 
 
@@ -36,7 +46,6 @@ except:
     HAVE_TORCH = False
 
 
-@pytest.fixture(scope="module")
 def recording():
     repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
     remote_path = "mearec/mearec_test_10s.h5"
@@ -44,7 +53,11 @@ def recording():
     recording = MEArecRecordingExtractor(local_path)
     return recording
 
-@pytest.fixture(scope="module")
+@pytest.fixture(name="recording", scope="module")
+def recording_fixture():
+    return recording()
+
+
 def sorting():
     repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
     remote_path = "mearec/mearec_test_10s.h5"
@@ -52,21 +65,210 @@ def sorting():
     sorting = MEArecSortingExtractor(local_path)
     return sorting
 
-@pytest.fixture(scope="module")
+@pytest.fixture(name="sorting", scope="module")
+def sorting_fixture():
+    return sorting()
+
+
 def spike_trains(sorting):
     spike_trains = sorting.get_all_spike_trains()[0][0]
     return spike_trains
 
-@pytest.fixture(scope="module")
-def job_kwargs():
-    return dict(n_jobs=-1, chunk_size=10000, progress_bar=True, verbose=True, mp_context="spawn")
+@pytest.fixture(name="spike_trains", scope="module")
+def spike_trains_fixture(sorting):
+    return spike_trains(sorting)
 
-# Don't know why this was different normal job_kwargs
-@pytest.fixture(scope="module")
+
+def job_kwargs():
+    return dict(n_jobs=1, chunk_size=10000, progress_bar=True, verbose=True, mp_context="spawn")
+
+@pytest.fixture(name="job_kwargs", scope="module")
+def job_kwargs_fixture():
+    return job_kwargs()
+
+
 def torch_job_kwargs(job_kwargs):
     torch_job_kwargs = job_kwargs.copy()
     torch_job_kwargs["n_jobs"] = 2
     return torch_job_kwargs
+
+@pytest.fixture(name="torch_job_kwargs", scope="module")
+def torch_job_kwargs_fixture(job_kwargs):
+    return torch_job_kwargs(job_kwargs)
+
+
+def pca_model_folder_path(recording, job_kwargs, tmp_path):
+    ms_before = 1.0
+    ms_after = 1.0
+    
+    model_folder_path = Path(tmp_path) / "temporal_pca_model"
+    model_folder_path.mkdir(parents=True, exist_ok=True)
+    # Fit the model
+    n_components = 3
+    n_peaks = 100  # Heuristic for extracting around 1k waveforms per channel
+    peak_selection_params = dict(method="uniform", select_per_channel=True, n_peaks=n_peaks)
+    detect_peaks_params = dict(method="by_channel", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1)
+    TemporalPCADenoising.fit(
+        recording=recording,
+        model_folder_path=model_folder_path,
+        n_components=n_components,
+        ms_before=ms_before,
+        ms_after=ms_after,
+        detect_peaks_params=detect_peaks_params,
+        peak_selection_params=peak_selection_params,
+        job_kwargs=job_kwargs,
+    )
+
+    return model_folder_path
+
+@pytest.fixture(name="pca_model_folder_path", scope="module")
+def pca_model_folder_path_fixture(recording, job_kwargs, tmp_path_factory):
+    tmp_path = tmp_path_factory.mktemp("my_temp_dir")
+    return pca_model_folder_path(recording, job_kwargs, tmp_path)
+
+
+def peak_detector_kwargs(recording):
+    peak_detector_keyword_arguments = dict(
+        recording=recording,
+        exclude_sweep_ms=1.0,
+        peak_sign="both",
+        detect_threshold=5,
+        local_radius_um=50,
+    )
+
+    return peak_detector_keyword_arguments
+
+@pytest.fixture(name="peak_detector_kwargs", scope="module")
+def peak_detector_kwargs_fixture(recording):
+    return peak_detector_kwargs(recording)
+
+
+def test_iterative_peak_detection(recording, job_kwargs, pca_model_folder_path, peak_detector_kwargs):
+    peak_detector_node = DetectPeakLocallyExclusive(**peak_detector_kwargs)
+
+    ms_before = 1.0
+    ms_after = 1.0
+    waveform_extraction_node = ExtractDenseWaveforms(recording=recording, ms_before=ms_before, ms_after=ms_after)
+
+    waveform_denoising_node = TemporalPCADenoising(
+        recording=recording,
+        parents=[waveform_extraction_node],
+        model_folder_path=pca_model_folder_path,
+    )
+
+    num_iterations = 2
+    iterative_peak_detector = IterativePeakDetector(
+        recording=recording,
+        peak_detector_node=peak_detector_node,
+        waveform_extraction_node=waveform_extraction_node,
+        waveform_denoising_node=waveform_denoising_node,
+        num_iterations=num_iterations,
+        return_output=(True, True),
+    )
+
+    peaks, waveforms = run_node_pipeline(recording=recording, nodes=[iterative_peak_detector], job_kwargs=job_kwargs)
+    # Assert there is a field call iteration in structured array peaks
+    assert "iteration" in peaks.dtype.names
+    assert peaks.shape[0] == waveforms.shape[0]
+
+    sample_indices = peaks["sample_index"]
+    # Assert that sample_indices are ordered
+    ordered_sample_indices = np.sort(sample_indices)
+    assert np.array_equal(sample_indices, ordered_sample_indices)
+
+    num_peaks_in_first_iteration = peaks[peaks["iteration"] == 0].size
+    num_peaks_in_second_iteration = peaks[peaks["iteration"] == 1].size
+    num_total_peaks = peaks.size
+    assert num_total_peaks == (num_peaks_in_first_iteration + num_peaks_in_second_iteration)
+
+
+def test_iterative_peak_detection_sparse(recording, job_kwargs, pca_model_folder_path, peak_detector_kwargs):
+    peak_detector_node = DetectPeakLocallyExclusive(**peak_detector_kwargs)
+
+    ms_before = 1.0
+    ms_after = 1.0
+    local_radius_um = 40
+    waveform_extraction_node = ExtractSparseWaveforms(
+        recording=recording,
+        ms_before=ms_before,
+        ms_after=ms_after,
+        local_radius_um=local_radius_um,
+    )
+
+    waveform_denoising_node = TemporalPCADenoising(
+        recording=recording,
+        parents=[waveform_extraction_node],
+        model_folder_path=pca_model_folder_path,
+    )
+
+    num_iterations = 2
+    iterative_peak_detector = IterativePeakDetector(
+        recording=recording,
+        peak_detector_node=peak_detector_node,
+        waveform_extraction_node=waveform_extraction_node,
+        waveform_denoising_node=waveform_denoising_node,
+        num_iterations=num_iterations,
+        return_output=(True, True),
+    )
+
+    peaks, waveforms = run_node_pipeline(recording=recording, nodes=[iterative_peak_detector], job_kwargs=job_kwargs)
+    # Assert there is a field call iteration in structured array peaks
+    assert "iteration" in peaks.dtype.names
+    assert peaks.shape[0] == waveforms.shape[0]
+
+    # Assert that sample_indices are ordered
+    sample_indices = peaks["sample_index"]
+    ordered_sample_indices = np.sort(sample_indices)
+    assert np.array_equal(sample_indices, ordered_sample_indices)
+
+    num_peaks_in_first_iteration = peaks[peaks["iteration"] == 0].size
+    num_peaks_in_second_iteration = peaks[peaks["iteration"] == 1].size
+    num_total_peaks = peaks.size
+    assert num_total_peaks == (num_peaks_in_first_iteration + num_peaks_in_second_iteration)
+
+
+def test_iterative_peak_detection_thresholds(recording, job_kwargs, pca_model_folder_path, peak_detector_kwargs):
+    peak_detector_node = DetectPeakLocallyExclusive(**peak_detector_kwargs)
+
+    ms_before = 1.0
+    ms_after = 1.0
+
+    waveform_extraction_node = ExtractDenseWaveforms(recording=recording, ms_before=ms_before, ms_after=ms_after)
+
+    waveform_denoising_node = TemporalPCADenoising(
+        recording=recording,
+        parents=[waveform_extraction_node],
+        model_folder_path=pca_model_folder_path,
+    )
+
+    num_iterations = 3
+    tresholds = [5.0, 3.0, 1.0]
+    iterative_peak_detector = IterativePeakDetector(
+        recording=recording,
+        peak_detector_node=peak_detector_node,
+        waveform_extraction_node=waveform_extraction_node,
+        waveform_denoising_node=waveform_denoising_node,
+        num_iterations=num_iterations,
+        return_output=(True, True),
+        tresholds=tresholds,
+    )
+
+    peaks, waveforms = run_node_pipeline(recording=recording, nodes=[iterative_peak_detector], job_kwargs=job_kwargs)
+    # Assert there is a field call iteration in structured array peaks
+    assert "iteration" in peaks.dtype.names
+    assert peaks.shape[0] == waveforms.shape[0]
+
+    # Assert that sample_indices are ordered
+    sample_indices = peaks["sample_index"]
+    ordered_sample_indices = np.sort(sample_indices)
+    assert np.array_equal(sample_indices, ordered_sample_indices)
+
+    num_peaks_in_first_iteration = peaks[peaks["iteration"] == 0].size
+    num_peaks_in_second_iteration = peaks[peaks["iteration"] == 1].size
+    num_peaks_in_third_iteration = peaks[peaks["iteration"] == 2].size
+    num_total_peaks = peaks.size
+    num_cumulative_peaks = num_peaks_in_first_iteration + num_peaks_in_second_iteration + num_peaks_in_third_iteration
+    assert num_total_peaks == num_cumulative_peaks
 
 
 def test_detect_peaks_by_channel(recording, job_kwargs, torch_job_kwargs):
@@ -246,6 +448,15 @@ def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs):
         ax.scatter(soma_positions[:, 1], soma_positions[:, 2], color='g', s=20, marker='*')
         plt.show()
 
-if __name__ == '__main__':
-    pass
+if __name__ == "__main__":
+    recording_main = recording()
+    sorting_main = sorting()
+    spike_trains_main = spike_trains(sorting_main)
+    job_kwargs_main = job_kwargs()
+    torch_job_kwargs_main = torch_job_kwargs(job_kwargs_main)
+    # Create a temporary directory using the standard library
+    tmp_dir_main = tempfile.mkdtemp()    
+    pca_model_folder_path_main = pca_model_folder_path(recording_main, job_kwargs_main, tmp_dir_main)
+    peak_detector_kwargs_main = peak_detector_kwargs(recording_main)
     
+    test_iterative_peak_detection(recording_main, job_kwargs_main, pca_model_folder_path_main, peak_detector_kwargs_main)
