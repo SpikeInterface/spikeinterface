@@ -245,6 +245,7 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
     num_channels = recording.get_num_channels()
     dtype_size_bytes = np.dtype(dtype).itemsize 
     
+    file_dict = {}
     for segment_index, file_path in file_path_dict.items():
         num_frames = recording.get_num_frames(segment_index=segment_index)
         data_size_bytes = dtype_size_bytes * num_frames * num_channels 
@@ -252,27 +253,30 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
         
         file = open(file_path, "wb+")
         file.truncate(file_size_bytes)
-        file.close()
         assert Path(file_path).is_file()    
-    
+        file_dict[segment_index] = file
+        
     
     # use executor (loop or workers)
     func = _write_binary_chunk
     init_func = _init_binary_worker
-    init_args = (recording, file_path_dict, dtype, byte_offset, cast_unsigned)
+    init_args = (recording, file_dict, dtype, byte_offset, cast_unsigned)
     executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
                                       job_name='write_binary_recording', **job_kwargs)
     executor.run()
+    
+    for file in file_dict.values():
+        file.close()
 
 
 write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
 
 # used by write_binary_recording + ChunkRecordingExecutor
-def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsigned):
+def _init_binary_worker(recording, file_dict, dtype, byte_offest, cast_unsigned):
     # create a local dict per worker
     worker_ctx = {}
     worker_ctx['recording'] = recording
-    worker_ctx["file_path_dict"] = file_path_dict
+    worker_ctx["file_dict"] = file_dict
     worker_ctx["byte_offset"] = byte_offest
 
     worker_ctx['dtype'] = np.dtype(dtype)
@@ -286,7 +290,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx['recording']
     dtype = worker_ctx['dtype']
     byte_offset = worker_ctx["byte_offset"]
-    file_path = worker_ctx["file_path_dict"][segment_index]
+    file = worker_ctx["file_dict"][segment_index]
     cast_unsigned = worker_ctx['cast_unsigned']
     
     # Open the memmap
@@ -296,10 +300,8 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     shape = (num_frames, num_channels)
     dtype_size_bytes = np.dtype(dtype).itemsize 
     data_size_bytes = dtype_size_bytes * num_frames * num_channels 
-    
-    file = open(file_path, "r+")
-    
-    # Offset (The offset needs to be multiple of the page size)
+
+    # Offset (The offset needs to be multiple by the page size)
     # The mmap offset is associated to be as big as possible but still a multiple of the page size
     # The array offset takes care of the reminder
     mmap_offset, array_offset = divmod(byte_offset, mmap.ALLOCATIONGRANULARITY)
@@ -307,7 +309,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     memmap_obj = mmap.mmap(file.fileno(), length=mmmap_length, access=mmap.ACCESS_WRITE, offset=mmap_offset)
 
     array = np.ndarray.__new__(np.ndarray, shape=shape, dtype=dtype, buffer=memmap_obj, order="C", offset=array_offset)
-    # apply function
+
     traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index,
                                   cast_unsigned=cast_unsigned)
     traces = traces.astype(dtype)
@@ -315,7 +317,6 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     # Close the memmap
     memmap_obj.close()
-    file.close()
     
 
 # used by write_memory_recording
