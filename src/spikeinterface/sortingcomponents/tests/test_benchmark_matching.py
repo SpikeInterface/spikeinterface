@@ -11,13 +11,12 @@ import spikeinterface.preprocessing as spre
 from spikeinterface.sortingcomponents.benchmark import benchmark_matching
 
 @pytest.fixture(scope="session")
-def benchmark_and_kwargs():
+def benchmark_and_kwargs(tmp_path_factory):
     recording, sorting = se.toy_example(duration=1, num_channels=2, num_units=2, num_segments=1,
                                         firing_rate=10, seed=0)
     recording = spre.common_reference(recording, dtype='float32')
-    cwd = Path.cwd()
-    we_path = cwd / "waveforms"
-    sort_path = cwd / "sorting.npz"
+    we_path = tmp_path_factory.mktemp("waveforms")
+    sort_path = tmp_path_factory.mktemp("sortings") / ("sorting.npz")
     se.NpzSortingExtractor.write_sorting(sorting, sort_path)
     sorting = se.NpzSortingExtractor(sort_path)
     we = sc.extract_waveforms(recording, sorting, we_path, overwrite=True)
@@ -30,11 +29,7 @@ def benchmark_and_kwargs():
     }
     methods = list(methods_kwargs.keys())
     benchmark = benchmark_matching.BenchmarkMatching(recording, sorting, we, methods, methods_kwargs)
-    yield benchmark, methods_kwargs
-
-    # Teardown
-    shutil.rmtree(we_path)
-    os.remove(sort_path)
+    return benchmark, methods_kwargs
 
 def test_run_matching_vary_parameter(benchmark_and_kwargs):
     # Arrange
