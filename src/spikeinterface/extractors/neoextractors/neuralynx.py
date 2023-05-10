@@ -58,12 +58,16 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
     need_t_start_from_signal_stream = True
     name = "neuralynx"
 
-    def __init__(self, folder_path: str):
+    def __init__(self, folder_path: str, stream_index=None):
         
-        neo_kwargs = self.map_to_neo_kwargs(folder_path)
-        self.neo_reader = NeoBaseSortingExtractor.get_neo_io_reader(self.NeoRawIOClass, **neo_kwargs)
-        
-        NeoBaseSortingExtractor.__init__(self, **neo_kwargs)
+        neo_kwargs = self.map_to_neo_kwargs(folder_path)            
+        if stream_index is None:
+            stream_names, stream_ids = self.get_streams(folder_path=folder_path)
+            if len(stream_ids) > 1:
+                raise ValueError('More than one stream found. Please specify the stream_index') 
+            stream_index = 0
+            
+        NeoBaseSortingExtractor.__init__(self, **neo_kwargs, stream_index=stream_index)
         self._kwargs.update(dict(folder_path=str(folder_path)))
 
     @classmethod

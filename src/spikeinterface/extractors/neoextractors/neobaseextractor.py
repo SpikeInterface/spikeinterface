@@ -52,6 +52,16 @@ class _NeoBaseExtractor:
 
         return neo_reader
     
+    @classmethod
+    def get_streams(cls, *args, **kwargs):
+        neo_kwargs = cls.map_to_neo_kwargs(*args, **kwargs)
+        neo_reader = cls.get_neo_io_reader(cls.NeoRawIOClass, **neo_kwargs)
+
+        stream_channels = neo_reader.header['signal_streams']
+        stream_names = list(stream_channels['name'])
+        stream_ids = list(stream_channels['id'])
+        return stream_names, stream_ids
+    
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
     def __init__(self, stream_id: Optional[str] = None, stream_name: Optional[str] = None,
                  block_index: Optional[int] = None, all_annotations: bool = False,
@@ -186,15 +196,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
         self._kwargs.update(kwargs)
 
 
-    @classmethod
-    def get_streams(cls, *args, **kwargs):
-        neo_kwargs = cls.map_to_neo_kwargs(*args, **kwargs)
-        neo_reader = cls.get_neo_io_reader(cls.NeoRawIOClass, **neo_kwargs)
 
-        stream_channels = neo_reader.header['signal_streams']
-        stream_names = list(stream_channels['name'])
-        stream_ids = list(stream_channels['id'])
-        return stream_names, stream_ids
 
 
     @classmethod
@@ -240,16 +242,24 @@ class NeoRecordingSegment(BaseRecordingSegment):
 class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
     
     neo_returns_timestamps = False
-    # Class attribute indicating whether `neo_reader.get_spike_timestamps` returns timestamps instead of frames,
+    # `neo_returns_timestamps` is a class attribute indicating whether `neo_reader.get_spike_timestamps`
+    # returns timestamps instead of frames, If True, then the segments do a transformation to frames.
     # This should be modified in subclasses if it is known that a specific format returns timestamps (e.g. Mearec)
     
     need_t_start_from_signal_stream = False
-    # Class attribute indicating whether `neo_reader.get_signal_t_start` is needed to get the t_start of the sorting
+    # `need_t_start_from_signal_streamClass` is a class attribute indicating whether 
+    # `neo_reader.get_signal_t_start` is needed to get the t_start of the sorting correctly.
     # Examples of this neuralynx and blackrock
     
-    def __init__(self, block_index=None,
-                 sampling_frequency=None, use_natural_unit_ids=False,
+    def __init__(self, 
+                 block_index=None,
+                 stream_index=None,
+                 sampling_frequency=None, 
+                 use_natural_unit_ids=False,
                  **neo_kwargs):
+        if stream_index is None and self.need_t_start_from_signal_stream:
+            raise ValueError("'stream_index' must be specified when need_t_start_from_signal_stream is True")
+        
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
 
         self.use_natural_unit_ids = use_natural_unit_ids
@@ -265,19 +275,19 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
             unit_ids = np.arange(spike_channels.size, dtype='int64')
         
         sampling_frequency_not_provided = sampling_frequency is None 
-        stream_index = None
         if sampling_frequency_not_provided:
             sampling_frequency, stream_id = self._infer_sampling_frequency_from_analog_signal()
-            stream_index = np.where(self.neo_reader.header["signal_streams"]["id"] == stream_id)[0][0]
                 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         
-        get_t_start_from_analog_signal = sampling_frequency_not_provided and self.neo_returns_timestamps
         num_segments = self.neo_reader.segment_count(block_index=self.block_index)
         for segment_index in range(num_segments):
             t_start = None  # This means t_start will be 0 for practical purposes
             if self.need_t_start_from_signal_stream:
-                t_start = self.neo_reader.get_signal_t_start(block_index=self.block_index,seg_index=segment_index, stream_index=stream_index)
+                t_start = self.neo_reader.get_signal_t_start(block_index=self.block_index,
+                                                             seg_index=segment_index,
+                                                             stream_index=stream_index
+                                                             )
             
             sorting_segment = NeoSortingSegment(neo_reader=self.neo_reader,
                                                 block_index=self.block_index,

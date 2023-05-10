@@ -1,6 +1,6 @@
 from pathlib import Path
 from packaging import version
-import neo
+from typing import Optional
 
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -72,9 +72,16 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
     neo_returns_timestamps = True
     name = "blackrock"
 
-    def __init__(self, file_path, sampling_frequency=None):
+    def __init__(self, file_path, stream_index: Optional[int] = None):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, **neo_kwargs)
+        
+        if stream_index is None:
+            stream_names, stream_ids = self.get_streams(file_path)
+            if len(stream_ids) > 1:
+                raise ValueError('More than one stream found. Please specify the stream_index') 
+            stream_index = 0
+        
+        NeoBaseSortingExtractor.__init__(self, **neo_kwargs, stream_index=stream_index)
         self._kwargs.update({'file_path': str(file_path)})
 
     @classmethod

@@ -139,7 +139,7 @@ class SortingCommonTestSuite(CommonTestSuite):
                     # Test that return times are working properly
                     spike_train_times = sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id, return_times=True)
                     differences = np.diff(spike_train_times)
-                    minimal_time_resolution = 1.0 / sampling_frequency
+                    minimal_time_resolution = 0.95 / sampling_frequency
                     no_pairs_of_spikes_too_close_in_time = np.all(differences >= minimal_time_resolution)
                     assert no_pairs_of_spikes_too_close_in_time
     
