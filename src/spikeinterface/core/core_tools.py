@@ -315,7 +315,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     array[start_frame:end_frame, :] = traces
 
     # Close the memmap
-    # memmap_obj.close()
+    memmap_obj.close()
     
 
 # used by write_memory_recording
