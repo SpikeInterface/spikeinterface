@@ -1,5 +1,4 @@
 from pathlib import Path
-import yaml
 
 import numpy as np
 
@@ -36,6 +35,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         try:
             import hybridizer.io as sbio
             import hybridizer.probes as sbprb
+            import yaml
             HAVE_SBEX = True
         except ImportError:
             HAVE_SBEX = False
@@ -95,6 +95,8 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         try:
             import hybridizer.io as sbio
             import hybridizer.probes as sbprb
+            import yaml
+
             HAVE_SBEX = True
         except ImportError:
             HAVE_SBEX = False
