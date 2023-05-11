@@ -290,8 +290,8 @@ class CellExplorerSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = CellExplorerSortingExtractor
     downloads = ['cellexplorer']
     entities = [
-        'cellexplorer/dataset_1/20170311_684um_2088um_170311_134350.spikes.cellinfo.mat',
-        ('cellexplorer/dataset_2/20170504_396um_0um_merge.spikes.cellinfo.mat', 
+        'cellexplorer/dataset_1/',
+        ('cellexplorer/dataset_2/', 
         {'session_info_matfile_path': 
             local_folder / 'cellexplorer/dataset_2/20170504_396um_0um_merge.sessionInfo.mat'})
     ]
