@@ -276,7 +276,8 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsi
     worker_ctx['dtype'] = np.dtype(dtype)
     worker_ctx['cast_unsigned'] = cast_unsigned
 
-    worker_ctx["file_path_dict"] = file_path_dict
+    file_dict = {segment_index: open(file_path, "r+") for segment_index, file_path in file_path_dict.items()}
+    worker_ctx["file_dict"] = file_dict
 
     return worker_ctx
 
@@ -286,11 +287,9 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx['recording']
     dtype = worker_ctx['dtype']
     byte_offset = worker_ctx["byte_offset"]
-    file_path = worker_ctx["file_path_dict"][segment_index]
     cast_unsigned = worker_ctx['cast_unsigned']
+    file = worker_ctx["file_dict"][segment_index]
     
-    file = open(file_path, "r+")
-
     # Open the memmap
     # What we need is the file_path
     num_channels = recording.get_num_channels()
@@ -316,7 +315,6 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     # Close the memmap
     memmap_obj.close()
-    file.close()
     
 
 # used by write_memory_recording

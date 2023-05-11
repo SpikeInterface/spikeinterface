@@ -59,7 +59,7 @@ def test_write_binary_recording_parallel(tmp_path):
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
     # Write binary recording
-    job_kwargs = dict(verbose=False, n_jobs=2, chunk_memory="100k")
+    job_kwargs = dict(verbose=False, n_jobs=2, chunk_memory="100k", mp_context="spawn")
     write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
     # Check if written data matches original data
@@ -86,7 +86,7 @@ def test_write_binary_recording_multiple_segment(tmp_path):
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
     # Write binary recording
-    job_kwargs = dict(verbose=False, n_jobs=2, chunk_memory="100k")
+    job_kwargs = dict(verbose=False, n_jobs=2, chunk_memory="100k", mp_context="spawn")
     write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
     # Check if written data matches original data
