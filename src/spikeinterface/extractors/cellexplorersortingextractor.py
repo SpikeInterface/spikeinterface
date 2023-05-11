@@ -54,13 +54,13 @@ class CellExplorerSortingExtractor(BaseSorting):
 
         spikes_cellinfo_path = self.folder_path / f"{self.session_id}.spikes.cellinfo.mat"
         assert spikes_cellinfo_path.is_file(), f"The spikes.cellinfo.mat file must exist in the {self.folder_path}!"
-
+        
+        read_as_hdf5 = False 
         try:
             spikes_mat = scipy.io.loadmat(file_name=str(spikes_cellinfo_path), simplify_cells=True)
-            self.read_spikes_info_with_scipy = True
         except NotImplementedError:
             spikes_mat = h5py.File(name=spikes_cellinfo_path, mode="r")
-            self.read_spikes_info_with_scipy = False
+            read_as_hdf5 = True
 
         if sampling_frequency is None:
             # First try is for the new format of spikes.cellinfo.mat files where sampling rate is included
@@ -78,16 +78,17 @@ class CellExplorerSortingExtractor(BaseSorting):
         spike_times_available = "times" in spikes_mat["spikes"].keys()
         assert spike_times_available, "The spikes.cellinfo.mat file must contain field 'times'!"
 
-        if self.read_spikes_info_with_scipy:
-            unit_ids = spikes_mat["spikes"]["UID"].tolist()
-            spike_times = spikes_mat["spikes"]["times"]
-        else:
-            unit_ids = spikes_mat["spikes"]["UID"][:].squeeze().astype("int").tolist()
-            spike_references = spikes_mat["spikes"]["times"][:]  # These are HDF5 references
+        unit_ids = spikes_mat["spikes"]["UID"]
+        spike_times = spikes_mat["spikes"]["times"]
+        
+        if read_as_hdf5:
+            unit_ids = unit_ids[:].squeeze().astype("int")
+            spike_references = spike_times[:]  # These are HDF5 references
             spike_times = [spikes_mat[reference[0]][()].squeeze() for reference in spike_references]
 
         # CellExplorer reports spike times in units seconds; SpikeExtractors uses time units of sampling frames
         # Rounding is necessary to prevent data loss from int-casting floating point errors
+        unit_ids = unit_ids.tolist()
         spiketrains_dict = {unit_id: spike_times[index] for index, unit_id in enumerate(unit_ids)}
         for unit_id in unit_ids:
             spiketrains_dict[unit_id] = (sampling_frequency * spiketrains_dict[unit_id]).round().astype(np.int64)
@@ -114,13 +115,14 @@ class CellExplorerSortingExtractor(BaseSorting):
         self.session_info_matfile_path = Path(self.session_info_matfile_path).absolute()
         assert (
             self.session_info_matfile_path.is_file()
-        ), f"No {self.session_id}.sessionInfo.mat file found in the {self.folder_path}!"
+        ), f"No {self.session_id}.sessionInfo.mat file found in the {self.folder_path}!, can't inferr sampling rate"
+        
+        read_as_hdf5 = False 
         try:
             session_info_mat = scipy.io.loadmat(file_name=str(self.session_info_matfile_path), simplify_cells=True)
-            self.read_session_info_with_scipy = True
         except NotImplementedError:
             session_info_mat = h5py.File(name=str(self.session_info_matfile_path), mode="r")
-            self.read_session_info_with_scipy = False
+            read_as_hdf5 = True
 
         rates = session_info_mat["sessionInfo"]["rates"]
         wideband_in_rates = "wideband" in rates.keys()
@@ -129,7 +131,7 @@ class CellExplorerSortingExtractor(BaseSorting):
         # Not to be connfused with the lfpsamplingrate; reported in units Hz also present in rates
         sampling_frequency = rates["wideband"]
 
-        if not self.read_session_info_with_scipy:
+        if read_as_hdf5:
             sampling_frequency = sampling_frequency[()]
 
         return sampling_frequency
