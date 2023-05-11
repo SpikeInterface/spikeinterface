@@ -36,7 +36,8 @@ def test_write_binary_recording(tmp_path):
     file_paths = [tmp_path / "binary01.raw"]
 
     # Write binary recording
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=True, n_jobs=1)
+    job_kwargs = dict(verbose=False, n_jobs=1)
+    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
@@ -58,23 +59,24 @@ def test_write_binary_recording_parallel(tmp_path):
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
     # Write binary recording
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=False, n_jobs=2, chunk_memory="100k")
+    job_kwargs = dict(verbose=False, n_jobs=2, chunk_memory="100k")
+    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
         file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
     )
     for segment_index in range(recording.get_num_segments()):
-        assert np.allclose(
-            recorder_binary.get_traces(segment_index=segment_index), recording.get_traces(segment_index=segment_index)
-        )
+        binary_traces = recorder_binary.get_traces(segment_index=segment_index)
+        recording_traces = recording.get_traces(segment_index=segment_index)
+        assert np.allclose(binary_traces, recording_traces)
 
 
 def test_write_binary_recording_multiple_segment(tmp_path):
-    # Test write_binary_recording() with loop (n_jobs=1)
+    # Test write_binary_recording() with multiple segments (n_jobs=2)
     # Setup
     sampling_frequency = 30_000
-    num_channels = 2
+    num_channels = 10
     dtype = "float32"
 
     durations = [10.30, 3.5]
@@ -84,20 +86,18 @@ def test_write_binary_recording_multiple_segment(tmp_path):
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
     # Write binary recording
-    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, verbose=True, n_jobs=2)
+    job_kwargs = dict(verbose=False, n_jobs=2, chunk_memory="100k")
+    write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
         file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
     )
+    
     for segment_index in range(recording.get_num_segments()):
-        assert np.allclose(
-            recorder_binary.get_traces(segment_index=segment_index), recording.get_traces(segment_index=segment_index)
-        )
-
-
-
-
+        binary_traces = recorder_binary.get_traces(segment_index=segment_index)
+        recording_traces = recording.get_traces(segment_index=segment_index)
+        assert np.allclose(binary_traces, recording_traces)
 
 
 def test_write_memory_recording():
