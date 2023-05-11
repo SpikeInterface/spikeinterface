@@ -310,11 +310,12 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # apply function
     traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index,
                                   cast_unsigned=cast_unsigned)
-    traces = traces.astype(dtype)
+    if traces.dtype != dtype:
+        traces = traces.astype(dtype) 
     array[start_frame:end_frame, :] = traces
 
     # Close the memmap
-    memmap_obj.close()
+    # memmap_obj.close()
     
 
 # used by write_memory_recording
