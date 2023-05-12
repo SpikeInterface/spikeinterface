@@ -26,7 +26,6 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
     def __init__(
         self, waveform_extractor: WaveformExtractor, unit_ids=None, unit_colors=None, backend=None, **backend_kwargs
     ):
-
         we = waveform_extractor
 
         self.check_extensions(we, "spike_amplitudes")

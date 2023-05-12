@@ -181,7 +181,6 @@ def test_detect_injected_correlation():
     sorting = NumpySorting.from_dict([units_dict], sampling_frequency=sampling_frequency)
 
     for method in methods:
-
         correlograms, bins = compute_correlograms(sorting, window_ms=10.0, bin_ms=0.1, method=method)
 
         cc_01 = correlograms[0, 1, :]

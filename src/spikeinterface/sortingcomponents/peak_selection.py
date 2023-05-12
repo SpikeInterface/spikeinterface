@@ -87,7 +87,6 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
     rng = np.random.default_rng(seed=seed)
 
     if method == "uniform":
-
         params = {"select_per_channel": False, "n_peaks": None}
 
         params.update(method_kwargs)
@@ -95,7 +94,6 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
         assert params["n_peaks"] is not None, "n_peaks should be defined!"
 
         if params["select_per_channel"]:
-
             ## This method will randomly select max_peaks_per_channel peaks per channels
             for channel in np.unique(peaks["channel_index"]):
                 peaks_indices = np.where(peaks["channel_index"] == channel)[0]
@@ -106,9 +104,7 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
             selected_indices = [rng.choice(peaks.size, size=num_peaks, replace=False)]
 
     elif method in ["smart_sampling_amplitudes", "smart_sampling_locations", "smart_sampling_locations_and_time"]:
-
         if method == "smart_sampling_amplitudes":
-
             ## This method will try to select around n_peaks per channel but in a non uniform manner
             ## First, it will look at the distribution of the peaks amplitudes, per channel.
             ## Once this distribution is known, it will sample from the peaks with a rejection probability
@@ -127,7 +123,6 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
 
             if params["select_per_channel"]:
                 for channel in np.unique(peaks["channel_index"]):
-
                     peaks_indices = np.where(peaks["channel_index"] == channel)[0]
                     if params["n_peaks"] > peaks_indices.size:
                         selected_indices += [peaks_indices]
@@ -168,7 +163,6 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
                     selected_indices = [rng.permutation(my_selection)[: params["n_peaks"]]]
 
         elif method == "smart_sampling_locations":
-
             ## This method will try to select around n_peaksbut in a non uniform manner
             ## First, it will look at the distribution of the positions.
             ## Once this distribution is known, it will sample from the peaks with a rejection probability
@@ -190,7 +184,6 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
             if params["n_peaks"] > nb_spikes:
                 selected_indices += [np.arange(peaks.size)]
             else:
-
                 preprocessing = QuantileTransformer(output_distribution="uniform", n_quantiles=min(100, nb_spikes))
                 data = np.array([params["peaks_locations"]["x"], params["peaks_locations"]["y"]]).T
                 data = preprocessing.fit_transform(data)
@@ -212,7 +205,6 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
                 selected_indices = [rng.permutation(my_selection)[: params["n_peaks"]]]
 
         elif method == "smart_sampling_locations_and_time":
-
             ## This method will try to select around n_peaksbut in a non uniform manner
             ## First, it will look at the distribution of the positions.
             ## Once this distribution is known, it will sample from the peaks with a rejection probability
@@ -234,7 +226,6 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
             if params["n_peaks"] > nb_spikes:
                 selected_indices += [np.arange(peaks.size)]
             else:
-
                 preprocessing = QuantileTransformer(output_distribution="uniform", n_quantiles=min(100, nb_spikes))
                 data = np.array(
                     [params["peaks_locations"]["x"], params["peaks_locations"]["y"], peaks["sample_index"]]
@@ -261,7 +252,6 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
                 selected_indices = [rng.permutation(my_selection)[: params["n_peaks"]]]
 
     else:
-
         raise NotImplementedError(f"No method {method} for peaks selection")
 
     selected_indices = np.concatenate(selected_indices)

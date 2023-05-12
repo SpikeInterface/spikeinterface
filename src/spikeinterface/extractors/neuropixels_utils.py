@@ -88,7 +88,6 @@ def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
     groups = []
 
     for i in range(num_channels_per_adc):
-
         groups.append(
             list(
                 np.sort(

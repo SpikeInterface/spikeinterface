@@ -33,7 +33,7 @@ def test_find_cluster_from_peaks():
         exclude_sweep_ms=0.1,
         verbose=False,
         noise_levels=noise_levels,
-        **job_kwargs
+        **job_kwargs,
     )
 
     peak_locations = localize_peaks(recording, peaks, method="center_of_mass", **job_kwargs)

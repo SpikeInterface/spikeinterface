@@ -39,7 +39,6 @@ def test_get_noise_levels():
 
 
 def test_get_noise_levels_output():
-
     # Generate a recording following a gaussian distribution to check the result of get_noise.
     std = 6.0
     seed = 0

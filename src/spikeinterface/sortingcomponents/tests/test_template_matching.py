@@ -44,7 +44,6 @@ def waveform_extractor_fixture(tmp_path_factory):
 
 @pytest.mark.parametrize("method", matching_methods.keys())
 def test_find_spikes_from_templates(method, waveform_extractor):
-
     recording = waveform_extractor._recording
     waveform = waveform_extractor.get_waveforms("#0")
     num_waveforms, _, _ = waveform.shape

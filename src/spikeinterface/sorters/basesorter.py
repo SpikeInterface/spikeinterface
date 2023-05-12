@@ -99,7 +99,6 @@ class BaseSorter:
 
     @classmethod
     def initialize_folder(cls, recording, output_folder, verbose, remove_existing_folder):
-
         # installed ?
         if not cls.is_installed():
             raise Exception(

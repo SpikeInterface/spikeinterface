@@ -234,7 +234,6 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         time_pad,
         sparsity,
     ):
-
         import scipy.interpolate
 
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
@@ -253,7 +252,6 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         self.sparsity = sparsity
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-
         if self.mode in ["average", "median"]:
             traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
         else:
@@ -386,7 +384,6 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                 best_amplitudes = np.zeros(nb_jitters, dtype=np.float32)
 
                 for count, padding in enumerate(jitters):
-
                     t_trig = trig + padding
 
                     if t_trig - pad[0] >= 0 and t_trig + pad[1] < end_frame - start_frame:

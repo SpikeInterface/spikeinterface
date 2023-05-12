@@ -29,7 +29,6 @@ class RecordingCommonTestSuite(CommonTestSuite):
 
     def test_open(self):
         for entity in self.entities:
-
             if isinstance(entity, tuple):
                 path, kwargs = entity
             elif isinstance(entity, str):
@@ -82,7 +81,6 @@ class RecordingCommonTestSuite(CommonTestSuite):
 
     def test_neo_annotations(self):
         for entity in self.entities:
-
             if isinstance(entity, tuple):
                 path, kwargs = entity
             elif isinstance(entity, str):
@@ -109,7 +107,6 @@ class RecordingCommonTestSuite(CommonTestSuite):
 class SortingCommonTestSuite(CommonTestSuite):
     def test_open(self):
         for entity in self.entities:
-
             if isinstance(entity, tuple):
                 path, kwargs = entity
                 sorting = self.ExtractorClass(local_folder / path, **kwargs)
@@ -147,7 +144,6 @@ class SortingCommonTestSuite(CommonTestSuite):
 class EventCommonTestSuite(CommonTestSuite):
     def test_open(self):
         for entity in self.entities:
-
             if isinstance(entity, tuple):
                 path, kwargs = entity
             elif isinstance(entity, str):

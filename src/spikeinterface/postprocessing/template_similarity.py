@@ -18,7 +18,6 @@ class TemplateSimilarityCalculator(BaseWaveformExtractorExtension):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
     def _set_params(self, method="cosine_similarity"):
-
         params = dict(method=method)
 
         return params
@@ -172,7 +171,6 @@ def check_equal_template_with_distribution_overlap(
     equal = False
     final_shift = None
     for shift in range(num_shift * 2 + 1):
-
         template1_ = template1[shift : width + shift, :]
         vector_0_1 = template1_ - template0_
         vector_0_1 /= np.sum(vector_0_1**2)

@@ -66,9 +66,8 @@ class NormalizeByQuantileRecording(BasePreprocessor):
         q2=0.99,
         mode="by_channel",
         dtype="float32",
-        **random_chunk_kwargs
+        **random_chunk_kwargs,
     ):
-
         assert mode in ("pool_channel", "by_channel")
 
         random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
@@ -136,7 +135,6 @@ class ScaleRecording(BasePreprocessor):
     name = "scale"
 
     def __init__(self, recording, gain=1.0, offset=0.0, dtype="float32"):
-
         if dtype is None:
             dtype = recording.get_dtype()
 
@@ -196,7 +194,6 @@ class CenterRecording(BasePreprocessor):
     name = "center"
 
     def __init__(self, recording, mode="median", dtype="float32", **random_chunk_kwargs):
-
         assert mode in ("median", "mean")
         random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
 
@@ -261,9 +258,8 @@ class ZScoreRecording(BasePreprocessor):
         offset=None,
         int_scale=None,
         dtype="float32",
-        **random_chunk_kwargs
+        **random_chunk_kwargs,
     ):
-
         assert mode in ("median+mad", "mean+std")
 
         # fix dtype

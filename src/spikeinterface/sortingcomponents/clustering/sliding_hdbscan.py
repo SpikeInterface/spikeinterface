@@ -162,7 +162,6 @@ class SlidingHdbscanClustering:
 
     @classmethod
     def _find_clusters(cls, recording, peaks, wfs_arrays, sparsity_mask, noise, d):
-
         num_chans = recording.get_num_channels()
         fs = recording.get_sampling_frequency()
         nbefore = int(d["ms_before"] * fs / 1000.0)
@@ -399,7 +398,6 @@ class SlidingHdbscanClustering:
 
     @classmethod
     def _prepare_clean(cls, recording, peaks, wfs_arrays, sparsity_mask, peak_labels, d):
-
         tmp_folder = d["tmp_folder"]
         if tmp_folder is None:
             wf_folder = None
@@ -470,7 +468,6 @@ class SlidingHdbscanClustering:
 
     @classmethod
     def _clean_cluster(cls, recording, peaks, wfs_arrays2, sparsity_mask2, peak_labels, d):
-
         fs = recording.get_sampling_frequency()
         nbefore = int(d["ms_before"] * fs / 1000.0)
         nafter = int(d["ms_after"] * fs / 1000.0)

@@ -155,7 +155,6 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         parent_recording_segment: Union[BaseRecordingSegment, None] = None,
         num_samples: Union[int, None] = None,
     ) -> None:
-
         BaseRecordingSegment.__init__(
             self,
             sampling_frequency,

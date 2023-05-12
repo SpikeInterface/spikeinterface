@@ -26,7 +26,6 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         self.spikes = self.waveform_extractor.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
 
     def _set_params(self, ms_before=0.5, ms_after=0.5, method="center_of_mass", method_kwargs={}):
-
         params = dict(ms_before=ms_before, ms_after=ms_after, method=method)
         params.update(**method_kwargs)
         return params
@@ -108,7 +107,7 @@ def compute_spike_locations(
     method="center_of_mass",
     method_kwargs={},
     outputs="concatenated",
-    **job_kwargs
+    **job_kwargs,
 ):
     """
     Localize spikes in 2D or 3D with several methods given the template.

@@ -66,7 +66,7 @@ class TimeseriesWidget(BaseWidget):
         with_colorbar=True,
         figure=None,
         ax=None,
-        **plot_kwargs
+        **plot_kwargs,
     ):
         BaseWidget.__init__(self, figure, ax)
         self.recording = recording

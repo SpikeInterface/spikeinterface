@@ -46,7 +46,7 @@ class SortingSummaryWidget(BaseWidget):
         unit_table_properties=None,
         label_choices=None,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         self.check_extensions(waveform_extractor, ["correlograms", "spike_amplitudes", "unit_locations", "similarity"])
         we = waveform_extractor

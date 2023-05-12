@@ -64,7 +64,6 @@ class BinaryRecordingExtractor(BaseRecording):
         offset_to_uV=None,
         is_filtered=None,
     ):
-
         if channel_ids is None:
             channel_ids = list(range(num_chan))
         else:

@@ -25,7 +25,6 @@ class ISIHistogramsCalculator(BaseWaveformExtractorExtension):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
     def _set_params(self, window_ms: float = 100.0, bin_ms: float = 5.0, method: str = "auto"):
-
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
 
         return params

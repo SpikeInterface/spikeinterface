@@ -33,7 +33,7 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
             stream_name=stream_name,
             all_annotations=all_annotations,
             use_names_as_ids=use_names_as_ids,
-            **neo_kwargs
+            **neo_kwargs,
         )
 
         self._kwargs.update(dict(file_path=str(file_path)))

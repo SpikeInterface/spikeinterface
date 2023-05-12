@@ -41,9 +41,8 @@ class UnitSummaryWidget(BaseWidget):
         sparsity=None,
         radius_um=100,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
-
         we = waveform_extractor
 
         if unit_colors is None:

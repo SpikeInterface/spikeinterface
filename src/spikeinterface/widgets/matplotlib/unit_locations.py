@@ -29,7 +29,6 @@ class UnitLocationsPlotter(MplPlotter):
         contacts_kargs = dict(alpha=1.0, edgecolor="k", lw=0.5)
 
         for probe in probegroup.probes:
-
             text_on_contact = None
             if dp.with_channel_ids:
                 text_on_contact = dp.channel_ids
@@ -71,7 +70,7 @@ class UnitLocationsPlotter(MplPlotter):
                 color=unit_colors[unit],
                 zorder=5 if unit in dp.unit_ids else 3,
                 alpha=0.9 if unit in dp.unit_ids else 0.5,
-                **ellipse_kwargs
+                **ellipse_kwargs,
             )
             for i, unit in enumerate(unit_ids)
         ]

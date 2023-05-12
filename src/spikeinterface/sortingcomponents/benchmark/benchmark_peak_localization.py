@@ -45,7 +45,6 @@ class BenchmarkPeakLocalization:
         shutil.rmtree(self.tmp_folder)
 
     def run(self, method, method_kwargs={}):
-
         if self.waveforms is None:
             self.waveforms = extract_waveforms(
                 self.recording,
@@ -176,7 +175,6 @@ def plot_comparison_positions(benchmarks, mode="average"):
     ax.spines["right"].set_visible(False)
 
     for bench in benchmarks:
-
         ax.plot(
             snrs[wdx], savgol_filter(bench.medians_over_templates[wdx], smoothing_factor, 3), lw=2, label=bench.title
         )
@@ -196,7 +194,6 @@ def plot_comparison_positions(benchmarks, mode="average"):
     ax.spines["right"].set_visible(False)
 
     for bench in benchmarks:
-
         ax.plot(
             distances_to_center[zdx],
             savgol_filter(bench.medians_over_templates[zdx], smoothing_factor, 3),
@@ -241,7 +238,6 @@ def plot_comparison_positions(benchmarks, mode="average"):
 
 
 def plot_comparison_inferences(benchmarks, bin_size=np.arange(0.1, 20, 1)):
-
     import numpy as np
     import sklearn
     import scipy.stats
@@ -275,7 +271,6 @@ def plot_comparison_inferences(benchmarks, bin_size=np.arange(0.1, 20, 1)):
         return 0.5 * np.sum((p - q) ** 2 / (p + q + 1e-6))
 
     for count, benchmark in enumerate(benchmarks):
-
         spikes = benchmark.spike_positions[0]
         units = benchmark.waveforms.sorting.unit_ids
         all_x = np.concatenate([spikes[unit_id]["x"] for unit_id in units])
@@ -369,13 +364,11 @@ def plot_comparison_inferences(benchmarks, bin_size=np.arange(0.1, 20, 1)):
 
 
 def plot_comparison_precision(benchmarks):
-
     import pylab as plt
 
     fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(15, 10), squeeze=False)
 
     for bench in benchmarks:
-
         # gt_positions = bench.gt_positions
         # template_positions = bench.template_positions
         # dx = np.abs(gt_positions[:, 0] - template_positions[:, 0])
@@ -438,7 +431,6 @@ def plot_comparison_precision(benchmarks):
 
 
 def plot_figure_1(benchmark, mode="average", cell_ind="auto"):
-
     if cell_ind == "auto":
         norms = np.linalg.norm(benchmark.gt_positions[:, :2], axis=1)
         cell_ind = np.argsort(norms)[0]

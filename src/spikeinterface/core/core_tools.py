@@ -347,7 +347,6 @@ def write_binary_recording_file_handle(
             traces = traces.astype(dtype)
         traces.tofile(file_handle)
     else:
-
         num_frames = recording.get_num_samples(segment_index=0)
         chunks = divide_segment_into_chunks(num_frames, chunk_size)
 

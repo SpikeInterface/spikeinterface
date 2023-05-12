@@ -28,9 +28,7 @@ class CorrelogramGTStudy(GroundTruthStudy):
             return value.time_bins
 
     def precompute_scores_by_similarities(self, good_only=True):
-
         if not hasattr(self, "_computed"):
-
             import sklearn
 
             similarity_matrix = {}
@@ -44,12 +42,10 @@ class CorrelogramGTStudy(GroundTruthStudy):
             self._computed = True
 
             for sorter_ind, sorter_name in enumerate(self.sorter_names):
-
                 # loop over recordings
                 all_errors = []
                 all_similarities = []
                 for rec_name in self.rec_names:
-
                     try:
                         comp = self.comparisons[(rec_name, sorter_name)]
                         similarities, errors = comp.compute_correlogram_by_similarity(similarity_matrix[rec_name])
@@ -62,7 +58,6 @@ class CorrelogramGTStudy(GroundTruthStudy):
                 self.all_errors[sorter_name] = np.concatenate(all_errors, axis=0)
 
     def get_error_profile_over_similarity_bins(self, similarity_bins, sorter_name):
-
         all_similarities = self.all_similarities[sorter_name]
         all_errors = self.all_errors[sorter_name]
 

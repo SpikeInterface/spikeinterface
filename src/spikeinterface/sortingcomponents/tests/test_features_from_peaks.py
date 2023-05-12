@@ -12,7 +12,6 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 
 def test_features_from_peaks():
-
     repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
     remote_path = "mearec/mearec_test_10s.h5"
     local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
@@ -28,7 +27,7 @@ def test_features_from_peaks():
         peak_sign="neg",
         detect_threshold=5,
         noise_levels=noise_levels,
-        **job_kwargs
+        **job_kwargs,
     )
 
     feature_list = ["amplitude", "ptp", "center_of_mass", "energy"]
@@ -61,7 +60,10 @@ def test_features_from_peaks():
 
     # amplitude and peak to peak with multi channels
     d = {"all_channels": True}
-    amplitude, ptp, = compute_features_from_peaks(
+    (
+        amplitude,
+        ptp,
+    ) = compute_features_from_peaks(
         recording, peaks, ["amplitude", "ptp"], feature_params={"amplitude": d, "ptp": d}, **job_kwargs
     )
     assert amplitude.shape[0] == amplitude.shape[0]

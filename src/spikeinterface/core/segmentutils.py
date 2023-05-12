@@ -46,7 +46,6 @@ class AppendSegmentRecording(BaseRecording):
     """
 
     def __init__(self, recording_list, sampling_frequency_max_diff=0):
-
         rec0 = recording_list[0]
         sampling_frequency = rec0.get_sampling_frequency()
         dtype = rec0.get_dtype()
@@ -114,7 +113,6 @@ class ConcatenateSegmentRecording(BaseRecording):
     """
 
     def __init__(self, recording_list, ignore_times=True, sampling_frequency_max_diff=0):
-
         one_rec = append_recordings(recording_list, sampling_frequency_max_diff=sampling_frequency_max_diff)
 
         BaseRecording.__init__(self, one_rec.get_sampling_frequency(), one_rec.channel_ids, one_rec.get_dtype())
@@ -283,7 +281,6 @@ class AppendSegmentSorting(BaseSorting):
     """
 
     def __init__(self, sorting_list, sampling_frequency_max_diff=0):
-
         sorting0 = sorting_list[0]
         sampling_frequency = sorting0.get_sampling_frequency()
         unit_ids = sorting0.unit_ids
@@ -352,7 +349,6 @@ class ConcatenateSegmentSorting(BaseSorting):
     """
 
     def __init__(self, sorting_list, total_samples_list=None, ignore_times=True, sampling_frequency_max_diff=0):
-
         # Check that all sortings have a recording or that sortings' num_samples are provided
         all_has_recording = all([sorting.has_recording() for sorting in sorting_list])
         if not all_has_recording:

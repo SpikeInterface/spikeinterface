@@ -97,7 +97,6 @@ class SlidingNNClustering:
 
     @classmethod
     def _initialize_folder(cls, recording, peaks, params):
-
         assert HAVE_NUMBA, "SlidingNN needs numba to work"
         assert HAVE_TORCH, "SlidingNN needs torch to work"
         assert HAVE_NNDESCENT, "SlidingNN needs pynndescent to work"
@@ -155,7 +154,6 @@ class SlidingNNClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params):
-
         d = params
 
         # wfs_arrays, sparsity_mask, noise = cls._initialize_folder(recording, peaks, params)

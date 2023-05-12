@@ -49,7 +49,7 @@ class SorterCommonTestSuite:
             delete_output_folder=True,
             verbose=False,
             raise_error=True,
-            **sorter_params
+            **sorter_params,
         )
         assert sorting.sorting_info is not None
         assert "recording" in sorting.sorting_info.keys()
@@ -108,7 +108,7 @@ class SnippetsSorterCommonTestSuite:
             delete_output_folder=False,
             verbose=False,
             raise_error=True,
-            **sorter_params
+            **sorter_params,
         )
 
         del sorting

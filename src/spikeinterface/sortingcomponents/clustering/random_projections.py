@@ -81,7 +81,6 @@ class RandomProjectionClustering:
         noise_snippets = None
 
         for proj_type in ["ptp", "energy"]:
-
             if d["nb_projections"][proj_type] > 0:
                 features_list += [f"random_projections_{proj_type}"]
 
@@ -167,7 +166,6 @@ class RandomProjectionClustering:
             print("We found %d raw clusters, starting to clean with %s..." % (len(labels), cleaning_method))
 
         if cleaning_method == "cosine":
-
             wfs_arrays = extract_waveforms_to_buffers(
                 recording,
                 spikes,
@@ -188,7 +186,6 @@ class RandomProjectionClustering:
             )
 
         elif cleaning_method == "dip":
-
             wfs_arrays = {}
             for label in labels:
                 mask = label == peak_labels

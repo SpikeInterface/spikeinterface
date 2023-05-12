@@ -124,7 +124,6 @@ def correct_motion_on_traces(
 
     # inperpolation kernel will be the same per temporal bin
     for bin_ind in np.unique(bin_inds):
-
         # Step 1 : channel motion
         if spatial_bins is None:
             # rigid motion : same motion for all channels

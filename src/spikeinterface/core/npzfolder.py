@@ -31,7 +31,6 @@ class NpzFolderSorting(NpzSortingExtractor):
     name = "npzfolder"
 
     def __init__(self, folder_path):
-
         folder_path = Path(folder_path)
 
         with open(folder_path / "npz.json", "r") as f:

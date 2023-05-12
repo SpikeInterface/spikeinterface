@@ -476,7 +476,6 @@ class StudyComparisonPerformancesByTemplateSimilarity(BaseWidget):
         BaseWidget.__init__(self, ax=ax)
 
     def plot(self):
-
         import sklearn
 
         cmap = plt.get_cmap(self.cmap_name, len(self.study.sorter_names))
@@ -484,7 +483,6 @@ class StudyComparisonPerformancesByTemplateSimilarity(BaseWidget):
 
         flat_templates_gt = {}
         for rec_name in self.study.rec_names:
-
             waveform_folder = self.study.study_folder / "waveforms" / f"waveforms_GroundTruth_{rec_name}"
             if not waveform_folder.is_dir():
                 self.study.compute_waveforms(rec_name)
@@ -495,11 +493,9 @@ class StudyComparisonPerformancesByTemplateSimilarity(BaseWidget):
         all_results = {}
 
         for sorter_name in self.study.sorter_names:
-
             all_results[sorter_name] = {"similarity": [], "accuracy": []}
 
             for rec_name in self.study.rec_names:
-
                 try:
                     waveform_folder = self.study.study_folder / "waveforms" / f"waveforms_{sorter_name}_{rec_name}"
                     if not waveform_folder.is_dir():

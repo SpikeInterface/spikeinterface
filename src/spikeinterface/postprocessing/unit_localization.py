@@ -41,7 +41,6 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
     def _set_params(self, method="center_of_mass", method_kwargs={}):
-
         params = dict(method=method, method_kwargs=method_kwargs)
         return params
 
@@ -132,7 +131,6 @@ def compute_unit_locations(
 
 
 def make_initial_guess_and_bounds(wf_data, local_contact_locations, max_distance_um, initial_z=20):
-
     # constant for initial guess and bounds
     ind_max = np.argmax(wf_data)
     max_ptp = wf_data[ind_max]
@@ -551,7 +549,6 @@ def enforce_decrease_shells_data(wf_data, maxchan, radial_parents, in_place=Fals
 def get_grid_convolution_templates_and_weights(
     contact_locations, local_radius_um=50, upsampling_um=5, sigma_um=[np.linspace(10, 50.0, 5)], margin_um=50
 ):
-
     x_min, x_max = contact_locations[:, 0].min(), contact_locations[:, 0].max()
     y_min, y_max = contact_locations[:, 1].min(), contact_locations[:, 1].max()
 

@@ -35,7 +35,7 @@ class NixRecordingExtractor(NeoBaseRecordingExtractor):
             stream_name=stream_name,
             block_index=block_index,
             all_annotations=all_annotations,
-            **neo_kwargs
+            **neo_kwargs,
         )
         self._kwargs.update(dict(file_path=str(file_path), stream_id=stream_id))
         self.extra_requirements.append("neo[nixio]")

@@ -131,7 +131,7 @@ class CircusClustering:
             dtype=recording.get_dtype(),
             sparsity_mask=sparsity_mask,
             copy=(params["waveform_mode"] == "shared_memory"),
-            **params["job_kwargs"]
+            **params["job_kwargs"],
         )
 
         n_loc = len(location_keys)
@@ -234,7 +234,6 @@ class CircusClustering:
         print("We found %d raw clusters, starting to clean with %s..." % (len(labels), cleaning_method))
 
         if cleaning_method == "cosine":
-
             wfs_arrays = extract_waveforms_to_buffers(
                 recording,
                 spikes,
@@ -247,7 +246,7 @@ class CircusClustering:
                 dtype=recording.get_dtype(),
                 sparsity_mask=None,
                 copy=(params["waveform_mode"] == "shared_memory"),
-                **params["job_kwargs"]
+                **params["job_kwargs"],
             )
 
             labels, peak_labels = remove_duplicates(
@@ -255,7 +254,6 @@ class CircusClustering:
             )
 
         elif cleaning_method == "dip":
-
             wfs_arrays = extract_waveforms_to_buffers(
                 recording,
                 spikes,
@@ -268,7 +266,7 @@ class CircusClustering:
                 dtype=recording.get_dtype(),
                 sparsity_mask=None,
                 copy=(params["waveform_mode"] == "shared_memory"),
-                **params["job_kwargs"]
+                **params["job_kwargs"],
             )
 
             labels, peak_labels = remove_duplicates_via_dip(wfs_arrays, peak_labels)
@@ -285,7 +283,7 @@ class CircusClustering:
                 overwrite=True,
                 ms_before=params["ms_before"],
                 ms_after=params["ms_after"],
-                **params["job_kwargs"]
+                **params["job_kwargs"],
             )
             labels, peak_labels = remove_duplicates_via_matching(we, peak_labels, job_kwargs=params["job_kwargs"])
             shutil.rmtree(tmp_folder)

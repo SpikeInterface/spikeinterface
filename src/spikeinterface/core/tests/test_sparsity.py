@@ -8,7 +8,6 @@ from spikeinterface.core.core_tools import check_json
 
 
 def test_ChannelSparsity():
-
     for unit_ids in (["a", "b", "c", "d"], [4, 5, 6, 7]):
         channel_ids = [1, 2, 3]
         mask = np.zeros((4, 3), dtype="bool")

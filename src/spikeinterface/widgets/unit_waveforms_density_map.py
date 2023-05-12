@@ -46,7 +46,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         peak_sign="neg",
         unit_colors=None,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         we = waveform_extractor
 

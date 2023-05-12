@@ -278,7 +278,6 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
 
     # all units converted to seconds
     for unit_id in unit_ids:
-
         spike_trains = []
 
         for segment_index in range(num_segs):
@@ -426,7 +425,6 @@ def compute_sliding_rp_violations(
 
     # all units converted to seconds
     for unit_id in unit_ids:
-
         spike_train_list = []
 
         for segment_index in range(num_segs):

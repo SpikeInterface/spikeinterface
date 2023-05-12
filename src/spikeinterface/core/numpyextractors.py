@@ -211,7 +211,6 @@ class NumpySorting(BaseSorting):
 
         sorting = NumpySorting(sampling_frequency, unit_ids)
         for seg_index in range(nseg):
-
             units_dict = {}
             for u, unit_id in enumerate(unit_ids):
                 st = neo_spiketrains[seg_index][u]

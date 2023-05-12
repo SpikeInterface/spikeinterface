@@ -28,7 +28,6 @@ import MEArec as mr
 
 
 class BenchmarkMotionCorrectionMearec(BenchmarkBase):
-
     _array_names = ("motion", "temporal_bins", "spatial_bins")
     _waveform_names = ("static", "drifting", "corrected")
     _sorting_names = ()
@@ -58,7 +57,6 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         delete_output_folder=True,
         parent_benchmark=None,
     ):
-
         BenchmarkBase.__init__(
             self,
             folder=folder,
@@ -128,7 +126,6 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         self.save_to_folder()
 
     def extract_waveforms(self):
-
         # the sparsity is estimated on the static recording and propagated to all of then
         if self.parent_benchmark is None:
             sparsity = precompute_sparsity(
@@ -226,7 +223,6 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         return self.distances
 
     def compute_residuals(self, force=True):
-
         fr = int(self.recordings["static"].get_sampling_frequency())
         duration = int(self.recordings["static"].get_total_duration())
 
@@ -258,7 +254,6 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 self.accuracies[label] = comp.get_performance()["accuracy"].values
 
     def _plot_accuracy(self, accuracies, mode="ordered_accuracy", figsize=(15, 5), ls="-"):
-
         if len(self.accuracies) != len(self.sorter_cases):
             self.compute_accuracies()
 
@@ -340,18 +335,15 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             ax.set_ylabel("accuracy")
 
     def plot_sortings_accuracy(self, mode="ordered_accuracy", figsize=(15, 5)):
-
         if len(self.accuracies) != len(self.sorter_cases):
             self.compute_accuracies()
 
         self._plot_accuracy(self.accuracies, mode=mode, figsize=figsize, ls="-")
 
     def plot_best_merges_accuracy(self, mode="ordered_accuracy", figsize=(15, 5)):
-
         self._plot_accuracy(self.merged_accuracies, mode=mode, figsize=figsize, ls="--")
 
     def plot_sorting_units_categories(self):
-
         if len(self.accuracies) != len(self.sorter_cases):
             self.compute_accuracies()
 
@@ -401,7 +393,6 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
 
 def plot_distances_to_static(benchmarks, metric="cosine", figsize=(15, 10)):
-
     fig = plt.figure(figsize=figsize)
     gs = fig.add_gridspec(4, 2)
 
@@ -440,7 +431,6 @@ def plot_distances_to_static(benchmarks, metric="cosine", figsize=(15, 10)):
     ax_4 = fig.add_subplot(gs[2:, 0])
 
     for count, bench in enumerate(benchmarks):
-
         # results = bench._compute_snippets_variability(metric=metric, num_channels=num_channels)
         distances = bench.compute_distances_to_static(force=False)
 
@@ -481,7 +471,6 @@ def plot_distances_to_static(benchmarks, metric="cosine", figsize=(15, 10)):
 
 
 def plot_snr_decrease(benchmarks, figsize=(15, 10)):
-
     fig, axes = plt.subplots(2, 2, figsize=figsize, squeeze=False)
 
     recgen = mr.load_recordings(benchmarks[0].mearec_filenames["static"])
@@ -510,7 +499,6 @@ def plot_snr_decrease(benchmarks, figsize=(15, 10)):
     axes[0, 0].set_xticks([])
 
     for count, bench in enumerate(benchmarks):
-
         snr_corrected = compute_quality_metrics(bench.waveforms["corrected"], metric_names=["snr"], load_if_exists=True)
         axes[1, 0].scatter(snr_static.values, snr_corrected.values, label=bench.title)
         axes[1, 0].plot([0, m], [0, m], color="k")
@@ -530,7 +518,6 @@ def plot_snr_decrease(benchmarks, figsize=(15, 10)):
 
 
 def plot_residuals_comparisons(benchmarks):
-
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     for count, bench in enumerate(benchmarks):
         residuals, (t_start, t_stop) = bench.compute_residuals(force=False)
@@ -595,7 +582,6 @@ class DifferenceRecordingSegment(BasePreprocessorSegment):
         self.parent_recording_segment_2 = parent_recording_segment_2
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-
         traces_1 = self.parent_recording_segment_1.get_traces(start_frame, end_frame, channel_indices)
         traces_2 = self.parent_recording_segment_2.get_traces(start_frame, end_frame, channel_indices)
 

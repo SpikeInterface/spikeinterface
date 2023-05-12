@@ -14,7 +14,6 @@ else:
 
 
 def test_NpyFolderSnippets():
-
     snippets, _ = generate_snippets(num_channels=10, durations=[2.0, 1.0])
     folder = cache_folder / "npy_folder_1"
 

@@ -27,7 +27,6 @@ class ConfusionMatrixWidget(BaseWidget):
     """
 
     def __init__(self, gt_comparison, count_text=True, unit_ticks=True, figure=None, ax=None):
-
         from matplotlib import pyplot as plt
 
         BaseWidget.__init__(self, figure, ax)

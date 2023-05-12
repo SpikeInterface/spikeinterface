@@ -17,7 +17,6 @@ from IPython.display import display
 
 class MetricsPlotter(IpywidgetsPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
-
         cm = 1 / 2.54
 
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)

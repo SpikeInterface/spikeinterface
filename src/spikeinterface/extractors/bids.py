@@ -34,7 +34,6 @@ def read_bids(folder_path):
 
     recordings = []
     for file_path in folder_path.iterdir():
-
         bids_name = file_path.stem
 
         if file_path.suffix == ".nwb":

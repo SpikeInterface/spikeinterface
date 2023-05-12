@@ -171,7 +171,6 @@ def test_resample_by_chunks():
     for resample_rate in resample_rates:
         for margin_ms in margins_ms:
             for chunk_size in [int(resample_rate * chunk_multi) for chunk_multi in chunk_durations]:
-
                 # print(f'resmple_rate = {resample_rate}; margin_ms = {margin_ms}; chunk_size={chunk_size}')
                 rec2 = resample(parent_rec, resample_rate, margin_ms=margin_ms)
                 # save by chunk rec3 is the cached version

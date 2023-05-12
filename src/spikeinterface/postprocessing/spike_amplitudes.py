@@ -21,7 +21,6 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         self._all_spikes = None
 
     def _set_params(self, peak_sign="neg", return_scaled=True):
-
         params = dict(peak_sign=str(peak_sign), return_scaled=bool(return_scaled))
         return params
 

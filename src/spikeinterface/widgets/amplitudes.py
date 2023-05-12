@@ -49,7 +49,7 @@ class AmplitudesWidget(BaseWidget):
         bins=None,
         plot_legend=True,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         sorting = waveform_extractor.sorting
         self.check_extensions(waveform_extractor, "spike_amplitudes")

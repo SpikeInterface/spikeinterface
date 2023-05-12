@@ -73,7 +73,6 @@ class BenchmarkMatching:
         self.metrics = compute_quality_metrics(self.we, metric_names=["snr"], load_if_exists=True)
 
     def plot(self, title=None):
-
         if title is None:
             title = self.method
 

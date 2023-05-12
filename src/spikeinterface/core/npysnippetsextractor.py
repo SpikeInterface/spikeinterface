@@ -22,7 +22,6 @@ class NpySnippetsExtractor(BaseSnippets):
     def __init__(
         self, file_paths, sampling_frequency, channel_ids=None, nbefore=None, gain_to_uV=None, offset_to_uV=None
     ):
-
         if not isinstance(file_paths, list):
             file_paths = [file_paths]
 

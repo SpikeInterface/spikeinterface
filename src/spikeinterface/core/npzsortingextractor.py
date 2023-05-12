@@ -21,7 +21,6 @@ class NpzSortingExtractor(BaseSorting):
     name = "npz"
 
     def __init__(self, file_path):
-
         self.npz_filename = file_path
 
         npz = np.load(file_path)
@@ -48,7 +47,6 @@ class NpzSortingExtractor(BaseSorting):
         d["sampling_frequency"] = np.array([sorting.get_sampling_frequency()], dtype="float64")
 
         for seg_index in range(sorting.get_num_segments()):
-
             spike_indexes = []
             spike_labels = []
             for unit_id in units_ids:

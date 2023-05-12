@@ -97,7 +97,6 @@ class BlankSaturationRecording(BasePreprocessor):
         chunk_size=500,
         seed=0,
     ):
-
         assert direction in ("upper", "lower", "both")
 
         if fill_value is None or quantile_threshold is not None:

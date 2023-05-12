@@ -26,7 +26,6 @@ import MEArec as mr
 
 
 class BenchmarkMotionEstimationMearec(BenchmarkBase):
-
     _array_names = (
         "noise_levels",
         "gt_unit_positions",
@@ -53,7 +52,6 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         overwrite=False,
         parent_benchmark=None,
     ):
-
         BenchmarkBase.__init__(
             self, folder=folder, title=title, overwrite=overwrite, job_kwargs=job_kwargs, parent_benchmark=None
         )
@@ -91,7 +89,6 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         return self._recording
 
     def run(self):
-
         if self.folder is not None:
             if self.folder.exists() and not self.overwrite:
                 raise ValueError(f"The folder {self.folder} is not empty")
@@ -177,7 +174,6 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
                 self.gt_motion[t, :] = f(self.spatial_bins)
 
     def plot_true_drift(self, scaling_probe=1.5, figsize=(15, 10), axes=None):
-
         if axes is None:
             fig = plt.figure(figsize=figsize)
             gs = fig.add_gridspec(1, 8, wspace=0)
@@ -240,7 +236,6 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         ax.set_xlabel("# neurons")
 
     def plot_peaks_probe(self, alpha=0.05, figsize=(15, 10)):
-
         fig, axs = plt.subplots(ncols=2, sharey=True, figsize=figsize)
         ax = axs[0]
         plot_probe_map(self.recording, ax=ax)
@@ -254,7 +249,6 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
             ax.set_xlim(0, 100)
 
     def plot_peaks(self, scaling_probe=1.5, show_drift=True, show_histogram=True, alpha=0.05, figsize=(15, 10)):
-
         fig = plt.figure(figsize=figsize)
         if show_histogram:
             gs = fig.add_gridspec(1, 4)
@@ -320,7 +314,6 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         ax1.sharey(ax0)
 
     def plot_motion_corrected_peaks(self, scaling_probe=1.5, alpha=0.05, figsize=(15, 10), show_probe=True, axes=None):
-
         if axes is None:
             fig = plt.figure(figsize=figsize)
             if show_probe:

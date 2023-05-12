@@ -846,7 +846,6 @@ def _load_extractor_from_dict(dic):
 
     # handle nested
     for k, v in kwargs.items():
-
         if isinstance(v, dict) and is_dict_extractor(v):
             kwargs[k] = _load_extractor_from_dict(v)
 

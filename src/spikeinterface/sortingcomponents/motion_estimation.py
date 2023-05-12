@@ -290,7 +290,6 @@ class DecentralizedRegistration:
         lsqr_robust_n_iter=20,
         weight_with_amplitude=False,
     ):
-
         # use torch if installed
         if conv_engine is None:
             conv_engine = "torch" if HAVE_TORCH else "numpy"
@@ -485,7 +484,6 @@ class IterativeTemplateRegistration:
         kriging_p=2,
         kriging_d=2,
     ):
-
         # make a 3D histogram
         motion_histograms, temporal_hist_bin_edges, spatial_hist_bin_edges = make_3d_motion_histograms(
             recording,

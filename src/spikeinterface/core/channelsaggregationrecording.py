@@ -30,7 +30,7 @@ class ChannelsAggregationRecording(BaseRecording):
         for r_i, recording in enumerate(recording_list):
             single_channel_ids = recording.get_channel_ids()
             single_channel_indices = recording.ids_to_indices(single_channel_ids)
-            for (chan_id, chan_idx) in zip(single_channel_ids, single_channel_indices):
+            for chan_id, chan_idx in zip(single_channel_ids, single_channel_indices):
                 channel_map[ch_id] = {"recording_id": r_i, "channel_index": chan_idx}
                 ch_id += 1
 
@@ -125,7 +125,6 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
         end_frame: Union[int, None] = None,
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
-
         return_all_channels = False
         if channel_indices is None:
             return_all_channels = True

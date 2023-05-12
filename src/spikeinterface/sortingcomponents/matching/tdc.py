@@ -61,7 +61,6 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
-
         assert HAVE_NUMBA, "TridesclousPeeler need numba to be installed"
 
         d = cls.default_params.copy()
@@ -187,7 +186,6 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def main_function(cls, traces, d):
-
         traces = traces.copy()
 
         all_spikes = []

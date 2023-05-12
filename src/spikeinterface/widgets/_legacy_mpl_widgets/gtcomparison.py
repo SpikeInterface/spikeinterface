@@ -143,7 +143,6 @@ class ComparisonPerformancesByTemplateSimilarity(BaseWidget):
         BaseWidget.__init__(self, ax=ax)
 
     def plot(self):
-
         all_results = {"similarity": [], "accuracy": []}
         comp = self.gt_comp
 

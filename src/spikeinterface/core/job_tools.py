@@ -31,7 +31,7 @@ _shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel process
             * progress_bar: bool
                 If True, a progress bar is printed
             * mp_context: str or None
-                Context for multiprocessing. It can be None (default), "fork" or "spawn". 
+                Context for multiprocessing. It can be None (default), "fork" or "spawn".
                 Note that "fork" is only available on UNIX systems
     """
 
@@ -392,7 +392,6 @@ class ChunkRecordingExecutor:
                 mp_context=mp.get_context(self.mp_context),
                 initargs=(self.func, self.init_func, self.init_args, self.max_threads_per_process),
             ) as executor:
-
                 results = executor.map(function_wrapper, all_chunks)
 
                 if self.progress_bar:

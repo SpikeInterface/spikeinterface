@@ -92,7 +92,6 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
         self.noise_levels = noise_levels
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
         num_channels = traces.shape[1]
@@ -108,11 +107,9 @@ class SilencedPeriodsRecordingSegment(BasePreprocessorSegment):
             upper_index = np.searchsorted(self.periods[:, 0], new_interval[1])
 
             if upper_index > lower_index:
-
                 periods_in_interval = self.periods[lower_index:upper_index]
 
                 for period in periods_in_interval:
-
                     onset = max(0, period[0] - start_frame)
                     offset = min(period[1] - start_frame, end_frame)
 

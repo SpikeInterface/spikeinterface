@@ -47,7 +47,6 @@ class BenchmarkBase:
         self.parent_benchmark = parent_benchmark
 
         if self.parent_benchmark is not None:
-
             for name in self._array_names_from_parent:
                 setattr(self, name, getattr(parent_benchmark, name))
 

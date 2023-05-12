@@ -44,7 +44,7 @@ class UnitLocationsWidget(BaseWidget):
         plot_legend=False,
         hide_axis=False,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         self.check_extensions(waveform_extractor, "unit_locations")
         ulc = waveform_extractor.load_extension("unit_locations")

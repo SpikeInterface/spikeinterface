@@ -85,7 +85,7 @@ class UnitWaveformsWidget(BaseWidget):
         hide_unit_selector=False,
         plot_legend=True,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         we = waveform_extractor
         sorting: BaseSorting = we.sorting

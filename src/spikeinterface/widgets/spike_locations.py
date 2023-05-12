@@ -51,7 +51,7 @@ class SpikeLocationsWidget(BaseWidget):
         plot_legend=False,
         hide_axis=False,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         self.check_extensions(waveform_extractor, "spike_locations")
         slc = waveform_extractor.load_extension("spike_locations")

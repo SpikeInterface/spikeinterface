@@ -65,7 +65,6 @@ class UnitWaveformsWidget(BaseWidget):
         unit_selected_waveforms=None,
         set_title=True,
     ):
-
         self.waveform_extractor = waveform_extractor
         self._recording = waveform_extractor.recording
         self._sorting = waveform_extractor.sorting
@@ -135,7 +134,6 @@ class UnitWaveformsWidget(BaseWidget):
             channel_inds = {unit_id: slice(None) for unit_id in unit_ids}
 
         for i, unit_id in enumerate(unit_ids):
-
             ax = self.axes.flatten()[i]
             color = self.unit_colors[unit_id]
 

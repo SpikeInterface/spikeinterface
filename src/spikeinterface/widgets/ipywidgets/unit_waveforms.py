@@ -17,7 +17,6 @@ from IPython.display import display
 
 class UnitWaveformPlotter(IpywidgetsPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
-
         cm = 1 / 2.54
         we = data_plot["waveform_extractor"]
 

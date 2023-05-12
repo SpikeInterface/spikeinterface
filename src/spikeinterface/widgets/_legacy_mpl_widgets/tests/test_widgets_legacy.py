@@ -53,7 +53,6 @@ class TestWidgets(unittest.TestCase):
         sw.plot_rasters(self._sorting)
 
     def test_plot_probe_map(self):
-
         sw.plot_probe_map(self._rec)
         sw.plot_probe_map(self._rec, with_channel_ids=True)
 

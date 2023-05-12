@@ -49,7 +49,6 @@ class FilterOpenCLRecording(BasePreprocessor):
         filter_mode="sos",
         margin_ms=5.0,
     ):
-
         assert HAVE_PYOPENCL, "You need to install pyopencl (and GPU driver!!)"
 
         assert btype in ("bandpass", "lowpass", "highpass", "bandstop")
@@ -218,50 +217,50 @@ processor_kernel = """
 
 __kernel void sos_filter(__global  float *input,
                                     __global  float *output,
-                                    __constant  float *coefficients, 
+                                    __constant  float *coefficients,
                                     __global float *zi,
                                     int local_chunksize,
                                     int direction) {
 
     int chan = get_global_id(0); //channel indice
-    
+
     int offset_filt2;  //offset channel within section
     int offset_zi = chan*n_section*2;
-    
+
     int idx;
 
     float w0, w1,w2;
     float res;
-    
+
     for (int section=0; section<n_section; section++){
-    
+
         //offset_filt2 = chan*n_section*6+section*6;
         offset_filt2 = section*6;
-        
+
         w1 = zi[offset_zi+section*2+0];
         w2 = zi[offset_zi+section*2+1];
-        
+
         for (int s=0; s<local_chunksize;s++){
-            
+
             if (direction==1) {idx = s*num_channels+chan;}
             else if (direction==-1) {idx = (local_chunksize-s-1)*num_channels+chan;}
-            
+
             if (section==0)  {w0 = input[idx];}
             else {w0 = output[idx];}
-            
+
             w0 -= coefficients[offset_filt2+4] * w1;
             w0 -= coefficients[offset_filt2+5] * w2;
             res = coefficients[offset_filt2+0] * w0 + coefficients[offset_filt2+1] * w1 +  coefficients[offset_filt2+2] * w2;
             w2 = w1; w1 =w0;
-            
+
             output[idx] = res;
         }
-        
+
         zi[offset_zi+section*2+0] = w1;
         zi[offset_zi+section*2+1] = w2;
 
     }
-   
+
 }
 
 
@@ -276,10 +275,10 @@ __kernel void sosfiltfilt(__global  float *input,
 
     // filter forward
     sos_filter(input, input, coefficients, zi1, full_size, 1);
-    
+
     // filter backward
     sos_filter(input, output, coefficients, zi2, full_size, -1);
-    
+
 }
 
 

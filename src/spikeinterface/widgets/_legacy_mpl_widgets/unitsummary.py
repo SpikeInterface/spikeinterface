@@ -37,7 +37,6 @@ class UnitSummaryWidget(BaseWidget):
     """
 
     def __init__(self, waveform_extractor, unit_id, unit_colors=None, figure=None, ax=None):
-
         assert ax is None
         # ~ assert axes is None
 

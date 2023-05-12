@@ -211,7 +211,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
         batch_size=128,
         use_gpu: bool = True,
         disable_tf_logger: bool = True,
-        **random_chunk_kwargs
+        **random_chunk_kwargs,
     ):
         """Applies DeepInterpolation, a neural network based denoising method, to the recording.
 
@@ -306,7 +306,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
             post_frames=post_frames,
             pre_post_omission=pre_post_omission,
             batch_size=batch_size,
-            **random_chunk_kwargs
+            **random_chunk_kwargs,
         )
         self.extra_requirements.extend(["tensorflow"])
 

@@ -82,7 +82,6 @@ class MCSH5RecordingSegment(BaseRecordingSegment):
         return self._num_samples
 
     def get_traces(self, start_frame=None, end_frame=None, channel_indices=None):
-
         if isinstance(channel_indices, slice):
             traces = self._stream.get("ChannelData")[channel_indices, start_frame:end_frame].T
         else:

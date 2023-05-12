@@ -12,7 +12,6 @@ from spikeinterface.sortingcomponents.peak_selection import select_peaks
 
 
 def test_select_peaks():
-
     repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
     remote_path = "mearec/mearec_test_10s.h5"
     local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)

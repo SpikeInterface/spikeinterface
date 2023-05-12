@@ -135,7 +135,6 @@ class TridesclousSorter(BaseSorter):
         # make catalogue
         chan_grps = list(tdc_dataio.channel_groups.keys())
         for chan_grp in chan_grps:
-
             # parameters can change depending the group
             catalogue_nested_params = make_nested_tdc_params(tdc_dataio, chan_grp, **params)
 

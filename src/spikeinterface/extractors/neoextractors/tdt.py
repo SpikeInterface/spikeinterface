@@ -33,7 +33,7 @@ class TdtRecordingExtractor(NeoBaseRecordingExtractor):
             stream_name=stream_name,
             block_index=block_index,
             all_annotations=all_annotations,
-            **neo_kwargs
+            **neo_kwargs,
         )
         self._kwargs.update(dict(folder_path=str(folder_path)))
 

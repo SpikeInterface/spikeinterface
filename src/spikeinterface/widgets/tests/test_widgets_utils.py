@@ -2,7 +2,6 @@ from spikeinterface.widgets.utils import get_some_colors
 
 
 def test_get_some_colors():
-
     keys = ["a", "b", "c", "d"]
 
     colors = get_some_colors(keys, color_engine="auto")

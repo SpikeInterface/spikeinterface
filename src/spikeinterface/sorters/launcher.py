@@ -148,7 +148,7 @@ def run_sorter_by_property(
 
     grouping_property_values = None
     sorting_list = []
-    for (output_name, sorting) in sorting_output.items():
+    for output_name, sorting in sorting_output.items():
         prop_name, sorter_name = output_name
         sorting_list.append(sorting)
         if grouping_property_values is None:
@@ -251,7 +251,6 @@ def run_sorters(
     task_args_list = []
     for rec_name, recording in recording_dict.items():
         for sorter_name in sorter_list:
-
             output_folder = working_folder / str(rec_name) / sorter_name
 
             if output_folder.is_dir():

@@ -41,7 +41,6 @@ class CombinatoSortingExtractor(BaseSorting):
     name = "combinato"
 
     def __init__(self, folder_path, sampling_frequency=None, user="simple", det_sign="both", keep_good_only=True):
-
         folder_path = Path(folder_path)
         assert folder_path.is_dir(), "Folder {} doesn't exist".format(folder_path)
         if sampling_frequency is None:

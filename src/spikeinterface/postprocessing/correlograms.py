@@ -27,7 +27,6 @@ class CorrelogramsCalculator(BaseWaveformExtractorExtension):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
     def _set_params(self, window_ms: float = 100.0, bin_ms: float = 5.0, method: str = "auto"):
-
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
 
         return params
@@ -69,7 +68,6 @@ WaveformExtractor.register_extension(CorrelogramsCalculator)
 
 
 def _make_bins(sorting, window_ms, bin_ms):
-
     fs = sorting.get_sampling_frequency()
 
     window_size = int(round(fs * window_ms / 2 * 1e-3))
@@ -278,7 +276,6 @@ def correlogram_for_one_segment(spike_times, spike_labels, window_size, bin_size
                     correlograms.shape,
                 )
             else:
-
                 indices = np.ravel_multi_index(
                     (spike_labels[:-shift][m], spike_labels[+shift:][m], spike_diff_b[m] + num_half_bins),
                     correlograms.shape,
@@ -380,7 +377,6 @@ if HAVE_NUMBA:
         parallel=True,
     )
     def _compute_correlograms_numba(correlograms, spike_times, spike_labels, window_size, bin_size):
-
         n_units = correlograms.shape[0]
 
         for i in numba.prange(n_units):

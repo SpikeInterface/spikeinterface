@@ -59,7 +59,6 @@ class CommonReferenceRecording(BasePreprocessor):
         verbose=False,
         dtype=None,
     ):
-
         num_chans = recording.get_num_channels()
         neighbors = None
         # some checks

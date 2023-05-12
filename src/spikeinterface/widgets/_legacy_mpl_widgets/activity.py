@@ -106,7 +106,6 @@ class PeakActivityMapWidget(BaseWidget):
             self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames, interval=100, blit=True)
 
     def _plot_one_bin(self, rec, probe, peaks, duration):
-
         # TODO: @alessio weight_with_amplitudes is not implemented yet
         rates = np.zeros(rec.get_num_channels(), dtype="float64")
         for chan_ind, chan_id in enumerate(rec.channel_ids):

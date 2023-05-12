@@ -132,7 +132,6 @@ class PositionAndFeaturesClustering:
         print("We found %d raw clusters, starting to clean with %s..." % (len(labels), cleaning_method))
 
         if cleaning_method == "cosine":
-
             num_chans = recording.get_num_channels()
             wfs_arrays = extract_waveforms_to_buffers(
                 recording,
@@ -146,7 +145,7 @@ class PositionAndFeaturesClustering:
                 dtype=recording.get_dtype(),
                 sparsity_mask=None,
                 copy=True,
-                **params["job_kwargs"]
+                **params["job_kwargs"],
             )
 
             noise_levels = get_noise_levels(recording, return_scaled=False)
@@ -155,7 +154,6 @@ class PositionAndFeaturesClustering:
             )
 
         elif cleaning_method == "dip":
-
             wfs_arrays = {}
             for label in labels:
                 mask = label == peak_labels
@@ -176,7 +174,7 @@ class PositionAndFeaturesClustering:
                 ms_before=params["ms_before"],
                 ms_after=params["ms_after"],
                 **params["job_kwargs"],
-                return_scaled=False
+                return_scaled=False,
             )
             labels, peak_labels = remove_duplicates_via_matching(
                 we, peak_labels, job_kwargs=params["job_kwargs"], **params["cleaning_kwargs"]

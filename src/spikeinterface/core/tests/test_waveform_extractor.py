@@ -43,7 +43,6 @@ def test_WaveformExtractor():
 
     for mode in ["folder", "memory"]:
         for sparsity in [None, sparsity_ext]:
-
             folder = cache_folder / "test_waveform_extractor"
             if folder.is_dir():
                 shutil.rmtree(folder)

@@ -35,7 +35,6 @@ class ALFSortingExtractor(BaseSorting):
     name = "alf"
 
     def __init__(self, folder_path, sampling_frequency=30000):
-
         assert self.installed, self.installation_mesg
         # check correct parent folder:
         self._folder_path = Path(folder_path)

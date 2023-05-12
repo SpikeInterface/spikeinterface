@@ -38,7 +38,7 @@ class TemplateSimilarityWidget(BaseWidget):
         show_unit_ticks=False,
         show_colorbar=True,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         self.check_extensions(waveform_extractor, "similarity")
         tsc = waveform_extractor.load_extension("similarity")

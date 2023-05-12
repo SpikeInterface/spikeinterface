@@ -12,6 +12,7 @@ from .snippets_tools import snippets_from_sorting
 
 from typing import List, Optional
 
+
 # TODO: merge with lazy recording when noise is implemented
 def generate_recording(
     num_channels: Optional[int] = 2,
@@ -141,7 +142,6 @@ def generate_snippets(
     empty_units=None,
     **job_kwargs,
 ):
-
     recording = generate_recording(
         durations=durations,
         num_channels=num_channels,
@@ -397,7 +397,6 @@ from typing import Union, Optional, List, Literal
 
 
 class GeneratorRecording(BaseRecording):
-
     available_modes = ["white_noise", "random_peaks"]
 
     def __init__(
@@ -548,7 +547,6 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
         end_frame: Union[int, None] = None,
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
-
         start_frame = 0 if start_frame is None else max(start_frame, 0)
         end_frame = self.num_samples if end_frame is None else min(end_frame, self.num_samples)
 
@@ -617,7 +615,6 @@ class GeneratorRecordingSegment(BaseRecordingSegment):
             if repeat_block_count == 0:
                 end_repeat_block = end_first_block
             else:  # Repeat block as many times as necessary
-
                 # Create a broadcasted view of the noise block repeated along the first axis
                 repeated_block = np.broadcast_to(noise_block, shape=(repeat_block_count, noise_frames, num_channels))
 

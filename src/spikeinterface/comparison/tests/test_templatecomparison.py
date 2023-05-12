@@ -24,7 +24,6 @@ def setup_module():
 
 
 def test_compare_multiple_templates():
-
     duration = 60
     num_channels = 8
 

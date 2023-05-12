@@ -34,7 +34,6 @@ class SavGolDenoiser(WaveformsNode):
         order: int = 3,
         window_length_ms: float = 0.25,
     ):
-
         waveform_extractor = find_parent_of_type(parents, WaveformsNode)
         if waveform_extractor is None:
             raise TypeError(f"SavGolDenoiser should have a single {WaveformsNode.__name__} in its parents")

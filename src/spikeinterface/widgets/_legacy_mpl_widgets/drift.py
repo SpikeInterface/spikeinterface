@@ -186,7 +186,6 @@ class PairwiseDisplacementWidget(BaseWidget):
         self._do_plot()
 
     def _do_plot(self):
-
         n = self.motion.shape[1]
 
         extent = (self.temporal_bins[0], self.temporal_bins[-1], self.temporal_bins[0], self.temporal_bins[-1])

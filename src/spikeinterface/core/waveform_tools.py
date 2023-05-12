@@ -293,7 +293,6 @@ def _init_worker_waveform_extractor(
         # memmap file will be open on demand and not globally per worker
         worker_ctx["wfs_arrays_info"] = wfs_arrays_info
     elif mode == "shared_memory":
-
         from multiprocessing.shared_memory import SharedMemory
 
         wfs_arrays = {}

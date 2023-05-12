@@ -10,7 +10,6 @@ from spikeinterface.postprocessing import check_equal_template_with_distribution
 def _split_waveforms(
     wfs_and_noise, noise_size, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug
 ):
-
     import sklearn.decomposition
     import hdbscan
 
@@ -91,7 +90,6 @@ def _split_waveforms(
 def _split_waveforms_nested(
     wfs_and_noise, noise_size, nbefore, n_components_by_channel, n_components, hdbscan_params, probability_thr, debug
 ):
-
     import sklearn.decomposition
     import hdbscan
 
@@ -354,7 +352,6 @@ def auto_clean_clustering(
     auto_merge_list = []
     for l0 in range(len(labels)):
         for l1 in range(l0 + 1, len(labels)):
-
             label0, label1 = labels[l0], labels[l1]
 
             main_chan0 = main_channels[l0]
@@ -425,7 +422,7 @@ def auto_clean_clustering(
     # ~ print('auto_merge_list', auto_merge_list)
     # merge in reverse order because of shift accumulation
     peak_sample_shifts = np.zeros(peak_labels.size, dtype="int64")
-    for (l0, l1, shift) in auto_merge_list[::-1]:
+    for l0, l1, shift in auto_merge_list[::-1]:
         label0, label1 = labels[l0], labels[l1]
         (inds,) = np.nonzero(peak_labels == label1)
         clean_peak_labels[inds] = label0
@@ -491,14 +488,12 @@ def auto_clean_clustering(
 def remove_duplicates(
     wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, cosine_threshold=0.975, sparsify_threshold=0.99
 ):
-
     import sklearn
 
     nb_templates = len(wfs_arrays.keys())
     templates = np.zeros((nb_templates, num_samples, num_chans), dtype=np.float32)
 
     for t, wfs in wfs_arrays.items():
-
         templates[t] = np.median(wfs, axis=0)
 
         is_silent = templates[t].std(0) < 0.1 * noise_levels
@@ -543,7 +538,6 @@ def remove_duplicates_via_matching(
     job_kwargs={},
     tmp_folder=None,
 ):
-
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface import get_noise_levels
     from spikeinterface.core import BinaryRecordingExtractor
@@ -611,7 +605,6 @@ def remove_duplicates_via_matching(
     similar_templates = [[], []]
 
     for i in range(nb_templates):
-
         t_start = padding + i * duration
         t_stop = padding + (i + 1) * duration
 
@@ -660,7 +653,6 @@ def remove_duplicates_via_matching(
 
 
 def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1, cosine_threshold=None):
-
     import sklearn
 
     from spikeinterface.sortingcomponents.clustering.isocut5 import isocut5
@@ -679,7 +671,6 @@ def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1, cosine_t
         fused[i] = [i]
 
     while keep_merging:
-
         min_dip = np.inf
         to_merge = None
         labels = np.unique(new_labels)
@@ -728,7 +719,6 @@ def remove_duplicates_via_dip(wfs_arrays, peak_labels, dip_threshold=1, cosine_t
                                 similarities[i][j] = cosine
 
                         if cosine_threshold is None or cosine > cosine_threshold:
-
                             if j in diptests[i]:
                                 diptest = diptests[i][j]
                             else:

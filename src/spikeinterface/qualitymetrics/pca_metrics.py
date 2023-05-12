@@ -822,7 +822,6 @@ def silhouette_score(all_pcs, all_labels, this_unit_id):
 
 
 def _subtract_clip_component(clip1, component):
-
     V1 = clip1.flatten()
     V2 = component.flatten()
     V1 = V1 - V2 * np.dot(V1, V2) / np.dot(V2, V2)

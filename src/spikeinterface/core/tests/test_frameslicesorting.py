@@ -7,7 +7,6 @@ from spikeinterface.core import NumpyRecording, NumpySorting
 
 
 def test_FrameSliceSorting():
-
     # Single segment sorting, with and without attached recording
     # Since the default end_frame can be set either from the last spike
     # or from the registered recording

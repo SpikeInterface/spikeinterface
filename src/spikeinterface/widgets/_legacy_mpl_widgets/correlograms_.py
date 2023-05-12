@@ -23,7 +23,6 @@ class CrossCorrelogramsWidget(BaseWidget):
     """
 
     def __init__(self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0, axes=None):
-
         if unit_ids is not None:
             sorting = sorting.select_units(unit_ids)
         self.sorting = sorting
@@ -78,7 +77,6 @@ class AutoCorrelogramsWidget(BaseWidget):
     """
 
     def __init__(self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0, ncols=5, axes=None):
-
         if unit_ids is not None:
             sorting = sorting.select_units(unit_ids)
         self.sorting = sorting

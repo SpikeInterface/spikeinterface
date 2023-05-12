@@ -21,7 +21,6 @@ class BaseSnippets(BaseRecordingSnippets):
     def __init__(
         self, sampling_frequency: float, nbefore: Union[int, None], snippet_len: int, channel_ids: List, dtype
     ):
-
         BaseRecordingSnippets.__init__(
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
         )
@@ -97,7 +96,6 @@ class BaseSnippets(BaseRecordingSnippets):
         channel_ids: Union[List, None] = None,
         return_scaled=False,
     ):
-
         segment_index = self._check_segment_index(segment_index)
         spts = self._snippets_segments[segment_index]
         channel_indices = self.ids_to_indices(channel_ids, prefer_slice=True)
@@ -124,7 +122,6 @@ class BaseSnippets(BaseRecordingSnippets):
         channel_ids: Union[List, None] = None,
         return_scaled=False,
     ):
-
         segment_index = self._check_segment_index(segment_index)
         spts = self._snippets_segments[segment_index]
         indices = spts.frames_to_indices(start_frame, end_frame)

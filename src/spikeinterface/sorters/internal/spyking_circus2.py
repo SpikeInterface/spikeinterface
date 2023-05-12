@@ -18,7 +18,6 @@ except:
 
 
 class Spykingcircus2Sorter(ComponentsBasedSorter):
-
     sorter_name = "spykingcircus2"
 
     _default_params = {
@@ -42,7 +41,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
-
         assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
 
         # this is importanted only on demand because numba import are too heavy

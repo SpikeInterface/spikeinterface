@@ -150,7 +150,6 @@ class BenchmarkPeakSelection:
         for label, sorting in zip(
             ["gt", "full_gt", "garbage"], [self.sliced_gt_sorting, self.gt_sorting, self.garbage_sorting]
         ):
-
             tmp_folder = os.path.join(self.tmp_folder, label)
             if os.path.exists(tmp_folder):
                 import shutil
@@ -158,7 +157,6 @@ class BenchmarkPeakSelection:
                 shutil.rmtree(tmp_folder)
 
             if not (label == "full_gt" and label in self.waveforms):
-
                 if self.verbose:
                     print(f"Extracting waveforms for {label}")
 
@@ -221,7 +219,6 @@ class BenchmarkPeakSelection:
         alpha=0.5,
         show_ellipses=True,
     ):
-
         if colors is None:
             from spikeinterface.widgets import get_unit_colors
 
@@ -437,7 +434,6 @@ class BenchmarkPeakSelection:
         # ax.set_ylabel('y')
 
     def plot_statistics(self, metric="cosine", annotations=True, detect_threshold=5):
-
         fig, axs = plt.subplots(ncols=3, nrows=2, figsize=(15, 10))
 
         ax = axs[0, 0]

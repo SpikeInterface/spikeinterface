@@ -60,7 +60,6 @@ class GroundTruthStudy:
         return cls(study_folder)
 
     def run_sorters(self, sorter_list, mode_if_folder_exists="keep", remove_sorter_folders=False, **kwargs):
-
         sorter_folders = self.study_folder / "sorter_folders"
         recording_dict = get_recordings(self.study_folder)
 
@@ -111,7 +110,6 @@ class GroundTruthStudy:
         return selected_sorting
 
     def copy_sortings(self):
-
         sorter_folders = self.study_folder / "sorter_folders"
         sorting_folders = self.study_folder / "sortings"
         log_olders = self.study_folder / "sortings" / "run_log"
@@ -251,7 +249,6 @@ class GroundTruthStudy:
         n_jobs=-1,
         total_memory="1G",
     ):
-
         we = self.get_waveform_extractor(rec_name, sorter_name)
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
         we.run_extract_waveforms(n_jobs=n_jobs, total_memory=total_memory)
@@ -277,7 +274,6 @@ class GroundTruthStudy:
         n_jobs=-1,
         total_memory="1G",
     ):
-
         we = self.get_waveform_extractor(rec_name)
         we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
         we.run_extract_waveforms(n_jobs=n_jobs, total_memory=total_memory)

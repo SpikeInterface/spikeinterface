@@ -308,7 +308,6 @@ def test_detect_peaks_locally_exclusive(recording, spike_trains, job_kwargs, tor
     assert len(peaks_by_channel_np) > len(peaks_local_numba)
 
     if HAVE_TORCH:
-
         peaks_local_torch = detect_peaks(
             recording,
             method="locally_exclusive_torch",
@@ -341,7 +340,6 @@ detection_classes = [
 
 @pytest.mark.parametrize("detection_class", detection_classes)
 def test_peak_sign_consistency(recording, job_kwargs, detection_class):
-
     peak_sign = "neg"
     peak_detection_node = detection_class(recording=recording, peak_sign=peak_sign)
     negative_peaks = run_node_pipeline(recording=recording, nodes=[peak_detection_node], job_kwargs=job_kwargs)
@@ -365,7 +363,6 @@ def test_peak_sign_consistency(recording, job_kwargs, detection_class):
 
 
 def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs):
-
     extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=1.0, ms_after=1.0, return_output=False)
 
     pipeline_nodes = [

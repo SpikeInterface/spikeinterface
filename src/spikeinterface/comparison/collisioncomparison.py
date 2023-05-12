@@ -16,7 +16,6 @@ class CollisionGTComparison(GroundTruthComparison):
     """
 
     def __init__(self, gt_sorting, tested_sorting, collision_lag=2.0, nbins=11, **kwargs):
-
         # Force compute labels
         kwargs["compute_labels"] = True
 
@@ -59,7 +58,6 @@ class CollisionGTComparison(GroundTruthComparison):
         return score_label1, score_label2, delta
 
     def get_label_count_per_collision_bins(self, gt_unit_id1, gt_unit_id2, bins):
-
         score_label1, score_label2, delta = self.get_label_for_collision(gt_unit_id1, gt_unit_id2)
 
         tp_count1 = np.zeros(bins.size - 1)
@@ -83,7 +81,6 @@ class CollisionGTComparison(GroundTruthComparison):
         return tp_count1, fn_count1, tp_count2, fn_count2
 
     def compute_all_pair_collision_bins(self):
-
         d = int(self.collision_lag / 1000 * self.sampling_frequency)
         bins = np.linspace(-d, d, self.nbins + 1)
         self.bins = bins
@@ -125,7 +122,6 @@ class CollisionGTComparison(GroundTruthComparison):
 
         for r in range(n):
             for c in range(r + 1, n):
-
                 u1 = unit_ids[r]
                 u2 = unit_ids[c]
 

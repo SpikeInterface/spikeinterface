@@ -15,7 +15,6 @@ class CorrelogramGTComparison(GroundTruthComparison):
     """
 
     def __init__(self, gt_sorting, tested_sorting, window_ms=100.0, bin_ms=1.0, well_detected_score=0.8, **kwargs):
-
         # Force compute labels
         kwargs["compute_labels"] = True
 
@@ -36,7 +35,6 @@ class CorrelogramGTComparison(GroundTruthComparison):
         return np.linspace(-self.window_ms / 2, self.window_ms / 2, self.nb_timesteps)
 
     def compute_correlograms(self):
-
         correlograms_1, bins = compute_correlograms(self.sorting1, **self.compute_kwargs)
         correlograms_2, bins = compute_correlograms(self.sorting2, **self.compute_kwargs)
 
@@ -90,14 +88,12 @@ class CorrelogramGTComparison(GroundTruthComparison):
         return np.mean(res, 0)
 
     def compute_correlogram_by_similarity(self, similarity_matrix, window_ms=None):
-
         errors = []
         similarities = []
         error = self._get_slice(window_ms)
 
         for r, u1 in enumerate(self.good_gt):
             for c, u2 in enumerate(self.good_gt):
-
                 ind1 = self.sorting1.id_to_index(u1)
                 ind2 = self.sorting1.id_to_index(u2)
 

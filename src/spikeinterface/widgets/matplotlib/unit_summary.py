@@ -15,7 +15,6 @@ from .autocorrelograms import AutoCorrelogramsPlotter
 
 class UnitSummaryPlotter(MplPlotter):
     def do_plot(self, data_plot, **backend_kwargs):
-
         dp = to_attr(data_plot)
 
         # force the figure without axes

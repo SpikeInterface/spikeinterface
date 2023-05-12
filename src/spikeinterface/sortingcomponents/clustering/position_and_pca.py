@@ -72,7 +72,6 @@ class PositionAndPCAClustering:
 
     @classmethod
     def main_function(cls, recording, peaks, params):
-
         # res = PositionClustering(recording, peaks, params)
 
         assert HAVE_HDBSCAN, "position_and_pca clustering need hdbscan to be installed"
@@ -153,7 +152,7 @@ class PositionAndPCAClustering:
             dtype=recording.get_dtype(),
             sparsity_mask=sparsity_mask,
             copy=(params["waveform_mode"] == "shared_memory"),
-            **params["job_kwargs"]
+            **params["job_kwargs"],
         )
 
         noise = get_random_data_chunks(
@@ -220,7 +219,7 @@ class PositionAndPCAClustering:
             dtype=recording.get_dtype(),
             sparsity_mask=sparsity_mask3,
             copy=(params["waveform_mode"] == "shared_memory"),
-            **params["job_kwargs"]
+            **params["job_kwargs"],
         )
 
         clean_peak_labels, peak_sample_shifts = auto_clean_clustering(

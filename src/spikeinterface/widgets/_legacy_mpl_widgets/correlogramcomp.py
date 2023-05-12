@@ -34,7 +34,6 @@ class StudyComparisonCorrelogramBySimilarityWidget(BaseWidget):
         self.ylim = ylim
 
     def plot(self):
-
         my_cmap = plt.get_cmap(self.cmap)
         cNorm = matplotlib.colors.Normalize(vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
@@ -43,7 +42,6 @@ class StudyComparisonCorrelogramBySimilarityWidget(BaseWidget):
         time_bins = self.study.time_bins
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
-
             result = self.study.get_error_profile_over_similarity_bins(self.similarity_bins, sorter_name)
 
             # plot by similarity bins
@@ -95,11 +93,9 @@ class StudyComparisonCorrelogramBySimilarityRangesMeanErrorWidget(BaseWidget):
         self.show_legend = show_legend
 
     def plot(self):
-
         self.study.precompute_scores_by_similarities()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
-
             all_similarities = self.study.all_similarities[sorter_name]
             all_errors = self.study.all_errors[sorter_name]
 

@@ -49,7 +49,6 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         ax=None,
         axes=None,
     ):
-
         self.waveform_extractor = waveform_extractor
         self.recording = waveform_extractor.recording
         self.sorting = waveform_extractor.sorting

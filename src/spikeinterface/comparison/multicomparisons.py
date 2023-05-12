@@ -104,7 +104,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         self._spiketrains = []
         for seg_index in range(self._num_segments):
             spike_trains_segment = dict()
-            for (unit_id, sg) in zip(self._new_units, self.subgraphs):
+            for unit_id, sg in zip(self._new_units, self.subgraphs):
                 sorter_unit_ids = self._new_units[unit_id]["unit_ids"]
                 edges = list(sg.edges(data=True))
                 # Append correct spike train
@@ -196,7 +196,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         with (save_folder / "kwargs.json").open("w") as f:
             json.dump(kwargs, f)
         sortings = {}
-        for (name, sorting) in zip(self.name_list, self.object_list):
+        for name, sorting in zip(self.name_list, self.object_list):
             sortings[name] = sorting.to_dict()
         with (save_folder / "sortings.json").open("w") as f:
             json.dump(sortings, f)
@@ -225,7 +225,6 @@ class AgreementSortingExtractor(BaseSorting):
     def __init__(
         self, sampling_frequency, multisortingcomparison, min_agreement_count=1, min_agreement_count_only=False
     ):
-
         self._msc = multisortingcomparison
         self.is_dumpable = False
 

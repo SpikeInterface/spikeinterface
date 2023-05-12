@@ -154,7 +154,6 @@ class MergeUnitsSortingSegment(BaseSortingSegment):
         start_frame: Union[int, None] = None,
         end_frame: Union[int, None] = None,
     ) -> np.ndarray:
-
         if unit_id in self.new_unit_ids:
             ind = self.new_unit_ids.index(unit_id)
             spike_times = self._merged_spike_times[ind]
@@ -175,7 +174,6 @@ class MergeUnitsSortingSegment(BaseSortingSegment):
 
 # TODO move this function to postprocessing or similar
 def get_non_duplicated_events(times_list, delta):
-
     times_concat = np.concatenate(times_list)
     if len(times_concat) == 0:
         return times_concat

@@ -31,7 +31,6 @@ class NpyFolderSnippets(NpySnippetsExtractor):
     name = "npyfolder"
 
     def __init__(self, folder_path):
-
         folder_path = Path(folder_path)
 
         with open(folder_path / "npy.json", "r") as f:

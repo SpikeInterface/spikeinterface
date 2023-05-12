@@ -22,7 +22,6 @@ def test_compare_sorter_to_ground_truth():
     )
 
     for match_mode in ("hungarian", "best"):
-
         compute_labels = match_mode == "hungarian"
 
         sc = compare_sorter_to_ground_truth(

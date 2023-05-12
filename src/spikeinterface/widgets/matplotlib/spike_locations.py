@@ -28,7 +28,6 @@ class SpikeLocationsPlotter(MplPlotter):
         contacts_kargs = dict(alpha=1.0, edgecolor="k", lw=0.5)
 
         for probe in probegroup.probes:
-
             text_on_contact = None
             if dp.with_channel_ids:
                 text_on_contact = dp.channel_ids

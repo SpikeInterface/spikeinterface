@@ -72,7 +72,6 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
         )
 
     def check_inputs(self, recording, bad_channel_ids):
-
         if bad_channel_ids.ndim != 1:
             raise TypeError("'bad_channel_ids' must be a 1d array or list.")
 

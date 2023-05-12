@@ -70,7 +70,6 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
 
         for r in range(n):
             for c in range(r + 1, n):
-
                 ax = axs[r, c]
 
                 u1 = self.unit_ids[r]
@@ -178,7 +177,6 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         self._do_plot()
 
     def _do_plot(self):
-
         import sklearn
 
         # compute similarity
@@ -203,7 +201,6 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         )
 
         if self.mode == "heatmap":
-
             fig = self.figure
             for ax in fig.axes:
                 ax.remove()
@@ -307,7 +304,6 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
         self.min_accuracy = min_accuracy
 
     def plot(self):
-
         my_cmap = plt.get_cmap(self.cmap)
         cNorm = matplotlib.colors.Normalize(vmin=self.similarity_bins.min(), vmax=self.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
@@ -315,7 +311,6 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
         lags = self.study.get_lags()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
-
             curves = self.study.get_lag_profile_over_similarity_bins(self.similarity_bins, sorter_name)
 
             # plot by similarity bins
@@ -374,12 +369,10 @@ class StudyComparisonCollisionBySimilarityRangeWidget(BaseWidget):
         self.min_accuracy = min_accuracy
 
     def plot(self):
-
         self.study.precompute_scores_by_similarities(self.good_only, min_accuracy=self.min_accuracy)
         lags = self.study.get_lags()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
-
             mean_recall_scores = self.study.get_mean_over_similarity_range(self.similarity_range, sorter_name)
             self.ax.plot(
                 lags[:-1] + (lags[1] - lags[0]) / 2, mean_recall_scores, label=sorter_name, c="C%d" % sorter_ind
@@ -424,12 +417,10 @@ class StudyComparisonCollisionBySimilarityRangesWidget(BaseWidget):
         self.min_accuracy = min_accuracy
 
     def plot(self):
-
         self.study.precompute_scores_by_similarities(self.good_only, min_accuracy=self.min_accuracy)
         lags = self.study.get_lags()
 
         for sorter_ind, sorter_name in enumerate(self.study.sorter_names):
-
             all_similarities = self.study.all_similarities[sorter_name]
             all_recall_scores = self.study.all_recall_scores[sorter_name]
 

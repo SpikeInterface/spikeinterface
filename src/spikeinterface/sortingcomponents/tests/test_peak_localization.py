@@ -10,7 +10,6 @@ from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
 
 def test_localize_peaks():
-
     repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
     remote_path = "mearec/mearec_test_10s.h5"
     local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
@@ -51,7 +50,7 @@ def test_localize_peaks():
         method="monopolar_triangulation",
         optimizer="minimize_with_log_penality",
         enforce_decrease=True,
-        **job_kwargs
+        **job_kwargs,
     )
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(("minimize_with_log_penality", peak_locations))
@@ -63,7 +62,7 @@ def test_localize_peaks():
         optimizer="minimize_with_log_penality",
         enforce_decrease=True,
         feature="energy",
-        **job_kwargs
+        **job_kwargs,
     )
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(("minimize_with_log_penality_energy", peak_locations))
@@ -75,7 +74,7 @@ def test_localize_peaks():
         optimizer="minimize_with_log_penality",
         enforce_decrease=True,
         feature="peak_voltage",
-        **job_kwargs
+        **job_kwargs,
     )
     assert peaks.size == peak_locations.shape[0]
     list_locations.append(("minimize_with_log_penality_v_peak", peak_locations))

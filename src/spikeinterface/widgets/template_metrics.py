@@ -33,7 +33,7 @@ class TemplateMetricsWidget(MetricsBaseWidget):
         unit_colors=None,
         hide_unit_selector=False,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         self.check_extensions(waveform_extractor, "template_metrics")
         tmc = waveform_extractor.load_extension("template_metrics")
@@ -51,5 +51,5 @@ class TemplateMetricsWidget(MetricsBaseWidget):
             skip_metrics=skip_metrics,
             hide_unit_selector=hide_unit_selector,
             backend=backend,
-            **backend_kwargs
+            **backend_kwargs,
         )

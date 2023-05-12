@@ -28,7 +28,6 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
     name = "hdsort"
 
     def __init__(self, file_path, keep_good_only=True):
-
         MatlabHelper.__init__(self, file_path)
 
         if not self._old_style_mat:

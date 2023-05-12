@@ -77,7 +77,6 @@ class UnitLocalizationWidget(BaseWidget):
         contacts_kargs = dict(alpha=1.0, edgecolor="k", lw=0.5)
 
         for probe in probegroup.probes:
-
             text_on_contact = None
             if self.with_channel_ids:
                 text_on_contact = self.waveform_extractor.recording.channel_ids

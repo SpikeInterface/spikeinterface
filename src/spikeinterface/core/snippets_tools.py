@@ -50,7 +50,7 @@ def snippets_from_sorting(recording, sorting, nbefore=20, nafter=44, wf_folder=N
         dtype=recording.get_dtype(),
         sparsity_mask=None,
         copy=True,
-        **job_kwargs
+        **job_kwargs,
     )
     wfs = []
     for i in range(recording.get_num_segments()):

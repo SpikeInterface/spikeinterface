@@ -155,7 +155,7 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
         assert len(all_pca) == we.get_num_channels()
         assert len(all_pca_par) == we.get_num_channels()
 
-        for (pc, pc_par) in zip(all_pca, all_pca_par):
+        for pc, pc_par in zip(all_pca, all_pca_par):
             assert np.allclose(pc.components_, pc_par.components_)
 
         # project

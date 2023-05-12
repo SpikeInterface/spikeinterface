@@ -79,7 +79,6 @@ class NaiveMatching(BaseTemplateMatchingEngine):
 
     @classmethod
     def unserialize_in_worker(cls, kwargs):
-
         we = kwargs["waveform_extractor"]
         if isinstance(we, str):
             we = WaveformExtractor.load(we)
@@ -93,7 +92,6 @@ class NaiveMatching(BaseTemplateMatchingEngine):
 
     @classmethod
     def main_function(cls, traces, method_kwargs):
-
         peak_sign = method_kwargs["peak_sign"]
         abs_threholds = method_kwargs["abs_threholds"]
         exclude_sweep_size = method_kwargs["exclude_sweep_size"]

@@ -27,7 +27,6 @@ import numpy as np
 
 class BenchmarkClustering:
     def __init__(self, recording, gt_sorting, method, exhaustive_gt=True, tmp_folder=None, job_kwargs={}, verbose=True):
-
         self.method = method
 
         assert method in clustering_methods, "Clustering method should be in %s" % clustering_methods.keys()
@@ -177,7 +176,6 @@ class BenchmarkClustering:
         for label, sorting in zip(
             ["gt", "clustering", "full_gt"], [self.sliced_gt_sorting, self.clustering, self.gt_sorting]
         ):
-
             tmp_folder = os.path.join(self.tmp_folder, label)
             if os.path.exists(tmp_folder):
                 import shutil
@@ -185,7 +183,6 @@ class BenchmarkClustering:
                 shutil.rmtree(tmp_folder)
 
             if not (label == "full_gt" and label in self.waveforms):
-
                 if self.verbose:
                     print(f"Extracting waveforms for {label}")
 
@@ -242,7 +239,6 @@ class BenchmarkClustering:
         alpha=0.5,
         show_ellipses=True,
     ):
-
         if colors is None:
             from spikeinterface.widgets import get_unit_colors
 
@@ -302,7 +298,6 @@ class BenchmarkClustering:
                 ax.add_patch(ell)
 
     def plot_clusters(self, show_probe=True, show_ellipses=True):
-
         fig, axs = plt.subplots(ncols=3, nrows=1, figsize=(15, 10))
         fig.suptitle(f"Clustering results with {self.method}")
         ax = axs[0]
@@ -371,7 +366,6 @@ class BenchmarkClustering:
             ax.set_yticks([], [])
 
     def plot_found_clusters(self, show_probe=True, show_ellipses=True):
-
         fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(10, 10))
         fig.suptitle(f"Clustering results with {self.method}")
         ax.set_title("Found clusters")
@@ -393,7 +387,6 @@ class BenchmarkClustering:
             ax.set_yticks([], [])
 
     def plot_statistics(self, metric="cosine", annotations=True, detect_threshold=5):
-
         fig, axs = plt.subplots(ncols=3, nrows=2, figsize=(15, 10))
 
         fig.suptitle(f"Clustering results with {self.method}")

@@ -47,7 +47,6 @@ from scipy import linalg, fft as sp_fft
 
 
 def get_scipy_shape(in1, in2, mode="full", axes=None, calc_fast_len=True):
-
     in1 = np.asarray(in1)
     in2 = np.asarray(in2)
 
@@ -80,7 +79,6 @@ def get_scipy_shape(in1, in2, mode="full", axes=None, calc_fast_len=True):
 
 
 def fftconvolve_with_cache(in1, in2, cache, mode="full", axes=None):
-
     in1 = np.asarray(in1)
     in2 = np.asarray(in2)
 
@@ -104,7 +102,6 @@ def fftconvolve_with_cache(in1, in2, cache, mode="full", axes=None):
 
 
 def _freq_domain_conv(in1, in2, axes, shape, cache, calc_fast_len=True):
-
     if not len(axes):
         return in1 * in2
 
@@ -184,7 +181,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _sparsify_template(cls, template, sparsify_threshold):
-
         is_silent = template.ptp(0) < sparsify_threshold
         template[:, is_silent] = 0
         (active_channels,) = np.where(np.logical_not(is_silent))
@@ -193,7 +189,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _regularize_template(cls, template, smoothing_factor=0.25):
-
         nb_channels = template.shape[1]
         nb_timesteps = template.shape[0]
         xaxis = np.arange(nb_timesteps)
@@ -205,7 +200,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _prepare_templates(cls, d):
-
         waveform_extractor = d["waveform_extractor"]
         num_samples = d["num_samples"]
         num_channels = d["num_channels"]
@@ -218,7 +212,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d["norms"] = np.zeros(num_templates, dtype=np.float32)
 
         for count, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
-
             if d["smoothing_factor"] > 0:
                 template = cls._regularize_template(templates[count], d["smoothing_factor"])
             else:
@@ -232,7 +225,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _prepare_overlaps(cls, d):
-
         templates = d["templates"]
         num_samples = d["num_samples"]
         num_channels = d["num_channels"]
@@ -271,7 +263,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
-
         d = cls._default_params.copy()
         d.update(kwargs)
 
@@ -368,9 +359,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         flagged_chunk = cached_fft_kernels["fshape"] != fshape[0]
 
         for i in range(num_templates):
-
             if i not in ignored_ids:
-
                 if i not in cached_fft_kernels or flagged_chunk:
                     kernel_filter = np.ascontiguousarray(templates[i][::-1].T)
                     cached_fft_kernels.update({i: sp_fft.rfftn(kernel_filter, fshape, axes=axes)})
@@ -406,12 +395,10 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         is_valid = scalar_products > stop_criteria
 
         while np.any(is_valid):
-
             best_amplitude_ind = scalar_products[is_valid].argmax()
             best_cluster_ind, peak_index = np.unravel_index(idx_lookup[is_valid][best_amplitude_ind], idx_lookup.shape)
 
             if num_selection > 0:
-
                 delta_t = selection[1] - peak_index
                 idx = np.where((delta_t < neighbor_window) & (delta_t > -num_samples))[0]
                 myline = num_samples + delta_t[idx]
@@ -457,7 +444,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             final_amplitudes[selection[0], selection[1]] = all_amplitudes
 
             for i in modified:
-
                 tmp_best, tmp_peak = selection[:, i]
                 diff_amp = diff_amplitudes[i] * norms[tmp_best]
 
@@ -560,7 +546,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
-
         is_silent = template.std(0) < 0.1 * noise_levels
 
         template[:, is_silent] = 0
@@ -577,7 +562,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _regularize_template(cls, template, smoothing_factor=0.25):
-
         nb_channels = template.shape[1]
         nb_timesteps = template.shape[0]
         xaxis = np.arange(nb_timesteps)
@@ -605,7 +589,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         templates = waveform_extractor.get_all_templates(mode="median").copy()
 
         for count, unit_id in enumerate(all_units):
-
             if parameters["smoothing_factor"] > 0:
                 templates[count] = cls._regularize_template(templates[count], parameters["smoothing_factor"])
 
@@ -631,7 +614,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _prepare_overlaps(cls, d):
-
         templates = d["templates"]
         num_samples = d["num_samples"]
         num_channels = d["num_channels"]
@@ -740,7 +722,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
-
         assert HAVE_SKLEARN, "CircusPeeler needs sklearn to work"
         default_parameters = cls._default_params.copy()
         default_parameters.update(kwargs)
@@ -880,7 +861,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         cached_overlaps = {}
 
         while np.any(is_valid):
-
             best_amplitude_ind = scalar_products[is_valid].argmax()
             best_cluster_ind, peak_index = np.unravel_index(idx_lookup[is_valid][best_amplitude_ind], idx_lookup.shape)
 

@@ -39,7 +39,6 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
     def _set_params(
         self, metric_names=None, qm_params=None, peak_sign=None, seed=None, sparsity=None, skip_pc_metrics=False
     ):
-
         if metric_names is None:
             metric_names = list(_misc_metric_name_to_func.keys())
             # if PC is available, PC metrics are automatically added to the list

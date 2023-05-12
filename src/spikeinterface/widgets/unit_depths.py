@@ -29,7 +29,6 @@ class UnitDepthsWidget(BaseWidget):
     def __init__(
         self, waveform_extractor, unit_colors=None, depth_axis=1, peak_sign="neg", backend=None, **backend_kwargs
     ):
-
         we = waveform_extractor
         unit_ids = we.sorting.unit_ids
 

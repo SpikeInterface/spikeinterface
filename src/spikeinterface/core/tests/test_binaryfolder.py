@@ -16,7 +16,6 @@ else:
 
 
 def test_BinaryFolderRecording():
-
     rec = generate_recording(num_channels=10, durations=[2.0, 2.0])
     folder = cache_folder / "binary_folder_1"
 

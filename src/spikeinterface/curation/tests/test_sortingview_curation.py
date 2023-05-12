@@ -26,6 +26,7 @@ KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.geten
 
 set_global_tmp_folder(cache_folder)
 
+
 # this needs to be run only once
 def generate_sortingview_curation_dataset():
     import spikeinterface.widgets as sw

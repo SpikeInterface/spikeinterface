@@ -34,7 +34,7 @@ class QualityMetricsWidget(MetricsBaseWidget):
         unit_colors=None,
         hide_unit_selector=False,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         self.check_extensions(waveform_extractor, "quality_metrics")
         qlc = waveform_extractor.load_extension("quality_metrics")
@@ -52,5 +52,5 @@ class QualityMetricsWidget(MetricsBaseWidget):
             skip_metrics=skip_metrics,
             hide_unit_selector=hide_unit_selector,
             backend=backend,
-            **backend_kwargs
+            **backend_kwargs,
         )

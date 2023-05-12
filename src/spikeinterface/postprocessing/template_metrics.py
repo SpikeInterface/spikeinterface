@@ -31,7 +31,6 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
     def _set_params(self, metric_names=None, peak_sign="neg", upsampling_factor=10, sparsity=None, window_slope_ms=0.7):
-
         if metric_names is None:
             metric_names = get_template_metric_names()
 

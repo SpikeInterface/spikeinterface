@@ -224,7 +224,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         Enforce spatial decreasingness for PTP vectors
     feature: string in ['ptp', 'energy', 'peak_voltage']
         The available features to consider for estimating the position via
-        monopolar triangulation are peak-to-peak amplitudes (ptp, default), 
+        monopolar triangulation are peak-to-peak amplitudes (ptp, default),
         energy ('energy', as L2 norm) or voltages at the center of the waveform
         (peak_voltage)
     """

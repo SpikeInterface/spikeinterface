@@ -13,7 +13,6 @@ class BaseSorting(BaseExtractor):
     """
 
     def __init__(self, sampling_frequency: float, unit_ids: List):
-
         BaseExtractor.__init__(self, unit_ids)
         self._sampling_frequency = sampling_frequency
         self._sorting_segments: List[BaseSortingSegment] = []

@@ -83,7 +83,7 @@ class SpikesOnTracesWidget(BaseWidget):
         seconds_per_row=0.2,
         with_colorbar=True,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         we = waveform_extractor
         recording: BaseRecording = we.recording
@@ -106,7 +106,7 @@ class SpikesOnTracesWidget(BaseWidget):
             seconds_per_row,
             with_colorbar,
             backend,
-            **backend_kwargs
+            **backend_kwargs,
         )
 
         if unit_ids is None:

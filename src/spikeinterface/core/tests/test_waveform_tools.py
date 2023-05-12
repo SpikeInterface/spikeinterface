@@ -25,7 +25,6 @@ def _check_all_wf_equal(list_wfs_arrays):
 
 
 def test_waveform_tools():
-
     durations = [30, 40]
     sampling_frequency = 30000.0
 

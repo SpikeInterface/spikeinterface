@@ -30,7 +30,7 @@ def test_run_sorter_local():
         verbose=True,
         raise_error=True,
         docker_image=None,
-        **sorter_params
+        **sorter_params,
     )
     print(sorting)
 
@@ -56,7 +56,7 @@ def test_run_sorter_docker():
         raise_error=True,
         docker_image=docker_image,
         with_output=False,
-        **sorter_params
+        **sorter_params,
     )
     assert sorting is None
     # TODO: Add another run with `with_output=True` and check sorting result
@@ -82,7 +82,7 @@ def test_run_sorter_singularity():
         verbose=True,
         raise_error=True,
         singularity_image=singularity_image,
-        **sorter_params
+        **sorter_params,
     )
     print(sorting)
 

@@ -38,7 +38,7 @@ class CrossCorrelogramsWidget(BaseWidget):
         hide_unit_selector=False,
         unit_colors=None,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
             sorting = waveform_or_sorting_extractor.sorting
