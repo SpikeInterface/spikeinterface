@@ -17,5 +17,5 @@ clustering_methods = {
     "sliding_nn": SlidingNNClustering,
     "position_and_features": PositionAndFeaturesClustering,
     "random_projections": RandomProjectionClustering,
-    "circus" : CircusClustering
+    "circus": CircusClustering,
 }

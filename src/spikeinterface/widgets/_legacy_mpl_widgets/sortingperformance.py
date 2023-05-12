@@ -33,12 +33,23 @@ class SortingPerformanceWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, sorting_comparison, metrics,
-                 performance_name='accuracy', metric_name='snr',
-                 color='b', markersize=10, marker='.', figure=None, ax=None):
+    def __init__(
+        self,
+        sorting_comparison,
+        metrics,
+        performance_name="accuracy",
+        metric_name="snr",
+        color="b",
+        markersize=10,
+        marker=".",
+        figure=None,
+        ax=None,
+    ):
         from matplotlib import pyplot as plt
-        assert isinstance(sorting_comparison, GroundTruthComparison), \
-            "The 'sorting_comparison' object should be a GroundTruthComparison instance"
+
+        assert isinstance(
+            sorting_comparison, GroundTruthComparison
+        ), "The 'sorting_comparison' object should be a GroundTruthComparison instance"
         BaseWidget.__init__(self, figure, ax)
         self.sorting_comparison = sorting_comparison
         self.metrics = metrics
@@ -59,7 +70,7 @@ class SortingPerformanceWidget(BaseWidget):
 
         ax = self.ax
 
-        ax.plot(metric, perf, marker=self.marker, markersize=int(self.markersize), ls='', color=self.color)
+        ax.plot(metric, perf, marker=self.marker, markersize=int(self.markersize), ls="", color=self.color)
         ax.set_xlabel(self.metric_name)
         ax.set_ylabel(self.performance_name)
         ax.set_ylim(0, 1.05)

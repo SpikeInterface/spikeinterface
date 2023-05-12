@@ -31,23 +31,34 @@ class AmplitudesWidget(BaseWidget):
     bins : int
         If plot_histogram is True, the number of bins for the amplitude histogram.
         If None this is automatically adjusted, default None
-    plot_legend : bool 
+    plot_legend : bool
         True includes legend in plot, default True
     """
+
     possible_backends = {}
 
-    
-    def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None, unit_colors=None,
-                 segment_index=None, max_spikes_per_unit=None, hide_unit_selector=False, 
-                 plot_histograms=False, bins=None, plot_legend=True, backend=None, **backend_kwargs):
+    def __init__(
+        self,
+        waveform_extractor: WaveformExtractor,
+        unit_ids=None,
+        unit_colors=None,
+        segment_index=None,
+        max_spikes_per_unit=None,
+        hide_unit_selector=False,
+        plot_histograms=False,
+        bins=None,
+        plot_legend=True,
+        backend=None,
+        **backend_kwargs
+    ):
         sorting = waveform_extractor.sorting
         self.check_extensions(waveform_extractor, "spike_amplitudes")
-        sac = waveform_extractor.load_extension('spike_amplitudes')
-        amplitudes = sac.get_data(outputs='by_unit')
+        sac = waveform_extractor.load_extension("spike_amplitudes")
+        amplitudes = sac.get_data(outputs="by_unit")
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids
-    
+
         if unit_colors is None:
             unit_colors = get_some_colors(sorting.unit_ids)
 
@@ -58,9 +69,10 @@ class AmplitudesWidget(BaseWidget):
         else:
             segment_index = 0
         amplitudes_segment = amplitudes[segment_index]
-        total_duration = waveform_extractor.recording.get_num_samples(segment_index) / \
-            waveform_extractor.sampling_frequency
-        
+        total_duration = (
+            waveform_extractor.recording.get_num_samples(segment_index) / waveform_extractor.sampling_frequency
+        )
+
         spiketrains_segment = {}
         for i, unit_id in enumerate(sorting.unit_ids):
             times = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
@@ -102,6 +114,3 @@ class AmplitudesWidget(BaseWidget):
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
-
-
-

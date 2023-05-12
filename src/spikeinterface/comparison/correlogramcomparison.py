@@ -17,7 +17,7 @@ class CorrelogramGTComparison(GroundTruthComparison):
     def __init__(self, gt_sorting, tested_sorting, window_ms=100.0, bin_ms=1.0, well_detected_score=0.8, **kwargs):
 
         # Force compute labels
-        kwargs['compute_labels'] = True
+        kwargs["compute_labels"] = True
 
         if gt_sorting.get_num_segments() > 1 or tested_sorting.get_num_segments() > 1:
             raise NotImplementedError("Correlogram comparison is only available for mono-segment sorting objects")
@@ -33,7 +33,7 @@ class CorrelogramGTComparison(GroundTruthComparison):
 
     @property
     def time_bins(self):
-        return np.linspace(-self.window_ms/2, self.window_ms/2, self.nb_timesteps)
+        return np.linspace(-self.window_ms / 2, self.window_ms / 2, self.nb_timesteps)
 
     def compute_correlograms(self):
 
@@ -45,25 +45,25 @@ class CorrelogramGTComparison(GroundTruthComparison):
         self.good_idx_gt = self.sorting1.ids_to_indices(self.good_gt)
         self.good_idx_sorting = self.sorting2.ids_to_indices(self.good_sorting)
 
-        #order = np.argsort(self.good_idx_gt)
-        #self.good_idx_gt = self.good_idx_gt[order]
+        # order = np.argsort(self.good_idx_gt)
+        # self.good_idx_gt = self.good_idx_gt[order]
 
         if len(self.good_idx_gt) > 0:
             correlograms_1 = correlograms_1[self.good_idx_gt, :, :]
-            self.correlograms['true'] = correlograms_1[:, self.good_idx_gt, :]
+            self.correlograms["true"] = correlograms_1[:, self.good_idx_gt, :]
 
         if len(self.good_idx_sorting) > 0:
             correlograms_2 = correlograms_2[self.good_idx_sorting, :, :]
-            self.correlograms['estimated'] = correlograms_2[:, self.good_idx_sorting, :]
+            self.correlograms["estimated"] = correlograms_2[:, self.good_idx_sorting, :]
 
         if len(self.good_idx_gt) > 0:
-            self.nb_cells = self.correlograms['true'].shape[0]
-            self.nb_timesteps = self.correlograms['true'].shape[2]
+            self.nb_cells = self.correlograms["true"].shape[0]
+            self.nb_timesteps = self.correlograms["true"].shape[2]
         else:
             self.nb_cells = 0
             self.nb_timesteps = 11
-            self.correlograms['true'] = np.zeros((0, 0, self.nb_timesteps))
-            self.correlograms['estimated'] = np.zeros((0, 0, self.nb_timesteps))
+            self.correlograms["true"] = np.zeros((0, 0, self.nb_timesteps))
+            self.correlograms["estimated"] = np.zeros((0, 0, self.nb_timesteps))
 
         self._center = self.nb_timesteps // 2
 
@@ -72,14 +72,15 @@ class CorrelogramGTComparison(GroundTruthComparison):
             amin = 0
             amax = self.nb_timesteps
         else:
-            amin = self._center - int(window_ms/self.bin_ms)
-            amax = self._center + int(window_ms/self.bin_ms) + 1
-
+            amin = self._center - int(window_ms / self.bin_ms)
+            amax = self._center + int(window_ms / self.bin_ms) + 1
 
         res = np.nan * np.ones((self.nb_cells, self.nb_cells, amax - amin))
 
-        indices = np.where(self.correlograms['true'][:,:,amin:amax] > 0)
-        res[indices] = np.abs(1 - self.correlograms['estimated'][:,:,amin:amax]/self.correlograms['true'][:,:,amin:amax])[indices]
+        indices = np.where(self.correlograms["true"][:, :, amin:amax] > 0)
+        res[indices] = np.abs(
+            1 - self.correlograms["estimated"][:, :, amin:amax] / self.correlograms["true"][:, :, amin:amax]
+        )[indices]
 
         return res
 

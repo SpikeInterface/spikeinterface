@@ -3,10 +3,10 @@ from .method_list import *
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 
-def find_cluster_from_peaks(recording, peaks, method='stupid', method_kwargs={}, extra_outputs=False, **job_kwargs):
+def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={}, extra_outputs=False, **job_kwargs):
     """
     Find cluster from peaks.
-    
+
 
     Parameters
     ----------
@@ -30,16 +30,17 @@ def find_cluster_from_peaks(recording, peaks, method='stupid', method_kwargs={},
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    assert method in clustering_methods, f'Method for clustering do not exists, should be in {list(clustering_methods.keys())}'
-    
+    assert (
+        method in clustering_methods
+    ), f"Method for clustering do not exists, should be in {list(clustering_methods.keys())}"
+
     method_class = clustering_methods[method]
     params = method_class._default_params.copy()
     params.update(**method_kwargs)
-    
+
     labels, peak_labels = method_class.main_function(recording, peaks, params)
-    
+
     if extra_outputs:
         raise NotImplementedError
-
 
     return labels, peak_labels

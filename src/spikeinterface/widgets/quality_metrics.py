@@ -42,11 +42,15 @@ class QualityMetricsWidget(MetricsBaseWidget):
 
         sorting = waveform_extractor.sorting
 
-        MetricsBaseWidget.__init__(self, quality_metrics, sorting,
-                                   unit_ids=unit_ids, unit_colors=unit_colors,
-                                   include_metrics=include_metrics, 
-                                   skip_metrics=skip_metrics,
-                                   hide_unit_selector=hide_unit_selector,
-                                   backend=backend, **backend_kwargs)
-
-
+        MetricsBaseWidget.__init__(
+            self,
+            quality_metrics,
+            sorting,
+            unit_ids=unit_ids,
+            unit_colors=unit_colors,
+            include_metrics=include_metrics,
+            skip_metrics=skip_metrics,
+            hide_unit_selector=hide_unit_selector,
+            backend=backend,
+            **backend_kwargs
+        )
