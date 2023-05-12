@@ -54,9 +54,10 @@ class CellExplorerSortingExtractor(BaseSorting):
 
         if spikes_matfile_path is not None:
             # Raise an error if the warning period has expired
-            six_months_from_now = datetime.datetime.now() + datetime.timedelta(days=180)
-            if six_months_from_now > datetime.datetime(2023, 4, 1):
-                raise ValueError("The spikes_matfile_path argument is no longer supported. Use file_path instead.")
+            deprecation_issued =  datetime.datetime(2023, 4, 1)
+            deprecation_deadline = deprecation_issued + datetime.timedelta(days=180)
+            if datetime.datetime.now() > deprecation_deadline:
+                raise ValueError("The spikes_matfile_path argument is no longer supported in. Use file_path instead.")
 
             # Otherwise, issue a DeprecationWarning
             else:
