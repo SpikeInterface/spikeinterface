@@ -37,7 +37,7 @@ class UnitWaveformsWidget(BaseWidget):
         A dict key is unit_id and value is any color format handled by matplotlib.
         If None, then the get_unit_colors() is internally used.
     unit_selected_waveforms: None or dict
-        A dict key is unit_id and value is the subset of waveforms indices that should be 
+        A dict key is unit_id and value is the subset of waveforms indices that should be
         be displayed
     show_all_channels: bool
         Show the whole probe if True, or only selected channels if False
@@ -47,13 +47,24 @@ class UnitWaveformsWidget(BaseWidget):
         and figure parameters are ignored
     """
 
-    def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
-                 plot_waveforms=True, plot_templates=True, plot_channels=False,
-                 unit_colors=None, max_channels=None, radius_um=None,
-                 ncols=5, axes=None, lw=2, axis_equal=False, unit_selected_waveforms=None,
-                 set_title=True
-                 ):
-
+    def __init__(
+        self,
+        waveform_extractor,
+        channel_ids=None,
+        unit_ids=None,
+        plot_waveforms=True,
+        plot_templates=True,
+        plot_channels=False,
+        unit_colors=None,
+        max_channels=None,
+        radius_um=None,
+        ncols=5,
+        axes=None,
+        lw=2,
+        axis_equal=False,
+        unit_selected_waveforms=None,
+        set_title=True,
+    ):
         self.waveform_extractor = waveform_extractor
         self._recording = waveform_extractor.recording
         self._sorting = waveform_extractor.sorting
@@ -76,9 +87,9 @@ class UnitWaveformsWidget(BaseWidget):
         self._plot_channels = plot_channels
 
         if radius_um is not None:
-            assert max_channels is None, 'radius_um and max_channels are mutually exclusive'
+            assert max_channels is None, "radius_um and max_channels are mutually exclusive"
         if max_channels is not None:
-            assert radius_um is None, 'radius_um and max_channels are mutually exclusive'
+            assert radius_um is None, "radius_um and max_channels are mutually exclusive"
 
         self.radius_um = radius_um
         self.max_channels = max_channels
@@ -95,8 +106,6 @@ class UnitWaveformsWidget(BaseWidget):
         else:
             num_axes = None
         BaseWidget.__init__(self, None, None, axes, ncols=ncols, num_axes=num_axes)
-
-
 
     def plot(self):
         self._do_plot()
@@ -115,16 +124,16 @@ class UnitWaveformsWidget(BaseWidget):
         nrows = int(np.ceil(len(unit_ids) / ncols))
 
         if self.radius_um is not None:
-            channel_inds = get_template_channel_sparsity(we, method='radius', outputs='index', radius_um=self.radius_um)
+            channel_inds = get_template_channel_sparsity(we, method="radius", outputs="index", radius_um=self.radius_um)
         elif self.max_channels is not None:
-            channel_inds = get_template_channel_sparsity(we, method='best_channels', outputs='index',
-                                                         num_channels=self.max_channels)
+            channel_inds = get_template_channel_sparsity(
+                we, method="best_channels", outputs="index", num_channels=self.max_channels
+            )
         else:
             # all channels
             channel_inds = {unit_id: slice(None) for unit_id in unit_ids}
 
         for i, unit_id in enumerate(unit_ids):
-
             ax = self.axes.flatten()[i]
             color = self.unit_colors[unit_id]
 
@@ -146,15 +155,15 @@ class UnitWaveformsWidget(BaseWidget):
             if self._plot_templates:
                 template = templates[i, :, :][:, chan_inds] * y_scale + y_offset[:, chan_inds]
                 if self._plot_waveforms and self._plot_templates:
-                    color = 'k'
+                    color = "k"
                 ax.plot(xvectors_flat, template.T.flatten(), lw=1, color=color)
                 template_label = unit_ids[i]
-                ax.set_title(f'template {template_label}')
+                ax.set_title(f"template {template_label}")
 
             # plot channels
             if self._plot_channels:
                 # TODO enhance this
-                ax.scatter(channel_locations[:, 0], channel_locations[:, 1], color='k')
+                ax.scatter(channel_locations[:, 0], channel_locations[:, 1], color="k")
 
 
 def get_waveforms_scales(we, templates, channel_locations):
@@ -168,13 +177,13 @@ def get_waveforms_scales(we, templates, channel_locations):
     if x_chans.size > 1:
         delta_x = np.min(np.diff(x_chans))
     else:
-        delta_x = 40.
+        delta_x = 40.0
 
     y_chans = np.unique(channel_locations[:, 1])
     if y_chans.size > 1:
         delta_y = np.min(np.diff(y_chans))
     else:
-        delta_y = 40.
+        delta_y = 40.0
 
     m = max(np.abs(wf_max), np.abs(wf_min))
     y_scale = delta_y / m * 0.7
@@ -200,7 +209,7 @@ plot_unit_waveforms.__doc__ = UnitWaveformsWidget.__doc__
 
 
 def plot_unit_templates(*args, **kwargs):
-    kwargs['plot_waveforms'] = False
+    kwargs["plot_waveforms"] = False
     W = UnitWaveformsWidget(*args, **kwargs)
     W.plot()
     return W

@@ -9,7 +9,7 @@ class CrossCorrelogramsWidget(BaseWidget):
     """
     Plots spike train cross-correlograms.
     The diagonal is auto-correlogram.
-    
+
     Parameters
     ----------
     sorting: SortingExtractor
@@ -22,9 +22,7 @@ class CrossCorrelogramsWidget(BaseWidget):
         Window duration in ms
     """
 
-    def __init__(self, sorting, unit_ids=None,
-                 window_ms=100.0, bin_ms=1.0, axes=None):
-
+    def __init__(self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0, axes=None):
         if unit_ids is not None:
             sorting = sorting.select_units(unit_ids)
         self.sorting = sorting
@@ -44,14 +42,14 @@ class CrossCorrelogramsWidget(BaseWidget):
                 ccg = correlograms[i, j]
                 ax = self.axes[i, j]
                 if i == j:
-                    color = 'g'
+                    color = "g"
                 else:
-                    color = 'k'
-                ax.bar(x=bins[:-1], height=ccg, width=bin_width, color=color, align='edge')
+                    color = "k"
+                ax.bar(x=bins[:-1], height=ccg, width=bin_width, color=color, align="edge")
 
         for i, unit_id in enumerate(unit_ids):
             self.axes[0, i].set_title(str(unit_id))
-            self.axes[-1, i].set_xlabel('CCG (ms)')
+            self.axes[-1, i].set_xlabel("CCG (ms)")
 
 
 def plot_crosscorrelograms(*args, **kwargs):
@@ -78,10 +76,7 @@ class AutoCorrelogramsWidget(BaseWidget):
         Window duration in ms
     """
 
-    def __init__(self, sorting, unit_ids=None,
-                 window_ms=100.0, bin_ms=1.0,
-                 ncols=5, axes=None):
-
+    def __init__(self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0, ncols=5, axes=None):
         if unit_ids is not None:
             sorting = sorting.select_units(unit_ids)
         self.sorting = sorting
@@ -98,8 +93,8 @@ class AutoCorrelogramsWidget(BaseWidget):
         for i, unit_id in enumerate(unit_ids):
             ccg = correlograms[i, i]
             ax = self.axes.flatten()[i]
-            color = 'g'
-            ax.bar(x=bins[:-1], height=ccg, width=bin_width, color=color, align='edge')
+            color = "g"
+            ax.bar(x=bins[:-1], height=ccg, width=bin_width, color=color, align="edge")
             ax.set_title(str(unit_id))
 
 

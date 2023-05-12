@@ -1,9 +1,15 @@
 import pytest
 from pathlib import Path
 
-from spikeinterface import (set_global_dataset_folder, get_global_dataset_folder,
-                            set_global_tmp_folder, get_global_tmp_folder,
-                            set_global_job_kwargs, get_global_job_kwargs, reset_global_job_kwargs)
+from spikeinterface import (
+    set_global_dataset_folder,
+    get_global_dataset_folder,
+    set_global_tmp_folder,
+    get_global_tmp_folder,
+    set_global_job_kwargs,
+    get_global_job_kwargs,
+    reset_global_job_kwargs,
+)
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 if hasattr(pytest, "global_test_folder"):
@@ -44,18 +50,18 @@ def test_global_job_kwargs():
     # test that fix_job_kwargs grabs global kwargs
     new_job_kwargs = dict(n_jobs=10)
     job_kwargs_split = fix_job_kwargs(new_job_kwargs)
-    assert job_kwargs_split['n_jobs'] == new_job_kwargs['n_jobs']
-    assert job_kwargs_split['chunk_duration'] == job_kwargs['chunk_duration']
-    assert job_kwargs_split['progress_bar'] == job_kwargs['progress_bar']
+    assert job_kwargs_split["n_jobs"] == new_job_kwargs["n_jobs"]
+    assert job_kwargs_split["chunk_duration"] == job_kwargs["chunk_duration"]
+    assert job_kwargs_split["progress_bar"] == job_kwargs["progress_bar"]
     # test that None values do not change existing global kwargs
     none_job_kwargs = dict(n_jobs=None, progress_bar=None, chunk_duration=None)
     job_kwargs_split = fix_job_kwargs(none_job_kwargs)
-    assert job_kwargs_split['chunk_duration'] == job_kwargs['chunk_duration']
-    assert job_kwargs_split['progress_bar'] == job_kwargs['progress_bar']
+    assert job_kwargs_split["chunk_duration"] == job_kwargs["chunk_duration"]
+    assert job_kwargs_split["progress_bar"] == job_kwargs["progress_bar"]
     reset_global_job_kwargs()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_global_dataset_folder()
     test_global_tmp_folder()
     test_global_job_kwargs()

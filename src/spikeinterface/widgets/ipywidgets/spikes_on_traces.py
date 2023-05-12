@@ -15,7 +15,6 @@ from IPython.display import display
 
 
 class SpikesOnTracesPlotter(IpywidgetsPlotter):
-
     def do_plot(self, data_plot, **backend_kwargs):
         ratios = [0.2, 0.8]
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
@@ -25,42 +24,36 @@ class SpikesOnTracesPlotter(IpywidgetsPlotter):
         height_cm = backend_kwargs["height_cm"]
         width_cm = backend_kwargs["width_cm"]
 
-        
         # plot timeseries
         tsplotter = TimeseriesPlotter()
         data_plot["timeseries"]["add_legend"] = False
         tsplotter.do_plot(data_plot["timeseries"], **backend_kwargs_ts)
-        
+
         ts_w = tsplotter.widget
         ts_updater = tsplotter.updater
-        
-        we = data_plot['waveform_extractor']
-        unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'], we.unit_ids,
-                                                            ratios[0] * width_cm, height_cm)
-        
+
+        we = data_plot["waveform_extractor"]
+        unit_widget, unit_controller = make_unit_controller(
+            data_plot["unit_ids"], we.unit_ids, ratios[0] * width_cm, height_cm
+        )
+
         self.controller = ts_updater.controller
         self.controller.update(unit_controller)
-    
+
         mpl_plotter = MplSpikesOnTracesPlotter()
-        
+
         self.updater = PlotUpdater(data_plot, mpl_plotter, ts_updater, self.controller)
         for w in self.controller.values():
             w.observe(self.updater)
-        
-        
-        self.widget = widgets.AppLayout(
-            center=ts_w,
-            left_sidebar=unit_widget,
-            pane_widths=ratios + [0]
-        )
-        
+
+        self.widget = widgets.AppLayout(center=ts_w, left_sidebar=unit_widget, pane_widths=ratios + [0])
+
         # a first update
         self.updater(None)
-        
+
         if backend_kwargs["display"]:
             self.check_backend()
             display(self.widget)
-
 
 
 SpikesOnTracesPlotter.register(SpikesOnTracesWidget)
@@ -70,40 +63,40 @@ class PlotUpdater:
     def __init__(self, data_plot, mpl_plotter, ts_updater, controller):
         self.data_plot = data_plot
         self.mpl_plotter = mpl_plotter
-        
+
         self.ts_updater = ts_updater
         self.ax = ts_updater.ax
         self.fig = self.ax.figure
         self.controller = controller
-    
+
     def __call__(self, change):
         self.ax.clear()
-        
+
         unit_ids = self.controller["unit_ids"].value
-        
+
         # update ts
         # self.ts_updater.__call__(change)
-        
+
         # update data plot
         data_plot = self.data_plot.copy()
         data_plot["timeseries"] = self.ts_updater.next_data_plot
         data_plot["unit_ids"] = unit_ids
-        
+
         backend_kwargs = {}
-        backend_kwargs['ax'] = self.ax
-        
+        backend_kwargs["ax"] = self.ax
+
         self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
-        
+
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
-        
+
         # t = self.time_slider.value
         # d = self.win_sizer.value
-        
+
         # selected_layer = self.layer_selector.value
         # segment_index = self.seg_selector.value
         # mode = self.mode_selector.value
-        
+
         # t_stop = self.t_stops[segment_index]
         # if self.actual_segment_index != segment_index:
         #     # change time_slider limits
@@ -115,7 +108,7 @@ class PlotUpdater:
         #     t = t_stop - d
 
         # time_range = np.array([t, t+d])
-        
+
         # if mode =='line':
         #     # plot all layer
         #     layer_keys = self.data_plot['layer_keys']
@@ -125,7 +118,7 @@ class PlotUpdater:
         #     layer_keys = [selected_layer]
         #     recordings = {selected_layer: self.recordings[selected_layer]}
         #     clims = {selected_layer: self.data_plot["clims"][selected_layer]}
-        
+
         # channel_ids = self.data_plot['channel_ids']
         # order =  self.data_plot['order']
         # times, list_traces, frame_range, order = _get_trace_list(recordings, channel_ids, time_range, order,
@@ -146,8 +139,7 @@ class PlotUpdater:
         # backend_kwargs = {}
         # backend_kwargs['ax'] = self.ax
         # self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
-        
+
         # fig = self.ax.figure
         # fig.canvas.draw()
         # fig.canvas.flush_events()
-
