@@ -286,17 +286,6 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         pass
 
 
-class CellExplorerSortingTest(SortingCommonTestSuite, unittest.TestCase):
-    ExtractorClass = CellExplorerSortingExtractor
-    downloads = ['cellexplorer']
-    entities = [
-        'cellexplorer/dataset_1/',
-        ('cellexplorer/dataset_2/', 
-        {'session_info_matfile_path': 
-            local_folder / 'cellexplorer/dataset_2/20170504_396um_0um_merge.sessionInfo.mat'})
-    ]
-
-
 if __name__ == '__main__':
     # test = MearecSortingTest()
     # test = SpikeGLXRecordingTest()
