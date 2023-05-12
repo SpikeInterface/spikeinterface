@@ -9,6 +9,16 @@ local_folder = get_global_dataset_folder() / 'ephy_testing_data'
 
 
 class CellExplorerSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    """    
+    Notes from the testing suite:
+    Note: dataset_2 and dataset_3 contain mat files with version different from mat version 5.
+
+    dataset_2: sessionInfo is saved as mat version 7.3.
+    dataset_3: spikes.cellinfo is saved as mat version 7.3
+    
+    From version 7.3, mat files are hdf5 files so they can't be loaded with scipy.io.loadmat.
+    """
+    
     ExtractorClass = CellExplorerSortingExtractor
     downloads = ['cellexplorer']
     entities = [

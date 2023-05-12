@@ -37,36 +37,42 @@ class CellExplorerSortingExtractor(BaseSorting):
 
     def __init__(
         self,
-        file_path: str | Path,
+        file_path: str | Path | None = None,
         sampling_frequency: float | None = None,
         session_info_matfile_path: str | Path | None = None,
-        spikes_matfile_path: str | Path | None = None,  
+        spikes_matfile_path: str | Path | None = None,
     ):
         try:
             import h5py
             import scipy.io
         except ImportError:
             raise ImportError(self.installation_mesg)
-        
+
+        assert (
+            file_path is not None or spikes_matfile_path is not None
+        ), "Either file_path or spikes_matfile_path must be provided!"
 
         if spikes_matfile_path is not None:
             # Raise an error if the warning period has expired
             six_months_from_now = datetime.datetime.now() + datetime.timedelta(days=180)
-            if six_months_from_now > datetime.datetime(2023, 4,1):
+            if six_months_from_now > datetime.datetime(2023, 4, 1):
                 raise ValueError("The spikes_matfile_path argument is no longer supported. Use file_path instead.")
+
             # Otherwise, issue a DeprecationWarning
             else:
-                warnings.warn("The spikes_matfile_path argument is deprecated and will be removed in six months. "
-                            "Use file_path instead.", DeprecationWarning)
+                warnings.warn(
+                    "The spikes_matfile_path argument is deprecated and will be removed in six months. "
+                    "Use file_path instead.",
+                    DeprecationWarning,
+                )
             file_path = spikes_matfile_path if file_path is None else file_path
-            
-        
+
         self.spikes_cellinfo_path = Path(file_path).absolute()
         assert self.spikes_cellinfo_path.is_file(), f"The spikes.cellinfo.mat file must exist in {self.folder_path}!"
-        
+
         self.folder_path = self.spikes_cellinfo_path.parent
         self.session_info_matfile_path = session_info_matfile_path
-        
+
         self.session_id = self.spikes_cellinfo_path.stem.split(".")[0]
 
         read_as_hdf5 = False
@@ -80,17 +86,17 @@ class CellExplorerSortingExtractor(BaseSorting):
             spikes_mat = matlab_file["spikes"]
             assert isinstance(spikes_mat, h5py.Group), f"field `spikes` must be a Group, not {type(spikes_mat)}!"
             read_as_hdf5 = True
-            
+
         if sampling_frequency is None:
             # First try the new format of spikes.cellinfo.mat files where sampling rate is included in the file
             sr_data = spikes_mat.get("sr", None)
-            sampling_frequency = sr_data[()] if isinstance(sr_data, h5py.Dataset) else None 
-        
+            sampling_frequency = sr_data[()] if isinstance(sr_data, h5py.Dataset) else None
+
         if sampling_frequency is None:
             sampling_frequency = self._retrieve_sampling_frequency_from_session_info()
-        
+
         sampling_frequency = float(sampling_frequency)
-        
+
         unit_ids_available = "UID" in spikes_mat.keys()
         assert unit_ids_available, f"The `spikes struct` must contain field 'UID'! fields: {spikes_mat.keys()}"
 
@@ -99,7 +105,7 @@ class CellExplorerSortingExtractor(BaseSorting):
 
         unit_ids = spikes_mat["UID"]
         spike_times = spikes_mat["times"]
-        
+
         if read_as_hdf5:
             assert isinstance(unit_ids, h5py.Dataset), f"`unit_ids` must be a Dataset, not {type(unit_ids)}!"
             assert isinstance(spike_times, h5py.Dataset), f"`spike_times` must be a Dataset, not {type(spike_times)}!"
@@ -122,17 +128,29 @@ class CellExplorerSortingExtractor(BaseSorting):
         self.add_sorting_segment(sorting_segment)
 
         self.extra_requirements.append("scipy")
-        
+
         self._kwargs = dict(
             file_path=str(self.spikes_cellinfo_path),
             sampling_frequency=sampling_frequency,
-            session_info_matfile_path=str(session_info_matfile_path)
+            session_info_matfile_path=str(session_info_matfile_path),
         )
 
     def _retrieve_sampling_frequency_from_session_info(self) -> float:
+        """
+        Retrieve the sampling frequency from the `sessionInfo.mat` file when available.
+
+        This function tries to locate a .sessionInfo.mat file corresponding to the current session. It then loads this
+        file (either as a standard .mat file or as an HDF5 file if the former is not possible) and extracts the wideband
+        sampling frequency from the 'rates' field of the 'sessionInfo' struct.
+
+        Returns
+        -------
+        float
+            The wideband sampling frequency for the current session.
+        """
         import h5py
         import scipy.io
-            
+
         if self.session_info_matfile_path is None:
             self.session_info_matfile_path = self.folder_path / f"{self.session_id}.sessionInfo.mat"
 
@@ -140,8 +158,8 @@ class CellExplorerSortingExtractor(BaseSorting):
         assert (
             self.session_info_matfile_path.is_file()
         ), f"No {self.session_id}.sessionInfo.mat file found in the {self.folder_path}!, can't inferr sampling rate"
-        
-        read_as_hdf5 = False 
+
+        read_as_hdf5 = False
         try:
             session_info_mat = scipy.io.loadmat(file_name=str(self.session_info_matfile_path), simplify_cells=True)
         except NotImplementedError:
