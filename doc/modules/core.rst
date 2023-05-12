@@ -205,7 +205,6 @@ In addition, waveforms can also be extracted in-memory for fast computations (:c
 Note that this mode can quickly fill up your RAM... Use it wisely!
 Finally, an existing :py:class:`~spikeinterface.core.WaveformExtractor` can be saved also in :code:`zarr` format.
 
-
 .. code-block:: python
 
     # extract dense waveforms on 500 spikes per unit
@@ -245,6 +244,26 @@ Finally, an existing :py:class:`~spikeinterface.core.WaveformExtractor` can be s
                                   max_spikes_per_unit=500, sparse=True, 
                                   method="radius", radius_um=40,
                                   num_spikes_for_sparsity=50)
+
+
+**IMPORTANT:** to load a waveform extractor object from disk, it needs to be able to reload the associated 
+:code:`sorting` object (the :code:`reccording` is optional). In order to make a waveform folder portable 
+(e.g. copied to another location or machine), one can do:
+
+.. code-block:: python
+
+    # create a "processed" folder
+    processed_folder = Path("processed")
+
+    # save the sorting object in the "processed" folder
+    sorting = sorting.save(folder=processed_folder / "sorting")
+    # extract waveforms using relative paths
+    we = extract_waveforms(recording, sorting, folder=processed_folder / "waveforms",
+                           use_relative_path=True)
+    # the "processed" folder is now portable, and the waveform extractor can be reloaded 
+    # from a different location/machine
+    we_loaded = si.load_waveforms(processed_folder / "waveforms")
+
 
 Event
 -----
