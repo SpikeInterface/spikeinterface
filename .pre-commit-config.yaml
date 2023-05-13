@@ -9,4 +9,4 @@ repos:
     rev: 23.3.0
     hooks:
     -   id: black
-        exclude: '^(doc|examples|spikeinterface|installation_tips)/'
+        files: ^src/
