@@ -566,8 +566,15 @@ class BaseExtractor:
         This function is used by pickle to serialize the object.
         """
         instance_constructor = self.from_dict
-        intialization_args = (self.to_dict(), )
+        intialization_args = (self.prepare_for_pickling(), )
         return (instance_constructor, intialization_args)
+    
+    def prepare_for_pickling(self):
+        
+        extractor_as_dict = self.to_dict()
+        extractor_as_dict = {key: (value.to_dict() if hasattr(value, 'to_dict') else value) for key, value in extractor_as_dict.items()}
+        
+        return extractor_as_dict
 
     @staticmethod
     def load_from_folder(folder):
