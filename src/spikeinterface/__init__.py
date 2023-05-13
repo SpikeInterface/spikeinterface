@@ -8,7 +8,8 @@ __version__ = importlib.metadata.version("spikeinterface")
 from .core import *
 
 import warnings
-warnings.simplefilter('always', DeprecationWarning)
+warnings.filterwarnings("ignore", message="distutils Version classes are deprecated")
+warnings.filterwarnings("ignore", message="the imp module is deprecated")
 
 """
 submodules are imported only if needed
