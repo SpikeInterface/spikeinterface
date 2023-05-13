@@ -571,10 +571,8 @@ class BaseExtractor:
     
     def prepare_for_pickling(self):
         
-        extractor_as_dict = self.to_dict()
-        extractor_as_dict = {key: (value.to_dict() if hasattr(value, 'to_dict') else value) for key, value in extractor_as_dict.items()}
         
-        return extractor_as_dict
+        return self.to_dict()
 
     @staticmethod
     def load_from_folder(folder):

@@ -8,7 +8,7 @@ __version__ = importlib.metadata.version("spikeinterface")
 from .core import *
 
 import warnings
-warnings.simplefilter('always', DeprecationWarning)
+warnings.simplefilter('ignore', DeprecationWarning)
 
 """
 submodules are imported only if needed
