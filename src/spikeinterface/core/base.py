@@ -293,6 +293,16 @@ class BaseExtractor:
         dump_dict: dict
             Serialized dictionary
         """
+        to_dict_kwargs = dict(include_annotations=include_annotations, include_properties=include_properties,
+                            relative_to=relative_to, folder_metadata=folder_metadata)
+        for name, value in self._kwargs.items():
+            if isinstance(value, list):
+                transform_to_dict = lambda x: x.to_dict(**to_dict_kwargs) if isinstance(x, BaseExtractor) else x
+                new_list = [transform_to_dict(element) for element in value]
+                self._kwargs[name] = new_list
+            elif isinstance(value, BaseExtractor):
+                self._kwargs[name] = value.to_dict(**to_dict_kwargs)
+        
         class_name = str(type(self)).replace("<class '", "").replace("'>", '')
         module = class_name.split('.')[0]
         imported_module = importlib.import_module(module)
