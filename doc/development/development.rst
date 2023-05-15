@@ -20,7 +20,7 @@ We use a forking workflow <https://www.atlassian.com/git/tutorials/comparing-wor
 * Create a new branch (e.g., :code:git switch -c my-contribution).
 * Modify the code, commit, and push changes to your fork.
 * Open a pull request from the "Pull Requests" tab of your fork to :code:spikeinterface/main.
-* By following this process, we can review the code and even make changes as necessary. 
+* By following this process, we can review the code and even make changes as necessary.
 
 While we appreciate all the contributions please be mindful of the cost of reviewing pull requests <https://rgommers.github.io/2019/06/the-cost-of-an-open-source-contribution/>_ .
 
@@ -52,7 +52,7 @@ If you want to run a specific test in a specific file, you can use the following
 
     pytest pytest src/spikeinterface/core/tests/test_baserecording.py::specific_test_in_this_module
 
-We also mantain pytest markers to run specific tests. For example, if you want to run only the tests 
+We also mantain pytest markers to run specific tests. For example, if you want to run only the tests
 for the :code:`spikeinterface.extractors` module, you can use the following command:
 
 .. code-block:: bash
@@ -69,7 +69,7 @@ Note that you should install the package before running the tests. You can do th
 
 You can change the :code:`[test,extractors,full]` to install only the dependencies you need. The dependencies are specified in the :code:`pyproject.toml` file in the root of the repository.
 
-The specific environment for the CI is specified in the :code:`.github/actions/build-test-environment/action.yml` and you can 
+The specific environment for the CI is specified in the :code:`.github/actions/build-test-environment/action.yml` and you can
 find the full tests in the :code:`.github/workflows/full_test.yml` file.
 
 The extractor tests require datalad for some of the tests. Here are instructions for installing datalad:
@@ -156,22 +156,22 @@ Note, however, that the running time of the command above will be slow. If you w
 Implement a new extractor
 -------------------------
 
-SpikeInterface already supports over 30 file formats, but the acquisition system you use might not be among the 
-supported formats list (***ref***). Most of the extractord rely on the `NEO <https://github.com/NeuralEnsemble/python-neo>`_ 
+SpikeInterface already supports over 30 file formats, but the acquisition system you use might not be among the
+supported formats list (***ref***). Most of the extractord rely on the `NEO <https://github.com/NeuralEnsemble/python-neo>`_
 package to read information from files.
 Therefore, to implement a new extractor to handle the unsupported format, we recommend make a new `neo.rawio `_ class.
-Once that is done, the new class can be easily wrapped into SpikeInterface as an extension of the 
-:py:class:`~spikeinterface.extractors.neoextractors.neobaseextractors.NeoBaseRecordingExtractor` 
-(for :py:class:`~spikeinterface.core.BaseRecording` objects) or 
-:py:class:`~spikeinterface.extractors.neoextractors.neobaseextractors.NeoBaseRecordingExtractor` 
-(for py:class:`~spikeinterface.core.BaseSorting` objects) or with a few lines of 
-code (e.g., see reader for `SpikeGLX <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/neoextractors/spikeglx.py>`_ 
-or `Neuralynx <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/neoextractors/neuralynx.py>`_). 
+Once that is done, the new class can be easily wrapped into SpikeInterface as an extension of the
+:py:class:`~spikeinterface.extractors.neoextractors.neobaseextractors.NeoBaseRecordingExtractor`
+(for :py:class:`~spikeinterface.core.BaseRecording` objects) or
+:py:class:`~spikeinterface.extractors.neoextractors.neobaseextractors.NeoBaseRecordingExtractor`
+(for py:class:`~spikeinterface.core.BaseSorting` objects) or with a few lines of
+code (e.g., see reader for `SpikeGLX <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/neoextractors/spikeglx.py>`_
+or `Neuralynx <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/neoextractors/neuralynx.py>`_).
 
-**NOTE:** implementing a `neo.rawio` Class is not required, but recommended. Several extractors (especially) for Sorting 
+**NOTE:** implementing a `neo.rawio` Class is not required, but recommended. Several extractors (especially) for Sorting
 objects are implemented directly in SpikeInterface and inherit from the base classes.
-As examples, see the `CompressedBinaryIblExtractor <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/cbin_ibl.py>`_ 
-for a :py:class:`~spikeinterface.core.BaseRecording` object, or the `SpykingCircusSortingExtractor <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/spykingcircusextractors.py>`_ 
+As examples, see the `CompressedBinaryIblExtractor <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/cbin_ibl.py>`_
+for a :py:class:`~spikeinterface.core.BaseRecording` object, or the `SpykingCircusSortingExtractor <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/spykingcircusextractors.py>`_
 for a a :py:class:`~spikeinterface.core.BaseSorting` object.
 
 
@@ -309,4 +309,3 @@ but we recommend testing the implementation locally.
 After this you need to add a block in doc/sorters_info.rst
 
 Finally, make a pull request to the spikesorters repo, so we can review the code and merge it to the spikesorters!
-

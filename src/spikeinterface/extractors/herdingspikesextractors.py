@@ -2,11 +2,12 @@ from pathlib import Path
 
 import numpy as np
 
-from spikeinterface.core import (BaseSorting, BaseSortingSegment)
+from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import h5py
+
     HAVE_HS2SX = True
 except ImportError:
     HAVE_HS2SX = False
@@ -28,35 +29,37 @@ class HerdingspikesSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = 'HS2Sorting'
+    extractor_name = "HS2Sorting"
     installed = HAVE_HS2SX  # check at class level if installed or not
-    mode = 'file'
-    installation_mesg = "To use the HS2SortingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
+    mode = "file"
+    installation_mesg = (
+        "To use the HS2SortingExtractor install h5py: \n\n pip install h5py\n\n"  # error message when not installed
+    )
     name = "herdingspikes"
 
     def __init__(self, file_path, load_unit_info=True):
         assert self.installed, self.installation_mesg
 
         self._recording_file = file_path
-        self._rf = h5py.File(self._recording_file, mode='r')
-        if 'Sampling' in self._rf:
-            if self._rf['Sampling'][()] == 0:
+        self._rf = h5py.File(self._recording_file, mode="r")
+        if "Sampling" in self._rf:
+            if self._rf["Sampling"][()] == 0:
                 sampling_frequency = None
             else:
-                sampling_frequency = self._rf['Sampling'][()]
+                sampling_frequency = self._rf["Sampling"][()]
 
-        spike_ids = self._rf['cluster_id'][()]
+        spike_ids = self._rf["cluster_id"][()]
         unit_ids = np.unique(spike_ids)
-        spike_times = self._rf['times'][()]
+        spike_times = self._rf["times"][()]
 
         if load_unit_info:
             self.load_unit_info()
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.add_sorting_segment(HerdingspikesSortingSegment(unit_ids, spike_times, spike_ids))
-        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'load_unit_info': load_unit_info}
+        self._kwargs = {"file_path": str(Path(file_path).absolute()), "load_unit_info": load_unit_info}
 
-        self.extra_requirements.append('h5py')
+        self.extra_requirements.append("h5py")
 
     def load_unit_info(self):
         # TODO

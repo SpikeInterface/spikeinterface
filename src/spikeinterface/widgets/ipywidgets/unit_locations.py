@@ -16,9 +16,7 @@ from IPython.display import display
 
 
 class UnitLocationsPlotter(IpywidgetsPlotter):
-
     def do_plot(self, data_plot, **backend_kwargs):
-
         cm = 1 / 2.54
 
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
@@ -30,14 +28,13 @@ class UnitLocationsPlotter(IpywidgetsPlotter):
         with plt.ioff():
             output = widgets.Output()
             with output:
-                fig, ax = plt.subplots(
-                    figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
+                fig, ax = plt.subplots(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
-        data_plot['unit_ids'] = data_plot['unit_ids'][:1]
-        unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'],
-                                                            list(data_plot['unit_colors'].keys()),
-                                                            ratios[0] * width_cm, height_cm)
+        data_plot["unit_ids"] = data_plot["unit_ids"][:1]
+        unit_widget, unit_controller = make_unit_controller(
+            data_plot["unit_ids"], list(data_plot["unit_colors"].keys()), ratios[0] * width_cm, height_cm
+        )
 
         self.controller = unit_controller
 
@@ -80,13 +77,13 @@ class PlotUpdater:
 
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
-        data_plot['unit_ids'] = unit_ids
-        data_plot['plot_all_units'] = True
-        data_plot['plot_legend'] = True
-        data_plot['hide_axis'] = True
+        data_plot["unit_ids"] = unit_ids
+        data_plot["plot_all_units"] = True
+        data_plot["plot_legend"] = True
+        data_plot["hide_axis"] = True
 
         backend_kwargs = {}
-        backend_kwargs['ax'] = self.ax
+        backend_kwargs["ax"] = self.ax
 
         self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
         fig = self.ax.get_figure()

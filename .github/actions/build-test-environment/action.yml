@@ -8,13 +8,13 @@ inputs:
   os:
     description: 'Operating system to set up'
     required: false
-    
+
 runs:
   using: "composite"
   steps:
     - name: Install dependencies
       run: |
-        sudo apt install git 
+        sudo apt install git
         git config --global user.email "CI@example.com"
         git config --global user.name "CI Almighty"
         python -m venv ${{ github.workspace }}/test_env # Environment used in the caching step

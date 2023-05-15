@@ -12,10 +12,10 @@ the spike sorting output. Most of the post-processing functions require a
 WaveformExtractor extensions
 ----------------------------
 
-There are several postprocessing tools available, and all 
+There are several postprocessing tools available, and all
 of them are implemented as a :py:class:`~spikeinterface.core.BaseWaveformExtractorExtension`. All computations on top
 of a WaveformExtractor will be saved along side the WaveformExtractor itself (sub  folder, zarr path or sub dict).
-This workflow is convenient for retrieval of time-consuming computations (such as pca or spike amplitudes) when reloading a 
+This workflow is convenient for retrieval of time-consuming computations (such as pca or spike amplitudes) when reloading a
 WaveformExtractor.
 
 :py:class:`~spikeinterface.core.BaseWaveformExtractorExtension`  objects are tightly connected to the
@@ -43,7 +43,7 @@ To load the extension object you can run:
     ext = we.load_extension("spike_amplitudes")
     ext_data = ext.get_data()
 
-Here :code:`ext` is the extension object (in this case the :code:`SpikeAmplitudeCalculator`), and :code:`ext_data` will 
+Here :code:`ext` is the extension object (in this case the :code:`SpikeAmplitudeCalculator`), and :code:`ext_data` will
 contain the actual amplitude data. Note that different extensions might have different ways to return the extension.
 You can use :code:`ext.get_data?` for documentation.
 
@@ -65,7 +65,7 @@ noise_levels
 This extension computes the noise level of each channel using the median absolute deviation.
 As an extension, this expects the :code:`WaveformExtractor` as input and the computed values are persistent on disk.
 
-The :py:func:`~spikeinterface.core.get_noise_levels(recording)` computes the same values, but starting from a recording 
+The :py:func:`~spikeinterface.core.get_noise_levels(recording)` computes the same values, but starting from a recording
 and without saving the data as an extension.
 
 
@@ -91,9 +91,9 @@ template_similarity
 ^^^^^^^^^^^^^^^^^^^
 
 
-This extension computes the similarity of the templates to each other. This information could be used for automatic 
-merging. Currently, the only available similarity method is the cosine similarity, which is the angle between the 
-high-dimensional flattened template arrays. Note that cosine similarity does not take into account amplitude differences 
+This extension computes the similarity of the templates to each other. This information could be used for automatic
+merging. Currently, the only available similarity method is the cosine similarity, which is the angle between the
+high-dimensional flattened template arrays. Note that cosine similarity does not take into account amplitude differences
 and is not well suited for high-density probes.
 
 
@@ -104,10 +104,10 @@ For more information, see :py:func:`~spikeinterface.postprocessing.compute_templ
 spike_amplitudes
 ^^^^^^^^^^^^^^^^
 
-This extension computes the amplitude of each spike as the value of the traces on the extremum channel at the times of 
+This extension computes the amplitude of each spike as the value of the traces on the extremum channel at the times of
 each spike.
 
-**NOTE:** computing spike amplitudes is highly recommended before calculating amplitude-based quality metrics, such as 
+**NOTE:** computing spike amplitudes is highly recommended before calculating amplitude-based quality metrics, such as
 :ref:`amp_cutoff` and :ref:`amp_median`.
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_spike_amplitudes`
@@ -117,9 +117,9 @@ spike_locations
 ^^^^^^^^^^^^^^^
 
 
-This extension estimates the location of each spike in the sorting output. Spike location estimates can be done either 
-with center of mass (:code:`method="center_of_mass"` - fast, but less accurate), or using a monopolar triangulation 
-(:code:`method="monopolar_triangulation"` - slow, but more accurate). 
+This extension estimates the location of each spike in the sorting output. Spike location estimates can be done either
+with center of mass (:code:`method="center_of_mass"` - fast, but less accurate), or using a monopolar triangulation
+(:code:`method="monopolar_triangulation"` - slow, but more accurate).
 
 **NOTE:** computing spike locations is required to compute :ref:`drift_metrics`.
 
@@ -132,7 +132,7 @@ unit locations
 
 
 This extension is similar to the :code:`spike_locations`, but instead of estimating a location for each spike
-based on individual waveforms, it calculates at the unit level using templates. The same localization methods 
+based on individual waveforms, it calculates at the unit level using templates. The same localization methods
 (:code:`method="center_of_mass" | "monopolar_triangulation"`) are available.
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_unit_locations`
@@ -141,7 +141,7 @@ For more information, see :py:func:`~spikeinterface.postprocessing.compute_unit_
 template_metrics
 ^^^^^^^^^^^^^^^^
 
-This extension computes commonly used waveform/template metrics. 
+This extension computes commonly used waveform/template metrics.
 By default, the following metrics are computed:
 
 * "peak_to_valley": duration between negative and positive peaks
@@ -152,7 +152,7 @@ By default, the following metrics are computed:
 
 .. figure:: ../images/1d_waveform_features.png
 
-    Visualization of template metrics. Image from `ecephys_spike_sorting <https://github.com/AllenInstitute/ecephys_spike_sorting/tree/v0.2/ecephys_spike_sorting/modules/mean_waveforms>`_ 
+    Visualization of template metrics. Image from `ecephys_spike_sorting <https://github.com/AllenInstitute/ecephys_spike_sorting/tree/v0.2/ecephys_spike_sorting/modules/mean_waveforms>`_
     from the Allen Institute.
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_template_metrics`
@@ -161,7 +161,7 @@ For more information, see :py:func:`~spikeinterface.postprocessing.compute_templ
 correlograms
 ^^^^^^^^^^^^
 
-This extension computes correlograms (both auto- and cross-) for spike trains. The computed output is a 3d array 
+This extension computes correlograms (both auto- and cross-) for spike trains. The computed output is a 3d array
 with shape (num_units, num_units, num_bins) with all correlograms for each pair of units (diagonals are auto-correlograms).
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_correlograms`
@@ -170,7 +170,7 @@ For more information, see :py:func:`~spikeinterface.postprocessing.compute_corre
 isi_histograms
 ^^^^^^^^^^^^^^
 
-This extension computes the histograms of inter-spike-intervals. The computed output is a 2d array with shape 
+This extension computes the histograms of inter-spike-intervals. The computed output is a 2d array with shape
 (num_units, num_bins), with the isi histogram of each unit.
 
 For more information, see :py:func:`~spikeinterface.postprocessing.compute_isi_histograms`
