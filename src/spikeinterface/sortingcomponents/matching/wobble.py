@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 
 from .main import BaseTemplateMatchingEngine
 
-
 @dataclass
 class WobbleParameters:
     """Parameters for the WobbleMatch algorithm.
@@ -47,18 +46,17 @@ class WobbleParameters:
      if their amplitude clears the threshold parameter.
 
     """
-
     amplitude_variance: float = 0
     max_iter: int = 1_000
     jitter_factor: int = 8
-    threshold: float = 30  # TODO : Add units to threshold? (ex. thresold_uV) --> benchmark
+    threshold: float = 30 # TODO : Add units to threshold? (ex. thresold_uV) --> benchmark
     approx_rank: int = 5
     visibility_threshold: float = 1
     verbose: bool = False
     template_indices2unit_indices: Optional[np.ndarray] = None
-    refractory_period_frames: int = 10  # TODO : convert to refractory_period_ms --> benchmark
-    scale_min: float = 0
-    scale_max: float = np.inf
+    refractory_period_frames: int = 10 # TODO : convert to refractory_period_ms --> benchmark
+    scale_min : float = 0
+    scale_max : float = np.inf
     scale_amplitudes: bool = False
 
     def __post_init__(self):
@@ -110,23 +108,22 @@ class TemplateMetadata:
     A 'unit' refers to a putative neuron which may have one or more 'templates' of its spike waveform.
     Each 'template' may have many upsampled 'jittered_templates' depending on the 'jitter_factor'.
     """
-
-    num_samples: int
-    num_channels: int
-    num_units: int
-    num_templates: int
-    num_jittered: int
-    unit_indices: np.ndarray
-    template_indices: np.ndarray
-    jittered_indices: np.ndarray
-    template_indices2unit_indices: np.ndarray
-    unit_indices2template_indices: List[set]
-    overlapping_spike_buffer: int
-    peak_window: np.ndarray
-    peak_window_len: int
-    jitter_window: np.ndarray
-    jitter2template_shift: np.ndarray
-    jitter2spike_time_shift: np.ndarray
+    num_samples : int
+    num_channels : int
+    num_units : int
+    num_templates : int
+    num_jittered : int
+    unit_indices : np.ndarray
+    template_indices : np.ndarray
+    jittered_indices : np.ndarray
+    template_indices2unit_indices : np.ndarray
+    unit_indices2template_indices : List[set]
+    overlapping_spike_buffer : int
+    peak_window : np.ndarray
+    peak_window_len : int
+    jitter_window : np.ndarray
+    jitter2template_shift : np.ndarray
+    jitter2spike_time_shift : np.ndarray
 
     @classmethod
     def from_parameters_and_templates(cls, params, templates):
@@ -149,9 +146,8 @@ class TemplateMetadata:
         if params.template_indices2unit_indices is None:  # Trivial grouping of templates = units
             template_indices2unit_indices = np.arange(num_templates)
         else:
-            assert params.template_indices2unit_indices.shape == (
-                templates.shape[0],
-            ), "template_indices2unit_indices must have shape (num_templates,)"
+            assert params.template_indices2unit_indices.shape == (templates.shape[0],), \
+                "template_indices2unit_indices must have shape (num_templates,)"
             template_indices2unit_indices = params.template_indices2unit_indices
         unit_indices = np.unique(template_indices2unit_indices)
         num_units = len(unit_indices)
@@ -162,9 +158,7 @@ class TemplateMetadata:
             unit_indices2template_indices.append(template_indices_of_unit)
         num_jittered = num_templates * params.jitter_factor
         jittered_indices = np.arange(num_jittered)
-        overlapping_spike_buffer = (
-            num_samples - 1
-        )  # makes sure two overlapping spikes aren't subtracted at the same time
+        overlapping_spike_buffer = num_samples - 1  # makes sure two overlapping spikes aren't subtracted at the same time
 
         # TODO: Benchmark peak_radius with alternative expressions
         peak_radius = (params.jitter_factor // 2) + (params.jitter_factor % 2)  # Empirical --> needs to be benchmarked
@@ -176,22 +170,13 @@ class TemplateMetadata:
         )
         jitter2spike_time_shift = np.concatenate(([0], np.array([0, 1]).repeat(peak_radius)))
         template_meta = cls(
-            num_samples=num_samples,
-            num_channels=num_channels,
-            num_units=num_units,
-            num_templates=num_templates,
+            num_samples=num_samples, num_channels=num_channels, num_units=num_units, num_templates=num_templates,
             num_jittered=num_jittered,
-            unit_indices=unit_indices,
-            template_indices=template_indices,
-            jittered_indices=jittered_indices,
-            template_indices2unit_indices=template_indices2unit_indices,
-            unit_indices2template_indices=unit_indices2template_indices,
-            overlapping_spike_buffer=overlapping_spike_buffer,
-            peak_window=peak_window,
-            peak_window_len=peak_window_len,
-            jitter_window=jitter_window,
-            jitter2template_shift=jitter2template_shift,
-            jitter2spike_time_shift=jitter2spike_time_shift,
+            unit_indices=unit_indices, template_indices=template_indices, jittered_indices=jittered_indices,
+            template_indices2unit_indices=template_indices2unit_indices, unit_indices2template_indices=unit_indices2template_indices,
+            overlapping_spike_buffer=overlapping_spike_buffer, peak_window=peak_window, peak_window_len=peak_window_len,
+            jitter_window=jitter_window, jitter2template_shift=jitter2template_shift,
+            jitter2spike_time_shift=jitter2spike_time_shift
         )
         return template_meta
 
@@ -208,9 +193,8 @@ class Sparsity:
         unit_overlap[i, j] is True if there exists at least one channel on which both jittered template i and template j
         are visible.
     """
-
-    visible_channels: np.ndarray
-    unit_overlap: np.ndarray
+    visible_channels : np.ndarray
+    unit_overlap : np.ndarray
 
     @classmethod
     def from_parameters_and_templates(cls, params, templates):
@@ -229,13 +213,13 @@ class Sparsity:
             Dataclass object for aggregating channel sparsity variables together.
         """
         visible_channels = np.ptp(templates, axis=1) > params.visibility_threshold
-        unit_overlap = np.sum(
-            np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]), axis=2
-        )
+        unit_overlap = np.sum(np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]),
+                              axis=2)
         unit_overlap = unit_overlap > 0
         unit_overlap = np.repeat(unit_overlap, params.jitter_factor, axis=0)
         sparsity = cls(visible_channels=visible_channels, unit_overlap=unit_overlap)
         return sparsity
+
 
 
 @dataclass
@@ -259,10 +243,9 @@ class TemplateData:
     norm_squared : ndarray (num_templates,)
         Magnitude of each template for normalization.
     """
-
-    compressed_templates: Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
-    pairwise_convolution: List[np.ndarray]
-    norm_squared: np.ndarray
+    compressed_templates : Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+    pairwise_convolution : List[np.ndarray]
+    norm_squared : np.ndarray
     temporal: Optional[np.ndarray] = None
     singular: Optional[np.ndarray] = None
     spatial: Optional[np.ndarray] = None
@@ -305,17 +288,11 @@ class WobbleMatch(BaseTemplateMatchingEngine):
     - 'spikes' refer to putative extracellular action potentials (EAPs)
     - 'peaks' are considered spikes if their amplitude clears the threshold parameter
     """
-
     default_params = {
-        "waveform_extractor": None,
+        'waveform_extractor' : None,
     }
-    spike_dtype = [
-        ("sample_index", "int64"),
-        ("channel_index", "int64"),
-        ("cluster_index", "int64"),
-        ("amplitude", "float64"),
-        ("segment_index", "int64"),
-    ]
+    spike_dtype = [('sample_index', 'int64'), ('channel_index', 'int64'), ('cluster_index', 'int64'),
+                   ('amplitude', 'float64'), ('segment_index', 'int64')]
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
@@ -334,42 +311,38 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             Updated Keyword arguments.
         """
         d = cls.default_params.copy()
-        required_kwargs_keys = ["nbefore", "nafter", "templates"]
+        required_kwargs_keys = ['nbefore', 'nafter', 'templates']
         for required_key in required_kwargs_keys:
             assert required_key in kwargs, f"`{required_key}` is a required key in the kwargs"
-        parameters = kwargs.get("parameters", {})
-        templates = kwargs["templates"]
-        templates = templates.astype(np.float32, casting="safe")
+        parameters = kwargs.get('parameters', {})
+        templates = kwargs['templates']
+        templates = templates.astype(np.float32, casting='safe')
 
         # Aggregate useful parameters/variables for handy access in downstream functions
         params = WobbleParameters(**parameters)
         template_meta = TemplateMetadata.from_parameters_and_templates(params, templates)
-        sparsity = Sparsity.from_parameters_and_templates(
-            params, templates
-        )  # TODO: replace with spikeinterface sparsity
+        sparsity = Sparsity.from_parameters_and_templates(params, templates) # TODO: replace with spikeinterface sparsity
 
         # Perform initial computations on templates necessary for computing the objective
         sparse_templates = np.where(sparsity.visible_channels[:, np.newaxis, :], templates, 0)
         temporal, singular, spatial = compress_templates(sparse_templates, params.approx_rank)
         temporal_jittered = upsample_and_jitter(temporal, params.jitter_factor, template_meta.num_samples)
         compressed_templates = (temporal, singular, spatial, temporal_jittered)
-        pairwise_convolution = convolve_templates(
-            compressed_templates, params.jitter_factor, params.approx_rank, template_meta.jittered_indices, sparsity
-        )
+        pairwise_convolution = convolve_templates(compressed_templates, params.jitter_factor, params.approx_rank,
+                                                  template_meta.jittered_indices, sparsity)
         norm_squared = compute_template_norm(sparsity.visible_channels, templates)
-        template_data = TemplateData(
-            compressed_templates=compressed_templates,
-            pairwise_convolution=pairwise_convolution,
-            norm_squared=norm_squared,
-        )
+        template_data = TemplateData(compressed_templates=compressed_templates,
+                                     pairwise_convolution=pairwise_convolution,
+                                     norm_squared=norm_squared)
 
         # Pack initial data into kwargs
-        kwargs["params"] = params
-        kwargs["template_meta"] = template_meta
-        kwargs["sparsity"] = sparsity
-        kwargs["template_data"] = template_data
+        kwargs['params'] = params
+        kwargs['template_meta'] = template_meta
+        kwargs['sparsity'] = sparsity
+        kwargs['template_data'] = template_data
         d.update(kwargs)
         return d
+
 
     @classmethod
     def serialize_method_kwargs(cls, kwargs):
@@ -400,7 +373,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         """
         buffer_ms = 10
         # margin = int(buffer_ms*1e-3 * recording.sampling_frequency)
-        margin = 300  # To ensure equivalence with spike-psvae version of the algorithm
+        margin = 300 # To ensure equivalence with spike-psvae version of the algorithm
         return margin
 
     @classmethod
@@ -420,14 +393,14 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             Resulting spike train.
         """
         # Unpack method_kwargs
-        nbefore, nafter = method_kwargs["nbefore"], method_kwargs["nafter"]
-        template_meta = method_kwargs["template_meta"]
-        params = method_kwargs["params"]
-        sparsity = method_kwargs["sparsity"]
-        template_data = method_kwargs["template_data"]
+        nbefore, nafter = method_kwargs['nbefore'], method_kwargs['nafter']
+        template_meta = method_kwargs['template_meta']
+        params = method_kwargs['params']
+        sparsity = method_kwargs['sparsity']
+        template_data = method_kwargs['template_data']
 
         # Check traces
-        traces = traces.astype(np.float32, casting="safe")  # ensure traces are specified as np.float32
+        traces = traces.astype(np.float32, casting='safe') # ensure traces are specified as np.float32
 
         # Compute objective
         objective = compute_objective(traces, template_data, params.approx_rank)
@@ -437,9 +410,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         spike_trains, scalings, distance_metrics = [], [], []
         for i in range(params.max_iter):
             # find peaks
-            spike_train, scaling, distance_metric = cls.find_peaks(
-                objective, objective_normalized, params, template_data, template_meta
-            )
+            spike_train, scaling, distance_metric = cls.find_peaks(objective, objective_normalized, params,
+                                                                   template_data, template_meta)
             if len(spike_train) == 0:
                 break
 
@@ -449,9 +421,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             distance_metrics.extend(list(distance_metric))
 
             # subtract newly detected spike train from traces (via the objective)
-            objective, objective_normalized = cls.subtract_spike_train(
-                spike_train, scaling, template_data, objective, objective_normalized, params, template_meta, sparsity
-            )
+            objective, objective_normalized = cls.subtract_spike_train(spike_train, scaling, template_data, objective,
+                                                                       objective_normalized, params, template_meta,
+                                                                       sparsity)
 
         spike_train = np.array(spike_trains)
         scalings = np.array(scalings)
@@ -466,8 +438,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         distance_metric = distance_metric[index]
 
         # adjust spike_train
-        spike_train[:, 0] += nbefore  # beginning of template --> center of template
-        spike_train[:, 1] //= params.jitter_factor  # jittered_index --> template_index
+        spike_train[:, 0] += nbefore # beginning of template --> center of template
+        spike_train[:, 1] //= params.jitter_factor # jittered_index --> template_index
 
         # TODO : Benchmark spike amplitudes
         # Find spike amplitudes / channels
@@ -480,12 +452,14 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         # assign result to spikes array
         spikes = np.zeros(spike_train.shape[0], dtype=cls.spike_dtype)
-        spikes["sample_index"] = spike_train[:, 0]
-        spikes["cluster_index"] = spike_train[:, 1]
-        spikes["channel_index"] = channel_inds
-        spikes["amplitude"] = amplitudes
+        spikes['sample_index'] = spike_train[:, 0]
+        spikes['cluster_index'] = spike_train[:, 1]
+        spikes['channel_index'] = channel_inds
+        spikes['amplitude'] = amplitudes
 
         return spikes
+
+
 
     # TODO: Replace this method with equivalent from spikeinterface
     @classmethod
@@ -522,7 +496,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         # Get spike times (indices) using peaks in the objective
         objective_template_max = np.max(objective_normalized, axis=0)
         spike_window = (template_meta.num_samples - 1, objective_normalized.shape[1] - template_meta.num_samples)
-        objective_windowed = objective_template_max[spike_window[0] : spike_window[1]]
+        objective_windowed = objective_template_max[spike_window[0]:spike_window[1]]
         spike_time_indices = signal.argrelmax(objective_windowed, order=template_meta.num_samples - 1)[0]
         spike_time_indices += template_meta.num_samples - 1
         objective_spikes = objective_template_max[spike_time_indices]
@@ -534,15 +508,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
 
         # Find the best upsampled template
         spike_template_indices = np.argmax(objective_normalized[:, spike_time_indices], axis=0)
-        high_res_shifts = cls.calculate_high_res_shift(
-            spike_time_indices,
-            spike_template_indices,
-            objective,
-            objective_normalized,
-            template_data,
-            params,
-            template_meta,
-        )
+        high_res_shifts = cls.calculate_high_res_shift(spike_time_indices, spike_template_indices, objective,
+                                                       objective_normalized, template_data, params, template_meta)
         template_shift, time_shift, non_refractory_indices, scaling = high_res_shifts
 
         # Update unit_indices, spike_times, and scalings
@@ -554,16 +521,16 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             scalings[non_refractory_indices] = scaling
 
         # Generate new spike train from spike times (indices)
-        convolution_correction = -1 * (template_meta.num_samples - 1)  # convolution indices --> raw_indices
+        convolution_correction = -1*(template_meta.num_samples - 1) # convolution indices --> raw_indices
         spike_time_indices += convolution_correction
         new_spike_train = np.array([spike_time_indices, spike_jittered_indices]).T
 
         return new_spike_train, scalings, distance_metric
 
+
     @classmethod
-    def subtract_spike_train(
-        cls, spike_train, scalings, template_data, objective, objective_normalized, params, template_meta, sparsity
-    ):
+    def subtract_spike_train(cls, spike_train, scalings, template_data, objective, objective_normalized,
+                             params, template_meta, sparsity):
         """Subtract spike train of templates from the objective directly.
 
         Parameters
@@ -602,27 +569,19 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             # TODO: If optimizing for speed -- check this loop
             for spike_start_index, spike_scaling in zip(id_spiketrain, id_scaling):
                 spike_stop_index = spike_start_index + convolution_resolution_len
-                objective_normalized[overlapping_templates, spike_start_index:spike_stop_index] -= 2 * pconv
+                objective_normalized[overlapping_templates, spike_start_index:spike_stop_index] -= 2*pconv
                 if params.scale_amplitudes:
                     pconv_scaled = pconv * spike_scaling
                     objective[overlapping_templates, spike_start_index:spike_stop_index] -= pconv_scaled
 
-            objective, objective_normalized = cls.enforce_refractory(
-                spike_train, objective, objective_normalized, params, template_meta
-            )
+            objective, objective_normalized = cls.enforce_refractory(spike_train, objective, objective_normalized,
+                                                                     params, template_meta)
         return objective, objective_normalized
 
+
     @classmethod
-    def calculate_high_res_shift(
-        cls,
-        spike_time_indices,
-        spike_unit_indices,
-        objective,
-        objective_normalized,
-        template_data,
-        params,
-        template_meta,
-    ):
+    def calculate_high_res_shift(cls, spike_time_indices, spike_unit_indices, objective, objective_normalized,
+                                 template_data, params, template_meta):
         """Determines optimal shifts when super-resolution, scaled templates are used.
 
         Parameters
@@ -673,7 +632,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         objective_normalized[spike_unit_indices[peak_is_refractory], refractory_indices] = -1 * np.inf
         non_refractory_indices = np.flatnonzero(np.logical_not(peak_is_refractory))
         objective_peaks = objective_peaks[:, non_refractory_indices]
-        if objective_peaks.shape[1] == 0:  # no non-refractory peaks --> exit function
+        if objective_peaks.shape[1] == 0: # no non-refractory peaks --> exit function
             return np.array([]), np.array([]), np.array([]), np.array([])
 
         # Upsample and compute optimal template shift
@@ -693,9 +652,8 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             # Find template norms for detected peaks only
             norm_peaks = template_data.norm_squared[spike_unit_indices[non_refractory_indices]]
 
-            high_res_objective, scalings = compute_scale_amplitudes(
-                high_resolution_conv, norm_peaks, params.scale_min, params.scale_max, params.amplitude_variance
-            )
+            high_res_objective, scalings = compute_scale_amplitudes(high_resolution_conv, norm_peaks, params.scale_min,
+                                                              params.scale_max, params.amplitude_variance)
             jitter = np.argmax(high_res_objective[template_meta.jitter_window, :], axis=0)
             scalings = scalings[jitter, np.arange(len(non_refractory_indices))]
 
@@ -703,6 +661,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         template_shift = template_meta.jitter2template_shift[jitter]
         time_shift = template_meta.jitter2spike_time_shift[jitter]
         return template_shift, time_shift, non_refractory_indices, scalings
+
 
     @classmethod
     def enforce_refractory(cls, spike_train, objective, objective_normalized, params, template_meta):
@@ -728,7 +687,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         objective_normalized : ndarray (num_templates, traces.shape[0]+template_meta.num_samples-1)
             Template matching objective normalized by the magnitude of each template.
         """
-        window = np.arange(-params.refractory_period_frames, params.refractory_period_frames + 1)
+        window = np.arange(-params.refractory_period_frames, params.refractory_period_frames+1)
 
         # Adjust cluster IDs so that they match original templates
         spike_times = spike_train[:, 0]
@@ -737,17 +696,15 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         # We want to enforce refractory conditions on unit_indices rather than template_indices for units with many templates
         spike_unit_indices = spike_template_indices.copy()
         for template_index in set(spike_template_indices):
-            unit_index = template_meta.template_indices2unit_indices[
-                template_index
-            ]  # unit_index corresponding to this template
-            spike_unit_indices[spike_template_indices == template_index] = unit_index
+            unit_index = template_meta.template_indices2unit_indices[template_index] # unit_index corresponding to this template
+            spike_unit_indices[spike_template_indices==template_index] = unit_index
 
         # Get the samples (time indices) that correspond to the waveform for each spike
         waveform_samples = get_convolution_len(spike_times[:, np.newaxis], template_meta.num_samples) + window
 
         # Enforce refractory by setting objective to negative infinity in invalid regions
         objective_normalized[spike_unit_indices[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
-        if params.scale_amplitudes:  # template_convolution is only used with amplitude scaling
+        if params.scale_amplitudes: # template_convolution is only used with amplitude scaling
             objective[spike_unit_indices[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
         return objective, objective_normalized
 
@@ -770,7 +727,9 @@ def compute_template_norm(visible_channels, templates):
     num_templates = templates.shape[0]
     norm_squared = np.zeros(num_templates, dtype=np.float32)
     for i in range(num_templates):
-        norm_squared[i] = np.sum(np.square(templates[i, :, visible_channels[i, :]]))
+        norm_squared[i] = np.sum(
+            np.square(templates[i, :, visible_channels[i, :]])
+        )
     return norm_squared
 
 
@@ -798,7 +757,6 @@ def compress_templates(templates, approx_rank):
     spatial = spatial[:, :approx_rank, :]
     return temporal, singular, spatial
 
-
 def upsample_and_jitter(temporal, jitter_factor, num_samples):
     """Upsample the temporal components of the templates and re-index to obtain the jittered templates.
 
@@ -822,7 +780,7 @@ def upsample_and_jitter(temporal, jitter_factor, num_samples):
 
     approx_rank = temporal.shape[2]
     num_samples_super_res = num_samples * jitter_factor
-    temporal_flipped = np.flip(temporal, axis=1)  # TODO: why do we need to flip the temporal components?
+    temporal_flipped = np.flip(temporal, axis=1) # TODO: why do we need to flip the temporal components?
     temporal_jittered = signal.resample(temporal_flipped, num_samples_super_res, axis=1)
 
     original_index = np.arange(0, num_samples_super_res, jitter_factor)  # indices of original data
@@ -888,7 +846,8 @@ def convolve_templates(compressed_templates, jitter_factor, approx_rank, jittere
             spatially_filtered_template = np.matmul(visible_template, spatial_filters)
             scaled_filtered_template = spatially_filtered_template * singular_overlapped
             for i in range(approx_rank):
-                pconv[j, :] += np.convolve(scaled_filtered_template[:, i], temporal_overlapped[:, i], "full")
+                pconv[j, :] += np.convolve(scaled_filtered_template[:, i], temporal_overlapped[:, i],
+                                                   'full')
         pairwise_convolution.append(pconv)
     return pairwise_convolution
 
@@ -925,9 +884,9 @@ def compute_objective(traces, template_data, approx_rank):
         # TODO: vectorize this loop
         for template_index in range(num_templates):
             template_temporal_filter = temporal_filters[template_index]
-            objective[template_index, :] += np.convolve(
-                scaled_filtered_data[template_index, :], template_temporal_filter, mode="full"
-            )
+            objective[template_index, :] += np.convolve(scaled_filtered_data[template_index, :],
+                                                     template_temporal_filter,
+                                                     mode='full')
     return objective
 
 

@@ -6,13 +6,14 @@ from .base_mpl import MplPlotter
 
 
 class AllAmplitudesDistributionsPlotter(MplPlotter):
+
     def do_plot(self, data_plot, **backend_kwargs):
         dp = to_attr(data_plot)
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         self.make_mpl_figure(**backend_kwargs)
-
+        
         ax = self.ax
-
+        
         unit_amps = []
         for i, unit_id in enumerate(dp.unit_ids):
             amps = []
@@ -22,10 +23,10 @@ class AllAmplitudesDistributionsPlotter(MplPlotter):
             unit_amps.append(amps)
         parts = ax.violinplot(unit_amps, showmeans=False, showmedians=False, showextrema=False)
 
-        for i, pc in enumerate(parts["bodies"]):
+        for i, pc in enumerate(parts['bodies']):
             color = dp.unit_colors[dp.unit_ids[i]]
             pc.set_facecolor(color)
-            pc.set_edgecolor("black")
+            pc.set_edgecolor('black')
             pc.set_alpha(1)
 
         ax.set_xticks(np.arange(len(dp.unit_ids)) + 1)
@@ -38,4 +39,10 @@ class AllAmplitudesDistributionsPlotter(MplPlotter):
             ax.set_ylim(0, max(ylims))
 
 
+
+
 AllAmplitudesDistributionsPlotter.register(AllAmplitudesDistributionsWidget)
+
+
+
+   

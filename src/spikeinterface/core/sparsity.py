@@ -10,7 +10,7 @@ _sparsity_doc = """
         * "radius": radius around the best channel. Use the 'radius_um' argument to specify the radius in um
         * "snr": threshold based on template signal-to-noise ratio. Use the 'threshold' argument
                  to specify the SNR threshold.
-        * "energy": threshold based on the expected energy that should be present on the channels,
+        * "energy": threshold based on the expected energy that should be present on the channels, 
                     given their noise levels. Use the 'threshold' argument to specify the SNR threshold
         * "by_property": sparsity is given by a property of the recording and sorting(e.g. 'group').
                          Use the 'by_property' argument to specify the property name.
@@ -58,7 +58,7 @@ class ChannelSparsity:
 
     Examples
     --------
-
+    
     The class can also be used to construct/estimate the sparsity from a Waveformextractor
     with several methods:
 
@@ -77,15 +77,14 @@ class ChannelSparsity:
     >>> sparsity = ChannelSparsity.from_energy(we, threshold, peak_sign='neg')
 
     Using a recording/sorting property (e.g. 'group'):
-
+    
     >>> sparsity = ChannelSparsity.from_property(we, by_property="group")
 
     """
-
     def __init__(self, mask, unit_ids, channel_ids):
         self.unit_ids = np.asarray(unit_ids)
         self.channel_ids = np.asarray(channel_ids)
-        self.mask = np.asarray(mask, dtype="bool")
+        self.mask = np.asarray(mask, dtype='bool')
         assert self.mask.shape[0] == self.unit_ids.shape[0]
         assert self.mask.shape[1] == self.channel_ids.shape[0]
 
@@ -95,7 +94,7 @@ class ChannelSparsity:
 
     def __repr__(self):
         ratio = np.mean(self.mask)
-        txt = f"ChannelSparsity - units: {self.unit_ids.size} - channels: {self.channel_ids.size} - ratio: {ratio:0.2f}"
+        txt = f'ChannelSparsity - units: {self.unit_ids.size} - channels: {self.channel_ids.size} - ratio: {ratio:0.2f}'
         return txt
 
     @property
@@ -106,7 +105,7 @@ class ChannelSparsity:
                 channel_inds = np.flatnonzero(self.mask[unit_ind, :])
                 self._unit_id_to_channel_ids[unit_id] = self.channel_ids[channel_inds]
         return self._unit_id_to_channel_ids
-
+    
     @property
     def unit_id_to_channel_indices(self):
         if self._unit_id_to_channel_indices is None:
@@ -123,7 +122,7 @@ class ChannelSparsity:
         """
         unit_ids = list(unit_ids)
         channel_ids = list(channel_ids)
-        mask = np.zeros((len(unit_ids), len(channel_ids)), dtype="bool")
+        mask = np.zeros((len(unit_ids), len(channel_ids)), dtype='bool')
         for unit_id, chan_ids in unit_id_to_channel_ids.items():
             unit_ind = unit_ids.index(unit_id)
             channel_inds = [channel_ids.index(chan_id) for chan_id in chan_ids]
@@ -143,25 +142,25 @@ class ChannelSparsity:
     @classmethod
     def from_dict(cls, d):
         unit_id_to_channel_ids_corrected = {}
-        for unit_id in d["unit_ids"]:
-            if unit_id in d["unit_id_to_channel_ids"]:
-                unit_id_to_channel_ids_corrected[unit_id] = d["unit_id_to_channel_ids"][unit_id]
+        for unit_id in d['unit_ids']:
+            if unit_id in d['unit_id_to_channel_ids']:
+                unit_id_to_channel_ids_corrected[unit_id] = d['unit_id_to_channel_ids'][unit_id]
             else:
-                unit_id_to_channel_ids_corrected[unit_id] = d["unit_id_to_channel_ids"][str(unit_id)]
-        d["unit_id_to_channel_ids"] = unit_id_to_channel_ids_corrected
+                unit_id_to_channel_ids_corrected[unit_id] = d['unit_id_to_channel_ids'][str(unit_id)]
+        d['unit_id_to_channel_ids'] = unit_id_to_channel_ids_corrected
 
         return cls.from_unit_id_to_channel_ids(**d)
 
     ## Some convinient function to compute sparsity from several strategy
     @classmethod
-    def from_best_channels(cls, we, num_channels, peak_sign="neg"):
+    def from_best_channels(cls, we, num_channels, peak_sign='neg'):
         """
         Construct sparsity from N best channels with the largest amplitude.
         Use the 'num_channels' argument to specify the number of channels.
         """
         from .template_tools import get_template_amplitudes
 
-        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype="bool")
+        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
         peak_values = get_template_amplitudes(we, peak_sign=peak_sign)
         for unit_ind, unit_id in enumerate(we.unit_ids):
             chan_inds = np.argsort(np.abs(peak_values[unit_id]))[::-1]
@@ -170,32 +169,32 @@ class ChannelSparsity:
         return cls(mask, we.unit_ids, we.channel_ids)
 
     @classmethod
-    def from_radius(cls, we, radius_um, peak_sign="neg"):
+    def from_radius(cls, we, radius_um, peak_sign='neg'):
         """
         Construct sparsity from a radius around the best channel.
         Use the 'radius_um' argument to specify the radius in um
         """
         from .template_tools import get_template_extremum_channel
 
-        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype="bool")
+        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
         locations = we.get_channel_locations()
         distances = np.linalg.norm(locations[:, np.newaxis] - locations[np.newaxis, :], axis=2)
         best_chan = get_template_extremum_channel(we, peak_sign=peak_sign, outputs="index")
         for unit_ind, unit_id in enumerate(we.unit_ids):
             chan_ind = best_chan[unit_id]
-            (chan_inds,) = np.nonzero(distances[chan_ind, :] <= radius_um)
+            chan_inds, = np.nonzero(distances[chan_ind, :] <= radius_um)
             mask[unit_ind, chan_inds] = True
         return cls(mask, we.unit_ids, we.channel_ids)
 
     @classmethod
-    def from_snr(cls, we, threshold, peak_sign="neg"):
+    def from_snr(cls, we, threshold, peak_sign='neg'):
         """
         Construct sparsity from a thresholds based on template signal-to-noise ratio.
         Use the 'threshold' argument to specify the SNR threshold.
         """
         from .template_tools import get_template_amplitudes
 
-        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype="bool")
+        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
 
         peak_values = get_template_amplitudes(we, peak_sign=peak_sign, mode="extremum")
         noise = get_noise_levels(we.recording, return_scaled=we.return_scaled)
@@ -210,7 +209,7 @@ class ChannelSparsity:
         Construct sparsity from a threshold based on per channel energy ratio.
         Use the 'threshold' argument to specify the SNR threshold.
         """
-        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype="bool")
+        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
         noise = np.sqrt(we.nsamples) * get_noise_levels(we.recording, return_scaled=we.return_scaled)
         for unit_ind, unit_id in enumerate(we.unit_ids):
             wfs = we.get_waveforms(unit_id)
@@ -229,13 +228,12 @@ class ChannelSparsity:
         assert by_property in we.recording.get_property_keys(), f"Property {by_property} is not a recording property"
         assert by_property in we.sorting.get_property_keys(), f"Property {by_property} is not a sorting property"
 
-        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype="bool")
+        mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype='bool')
         rec_by = we.recording.split_by(by_property)
         for unit_ind, unit_id in enumerate(we.unit_ids):
             unit_property = we.sorting.get_property(by_property)[unit_ind]
-            assert (
-                unit_property in rec_by.keys()
-            ), f"Unit property {unit_property} cannot be found in the recording properties"
+            assert unit_property in rec_by.keys(), (
+                   f"Unit property {unit_property} cannot be found in the recording properties")
             chan_inds = we.recording.ids_to_indices(rec_by[unit_property].get_channel_ids())
             mask[unit_ind, chan_inds] = True
         return cls(mask, we.unit_ids, we.channel_ids)
@@ -245,7 +243,7 @@ class ChannelSparsity:
         """
         Create a sparsity object with all selected channel for all units.
         """
-        mask = np.ones((we.unit_ids.size, we.channel_ids.size), dtype="bool")
+        mask = np.ones((we.unit_ids.size, we.channel_ids.size), dtype='bool')
         return cls(mask, we.unit_ids, we.channel_ids)
 
 
@@ -254,24 +252,24 @@ def compute_sparsity(
     method="radius",
     peak_sign="neg",
     num_channels=5,
-    radius_um=100.0,
+    radius_um=100.,
     threshold=5,
     by_property=None,
 ):
     """
-        Get channel sparsity (subset of channels) for each template with several methods.
+    Get channel sparsity (subset of channels) for each template with several methods.
 
-        Parameters
-        ----------
-        waveform_extractor: WaveformExtractor
-            The waveform extractor
+    Parameters
+    ----------
+    waveform_extractor: WaveformExtractor
+        The waveform extractor
 
-    {}
+{}
 
-        Returns
-        -------
-        sparsity: ChannelSparsity
-            The estimated sparsity
+    Returns
+    -------
+    sparsity: ChannelSparsity
+        The estimated sparsity
     """
     if method == "best_channels":
         assert num_channels is not None, "For the 'best_channels' method, 'num_channels' needs to be given"

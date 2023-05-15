@@ -11,14 +11,12 @@ from spikeinterface.core.core_tools import define_function_from_class
 try:
     from pynwb import NWBHDF5IO, NWBFile
     from pynwb.ecephys import ElectricalSeries, ElectrodeGroup
-
     HAVE_NWB = True
 except ModuleNotFoundError:
     HAVE_NWB = False
 
 try:
     import h5py
-
     HAVE_H5PY = True
 except:
     HAVE_H5PY = False
@@ -72,7 +70,9 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
             item.name: item for item in nwbfile.all_children() if isinstance(item, ElectricalSeries)
         }
         if electrical_series_name not in electrical_series_dict:
-            raise ValueError(f"{electrical_series_name} not found in the NWBFile. ")
+            raise ValueError(
+                f"{electrical_series_name} not found in the NWBFile. "
+            )
         electrical_series = electrical_series_dict[electrical_series_name]
     else:
         electrical_series_list: List[ElectricalSeries] = [
@@ -149,6 +149,7 @@ def read_nwbfile(
 
     nwbfile = io.read()
     return nwbfile
+
 
 
 class NwbRecordingExtractor(BaseRecording):

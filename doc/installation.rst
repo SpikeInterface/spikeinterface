@@ -12,7 +12,7 @@ To install the current release version, you can use:
 
    pip install spikeinterface[full]
 
-The :code:`[full]` option installs all the extra dependencies for all the different sub-modules.
+The :code:`[full]` option installs all the extra dependencies for all the different sub-modules. 
 
 Note that if using Z shell (:code:`zsh` - the default shell on mac), you will need to use quotes (:code:`pip install "spikeinterface[full]"`).
 
@@ -37,9 +37,9 @@ From source
 -----------
 
 As :code:`spikeinterface` is undergoing a heavy development phase, it is sometimes convenient to install from source
-to get the latest bug fixes and improvements. We recommend constructing the package within a
-[virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/)
-to prevent potential conflicts with local dependencies.
+to get the latest bug fixes and improvements. We recommend constructing the package within a 
+[virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) 
+to prevent potential conflicts with local dependencies. 
 
 .. code-block:: bash
 
@@ -62,7 +62,7 @@ as :code:`spikeinterface` strongly relies on these packages to interface with va
    pip install git+https://github.com/SpikeInterface/probeinterface.git
 
 
-It is also sometimes useful to have local copies of :code: `neo` and :code:`probeinterface` to make changes to the code. To achieve this, repeat the first set of commands,
+It is also sometimes useful to have local copies of :code: `neo` and :code:`probeinterface` to make changes to the code. To achieve this, repeat the first set of commands, 
 replacing `https://github.com/SpikeInterface/spikeinterface.git` with the appropriate repository in the first code block of this section.
 
 For beginners
@@ -97,5 +97,5 @@ Sub-modules have more dependencies, so you should also install:
   * matplotlib
 
 
-All external spike sorters can be either run inside containers (Docker or Singularity - see :ref:`containerizedsorters`)
+All external spike sorters can be either run inside containers (Docker or Singularity - see :ref:`containerizedsorters`) 
 or must be installed independently (see :ref:`installsorters`).

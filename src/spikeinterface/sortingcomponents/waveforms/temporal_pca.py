@@ -30,13 +30,8 @@ class TemporalPCBaseNode(WaveformsNode):
         if waveform_extractor is None:
             raise TypeError(f"TemporalPCA should have a single {WaveformsNode.__name__} in its parents")
 
-        super().__init__(
-            recording,
-            waveform_extractor.ms_before,
-            waveform_extractor.ms_after,
-            return_output=return_output,
-            parents=parents,
-        )
+        super().__init__(recording, waveform_extractor.ms_before, waveform_extractor.ms_after,
+            return_output=return_output, parents=parents)
 
         self.model_folder_path = model_folder_path
 

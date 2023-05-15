@@ -24,12 +24,12 @@ class PositionPTPScaledClustering:
         "ptps": None,
         "scales": (1, 1, 10),
         "peak_localization_kwargs": {"method": "center_of_mass"},
-        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M", "verbose": True, "progress_bar": True},
+        'job_kwargs' : {'n_jobs' : -1, 'chunk_memory' : '10M', 'verbose' : True, 'progress_bar' : True},
         "hdbscan_kwargs": {
             "min_cluster_size": 20,
             "min_samples": 20,
             "allow_single_cluster": True,
-            "core_dist_n_jobs": -1,
+            "core_dist_n_jobs" : -1
         },
         "debug": False,
         "tmp_folder": None,
@@ -45,7 +45,9 @@ class PositionPTPScaledClustering:
                 localize_peaks,
             )
 
-            peak_locations = localize_peaks(recording, peaks, **d["peak_localization_kwargs"])
+            peak_locations = localize_peaks(
+                recording, peaks, **d["peak_localization_kwargs"]
+            )
         else:
             peak_locations = d["peak_locations"]
 
@@ -57,9 +59,11 @@ class PositionPTPScaledClustering:
         locations = np.stack([peak_locations[k] for k in location_keys], axis=1)
 
         if d["ptps"] is None:
-            (ptps,) = compute_features_from_peaks(
-                recording, peaks, ["ptp"], feature_params={"ptp": {"all_channels": True}}, **d["job_kwargs"]
-            )
+            ptps, = compute_features_from_peaks(recording,
+                peaks,
+                ['ptp'],
+                feature_params={'ptp' : {'all_channels': True}},
+                **d["job_kwargs"])
         else:
             ptps = d["ptps"]
 
@@ -81,7 +85,9 @@ class PositionPTPScaledClustering:
 
             fig1, ax = plt.subplots()
             kwargs = dict(
-                probe_shape_kwargs=dict(facecolor="w", edgecolor="k", lw=0.5, alpha=0.3),
+                probe_shape_kwargs=dict(
+                    facecolor="w", edgecolor="k", lw=0.5, alpha=0.3
+                ),
                 contacts_kargs=dict(alpha=0.5, edgecolor="k", lw=0.5, facecolor="w"),
             )
             si.plot_probe_map(recording, ax=ax, **kwargs)
