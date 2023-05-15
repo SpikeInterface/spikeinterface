@@ -8,6 +8,7 @@ from spikeinterface.core import generate_recording
 from spikeinterface.core.core_tools import write_binary_recording, write_memory_recording, recursive_path_modifier
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
 from spikeinterface.core.generate import GeneratorRecording
+
 try:
     from multiprocessing.shared_memory import SharedMemory
 
@@ -45,6 +46,7 @@ def test_write_binary_recording(tmp_path):
     )
     assert np.allclose(recorder_binary.get_traces(), recording.get_traces())
 
+
 def test_write_binary_recording_parallel(tmp_path):
     # Test write_binary_recording() with parallel processing (n_jobs=2)
 
@@ -54,7 +56,10 @@ def test_write_binary_recording_parallel(tmp_path):
     dtype = "float32"
     durations = [10.30, 3.5]
     recording = GeneratorRecording(
-        durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency, dtype=dtype,
+        durations=durations,
+        num_channels=num_channels,
+        sampling_frequency=sampling_frequency,
+        dtype=dtype,
     )
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
@@ -93,7 +98,7 @@ def test_write_binary_recording_multiple_segment(tmp_path):
     recorder_binary = BinaryRecordingExtractor(
         file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
     )
-    
+
     for segment_index in range(recording.get_num_segments()):
         binary_traces = recorder_binary.get_traces(segment_index=segment_index)
         recording_traces = recording.get_traces(segment_index=segment_index)
@@ -109,48 +114,42 @@ def test_write_memory_recording():
     # write with loop
     write_memory_recording(recording, dtype=None, verbose=True, n_jobs=1)
 
-    write_memory_recording(recording, dtype=None,
-                           verbose=True, n_jobs=1, chunk_memory='100k', progress_bar=True)
+    write_memory_recording(recording, dtype=None, verbose=True, n_jobs=1, chunk_memory="100k", progress_bar=True)
 
-    if HAVE_SHAREDMEMORY and platform.system() != 'Windows':
+    if HAVE_SHAREDMEMORY and platform.system() != "Windows":
         # write parrallel
-        write_memory_recording(recording, dtype=None,
-                               verbose=False, n_jobs=2, chunk_memory='100k')
+        write_memory_recording(recording, dtype=None, verbose=False, n_jobs=2, chunk_memory="100k")
 
         # write parrallel
-        write_memory_recording(recording, dtype=None,
-                               verbose=False, n_jobs=2, total_memory='200k', progress_bar=True)
-
+        write_memory_recording(recording, dtype=None, verbose=False, n_jobs=2, total_memory="200k", progress_bar=True)
 
 
 def test_recursive_path_modifier():
     # this test nested depth 2 path modifier
     d = {
-        'kwargs':{
-            'path' : '/yep/path1',
-            'recording': {
-                'module': 'mock_module',
-                'class': 'mock_class',
-                'version': '1.2',
-                'annotations': {},
-                'kwargs': {
-                    'path':'/yep/path2'
-                },
-            
-            }
+        "kwargs": {
+            "path": "/yep/path1",
+            "recording": {
+                "module": "mock_module",
+                "class": "mock_class",
+                "version": "1.2",
+                "annotations": {},
+                "kwargs": {"path": "/yep/path2"},
+            },
         }
     }
 
-    d2  =recursive_path_modifier(d, lambda p: p.replace('/yep', '/yop'))
-    assert d2['kwargs']['path'].startswith('/yop')
-    assert d2['kwargs']['recording']['kwargs'] ['path'].startswith('/yop')
+    d2 = recursive_path_modifier(d, lambda p: p.replace("/yep", "/yop"))
+    assert d2["kwargs"]["path"].startswith("/yop")
+    assert d2["kwargs"]["recording"]["kwargs"]["path"].startswith("/yop")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Create a temporary folder using the standard library
     import tempfile
+
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp_path = Path(tmpdirname)
         test_write_binary_recording_with_chunk_memory(tmp_path)
-        #test_write_memory_recording()
-        #test_recursive_path_modifier()
+        # test_write_memory_recording()
+        # test_recursive_path_modifier()
