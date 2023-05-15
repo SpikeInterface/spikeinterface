@@ -42,11 +42,11 @@ toolkit:
   * add dtype option in filters and improved docstrings
   * implement sparsity with threshold
   * fix filtering for uint signals
-  
+
 comparison:
   * fix and rename MultiSortingComparison.save_to_folder()/load_from_folder()
   * improve the collision comparison and study framework
-  
+
 widgets:
  * add plot_probe kwargs in plot_probe_map
  * add widget collisions
@@ -58,4 +58,3 @@ export:
 
 doc:
   * fix typos and grammar
-  

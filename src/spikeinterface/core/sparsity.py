@@ -10,7 +10,7 @@ _sparsity_doc = """
         * "radius": radius around the best channel. Use the 'radius_um' argument to specify the radius in um
         * "snr": threshold based on template signal-to-noise ratio. Use the 'threshold' argument
                  to specify the SNR threshold.
-        * "energy": threshold based on the expected energy that should be present on the channels, 
+        * "energy": threshold based on the expected energy that should be present on the channels,
                     given their noise levels. Use the 'threshold' argument to specify the SNR threshold
         * "by_property": sparsity is given by a property of the recording and sorting(e.g. 'group').
                          Use the 'by_property' argument to specify the property name.
