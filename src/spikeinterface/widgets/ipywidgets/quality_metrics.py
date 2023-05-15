@@ -3,7 +3,7 @@ from .metrics import MetricsPlotter
 
 
 class QualityMetricsPlotter(MetricsPlotter):
-    pass        
+    pass
 
 
 QualityMetricsPlotter.register(QualityMetricsWidget)
