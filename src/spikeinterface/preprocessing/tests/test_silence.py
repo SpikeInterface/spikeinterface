@@ -20,6 +20,7 @@ else:
 
 set_global_tmp_folder(cache_folder)
 
+
 def test_silence():
     rec = generate_recording()
 
@@ -49,5 +50,5 @@ def test_silence():
     assert not np.all(traces_mix[:-200] == 0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_silence()

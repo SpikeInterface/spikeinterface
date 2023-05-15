@@ -20,26 +20,25 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
     unit_colors: None or dict
         Dict of colors with key: unit, value: color, default None
     """
+
     possible_backends = {}
 
-    
-    def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None, unit_colors=None,
-                 backend=None, **backend_kwargs):
-        
+    def __init__(
+        self, waveform_extractor: WaveformExtractor, unit_ids=None, unit_colors=None, backend=None, **backend_kwargs
+    ):
         we = waveform_extractor
 
         self.check_extensions(we, "spike_amplitudes")
-        amplitudes = we.load_extension('spike_amplitudes').get_data(outputs='by_unit')
-        
+        amplitudes = we.load_extension("spike_amplitudes").get_data(outputs="by_unit")
+
         num_segments = we.get_num_segments()
-        
+
         if unit_ids is None:
             unit_ids = we.unit_ids
-        
+
         if unit_colors is None:
             unit_colors = get_some_colors(we.unit_ids)
 
-        
         plot_data = dict(
             unit_ids=unit_ids,
             unit_colors=unit_colors,
