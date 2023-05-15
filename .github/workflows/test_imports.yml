@@ -47,4 +47,3 @@ jobs:
           echo "### Import times when installing full dependencies in " >> $GITHUB_STEP_SUMMARY
           python ./.github/import_test.py >> $GITHUB_STEP_SUMMARY
         shell: bash  # Necessary for pipeline to work on windows
-
