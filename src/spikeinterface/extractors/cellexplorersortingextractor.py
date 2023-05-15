@@ -22,7 +22,7 @@ class CellExplorerSortingExtractor(BaseSorting):
 
     Parameters
     ----------
-    file: str | Path
+    file_path: str | Path
         Path to `.mat` file containing spikes. Usually named `session_id.spikes.cellinfo.mat`
     sampling_frequency: float | None, optional
         The sampling frequency of the data. If None, it will be extracted from the files.
