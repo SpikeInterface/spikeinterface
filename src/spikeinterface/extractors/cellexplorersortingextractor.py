@@ -26,8 +26,8 @@ class CellExplorerSortingExtractor(BaseSorting):
         Path to `.mat` file containing spikes. Usually named `session_id.spikes.cellinfo.mat`
     sampling_frequency: float | None, optional
         The sampling frequency of the data. If None, it will be extracted from the files.
-    session_info_matfile_path: str | Path | None, optional
-        Path to the session info .mat file. If None, it will be inferred from the folder path.
+    session_info_file_path: str | Path | None, optional
+        Path to the `sessionInfo.mat` file. If None, it will be inferred from the file_path.
     """
 
     extractor_name = "CellExplorerSortingExtractor"
@@ -39,8 +39,9 @@ class CellExplorerSortingExtractor(BaseSorting):
         self,
         file_path: str | Path | None = None,
         sampling_frequency: float | None = None,
-        session_info_matfile_path: str | Path | None = None,
+        session_info_file_path: str | Path | None = None,
         spikes_matfile_path: str | Path | None = None,
+        session_info_matfile_path - str | Path | None = None,
     ):
         try:
             import h5py
@@ -67,12 +68,28 @@ class CellExplorerSortingExtractor(BaseSorting):
                     DeprecationWarning,
                 )
             file_path = spikes_matfile_path if file_path is None else file_path
+        
+        if session_info_matfile_path is not None:
+            # Raise an error if the warning period has expired
+            deprecation_issued =  datetime.datetime(2023, 4, 1)
+            deprecation_deadline = deprecation_issued + datetime.timedelta(days=180)
+            if datetime.datetime.now() > deprecation_deadline:
+                raise ValueError("The session_info_matfile_path argument is no longer supported in. Use session_info_file_path instead.")
+
+            # Otherwise, issue a DeprecationWarning
+            else:
+                warnings.warn(
+                    "The session_info_matfile_path argument is deprecated and will be removed in six months. "
+                    "Use session_info_file_path instead.",
+                    DeprecationWarning,
+                )
+            session_info_file_path = session_info_matfile_path if session_info_file_path is None else session_info_file_path
 
         self.spikes_cellinfo_path = Path(file_path).absolute()
         assert self.spikes_cellinfo_path.is_file(), f"The spikes.cellinfo.mat file must exist in {self.folder_path}!"
 
         self.folder_path = self.spikes_cellinfo_path.parent
-        self.session_info_matfile_path = session_info_matfile_path
+        self.session_info_file_path = session_info_file_path
 
         self.session_id = self.spikes_cellinfo_path.stem.split(".")[0]
 
@@ -133,7 +150,7 @@ class CellExplorerSortingExtractor(BaseSorting):
         self._kwargs = dict(
             file_path=str(self.spikes_cellinfo_path),
             sampling_frequency=sampling_frequency,
-            session_info_matfile_path=str(session_info_matfile_path),
+            session_info_file_path=str(session_info_file_path),
         )
 
     def _retrieve_sampling_frequency_from_session_info(self) -> float:
@@ -152,19 +169,19 @@ class CellExplorerSortingExtractor(BaseSorting):
         import h5py
         import scipy.io
 
-        if self.session_info_matfile_path is None:
-            self.session_info_matfile_path = self.folder_path / f"{self.session_id}.sessionInfo.mat"
+        if self.session_info_file_path is None:
+            self.session_info_file_path = self.folder_path / f"{self.session_id}.sessionInfo.mat"
 
-        self.session_info_matfile_path = Path(self.session_info_matfile_path).absolute()
+        self.session_info_file_path = Path(self.session_info_file_path).absolute()
         assert (
-            self.session_info_matfile_path.is_file()
+            self.session_info_file_path.is_file()
         ), f"No {self.session_id}.sessionInfo.mat file found in the {self.folder_path}!, can't inferr sampling rate"
 
         read_as_hdf5 = False
         try:
-            session_info_mat = scipy.io.loadmat(file_name=str(self.session_info_matfile_path), simplify_cells=True)
+            session_info_mat = scipy.io.loadmat(file_name=str(self.session_info_file_path), simplify_cells=True)
         except NotImplementedError:
-            session_info_mat = h5py.File(name=str(self.session_info_matfile_path), mode="r")
+            session_info_mat = h5py.File(name=str(self.session_info_file_path), mode="r")
             read_as_hdf5 = True
 
         rates = session_info_mat["sessionInfo"]["rates"]
