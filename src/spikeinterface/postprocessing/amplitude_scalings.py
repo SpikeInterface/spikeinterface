@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.stats import linregress
 
 from spikeinterface.core import ChannelSparsity, get_chunk_with_margin
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, ensure_n_jobs, fix_job_kwargs
@@ -335,6 +334,8 @@ def _init_worker_amplitude_scalings(
 
 
 def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    from scipy.stats import linregress
+
     # recover variables of the worker
     spikes = worker_ctx["spikes"]
     recording = worker_ctx["recording"]
