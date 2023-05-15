@@ -295,13 +295,19 @@ class BaseExtractor:
         """
         to_dict_kwargs = dict(include_annotations=include_annotations, include_properties=include_properties,
                             relative_to=relative_to, folder_metadata=folder_metadata)
+        
+        new_dict = dict()
+        transform_to_dict = lambda x: x.to_dict(**to_dict_kwargs) if isinstance(x, BaseExtractor) else x
         for name, value in self._kwargs.items():
             if isinstance(value, list):
-                transform_to_dict = lambda x: x.to_dict(**to_dict_kwargs) if isinstance(x, BaseExtractor) else x
                 new_list = [transform_to_dict(element) for element in value]
-                self._kwargs[name] = new_list
+                new_dict[name] = new_list
+            if isinstance(value, dict):
+                new_dict[name] = {k: transform_to_dict(v) for k, v in value.items()}
             elif isinstance(value, BaseExtractor):
-                self._kwargs[name] = value.to_dict(**to_dict_kwargs)
+                new_dict[name] = value.to_dict(**to_dict_kwargs)
+            else:
+                new_dict[name] = value
         
         class_name = str(type(self)).replace("<class '", "").replace("'>", '')
         module = class_name.split('.')[0]
@@ -315,7 +321,7 @@ class BaseExtractor:
         dump_dict = {
             'class': class_name,
             'module': module,
-            'kwargs': self._kwargs,
+            'kwargs': new_dict,
             'dumpable': self.is_dumpable,
             'version': version,
             'relative_paths': (relative_to is not None),
