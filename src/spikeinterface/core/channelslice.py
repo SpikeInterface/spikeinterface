@@ -3,7 +3,7 @@ from typing import List, Union
 import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
-from .basesnippets import BaseSnippets, BaseSnippetsSegment 
+from .basesnippets import BaseSnippets, BaseSnippetsSegment
 
 
 class ChannelSliceRecording(BaseRecording):
@@ -27,16 +27,24 @@ class ChannelSliceRecording(BaseRecording):
         parents_chan_ids = self._parent_recording.get_channel_ids()
 
         # some checks
-        assert all(chan_id in parents_chan_ids for chan_id in self._channel_ids), 'ChannelSliceRecording : channel ids are not all in parents'
-        assert len(self._channel_ids) == len(self._renamed_channel_ids), 'ChannelSliceRecording: renamed channel_ids must be the same size'
-        assert self._channel_ids.size == np.unique(self._channel_ids).size, 'ChannelSliceRecording : channel_ids not unique'
+        assert all(
+            chan_id in parents_chan_ids for chan_id in self._channel_ids
+        ), "ChannelSliceRecording : channel ids are not all in parents"
+        assert len(self._channel_ids) == len(
+            self._renamed_channel_ids
+        ), "ChannelSliceRecording: renamed channel_ids must be the same size"
+        assert (
+            self._channel_ids.size == np.unique(self._channel_ids).size
+        ), "ChannelSliceRecording : channel_ids not unique"
 
         sampling_frequency = parent_recording.get_sampling_frequency()
 
-        BaseRecording.__init__(self,
-                               sampling_frequency=sampling_frequency,
-                               channel_ids=self._renamed_channel_ids,
-                               dtype=parent_recording.get_dtype())
+        BaseRecording.__init__(
+            self,
+            sampling_frequency=sampling_frequency,
+            channel_ids=self._renamed_channel_ids,
+            dtype=parent_recording.get_dtype(),
+        )
 
         self._parent_channel_indices = parent_recording.ids_to_indices(self._channel_ids)
 
@@ -49,14 +57,17 @@ class ChannelSliceRecording(BaseRecording):
         parent_recording.copy_metadata(self, only_main=False, ids=self._channel_ids)
 
         # change the wiring of the probe
-        contact_vector = self.get_property('contact_vector')
+        contact_vector = self.get_property("contact_vector")
         if contact_vector is not None:
-            contact_vector['device_channel_indices'] = np.arange(len(channel_ids), dtype='int64')
-            self.set_property('contact_vector', contact_vector)
+            contact_vector["device_channel_indices"] = np.arange(len(channel_ids), dtype="int64")
+            self.set_property("contact_vector", contact_vector)
 
         # update dump dict
-        self._kwargs = {'parent_recording': parent_recording, 'channel_ids': channel_ids,
-                        'renamed_channel_ids': renamed_channel_ids}
+        self._kwargs = {
+            "parent_recording": parent_recording,
+            "channel_ids": channel_ids,
+            "renamed_channel_ids": renamed_channel_ids,
+        }
 
 
 class ChannelSliceRecordingSegment(BaseRecordingSegment):
@@ -72,11 +83,12 @@ class ChannelSliceRecordingSegment(BaseRecordingSegment):
     def get_num_samples(self) -> int:
         return self._parent_recording_segment.get_num_samples()
 
-    def get_traces(self,
-                   start_frame: Union[int, None] = None,
-                   end_frame: Union[int, None] = None,
-                   channel_indices: Union[List, None] = None,
-                   ) -> np.ndarray:
+    def get_traces(
+        self,
+        start_frame: Union[int, None] = None,
+        end_frame: Union[int, None] = None,
+        channel_indices: Union[List, None] = None,
+    ) -> np.ndarray:
         parent_indices = self._parent_channel_indices[channel_indices]
         traces = self._parent_recording_segment.get_traces(start_frame, end_frame, parent_indices)
         return traces
@@ -103,18 +115,26 @@ class ChannelSliceSnippets(BaseSnippets):
         parents_chan_ids = self._parent_snippets.get_channel_ids()
 
         # some checks
-        assert all(chan_id in parents_chan_ids for chan_id in self._channel_ids), 'ChannelSliceSnippets : channel ids are not all in parents'
-        assert len(self._channel_ids) == len(self._renamed_channel_ids), 'ChannelSliceSnippets: renamed channel_ids must be the same size'
-        assert self._channel_ids.size == np.unique(self._channel_ids).size, 'ChannelSliceSnippets : channel_ids not unique'
+        assert all(
+            chan_id in parents_chan_ids for chan_id in self._channel_ids
+        ), "ChannelSliceSnippets : channel ids are not all in parents"
+        assert len(self._channel_ids) == len(
+            self._renamed_channel_ids
+        ), "ChannelSliceSnippets: renamed channel_ids must be the same size"
+        assert (
+            self._channel_ids.size == np.unique(self._channel_ids).size
+        ), "ChannelSliceSnippets : channel_ids not unique"
 
         sampling_frequency = parent_snippets.get_sampling_frequency()
 
-        BaseSnippets.__init__(self,
-                              sampling_frequency=sampling_frequency,
-                              nbefore=parent_snippets.nbefore,
-                              snippet_len=parent_snippets.snippet_len,
-                              channel_ids=self._renamed_channel_ids,
-                              dtype=parent_snippets.get_dtype())
+        BaseSnippets.__init__(
+            self,
+            sampling_frequency=sampling_frequency,
+            nbefore=parent_snippets.nbefore,
+            snippet_len=parent_snippets.snippet_len,
+            channel_ids=self._renamed_channel_ids,
+            dtype=parent_snippets.get_dtype(),
+        )
 
         self._parent_channel_indices = parent_snippets.ids_to_indices(self._channel_ids)
 
@@ -127,14 +147,17 @@ class ChannelSliceSnippets(BaseSnippets):
         parent_snippets.copy_metadata(self, only_main=False, ids=self._channel_ids)
 
         # change the wiring of the probe
-        contact_vector = self.get_property('contact_vector')
+        contact_vector = self.get_property("contact_vector")
         if contact_vector is not None:
-            contact_vector['device_channel_indices'] = np.arange(len(channel_ids), dtype='int64')
-            self.set_property('contact_vector', contact_vector)
+            contact_vector["device_channel_indices"] = np.arange(len(channel_ids), dtype="int64")
+            self.set_property("contact_vector", contact_vector)
 
         # update dump dict
-        self._kwargs = {'parent_snippets': parent_snippets, 'channel_ids': channel_ids,
-                        'renamed_channel_ids': renamed_channel_ids}
+        self._kwargs = {
+            "parent_snippets": parent_snippets,
+            "channel_ids": channel_ids,
+            "renamed_channel_ids": renamed_channel_ids,
+        }
 
 
 class ChannelSliceSnippetsSegment(BaseSnippetsSegment):
@@ -149,19 +172,18 @@ class ChannelSliceSnippetsSegment(BaseSnippetsSegment):
 
     def get_num_snippets(self) -> int:
         return self._parent_snippets_segment.get_num_snippets()
-    
-    def frames_to_indices(self,
-                          start_frame: Union[int, None] = None,
-                          end_frame: Union[int, None] = None):
+
+    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
         return self._parent_snippets_segment.frames_to_indices(start_frame, end_frame)
 
     def get_frames(self, indices=None):
         return self._parent_snippets_segment.get_frames(indices)
-    
-    def get_snippets(self,
-                     indices,
-                     channel_indices: Union[List, None] = None,
-                     ) -> np.ndarray:
+
+    def get_snippets(
+        self,
+        indices,
+        channel_indices: Union[List, None] = None,
+    ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
 

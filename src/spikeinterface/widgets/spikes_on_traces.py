@@ -59,26 +59,60 @@ class SpikesOnTracesWidget(BaseWidget):
     seconds_per_row : float
         For 'map' mode and sortingview backend, seconds to render in each row, default 0.2
     """
+
     possible_backends = {}
 
-    def __init__(self, waveform_extractor: WaveformExtractor, 
-                 segment_index=None, channel_ids=None, unit_ids=None, order_channel_by_depth=False,
-                 time_range=None, unit_colors=None, sparsity=None, 
-                 mode='auto', return_scaled=False, cmap='RdBu', show_channel_ids=False,
-                 color_groups=False, color=None, clim=None, tile_size=512, seconds_per_row=0.2, 
-                 with_colorbar=True, backend=None, **backend_kwargs):
+    def __init__(
+        self,
+        waveform_extractor: WaveformExtractor,
+        segment_index=None,
+        channel_ids=None,
+        unit_ids=None,
+        order_channel_by_depth=False,
+        time_range=None,
+        unit_colors=None,
+        sparsity=None,
+        mode="auto",
+        return_scaled=False,
+        cmap="RdBu",
+        show_channel_ids=False,
+        color_groups=False,
+        color=None,
+        clim=None,
+        tile_size=512,
+        seconds_per_row=0.2,
+        with_colorbar=True,
+        backend=None,
+        **backend_kwargs,
+    ):
         we = waveform_extractor
         recording: BaseRecording = we.recording
         sorting: BaseSorting = we.sorting
-        
-        ts_widget = TimeseriesWidget(recording, segment_index, channel_ids, order_channel_by_depth,
-                                     time_range, mode, return_scaled, cmap, show_channel_ids, color_groups, color, clim, 
-                                     tile_size, seconds_per_row, with_colorbar, backend, **backend_kwargs)
+
+        ts_widget = TimeseriesWidget(
+            recording,
+            segment_index,
+            channel_ids,
+            order_channel_by_depth,
+            time_range,
+            mode,
+            return_scaled,
+            cmap,
+            show_channel_ids,
+            color_groups,
+            color,
+            clim,
+            tile_size,
+            seconds_per_row,
+            with_colorbar,
+            backend,
+            **backend_kwargs,
+        )
 
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
         unit_ids = unit_ids
-        
+
         if unit_colors is None:
             unit_colors = get_unit_colors(sorting)
 
@@ -91,9 +125,7 @@ class SpikesOnTracesWidget(BaseWidget):
                 extremum_channel_ids = get_template_extremum_channel(we)
                 unit_id_to_channel_ids = {u: [ch] for u, ch in extremum_channel_ids.items()}
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
-                    unit_id_to_channel_ids=unit_id_to_channel_ids,
-                    unit_ids=we.unit_ids,
-                    channel_ids=we.channel_ids
+                    unit_id_to_channel_ids=unit_id_to_channel_ids, unit_ids=we.unit_ids, channel_ids=we.channel_ids
                 )
             else:
                 assert isinstance(sparsity, ChannelSparsity)
