@@ -7,7 +7,7 @@ import numpy as np
 from spikeinterface.extractors import *
 
 
-@pytest.mark.skip('Combinato can be tested after running run_combinato()')
+@pytest.mark.skip("Combinato can be tested after running run_combinato()")
 def test_combinatoextractors():
     # not tested here, tested in run_combinato(...)
     pass
@@ -16,5 +16,5 @@ def test_combinatoextractors():
     #  print(sorting)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_combinatoextractors()

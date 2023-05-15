@@ -66,5 +66,5 @@ def test_average_across_direction():
         pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_average_across_direction()

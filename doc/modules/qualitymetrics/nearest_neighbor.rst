@@ -82,4 +82,3 @@ Literature
 ----------
 
 Introduced by [Chung]_ and adapted by [Siegle]_ and Kyu Hyun Lee.
-

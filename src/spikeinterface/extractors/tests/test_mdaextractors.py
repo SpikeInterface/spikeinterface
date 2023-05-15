@@ -18,13 +18,13 @@ def test_mda_extractors():
 
     check_recordings_equal(rec, rec_mda, return_scaled=False)
 
-    MdaSortingExtractor.write_sorting(
-        sort, cache_folder / "mdatest" / "firings.mda")
+    MdaSortingExtractor.write_sorting(sort, cache_folder / "mdatest" / "firings.mda")
     sort_mda = MdaSortingExtractor(
-        cache_folder / "mdatest" / "firings.mda", sampling_frequency=sort.get_sampling_frequency())
+        cache_folder / "mdatest" / "firings.mda", sampling_frequency=sort.get_sampling_frequency()
+    )
 
     check_sortings_equal(sort, sort_mda)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_mda_extractors()

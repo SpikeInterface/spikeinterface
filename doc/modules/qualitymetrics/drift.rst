@@ -7,7 +7,7 @@ Calculation
 -----------
 
 Geometric positions and times of spikes within the cluster are estimated.
-Over the duration of the recording, the drift observed in positions of spikes is calculated in intervals, with respect 
+Over the duration of the recording, the drift observed in positions of spikes is calculated in intervals, with respect
 to the overall median positions over the entire recording. These are referred to as "drift signals".
 
 * The drift_ptp is the peak-to-peak of the drift signal for each unit.
@@ -15,17 +15,17 @@ to the overall median positions over the entire recording. These are referred to
 * The drift_mad is the median absolute deviation of the drift signal for each unit.
 
 
-The SpikeInterface implementation differes from the original Allen because it uses spike location estimates 
-(using :py:func:`~spikeinterface.postprocessing.compute_spike_locations()` - either center of mass or monopolar 
+The SpikeInterface implementation differes from the original Allen because it uses spike location estimates
+(using :py:func:`~spikeinterface.postprocessing.compute_spike_locations()` - either center of mass or monopolar
 triangulation), instead of the center of mass of the first PC projection.
 In addition the Allen Institute implementation assumes linear and equally spaced arrangement of channels.
 
-Finally, the original "cumulative_drift" and "max_drift" metrics have been refactored/modified 
+Finally, the original "cumulative_drift" and "max_drift" metrics have been refactored/modified
 for the following reasons:
 
 - "max_drift" is calculated with the peak-to-peak, so it's been renamed "drift_ptp"
-- | "cumulative_drift" sums the absolute value of the drift signal for each interval. This makes it very sensitive to 
-  | the number of bins (and hence the recording duration)! The "drift_std" and "drift_mad", instead, are measures of 
+- | "cumulative_drift" sums the absolute value of the drift signal for each interval. This makes it very sensitive to
+  | the number of bins (and hence the recording duration)! The "drift_std" and "drift_mad", instead, are measures of
   | the dispersion of the drift signal and are insensitive to the recording duration.
 
 

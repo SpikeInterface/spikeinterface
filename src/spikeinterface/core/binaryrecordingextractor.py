@@ -44,19 +44,30 @@ class BinaryRecordingExtractor(BaseRecording):
     recording: BinaryRecordingExtractor
         The recording Extractor
     """
-    extractor_name = 'BinaryRecording'
-    is_writable = True
-    mode = 'file'
-    name = "binary"
-    
-    def __init__(self, file_paths, sampling_frequency, num_chan, dtype, t_starts=None, channel_ids=None,
-                 time_axis=0, file_offset=0, gain_to_uV=None, offset_to_uV=None,
-                 is_filtered=None):
 
+    extractor_name = "BinaryRecording"
+    is_writable = True
+    mode = "file"
+    name = "binary"
+
+    def __init__(
+        self,
+        file_paths,
+        sampling_frequency,
+        num_chan,
+        dtype,
+        t_starts=None,
+        channel_ids=None,
+        time_axis=0,
+        file_offset=0,
+        gain_to_uV=None,
+        offset_to_uV=None,
+        is_filtered=None,
+    ):
         if channel_ids is None:
             channel_ids = list(range(num_chan))
         else:
-            assert len(channel_ids) == num_chan, 'Provided recording channels have the wrong length'
+            assert len(channel_ids) == num_chan, "Provided recording channels have the wrong length"
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
@@ -68,7 +79,7 @@ class BinaryRecordingExtractor(BaseRecording):
             datfiles = [Path(file_paths)]
 
         if t_starts is not None:
-            assert len(t_starts) == len(datfiles), 't_starts must be a list of same size than file_paths'
+            assert len(t_starts) == len(datfiles), "t_starts must be a list of same size than file_paths"
             t_starts = [float(t_start) for t_start in t_starts]
 
         dtype = np.dtype(dtype)
@@ -78,7 +89,9 @@ class BinaryRecordingExtractor(BaseRecording):
                 t_start = None
             else:
                 t_start = t_starts[i]
-            rec_segment = BinaryRecordingSegment(datfile, sampling_frequency, t_start, num_chan, dtype, time_axis, file_offset)
+            rec_segment = BinaryRecordingSegment(
+                datfile, sampling_frequency, t_start, num_chan, dtype, time_axis, file_offset
+            )
             self.add_recording_segment(rec_segment)
 
         if is_filtered is not None:
@@ -90,14 +103,19 @@ class BinaryRecordingExtractor(BaseRecording):
         if offset_to_uV is not None:
             self.set_channel_offsets(offset_to_uV)
 
-        self._kwargs = {'file_paths': [str(e.absolute()) for e in datfiles],
-                        'sampling_frequency': sampling_frequency,
-                        't_starts': t_starts,
-                        'num_chan': num_chan, 'dtype': dtype.str,
-                        'channel_ids': channel_ids, 'time_axis': time_axis, 'file_offset': file_offset,
-                        'gain_to_uV': gain_to_uV, 'offset_to_uV': offset_to_uV,
-                        'is_filtered': is_filtered
-                        }
+        self._kwargs = {
+            "file_paths": [str(e.absolute()) for e in datfiles],
+            "sampling_frequency": sampling_frequency,
+            "t_starts": t_starts,
+            "num_chan": num_chan,
+            "dtype": dtype.str,
+            "channel_ids": channel_ids,
+            "time_axis": time_axis,
+            "file_offset": file_offset,
+            "gain_to_uV": gain_to_uV,
+            "offset_to_uV": offset_to_uV,
+            "is_filtered": is_filtered,
+        }
 
     @staticmethod
     def write_recording(recording, file_paths, dtype=None, **job_kwargs):
@@ -118,20 +136,21 @@ class BinaryRecordingExtractor(BaseRecording):
 
     def is_binary_compatible(self):
         return True
-        
+
     def get_binary_description(self):
         d = dict(
-            file_paths=self._kwargs['file_paths'],
-            dtype=np.dtype(self._kwargs['dtype']),
-            num_channels=self._kwargs['num_chan'],
-            time_axis=self._kwargs['time_axis'],
-            file_offset=self._kwargs['file_offset'],
+            file_paths=self._kwargs["file_paths"],
+            dtype=np.dtype(self._kwargs["dtype"]),
+            num_channels=self._kwargs["num_chan"],
+            time_axis=self._kwargs["time_axis"],
+            file_offset=self._kwargs["file_offset"],
         )
         return d
 
 
 BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.write_recording.__doc__.format(
-    _shared_job_kwargs_doc)
+    _shared_job_kwargs_doc
+)
 
 
 class BinaryRecordingSegment(BaseRecordingSegment):
@@ -147,11 +166,12 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         """
         return self._timeseries.shape[0]
 
-    def get_traces(self,
-                   start_frame: Union[int, None] = None,
-                   end_frame: Union[int, None] = None,
-                   channel_indices: Union[List, None] = None,
-                   ) -> np.ndarray:
+    def get_traces(
+        self,
+        start_frame: Union[int, None] = None,
+        end_frame: Union[int, None] = None,
+        channel_indices: Union[List, None] = None,
+    ) -> np.ndarray:
         traces = self._timeseries[start_frame:end_frame]
         if channel_indices is not None:
             traces = traces[:, channel_indices]
