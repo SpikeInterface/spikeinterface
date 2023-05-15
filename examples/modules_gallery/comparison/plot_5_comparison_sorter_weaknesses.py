@@ -95,6 +95,3 @@ comp.print_summary(well_detected_score=0.75, redundant_score=0.2, overmerged_sco
 
 
 plt.show()
-
-
-

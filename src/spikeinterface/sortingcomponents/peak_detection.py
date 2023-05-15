@@ -38,7 +38,7 @@ except ImportError:
 """
 TODO:
     * remove the wrapper class and move  all implementation to instance
-    * 
+    *
 
 """
 
@@ -982,7 +982,7 @@ __kernel void detect_peaks(
                         volatile __global int *num_peaks
                 ){
     int pos = get_global_id(0);
-    
+
     if (pos == 0){
         *num_peaks = 0;
     }
@@ -992,23 +992,23 @@ __kernel void detect_peaks(
     if (pos>=(chunk_size - (2 * exclude_sweep_size))){
         return;
     }
-    
+
 
     float v;
     uchar peak;
     uchar is_neighbour;
-    
+
     int index;
-    
+
     int i_peak;
 
-    
+
     for (int chan=0; chan<num_channels; chan++){
-        
+
         //v = traces[(pos + exclude_sweep_size)*num_channels + chan];
         index = (pos + exclude_sweep_size) * num_channels + chan;
         v = traces[index];
-        
+
         if(peak_sign==1){
             if (v>abs_threholds[chan]){peak=1;}
             else {peak=0;}
@@ -1017,10 +1017,10 @@ __kernel void detect_peaks(
             if (v<-abs_threholds[chan]){peak=1;}
             else {peak=0;}
         }
-        
+
         if (peak == 1){
             for (int chan_neigh=0; chan_neigh<num_channels; chan_neigh++){
-            
+
                 is_neighbour = neighbours_mask[chan * num_channels + chan_neigh];
                 if (is_neighbour == 0){continue;}
                 //if (chan == chan_neigh){continue;}
@@ -1032,9 +1032,9 @@ __kernel void detect_peaks(
                 else if(peak_sign==-1){
                     peak = peak && (v<=traces[index]);
                 }
-                
+
                 if (peak==0){break;}
-                
+
                 if(peak_sign==1){
                     for (int i=1; i<=exclude_sweep_size; i++){
                         peak = peak && (v>traces[(pos + exclude_sweep_size - i)*num_channels + chan_neigh]) && (v>=traces[(pos + exclude_sweep_size + i)*num_channels + chan_neigh]);
@@ -1051,16 +1051,16 @@ __kernel void detect_peaks(
             }
 
         }
-        
+
         if (peak==1){
-            //append to 
+            //append to
             i_peak = atomic_inc(num_peaks);
             // sample_index is LOCAL to fifo
             peaks[i_peak].sample_index = pos + exclude_sweep_size;
             peaks[i_peak].channel_index = chan;
         }
     }
-    
+
 }
 """
 
