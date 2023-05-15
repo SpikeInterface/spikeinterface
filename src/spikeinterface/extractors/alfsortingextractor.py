@@ -7,6 +7,7 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import pandas as pd
+
     HAVE_PANDAS = True
 except:
     HAVE_PANDAS = False
@@ -28,54 +29,55 @@ class ALFSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = 'ALFSorting'
+    extractor_name = "ALFSorting"
     installed = HAVE_PANDAS
     installation_mesg = "To use the ALF extractors, install pandas: \n\n pip install pandas\n\n"
     name = "alf"
 
     def __init__(self, folder_path, sampling_frequency=30000):
-
         assert self.installed, self.installation_mesg
         # check correct parent folder:
         self._folder_path = Path(folder_path)
-        if 'probe' not in self._folder_path.name:
+        if "probe" not in self._folder_path.name:
             raise ValueError('folder name should contain "probe", containing channels, clusters.* .npy datasets')
         # load datasets as mmap into a dict:
-        required_alf_datasets = ['spikes.times', 'spikes.clusters']
+        required_alf_datasets = ["spikes.times", "spikes.clusters"]
         found_alf_datasets = dict()
         for alf_dataset_name in self.file_loc.iterdir():
-            if 'spikes' in alf_dataset_name.stem or 'clusters' in alf_dataset_name.stem:
-                if 'npy' in alf_dataset_name.suffix:
-                    dset = np.load(alf_dataset_name, mmap_mode='r', allow_pickle=True)
+            if "spikes" in alf_dataset_name.stem or "clusters" in alf_dataset_name.stem:
+                if "npy" in alf_dataset_name.suffix:
+                    dset = np.load(alf_dataset_name, mmap_mode="r", allow_pickle=True)
                     found_alf_datasets.update({alf_dataset_name.stem: dset})
-                elif 'metrics' in alf_dataset_name.stem:
+                elif "metrics" in alf_dataset_name.stem:
                     found_alf_datasets.update({alf_dataset_name.stem: pd.read_csv(alf_dataset_name)})
 
         # check existence of datasets:
         if not any([i in found_alf_datasets for i in required_alf_datasets]):
-            raise Exception(f'could not find {required_alf_datasets} in folder')
+            raise Exception(f"could not find {required_alf_datasets} in folder")
 
-        spike_clusters = found_alf_datasets['spikes.clusters']
-        spike_times = found_alf_datasets['spikes.times']
+        spike_clusters = found_alf_datasets["spikes.clusters"]
+        spike_times = found_alf_datasets["spikes.times"]
 
         # load units properties:
         total_units = 0
         properties = dict()
 
         for alf_dataset_name, alf_dataset in found_alf_datasets.items():
-            if 'clusters' in alf_dataset_name:
-                if 'clusters.metrics' in alf_dataset_name:
+            if "clusters" in alf_dataset_name:
+                if "clusters.metrics" in alf_dataset_name:
                     for property_name, property_values in found_alf_datasets[alf_dataset_name].iteritems():
                         properties[property_name] = property_values.tolist()
                 else:
-                    property_name = alf_dataset_name.split('.')[1]
+                    property_name = alf_dataset_name.split(".")[1]
                     properties[property_name] = alf_dataset
                     if total_units == 0:
                         total_units = alf_dataset.shape[0]
 
-        if 'clusters.metrics' in found_alf_datasets and \
-                found_alf_datasets['clusters.metrics'].get('cluster_id') is not None:
-            unit_ids = found_alf_datasets['clusters.metrics'].get('cluster_id').tolist()
+        if (
+            "clusters.metrics" in found_alf_datasets
+            and found_alf_datasets["clusters.metrics"].get("cluster_id") is not None
+        ):
+            unit_ids = found_alf_datasets["clusters.metrics"].get("cluster_id").tolist()
         else:
             unit_ids = list(range(total_units))
 
@@ -83,13 +85,13 @@ class ALFSortingExtractor(BaseSorting):
         sorting_segment = ALFSortingSegment(spike_clusters, spike_times, sampling_frequency)
         self.add_sorting_segment(sorting_segment)
 
-        self.extra_requirements.append('pandas')
+        self.extra_requirements.append("pandas")
 
         # add properties
         for property_name, values in properties.items():
             self.set_property(property_name, values)
 
-        self._kwargs = {'folder_path': str(Path(folder_path).absolute()), 'sampling_frequency': sampling_frequency}
+        self._kwargs = {"folder_path": str(Path(folder_path).absolute()), "sampling_frequency": sampling_frequency}
 
     # @staticmethod
     # def write_sorting(sorting, save_path):
@@ -134,11 +136,12 @@ class ALFSortingSegment(BaseSortingSegment):
         self._sampling_frequency = sampling_frequency
         BaseSortingSegment.__init__(self)
 
-    def get_unit_spike_train(self,
-                             unit_id,
-                             start_frame,
-                             end_frame,
-                             ) -> np.ndarray:
+    def get_unit_spike_train(
+        self,
+        unit_id,
+        start_frame,
+        end_frame,
+    ) -> np.ndarray:
         # must be implemented in subclass
         if start_frame is None:
             start_frame = 0
@@ -146,7 +149,7 @@ class ALFSortingSegment(BaseSortingSegment):
             end_frame = np.inf
 
         spike_times = self._spike_time[np.where(self._spike_clusters == unit_id)]
-        spike_frames = (spike_times * self._sampling_frequency).astype('int64')
+        spike_frames = (spike_times * self._sampling_frequency).astype("int64")
         return spike_frames[(spike_frames >= start_frame) & (spike_frames < end_frame)]
 
 

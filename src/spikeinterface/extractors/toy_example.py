@@ -5,12 +5,22 @@ from probeinterface import Probe
 from spikeinterface.core import NumpyRecording, NumpySorting, synthesize_random_firings
 
 
-def toy_example(duration=10, num_channels=4, num_units=10,
-                sampling_frequency=30000.0, num_segments=2,
-                average_peak_amplitude=-100, upsample_factor=13,
-                contact_spacing_um=40, num_columns=1,
-                spike_times=None, spike_labels=None,
-                score_detection=1, firing_rate=3., seed=None):
+def toy_example(
+    duration=10,
+    num_channels=4,
+    num_units=10,
+    sampling_frequency=30000.0,
+    num_segments=2,
+    average_peak_amplitude=-100,
+    upsample_factor=13,
+    contact_spacing_um=40,
+    num_columns=1,
+    spike_times=None,
+    spike_labels=None,
+    score_detection=1,
+    firing_rate=3.0,
+    seed=None,
+):
     """
     Creates a toy recording and sorting extractors.
 
@@ -65,29 +75,48 @@ def toy_example(duration=10, num_channels=4, num_units=10,
     assert num_channels > 0
     assert num_units > 0
 
-    waveforms, geometry = synthesize_random_waveforms(num_units=num_units, num_channels=num_channels,
-                                                      contact_spacing_um=contact_spacing_um, num_columns=num_columns,
-                                                      average_peak_amplitude=average_peak_amplitude,
-                                                      upsample_factor=upsample_factor, seed=seed)
+    waveforms, geometry = synthesize_random_waveforms(
+        num_units=num_units,
+        num_channels=num_channels,
+        contact_spacing_um=contact_spacing_um,
+        num_columns=num_columns,
+        average_peak_amplitude=average_peak_amplitude,
+        upsample_factor=upsample_factor,
+        seed=seed,
+    )
 
-    unit_ids = np.arange(num_units, dtype='int64')
+    unit_ids = np.arange(num_units, dtype="int64")
 
     traces_list = []
     times_list = []
     labels_list = []
     for segment_index in range(num_segments):
         if spike_times is None:
-            times, labels = synthesize_random_firings(num_units=num_units, duration=durations[segment_index],
-                                                  sampling_frequency=sampling_frequency, firing_rates=firing_rate, seed=seed)
+            times, labels = synthesize_random_firings(
+                num_units=num_units,
+                duration=durations[segment_index],
+                sampling_frequency=sampling_frequency,
+                firing_rates=firing_rate,
+                seed=seed,
+            )
         else:
             times = spike_times[segment_index]
             labels = spike_labels[segment_index]
 
-        traces = synthesize_timeseries(times, labels, unit_ids, waveforms, sampling_frequency, durations[segment_index],
-                                        noise_level=10, waveform_upsample_factor=upsample_factor, seed=seed)
+        traces = synthesize_timeseries(
+            times,
+            labels,
+            unit_ids,
+            waveforms,
+            sampling_frequency,
+            durations[segment_index],
+            noise_level=10,
+            waveform_upsample_factor=upsample_factor,
+            seed=seed,
+        )
 
-        amp_index= np.sort(np.argsort(np.max(np.abs(traces[times-10, :]), 1))[:int(score_detection*len(times))])
-        times_list.append(times[amp_index]) # Keep only a certain percentage of detected spike for sorting
+        amp_index = np.sort(np.argsort(np.max(np.abs(traces[times - 10, :]), 1))[: int(score_detection * len(times))])
+        times_list.append(times[amp_index])  # Keep only a certain percentage of detected spike for sorting
         labels_list.append(labels[amp_index])
         traces_list.append(traces)
 
@@ -97,21 +126,25 @@ def toy_example(duration=10, num_channels=4, num_units=10,
     recording.annotate(is_filtered=True)
 
     probe = Probe(ndim=2)
-    probe.set_contacts(positions=geometry,
-                       shapes='circle', shape_params={'radius': 5})
-    probe.create_auto_shape(probe_type='rect', margin=20)
-    probe.set_device_channel_indices(np.arange(num_channels, dtype='int64'))
+    probe.set_contacts(positions=geometry, shapes="circle", shape_params={"radius": 5})
+    probe.create_auto_shape(probe_type="rect", margin=20)
+    probe.set_device_channel_indices(np.arange(num_channels, dtype="int64"))
     recording = recording.set_probe(probe)
 
     return recording, sorting
 
 
-
-
-
-def synthesize_random_waveforms(num_channels=5, num_units=20, width=500,
-                                upsample_factor=13, timeshift_factor=0, average_peak_amplitude=-10,
-                                contact_spacing_um=40, num_columns=1, seed=None):
+def synthesize_random_waveforms(
+    num_channels=5,
+    num_units=20,
+    width=500,
+    upsample_factor=13,
+    timeshift_factor=0,
+    average_peak_amplitude=-10,
+    contact_spacing_um=40,
+    num_columns=1,
+    seed=None,
+):
     if seed is not None:
         np.random.seed(seed)
         seeds = np.random.RandomState(seed=seed).randint(0, 2147483647, num_units)
@@ -124,18 +157,18 @@ def synthesize_random_waveforms(num_channels=5, num_units=20, width=500,
     rand_amps_stdev = [0.2, 3, 0.5, 0]
     rand_amp_factor_range = [0.5, 1]
     geom_spread_coef1 = 1
-    geom_spread_coef2 =  0.1
+    geom_spread_coef2 = 0.1
 
     geometry = np.zeros((num_channels, 2))
     if num_columns == 1:
         geometry[:, 1] = np.arange(num_channels) * contact_spacing_um
     else:
-        assert num_channels % num_columns == 0, 'Invalid num_columns'
+        assert num_channels % num_columns == 0, "Invalid num_columns"
         num_contact_per_column = num_channels // num_columns
         j = 0
         for i in range(num_columns):
-            geometry[j:j+num_contact_per_column, 0] = i * contact_spacing_um
-            geometry[j:j+num_contact_per_column, 1] = np.arange(num_contact_per_column) * contact_spacing_um
+            geometry[j : j + num_contact_per_column, 0] = i * contact_spacing_um
+            geometry[j : j + num_contact_per_column, 1] = np.arange(num_contact_per_column) * contact_spacing_um
             j += num_contact_per_column
 
     avg_durations = np.array(avg_durations)
@@ -154,16 +187,21 @@ def synthesize_random_waveforms(num_channels=5, num_units=20, width=500,
     for i, k in enumerate(range(num_units)):
         for m in range(num_channels):
             diff = neuron_locations[k, :] - geometry[m, :]
-            dist = np.sqrt(np.sum(diff ** 2))
-            durations0 = np.maximum(np.ones(avg_durations.shape),
-                                    avg_durations + np.random.RandomState(seed=seeds[i]).randn(1,
-                                                                                               4) * rand_durations_stdev) * upsample_factor
+            dist = np.sqrt(np.sum(diff**2))
+            durations0 = (
+                np.maximum(
+                    np.ones(avg_durations.shape),
+                    avg_durations + np.random.RandomState(seed=seeds[i]).randn(1, 4) * rand_durations_stdev,
+                )
+                * upsample_factor
+            )
             amps0 = avg_amps + np.random.RandomState(seed=seeds[i]).randn(1, 4) * rand_amps_stdev
             waveform0 = synthesize_single_waveform(full_width, durations0, amps0)
             waveform0 = np.roll(waveform0, int(timeshift_factor * dist * upsample_factor))
-            waveform0 = waveform0 * np.random.RandomState(seed=seeds[i]).uniform(rand_amp_factor_range[0],
-                                                                                 rand_amp_factor_range[1])
-            factor = (geom_spread_coef1 + dist * geom_spread_coef2)
+            waveform0 = waveform0 * np.random.RandomState(seed=seeds[i]).uniform(
+                rand_amp_factor_range[0], rand_amp_factor_range[1]
+            )
+            factor = geom_spread_coef1 + dist * geom_spread_coef2
             WW[m, :, k] = waveform0 / factor
 
     peaks = np.max(np.abs(WW), axis=(0, 1))
@@ -174,7 +212,7 @@ def synthesize_random_waveforms(num_channels=5, num_units=20, width=500,
 
 def get_default_neuron_locations(num_channels, num_units, geometry):
     num_dims = geometry.shape[1]
-    neuron_locations = np.zeros((num_units, num_dims), dtype='float64')
+    neuron_locations = np.zeros((num_units, num_dims), dtype="float64")
 
     for k in range(num_units):
         ind = k / (num_units - 1) * (num_channels - 1) + 1
@@ -196,7 +234,7 @@ def exp_growth(amp1, amp2, dur1, dur2):
     # Want Y[0]=amp1
     # Want Y[-1]=amp2
     Y = Y / (Y[-1] - Y[0]) * (amp2 - amp1)
-    Y = Y - Y[0] + amp1;
+    Y = Y - Y[0] + amp1
     return Y
 
 
@@ -215,22 +253,24 @@ def smooth_it(Y, t):
 
 def synthesize_single_waveform(full_width, durations, amps):
     durations = np.array(durations).ravel()
-    if (np.sum(durations) >= full_width - 2):
-        durations[-1] = full_width - 2 - np.sum(durations[0:durations.size - 1])
+    if np.sum(durations) >= full_width - 2:
+        durations[-1] = full_width - 2 - np.sum(durations[0 : durations.size - 1])
 
     amps = np.array(amps).ravel()
 
-    timepoints = np.round(np.hstack((0, np.cumsum(durations) - 1))).astype('int');
+    timepoints = np.round(np.hstack((0, np.cumsum(durations) - 1))).astype("int")
 
-    t = np.r_[0:np.sum(durations) + 1]
+    t = np.r_[0 : np.sum(durations) + 1]
 
     Y = np.zeros(len(t))
-    Y[timepoints[0]:timepoints[1] + 1] = exp_growth(0, amps[0], timepoints[1] + 1 - timepoints[0], durations[0] / 4)
-    Y[timepoints[1]:timepoints[2] + 1] = exp_growth(amps[0], amps[1], timepoints[2] + 1 - timepoints[1], durations[1])
-    Y[timepoints[2]:timepoints[3] + 1] = exp_decay(amps[1], amps[2], timepoints[3] + 1 - timepoints[2],
-                                                   durations[2] / 4)
-    Y[timepoints[3]:timepoints[4] + 1] = exp_decay(amps[2], amps[3], timepoints[4] + 1 - timepoints[3],
-                                                   durations[3] / 5)
+    Y[timepoints[0] : timepoints[1] + 1] = exp_growth(0, amps[0], timepoints[1] + 1 - timepoints[0], durations[0] / 4)
+    Y[timepoints[1] : timepoints[2] + 1] = exp_growth(amps[0], amps[1], timepoints[2] + 1 - timepoints[1], durations[1])
+    Y[timepoints[2] : timepoints[3] + 1] = exp_decay(
+        amps[1], amps[2], timepoints[3] + 1 - timepoints[2], durations[2] / 4
+    )
+    Y[timepoints[3] : timepoints[4] + 1] = exp_decay(
+        amps[2], amps[3], timepoints[4] + 1 - timepoints[3], durations[3] / 5
+    )
     Y = smooth_it(Y, 3)
     Y = Y - np.linspace(Y[0], Y[-1], len(t))
     Y = np.hstack((Y, np.zeros(full_width - len(t))))
@@ -241,8 +281,17 @@ def synthesize_single_waveform(full_width, durations, amps):
     return Y
 
 
-def synthesize_timeseries(spike_times, spike_labels, unit_ids, waveforms, sampling_frequency, duration,
-                          noise_level=10, waveform_upsample_factor=13, seed=None):
+def synthesize_timeseries(
+    spike_times,
+    spike_labels,
+    unit_ids,
+    waveforms,
+    sampling_frequency,
+    duration,
+    noise_level=10,
+    waveform_upsample_factor=13,
+    seed=None,
+):
     num_samples = np.int64(sampling_frequency * duration)
     waveform_upsample_factor = int(waveform_upsample_factor)
     W = waveforms
@@ -268,16 +317,12 @@ def synthesize_timeseries(spike_times, spike_labels, unit_ids, waveforms, sampli
             i_start = np.int64(np.floor(t0)) - half_width
             if (0 <= i_start) and (i_start + width <= num_samples):
                 wf = waveform0[:, frac_offset::waveform_upsample_factor] * amp0
-                traces[i_start:i_start + width, :] += wf.T
+                traces[i_start : i_start + width, :] += wf.T
 
     return traces
 
 
-
-
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     rec, sorting = toy_example(num_segments=2)
     print(rec)
     print(sorting)

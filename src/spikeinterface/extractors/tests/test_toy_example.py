@@ -20,5 +20,5 @@ def test_toy_example():
     print(probe)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_toy_example()

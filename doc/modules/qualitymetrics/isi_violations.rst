@@ -10,7 +10,7 @@ Calculation
 Neurons have a refractory period after a spiking event during which they cannot fire again.
 Inter-spike-interval (ISI) violations refers to the rate of refractory period violations (as described by [Hill]_).
 
-The calculation works under the assumption that the contaminant events happen randomly or come from another neuron that is not correlated with our unit. 
+The calculation works under the assumption that the contaminant events happen randomly or come from another neuron that is not correlated with our unit.
 A correlation will lead to an overestimation of the contamination, whereas an anti-correlation will lead to an underestimation.
 
 Different formulas have been developed over the years.

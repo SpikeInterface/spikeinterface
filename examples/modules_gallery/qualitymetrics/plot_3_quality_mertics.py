@@ -10,7 +10,7 @@ After spike sorting, you might want to validate the goodness of the sorted units
 import spikeinterface as si
 import spikeinterface.extractors as se
 from spikeinterface.postprocessing import compute_principal_components
-from spikeinterface.qualitymetrics import (compute_snrs, compute_firing_rates, 
+from spikeinterface.qualitymetrics import (compute_snrs, compute_firing_rates,
     compute_isi_violations, calculate_pc_metrics, compute_quality_metrics)
 
 ##############################################################################
@@ -25,7 +25,7 @@ print(sorting)
 ##############################################################################
 # Extract spike waveforms
 # -----------------------
-# 
+#
 # For convenience, metrics are computed on the :code:`WaveformExtractor` object,
 # because it contains a reference to the "Recording" and the "Sorting" objects:
 

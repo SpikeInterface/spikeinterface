@@ -14,9 +14,9 @@ from .isidistribution import plot_isi_distribution
 class UnitSummaryWidget(BaseWidget):
     """
     Plot a unit summary.
-    
+
     If amplitudes are alreday computed they are displayed.
-    
+
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
@@ -36,14 +36,15 @@ class UnitSummaryWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, waveform_extractor, unit_id,
-                 unit_colors=None, figure=None, ax=None):
-
+    def __init__(self, waveform_extractor, unit_id, unit_colors=None, figure=None, ax=None):
         assert ax is None
         # ~ assert axes is None
 
         if figure is None:
-            figure = plt.figure(constrained_layout=False, figsize=(15, 7), )
+            figure = plt.figure(
+                constrained_layout=False,
+                figsize=(15, 7),
+            )
 
         BaseWidget.__init__(self, figure, None)
 
@@ -62,7 +63,7 @@ class UnitSummaryWidget(BaseWidget):
         fig = self.figure
         self.ax.remove()
 
-        if we.is_extension('spike_amplitudes'):
+        if we.is_extension("spike_amplitudes"):
             nrows = 3
         else:
             nrows = 2
@@ -71,7 +72,7 @@ class UnitSummaryWidget(BaseWidget):
 
         ax = fig.add_subplot(gs[:, 0])
         plot_unit_probe_map(we, unit_ids=[self.unit_id], axes=[ax], colorbar=False)
-        ax.set_title('')
+        ax.set_title("")
 
         ax = fig.add_subplot(gs[0:2, 1:3])
         plot_unit_waveforms(we, unit_ids=[self.unit_id], radius_um=60, axes=[ax], unit_colors=self.unit_colors)
@@ -83,16 +84,15 @@ class UnitSummaryWidget(BaseWidget):
 
         ax = fig.add_subplot(gs[0:2, 5])
         plot_isi_distribution(we.sorting, unit_ids=[self.unit_id], axes=[ax])
-        ax.set_title('')
+        ax.set_title("")
 
-        if we.is_extension('spike_amplitudes'):
+        if we.is_extension("spike_amplitudes"):
             ax = fig.add_subplot(gs[-1, 1:])
-            plot_amplitudes_timeseries(we, unit_ids=[self.unit_id], ax=ax,
-                                       unit_colors=self.unit_colors)
+            plot_amplitudes_timeseries(we, unit_ids=[self.unit_id], ax=ax, unit_colors=self.unit_colors)
             ax.set_ylabel(None)
             ax.set_title(None)
 
-        fig.suptitle(f'Unit ID: {self.unit_id}')
+        fig.suptitle(f"Unit ID: {self.unit_id}")
 
 
 def plot_unit_summary(*args, **kwargs):

@@ -3,7 +3,7 @@ from .metrics import MetricsPlotter
 
 
 class TemplateMetricsPlotter(MetricsPlotter):
-    pass        
+    pass
 
 
 TemplateMetricsPlotter.register(TemplateMetricsWidget)

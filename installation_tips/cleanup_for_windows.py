@@ -13,7 +13,7 @@ def _clean():
     for folder in folders:
         if Path(folder).exists():
             shutil.rmtree(folder)
-        
+
 if __name__ == '__main__':
 
     _clean()
