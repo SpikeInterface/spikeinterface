@@ -272,11 +272,12 @@ def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsi
     # create a local dict per worker
     worker_ctx = {}
     worker_ctx['recording'] = recording
-    worker_ctx["file_path_dict"] = file_path_dict
     worker_ctx["byte_offset"] = byte_offest
-
     worker_ctx['dtype'] = np.dtype(dtype)
     worker_ctx['cast_unsigned'] = cast_unsigned
+
+    file_dict = {segment_index: open(file_path, "r+") for segment_index, file_path in file_path_dict.items()}
+    worker_ctx["file_dict"] = file_dict
 
     return worker_ctx
 
@@ -286,8 +287,8 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx['recording']
     dtype = worker_ctx['dtype']
     byte_offset = worker_ctx["byte_offset"]
-    file_path = worker_ctx["file_path_dict"][segment_index]
     cast_unsigned = worker_ctx['cast_unsigned']
+    file = worker_ctx["file_dict"][segment_index]
     
     # Open the memmap
     # What we need is the file_path
@@ -297,7 +298,6 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     dtype_size_bytes = np.dtype(dtype).itemsize 
     data_size_bytes = dtype_size_bytes * num_frames * num_channels 
     
-    file = open(file_path, "r+")
     
     # Offset (The offset needs to be multiple of the page size)
     # The mmap offset is associated to be as big as possible but still a multiple of the page size
@@ -310,12 +310,12 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # apply function
     traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index,
                                   cast_unsigned=cast_unsigned)
-    traces = traces.astype(dtype)
+    if traces.dtype != dtype:
+        traces = traces.astype(dtype) 
     array[start_frame:end_frame, :] = traces
 
     # Close the memmap
-    memmap_obj.close()
-    file.close()
+    memmap_obj.flush()
     
 
 # used by write_memory_recording
@@ -825,3 +825,43 @@ def convert_bytes_to_str(byte_value:int ) -> str:
         byte_value /= 1024
         i += 1
     return f"{byte_value:.2f} {suffixes[i]}"
+
+
+def convert_seconds_to_str(seconds: float, long_notation: bool = True) -> str:
+    """
+    Convert seconds to a human-readable string representation.
+
+    Parameters
+    ----------
+    seconds : float
+        The duration in seconds.
+    long_notation : bool, optional, default: True
+        Whether to display the time with additional units (such as milliseconds, minutes,
+        hours, or days). If set to True, the function will display a more detailed
+        representation of the duration, including other units alongside the primary
+        seconds representation.
+
+    Returns
+    -------
+    str
+        A string representing the duration, with additional units included if
+        requested by the `long_notation` parameter.
+    """
+    base_str = f"{seconds:,.2f}s"
+    
+    if long_notation:
+        if seconds < 1.0:
+            base_str += f" ({seconds * 1000:.2f} ms)"
+        elif seconds < 60:
+            pass # seconds is already the primary representation
+        elif seconds < 3600:
+            minutes = seconds / 60
+            base_str += f" ({minutes:.2f} minutes)"
+        elif seconds < 86400 * 2:  # 2 days
+            hours = seconds / 3600
+            base_str += f" ({hours:.2f} hours)"
+        else:
+            days = seconds / 86400
+            base_str += f" ({days:.2f} days)"
+
+    return base_str
