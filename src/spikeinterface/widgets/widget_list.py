@@ -78,7 +78,7 @@ for wcls in widget_list:
     wcls_doc = wcls.__doc__
 
     wcls_doc += """
-    
+
     backend: str
     {backends}
     **backend_kwargs: kwargs
