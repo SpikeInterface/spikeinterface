@@ -41,7 +41,7 @@ class CellExplorerSortingExtractor(BaseSorting):
         sampling_frequency: float | None = None,
         session_info_file_path: str | Path | None = None,
         spikes_matfile_path: str | Path | None = None,
-        session_info_matfile_path - str | Path | None = None,
+        session_info_matfile_path: str | Path | None = None,
     ):
         try:
             import h5py
