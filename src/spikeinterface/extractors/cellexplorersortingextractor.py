@@ -97,7 +97,7 @@ class CellExplorerSortingExtractor(BaseSorting):
                 for x in spikes_mat["spikes"]["times"][0][0][0]
             ]
         else:
-            unit_ids = np.asarray(spikes_mat["spikes"]["UID"][0][0])
+            unit_ids = np.asarray(spikes_mat['spikes']["UID"][0][0])
             spiketrains = [
                 (np.array([y[0] for y in x]) * sampling_frequency).round().astype(np.int64)
                 for x in spikes_mat["spikes"]["times"][0][0]
