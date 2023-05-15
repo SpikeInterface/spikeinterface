@@ -77,8 +77,16 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
         
         if stream_index is None:
             stream_names, stream_ids = self.get_streams(file_path)
-            if len(stream_ids) > 1:
-                raise ValueError('More than one stream found. Please specify the stream_index') 
+            
+            error_msg = (
+                "Black rock requires analog signal streams nsx5 or nsx6 to be present in for inferring spike times"
+            )
+            
+            # Return the index of the first stream that is named nsx5 or nsx6 in that order
+            stream_index = next((index for index, name in enumerate(stream_names) if name == "nsx5"), None)
+            if stream_index is None:
+                stream_index = next((index for index, name in enumerate(stream_names) if name == "nsx6"), None)
+            assert stream_index is not None, error_msg            
             stream_index = 0
         
         NeoBaseSortingExtractor.__init__(self, **neo_kwargs, stream_index=stream_index)
