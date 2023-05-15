@@ -2,11 +2,12 @@ from pathlib import Path
 
 import numpy as np
 
-from spikeinterface.core import (BaseSorting, BaseSortingSegment)
+from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import h5py
+
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False
@@ -26,9 +27,9 @@ class SpykingCircusSortingExtractor(BaseSorting):
         Loaded data.
     """
 
-    extractor_name = 'SpykingCircusSortingExtractor'
+    extractor_name = "SpykingCircusSortingExtractor"
     installed = HAVE_H5PY  # check at class level if installed or not
-    mode = 'folder'
+    mode = "folder"
     installation_mesg = "To use the SpykingCircusSortingExtractor install h5py: \n\n pip install h5py\n\n"
     name = "spykingcircus"
 
@@ -42,7 +43,7 @@ class SpykingCircusSortingExtractor(BaseSorting):
         result_folder = None
         for f in listfiles:
             if f.is_dir():
-                if any([f_.suffix == '.hdf5' for f_ in f.iterdir()]):
+                if any([f_.suffix == ".hdf5" for f_ in f.iterdir()]):
                     parent_folder = spykingcircus_folder
                     result_folder = f
 
@@ -50,7 +51,7 @@ class SpykingCircusSortingExtractor(BaseSorting):
             parent_folder = spykingcircus_folder.parent
             for f in parent_folder.iterdir():
                 if f.is_dir():
-                    if any([f_.suffix == '.hdf5' for f_ in f.iterdir()]):
+                    if any([f_.suffix == ".hdf5" for f_ in f.iterdir()]):
                         result_folder = spykingcircus_folder
 
         assert isinstance(parent_folder, Path) and isinstance(result_folder, Path), "Not a valid spyking circus folder"
@@ -58,9 +59,9 @@ class SpykingCircusSortingExtractor(BaseSorting):
         # load files
         results = None
         for f in result_folder.iterdir():
-            if 'result.hdf5' in str(f):
+            if "result.hdf5" in str(f):
                 results = f
-            if 'result-merged.hdf5' in str(f):
+            if "result-merged.hdf5" in str(f):
                 results = f
                 break
         if results is None:
@@ -69,23 +70,23 @@ class SpykingCircusSortingExtractor(BaseSorting):
         # load params
         sample_rate = None
         for f in parent_folder.iterdir():
-            if f.suffix == '.params':
+            if f.suffix == ".params":
                 sample_rate = _load_sample_rate(f)
 
-        assert sample_rate is not None, 'sample rate not found'
+        assert sample_rate is not None, "sample rate not found"
 
-        with h5py.File(results, 'r') as f_results:
+        with h5py.File(results, "r") as f_results:
             spiketrains = []
             unit_ids = []
-            for temp in f_results['spiketimes'].keys():
-                spiketrains.append(np.array(f_results['spiketimes'][temp]).astype('int64'))
-                unit_ids.append(int(temp.split('_')[-1]))
+            for temp in f_results["spiketimes"].keys():
+                spiketrains.append(np.array(f_results["spiketimes"][temp]).astype("int64"))
+                unit_ids.append(int(temp.split("_")[-1]))
 
         BaseSorting.__init__(self, sample_rate, unit_ids)
         self.add_sorting_segment(SpykingcircustSortingSegment(unit_ids, spiketrains))
 
-        self._kwargs = {'folder_path': str(Path(folder_path).absolute())}
-        self.extra_requirements.append('h5py')
+        self._kwargs = {"folder_path": str(Path(folder_path).absolute())}
+        self.extra_requirements.append("h5py")
 
 
 class SpykingcircustSortingSegment(BaseSortingSegment):
@@ -106,12 +107,12 @@ class SpykingcircustSortingSegment(BaseSortingSegment):
 
 def _load_sample_rate(params_file):
     sample_rate = None
-    with params_file.open('r') as f:
+    with params_file.open("r") as f:
         for r in f.readlines():
-            if 'sampling_rate' in r:
-                sample_rate = r.split('=')[-1]
-                if '#' in sample_rate:
-                    sample_rate = sample_rate[:sample_rate.find('#')]
+            if "sampling_rate" in r:
+                sample_rate = r.split("=")[-1]
+                if "#" in sample_rate:
+                    sample_rate = sample_rate[: sample_rate.find("#")]
                 sample_rate = float(sample_rate)
     return sample_rate
 

@@ -2,10 +2,10 @@ Comparison module
 =================
 
 
-SpikeInterface has a :py:mod:`~spikeinterface.comparison` module, which contains functions and tools to compare 
+SpikeInterface has a :py:mod:`~spikeinterface.comparison` module, which contains functions and tools to compare
 spike trains and templates (useful for tracking units over multiple sessions).
 
-In addition, the :py:mod:`~spikeinterface.comparison` module contains advanced benchmarking tools to evaluate 
+In addition, the :py:mod:`~spikeinterface.comparison` module contains advanced benchmarking tools to evaluate
 the effects of spike collisions on spike sorting results, and to construct hybrid recordings for comparison.
 
 Spike train comparison
@@ -245,7 +245,7 @@ An **over-merged** unit has a relatively high agreement (>= 0.2 by default) for 
 
 **Example: compare many sorters with a Ground Truth Study**
 
-We also have a high level class to compare many sorters against ground truth: 
+We also have a high level class to compare many sorters against ground truth:
 :py:func:`~spiekinterface.comparison.GroundTruthStudy()`
 
 A study is a systematic performance comparison of several ground truth recordings with several sorters.
@@ -490,14 +490,14 @@ Comparison of multiple sorters uses the following procedure:
 Template comparison
 -------------------
 
-For template comparisons, the underlying ideas are very similar to :ref:`symmetric` and :ref:`multiple`, for 
+For template comparisons, the underlying ideas are very similar to :ref:`symmetric` and :ref:`multiple`, for
 pairwise and multiple comparisons, respectively. In contrast to spike train comparisons, agreement is assessed
 in the similarity of templates rather than spiking events.
-This enables us to use exatly the same tools for both types of comparisons, just by changing the way that agreement 
+This enables us to use exatly the same tools for both types of comparisons, just by changing the way that agreement
 scores are computed.
 
-The functions to compare templates take a list of :py:class:`~spikeinterface.core.WaveformExtractor` objects as input, 
-which are assumed to be from different sessions of the same animal over time. In this case, let's assume we have 5 
+The functions to compare templates take a list of :py:class:`~spikeinterface.core.WaveformExtractor` objects as input,
+which are assumed to be from different sessions of the same animal over time. In this case, let's assume we have 5
 waveform extractors from day 1 (:code:`we_day1`) to day 5 (:code:`we_day5`):
 
 .. code-block:: python
@@ -508,9 +508,9 @@ waveform extractors from day 1 (:code:`we_day1`) to day 5 (:code:`we_day5`):
     p_tcmp = sc.compare_templates(we_day1, we_day2, we1_name="Day1", we2_name="Day2")
 
     # match all
-    m_tcmp = sc.compare_multiple_templates(we_list, 
+    m_tcmp = sc.compare_multiple_templates(we_list,
                                            name_list=["D1", "D2", "D3", "D4", "D5"])
-    
+
 
 
 Benchmark spike collisions
@@ -518,8 +518,8 @@ Benchmark spike collisions
 
 SpikeInterface also has a specific toolset to benchmark how good sorters are at recovering spikes in "collision".
 
-We have three classes to handle collision-specific comparisons, and also to quantify the effects on correlogram 
-estimation: 
+We have three classes to handle collision-specific comparisons, and also to quantify the effects on correlogram
+estimation:
 
   * :py:class:`~spikeinterface.comparison.CollisionGTComparison`
   * :py:class:`~spikeinterface.comparison.CorrelogramGTComparison`
@@ -535,7 +535,7 @@ Hybrid recording
 ----------------
 
 To benchmark spike sorting results, we need ground-truth spiking activity.
-This can be generated with artificial simulations, e.g., using `MEArec <https://mearec.readthedocs.io/>`_, or 
+This can be generated with artificial simulations, e.g., using `MEArec <https://mearec.readthedocs.io/>`_, or
 alternatively by generating so-called "hybrid" recordings.
 
 The :py:mod:`~spikeinterface.comparison` module includes functions to generate such "hybrid" recordings:

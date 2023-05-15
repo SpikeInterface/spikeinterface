@@ -5,5 +5,5 @@ from .detect_bad_channels import detect_bad_channels
 from .correct_lsb import correct_lsb
 
 
-#for snippets
+# for snippets
 from .align_snippets import AlignSnippets
