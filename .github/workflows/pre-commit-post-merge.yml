@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 jobs:
-  main:
+  pre-commit-post-merge:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
