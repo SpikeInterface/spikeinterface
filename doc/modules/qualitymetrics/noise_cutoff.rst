@@ -5,7 +5,7 @@ Calculation
 -----------
 
 
-Metric describing whether an amplitude distribution is cut off, similar to _amp_cutoff  :ref:`amplitude cutoff <amp_cutoff>` but without a Gaussian assumption. 
+Metric describing whether an amplitude distribution is cut off, similar to _amp_cutoff  :ref:`amplitude cutoff <amp_cutoff>` but without a Gaussian assumption.
 A histogram of amplitudes is created and quantifies the distance between the low tail, mean number of spikes and high tail in terms of standard deviations.
 
 A SpikeInterface implementation is not yet available.

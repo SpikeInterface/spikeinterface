@@ -11,7 +11,7 @@ including custom pre- and post-processing.
 .. code:: ipython3
 
     import spikeinterface.full as si
-    
+
     import numpy as np
     import matplotlib.pyplot as plt
     from pathlib import Path
@@ -19,7 +19,7 @@ including custom pre- and post-processing.
 .. code:: ipython3
 
     base_folder = Path('/mnt/data/sam/DataSpikeSorting/neuropixel_example/')
-    
+
     spikeglx_folder = base_folder / 'Rec_1_10_11_2021_g0'
 
 
@@ -73,11 +73,11 @@ We need to specify which one to read:
         .dataframe tbody tr th:only-of-type {
             vertical-align: middle;
         }
-    
+
         .dataframe tbody tr th {
             vertical-align: top;
         }
-    
+
         .dataframe thead th {
             text-align: right;
         }
@@ -235,7 +235,7 @@ Let’s do something similar to the IBL destriping chain (See
     bad_channel_ids, channel_labels = si.detect_bad_channels(rec1)
     rec2 = rec1.remove_channels(bad_channel_ids)
     print('bad_channel_ids', bad_channel_ids)
-    
+
     rec3 = si.phase_shift(rec2)
     rec4 = si.common_reference(rec3, operator="median", reference="global")
     rec = rec4
@@ -275,7 +275,7 @@ is lazy, so you can change the previsous cell (parameters, step order,
 
     # here we use static plot using matplotlib backend
     fig, axs = plt.subplots(ncols=3, figsize=(20, 10))
-    
+
     si.plot_timeseries(rec1, backend='matplotlib',  clim=(-50, 50), ax=axs[0])
     si.plot_timeseries(rec4, backend='matplotlib',  clim=(-50, 50), ax=axs[1])
     si.plot_timeseries(rec, backend='matplotlib',  clim=(-50, 50), ax=axs[2])
@@ -329,7 +329,7 @@ parallelization mechanism of SpikeInterface.
 .. code:: ipython3
 
     job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
-    
+
     rec = rec.save(folder=base_folder / 'preprocess', format='binary', **job_kwargs)
 
 
@@ -423,9 +423,9 @@ Let’s use here the ``locally_exclusive`` method for detection and the
 .. code:: ipython3
 
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-    
+
     job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
-    peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16, 
+    peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16,
                          detect_threshold=5, local_radius_um=50., **job_kwargs)
     peaks
 
@@ -450,7 +450,7 @@ Let’s use here the ``locally_exclusive`` method for detection and the
 .. code:: ipython3
 
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-    
+
     peak_locations = localize_peaks(rec, peaks, method='center_of_mass', local_radius_um=50., **job_kwargs)
 
 
@@ -498,7 +498,7 @@ documentation for motion estimation and correction for more details.
     fig, ax = plt.subplots(figsize=(15, 10))
     si.plot_probe_map(rec, ax=ax, with_channel_ids=True)
     ax.set_ylim(-100, 150)
-    
+
     ax.scatter(peak_locations['x'], peak_locations['y'], color='purple', alpha=0.002)
 
 
@@ -575,7 +575,7 @@ In this example:
 
     # run kilosort2.5 without drift correction
     params_kilosort2_5 = {'do_correction': False}
-    
+
     sorting = si.run_sorter('kilosort2_5', rec, output_folder=base_folder / 'kilosort2.5_output',
                             docker_image=True, verbose=True, **params_kilosort2_5)
 
@@ -633,7 +633,7 @@ up the waveforms extraction and further processing.
 
 .. code:: ipython3
 
-    # the WaveformExtractor contains all information and is persistent on disk 
+    # the WaveformExtractor contains all information and is persistent on disk
     print(we)
     print(we.folder)
 
@@ -721,11 +721,11 @@ PCA for their computation. This can be achieved with:
         .dataframe tbody tr th:only-of-type {
             vertical-align: middle;
         }
-    
+
         .dataframe tbody tr th {
             vertical-align: top;
         }
-    
+
         .dataframe thead th {
             text-align: right;
         }
@@ -1039,7 +1039,7 @@ A very common curation approach is to threshold these metrics to select
     amplitude_cutoff_thresh = 0.1
     isi_violations_ratio_thresh = 1
     presence_ratio_thresh = 0.9
-    
+
     our_query = f"(amplitude_cutoff < {amplitude_cutoff_thresh}) & (isi_violations_ratio < {isi_violations_ratio_thresh}) & (presence_ratio > {presence_ratio_thresh})"
     print(our_query)
 
