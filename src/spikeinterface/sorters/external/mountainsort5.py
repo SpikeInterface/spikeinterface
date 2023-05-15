@@ -27,7 +27,8 @@ class Mountainsort5Sorter(BaseSorter):
         'detect_time_radius_msec': 0.5,
         'snippet_T1': 20,
         'snippet_T2': 20,
-        'npca_per_branch': 12,
+        'npca_per_channel': 3,
+        'npca_per_subdivision': 10,
         'snippet_mask_radius': 250,
         'scheme1_detect_channel_radius': 150,
         'scheme2_phase1_detect_channel_radius': 200,
@@ -49,7 +50,8 @@ class Mountainsort5Sorter(BaseSorter):
         'detect_time_radius_msec': 'Determines the minimum allowable time interval between detected spikes in the same spatial region',
         'snippet_T1': 'Number of samples before the peak to include in the snippet',
         'snippet_T2': 'Number of samples after the peak to include in the snippet',
-        'npca_per_branch': 'Number of PCA features to compute at each stage of branch clustering',
+        'npca_per_channel': 'Number of PCA features per channel in the initial dimension reduction step',
+        'npca_per_subdivision': 'Number of PCA features to compute at each stage of clustering in the isosplit6 subdivision method',
         'snippet_mask_radius': 'Radius of the mask to apply to the extracted snippets',
         'scheme1_detect_channel_radius': 'Channel radius for excluding events that are too close in time in scheme 1',
         'scheme2_phase1_detect_channel_radius': 'Channel radius for excluding events that are too close in time during phase 1 of scheme 2',
@@ -83,8 +85,8 @@ class Mountainsort5Sorter(BaseSorter):
 
         if HAVE_MS5:
             vv = parse(mountainsort5.__version__)
-            if vv < parse("0.1") or vv >= parse("0.2"):
-                print(f'WARNING: This version of SpikeInterface expects Mountainsort5 version 0.1.x. '
+            if vv < parse("0.3") or vv >= parse("0.4"):
+                print(f'WARNING: This version of SpikeInterface expects Mountainsort5 version 0.3.x. '
                       f'You have version {mountainsort5.__version__}')
                 HAVE_MS5 = False
         return HAVE_MS5
@@ -135,7 +137,8 @@ class Mountainsort5Sorter(BaseSorter):
             snippet_T1=p['snippet_T1'],
             snippet_T2=p['snippet_T2'],
             snippet_mask_radius=p['snippet_mask_radius'],
-            npca_per_branch=p['npca_per_branch']
+            npca_per_channel=p['npca_per_channel'],
+            npca_per_subdivision=p['npca_per_subdivision']
         )
 
         scheme2_sorting_parameters = ms5.Scheme2SortingParameters(
@@ -144,7 +147,8 @@ class Mountainsort5Sorter(BaseSorter):
             phase1_detect_threshold=p['detect_threshold'],
             phase1_detect_time_radius_msec=p['detect_time_radius_msec'],
             detect_time_radius_msec=p['detect_time_radius_msec'],
-            phase1_npca_per_branch=p['npca_per_branch'],
+            phase1_npca_per_channel=p['npca_per_channel'],
+            phase1_npca_per_subdivision=p['npca_per_subdivision'],
             detect_sign=p['detect_sign'],
             detect_threshold=p['detect_threshold'],
             snippet_T1=p['snippet_T1'],

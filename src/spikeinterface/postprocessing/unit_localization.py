@@ -361,7 +361,7 @@ def compute_center_of_mass(waveform_extractor, peak_sign='neg', radius_um=75, fe
 
 @np.errstate(divide='ignore', invalid='ignore')
 def compute_grid_convolution(waveform_extractor, peak_sign='neg', radius_um=50., upsampling_um=5,
-        sigma_um=np.linspace(10, 50, 5), sigma_ms=0.25, margin_um=50, prototype=None):
+        sigma_um=np.linspace(10, 50, 5), sigma_ms=0.25, margin_um=50, prototype=None, percentile=10):
     '''
     Estimate the positions of the templates from a large grid of fake templates
 
@@ -383,6 +383,9 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', radius_um=50.,
         The margin for the grid of fake templates
     prototype: np.array
         Fake waveforms for the templates. If None, generated as Gaussian
+    percentile: float (default 10)
+        The percentage  in [0, 100] of the best scalar products kept to 
+        estimate the position
 
     Returns
     -------
@@ -394,6 +397,8 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', radius_um=50.,
     nbefore = waveform_extractor.nbefore
     nafter = waveform_extractor.nafter
     fs = waveform_extractor.sampling_frequency
+    percentile = 100 - percentile
+    assert 0 <= percentile <= 100, "Percentile should be in [0, 100]"
         
     time_axis = np.arange(-nbefore, nafter) * 1000/fs
     if prototype is None:
@@ -426,6 +431,11 @@ def compute_grid_convolution(waveform_extractor, peak_sign='neg', radius_um=50.,
         for count, w in enumerate(weights):
             dot_products = np.dot(global_products, w[:, intersect])
             dot_products = np.maximum(0, dot_products)
+
+            if percentile < 100:
+                thresholds = np.percentile(dot_products, percentile)
+                dot_products[dot_products < thresholds] = 0
+
             scalar_products[intersect] += dot_products
             found_positions += np.dot(dot_products, template_positions[intersect])
         
@@ -543,7 +553,7 @@ def enforce_decrease_shells_data(
     return decreasing_data
 
 def get_grid_convolution_templates_and_weights(contact_locations, local_radius_um=50, upsampling_um=5, 
-    sigma_um=[np.linspace(10, 50., 5)], margin_um=50):
+    sigma_um=np.linspace(10, 50., 5), margin_um=50):
     
     x_min, x_max = contact_locations[:,0].min(), contact_locations[:,0].max()
     y_min, y_max = contact_locations[:,1].min(), contact_locations[:,1].max()
