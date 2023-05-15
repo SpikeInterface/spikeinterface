@@ -15,7 +15,7 @@ def _find_duplicated_spikes_numpy(
 ) -> np.ndarray:
     (indices_of_duplicates,) = np.where(np.diff(spike_train) <= censored_period)
 
-    if method == "keep_first":
+    if method == 'keep_first':
         indices_of_duplicates += 1
     elif method == "random":
         rand_state = np.random.get_state()
