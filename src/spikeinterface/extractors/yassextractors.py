@@ -2,11 +2,12 @@ from pathlib import Path
 
 import numpy as np
 
-from spikeinterface.core import (BaseSorting, BaseSortingSegment)
+from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import yaml
+
     HAVE_YAML = True
 except:
     HAVE_YAML = False
@@ -26,10 +27,12 @@ class YassSortingExtractor(BaseSorting):
         Loaded data.
     """
 
-    extractor_name = 'YassExtractor'
-    mode = 'folder'
+    extractor_name = "YassExtractor"
+    mode = "folder"
     installed = HAVE_YAML  # check at class level if installed or not
-    installation_mesg = "To use the Yass extractor, install pyyaml: \n\n pip install pyyaml\n\n"  # error message when not installed
+    installation_mesg = (
+        "To use the Yass extractor, install pyyaml: \n\n pip install pyyaml\n\n"  # error message when not installed
+    )
     name = "yass"
 
     def __init__(self, folder_path):
@@ -37,24 +40,24 @@ class YassSortingExtractor(BaseSorting):
 
         folder_path = Path(folder_path)
 
-        self.fname_spike_train = folder_path / 'tmp' / 'output' / 'spike_train.npy'
-        self.fname_templates = folder_path / 'tmp' / 'output' / 'templates' / 'templates_0sec.npy'
-        self.fname_config = folder_path / 'config.yaml'
+        self.fname_spike_train = folder_path / "tmp" / "output" / "spike_train.npy"
+        self.fname_templates = folder_path / "tmp" / "output" / "templates" / "templates_0sec.npy"
+        self.fname_config = folder_path / "config.yaml"
 
         # Read CONFIG File
-        with open(self.fname_config, 'r') as stream:
+        with open(self.fname_config, "r") as stream:
             self.config = yaml.safe_load(stream)
 
         spiketrains = np.load(self.fname_spike_train)
         unit_ids = np.unique(spiketrains[:, 1])
 
         # initialize
-        sampling_frequency = self.config['recordings']['sampling_rate']
+        sampling_frequency = self.config["recordings"]["sampling_rate"]
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.add_sorting_segment(YassSortingSegment(spiketrains))
 
-        self._kwargs = {'folder_path': str(folder_path)}
-        self.extra_requirements.append('pyyaml')
+        self._kwargs = {"folder_path": str(folder_path)}
+        self.extra_requirements.append("pyyaml")
 
 
 class YassSortingSegment(BaseSortingSegment):

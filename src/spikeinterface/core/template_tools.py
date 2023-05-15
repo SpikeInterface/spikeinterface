@@ -56,7 +56,9 @@ def get_template_amplitudes(waveform_extractor, peak_sign: str = "neg", mode: st
     return peak_values
 
 
-def get_template_extremum_channel(waveform_extractor, peak_sign: str = "neg", mode: str = "extremum", outputs: str = "id"):
+def get_template_extremum_channel(
+    waveform_extractor, peak_sign: str = "neg", mode: str = "extremum", outputs: str = "id"
+):
     """
     Compute the channel with the extremum peak for each unit.
 
@@ -105,39 +107,47 @@ def get_template_channel_sparsity(
     method="radius",
     peak_sign="neg",
     num_channels=5,
-    radius_um=100.,
+    radius_um=100.0,
     threshold=5,
     by_property=None,
     outputs="id",
 ):
     """
-    Get channel sparsity (subset of channels) for each template with several methods.
+        Get channel sparsity (subset of channels) for each template with several methods.
 
-    Parameters
-    ----------
-    waveform_extractor: WaveformExtractor
-        The waveform extractor
-{}
-    outputs: str
-        * 'id': channel id
-        * 'index': channel index
+        Parameters
+        ----------
+        waveform_extractor: WaveformExtractor
+            The waveform extractor
+    {}
+        outputs: str
+            * 'id': channel id
+            * 'index': channel index
 
-    Returns
-    -------
-    sparsity: dict
-        Dictionary with unit ids as keys and sparse channel ids or indices (id or index based on 'outputs')
-        as values
+        Returns
+        -------
+        sparsity: dict
+            Dictionary with unit ids as keys and sparse channel ids or indices (id or index based on 'outputs')
+            as values
     """
     from spikeinterface.core.sparsity import compute_sparsity
 
-    warnings.warn("The 'get_template_channel_sparsity()' function is deprecated. "
-                  "Use 'compute_sparsity()' instead",
-                  DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        "The 'get_template_channel_sparsity()' function is deprecated. " "Use 'compute_sparsity()' instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
-    assert outputs in ('id', 'index'), "'outputs' can either be 'id' or 'index'"
-    sparsity = compute_sparsity(waveform_extractor, method=method, peak_sign=peak_sign,
-                                 num_channels=num_channels, radius_um=radius_um, threshold=threshold,
-                                 by_property=by_property)
+    assert outputs in ("id", "index"), "'outputs' can either be 'id' or 'index'"
+    sparsity = compute_sparsity(
+        waveform_extractor,
+        method=method,
+        peak_sign=peak_sign,
+        num_channels=num_channels,
+        radius_um=radius_um,
+        threshold=threshold,
+        by_property=by_property,
+    )
 
     # handle output ids or indexes
     if outputs == "id":
@@ -219,13 +229,9 @@ def get_template_extremum_amplitude(waveform_extractor, peak_sign: str = "neg", 
 
     before = waveform_extractor.nbefore
 
-    extremum_channels_ids = get_template_extremum_channel(
-        waveform_extractor, peak_sign=peak_sign, mode=mode
-    )
+    extremum_channels_ids = get_template_extremum_channel(waveform_extractor, peak_sign=peak_sign, mode=mode)
 
-    extremum_amplitudes = get_template_amplitudes(
-        waveform_extractor, peak_sign=peak_sign, mode=mode
-    )
+    extremum_amplitudes = get_template_amplitudes(waveform_extractor, peak_sign=peak_sign, mode=mode)
 
     unit_amplitudes = {}
     for unit_id in unit_ids:
@@ -234,5 +240,3 @@ def get_template_extremum_amplitude(waveform_extractor, peak_sign: str = "neg", 
         unit_amplitudes[unit_id] = extremum_amplitudes[unit_id][best_channel]
 
     return unit_amplitudes
-
-

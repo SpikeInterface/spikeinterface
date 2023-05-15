@@ -17,38 +17,46 @@ except ImportError:
 class FilterOpenCLRecording(BasePreprocessor):
     """
     Simple implementation of FilterRecording in OpenCL.
-    
+
     Only filter_mode='sos' is supported.
-    
+
     Author : Samuel Garcia
     This kernel is ported from "tridesclous"
-    
+
     Parameters
     ----------
     recording: Recording
         The recording extractor to be re-referenced
-    
+
     N: order
     filter_mode: 'sos' only
 
     ftypestr: 'butter' / 'cheby1' / ... all possible of scipy.signal.iirdesign
-    
+
     margin: margin in second on border to avoid border effect
-    
+
     """
-    name = 'filter'
 
-    def __init__(self, recording, band=[300., 6000.], btype='bandpass',
-                 filter_order=5, ftype='butter', filter_mode='sos', margin_ms=5.0):
+    name = "filter"
 
-        assert HAVE_PYOPENCL, 'You need to install pyopencl (and GPU driver!!)'
+    def __init__(
+        self,
+        recording,
+        band=[300.0, 6000.0],
+        btype="bandpass",
+        filter_order=5,
+        ftype="butter",
+        filter_mode="sos",
+        margin_ms=5.0,
+    ):
+        assert HAVE_PYOPENCL, "You need to install pyopencl (and GPU driver!!)"
 
-        assert btype in ('bandpass', 'lowpass', 'highpass', 'bandstop')
-        assert filter_mode in ('sos',)
+        assert btype in ("bandpass", "lowpass", "highpass", "bandstop")
+        assert filter_mode in ("sos",)
 
         # coefficient
         sf = recording.get_sampling_frequency()
-        if btype in ('bandpass', 'bandstop'):
+        if btype in ("bandpass", "bandstop"):
             assert len(band) == 2
             Wn = [e / sf * 2 for e in band]
         else:
@@ -59,18 +67,25 @@ class FilterOpenCLRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording)
 
-        margin = int(margin_ms * sf / 1000.)
+        margin = int(margin_ms * sf / 1000.0)
         num_channels = recording.get_num_channels()
         dtype = recording.get_dtype()
         # DEBUG force float32 at the moement
-        dtype = 'float32'
+        dtype = "float32"
         executor = OpenCLFilterExecutor(coefficients, num_channels, dtype, margin)
 
         for parent_segment in recording._recording_segments:
             self.add_recording_segment(FilterOpenCLRecordingSegment(parent_segment, executor, margin))
 
-        self._kwargs = dict(recording=recording, band=band, btype=btype,
-                            filter_order=filter_order, ftype=ftype, filter_mode=filter_mode, margin_ms=margin_ms)
+        self._kwargs = dict(
+            recording=recording,
+            band=band,
+            btype=btype,
+            filter_order=filter_order,
+            ftype=ftype,
+            filter_mode=filter_mode,
+            margin_ms=margin_ms,
+        )
 
 
 class FilterOpenCLRecordingSegment(BasePreprocessorSegment):
@@ -81,20 +96,20 @@ class FilterOpenCLRecordingSegment(BasePreprocessorSegment):
         self.margin = margin
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        assert start_frame is not None, 'FilterOpenCLRecording work with fixed chunk_size'
-        assert end_frame is not None, 'FilterOpenCLRecording work with fixed chunk_size'
+        assert start_frame is not None, "FilterOpenCLRecording work with fixed chunk_size"
+        assert end_frame is not None, "FilterOpenCLRecording work with fixed chunk_size"
 
         chunk_size = end_frame - start_frame
         if chunk_size != self.executor.chunk_size:
             self.executor.create_buffers_and_compile(chunk_size)
 
         #  get with margin and force zeros!!
-        traces_chunk, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment,
-                                                                        start_frame, end_frame, channel_indices,
-                                                                        self.margin, add_zeros=True)
+        traces_chunk, left_margin, right_margin = get_chunk_with_margin(
+            self.parent_recording_segment, start_frame, end_frame, channel_indices, self.margin, add_zeros=True
+        )
 
         # DEBUG
-        traces_chunk_float32 = traces_chunk.astype('float32')
+        traces_chunk_float32 = traces_chunk.astype("float32")
 
         filtered_traces = self.executor.process(traces_chunk_float32)
 
@@ -112,15 +127,15 @@ class FilterOpenCLRecordingSegment(BasePreprocessorSegment):
 class OpenCLFilterExecutor:
     """
     Executor function shared across FilterOpenCLRecordingSegment.
-    
+
     The input/ouput can be  float32 only (int16 will be implemented soon).
-    
+
     Internally it is computed as float32 with coeff
-    
+
     """
 
     def __init__(self, coefficients, num_channels, dtype, margin):
-        self.coefficients = np.ascontiguousarray(coefficients, dtype='float32')
+        self.coefficients = np.ascontiguousarray(coefficients, dtype="float32")
         self.num_channels = num_channels
         self.dtype = np.dtype(dtype)
         self.margin = margin
@@ -142,12 +157,20 @@ class OpenCLFilterExecutor:
 
         if traces.shape[0] != self.full_size:
             if self.full_size is not None:
-                print(f'Warning : chunk_size have change {self.chunk_size} {traces.shape[0]}, need recompile CL!!!')
+                print(f"Warning : chunk_size have change {self.chunk_size} {traces.shape[0]}, need recompile CL!!!")
             self.create_buffers_and_compile()
 
         event = pyopencl.enqueue_copy(self.queue, self.input_cl, traces)
-        event = self.kern_sosfiltfilt(self.queue, (self.num_channels,), (self.num_channels,),
-                                      self.input_cl, self.output_cl, self.coefficients_cl, self.zi1_cl, self.zi2_cl)
+        event = self.kern_sosfiltfilt(
+            self.queue,
+            (self.num_channels,),
+            (self.num_channels,),
+            self.input_cl,
+            self.output_cl,
+            self.coefficients_cl,
+            self.zi1_cl,
+            self.zi2_cl,
+        )
         event.wait()
         event = pyopencl.enqueue_copy(self.queue, self.output, self.output_cl)
 
@@ -161,8 +184,8 @@ class OpenCLFilterExecutor:
         buffer_nbytes = self.full_size * self.num_channels * self.dtype.itemsize
 
         # this is for stream processing
-        self.zi1 = np.zeros((self.num_channels, n_section, 2), dtype='float32')
-        self.zi2 = np.zeros((self.num_channels, n_section, 2), dtype='float32')
+        self.zi1 = np.zeros((self.num_channels, n_section, 2), dtype="float32")
+        self.zi2 = np.zeros((self.num_channels, n_section, 2), dtype="float32")
         self.output = np.zeros((self.full_size, self.num_channels), dtype=self.dtype)
 
         # GPU buffers
@@ -183,7 +206,7 @@ class OpenCLFilterExecutor:
         prg = pyopencl.Program(self.ctx, kernel_formated)
         self.opencl_prg = prg.build()  # options='-cl-mad-enable'
 
-        self.kern_sosfiltfilt = getattr(self.opencl_prg, 'sosfiltfilt')
+        self.kern_sosfiltfilt = getattr(self.opencl_prg, "sosfiltfilt")
 
 
 processor_kernel = """

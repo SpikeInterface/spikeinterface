@@ -11,6 +11,7 @@ from .base_mpl import MplPlotter
 from matplotlib.patches import Ellipse
 from matplotlib.lines import Line2D
 
+
 class UnitLocationsPlotter(MplPlotter):
     def __init__(self) -> None:
         self.legend = None
@@ -20,33 +21,36 @@ class UnitLocationsPlotter(MplPlotter):
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
         self.make_mpl_figure(**backend_kwargs)
-        
-        unit_locations = dp.unit_locations
-        
-        probegroup = ProbeGroup.from_dict(dp.probegroup_dict)
-        probe_shape_kwargs = dict(facecolor='w', edgecolor='k', lw=0.5, alpha=1.)
-        contacts_kargs = dict(alpha=1., edgecolor='k', lw=0.5)
-        
-        for probe in probegroup.probes:
 
+        unit_locations = dp.unit_locations
+
+        probegroup = ProbeGroup.from_dict(dp.probegroup_dict)
+        probe_shape_kwargs = dict(facecolor="w", edgecolor="k", lw=0.5, alpha=1.0)
+        contacts_kargs = dict(alpha=1.0, edgecolor="k", lw=0.5)
+
+        for probe in probegroup.probes:
             text_on_contact = None
             if dp.with_channel_ids:
                 text_on_contact = dp.channel_ids
-            
-            poly_contact, poly_contour = plot_probe(probe, ax=self.ax,
-                                                    contacts_colors='w', contacts_kargs=contacts_kargs,
-                                                    probe_shape_kwargs=probe_shape_kwargs,
-                                                    text_on_contact=text_on_contact)
+
+            poly_contact, poly_contour = plot_probe(
+                probe,
+                ax=self.ax,
+                contacts_colors="w",
+                contacts_kargs=contacts_kargs,
+                probe_shape_kwargs=probe_shape_kwargs,
+                text_on_contact=text_on_contact,
+            )
             poly_contact.set_zorder(2)
             if poly_contour is not None:
                 poly_contour.set_zorder(1)
 
-        self.ax.set_title('')
+        self.ax.set_title("")
 
         # color = np.array([dp.unit_colors[unit_id] for unit_id in dp.unit_ids])
         width = height = 10
         ellipse_kwargs = dict(width=width, height=height, lw=2)
-        
+
         if dp.plot_all_units:
             unit_colors = {}
             unit_ids = dp.all_unit_ids
@@ -60,24 +64,32 @@ class UnitLocationsPlotter(MplPlotter):
             unit_colors = dp.unit_colors
         labels = dp.unit_ids
 
-        patches = [Ellipse((unit_locations[unit]), color=unit_colors[unit], 
-                           zorder=5 if unit in dp.unit_ids else 3, 
-                           alpha=0.9 if unit in dp.unit_ids else 0.5,
-                            **ellipse_kwargs) for i, unit in enumerate(unit_ids)]
+        patches = [
+            Ellipse(
+                (unit_locations[unit]),
+                color=unit_colors[unit],
+                zorder=5 if unit in dp.unit_ids else 3,
+                alpha=0.9 if unit in dp.unit_ids else 0.5,
+                **ellipse_kwargs,
+            )
+            for i, unit in enumerate(unit_ids)
+        ]
         for p in patches:
             self.ax.add_patch(p)
-        handles = [Line2D([0], [0], ls="", marker='o', markersize=5, markeredgewidth=2, 
-                          color=unit_colors[unit]) for unit in dp.unit_ids]
+        handles = [
+            Line2D([0], [0], ls="", marker="o", markersize=5, markeredgewidth=2, color=unit_colors[unit])
+            for unit in dp.unit_ids
+        ]
 
         if dp.plot_legend:
             if self.legend is not None:
                 self.legend.remove()
-            self.legend = self.figure.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 1.),
-                                             ncol=5, fancybox=True, shadow=True)
+            self.legend = self.figure.legend(
+                handles, labels, loc="upper center", bbox_to_anchor=(0.5, 1.0), ncol=5, fancybox=True, shadow=True
+            )
 
         if dp.hide_axis:
             self.ax.axis("off")
-
 
 
 UnitLocationsPlotter.register(UnitLocationsWidget)

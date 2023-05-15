@@ -6,7 +6,7 @@ from .remove_excess_spikes import remove_excess_spikes
 from .auto_merge import get_potential_auto_merge
 
 
-# manual sorting, 
+# manual sorting,
 from .curationsorting import CurationSorting
 from .mergeunitssorting import MergeUnitsSorting
 from .splitunitsorting import SplitUnitSorting

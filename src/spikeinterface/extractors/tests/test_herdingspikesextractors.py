@@ -7,7 +7,7 @@ import numpy as np
 from spikeinterface.extractors import *
 
 
-@pytest.mark.skip('HerdingSpikes can be tested after running run_herdingspikes()')
+@pytest.mark.skip("HerdingSpikes can be tested after running run_herdingspikes()")
 def test_herdingspikesextractors():
     # no tested here, tested un run_herdingspikes()
     pass
@@ -17,5 +17,5 @@ def test_herdingspikesextractors():
     #  print(sorting)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_herdingspikesextractors()
