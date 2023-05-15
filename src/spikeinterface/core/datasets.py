@@ -8,7 +8,7 @@ import warnings
 from .globals import get_global_dataset_folder, is_set_global_dataset_folder
 
 
-def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_exists=False, unlock=False):
+def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_exists=False, unlock=False) -> Path:
     """
     Function to download dataset from a remote repository using datalad.
 
