@@ -78,6 +78,7 @@ class WaveformExtractor:
         self._params = {}
         self._loaded_extensions = dict()
         self.sparsity = sparsity
+        self.was_run = False
 
         self.folder = folder
         if self.folder is not None:
@@ -563,7 +564,7 @@ class WaveformExtractor:
                 if template_file.is_file():
                     template_file.unlink()
 
-            waveform_folder.mkdir()
+            waveform_folder.mkdir(parents=True)
         else:
             # remove shared objects
             self._memory_objects = None
@@ -1296,6 +1297,8 @@ class WaveformExtractor:
                                                   **job_kwargs)
         if self.folder is None:
             self._memory_objects["wfs_arrays"] = wfs_arrays
+
+        self.was_run = True
 
 
 def select_random_spikes_uniformly(recording, sorting, max_spikes_per_unit, nbefore=None, nafter=None, seed=None):

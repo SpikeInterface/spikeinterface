@@ -36,6 +36,7 @@ def test_get_auto_merge_list():
     rec = rec.save()
     sorting_with_split = sorting_with_split.save()
     wf_folder = cache_folder / 'wf_auto_merge'
+    wv_unrunned_folder = cache_folder / 'wf_unrunned_auto_merge'
     if wf_folder.exists():
         shutil.rmtree(wf_folder)
     we = extract_waveforms(rec, sorting_with_split, mode='folder', folder=wf_folder, n_jobs=1)
@@ -59,6 +60,31 @@ def test_get_auto_merge_list():
                 extra_outputs=True,
                 )
     # print(potential_merges)
+
+    assert len(potential_merges) == num_unit_splited
+    for true_pair in other_ids.values():
+        true_pair = tuple(true_pair)
+        assert true_pair in potential_merges
+
+
+    # Make sure it runs with an yet runned WaveformExtractor
+    we = WaveformExtractor.create(rec, sorting_with_split, folder=wv_unrunned_folder, mode="folder")
+    we.set_params()
+    potential_merges, outs = get_potential_auto_merge(we,
+                minimum_spikes=1000, maximum_distance_um=150.,
+                peak_sign="neg",
+                bin_ms=0.25, window_ms=100.,
+                corr_diff_thresh=0.16,
+                template_diff_thresh=0.25,
+                censored_period_ms=0., refractory_period_ms=4.0,
+                sigma_smooth_ms = 0.6,
+                contamination_threshold=0.2,
+                adaptative_window_threshold=0.5,
+                num_channels=5,
+                num_shift=5,
+                firing_contamination_balance=1.5,
+                extra_outputs=True,
+                )
 
     assert len(potential_merges) == num_unit_splited
     for true_pair in other_ids.values():

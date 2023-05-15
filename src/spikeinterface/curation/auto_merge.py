@@ -2,6 +2,7 @@ from re import template
 import numpy as np
 
 
+from ..core import WaveformExtractor, extract_waveforms
 from ..core.template_tools import get_template_extremum_channel
 from ..postprocessing import compute_correlograms
 from ..qualitymetrics import compute_refrac_period_violations, compute_firing_rates
@@ -10,22 +11,22 @@ from .mergeunitssorting import MergeUnitsSorting
 
 
 def get_potential_auto_merge(
-    waveform_extractor, 
-    minimum_spikes=1000, 
-    maximum_distance_um=150.,
-    peak_sign="neg",
-    bin_ms=0.25, window_ms=100.,
-    corr_diff_thresh=0.16,
-    template_diff_thresh=0.25,
-    censored_period_ms=0., 
-    refractory_period_ms=1.0,
-    sigma_smooth_ms = 0.6,
-    contamination_threshold=0.2,
-    adaptative_window_threshold=0.5,
-    num_channels=5,
-    num_shift=5,
-    firing_contamination_balance=1.5,
-    extra_outputs=False,
+    waveform_extractor: WaveformExtractor, 
+    minimum_spikes: int = 1000, 
+    maximum_distance_um: float = 150.,
+    peak_sign: str = "neg",
+    bin_ms: float = 0.25, window_ms: float = 100.,
+    corr_diff_thresh: float = 0.16,
+    template_diff_thresh: float = 0.25,
+    censored_period_ms: float = 0., 
+    refractory_period_ms: float = 1.0,
+    sigma_smooth_ms: float = 0.6,
+    contamination_threshold: float = 0.2,
+    adaptative_window_threshold: float = 0.5,
+    num_channels: int = 5,
+    num_shift: int = 5,
+    firing_contamination_balance: float = 1.5,
+    extra_outputs: bool = False,
     steps=None,
 ):
     """
@@ -144,9 +145,16 @@ def get_potential_auto_merge(
         pair_mask[:, to_remove] = False
 
     # STEP 3 : unit positions are estimated roughly with channel
-    if 'unit_positions' in steps:
-        chan_loc = we.get_channel_locations()
-        unit_max_chan = get_template_extremum_channel(we, peak_sign=peak_sign, mode="extremum", outputs="index")
+    if 'unit_positions' in steps:  # If waveform extractor was not run, run it with few spikes for rough location estimation.
+        if not we.was_run:
+            p = we._params
+            p['max_spikes_per_unit'] = 100
+            we1 = extract_waveforms(we.recording, sorting, mode="memory", **p)
+        else:
+            we1 = we
+
+        chan_loc = we1.get_channel_locations()
+        unit_max_chan = get_template_extremum_channel(we1, peak_sign=peak_sign, mode="extremum", outputs="index")
         unit_max_chan = list(unit_max_chan.values())
         unit_locations = chan_loc[unit_max_chan, :]
         unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric='euclidean')
@@ -171,7 +179,18 @@ def get_potential_auto_merge(
 
     # STEP 5 : check if potential merge with CC also have template similarity
     if 'template_similarity' in steps:
-        templates = we.get_all_templates(mode='average')
+        if not we.was_run:  # If waveform extractor was not run, run it on the subset of unit ids that matters.
+            unit_left_mask = np.any(pair_mask, axis=0)
+            unit_ids_left = unit_ids[unit_left_mask]
+            we.sorting = we.sorting.select_units(unit_ids_left)
+            we.run_extract_waveforms()
+
+            temp = we.get_all_templates(mode='average')
+            templates = np.zeros((len(unit_ids), temp.shape[1], temp.shape[2]), dtype=temp.dtype)
+            templates[unit_left_mask] = temp
+        else:
+            templates = we.get_all_templates(mode='average')
+
         templates_diff = compute_templates_diff(sorting, templates, num_channels=num_channels, num_shift=num_shift, pair_mask=pair_mask)        
         pair_mask = pair_mask & (templates_diff  < template_diff_thresh)
 
