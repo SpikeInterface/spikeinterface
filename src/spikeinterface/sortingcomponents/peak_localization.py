@@ -289,17 +289,22 @@ class LocalizeGridConvolution(PipelineNode):
         The margin for the grid of fake templates
     prototype: np.array
         Fake waveforms for the templates. If None, generated as Gaussian
+    percentile: float (default 10)
+        The percentage in [0, 100] of the best scalar products kept to 
+        estimate the position
     """
     def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=50., upsampling_um=5,
-        sigma_um=np.linspace(10, 50., 5), sigma_ms=0.25, margin_um=50., prototype=None):
+        sigma_um=np.linspace(10, 50., 5), sigma_ms=0.25, margin_um=50., prototype=None, percentile=10):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         
         self.local_radius_um = local_radius_um
         self.sigma_um = sigma_um
         self.margin_um = margin_um
         self.upsampling_um = upsampling_um
-        contact_locations = recording.get_channel_locations()
+        self.percentile = 100 - percentile
+        assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
 
+        contact_locations = recording.get_channel_locations()
         # Find waveform extractor in the parents
         waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
         if waveform_extractor is None:
@@ -326,7 +331,8 @@ class LocalizeGridConvolution(PipelineNode):
                                  template_positions=self.template_positions,
                                  neighbours_mask=self.neighbours_mask,
                                  weights=self.weights,
-                                 nbefore=self.nbefore))
+                                 nbefore=self.nbefore,
+                                 percentile=self.percentile))
 
     def get_dtype(self):
         return self._dtype
@@ -351,6 +357,11 @@ class LocalizeGridConvolution(PipelineNode):
             for count, weights in enumerate(self.weights):
                 dot_products = np.dot(global_products, weights[:, intersect])
                 dot_products = np.maximum(0, dot_products)
+
+                if self.percentile < 100:
+                    thresholds = np.percentile(dot_products, self.percentile, axis=1)
+                    dot_products[dot_products < thresholds[:, np.newaxis]] = 0
+
                 scalar_products[:, intersect] += dot_products
                 found_positions += np.dot(dot_products, self.template_positions[intersect])
 
