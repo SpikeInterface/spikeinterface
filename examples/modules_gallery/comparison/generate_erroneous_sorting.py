@@ -32,7 +32,7 @@ def generate_erroneous_sorting():
     Returns:
         A tuple containing the true sorting and the erroneous sorting in that order
     """
-    
+
     rec, sorting_true = se.toy_example(num_channels=4, num_units=10, duration=10, seed=10, num_segments=1)
 
     # artificially remap to one based
@@ -102,4 +102,3 @@ if __name__ == '__main__':
     comp = sc.compare_sorter_to_ground_truth(sorting_true, sorting_err, exhaustive_gt=True)
     sw.plot_agreement_matrix(comp, ordered=True)
     plt.show()
-

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from spikeinterface.core import (BaseSorting, BaseSortingSegment)
+from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from .matlabhelpers import MatlabHelper
 
@@ -33,19 +33,19 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
         classes = cluster_classes[:, 0]
         spike_times = cluster_classes[:, 1]
         sampling_frequency = float(self._getfield("par/sr"))
-        unit_ids = np.unique(classes).astype('int')
+        unit_ids = np.unique(classes).astype("int")
         if keep_good_only:
             unit_ids = unit_ids[unit_ids > 0]
         spiketrains = {}
         for unit_id in unit_ids:
-            mask = (classes == unit_id)
+            mask = classes == unit_id
             spiketrains[unit_id] = np.rint(spike_times[mask] * (sampling_frequency / 1000))
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
         self.add_sorting_segment(WaveClustSortingSegment(unit_ids, spiketrains))
-        self.set_property('unsorted', np.array([c == 0 for c in unit_ids]))
-        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'keep_good_only':keep_good_only}
+        self.set_property("unsorted", np.array([c == 0 for c in unit_ids]))
+        self._kwargs = {"file_path": str(Path(file_path).absolute()), "keep_good_only": keep_good_only}
 
 
 class WaveClustSortingSegment(BaseSortingSegment):

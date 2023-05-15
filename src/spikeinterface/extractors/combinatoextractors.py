@@ -7,6 +7,7 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 try:
     import h5py
+
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False
@@ -34,27 +35,26 @@ class CombinatoSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = 'CombinatoSortingExtractor'
+    extractor_name = "CombinatoSortingExtractor"
     installed = HAVE_H5PY
     installation_mesg = "To use the CombinatoSortingExtractor install h5py: \n\n pip install h5py\n\n"
     name = "combinato"
 
-    def __init__(self, folder_path, sampling_frequency=None, user='simple', det_sign='both', keep_good_only=True):
-
+    def __init__(self, folder_path, sampling_frequency=None, user="simple", det_sign="both", keep_good_only=True):
         folder_path = Path(folder_path)
-        assert folder_path.is_dir(), 'Folder {} doesn\'t exist'.format(folder_path)
+        assert folder_path.is_dir(), "Folder {} doesn't exist".format(folder_path)
         if sampling_frequency is None:
-            h5_path = str(folder_path) + '.h5'
+            h5_path = str(folder_path) + ".h5"
             if Path(h5_path).exists():
-                with h5py.File(h5_path, mode='r') as f:
-                    sampling_frequency = f['sr'][0]
+                with h5py.File(h5_path, mode="r") as f:
+                    sampling_frequency = f["sr"][0]
 
         # ~ self.set_sampling_frequency(sampling_frequency)
-        det_file = str(folder_path / Path('data_' + folder_path.stem + '.h5'))
+        det_file = str(folder_path / Path("data_" + folder_path.stem + ".h5"))
         sort_cat_files = []
-        for sign in ['neg', 'pos']:
-            if det_sign in ['both', sign]:
-                sort_cat_file = folder_path / Path('sort_{}_{}/sort_cat.h5'.format(sign, user))
+        for sign in ["neg", "pos"]:
+            if det_sign in ["both", sign]:
+                sort_cat_file = folder_path / Path("sort_{}_{}/sort_cat.h5".format(sign, user))
                 if sort_cat_file.exists():
                     sort_cat_files.append((sign, str(sort_cat_file)))
 
@@ -62,31 +62,32 @@ class CombinatoSortingExtractor(BaseSorting):
         spiketrains = {}
         metadata = {}
         unsorted = []
-        with h5py.File(det_file, mode='r') as fdet:
+        with h5py.File(det_file, mode="r") as fdet:
             for sign, sfile in sort_cat_files:
-                with h5py.File(sfile, mode='r') as f:
-                    sp_class = f['classes'][()]
-                    gaux = f['groups'][()]
+                with h5py.File(sfile, mode="r") as f:
+                    sp_class = f["classes"][()]
+                    gaux = f["groups"][()]
                     groups = {g: gaux[gaux[:, 1] == g, 0] for g in np.unique(gaux[:, 1])}  # array of classes per group
-                    group_type = {group: g_type for group, g_type in f['types'][()]}
-                    sp_index = f['index'][()]
+                    group_type = {group: g_type for group, g_type in f["types"][()]}
+                    sp_index = f["index"][()]
 
-                times_css = fdet[sign]['times'][()]
+                times_css = fdet[sign]["times"][()]
                 for gr, cls in groups.items():
                     if keep_good_only and (group_type[gr] < 1):  # artifact or unsorted
                         continue
                     spiketrains[unit_counter] = np.rint(
-                        times_css[sp_index[np.isin(sp_class, cls)]] * (sampling_frequency / 1000))
-                    metadata[unit_counter] = {'group_type': group_type[gr]}
+                        times_css[sp_index[np.isin(sp_class, cls)]] * (sampling_frequency / 1000)
+                    )
+                    metadata[unit_counter] = {"group_type": group_type[gr]}
                     unit_counter = unit_counter + 1
-        unit_ids = np.arange(unit_counter, dtype='int64')
+        unit_ids = np.arange(unit_counter, dtype="int64")
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.add_sorting_segment(CombinatoSortingSegment(spiketrains))
-        self.set_property('unsorted', np.array([metadata[u]['group_type'] == 0 for u in range(unit_counter)]))
-        self.set_property('artifact', np.array([metadata[u]['group_type'] == -1 for u in range(unit_counter)]))
-        self._kwargs = {'folder_path': str(folder_path), 'user': user, 'det_sign': det_sign}
+        self.set_property("unsorted", np.array([metadata[u]["group_type"] == 0 for u in range(unit_counter)]))
+        self.set_property("artifact", np.array([metadata[u]["group_type"] == -1 for u in range(unit_counter)]))
+        self._kwargs = {"folder_path": str(folder_path), "user": user, "det_sign": det_sign}
 
-        self.extra_requirements.append('h5py')
+        self.extra_requirements.append("h5py")
 
 
 class CombinatoSortingSegment(BaseSortingSegment):

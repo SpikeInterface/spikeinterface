@@ -34,7 +34,7 @@ def test_filter_gaussian():
     check_recordings_equal(rec_filtered, saved_loaded, return_scaled=False)
 
     saved_1job = rec_filtered.save(folder=cache_folder / "1job")
-    saved_2job = rec_filtered.save(folder=cache_folder / "2job", n_jobs=2, chunk_duration='1s')
+    saved_2job = rec_filtered.save(folder=cache_folder / "2job", n_jobs=2, chunk_duration="1s")
 
     for seg_idx in range(rec_filtered.get_num_segments()):
         original_trace = rec_filtered.get_traces(seg_idx)

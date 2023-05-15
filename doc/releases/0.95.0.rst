@@ -7,7 +7,7 @@ SpikeInterface 0.95.0 release notes
 
 
 Main changes:
- 
+
  * Add `BaseSnippets` object to handle waveform cutouts (https://github.com/SpikeInterface/spikeinterface/pull/764)
  * Sacrificed `toolkit` in favor of: `preprocessing`, `postprocessing`, `qualitymetrics`, and `curation` modules (https://github.com/SpikeInterface/spikeinterface/pull/745)
  * Major refactoring widget module to allow for multiple backends (https://github.com/SpikeInterface/spikeinterface/pull/686 / https://github.com/SpikeInterface/spikeinterface/pull/786 / )
@@ -17,7 +17,7 @@ Main changes:
  * First implementations of (experimental) `sortingcomponents`-based sorters:
    * `spykingcircus2` (https://github.com/SpikeInterface/spikeinterface/pull/787)
    * `tridesclous2` (https://github.com/SpikeInterface/spikeinterface/pull/800)
- 
+
 
 core:
 
@@ -46,13 +46,13 @@ extractors:
  * Add `ros3`` support for NWB (https://github.com/SpikeInterface/spikeinterface/pull/658)
  * Fix neo kwargs propagation (https://github.com/SpikeInterface/spikeinterface/pull/723)
  * Load ADC sample shifts for Open Ephys and SpikeGLX (Neuropixels) (https://github.com/SpikeInterface/spikeinterface/pull/734 / https://github.com/SpikeInterface/spikeinterface/pull/759)
- * Load gain for MEArec (https://github.com/SpikeInterface/spikeinterface/pull/791) 
+ * Load gain for MEArec (https://github.com/SpikeInterface/spikeinterface/pull/791)
  * Added functions to get extractors from name (https://github.com/SpikeInterface/spikeinterface/pull/835)
  * Update nwb recording extractor to use offsets (https://github.com/SpikeInterface/spikeinterface/pull/846)
  * Add `EDFRecordingExtractor`, `NeuralynxSortingExtractor`, `BlackrockSortngExtractor` (https://github.com/SpikeInterface/spikeinterface/pull/853 / https://github.com/SpikeInterface/spikeinterface/pull/854 / https://github.com/SpikeInterface/spikeinterface/pull/856)
  * Fix IBL cbin kwargs (https://github.com/SpikeInterface/spikeinterface/pull/873)
  * Add snippets extractors: MClust (https://github.com/SpikeInterface/spikeinterface/pull/879) - WaveClus (https://github.com/SpikeInterface/spikeinterface/pull/764)
- * Fix Phy reading when unit groups are excluded (https://github.com/SpikeInterface/spikeinterface/pull/876) 
+ * Fix Phy reading when unit groups are excluded (https://github.com/SpikeInterface/spikeinterface/pull/876)
 
 sorters:
 
@@ -113,7 +113,7 @@ widgets:
  * Add Tiled plot (https://github.com/SpikeInterface/spikeinterface/pull/693 / https://github.com/SpikeInterface/spikeinterface/pull/821)
  * Refactor multiple widgets (https://github.com/SpikeInterface/spikeinterface/pull/762 / https://github.com/SpikeInterface/spikeinterface/pull/820)
  * Multi-layer timeseries (https://github.com/SpikeInterface/spikeinterface/pull/783)
- * Add `sorting_summary` widget for sortingview (https://github.com/SpikeInterface/spikeinterface/pull/795)  
+ * Add `sorting_summary` widget for sortingview (https://github.com/SpikeInterface/spikeinterface/pull/795)
  * Fix generation of docstrings for `plot_` functions (https://github.com/SpikeInterface/spikeinterface/pull/920)
  * Unify generation of 2d axes in MPL (https://github.com/SpikeInterface/spikeinterface/pull/921)
 

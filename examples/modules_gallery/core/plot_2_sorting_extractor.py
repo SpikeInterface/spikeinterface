@@ -89,7 +89,7 @@ print(sorting3)
 
 print(sorting3.get_property('firing_rate'))
 
-# which is equivalent to 
+# which is equivalent to
 from spikeinterface import UnitsSelectionSorting
 
 sorting3 = UnitsSelectionSorting(sorting2, unit_ids=[1, 4])

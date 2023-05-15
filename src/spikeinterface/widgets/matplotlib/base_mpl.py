@@ -5,32 +5,24 @@ import numpy as np
 
 
 class MplPlotter(BackendPlotter):
-    backend = 'matplotlib'
+    backend = "matplotlib"
     backend_kwargs_desc = {
         "figure": "Matplotlib figure. When None, it is created. Default None",
         "ax": "Single matplotlib axis. When None, it is created. Default None",
         "axes": "Multiple matplotlib axes. When None, they is created. Default None",
         "ncols": "Number of columns to create in subplots.  Default 5",
         "figsize": "Size of matplotlib figure. Default None",
-        "figtitle": "The figure title. Default None"
+        "figtitle": "The figure title. Default None",
     }
-    default_backend_kwargs = {
-        "figure": None,
-        "ax": None,
-        "axes": None,
-        "ncols": 5,
-        "figsize": None,
-        "figtitle": None
-    }
+    default_backend_kwargs = {"figure": None, "ax": None, "axes": None, "ncols": 5, "figsize": None, "figtitle": None}
 
-    def make_mpl_figure(self, figure=None, ax=None, axes=None, ncols=None, num_axes=None,
-                        figsize=None, figtitle=None):
+    def make_mpl_figure(self, figure=None, ax=None, axes=None, ncols=None, num_axes=None, figsize=None, figtitle=None):
         """
         figure/ax/axes : only one of then can be not None
         """
         if figure is not None:
-            assert ax is None and axes is None, 'figure/ax/axes : only one of then can be not None'
-            if  num_axes is None:
+            assert ax is None and axes is None, "figure/ax/axes : only one of then can be not None"
+            if num_axes is None:
                 ax = figure.add_subplot(111)
                 axes = np.array([[ax]])
             else:
@@ -44,11 +36,11 @@ class MplPlotter(BackendPlotter):
                     c = i % ncols
                     axes[r, c] = ax
         elif ax is not None:
-            assert figure is None and axes is None, 'figure/ax/axes : only one of then can be not None'
+            assert figure is None and axes is None, "figure/ax/axes : only one of then can be not None"
             figure = ax.get_figure()
             axes = np.array([[ax]])
         elif axes is not None:
-            assert figure is None and ax is None, 'figure/ax/axes : only one of then can be not None'
+            assert figure is None and ax is None, "figure/ax/axes : only one of then can be not None"
             axes = np.asarray(axes)
             figure = axes.flatten()[0].get_figure()
         else:
@@ -72,8 +64,7 @@ class MplPlotter(BackendPlotter):
                     if num_axes < ncols:
                         ncols = num_axes
                     nrows = int(np.ceil(num_axes / ncols))
-                    figure, axes = plt.subplots(
-                        nrows=nrows, ncols=ncols, figsize=figsize)
+                    figure, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
                     ax = None
                     # remove extra axes
                     if ncols * nrows > num_axes:
@@ -88,10 +79,9 @@ class MplPlotter(BackendPlotter):
         self.ax = ax
         # axes is always a 2D array of ax
         self.axes = axes
-        
+
         if figtitle is not None:
             self.figure.suptitle(figtitle)
-
 
 
 class to_attr(object):
@@ -105,8 +95,8 @@ class to_attr(object):
         print(o.a, o.b)
         """
         object.__init__(self)
-        object.__setattr__(self, '__d', d)
+        object.__setattr__(self, "__d", d)
 
     def __getattribute__(self, k):
-        d = object.__getattribute__(self, '__d')
+        d = object.__getattribute__(self, "__d")
         return d[k]
