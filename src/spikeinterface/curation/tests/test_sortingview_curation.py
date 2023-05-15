@@ -5,12 +5,8 @@ import os
 import spikeinterface as si
 from spikeinterface.extractors import read_mearec
 from spikeinterface import set_global_tmp_folder
-from spikeinterface.postprocessing import (
-    compute_correlograms,
-    compute_unit_locations,
-    compute_template_similarity,
-    compute_spike_amplitudes,
-)
+from spikeinterface.postprocessing import (compute_correlograms, compute_unit_locations,
+                                           compute_template_similarity, compute_spike_amplitudes)
 from spikeinterface.curation import apply_sortingview_curation
 
 if hasattr(pytest, "global_test_folder"):
@@ -20,18 +16,17 @@ else:
 
 parent_folder = Path(__file__).parent
 
-ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
-KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
+ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
+KACHERY_CLOUD_SET = bool(os.getenv('KACHERY_CLOUD_CLIENT_ID')) and bool(os.getenv('KACHERY_CLOUD_PRIVATE_KEY'))
 
 
 set_global_tmp_folder(cache_folder)
-
 
 # this needs to be run only once
 def generate_sortingview_curation_dataset():
     import spikeinterface.widgets as sw
 
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
+    local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     recording, sorting = read_mearec(local_path)
 
     we = si.extract_waveforms(recording, sorting, folder=None, mode="memory")
@@ -50,7 +45,7 @@ def generate_sortingview_curation_dataset():
 
 @pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
 def test_gh_curation():
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
+    local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     _, sorting = read_mearec(local_path)
 
     # from GH
@@ -68,9 +63,8 @@ def test_gh_curation():
 
     sorting_curated_gh_accepted = apply_sortingview_curation(sorting, uri_or_json=gh_uri, include_labels=["accept"])
     sorting_curated_gh_mua = apply_sortingview_curation(sorting, uri_or_json=gh_uri, exclude_labels=["mua"])
-    sorting_curated_gh_art_mua = apply_sortingview_curation(
-        sorting, uri_or_json=gh_uri, exclude_labels=["artifact", "mua"]
-    )
+    sorting_curated_gh_art_mua = apply_sortingview_curation(sorting, uri_or_json=gh_uri,
+                                                            exclude_labels=["artifact", "mua"])
     assert len(sorting_curated_gh_accepted.unit_ids) == 3
     assert len(sorting_curated_gh_mua.unit_ids) == 6
     assert len(sorting_curated_gh_art_mua.unit_ids) == 5
@@ -78,7 +72,7 @@ def test_gh_curation():
 
 @pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
 def test_sha1_curation():
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
+    local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     _, sorting = read_mearec(local_path)
 
     # from SHA1
@@ -96,16 +90,15 @@ def test_sha1_curation():
 
     sorting_curated_sha1_accepted = apply_sortingview_curation(sorting, uri_or_json=sha1_uri, include_labels=["accept"])
     sorting_curated_sha1_mua = apply_sortingview_curation(sorting, uri_or_json=sha1_uri, exclude_labels=["mua"])
-    sorting_curated_sha1_art_mua = apply_sortingview_curation(
-        sorting, uri_or_json=sha1_uri, exclude_labels=["artifact", "mua"]
-    )
+    sorting_curated_sha1_art_mua = apply_sortingview_curation(sorting, uri_or_json=sha1_uri,
+                                                              exclude_labels=["artifact", "mua"])
     assert len(sorting_curated_sha1_accepted.unit_ids) == 3
     assert len(sorting_curated_sha1_mua.unit_ids) == 6
     assert len(sorting_curated_sha1_art_mua.unit_ids) == 5
 
 
 def test_json_curation():
-    local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
+    local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     _, sorting = read_mearec(local_path)
 
     # from curation.json
@@ -119,13 +112,10 @@ def test_json_curation():
     assert "mua" in sorting_curated_json.get_property_keys()
     assert "artifact" in sorting_curated_json.get_property_keys()
 
-    sorting_curated_json_accepted = apply_sortingview_curation(
-        sorting, uri_or_json=json_file, include_labels=["accept"]
-    )
+    sorting_curated_json_accepted = apply_sortingview_curation(sorting, uri_or_json=json_file, include_labels=["accept"])
     sorting_curated_json_mua = apply_sortingview_curation(sorting, uri_or_json=json_file, exclude_labels=["mua"])
-    sorting_curated_json_mua1 = apply_sortingview_curation(
-        sorting, uri_or_json=json_file, exclude_labels=["artifact", "mua"]
-    )
+    sorting_curated_json_mua1 = apply_sortingview_curation(sorting, uri_or_json=json_file,
+                                                           exclude_labels=["artifact", "mua"])
     assert len(sorting_curated_json_accepted.unit_ids) == 3
     assert len(sorting_curated_json_mua.unit_ids) == 6
     assert len(sorting_curated_json_mua1.unit_ids) == 5

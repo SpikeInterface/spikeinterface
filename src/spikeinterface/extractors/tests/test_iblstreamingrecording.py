@@ -10,7 +10,6 @@ from spikeinterface.extractors import IblStreamingRecordingExtractor
 
 from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite, SortingCommonTestSuite
 
-
 @pytest.mark.streaming_extractors
 class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
     @classmethod
@@ -30,16 +29,14 @@ class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
             if str(e) == expected_error_message:
                 pytest.skip(f"Skipping test due to KeyError: {e}")
             else:
-                raise
+                raise        
         cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
-        cls.small_unscaled_trace = cls.recording.get_traces(
-            start_frame=5, end_frame=26
-        )  # return_scaled=False is SI default
+        cls.small_unscaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26)  # return_scaled=False is SI default
 
     def test_get_stream_names(self):
         stream_names = IblStreamingRecordingExtractor.get_stream_names(session=self.session)
 
-        expected_stream_names = ["probe01.ap", "probe01.lf", "probe00.ap", "probe00.lf"]
+        expected_stream_names = ['probe01.ap', 'probe01.lf', 'probe00.ap', 'probe00.lf']
         self.assertCountEqual(first=stream_names, second=expected_stream_names)
 
     def test_dtype(self):
@@ -53,11 +50,11 @@ class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
     def test_gains(self):
         expected_gains = 2.34375 * np.ones(shape=384)
         assert_array_equal(x=self.recording.get_channel_gains(), y=expected_gains)
-
+        
     def test_offsets(self):
         expected_offsets = np.zeros(shape=384)
         assert_array_equal(x=self.recording.get_channel_offsets(), y=expected_offsets)
-
+        
     def test_probe_representation(self):
         probe = self.recording.get_probe()
         expected_probe_representation = "Probe - 384ch - 1shanks"
@@ -65,18 +62,18 @@ class TestDefaultIblStreamingRecordingExtractorApBand(TestCase):
 
     def test_property_keys(self):
         expected_property_keys = [
-            "gain_to_uV",
-            "offset_to_uV",
-            "contact_vector",
-            "location",
-            "group",
-            "shank",
-            "shank_row",
-            "shank_col",
-            "good_channel",
-            "inter_sample_shift",
-            "adc",
-            "index_on_probe",
+            'gain_to_uV',
+            'offset_to_uV',
+            'contact_vector',
+            'location',
+            'group',
+            'shank',
+            'shank_row',
+            'shank_col',
+            'good_channel',
+            'inter_sample_shift',
+            'adc',
+            'index_on_probe',
         ]
         self.assertCountEqual(first=self.recording.get_property_keys(), second=expected_property_keys)
 
@@ -98,13 +95,9 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.session = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
-        cls.recording = IblStreamingRecordingExtractor(
-            session=cls.session, stream_name="probe00.ap", load_sync_channel=True
-        )
+        cls.recording = IblStreamingRecordingExtractor(session=cls.session, stream_name="probe00.ap", load_sync_channel=True)
         cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
-        cls.small_unscaled_trace = cls.recording.get_traces(
-            start_frame=5, end_frame=26
-        )  # return_scaled=False is SI default
+        cls.small_unscaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26)  # return_scaled=False is SI default
 
     def test_dtype(self):
         expected_datatype = "int16"
@@ -121,7 +114,7 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
     def test_offsets(self):
         expected_offsets = np.zeros(shape=385)
         assert_array_equal(x=self.recording.get_channel_offsets(), y=expected_offsets)
-
+        
     def test_probe_representation(self):
         expected_exception = ValueError
         expected_error_message = "There is no Probe attached to this recording. Use set_probe(...) to attach one."
@@ -133,15 +126,15 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
 
     def test_property_keys(self):
         expected_property_keys = [
-            "gain_to_uV",
-            "offset_to_uV",
-            "shank",
-            "shank_row",
-            "shank_col",
-            "good_channel",
-            "inter_sample_shift",
-            "adc",
-            "index_on_probe",
+            'gain_to_uV',
+            'offset_to_uV',
+            'shank',
+            'shank_row',
+            'shank_col',
+            'good_channel',
+            'inter_sample_shift',
+            'adc',
+            'index_on_probe',
         ]
         self.assertCountEqual(first=self.recording.get_property_keys(), second=expected_property_keys)
 
@@ -158,7 +151,7 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
         assert self.small_unscaled_trace.dtype == expected_dtype
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     TestDefaultIblStreamingRecordingExtractorApBand.setUpClass()
     test1 = TestDefaultIblStreamingRecordingExtractorApBand()
     test1.setUp()

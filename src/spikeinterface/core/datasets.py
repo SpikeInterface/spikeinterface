@@ -22,7 +22,7 @@ def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_e
         If not provided, the function returns None
     local_folder : str, optional
         The destination folder / directory to download the dataset to.
-        defaults to the path "get_global_dataset_folder()" / f{repo_name} (see `spikeinterface.core.globals`)
+        defaults to the path "get_global_dataset_folder()" / f{repo_name} (see `spikeinterface.core.globals`) 
     update_if_exists : bool, optional
         Forces re-download of the dataset if it already exists, by default False
     unlock : bool, optional
@@ -46,7 +46,7 @@ def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_e
         local_folder = base_local_folder / repo.split("/")[-1]
     else:
         local_folder = Path(local_folder)
-
+        
     if local_folder.exists() and GitRepo.is_valid_repo(local_folder):
         dataset = datalad.api.Dataset(path=local_folder)
         # make sure git repo is in clean state

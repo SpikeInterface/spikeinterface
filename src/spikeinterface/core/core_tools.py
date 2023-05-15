@@ -11,25 +11,18 @@ import numpy as np
 from tqdm import tqdm
 import inspect
 
-from .job_tools import (
-    ensure_chunk_size,
-    ensure_n_jobs,
-    divide_segment_into_chunks,
-    fix_job_kwargs,
-    ChunkRecordingExecutor,
-    _shared_job_kwargs_doc,
-)
-
+from .job_tools import (ensure_chunk_size, ensure_n_jobs, divide_segment_into_chunks, fix_job_kwargs, 
+                        ChunkRecordingExecutor, _shared_job_kwargs_doc)
 
 def copy_signature(source_fct):
     def copy(target_fct):
         target_fct.__signature__ = inspect.signature(source_fct)
         return target_fct
-
     return copy
 
 
 def define_function_from_class(source_class, name):
+
     @copy_signature(source_class)
     def reader_func(*args, **kwargs):
         return source_class(*args, **kwargs)
@@ -56,12 +49,11 @@ def read_python(path):
     """
     from six import exec_
     import re
-
     path = Path(path).absolute()
     assert path.is_file()
-    with path.open("r") as f:
+    with path.open('r') as f:
         contents = f.read()
-    contents = re.sub(r"range\(([\d,]*)\)", r"list(range(\1))", contents)
+    contents = re.sub(r'range\(([\d,]*)\)', r'list(range(\1))', contents)
     metadata = {}
     exec_(contents, {}, metadata)
     metadata = {k.lower(): v for (k, v) in metadata.items()}
@@ -78,16 +70,15 @@ def write_python(path, dict):
     dict: dict
         dictionary to save
     """
-    with Path(path).open("w") as f:
+    with Path(path).open('w') as f:
         for k, v in dict.items():
             if isinstance(v, str) and not v.startswith("'"):
-                if "path" in k and "win" in sys.platform:
+                if 'path' in k and 'win' in sys.platform:
                     f.write(str(k) + " = r'" + str(v) + "'\n")
                 else:
                     f.write(str(k) + " = '" + str(v) + "'\n")
             else:
                 f.write(str(k) + " = " + str(v) + "\n")
-
 
 class SIJsonEncoder(json.JSONEncoder):
     """
@@ -166,14 +157,14 @@ def add_suffix(file_path, possible_suffix):
     file_path = Path(file_path)
     if isinstance(possible_suffix, str):
         possible_suffix = [possible_suffix]
-    possible_suffix = [s if s.startswith(".") else "." + s for s in possible_suffix]
+    possible_suffix = [s if s.startswith('.') else '.' + s for s in possible_suffix]
     if file_path.suffix not in possible_suffix:
-        file_path = file_path.parent / (file_path.name + "." + possible_suffix[0])
+        file_path = file_path.parent / (file_path.name + '.' + possible_suffix[0])
     return file_path
 
 
 def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
-    """
+    '''
     Read binary .bin or .dat file.
 
     Parameters
@@ -190,14 +181,14 @@ def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
     offset: int
         number of offset bytes
 
-    """
+    '''
     num_chan = int(num_chan)
     with Path(file).open() as f:
         nsamples = (os.fstat(f.fileno()).st_size - offset) // (num_chan * np.dtype(dtype).itemsize)
     if time_axis == 0:
-        samples = np.memmap(file, np.dtype(dtype), mode="r", offset=offset, shape=(nsamples, num_chan))
+        samples = np.memmap(file, np.dtype(dtype), mode='r', offset=offset, shape=(nsamples, num_chan))
     else:
-        samples = np.memmap(file, np.dtype(dtype), mode="r", offset=offset, shape=(num_chan, nsamples)).T
+        samples = np.memmap(file, np.dtype(dtype), mode='r', offset=offset, shape=(num_chan, nsamples)).T
     return samples
 
 
@@ -207,18 +198,17 @@ def _init_binary_worker(recording, rec_memmaps_dict, dtype, cast_unsigned):
     worker_ctx = {}
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
-
-        worker_ctx["recording"] = load_extractor(recording)
+        worker_ctx['recording'] = load_extractor(recording)
     else:
-        worker_ctx["recording"] = recording
+        worker_ctx['recording'] = recording
 
     rec_memmaps = []
     for d in rec_memmaps_dict:
         rec_memmaps.append(np.memmap(**d))
 
-    worker_ctx["rec_memmaps"] = rec_memmaps
-    worker_ctx["dtype"] = np.dtype(dtype)
-    worker_ctx["cast_unsigned"] = cast_unsigned
+    worker_ctx['rec_memmaps'] = rec_memmaps
+    worker_ctx['dtype'] = np.dtype(dtype)
+    worker_ctx['cast_unsigned'] = cast_unsigned
 
     return worker_ctx
 
@@ -226,30 +216,21 @@ def _init_binary_worker(recording, rec_memmaps_dict, dtype, cast_unsigned):
 # used by write_binary_recording + ChunkRecordingExecutor
 def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
-    recording = worker_ctx["recording"]
-    dtype = worker_ctx["dtype"]
-    rec_memmap = worker_ctx["rec_memmaps"][segment_index]
-    cast_unsigned = worker_ctx["cast_unsigned"]
+    recording = worker_ctx['recording']
+    dtype = worker_ctx['dtype']
+    rec_memmap = worker_ctx['rec_memmaps'][segment_index]
+    cast_unsigned = worker_ctx['cast_unsigned']
 
     # apply function
-    traces = recording.get_traces(
-        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
-    )
+    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index,
+                                  cast_unsigned=cast_unsigned)
     traces = traces.astype(dtype)
     rec_memmap[start_frame:end_frame, :] = traces
 
 
-def write_binary_recording(
-    recording,
-    file_paths=None,
-    dtype=None,
-    add_file_extension=True,
-    verbose=False,
-    byte_offset=0,
-    auto_cast_uint=True,
-    **job_kwargs,
-):
-    """
+def write_binary_recording(recording, file_paths=None, dtype=None, add_file_extension=True,
+                           verbose=False, byte_offset=0, auto_cast_uint=True, **job_kwargs):
+    '''
     Save the trace of a recording extractor in several binary .dat format.
 
     Note :
@@ -273,7 +254,7 @@ def write_binary_recording(
     auto_cast_uint: bool
         If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
     {}
-    """
+    '''
     assert file_paths is not None, "Provide 'file_path'"
     job_kwargs = fix_job_kwargs(job_kwargs)
 
@@ -281,7 +262,7 @@ def write_binary_recording(
         file_paths = [file_paths]
     file_paths = [Path(e) for e in file_paths]
     if add_file_extension:
-        file_paths = [add_suffix(file_path, ["raw", "bin", "dat"]) for file_path in file_paths]
+        file_paths = [add_suffix(file_path, ['raw', 'bin', 'dat']) for file_path in file_paths]
 
     if dtype is None:
         dtype = recording.get_dtype()
@@ -298,26 +279,24 @@ def write_binary_recording(
         num_channels = recording.get_num_channels()
         file_path = file_paths[segment_index]
         shape = (num_frames, num_channels)
-        rec_memmap = np.memmap(str(file_path), dtype=dtype, mode="w+", offset=byte_offset, shape=shape)
+        rec_memmap = np.memmap(str(file_path), dtype=dtype, mode='w+', offset=byte_offset, shape=shape)
         rec_memmaps.append(rec_memmap)
-        rec_memmaps_dict.append(dict(filename=str(file_path), dtype=dtype, mode="r+", offset=byte_offset, shape=shape))
+        rec_memmaps_dict.append(dict(filename=str(file_path), dtype=dtype, mode='r+', offset=byte_offset, shape=shape))
 
     # use executor (loop or workers)
     func = _write_binary_chunk
     init_func = _init_binary_worker
     init_args = (recording, rec_memmaps_dict, dtype, cast_unsigned)
-    executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_binary_recording", **job_kwargs
-    )
+    executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
+                                      job_name='write_binary_recording', **job_kwargs)
     executor.run()
 
 
 write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
 
 
-def write_binary_recording_file_handle(
-    recording, file_handle=None, time_axis=0, dtype=None, byte_offset=0, verbose=False, **job_kwargs
-):
+def write_binary_recording_file_handle(recording, file_handle=None,
+                                       time_axis=0, dtype=None, byte_offset=0, verbose=False, **job_kwargs):
     """
     Old variant version of write_binary_recording with one file handle.
     Can be useful in some case ???
@@ -326,7 +305,7 @@ def write_binary_recording_file_handle(
     @ SAM useful for writing with time_axis=1!
     """
     assert file_handle is not None
-    assert recording.get_num_segments() == 1, "If file_handle is given then only deals with one segment"
+    assert recording.get_num_segments() == 1, 'If file_handle is given then only deals with one segment'
 
     if dtype is None:
         dtype = recording.get_dtype()
@@ -347,11 +326,13 @@ def write_binary_recording_file_handle(
             traces = traces.astype(dtype)
         traces.tofile(file_handle)
     else:
+
         num_frames = recording.get_num_samples(segment_index=0)
         chunks = divide_segment_into_chunks(num_frames, chunk_size)
 
         for start_frame, end_frame in chunks:
-            traces = recording.get_traces(segment_index=0, start_frame=start_frame, end_frame=end_frame)
+            traces = recording.get_traces(segment_index=0,
+                                          start_frame=start_frame, end_frame=end_frame)
             if time_axis == 1:
                 traces = traces.T
             if dtype is not None:
@@ -365,28 +346,26 @@ def _init_memory_worker(recording, arrays, shm_names, shapes, dtype, cast_unsign
     worker_ctx = {}
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
-
-        worker_ctx["recording"] = load_extractor(recording)
+        worker_ctx['recording'] = load_extractor(recording)
     else:
-        worker_ctx["recording"] = recording
+        worker_ctx['recording'] = recording
 
-    worker_ctx["dtype"] = np.dtype(dtype)
+    worker_ctx['dtype'] = np.dtype(dtype)
 
     if arrays is None:
         # create it from share memory name
         from multiprocessing.shared_memory import SharedMemory
-
         arrays = []
         # keep shm alive
-        worker_ctx["shms"] = []
+        worker_ctx['shms'] = []
         for i in range(len(shm_names)):
             shm = SharedMemory(shm_names[i])
-            worker_ctx["shms"].append(shm)
+            worker_ctx['shms'].append(shm)
             arr = np.ndarray(shape=shapes[i], dtype=dtype, buffer=shm.buf)
             arrays.append(arr)
 
-    worker_ctx["arrays"] = arrays
-    worker_ctx["cast_unsigned"] = cast_unsigned
+    worker_ctx['arrays'] = arrays
+    worker_ctx['cast_unsigned'] = cast_unsigned
 
     return worker_ctx
 
@@ -394,15 +373,14 @@ def _init_memory_worker(recording, arrays, shm_names, shapes, dtype, cast_unsign
 # used by write_memory_recording
 def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
-    recording = worker_ctx["recording"]
-    dtype = worker_ctx["dtype"]
-    arr = worker_ctx["arrays"][segment_index]
-    cast_unsigned = worker_ctx["cast_unsigned"]
+    recording = worker_ctx['recording']
+    dtype = worker_ctx['dtype']
+    arr = worker_ctx['arrays'][segment_index]
+    cast_unsigned = worker_ctx['cast_unsigned']
 
     # apply function
-    traces = recording.get_traces(
-        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
-    )
+    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index,
+                                  cast_unsigned=cast_unsigned)
     traces = traces.astype(dtype)
     arr[start_frame:end_frame, :] = traces
 
@@ -412,7 +390,7 @@ def make_shared_array(shape, dtype):
     try:
         from multiprocessing.shared_memory import SharedMemory
     except Exception as e:
-        raise Exception("SharedMemory is available only for python>=3.8")
+        raise Exception('SharedMemory is available only for python>=3.8')
 
     dtype = np.dtype(dtype)
     nbytes = int(np.prod(shape) * dtype.itemsize)
@@ -457,8 +435,8 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     arrays = []
     shm_names = []
     shapes = []
-
-    n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get("n_jobs", 1))
+    
+    n_jobs = ensure_n_jobs(recording, n_jobs=job_kwargs.get('n_jobs', 1))
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
         num_channels = recording.get_num_channels()
@@ -479,9 +457,8 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     else:
         init_args = (recording, arrays, None, None, dtype, cast_unsigned)
 
-    executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_memory_recording", **job_kwargs
-    )
+    executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
+                                      job_name='write_memory_recording', **job_kwargs)
     executor.run()
 
     return arrays
@@ -490,21 +467,9 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
 write_memory_recording.__doc__ = write_memory_recording.__doc__.format(_shared_job_kwargs_doc)
 
 
-def write_to_h5_dataset_format(
-    recording,
-    dataset_path,
-    segment_index,
-    save_path=None,
-    file_handle=None,
-    time_axis=0,
-    single_axis=False,
-    dtype=None,
-    chunk_size=None,
-    chunk_memory="500M",
-    verbose=False,
-    auto_cast_uint=True,
-    return_scaled=False,
-):
+def write_to_h5_dataset_format(recording, dataset_path, segment_index, save_path=None, file_handle=None,
+                               time_axis=0, single_axis=False, dtype=None, chunk_size=None, chunk_memory='500M',
+                               verbose=False, auto_cast_uint=True, return_scaled=False):
     """
     Save the traces of a recording extractor in an h5 dataset.
 
@@ -542,15 +507,14 @@ def write_to_h5_dataset_format(
         traces are dumped to uV, by default False
     """
     import h5py
-
     # ~ assert HAVE_H5, "To write to h5 you need to install h5py: pip install h5py"
     assert save_path is not None or file_handle is not None, "Provide 'save_path' or 'file handle'"
 
     if save_path is not None:
         save_path = Path(save_path)
-        if save_path.suffix == "":
+        if save_path.suffix == '':
             # when suffix is already raw/bin/dat do not change it.
-            save_path = save_path.parent / (save_path.name + ".h5")
+            save_path = save_path.parent / (save_path.name + '.h5')
 
     num_channels = recording.get_num_channels()
     num_frames = recording.get_num_frames(segment_index=0)
@@ -558,7 +522,7 @@ def write_to_h5_dataset_format(
     if file_handle is not None:
         assert isinstance(file_handle, h5py.File)
     else:
-        file_handle = h5py.File(save_path, "w")
+        file_handle = h5py.File(save_path, 'w')
 
     if dtype is None:
         dtype_file = recording.get_dtype()
@@ -602,23 +566,20 @@ def write_to_h5_dataset_format(
         else:
             chunks = range(n_chunk)
         for i in chunks:
-            traces = recording.get_traces(
-                segment_index=segment_index,
-                start_frame=i * chunk_size,
-                end_frame=min((i + 1) * chunk_size, num_frames),
-                cast_unsigned=cast_unsigned,
-                return_scaled=return_scaled,
-            )
+            traces = recording.get_traces(segment_index=segment_index,
+                                          start_frame=i * chunk_size,
+                                          end_frame=min((i + 1) * chunk_size, num_frames),
+                                          cast_unsigned=cast_unsigned, return_scaled=return_scaled)
             chunk_frames = traces.shape[0]
             if dtype is not None:
                 traces = traces.astype(dtype_file)
             if single_axis:
-                dset[chunk_start : chunk_start + chunk_frames] = traces[:, 0]
+                dset[chunk_start:chunk_start + chunk_frames] = traces[:, 0]
             else:
                 if time_axis == 0:
-                    dset[chunk_start : chunk_start + chunk_frames, :] = traces
+                    dset[chunk_start:chunk_start + chunk_frames, :] = traces
                 else:
-                    dset[:, chunk_start : chunk_start + chunk_frames] = traces.T
+                    dset[:, chunk_start:chunk_start + chunk_frames] = traces.T
 
             chunk_start += chunk_frames
 
@@ -627,21 +588,12 @@ def write_to_h5_dataset_format(
     return save_path
 
 
-def write_traces_to_zarr(
-    recording,
-    zarr_root,
-    zarr_path,
-    storage_options,
-    dataset_paths,
-    channel_chunk_size=None,
-    dtype=None,
-    compressor=None,
-    filters=None,
-    verbose=False,
-    auto_cast_uint=True,
-    **job_kwargs,
-):
-    """
+def write_traces_to_zarr(recording, zarr_root, zarr_path, storage_options, 
+                         dataset_paths, channel_chunk_size=None, dtype=None,
+                         compressor=None, filters=None, 
+                         verbose=False, auto_cast_uint=True, 
+                         **job_kwargs):
+    '''
     Save the trace of a recording extractor in several zarr format.
 
 
@@ -670,7 +622,7 @@ def write_traces_to_zarr(
     auto_cast_uint: bool
         If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
     {}
-    """
+    '''
     assert dataset_paths is not None, "Provide 'file_path'"
 
     if not isinstance(dataset_paths, list):
@@ -693,23 +645,19 @@ def write_traces_to_zarr(
         num_channels = recording.get_num_channels()
         dset_name = dataset_paths[segment_index]
         shape = (num_frames, num_channels)
-        _ = zarr_root.create_dataset(
-            name=dset_name,
-            shape=shape,
-            chunks=(chunk_size, channel_chunk_size),
-            dtype=dtype,
-            filters=filters,
-            compressor=compressor,
-        )
-        # synchronizer=zarr.ThreadSynchronizer())
+        _ = zarr_root.create_dataset(name=dset_name, shape=shape,
+                                     chunks=(chunk_size, channel_chunk_size), 
+                                     dtype=dtype,
+                                     filters=filters,
+                                     compressor=compressor,)
+                                # synchronizer=zarr.ThreadSynchronizer())
 
     # use executor (loop or workers)
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
     init_args = (recording, zarr_path, storage_options, dataset_paths, dtype, cast_unsigned)
-    executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_zarr_recording", **job_kwargs
-    )
+    executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose,
+                                      job_name='write_zarr_recording', **job_kwargs)
     executor.run()
 
 
@@ -721,10 +669,9 @@ def _init_zarr_worker(recording, zarr_path, storage_options, dataset_paths, dtyp
     worker_ctx = {}
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
-
-        worker_ctx["recording"] = load_extractor(recording)
+        worker_ctx['recording'] = load_extractor(recording)
     else:
-        worker_ctx["recording"] = recording
+        worker_ctx['recording'] = recording
 
     # reload root and datasets
     if storage_options is None:
@@ -741,9 +688,9 @@ def _init_zarr_worker(recording, zarr_path, storage_options, dataset_paths, dtyp
     for dset_name in dataset_paths:
         z = root[dset_name]
         zarr_datasets.append(z)
-    worker_ctx["zarr_datasets"] = zarr_datasets
-    worker_ctx["dtype"] = np.dtype(dtype)
-    worker_ctx["cast_unsigned"] = cast_unsigned
+    worker_ctx['zarr_datasets'] = zarr_datasets
+    worker_ctx['dtype'] = np.dtype(dtype)
+    worker_ctx['cast_unsigned'] = cast_unsigned
 
     return worker_ctx
 
@@ -751,15 +698,14 @@ def _init_zarr_worker(recording, zarr_path, storage_options, dataset_paths, dtyp
 # used by write_zarr_recording + ChunkRecordingExecutor
 def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
-    recording = worker_ctx["recording"]
-    dtype = worker_ctx["dtype"]
-    zarr_dataset = worker_ctx["zarr_datasets"][segment_index]
-    cast_unsigned = worker_ctx["cast_unsigned"]
+    recording = worker_ctx['recording']
+    dtype = worker_ctx['dtype']
+    zarr_dataset = worker_ctx['zarr_datasets'][segment_index]
+    cast_unsigned = worker_ctx['cast_unsigned']
 
     # apply function
-    traces = recording.get_traces(
-        start_frame=start_frame, end_frame=end_frame, segment_index=segment_index, cast_unsigned=cast_unsigned
-    )
+    traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index,
+                                  cast_unsigned=cast_unsigned)
     traces = traces.astype(dtype)
     zarr_dataset[start_frame:end_frame, :] = traces
 
@@ -784,11 +730,11 @@ def is_dict_extractor(d):
     """
     if not isinstance(d, dict):
         return False
-    is_extractor = ("module" in d) and ("class" in d) and ("version" in d) and ("annotations" in d)
+    is_extractor = ('module' in d) and ('class' in d) and ('version' in d) and ('annotations' in d)
     return is_extractor
 
 
-def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
+def recursive_path_modifier(d, func, target='path', copy=True) -> dict:
     """
     Generic function for recursive modification of paths in an extractor dict.
     A recording can be nested and this function explores the dictionary recursively
@@ -820,13 +766,13 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
         dc = deepcopy(d)
     else:
         dc = d
-
+    
     if "kwargs" in dc.keys():
         kwargs = dc["kwargs"]
-
+        
         # change in place (copy=False)
         recursive_path_modifier(kwargs, func, copy=False)
-
+        
         # find nested and also change inplace (copy=False)
         nested_extractor_dict = None
         for k, v in kwargs.items():
@@ -848,11 +794,12 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
                 if v is None:
                     continue
                 if isinstance(v, (str, Path)):
-                    dc[k] = func(v)
+                    dc[k] =func(v)
                 elif isinstance(v, list):
                     dc[k] = [func(e) for e in v]
                 else:
-                    raise ValueError(f"{k} key for path  must be str or list[str]")
+                    raise ValueError(
+                        f'{k} key for path  must be str or list[str]')
 
 
 def recursive_key_finder(d, key):
@@ -865,7 +812,7 @@ def recursive_key_finder(d, key):
                 yield v
 
 
-def convert_bytes_to_str(byte_value: int) -> str:
+def convert_bytes_to_str(byte_value:int ) -> str:
     """
     Convert a number of bytes to a human-readable string with an appropriate unit.
 
@@ -894,7 +841,7 @@ def convert_bytes_to_str(byte_value: int) -> str:
     >>> convert_bytes_to_str(45056)
     '43.99 KiB'
     """
-    suffixes = ["B", "KiB", "MiB", "GiB", "TiB"]
+    suffixes = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
     i = 0
     while byte_value >= 1024 and i < len(suffixes) - 1:
         byte_value /= 1024
@@ -923,12 +870,12 @@ def convert_seconds_to_str(seconds: float, long_notation: bool = True) -> str:
         requested by the `long_notation` parameter.
     """
     base_str = f"{seconds:,.2f}s"
-
+    
     if long_notation:
         if seconds < 1.0:
             base_str += f" ({seconds * 1000:.2f} ms)"
         elif seconds < 60:
-            pass  # seconds is already the primary representation
+            pass # seconds is already the primary representation
         elif seconds < 3600:
             minutes = seconds / 60
             base_str += f" ({minutes:.2f} minutes)"

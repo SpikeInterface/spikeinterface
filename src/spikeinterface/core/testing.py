@@ -11,14 +11,8 @@ def check_sorted_arrays_equal(a1, a2):
     assert_array_equal(a1, a2)
 
 
-def check_recordings_equal(
-    RX1: BaseRecording,
-    RX2: BaseRecording,
-    return_scaled=True,
-    force_dtype=None,
-    check_annotations: bool = False,
-    check_properties: bool = False,
-) -> None:
+def check_recordings_equal(RX1: BaseRecording, RX2: BaseRecording, return_scaled=True, force_dtype=None,
+                           check_annotations: bool = False, check_properties: bool = False) -> None:
     assert RX1.get_num_segments() == RX2.get_num_segments()
 
     for segment_idx in range(RX1.get_num_segments()):
@@ -33,15 +27,14 @@ def check_recordings_equal(
         assert np.allclose(RX1.get_sampling_frequency(), RX2.get_sampling_frequency())
         # get_traces
         if force_dtype is None:
-            assert np.allclose(
-                RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled),
-                RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled),
-            )
+            assert np.allclose(RX1.get_traces(segment_index=segment_idx,
+                                              return_scaled=return_scaled), 
+                               RX2.get_traces(segment_index=segment_idx, 
+                                              return_scaled=return_scaled))
         else:
             assert np.allclose(
                 RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),
-                RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),
-            )
+                RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype))
         sf = 0
         ef = N
         if RX1.get_num_channels() > 1:
@@ -49,23 +42,15 @@ def check_recordings_equal(
         else:
             ch = [RX1.get_channel_ids()[0]]
         if force_dtype is None:
-            assert np.allclose(
-                RX1.get_traces(
-                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
-                ),
-                RX2.get_traces(
-                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
-                ),
-            )
+            assert np.allclose(RX1.get_traces(segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef,
+                                              return_scaled=return_scaled),
+                               RX2.get_traces(segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef,
+                                              return_scaled=return_scaled))
         else:
-            assert np.allclose(
-                RX1.get_traces(
-                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
-                ).astype(force_dtype),
-                RX2.get_traces(
-                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
-                ).astype(force_dtype),
-            )
+            assert np.allclose(RX1.get_traces(segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef,
+                                              return_scaled=return_scaled).astype(force_dtype),
+                               RX2.get_traces(segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef,
+                                              return_scaled=return_scaled).astype(force_dtype))
 
     if check_annotations:
         check_extractor_annotations_equal(RX1, RX2)
@@ -73,9 +58,7 @@ def check_recordings_equal(
         check_extractor_properties_equal(RX1, RX2)
 
 
-def check_sortings_equal(
-    SX1: BaseSorting, SX2: BaseSorting, check_annotations: bool = False, check_properties: bool = False
-) -> None:
+def check_sortings_equal(SX1: BaseSorting, SX2: BaseSorting, check_annotations: bool = False, check_properties: bool = False) -> None:
     assert SX1.get_num_segments() == SX2.get_num_segments()
 
     for segment_idx in range(SX1.get_num_segments()):

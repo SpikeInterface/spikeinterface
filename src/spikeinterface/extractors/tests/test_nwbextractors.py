@@ -126,7 +126,7 @@ def test_nwb_extractor_channel_ids_retrieval(path_to_nwbfile, nwbfile_with_eceph
         electrical_series_electrode_indices = electrical_series.electrodes.data[:]
         electrodes_table = nwbfile.electrodes.to_dataframe()
         sub_electrodes_table = electrodes_table.iloc[electrical_series_electrode_indices]
-
+        
         expected_channel_ids = sub_electrodes_table["channel_name"].values
         extracted_channel_ids = recording_extractor.channel_ids
         assert np.array_equal(extracted_channel_ids, expected_channel_ids)
@@ -147,7 +147,7 @@ def test_nwb_extractor_property_retrieval(path_to_nwbfile, nwbfile_with_ecephys_
         electrical_series_electrode_indices = electrical_series.electrodes.data[:]
         electrodes_table = nwbfile.electrodes.to_dataframe()
         sub_electrodes_table = electrodes_table.iloc[electrical_series_electrode_indices]
-
+        
         expected_property = sub_electrodes_table["property"].values
         extracted_property = recording_extractor.get_property("property")
         assert np.array_equal(extracted_property, expected_property)
@@ -163,7 +163,7 @@ def test_nwb_extractor_offset_from_electrodes_table(path_to_nwbfile, nwbfile_wit
     electrical_series_electrode_indices = electrical_series.electrodes.data[:]
     electrodes_table = nwbfile.electrodes.to_dataframe()
     sub_electrodes_table = electrodes_table.iloc[electrical_series_electrode_indices]
-
+    
     expected_offsets_uV = sub_electrodes_table["offset"].values * 1e6
     extracted_offsets_uV = recording_extractor.get_channel_offsets()
     assert np.array_equal(extracted_offsets_uV, expected_offsets_uV)

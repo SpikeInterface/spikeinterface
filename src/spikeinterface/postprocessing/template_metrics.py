@@ -24,48 +24,48 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
     waveform_extractor: WaveformExtractor
         The waveform extractor object
     """
-
-    extension_name = "template_metrics"
+    extension_name = 'template_metrics'
 
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
-    def _set_params(self, metric_names=None, peak_sign="neg", upsampling_factor=10, sparsity=None, window_slope_ms=0.7):
+    def _set_params(self, metric_names=None, peak_sign='neg', 
+                    upsampling_factor=10, sparsity=None,
+                    window_slope_ms=0.7):
+
         if metric_names is None:
             metric_names = get_template_metric_names()
 
-        params = dict(
-            metric_names=[str(name) for name in metric_names],
-            sparsity=sparsity,
-            peak_sign=peak_sign,
-            upsampling_factor=int(upsampling_factor),
-            window_slope_ms=float(window_slope_ms),
-        )
+        params = dict(metric_names=[str(name) for name in metric_names],
+                      sparsity=sparsity,
+                      peak_sign=peak_sign,
+                      upsampling_factor=int(upsampling_factor),
+                      window_slope_ms=float(window_slope_ms))
 
         return params
 
     def _select_extension_data(self, unit_ids):
         # filter metrics dataframe
-        new_metrics = self._extension_data["metrics"].loc[np.array(unit_ids)]
+        new_metrics = self._extension_data['metrics'].loc[np.array(unit_ids)]
         return dict(metrics=new_metrics)
-
+        
     def _run(self):
         import pandas as pd
         from scipy.signal import resample_poly
-
-        metric_names = self._params["metric_names"]
-        sparsity = self._params["sparsity"]
-        peak_sign = self._params["peak_sign"]
-        upsampling_factor = self._params["upsampling_factor"]
+        metric_names = self._params['metric_names']
+        sparsity = self._params['sparsity']
+        peak_sign = self._params['peak_sign']
+        upsampling_factor = self._params['upsampling_factor']
         unit_ids = self.waveform_extractor.sorting.unit_ids
         sampling_frequency = self.waveform_extractor.sampling_frequency
 
         if sparsity is None:
-            extremum_channels_ids = get_template_extremum_channel(
-                self.waveform_extractor, peak_sign=peak_sign, outputs="id"
-            )
+            extremum_channels_ids = get_template_extremum_channel(self.waveform_extractor, 
+                                                                  peak_sign=peak_sign,
+                                                                  outputs='id')
 
-            template_metrics = pd.DataFrame(index=unit_ids, columns=metric_names)
+            template_metrics = pd.DataFrame(
+                index=unit_ids, columns=metric_names)
         else:
             extremum_channels_ids = sparsity.unit_id_to_channel_ids
             index_unit_ids = []
@@ -73,10 +73,10 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
             for unit_id, sparse_channels in extremum_channels_ids.items():
                 index_unit_ids += [unit_id] * len(sparse_channels)
                 index_channel_ids += list(sparse_channels)
-            multi_index = pd.MultiIndex.from_tuples(
-                list(zip(index_unit_ids, index_channel_ids)), names=["unit_id", "channel_id"]
-            )
-            template_metrics = pd.DataFrame(index=multi_index, columns=metric_names)
+            multi_index = pd.MultiIndex.from_tuples(list(zip(index_unit_ids, index_channel_ids)),
+                                                    names=["unit_id", "channel_id"])
+            template_metrics = pd.DataFrame(
+                index=multi_index, columns=metric_names)
 
         all_templates = self.waveform_extractor.get_all_templates()
         for unit_index, unit_id in enumerate(unit_ids):
@@ -93,8 +93,10 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
                 else:
                     index = (unit_id, chan_ids[i])
                 if upsampling_factor > 1:
-                    assert isinstance(upsampling_factor, (int, np.integer)), "'upsample' must be an integer"
-                    template_upsampled = resample_poly(template_single, up=upsampling_factor, down=1)
+                    assert isinstance(
+                        upsampling_factor, (int, np.integer)), "'upsample' must be an integer"
+                    template_upsampled = resample_poly(
+                        template_single, up=upsampling_factor, down=1)
                     sampling_frequency_up = upsampling_factor * sampling_frequency
                 else:
                     template_upsampled = template_single
@@ -102,27 +104,25 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
 
                 for metric_name in metric_names:
                     func = _metric_name_to_func[metric_name]
-                    value = func(
-                        template_upsampled,
-                        sampling_frequency=sampling_frequency_up,
-                        window_ms=self._params["window_slope_ms"],
-                    )
+                    value = func(template_upsampled,
+                                 sampling_frequency=sampling_frequency_up,
+                                 window_ms=self._params['window_slope_ms'])
                     template_metrics.at[index, metric_name] = value
 
-        self._extension_data["metrics"] = template_metrics
+        self._extension_data['metrics'] = template_metrics
 
     def get_data(self):
         """
         Get the computed metrics.
-
+        
         Returns
         -------
         metrics : pd.DataFrame
             Dataframe with template metrics
         """
         msg = "Template metrics are not computed. Use the 'run()' function."
-        assert self._extension_data["metrics"] is not None, msg
-        return self._extension_data["metrics"]
+        assert self._extension_data['metrics'] is not None, msg
+        return self._extension_data['metrics']
 
     @staticmethod
     def get_extension_function():
@@ -132,15 +132,10 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
 WaveformExtractor.register_extension(TemplateMetricsCalculator)
 
 
-def compute_template_metrics(
-    waveform_extractor,
-    load_if_exists=False,
-    metric_names=None,
-    peak_sign="neg",
-    upsampling_factor=10,
-    sparsity=None,
-    window_slope_ms=0.7,
-):
+def compute_template_metrics(waveform_extractor, load_if_exists=False,
+                             metric_names=None, peak_sign='neg',
+                             upsampling_factor=10, sparsity=None,
+                             window_slope_ms=0.7):
     """
     Compute template metrics including:
         * peak_to_valley
@@ -179,13 +174,9 @@ def compute_template_metrics(
         tmc = waveform_extractor.load_extension(TemplateMetricsCalculator.extension_name)
     else:
         tmc = TemplateMetricsCalculator(waveform_extractor)
-        tmc.set_params(
-            metric_names=metric_names,
-            peak_sign=peak_sign,
-            upsampling_factor=upsampling_factor,
-            sparsity=sparsity,
-            window_slope_ms=window_slope_ms,
-        )
+        tmc.set_params(metric_names=metric_names, peak_sign=peak_sign,
+                       upsampling_factor=upsampling_factor, sparsity=sparsity,
+                       window_slope_ms=window_slope_ms)
         tmc.run()
 
     metrics = tmc.get_data()
@@ -238,8 +229,8 @@ def get_half_width(template, **kwargs):
     # threshold is half of peak heigth (assuming baseline is 0)
     threshold = 0.5 * trough_val
 
-    (cpre_idx,) = np.where(template[:trough_idx] < threshold)
-    (cpost_idx,) = np.where(template[trough_idx:] < threshold)
+    cpre_idx, = np.where(template[:trough_idx] < threshold)
+    cpost_idx, = np.where(template[trough_idx:] < threshold)
 
     if len(cpre_idx) == 0 or len(cpost_idx) == 0:
         hw = np.nan
@@ -274,7 +265,7 @@ def get_repolarization_slope(template, **kwargs):
     if trough_idx == 0:
         return np.nan
 
-    (rtrn_idx,) = np.nonzero(template[trough_idx:] >= 0)
+    rtrn_idx, = np.nonzero(template[trough_idx:] >= 0)
     if len(rtrn_idx) == 0:
         return np.nan
     # first time after  trough, where template is at baseline
@@ -282,10 +273,10 @@ def get_repolarization_slope(template, **kwargs):
 
     if return_to_base_idx - trough_idx < 3:
         return np.nan
-
+    
     import scipy.stats
-
-    res = scipy.stats.linregress(times[trough_idx:return_to_base_idx], template[trough_idx:return_to_base_idx])
+    res = scipy.stats.linregress(
+        times[trough_idx:return_to_base_idx], template[trough_idx:return_to_base_idx])
     return res.slope
 
 
@@ -310,29 +301,28 @@ def get_recovery_slope(template, window_ms=0.7, **kwargs):
         return np.nan
     max_idx = int(peak_idx + ((window_ms / 1000) * sampling_frequency))
     max_idx = np.min([max_idx, template.shape[0]])
-
+    
     import scipy.stats
-
-    res = scipy.stats.linregress(times[peak_idx:max_idx], template[peak_idx:max_idx])
+    res = scipy.stats.linregress(
+        times[peak_idx:max_idx], template[peak_idx:max_idx])
     return res.slope
 
 
 _metric_name_to_func = {
-    "peak_to_valley": get_peak_to_valley,
-    "peak_trough_ratio": get_peak_trough_ratio,
-    "half_width": get_half_width,
-    "repolarization_slope": get_repolarization_slope,
-    "recovery_slope": get_recovery_slope,
+    'peak_to_valley': get_peak_to_valley,
+    'peak_trough_ratio': get_peak_trough_ratio,
+    'half_width': get_half_width,
+    'repolarization_slope': get_repolarization_slope,
+    'recovery_slope': get_recovery_slope,
 }
+
 
 
 # back-compatibility
 def calculate_template_metrics(*args, **kwargs):
-    warnings.warn(
-        "The 'calculate_template_metrics' function is deprecated. " "Use 'compute_template_metrics' instead",
-        DeprecationWarning,
-        stacklevel=2,
-    )
+    warnings.warn("The 'calculate_template_metrics' function is deprecated. "
+                  "Use 'compute_template_metrics' instead",
+                   DeprecationWarning, stacklevel=2)
     return compute_template_metrics(*args, **kwargs)
 
 

@@ -55,7 +55,7 @@ class CellExplorerSortingExtractor(BaseSorting):
 
         if spikes_matfile_path is not None:
             # Raise an error if the warning period has expired
-            deprecation_issued = datetime.datetime(2023, 4, 1)
+            deprecation_issued =  datetime.datetime(2023, 4, 1)
             deprecation_deadline = deprecation_issued + datetime.timedelta(days=180)
             if datetime.datetime.now() > deprecation_deadline:
                 raise ValueError("The spikes_matfile_path argument is no longer supported in. Use file_path instead.")
@@ -68,15 +68,13 @@ class CellExplorerSortingExtractor(BaseSorting):
                     DeprecationWarning,
                 )
             file_path = spikes_matfile_path if file_path is None else file_path
-
+        
         if session_info_matfile_path is not None:
             # Raise an error if the warning period has expired
-            deprecation_issued = datetime.datetime(2023, 4, 1)
+            deprecation_issued =  datetime.datetime(2023, 4, 1)
             deprecation_deadline = deprecation_issued + datetime.timedelta(days=180)
             if datetime.datetime.now() > deprecation_deadline:
-                raise ValueError(
-                    "The session_info_matfile_path argument is no longer supported in. Use session_info_file_path instead."
-                )
+                raise ValueError("The session_info_matfile_path argument is no longer supported in. Use session_info_file_path instead.")
 
             # Otherwise, issue a DeprecationWarning
             else:
@@ -85,9 +83,7 @@ class CellExplorerSortingExtractor(BaseSorting):
                     "Use session_info_file_path instead.",
                     DeprecationWarning,
                 )
-            session_info_file_path = (
-                session_info_matfile_path if session_info_file_path is None else session_info_file_path
-            )
+            session_info_file_path = session_info_matfile_path if session_info_file_path is None else session_info_file_path
 
         self.spikes_cellinfo_path = Path(file_path).absolute()
         assert self.spikes_cellinfo_path.is_file(), f"The spikes.cellinfo.mat file must exist in {self.folder_path}!"

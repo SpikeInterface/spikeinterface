@@ -26,20 +26,12 @@ class CrossCorrelogramsWidget(BaseWidget):
     unit_colors: dict or None
         If given, a dictionary with unit ids as keys and colors as values, default None
     """
-
     possible_backends = {}
 
-    def __init__(
-        self,
-        waveform_or_sorting_extractor: Union[WaveformExtractor, BaseSorting],
-        unit_ids=None,
-        window_ms=100.0,
-        bin_ms=1.0,
-        hide_unit_selector=False,
-        unit_colors=None,
-        backend=None,
-        **backend_kwargs,
-    ):
+    def __init__(self, waveform_or_sorting_extractor: Union[WaveformExtractor, BaseSorting], 
+                 unit_ids=None, window_ms=100.0, bin_ms=1.0, hide_unit_selector=False,
+                 unit_colors=None,
+                 backend=None, **backend_kwargs):
         if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
             sorting = waveform_or_sorting_extractor.sorting
             self.check_extensions(waveform_or_sorting_extractor, "correlograms")
@@ -47,8 +39,10 @@ class CrossCorrelogramsWidget(BaseWidget):
             ccgs, bins = ccc.get_data()
         else:
             sorting = waveform_or_sorting_extractor
-            ccgs, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms)
-
+            ccgs, bins = compute_correlograms(sorting,
+                                              window_ms=window_ms,
+                                              bin_ms=bin_ms)
+            
         if unit_ids is None:
             unit_ids = sorting.unit_ids
             correlograms = ccgs
@@ -65,3 +59,6 @@ class CrossCorrelogramsWidget(BaseWidget):
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
+
+
+
