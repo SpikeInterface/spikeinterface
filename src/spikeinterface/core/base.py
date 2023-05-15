@@ -293,6 +293,22 @@ class BaseExtractor:
         dump_dict: dict
             Serialized dictionary
         """
+        to_dict_kwargs = dict(include_annotations=include_annotations, include_properties=include_properties,
+                            relative_to=relative_to, folder_metadata=folder_metadata)
+        
+        new_kwargs = dict()
+        transform_to_dict = lambda x: x.to_dict(**to_dict_kwargs) if isinstance(x, BaseExtractor) else x
+        for name, value in self._kwargs.items():
+            if isinstance(value, list):
+                new_list = [transform_to_dict(element) for element in value]
+                new_kwargs[name] = new_list
+            if isinstance(value, dict):
+                new_kwargs[name] = {k: transform_to_dict(v) for k, v in value.items()}
+            elif isinstance(value, BaseExtractor):
+                new_kwargs[name] = value.to_dict(**to_dict_kwargs)
+            else:
+                new_kwargs[name] = value
+        
         class_name = str(type(self)).replace("<class '", "").replace("'>", '')
         module = class_name.split('.')[0]
         imported_module = importlib.import_module(module)
@@ -305,7 +321,7 @@ class BaseExtractor:
         dump_dict = {
             'class': class_name,
             'module': module,
-            'kwargs': self._kwargs,
+            'kwargs': new_kwargs,
             'dumpable': self.is_dumpable,
             'version': version,
             'relative_paths': (relative_to is not None),
@@ -568,7 +584,7 @@ class BaseExtractor:
         instance_constructor = self.from_dict
         intialization_args = (self.to_dict(), )
         return (instance_constructor, intialization_args)
-
+    
     @staticmethod
     def load_from_folder(folder):
         return BaseExtractor.load(folder)
