@@ -59,7 +59,7 @@ comparison:
 exporters:
   * Allow export_to_phy to make parent directories (#948)
 
-widgets: 
+widgets:
   * Sortingview backend: display in jupyter (#942)
   * Improve timeseries widgets (#945 - #1008)
   * Use segment_index=0 as default in plot_amplitudes (#964)

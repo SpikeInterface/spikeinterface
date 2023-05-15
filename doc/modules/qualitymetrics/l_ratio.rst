@@ -4,7 +4,7 @@ L-ratio (:code:`l_ratio`)
 Calculation
 -----------
 
-This example assumes use of a tetrode. 
+This example assumes use of a tetrode.
 
 L-ratio uses 4 principal components (PCs) for each tetrode channel (the first being energy, the square root of the sum of squares of each sample in the waveform, followed by the first 3 PCs of the energy normalised waveform).
 This yields spikes which are each represented as a point in 16 dimensional space.
@@ -31,8 +31,8 @@ This yields L-ratio, which can be expressed as:
 Expectation and use
 -------------------
 
-Since this metric identifies unit separation, a high value indicates a highly contaminated unit (type I error) 
-([Schmitzer-Torbert]_ et al.). [Jackson]_ et al. suggests that this measure is also correlated with type II errors 
+Since this metric identifies unit separation, a high value indicates a highly contaminated unit (type I error)
+([Schmitzer-Torbert]_ et al.). [Jackson]_ et al. suggests that this measure is also correlated with type II errors
 (although more strongly with type I errors).
 
 A well separated unit should have a low L-ratio ([Schmitzer-Torbert]_ et al.).
