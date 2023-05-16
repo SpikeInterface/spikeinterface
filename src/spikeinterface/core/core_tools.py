@@ -239,10 +239,17 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
     rec_memmap[start_frame:end_frame, :] = traces
 
 
-def write_binary_recording(recording, file_paths=None, dtype=None, add_file_extension=True,
-                           verbose=False, byte_offset=0, auto_cast_uint=True, zero_pad_samples=None,
-
-                             **job_kwargs):
+def write_binary_recording(
+    recording,
+    file_paths=None,
+    dtype=None,
+    add_file_extension=True,
+    verbose=False,
+    byte_offset=0,
+    auto_cast_uint=True,
+    zero_pad_samples=None,
+    **job_kwargs,
+):
     """
     Save the trace of a recording extractor in several binary .dat format.
 
@@ -294,7 +301,6 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
     else:
         pad0, pad1 = 0, 0
 
-
     # create memmap files
     rec_memmaps = []
     rec_memmaps_dict = []
@@ -305,9 +311,9 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
         num_channels = recording.get_num_channels()
         offset = byte_offset + pad0 * dtype.itemsize * num_channels
         shape = (num_frames + pad1, num_channels)
-        rec_memmap = np.memmap(str(file_path), dtype=dtype, mode='w+', offset=offset, shape=shape)
+        rec_memmap = np.memmap(str(file_path), dtype=dtype, mode="w+", offset=offset, shape=shape)
         rec_memmaps.append(rec_memmap)
-        rec_memmaps_dict.append(dict(filename=str(file_path), dtype=dtype, mode='r+', offset=offset, shape=shape))
+        rec_memmaps_dict.append(dict(filename=str(file_path), dtype=dtype, mode="r+", offset=offset, shape=shape))
 
     # use executor (loop or workers)
     func = _write_binary_chunk
@@ -324,7 +330,7 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
             file_path = file_paths[segment_index]
             num_channels = recording.get_num_channels()
             shape = (num_frames + pad0 + pad1, num_channels)
-            rec_memmap = np.memmap(str(file_path), dtype=dtype, mode='r+', offset=byte_offset, shape=shape)
+            rec_memmap = np.memmap(str(file_path), dtype=dtype, mode="r+", offset=byte_offset, shape=shape)
             rec_memmap[:pad0, :] = 0
             rec_memmap[-pad1:, :] = 0
 
