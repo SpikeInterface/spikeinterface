@@ -39,3 +39,4 @@ dependencies:
     - tridesclous>=1.6.6.1
     # - phy==2.0b5
     - mountainsort4>=1.0.0
+    - mountainsort5>=0.3.0

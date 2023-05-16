@@ -232,8 +232,8 @@ installed
 
 .. parsed-literal::
 
-    Available sorters ['combinato', 'hdsort', 'herdingspikes', 'ironclust', 'kilosort', 'kilosort2', 'kilosort2_5', 'kilosort3', 'klusta', 'mountainsort4', 'pykilosort', 'spykingcircus', 'spykingcircus2', 'tridesclous', 'tridesclous2', 'waveclus', 'waveclus_snippets', 'yass']
-    Installed sorters ['herdingspikes', 'kilosort2_5', 'mountainsort4', 'pykilosort', 'spykingcircus2', 'tridesclous', 'tridesclous2']
+    Available sorters ['combinato', 'hdsort', 'herdingspikes', 'ironclust', 'kilosort', 'kilosort2', 'kilosort2_5', 'kilosort3', 'klusta', 'mountainsort4', 'mountainsort5', 'pykilosort', 'spykingcircus', 'spykingcircus2', 'tridesclous', 'tridesclous2', 'waveclus', 'waveclus_snippets', 'yass']
+    Installed sorters ['herdingspikes', 'kilosort2_5', 'mountainsort4', 'mountainsort5', 'pykilosort', 'spykingcircus2', 'tridesclous', 'tridesclous2']
 
 
 The ``ss.installed_sorters()`` will list the sorters installed in the

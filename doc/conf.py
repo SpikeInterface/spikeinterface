@@ -50,7 +50,7 @@ for folder in folders:
 
 # -- Project information -----------------------------------------------------
 
-project = 'spikeinterface'
+project = 'SpikeInterface'
 copyright = '2022, Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
 author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
 
