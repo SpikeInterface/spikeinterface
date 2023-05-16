@@ -33,24 +33,36 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     install_maxwell_plugin: bool, default: False
         If True, install the maxwell plugin for neo.
     """
-    mode = 'file'
-    NeoRawIOClass = 'MaxwellRawIO'
+
+    mode = "file"
+    NeoRawIOClass = "MaxwellRawIO"
     name = "maxwell"
     has_default_locations = True
 
-    def __init__(self, file_path, stream_id=None, stream_name=None, block_index=None, 
-                 all_annotations=False, rec_name=None, install_maxwell_plugin=False):
+    def __init__(
+        self,
+        file_path,
+        stream_id=None,
+        stream_name=None,
+        block_index=None,
+        all_annotations=False,
+        rec_name=None,
+        install_maxwell_plugin=False,
+    ):
         if install_maxwell_plugin:
             self.install_maxwell_plugin()
-        
-        neo_kwargs = self.map_to_neo_kwargs(file_path, rec_name)
-        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
-                                           stream_name=stream_name,
-                                           block_index=block_index,
-                                           all_annotations=all_annotations, 
-                                           **neo_kwargs)
 
-        self.extra_requirements.append('h5py')
+        neo_kwargs = self.map_to_neo_kwargs(file_path, rec_name)
+        NeoBaseRecordingExtractor.__init__(
+            self,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            block_index=block_index,
+            all_annotations=all_annotations,
+            **neo_kwargs,
+        )
+
+        self.extra_requirements.append("h5py")
 
         # well_name is stream_id
         well_name = self.stream_id
@@ -63,30 +75,35 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path, rec_name=None):
-        neo_kwargs = {'filename': str(file_path), 'rec_name': rec_name}
+        neo_kwargs = {"filename": str(file_path), "rec_name": rec_name}
         return neo_kwargs
 
     def install_maxwell_plugin(self, force_download=False):
         from neo.rawio.maxwellrawio import auto_install_maxwell_hdf5_compression_plugin
+
         auto_install_maxwell_hdf5_compression_plugin(force_download=False)
 
+
 _maxwell_event_dtype = np.dtype([("frame", "int64"), ("state", "int8"), ("time", "float64")])
+
 
 class MaxwellEventExtractor(BaseEvent):
     """
     Class for reading TTL events from Maxwell files.
     """
+
     name = "maxwell"
 
     def __init__(self, file_path):
         import h5py
+
         self.file_path = file_path
-        h5_file = h5py.File(self.file_path, mode='r')
+        h5_file = h5py.File(self.file_path, mode="r")
         version = int(h5_file["version"][0].decode())
         fs = 20000
 
-        bits = h5_file['bits']
-        bit_states = bits['bits']
+        bits = h5_file["bits"]
+        bit_states = bits["bits"]
         channel_ids = np.unique(bit_states[bit_states != 0])
 
         BaseEvent.__init__(self, channel_ids, structured_dtype=_maxwell_event_dtype)
@@ -99,7 +116,7 @@ class MaxwellEventSegment(BaseEventSegment):
         BaseEventSegment.__init__(self)
         self.h5_file = h5_file
         self.version = version
-        self.bits = self.h5_file['bits']
+        self.bits = self.h5_file["bits"]
         self.fs = fs
 
     def get_events(self, channel_id, start_time, end_time):
@@ -108,8 +125,8 @@ class MaxwellEventSegment(BaseEventSegment):
 
         framevals = self.h5_file["sig"][-2:, 0]
         first_frame = framevals[1] << 16 | framevals[0]
-        ttl_frames = self.bits['frameno'] - first_frame
-        ttl_states = self.bits['bits']
+        ttl_frames = self.bits["frameno"] - first_frame
+        ttl_states = self.bits["bits"]
         if channel_id is not None:
             bits_channel_idx = np.where((ttl_states == channel_id) | (ttl_states == 0))[0]
             ttl_frames = ttl_frames[bits_channel_idx]
@@ -118,7 +135,7 @@ class MaxwellEventSegment(BaseEventSegment):
         event = np.zeros(len(ttl_frames), dtype=_maxwell_event_dtype)
         event["frame"] = ttl_frames
         event["time"] = ttl_frames / self.fs
-        event["state"] = ttl_states            
+        event["state"] = ttl_states
 
         if start_time is not None:
             event = event[event["time"] >= start_time]

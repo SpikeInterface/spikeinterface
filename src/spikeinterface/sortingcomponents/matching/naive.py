@@ -7,8 +7,13 @@ from spikeinterface.postprocessing import (get_template_channel_sparsity, get_te
 
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 
-spike_dtype = [('sample_index', 'int64'), ('channel_index', 'int64'), ('cluster_index', 'int64'),
-               ('amplitude', 'float64'), ('segment_index', 'int64')]
+spike_dtype = [
+    ("sample_index", "int64"),
+    ("channel_index", "int64"),
+    ("cluster_index", "int64"),
+    ("amplitude", "float64"),
+    ("segment_index", "int64"),
+]
 
 
 from .main import BaseTemplateMatchingEngine
@@ -23,6 +28,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
     It is implemented for benchmarking against this low quality template matching.
     And also as an example how to deal with methods_kwargs, margin, intit, func, ...
     """
+
     default_params = {
         'peak_sign': 'neg',
         'exclude_sweep_ms': 0.1,
@@ -31,7 +37,6 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         'local_radius_um': 75,
         'random_chunk_kwargs': {}
     }
-    
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
@@ -48,10 +53,10 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         d['exclude_sweep_size'] = int(d['exclude_sweep_ms'] * d['sampling_frequency'] / 1000.)
 
         return d
-    
+
     @classmethod
     def get_margin(cls, recording, kwargs):
-        margin = max(kwargs['nbefore'], kwargs['nafter'])
+        margin = max(kwargs["nbefore"], kwargs["nafter"])
         return margin
 
     @classmethod
@@ -78,19 +83,19 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         peak_sample_ind += margin
 
         spikes = np.zeros(peak_sample_ind.size, dtype=spike_dtype)
-        spikes['sample_index'] = peak_sample_ind
-        spikes['channel_index'] = peak_chan_ind  # TODO need to put the channel from template
-        
+        spikes["sample_index"] = peak_sample_ind
+        spikes["channel_index"] = peak_chan_ind  # TODO need to put the channel from template
+
         # naively take the closest template
         for i in range(peak_sample_ind.size):
             i0 = peak_sample_ind[i] - nbefore
             i1 = peak_sample_ind[i] + nafter
-            
+
             waveforms = traces[i0:i1, :]
-            dist = np.sum(np.sum((templates - waveforms[None, : , :])**2, axis=1), axis=1)
+            dist = np.sum(np.sum((templates - waveforms[None, :, :]) ** 2, axis=1), axis=1)
             cluster_index = np.argmin(dist)
 
-            spikes['cluster_index'][i] = cluster_index
-            spikes['amplitude'][i] = 0.
+            spikes["cluster_index"][i] = cluster_index
+            spikes["amplitude"][i] = 0.0
 
         return spikes
