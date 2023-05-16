@@ -32,13 +32,13 @@ except ModuleNotFoundError as err:
 _default_params = dict()
 
 
-def compute_num_spikes(waveform_extractor, **kwargs):
+def compute_num_spikes(waveform_or_sorting_extractor: Union[BaseSorting, WaveformExtractor], **kwargs):
     """Compute the number of spike across segments.
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object.
+    waveform_or_sorting_extractor : BaseSorting | WaveformExtractor
+        The waveform or sorting extractor object.
 
     Returns
     -------
@@ -46,7 +46,10 @@ def compute_num_spikes(waveform_extractor, **kwargs):
         The number of spikes, across all segments, for each unit ID.
     """
 
-    sorting = waveform_extractor.sorting
+    if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
+        sorting = waveform_or_sorting_extractor.sorting
+    else:
+        sorting = waveform_or_sorting_extractor
     unit_ids = sorting.unit_ids
     num_segs = sorting.get_num_segments()
 
@@ -349,7 +352,7 @@ def compute_refrac_period_violations(
     num_units = sorting.get_num_units()
     num_segments = sorting.get_num_segments()
     spikes = sorting.get_all_spike_trains(outputs="unit_index")
-    num_spikes = compute_num_spikes(waveform_extractor)
+    num_spikes = compute_num_spikes(sorting)
 
     t_c = int(round(censored_period_ms * fs * 1e-3))
     t_r = int(round(refractory_period_ms * fs * 1e-3))
