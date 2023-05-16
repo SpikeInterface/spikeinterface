@@ -26,7 +26,7 @@ class BaseExtractor:
 
     """
 
-    default_missing_property_values = {"f": np.nan, "O": None, "S": "", "U": ""}
+    default_missing_property_values = {'f': np.nan, "O": None, "S": "", "U": ""}
 
     # This replaces the old key_properties
     # These are annotations/properties that always need to be
