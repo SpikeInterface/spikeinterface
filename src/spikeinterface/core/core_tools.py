@@ -287,20 +287,20 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
         cast_unsigned = determine_cast_unsigned(recording, dtype)
     else:
         cast_unsigned = False
-    
+
     if zero_pad_samples is not None:
         pad0, pad1 = zero_pad_samples
         pad0, pad1 = int(pad0), int(pad1)
     else:
         pad0, pad1 = 0, 0
-    
+
 
     # create memmap files
     rec_memmaps = []
     rec_memmaps_dict = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
-        
+
         file_path = file_paths[segment_index]
         num_channels = recording.get_num_channels()
         offset = byte_offset + pad0 * dtype.itemsize * num_channels

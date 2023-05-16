@@ -36,25 +36,25 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
     requires_locations = False
 
     _default_params = {
-        'detect_threshold': 6,
-        'projection_threshold': [10, 4],
-        'preclust_threshold': 8,
-        'car': True,
-        'minFR': 0.1,
-        'minfr_goodchannels': 0.1,
-        'nblocks': 5,
-        'sig': 20,
-        'freq_min': 150,
-        'sigmaMask': 30,
-        'nPCs': 3,
-        'ntbuff': 64,
-        'nfilt_factor': 4,
-        'NT': None,
-        'do_correction': True,
-        'wave_length': 61,
-        'keep_good_only': False,
-        'skip_kilosort_preprocessing': False,
-        'scaleproc': None, 
+        "detect_threshold": 6,
+        "projection_threshold": [10, 4],
+        "preclust_threshold": 8,
+        "car": True,
+        "minFR": 0.1,
+        "minfr_goodchannels": 0.1,
+        "nblocks": 5,
+        "sig": 20,
+        "freq_min": 150,
+        "sigmaMask": 30,
+        "nPCs": 3,
+        "ntbuff": 64,
+        "nfilt_factor": 4,
+        "NT": None,
+        "do_correction": True,
+        "wave_length": 61,
+        "keep_good_only": False,
+        "skip_kilosort_preprocessing": False,
+        "scaleproc": None,
     }
 
     _params_description = {
@@ -72,11 +72,11 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "ntbuff": "Samples of symmetrical buffer for whitening and spike detection",
         "nfilt_factor": "Max number of clusters per good channel (even temporary ones) 4",
         "do_correction": "If True drift registration is applied",
-        'NT': "Batch size (if None it is automatically computed)",
-        'keep_good_only': "If True only 'good' units are returned",
-        'wave_length': "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
-        'skip_kilosort_preprocessing' : "Can optionaly skip the internal kilosort preprocessing",
-        'scaleproc': "int16 scaling of whitened data, if None set to 200.",
+        "NT": "Batch size (if None it is automatically computed)",
+        "keep_good_only": "If True only 'good' units are returned",
+        "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
+        "skip_kilosort_preprocessing": "Can optionaly skip the internal kilosort preprocessing",
+        "scaleproc": "int16 scaling of whitened data, if None set to 200.",
     }
 
     sorter_description = """Kilosort2_5 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
@@ -198,27 +198,33 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
 
         ops["GPU"] = 1.0  # has to be 1, no CPU version yet, sorry
         # ops['Nfilt'] = 1024 # max number of clusters
-        ops['nfilt_factor'] = params['nfilt_factor']  # max number of clusters per good channel (even temporary ones)
-        ops['ntbuff'] = params['ntbuff']  # samples of symmetrical buffer for whitening and spike detection
-        ops['NT'] = params['NT']  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
-        ops['whiteningRange'] = 32.0  # number of channels to use for whitening each channel
-        ops['nSkipCov'] = 25.0  # compute whitening matrix from every N-th batch
-        ops['nPCs'] = params['nPCs']  # how many PCs to project the spikes into
-        ops['useRAM'] = 0.0  # not yet available
+        ops["nfilt_factor"] = params["nfilt_factor"]  # max number of clusters per good channel (even temporary ones)
+        ops["ntbuff"] = params["ntbuff"]  # samples of symmetrical buffer for whitening and spike detection
+        ops["NT"] = params[
+            "NT"
+        ]  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
+        ops["whiteningRange"] = 32.0  # number of channels to use for whitening each channel
+        ops["nSkipCov"] = 25.0  # compute whitening matrix from every N-th batch
+        ops["nPCs"] = params["nPCs"]  # how many PCs to project the spikes into
+        ops["useRAM"] = 0.0  # not yet available
 
         # drift correction
         ops["do_correction"] = params["do_correction"]
 
         ## option for wavelength
-        ops['nt0'] = params['wave_length'] # size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.
+        ops["nt0"] = params[
+            "wave_length"
+        ]  # size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.
 
-        ops['skip_kilosort_preprocessing'] = params['skip_kilosort_preprocessing']
-        if params['skip_kilosort_preprocessing']:
-            ops['fproc'] = ops['fbinary']
-            assert params['scaleproc'] is not None, 'When skip_kilosort_preprocessing=True scaleproc must explicitly given'
+        ops["skip_kilosort_preprocessing"] = params["skip_kilosort_preprocessing"]
+        if params["skip_kilosort_preprocessing"]:
+            ops["fproc"] = ops["fbinary"]
+            assert (
+                params["scaleproc"] is not None
+            ), "When skip_kilosort_preprocessing=True scaleproc must explicitly given"
 
         # int16 scaling of whitened data, when None then scaleproc is set to 200.
-        scaleproc = params['scaleproc']
-        ops['scaleproc'] = scaleproc if scaleproc is not None else 200.
+        scaleproc = params["scaleproc"]
+        ops["scaleproc"] = scaleproc if scaleproc is not None else 200.0
 
         return ops
