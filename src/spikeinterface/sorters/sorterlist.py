@@ -44,8 +44,7 @@ sorter_full_list = [
     # internal
     Spykingcircus2Sorter,
     Tridesclous2Sorter,
-    SimpleSorter
-
+    SimpleSorter,
 ]
 
 sorter_dict = {s.sorter_name: s for s in sorter_full_list}
