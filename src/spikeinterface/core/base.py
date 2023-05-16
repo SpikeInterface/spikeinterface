@@ -35,7 +35,7 @@ class BaseExtractor:
     _main_properties = []
 
     installed = True
-    installation_mesg = ""
+    installation_mesg = ''
     is_writable = False
 
     def __init__(self, main_ids):
