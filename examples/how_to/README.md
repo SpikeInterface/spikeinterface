@@ -2,12 +2,12 @@
 
 In this examples folder, we only keep the light-weight .py files that will appear in the docs.
 
-The `modules_gallery` folder will be built with `sphinx-gallery` (all examples starting with `plot_`) will be run in 
+The `modules_gallery` folder will be built with `sphinx-gallery` (all examples starting with `plot_`) will be run in
 Read The Docs and added to the documentation at run-time.
 
 The `how_to` examples, instead, are manually run and added to the documentation.
 
-To do so, we use `jupytext` to sync the .py files with an associated notebook, and then convert the notebook to .rst 
+To do so, we use `jupytext` to sync the .py files with an associated notebook, and then convert the notebook to .rst
 with `nbconvert`. Here are the steps (in this example for the `get_started`):
 
 1. Create a notebook from the .py file:

@@ -13,7 +13,7 @@ else:
     cache_folder = Path("cache_folder") / "comparison"
     cache_folder.mkdir(exist_ok=True, parents=True)
 
-study_folder = cache_folder / 'test_groundtruthstudy/'
+study_folder = cache_folder / "test_groundtruthstudy/"
 
 
 def setup_module():
@@ -27,17 +27,21 @@ def _setup_comparison_study():
     rec1, gt_sorting1 = toy_example(num_channels=32, duration=30, seed=0, num_segments=1)
 
     gt_dict = {
-        'toy_tetrode': (rec0, gt_sorting0),
-        'toy_probe32': (rec1, gt_sorting1),
+        "toy_tetrode": (rec0, gt_sorting0),
+        "toy_probe32": (rec1, gt_sorting1),
     }
     study = GroundTruthStudy.create(study_folder, gt_dict)
 
 
 def test_run_study_sorters():
     study = GroundTruthStudy(study_folder)
-    sorter_list = ['tridesclous', ]
-    print(f"\n#################################\nINSTALLED SORTERS\n#################################\n"
-          f"{installed_sorters()}")
+    sorter_list = [
+        "tridesclous",
+    ]
+    print(
+        f"\n#################################\nINSTALLED SORTERS\n#################################\n"
+        f"{installed_sorters()}"
+    )
     study.run_sorters(sorter_list)
 
 
@@ -67,7 +71,7 @@ def test_extract_sortings():
     print(dataframes)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # setup_module()
     # test_run_study_sorters()
     test_extract_sortings()

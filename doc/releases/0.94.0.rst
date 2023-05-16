@@ -10,7 +10,7 @@ Main change:
 
  * Refactor WaveformExtractor with waveform_tools.
  * Implement Zarr backend for save()
- * Read IBL compressed files. 
+ * Read IBL compressed files.
  * Phase shift (destripe) preprocessor
  * Test are run partially : faster GH actions
  * Many improvement in sorting compnents: template matching, select_peaks, motion_estimation, motion_correction
@@ -21,14 +21,14 @@ core:
  * Fix typo in SplitSegmentSorting init
  * Added NumpySorting.from_peaks()
  * Refactor WaveformExtractor with waveform_tools.
- * Fix bug "too many open files" for the new waveforme extractor. 
+ * Fix bug "too many open files" for the new waveforme extractor.
  * Add function to remove empty units
- * Remove loose version in favor of packaging 
+ * Remove loose version in favor of packaging
  * Add chunk_duration concept for jobs
- * Implement Zarr backend for save() 
- * Add split recording class and function 
- * Add Recording.remove_channels() 
- * Add save sorting to memory 
+ * Implement Zarr backend for save()
+ * Add split recording class and function
+ * Add Recording.remove_channels()
+ * Add save sorting to memory
 
 
 
@@ -37,44 +37,44 @@ extractors:
  * Reintroduce spikeglx test files
  * Add NeuroscopeSortingExtractor
  * New neo extractors
- * Add more neualynx versions for testing 
- * Modify nwb recorder extractor for loading channel name property as channel_ids when available 
- * Support 3d positions (rel_z) in NWB 
+ * Add more neualynx versions for testing
+ * Modify nwb recorder extractor for loading channel name property as channel_ids when available
+ * Support 3d positions (rel_z) in NWB
  * Read openephys probe from probeinterface
- * Fix "KSLabel" extraction in phykilosortextractor 
- * Bug fix on waveclus sorting extractor 
+ * Fix "KSLabel" extraction in phykilosortextractor
+ * Bug fix on waveclus sorting extractor
  * Read IBL compressed files
 
 
-  
+
 sorters:
 
- * Refactor run_sorters/run_sorter_by_group to better handle folders and key dtypes 
-  
+ * Refactor run_sorters/run_sorter_by_group to better handle folders and key dtypes
+
 toolkit:
 
  * Phase shift (destripe) preprocessor
  * Fix typo in isi violation
- * Addresses batch size bug #565, and also resolves open file warnings 
- * Add nan to d_prime for single unit case 
- * Handle computing of nearest neighbor metrics for units with few spikes 
+ * Addresses batch size bug #565, and also resolves open file warnings
+ * Add nan to d_prime for single unit case
+ * Handle computing of nearest neighbor metrics for units with few spikes
 
-  
+
 comparison:
 
- * Fix multisortingcomparison spiketrains 
+ * Fix multisortingcomparison spiketrains
 
 widgets:
 
  * Add presence plot
- * Add with_channel_ids for several widgets that use plot_probe 
- * Add optional distinctipy 
+ * Add with_channel_ids for several widgets that use plot_probe
+ * Add optional distinctipy
 
 
 export:
 
   * Fix mismatch between phy and si unit ids
-  
+
 
 sortingcomponents:
 
@@ -83,16 +83,16 @@ sortingcomponents:
  * Improvements to select_peak()
  * Improvements to motion_estimation()
  * Improvements to motion_correction()
- 
- 
-  
+
+
+
 doc:
- * Documentation updates for quality_metrics 
+ * Documentation updates for quality_metrics
  * Try install SI from conda env and skip pip
  * Improve documentation for sorting components
 
  CI:
- 
+
   * Refactor tests
   * Partial tests
-  * Fix herdingspikes version for tests 
+  * Fix herdingspikes version for tests

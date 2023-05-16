@@ -20,34 +20,34 @@ except ImportError:
 class PyKilosortSorter(BaseSorter):
     """Pykilosort Sorter object."""
 
-    sorter_name = 'pykilosort'
+    sorter_name = "pykilosort"
     requires_locations = False
-    gpu_capability = 'nvidia-required'
+    gpu_capability = "nvidia-required"
     requires_binary_data = True
-    compatible_with_parallel = {'loky': True, 'multiprocessing': False, 'threading': False}
+    compatible_with_parallel = {"loky": True, "multiprocessing": False, "threading": False}
 
     _default_params = {
         "low_memory": False,
         "seed": 42,
-        "preprocessing_function": 'kilosort2',
+        "preprocessing_function": "kilosort2",
         "save_drift_spike_detections": False,
         "perform_drift_registration": False,
         "do_whitening": True,
         "save_temp_files": True,
         "fshigh": 300.0,
         "fslow": None,
-        "minfr_goodchannels": .1,
+        "minfr_goodchannels": 0.1,
         "genericSpkTh": 8.0,
         "nblocks": 5,
         "sig_datashift": 20.0,
         "stable_mode": True,
         "deterministic_mode": True,
         "datashift": None,
-        "Th": [10,4],
+        "Th": [10, 4],
         "ThPre": 8,
         "lam": 10,
-        "minFR": 1.0/50,
-        "momentum": [20,400],
+        "minFR": 1.0 / 50,
+        "momentum": [20, 400],
         "sigmaMask": 30,
         "spkTh": -6,
         "reorder": 1,
@@ -63,19 +63,19 @@ class PyKilosortSorter(BaseSorter):
         "templateScaling": 20.0,
         "loc_range": [5, 4],
         "long_range": [30, 6],
-        "keep_good_only": False
+        "keep_good_only": False,
     }
 
     _params_description = {
         "low_memory": "low memory setting for running chronic recordings",
         "seed": "seed for deterministic output",
         "preprocessing_function": 'pre-processing function used choices are "kilosort2" or "destriping"',
-        "save_drift_spike_detections": 'save detected spikes in drift correction',
-        "perform_drift_registration": 'Estimate electrode drift and apply registration',
-        "do_whitening": 'whether or not to whiten data, if disabled channels are individually z-scored',
+        "save_drift_spike_detections": "save detected spikes in drift correction",
+        "perform_drift_registration": "Estimate electrode drift and apply registration",
+        "do_whitening": "whether or not to whiten data, if disabled channels are individually z-scored",
         "fs": "sample rate",
-        "probe": 'data type of raw data',
-        "data_dtype": 'data type of raw data',
+        "probe": "data type of raw data",
+        "data_dtype": "data type of raw data",
         "save_temp_files": "keep temporary files created while running",
         "fshigh": "high pass filter frequency",
         "fslow": "low pass filter frequency",
@@ -90,7 +90,7 @@ class PyKilosortSorter(BaseSorter):
         "datashift": "parameters for 'datashift' drift correction. not required",
         "Th": "threshold on projections (like in Kilosort1, can be different for last pass like [10 4])",
         "ThPre": "threshold crossings for pre-clustering (in PCA projection space)",
-        "lam":  "how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot)",
+        "lam": "how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot)",
         "minFR": " minimum spike rate (Hz), if a cluster falls below this for too long it gets removed",
         "momentum": "number of samples to average over (annealed from first to second value)",
         "sigmaMask": "spatial constant in um for computing residual variance of spike",
@@ -108,7 +108,7 @@ class PyKilosortSorter(BaseSorter):
         "templateScaling": None,
         "loc_range": None,
         "long_range": None,
-        "keep_good_only": "If True only 'good' units are returned"
+        "keep_good_only": "If True only 'good' units are returned",
     }
 
     sorter_description = """pykilosort is a port of kilosort to python"""
@@ -140,20 +140,24 @@ class PyKilosortSorter(BaseSorter):
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         if not recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
             # local copy needed
-            write_binary_recording(recording, file_paths=sorter_output_folder / 'recording.dat',
-                                                     verbose=False, **get_job_kwargs(params, verbose))
+            write_binary_recording(
+                recording,
+                file_paths=sorter_output_folder / "recording.dat",
+                verbose=False,
+                **get_job_kwargs(params, verbose),
+            )
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
-        recording = load_extractor(sorter_output_folder.parent / 'spikeinterface_recording.json')
+        recording = load_extractor(sorter_output_folder.parent / "spikeinterface_recording.json")
 
         if not recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
             # saved by setup recording
-            dat_path = sorter_output_folder / 'recording.dat'
+            dat_path = sorter_output_folder / "recording.dat"
         else:
             # no copy
             d = recording.get_binary_description()
-            dat_path = d['file_paths'][0]
+            dat_path = d["file_paths"][0]
 
         num_chans = recording.get_num_channels()
         locations = recording.get_channel_locations()
@@ -184,7 +188,7 @@ class PyKilosortSorter(BaseSorter):
             if len(np.unique(gains)) == 1:
                 ks_probe.sample2volt = gains[0] * 1e-6
             else:
-                warnings.warn('Multiple gains detected for different channels. Median gain will be used')
+                warnings.warn("Multiple gains detected for different channels. Median gain will be used")
                 ks_probe.sample2volt = np.median(gains) * 1e-6
         else:
             ks_probe.sample2volt = 1e-6
@@ -201,14 +205,13 @@ class PyKilosortSorter(BaseSorter):
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
         sorter_output_folder = Path(sorter_output_folder)
-        if (sorter_output_folder.parent / 'spikeinterface_params.json').is_file():
-            params_file = sorter_output_folder.parent / 'spikeinterface_params.json'
+        if (sorter_output_folder.parent / "spikeinterface_params.json").is_file():
+            params_file = sorter_output_folder.parent / "spikeinterface_params.json"
         else:
             # back-compatibility
-            params_file = sorter_output_folder / 'spikeinterface_params.json'
-        with params_file.open('r') as f:
-            sorter_params = json.load(f)['sorter_params']
-        keep_good_only = sorter_params.get('keep_good_only', False)
-        sorting = KiloSortSortingExtractor(folder_path=sorter_output_folder / "output",
-                                           keep_good_only=keep_good_only)
+            params_file = sorter_output_folder / "spikeinterface_params.json"
+        with params_file.open("r") as f:
+            sorter_params = json.load(f)["sorter_params"]
+        keep_good_only = sorter_params.get("keep_good_only", False)
+        sorting = KiloSortSortingExtractor(folder_path=sorter_output_folder / "output", keep_good_only=keep_good_only)
         return sorting

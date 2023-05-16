@@ -41,7 +41,7 @@ def get_random_data_chunks(
     # TODO: if segment have differents length make another sampling that dependant on the length of the segment
     # Should be done by changing kwargs with total_num_chunks=XXX and total_duration=YYYY
     # And randomize the number of chunk per segment weighted by segment duration
-    
+
     # check chunk size
     num_segments = recording.get_num_segments()
     for segment_index in range(num_segments):
@@ -56,7 +56,7 @@ def get_random_data_chunks(
     rng = np.random.default_rng(seed)
     chunk_list = []
     low = margin_frames
-    size=num_chunks_per_segment
+    size = num_chunks_per_segment
     for segment_index in range(num_segments):
         num_frames = recording.get_num_frames(segment_index)
         high = num_frames - chunk_size - margin_frames
@@ -72,7 +72,7 @@ def get_random_data_chunks(
         ]
 
         chunk_list.extend(segment_trace_chunk)
-    
+
     if concatenated:
         return np.concatenate(chunk_list, axis=0)
     else:
@@ -84,9 +84,7 @@ def get_channel_distances(recording):
     Distance between channel pairs
     """
     locations = recording.get_channel_locations()
-    channel_distances = np.linalg.norm(
-        locations[:, np.newaxis] - locations[np.newaxis, :], axis=2
-    )
+    channel_distances = np.linalg.norm(locations[:, np.newaxis] - locations[np.newaxis, :], axis=2)
 
     return channel_distances
 
@@ -234,16 +232,9 @@ def get_chunk_with_margin(
             end_frame2 = end_frame + margin
             right_pad = 0
 
-        traces_chunk = rec_segment.get_traces(
-            start_frame2, end_frame2, channel_indices
-        )
+        traces_chunk = rec_segment.get_traces(start_frame2, end_frame2, channel_indices)
 
-        if (
-            dtype is not None
-            or window_on_margin
-            or left_pad > 0
-            or right_pad > 0
-        ):
+        if dtype is not None or window_on_margin or left_pad > 0 or right_pad > 0:
             need_copy = True
         else:
             need_copy = False
@@ -262,17 +253,13 @@ def get_chunk_with_margin(
                 right_margin = end_frame + margin - length
 
             if add_zeros:
-                traces_chunk2 = np.zeros(
-                    (full_size, traces_chunk.shape[1]), dtype=dtype
-                )
+                traces_chunk2 = np.zeros((full_size, traces_chunk.shape[1]), dtype=dtype)
                 i0 = left_pad
                 i1 = left_pad + traces_chunk.shape[0]
                 traces_chunk2[i0:i1, :] = traces_chunk
                 if window_on_margin:
                     # apply inplace taper on border
-                    taper = (
-                        1 - np.cos(np.arange(margin) / margin * np.pi)
-                    ) / 2
+                    taper = (1 - np.cos(np.arange(margin) / margin * np.pi)) / 2
                     taper = taper[:, np.newaxis]
                     traces_chunk2[:margin] *= taper
                     traces_chunk2[-margin:] *= taper[::-1]
@@ -291,9 +278,7 @@ def get_chunk_with_margin(
     return traces_chunk, left_margin, right_margin
 
 
-def order_channels_by_depth(
-    recording, channel_ids=None, dimensions=("x", "y")
-):
+def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y")):
     """
     Order channels by depth, by first ordering the x-axis, and then the y-axis.
 
@@ -325,9 +310,7 @@ def order_channels_by_depth(
         assert dim < ndim, "Invalid dimensions!"
         order_f = np.argsort(locations[:, dim], kind="stable")
     else:
-        assert isinstance(
-            dimensions, tuple
-        ), "dimensions can be a str or a tuple"
+        assert isinstance(dimensions, tuple), "dimensions can be a str or a tuple"
         locations_to_sort = ()
         for dim in dimensions:
             dim = ["x", "y", "z"].index(dim)
@@ -362,15 +345,12 @@ def check_probe_do_not_overlap(probes):
             if np.any(
                 np.array(
                     [
-                        x_bounds_i[0] < cp[0] < x_bounds_i[1]
-                        and y_bounds_i[0] < cp[1] < y_bounds_i[1]
+                        x_bounds_i[0] < cp[0] < x_bounds_i[1] and y_bounds_i[0] < cp[1] < y_bounds_i[1]
                         for cp in probe_j.contact_positions
                     ]
                 )
             ):
-                raise Exception(
-                    "Probes are overlapping! Retrieve locations of single probes separately"
-                )
+                raise Exception("Probes are overlapping! Retrieve locations of single probes separately")
 
 
 def get_rec_attributes(recording):
@@ -388,15 +368,14 @@ def get_rec_attributes(recording):
         The rec_attributes dictionary
     """
     properties_to_attrs = deepcopy(recording._properties)
-    if 'contact_vector' in properties_to_attrs:
-        del properties_to_attrs['contact_vector']
+    if "contact_vector" in properties_to_attrs:
+        del properties_to_attrs["contact_vector"]
     rec_attributes = dict(
-            channel_ids=recording.channel_ids,
-            sampling_frequency=recording.get_sampling_frequency(),
-            num_channels=recording.get_num_channels(),
-            num_samples=[recording.get_num_samples(seg_index)
-                         for seg_index in range(recording.get_num_segments())],
-            is_filtered=recording.is_filtered(),
-            properties=properties_to_attrs
-        )
+        channel_ids=recording.channel_ids,
+        sampling_frequency=recording.get_sampling_frequency(),
+        num_channels=recording.get_num_channels(),
+        num_samples=[recording.get_num_samples(seg_index) for seg_index in range(recording.get_num_segments())],
+        is_filtered=recording.is_filtered(),
+        properties=properties_to_attrs,
+    )
     return rec_attributes
