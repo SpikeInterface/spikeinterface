@@ -133,17 +133,16 @@ def _freq_domain_conv(in1, in2, axes, shape, cache, calc_fast_len=True):
 
 
 def compute_overlaps(templates, num_samples, num_channels):
-
     num_templates = len(templates)
 
     size = 2 * num_samples - 1
 
-    all_delays = list(range(0, num_samples+1))
+    all_delays = list(range(0, num_samples + 1))
     overlaps = {}
-        
+
     for delay in all_delays:
         source = templates[:, :delay, :].reshape(num_templates, -1)
-        target = templates[:, num_samples-delay:, :].reshape(num_templates, -1)
+        target = templates[:, num_samples - delay :, :].reshape(num_templates, -1)
         overlaps[delay] = scipy.sparse.csr_matrix(source.dot(target.T))
 
         if delay < num_samples:
@@ -189,41 +188,39 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
     """
 
     _default_params = {
-        'amplitudes' : [0.6, 2],
-        'omp_min_sps' : 0.2,
-        'overlaps' : None,
-        'norms' : None,
-        'random_chunk_kwargs': {},
-        'noise_levels': None,
-        'ignored_ids' : []
+        "amplitudes": [0.6, 2],
+        "omp_min_sps": 0.2,
+        "overlaps": None,
+        "norms": None,
+        "random_chunk_kwargs": {},
+        "noise_levels": None,
+        "ignored_ids": [],
     }
 
     @classmethod
     def _prepare_templates(cls, d):
-        
-        num_samples = d['num_samples']
-        num_channels = d['num_channels']
-        templates = d['templates']
+        num_samples = d["num_samples"]
+        num_channels = d["num_channels"]
+        templates = d["templates"]
         num_templates = len(templates)
-        d['circus_templates'] = d['templates'].copy()
-        d['norms'] = np.zeros(num_templates, dtype=np.float32)
+        d["circus_templates"] = d["templates"].copy()
+        d["norms"] = np.zeros(num_templates, dtype=np.float32)
 
         for unit_ind in range(num_templates):
-            d['norms'][unit_ind] = np.linalg.norm(d['circus_templates'][unit_ind])
-            d['circus_templates'][unit_ind] /= d['norms'][unit_ind]
+            d["norms"][unit_ind] = np.linalg.norm(d["circus_templates"][unit_ind])
+            d["circus_templates"][unit_ind] /= d["norms"][unit_ind]
 
         return d
 
     @classmethod
     def _compress_templates(cls, d):
-        
-        templates = d.pop('circus_templates')
+        templates = d.pop("circus_templates")
         num_templates = len(templates)
-        d['circus_templates'] = {}
-        
+        d["circus_templates"] = {}
+
         for unit_ind in range(num_templates):
-            active_channels = d['sparsity_mask'][unit_ind]
-            d['circus_templates'][unit_ind] = templates[unit_ind][:, active_channels]
+            active_channels = d["sparsity_mask"][unit_ind]
+            d["circus_templates"][unit_ind] = templates[unit_ind][:, active_channels]
 
         return d
 
@@ -232,13 +229,13 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d = cls._default_params.copy()
         d.update(kwargs)
 
-        for v in ['omp_min_sps']:
-            assert (d[v] >= 0) and (d[v] <= 1), f'{v} should be in [0, 1]'
-        
-        d['num_channels'] = d['waveform_extractor'].recording.get_num_channels()
-        d['num_samples'] = d['waveform_extractor'].nsamples
-        d['num_templates'] = len(d['templates'])
-        d['sampling_frequency'] = d['waveform_extractor'].recording.get_sampling_frequency()
+        for v in ["omp_min_sps"]:
+            assert (d[v] >= 0) and (d[v] <= 1), f"{v} should be in [0, 1]"
+
+        d["num_channels"] = d["waveform_extractor"].recording.get_num_channels()
+        d["num_samples"] = d["waveform_extractor"].nsamples
+        d["num_templates"] = len(d["templates"])
+        d["sampling_frequency"] = d["waveform_extractor"].recording.get_sampling_frequency()
 
         d["num_channels"] = d["waveform_extractor"].recording.get_num_channels()
         d["num_samples"] = d["waveform_extractor"].nsamples
@@ -248,15 +245,15 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         d = cls._prepare_templates(d)
 
-        if d['overlaps'] is None: 
-            d['overlaps'] = compute_overlaps(d['circus_templates'], d['num_samples'], d['num_channels'])
+        if d["overlaps"] is None:
+            d["overlaps"] = compute_overlaps(d["circus_templates"], d["num_samples"], d["num_channels"])
 
         d = cls._compress_templates(d)
 
         d["ignored_ids"] = np.array(d["ignored_ids"])
 
-        omp_min_sps = d['omp_min_sps']
-        d['stop_criteria'] = omp_min_sps * np.sqrt(d['noise_levels'].sum() * d['num_samples'])
+        omp_min_sps = d["omp_min_sps"]
+        d["stop_criteria"] = omp_min_sps * np.sqrt(d["noise_levels"].sum() * d["num_samples"])
 
         return d
 
@@ -271,21 +268,21 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def main_function(cls, traces, d):
-        templates = d['circus_templates']
-        num_templates = d['num_templates']
-        num_channels = d['num_channels']
-        num_samples = d['num_samples']
-        overlaps = d['overlaps']
-        norms = d['norms']
-        nbefore = d['nbefore']
-        nafter = d['nafter']
+        templates = d["circus_templates"]
+        num_templates = d["num_templates"]
+        num_channels = d["num_channels"]
+        num_samples = d["num_samples"]
+        overlaps = d["overlaps"]
+        norms = d["norms"]
+        nbefore = d["nbefore"]
+        nafter = d["nafter"]
         omp_tol = np.finfo(np.float32).eps
         num_samples = d["nafter"] + d["nbefore"]
         neighbor_window = num_samples - 1
-        min_amplitude, max_amplitude = d['amplitudes']
-        sparsities = d['sparsity_mask']
-        ignored_ids = d['ignored_ids']
-        stop_criteria = d['stop_criteria']
+        min_amplitude, max_amplitude = d["amplitudes"]
+        sparsities = d["sparsity_mask"]
+        ignored_ids = d["ignored_ids"]
+        stop_criteria = d["stop_criteria"]
 
         if "cached_fft_kernels" not in d:
             d["cached_fft_kernels"] = {"fshape": 0}
@@ -474,51 +471,50 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     """
 
     _default_params = {
-        'peak_sign': 'neg', 
-        'exclude_sweep_ms': 0.1,
-        'jitter_ms' : 0.1, 
-        'detect_threshold': 5,
-        'noise_levels': None, 
-        'random_chunk_kwargs': {},
-        'max_amplitude' : 1.5,
-        'min_amplitude' : 0.5,
-        'use_sparse_matrix_threshold' : 0.25,
+        "peak_sign": "neg",
+        "exclude_sweep_ms": 0.1,
+        "jitter_ms": 0.1,
+        "detect_threshold": 5,
+        "noise_levels": None,
+        "random_chunk_kwargs": {},
+        "max_amplitude": 1.5,
+        "min_amplitude": 0.5,
+        "use_sparse_matrix_threshold": 0.25,
     }
 
     @classmethod
     def _prepare_templates(cls, d):
-        
-        num_samples = d['num_samples']
-        num_channels = d['num_channels']
-        num_templates = d['num_templates']
-        max_amplitude = d['max_amplitude']
-        min_amplitude = d['min_amplitude']
-        use_sparse_matrix_threshold = d['use_sparse_matrix_threshold']
-        d['circus_templates'] = d['templates'].copy()
-        d['norms'] = np.zeros(num_templates, dtype=np.float32)
+        num_samples = d["num_samples"]
+        num_channels = d["num_channels"]
+        num_templates = d["num_templates"]
+        max_amplitude = d["max_amplitude"]
+        min_amplitude = d["min_amplitude"]
+        use_sparse_matrix_threshold = d["use_sparse_matrix_threshold"]
+        d["circus_templates"] = d["templates"].copy()
+        d["norms"] = np.zeros(num_templates, dtype=np.float32)
 
         for unit_ind in range(num_templates):
-            d['norms'][unit_ind] = np.linalg.norm(d['circus_templates'][unit_ind])
-            d['circus_templates'][unit_ind] /= d['norms'][unit_ind]
-        
+            d["norms"][unit_ind] = np.linalg.norm(d["circus_templates"][unit_ind])
+            d["circus_templates"][unit_ind] /= d["norms"][unit_ind]
+
         return d
 
     @classmethod
     def _compress_templates(cls, d):
-        circus_templates = d.pop('circus_templates')
+        circus_templates = d.pop("circus_templates")
         num_templates = len(circus_templates)
-        num_samples = d['num_samples']
-        num_channels = d['num_channels']
+        num_samples = d["num_samples"]
+        num_channels = d["num_channels"]
         circus_templates = circus_templates.reshape(num_templates, -1)
 
-        nnz = np.sum(circus_templates != 0)/(num_templates * num_samples * num_channels)
-        if nnz <= d['use_sparse_matrix_threshold']:
+        nnz = np.sum(circus_templates != 0) / (num_templates * num_samples * num_channels)
+        if nnz <= d["use_sparse_matrix_threshold"]:
             circus_templates = scipy.sparse.csr_matrix(circus_templates)
-            d['is_dense'] = False
+            d["is_dense"] = False
         else:
             parameters["is_dense"] = True
 
-        d['circus_templates'] = circus_templates
+        d["circus_templates"] = circus_templates
         return d
 
     @classmethod
@@ -544,12 +540,11 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _optimize_amplitudes(cls, noise_snippets, d):
-
-        waveform_extractor = d['waveform_extractor']
-        templates = d['circus_templates']
-        num_templates = d['num_templates']
-        max_amplitude = d['max_amplitude']
-        min_amplitude = d['min_amplitude']
+        waveform_extractor = d["waveform_extractor"]
+        templates = d["circus_templates"]
+        num_templates = d["num_templates"]
+        max_amplitude = d["max_amplitude"]
+        min_amplitude = d["min_amplitude"]
         alpha = 0.5
         norms = parameters["norms"]
         all_units = list(waveform_extractor.sorting.unit_ids)
@@ -580,12 +575,12 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         default_parameters = cls._default_params.copy()
         default_parameters.update(kwargs)
 
-        for v in ['use_sparse_matrix_threshold']:
-            assert (d[v] >= 0) and (d[v] <= 1), f'{v} should be in [0, 1]'
-        
-        d['num_channels'] = d['waveform_extractor'].recording.get_num_channels()
-        d['num_samples'] = d['waveform_extractor'].nsamples
-        d['num_templates'] = len(d['templates'])
+        for v in ["use_sparse_matrix_threshold"]:
+            assert (d[v] >= 0) and (d[v] <= 1), f"{v} should be in [0, 1]"
+
+        d["num_channels"] = d["waveform_extractor"].recording.get_num_channels()
+        d["num_samples"] = d["waveform_extractor"].nsamples
+        d["num_templates"] = len(d["templates"])
 
         default_parameters["num_channels"] = default_parameters["waveform_extractor"].recording.get_num_channels()
         default_parameters["num_samples"] = default_parameters["waveform_extractor"].nsamples
@@ -598,7 +593,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             )
 
         d = cls._prepare_templates(d)
-        d['overlaps'] = compute_overlaps(d['circus_templates'], d['num_samples'], d['num_channels'])
+        d["overlaps"] = compute_overlaps(d["circus_templates"], d["num_samples"], d["num_channels"])
         d = cls._compress_templates(d)
 
         default_parameters = cls._prepare_templates(default_parameters)
@@ -649,18 +644,18 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def main_function(cls, traces, d):
-        peak_sign = d['peak_sign']
-        abs_threholds = d['abs_threholds']
-        exclude_sweep_size = d['exclude_sweep_size']
-        templates = d['circus_templates']
-        num_templates = d['num_templates']
-        num_channels = d['num_channels']
-        overlaps = d['overlaps']
-        margin = d['margin']
-        norms = d['norms']
-        jitter = d['jitter']
-        patch_sizes = d['patch_sizes']
-        num_samples = d['nafter'] + d['nbefore']
+        peak_sign = d["peak_sign"]
+        abs_threholds = d["abs_threholds"]
+        exclude_sweep_size = d["exclude_sweep_size"]
+        templates = d["circus_templates"]
+        num_templates = d["num_templates"]
+        num_channels = d["num_channels"]
+        overlaps = d["overlaps"]
+        margin = d["margin"]
+        norms = d["norms"]
+        jitter = d["jitter"]
+        patch_sizes = d["patch_sizes"]
+        num_samples = d["nafter"] + d["nbefore"]
         neighbor_window = num_samples - 1
         amplitudes = d["amplitudes"]
         sym_patch = d["sym_patch"]

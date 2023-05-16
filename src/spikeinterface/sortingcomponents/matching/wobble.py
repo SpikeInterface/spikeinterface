@@ -335,9 +335,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         """
         d = cls.default_params.copy()
         d.update(kwargs)
-        parameters = d.get('parameters', {})
-        templates = d['templates']
-        templates = templates.astype(np.float32, casting='safe')
+        parameters = d.get("parameters", {})
+        templates = d["templates"]
+        templates = templates.astype(np.float32, casting="safe")
 
         # Aggregate useful parameters/variables for handy access in downstream functions
         params = WobbleParameters(**parameters)
@@ -362,10 +362,10 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         )
 
         # Pack initial data into kwargs
-        d['params'] = params
-        d['template_meta'] = template_meta
-        d['sparsity'] = sparsity
-        d['template_data'] = template_data
+        d["params"] = params
+        d["template_meta"] = template_meta
+        d["sparsity"] = sparsity
+        d["template_data"] = template_data
         return d
 
     @classmethod
@@ -373,7 +373,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         # This function does nothing without a waveform extractor -- candidate for refactor
         kwargs = dict(kwargs)
         # remove waveform_extractor
-        kwargs.pop('waveform_extractor')
+        kwargs.pop("waveform_extractor")
         return kwargs
 
     @classmethod

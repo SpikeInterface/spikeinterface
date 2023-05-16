@@ -89,7 +89,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
         channel_distance = get_channel_distances(recording)
         d['neighbours_mask'] = channel_distance < d['local_radius_um']
-        
+
         extremum_channel = get_template_extremum_channel(we, peak_sign=d['peak_sign'], outputs='index')
         # as numpy vector
         extremum_channel = np.array([extremum_channel[unit_id] for unit_id in unit_ids], dtype="int64")
@@ -221,17 +221,17 @@ def _tdc_find_spikes(traces, d, level=0):
                 ## pure numpy with cluster+channel spasity
                 # union_channels, = np.nonzero(np.any(d['sparsity_mask'][possible_clusters, :], axis=0))
                 # distances = np.sum(np.sum((templates[possible_clusters][:, :, union_channels] - wf[: , union_channels][None, : :])**2, axis=1), axis=1)
-                
+
                 ## numba with cluster+channel spasity
                 union_channels = np.any(d['sparsity_mask'][possible_clusters, :], axis=0)
                 # distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
                 distances = numba_sparse_dist(wf_short, templates_short, union_channels, possible_clusters)
-                
-                
+
+
                 # DEBUG
                 #~ ind = np.argmin(distances)
                 #~ cluster_index = possible_clusters[ind]
-                
+
                 for ind in np.argsort(distances)[:d['num_template_try']]:
                     cluster_index = possible_clusters[ind]
 
