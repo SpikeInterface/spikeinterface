@@ -120,6 +120,48 @@ The following steps are common to all operating systems:
 Stylistic conventions
 ---------------------
 
+
+SpikeInterface maintains a consistent coding style across the project, leveraging the black Python code formatter.
+This helps to ensure readability and maintainability of the code, making it easier for contributors to collaborate.
+
+To install black, you can use pip, the Python package installer. Run the following command in your terminal:
+
+.. code-block:: bash
+
+    pip install black
+
+This will install black into your current Python environment.
+
+In addition to black, we use pre-commit to manage a suite of code formatting.
+Pre-commit helps to automate the process of running these tools before every commit,
+ensuring that all code is checked for style.
+
+You can install pre-commit using pip as well:
+
+.. code-block:: bash
+
+    pip install pre-commit
+
+
+Once pre-commit is installed, you can set up the pre-commit hooks for your local repository.
+These hooks are scripts that pre-commit will run prior to each commit. To install the pre-commit hooks,
+navigate to your local repository in your terminal and run the following command:
+
+.. code-block:: bash
+
+    pre-commit install
+
+Now, each time you make a commit, pre-commit will automatically run black and any other configured hooks.
+If the hooks make changes or if there are any issues, the commit will be stopped, and you'll be able to review and add the changes.
+
+If you want black to omit a line from formatting, you can add the following comment to the end of the line:
+
+.. code-block:: python
+
+    # fmt: off
+
+As described in the `black documentation <https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html#code-style>`_,
+
 The following are some styling conventions that we follow in SpikeInterface:
 
 #. Avoid using abreviations in variable names (e.g., use :code:`recording` instead of :code:`rec`). It is specially important to avoid single letter variables.
