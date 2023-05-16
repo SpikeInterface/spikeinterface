@@ -126,8 +126,13 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
     return np.array(closest_channels_inds), np.array(dists)
 
 
-def get_noise_levels(recording: 'BaseRecording', return_scaled: bool = True, method: Literal['mad', 'std'] = "mad", 
-    force_recompute: bool=False, **random_chunk_kwargs):
+def get_noise_levels(
+    recording: "BaseRecording",
+    return_scaled: bool = True,
+    method: Literal["mad", "std"] = "mad",
+    force_recompute: bool = False,
+    **random_chunk_kwargs,
+):
     """
     Estimate noise for each channel using MAD methods.
     You can use standard deviation with `method='std'`
@@ -136,25 +141,21 @@ def get_noise_levels(recording: 'BaseRecording', return_scaled: bool = True, met
     And then, it use MAD estimator (more robust than STD)
 
     """
-    
+
     if return_scaled:
-        key = 'noise_level_scaled'
+        key = "noise_level_scaled"
     else:
-        key = 'noise_level_raw'
+        key = "noise_level_raw"
 
     if key in recording._properties and not force_recompute:
         noise_levels = recording.get_property(key=key)
     else:
-        random_chunks = get_random_data_chunks(
-            recording, return_scaled=return_scaled, **random_chunk_kwargs
-        )
-        
+        random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
+
         if method == "mad":
             med = np.median(random_chunks, axis=0, keepdims=True)
             # hard-coded so that core doesn't depend on scipy
-            noise_levels = (
-                np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
-            )
+            noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
         elif method == "std":
             noise_levels = np.std(random_chunks, axis=0)
         recording.set_property(key, noise_levels)
