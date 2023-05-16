@@ -1,7 +1,11 @@
 import numpy as np
 import scipy
-from spikeinterface.core import (WaveformExtractor, get_noise_levels, get_channel_distances,
-                                 get_template_extremum_channel)
+from spikeinterface.core import (
+    WaveformExtractor,
+    get_noise_levels,
+    get_channel_distances,
+    get_template_extremum_channel,
+)
 
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
 
@@ -40,18 +44,18 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
     """
 
     default_params = {
-        'peak_sign': 'neg',
-        'peak_shift_ms':  0.2,
-        'detect_threshold': 5,
-        'noise_levels': None,
-        'local_radius_um': 75,
-        'random_chunk_kwargs': {},
-        'num_closest' : 5,
-        'sample_shift': 3,
-        'ms_before': 0.8,
-        'ms_after': 1.2,
-        'num_peeler_loop':  2,
-        'num_template_try' : 1
+        "peak_sign": "neg",
+        "peak_shift_ms": 0.2,
+        "detect_threshold": 5,
+        "noise_levels": None,
+        "local_radius_um": 75,
+        "random_chunk_kwargs": {},
+        "num_closest": 5,
+        "sample_shift": 3,
+        "ms_before": 0.8,
+        "ms_after": 1.2,
+        "num_peeler_loop": 2,
+        "num_template_try": 1,
     }
 
     @classmethod
@@ -61,15 +65,15 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         d = cls.default_params.copy()
         d.update(kwargs)
 
-        we = d['waveform_extractor']
-        templates = d['templates']
+        we = d["waveform_extractor"]
+        templates = d["templates"]
         unit_ids = we.unit_ids
         channel_ids = we.channel_ids
 
         sr = we.sampling_frequency
 
-        nbefore_short = int(d['ms_before'] * sr / 1000.)
-        nafter_short = int(d['ms_before'] * sr / 1000.)
+        nbefore_short = int(d["ms_before"] * sr / 1000.0)
+        nafter_short = int(d["ms_before"] * sr / 1000.0)
         assert nbefore_short <= we.nbefore
         assert nafter_short <= we.nafter
         d["nbefore_short"] = nbefore_short
@@ -81,16 +85,18 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         templates_short = templates[:, slice(s0, s1), :].copy()
         d["templates_short"] = templates_short
 
-        d['peak_shift'] = int(d['peak_shift_ms'] / 1000 * sr)
+        d["peak_shift"] = int(d["peak_shift_ms"] / 1000 * sr)
 
-        if d['noise_levels'] is None:
-            print('TridesclousPeeler : noise should be computed outside')
-            d['noise_levels'] = get_noise_levels(recording, **d['random_chunk_kwargs'])
+        if d["noise_levels"] is None:
+            print("TridesclousPeeler : noise should be computed outside")
+            d["noise_levels"] = get_noise_levels(recording, **d["random_chunk_kwargs"])
+
+        d["abs_threholds"] = d["noise_levels"] * d["detect_threshold"]
 
         channel_distance = get_channel_distances(recording)
-        d['neighbours_mask'] = channel_distance < d['local_radius_um']
+        d["neighbours_mask"] = channel_distance < d["local_radius_um"]
 
-        extremum_channel = get_template_extremum_channel(we, peak_sign=d['peak_sign'], outputs='index')
+        extremum_channel = get_template_extremum_channel(we, peak_sign=d["peak_sign"], outputs="index")
         # as numpy vector
         extremum_channel = np.array([extremum_channel[unit_id] for unit_id in unit_ids], dtype="int64")
         d["extremum_channel"] = extremum_channel
@@ -113,7 +119,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
             closest_u = np.array(closest_u[: d["num_closest"]])
 
             # compute unitary discriminent vector
-            chans, = np.nonzero(d['sparsity_mask'][unit_ind, :])
+            (chans,) = np.nonzero(d["sparsity_mask"][unit_ind, :])
             template_sparse = templates[unit_ind, :, :][:, chans]
             closest_vec = []
             # against N closets
@@ -218,32 +224,19 @@ def _tdc_find_spikes(traces, d, level=0):
 
             # ~ wf = traces[s0:s1, :]
 
-                ## pure numpy with cluster+channel spasity
-                # union_channels, = np.nonzero(np.any(d['sparsity_mask'][possible_clusters, :], axis=0))
-                # distances = np.sum(np.sum((templates[possible_clusters][:, :, union_channels] - wf[: , union_channels][None, : :])**2, axis=1), axis=1)
-
-                ## numba with cluster+channel spasity
-                union_channels = np.any(d['sparsity_mask'][possible_clusters, :], axis=0)
-                # distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
-                distances = numba_sparse_dist(wf_short, templates_short, union_channels, possible_clusters)
-
-
-                # DEBUG
-                #~ ind = np.argmin(distances)
-                #~ cluster_index = possible_clusters[ind]
-
-                for ind in np.argsort(distances)[:d['num_template_try']]:
-                    cluster_index = possible_clusters[ind]
+            s0 = sample_index - d["nbefore_short"]
+            s1 = sample_index + d["nafter_short"]
+            wf_short = traces[s0:s1, :]
 
             ## pure numpy with cluster spasity
             # distances = np.sum(np.sum((templates[possible_clusters, :, :] - wf[None, : , :])**2, axis=1), axis=1)
 
             ## pure numpy with cluster+channel spasity
-            # union_channels, = np.nonzero(np.any(d['template_sparsity'][possible_clusters, :], axis=0))
+            # union_channels, = np.nonzero(np.any(d['sparsity_mask'][possible_clusters, :], axis=0))
             # distances = np.sum(np.sum((templates[possible_clusters][:, :, union_channels] - wf[: , union_channels][None, : :])**2, axis=1), axis=1)
 
             ## numba with cluster+channel spasity
-            union_channels = np.any(d["template_sparsity"][possible_clusters, :], axis=0)
+            union_channels = np.any(d["sparsity_mask"][possible_clusters, :], axis=0)
             # distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
             distances = numba_sparse_dist(wf_short, templates_short, union_channels, possible_clusters)
 
