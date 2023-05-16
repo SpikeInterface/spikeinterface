@@ -34,13 +34,13 @@ def test_time_handling():
             assert sort.has_time_vector(segment_index=segment_index)
 
             # times are correctly saved by the recording
-            assert np.allclose(rec.get_times(segment_index=segment_index), 
-                               rec_cache.get_times(segment_index=segment_index))
+            assert np.allclose(
+                rec.get_times(segment_index=segment_index), rec_cache.get_times(segment_index=segment_index)
+            )
 
             # spike times are correctly adjusted
             for u in sort.get_unit_ids():
-                spike_times = sort.get_unit_spike_train(u, segment_index=segment_index,
-                                                        return_times=True)
+                spike_times = sort.get_unit_spike_train(u, segment_index=segment_index, return_times=True)
                 rec_times = rec.get_times(segment_index=segment_index)
                 assert np.all(spike_times >= rec_times[0])
                 assert np.all(spike_times <= rec_times[-1])
@@ -71,5 +71,5 @@ def test_frame_slicing():
         assert np.all(spike_times <= rec_times[-1])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_frame_slicing()

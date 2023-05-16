@@ -9,14 +9,14 @@ SpikeInterface 0.96.1 release notes
 Main change:
  * Bump up probeinterface version to version 0.2.14 due to bug fix in reading SpikeGLX electrode locations
    https://probeinterface.readthedocs.io/en/main/releases/0.2.14.html
-   
+
 .. warning::
-    Probeinterface v0.2.14 fixes a **important bug** in :code:`read_spikeglx()` / :code:`read_imro()` that was 
+    Probeinterface v0.2.14 fixes a **important bug** in :code:`read_spikeglx()` / :code:`read_imro()` that was
     leading to wrong contact locations when the Imec Readout Table (aka imRo) was set with complex multi-bank patterns.
-    The bug was introduced with version **0.2.10**, released on September 1st 2022, and it is also present in these 
+    The bug was introduced with version **0.2.10**, released on September 1st 2022, and it is also present in these
     versions: **0.2.10**, **0.2.11**, **0.2.12**, and **0.2.13**.
-    **If you used spikeinterface/probeinterface with SpikeGLX data using one of these versions, we recommend you 
-    to check your contact positions (if they are non-standard - using the probe tip) and re-run your spike-sorting 
+    **If you used spikeinterface/probeinterface with SpikeGLX data using one of these versions, we recommend you
+    to check your contact positions (if they are non-standard - using the probe tip) and re-run your spike-sorting
     analysis if they are wrong.**
 
 

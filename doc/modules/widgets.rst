@@ -9,16 +9,16 @@ sortings, waveforms, and more.
 Since version 0.95.0, the :py:mod:`spikeinterface.widgets` module supports multiple backends:
 
 * | :code:`matplotlib`: static rendering using the `matplotlib <https://matplotlib.org/>`_ package
-* | :code:`ipywidgets`: interactive rendering within a jupyter notebook using the 
+* | :code:`ipywidgets`: interactive rendering within a jupyter notebook using the
   | `ipywidgets <https://ipywidgets.readthedocs.io/en/stable/>`_ package
-* | :code:`sortingview`: web-based and interactive rendering using the `sortingview <https://github.com/magland/sortingview>`_ 
+* | :code:`sortingview`: web-based and interactive rendering using the `sortingview <https://github.com/magland/sortingview>`_
   | and `FIGURL <https://github.com/flatironinstitute/figurl>`_ packages.
 
 
 Installing backends
 -------------------
 
-The backends are loaded at run-time and can be installed separately. Alternatively, all dependencies from all 
+The backends are loaded at run-time and can be installed separately. Alternatively, all dependencies from all
 backends can be installed with:
 
 .. code-block:: bash
@@ -29,7 +29,7 @@ backends can be installed with:
 matplotlib
 ^^^^^^^^^^
 
-The :code:`matplotlib` backend (default) uses the :code:`matplotlib` package to generate static figures. 
+The :code:`matplotlib` backend (default) uses the :code:`matplotlib` package to generate static figures.
 
 To install it, run:
 
@@ -40,14 +40,14 @@ To install it, run:
 ipywidgets
 ^^^^^^^^^^
 
-The :code:`ipywidgets` backend allows users to interact with the plot, for example, by selecting units or 
+The :code:`ipywidgets` backend allows users to interact with the plot, for example, by selecting units or
 scrolling through a time series.
 
 To install it, run:
 
 .. code-block:: bash
 
-    pip install matplotlib ipympl ipywidgets 
+    pip install matplotlib ipympl ipywidgets
 
 To enable interactive widgets in your notebook, add and run a cell with:
 
@@ -70,28 +70,28 @@ To install it, run:
     pip install sortingview figurl-jupyter
 
 Internally, the processed data to be rendered are uploaded to a public bucket in the cloud, so that they
-can be visualized via the web (if :code:`generate_url=True`). 
-When running in a Jupyter notebook or JupyterLab, the sortingview widget will also be rendered in the 
+can be visualized via the web (if :code:`generate_url=True`).
+When running in a Jupyter notebook or JupyterLab, the sortingview widget will also be rendered in the
 notebook!
 
-To set up the backend, you need to authenticate to `kachery-cloud` using your GitHub account by running 
+To set up the backend, you need to authenticate to `kachery-cloud` using your GitHub account by running
 the following command (you will be prompted a link):
 
 .. code-block:: bash
 
     kachery-cloud-init
 
-Finally, if you wish to set up another cloud provider, follow the instruction from the 
+Finally, if you wish to set up another cloud provider, follow the instruction from the
 `kachery-cloud <https://github.com/flatironinstitute/kachery-cloud>`_ package ("Using your own storage bucket").
 
 
 Usage
 -----
 
-You can specify which backend to use with the :code:`backend` argument. In addition, each backend 
+You can specify which backend to use with the :code:`backend` argument. In addition, each backend
 comes with specific arguments that can be set when calling the plotting function.
 
-A default backend for a SpikeInterface session can be set with the 
+A default backend for a SpikeInterface session can be set with the
 :py:func:`~spikeinterface.widgets.set_default_plotter_backend` function:
 
 .. code-block:: python
@@ -101,9 +101,9 @@ A default backend for a SpikeInterface session can be set with the
     print(get_default_plotter_backend())
     # >>> "ipywidgets"
 
-All :code:`plot_*` functions return a :code:`BackendPlotter` instance. 
-Different backend-specific plotters can expose different attributes. For example, the :code:`matplotlib` 
-plotter has the :code:`figure`, :code:`ax`, and :code:`axes` (for multi-axes plots) attributes to enable further 
+All :code:`plot_*` functions return a :code:`BackendPlotter` instance.
+Different backend-specific plotters can expose different attributes. For example, the :code:`matplotlib`
+plotter has the :code:`figure`, :code:`ax`, and :code:`axes` (for multi-axes plots) attributes to enable further
 customization.
 
 
@@ -134,7 +134,7 @@ The :code:`plot_*(..., backend="matplotlib")` functions come with the following 
 ipywidgets
 ^^^^^^^^^^
 
-The :code:`plot_*(..., backend="ipywidgets")` functions are only available in Jupyter notebooks or JupyterLab after 
+The :code:`plot_*(..., backend="ipywidgets")` functions are only available in Jupyter notebooks or JupyterLab after
 calling the :code:`%matplotlib widget` magic line.
 Each function has the following additional arguments:
 
@@ -158,8 +158,8 @@ Each function has the following additional arguments:
 sortingview
 ^^^^^^^^^^^
 
-The :code:`plot_*(..., backend="sortingview")` generate web-based GUIs, which are also shareable with a link (provided 
-that :code:`kachery-cloud` is correctly setup, see :ref:`sorting_view`). 
+The :code:`plot_*(..., backend="sortingview")` generate web-based GUIs, which are also shareable with a link (provided
+that :code:`kachery-cloud` is correctly setup, see :ref:`sorting_view`).
 The functions have the following additional arguments:
 
   * :code:`generate_url`: If True, the figurl URL is generated and printed. Default True
@@ -241,7 +241,7 @@ Available plotting functions
 Legacy plotting functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-These functions are still part of the package, but they are directly implemented in :code:`matplotlib` without the 
+These functions are still part of the package, but they are directly implemented in :code:`matplotlib` without the
 more recend backend mechanism:
 
 * :py:func:`~spikeinterface.widgets.plot_rasters`

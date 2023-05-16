@@ -27,7 +27,7 @@ class WhitenRecording(BasePreprocessor):
         Substract or not the mean matrix M before the dot product with W.
     int_scale : None or float
         Apply a scaling factor to fit the integer range.
-        This is used when the dtype is an integer, so that the output is scaled. 
+        This is used when the dtype is an integer, so that the output is scaled.
         For example, a value of `int_scale=200` will scale the traces value to a standard deviation of 200.
     W : 2d np.array
         Pre-computed whitening matrix, by default None
@@ -41,33 +41,35 @@ class WhitenRecording(BasePreprocessor):
     whitened_recording: WhitenRecording
         The whitened recording extractor
     """
-    name = 'whiten'
+
+    name = "whiten"
 
     def __init__(
         self,
         recording,
         dtype=None,
         apply_mean=False,
-        mode='global',
-        radius_um=100.,
+        mode="global",
+        radius_um=100.0,
         int_scale=None,
         W=None,
         M=None,
-        **random_chunk_kwargs
+        **random_chunk_kwargs,
     ):
         # fix dtype
         dtype_ = fix_dtype(recording, dtype)
 
-        if dtype_.kind == 'i':
-            assert int_scale is not None, 'For recording with dtype=int you must set dtype=float32 OR set a int_scale' 
+        if dtype_.kind == "i":
+            assert int_scale is not None, "For recording with dtype=int you must set dtype=float32 OR set a int_scale"
 
         if W is not None:
             W = np.asarray(W)
             if M is not None:
                 M = np.asarray(M)
         else:
-            W, M = compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean,
-                                            radius_um=radius_um, eps=1e-8)
+            W, M = compute_whitening_matrix(
+                recording, mode, random_chunk_kwargs, apply_mean, radius_um=radius_um, eps=1e-8
+            )
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
 
@@ -76,7 +78,8 @@ class WhitenRecording(BasePreprocessor):
             self.add_recording_segment(rec_segment)
 
         self._kwargs = dict(
-            recording=recording, dtype=dtype,
+            recording=recording,
+            dtype=dtype,
             mode=mode,
             radius_um=radius_um,
             apply_mean=apply_mean,
@@ -96,8 +99,7 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
         self.int_scale = int_scale
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        traces = self.parent_recording_segment.get_traces(
-            start_frame, end_frame, slice(None))
+        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
         traces_dtype = traces.dtype
         # if uint --> force int
         if traces_dtype.kind == "u":
@@ -120,8 +122,7 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
 whiten = define_function_from_class(source_class=WhitenRecording, name="whiten")
 
 
-def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean,
-                             radius_um=None, eps=1e-8):
+def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, radius_um=None, eps=1e-8):
     """
     Compute whitening matrix
 
@@ -152,9 +153,8 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean,
         The "mean" matrix
 
     """
-    random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False,
-                                         **random_chunk_kwargs)
-    random_data = random_data.astype('float32')
+    random_data = get_random_data_chunks(recording, concatenated=True, return_scaled=False, **random_chunk_kwargs)
+    random_data = random_data.astype("float32")
 
     if apply_mean:
         M = np.mean(random_data, axis=0)
@@ -167,21 +167,21 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean,
     cov = data.T @ data
     cov = cov / data.shape[0]
 
-    if mode == 'global':
+    if mode == "global":
         U, S, Ut = np.linalg.svd(cov, full_matrices=True)
         W = (U @ np.diag(1 / np.sqrt(S + eps))) @ Ut
-    elif mode == 'local':
+    elif mode == "local":
         assert radius_um is not None
         n = cov.shape[0]
         distances = get_channel_distances(recording)
-        W = np.zeros((n, n), dtype='float64')
+        W = np.zeros((n, n), dtype="float64")
         for c in range(n):
-            inds,  = np.nonzero(distances[c, :] < radius_um)
+            (inds,) = np.nonzero(distances[c, :] < radius_um)
             cov_local = cov[inds, :][:, inds]
             U, S, Ut = np.linalg.svd(cov_local, full_matrices=True)
             W_local = (U @ np.diag(1 / np.sqrt(S + eps))) @ Ut
-            W[inds, c] = W_local[c==inds]
+            W[inds, c] = W_local[c == inds]
     else:
-        raise ValueError(f'compute_whitening_matrix : wrong mode {mode}')
+        raise ValueError(f"compute_whitening_matrix : wrong mode {mode}")
 
     return W, M

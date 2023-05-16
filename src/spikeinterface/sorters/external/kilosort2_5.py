@@ -19,8 +19,9 @@ def check_if_installed(kilosort2_5_path: Union[str, None]):
         kilosort2_5_path = kilosort2_5_path[1:-1]
     kilosort2_5_path = str(Path(kilosort2_5_path).absolute())
 
-    if (Path(kilosort2_5_path) / 'master_kilosort.m').is_file() or (
-            Path(kilosort2_5_path) / 'main_kilosort.m').is_file():
+    if (Path(kilosort2_5_path) / "master_kilosort.m").is_file() or (
+        Path(kilosort2_5_path) / "main_kilosort.m"
+    ).is_file():
         return True
     else:
         return False
@@ -29,9 +30,9 @@ def check_if_installed(kilosort2_5_path: Union[str, None]):
 class Kilosort2_5Sorter(KilosortBase, BaseSorter):
     """Kilosort2.5 Sorter object."""
 
-    sorter_name: str = 'kilosort2_5'
-    compiled_name: str = 'ks2_5_compiled'
-    kilosort2_5_path: Union[str, None] = os.getenv('KILOSORT2_5_PATH', None)
+    sorter_name: str = "kilosort2_5"
+    compiled_name: str = "ks2_5_compiled"
+    kilosort2_5_path: Union[str, None] = os.getenv("KILOSORT2_5_PATH", None)
     requires_locations = False
 
     _default_params = {
@@ -57,19 +58,19 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
     }
 
     _params_description = {
-        'detect_threshold': "Threshold for spike detection",
-        'projection_threshold': "Threshold on projections",
-        'preclust_threshold': "Threshold crossings for pre-clustering (in PCA projection space)",
-        'car': "Enable or disable common reference",
-        'minFR': "Minimum spike rate (Hz), if a cluster falls below this for too long it gets removed",
-        'minfr_goodchannels': "Minimum firing rate on a 'good' channel",
-        'nblocks': "blocks for registration. 0 turns it off, 1 does rigid registration. Replaces 'datashift' option.",
-        'sig': "spatial smoothness constant for registration",
-        'freq_min': "High-pass filter cutoff frequency",
-        'sigmaMask': "Spatial constant in um for computing residual variance of spike",
-        'nPCs': "Number of PCA dimensions",
-        'ntbuff': "Samples of symmetrical buffer for whitening and spike detection",
-        'nfilt_factor': "Max number of clusters per good channel (even temporary ones) 4",
+        "detect_threshold": "Threshold for spike detection",
+        "projection_threshold": "Threshold on projections",
+        "preclust_threshold": "Threshold crossings for pre-clustering (in PCA projection space)",
+        "car": "Enable or disable common reference",
+        "minFR": "Minimum spike rate (Hz), if a cluster falls below this for too long it gets removed",
+        "minfr_goodchannels": "Minimum firing rate on a 'good' channel",
+        "nblocks": "blocks for registration. 0 turns it off, 1 does rigid registration. Replaces 'datashift' option.",
+        "sig": "spatial smoothness constant for registration",
+        "freq_min": "High-pass filter cutoff frequency",
+        "sigmaMask": "Spatial constant in um for computing residual variance of spike",
+        "nPCs": "Number of PCA dimensions",
+        "ntbuff": "Samples of symmetrical buffer for whitening and spike detection",
+        "nfilt_factor": "Max number of clusters per good channel (even temporary ones) 4",
         "do_correction": "If True drift registration is applied",
         'NT': "Batch size (if None it is automatically computed)",
         'keep_good_only': "If True only 'good' units are returned",
@@ -108,12 +109,12 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
     @classmethod
     def get_sorter_version(cls):
         if cls.check_compiled():
-            return 'compiled'
-        commit = get_git_commit(os.getenv('KILOSORT2_5_PATH', None))
+            return "compiled"
+        commit = get_git_commit(os.getenv("KILOSORT2_5_PATH", None))
         if commit is None:
-            return 'unknown'
+            return "unknown"
         else:
-            return 'git-' + commit
+            return "git-" + commit
 
     @staticmethod
     def set_kilosort2_5_path(kilosort2_5_path: PathType):
@@ -128,14 +129,14 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
     @classmethod
     def _check_params(cls, recording, output_folder, params):
         p = params
-        if p['NT'] is None:
-            p['NT'] = 64 * 1024 + p['ntbuff']
+        if p["NT"] is None:
+            p["NT"] = 64 * 1024 + p["ntbuff"]
         else:
-            p['NT'] = p['NT'] // 32 * 32  # make sure is multiple of 32
-        if p['wave_length'] % 2 != 1:
-            p['wave_length'] = p['wave_length'] + 1 # The wave_length must be odd
-        if p['wave_length'] > 81:
-            p['wave_length'] = 81 # The wave_length must be less than 81.
+            p["NT"] = p["NT"] // 32 * 32  # make sure is multiple of 32
+        if p["wave_length"] % 2 != 1:
+            p["wave_length"] = p["wave_length"] + 1  # The wave_length must be odd
+        if p["wave_length"] > 81:
+            p["wave_length"] = 81  # The wave_length must be less than 81.
         return p
 
     @classmethod
@@ -156,46 +157,46 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
             Final ops data
         """
         # frequency for high pass filtering (300)
-        ops['fshigh'] = params['freq_min']
+        ops["fshigh"] = params["freq_min"]
 
         # minimum firing rate on a "good" channel (0 to skip)
-        ops['minfr_goodchannels'] = params['minfr_goodchannels']
+        ops["minfr_goodchannels"] = params["minfr_goodchannels"]
 
         # number of blocks to use for nonrigid registration
-        ops['nblocks'] = params['nblocks']
+        ops["nblocks"] = params["nblocks"]
 
         # spatial smoothness constant for registration
-        ops['sig'] = params['sig']
+        ops["sig"] = params["sig"]
 
-        projection_threshold = [float(pt) for pt in params['projection_threshold']]
+        projection_threshold = [float(pt) for pt in params["projection_threshold"]]
         # threshold on projections (like in Kilosort1, can be different for last pass like [10 4])
-        ops['Th'] = projection_threshold
+        ops["Th"] = projection_threshold
 
         # how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot)
-        ops['lam'] = 10.0
+        ops["lam"] = 10.0
 
         # splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
-        ops['AUCsplit'] = 0.9
+        ops["AUCsplit"] = 0.9
 
         # minimum spike rate (Hz), if a cluster falls below this for too long it gets removed
-        ops['minFR'] = params['minFR']
+        ops["minFR"] = params["minFR"]
 
         # number of samples to average over (annealed from first to second value)
-        ops['momentum'] = [20.0, 400.0]
+        ops["momentum"] = [20.0, 400.0]
 
         # spatial constant in um for computing residual variance of spike
-        ops['sigmaMask'] = params['sigmaMask']
+        ops["sigmaMask"] = params["sigmaMask"]
 
         # threshold crossings for pre-clustering (in PCA projection space)
-        ops['ThPre'] = params['preclust_threshold']
+        ops["ThPre"] = params["preclust_threshold"]
 
         ## danger, changing these settings can lead to fatal errors
         # options for determining PCs
-        ops['spkTh'] = -params['detect_threshold']  # spike threshold in standard deviations (-6)
-        ops['reorder'] = 1.0  # whether to reorder batches for drift correction.
-        ops['nskip'] = 25.0  # how many batches to skip for determining spike PCs
+        ops["spkTh"] = -params["detect_threshold"]  # spike threshold in standard deviations (-6)
+        ops["reorder"] = 1.0  # whether to reorder batches for drift correction.
+        ops["nskip"] = 25.0  # how many batches to skip for determining spike PCs
 
-        ops['GPU'] = 1.0  # has to be 1, no CPU version yet, sorry
+        ops["GPU"] = 1.0  # has to be 1, no CPU version yet, sorry
         # ops['Nfilt'] = 1024 # max number of clusters
         ops['nfilt_factor'] = params['nfilt_factor']  # max number of clusters per good channel (even temporary ones)
         ops['ntbuff'] = params['ntbuff']  # samples of symmetrical buffer for whitening and spike detection
@@ -206,7 +207,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         ops['useRAM'] = 0.0  # not yet available
 
         # drift correction
-        ops['do_correction'] = params['do_correction']
+        ops["do_correction"] = params["do_correction"]
 
         ## option for wavelength
         ops['nt0'] = params['wave_length'] # size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.

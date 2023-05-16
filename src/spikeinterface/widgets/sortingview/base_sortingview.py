@@ -5,20 +5,15 @@ from spikeinterface.widgets.base import BackendPlotter
 
 
 class SortingviewPlotter(BackendPlotter):
-    backend = 'sortingview'
+    backend = "sortingview"
     backend_kwargs_desc = {
         "generate_url": "If True, the figurl URL is generated and printed. Default True",
         "display": "If True and in jupyter notebook/lab, the widget is displayed in the cell. Default True.",
         "figlabel": "The figurl figure label. Default None",
-        "height": "The height of the sortingview View in jupyter. Default None"
+        "height": "The height of the sortingview View in jupyter. Default None",
     }
-    default_backend_kwargs = {
-        "generate_url": True,
-        "display": True,
-        "figlabel": None,
-        "height": None
-    }
-    
+    default_backend_kwargs = {"generate_url": True, "display": True, "figlabel": None, "height": None}
+
     def __init__(self):
         self.view = None
         self.url = None
@@ -33,14 +28,13 @@ class SortingviewPlotter(BackendPlotter):
             returns = returns[0]
         return returns
 
-
     @staticmethod
     def is_notebook() -> bool:
         try:
             shell = get_ipython().__class__.__name__
-            if shell == 'ZMQInteractiveShell':
-                return True   # Jupyter notebook or qtconsole
-            elif shell == 'TerminalInteractiveShell':
+            if shell == "ZMQInteractiveShell":
+                return True  # Jupyter notebook or qtconsole
+            elif shell == "TerminalInteractiveShell":
                 return False  # Terminal running IPython
             else:
                 return False  # Other type (?)
@@ -57,7 +51,7 @@ class SortingviewPlotter(BackendPlotter):
                 figlabel = self.default_label
             url = view.url(label=figlabel)
             self.set_url(url)
-            print(url)            
+            print(url)
 
     # make view and url accessible by the plotter
     def set_view(self, view):
@@ -69,12 +63,10 @@ class SortingviewPlotter(BackendPlotter):
 
 def generate_unit_table_view(sorting, unit_properties=None, similarity_scores=None):
     import sortingview.views as vv
+
     if unit_properties is None:
         ut_columns = []
-        ut_rows = [
-            vv.UnitsTableRow(unit_id=u, values={})
-            for u in sorting.unit_ids
-        ]
+        ut_rows = [vv.UnitsTableRow(unit_id=u, values={}) for u in sorting.unit_ids]
     else:
         ut_columns = []
         ut_rows = []
@@ -95,11 +87,9 @@ def generate_unit_table_view(sorting, unit_properties=None, similarity_scores=No
             else:
                 print(f"Unsupported dtype {val0.dtype} for property {prop_name}. Skipping")
                 continue
-            ut_columns.append(
-                vv.UnitsTableColumn(key=prop_name, label=prop_name, dtype=dtype)
-            )
+            ut_columns.append(vv.UnitsTableColumn(key=prop_name, label=prop_name, dtype=dtype))
             valid_unit_properties.append(prop_name)
-        
+
         for ui, unit in enumerate(sorting.unit_ids):
             for prop_name in valid_unit_properties:
                 property_values = sorting.get_property(prop_name)
@@ -108,6 +98,6 @@ def generate_unit_table_view(sorting, unit_properties=None, similarity_scores=No
                     continue
                 values[prop_name] = property_values[ui]
             ut_rows.append(vv.UnitsTableRow(unit_id=unit, values=check_json(values)))
-            
+
     v_units_table = vv.UnitsTable(rows=ut_rows, columns=ut_columns, similarity_scores=similarity_scores)
     return v_units_table
