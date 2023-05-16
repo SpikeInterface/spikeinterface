@@ -153,8 +153,7 @@ class WaveformExtractor:
                 rec_attributes["probegroup"] = None
         else:
             try:
-                recording = load_extractor(folder / 'recording.json',
-                                           base_folder=folder)
+                recording = load_extractor(folder / "recording.json", base_folder=folder)
                 rec_attributes = None
             except:
                 raise Exception("The recording could not be loaded. You can use the `with_recording=False` argument")
@@ -637,7 +636,7 @@ class WaveformExtractor:
         else:
             if rec_attributes is None:
                 rec_attributes = get_rec_attributes(recording)
-            
+
             if recording.get_num_segments() != self.get_num_segments():
                 raise ValueError(
                     f"Couldn't set the WaveformExtractor recording: num_segments do not match!\n{self.get_num_segments()} != {recording.get_num_segments()}"
