@@ -49,7 +49,7 @@ spikeinterface.core
     .. autofunction:: get_template_extremum_channel_peak_shift
     .. autofunction:: get_template_extremum_amplitude
 
-.. 
+..
     .. autofunction:: read_binary
     .. autofunction:: read_zarr
     .. autofunction:: append_recordings
@@ -78,7 +78,7 @@ NEO-based
 ~~~~~~~~~
 
 .. automodule:: spikeinterface.extractors
- 
+
     .. autofunction:: read_alphaomega
     .. autofunction:: read_alphaomega_event
     .. autofunction:: read_axona
@@ -241,7 +241,7 @@ spikeinterface.comparison
 
     .. autoclass:: MultiSortingComparison
         :members:
-    
+
     .. autoclass:: CollisionGTComparison
     .. autoclass:: CorrelogramGTComparison
     .. autoclass:: CollisionGTStudy
@@ -356,4 +356,3 @@ Template Matching
 .. automodule:: spikeinterface.sortingcomponents.matching
 
     .. autofunction:: find_spikes_from_templates
-

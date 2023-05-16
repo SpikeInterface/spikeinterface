@@ -1,5 +1,4 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
@@ -31,15 +30,16 @@ class RasterWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, sorting, segment_index=None, unit_ids=None,
-                 time_range=None, color='k', figure=None, ax=None):
+    def __init__(self, sorting, segment_index=None, unit_ids=None, time_range=None, color="k", figure=None, ax=None):
+        from matplotlib import pyplot as plt
+
         BaseWidget.__init__(self, figure, ax)
         self._sorting = sorting
 
         if segment_index is None:
             nseg = sorting.get_num_segments()
             if nseg != 1:
-                raise ValueError('You must provide segment_index=...')
+                raise ValueError("You must provide segment_index=...")
             else:
                 segment_index = 0
         self.segment_index = segment_index
@@ -50,8 +50,7 @@ class RasterWidget(BaseWidget):
         self._color = color
         self._max_frame = 0
         for unit_id in self._sorting.get_unit_ids():
-            spike_train = self._sorting.get_unit_spike_train(unit_id,
-                                                             segment_index=self.segment_index)
+            spike_train = self._sorting.get_unit_spike_train(unit_id, segment_index=self.segment_index)
             if len(spike_train) > 0:
                 curr_max_frame = np.max(spike_train)
                 if curr_max_frame > self._max_frame:
@@ -64,7 +63,7 @@ class RasterWidget(BaseWidget):
             self._visible_trange = [int(t * self._sampling_frequency) for t in time_range]
 
         self._visible_trange = self._fix_trange(self._visible_trange)
-        self.name = 'Raster'
+        self.name = "Raster"
 
     def plot(self):
         self._do_plot()
@@ -73,23 +72,32 @@ class RasterWidget(BaseWidget):
         units_ids = self._unit_ids
         if units_ids is None:
             units_ids = self._sorting.get_unit_ids()
+        import matplotlib.pyplot as plt
 
-        with plt.rc_context({'axes.edgecolor': 'gray'}):
+        with plt.rc_context({"axes.edgecolor": "gray"}):
             for u_i, unit_id in enumerate(units_ids):
-                spiketrain = self._sorting.get_unit_spike_train(unit_id,
-                                                                start_frame=self._visible_trange[0],
-                                                                end_frame=self._visible_trange[1],
-                                                                segment_index=self.segment_index)
+                spiketrain = self._sorting.get_unit_spike_train(
+                    unit_id,
+                    start_frame=self._visible_trange[0],
+                    end_frame=self._visible_trange[1],
+                    segment_index=self.segment_index,
+                )
                 spiketimes = spiketrain / float(self._sampling_frequency)
-                self.ax.plot(spiketimes, u_i * np.ones_like(spiketimes),
-                             marker='|', mew=1, markersize=3,
-                             ls='', color=self._color)
+                self.ax.plot(
+                    spiketimes,
+                    u_i * np.ones_like(spiketimes),
+                    marker="|",
+                    mew=1,
+                    markersize=3,
+                    ls="",
+                    color=self._color,
+                )
             visible_start_frame = self._visible_trange[0] / self._sampling_frequency
             visible_end_frame = self._visible_trange[1] / self._sampling_frequency
             self.ax.set_yticks(np.arange(len(units_ids)))
             self.ax.set_yticklabels(units_ids)
             self.ax.set_xlim(visible_start_frame, visible_end_frame)
-            self.ax.set_xlabel('time (s)')
+            self.ax.set_xlabel("time (s)")
 
     def _fix_trange(self, trange):
         if trange[1] > self._max_frame:

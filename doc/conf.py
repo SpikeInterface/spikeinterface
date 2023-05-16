@@ -40,7 +40,7 @@ folders =  [
     '../examples/modules_gallery/qualitymetrics/waveforms_mearec',
     '../examples/modules_gallery/qualitymetrics/wfs_mearec',
     '../examples/modules_gallery/widgets/waveforms_mearec',
-    
+
 ]
 
 for folder in folders:
@@ -50,7 +50,7 @@ for folder in folders:
 
 # -- Project information -----------------------------------------------------
 
-project = 'spikeinterface'
+project = 'SpikeInterface'
 copyright = '2022, Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
 author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
 
@@ -69,7 +69,7 @@ extensions = [
     "sphinx.ext.extlinks",
 ]
 
-numpydoc_show_class_members = False 
+numpydoc_show_class_members = False
 
 
 # Add any paths that contain templates here, relative to this directory.

@@ -3,7 +3,6 @@ on:
   pull_request:
     types: [synchronize, opened, reopened]
     branches:
-      - master
       - main
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}

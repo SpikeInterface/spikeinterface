@@ -25,14 +25,14 @@ In this code example, we build a preprocessing chain with two steps:
     recording_f = bandpass_filter(recording, freq_min=300, freq_max=6000)
     recording_cmr = common_reference(recording_f, operator="median")
 
-These two preprocessors will not compute anything at instantiation, but the computation will be "on-demand" 
+These two preprocessors will not compute anything at instantiation, but the computation will be "on-demand"
 ("on-the-fly") when getting traces.
 
 .. code-block:: python
 
     traces = recording_cmr.get_traces(start_frame=100_000, end_frame=200_000)
 
-Some internal sorters (see :ref:`si_based`) can work directly on these preprocessed objects so there is no need to 
+Some internal sorters (see :ref:`si_based`) can work directly on these preprocessed objects so there is no need to
 save the object:
 
 .. code-block:: python
@@ -40,7 +40,7 @@ save the object:
     # here the spykingcircus2 sorter engine directly uses the lazy "recording_cmr" object
     sorting = run_sorter(recording_cmr, 'spykingcircus2')
 
-Most of the external sorters, however, will need a binary file as input, so we can optionally save the processed 
+Most of the external sorters, however, will need a binary file as input, so we can optionally save the processed
 recording with the efficient SpikeInterface :code:`save()` function:
 
 .. code-block:: python
@@ -56,9 +56,9 @@ CMR, and save it to a binary file in the "/path/to/preprocessed" folder. The :co
 Impact on recording dtype
 -------------------------
 
-By default the dtype of a preprocessed recording does not change the recording's dtype, even if, internally, the 
+By default the dtype of a preprocessed recording does not change the recording's dtype, even if, internally, the
 computation is performed using a different dtype.
-For instance if we have a :code:`int16`` recording, the application of a bandpass filter will preserve the original 
+For instance if we have a :code:`int16`` recording, the application of a bandpass filter will preserve the original
 dtype (unless specified otherwise):
 
 
@@ -130,15 +130,15 @@ Recording system often do not sample all channels simultaneously.
 In fact, there is a small delay (less that a sampling period) in between channels.
 For instance this is the case for Neuropixels devices.
 
-Applying :code:`common_reference()` on this data does not correctly remove artifacts, since we first need to compensate 
+Applying :code:`common_reference()` on this data does not correctly remove artifacts, since we first need to compensate
 for these small delays! This is exactly what :code:`phase_shift()` does.
 
-This function relies on an internal property of the recording called :code:`inter_sample_shift`. 
-For Neuropixels recordings (read with the :py:func:`~spikeinterface.extractors.read_spikeglx` or the 
-:py:func:`~spikeinterface.extractors.read_openephys` functions), the :code:`inter_sample_shift` is automatically loaded 
+This function relies on an internal property of the recording called :code:`inter_sample_shift`.
+For Neuropixels recordings (read with the :py:func:`~spikeinterface.extractors.read_spikeglx` or the
+:py:func:`~spikeinterface.extractors.read_openephys` functions), the :code:`inter_sample_shift` is automatically loaded
 from the metadata and set.
 
-Calling :code:`phase_shift()` alone has almost no effect, but combined with :code:`common_reference()` it makes a real 
+Calling :code:`phase_shift()` alone has almost no effect, but combined with :code:`common_reference()` it makes a real
 difference on artifact removal.
 
 
@@ -162,7 +162,7 @@ We have several "scalers" to apply some gains and offsets on traces.
 
 :code:`scale()` is the base function to apply user-defined gains and offsets to every channels.
 
-:code:`zscore()` estimates median/mad (or mean/std) of each channel and then applies the scale function to obtain 
+:code:`zscore()` estimates median/mad (or mean/std) of each channel and then applies the scale function to obtain
 centered with unitary variance on each channel.
 
 
@@ -178,7 +178,7 @@ centered with unitary variance on each channel.
 whiten()
 ^^^^^^^^
 
-Many sorters use this pre-processing step internally, but if you want to combine this operation with other preprocessing 
+Many sorters use this pre-processing step internally, but if you want to combine this operation with other preprocessing
 steps, you can use the :code:`whiten()` implemented in SpikeInterface.
 The whitenning matrix :code:`W` is constructed by estimating the covariance across channels and then inverting it.
 
@@ -210,7 +210,7 @@ highpass_spatial_filter()
 
 :code:`highpass_spatial_filter()` is a preprocessing step introduced by the International Brain Laboratory [IBL_spikesorting]_.
 It applies a filter in the spatial axis of the traces after ordering the channels by depth.
-It is similar to common reference, but it can deal with "stripes" that are uneven across depth. 
+It is similar to common reference, but it can deal with "stripes" that are uneven across depth.
 This preprocessing step can be super useful for long probes like Neuropixels.
 
 This is part of the "destriping" from IBL (see :ref:`ibl_destripe`).
@@ -221,14 +221,14 @@ This is part of the "destriping" from IBL (see :ref:`ibl_destripe`).
 detect_bad_channels() / interpolate_bad_channels()
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The :code:`detect_bad_channels()` can be used to detect bad channels with several methods, including an :code:`std`- or :code:`mad`-based 
-approach to detect bad channels with abnormally high power and the :code:`coherence+psd` method (introduced by [IBL_spikesorting]_), 
+The :code:`detect_bad_channels()` can be used to detect bad channels with several methods, including an :code:`std`- or :code:`mad`-based
+approach to detect bad channels with abnormally high power and the :code:`coherence+psd` method (introduced by [IBL_spikesorting]_),
 which detects bad channels looking at both coherence with other channels and PSD power in the high-frequency range.
 
-The function returns both the :code:`bad_channel_ids` and :code:`channel_labels`, which can be :code:`good`, :code:`noise`, :code:`dead`, 
+The function returns both the :code:`bad_channel_ids` and :code:`channel_labels`, which can be :code:`good`, :code:`noise`, :code:`dead`,
 or :code:`out` (outside of the brain). Note that the :code:`dead` and :code:`out` are only available with the :code:`coherence+psd` method.
 
-Bad channels can then either be removed from the recording using :code:`recording.remove_channels(bad_channel_ids)` or be 
+Bad channels can then either be removed from the recording using :code:`recording.remove_channels(bad_channel_ids)` or be
 interpolated with the :code:`interpolate_bad_channels()` function (channels labeled as :code:`out` should always be removed):
 
 .. code-block:: python
@@ -254,7 +254,7 @@ This step returns traces in absolute values. It could be used to compute a proxy
 remove_artifacts()
 ^^^^^^^^^^^^^^^^^^
 
-Given an external list of trigger times,  :code:`remove_artifacts()` function can remove artifacts with several 
+Given an external list of trigger times,  :code:`remove_artifacts()` function can remove artifacts with several
 strategies:
 
 * replace with zeros (blank)
@@ -272,7 +272,7 @@ strategies:
 zero_channel_pad()
 ^^^^^^^^^^^^^^^^^^
 
-Pads a recording with extra channels that containing only zeros. This step can be useful when a certain shape is 
+Pads a recording with extra channels that containing only zeros. This step can be useful when a certain shape is
 required.
 
 .. code-block:: python
@@ -296,12 +296,12 @@ How to implement "IBL destriping" or "SpikeGLX CatGT" in SpikeInterface
 -----------------------------------------------------------------------
 
 
-SpikeGLX has a built-in function called `CatGT <https://billkarsh.github.io/SpikeGLX/help/dmx_vs_gbl/dmx_vs_gbl/>`_ 
+SpikeGLX has a built-in function called `CatGT <https://billkarsh.github.io/SpikeGLX/help/dmx_vs_gbl/dmx_vs_gbl/>`_
 to apply some preprocessing on the traces to remove noise and artifacts.
 IBL also has a standardized pipeline for preprocessed traces a bit similar to CatGT which is called "destriping" [IBL_spikesorting]_.
 In these both cases, the traces are entiely read, processed and written back to a file.
 
-SpikeInterface can reproduce similar results without the need to write back to a file by building a *lazy* 
+SpikeInterface can reproduce similar results without the need to write back to a file by building a *lazy*
 preprocessing chain. Optionally, the result can still be written to a binary (or a zarr) file.
 
 
@@ -310,7 +310,7 @@ Here is a recipe to mimic the **IBL destriping**:
 .. code-block:: python
 
     rec = read_spikeglx('my_spikeglx_folder')
-    rec = highpass_filter(rec)
+    rec = highpass_filter(rec, n_channel_pad=60)
     rec = phase_shift(rec)
     bad_channel_ids = detect_bad_channels(rec)
     rec = interpolate_bad_channels(rec, bad_channel_ids)
@@ -331,7 +331,7 @@ Here is a recipe to mimic the **SpikeGLX CatGT**:
     rec.save(folder='clean_traces', n_jobs=10, chunk_duration='1s', progres_bar=True)
 
 
-Of course, these pipelines can be enhanced and customized using other available steps in the 
+Of course, these pipelines can be enhanced and customized using other available steps in the
 :py:mod:`spikeinterface.preprocessing` module!
 
 
@@ -354,6 +354,6 @@ This function aligns waveform snippets.
 References
 ----------
 
-.. [IBL_spikesorting] International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022. 9 Jun 2022. 
+.. [IBL_spikesorting] International Brain Laboratory. “Spike sorting pipeline for the International Brain Laboratory”. 4 May 2022. 9 Jun 2022.
 
 .. [DeepInterpolation] Lecoq, Jérôme, et al. "Removing independent noise in systems neuroscience data using DeepInterpolation." Nature methods 18.11 (2021): 1401-1408.

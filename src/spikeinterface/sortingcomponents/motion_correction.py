@@ -16,9 +16,9 @@ from spikeinterface.preprocessing import get_spatial_interpolation_kernel
 #     HAVE_NUMBA = False
 
 
-def correct_motion_on_peaks(peaks, peak_locations, times,
-                            motion, temporal_bins, spatial_bins,
-                            direction='y', progress_bar=False):
+def correct_motion_on_peaks(
+    peaks, peak_locations, times, motion, temporal_bins, spatial_bins, direction="y", progress_bar=False
+):
     """
     Given the output of estimate_motion(), apply inverse motion on peak locations.
 
@@ -49,22 +49,32 @@ def correct_motion_on_peaks(peaks, peak_locations, times,
         # rigid motion interpolation 1D
         sample_bins = np.searchsorted(times, temporal_bins)
         f = scipy.interpolate.interp1d(sample_bins, motion[:, 0], bounds_error=False, fill_value="extrapolate")
-        shift = f(peaks['sample_ind'])
+        shift = f(peaks["sample_index"])
         corrected_peak_locations[direction] -= shift
     else:
         # non rigid motion = interpolation 2D
-        f = scipy.interpolate.RegularGridInterpolator((temporal_bins, spatial_bins), motion,
-                                                      method='linear', bounds_error=False, fill_value=None)
-        spike_times = times[peaks['sample_ind']]
+        f = scipy.interpolate.RegularGridInterpolator(
+            (temporal_bins, spatial_bins), motion, method="linear", bounds_error=False, fill_value=None
+        )
+        spike_times = times[peaks["sample_index"]]
         shift = f(np.c_[spike_times, peak_locations[direction]])
         corrected_peak_locations[direction] -= shift
 
     return corrected_peak_locations
 
 
-def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_bins, spatial_bins, direction=1,
-                             channel_inds=None, spatial_interpolation_method='kriging',
-                             spatial_interpolation_kwargs={}):
+def correct_motion_on_traces(
+    traces,
+    times,
+    channel_locations,
+    motion,
+    temporal_bins,
+    spatial_bins,
+    direction=1,
+    channel_inds=None,
+    spatial_interpolation_method="kriging",
+    spatial_interpolation_kwargs={},
+):
     """
     Apply inverse motion with spatial interpolation on traces.
 
@@ -93,7 +103,7 @@ def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_
         * kriging : kilosort2.5 like
     spatial_interpolation_kwargs:
         * specific option for the interpolation method
-    
+
     Returns
     -------
     channel_motions: np.array
@@ -108,37 +118,41 @@ def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_
     else:
         channel_inds = np.asarray(channel_inds)
         traces_corrected = np.zeros((traces.shape[0], channel_inds.size), dtype=traces.dtype)
-    
+
     # regroup times by closet temporal_bins
     bin_inds = _get_closest_ind(temporal_bins, times)
 
-    # inperpolation kernel will be the same per temporal bin   
+    # inperpolation kernel will be the same per temporal bin
     for bin_ind in np.unique(bin_inds):
-
         # Step 1 : channel motion
         if spatial_bins is None:
-            # rigid motion : same motion for all channels
+            # rigid motion : same motion for all channels
             channel_motions = motion[bin_ind, 0]
         else:
             # non rigid : interpolation channel motion for this temporal bin
-            f = scipy.interpolate.interp1d(spatial_bins, motion[bin_ind, :], kind='linear',
-                                           axis=0, bounds_error=False, fill_value="extrapolate")
+            f = scipy.interpolate.interp1d(
+                spatial_bins, motion[bin_ind, :], kind="linear", axis=0, bounds_error=False, fill_value="extrapolate"
+            )
             locs = channel_locations[:, direction]
             channel_motions = f(locs)
         channel_locations_moved = channel_locations.copy()
         channel_locations_moved[:, direction] += channel_motions
-        # channel_locations_moved[:, direction] -= channel_motions
+        # channel_locations_moved[:, direction] -= channel_motions
 
         if channel_inds is not None:
             channel_locations_moved = channel_locations_moved[channel_inds]
-        
-        drift_kernel = get_spatial_interpolation_kernel(channel_locations, channel_locations_moved, dtype='float32',
-                                                        method=spatial_interpolation_method,
-                                                        **spatial_interpolation_kwargs)
-        
-        i0 = np.searchsorted(bin_inds, bin_ind, side='left')
-        i1 = np.searchsorted(bin_inds, bin_ind, side='right')
-        
+
+        drift_kernel = get_spatial_interpolation_kernel(
+            channel_locations,
+            channel_locations_moved,
+            dtype="float32",
+            method=spatial_interpolation_method,
+            **spatial_interpolation_kwargs,
+        )
+
+        i0 = np.searchsorted(bin_inds, bin_ind, side="left")
+        i1 = np.searchsorted(bin_inds, bin_ind, side="right")
+
         # here we use a simple np.matmul even if dirft_kernel can be super sparse.
         # because the speed for a sparse matmul is not so good when we disable multi threaad (due multi processing
         # in ChunkRecordingExecutor)
@@ -163,14 +177,14 @@ def correct_motion_on_traces(traces, times, channel_locations, motion, temporal_
 #         num_samples = data_in.shape[0]
 #         num_chan_out = data_out.shape[1]
 #         num_sparse = sparse_chans.shape[1]
-#         # for sample_ind in range(num_samples):
-#         for sample_ind in numba.prange(num_samples):
+#         # for sample_index in range(num_samples):
+#         for sample_index in numba.prange(num_samples):
 #             for out_chan in range(num_chan_out):
 #                 v = 0
 #                 for i in range(num_sparse):
 #                     in_chan = sparse_chans[out_chan, i]
-#                     v +=  weights[out_chan, i] * data_in[sample_ind, in_chan]
-#                 data_out[sample_ind, out_chan] = v
+#                     v +=  weights[out_chan, i] * data_in[sample_index, in_chan]
+#                 data_out[sample_index, out_chan] = v
 
 
 def _get_closest_ind(array, values):
@@ -180,8 +194,9 @@ def _get_closest_ind(array, values):
     idxs = np.searchsorted(array, values, side="left")
 
     # find indexes where previous index is closer
-    prev_idx_is_less = ((idxs == len(array)) | (np.fabs(values - array[np.maximum(idxs-1, 0)]) <
-                                                np.fabs(values - array[np.minimum(idxs, len(array)-1)])))
+    prev_idx_is_less = (idxs == len(array)) | (
+        np.fabs(values - array[np.maximum(idxs - 1, 0)]) < np.fabs(values - array[np.minimum(idxs, len(array) - 1)])
+    )
     idxs[prev_idx_is_less] -= 1
 
     return idxs
@@ -233,81 +248,124 @@ class CorrectMotionRecording(BasePreprocessor):
     corrected_recording: CorrectMotionRecording
         Recording after motion correction
     """
-    name = 'correct_motion'
 
-    def __init__(self, recording, motion, temporal_bins, spatial_bins, direction=1,
-                 border_mode='remove_channels', spatial_interpolation_method='kriging',
-                 sigma_um=20., p=1, num_closest=3):
-        assert recording.get_num_segments() == 1, 'correct_motion() is only available for single-segment recordings'
-        
+    name = "correct_motion"
+
+    def __init__(
+        self,
+        recording,
+        motion,
+        temporal_bins,
+        spatial_bins,
+        direction=1,
+        border_mode="remove_channels",
+        spatial_interpolation_method="kriging",
+        sigma_um=20.0,
+        p=1,
+        num_closest=3,
+    ):
+        assert recording.get_num_segments() == 1, "correct_motion() is only available for single-segment recordings"
+
         # force as arrays
         temporal_bins = np.asarray(temporal_bins)
         motion = np.asarray(motion)
         if spatial_bins is not None:
             spatial_bins = np.asarray(spatial_bins)
 
-
         channel_locations = recording.get_channel_locations()
-        assert channel_locations.ndim >= direction, (f"'direction' {direction} not available. "
-                                                     f"Channel locations have {channel_locations.ndim} dimensions.")
+        assert channel_locations.ndim >= direction, (
+            f"'direction' {direction} not available. " f"Channel locations have {channel_locations.ndim} dimensions."
+        )
         spatial_interpolation_kwargs = dict(sigma_um=sigma_um, p=p, num_closest=num_closest)
-        if border_mode == 'remove_channels':
+        if border_mode == "remove_channels":
             locs = channel_locations[:, direction]
             l0, l1 = np.min(channel_locations[:, direction]), np.max(channel_locations[:, direction])
 
             # compute max and min motion (with interpolation)
             # and check if channels are inside
-            channel_inside = np.ones(locs.shape[0], dtype='bool')
+            channel_inside = np.ones(locs.shape[0], dtype="bool")
             for operator in (np.max, np.min):
                 if spatial_bins is None:
                     best_motions = operator(motion[:, 0])
                 else:
                     # non rigid : interpolation channel motion for this temporal bin
-                    f = scipy.interpolate.interp1d(spatial_bins, operator(motion[:, :], axis=0), kind='linear',
-                                           axis=0, bounds_error=False, fill_value="extrapolate")
+                    f = scipy.interpolate.interp1d(
+                        spatial_bins,
+                        operator(motion[:, :], axis=0),
+                        kind="linear",
+                        axis=0,
+                        bounds_error=False,
+                        fill_value="extrapolate",
+                    )
                     best_motions = f(locs)
                 channel_inside &= ((locs + best_motions) >= l0) & ((locs + best_motions) <= l1)
 
-            channel_inds,  = np.nonzero(channel_inside)
+            (channel_inds,) = np.nonzero(channel_inside)
             channel_ids = recording.channel_ids[channel_inds]
-            spatial_interpolation_kwargs['force_extrapolate'] = False
-        elif border_mode == 'force_extrapolate':
+            spatial_interpolation_kwargs["force_extrapolate"] = False
+        elif border_mode == "force_extrapolate":
             channel_inds = None
             channel_ids = recording.channel_ids
-            spatial_interpolation_kwargs['force_extrapolate'] = True
-        elif border_mode == 'force_zeros':
+            spatial_interpolation_kwargs["force_extrapolate"] = True
+        elif border_mode == "force_zeros":
             channel_inds = None
             channel_ids = recording.channel_ids
-            spatial_interpolation_kwargs['force_extrapolate'] = False
+            spatial_interpolation_kwargs["force_extrapolate"] = False
         else:
-            raise ValueError('Wrong border_mode')
-        
+            raise ValueError("Wrong border_mode")
+
         BasePreprocessor.__init__(self, recording, channel_ids=channel_ids)
 
-        if border_mode == 'remove_channels':
+        if border_mode == "remove_channels":
             # change the wiring of the probe
             # TODO this is also done in ChannelSliceRecording, this should be done in a common place
-            contact_vector = self.get_property('contact_vector')
+            contact_vector = self.get_property("contact_vector")
             if contact_vector is not None:
-                contact_vector['device_channel_indices'] = np.arange(len(channel_ids), dtype='int64')
-                self.set_property('contact_vector', contact_vector)
+                contact_vector["device_channel_indices"] = np.arange(len(channel_ids), dtype="int64")
+                self.set_property("contact_vector", contact_vector)
 
         for parent_segment in recording._recording_segments:
-            rec_segment = CorrectMotionRecordingSegment(parent_segment, channel_locations,
-                                                        motion, temporal_bins, spatial_bins, direction,
-                                                        spatial_interpolation_method, spatial_interpolation_kwargs, channel_inds, )
+            rec_segment = CorrectMotionRecordingSegment(
+                parent_segment,
+                channel_locations,
+                motion,
+                temporal_bins,
+                spatial_bins,
+                direction,
+                spatial_interpolation_method,
+                spatial_interpolation_kwargs,
+                channel_inds,
+            )
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording, motion=motion, temporal_bins=temporal_bins,
-                            spatial_bins=spatial_bins, direction=direction, border_mode=border_mode,
-                            spatial_interpolation_method=spatial_interpolation_method,
-                            sigma_um=sigma_um, p=p, num_closest=num_closest)
+        self._kwargs = dict(
+            recording=recording,
+            motion=motion,
+            temporal_bins=temporal_bins,
+            spatial_bins=spatial_bins,
+            direction=direction,
+            border_mode=border_mode,
+            spatial_interpolation_method=spatial_interpolation_method,
+            sigma_um=sigma_um,
+            p=p,
+            num_closest=num_closest,
+        )
         # self.is_dumpable= False
 
 
 class CorrectMotionRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, channel_locations, motion, temporal_bins, spatial_bins, direction,
-                 spatial_interpolation_method, spatial_interpolation_kwargs, channel_inds):
+    def __init__(
+        self,
+        parent_recording_segment,
+        channel_locations,
+        motion,
+        temporal_bins,
+        spatial_bins,
+        direction,
+        spatial_interpolation_method,
+        spatial_interpolation_kwargs,
+        channel_inds,
+    ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.channel_locations = channel_locations
         self.motion = motion
@@ -320,10 +378,12 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if self.time_vector is not None:
-            raise NotImplementedError('time_vector for CorrectMotionRecording do not work because temporal_bins start from 0')
-            # times = np.asarray(self.time_vector[start_frame:end_frame])
+            raise NotImplementedError(
+                "time_vector for CorrectMotionRecording do not work because temporal_bins start from 0"
+            )
+            # times = np.asarray(self.time_vector[start_frame:end_frame])
         else:
-            times = np.arange((end_frame or self.get_num_samples()) - (start_frame or 0), dtype='float64')
+            times = np.arange((end_frame or self.get_num_samples()) - (start_frame or 0), dtype="float64")
             times /= self.sampling_frequency
             t0 = start_frame / self.sampling_frequency
             # if self.t_start is not None:
@@ -332,11 +392,18 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
 
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices=slice(None))
 
-        trace2 = correct_motion_on_traces(traces, times, self.channel_locations, self.motion,
-                                          self.temporal_bins, self.spatial_bins, direction=self.direction,
-                                          channel_inds=self.channel_inds,
-                                          spatial_interpolation_method=self.spatial_interpolation_method,
-                                          spatial_interpolation_kwargs=self.spatial_interpolation_kwargs)
+        trace2 = correct_motion_on_traces(
+            traces,
+            times,
+            self.channel_locations,
+            self.motion,
+            self.temporal_bins,
+            self.spatial_bins,
+            direction=self.direction,
+            channel_inds=self.channel_inds,
+            spatial_interpolation_method=self.spatial_interpolation_method,
+            spatial_interpolation_kwargs=self.spatial_interpolation_kwargs,
+        )
 
         if channel_indices is not None:
             trace2 = trace2[:, channel_indices]
@@ -344,5 +411,4 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
         return trace2
 
 
-correct_motion = define_function_from_class(source_class=CorrectMotionRecording,
-                                            name="correct_motion")
+correct_motion = define_function_from_class(source_class=CorrectMotionRecording, name="correct_motion")

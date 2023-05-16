@@ -15,7 +15,7 @@ class UnitWaveformPlotter(MplPlotter):
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
         if backend_kwargs["axes"] is not None:
-            assert len(backend_kwargs) >= len(dp.units)
+            assert len(backend_kwargs["axes"]) >= len(dp.unit_ids), "Provide as many 'axes' as neurons"
         elif backend_kwargs["ax"] is not None:
             assert dp.same_axis, "If 'same_axis' is not used, provide as many 'axes' as neurons"
         else:
@@ -45,7 +45,7 @@ class UnitWaveformPlotter(MplPlotter):
                     wfs = wfs[dp.unit_selected_waveforms[unit_id]]
                 elif dp.max_spikes_per_unit is not None:
                     if len(wfs) > dp.max_spikes_per_unit:
-                        random_idxs = np.random.permutation(len(wfs))[:dp.max_spikes_per_unit]
+                        random_idxs = np.random.permutation(len(wfs))[: dp.max_spikes_per_unit]
                         wfs = wfs[random_idxs]
                 wfs = wfs * dp.y_scale + dp.y_offset[None, :, chan_inds]
                 wfs_flat = wfs.swapaxes(1, 2).reshape(wfs.shape[0], -1).T
@@ -71,23 +71,25 @@ class UnitWaveformPlotter(MplPlotter):
                 else:
                     xvec = xvectors_flat
 
-                ax.plot(xvec, template.T.flatten(), lw=dp.lw_templates, alpha=dp.alpha_templates,
-                        color=color, label=unit_id)
+                ax.plot(
+                    xvec, template.T.flatten(), lw=dp.lw_templates, alpha=dp.alpha_templates, color=color, label=unit_id
+                )
 
                 template_label = dp.unit_ids[i]
                 if dp.set_title:
-                    ax.set_title(f'template {template_label}')
+                    ax.set_title(f"template {template_label}")
 
             # plot channels
             if dp.plot_channels:
                 # TODO enhance this
-                ax.scatter(dp.channel_locations[:, 0], dp.channel_locations[:, 1], color='k')
-            
+                ax.scatter(dp.channel_locations[:, 0], dp.channel_locations[:, 1], color="k")
+
             if dp.same_axis and dp.plot_legend:
                 if self.legend is not None:
                     self.legend.remove()
-                self.legend = self.figure.legend(loc='upper center', bbox_to_anchor=(0.5, 1.),
-                                                 ncol=5, fancybox=True, shadow=True)
+                self.legend = self.figure.legend(
+                    loc="upper center", bbox_to_anchor=(0.5, 1.0), ncol=5, fancybox=True, shadow=True
+                )
 
 
 UnitWaveformPlotter.register(UnitWaveformsWidget)

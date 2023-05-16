@@ -14,40 +14,39 @@ from spikeinterface.extractors import NpzSortingExtractor, NumpySorting
 class Mountainsort4Sorter(BaseSorter):
     """Mountainsort4 Sorter object."""
 
-    sorter_name = 'mountainsort4'
+    sorter_name = "mountainsort4"
     requires_locations = False
-    compatible_with_parallel = {'loky': True, 'multiprocessing': False, 'threading': False}
+    compatible_with_parallel = {"loky": True, "multiprocessing": False, "threading": False}
 
     _default_params = {
-        'detect_sign': -1,  # Use -1, 0, or 1, depending on the sign of the spikes in the recording
-        'adjacency_radius': -1,  # Use -1 to include all channels in every neighborhood
-        'freq_min': 300,  # Use None for no bandpass filtering
-        'freq_max': 6000,
-        'filter': True,
-        'whiten': True,  # Whether to do channel whitening as part of preprocessing
-        'num_workers': 1,
-        'clip_size': 50,
-        'detect_threshold': 3,
-        'detect_interval': 10,  # Minimum number of timepoints between events detected on the same channel
-        'tempdir': None
+        "detect_sign": -1,  # Use -1, 0, or 1, depending on the sign of the spikes in the recording
+        "adjacency_radius": -1,  # Use -1 to include all channels in every neighborhood
+        "freq_min": 300,  # Use None for no bandpass filtering
+        "freq_max": 6000,
+        "filter": True,
+        "whiten": True,  # Whether to do channel whitening as part of preprocessing
+        "num_workers": 1,
+        "clip_size": 50,
+        "detect_threshold": 3,
+        "detect_interval": 10,  # Minimum number of timepoints between events detected on the same channel
+        "tempdir": None,
     }
 
     _params_description = {
-        'detect_sign': "Use -1 (negative) or 1 (positive) depending "
-                       "on the sign of the spikes in the recording",
+        "detect_sign": "Use -1 (negative) or 1 (positive) depending " "on the sign of the spikes in the recording",
         # Use -1, 0, or 1, depending on the sign of the spikes in the recording
-        'adjacency_radius': "Radius in um to build channel neighborhood "
-                            "(Use -1 to include all channels in every neighborhood)",
+        "adjacency_radius": "Radius in um to build channel neighborhood "
+        "(Use -1 to include all channels in every neighborhood)",
         # Use -1 to include all channels in every neighborhood
-        'freq_min': "High-pass filter cutoff frequency",
-        'freq_max': "Low-pass filter cutoff frequency",
-        'filter': "Enable or disable filter",
-        'whiten': "Enable or disable whitening",
-        'num_workers': "Number of workers (if None, half of the cpu number is used)",
-        'clip_size': "Number of samples per waveform",
-        'detect_threshold': "Threshold for spike detection",
-        'detect_interval': "Minimum number of timepoints between events detected on the same channel",
-        'tempdir': "Temporary directory for mountainsort (available for ms4 >= 1.0.2)s"
+        "freq_min": "High-pass filter cutoff frequency",
+        "freq_max": "Low-pass filter cutoff frequency",
+        "filter": "Enable or disable filter",
+        "whiten": "Enable or disable whitening",
+        "num_workers": "Number of workers (if None, half of the cpu number is used)",
+        "clip_size": "Number of samples per waveform",
+        "detect_threshold": "Threshold for spike detection",
+        "detect_interval": "Minimum number of timepoints between events detected on the same channel",
+        "tempdir": "Temporary directory for mountainsort (available for ms4 >= 1.0.2)s",
     }
 
     sorter_description = """Mountainsort4 is a fully automatic density-based spike sorter using the isosplit clustering
@@ -64,6 +63,7 @@ class Mountainsort4Sorter(BaseSorter):
     def is_installed(cls):
         try:
             import mountainsort4
+
             HAVE_MS4 = True
         except ImportError:
             HAVE_MS4 = False
@@ -72,13 +72,14 @@ class Mountainsort4Sorter(BaseSorter):
     @staticmethod
     def get_sorter_version():
         import mountainsort4
-        if hasattr(mountainsort4, '__version__'):
+
+        if hasattr(mountainsort4, "__version__"):
             return mountainsort4.__version__
-        return 'unknown'
+        return "unknown"
 
     @classmethod
     def _check_apply_filter_in_params(cls, params):
-        return params['filter']
+        return params["filter"]
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
@@ -88,7 +89,7 @@ class Mountainsort4Sorter(BaseSorter):
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
         import mountainsort4
 
-        recording = load_extractor(sorter_output_folder.parent / 'spikeinterface_recording.json')
+        recording = load_extractor(sorter_output_folder.parent / "spikeinterface_recording.json")
 
         # alias to params
         p = params
@@ -96,29 +97,31 @@ class Mountainsort4Sorter(BaseSorter):
         samplerate = recording.get_sampling_frequency()
 
         # Bandpass filter
-        if p['filter'] and p['freq_min'] is not None and p['freq_max'] is not None:
+        if p["filter"] and p["freq_min"] is not None and p["freq_max"] is not None:
             if verbose:
-                print('filtering')
-            recording = bandpass_filter(recording=recording, freq_min=p['freq_min'], freq_max=p['freq_max'])
+                print("filtering")
+            recording = bandpass_filter(recording=recording, freq_min=p["freq_min"], freq_max=p["freq_max"])
 
         # Whiten
-        if p['whiten']:
+        if p["whiten"]:
             if verbose:
-                print('whitening')
-            recording = whiten(recording=recording)
+                print("whitening")
+            recording = whiten(recording=recording, dtype="float32")
 
-        print('Mountainsort4 use the OLD spikeextractors mapped with NewToOldRecording')
+        print("Mountainsort4 use the OLD spikeextractors mapped with NewToOldRecording")
         old_api_recording = NewToOldRecording(recording)
-        
-        ms4_params = dict(recording=old_api_recording,
-                          detect_sign=p['detect_sign'],
-                          adjacency_radius=p['adjacency_radius'],
-                          clip_size=p['clip_size'],
-                          detect_threshold=p['detect_threshold'],
-                          detect_interval=p['detect_interval'],
-                          num_workers=p['num_workers'],
-                          verbose=verbose)
-        
+
+        ms4_params = dict(
+            recording=old_api_recording,
+            detect_sign=p["detect_sign"],
+            adjacency_radius=p["adjacency_radius"],
+            clip_size=p["clip_size"],
+            detect_threshold=p["detect_threshold"],
+            detect_interval=p["detect_interval"],
+            num_workers=p["num_workers"],
+            verbose=verbose,
+        )
+
         # temporary folder
         ms4_version = Mountainsort4Sorter.get_sorter_version()
 
@@ -127,7 +130,7 @@ class Mountainsort4Sorter(BaseSorter):
                 p["tempdir"] = str(p["tempdir"])
             if verbose:
                 print(f'Using temporary directory {p["tempdir"]}')
-            ms4_params.update(tempdir=p['tempdir'])
+            ms4_params.update(tempdir=p["tempdir"])
 
         # Check location no more needed done in basesorter
         old_api_sorting = mountainsort4.mountainsort4(**ms4_params)
@@ -136,11 +139,11 @@ class Mountainsort4Sorter(BaseSorter):
         unit_ids = old_api_sorting.get_unit_ids()
         units_dict_list = [{u: old_api_sorting.get_unit_spike_train(u) for u in unit_ids}]
         new_api_sorting = NumpySorting.from_dict(units_dict_list, samplerate)
-        NpzSortingExtractor.write_sorting(new_api_sorting, str(sorter_output_folder / 'firings.npz'))
+        NpzSortingExtractor.write_sorting(new_api_sorting, str(sorter_output_folder / "firings.npz"))
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
         sorter_output_folder = Path(sorter_output_folder)
-        result_fname = sorter_output_folder / 'firings.npz'
+        result_fname = sorter_output_folder / "firings.npz"
         sorting = NpzSortingExtractor(result_fname)
         return sorting

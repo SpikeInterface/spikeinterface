@@ -27,7 +27,7 @@ For now, we have methods for:
 For some of theses steps, implementations are in a very early stage and are still a bit *drafty*.
 Signature and behavior may change from time to time in this alpha period development.
 
-You can also have a look `spikeinterface blog <https://spikeinterface.github.io>`_ where there are more detailed 
+You can also have a look `spikeinterface blog <https://spikeinterface.github.io>`_ where there are more detailed
 notebooks on sorting components.
 
 
@@ -43,9 +43,9 @@ follows:
 .. code-block:: python
 
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-    
+
     job_kwargs = dict(chunk_duration='1s', n_jobs=8, progress_bar=True)
-    
+
     peaks = detect_peaks(
         recording, method='by_channel',
         peak_sign='neg',
@@ -63,7 +63,7 @@ The output :code:`peaks` is a NumPy array with a length of the number of peaks f
 
 .. code-block:: python
 
-    peak_dtype = [('sample_ind', 'int64'), ('channel_ind', 'int64'), ('amplitude', 'float64'), ('segment_ind', 'int64')]
+    peak_dtype = [('sample_index', 'int64'), ('channel_index', 'int64'), ('amplitude', 'float64'), ('segment_index', 'int64')]
 
 
 Different methods are available with the :code:`method` argument:
@@ -91,17 +91,17 @@ follows:
 .. code-block:: python
 
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-    
+
     job_kwargs = dict(chunk_duration='1s', n_jobs=8, progress_bar=True)
 
     peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
                                     local_radius_um=70., ms_before=0.3, ms_after=0.6,
                                     **job_kwargs)
 
-                                        
+
 Currently, the following methods are implemented:
 
-  * 'center_of_mass' 
+  * 'center_of_mass'
   * 'monopolar_triangulation' with optimizer='least_square'
     This method is from Julien Boussard and Erdem Varol from the Paninski lab.
     This has been presented at [NeurIPS](https://nips.cc/Conferences/2021/ScheduleMultitrack?event=26709)
@@ -133,7 +133,7 @@ Peak selection
 
 When too many peaks are detected a strategy can be used to select (or sub-sample) only some of them before clustering.
 This is the strategy used by spyking-circus or tridesclous, for instance.
-Then, clustering is run on this subset of peaks, templates are extracted, and a template-matching step is run to find 
+Then, clustering is run on this subset of peaks, templates are extracted, and a template-matching step is run to find
 all spikes.
 
 The way the *peak vector* is reduced (or sub-sampled) is a crucial step because units with small firing rates
@@ -143,11 +143,11 @@ can be *hidden* by this process.
 .. code-block:: python
 
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-    
+
     many_peaks = detect_peaks(...)
-    
+
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
-    
+
     some_peaks = select_peaks(many_peaks, method='uniform', n_peaks=10000)
 
 Implemented methods are the following:
@@ -166,8 +166,8 @@ Motion estimation
 Recently, drift estimation has been added to some of the available spike sorters (Kilosort 2.5, 3)
 Especially for Neuropixels-like probes, this is a crucial step.
 
-Several methods have been proposed to correct for drift, but only one is currently implemented in SpikeInterface. 
-See `Decentralized Motion Inference and Registration of Neuropixel Data <https://ieeexplore.ieee.org/document/9414145>`_ 
+Several methods have been proposed to correct for drift, but only one is currently implemented in SpikeInterface.
+See `Decentralized Motion Inference and Registration of Neuropixel Data <https://ieeexplore.ieee.org/document/9414145>`_
 for more details.
 
 The motion estimation step comes after peak detection and peak localization.
@@ -175,20 +175,20 @@ The idea is to divide the recording into time bins and estimate the relative mot
 
 This method has two options:
 
-  * rigid drift : one motion vector is estimated for the entire probe 
+  * rigid drift : one motion vector is estimated for the entire probe
   * non-rigid drift : one motion vector is estimated per depth bin
 
 Here is an example with non-rigid motion estimation:
-  
+
 .. code-block:: python
 
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
     peaks = detect_peaks(recording, ...)
-    
+
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks
     peak_locations = localize_peaks(recording, peaks, ...)
-    
-    
+
+
     from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
     motion, temporal_bins, spatial_bins,
                 extra_check = estimate_motion(recording, peaks, peak_locations=peak_locations,
@@ -216,7 +216,7 @@ Here is a short example that depends on the output of "Motion estimation":
 .. code-block:: python
 
   from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
-  
+
   recording_corrected = CorrectMotionRecording(recording_with_drift, motion, temporal_bins, spatial_bins
                                               spatial_interpolation_method='kriging,
                                               border_mode='remove_channels')
@@ -235,25 +235,25 @@ Clustering
 The clustering step remains the central step of spike sorting.
 Historically this step was separted into two distinct parts: feature reduction and clustering.
 In SpikeInterface, we decided to regroup these two steps into the same module.
-This allows one to compute feature reduction 'on-the-fly' and avoid long computations and storage of 
+This allows one to compute feature reduction 'on-the-fly' and avoid long computations and storage of
 large features.
 
-The clustering step takes the recording and detected (and optionally selected) peaks as input and returns 
+The clustering step takes the recording and detected (and optionally selected) peaks as input and returns
 a label for every peak.
 
 At the moment, the implemention is quite experimental.
 These methods have been implemented:
 
   * | "position_clustering": use HDBSCAN on peak locations.
-  * | "sliding_hdbscan": clustering approach from tridesclous, with sliding spatial windows. PCA and HDBSCAN are run 
+  * | "sliding_hdbscan": clustering approach from tridesclous, with sliding spatial windows. PCA and HDBSCAN are run
     | on local/sparse waveforms.
-  * | "position_pca_clustering": this method tries to use peak locations for a first clustering step and then perform 
+  * | "position_pca_clustering": this method tries to use peak locations for a first clustering step and then perform
     | further splits using PCA + HDBSCAN
 
 Different methods may need different inputs (for instance some of them require peak locations and some do not).
-    
+
 .. code-block:: python
-  
+
   from spikeinterface.sortingcomponents.peak_detection import detect_peaks
   peaks = detect_peaks(recording, ...)
 
@@ -270,7 +270,7 @@ Template matching
 
 Template matching is the final step used in many sorters (Kilosort, SpyKING-Circus, YASS, Tridesclous, HDsort...)
 
-In this step, from a given catalogue (or dictionary) of templates (or atoms), the algorithms try to *explain* the 
+In this step, from a given catalogue (or dictionary) of templates (or atoms), the algorithms try to *explain* the
 traces as a linear sum of a template plus a residual noise.
 
 At the moment, there are four methods implemented:
@@ -278,7 +278,7 @@ At the moment, there are four methods implemented:
   * 'naive': a very naive implemenation used as a reference for benchmarks
   * 'tridesclous': the algorithm for template matching implemented in Tridesclous
   * 'circus': the algorithm for template matching implemented in SpyKING-Circus
-  * 'circus-omp': a updated algorithm similar to SpyKING-Circus but with OMP (orthogonal macthing 
+  * 'circus-omp': a updated algorithm similar to SpyKING-Circus but with OMP (orthogonal macthing
     pursuit)
 
 Very preliminary benchmarks suggest that:

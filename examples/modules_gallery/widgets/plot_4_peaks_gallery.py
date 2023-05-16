@@ -28,7 +28,7 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 rec_filtred = si.bandpass_filter(rec, freq_min=300., freq_max=6000., margin_ms=5.0)
 print(rec_filtred)
 peaks = detect_peaks(
-        rec_filtred, method='locally_exclusive', 
+        rec_filtred, method='locally_exclusive',
         peak_sign='neg', detect_threshold=6, exclude_sweep_ms=0.3,
         local_radius_um=100,
         noise_levels=None,
@@ -37,7 +37,6 @@ peaks = detect_peaks(
 
 ##############################################################################
 # peaks is a numpy 1D array with structured dtype that contains several fields:
-# sample_ind/channel_ind/amplitude/segment_ind
 
 print(peaks.dtype)
 print(peaks.shape)

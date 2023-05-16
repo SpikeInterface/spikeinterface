@@ -13,7 +13,7 @@ from ..core import get_random_data_chunks
 
 
 class ClipRecording(BasePreprocessor):
-    '''
+    """
     Limit the values of the data between a_min and a_max. Values exceeding the
     range will be set to the minimum or maximum, respectively.
 
@@ -32,8 +32,9 @@ class ClipRecording(BasePreprocessor):
     -------
     rescaled_traces: ClipTracesRecording
         The clipped traces recording extractor object
-    '''
-    name = 'clip'
+    """
+
+    name = "clip"
 
     def __init__(self, recording, a_min=None, a_max=None):
         value_min = a_min
@@ -41,21 +42,19 @@ class ClipRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording)
         for parent_segment in recording._recording_segments:
-            rec_segment = ClipRecordingSegment(
-                parent_segment, a_min, value_min, a_max, value_max)
+            rec_segment = ClipRecordingSegment(parent_segment, a_min, value_min, a_max, value_max)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording,
-                            a_min=a_min, a_max=a_max)
+        self._kwargs = dict(recording=recording, a_min=a_min, a_max=a_max)
 
 
 class BlankSaturationRecording(BasePreprocessor):
     """
     Find and remove parts of the signal with extereme values. Some arrays
     may produce these when amplifiers enter saturation, typically for
-    short periods of time. To remove these artefacts, values below or above 
+    short periods of time. To remove these artefacts, values below or above
     a threshold are set to the median signal value.
-    The threshold is either be estimated automatically, using the lower and upper 
+    The threshold is either be estimated automatically, using the lower and upper
     0.1 signal percentile with the largest deviation from the median, or specificed.
     Use this function with caution, as it may clip uncontaminated signals. A warning is
     printed if the data range suggests no artefacts.
@@ -101,12 +100,26 @@ class BlankSaturationRecording(BasePreprocessor):
                  ms_before=0, ms_after=0,
                  num_chunks_per_segment=50, chunk_size=500, seed=0):
 
-        assert direction in ('upper', 'lower', 'both')
+
+    name = "blank_staturation"
+
+    def __init__(
+        self,
+        recording,
+        abs_threshold=None,
+        quantile_threshold=None,
+        direction="upper",
+        fill_value=None,
+        num_chunks_per_segment=50,
+        chunk_size=500,
+        seed=0,
+    ):
+        assert direction in ("upper", "lower", "both")
 
         if fill_value is None or quantile_threshold is not None:
-            random_data = get_random_data_chunks(recording,
-                                                 num_chunks_per_segment=num_chunks_per_segment,
-                                                 chunk_size=chunk_size, seed=seed)
+            random_data = get_random_data_chunks(
+                recording, num_chunks_per_segment=num_chunks_per_segment, chunk_size=chunk_size, seed=seed
+            )
 
         if fill_value is None:
             fill_value = np.median(random_data)
@@ -116,23 +129,22 @@ class BlankSaturationRecording(BasePreprocessor):
         if abs_threshold is None:
             assert quantile_threshold is not None
             assert 0 <= quantile_threshold <= 1
-            q = np.quantile(
-                random_data, [quantile_threshold, 1 - quantile_threshold])
-            if direction in ('lower', 'both'):
+            q = np.quantile(random_data, [quantile_threshold, 1 - quantile_threshold])
+            if direction in ("lower", "both"):
                 a_min = q[0]
                 value_min = fill_value
-            if direction in ('upper', 'both'):
+            if direction in ("upper", "both"):
                 a_max = q[1]
                 value_max = fill_value
         else:
             assert abs_threshold is not None
-            if direction == 'lower':
+            if direction == "lower":
                 a_min = abs_threshold
                 value_min = fill_value
-            if direction == 'upper':
+            if direction == "upper":
                 a_max = abs_threshold
                 value_max = fill_value
-            if direction == 'both':
+            if direction == "both":
                 a_min = -abs_threshold
                 value_min = fill_value
                 a_max = abs_threshold
@@ -152,6 +164,7 @@ class BlankSaturationRecording(BasePreprocessor):
                             seed=seed)
 
 
+
 class ClipRecordingSegment(BasePreprocessorSegment):
     def __init__(self, parent_recording_segment, a_min, value_min, a_max, value_max,
                  ms_before=0, ms_after=0):
@@ -166,8 +179,7 @@ class ClipRecordingSegment(BasePreprocessorSegment):
 
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        traces = self.parent_recording_segment.get_traces(
-            start_frame, end_frame, channel_indices)
+        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         traces = traces.copy()
         fs = self.parent_recording_segment.sampling_frequency
 

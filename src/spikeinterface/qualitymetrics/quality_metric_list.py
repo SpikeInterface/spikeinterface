@@ -10,7 +10,7 @@ from .misc_metrics import (
     compute_sliding_rp_violations,
     compute_amplitude_cutoffs,
     compute_amplitude_medians,
-    compute_drift_metrics
+    compute_drift_metrics,
 )
 
 from .pca_metrics import (
@@ -19,7 +19,9 @@ from .pca_metrics import (
     lda_metrics,
     nearest_neighbors_metrics,
     nearest_neighbors_isolation,
-    nearest_neighbors_noise_overlap
+    nearest_neighbors_noise_overlap,
+    silhouette_score,
+    simplified_silhouette_score,
 )
 
 from .pca_metrics import _possible_pc_metric_names
@@ -28,15 +30,14 @@ from .pca_metrics import _possible_pc_metric_names
 # list of all available metrics and mapping to function
 # this list MUST NOT contain pca metrics, which are handled separately
 _misc_metric_name_to_func = {
-    "num_spikes" : compute_num_spikes,
-    "firing_rate" : compute_firing_rates,
-    "presence_ratio" : compute_presence_ratios,
-    "snr" : compute_snrs,
-    "isi_violation" : compute_isi_violations,
-    "rp_violation" : compute_refrac_period_violations,
-    "sliding_rp_violation" : compute_sliding_rp_violations,
-    "amplitude_cutoff" : compute_amplitude_cutoffs,
-    "amplitude_median" : compute_amplitude_medians,
-    "drift" : compute_drift_metrics
+    "num_spikes": compute_num_spikes,
+    "firing_rate": compute_firing_rates,
+    "presence_ratio": compute_presence_ratios,
+    "snr": compute_snrs,
+    "isi_violation": compute_isi_violations,
+    "rp_violation": compute_refrac_period_violations,
+    "sliding_rp_violation": compute_sliding_rp_violations,
+    "amplitude_cutoff": compute_amplitude_cutoffs,
+    "amplitude_median": compute_amplitude_medians,
+    "drift": compute_drift_metrics,
 }
-

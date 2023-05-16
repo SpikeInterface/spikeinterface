@@ -8,10 +8,10 @@ An important aspect of SpikeInterface is the :py:mod:`spikeinterface.sorters` mo
 This module wraps many popular spike sorting tools, allowing you to run multiple sorters on the same dataset with
 only a few lines of code and through Python.
 
-Installing spike sorters can be painful! Many of them come with several requirements that could cause conflicts in 
-your Python environment. To make things easier, we have created Docker images for most of these sorters, 
-and in many cases the easiest way to run them is to do so via Docker or Singularity. 
-**This is the approach we recommend for all users.** 
+Installing spike sorters can be painful! Many of them come with several requirements that could cause conflicts in
+your Python environment. To make things easier, we have created Docker images for most of these sorters,
+and in many cases the easiest way to run them is to do so via Docker or Singularity.
+**This is the approach we recommend for all users.**
 To run containerized sorters see our documentation here: :ref:`containerizedsorters`.
 
 There are some cases where users will need to install the spike sorting algorithms in their own environment. If you
@@ -28,7 +28,7 @@ Installation instructions are given for an **Ubuntu** platform. Please check the
 sorters to retrieve installation instructions for other operating systems.
 We use **pip** to install packages, but **conda** should also work in many cases.
 
-Some novel spike sorting algorithms are implemented directly in SpikeInterface using the 
+Some novel spike sorting algorithms are implemented directly in SpikeInterface using the
 :py:mod:`spikeinterface.sortingcomponents` module. Checkout the :ref:`si_based` section of this page
 for more information!
 
@@ -145,12 +145,12 @@ pyKilosort
 * Authors: Marius Pachitariu, Shashwat Sridhar, Alexander Morley, Cyrille Rossant, Kush Bunga
 
 * Install the python cuda toolkit. In principle, this should work::
-    
+
     pip install cupy  (or pip install cupy-cudaXXX)
 
 * However, conda installation could be less painful::
-    
-    conda install cupy 
+
+    conda install cupy
 
 * Next, clone and install pykilosort. Note that we support the newer version on the `develop` branch and the `ibl_prod` version from the IBL fork::
 
@@ -162,7 +162,7 @@ pyKilosort
     cd pykilosort
     pip install -r requirements.txt
     python setup.py install
-    
+
 * Alternatively, you can use the `pyks2.yml` environment file in the pykilosort repo and update your favorite environment with::
 
     conda env update --name my-fav-env --file pyks2.yml --prune
@@ -180,6 +180,15 @@ Mountainsort4
 
       pip install mountainsort4
 
+Mountainsort5
+^^^^^^^^^^^^^
+
+* Python
+* Url: https://github.com/flatironinstitute/mountainsort5
+* Authors: 	Jeremy Magland
+* Installation::
+
+      pip install mountainsort5
 
 SpyKING CIRCUS
 ^^^^^^^^^^^^^
@@ -274,15 +283,15 @@ Yass (LEGACY)
 SpikeInterface-based spike sorters
 ----------------------------------
 
-Thanks to the :py:mod:`spikeinterface.sortingcomponents` module, some spike sorting algorithms can now be fully implemented 
-with SpikeInterface. 
+Thanks to the :py:mod:`spikeinterface.sortingcomponents` module, some spike sorting algorithms can now be fully implemented
+with SpikeInterface.
 
 SpykingCircus2
 ^^^^^^^^^^^^^^
 
-This is a upgraded version of SpykingCircus, natively written in SpikeInterface. 
-The main differences are located in the clustering (now using on-the-fly features and less prone to finding 
-noise clusters), and in the template-matching procedure, which is now a fully orthogonal matching pursuit, 
+This is a upgraded version of SpykingCircus, natively written in SpikeInterface.
+The main differences are located in the clustering (now using on-the-fly features and less prone to finding
+noise clusters), and in the template-matching procedure, which is now a fully orthogonal matching pursuit,
 working not only at peak times but at all times, recovering more spikes close to noise thresholds.
 
 * Python

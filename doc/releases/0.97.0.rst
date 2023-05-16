@@ -5,26 +5,26 @@ SpikeInterface 0.97.0 release notes
 
 10th February 2023
 
-   
+
 Main change:
-  
+
   * Implemented "sparse" waveforms in core and propagated to all modules (#1079, #1136, #1152):
-  
+
     * Add waveform extractor :code:`save()` function and Zarr backend (#1079)
     * Dense waveforms can be saved as sparse with the :code:`save()` function
     * Sparse waveforms can be extracted directly with :code:`sparse=True`
 
   * Added IBL preprocessing tools for Neuropixels (#1025, #1059, #1070):
 
-    * Bad channel detection 
+    * Bad channel detection
     * Channel interpolation
-    * High-pass spatial filter 
+    * High-pass spatial filter
 
-  * | Add subfolder for sorter output ("output_folder/sorter_output") and :code:`sorting_info` field to Sorting, 
+  * | Add subfolder for sorter output ("output_folder/sorter_output") and :code:`sorting_info` field to Sorting,
     | so that "sorter_output" can be deleted without deleting metadata and :code:`sorting_info` (#1149, #1150)
 
   * Refactor Quality Metrics module (#1155, #1177, #1197):
-  
+
     * Improve parameter handling
     * Unified naming and conventions
     * Add missing metrics: drift, amp medians, sliding_rp_violations
@@ -32,7 +32,7 @@ Main change:
   * Extended Motion estimation and motion correction, which is now ready to use (#1129, #1108, #1183)
 
   * Removed deprecated functions/modules (#1261):
-  
+
     * :code:`toolkit` module
     * :code:`symmetrize` argument from compute_correlograms
     * :code:`localize_units` from postprocessing
@@ -44,7 +44,7 @@ core:
   * Prefer :code:`folder`` argument and make :code:`zarr_path`` deprecated in :code:`save()` function (#1049)
   * Fix bug 'int16' is not a JSON serializable (#1069)
   * Add waveform extractor :code:`save()` function and Zarr backend (#1079)
-  * :code:`ChunkRecordingExecutor`: add max_thread_per_process to limit the number of thread using the module threadpool_limits (#1086) 
+  * :code:`ChunkRecordingExecutor`: add max_thread_per_process to limit the number of thread using the module threadpool_limits (#1086)
   * Correct channel selection in tests when mono-channel recording (#1096)
   * Add :code:`split_job_kwargs()` function (#1110)
   * Improve handling of not dumpable objects (#1131)
@@ -59,7 +59,7 @@ core:
 
 extractors:
   * NWBRecordingExtractor offset extraction (#1057)
-  * fsspec for streaming NWB data (#1090) 
+  * fsspec for streaming NWB data (#1090)
   * Optimizing Phy-based extractors (#1153)
   * Add CellExplorerSortingExtractor (#1158)
   * Fix neuralynx sorting function and NeoBaseSorting when no streams (#1171)
@@ -110,7 +110,7 @@ curation:
   * Allow apply_sortingview_curation to load json curation files directly (#1104)
   * Improve MergeUnitsSorting to have several merge at the same time (#1244)
 
-widgets: 
+widgets:
   * Increase sv timeresies tile-size (#1101)
   * Updates for SV sorting summmary (#1165)
   * Promote distinctipy color as a second choice because it is slow (#1222)

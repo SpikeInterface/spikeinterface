@@ -1,11 +1,16 @@
 import numpy as np
-import pandas as pd
 
 from spikeinterface.core.core_tools import define_function_from_class
 from .basecomparison import BasePairComparison, MixinSpikeTrainComparison, MixinTemplateComparison
-from .comparisontools import (do_count_event, make_match_count_matrix, 
-                              make_agreement_scores_from_count, do_score_labels, do_confusion_matrix, 
-                              do_count_score, compute_performance)
+from .comparisontools import (
+    do_count_event,
+    make_match_count_matrix,
+    make_agreement_scores_from_count,
+    do_score_labels,
+    do_confusion_matrix,
+    do_count_score,
+    compute_performance,
+)
 from ..postprocessing import compute_template_similarity
 
 
@@ -14,26 +19,41 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
     Base class shared by SymmetricSortingComparison and GroundTruthComparison
     """
 
-    def __init__(self, sorting1, sorting2, sorting1_name=None, sorting2_name=None,
-                 delta_time=0.4, match_score=0.5, chance_score=0.1, n_jobs=1, 
-                 verbose=False):
+    def __init__(
+        self,
+        sorting1,
+        sorting2,
+        sorting1_name=None,
+        sorting2_name=None,
+        delta_time=0.4,
+        match_score=0.5,
+        chance_score=0.1,
+        n_jobs=1,
+        verbose=False,
+    ):
         if sorting1_name is None:
-            sorting1_name = 'sorting1'
+            sorting1_name = "sorting1"
         if sorting2_name is None:
-            sorting2_name = 'sorting2'
-        assert sorting1.get_num_segments() == sorting2.get_num_segments(), ("The two sortings must have the same "
-                                                                            "number of segments! ")
+            sorting2_name = "sorting2"
+        assert sorting1.get_num_segments() == sorting2.get_num_segments(), (
+            "The two sortings must have the same " "number of segments! "
+        )
 
-        BasePairComparison.__init__(self, object1=sorting1, object2=sorting2, 
-                                    name1=sorting1_name, name2=sorting2_name,
-                                    match_score=match_score, chance_score=chance_score, 
-                                    verbose=verbose)
+        BasePairComparison.__init__(
+            self,
+            object1=sorting1,
+            object2=sorting2,
+            name1=sorting1_name,
+            name2=sorting2_name,
+            match_score=match_score,
+            chance_score=chance_score,
+            verbose=verbose,
+        )
         MixinSpikeTrainComparison.__init__(self, delta_time=delta_time, n_jobs=n_jobs)
         self.set_frames_and_frequency(self.object_list)
 
         self.unit1_ids = self.sorting1.get_unit_ids()
         self.unit2_ids = self.sorting2.get_unit_ids()
-        
 
         self._do_agreement()
         self._do_matching()
@@ -56,7 +76,7 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
 
     def _do_agreement(self):
         if self._verbose:
-            print('Agreement scores...')
+            print("Agreement scores...")
 
         # common to GroundTruthComparison and SymmetricSortingComparison
         # spike count for each spike train
@@ -64,12 +84,14 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
         self.event_counts2 = do_count_event(self.sorting2)
 
         # matrix of  event match count for each pair
-        self.match_event_count = make_match_count_matrix(self.sorting1, self.sorting2, self.delta_frames,
-                                                         n_jobs=self.n_jobs)
+        self.match_event_count = make_match_count_matrix(
+            self.sorting1, self.sorting2, self.delta_frames, n_jobs=self.n_jobs
+        )
 
         # agreement matrix score for each pair
-        self.agreement_scores = make_agreement_scores_from_count(self.match_event_count, self.event_counts1,
-                                                                 self.event_counts2)
+        self.agreement_scores = make_agreement_scores_from_count(
+            self.match_event_count, self.event_counts1, self.event_counts2
+        )
 
 
 class SymmetricSortingComparison(BasePairSorterComparison):
@@ -110,14 +132,31 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         The SortingComparison object
     """
 
-    def __init__(self, sorting1, sorting2, sorting1_name=None, sorting2_name=None,
-                 delta_time=0.4, sampling_frequency=None, match_score=0.5, chance_score=0.1,
-                 n_jobs=-1, verbose=False):
-        BasePairSorterComparison.__init__(self, sorting1, sorting2, sorting1_name=sorting1_name,
-                                          sorting2_name=sorting2_name,
-                                          delta_time=delta_time,
-                                          match_score=match_score, chance_score=chance_score,
-                                          n_jobs=n_jobs, verbose=verbose)
+    def __init__(
+        self,
+        sorting1,
+        sorting2,
+        sorting1_name=None,
+        sorting2_name=None,
+        delta_time=0.4,
+        sampling_frequency=None,
+        match_score=0.5,
+        chance_score=0.1,
+        n_jobs=-1,
+        verbose=False,
+    ):
+        BasePairSorterComparison.__init__(
+            self,
+            sorting1,
+            sorting2,
+            sorting1_name=sorting1_name,
+            sorting2_name=sorting2_name,
+            delta_time=delta_time,
+            match_score=match_score,
+            chance_score=chance_score,
+            n_jobs=n_jobs,
+            verbose=verbose,
+        )
 
     def get_matching(self):
         return self.hungarian_match_12, self.hungarian_match_21
@@ -126,8 +165,7 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         if (unit1 is not None) and (unit2 is not None):
             return self.match_event_count.at[unit1, unit2]
         else:
-            raise Exception(
-                'get_matching_event_count: unit1 and unit2 must not be None.')
+            raise Exception("get_matching_event_count: unit1 and unit2 must not be None.")
 
     def get_best_unit_match1(self, unit1):
         return self.best_match_12[unit1]
@@ -212,19 +250,44 @@ class GroundTruthComparison(BasePairSorterComparison):
         The SortingComparison object
     """
 
-    def __init__(self, gt_sorting, tested_sorting, gt_name=None, tested_name=None,
-                 delta_time=0.4, sampling_frequency=None, match_score=0.5, well_detected_score=0.8,
-                 redundant_score=0.2, overmerged_score=0.2, chance_score=0.1, exhaustive_gt=False, n_jobs=-1,
-                 match_mode='hungarian', compute_labels=False, compute_misclassifications=False, verbose=False):
+    def __init__(
+        self,
+        gt_sorting,
+        tested_sorting,
+        gt_name=None,
+        tested_name=None,
+        delta_time=0.4,
+        sampling_frequency=None,
+        match_score=0.5,
+        well_detected_score=0.8,
+        redundant_score=0.2,
+        overmerged_score=0.2,
+        chance_score=0.1,
+        exhaustive_gt=False,
+        n_jobs=-1,
+        match_mode="hungarian",
+        compute_labels=False,
+        compute_misclassifications=False,
+        verbose=False,
+    ):
+        import pandas as pd
 
         if gt_name is None:
-            gt_name = 'ground truth'
+            gt_name = "ground truth"
         if tested_name is None:
-            tested_name = 'tested'
-        BasePairSorterComparison.__init__(self, gt_sorting, tested_sorting, sorting1_name=gt_name,
-                                          sorting2_name=tested_name, delta_time=delta_time,
-                                          match_score=match_score, chance_score=chance_score, 
-                                          n_jobs=n_jobs, verbose=verbose)
+            tested_name = "tested"
+        BasePairSorterComparison.__init__(
+            self,
+            gt_sorting,
+            tested_sorting,
+            sorting1_name=gt_name,
+            sorting2_name=tested_name,
+            delta_time=delta_time,
+            match_score=match_score,
+            chance_score=chance_score,
+            n_jobs=n_jobs,
+            verbose=verbose,
+        )
         self.exhaustive_gt = exhaustive_gt
 
         self._compute_misclassifications = compute_misclassifications
@@ -232,7 +295,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         self.overmerged_score = overmerged_score
         self.well_detected_score = well_detected_score
 
-        assert match_mode in ['hungarian', 'best']
+        assert match_mode in ["hungarian", "best"]
         self.match_mode = match_mode
         self._compute_labels = compute_labels
 
@@ -270,25 +333,25 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Internally use hungarian match or best match.
         """
-        if self.match_mode == 'hungarian':
+        if self.match_mode == "hungarian":
             match_12 = self.hungarian_match_12
-        elif self.match_mode == 'best':
+        elif self.match_mode == "best":
             match_12 = self.best_match_12
 
-        self.count_score = do_count_score(self.event_counts1, self.event_counts2,
-                                          match_12, self.match_event_count)
+        self.count_score = do_count_score(self.event_counts1, self.event_counts2, match_12, self.match_event_count)
 
     def _do_confusion_matrix(self):
         if self._verbose:
             print("Computing confusion matrix...")
 
-        if self.match_mode == 'hungarian':
+        if self.match_mode == "hungarian":
             match_12 = self.hungarian_match_12
-        elif self.match_mode == 'best':
+        elif self.match_mode == "best":
             match_12 = self.best_match_12
 
-        self._confusion_matrix = do_confusion_matrix(self.event_counts1, self.event_counts2, match_12,
-                                                     self.match_event_count)
+        self._confusion_matrix = do_confusion_matrix(
+            self.event_counts1, self.event_counts2, match_12, self.match_event_count
+        )
 
     def get_confusion_matrix(self):
         """
@@ -304,17 +367,16 @@ class GroundTruthComparison(BasePairSorterComparison):
         return self._confusion_matrix
 
     def _do_score_labels(self):
-        assert self.match_mode == 'hungarian', \
-            'Labels (TP, FP, FN) can be computed only with hungarian match'
+        assert self.match_mode == "hungarian", "Labels (TP, FP, FN) can be computed only with hungarian match"
 
         if self._verbose:
             print("Adding labels...")
 
-        self._labels_st1, self._labels_st2 = do_score_labels(self.sorting1, self.sorting2,
-                                                             self.delta_frames, self.hungarian_match_12,
-                                                             self._compute_misclassifications)
+        self._labels_st1, self._labels_st2 = do_score_labels(
+            self.sorting1, self.sorting2, self.delta_frames, self.hungarian_match_12, self._compute_misclassifications
+        )
 
-    def get_performance(self, method='by_unit', output='pandas'):
+    def get_performance(self, method="by_unit", output="pandas"):
         """
         Get performance rate with several method:
           * 'raw_count' : just render the raw count table
@@ -333,43 +395,42 @@ class GroundTruthComparison(BasePairSorterComparison):
         perf: pandas dataframe/series (or dict)
             dataframe/series (based on 'output') with performance entries
         """
-        possibles = ('raw_count', 'by_unit', 'pooled_with_average')
+        possibles = ("raw_count", "by_unit", "pooled_with_average")
         if method not in possibles:
-            raise Exception("'method' can be " + ' or '.join(possibles))
+            raise Exception("'method' can be " + " or ".join(possibles))
 
-        if method == 'raw_count':
+        if method == "raw_count":
             perf = self.count_score
 
-        elif method == 'by_unit':
+        elif method == "by_unit":
             perf = compute_performance(self.count_score)
 
-        elif method == 'pooled_with_average':
-            perf = self.get_performance(method='by_unit').mean(axis=0)
+        elif method == "pooled_with_average":
+            perf = self.get_performance(method="by_unit").mean(axis=0)
 
-        if output == 'dict' and isinstance(perf, pd.Series):
+        if output == "dict" and isinstance(perf, pd.Series):
             perf = perf.to_dict()
 
         return perf
 
-    def print_performance(self, method='pooled_with_average'):
+    def print_performance(self, method="pooled_with_average"):
         """
         Print performance with the selected method
         """
 
         template_txt_performance = _template_txt_performance
 
-        if method == 'by_unit':
-            perf = self.get_performance(method=method, output='pandas')
+        if method == "by_unit":
+            perf = self.get_performance(method=method, output="pandas")
             perf = perf * 100
             d = {k: perf[k].tolist() for k in perf.columns}
             txt = template_txt_performance.format(method=method, **d)
             print(txt)
 
-        elif method == 'pooled_with_average':
-            perf = self.get_performance(method=method, output='pandas')
+        elif method == "pooled_with_average":
+            perf = self.get_performance(method=method, output="pandas")
             perf = perf * 100
-            txt = template_txt_performance.format(
-                method=method, **perf.to_dict())
+            txt = template_txt_performance.format(method=method, **perf.to_dict())
             print(txt)
 
     def print_summary(self, well_detected_score=None, redundant_score=None, overmerged_score=None):
@@ -385,16 +446,15 @@ class GroundTruthComparison(BasePairSorterComparison):
         d = dict(
             num_gt=len(self.unit1_ids),
             num_tested=len(self.unit2_ids),
-            num_well_detected=self.count_well_detected_units(
-                well_detected_score),
+            num_well_detected=self.count_well_detected_units(well_detected_score),
             num_redundant=self.count_redundant_units(redundant_score),
             num_overmerged=self.count_overmerged_units(overmerged_score),
         )
 
         if self.exhaustive_gt:
             txt = txt + _template_summary_part2
-            d['num_false_positive_units'] = self.count_false_positive_units()
-            d['num_bad'] = self.count_bad_units()
+            d["num_false_positive_units"] = self.count_false_positive_units()
+            d["num_bad"] = self.count_bad_units()
 
         txt = txt.format(**d)
 
@@ -449,7 +509,7 @@ class GroundTruthComparison(BasePairSorterComparison):
             The agreement score below which tested units
             are counted as "false positive"" (and not "redundant").
         """
-        assert self.exhaustive_gt, 'false_positive_units list is valid only if exhaustive_gt=True'
+        assert self.exhaustive_gt, "false_positive_units list is valid only if exhaustive_gt=True"
 
         if redundant_score is not None:
             self.redundant_score = redundant_score
@@ -489,7 +549,7 @@ class GroundTruthComparison(BasePairSorterComparison):
             The agreement score above which tested units
             are counted as "redundant" (and not "false positive" ).
         """
-        assert self.exhaustive_gt, 'redundant_units list is valid only if exhaustive_gt=True'
+        assert self.exhaustive_gt, "redundant_units list is valid only if exhaustive_gt=True"
 
         if redundant_score is not None:
             self.redundant_score = redundant_score
@@ -524,7 +584,7 @@ class GroundTruthComparison(BasePairSorterComparison):
             Tested units with 2 or more agreement scores above 'overmerged_score'
             are counted as "overmerged".
         """
-        assert self.exhaustive_gt, 'overmerged_units list is valid only if exhaustive_gt=True'
+        assert self.exhaustive_gt, "overmerged_units list is valid only if exhaustive_gt=True"
 
         if overmerged_score is not None:
             self.overmerged_score = overmerged_score
@@ -554,7 +614,7 @@ class GroundTruthComparison(BasePairSorterComparison):
 
         Need exhaustive_gt=True
         """
-        assert self.exhaustive_gt, 'bad_units list is valid only if exhaustive_gt=True'
+        assert self.exhaustive_gt, "bad_units list is valid only if exhaustive_gt=True"
         matched_units2 = list(self.hungarian_match_12.values)
         bad_ids = []
         for u2 in self.unit2_ids:
@@ -568,20 +628,24 @@ class GroundTruthComparison(BasePairSorterComparison):
         """
         return len(self.get_bad_units())
 
-    def count_units_categories(self, well_detected_score=None, overmerged_score=None, redundant_score=None, ):
-        count = pd.Series(dtype='int64')
+    def count_units_categories(
+        self,
+        well_detected_score=None,
+        overmerged_score=None,
+        redundant_score=None,
+    ):
+        count = pd.Series(dtype="int64")
 
-        count['num_gt'] = len(self.sorting1.get_unit_ids())
-        count['num_sorter'] = len(self.sorting2.get_unit_ids())
-        count['num_well_detected'] = self.count_well_detected_units(well_detected_score)
+        count["num_gt"] = len(self.sorting1.get_unit_ids())
+        count["num_sorter"] = len(self.sorting2.get_unit_ids())
+        count["num_well_detected"] = self.count_well_detected_units(well_detected_score)
         if self.exhaustive_gt:
-            count['num_overmerged'] = self.count_overmerged_units(overmerged_score)
-            count['num_redundant'] = self.count_redundant_units(redundant_score)
-            count['num_false_positive'] = self.count_false_positive_units(redundant_score)
-            count['num_bad'] = self.count_bad_units()
+            count["num_overmerged"] = self.count_overmerged_units(overmerged_score)
+            count["num_redundant"] = self.count_redundant_units(redundant_score)
+            count["num_false_positive"] = self.count_false_positive_units(redundant_score)
+            count["num_bad"] = self.count_bad_units()
 
         return count
-
 
 
 # usefull also for gathercomparison
@@ -610,8 +674,9 @@ num_bad: {num_bad}
 """
 
 
-compare_sorter_to_ground_truth = define_function_from_class(source_class=GroundTruthComparison, 
-                                                            name="compare_sorter_to_ground_truth")
+compare_sorter_to_ground_truth = define_function_from_class(
+    source_class=GroundTruthComparison, name="compare_sorter_to_ground_truth"
+)
 
 
 class TemplateComparison(BasePairComparison, MixinTemplateComparison):
@@ -640,19 +705,35 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
     comparison : TemplateComparison
         The output TemplateComparison object
     """
-    def __init__(self, we1, we2, we1_name=None, we2_name=None,
-                 unit_ids1=None, unit_ids2=None,
-                 match_score=0.7, chance_score=0.3,
-                 similarity_method="cosine_similarity", sparsity_dict=None,
-                 verbose=False):
+
+    def __init__(
+        self,
+        we1,
+        we2,
+        we1_name=None,
+        we2_name=None,
+        unit_ids1=None,
+        unit_ids2=None,
+        match_score=0.7,
+        chance_score=0.3,
+        similarity_method="cosine_similarity",
+        sparsity_dict=None,
+        verbose=False,
+    ):
         if we1_name is None:
             we1_name = "sess1"
         if we2_name is None:
             we2_name = "sess2"
-        BasePairComparison.__init__(self, object1=we1, object2=we2,
-                                    name1=we1_name, name2=we2_name,
-                                    match_score=match_score, chance_score=chance_score,
-                                    verbose=verbose)
+        BasePairComparison.__init__(
+            self,
+            object1=we1,
+            object2=we2,
+            name1=we1_name,
+            name2=we2_name,
+            match_score=match_score,
+            chance_score=chance_score,
+            verbose=verbose,
+        )
         MixinTemplateComparison.__init__(self, similarity_method=similarity_method, sparsity_dict=sparsity_dict)
 
         self.we1 = we1
@@ -686,13 +767,12 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
 
     def _do_agreement(self):
         if self._verbose:
-            print('Agreement scores...')
+            print("Agreement scores...")
 
-        agreement_scores = compute_template_similarity(self.we1, self.we2,
-                                                       method=self.similarity_method)
-        self.agreement_scores = pd.DataFrame(agreement_scores,
-                                             index=self.unit_ids[0],
-                                             columns=self.unit_ids[1])
+        agreement_scores = compute_template_similarity(self.we1, self.we2, method=self.similarity_method)
+        import pandas as pd
+
+        self.agreement_scores = pd.DataFrame(agreement_scores, index=self.unit_ids[0], columns=self.unit_ids[1])
 
 
 compare_templates = define_function_from_class(source_class=TemplateComparison, name="compare_templates")

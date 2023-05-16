@@ -27,7 +27,7 @@ Example code
 Without SpikeInterface:
 
 .. code-block:: python
-    
+
     spike_train = ...
     t_recording = ...    # Length of recording (in s).
 
