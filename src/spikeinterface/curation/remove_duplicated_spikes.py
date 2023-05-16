@@ -47,7 +47,7 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
         if sorting.has_recording():
             self.register_recording(sorting._recording)
 
-        self._kwargs = {"sorting": sorting, "censored_period_ms": censored_period_ms, "method": method}
+        self._kwargs = {"sorting": sorting, 'censored_period_ms': censored_period_ms, "method": method}
 
 
 class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
@@ -59,6 +59,7 @@ class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
         method: str,
         seed: Optional[int] = None,
     ):
+
         super().__init__()
         self._parent_segment = parent_segment
         self._duplicated_spikes = {}
@@ -67,6 +68,7 @@ class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
         self.method = method
 
         self._duplicated_spikes = {unit_id: None for unit_id in unit_ids}
+
 
     def get_unit_spike_train(
         self, unit_id, start_frame: Optional[int] = None, end_frame: Optional[int] = None

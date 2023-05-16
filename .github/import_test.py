@@ -30,7 +30,7 @@ for import_statement in import_statement_list:
                 f"import_statement = '{import_statement}' \n"
                 f"time_taken = timeit.timeit(import_statement, number=1) \n"
                 f"print(time_taken) \n"
-               ) 
+               )
 
         result = subprocess.run(["python", "-c", script_to_execute], capture_output=True, text=True)
 

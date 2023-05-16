@@ -2,7 +2,7 @@ from pathlib import Path
 import re
 import numpy as np
 
-from spikeinterface.core import (BaseSorting, BaseSortingSegment)
+from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 
@@ -18,9 +18,9 @@ class MClustSortingExtractor(BaseSorting):
     sampling_frequency_raw: float or None
         Required to read files with raw formats. In that case, the samples are saved in the same
         unit as the input data. Default None
-        Examples: 
-            - If raw time is in tens of ms sampling_frequency_raw=10000 
-            - If raw time is in samples sampling_frequency_raw=sampling_frequency 
+        Examples:
+            - If raw time is in tens of ms sampling_frequency_raw=10000
+            - If raw time is in samples sampling_frequency_raw=sampling_frequency
     Returns
     -------
     extractor : MClustSortingExtractor
@@ -30,14 +30,14 @@ class MClustSortingExtractor(BaseSorting):
     extractor_name = "MClustSortingExtractor"
     name = "mclust"
 
-    def __init__(self, folder_path, sampling_frequency, sampling_frequency_raw = None):
-        end_header_str = '%%ENDHEADER'
-        ext_list = ['t64', 't32', 't', 'raw64','raw32']
+    def __init__(self, folder_path, sampling_frequency, sampling_frequency_raw=None):
+        end_header_str = "%%ENDHEADER"
+        ext_list = ["t64", "t32", "t", "raw64", "raw32"]
         unit_ids = []
         ext = None
 
         for e in ext_list:
-            files = Path(folder_path).glob(f'*.{e}')
+            files = Path(folder_path).glob(f"*.{e}")
             if files:
                 ext = e
                 break
@@ -45,38 +45,39 @@ class MClustSortingExtractor(BaseSorting):
         if ext is None:
             raise Exception("Mclust files not found in path")
 
-        if ext.startswith('raw') and sampling_frequency_raw is None: 
+        if ext.startswith("raw") and sampling_frequency_raw is None:
             raise Exception(f"To load files with extension {ext} a sampling_frequency_raw input is required.")
-        
-        if ext.endswith('64'):
-            dataformat='>u8'
+
+        if ext.endswith("64"):
+            dataformat = ">u8"
         else:
-            dataformat='>u4'
-        
+            dataformat = ">u4"
+
         spiketrains = {}
 
         for filename in files:
-            unit = int(re.search('_([0-9]+?)$',filename.stem).group(1))
+            unit = int(re.search("_([0-9]+?)$", filename.stem).group(1))
             unit_ids.append(unit)
-            with open(filename, 'rb') as f:
+            with open(filename, "rb") as f:
                 reading_header = True
                 while reading_header:
                     line = f.readline()
-                    reading_header = not line.decode('utf-8').startswith(end_header_str)
-                times = np.fromfile(f,dtype=dataformat) 
-            if ext.startswith('t'):
-                times = times/10000
+                    reading_header = not line.decode("utf-8").startswith(end_header_str)
+                times = np.fromfile(f, dtype=dataformat)
+            if ext.startswith("t"):
+                times = times / 10000
             else:
-                times = times/sampling_frequency_raw
+                times = times / sampling_frequency_raw
             spiketrains[unit] = np.rint(times * sampling_frequency)
-
-            
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
         self.add_sorting_segment(MClustSortingSegment(unit_ids, spiketrains))
-        self._kwargs = {'folder_path': str(Path(folder_path).absolute()), 'sampling_frequency':sampling_frequency,
-                        'sampling_frequency_raw':sampling_frequency_raw}
+        self._kwargs = {
+            "folder_path": str(Path(folder_path).absolute()),
+            "sampling_frequency": sampling_frequency,
+            "sampling_frequency_raw": sampling_frequency_raw,
+        }
 
 
 class MClustSortingSegment(BaseSortingSegment):

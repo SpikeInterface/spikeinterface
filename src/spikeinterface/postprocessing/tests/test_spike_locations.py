@@ -10,22 +10,24 @@ class SpikeLocationsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
     extension_class = SpikeLocationsCalculator
     extension_data_names = ["spike_locations"]
     extension_function_kwargs_list = [
-        dict(method='center_of_mass', chunk_size=10000, n_jobs=1),
-        dict(method='center_of_mass', chunk_size=10000, n_jobs=1, outputs='by_unit'),
-        dict(method='monopolar_triangulation', chunk_size=10000, n_jobs=1, outputs='by_unit'),
-        dict(method='monopolar_triangulation', chunk_size=10000, n_jobs=1, outputs='by_unit'),
+        dict(method="center_of_mass", chunk_size=10000, n_jobs=1),
+        dict(method="center_of_mass", chunk_size=10000, n_jobs=1, outputs="by_unit"),
+        dict(method="monopolar_triangulation", chunk_size=10000, n_jobs=1, outputs="by_unit"),
+        dict(method="monopolar_triangulation", chunk_size=10000, n_jobs=1, outputs="by_unit"),
     ]
 
     def test_parallel(self):
         locs_mono1 = self.extension_class.get_extension_function()(
-            self.we1, method="monopolar_triangulation", chunk_size=10000, n_jobs=1)
+            self.we1, method="monopolar_triangulation", chunk_size=10000, n_jobs=1
+        )
         locs_mono2 = self.extension_class.get_extension_function()(
-            self.we1, method="monopolar_triangulation", chunk_size=10000, n_jobs=2)
+            self.we1, method="monopolar_triangulation", chunk_size=10000, n_jobs=2
+        )
 
         assert np.array_equal(locs_mono1[0], locs_mono2[0])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test = SpikeLocationsExtensionTest()
     test.setUp()
     test.test_extension()
