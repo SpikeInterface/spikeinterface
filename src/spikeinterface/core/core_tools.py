@@ -243,7 +243,7 @@ def write_binary_recording(recording, file_paths=None, dtype=None, add_file_exte
                            verbose=False, byte_offset=0, auto_cast_uint=True, zero_pad_samples=None,
 
                              **job_kwargs):
-    '''
+    """
     Save the trace of a recording extractor in several binary .dat format.
 
     Note :
