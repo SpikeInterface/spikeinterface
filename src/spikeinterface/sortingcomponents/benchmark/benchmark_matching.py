@@ -1,4 +1,3 @@
-
 from spikeinterface.core import extract_waveforms
 from spikeinterface.preprocessing import bandpass_filter, common_reference
 from spikeinterface.postprocessing import compute_template_similarity
@@ -6,9 +5,14 @@ from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.core import NumpySorting
 from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_ground_truth
-from spikeinterface.widgets import (plot_sorting_performance,
-    plot_agreement_matrix, plot_comparison_collision_by_similarity,
-    plot_unit_templates, plot_unit_waveforms, plot_gt_performances)
+from spikeinterface.widgets import (
+    plot_sorting_performance,
+    plot_agreement_matrix,
+    plot_comparison_collision_by_similarity,
+    plot_unit_templates,
+    plot_unit_waveforms,
+    plot_gt_performances,
+)
 
 
 import time
@@ -439,7 +443,7 @@ class BenchmarkMatching:
         ax.set_title(title)
         plot_agreement_matrix(comp, ax=ax)
         ax.set_title(title)
-        
+
         ax = axs[1, 0]
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
@@ -447,7 +451,6 @@ class BenchmarkMatching:
         plot_sorting_performance(comp, self.metrics, performance_name='recall', metric_name='snr', ax=ax, color='g')
         plot_sorting_performance(comp, self.metrics, performance_name='precision', metric_name='snr', ax=ax, color='b')
         ax.legend(['accuracy', 'recall', 'precision'])
-        
         ax = axs[1, 1]
         plot_gt_performances(comp, ax=ax)
 
@@ -459,7 +462,7 @@ class BenchmarkMatching:
 
 def plot_errors_matching(benchmark, comp, unit_id, nb_spikes=200, metric='cosine'):
     fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(15, 10))
-    
+
     benchmark.we.sorting.get_unit_spike_train(unit_id)
     template = benchmark.we.get_template(unit_id)
     a = template.reshape(template.size, 1).T
@@ -480,35 +483,34 @@ def plot_errors_matching(benchmark, comp, unit_id, nb_spikes=200, metric='cosine
                             unit_selected_waveforms = {unit_id : intersection},
                             unit_colors = {unit_id : colors[count]})   
         ax.set_title(label)
-        
+
         wfs = benchmark.we.get_waveforms(unit_id)
         wfs = wfs[intersection, :, :]
-                
+
         import sklearn
-        
+
         nb_spikes = len(wfs)
         b = wfs.reshape(nb_spikes, -1)
         distances = sklearn.metrics.pairwise_distances(a, b, metric).flatten()
         ax = axs[count, 1]
         ax.set_title(label)
         ax.hist(distances, color=colors[count])
-        ax.set_ylabel('# waveforms')
+        ax.set_ylabel("# waveforms")
         ax.set_xlabel(metric)
-        
+
         count += 1
     return fig, axs
 
 def plot_errors_matching_all_neurons(benchmark, comp, nb_spikes=200, metric='cosine'):
     templates = benchmark.templates
     nb_units = len(benchmark.we.unit_ids)
-    colors = ['r', 'b']
+    colors = ["r", "b"]
 
-    results = {'TP' : {'mean' : [], 'std' : []}, 
-               'FN' : {'mean' : [], 'std' : []}}
-    
+    results = {"TP": {"mean": [], "std": []}, "FN": {"mean": [], "std": []}}
+
     for i in range(nb_units):
         unit_id = benchmark.we.unit_ids[i]
-        idx_2 = benchmark.we.get_sampled_indices(unit_id)['spike_index']
+        idx_2 = benchmark.we.get_sampled_indices(unit_id)["spike_index"]
         wfs = benchmark.we.get_waveforms(unit_id)
         template = benchmark.we.get_template(unit_id)
         a = template.reshape(template.size, 1).T
@@ -516,33 +518,33 @@ def plot_errors_matching_all_neurons(benchmark, comp, nb_spikes=200, metric='cos
         for label in ['TP', 'FN']:
             idx_1 = np.where(comp.get_labels1(unit_id) == label)[0]
             intersection = np.where(np.in1d(idx_2, idx_1))[0]
-            intersection = np.random.permutation(intersection)[:nb_spikes]            
+            intersection = np.random.permutation(intersection)[:nb_spikes]
             wfs_sliced = wfs[intersection, :, :]
-                    
+
             import sklearn
-            
+
             all_spikes = len(wfs_sliced)
             if all_spikes > 0:
                 b = wfs_sliced.reshape(all_spikes, -1)
-                if metric == 'cosine':
+                if metric == "cosine":
                     distances = sklearn.metrics.pairwise.cosine_similarity(a, b).flatten()
                 else:
                     distances = sklearn.metrics.pairwise_distances(a, b, metric).flatten()
-                results[label]['mean'] += [np.nanmean(distances)]
-                results[label]['std'] += [np.nanstd(distances)]
+                results[label]["mean"] += [np.nanmean(distances)]
+                results[label]["std"] += [np.nanstd(distances)]
             else:
-                results[label]['mean'] += [0]
-                results[label]['std'] += [0]
-    
+                results[label]["mean"] += [0]
+                results[label]["std"] += [0]
+
     fig, axs = plt.subplots(ncols=2, nrows=1, figsize=(15, 5))
-    for count, label in enumerate(['TP', 'FN']):
+    for count, label in enumerate(["TP", "FN"]):
         ax = axs[count]
         idx = np.argsort(benchmark.metrics.snr)
-        means = np.array(results[label]['mean'])[idx]
-        stds = np.array(results[label]['std'])[idx]
+        means = np.array(results[label]["mean"])[idx]
+        stds = np.array(results[label]["std"])[idx]
         ax.errorbar(benchmark.metrics.snr[idx], means, yerr=stds, c=colors[count])
         ax.set_title(label)
-        ax.set_xlabel('snr')
+        ax.set_xlabel("snr")
         ax.set_ylabel(metric)
     return fig, axs
 
@@ -646,4 +648,3 @@ def plot_vary_parameter(matching_df, performance_metric='accuracy', method_color
         figs.append(fig)
         axs.append(ax)
     return figs, axs
-

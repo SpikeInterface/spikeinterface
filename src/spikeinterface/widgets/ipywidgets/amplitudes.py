@@ -16,11 +16,9 @@ from IPython.display import display
 
 
 class AmplitudesPlotter(IpywidgetsPlotter):
-
     def do_plot(self, data_plot, **backend_kwargs):
-
         cm = 1 / 2.54
-        we = data_plot['waveform_extractor']
+        we = data_plot["waveform_extractor"]
 
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         width_cm = backend_kwargs["width_cm"]
@@ -34,13 +32,14 @@ class AmplitudesPlotter(IpywidgetsPlotter):
                 fig = plt.figure(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
-        data_plot['unit_ids'] = data_plot['unit_ids'][:1]
-        unit_widget, unit_controller = make_unit_controller(data_plot['unit_ids'], we.unit_ids,
-                                                            ratios[0] * width_cm, height_cm)
+        data_plot["unit_ids"] = data_plot["unit_ids"][:1]
+        unit_widget, unit_controller = make_unit_controller(
+            data_plot["unit_ids"], we.unit_ids, ratios[0] * width_cm, height_cm
+        )
 
         plot_histograms = widgets.Checkbox(
             value=data_plot["plot_histograms"],
-            description='plot histograms',
+            description="plot histograms",
             disabled=False,
         )
 
@@ -56,10 +55,7 @@ class AmplitudesPlotter(IpywidgetsPlotter):
             w.observe(self.updater)
 
         self.widget = widgets.AppLayout(
-            center=fig.canvas,
-            left_sidebar=unit_widget,
-            pane_widths=ratios + [0],
-            footer=footer
+            center=fig.canvas, left_sidebar=unit_widget, pane_widths=ratios + [0], footer=footer
         )
 
         # a first update
@@ -68,7 +64,6 @@ class AmplitudesPlotter(IpywidgetsPlotter):
         if backend_kwargs["display"]:
             self.check_backend()
             display(self.widget)
-
 
 
 AmplitudesPlotter.register(AmplitudesWidget)
@@ -81,7 +76,7 @@ class PlotUpdater:
         self.fig = fig
         self.controller = controller
 
-        self.we = data_plot['waveform_extractor']
+        self.we = data_plot["waveform_extractor"]
         self.next_data_plot = data_plot.copy()
 
     def __call__(self, change):
@@ -92,11 +87,11 @@ class PlotUpdater:
 
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
-        data_plot['unit_ids'] = unit_ids
-        data_plot['plot_histograms'] = plot_histograms
-        
+        data_plot["unit_ids"] = unit_ids
+        data_plot["plot_histograms"] = plot_histograms
+
         backend_kwargs = {}
-        backend_kwargs['figure'] = self.fig
+        backend_kwargs["figure"] = self.fig
 
         self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
 

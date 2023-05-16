@@ -7,7 +7,7 @@ import numpy as np
 from spikeinterface.extractors import *
 
 
-@pytest.mark.skip('YASS can be tested after running run_yass()')
+@pytest.mark.skip("YASS can be tested after running run_yass()")
 def test_yassextractors():
     # not tested here, tested in run_yass(...)
     pass
@@ -17,5 +17,5 @@ def test_yassextractors():
     #  print(sorting)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_yassextractors()
