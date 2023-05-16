@@ -1,14 +1,21 @@
 """
 Some simple function to retrieve public datasets with datalad
 """
+from __future__ import annotations
 
 from pathlib import Path
 
 import warnings
-from .globals import get_global_dataset_folder, is_set_global_dataset_folder
+from .globals import get_global_dataset_folder
 
 
-def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_exists=False, unlock=False) -> Path:
+def download_dataset(
+    repo: str | None = None,
+    remote_path: str | None = None,
+    local_folder: Path | None = None,
+    update_if_exists: bool = False,
+    unlock: bool = False,
+) -> Path | None:
     """
     Function to download dataset from a remote repository using datalad.
 
@@ -30,7 +37,7 @@ def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_e
 
     Returns
     -------
-    str
+    Path
         The local path to the downloaded dataset
     """
     import datalad.api
@@ -59,7 +66,7 @@ def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_e
 
     if remote_path is None:
         warnings.warn(message="No remote path provided, returning None")
-        return
+        return None  # TODO: is this the best option? I Think this should not accept remote_path is None.
 
     local_path = local_folder / remote_path
 
