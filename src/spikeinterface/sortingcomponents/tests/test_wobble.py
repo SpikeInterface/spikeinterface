@@ -101,7 +101,6 @@ def test_upsample_and_jitter():
         upsampled_template = temporal_jittered[i * jitter_factor, :, :]
         assert np.allclose(original_template, upsampled_template)
 
-
 def test_get_convolution_len():
     # Arrange: generate random 'data'
     seed = 0
@@ -138,17 +137,15 @@ def test_convolve_templates():
     false_visible_channels = np.zeros((num_templates, num_channels), dtype=bool)
 
     for visible_channels in (rand_visible_channels, true_visible_channels, false_visible_channels):
-        unit_overlap = np.sum(
-            np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]), axis=2
-        )
+        unit_overlap = np.sum(np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]),
+                              axis=2)
         unit_overlap = unit_overlap > 0
         unit_overlap = np.repeat(unit_overlap, jitter_factor, axis=0)
         sparsity = wobble.Sparsity(visible_channels, unit_overlap)
 
         # Act: run convolve_templates
-        pairwise_convolution = wobble.convolve_templates(
-            compressed_templates, jitter_factor, approx_rank, jittered_indices, sparsity
-        )
+        pairwise_convolution = wobble.convolve_templates(compressed_templates, jitter_factor, approx_rank,
+                                                         jittered_indices, sparsity)
 
         # Assert: check shapes
         assert len(pairwise_convolution) == num_templates * jitter_factor
@@ -195,9 +192,9 @@ def compute_objective_loopy(traces, template_data, approx_rank):
         scaled_filtered_data = spatially_filtered_data * singular[:, [rank]]
         for template_id in range(num_templates):
             template_temporal_filter = temporal_filters[template_id]
-            objective[template_id, :] += np.convolve(
-                scaled_filtered_data[template_id, :], template_temporal_filter, mode="full"
-            )
+            objective[template_id, :] += np.convolve(scaled_filtered_data[template_id, :],
+                                                     template_temporal_filter,
+                                                     mode='full')
     return objective
 
 
@@ -217,16 +214,15 @@ def test_compute_objective():
     spatial = rng.random((num_templates, approx_rank, num_channels))
     compressed_templates = (temporal, singular, spatial, temporal)
     norm_squared = np.random.rand(num_templates)
-    template_data = wobble.TemplateData(
-        compressed_templates=compressed_templates, pairwise_convolution=[], norm_squared=norm_squared
-    )
+    template_data = wobble.TemplateData(compressed_templates=compressed_templates, pairwise_convolution=[],
+                                        norm_squared=norm_squared)
 
     # Act: run compute_objective
     objective = wobble.compute_objective(traces, template_data, approx_rank)
     expected_objective = compute_objective_loopy(traces, template_data, approx_rank)
 
     # Assert: check shape and equivalence to expected_objective
-    assert objective.shape == (num_templates, chunk_len + num_samples - 1)
+    assert objective.shape == (num_templates, chunk_len+num_samples-1)
     assert np.allclose(objective, expected_objective)
 
 
@@ -244,16 +240,17 @@ def test_compute_scale_amplitudes():
     amplitude_variance = rng.random() * 100
 
     # Act: run compute_scale_amplitudes
-    high_res_objective, scale_amplitudes = wobble.compute_scale_amplitudes(
-        high_resolution_conv, norm_peaks, scale_min, scale_max, amplitude_variance
-    )
+    high_res_objective, scale_amplitudes = wobble.compute_scale_amplitudes(high_resolution_conv, norm_peaks, scale_min,
+                                                                           scale_max, amplitude_variance)
 
     # Assert: check shapes
     assert high_res_objective.shape == (peak_window_size, num_spikes)
     assert scale_amplitudes.shape == (peak_window_size, num_spikes)
 
 
-if __name__ == "__main__":
+
+
+if __name__ == '__main__':
     test_compute_template_norm()
     test_compress_templates()
     test_upsample_and_jitter()

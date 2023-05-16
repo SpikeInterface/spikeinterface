@@ -35,8 +35,8 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
 
 @pytest.mark.parametrize("mode", mode_list)
 def test_lazy_random_recording(mode):
-    # Test that get_traces does not consume more memory than allocated.
-
+    # Test that get_traces does not consume more memory than allocated. 
+    
     bytes_to_MiB_factor = 1024**2
     relative_tolerance = 0.05  # relative tolerance of 5 per cent
 
@@ -84,7 +84,7 @@ def test_lazy_random_recording(mode):
 
 @pytest.mark.parametrize("mode", mode_list)
 def test_generate_lazy_recording(mode):
-    # Test that get_traces does not consume more memory than allocated.
+    # Test that get_traces does not consume more memory than allocated. 
     bytes_to_MiB_factor = 1024**2
     full_traces_size_GiB = 1.0
     relative_tolerance = 0.05  # relative tolerance of 5 per cent
@@ -123,11 +123,10 @@ def test_generate_lazy_recording_under_giga(mode):
     recording = generate_lazy_recording(full_traces_size_GiB=0.3, mode=mode)
     recording_total_memory = convert_bytes_to_str(recording.get_memory_size())
     assert recording_total_memory == "307.20 MiB"
-
+    
     recording = generate_lazy_recording(full_traces_size_GiB=0.1, mode=mode)
     recording_total_memory = convert_bytes_to_str(recording.get_memory_size())
     assert recording_total_memory == "102.40 MiB"
-
 
 @pytest.mark.parametrize("mode", mode_list)
 def test_generate_recording_correct_shape(mode):
@@ -156,16 +155,13 @@ def test_generate_recording_correct_shape(mode):
 
 
 @pytest.mark.parametrize("mode", mode_list)
-@pytest.mark.parametrize(
-    "start_frame, end_frame",
-    [
-        (0, None),
-        (0, 80),
-        (20_000, 30_000),
-        (0, 30_000),
-        (15_000, 30_0000),
-    ],
-)
+@pytest.mark.parametrize("start_frame, end_frame", [
+    (0, None),
+    (0, 80),
+    (20_000, 30_000),
+    (0, 30_000),
+    (15_000, 30_0000),
+])
 def test_generator_recording_consistency(mode, start_frame, end_frame):
     # Calling the get_traces twice should return the same result
     sampling_frequency = 30000  # Hz
@@ -188,18 +184,16 @@ def test_generator_recording_consistency(mode, start_frame, end_frame):
     assert np.allclose(traces, same_traces)
 
 
+
 @pytest.mark.parametrize("mode", mode_list)
-@pytest.mark.parametrize(
-    "start_frame, end_frame, extra_samples",
-    [
-        (0, 1000, 10),
-        (0, 20_000, 10_000),
-        (1_000, 2_000, 300),
-        (250, 750, 800),
-        (10_000, 25_000, 3_000),
-        (0, 60_000, 10_000),
-    ],
-)
+@pytest.mark.parametrize("start_frame, end_frame, extra_samples", [
+    (0, 1000, 10),
+    (0, 20_000, 10_000),
+    (1_000, 2_000, 300),
+    (250, 750, 800),
+    (10_000, 25_000, 3_000),
+    (0, 60_000, 10_000),
+])
 def test_generator_recording_consistency_across_traces(mode, start_frame, end_frame, extra_samples):
     # Test that the generated traces behave like true arrays. Calling a larger array and then slicing it should
     # give the same result as calling the slice directly
@@ -207,7 +201,7 @@ def test_generator_recording_consistency_across_traces(mode, start_frame, end_fr
     durations = [10.0]
     dtype = np.dtype("float32")
     num_channels = 384
-    seed = start_frame + end_frame + extra_samples  # To make sure that the seed is different for each test
+    seed = start_frame + end_frame + extra_samples # To make sure that the seed is different for each test
 
     lazy_recording = GeneratorRecording(
         durations=durations,
@@ -223,8 +217,7 @@ def test_generator_recording_consistency_across_traces(mode, start_frame, end_fr
     larger_traces = lazy_recording.get_traces(start_frame=start_frame, end_frame=end_frame_larger_array)
     equivalent_trace_from_larger_traces = larger_traces[:-extra_samples, :]  # Remove the extra samples
     assert np.allclose(traces, equivalent_trace_from_larger_traces)
-
-
+    
 if __name__ == "__main__":
     mode = "random_peaks"
     start_frame = 0

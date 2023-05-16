@@ -33,7 +33,7 @@ class TemplateMetricsWidget(MetricsBaseWidget):
         unit_colors=None,
         hide_unit_selector=False,
         backend=None,
-        **backend_kwargs,
+        **backend_kwargs
     ):
         self.check_extensions(waveform_extractor, "template_metrics")
         tmc = waveform_extractor.load_extension("template_metrics")
@@ -41,15 +41,11 @@ class TemplateMetricsWidget(MetricsBaseWidget):
 
         sorting = waveform_extractor.sorting
 
-        MetricsBaseWidget.__init__(
-            self,
-            template_metrics,
-            sorting,
-            unit_ids=unit_ids,
-            unit_colors=unit_colors,
-            include_metrics=include_metrics,
-            skip_metrics=skip_metrics,
-            hide_unit_selector=hide_unit_selector,
-            backend=backend,
-            **backend_kwargs,
-        )
+        MetricsBaseWidget.__init__(self, template_metrics, sorting,
+                                   unit_ids=unit_ids, unit_colors=unit_colors,
+                                   include_metrics=include_metrics, 
+                                   skip_metrics=skip_metrics,
+                                   hide_unit_selector=hide_unit_selector,
+                                   backend=backend, **backend_kwargs)
+
+

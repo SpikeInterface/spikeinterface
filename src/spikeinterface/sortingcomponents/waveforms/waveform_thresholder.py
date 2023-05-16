@@ -7,7 +7,11 @@ import operator
 from typing import Literal
 
 from spikeinterface.core import BaseRecording, get_noise_levels
-from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
+from spikeinterface.sortingcomponents.peak_pipeline import (
+    PipelineNode,
+    WaveformsNode,
+    find_parent_of_type
+)
 
 
 class WaveformThresholder(WaveformsNode):
@@ -40,28 +44,21 @@ class WaveformThresholder(WaveformsNode):
     """
 
     def __init__(
-        self,
-        recording: BaseRecording,
-        return_output: bool = True,
+        self, recording: BaseRecording, return_output: bool = True, 
         parents: Optional[List[PipelineNode]] = None,
-        feature: Literal["ptp", "mean", "energy", "peak_voltage"] = "ptp",
+        feature: Literal['ptp', 'mean', 'energy', 'peak_voltage'] = 'ptp',
         threshold: float = 2,
         noise_levels: Optional[np.array] = None,
         random_chunk_kwargs: dict = {},
-        operator: callable = operator.le,
+        operator: callable = operator.le
     ):
         waveform_extractor = find_parent_of_type(parents, WaveformsNode)
         if waveform_extractor is None:
             raise TypeError(f"SavGolDenoiser should have a single {WaveformsNode.__name__} in its parents")
 
-        super().__init__(
-            recording,
-            waveform_extractor.ms_before,
-            waveform_extractor.ms_after,
-            return_output=return_output,
-            parents=parents,
-        )
-        assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
+        super().__init__(recording, waveform_extractor.ms_before, waveform_extractor.ms_after,
+            return_output=return_output, parents=parents)
+        assert feature in ['ptp', 'mean', 'energy', 'peak_voltage'], f'{feature} is not a valid feature'
 
         self.threshold = threshold
         self.feature = feature
@@ -71,18 +68,20 @@ class WaveformThresholder(WaveformsNode):
         if self.noise_levels is None:
             self.noise_levels = get_noise_levels(self.recording, **random_chunk_kwargs, return_scaled=False)
 
-        self._kwargs.update(
-            dict(feature=feature, threshold=threshold, operator=operator, noise_levels=self.noise_levels)
-        )
-
+        self._kwargs.update(dict(feature=feature,
+                                 threshold=threshold,
+                                 operator=operator, 
+                                 noise_levels=self.noise_levels))
+        
     def compute(self, traces, peaks, waveforms):
-        if self.feature == "ptp":
+        
+        if self.feature == 'ptp':
             wf_data = waveforms.ptp(axis=1) / self.noise_levels
-        elif self.feature == "mean":
+        elif self.feature == 'mean':
             wf_data = waveforms.mean(axis=1) / self.noise_levels
-        elif self.feature == "energy":
+        elif self.feature == 'energy':
             wf_data = np.linalg.norm(waveforms, axis=1) / self.noise_levels
-        elif self.feature == "peak_voltage":
+        elif self.feature == 'peak_voltage':
             wf_data = waveforms[:, self.nbefore, :] / self.noise_levels
 
         mask = self.operator(wf_data, self.threshold)

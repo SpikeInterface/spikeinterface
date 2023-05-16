@@ -1,6 +1,6 @@
 name: Create caches for gin ecephys data and virtual env
 
-on:
+on: 
   workflow_dispatch:
   push:  # When someting is pushed into main this checks if caches need to re-created
     branches:
@@ -9,9 +9,9 @@ on:
     - cron: "0 12 * * *"  # Daily at noon UTC
 
 jobs:
+  
 
-
-
+  
   create-virtual-env-cache-if-missing:
     name: Caching virtual env
     runs-on: "ubuntu-latest"
@@ -35,13 +35,13 @@ jobs:
           key: ${{ runner.os }}-venv-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-venv.outputs.cache-hit == 'true'}}"
-      - name: Create the virtual environment to be cached
+      - name: Create the virtual environment to be cached 
         if: steps.cache-venv.outputs.cache-hit != 'true'
         uses: ./.github/actions/build-test-environment
-
-
-
-
+  
+  
+  
+  
   create-gin-data-cache-if-missing:
     name: Caching data env
     runs-on: "ubuntu-latest"
@@ -54,10 +54,10 @@ jobs:
           mkdir --parents --verbose $HOME/spikeinterface_datasets/ephy_testing_data/
           chmod -R 777 $HOME/spikeinterface_datasets
           ls -l $HOME/spikeinterface_datasets
-      - name: Get current hash (SHA) of the ephy_testing_data repo
+      - name: Get current hash (SHA) of the ephy_testing_data repo 
         id: repo_hash
         run: |
-          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)"
+          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" 
           echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
         id: cache-datasets
@@ -87,7 +87,7 @@ jobs:
       - name: Show size of the cache to assert data is downloaded
         run: |
           cd $HOME
-          pwd
+          pwd 
           du -hs spikeinterface_datasets
           cd spikeinterface_datasets
           pwd

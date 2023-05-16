@@ -28,9 +28,9 @@ class ISIDistributionWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0, ncols=5, axes=None):
+    def __init__(self, sorting, unit_ids=None, window_ms=100.0, bin_ms=1.0,
+                 ncols=5, axes=None):
         from matplotlib import pyplot as plt
-
         self._sorting = sorting
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
@@ -39,7 +39,7 @@ class ISIDistributionWidget(BaseWidget):
         self._sampling_frequency = sorting.get_sampling_frequency()
         self.window_ms = window_ms
         self.bin_ms = bin_ms
-        self.name = "ISIDistribution"
+        self.name = 'ISIDistribution'
 
         if axes is None:
             num_axes = len(unit_ids)
@@ -63,12 +63,9 @@ class ISIDistributionWidget(BaseWidget):
             bins = np.arange(0, self.window_ms, self.bin_ms)
             bin_counts = None
             for segment_index in range(num_seg):
-                # ~ ax = self.get_tiled_ax(num_ax, nrows, ncols)
-                times_ms = (
-                    self._sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                    / float(self._sampling_frequency)
-                    * 1000.0
-                )
+                #~ ax = self.get_tiled_ax(num_ax, nrows, ncols)
+                times_ms = self._sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index) \
+                           / float(self._sampling_frequency) * 1000.
                 #  bin_counts, bin_edges = compute_isi_dist(times, bins=self._bins, maxwindow=self._window)
                 isi = np.diff(times_ms)
 
@@ -79,10 +76,10 @@ class ISIDistributionWidget(BaseWidget):
                     bin_counts += bin_counts_
                     # TODO handle sensity when several segments
 
-            ax.bar(x=bin_edges[:-1], height=bin_counts, width=self.bin_ms, color="gray", align="edge")
+            ax.bar(x=bin_edges[:-1], height=bin_counts, width=self.bin_ms, color='gray', align='edge')
 
             if segment_index == 0:
-                ax.set_ylabel(f"{unit_id}")
+                ax.set_ylabel(f'{unit_id}')
 
 
 def plot_isi_distribution(*args, **kwargs):

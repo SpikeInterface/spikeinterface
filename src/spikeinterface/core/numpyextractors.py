@@ -1,16 +1,9 @@
 import numpy as np
-from spikeinterface.core import (
-    BaseRecording,
-    BaseSorting,
-    BaseRecordingSegment,
-    BaseSortingSegment,
-    BaseEvent,
-    BaseEventSegment,
-    BaseSnippets,
-    BaseSnippetsSegment,
-)
+from spikeinterface.core import (BaseRecording, BaseSorting,
+                                 BaseRecordingSegment, BaseSortingSegment,
+                                 BaseEvent, BaseEventSegment,
+                                 BaseSnippets, BaseSnippetsSegment)
 from typing import List, Union
-
 
 class NumpyRecording(BaseRecording):
     """
@@ -28,9 +21,8 @@ class NumpyRecording(BaseRecording):
     channel_ids: list
         An optional list of channel_ids. If None, linear channels are assumed
     """
-
-    extractor_name = "Numpy"
-    mode = "memory"
+    extractor_name = 'Numpy'
+    mode = 'memory'
     name = "numpy"
 
     def __init__(self, traces_list, sampling_frequency, t_starts=None, channel_ids=None):
@@ -38,11 +30,9 @@ class NumpyRecording(BaseRecording):
             all_elements_are_list = all(isinstance(e, list) for e in traces_list)
             if all_elements_are_list:
                 traces_list = [np.array(trace) for trace in traces_list]
-            assert all(
-                isinstance(e, np.ndarray) for e in traces_list
-            ), f"must give a list of numpy array but gave {traces_list[0]}"
+            assert all(isinstance(e, np.ndarray) for e in traces_list), f'must give a list of numpy array but gave {traces_list[0]}'
         else:
-            assert isinstance(traces_list, np.ndarray), "must give a list of numpy array"
+            assert isinstance(traces_list, np.ndarray), 'must give a list of numpy array'
             traces_list = [traces_list]
 
         dtype = traces_list[0].dtype
@@ -56,7 +46,7 @@ class NumpyRecording(BaseRecording):
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
         if t_starts is not None:
-            assert len(t_starts) == len(traces_list), "t_starts must be a list of same size than traces_list"
+            assert len(t_starts) == len(traces_list), 't_starts must be a list of same size than traces_list'
             t_starts = [float(t_start) for t_start in t_starts]
 
         self.is_dumpable = True
@@ -69,11 +59,9 @@ class NumpyRecording(BaseRecording):
             rec_segment = NumpyRecordingSegment(traces, sampling_frequency, t_start)
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = {
-            "traces_list": traces_list,
-            "t_starts": t_starts,
-            "sampling_frequency": sampling_frequency,
-        }
+        self._kwargs = {'traces_list': traces_list, 't_starts': t_starts,
+                        'sampling_frequency': sampling_frequency,
+                        }
 
 
 class NumpyRecordingSegment(BaseRecordingSegment):
@@ -100,7 +88,7 @@ class NumpySorting(BaseSorting):
         self.is_dumpable = False
 
     @staticmethod
-    def from_extractor(source_sorting: BaseSorting) -> "NumpySorting":
+    def from_extractor(source_sorting: BaseSorting) -> 'NumpySorting':
         """
         Create a numpy sorting from another extractor
         """
@@ -120,7 +108,7 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
+    def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> 'NumpySorting':
         """
         Construct sorting extractor from:
           * an array of spike times (in frames)
@@ -161,7 +149,7 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_dict(units_dict_list, sampling_frequency) -> "NumpySorting":
+    def from_dict(units_dict_list, sampling_frequency) -> 'NumpySorting':
         """
         Construct sorting extractor from a list of dict.
         The list lenght is the segment count
@@ -183,7 +171,7 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
-    def from_neo_spiketrain_list(neo_spiketrains, sampling_frequency, unit_ids=None) -> "NumpySorting":
+    def from_neo_spiketrain_list(neo_spiketrains, sampling_frequency, unit_ids=None) -> 'NumpySorting':
         """
         Construct a sorting with a neo spiketrain list.
 
@@ -207,20 +195,21 @@ class NumpySorting(BaseSorting):
         nseg = len(neo_spiketrains)
 
         if unit_ids is None:
-            unit_ids = np.arange(len(neo_spiketrains[0]), dtype="int64")
+            unit_ids = np.arange(len(neo_spiketrains[0]), dtype='int64')
 
         sorting = NumpySorting(sampling_frequency, unit_ids)
         for seg_index in range(nseg):
+
             units_dict = {}
             for u, unit_id in enumerate(unit_ids):
                 st = neo_spiketrains[seg_index][u]
-                units_dict[unit_id] = (st.rescale("s").magnitude * sampling_frequency).astype("int64")
+                units_dict[unit_id] = (st.rescale('s').magnitude * sampling_frequency).astype('int64')
             sorting.add_sorting_segment(NumpySortingSegment(units_dict))
 
         return sorting
 
     @staticmethod
-    def from_peaks(peaks, sampling_frequency) -> "NumpySorting":
+    def from_peaks(peaks, sampling_frequency) -> 'NumpySorting':
         """
         Construct a sorting from peaks returned by 'detect_peaks()' function.
         The unit ids correspond to the recording channel ids and spike trains are the
@@ -238,15 +227,15 @@ class NumpySorting(BaseSorting):
         sorting
             The NumpySorting object
         """
-        return NumpySorting.from_times_labels(peaks["sample_index"], peaks["channel_index"], sampling_frequency)
+        return NumpySorting.from_times_labels(peaks['sample_index'], peaks['channel_index'], sampling_frequency)
 
 
 class NumpySortingSegment(BaseSortingSegment):
     def __init__(self, units_dict):
         BaseSortingSegment.__init__(self)
         for unit_id, times in units_dict.items():
-            assert times.dtype.kind == "i", "numpy array of spike times must be integer"
-            assert np.all(np.diff(times) >= 0), "unsorted times"
+            assert times.dtype.kind == 'i', 'numpy array of spike times must be integer'
+            assert np.all(np.diff(times) >= 0), 'unsorted times'
         self._units_dict = units_dict
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
@@ -341,14 +330,18 @@ class NumpySnippets(BaseSnippets):
 
     def __init__(self, snippets_list, spikesframes_list, sampling_frequency, nbefore=None, channel_ids=None):
         if isinstance(snippets_list, list):
-            assert all(isinstance(e, np.ndarray) for e in snippets_list), "must give a list of numpy array"
+            assert all(isinstance(e, np.ndarray)
+                       for e in snippets_list), 'must give a list of numpy array'
         else:
-            assert isinstance(snippets_list, np.ndarray), "must give a list of numpy array"
+            assert isinstance(
+                snippets_list, np.ndarray), 'must give a list of numpy array'
             snippets_list = [snippets_list]
         if isinstance(spikesframes_list, list):
-            assert all(isinstance(e, np.ndarray) for e in spikesframes_list), "must give a list of numpy array"
+            assert all(isinstance(e, np.ndarray)
+                       for e in spikesframes_list), 'must give a list of numpy array'
         else:
-            assert isinstance(spikesframes_list, np.ndarray), "must give a list of numpy array"
+            assert isinstance(spikesframes_list,
+                              np.ndarray), 'must give a list of numpy array'
             spikesframes_list = [spikesframes_list]
 
         dtype = snippets_list[0].dtype
@@ -359,14 +352,9 @@ class NumpySnippets(BaseSnippets):
         else:
             channel_ids = np.asarray(channel_ids)
             assert channel_ids.size == snippets_list[0].shape[2]
-        BaseSnippets.__init__(
-            self,
-            sampling_frequency,
-            nbefore=nbefore,
-            snippet_len=snippets_list[0].shape[1],
-            channel_ids=channel_ids,
-            dtype=dtype,
-        )
+        BaseSnippets.__init__(self, sampling_frequency,  nbefore=nbefore,
+                              snippet_len=snippets_list[0].shape[1], channel_ids=channel_ids,
+                              dtype=dtype)
 
         self.is_dumpable = False
 
@@ -374,13 +362,12 @@ class NumpySnippets(BaseSnippets):
             snp_segment = NumpySnippetsSegment(snippets, spikesframes)
             self.add_snippets_segment(snp_segment)
 
-        self._kwargs = {
-            "snippets_list": snippets_list,
-            "spikesframes_list": spikesframes_list,
-            "nbefore": nbefore,
-            "sampling_frequency": sampling_frequency,
-            "channel_ids": channel_ids,
-        }
+        self._kwargs = {'snippets_list': snippets_list,
+                        'spikesframes_list': spikesframes_list,
+                        'nbefore': nbefore,
+                        'sampling_frequency': sampling_frequency,
+                        'channel_ids': channel_ids
+                        }
 
 
 class NumpySnippetsSegment(BaseSnippetsSegment):
@@ -389,11 +376,10 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         self._snippets = snippets
         self._spikestimes = spikesframes
 
-    def get_snippets(
-        self,
-        indices,
-        channel_indices: Union[List, None] = None,
-    ) -> np.ndarray:
+    def get_snippets(self,
+                     indices,
+                     channel_indices: Union[List, None] = None,
+                     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
 
@@ -412,13 +398,15 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
             Array of snippets, num_snippets x num_samples x num_channels
         """
         if indices is None:
-            return self._snippets[:, :, channel_indices]
-        return self._snippets[indices, :, channel_indices]
+            return self._snippets[:,:,channel_indices]
+        return self._snippets[indices,:,channel_indices]
 
     def get_num_snippets(self):
         return self._spikestimes.shape[0]
 
-    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
+    def frames_to_indices(self,
+                          start_frame: Union[int, None] = None,
+                          end_frame: Union[int, None] = None):
         """
         Return the slice of snippets
 
@@ -438,11 +426,11 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         if start_frame is None:
             init = 0
         else:
-            init = np.searchsorted(self._spikestimes, start_frame, side="left")
+            init = np.searchsorted(self._spikestimes, start_frame, side='left')
         if end_frame is None:
             endi = self._spikestimes.shape[0]
         else:
-            endi = np.searchsorted(self._spikestimes, end_frame, side="left")
+            endi = np.searchsorted(self._spikestimes, end_frame, side='left')
         return slice(init, endi, 1)
 
     def get_frames(self, indices=None):

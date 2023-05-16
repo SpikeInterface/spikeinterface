@@ -34,13 +34,12 @@ def numpy_array_float():
 def numpy_array_bool(numpy_array_float):
     return numpy_array_float > 0.5
 
-
 @pytest.fixture(scope="module")
 def dictionary_with_numpy_scalar_keys(numpy_array_integer, numpy_array_float, numpy_array_bool):
     numpy_integer_scalar = numpy_array_integer[0]
     numpy_float_scalar = numpy_array_float[0]
     numpy_boolean_scalar = numpy_array_bool[1]
-
+    
     dictionary = {
         numpy_integer_scalar: "value_of_numpy_integer_scalar",
         numpy_float_scalar: "value_of_numpy_float_scalar",
@@ -48,7 +47,6 @@ def dictionary_with_numpy_scalar_keys(numpy_array_integer, numpy_array_float, nu
     }
 
     return dictionary
-
 
 def test_numpy_array_encoding(numpy_array_integer, numpy_array_float, numpy_array_bool):
     json.dumps(numpy_array_integer, cls=SIJsonEncoder)

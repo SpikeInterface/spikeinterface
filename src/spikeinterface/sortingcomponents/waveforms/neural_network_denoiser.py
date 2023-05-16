@@ -5,13 +5,11 @@ from typing import List, Optional
 try:
     import torch
     from torch import nn
-
     HAVE_TORCH = True
 except ImportError:
     HAVE_TORCH = False
 try:
     from huggingface_hub import hf_hub_download
-
     HAVE_HUGGINFACE = True
 except ImportError:
     HAVE_HUGGINFACE = False
@@ -30,13 +28,8 @@ class SingleChannelToyDenoiser(WaveformsNode):
         if waveform_extractor is None:
             raise TypeError(f"Model should have a {WaveformsNode.__name__} in its parents")
 
-        super().__init__(
-            recording,
-            waveform_extractor.ms_before,
-            waveform_extractor.ms_after,
-            return_output=return_output,
-            parents=parents,
-        )
+        super().__init__(recording, waveform_extractor.ms_before, waveform_extractor.ms_after,
+            return_output=return_output, parents=parents)
 
         self.assert_model_and_waveform_temporal_match(waveform_extractor)
 
@@ -108,7 +101,6 @@ class SingleChannelToyDenoiser(WaveformsNode):
 
 
 if HAVE_TORCH:
-
     class SingleChannel1dCNNDenoiser(nn.Module):
         def __init__(self, pretrained_path=None, n_filters=[16, 8], filter_sizes=[5, 11], spike_size=121):
             super().__init__()
