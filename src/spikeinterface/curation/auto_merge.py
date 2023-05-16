@@ -132,6 +132,7 @@ def get_potential_auto_merge(
 
     n = unit_ids.size
     pair_mask = np.ones((n, n), dtype="bool")
+    np.fill_diagonal(pair_mask, False)
 
     # STEP 1 :
     if "min_spikes" in steps:
@@ -201,7 +202,7 @@ def get_potential_auto_merge(
 
             temp = we.get_all_templates(mode="average")
             templates = np.zeros((len(unit_ids), temp.shape[1], temp.shape[2]), dtype=temp.dtype)
-            templates[unit_left_mask] = temp
+            templates[unit_left_mask, :, :] = temp
         else:
             templates = we.get_all_templates(mode="average")
 
@@ -298,6 +299,7 @@ def compute_correlogram_diff(
             # Weighted difference (larger unit imposes its difference).
             w_diff = (num1 * diff1 + num2 * diff2) / (num1 + num2)
             corr_diff[unit_ind1, unit_ind2] = w_diff
+            corr_diff[unit_ind2, unit_ind1] = w_diff
 
     return corr_diff
 
