@@ -76,7 +76,7 @@ print(we)
 
 
 ###############################################################################
-# To speed up computation, waveforms can also be extracted using parallel 
+# To speed up computation, waveforms can also be extracted using parallel
 # processing (recommended!). We can define some :code:`'job_kwargs'` to pass
 # to the function as extra arguments:
 
@@ -143,13 +143,13 @@ Sparse Waveform Extractor
 
 '''
 ###############################################################################
-# For high-density probes, such as Neuropixels, we may want to work with sparse 
-# waveforms, i.e., waveforms computed on a subset of channels. To do so, we 
+# For high-density probes, such as Neuropixels, we may want to work with sparse
+# waveforms, i.e., waveforms computed on a subset of channels. To do so, we
 # two options.
 #
 # Option 1) Save a dense waveform extractor to sparse:
 #
-# In this case, from an existing waveform extractor, we can first estimate a 
+# In this case, from an existing waveform extractor, we can first estimate a
 # sparsity (which channels each unit is defined on) and then save to a new
 # folder in sparse mode:
 
@@ -173,7 +173,7 @@ print(f"Sparse waveforms shape for unit {we.sorting.unit_ids[0]}: {wf_sparse.sha
 
 
 ###############################################################################
-# Option 2) Directly extract sparse waveforms: 
+# Option 2) Directly extract sparse waveforms:
 #
 # We can also directly extract sparse waveforms. To do so, dense waveforms are
 # extracted first using a small number of spikes (:code:`'num_spikes_for_sparsity'`)
@@ -202,7 +202,7 @@ print(f"Sparse template shape for unit {we.sorting.unit_ids[0]}: {template_spars
 
 
 ###############################################################################
-# As shown above, when retrieving waveforms/template for a unit from a sparse 
+# As shown above, when retrieving waveforms/template for a unit from a sparse
 # :code:`'WaveformExtractor'`, the waveforms are returned on a subset of channels.
 # To retrieve which channels each unit is associated with, we can use the sparsity
 # object:
@@ -214,7 +214,7 @@ print(f"Channel ids associated to {unit_ids[0]}: {channel_ids_0}")
 
 
 ###############################################################################
-# However, when retrieving all templates, a dense shape is returned. This is 
+# However, when retrieving all templates, a dense shape is returned. This is
 # because different channels might have a different number of sparse channels!
 # In this case, values on channels not belonging to a unit are filled with 0s.
 

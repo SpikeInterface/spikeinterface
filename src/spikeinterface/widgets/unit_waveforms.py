@@ -30,7 +30,7 @@ class UnitWaveformsWidget(BaseWidget):
     plot_channels : bool
         Plot channel locations below traces, default False
     unit_selected_waveforms : None or dict
-        A dict key is unit_id and value is the subset of waveforms indices that should be 
+        A dict key is unit_id and value is the subset of waveforms indices that should be
         be displayed (matplotlib backend), default None
     max_spikes_per_unit : int or None
         If given and unit_selected_waveforms is None, only max_spikes_per_unit random units are
@@ -53,19 +53,40 @@ class UnitWaveformsWidget(BaseWidget):
     same_axis : bool
         If True, waveforms and templates are displayed on the same axis, default False (matplotlib backend)
     x_offset_units : bool
-        In case same_axis is True, this parameter allow to x-offset the waveforms for different units 
+        In case same_axis is True, this parameter allow to x-offset the waveforms for different units
         (recommended for a few units), default False (matlotlib backend)
-    plot_legend : bool 
+    plot_legend : bool
         Display legend, default True
     """
+
     possible_backends = {}
 
-    def __init__(self, waveform_extractor: WaveformExtractor, channel_ids=None, unit_ids=None,
-                 plot_waveforms=True, plot_templates=True, plot_channels=False,
-                 unit_colors=None, sparsity=None, ncols=5, lw_waveforms=1, lw_templates=2, axis_equal=False,
-                 unit_selected_waveforms=None, max_spikes_per_unit=50, set_title=True, same_axis=False,
-                 x_offset_units=False, alpha_waveforms=0.5, alpha_templates=1, hide_unit_selector=False,
-                 plot_legend=True, backend=None, **backend_kwargs):
+    def __init__(
+        self,
+        waveform_extractor: WaveformExtractor,
+        channel_ids=None,
+        unit_ids=None,
+        plot_waveforms=True,
+        plot_templates=True,
+        plot_channels=False,
+        unit_colors=None,
+        sparsity=None,
+        ncols=5,
+        lw_waveforms=1,
+        lw_templates=2,
+        axis_equal=False,
+        unit_selected_waveforms=None,
+        max_spikes_per_unit=50,
+        set_title=True,
+        same_axis=False,
+        x_offset_units=False,
+        alpha_waveforms=0.5,
+        alpha_templates=1,
+        hide_unit_selector=False,
+        plot_legend=True,
+        backend=None,
+        **backend_kwargs,
+    ):
         we = waveform_extractor
         sorting: BaseSorting = we.sorting
 
@@ -87,9 +108,7 @@ class UnitWaveformsWidget(BaseWidget):
                 # in this case, we construct a dense sparsity
                 unit_id_to_channel_ids = {u: we.channel_ids for u in we.unit_ids}
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
-                    unit_id_to_channel_ids=unit_id_to_channel_ids,
-                    unit_ids=we.unit_ids,
-                    channel_ids=we.channel_ids
+                    unit_id_to_channel_ids=unit_id_to_channel_ids, unit_ids=we.unit_ids, channel_ids=we.channel_ids
                 )
             else:
                 assert isinstance(sparsity, ChannelSparsity), "'sparsity' should be a ChannelSparsity object!"
@@ -99,7 +118,8 @@ class UnitWaveformsWidget(BaseWidget):
         template_stds = we.get_all_templates(unit_ids=unit_ids, mode="std")
 
         xvectors, y_scale, y_offset, delta_x = get_waveforms_scales(
-            waveform_extractor, templates, channel_locations, x_offset_units)
+            waveform_extractor, templates, channel_locations, x_offset_units
+        )
 
         wfs_by_ids = {}
         if plot_waveforms:
@@ -146,8 +166,7 @@ class UnitWaveformsWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
 
-def get_waveforms_scales(we, templates, channel_locations,
-                         x_offset_units=False):
+def get_waveforms_scales(we, templates, channel_locations, x_offset_units=False):
     """
     Return scales and x_vector for templates plotting
     """
@@ -158,13 +177,13 @@ def get_waveforms_scales(we, templates, channel_locations,
     if x_chans.size > 1:
         delta_x = np.min(np.diff(x_chans))
     else:
-        delta_x = 40.
+        delta_x = 40.0
 
     y_chans = np.unique(channel_locations[:, 1])
     if y_chans.size > 1:
         delta_y = np.min(np.diff(y_chans))
     else:
-        delta_y = 40.
+        delta_y = 40.0
 
     m = max(np.abs(wf_max), np.abs(wf_min))
     y_scale = delta_y / m * 0.7
@@ -184,4 +203,3 @@ def get_waveforms_scales(we, templates, channel_locations,
     xvectors[-1, :] = np.nan
 
     return xvectors, y_scale, y_offset, delta_x
-

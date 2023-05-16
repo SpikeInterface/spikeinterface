@@ -12,6 +12,7 @@ class TimeseriesPlotter(SortingviewPlotter):
 
     def do_plot(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
+
         try:
             import pyvips
         except ImportError:
@@ -24,8 +25,7 @@ class TimeseriesPlotter(SortingviewPlotter):
 
         if not dp.order_channel_by_depth:
             warnings.warn(
-                "It is recommended to set 'order_channel_by_depth' to True "
-                "when using the sortingview backend"
+                "It is recommended to set 'order_channel_by_depth' to True " "when using the sortingview backend"
             )
 
         tiled_layers = []

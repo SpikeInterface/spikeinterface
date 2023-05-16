@@ -2,8 +2,7 @@ from typing import Union
 
 import numpy as np
 import warnings
-from spikeinterface.core import (BaseRecording, BaseSorting,
-                                 BaseRecordingSegment, BaseSortingSegment)
+from spikeinterface.core import BaseRecording, BaseSorting, BaseRecordingSegment, BaseSortingSegment
 
 
 class NewToOldRecording:
@@ -22,9 +21,9 @@ class NewToOldRecording:
         self._recording = recording
 
     def get_traces(self, channel_ids=None, start_frame=None, end_frame=None):
-        traces = self._recording.get_traces(channel_ids=channel_ids,
-                                            start_frame=start_frame, end_frame=end_frame,
-                                            segment_index=0)
+        traces = self._recording.get_traces(
+            channel_ids=channel_ids, start_frame=start_frame, end_frame=end_frame, segment_index=0
+        )
         return traces.T
 
     def get_num_frames(self):
@@ -57,7 +56,8 @@ class NewToOldSorting:
     This class mimic the old API of spikeextractors with:
       * unique segment
     """
-    extractor_name = 'NewToOldSorting'
+
+    extractor_name = "NewToOldSorting"
 
     def __init__(self, sorting):
         assert sorting.get_num_segments() == 1
@@ -70,7 +70,9 @@ class NewToOldSorting:
             for u in self._sorting.get_unit_ids():
                 unit_map[u] = u
         else:
-            print("Some unit IDs are not int but all unit IDs must be int in the old API SortingExtractor. Converting unit IDs to index...")
+            print(
+                "Some unit IDs are not int but all unit IDs must be int in the old API SortingExtractor. Converting unit IDs to index..."
+            )
             for i_u, u in enumerate(self._sorting.get_unit_ids()):
                 unit_map[i_u] = u
         self._unit_map = unit_map
@@ -115,8 +117,9 @@ class NewToOldSorting:
             An 1D array containing all the frames for each spike in the
             specified unit given the range of start and end frames
         """
-        return self._sorting.get_unit_spike_train(unit_id=self._unit_map[unit_id], segment_index=0,
-                                                  start_frame=start_frame, end_frame=end_frame)
+        return self._sorting.get_unit_spike_train(
+            unit_id=self._unit_map[unit_id], segment_index=0, start_frame=start_frame, end_frame=end_frame
+        )
 
     def get_units_spike_train(self, unit_ids=None, start_frame=None, end_frame=None):
         """This function extracts spike frames from the specified units.
@@ -153,6 +156,7 @@ class NewToOldSorting:
         """
         return self._sampling_frequency
 
+
 def create_extractor_from_new_sorting(new_sorting):
     old_sorting = NewToOldSorting(new_sorting)
     return old_sorting
@@ -169,9 +173,12 @@ class OldToNewRecording(BaseRecording):
     """
 
     def __init__(self, oldapi_recording_extractor):
-        BaseRecording.__init__(self, sampling_frequency=float(oldapi_recording_extractor.get_sampling_frequency()),
-                               channel_ids=oldapi_recording_extractor.get_channel_ids(),
-                               dtype=oldapi_recording_extractor.get_dtype(return_scaled=False))
+        BaseRecording.__init__(
+            self,
+            sampling_frequency=float(oldapi_recording_extractor.get_sampling_frequency()),
+            channel_ids=oldapi_recording_extractor.get_channel_ids(),
+            dtype=oldapi_recording_extractor.get_dtype(return_scaled=False),
+        )
 
         # set is_dumpable to False to use dumping mechanism of old extractor
         self.is_dumpable = False
@@ -183,11 +190,11 @@ class OldToNewRecording(BaseRecording):
         self.set_channel_locations(oldapi_recording_extractor.get_channel_locations())
 
         # add old properties
-        copy_properties(oldapi_extractor=oldapi_recording_extractor, new_extractor=self,
-                        skip_properties=["gain", "offset"])
+        copy_properties(
+            oldapi_extractor=oldapi_recording_extractor, new_extractor=self, skip_properties=["gain", "offset"]
+        )
         # set correct gains and offsets
-        gains, offsets = find_old_gains_offsets_recursively(
-            oldapi_recording_extractor.dump_to_dict())
+        gains, offsets = find_old_gains_offsets_recursively(oldapi_recording_extractor.dump_to_dict())
         if gains is not None:
             if np.any(gains != 1):
                 self.set_channel_gains(gains)
@@ -195,7 +202,7 @@ class OldToNewRecording(BaseRecording):
             if np.any(offsets != 0):
                 self.set_channel_offsets(offsets)
 
-        self._kwargs = {'oldapi_recording_extractor': oldapi_recording_extractor}
+        self._kwargs = {"oldapi_recording_extractor": oldapi_recording_extractor}
 
 
 class OldToNewRecordingSegment(BaseRecordingSegment):
@@ -207,13 +214,18 @@ class OldToNewRecordingSegment(BaseRecordingSegment):
     oldapi_recording_extractor : se.RecordingExtractor
         recording extractor from spikeinterface < v0.90
     """
+
     def __init__(self, oldapi_recording_extractor):
-        BaseRecordingSegment.__init__(self, sampling_frequency=float(oldapi_recording_extractor.get_sampling_frequency()),
-                                      t_start=None, time_vector=None)
+        BaseRecordingSegment.__init__(
+            self,
+            sampling_frequency=float(oldapi_recording_extractor.get_sampling_frequency()),
+            t_start=None,
+            time_vector=None,
+        )
         self._oldapi_recording_extractor = oldapi_recording_extractor
         self._channel_ids = np.array(oldapi_recording_extractor.get_channel_ids())
 
-        self._kwargs = {'oldapi_recording_extractor': oldapi_recording_extractor}
+        self._kwargs = {"oldapi_recording_extractor": oldapi_recording_extractor}
 
     def get_num_samples(self):
         return self._oldapi_recording_extractor.get_num_frames()
@@ -223,10 +235,9 @@ class OldToNewRecordingSegment(BaseRecordingSegment):
             channel_ids = self._channel_ids
         else:
             channel_ids = self._channel_ids[channel_indices]
-        return self._oldapi_recording_extractor.get_traces(channel_ids=channel_ids,
-                                                           start_frame=start_frame,
-                                                           end_frame=end_frame,
-                                                           return_scaled=False).T
+        return self._oldapi_recording_extractor.get_traces(
+            channel_ids=channel_ids, start_frame=start_frame, end_frame=end_frame, return_scaled=False
+        ).T
 
 
 def create_recording_from_old_extractor(oldapi_recording_extractor) -> OldToNewRecording:
@@ -245,8 +256,11 @@ class OldToNewSorting(BaseSorting):
     """
 
     def __init__(self, oldapi_sorting_extractor):
-        BaseSorting.__init__(self, sampling_frequency=float(oldapi_sorting_extractor.get_sampling_frequency()),
-                             unit_ids=oldapi_sorting_extractor.get_unit_ids())
+        BaseSorting.__init__(
+            self,
+            sampling_frequency=float(oldapi_sorting_extractor.get_sampling_frequency()),
+            unit_ids=oldapi_sorting_extractor.get_unit_ids(),
+        )
 
         sorting_segment = OldToNewSortingSegment(oldapi_sorting_extractor)
         self.add_sorting_segment(sorting_segment)
@@ -256,7 +270,7 @@ class OldToNewSorting(BaseSorting):
         # add old properties
         copy_properties(oldapi_extractor=oldapi_sorting_extractor, new_extractor=self)
 
-        self._kwargs = {'oldapi_sorting_extractor': oldapi_sorting_extractor}
+        self._kwargs = {"oldapi_sorting_extractor": oldapi_sorting_extractor}
 
 
 class OldToNewSortingSegment(BaseSortingSegment):
@@ -268,21 +282,22 @@ class OldToNewSortingSegment(BaseSortingSegment):
     oldapi_sorting_extractor : se.SortingExtractor
         sorting extractor from spikeinterface < v0.90
     """
+
     def __init__(self, oldapi_sorting_extractor):
         BaseSortingSegment.__init__(self)
         self._oldapi_sorting_extractor = oldapi_sorting_extractor
 
-        self._kwargs = {'oldapi_sorting_extractor': oldapi_sorting_extractor}
+        self._kwargs = {"oldapi_sorting_extractor": oldapi_sorting_extractor}
 
-    def get_unit_spike_train(self,
-                             unit_id,
-                             start_frame: Union[int, None] = None,
-                             end_frame: Union[int, None] = None,
-                             ) -> np.ndarray:
-
-        return self._oldapi_sorting_extractor.get_unit_spike_train(unit_id=unit_id,
-                                                                   start_frame=start_frame,
-                                                                   end_frame=end_frame)
+    def get_unit_spike_train(
+        self,
+        unit_id,
+        start_frame: Union[int, None] = None,
+        end_frame: Union[int, None] = None,
+    ) -> np.ndarray:
+        return self._oldapi_sorting_extractor.get_unit_spike_train(
+            unit_id=unit_id, start_frame=start_frame, end_frame=end_frame
+        )
 
 
 def create_sorting_from_old_extractor(oldapi_sorting_extractor) -> OldToNewSorting:
@@ -325,7 +340,7 @@ def copy_properties(oldapi_extractor, new_extractor, skip_properties=None):
         property_ids = np.array(prop_dict["ids"])
         property_values = np.array(prop_dict["values"])
         missing_value = None
-        
+
         # For back-compatibility, incomplete int/uint properties are upcast to float
         # and missing_value is set to np.nan
         if len(property_ids) < len(get_ids()):
@@ -333,17 +348,16 @@ def copy_properties(oldapi_extractor, new_extractor, skip_properties=None):
                 property_values = property_values.astype("float")
                 missing_value = np.nan
         try:
-            new_extractor.set_property(key=property_name,
-                                       values=property_values, 
-                                       ids=property_ids,
-                                       missing_value=missing_value)
+            new_extractor.set_property(
+                key=property_name, values=property_values, ids=property_ids, missing_value=missing_value
+            )
         except Exception as e:
             warnings.warn(f"Property {property_name} cannot be ported to new API due to missing values.")
 
 
 def find_old_gains_offsets_recursively(oldapi_extractor_dict):
-    kwargs = oldapi_extractor_dict['kwargs']
-    if np.any([isinstance(v, dict) and 'dumpable' in v.keys() for (k, v) in kwargs.items()]):
+    kwargs = oldapi_extractor_dict["kwargs"]
+    if np.any([isinstance(v, dict) and "dumpable" in v.keys() for (k, v) in kwargs.items()]):
         # check nested
         for k, v in oldapi_extractor_dict["kwargs"].items():
             if isinstance(v, dict) and "dumpable" in v:

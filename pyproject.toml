@@ -74,7 +74,7 @@ streaming_extractors = [
     "ONE-api>=1.19.1",
     "ibllib>=2.21.0",
     # Following dependencies are for streaming with nwb files
-    "fsspec", 
+    "fsspec",
     "aiohttp",
     "requests",
     "pynwb>=2.3.0",
@@ -141,7 +141,7 @@ test = [
     # for release we need pypi, so this need to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
-    
+
 ]
 
 

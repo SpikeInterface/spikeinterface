@@ -37,11 +37,18 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         Plot channel locations below traces, only used if channel_locs is True
     """
 
-    def __init__(self, waveform_extractor, channel_ids=None, unit_ids=None,
-                 max_channels=None, radius_um=None, same_axis=False,
-                 unit_colors=None,
-                 ax=None, axes=None):
-
+    def __init__(
+        self,
+        waveform_extractor,
+        channel_ids=None,
+        unit_ids=None,
+        max_channels=None,
+        radius_um=None,
+        same_axis=False,
+        unit_colors=None,
+        ax=None,
+        axes=None,
+    ):
         self.waveform_extractor = waveform_extractor
         self.recording = waveform_extractor.recording
         self.sorting = waveform_extractor.sorting
@@ -59,9 +66,9 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         self.unit_colors = unit_colors
 
         if radius_um is not None:
-            assert max_channels is None, 'radius_um and max_channels are mutually exclusive'
+            assert max_channels is None, "radius_um and max_channels are mutually exclusive"
         if max_channels is not None:
-            assert radius_um is None, 'radius_um and max_channels are mutually exclusive'
+            assert radius_um is None, "radius_um and max_channels are mutually exclusive"
 
         self.radius_um = radius_um
         self.max_channels = max_channels
@@ -83,10 +90,11 @@ class UnitWaveformDensityMapWidget(BaseWidget):
 
         # channel sparsity
         if self.radius_um is not None:
-            channel_inds = get_template_channel_sparsity(we, method='radius', outputs='index', radius_um=self.radius_um)
+            channel_inds = get_template_channel_sparsity(we, method="radius", outputs="index", radius_um=self.radius_um)
         elif self.max_channels is not None:
-            channel_inds = get_template_channel_sparsity(we, method='best_channels', outputs='index',
-                                                         num_channels=self.max_channels)
+            channel_inds = get_template_channel_sparsity(
+                we, method="best_channels", outputs="index", num_channels=self.max_channels
+            )
         else:
             # all channels
             channel_inds = {unit_id: np.arange(len(self.channel_ids)) for unit_id in self.unit_ids}
@@ -98,7 +106,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             channel_inds = {unit_id: inds for unit_id in self.unit_ids}
 
         # bins
-        templates = we.get_all_templates(unit_ids=self.unit_ids, mode='median')
+        templates = we.get_all_templates(unit_ids=self.unit_ids, mode="median")
         bin_min = np.min(templates) * 1.3
         bin_max = np.max(templates) * 1.3
         bin_size = (bin_max - bin_min) / 100
@@ -117,7 +125,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             hist2d = np.zeros((wfs_flat.shape[1], bins.size))
             indexes0 = np.arange(wfs_flat.shape[1])
 
-            wf_bined = np.floor((wfs_flat - bin_min) / bin_size).astype('int32')
+            wf_bined = np.floor((wfs_flat - bin_min) / bin_size).astype("int32")
             wf_bined = wf_bined.clip(0, bins.size - 1)
             for d in wf_bined:
                 hist2d[indexes0, d] += 1
@@ -129,13 +137,25 @@ class UnitWaveformDensityMapWidget(BaseWidget):
                     all_hist2d += hist2d
             else:
                 ax = self.axes[unit_index]
-                im = ax.imshow(hist2d.T, interpolation='nearest',
-                               origin='lower', aspect='auto', extent=(0, hist2d.shape[0], bin_min, bin_max), cmap='hot')
+                im = ax.imshow(
+                    hist2d.T,
+                    interpolation="nearest",
+                    origin="lower",
+                    aspect="auto",
+                    extent=(0, hist2d.shape[0], bin_min, bin_max),
+                    cmap="hot",
+                )
 
         if self.same_axis:
             ax = self.ax
-            im = ax.imshow(all_hist2d.T, interpolation='nearest',
-                           origin='lower', aspect='auto', extent=(0, hist2d.shape[0], bin_min, bin_max), cmap='hot')
+            im = ax.imshow(
+                all_hist2d.T,
+                interpolation="nearest",
+                origin="lower",
+                aspect="auto",
+                extent=(0, hist2d.shape[0], bin_min, bin_max),
+                cmap="hot",
+            )
 
         # plot median
         for unit_index, unit_id in enumerate(self.unit_ids):
@@ -160,14 +180,14 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             chan_inds = channel_inds[unit_id]
             for i, chan_ind in enumerate(chan_inds):
                 if i != 0:
-                    ax.axvline(i * wfs.shape[1], color='w', lw=3)
+                    ax.axvline(i * wfs.shape[1], color="w", lw=3)
                 channel_id = self.recording.channel_ids[chan_ind]
                 x = i * wfs.shape[1] + wfs.shape[1] // 2
-                y = (bin_max + bin_min) / 2.
-                ax.text(x, y, f'chan_id {channel_id}', color='w', ha='center', va='center')
+                y = (bin_max + bin_min) / 2.0
+                ax.text(x, y, f"chan_id {channel_id}", color="w", ha="center", va="center")
 
             ax.set_xticks([])
-            ax.set_ylabel(f'unit_id {unit_id}')
+            ax.set_ylabel(f"unit_id {unit_id}")
 
 
 def plot_unit_waveform_density_map(*args, **kwargs):
