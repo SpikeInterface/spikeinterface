@@ -19,15 +19,15 @@ print(cache_folder.absolute())
 
 
 def test_estimate_and_correct_motion():
-    rec, sorting = toy_example(num_segments=1, duration=30., num_units=10, num_channels=12)
+    rec, sorting = toy_example(num_segments=1, duration=30.0, num_units=10, num_channels=12)
     print(rec)
 
-    folder = cache_folder / 'estimate_and_correct_motion'
+    folder = cache_folder / "estimate_and_correct_motion"
     if folder.exists():
         shutil.rmtree(folder)
     rec_corrected = estimate_and_correct_motion(rec, folder=folder)
     print(rec_corrected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_estimate_and_correct_motion()
