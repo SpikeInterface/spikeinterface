@@ -4,14 +4,25 @@ import os
 from pathlib import Path
 
 
-ON_GITHUB = bool(os.getenv('GITHUB_ACTIONS'))
+ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
 
 # define marks
-mark_names = ["core", "extractors", "preprocessing", "postprocessing",
-              "sorters_external", "sorters_internal", "sorters",
-              "qualitymetrics", "comparison", "curation",
-              "widgets", "exporters", "sortingcomponents"]
+mark_names = [
+    "core",
+    "extractors",
+    "preprocessing",
+    "postprocessing",
+    "sorters_external",
+    "sorters_internal",
+    "sorters",
+    "qualitymetrics",
+    "comparison",
+    "curation",
+    "widgets",
+    "exporters",
+    "sortingcomponents",
+]
 
 
 # define global test folder
@@ -29,10 +40,9 @@ def pytest_sessionstart(session):
 def pytest_collection_modifyitems(config, items):
     """
     This function marks (in the pytest sense) the tests according to their name and file_path location
-    Marking them in turn allows the tests to be run by using the pytest -m marker_name option.    
+    Marking them in turn allows the tests to be run by using the pytest -m marker_name option.
     """
 
-    
     # python 3.4/3.5 compat: rootdir = pathlib.Path(str(config.rootdir))
     rootdir = Path(config.rootdir)
 

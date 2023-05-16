@@ -5,8 +5,7 @@ from .normalize_scale import scale
 from ..core import get_random_data_chunks
 
 
-def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=None,
-                verbose=False):
+def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=None, verbose=False):
     """
     Estimates the LSB of the recording and divide traces by LSB
     to ensure LSB = 1. Medians are also subtracted to avoid rounding errors.
@@ -29,9 +28,14 @@ def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=Non
     correct_lsb_recording: ScaleRecording
         The recording extractor with corrected LSB
     """
-    random_data = get_random_data_chunks(recording, num_chunks_per_segment=num_chunks_per_segment,
-                                         chunk_size=chunk_size, concatenated=True, seed=seed,
-                                         return_scaled=False)
+    random_data = get_random_data_chunks(
+        recording,
+        num_chunks_per_segment=num_chunks_per_segment,
+        chunk_size=chunk_size,
+        concatenated=True,
+        seed=seed,
+        return_scaled=False,
+    )
     # compute medians and lsb
     medians = np.median(random_data, axis=0)
     lsb = _estimate_lsb_from_data(random_data)
@@ -49,9 +53,9 @@ def correct_lsb(recording, num_chunks_per_segment=20, chunk_size=10000, seed=Non
     else:
         dtype = recording.get_dtype()
         # first remove medians
-        recording_lsb = scale(recording, gain=1., offset=-medians, dtype=dtype)
+        recording_lsb = scale(recording, gain=1.0, offset=-medians, dtype=dtype)
         # apply LSB division and instantiate parent
-        recording_lsb = scale(recording_lsb, gain=1. / lsb, dtype=dtype)
+        recording_lsb = scale(recording_lsb, gain=1.0 / lsb, dtype=dtype)
         # if recording has scaled traces, correct gains
         if recording.has_scaled():
             recording_lsb.set_channel_gains(recording_lsb.get_channel_gains() * lsb)
