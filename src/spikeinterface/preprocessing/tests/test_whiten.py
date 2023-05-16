@@ -19,22 +19,16 @@ def test_whiten():
     rec = generate_recording(num_channels=4)
 
     print(rec.get_channel_locations())
-    random_chunk_kwargs={}
-    W, M = compute_whitening_matrix(rec, 'global', random_chunk_kwargs, apply_mean=False,
-                                    radius_um=None, eps=1e-8)
+    random_chunk_kwargs = {}
+    W, M = compute_whitening_matrix(rec, "global", random_chunk_kwargs, apply_mean=False, radius_um=None, eps=1e-8)
     print(W)
     print(M)
 
     with pytest.raises(AssertionError):
-        W, M = compute_whitening_matrix(rec, 'local', random_chunk_kwargs, apply_mean=False,
-                                    radius_um=None, eps=1e-8)
-    W, M = compute_whitening_matrix(rec, 'local', random_chunk_kwargs, apply_mean=False,
-                                radius_um=25, eps=1e-8)
+        W, M = compute_whitening_matrix(rec, "local", random_chunk_kwargs, apply_mean=False, radius_um=None, eps=1e-8)
+    W, M = compute_whitening_matrix(rec, "local", random_chunk_kwargs, apply_mean=False, radius_um=25, eps=1e-8)
     # W must be sparse
-    np.sum(W==0) == 6
-
-
-
+    np.sum(W == 0) == 6
 
     rec2 = whiten(rec)
     rec2.save(verbose=False)
@@ -47,16 +41,14 @@ def test_whiten():
 
     # test parallel
     rec_par = rec3.save(folder=cache_folder / "rec_par", n_jobs=2)
-    np.testing.assert_array_equal(rec3.get_traces(segment_index=0),
-                                  rec_par.get_traces(segment_index=0))
+    np.testing.assert_array_equal(rec3.get_traces(segment_index=0), rec_par.get_traces(segment_index=0))
 
     with pytest.raises(AssertionError):
         rec4 = whiten(rec_int, dtype=None)
     rec4 = whiten(rec_int, dtype=None, int_scale=256)
     assert rec4.get_dtype() == "int16"
-    assert rec4._kwargs['M'] is None
+    assert rec4._kwargs["M"] is None
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_whiten()

@@ -4,8 +4,8 @@ Extractors module
 Overview
 --------
 
-The :py:mod:`~spikeinterface.extractors` module allows you to load :py:class:`~spikeinterface.core.BaseRecording`, 
-:py:class:`~spikeinterface.core.BaseSorting`, and :py:class:`~spikeinterface.core.BaseEvent` objects from 
+The :py:mod:`~spikeinterface.extractors` module allows you to load :py:class:`~spikeinterface.core.BaseRecording`,
+:py:class:`~spikeinterface.core.BaseSorting`, and :py:class:`~spikeinterface.core.BaseEvent` objects from
 a large variety of acquisition systems and spike sorting outputs.
 
 Most of the :code:`Recording` classes are implemented by wrapping the
@@ -119,24 +119,24 @@ For raw recording formats, we currently support:
 * **Axona** :py:func:`~spikeinterface.extractors.read_axona()`
 * **BlackRock** :py:func:`~spikeinterface.extractors.read_blackrock()`
 * **Binary** :py:func:`~spikeinterface.core.read_binary()`
-* **Biocam HDF5** :py:func:`~spikeinterface.extractors.read_biocam()` 
+* **Biocam HDF5** :py:func:`~spikeinterface.extractors.read_biocam()`
 * **CED** :py:func:`~spikeinterface.extractors.read_ced()`
 * **EDF** :py:func:`~spikeinterface.extractors.read_edf()`
 * **IBL streaming** :py:func:`~spikeinterface.extractors.read_ibl_streaming_recording()`
-* **Intan** :py:func:`~spikeinterface.extractors.read_intan()` 
-* **MaxWell** :py:func:`~spikeinterface.extractors.read_maxwell()` 
+* **Intan** :py:func:`~spikeinterface.extractors.read_intan()`
+* **MaxWell** :py:func:`~spikeinterface.extractors.read_maxwell()`
 * **MCS H5** :py:func:`~spikeinterface.extractors.read_mcsh5()`
 * **MCS RAW** :py:func:`~spikeinterface.extractors.read_mcsraw()`
-* **MEArec** :py:func:`~spikeinterface.extractors.read_mearec()` 
-* **Mountainsort MDA** :py:func:`~spikeinterface.extractors.read_mda_recording()` 
-* **Neurodata Without Borders** :py:func:`~spikeinterface.extractors.read_nwb_recording()` 
-* **Neuroscope** :py:func:`~spikeinterface.coextractorsre.read_neuroscope_recording()` 
-* **NIX** :py:func:`~spikeinterface.extractors.read_nix()` 
-* **Neuralynx** :py:func:`~spikeinterface.extractors.read_neuralynx()` 
-* **Open Ephys Legacy** :py:func:`~spikeinterface.extractors.read_openephys()` 
-* **Open Ephys Binary** :py:func:`~spikeinterface.extractors.read_openephys()` 
-* **Plexon** :py:func:`~spikeinterface.corextractorse.read_plexon()` 
-* **Shybrid** :py:func:`~spikeinterface.extractors.read_shybrid_recording()` 
+* **MEArec** :py:func:`~spikeinterface.extractors.read_mearec()`
+* **Mountainsort MDA** :py:func:`~spikeinterface.extractors.read_mda_recording()`
+* **Neurodata Without Borders** :py:func:`~spikeinterface.extractors.read_nwb_recording()`
+* **Neuroscope** :py:func:`~spikeinterface.coextractorsre.read_neuroscope_recording()`
+* **NIX** :py:func:`~spikeinterface.extractors.read_nix()`
+* **Neuralynx** :py:func:`~spikeinterface.extractors.read_neuralynx()`
+* **Open Ephys Legacy** :py:func:`~spikeinterface.extractors.read_openephys()`
+* **Open Ephys Binary** :py:func:`~spikeinterface.extractors.read_openephys()`
+* **Plexon** :py:func:`~spikeinterface.corextractorse.read_plexon()`
+* **Shybrid** :py:func:`~spikeinterface.extractors.read_shybrid_recording()`
 * **SpikeGLX** :py:func:`~spikeinterface.extractors.read_spikeglx()`
 * **SpikeGLX IBL compressed** :py:func:`~spikeinterface.extractors.read_cbin_ibl()`
 * **SpikeGLX IBL stream** :py:func:`~spikeinterface.extractors.read_streaming_ibl()`
