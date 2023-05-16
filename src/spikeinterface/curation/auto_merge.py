@@ -11,14 +11,15 @@ from .mergeunitssorting import MergeUnitsSorting
 
 
 def get_potential_auto_merge(
-    waveform_extractor: WaveformExtractor, 
-    minimum_spikes: int = 1000, 
-    maximum_distance_um: float = 150.,
+    waveform_extractor: WaveformExtractor,
+    minimum_spikes: int = 1000,
+    maximum_distance_um: float = 150.0,
     peak_sign: str = "neg",
-    bin_ms: float = 0.25, window_ms: float = 100.,
+    bin_ms: float = 0.25,
+    window_ms: float = 100.0,
     corr_diff_thresh: float = 0.16,
     template_diff_thresh: float = 0.25,
-    censored_period_ms: float = 0., 
+    censored_period_ms: float = 0.0,
     refractory_period_ms: float = 1.0,
     sigma_smooth_ms: float = 0.6,
     contamination_threshold: float = 0.2,
@@ -151,10 +152,12 @@ def get_potential_auto_merge(
         pair_mask[:, to_remove] = False
 
     # STEP 3 : unit positions are estimated roughly with channel
-    if 'unit_positions' in steps:  # If waveform extractor was not run, run it with few spikes for rough location estimation.
+    if (
+        "unit_positions" in steps
+    ):  # If waveform extractor was not run, run it with few spikes for rough location estimation.
         if not we.was_run:
             p = we._params
-            p['max_spikes_per_unit'] = 100
+            p["max_spikes_per_unit"] = 100
             we1 = extract_waveforms(we.recording, sorting, mode="memory", **p)
         else:
             we1 = we
@@ -189,21 +192,23 @@ def get_potential_auto_merge(
         pair_mask = pair_mask & (correlogram_diff < corr_diff_thresh)
 
     # STEP 5 : check if potential merge with CC also have template similarity
-    if 'template_similarity' in steps:
+    if "template_similarity" in steps:
         if not we.was_run:  # If waveform extractor was not run, run it on the subset of unit ids that matters.
             unit_left_mask = np.any(pair_mask, axis=0)
             unit_ids_left = unit_ids[unit_left_mask]
             we.sorting = we.sorting.select_units(unit_ids_left)
             we.run_extract_waveforms()
 
-            temp = we.get_all_templates(mode='average')
+            temp = we.get_all_templates(mode="average")
             templates = np.zeros((len(unit_ids), temp.shape[1], temp.shape[2]), dtype=temp.dtype)
             templates[unit_left_mask] = temp
         else:
-            templates = we.get_all_templates(mode='average')
+            templates = we.get_all_templates(mode="average")
 
-        templates_diff = compute_templates_diff(sorting, templates, num_channels=num_channels, num_shift=num_shift, pair_mask=pair_mask)        
-        pair_mask = pair_mask & (templates_diff  < template_diff_thresh)
+        templates_diff = compute_templates_diff(
+            sorting, templates, num_channels=num_channels, num_shift=num_shift, pair_mask=pair_mask
+        )
+        pair_mask = pair_mask & (templates_diff < template_diff_thresh)
 
     # STEP 6 : validate the potential merges with CC increase the contamination quality metrics
     if "check_increase_score" in steps:
