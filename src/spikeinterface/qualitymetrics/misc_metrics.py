@@ -297,7 +297,9 @@ _default_params["isi_violation"] = dict(isi_threshold_ms=1.5, min_isi_ms=0)
 
 
 def compute_refrac_period_violations(
-    waveform_or_sorting_extractor: Union[BaseSorting, WaveformExtractor], refractory_period_ms: float = 1.0, censored_period_ms: float = 0.0
+    waveform_or_sorting_extractor: Union[BaseSorting, WaveformExtractor],
+    refractory_period_ms: float = 1.0,
+    censored_period_ms: float = 0.0,
 ):
     """Calculates the number of refractory period violations.
 
