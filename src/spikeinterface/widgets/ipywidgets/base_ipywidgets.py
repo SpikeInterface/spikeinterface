@@ -7,18 +7,14 @@ import numpy as np
 
 
 class IpywidgetsPlotter(BackendPlotter):
-    backend = 'ipywidgets'
+    backend = "ipywidgets"
     backend_kwargs_desc = {
         "width_cm": "Width of the figure in cm (default 10)",
         "height_cm": "Height of the figure in cm (default 6)",
-        "display": "If True, widgets are immediately displayed"
+        "display": "If True, widgets are immediately displayed",
     }
-    default_backend_kwargs = {
-        "width_cm": 25,
-        "height_cm": 10,
-        "display": True
-    }
+    default_backend_kwargs = {"width_cm": 25, "height_cm": 10, "display": True}
 
     def check_backend(self):
         mpl_backend = mpl.get_backend()
-        assert "ipympl" in mpl_backend, ("To use the 'ipywidgets' backend, you have to set %matplotlib widget")
+        assert "ipympl" in mpl_backend, "To use the 'ipywidgets' backend, you have to set %matplotlib widget"

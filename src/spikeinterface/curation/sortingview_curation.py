@@ -6,12 +6,7 @@ from .curationsorting import CurationSorting
 
 
 def apply_sortingview_curation(
-    sorting,
-    uri_or_json,
-    exclude_labels=None,
-    include_labels=None,
-    skip_merge=False,
-    verbose=False
+    sorting, uri_or_json, exclude_labels=None, include_labels=None, skip_merge=False, verbose=False
 ):
     """
     Apply curation from SortingView manual curation.

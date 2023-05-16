@@ -34,36 +34,51 @@ class MdaRecordingExtractor(BaseRecording):
         The loaded data.
     """
 
-    extractor_name = 'MdaRecording'
+    extractor_name = "MdaRecording"
     has_default_locations = True
     is_writable = True
-    mode = 'folder'
+    mode = "folder"
     name = "mda"
 
-    def __init__(self, folder_path, raw_fname='raw.mda', params_fname='params.json', geom_fname='geom.csv'):
+    def __init__(self, folder_path, raw_fname="raw.mda", params_fname="params.json", geom_fname="geom.csv"):
         folder_path = Path(folder_path)
         self._folder_path = folder_path
         self._dataset_params = read_dataset_params(self._folder_path, params_fname)
         self._timeseries_path = self._folder_path / raw_fname
-        geom = np.loadtxt(self._folder_path / geom_fname, delimiter=',', ndmin=2)
+        geom = np.loadtxt(self._folder_path / geom_fname, delimiter=",", ndmin=2)
         self._diskreadmda = DiskReadMda(str(self._timeseries_path))
         dtype = self._diskreadmda.dt()
         num_channels = self._diskreadmda.N1()
-        assert geom.shape[0] == self._diskreadmda.N1(), f'Incompatible dimensions between geom.csv and timeseries ' \
-                                                        f'file: {geom.shape[0]} <> {self._diskreadmda.N1()}'
-        sampling_frequency=float(self._dataset_params['samplerate'])
-        BaseRecording.__init__(self, sampling_frequency=sampling_frequency,
-                               channel_ids=np.arange(num_channels), dtype=dtype)
+        assert geom.shape[0] == self._diskreadmda.N1(), (
+            f"Incompatible dimensions between geom.csv and timeseries "
+            f"file: {geom.shape[0]} <> {self._diskreadmda.N1()}"
+        )
+        sampling_frequency = float(self._dataset_params["samplerate"])
+        BaseRecording.__init__(
+            self, sampling_frequency=sampling_frequency, channel_ids=np.arange(num_channels), dtype=dtype
+        )
         rec_segment = MdaRecordingSegment(self._diskreadmda, sampling_frequency)
         self.add_recording_segment(rec_segment)
         self.set_dummy_probe_from_locations(geom)
-        self._kwargs = {'folder_path': str(Path(folder_path).absolute()),
-                        'raw_fname': raw_fname, 'params_fname': params_fname,
-                        'geom_fname': geom_fname}
+        self._kwargs = {
+            "folder_path": str(Path(folder_path).absolute()),
+            "raw_fname": raw_fname,
+            "params_fname": params_fname,
+            "geom_fname": geom_fname,
+        }
 
     @staticmethod
-    def write_recording(recording, save_path, params=dict(), raw_fname='raw.mda', params_fname='params.json',
-                        geom_fname='geom.csv', verbose=True, dtype=None, **job_kwargs):
+    def write_recording(
+        recording,
+        save_path,
+        params=dict(),
+        raw_fname="raw.mda",
+        params_fname="params.json",
+        geom_fname="geom.csv",
+        verbose=True,
+        dtype=None,
+        **job_kwargs,
+    ):
         """Write a recording to file in MDA format.
 
         Parameters
@@ -93,8 +108,9 @@ class MdaRecordingExtractor(BaseRecording):
                 * progress_bar
         """
         job_kwargs = fix_job_kwargs(job_kwargs)
-        assert recording.get_num_segments() == 1, "MdaRecording.write_recording() can only write a single segment " \
-                                                  "recording"
+        assert recording.get_num_segments() == 1, (
+            "MdaRecording.write_recording() can only write a single segment " "recording"
+        )
         save_path = Path(save_path)
         save_path.mkdir(parents=True, exist_ok=True)
         save_file_path = save_path / raw_fname
@@ -107,28 +123,34 @@ class MdaRecordingExtractor(BaseRecording):
         if dtype is None:
             dtype = recording.get_dtype()
 
-        if dtype == 'float':
-            dtype = 'float32'
-        if dtype == 'int':
-            dtype = 'int16'
+        if dtype == "float":
+            dtype = "float32"
+        if dtype == "int":
+            dtype = "int16"
 
         header = MdaHeader(dt0=dtype, dims0=(num_chan, num_frames))
         header_size = header.header_size
 
-        write_binary_recording(recording, file_paths=save_file_path, dtype=dtype,
-                               byte_offset=header_size, verbose=verbose, add_file_extension=False, **job_kwargs)
+        write_binary_recording(
+            recording,
+            file_paths=save_file_path,
+            dtype=dtype,
+            byte_offset=header_size,
+            verbose=verbose,
+            add_file_extension=False,
+            **job_kwargs,
+        )
 
-        with save_file_path.open('rb+') as f:
+        with save_file_path.open("rb+") as f:
             header.write(f)
 
         params["samplerate"] = float(recording.get_sampling_frequency())
-        with (parent_dir / params_fname).open('w') as f:
+        with (parent_dir / params_fname).open("w") as f:
             json.dump(params, f)
-        np.savetxt(str(parent_dir / geom_fname), geom, delimiter=',')
+        np.savetxt(str(parent_dir / geom_fname), geom, delimiter=",")
 
 
 class MdaRecordingSegment(BaseRecordingSegment):
-
     def __init__(self, diskreadmda, sampling_frequency):
         self._diskreadmda = diskreadmda
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
@@ -142,17 +164,19 @@ class MdaRecordingSegment(BaseRecordingSegment):
         """
         return self._num_samples
 
-    def get_traces(self,
-                   start_frame: Union[int, None] = None,
-                   end_frame: Union[int, None] = None,
-                   channel_indices: Union[List, None] = None,
-                   ) -> np.ndarray:
+    def get_traces(
+        self,
+        start_frame: Union[int, None] = None,
+        end_frame: Union[int, None] = None,
+        channel_indices: Union[List, None] = None,
+    ) -> np.ndarray:
         if start_frame is None:
             start_frame = 0
         if end_frame is None:
             end_frame = self.get_num_samples()
-        recordings = self._diskreadmda.readChunk(i1=0, i2=start_frame, N1=self._diskreadmda.N1(),
-                                                 N2=end_frame - start_frame)
+        recordings = self._diskreadmda.readChunk(
+            i1=0, i2=start_frame, N1=self._diskreadmda.N1(), N2=end_frame - start_frame
+        )
         recordings = recordings[channel_indices, :].T
         return recordings
 
@@ -173,9 +197,9 @@ class MdaSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    extractor_name = 'MdaSorting'
+    extractor_name = "MdaSorting"
     is_writable = True
-    mode = 'file'
+    mode = "file"
     name = "mda"
 
     def __init__(self, file_path, sampling_frequency):
@@ -187,12 +211,11 @@ class MdaSortingExtractor(BaseSorting):
         sorting_segment = MdaSortingSegment(firings)
         self.add_sorting_segment(sorting_segment)
 
-        self._kwargs = {'file_path': str(Path(file_path).absolute()), 'sampling_frequency': sampling_frequency}
+        self._kwargs = {"file_path": str(Path(file_path).absolute()), "sampling_frequency": sampling_frequency}
 
     @staticmethod
     def write_sorting(sorting, save_path, write_primary_channels=False):
-        assert sorting.get_num_segments() == 1, "MdaSorting.write_sorting() can only write a single segment " \
-                                                "sorting"
+        assert sorting.get_num_segments() == 1, "MdaSorting.write_sorting() can only write a single segment " "sorting"
         unit_ids = sorting.get_unit_ids()
         times_list = []
         labels_list = []
@@ -202,12 +225,13 @@ class MdaSortingExtractor(BaseSorting):
             times_list.append(times)
             labels_list.append(np.ones(times.shape) * unit_id)
             if write_primary_channels:
-                if 'max_channel' in sorting.get_unit_property_names(unit_id):
-                    primary_channels_list.append([sorting.get_unit_property(unit_id, 'max_channel')] * times.shape[0])
+                if "max_channel" in sorting.get_unit_property_names(unit_id):
+                    primary_channels_list.append([sorting.get_unit_property(unit_id, "max_channel")] * times.shape[0])
                 else:
                     raise ValueError(
-                        "Unable to write primary channels because 'max_channel' spike feature not set in unit " + str(
-                            unit_id))
+                        "Unable to write primary channels because 'max_channel' spike feature not set in unit "
+                        + str(unit_id)
+                    )
             else:
                 primary_channels_list.append(np.zeros(times.shape))
         all_times = _concatenate(times_list)
@@ -234,23 +258,26 @@ class MdaSortingSegment(BaseSortingSegment):
         self._labels = self._firings[2, :]
         BaseSortingSegment.__init__(self)
 
-    def get_unit_spike_train(self,
-                             unit_id,
-                             start_frame: Union[int, None] = None,
-                             end_frame: Union[int, None] = None,
-                             ) -> np.ndarray:
+    def get_unit_spike_train(
+        self,
+        unit_id,
+        start_frame: Union[int, None] = None,
+        end_frame: Union[int, None] = None,
+    ) -> np.ndarray:
         # must be implemented in subclass
         if start_frame is None:
             start_frame = 0
         if end_frame is None:
             end_frame = np.inf
         inds = np.where(
-            (self._labels == unit_id) & (start_frame <= self._spike_times) & (self._spike_times < end_frame))
+            (self._labels == unit_id) & (start_frame <= self._spike_times) & (self._spike_times < end_frame)
+        )
         return np.rint(self._spike_times[inds]).astype(int)
 
 
 read_mda_recording = define_function_from_class(source_class=MdaRecordingExtractor, name="read_mda_recording")
 read_mda_sorting = define_function_from_class(source_class=MdaSortingExtractor, name="read_mda_sorting")
+
 
 def _concatenate(list):
     if len(list) == 0:
@@ -261,7 +288,7 @@ def _concatenate(list):
 def read_dataset_params(dsdir, params_fname):
     fname1 = dsdir / params_fname
     if not fname1.is_file():
-        raise Exception('Dataset parameter file does not exist: ' + fname1)
+        raise Exception("Dataset parameter file does not exist: " + fname1)
     with open(fname1) as f:
         return json.load(f)
 
@@ -269,7 +296,7 @@ def read_dataset_params(dsdir, params_fname):
 ######### MDAIO ###########
 class MdaHeader:
     def __init__(self, dt0, dims0):
-        uses64bitdims = (max(dims0) > 2e9)
+        uses64bitdims = max(dims0) > 2e9
         self.uses64bitdims = uses64bitdims
         self.dt_code = _dt_code_from_dt(dt0)
         self.dt = dt0
@@ -299,14 +326,14 @@ class MdaHeader:
 def npy_dtype_to_string(dt):
     str = dt.str[1:]
     map = {
-        "f2": 'float16',
-        "f4": 'float32',
-        "f8": 'float64',
-        "i1": 'int8',
-        "i2": 'int16',
-        "i4": 'int32',
-        "u2": 'uint16',
-        "u4": 'uint32'
+        "f2": "float16",
+        "f4": "float32",
+        "f8": "float64",
+        "i1": "int8",
+        "i2": "int16",
+        "i4": "int32",
+        "u2": "uint16",
+        "u4": "uint32",
     }
     return map[str]
 
@@ -315,11 +342,11 @@ class DiskReadMda:
     def __init__(self, path, header=None):
         self._npy_mode = False
         self._path = path
-        if file_extension(path) == '.npy':
-            raise Exception('DiskReadMda implementation has not been tested for npy files')
+        if file_extension(path) == ".npy":
+            raise Exception("DiskReadMda implementation has not been tested for npy files")
             self._npy_mode = True
             if header:
-                raise Exception('header not allowed in npy mode for DiskReadMda')
+                raise Exception("header not allowed in npy mode for DiskReadMda")
         if header:
             self._header = header
             self._header.header_size = 0
@@ -328,7 +355,7 @@ class DiskReadMda:
 
     def dims(self):
         if self._npy_mode:
-            A = np.load(self._path, mmap_mode='r')
+            A = np.load(self._path, mmap_mode="r")
             return A.shape
         return self._header.dims
 
@@ -343,13 +370,13 @@ class DiskReadMda:
 
     def dt(self):
         if self._npy_mode:
-            A = np.load(self._path, mmap_mode='r')
+            A = np.load(self._path, mmap_mode="r")
             return npy_dtype_to_string(A.dtype)
         return self._header.dt
 
     def numBytesPerEntry(self):
         if self._npy_mode:
-            A = np.load(self._path, mmap_mode='r')
+            A = np.load(self._path, mmap_mode="r")
             return A.itemsize
         return self._header.num_bytes_per_entry
 
@@ -357,8 +384,8 @@ class DiskReadMda:
         # print("Reading chunk {} {} {} {} {} {}".format(i1,i2,i3,N1,N2,N3))
         if i2 < 0:
             if self._npy_mode:
-                A = np.load(self._path, mmap_mode='r')
-                return A[:, :, i1:i1 + N1]
+                A = np.load(self._path, mmap_mode="r")
+                return A[:, :, i1 : i1 + N1]
             return self._read_chunk_1d(i1, N1)
         elif i3 < 0:
             if N1 != self.N1():
@@ -367,12 +394,12 @@ class DiskReadMda:
             X = self._read_chunk_1d(i1 + N1 * i2, N1 * N2)
 
             if X is None:
-                print('Problem reading chunk from file: ' + self._path)
+                print("Problem reading chunk from file: " + self._path)
                 return None
             if self._npy_mode:
-                A = np.load(self._path, mmap_mode='r')
-                return A[:, i2:i2 + N2]
-            return np.reshape(X, (N1, N2), order='F')
+                A = np.load(self._path, mmap_mode="r")
+                return A[:, i2 : i2 + N2]
+            return np.reshape(X, (N1, N2), order="F")
         else:
             if N1 != self.N1():
                 print("Unable to support N1 {} != {}".format(N1, self.N1()))
@@ -381,10 +408,10 @@ class DiskReadMda:
                 print("Unable to support N2 {} != {}".format(N2, self.N2()))
                 return None
             if self._npy_mode:
-                A = np.load(self._path, mmap_mode='r')
-                return A[:, :, i3:i3 + N3]
+                A = np.load(self._path, mmap_mode="r")
+                return A[:, :, i3 : i3 + N3]
             X = self._read_chunk_1d(i1 + N1 * i2 + N1 * N2 * i3, N1 * N2 * N3)
-            return np.reshape(X, (N1, N2, N3), order='F')
+            return np.reshape(X, (N1, N2, N3), order="F")
 
     def _read_chunk_1d(self, i, N):
         offset = self._header.header_size + self._header.num_bytes_per_entry * i
@@ -411,18 +438,18 @@ class DiskReadMda:
 
 
 def is_url(path):
-    return path.startswith('http://') or path.startswith('https://')
+    return path.startswith("http://") or path.startswith("https://")
 
 
 def _download_bytes_to_tmpfile(url, start, end):
     try:
         import requests
     except:
-        raise Exception('Unable to import module: requests')
+        raise Exception("Unable to import module: requests")
     headers = {"Range": "bytes={}-{}".format(start, end - 1)}
     r = requests.get(url, headers=headers, stream=True)
     fd, tmp_fname = tempfile.mkstemp()
-    with open(tmp_fname, 'wb') as f:
+    with open(tmp_fname, "wb") as f:
         for chunk in r.iter_content(chunk_size=1024):
             if chunk:
                 f.write(chunk)
@@ -433,7 +460,7 @@ def _read_header(path):
     if is_url(path):
         tmp_fname = _download_bytes_to_tmpfile(path, 0, 200)
         if not tmp_fname:
-            raise Exception('Problem downloading bytes from ' + path)
+            raise Exception("Problem downloading bytes from " + path)
         try:
             ret = _read_header(tmp_fname)
         except:
@@ -485,63 +512,63 @@ def _read_header(path):
 
 def _dt_from_dt_code(dt_code):
     if dt_code == -2:
-        dt = 'uint8'
+        dt = "uint8"
     elif dt_code == -3:
-        dt = 'float32'
+        dt = "float32"
     elif dt_code == -4:
-        dt = 'int16'
+        dt = "int16"
     elif dt_code == -5:
-        dt = 'int32'
+        dt = "int32"
     elif dt_code == -6:
-        dt = 'uint16'
+        dt = "uint16"
     elif dt_code == -7:
-        dt = 'float64'
+        dt = "float64"
     elif dt_code == -8:
-        dt = 'uint32'
+        dt = "uint32"
     else:
         dt = None
     return dt
 
 
 def _dt_code_from_dt(dt):
-    if dt == 'uint8':
+    if dt == "uint8":
         return -2
-    if dt == 'float32':
+    if dt == "float32":
         return -3
-    if dt == 'int16':
+    if dt == "int16":
         return -4
-    if dt == 'int32':
+    if dt == "int32":
         return -5
-    if dt == 'uint16':
+    if dt == "uint16":
         return -6
-    if dt == 'float64':
+    if dt == "float64":
         return -7
-    if dt == 'uint32':
+    if dt == "uint32":
         return -8
     return None
 
 
 def get_num_bytes_per_entry_from_dt(dt):
-    if dt == 'uint8':
+    if dt == "uint8":
         return 1
-    if dt == 'float32':
+    if dt == "float32":
         return 4
-    if dt == 'int16':
+    if dt == "int16":
         return 2
-    if dt == 'int32':
+    if dt == "int32":
         return 4
-    if dt == 'uint16':
+    if dt == "uint16":
         return 2
-    if dt == 'float64':
+    if dt == "float64":
         return 8
-    if dt == 'uint32':
+    if dt == "uint32":
         return 4
     return None
 
 
 def readmda_header(path):
-    if file_extension(path) == '.npy':
-        raise Exception('Cannot read mda header for .npy file.')
+    if file_extension(path) == ".npy":
+        raise Exception("Cannot read mda header for .npy file.")
     return _read_header(path)
 
 
@@ -570,8 +597,8 @@ def _write_header(path, H, rewrite=False):
 
 
 def readmda(path):
-    if file_extension(path) == '.npy':
-        return readnpy(path);
+    if file_extension(path) == ".npy":
+        return readnpy(path)
     H = _read_header(path)
     if H is None:
         print("Problem reading header of: {}".format(path))
@@ -581,7 +608,7 @@ def readmda(path):
         f.seek(H.header_size)
         # This is how I do the column-major order
         ret = np.fromfile(f, dtype=H.dt, count=H.dimprod)
-        ret = np.reshape(ret, H.dims, order='F')
+        ret = np.reshape(ret, H.dims, order="F")
         f.close()
         return ret
     except Exception as e:  # catch *all* exceptions
@@ -591,45 +618,45 @@ def readmda(path):
 
 
 def writemda32(X, fname):
-    if file_extension(fname) == '.npy':
+    if file_extension(fname) == ".npy":
         return writenpy32(X, fname)
-    return _writemda(X, fname, 'float32')
+    return _writemda(X, fname, "float32")
 
 
 def writemda64(X, fname):
-    if file_extension(fname) == '.npy':
+    if file_extension(fname) == ".npy":
         return writenpy64(X, fname)
-    return _writemda(X, fname, 'float64')
+    return _writemda(X, fname, "float64")
 
 
 def writemda8(X, fname):
-    if file_extension(fname) == '.npy':
+    if file_extension(fname) == ".npy":
         return writenpy8(X, fname)
-    return _writemda(X, fname, 'uint8')
+    return _writemda(X, fname, "uint8")
 
 
 def writemda32i(X, fname):
-    if file_extension(fname) == '.npy':
+    if file_extension(fname) == ".npy":
         return writenpy32i(X, fname)
-    return _writemda(X, fname, 'int32')
+    return _writemda(X, fname, "int32")
 
 
 def writemda32ui(X, fname):
-    if file_extension(fname) == '.npy':
+    if file_extension(fname) == ".npy":
         return writenpy32ui(X, fname)
-    return _writemda(X, fname, 'uint32')
+    return _writemda(X, fname, "uint32")
 
 
 def writemda16i(X, fname):
-    if file_extension(fname) == '.npy':
+    if file_extension(fname) == ".npy":
         return writenpy16i(X, fname)
-    return _writemda(X, fname, 'int16')
+    return _writemda(X, fname, "int16")
 
 
 def writemda16ui(X, fname):
-    if file_extension(fname) == '.npy':
+    if file_extension(fname) == ".npy":
         return writenpy16ui(X, fname)
-    return _writemda(X, fname, 'uint16')
+    return _writemda(X, fname, "uint16")
 
 
 def writemda(X, fname, *, dtype):
@@ -644,7 +671,7 @@ def _writemda(X, fname, dt):
         return False
 
     if type(fname) == str:
-        f = open(fname, 'wb')
+        f = open(fname, "wb")
     else:
         f = fname
     try:
@@ -657,7 +684,7 @@ def _writemda(X, fname, dt):
         # A=np.reshape(X,X.size,order='F').astype(dt)
         # A.tofile(f)
 
-        bytes0 = X.astype(dt).tobytes(order='F')
+        bytes0 = X.astype(dt).tobytes(order="F")
         f.write(bytes0)
 
         if type(fname) == str:
@@ -676,31 +703,31 @@ def readnpy(path):
 
 
 def writenpy8(X, path):
-    return _writenpy(X, path, dtype='int8')
+    return _writenpy(X, path, dtype="int8")
 
 
 def writenpy32(X, path):
-    return _writenpy(X, path, dtype='float32')
+    return _writenpy(X, path, dtype="float32")
 
 
 def writenpy64(X, path):
-    return _writenpy(X, path, dtype='float64')
+    return _writenpy(X, path, dtype="float64")
 
 
 def writenpy16i(X, path):
-    return _writenpy(X, path, dtype='int16')
+    return _writenpy(X, path, dtype="int16")
 
 
 def writenpy16ui(X, path):
-    return _writenpy(X, path, dtype='uint16')
+    return _writenpy(X, path, dtype="uint16")
 
 
 def writenpy32i(X, path):
-    return _writenpy(X, path, dtype='int32')
+    return _writenpy(X, path, dtype="int32")
 
 
 def writenpy32ui(X, path):
-    return _writenpy(X, path, dtype='uint32')
+    return _writenpy(X, path, dtype="uint32")
 
 
 def writenpy(X, path, *, dtype):
@@ -715,8 +742,8 @@ def _writenpy(X, path, *, dtype):
 
 
 def appendmda(X, path):
-    if file_extension(path) == '.npy':
-        raise Exception('appendmda not yet implemented for .npy files')
+    if file_extension(path) == ".npy":
+        raise Exception("appendmda not yet implemented for .npy files")
     H = _read_header(path)
     if H is None:
         print("Problem reading header of: {}".format(path))
@@ -735,7 +762,7 @@ def appendmda(X, path):
         _write_header(path, H, rewrite=True)
         f = open(path, "r+b")
         f.seek(H.header_size + H.num_bytes_per_entry * num_entries_old)
-        A = np.reshape(X, X.size, order='F').astype(H.dt)
+        A = np.reshape(X, X.size, order="F").astype(H.dt)
         A.tofile(f)
         f.close()
     except Exception as e:  # catch *all* exceptions
@@ -753,19 +780,19 @@ def file_extension(fname):
 
 
 def _read_int32(f):
-    return struct.unpack('<i', f.read(4))[0]
+    return struct.unpack("<i", f.read(4))[0]
 
 
 def _read_int64(f):
-    return struct.unpack('<q', f.read(8))[0]
+    return struct.unpack("<q", f.read(8))[0]
 
 
 def _write_int32(f, val):
-    f.write(struct.pack('<i', val))
+    f.write(struct.pack("<i", val))
 
 
 def _write_int64(f, val):
-    f.write(struct.pack('<q', val))
+    f.write(struct.pack("<q", val))
 
 
 def _header_from_file(f):

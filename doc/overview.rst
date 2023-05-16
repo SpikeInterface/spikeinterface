@@ -42,9 +42,9 @@ SpikeInterface consists of several sub-packages which encapsulate all steps in a
 Related projects
 ----------------
 
-- | `probeinterface <https://github.com/SpikeInterface/probeinterface>`_ is a python package to define and handle 
+- | `probeinterface <https://github.com/SpikeInterface/probeinterface>`_ is a python package to define and handle
   | neural probes and the wiring to recording devices.
 - | `spikeforest <https://spikeforest.flatironinstitute.org>`_ is a reproducible, continuously updating platform which
-  | benchmarks the performance of some spike sorting software using many ground-truth datasets. 
+  | benchmarks the performance of some spike sorting software using many ground-truth datasets.
   | The processing engine is based on SpikeInterface.
 - `MEArec <https://mearec.readthedocs.io>`_ is a fast customizable biophysical simulation of extracellular recording.

@@ -23,7 +23,7 @@ Example code
 Without SpikeInterface:
 
 .. code-block:: python
-    
+
     import numpy as np
     import scipy.stats
 
@@ -50,7 +50,7 @@ With SpikeInterface:
 
 Links to original implementations
 ---------------------------------
- 
+
 * From the `AllenSDK <https://allensdk.readthedocs.io/en/latest/_static/examples/nb/ecephys_quality_metrics.html#SNR>`_
 
 
