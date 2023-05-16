@@ -259,6 +259,7 @@ def test_calculate_rp_violations(simulated_data):
     counts_gt = {0: 2, 1: 4, 2: 10}
     we = setup_dataset(simulated_data)
     rp_contamination, counts = compute_refrac_period_violations(we, 1, 0.0)
+    rp_contamination, counts = compute_refrac_period_violations(we.sorting, 1, 0.0)
 
     print(rp_contamination)
     assert np.allclose(list(rp_contamination_gt.values()), list(rp_contamination.values()), rtol=0.05)
