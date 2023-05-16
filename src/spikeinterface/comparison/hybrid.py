@@ -1,7 +1,14 @@
 from pathlib import Path
 from typing import List, Union
 import numpy as np
-from spikeinterface.core import BaseRecording, BaseSorting, WaveformExtractor, NumpySorting, NpzSortingExtractor, InjectTemplatesRecording
+from spikeinterface.core import (
+    BaseRecording,
+    BaseSorting,
+    WaveformExtractor,
+    NumpySorting,
+    NpzSortingExtractor,
+    InjectTemplatesRecording,
+)
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.core import generate_sorting
 
@@ -42,14 +49,21 @@ class HybridUnitsRecording(InjectTemplatesRecording):
         The recording containing real and hybrid units.
     """
 
-    def __init__(self, parent_recording: BaseRecording, templates: np.ndarray,
-                 injected_sorting: Union[BaseSorting, None] = None, nbefore: Union[List[int], int, None] = None,
-                 firing_rate: float = 10, amplitude_factor: Union[np.ndarray, None] = None,
-                 amplitude_std: float = 0.0, refractory_period_ms: float = 2.0,
-                 injected_sorting_folder: Union[str, Path, None] = None,
-                 ):
-        num_samples = [parent_recording.get_num_frames(seg_index)
-                       for seg_index in range(parent_recording.get_num_segments())]
+    def __init__(
+        self,
+        parent_recording: BaseRecording,
+        templates: np.ndarray,
+        injected_sorting: Union[BaseSorting, None] = None,
+        nbefore: Union[List[int], int, None] = None,
+        firing_rate: float = 10,
+        amplitude_factor: Union[np.ndarray, None] = None,
+        amplitude_std: float = 0.0,
+        refractory_period_ms: float = 2.0,
+        injected_sorting_folder: Union[str, Path, None] = None,
+    ):
+        num_samples = [
+            parent_recording.get_num_frames(seg_index) for seg_index in range(parent_recording.get_num_segments())
+        ]
         fs = parent_recording.sampling_frequency
         n_units = len(templates)
 
@@ -57,29 +71,40 @@ class HybridUnitsRecording(InjectTemplatesRecording):
             assert injected_sorting.get_num_units() == n_units
             assert parent_recording.get_num_segments() == injected_sorting.get_num_segments()
         else:
-            assert injected_sorting_folder is not None, \
-                "Provide sorting_folder to save generated sorting object"
-            durations = [parent_recording.get_num_frames(seg_index) / fs
-                         for seg_index in range(parent_recording.get_num_segments())]
-            injected_sorting = generate_sorting(num_units=len(templates), sampling_frequency=fs,
-                                                durations=durations, firing_rate=firing_rate,
-                                                refractory_period=refractory_period_ms)
+            assert injected_sorting_folder is not None, "Provide sorting_folder to save generated sorting object"
+            durations = [
+                parent_recording.get_num_frames(seg_index) / fs
+                for seg_index in range(parent_recording.get_num_segments())
+            ]
+            injected_sorting = generate_sorting(
+                num_units=len(templates),
+                sampling_frequency=fs,
+                durations=durations,
+                firing_rate=firing_rate,
+                refractory_period=refractory_period_ms,
+            )
         # save injected sorting if necessary
         self.injected_sorting = injected_sorting
         if not self.injected_sorting.is_dumpable:
-            assert injected_sorting_folder is not None, \
-                "Provide injected_sorting_folder to injected sorting object"
+            assert injected_sorting_folder is not None, "Provide injected_sorting_folder to injected sorting object"
             self.injected_sorting = self.injected_sorting.save(folder=injected_sorting_folder)
 
         if amplitude_factor is None:
-            amplitude_factor = [[np.random.normal(loc=1.0, scale=amplitude_std,
-                                                  size=len(self.injected_sorting.get_unit_spike_train(unit_id,
-                                                                                                      segment_index=seg_index)))
-                                for unit_id in self.injected_sorting.unit_ids]
-                                for seg_index in range(parent_recording.get_num_segments())]
+            amplitude_factor = [
+                [
+                    np.random.normal(
+                        loc=1.0,
+                        scale=amplitude_std,
+                        size=len(self.injected_sorting.get_unit_spike_train(unit_id, segment_index=seg_index)),
+                    )
+                    for unit_id in self.injected_sorting.unit_ids
+                ]
+                for seg_index in range(parent_recording.get_num_segments())
+            ]
 
         InjectTemplatesRecording.__init__(
-            self, self.injected_sorting, templates, nbefore, amplitude_factor, parent_recording, num_samples)
+            self, self.injected_sorting, templates, nbefore, amplitude_factor, parent_recording, num_samples
+        )
 
         self._kwargs = dict(
             parent_recording=parent_recording,
@@ -90,7 +115,7 @@ class HybridUnitsRecording(InjectTemplatesRecording):
             amplitude_factor=amplitude_factor,
             amplitude_std=amplitude_std,
             refractory_period_ms=refractory_period_ms,
-            injected_sorting_folder=None
+            injected_sorting_folder=None,
         )
 
 
@@ -127,10 +152,16 @@ class HybridSpikesRecording(InjectTemplatesRecording):
         The recording containing units with real and hybrid spikes.
     """
 
-    def __init__(self, wvf_extractor: Union[WaveformExtractor, Path], injected_sorting: Union[BaseSorting, None] = None,
-                 unit_ids: Union[List[int], None] = None, max_injected_per_unit: int = 1000,
-                 injected_rate: float = 0.05, refractory_period_ms: float = 1.5,
-                 injected_sorting_folder: Union[str, Path, None] = None) -> None:
+    def __init__(
+        self,
+        wvf_extractor: Union[WaveformExtractor, Path],
+        injected_sorting: Union[BaseSorting, None] = None,
+        unit_ids: Union[List[int], None] = None,
+        max_injected_per_unit: int = 1000,
+        injected_rate: float = 0.05,
+        refractory_period_ms: float = 1.5,
+        injected_sorting_folder: Union[str, Path, None] = None,
+    ) -> None:
         if isinstance(wvf_extractor, (Path, str)):
             wvf_extractor = WaveformExtractor.load(wvf_extractor)
 
@@ -143,23 +174,26 @@ class HybridSpikesRecording(InjectTemplatesRecording):
             templates = templates[target_sorting.ids_to_indices(unit_ids)]
 
         if injected_sorting is None:
-            assert injected_sorting_folder is not None, \
-                "Provide injected_sorting_folder to save generated injected sorting object"
-            num_samples = [target_recording.get_num_frames(seg_index)
-                           for seg_index in range(target_recording.get_num_segments())]
-            self.injected_sorting = generate_injected_sorting(target_sorting, num_samples, max_injected_per_unit,
-                                                              injected_rate, refractory_period_ms)
+            assert (
+                injected_sorting_folder is not None
+            ), "Provide injected_sorting_folder to save generated injected sorting object"
+            num_samples = [
+                target_recording.get_num_frames(seg_index) for seg_index in range(target_recording.get_num_segments())
+            ]
+            self.injected_sorting = generate_injected_sorting(
+                target_sorting, num_samples, max_injected_per_unit, injected_rate, refractory_period_ms
+            )
         else:
             self.injected_sorting = injected_sorting
 
         # save injected sorting if necessary
         if not self.injected_sorting.is_dumpable:
-            assert injected_sorting_folder is not None, \
-                "Provide injected_sorting_folder to injected sorting object"
+            assert injected_sorting_folder is not None, "Provide injected_sorting_folder to injected sorting object"
             self.injected_sorting = self.injected_sorting.save(folder=injected_sorting_folder)
 
         InjectTemplatesRecording.__init__(
-            self, self.injected_sorting, templates, wvf_extractor.nbefore, parent_recording=target_recording)
+            self, self.injected_sorting, templates, wvf_extractor.nbefore, parent_recording=target_recording
+        )
 
         self._kwargs = dict(
             wvf_extractor=str(wvf_extractor.folder.absolute()),
@@ -168,12 +202,17 @@ class HybridSpikesRecording(InjectTemplatesRecording):
             max_injected_per_unit=max_injected_per_unit,
             injected_rate=injected_rate,
             refractory_period_ms=refractory_period_ms,
-            injected_sorting_folder=None
+            injected_sorting_folder=None,
         )
 
 
-def generate_injected_sorting(sorting: BaseSorting, num_samples: List[int], max_injected_per_unit: int = 1000,
-                              injected_rate: float = 0.05, refractory_period_ms: float = 1.5) -> NumpySorting:
+def generate_injected_sorting(
+    sorting: BaseSorting,
+    num_samples: List[int],
+    max_injected_per_unit: int = 1000,
+    injected_rate: float = 0.05,
+    refractory_period_ms: float = 1.5,
+) -> NumpySorting:
     injected_spike_trains = [{} for seg_index in range(sorting.get_num_segments())]
     t_r = int(round(refractory_period_ms * sorting.get_sampling_frequency() * 1e-3))
 
@@ -183,8 +222,9 @@ def generate_injected_sorting(sorting: BaseSorting, num_samples: List[int], max_
             n_injection = min(max_injected_per_unit, int(round(injected_rate * len(spike_train))))
             # Inject more, then take out all that violate the refractory period.
             n = int(n_injection + 10 * np.sqrt(n_injection))
-            injected_spike_train = np.sort(np.random.uniform(
-                low=0, high=num_samples[segment_index], size=n).astype(np.int64))
+            injected_spike_train = np.sort(
+                np.random.uniform(low=0, high=num_samples[segment_index], size=n).astype(np.int64)
+            )
 
             # Remove spikes that are in the refractory period.
             violations = np.where(np.diff(injected_spike_train) < t_r)[0]
@@ -205,6 +245,8 @@ def generate_injected_sorting(sorting: BaseSorting, num_samples: List[int], max_
 
 
 create_hybrid_units_recording = define_function_from_class(
-    source_class=HybridUnitsRecording, name="create_hybrid_units_recording")
+    source_class=HybridUnitsRecording, name="create_hybrid_units_recording"
+)
 create_hybrid_spikes_recording = define_function_from_class(
-    source_class=HybridSpikesRecording, name="create_hybrid_spikes_recording")
+    source_class=HybridSpikesRecording, name="create_hybrid_spikes_recording"
+)

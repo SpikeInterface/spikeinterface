@@ -13,7 +13,7 @@ Current core team
 * `Alessio Paolo Buccino <https://github.com/alejoe91>`_ [1]
 * `Samuel Garcia <https://github.com/samuelgarcia>`_ [2]
 
-For any inquiries, please contact Alessio Buccino (alessiop.buccino@gmail.com) or Samuel Garcia 
+For any inquiries, please contact Alessio Buccino (alessiop.buccino@gmail.com) or Samuel Garcia
 (samuel.garcie.die@gmail.com), or just write an issue (preferred)!
 
 

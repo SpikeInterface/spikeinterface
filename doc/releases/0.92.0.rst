@@ -14,39 +14,39 @@ core:
   * Handle time vector for recording
   * Wrapper classes for old/new API conversion
   * Fix get_channel_locations when multiple probes are present
-  * Relax requirement on t_start for concatenate_recordings 
+  * Relax requirement on t_start for concatenate_recordings
 
 extractors:
   * improve toy example
   * fix/improve NWB
   * fix PhyKiloSort
   * add SpikeGLX for Neuropixels2
-  
+
 sorters:
   * fix wave_clus
   * HS2 in new API (version>=0.3.99)
-  
+
 toolkit:
   * Refactor WaveformComponentExtractor
   * Add nearest neighbor noise overlap to pc metrics
   * Fix get_closest_channels logic
   * Update nearest neighbor isolation metric
   * Allow any filter in spikeinterface
-  * ISI violation ratio as in Hill2011 
-  
+  * ISI violation ratio as in Hill2011
+
 comparison:
-  
+
 widgets:
   * Fix auto mode in plot_timeseries
-  * Improve plot_drift_over_time 
+  * Improve plot_drift_over_time
 
 export:
   * fix show figure
 
 sortingcomponents:
   * peak localisation and unit localization
-  
+
 doc:
   * add installtion tips and conda env
   * typos and gramar
-  * Fix RTD with numpy==1.20 
+  * Fix RTD with numpy==1.20
