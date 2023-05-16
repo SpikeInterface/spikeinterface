@@ -1,7 +1,7 @@
 ## Installation tips
 
-If you are not (yet) an expert in Python installations (conda vs pip, mananging environements, etc.), 
-here we propose a simple recipe to install `spikeinterface` and several sorters inside an anaconda 
+If you are not (yet) an expert in Python installations (conda vs pip, mananging environements, etc.),
+here we propose a simple recipe to install `spikeinterface` and several sorters inside an anaconda
 environment for windows/mac users.
 
 This environment will install:
@@ -56,7 +56,7 @@ Then transfer `cleanup_for_windows.py` into your "Documents" folder. Finally run
    ```
    python cleanup_for_windows.py
    ```
-   
+
 This script tests the following:
   * importing spikeinterface
   * running tridesclous
@@ -64,4 +64,3 @@ This script tests the following:
   * running herdingspikes (not on windows)
   * opening the spikeinterface-gui
   * exporting to Phy
-

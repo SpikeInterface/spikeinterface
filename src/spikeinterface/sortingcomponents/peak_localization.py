@@ -224,7 +224,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         Enforce spatial decreasingness for PTP vectors
     feature: string in ['ptp', 'energy', 'peak_voltage']
         The available features to consider for estimating the position via
-        monopolar triangulation are peak-to-peak amplitudes (ptp, default), 
+        monopolar triangulation are peak-to-peak amplitudes (ptp, default),
         energy ('energy', as L2 norm) or voltages at the center of the waveform
         (peak_voltage)
     """
@@ -322,7 +322,7 @@ class LocalizeGridConvolution(PipelineNode):
     prototype: np.array
         Fake waveforms for the templates. If None, generated as Gaussian
     percentile: float (default 10)
-        The percentage in [0, 100] of the best scalar products kept to 
+        The percentage in [0, 100] of the best scalar products kept to
         estimate the position
     """
 

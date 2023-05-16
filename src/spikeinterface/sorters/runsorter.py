@@ -68,8 +68,8 @@ _common_param_doc = """
         Use a str to specify a non-default container. If that container is not local it will be pulled from docker hub.
         If False, the sorter is run locally.
     singularity_image: bool or str
-        If True, pull the default docker container for the sorter and run the sorter in that container using 
-        singularity. Use a str to specify a non-default container. If that container is not local it will be pulled 
+        If True, pull the default docker container for the sorter and run the sorter in that container using
+        singularity. Use a str to specify a non-default container. If that container is not local it will be pulled
         from Docker Hub.
         If False, the sorter is run locally.
     **sorter_params: keyword args
