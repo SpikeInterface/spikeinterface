@@ -205,7 +205,7 @@ def replace_slice_max(traces, a_max, frames_before, frames_after, value_max):
         return _replace_slice_max_numba(traces, a_max, frames_before, frames_after, value_max)
     else:
         return _replace_slice_max_for_loop(traces, a_max, frames_before, frames_after, value_max)
-    
+
 # For loops
 def _replace_slice_min_for_loop(traces, a_min, frames_before, frames_after, value_min):
     min_indices, channels = np.where(traces <= a_min)
@@ -252,6 +252,6 @@ if HAVE_NUMBA:
                 if to_clear[i]:
                     traces[i, j] = value_min
         return traces
-    
+
 clip = define_function_from_class(source_class=ClipRecording, name="clip")
 blank_staturation = define_function_from_class(source_class=BlankSaturationRecording, name="blank_staturation")
