@@ -18,7 +18,7 @@ jobs:
           python -m pip install pre-commit
       - name: Run pre-commit hooks
         run: |
-          pre-commit run --all-files
+          pre-commit run --all-files || true
       - name: Commit changes
         env:
           GITHUB_TOKEN: ${{ secrets.PRE_COMMIT_TOKEN }}
@@ -26,3 +26,4 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git diff --quiet && git diff --staged --quiet || (git commit -am "Format code"; git push)
+        if: always()
