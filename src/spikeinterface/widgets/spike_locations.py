@@ -14,17 +14,19 @@ class SpikeLocationsWidget(BaseWidget):
     ----------
     waveform_extractor : WaveformExtractor
         The object to compute/get spike locations from
-    unit_ids: list
-        List of unit ids.
-    max_spikes_per_unit: int
+    unit_ids : list
+        List of unit ids, default None
+    segment_index : int or None
+        The segment index (or None if mono-segment), default None
+    max_spikes_per_unit : int
         Number of max spikes per unit to display. Use None for all spikes.
         Default 500.
-    with_channel_ids: bool False default
-        Add channel ids text on the probe
+    with_channel_ids : bool
+        Add channel ids text on the probe, default False
     unit_colors :  dict or None
-        If given, a dictionary with unit ids as keys and colors as values
+        If given, a dictionary with unit ids as keys and colors as values, default None
     hide_unit_selector : bool
-        For sortingview backend, if True the unit selector is not displayed
+        For sortingview backend, if True the unit selector is not displayed, default False
     plot_all_units : bool
         If True, all units are plotted. The unselected ones (not in unit_ids),
         are plotted in grey. Default True (matplotlib backend)
@@ -49,7 +51,7 @@ class SpikeLocationsWidget(BaseWidget):
         plot_legend=False,
         hide_axis=False,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         self.check_extensions(waveform_extractor, "spike_locations")
         slc = waveform_extractor.load_extension("spike_locations")
@@ -62,9 +64,7 @@ class SpikeLocationsWidget(BaseWidget):
         probegroup = waveform_extractor.get_probegroup()
 
         if sorting.get_num_segments() > 1:
-            assert (
-                segment_index is not None
-            ), "Specify segment index for multi-segment object"
+            assert segment_index is not None, "Specify segment index for multi-segment object"
         else:
             segment_index = 0
 
@@ -100,7 +100,7 @@ class SpikeLocationsWidget(BaseWidget):
             hide_unit_selector=hide_unit_selector,
             plot_all_units=plot_all_units,
             plot_legend=plot_legend,
-            hide_axis=hide_axis
+            hide_axis=hide_axis,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -113,5 +113,3 @@ def estimate_axis_lims(spike_locations, quantile=0.02):
     ylims = np.quantile(all_locs["y"], [quantile, 1 - quantile])
 
     return xlims, ylims
-
-

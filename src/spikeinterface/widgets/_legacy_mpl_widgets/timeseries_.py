@@ -50,10 +50,24 @@ class TimeseriesWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, recording, segment_index=None, channel_ids=None, order_channel_by_depth=False,
-                 time_range=None, mode='auto', cmap='RdBu', show_channel_ids=False,
-                 color_groups=False, color=None, clim=None, with_colorbar=True,
-                 figure=None, ax=None, **plot_kwargs):
+    def __init__(
+        self,
+        recording,
+        segment_index=None,
+        channel_ids=None,
+        order_channel_by_depth=False,
+        time_range=None,
+        mode="auto",
+        cmap="RdBu",
+        show_channel_ids=False,
+        color_groups=False,
+        color=None,
+        clim=None,
+        with_colorbar=True,
+        figure=None,
+        ax=None,
+        **plot_kwargs,
+    ):
         BaseWidget.__init__(self, figure, ax)
         self.recording = recording
         self._sampling_frequency = recording.get_sampling_frequency()
@@ -63,7 +77,7 @@ class TimeseriesWidget(BaseWidget):
         if segment_index is None:
             nseg = recording.get_num_segments()
             if nseg != 1:
-                raise ValueError('You must provide segment_index=...')
+                raise ValueError("You must provide segment_index=...")
                 segment_index = 0
         self.segment_index = segment_index
 
@@ -75,7 +89,7 @@ class TimeseriesWidget(BaseWidget):
             channel_inds = self.recording.ids_to_indices(self.visible_channel_ids)
             locations = locations[channel_inds, :]
             origin = np.array([np.max(locations[:, 0]), np.min(locations[:, 1])])[None, :]
-            dist = scipy.spatial.distance.cdist(locations, origin, metric='euclidean')
+            dist = scipy.spatial.distance.cdist(locations, origin, metric="euclidean")
             dist = dist[:, 0]
             self.order = np.argsort(dist)
         else:
@@ -86,28 +100,28 @@ class TimeseriesWidget(BaseWidget):
 
         fs = recording.get_sampling_frequency()
         if time_range is None:
-            time_range = (0, 1.)
+            time_range = (0, 1.0)
         time_range = np.array(time_range)
 
-        assert mode in ('auto', 'line', 'map'), 'Mode must be in auto/line/map'
-        if mode == 'auto':
+        assert mode in ("auto", "line", "map"), "Mode must be in auto/line/map"
+        if mode == "auto":
             if len(channel_ids) <= 64:
-                mode = 'line'
+                mode = "line"
             else:
-                mode = 'map'
+                mode = "map"
         self.mode = mode
         self.cmap = cmap
 
         self.show_channel_ids = show_channel_ids
 
-        self._frame_range = (time_range * fs).astype('int64')
+        self._frame_range = (time_range * fs).astype("int64")
         a_max = self.recording.get_num_frames(segment_index=self.segment_index)
         self._frame_range = np.clip(self._frame_range, 0, a_max)
         self._time_range = [e / fs for e in self._frame_range]
-        
+
         self.clim = clim
         self.with_colorbar = with_colorbar
-        
+
         self._initialize_stats()
 
         # self._vspacing = self._mean_channel_std * 20
@@ -125,13 +139,14 @@ class TimeseriesWidget(BaseWidget):
             groups = np.unique(all_groups)
             N = len(groups)
             import colorsys
+
             HSV_tuples = [(x * 1.0 / N, 0.5, 0.5) for x in range(N)]
             self._colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples))
             color_idx = 0
             for group in groups:
                 self._group_color_map[group] = color_idx
                 color_idx += 1
-        self.name = 'TimeSeries'
+        self.name = "TimeSeries"
 
     def plot(self):
         self._do_plot()
@@ -141,7 +156,7 @@ class TimeseriesWidget(BaseWidget):
             segment_index=self.segment_index,
             channel_ids=self.visible_channel_ids,
             start_frame=self._frame_range[0],
-            end_frame=self._frame_range[1]
+            end_frame=self._frame_range[1],
         )
         if self.order is not None:
             chunk0 = chunk0[:, self.order]
@@ -151,13 +166,14 @@ class TimeseriesWidget(BaseWidget):
 
         n = len(self.visible_channel_ids)
 
-        if self.mode == 'line':
-            ax.set_xlim(self._frame_range[0] / self._sampling_frequency,
-                        self._frame_range[1] / self._sampling_frequency)
+        if self.mode == "line":
+            ax.set_xlim(
+                self._frame_range[0] / self._sampling_frequency, self._frame_range[1] / self._sampling_frequency
+            )
             ax.set_ylim(-self._vspacing, self._vspacing * n)
-            ax.get_xaxis().set_major_locator(MaxNLocator(prune='both'))
+            ax.get_xaxis().set_major_locator(MaxNLocator(prune="both"))
             ax.get_yaxis().set_ticks([])
-            ax.set_xlabel('time (s)')
+            ax.set_xlabel("time (s)")
 
             self._plots = {}
             self._plot_offsets = {}
@@ -178,20 +194,20 @@ class TimeseriesWidget(BaseWidget):
                 ax.set_yticks(np.arange(n) * self._vspacing)
                 ax.set_yticklabels([str(chan_id) for chan_id in self.visible_channel_ids[::-1]])
 
-        elif self.mode == 'map':
+        elif self.mode == "map":
             extent = (self._time_range[0], self._time_range[1], 0, self.recording.get_num_channels())
-            im = ax.imshow(chunk0.T, interpolation='nearest',
-                           origin='upper', aspect='auto', extent=extent, cmap=self.cmap)
-            
+            im = ax.imshow(
+                chunk0.T, interpolation="nearest", origin="upper", aspect="auto", extent=extent, cmap=self.cmap
+            )
+
             if self.clim is None:
                 im.set_clim(-self._max_channel_amp, self._max_channel_amp)
             else:
                 im.set_clim(*self.clim)
-            
+
             if self.with_colorbar:
                 self.figure.colorbar(im, ax=ax)
 
-            
             if self.show_channel_ids:
                 ax.set_yticks(np.arange(n) + 0.5)
                 ax.set_yticklabels([str(chan_id) for chan_id in self.visible_channel_ids[::-1]])
@@ -201,7 +217,7 @@ class TimeseriesWidget(BaseWidget):
             segment_index=self.segment_index,
             channel_ids=self.visible_channel_ids,
             start_frame=self._frame_range[0],
-            end_frame=self._frame_range[1]
+            end_frame=self._frame_range[1],
         )
 
         self._mean_channel_std = np.mean(np.std(chunk0, axis=0))

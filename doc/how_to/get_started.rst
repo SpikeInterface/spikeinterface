@@ -124,7 +124,7 @@ This is how you retrieve info from a ``BaseRecording``\ …
     fs = recording.get_sampling_frequency()
     num_chan = recording.get_num_channels()
     num_seg = recording.get_num_segments()
-    
+
     print('Channel ids:', channel_ids)
     print('Sampling frequency:', fs)
     print('Number of channels:', num_chan)
@@ -148,7 +148,7 @@ This is how you retrieve info from a ``BaseRecording``\ …
     num_seg = recording.get_num_segments()
     unit_ids = sorting_true.get_unit_ids()
     spike_train = sorting_true.get_unit_spike_train(unit_id=unit_ids[0])
-    
+
     print('Number of segments:', num_seg)
     print('Unit ids:', unit_ids)
     print('Spike train of first unit:', spike_train)
@@ -177,9 +177,9 @@ a ``Probe`` and we don’t need to set it *manually*.
 
     probe = recording.get_probe()
     print(probe)
-    
+
     from probeinterface.plotting import plot_probe
-    
+
     _ = plot_probe(probe)
 
 
@@ -207,7 +207,7 @@ object to disk.
     print(recording_f)
     recording_cmr = si.common_reference(recording_f, reference='global', operator='median')
     print(recording_cmr)
-    
+
     # this computes and saves the recording after applying the preprocessing chain
     recording_preprocessed = recording_cmr.save(format='binary')
     print(recording_preprocessed)
@@ -232,8 +232,8 @@ installed
 
 .. parsed-literal::
 
-    Available sorters ['combinato', 'hdsort', 'herdingspikes', 'ironclust', 'kilosort', 'kilosort2', 'kilosort2_5', 'kilosort3', 'klusta', 'mountainsort4', 'pykilosort', 'spykingcircus', 'spykingcircus2', 'tridesclous', 'tridesclous2', 'waveclus', 'waveclus_snippets', 'yass']
-    Installed sorters ['herdingspikes', 'kilosort2_5', 'mountainsort4', 'pykilosort', 'spykingcircus2', 'tridesclous', 'tridesclous2']
+    Available sorters ['combinato', 'hdsort', 'herdingspikes', 'ironclust', 'kilosort', 'kilosort2', 'kilosort2_5', 'kilosort3', 'klusta', 'mountainsort4', 'mountainsort5', 'pykilosort', 'spykingcircus', 'spykingcircus2', 'tridesclous', 'tridesclous2', 'waveclus', 'waveclus_snippets', 'yass']
+    Installed sorters ['herdingspikes', 'kilosort2_5', 'mountainsort4', 'mountainsort5', 'pykilosort', 'spykingcircus2', 'tridesclous', 'tridesclous2']
 
 
 The ``ss.installed_sorters()`` will list the sorters installed in the
@@ -296,9 +296,9 @@ Alternatively we can pass full dictionary containing the parameters:
 
     other_params = ss.get_default_sorter_params('tridesclous')
     other_params['detect_threshold'] = 6
-    
+
     # parameters set by params dictionary
-    sorting_TDC_2 = ss.run_sorter(sorter_name="tridesclous", recording=recording_preprocessed, 
+    sorting_TDC_2 = ss.run_sorter(sorter_name="tridesclous", recording=recording_preprocessed,
                                   output_folder="tdc_output2", **other_params)
     print(sorting_TDC_2)
 
@@ -358,7 +358,7 @@ example, let’s run ``Kilosort2`` using Docker:
     Stopping container
 
 .. parsed-literal::
-    
+
     KiloSortSortingExtractor: 19 units - 1 segments - 32.0kHz
 
 
@@ -374,11 +374,11 @@ and then to compute, for example, quality metrics.
 
     we_TDC = si.extract_waveforms(recording_preprocessed, sorting_TDC, 'waveforms_folder', overwrite=True)
     print(we_TDC)
-    
+
     unit_id0 = sorting_TDC.unit_ids[0]
     wavefroms = we_TDC.get_waveforms(unit_id0)
     print(wavefroms.shape)
-    
+
     template = we_TDC.get_template(unit_id0)
     print(template.shape)
 
@@ -506,11 +506,11 @@ accomodate the duration:
         .dataframe tbody tr th:only-of-type {
             vertical-align: middle;
         }
-    
+
         .dataframe tbody tr th {
             vertical-align: top;
         }
-    
+
         .dataframe thead th {
             text-align: right;
         }
@@ -745,7 +745,7 @@ on the “Save as snapshot (sha://)” and copy the URI:
 .. code:: ipython3
 
     uri = "sha1://68cb54a9aaed2303fb82dedbc302c853e818f1b6"
-    
+
     sorting_curated_sv = scur.apply_sortingview_curation(sorting_TDC, uri_or_json=uri)
     print(sorting_curated_sv)
     print(sorting_curated_sv.get_property("accept"))
@@ -792,7 +792,7 @@ above a certain threshold:
 
     keep_mask = (qm['snr'] > 10) & (qm['isi_violations_ratio'] < 0.01)
     print("Mask:", keep_mask.values)
-    
+
     sorting_curated_auto = sorting_TDC.select_units(sorting_TDC.unit_ids[keep_mask])
     print(sorting_curated_auto)
 
@@ -834,7 +834,7 @@ performance and plot a confusion matrix
 .. parsed-literal::
 
                 accuracy    recall precision false_discovery_rate miss_rate
-    gt_unit_id                                                             
+    gt_unit_id
     #0               1.0       1.0       1.0                  0.0       0.0
     #1               1.0       1.0       1.0                  0.0       0.0
     #2          0.976744  0.976744       1.0                  0.0  0.023256
@@ -911,9 +911,9 @@ graph showing how the units are matched between the sorters.
 .. code:: ipython3
 
     sorting_agreement = comp_multi.get_agreement_sorting(minimum_agreement_count=2)
-    
+
     print('Units in agreement between TDC, SC2, and KS2:', sorting_agreement.get_unit_ids())
-    
+
     w_multi = sw.plot_multicomp_agreement(comp_multi)
     w_multi = sw.plot_multicomp_agreement_by_sorter(comp_multi)
 

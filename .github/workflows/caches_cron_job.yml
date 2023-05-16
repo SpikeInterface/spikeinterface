@@ -1,16 +1,17 @@
 name: Create caches for gin ecephys data and virtual env
 
-on: 
+on:
   workflow_dispatch:
   push:  # When someting is pushed into main this checks if caches need to re-created
     branches:
-      - master
       - main
   schedule:
     - cron: "0 12 * * *"  # Daily at noon UTC
 
 jobs:
-  
+
+
+
   create-virtual-env-cache-if-missing:
     name: Caching virtual env
     runs-on: "ubuntu-latest"
@@ -30,33 +31,33 @@ jobs:
       - uses: actions/cache@v3
         id: cache-venv
         with:
-          path: ~/test_env
+          path: ${{ github.workspace }}/test_env
           key: ${{ runner.os }}-venv-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-venv.outputs.cache-hit == 'true'}}"
-      - name: Create the virtual environment to be cached 
+      - name: Create the virtual environment to be cached
         if: steps.cache-venv.outputs.cache-hit != 'true'
-        run: |
-          git config --global user.email "CI@example.com"
-          git config --global user.name "CI Almighty"
-          python -m venv ~/test_env  # Environment used in the caching step
-          source ~/test_env/bin/activate
-          python -m pip install -U pip  # Official recommended way
-          # herdingspikes need numpy to installed first (!)
-          pip install numpy==1.22
-          pip install -e .[test,extractors,full]
-  
-  create-data-cache-if-missing:
+        uses: ./.github/actions/build-test-environment
+
+
+
+
+  create-gin-data-cache-if-missing:
     name: Caching data env
     runs-on: "ubuntu-latest"
     steps:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-      - name: Get current hash (SHA) of the ephy_testing_data repo 
+      - name: Create the directory to store the data
+        run: |
+          mkdir --parents --verbose $HOME/spikeinterface_datasets/ephy_testing_data/
+          chmod -R 777 $HOME/spikeinterface_datasets
+          ls -l $HOME/spikeinterface_datasets
+      - name: Get current hash (SHA) of the ephy_testing_data repo
         id: repo_hash
         run: |
-          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" 
+          echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)"
           echo "dataset_hash=$(git ls-remote https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git HEAD | cut -f1)" >> $GITHUB_OUTPUT
       - uses: actions/cache@v3
         id: cache-datasets
@@ -82,12 +83,11 @@ jobs:
       - name: Move the downloaded data to the right directory
         if: steps.cache-datasets.outputs.cache-hit != 'true'
         run: |
-          mkdir --parents --verbose ~/spikeinterface_datasets/ephy_testing_data/
-          mv --force ./ephy_testing_data ~/spikeinterface_datasets/
+          mv --force ./ephy_testing_data $HOME/spikeinterface_datasets/
       - name: Show size of the cache to assert data is downloaded
         run: |
-          cd ~
-          pwd 
+          cd $HOME
+          pwd
           du -hs spikeinterface_datasets
           cd spikeinterface_datasets
           pwd

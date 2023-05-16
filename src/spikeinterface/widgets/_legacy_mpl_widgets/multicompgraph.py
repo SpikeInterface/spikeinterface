@@ -1,6 +1,4 @@
 import numpy as np
-import matplotlib
-from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 
@@ -34,8 +32,20 @@ class MultiCompGraphWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, multi_comparison, draw_labels=False, node_cmap='viridis',
-                 edge_cmap='hot', alpha_edges=0.5, colorbar=False, figure=None, ax=None):
+    def __init__(
+        self,
+        multi_comparison,
+        draw_labels=False,
+        node_cmap="viridis",
+        edge_cmap="hot",
+        alpha_edges=0.5,
+        colorbar=False,
+        figure=None,
+        ax=None,
+    ):
+        import matplotlib
+        from matplotlib import pyplot as plt
+
         BaseWidget.__init__(self, figure, ax)
         self._msc = multi_comparison
         self._draw_labels = draw_labels
@@ -43,7 +53,7 @@ class MultiCompGraphWidget(BaseWidget):
         self._edge_cmap = edge_cmap
         self._colorbar = colorbar
         self._alpha_edges = alpha_edges
-        self.name = 'MultiCompGraph'
+        self.name = "MultiCompGraph"
 
     def plot(self):
         self._do_plot()
@@ -55,7 +65,7 @@ class MultiCompGraphWidget(BaseWidget):
         edge_col = []
         for e in g.edges(data=True):
             n1, n2, d = e
-            edge_col.append(d['weight'])
+            edge_col.append(d["weight"])
         nodes_col_dict = {}
         for i, sort_name in enumerate(self._msc.name_list):
             nodes_col_dict[sort_name] = i
@@ -63,14 +73,28 @@ class MultiCompGraphWidget(BaseWidget):
         for node in sorted(g.nodes):
             nodes_col.append(nodes_col_dict[node[0]])
         nodes_col = np.array(nodes_col) / len(self._msc.name_list)
+        import matplotlib.pyplot as plt
 
         _ = plt.set_cmap(self._node_cmap)
-        _ = nx.draw_networkx_nodes(g, pos=nx.circular_layout(sorted(g)), nodelist=sorted(g.nodes),
-                                   node_color=nodes_col, node_size=20, ax=self.ax)
-        _ = nx.draw_networkx_edges(g, pos=nx.circular_layout((sorted(g))), nodelist=sorted(g.nodes),
-                                   edge_color=edge_col, alpha=self._alpha_edges,
-                                   edge_cmap=plt.cm.get_cmap(self._edge_cmap), edge_vmin=self._msc.match_score,
-                                   edge_vmax=1, ax=self.ax)
+        _ = nx.draw_networkx_nodes(
+            g,
+            pos=nx.circular_layout(sorted(g)),
+            nodelist=sorted(g.nodes),
+            node_color=nodes_col,
+            node_size=20,
+            ax=self.ax,
+        )
+        _ = nx.draw_networkx_edges(
+            g,
+            pos=nx.circular_layout((sorted(g))),
+            nodelist=sorted(g.nodes),
+            edge_color=edge_col,
+            alpha=self._alpha_edges,
+            edge_cmap=plt.cm.get_cmap(self._edge_cmap),
+            edge_vmin=self._msc.match_score,
+            edge_vmax=1,
+            ax=self.ax,
+        )
         if self._draw_labels:
             labels = {key: f"{key[0]}_{key[1]}" for key in sorted(g.nodes)}
             pos = nx.circular_layout(sorted(g))
@@ -82,12 +106,15 @@ class MultiCompGraphWidget(BaseWidget):
             _ = nx.draw_networkx_labels(g, pos=pos_extended, labels=labels, ax=self.ax)
 
         if self._colorbar:
+            import matplotlib
+            import matplotlib.pyplot as plt
+
             norm = matplotlib.colors.Normalize(vmin=self._msc.match_score, vmax=1)
             cmap = plt.cm.get_cmap(self._edge_cmap)
             m = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
             self.figure.colorbar(m)
 
-        self.ax.axis('off')
+        self.ax.axis("off")
 
 
 class MultiCompGlobalAgreementWidget(BaseWidget):
@@ -113,39 +140,53 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, multi_comparison, plot_type='pie', cmap='YlOrRd', fs=10,
-                 figure=None, ax=None):
+    def __init__(self, multi_comparison, plot_type="pie", cmap="YlOrRd", fs=10, figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
+        import matplotlib
+        import matplotlib.pyplot as plt
+
         self._msc = multi_comparison
         self._type = plot_type
         self._cmap = cmap
         self._fs = fs
-        self.name = 'MultiCompGlobalAgreement'
+        self.name = "MultiCompGlobalAgreement"
 
     def plot(self):
         self._do_plot()
 
     def _do_plot(self):
+        import matplotlib.pyplot as plt
+
         cmap = plt.get_cmap(self._cmap)
         colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(self._msc.name_list))])
         sg_names, sg_units = self._msc.compute_subgraphs()
         # fraction of units with agreement > threshold
         v, c = np.unique([len(np.unique(s)) for s in sg_names], return_counts=True)
-        if self._type == 'pie':
-            p = self.ax.pie(c, colors=colors[v - 1], autopct=lambda pct: _getabs(pct, c),
-                            pctdistance=1.25)
-            self.ax.legend(p[0], v, frameon=False, title='k=', handlelength=1, handletextpad=0.5,
-                           bbox_to_anchor=(1., 1.), loc=2, borderaxespad=0.5, labelspacing=0.15, fontsize=self._fs)
-        elif self._type == 'bar':
+        if self._type == "pie":
+            p = self.ax.pie(c, colors=colors[v - 1], autopct=lambda pct: _getabs(pct, c), pctdistance=1.25)
+            self.ax.legend(
+                p[0],
+                v,
+                frameon=False,
+                title="k=",
+                handlelength=1,
+                handletextpad=0.5,
+                bbox_to_anchor=(1.0, 1.0),
+                loc=2,
+                borderaxespad=0.5,
+                labelspacing=0.15,
+                fontsize=self._fs,
+            )
+        elif self._type == "bar":
             self.ax.bar(v, c, color=colors[v - 1])
-            x_labels = [f'k={vi}' for vi in v]
-            self.ax.spines['top'].set_visible(False)
-            self.ax.spines['right'].set_visible(False)
+            x_labels = [f"k={vi}" for vi in v]
+            self.ax.spines["top"].set_visible(False)
+            self.ax.spines["right"].set_visible(False)
             self.ax.set_xticks(v)
             self.ax.set_xticklabels(x_labels)
         else:
             raise AttributeError("Wrong plot_type. It can be 'pie' or 'bar'")
-        self.ax.set_title('Units agreed upon\nby k sorters')
+        self.ax.set_title("Units agreed upon\nby k sorters")
 
 
 class MultiCompAgreementBySorterWidget(BaseWidget):
@@ -172,14 +213,15 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
         The output widget
     """
 
-    def __init__(self, multi_comparison, plot_type='pie', cmap='YlOrRd', fs=9,
-                 axes=None, show_legend=True):
+    def __init__(self, multi_comparison, plot_type="pie", cmap="YlOrRd", fs=9, axes=None, show_legend=True):
+        import matplotlib.pyplot as plt
+
         self._msc = multi_comparison
         self._type = plot_type
         self._cmap = cmap
         self._fs = fs
         self._show_legend = show_legend
-        self.name = 'MultiCompAgreementBySorterWidget'
+        self.name = "MultiCompAgreementBySorterWidget"
 
         if axes is None:
             ncols = len(self._msc.name_list)
@@ -191,6 +233,8 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
 
     def _do_plot(self):
         name_list = self._msc.name_list
+        import matplotlib.pyplot as plt
+
         cmap = plt.get_cmap(self._cmap)
         colors = np.array([cmap(i) for i in np.linspace(0.1, 0.8, len(self._msc.name_list))])
         sg_names, sg_units = self._msc.compute_subgraphs()
@@ -198,23 +242,38 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
         for i, name in enumerate(name_list):
             ax = self.axes[i]
             v, c = np.unique([len(np.unique(sn)) for sn in sg_names if name in sn], return_counts=True)
-            if self._type == 'pie':
-                p = ax.pie(c, colors=colors[v - 1], textprops={'color': 'k', 'fontsize': self._fs},
-                           autopct=lambda pct: _getabs(pct, c), pctdistance=1.18)
+            if self._type == "pie":
+                p = ax.pie(
+                    c,
+                    colors=colors[v - 1],
+                    textprops={"color": "k", "fontsize": self._fs},
+                    autopct=lambda pct: _getabs(pct, c),
+                    pctdistance=1.18,
+                )
                 if (self._show_legend) and (i == len(name_list) - 1):
-                    plt.legend(p[0], v, frameon=False, title='k=', handlelength=1, handletextpad=0.5,
-                               bbox_to_anchor=(1.15, 1.25), loc=2, borderaxespad=0., labelspacing=0.15)
-            elif self._type == 'bar':
+                    plt.legend(
+                        p[0],
+                        v,
+                        frameon=False,
+                        title="k=",
+                        handlelength=1,
+                        handletextpad=0.5,
+                        bbox_to_anchor=(1.15, 1.25),
+                        loc=2,
+                        borderaxespad=0.0,
+                        labelspacing=0.15,
+                    )
+            elif self._type == "bar":
                 ax.bar(v, c, color=colors[v - 1])
-                x_labels = [f'k={vi}' for vi in v]
-                ax.spines['top'].set_visible(False)
-                ax.spines['right'].set_visible(False)
+                x_labels = [f"k={vi}" for vi in v]
+                ax.spines["top"].set_visible(False)
+                ax.spines["right"].set_visible(False)
                 ax.set_xticks(v)
                 ax.set_xticklabels(x_labels)
             else:
                 raise AttributeError("Wrong plot_type. It can be 'pie' or 'bar'")
             ax.set_title(name)
-        if self._type == 'bar':
+        if self._type == "bar":
             ylims = [np.max(ax_single.get_ylim()) for ax_single in self.axes]
             max_yval = np.max(ylims)
             for ax_single in self.axes:
@@ -222,7 +281,7 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
 
 
 def _getabs(pct, allvals):
-    absolute = int(np.round(pct / 100. * np.sum(allvals)))
+    absolute = int(np.round(pct / 100.0 * np.sum(allvals)))
     return "{:d}".format(absolute)
 
 

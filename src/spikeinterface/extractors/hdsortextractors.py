@@ -2,8 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from spikeinterface.core import (BaseRecording, BaseSorting,
-                                 BaseRecordingSegment, BaseSortingSegment)
+from spikeinterface.core import BaseRecording, BaseSorting, BaseRecordingSegment, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from .matlabhelpers import MatlabHelper
 
@@ -23,16 +22,16 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
     extractor : HDSortSortingExtractor
         The loaded data.
     """
+
     extractor_name = "HDSortSortingExtractor"
-    mode = 'file'
+    mode = "file"
     name = "hdsort"
 
     def __init__(self, file_path, keep_good_only=True):
-
         MatlabHelper.__init__(self, file_path)
 
         if not self._old_style_mat:
-            _units = self._data['Units']
+            _units = self._data["Units"]
             units = _parse_units(self._data, _units)
 
             # Extracting MutliElectrode field by field:
@@ -47,14 +46,14 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
             if keep_good_only:
                 units = [unit for unit in units if unit["ID"].flatten()[0].astype(int) % 1000 != 0]
 
-            if 'sortingInfo' in self._data.keys():
+            if "sortingInfo" in self._data.keys():
                 info = self._data["sortingInfo"]
-                start_frame = _squeeze_ds(info['startTimes'])
+                start_frame = _squeeze_ds(info["startTimes"])
                 self.start_frame = int(start_frame)
             else:
                 self.start_frame = 0
         else:
-            _units = self._getfield('Units').squeeze()
+            _units = self._getfield("Units").squeeze()
             fields = _units.dtype.fields.keys()
             units = []
 
@@ -74,9 +73,9 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
             if keep_good_only:
                 units = [unit for unit in units if unit["ID"].flatten()[0].astype(int) % 1000 != 0]
 
-            if 'sortingInfo' in self._data.keys():
+            if "sortingInfo" in self._data.keys():
                 info = self._getfield("sortingInfo")
-                start_frame = _squeeze_ds(info['startTimes'])
+                start_frame = _squeeze_ds(info["startTimes"])
                 self.start_frame = int(start_frame)
             else:
                 self.start_frame = 0
@@ -88,7 +87,7 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
         spiketrains = []
         for uc, unit in enumerate(units):
             unit_id = int(_squeeze_ds(unit["ID"]))
-            spike_times = _squeeze(unit["spikeTrain"]).astype('int64') - self.start_frame
+            spike_times = _squeeze(unit["spikeTrain"]).astype("int64") - self.start_frame
             unit_ids.append(unit_id)
             spiketrains.append(spike_times)
 
@@ -109,7 +108,7 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
         self.set_property("template", np.array(templates))
         self.set_property("template_frames_cut_before", np.array(templates_frames_cut_before))
 
-        self._kwargs = {'file_path': str(file_path), 'keep_good_only': keep_good_only}
+        self._kwargs = {"file_path": str(file_path), "keep_good_only": keep_good_only}
 
         # TODO features
         # ~ for uc, unit in enumerate(units):

@@ -159,7 +159,7 @@ ax.set_xlabel('noise  [microV]')
 #
 # The two functions (detect + localize):
 #
-#   * can be run in parallel 
+#   * can be run in parallel
 #   * are very fast when the preprocessed recording is already saved (and a bit slower otherwise)
 #   * implement several methods
 #
@@ -169,7 +169,7 @@ ax.set_xlabel('noise  [microV]')
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
-peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16, 
+peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16,
                      detect_threshold=5, local_radius_um=50., **job_kwargs)
 peaks
 
@@ -190,7 +190,7 @@ peak_locations = localize_peaks(rec, peaks, method='center_of_mass', local_radiu
 # check for drift
 fs = rec.sampling_frequency
 fig, ax = plt.subplots(figsize=(10, 8))
-ax.scatter(peaks['sample_ind'] / fs, peak_locations['y'], color='k', marker='.',  alpha=0.002)
+ax.scatter(peaks['sample_index'] / fs, peak_locations['y'], color='k', marker='.',  alpha=0.002)
 
 
 # +
@@ -214,7 +214,7 @@ ax.scatter(peak_locations['x'], peak_locations['y'], color='purple', alpha=0.002
 #
 # Please carefully read the `spikeinterface.sorters` documentation for more information.
 #
-# In this example: 
+# In this example:
 #
 #   * we will run kilosort2.5
 #   * we apply no drift correction (because we don't have drift)
@@ -251,7 +251,7 @@ we = si.extract_waveforms(rec, sorting, folder=base_folder / 'waveforms_kilosort
                           sparse=True, max_spikes_per_unit=500, ms_before=1.5,ms_after=2.,
                           **job_kwargs)
 
-# the `WaveformExtractor` contains all information and is persistent on disk 
+# the `WaveformExtractor` contains all information and is persistent on disk
 print(we)
 print(we.folder)
 

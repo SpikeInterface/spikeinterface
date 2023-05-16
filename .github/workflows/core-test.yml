@@ -4,7 +4,6 @@ on:
   pull_request:
     types: [synchronize, opened, reopened]
     branches:
-      - master
       - main
 
 concurrency:  # Cancel previous workflows on the same pull request
@@ -28,19 +27,19 @@ jobs:
         run: |
           git config --global user.email "CI@example.com"
           git config --global user.name "CI Almighty"
-          python -m pip install -U pip  # Official recommended way 
+          python -m pip install -U pip  # Official recommended way
           pip install -e .[test_core]
       - name: Test core with pytest
         run: |
           pytest -vv -ra --durations=0 --durations-min=0.001 src/spikeinterface/core | tee report.txt; test ${PIPESTATUS[0]} -eq 0 || exit 1
         shell: bash  # Necessary for pipeline to work on windows
       - name: Build test summary
-        run: | 
+        run: |
           pip install pandas
           pip install tabulate
-          echo "# Timing profile of core tests in ${{matrix.os}}" >> $GITHUB_STEP_SUMMARY 
+          echo "# Timing profile of core tests in ${{matrix.os}}" >> $GITHUB_STEP_SUMMARY
           # Outputs markdown summary to standard output
-          python ./.github/build_job_summary.py report.txt >> $GITHUB_STEP_SUMMARY 
-          cat $GITHUB_STEP_SUMMARY 
+          python ./.github/build_job_summary.py report.txt >> $GITHUB_STEP_SUMMARY
+          cat $GITHUB_STEP_SUMMARY
           rm report.txt
         shell: bash  # Necessary for pipeline to work on windows

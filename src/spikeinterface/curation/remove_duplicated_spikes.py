@@ -9,7 +9,7 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
     """
     Class to remove duplicated spikes from the spike trains.
     Spikes are considered duplicated if they are less than x
-    ms appart where x is the censored period.
+    ms apart where x is the censored period.
 
     Parameters
     ----------
@@ -24,8 +24,8 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
         If method = "keep_last", for each ISI violation, will remove the first spike.
         If method = "keep_first_iterative", will iteratively keep the first spike and remove the following violations.
         If method = "keep_last_iterative", does the same as "keep_first_iterative" but starting from the end.
-        In the iterative methods, if there is a triplet A, B, C where (A, B) and (A, C) are in the censored period
-        (but not (A, C)), then only B is removed. In the non iterative method however, only one spike remains.
+        In the iterative methods, if there is a triplet A, B, C where (A, B) and (B, C) are in the censored period
+        (but not (A, C)), then only B is removed. In the non iterative methods however, only one spike remains.
 
     Returns
     -------
@@ -39,35 +39,41 @@ class RemoveDuplicatedSpikesSorting(BaseSorting):
         seed = np.random.randint(low=0, high=np.iinfo(np.int32).max)
 
         for segment in sorting._sorting_segments:
-            self.add_sorting_segment(RemoveDuplicatedSpikesSortingSegment(segment, censored_period,
-                                                                          sorting.unit_ids, method, seed))
+            self.add_sorting_segment(
+                RemoveDuplicatedSpikesSortingSegment(segment, censored_period, sorting.unit_ids, method, seed)
+            )
 
         sorting.copy_metadata(self, only_main=False)
         if sorting.has_recording():
             self.register_recording(sorting._recording)
 
-        self._kwargs = {
-            'sorting': sorting,
-            'censored_period_ms': censored_period_ms,
-            'method': method
-        }
+        self._kwargs = {"sorting": sorting, "censored_period_ms": censored_period_ms, "method": method}
 
 
 class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
-
-    def __init__(self, parent_segment: BaseSortingSegment, censored_period: int, unit_ids, method: str, seed: Optional[int] = None) -> None:
+    def __init__(
+        self,
+        parent_segment: BaseSortingSegment,
+        censored_period: int,
+        unit_ids,
+        method: str,
+        seed: Optional[int] = None,
+    ) -> None:
         super().__init__()
         self._parent_segment = parent_segment
         self._duplicated_spikes = {}
 
         for unit_id in unit_ids:
-            self._duplicated_spikes[unit_id] = \
-                find_duplicated_spikes(parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None),
-                                       censored_period, method=method, seed=seed)
+            self._duplicated_spikes[unit_id] = find_duplicated_spikes(
+                parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None),
+                censored_period,
+                method=method,
+                seed=seed,
+            )
 
-
-    def get_unit_spike_train(self, unit_id, start_frame: Optional[int] = None,
-                             end_frame: Optional[int] = None) -> np.ndarray:
+    def get_unit_spike_train(
+        self, unit_id, start_frame: Optional[int] = None, end_frame: Optional[int] = None
+    ) -> np.ndarray:
         spike_train = self._parent_segment.get_unit_spike_train(unit_id, start_frame=None, end_frame=None)
         spike_train = np.delete(spike_train, self._duplicated_spikes[unit_id])
 
@@ -77,10 +83,11 @@ class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
             end_frame = spike_train[-1]
 
         start = np.searchsorted(spike_train, start_frame, side="left")
-        end   = np.searchsorted(spike_train, end_frame, side="right")
+        end = np.searchsorted(spike_train, end_frame, side="right")
 
-        return spike_train[start : end]
+        return spike_train[start:end]
 
 
-remove_duplicated_spikes = define_function_from_class(source_class=RemoveDuplicatedSpikesSorting,
-                                                      name="remove_duplicated_spikes")
+remove_duplicated_spikes = define_function_from_class(
+    source_class=RemoveDuplicatedSpikesSorting, name="remove_duplicated_spikes"
+)

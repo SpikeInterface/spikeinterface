@@ -2,8 +2,7 @@ import numpy as np
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 
-from spikeinterface.core.template_tools import (get_template_extremum_channel,
-                                                get_template_extremum_channel_peak_shift)
+from spikeinterface.core.template_tools import get_template_extremum_channel, get_template_extremum_channel_peak_shift
 
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
 
@@ -11,37 +10,34 @@ from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWavefo
 class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
     """
     Computes spike locations from WaveformExtractor.
-    
+
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
         A waveform extractor object
-    """    
-    extension_name = 'spike_locations'
-    
+    """
+
+    extension_name = "spike_locations"
+
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
         extremum_channel_inds = get_template_extremum_channel(self.waveform_extractor, outputs="index")
         self.spikes = self.waveform_extractor.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
 
-    def _set_params(self, ms_before=1., ms_after=1.5, method='center_of_mass',
-                    method_kwargs={}):
-
-        params = dict(ms_before=ms_before,
-                      ms_after=ms_after,
-                      method=method)
+    def _set_params(self, ms_before=0.5, ms_after=0.5, method="center_of_mass", method_kwargs={}):
+        params = dict(ms_before=ms_before, ms_after=ms_after, method=method)
         params.update(**method_kwargs)
-        return params        
-    
+        return params
+
     def _select_extension_data(self, unit_ids):
         old_unit_ids = self.waveform_extractor.sorting.unit_ids
         unit_inds = np.flatnonzero(np.in1d(old_unit_ids, unit_ids))
 
-        spike_mask = np.in1d(self.spikes['unit_ind'], unit_inds)
-        new_spike_locations = self._extension_data['spike_locations'][spike_mask]
+        spike_mask = np.in1d(self.spikes["unit_index"], unit_inds)
+        new_spike_locations = self._extension_data["spike_locations"][spike_mask]
         return dict(spike_locations=new_spike_locations)
-        
+
     def _run(self, **job_kwargs):
         """
         This function first transforms the sorting object into a `peaks` numpy array and then
@@ -49,17 +45,18 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         spike locations.
         """
         from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+
         job_kwargs = fix_job_kwargs(job_kwargs)
 
         we = self.waveform_extractor
-        
+
         extremum_channel_inds = get_template_extremum_channel(we, outputs="index")
         self.spikes = we.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
-        
+
         spike_locations = localize_peaks(we.recording, self.spikes, **self._params, **job_kwargs)
-        self._extension_data['spike_locations'] = spike_locations
-    
-    def get_data(self, outputs='concatenated'):
+        self._extension_data["spike_locations"] = spike_locations
+
+    def get_data(self, outputs="concatenated"):
         """
         Get computed spike locations
 
@@ -77,20 +74,20 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         we = self.waveform_extractor
         sorting = we.sorting
 
-        if outputs == 'concatenated':
-            return self._extension_data['spike_locations']
+        if outputs == "concatenated":
+            return self._extension_data["spike_locations"]
 
-        elif outputs == 'by_unit':
+        elif outputs == "by_unit":
             locations_by_unit = []
             for segment_index in range(self.waveform_extractor.get_num_segments()):
-                i0 =np.searchsorted(self.spikes['segment_ind'], segment_index, side="left")
-                i1 =np.searchsorted(self.spikes['segment_ind'], segment_index, side="right")
-                spikes = self.spikes[i0: i1]
-                locations = self._extension_data['spike_locations'][i0: i1]
-                
+                i0 = np.searchsorted(self.spikes["segment_index"], segment_index, side="left")
+                i1 = np.searchsorted(self.spikes["segment_index"], segment_index, side="right")
+                spikes = self.spikes[i0:i1]
+                locations = self._extension_data["spike_locations"][i0:i1]
+
                 locations_by_unit.append({})
                 for unit_ind, unit_id in enumerate(sorting.unit_ids):
-                    mask = spikes['unit_ind'] == unit_ind
+                    mask = spikes["unit_index"] == unit_ind
                     locations_by_unit[segment_index][unit_id] = locations[mask]
             return locations_by_unit
 
@@ -102,12 +99,16 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 WaveformExtractor.register_extension(SpikeLocationsCalculator)
 
 
-def compute_spike_locations(waveform_extractor, load_if_exists=False, 
-                            ms_before=1., ms_after=1.5, 
-                            method='center_of_mass',
-                            method_kwargs={},
-                            outputs='concatenated',
-                            **job_kwargs):
+def compute_spike_locations(
+    waveform_extractor,
+    load_if_exists=False,
+    ms_before=0.5,
+    ms_after=0.5,
+    method="center_of_mass",
+    method_kwargs={},
+    outputs="concatenated",
+    **job_kwargs,
+):
     """
     Localize spikes in 2D or 3D with several methods given the template.
 
@@ -122,11 +123,11 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
     ms_after : float
         The right window, after a peak, in milliseconds.
     method : str
-        'center_of_mass' / 'monopolar_triangulation'
-    method_kwargs : dict 
+        'center_of_mass' / 'monopolar_triangulation' / 'grid_convolution'
+    method_kwargs : dict
         Other kwargs depending on the method.
-    outputs : str 
-        'numpy' (default) / 'numpy_dtype' / 'dict'
+    outputs : str
+        'concatenated' (default) / 'by_unit'
     {}
 
     Returns
@@ -142,7 +143,7 @@ def compute_spike_locations(waveform_extractor, load_if_exists=False,
         slc = SpikeLocationsCalculator(waveform_extractor)
         slc.set_params(ms_before=ms_before, ms_after=ms_after, method=method, method_kwargs=method_kwargs)
         slc.run(**job_kwargs)
-    
+
     locs = slc.get_data(outputs=outputs)
     return locs
 

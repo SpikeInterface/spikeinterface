@@ -31,22 +31,33 @@ _shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel process
             * progress_bar: bool
                 If True, a progress bar is printed
             * mp_context: str or None
-                Context for multiprocessing. It can be None (default), "fork" or "spawn". 
+                Context for multiprocessing. It can be None (default), "fork" or "spawn".
                 Note that "fork" is only available on UNIX systems
     """
 
 
-job_keys = ('n_jobs', 'total_memory', 'chunk_size', 'chunk_memory', 'chunk_duration', 'progress_bar', 
-            'mp_context', 'verbose', 'max_threads_per_process')
+job_keys = (
+    "n_jobs",
+    "total_memory",
+    "chunk_size",
+    "chunk_memory",
+    "chunk_duration",
+    "progress_bar",
+    "mp_context",
+    "verbose",
+    "max_threads_per_process",
+)
 
 
 def fix_job_kwargs(runtime_job_kwargs):
     from .globals import get_global_job_kwargs
+
     job_kwargs = get_global_job_kwargs()
 
     for k in runtime_job_kwargs:
-        assert k in job_keys, (f"{k} is not a valid job keyword argument. "
-                               f"Available keyword arguments are: {list(job_keys)}")
+        assert k in job_keys, (
+            f"{k} is not a valid job keyword argument. " f"Available keyword arguments are: {list(job_keys)}"
+        )
     # remove None
     runtime_job_kwargs_exclude_none = runtime_job_kwargs.copy()
     for job_key, job_value in runtime_job_kwargs.items():
@@ -55,7 +66,7 @@ def fix_job_kwargs(runtime_job_kwargs):
     job_kwargs.update(runtime_job_kwargs_exclude_none)
 
     # if n_jobs is -1, set to os.cpu_count() (n_jobs is always in global job_kwargs)
-    n_jobs = job_kwargs['n_jobs']
+    n_jobs = job_kwargs["n_jobs"]
     assert isinstance(n_jobs, (float, np.integer, int))
     if isinstance(n_jobs, float):
         n_jobs = int(n_jobs * os.cpu_count())
@@ -87,6 +98,7 @@ def split_job_kwargs(mixed_kwargs):
 @contextlib.contextmanager
 def tqdm_joblib(tqdm_object):
     """Context manager to patch joblib to report into tqdm progress bar given as argument"""
+
     class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
         def __call__(self, *args, **kwargs):
             tqdm_object.update(n=self.batch_size)
@@ -131,7 +143,7 @@ def divide_recording_into_chunks(recording, chunk_size):
     return all_chunks
 
 
-_exponents = {'k': 1e3, 'M': 1e6, 'G': 1e9}
+_exponents = {"k": 1e3, "M": 1e6, "G": 1e9}
 
 
 def _mem_to_int(mem):
@@ -165,8 +177,9 @@ def ensure_n_jobs(recording, n_jobs=1):
     return n_jobs
 
 
-def ensure_chunk_size(recording, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, 
-                      **other_kwargs):
+def ensure_chunk_size(
+    recording, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None, n_jobs=1, **other_kwargs
+):
     """
     'chunk_size' is the traces.shape[0] for each worker.
 
@@ -211,21 +224,24 @@ def ensure_chunk_size(recording, total_memory=None, chunk_size=None, chunk_memor
         if isinstance(chunk_duration, float):
             chunk_size = int(chunk_duration * recording.get_sampling_frequency())
         elif isinstance(chunk_duration, str):
-            if chunk_duration.endswith('ms'):
-                chunk_duration = float(chunk_duration.replace('ms', '')) / 1000.
-            elif chunk_duration.endswith('s'):
-                chunk_duration = float(chunk_duration.replace('s', ''))
+            if chunk_duration.endswith("ms"):
+                chunk_duration = float(chunk_duration.replace("ms", "")) / 1000.0
+            elif chunk_duration.endswith("s"):
+                chunk_duration = float(chunk_duration.replace("s", ""))
             else:
-                raise ValueError('chunk_duration must ends with s or ms') 
+                raise ValueError("chunk_duration must ends with s or ms")
             chunk_size = int(chunk_duration * recording.get_sampling_frequency())
         else:
-            raise ValueError('chunk_duration must be str or float') 
+            raise ValueError("chunk_duration must be str or float")
     else:
         if n_jobs == 1:
             # not chunk computing
+            # TODO Discuss, Sam, is this something that we want to do?
+            # Even in single process mode, we should chunk the data to avoid loading the whole thing into memory I feel
+            # Am I wrong?
             chunk_size = None
         else:
-            raise ValueError('For n_jobs >1 you must specify total_memory or chunk_size or chunk_memory')
+            raise ValueError("For n_jobs >1 you must specify total_memory or chunk_size or chunk_memory")
 
     return chunk_size
 
@@ -280,27 +296,43 @@ class ChunkRecordingExecutor:
         Limit the number of thread per process using threadpoolctl modules.
         This used only when n_jobs>1
         If None, no limits.
-    
-        
+
+
     Returns
     -------
     res: list
         If 'handle_returns' is True, the results for each chunk process
     """
 
-    def __init__(self, recording, func, init_func, init_args, verbose=False, progress_bar=False, handle_returns=False,
-                 gather_func=None, n_jobs=1, total_memory=None, chunk_size=None, chunk_memory=None, chunk_duration=None,
-                 mp_context=None, job_name='', max_threads_per_process=1):
+    def __init__(
+        self,
+        recording,
+        func,
+        init_func,
+        init_args,
+        verbose=False,
+        progress_bar=False,
+        handle_returns=False,
+        gather_func=None,
+        n_jobs=1,
+        total_memory=None,
+        chunk_size=None,
+        chunk_memory=None,
+        chunk_duration=None,
+        mp_context=None,
+        job_name="",
+        max_threads_per_process=1,
+    ):
         self.recording = recording
         self.func = func
         self.init_func = init_func
         self.init_args = init_args
-        
+
         if mp_context is None:
             mp_context = recording.get_preferred_mp_context()
         if mp_context is not None and platform.system() == "Windows":
             assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
-                
+
         self.mp_context = mp_context
 
         self.verbose = verbose
@@ -310,15 +342,19 @@ class ChunkRecordingExecutor:
         self.gather_func = gather_func
 
         self.n_jobs = ensure_n_jobs(recording, n_jobs=n_jobs)
-        self.chunk_size = ensure_chunk_size(recording,
-                                            total_memory=total_memory, chunk_size=chunk_size,
-                                            chunk_memory=chunk_memory, chunk_duration=chunk_duration,
-                                            n_jobs=self.n_jobs)
+        self.chunk_size = ensure_chunk_size(
+            recording,
+            total_memory=total_memory,
+            chunk_size=chunk_size,
+            chunk_memory=chunk_memory,
+            chunk_duration=chunk_duration,
+            n_jobs=self.n_jobs,
+        )
         self.job_name = job_name
         self.max_threads_per_process = max_threads_per_process
-        
+
         if verbose:
-            print(self.job_name, 'with n_jobs =', self.n_jobs, 'and chunk_size =', self.chunk_size)
+            print(self.job_name, "with n_jobs =", self.n_jobs, "and chunk_size =", self.chunk_size)
 
     def run(self):
         """
@@ -330,10 +366,6 @@ class ChunkRecordingExecutor:
             returns = []
         else:
             returns = None
-
-        import sys
-        if self.n_jobs != 1 and not (sys.version_info >= (3, 8)):
-            self.n_jobs = 1
 
         if self.n_jobs == 1:
             if self.progress_bar:
@@ -354,11 +386,12 @@ class ChunkRecordingExecutor:
             ######## This is just a suggestion, but here it adds a dependency
 
             # parallel
-            with ProcessPoolExecutor(max_workers=n_jobs,
-                                     initializer=worker_initializer,
-                                     mp_context=mp.get_context(self.mp_context),
-                                     initargs=(self.func, self.init_func, self.init_args, self.max_threads_per_process)) as executor:
-
+            with ProcessPoolExecutor(
+                max_workers=n_jobs,
+                initializer=worker_initializer,
+                mp_context=mp.get_context(self.mp_context),
+                initargs=(self.func, self.init_func, self.init_args, self.max_threads_per_process),
+            ) as executor:
                 results = executor.map(function_wrapper, all_chunks)
 
                 if self.progress_bar:
@@ -388,7 +421,7 @@ def worker_initializer(func, init_func, init_args, max_threads_per_process):
     else:
         with threadpool_limits(limits=max_threads_per_process):
             _worker_ctx = init_func(*init_args)
-    _worker_ctx['max_threads_per_process'] = max_threads_per_process
+    _worker_ctx["max_threads_per_process"] = max_threads_per_process
     global _func
     _func = func
 
@@ -397,11 +430,9 @@ def function_wrapper(args):
     segment_index, start_frame, end_frame = args
     global _func
     global _worker_ctx
-    max_threads_per_process = _worker_ctx['max_threads_per_process']
+    max_threads_per_process = _worker_ctx["max_threads_per_process"]
     if max_threads_per_process is None:
         return _func(segment_index, start_frame, end_frame, _worker_ctx)
     else:
         with threadpool_limits(limits=max_threads_per_process):
             return _func(segment_index, start_frame, end_frame, _worker_ctx)
-
-

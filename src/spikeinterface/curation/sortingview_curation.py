@@ -6,12 +6,7 @@ from .curationsorting import CurationSorting
 
 
 def apply_sortingview_curation(
-    sorting,
-    uri_or_json,
-    exclude_labels=None,
-    include_labels=None,
-    skip_merge=False,
-    verbose=False
+    sorting, uri_or_json, exclude_labels=None, include_labels=None, skip_merge=False, verbose=False
 ):
     """
     Apply curation from SortingView manual curation.
@@ -23,7 +18,7 @@ def apply_sortingview_curation(
     sorting : BaseSorting
         The sorting object to be curated
     uri_or_json : str or Path
-        The URI curation link from sortingview or the path to the curation json file
+        The URI curation link from SortingView or the path to the curation json file
     exclude_labels : list, optional
         Optional list of labels to exclude (e.g. ["reject", "noise"]).
         Mutually exclusive with include_labels, by default None

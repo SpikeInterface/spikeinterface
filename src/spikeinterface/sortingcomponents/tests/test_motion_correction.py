@@ -5,11 +5,15 @@ import numpy as np
 from spikeinterface import download_dataset
 from spikeinterface.extractors import read_mearec, MEArecRecordingExtractor
 
-from spikeinterface.sortingcomponents.motion_correction import correct_motion_on_peaks, correct_motion_on_traces, CorrectMotionRecording
+from spikeinterface.sortingcomponents.motion_correction import (
+    correct_motion_on_peaks,
+    correct_motion_on_traces,
+    CorrectMotionRecording,
+)
 
 
-repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
-remote_path = 'mearec/mearec_test_10s.h5'
+repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
+remote_path = "mearec/mearec_test_10s.h5"
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -19,13 +23,14 @@ else:
 
 # Note : all theses tests are testing the accuracy methods but check that it is not buggy
 
+
 def make_fake_motion(rec):
     # make a fake motion vector
     duration = rec.get_total_duration()
     locs = rec.get_channel_locations()
-    temporal_bins = np.arange(0.5, duration-0.49, 0.5)
+    temporal_bins = np.arange(0.5, duration - 0.49, 0.5)
     spatial_bins = np.arange(locs[:, 1].min(), locs[:, 1].max(), 100)
-    motion =  np.zeros((temporal_bins.size, spatial_bins.size))
+    motion = np.zeros((temporal_bins.size, spatial_bins.size))
     motion[:, :] = np.linspace(-30, 30, temporal_bins.size)[:, None]
 
     return motion, temporal_bins, spatial_bins
@@ -38,18 +43,18 @@ def test_correct_motion_on_peaks():
     motion, temporal_bins, spatial_bins = make_fake_motion(rec)
 
     # fake locations
-    peak_locations = np.zeros((peaks.size), dtype=[('x', 'float32'), ('y', 'float')])
+    peak_locations = np.zeros((peaks.size), dtype=[("x", "float32"), ("y", "float")])
     times = rec.get_times()
 
-    corrected_peak_locations = correct_motion_on_peaks(peaks, peak_locations, times,
-                            motion, temporal_bins, spatial_bins,
-                            direction='y', progress_bar=False)
+    corrected_peak_locations = correct_motion_on_peaks(
+        peaks, peak_locations, times, motion, temporal_bins, spatial_bins, direction="y", progress_bar=False
+    )
     # print(corrected_peak_locations)
-    assert np.any(corrected_peak_locations['y'] != 0)
+    assert np.any(corrected_peak_locations["y"] != 0)
 
     # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
-    # ax.plot(times[peaks['sample_ind']], corrected_peak_locations['y'])
+    # ax.plot(times[peaks['sample_index']], corrected_peak_locations['y'])
     # ax.plot(temporal_bins, motion[:, 1])
     # plt.show()
 
@@ -64,9 +69,19 @@ def test_correct_motion_on_traces():
     traces = rec.get_traces(segment_index=0, start_frame=0, end_frame=30000)
     times = rec.get_times()[0:30000]
 
-    for method in ('kriging', 'idw', 'nearest'):
-        traces_corrected = correct_motion_on_traces(traces, times, channel_locations, motion, temporal_bins, spatial_bins, direction=1,
-                            channel_inds=None, spatial_interpolation_method=method, spatial_interpolation_kwargs={})
+    for method in ("kriging", "idw", "nearest"):
+        traces_corrected = correct_motion_on_traces(
+            traces,
+            times,
+            channel_locations,
+            motion,
+            temporal_bins,
+            spatial_bins,
+            direction=1,
+            channel_inds=None,
+            spatial_interpolation_method=method,
+            spatial_interpolation_kwargs={},
+        )
         assert traces.shape == traces_corrected.shape
         assert traces.dtype == traces_corrected.dtype
 
@@ -76,24 +91,22 @@ def test_CorrectMotionRecording():
     rec = MEArecRecordingExtractor(local_path)
     motion, temporal_bins, spatial_bins = make_fake_motion(rec)
 
-
-    rec2 = CorrectMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode='force_extrapolate')
+    rec2 = CorrectMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="force_extrapolate")
     assert rec2.channel_ids.size == 32
 
-    rec2 = CorrectMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode='force_zeros')
+    rec2 = CorrectMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="force_zeros")
     assert rec2.channel_ids.size == 32
 
-    rec2 = CorrectMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode='remove_channels')
+    rec2 = CorrectMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="remove_channels")
     assert rec2.channel_ids.size == 26
-    for ch_id in ('1', '11', '12', '21', '22', '23'):
-        assert  ch_id not in rec2.channel_ids
+    for ch_id in ("1", "11", "12", "21", "22", "23"):
+        assert ch_id not in rec2.channel_ids
 
     traces = rec2.get_traces(segment_index=0, start_frame=0, end_frame=30000)
     assert traces.shape == (30000, 26)
 
-    traces = rec2.get_traces(segment_index=0, start_frame=0, end_frame=30000, channel_ids=['3', '4'])
+    traces = rec2.get_traces(segment_index=0, start_frame=0, end_frame=30000, channel_ids=["3", "4"])
     assert traces.shape == (30000, 2)
-
 
     # import matplotlib.pyplot as plt
     # import spikeinterface.widgets as sw
@@ -104,7 +117,7 @@ def test_CorrectMotionRecording():
     # plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # test_correct_motion_on_peaks()
     test_correct_motion_on_traces()
     # test_CorrectMotionRecording()

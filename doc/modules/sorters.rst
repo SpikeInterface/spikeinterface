@@ -8,11 +8,11 @@ Kilosort, Spyking-circus, etc. (see :ref:`compatible-sorters`). All these sorter
 from the :py:class:`~spikeinterface.sorters.BaseSorter` class, which provides the common tools to
 run spike sorters.
 
-On the other hand SpikeInterface directly implements some internal sorters (**spykingcircus2**) 
-that do not depend on external tools, but depend on the :py:mod:`spikeinterface.sortingcomponents` 
+On the other hand SpikeInterface directly implements some internal sorters (**spykingcircus2**)
+that do not depend on external tools, but depend on the :py:mod:`spikeinterface.sortingcomponents`
 module. **Note that internal sorters are currently experimental and under development**.
 
-A drawback of using external sorters is the installation of these tools. Sometimes they need MATLAB, 
+A drawback of using external sorters is the installation of these tools. Sometimes they need MATLAB,
 specific versions of CUDA, specific gcc versions vary or even worse outdated versions of
 Python/NumPy. In that case, SpikeInterface offer the mechanism of running external sorters inside a
 container (Docker/Singularity) with the sorter pre-installed. See :ref:`containerizedsorters`.
@@ -22,8 +22,8 @@ External sorters: the "wrapper" concept
 ---------------------------------------
 
 When running external sorters, we use the concept of "wrappers". In short, we have Python code
-that generates the external code needed to run the sorter (for instance, a MATLAB script) and also 
-external configuration files. Then, the generated code is run in the background with the appropriate 
+that generates the external code needed to run the sorter (for instance, a MATLAB script) and also
+external configuration files. Then, the generated code is run in the background with the appropriate
 tools (e.g., Python, MATLAB, Command Line Interfaces).
 When the spike sorting process is finished, the output is loaded back into Python into a
 :py:class:`~spikeinterface.core.BaseSorting` object.
@@ -33,7 +33,7 @@ For instance, the :code:`Kilosort2_5Sorter` will handle:
   * Running MATLAB and Kilosort2.5 code in the folder, using :code:`Kilosort2_5Sorter.run_from_folder()`
   * Retrieving the spike sorting output, using :code:`Kilosort2_5Sorter.get_result_from_folder()`
 
-From the user's point of view all of this is in the background and it happens automatically when using the 
+From the user's point of view all of this is in the background and it happens automatically when using the
 :py:func:`~spikeinterface.sorters.run_sorter` function.
 
 
@@ -60,7 +60,7 @@ to easily run spike sorters:
     sorting_SC = run_sorter("spykingcircus", recording, output_folder="/folder_SC")
 
 
-Then the output, which is a :py:class:`~spikeinterface.core.BaseSorting` object, can be easily 
+Then the output, which is a :py:class:`~spikeinterface.core.BaseSorting` object, can be easily
 saved or directly post-processed:
 
 .. code-block:: python
@@ -70,13 +70,13 @@ saved or directly post-processed:
 
 The :py:func:`~spikeinterface.sorters.run_sorter` function has several options:
 
-  * to remove or not the sorter working folder (:code:`output_folder/sorter_output`) 
+  * to remove or not the sorter working folder (:code:`output_folder/sorter_output`)
     with: :code:`remove_existing_folder=True/False` (this can save lot of space because some sorters
     need data duplication!)
   * to control their verbosity: :code:`verbose=False/True`
   * to raise/not raise errors (if they fail): :code:`raise_error=False/True`
 
-Spike-sorter-specific parameters can be controlled directly from the 
+Spike-sorter-specific parameters can be controlled directly from the
 :py:func:`~spikeinterface.sorters.run_sorter` function:
 
 .. code-block:: python
@@ -134,13 +134,13 @@ Running sorters in Docker/Singularity Containers
 
 One of the biggest bottlenecks for users is installing spike sorting software. To alleviate this,
 we build and maintain containerized versions of several popular spike sorters on the
-`SpikeInterface Docker Hub repository <https://hub.docker.com/u/spikeinterface>`_. 
+`SpikeInterface Docker Hub repository <https://hub.docker.com/u/spikeinterface>`_.
 
-The containerized approach has several advantages:  
+The containerized approach has several advantages:
 
-* Installation is much easier.  
-* Different spike sorters with conflicting dependencies can be easily run side-by-side.  
-* The results of the analysis are more reproducible and not dependant on the operating system  
+* Installation is much easier.
+* Different spike sorters with conflicting dependencies can be easily run side-by-side.
+* The results of the analysis are more reproducible and not dependant on the operating system
 * MATLAB-based sorters can be run **without a MATLAB licence**.
 
 The containers can be run in Docker or Singularity, so having Docker or Singularity installed
@@ -162,12 +162,12 @@ CUDA and `nvidia-container-toolkit <https://docs.nvidia.com/datacenter/cloud-nat
 need to be installed. Only NVIDIA GPUs are supported for now.
 
 
-For Docker users, you can either install `Docker Desktop <https://www.docker.com/products/docker-desktop/>`_ 
-(recommended for Windows and MacOS) or the `Docker Engine  <https://docs.docker.com/engine/install/ubuntu/>`_ 
-(recommended for Linux). 
-To enable :code:`Docker Desktop` to download the containers, you need to create an account on 
+For Docker users, you can either install `Docker Desktop <https://www.docker.com/products/docker-desktop/>`_
+(recommended for Windows and MacOS) or the `Docker Engine  <https://docs.docker.com/engine/install/ubuntu/>`_
+(recommended for Linux).
+To enable :code:`Docker Desktop` to download the containers, you need to create an account on
 `DockerHub <https://hub.docker.com/>`_ (free) and perform the login in :code:`Docker Desktop`.
-For :code:`Docker Engine`, you also need to enable Docker to run without :code:`sudo` privileges 
+For :code:`Docker Engine`, you also need to enable Docker to run without :code:`sudo` privileges
 following `this post-install guide <https://docs.docker.com/engine/install/linux-postinstall/>`_
 
 The containers are built with Docker, but Singularity has an internal mechanism to convert Docker images.
@@ -195,16 +195,16 @@ The following code creates a test recording and runs a containerized spike sorte
 This will automatically check if the latest compiled kilosort3 Docker image is present on your
 workstation and if it is not, the proper image will be downloaded from
 `SpikeInterface's Docker Hub repository <https://hub.docker.com/u/spikeinterface>`_.
-The sorter will then run and output the results in the designated folder. 
+The sorter will then run and output the results in the designated folder.
 
-To run in Docker instead of Singularity, use ``docker_image=True``. 
+To run in Docker instead of Singularity, use ``docker_image=True``.
 
 .. code-block:: python
 
     sorting = run_sorter('kilosort3', recording=test_recording,
                          output_folder="/tmp/kilosort3", docker_image=True)
 
-To use a specific image, set either ``docker_image`` or ``singularity_image`` to a string, 
+To use a specific image, set either ``docker_image`` or ``singularity_image`` to a string,
 e.g. ``singularity_image="spikeinterface/kilosort3-compiled-base:0.1.0"``.
 
 .. code-block:: python
@@ -215,7 +215,7 @@ e.g. ``singularity_image="spikeinterface/kilosort3-compiled-base:0.1.0"``.
         singularity_image="spikeinterface/kilosort3-compiled-base:0.1.0")
 
 
-**NOTE:** the :code:`toy_example()` returns in-memory objects, which are not bound to a file on disk. 
+**NOTE:** the :code:`toy_example()` returns in-memory objects, which are not bound to a file on disk.
 In order to run a spike sorter in a container, the recording object MUST be persistent on disk, so
 that the container can reload it. The :code:`save()` function makes the recording persistent on disk,
 by saving the in-memory  :code:`test_recording` object to a binary file in the
@@ -225,8 +225,8 @@ by saving the in-memory  :code:`test_recording` object to a binary file in the
 Running several sorters in parallel
 -----------------------------------
 
-The :py:mod:`~spikeinterface.sorters` module also includes tools to run several spike sorting jobs 
-sequentially or in parallel. This can be done with the 
+The :py:mod:`~spikeinterface.sorters` module also includes tools to run several spike sorting jobs
+sequentially or in parallel. This can be done with the
 :py:func:`~spikeinterface.sorters.run_sorters()` function by specifying
 an :code:`engine` that supports parallel processing (such as :code:`joblib` or :code:`slurm`).
 
@@ -234,11 +234,11 @@ an :code:`engine` that supports parallel processing (such as :code:`joblib` or :
 
     recordings = {'rec1' : recording, 'rec2': another_recording}
     sorter_list = ['herdingspikes', 'tridesclous']
-    sorter_params = { 
+    sorter_params = {
                     'herdingspikes': {'clustering_bandwidth' : 8},
                     'tridesclous': {'detect_threshold' : 5.},
                     }
-    sorting_output = run_sorters(sorter_list, recordings, working_folder='tmp_some_sorters', 
+    sorting_output = run_sorters(sorter_list, recordings, working_folder='tmp_some_sorters',
                                  mode_if_folder_exists='overwrite', sorter_params=sorter_params)
 
     # the output is a dict with (rec_name, sorter_name) as keys
@@ -246,12 +246,12 @@ an :code:`engine` that supports parallel processing (such as :code:`joblib` or :
         print(rec_name, sorter_name, ':', sorting.get_unit_ids())
 
 After the jobs are run, the :code:`sorting_outputs` is a dictionary with :code:`(rec_name, sorter_name)` as a key (e.g.
-:code:`('rec1', 'tridesclous')` in this example), and the corresponding :py:class:`~spikeinterface.core.BaseSorting` 
+:code:`('rec1', 'tridesclous')` in this example), and the corresponding :py:class:`~spikeinterface.core.BaseSorting`
 as a value.
 
 :py:func:`~spikeinterface.sorters.run_sorters` has several "engines" available to launch the computation:
 
-* "loop": sequential 
+* "loop": sequential
 * "joblib": in parallel
 * "slurm": in parallel, using the SLURM job manager
 
@@ -259,7 +259,7 @@ as a value.
 
   run_sorters(sorter_list, recordings, engine='loop')
 
-  run_sorters(sorter_list, recordings, engine='joblib', 
+  run_sorters(sorter_list, recordings, engine='joblib',
               engine_kwargs={'n_jobs': 2})
 
   run_sorters(sorter_list, recordings, engine='slurm',
@@ -271,11 +271,11 @@ Spike sorting by group
 
 Sometimes you may want to spike sort using a specific grouping, for example when working with tetrodes, with multi-shank
 probes, or if the recording has data from different probes.
-Alternatively, for long silicon probes, such as Neuropixels, one could think of spike sorting different areas 
-separately, for example using a different sorter for the hippocampus, the thalamus, or the cerebellum. 
+Alternatively, for long silicon probes, such as Neuropixels, one could think of spike sorting different areas
+separately, for example using a different sorter for the hippocampus, the thalamus, or the cerebellum.
 Running spike sorting by group is indeed a very common need.
 
-A :py:class:`~spikeinterface.core.BaseRecording` object has the ability to split itself into a dictionary of 
+A :py:class:`~spikeinterface.core.BaseRecording` object has the ability to split itself into a dictionary of
 sub-recordings given a certain property (see :py:meth:`~spikeinterface.core.BaseRecording.split_by`).
 So it is easy to loop over this dictionary and sequentially run spike sorting on these sub-recordings.
 SpikeInterface also provides a high-level function to automate the process of splitting the
@@ -335,7 +335,7 @@ In this example, we create a 16-channel recording with 4 tetrodes:
 Handling multi-segment recordings
 ---------------------------------
 
-In several experiments, several acquisitions are performed in sequence, for example a 
+In several experiments, several acquisitions are performed in sequence, for example a
 baseline/intervention. In these cases, since the underlying spiking activity can be assumed to be
 the same (or at least very similar), the recordings can be concatenated. This example shows how
 to concatenate the recordings before spike sorting and how to split the sorted output based
@@ -404,6 +404,7 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **PyKilosort** :code:`run_sorter('pykilosort')`
 * **Klusta** :code:`run_sorter('klusta')`
 * **Mountainsort4** :code:`run_sorter('mountainsort4')`
+* **Mountainsort5** :code:`run_sorter('mountainsort5')`
 * **SpyKING Circus** :code:`run_sorter('spykingcircus')`
 * **Tridesclous** :code:`run_sorter('tridesclous')`
 * **Wave clus** :code:`run_sorter('waveclus')`
@@ -441,6 +442,7 @@ which outputs,
   ['herdingspikes',
    'klusta',
    'mountainsort4',
+   'mountainsort5',
    'spykingcircus',
    'tridesclous']
 
@@ -471,7 +473,7 @@ Internal sorters
 In 2022, we started the :py:mod:`spikeinterface.sortingcomponents` module to break into components a sorting pipeline.
 These components can be gathered to create a new sorter. We already have 2 sorters to showcase this new module:
 
-* :code:`spykingcircus2` (experimental, but ready to be tested) 
+* :code:`spykingcircus2` (experimental, but ready to be tested)
 * :code:`tridesclous2` (experimental, not ready to be used)
 
 There are some benefits of using these sorters:
@@ -492,13 +494,8 @@ Contributing
 There are 3 ways for contributing to the :py:mod:`spikeinterface.sorters` module:
 
   * helping in the containerization of spike sorters. This is managed on a separate GitHub repo,
-    `spikeinterface-dockerfiles <https://github.com/SpikeInterface/spikeinterface-dockerfiles>`_. 
+    `spikeinterface-dockerfiles <https://github.com/SpikeInterface/spikeinterface-dockerfiles>`_.
     If you find an error with a current container or would like to request a new spike sorter,
     please submit an Issue to this repo.
   * make a new wrapper of an existing external sorter.
   * make a new sorter based on :py:mod:`spikeinterface.sortingcomponents`
-
-
-
-
-

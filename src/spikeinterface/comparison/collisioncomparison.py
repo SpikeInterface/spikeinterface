@@ -1,5 +1,5 @@
-import pandas as pd
 import numpy as np
+
 from .paircomparisons import GroundTruthComparison
 from .comparisontools import make_collision_events
 
@@ -16,9 +16,8 @@ class CollisionGTComparison(GroundTruthComparison):
     """
 
     def __init__(self, gt_sorting, tested_sorting, collision_lag=2.0, nbins=11, **kwargs):
-
         # Force compute labels
-        kwargs['compute_labels'] = True
+        kwargs["compute_labels"] = True
 
         if gt_sorting.get_num_segments() > 1 or tested_sorting.get_num_segments() > 1:
             raise NotImplementedError("Collision comparison is only available for mono-segment sorting objects")
@@ -45,12 +44,12 @@ class CollisionGTComparison(GroundTruthComparison):
             reversed = False
 
         # events
-        mask = (self.collision_events['unit_id1'] == gt_unit_id1) & (self.collision_events['unit_id2'] == gt_unit_id2)
+        mask = (self.collision_events["unit_id1"] == gt_unit_id1) & (self.collision_events["unit_id2"] == gt_unit_id2)
         event = self.collision_events[mask]
 
-        score_label1 = self._labels_st1[gt_unit_id1][0][event['index1']]
-        score_label2 = self._labels_st1[gt_unit_id2][0][event['index2']]
-        delta = event['delta_frame']
+        score_label1 = self._labels_st1[gt_unit_id1][0][event["index1"]]
+        score_label2 = self._labels_st1[gt_unit_id2][0][event["index2"]]
+        delta = event["delta_frame"]
 
         if reversed:
             score_label1, score_label2 = score_label2, score_label1
@@ -59,9 +58,7 @@ class CollisionGTComparison(GroundTruthComparison):
         return score_label1, score_label2, delta
 
     def get_label_count_per_collision_bins(self, gt_unit_id1, gt_unit_id2, bins):
-
         score_label1, score_label2, delta = self.get_label_for_collision(gt_unit_id1, gt_unit_id2)
-
 
         tp_count1 = np.zeros(bins.size - 1)
         fn_count1 = np.zeros(bins.size - 1)
@@ -72,10 +69,10 @@ class CollisionGTComparison(GroundTruthComparison):
             l0, l1 = bins[i], bins[i + 1]
             mask = (delta >= l0) & (delta < l1)
 
-            tp_count1[i] = np.sum(score_label1[mask] == 'TP')
-            fn_count1[i] = np.sum(score_label1[mask] == 'FN')
-            tp_count2[i] = np.sum(score_label2[mask] == 'TP')
-            fn_count2[i] = np.sum(score_label2[mask] == 'FN')
+            tp_count1[i] = np.sum(score_label1[mask] == "TP")
+            fn_count1[i] = np.sum(score_label1[mask] == "FN")
+            tp_count2[i] = np.sum(score_label2[mask] == "TP")
+            fn_count2[i] = np.sum(score_label2[mask] == "FN")
 
         # inverse for unit_id2
         tp_count2 = tp_count2[::-1]
@@ -84,9 +81,8 @@ class CollisionGTComparison(GroundTruthComparison):
         return tp_count1, fn_count1, tp_count2, fn_count2
 
     def compute_all_pair_collision_bins(self):
-
         d = int(self.collision_lag / 1000 * self.sampling_frequency)
-        bins = np.linspace(-d, d, self.nbins+1)
+        bins = np.linspace(-d, d, self.nbins + 1)
         self.bins = bins
 
         unit_ids = self.sorting1.unit_ids
@@ -97,11 +93,11 @@ class CollisionGTComparison(GroundTruthComparison):
         all_tp_count2 = []
         all_fn_count2 = []
 
-        self.all_tp = np.zeros((n, n, self.nbins), dtype='int64')
-        self.all_fn = np.zeros((n, n, self.nbins), dtype='int64')
+        self.all_tp = np.zeros((n, n, self.nbins), dtype="int64")
+        self.all_fn = np.zeros((n, n, self.nbins), dtype="int64")
 
         for i in range(n):
-            for j in range(i+1, n):
+            for j in range(i + 1, n):
                 u1 = unit_ids[i]
                 u2 = unit_ids[j]
 
@@ -122,18 +118,16 @@ class CollisionGTComparison(GroundTruthComparison):
         similarities = []
         pair_names = []
 
-        performances = self.get_performance()['accuracy']
+        performances = self.get_performance()["accuracy"]
 
         for r in range(n):
             for c in range(r + 1, n):
-
                 u1 = unit_ids[r]
                 u2 = unit_ids[c]
 
                 if good_only:
                     if (performances[u1] < min_accuracy) or (performances[u2] < min_accuracy):
                         continue
-
 
                 ind1 = self.sorting1.id_to_index(u1)
                 ind2 = self.sorting1.id_to_index(u2)
@@ -143,14 +137,14 @@ class CollisionGTComparison(GroundTruthComparison):
                 recall1 = tp1 / (tp1 + fn1)
                 recall_scores.append(recall1)
                 similarities.append(similarity_matrix[r, c])
-                pair_names.append(f'{u1} {u2}')
+                pair_names.append(f"{u1} {u2}")
 
                 tp2 = self.all_tp[ind2, ind1, :]
                 fn2 = self.all_fn[ind2, ind1, :]
                 recall2 = tp2 / (tp2 + fn2)
                 recall_scores.append(recall2)
                 similarities.append(similarity_matrix[r, c])
-                pair_names.append(f'{u2} {u1}')
+                pair_names.append(f"{u2} {u1}")
 
         recall_scores = np.array(recall_scores)
         similarities = np.array(similarities)

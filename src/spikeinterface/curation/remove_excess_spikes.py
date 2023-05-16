@@ -8,14 +8,14 @@ from ..core.waveform_tools import has_exceeding_spikes
 class RemoveExcessSpikesSorting(BaseSorting):
     """
     Class to remove excess spikes from the spike trains.
-    Excess spikes are the ones exceeding a recording number of samples, for each segment
+    Excess spikes are the ones exceeding a recording number of samples, for each segment.
 
     Parameters
     ----------
     sorting: BaseSorting
         The parent sorting.
     recording: BaseRecording
-        The recording to use to get number of samples.
+        The recording to use to get the number of samples.
 
     Returns
     -------
@@ -26,8 +26,9 @@ class RemoveExcessSpikesSorting(BaseSorting):
     def __init__(self, sorting: BaseSorting, recording: BaseRecording) -> None:
         super().__init__(sorting.get_sampling_frequency(), sorting.unit_ids)
 
-        assert sorting.get_num_segments() == recording.get_num_segments(), \
-            "The sorting and recording objects must have the same number of samples!"
+        assert (
+            sorting.get_num_segments() == recording.get_num_segments()
+        ), "The sorting and recording objects must have the same number of samples!"
 
         for segment_index in range(sorting.get_num_segments()):
             sorting_segment = sorting._sorting_segments[segment_index]
@@ -38,10 +39,7 @@ class RemoveExcessSpikesSorting(BaseSorting):
         if sorting.has_recording():
             self.register_recording(sorting._recording)
 
-        self._kwargs = {
-            'sorting': sorting,
-            'recording': recording
-        }
+        self._kwargs = {"sorting": sorting, "recording": recording}
 
 
 class RemoveExcessSpikesSortingSegment(BaseSortingSegment):
@@ -50,8 +48,9 @@ class RemoveExcessSpikesSortingSegment(BaseSortingSegment):
         self._parent_segment = parent_segment
         self._num_samples = num_samples
 
-    def get_unit_spike_train(self, unit_id, start_frame: Optional[int] = None,
-                             end_frame: Optional[int] = None) -> np.ndarray:
+    def get_unit_spike_train(
+        self, unit_id, start_frame: Optional[int] = None, end_frame: Optional[int] = None
+    ) -> np.ndarray:
         spike_train = self._parent_segment.get_unit_spike_train(unit_id, start_frame=start_frame, end_frame=end_frame)
 
         return spike_train[spike_train < self._num_samples]
@@ -60,14 +59,14 @@ class RemoveExcessSpikesSortingSegment(BaseSortingSegment):
 def remove_excess_spikes(sorting, recording):
     """
     Remove excess spikes from the spike trains.
-    Excess spikes are the ones exceeding a recording number of samples, for each segment
+    Excess spikes are the ones exceeding a recording number of samples, for each segment.
 
     Parameters
     ----------
     sorting: BaseSorting
         The parent sorting.
     recording: BaseRecording
-        The recording to use to get number of samples.
+        The recording to use to get the number of samples.
 
     Returns
     -------
