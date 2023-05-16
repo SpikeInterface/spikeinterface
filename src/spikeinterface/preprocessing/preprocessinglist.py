@@ -1,21 +1,29 @@
 ### PREPROCESSORS ###
 from .resample import ResampleRecording, resample
-from .filter import (FilterRecording, filter,
-                     BandpassFilterRecording, bandpass_filter,
-                     NotchFilterRecording, notch_filter,
-                     HighpassFilterRecording, highpass_filter,
-                     )
-from .filter_gaussian import (GaussianBandpassFilterRecording, gaussian_bandpass_filter)
+from .filter import (
+    FilterRecording,
+    filter,
+    BandpassFilterRecording,
+    bandpass_filter,
+    NotchFilterRecording,
+    notch_filter,
+    HighpassFilterRecording,
+    highpass_filter,
+)
+from .filter_gaussian import GaussianBandpassFilterRecording, gaussian_bandpass_filter
 from .normalize_scale import (
-    NormalizeByQuantileRecording, normalize_by_quantile,
-    ScaleRecording, scale,
-    ZScoreRecording, zscore,
-    CenterRecording, center)
+    NormalizeByQuantileRecording,
+    normalize_by_quantile,
+    ScaleRecording,
+    scale,
+    ZScoreRecording,
+    zscore,
+    CenterRecording,
+    center,
+)
 from .whiten import WhitenRecording, whiten, compute_whitening_matrix
 from .rectify import RectifyRecording, rectify
-from .clip import (
-    BlankSaturationRecording, blank_staturation,
-    ClipRecording, clip)
+from .clip import BlankSaturationRecording, blank_staturation, ClipRecording, clip
 from .common_reference import CommonReferenceRecording, common_reference
 from .remove_artifacts import RemoveArtifactsRecording, remove_artifacts
 from .silence_periods import SilencedPeriodsRecording, silence_periods
@@ -36,20 +44,16 @@ preprocessers_full_list = [
     HighpassFilterRecording,
     NotchFilterRecording,
     GaussianBandpassFilterRecording,
-
     # gain offset stuff
     NormalizeByQuantileRecording,
     ScaleRecording,
     CenterRecording,
     ZScoreRecording,
-
     # decorrelation stuff
     WhitenRecording,
-
     # re-reference
     CommonReferenceRecording,
     PhaseShiftRecording,
-
     # misc
     RectifyRecording,
     ClipRecording,

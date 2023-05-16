@@ -26,18 +26,17 @@ for import_statement in import_statement_list:
     time_taken_list = []
     for _ in range(n_samples):
         script_to_execute = (
-                f"import timeit \n"
-                f"import_statement = '{import_statement}' \n"
-                f"time_taken = timeit.timeit(import_statement, number=1) \n"
-                f"print(time_taken) \n"
-               ) 
+            f"import timeit \n"
+            f"import_statement = '{import_statement}' \n"
+            f"time_taken = timeit.timeit(import_statement, number=1) \n"
+            f"print(time_taken) \n"
+        )
 
         result = subprocess.run(["python", "-c", script_to_execute], capture_output=True, text=True)
 
         if result.returncode != 0:
-            error_message  = (
-                f"Error when running {import_statement} \n"
-                f"Error in subprocess: {result.stderr.strip()}\n"
+            error_message = (
+                f"Error when running {import_statement} \n" f"Error in subprocess: {result.stderr.strip()}\n"
             )
             exceptions.append(error_message)
             break

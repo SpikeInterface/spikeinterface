@@ -19,16 +19,11 @@ class TemplateSimilarityPlotter(SortingviewPlotter):
         ss_items = []
         for i1, u1 in enumerate(unit_ids):
             for i2, u2 in enumerate(unit_ids):
-                ss_items.append(vv.UnitSimilarityScore(
-                    unit_id1=u1,
-                    unit_id2=u2,
-                    similarity=dp.similarity[i1, i2].astype("float32")
-                ))
+                ss_items.append(
+                    vv.UnitSimilarityScore(unit_id1=u1, unit_id2=u2, similarity=dp.similarity[i1, i2].astype("float32"))
+                )
 
-        view = vv.UnitSimilarityMatrix(
-            unit_ids=list(unit_ids),
-            similarity_scores=ss_items
-        )
+        view = vv.UnitSimilarityMatrix(unit_ids=list(unit_ids), similarity_scores=ss_items)
 
         self.handle_display_and_url(view, **backend_kwargs)
         return view

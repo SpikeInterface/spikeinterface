@@ -20,6 +20,7 @@ class BaseEvent(BaseExtractor):
         same dtype.
         In case of structured dtypes, the "time" or "timestamp" field name must be present.
     """
+
     def __init__(self, channel_ids, structured_dtype):
         BaseExtractor.__init__(self, channel_ids)
         self._event_segments: List[BaseEventSegment] = []
@@ -27,14 +28,16 @@ class BaseEvent(BaseExtractor):
         if not isinstance(structured_dtype, dict):
             structured_dtype = {chan_id: structured_dtype for chan_id in channel_ids}
         else:
-            assert all(chan_id in structured_dtype for chan_id in channel_ids), \
-                ("Missing some channel_ids from structured_dtype dict keys")
+            assert all(
+                chan_id in structured_dtype for chan_id in channel_ids
+            ), "Missing some channel_ids from structured_dtype dict keys"
 
         # check dtype fields (if present)
         for _, dtype in structured_dtype.items():
             if dtype.names is not None:
-                assert "time" in dtype.names or "timestamp" in dtype.names, \
-                    ("The event dtype need to have the 'time' or 'timestamp' field")
+                assert (
+                    "time" in dtype.names or "timestamp" in dtype.names
+                ), "The event dtype need to have the 'time' or 'timestamp' field"
 
         self.structured_dtype = structured_dtype
 
@@ -42,9 +45,9 @@ class BaseEvent(BaseExtractor):
         clsname = self.__class__.__name__
         nseg = self.get_num_segments()
         nchannels = self.get_num_channels()
-        txt = f'{clsname}: {nchannels} channels - {nseg} segments'
-        if 'file_path' in self._kwargs:
-            txt += '\n  file_path: {}'.format(self._kwargs['file_path'])
+        txt = f"{clsname}: {nchannels} channels - {nseg} segments"
+        if "file_path" in self._kwargs:
+            txt += "\n  file_path: {}".format(self._kwargs["file_path"])
         return txt
 
     @property
@@ -65,12 +68,13 @@ class BaseEvent(BaseExtractor):
     def get_num_segments(self):
         return len(self._event_segments)
 
-    def get_events(self,
-                   channel_id=None,
-                   segment_index=None,
-                   start_time=None,
-                   end_time=None,
-                   ):
+    def get_events(
+        self,
+        channel_id=None,
+        segment_index=None,
+        start_time=None,
+        end_time=None,
+    ):
         """
         Return events of a channel in its native structured type.
 
@@ -94,12 +98,13 @@ class BaseEvent(BaseExtractor):
         seg_ev = self._event_segments[segment_index]
         return seg_ev.get_events(channel_id, start_time, end_time)
 
-    def get_event_times(self,
-                        channel_id=None,
-                        segment_index=None,
-                        start_time=None,
-                        end_time=None,
-                        ):
+    def get_event_times(
+        self,
+        channel_id=None,
+        segment_index=None,
+        start_time=None,
+        end_time=None,
+    ):
         """
         Return events timestamps of a channel in seconds.
 

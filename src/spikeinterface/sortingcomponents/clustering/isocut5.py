@@ -68,32 +68,16 @@ if HAVE_NUMBA:
             while True:
                 if last_index <= 0:
                     break
-                if (
-                    wsum[last_index - 1] / count[last_index - 1]
-                    < wsum[last_index] / count[last_index]
-                ):
+                if wsum[last_index - 1] / count[last_index - 1] < wsum[last_index] / count[last_index]:
                     break
 
-                prevMSE = (
-                    wsumsqr[last_index - 1]
-                    - wsum[last_index - 1]
-                    * wsum[last_index - 1]
-                    / count[last_index - 1]
-                )
-                prevMSE += (
-                    wsumsqr[last_index]
-                    - wsum[last_index] * wsum[last_index] / count[last_index]
-                )
+                prevMSE = wsumsqr[last_index - 1] - wsum[last_index - 1] * wsum[last_index - 1] / count[last_index - 1]
+                prevMSE += wsumsqr[last_index] - wsum[last_index] * wsum[last_index] / count[last_index]
                 unweightedcount[last_index - 1] += unweightedcount[last_index]
                 count[last_index - 1] += count[last_index]
                 wsum[last_index - 1] += wsum[last_index]
                 wsumsqr[last_index - 1] += wsumsqr[last_index]
-                newMSE = (
-                    wsumsqr[last_index - 1]
-                    - wsum[last_index - 1]
-                    * wsum[last_index - 1]
-                    / count[last_index - 1]
-                )
+                newMSE = wsumsqr[last_index - 1] - wsum[last_index - 1] * wsum[last_index - 1] / count[last_index - 1]
                 MSE[j] += newMSE - prevMSE
                 last_index -= 1
 
@@ -183,9 +167,7 @@ if HAVE_NUMBA:
             alpha = (N - 1) / intervals.sum()
             intervals *= alpha
             # this line is the only one to translate to 0-based
-            inds = np.floor(np.hstack((float_0, np.cumsum(intervals)))).astype(
-                np.int_
-            )
+            inds = np.floor(np.hstack((float_0, np.cumsum(intervals)))).astype(np.int_)
             if intervals.min() >= 1:
                 break
             else:
@@ -197,22 +179,18 @@ if HAVE_NUMBA:
         multiplicities = np.diff(cumsum_sample_weights[inds])
         densities = multiplicities / spacings
 
-        densities_unimodal_fit = up_down_isotonic_regression(
-            densities, multiplicities
-        )
+        densities_unimodal_fit = up_down_isotonic_regression(densities, multiplicities)
         peak_ind = np.argmax(densities_unimodal_fit)
 
         # difficult translation of indexing from 1-based to 0-based in
         # the following few lines. this has been checked thoroughly.
         ks_left, ks_left_ind = compute_ks5(
             multiplicities[0 : peak_ind + 1],
-            densities_unimodal_fit[0 : peak_ind + 1]
-            * spacings[0 : peak_ind + 1],
+            densities_unimodal_fit[0 : peak_ind + 1] * spacings[0 : peak_ind + 1],
         )
         ks_right, ks_right_ind = compute_ks5(
             multiplicities[peak_ind:][::-1],
-            densities_unimodal_fit[peak_ind:][::-1]
-            * spacings[peak_ind:][::-1],
+            densities_unimodal_fit[peak_ind:][::-1] * spacings[peak_ind:][::-1],
         )
         ks_right_ind = spacings.size - ks_right_ind
 
@@ -223,12 +201,8 @@ if HAVE_NUMBA:
             critical_range = slice(ks_right_ind, spacings.size)
             dipscore = ks_right
 
-        densities_resid = (
-            densities[critical_range] - densities_unimodal_fit[critical_range]
-        )
-        densities_resid_fit = down_up_isotonic_regression(
-            densities_resid, spacings[critical_range]
-        )
+        densities_resid = densities[critical_range] - densities_unimodal_fit[critical_range]
+        densities_resid_fit = down_up_isotonic_regression(densities_resid, spacings[critical_range])
         cutpoint_ind = critical_range.start + np.argmin(densities_resid_fit)
         cutpoint = (X_sub[cutpoint_ind] + X_sub[cutpoint_ind + 1]) / 2
 
