@@ -11,10 +11,11 @@ from collections import namedtuple
 
 import math
 import numpy as np
+from typing import Union
 import warnings
 
 from ..postprocessing import correlogram_for_one_segment
-from ..core import get_noise_levels
+from ..core import BaseSorting, WaveformExtractor, get_noise_levels
 from ..core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
@@ -296,7 +297,7 @@ _default_params["isi_violation"] = dict(isi_threshold_ms=1.5, min_isi_ms=0)
 
 
 def compute_refrac_period_violations(
-    waveform_extractor, refractory_period_ms: float = 1.0, censored_period_ms: float = 0.0
+    waveform_or_sorting_extractor: Union[BaseSorting, WaveformExtractor], refractory_period_ms: float = 1.0, censored_period_ms: float = 0.0
 ):
     """Calculates the number of refractory period violations.
 
@@ -307,8 +308,8 @@ def compute_refrac_period_violations(
 
     Parameters
     ----------
-    waveform_extractor : WaveformExtractor
-        The waveform extractor object
+    waveform_or_sorting_extractor : BaseSorting |WaveformExtractor
+        The waveform or sorting extractor object
     refractory_period_ms : float, default: 1.0
         The period (in ms) where no 2 good spikes can occur.
     censored_period_ùs : float, default: 0.0
@@ -338,9 +339,12 @@ def compute_refrac_period_violations(
         print("compute_refrac_period_violations cannot run without numba.")
         return None
 
-    sorting = waveform_extractor.sorting
-    fs = sorting.get_sampling_frequency()
-    num_units = len(sorting.unit_ids)
+    if isinstance(waveform_or_sorting_extractor, WaveformExtractor):
+        sorting = waveform_or_sorting_extractor.sorting
+    else:
+        sorting = waveform_or_sorting_extractor
+    fs = sorting.sampling_frequency
+    num_units = sorting.get_num_units()
     num_segments = sorting.get_num_segments()
     spikes = sorting.get_all_spike_trains(outputs="unit_index")
     num_spikes = compute_num_spikes(waveform_extractor)
