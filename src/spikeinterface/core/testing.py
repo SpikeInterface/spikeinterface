@@ -1,5 +1,8 @@
 import numpy as np
 from numpy.testing import assert_array_equal
+from .base import BaseExtractor
+from .baserecording import BaseRecording
+from .basesorting import BaseSorting
 
 
 def check_sorted_arrays_equal(a1, a2):
@@ -8,7 +11,14 @@ def check_sorted_arrays_equal(a1, a2):
     assert_array_equal(a1, a2)
 
 
-def check_recordings_equal(RX1, RX2, return_scaled=True, force_dtype=None):
+def check_recordings_equal(
+    RX1: BaseRecording,
+    RX2: BaseRecording,
+    return_scaled=True,
+    force_dtype=None,
+    check_annotations: bool = False,
+    check_properties: bool = False,
+) -> None:
     assert RX1.get_num_segments() == RX2.get_num_segments()
 
     for segment_idx in range(RX1.get_num_segments()):
@@ -23,14 +33,15 @@ def check_recordings_equal(RX1, RX2, return_scaled=True, force_dtype=None):
         assert np.allclose(RX1.get_sampling_frequency(), RX2.get_sampling_frequency())
         # get_traces
         if force_dtype is None:
-            assert np.allclose(RX1.get_traces(segment_index=segment_idx,
-                                              return_scaled=return_scaled), 
-                               RX2.get_traces(segment_index=segment_idx, 
-                                              return_scaled=return_scaled))
+            assert np.allclose(
+                RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled),
+                RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled),
+            )
         else:
             assert np.allclose(
                 RX1.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),
-                RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype))
+                RX2.get_traces(segment_index=segment_idx, return_scaled=return_scaled).astype(force_dtype),
+            )
         sf = 0
         ef = N
         if RX1.get_num_channels() > 1:
@@ -38,29 +49,33 @@ def check_recordings_equal(RX1, RX2, return_scaled=True, force_dtype=None):
         else:
             ch = [RX1.get_channel_ids()[0]]
         if force_dtype is None:
-            assert np.allclose(RX1.get_traces(segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef,
-                                              return_scaled=return_scaled),
-                               RX2.get_traces(segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef,
-                                              return_scaled=return_scaled))
+            assert np.allclose(
+                RX1.get_traces(
+                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
+                ),
+                RX2.get_traces(
+                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
+                ),
+            )
         else:
-            assert np.allclose(RX1.get_traces(segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef,
-                                              return_scaled=return_scaled).astype(force_dtype),
-                               RX2.get_traces(segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef,
-                                              return_scaled=return_scaled).astype(force_dtype))
+            assert np.allclose(
+                RX1.get_traces(
+                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
+                ).astype(force_dtype),
+                RX2.get_traces(
+                    segment_index=segment_idx, channel_ids=ch, start_frame=sf, end_frame=ef, return_scaled=return_scaled
+                ).astype(force_dtype),
+            )
+
+    if check_annotations:
+        check_extractor_annotations_equal(RX1, RX2)
+    if check_properties:
+        check_extractor_properties_equal(RX1, RX2)
 
 
-# def check_recording_properties(RX1, RX2):
-#     # check properties
-#     assert sorted(RX1.get_shared_channel_property_names()) == sorted(RX2.get_shared_channel_property_names())
-#     for prop in RX1.get_shared_channel_property_names():
-#         for ch in RX1.get_channel_ids():
-#             if not isinstance(RX1.get_channel_property(ch, prop), str):
-#                 assert np.allclose(np.array(RX1.get_channel_property(ch, prop)),
-#                                    np.array(RX2.get_channel_property(ch, prop)))
-#             else:
-#                 assert RX1.get_channel_property(ch, prop) == RX2.get_channel_property(ch, prop)
-
-def check_sortings_equal(SX1, SX2):
+def check_sortings_equal(
+    SX1: BaseSorting, SX2: BaseSorting, check_annotations: bool = False, check_properties: bool = False
+) -> None:
     assert SX1.get_num_segments() == SX2.get_num_segments()
 
     for segment_idx in range(SX1.get_num_segments()):
@@ -73,22 +88,21 @@ def check_sortings_equal(SX1, SX2):
             train2 = np.sort(SX2.get_unit_spike_train(id, segment_index=segment_idx))
             assert np.array_equal(train1, train2)
 
-# def check_sorting_properties_features(SX1, SX2):
-#     # check properties
-#     print(SX1.__class__)
-#     print('Properties', sorted(SX1.get_shared_unit_property_names()), sorted(SX2.get_shared_unit_property_names()))
-#     assert sorted(SX1.get_shared_unit_property_names()) == sorted(SX2.get_shared_unit_property_names())
-#     for prop in SX1.get_shared_unit_property_names():
-#         for u in SX1.get_unit_ids():
-#             if not isinstance(SX1.get_unit_property(u, prop), str):
-#                 assert np.allclose(np.array(SX1.get_unit_property(u, prop)),
-#                                    np.array(SX2.get_unit_property(u, prop)))
-#             else:
-#                 assert SX1.get_unit_property(u, prop) == SX2.get_unit_property(u, prop)
-#     # check features
-#     print('Features', sorted(SX1.get_shared_unit_spike_feature_names()), sorted(SX2.get_shared_unit_spike_feature_names()))
-#     assert sorted(SX1.get_shared_unit_spike_feature_names()) == sorted(SX2.get_shared_unit_spike_feature_names())
-#     for feat in SX1.get_shared_unit_spike_feature_names():
-#         for u in SX1.get_unit_ids():
-#             assert np.allclose(np.array(SX1.get_unit_spike_features(u, feat)),
-#                                np.array(SX2.get_unit_spike_features(u, feat)))
+    if check_annotations:
+        check_extractor_annotations_equal(SX1, SX2)
+    if check_properties:
+        check_extractor_properties_equal(SX1, SX2)
+
+
+def check_extractor_annotations_equal(EX1, EX2) -> None:
+    assert np.array_equal(sorted(EX1.get_annotation_keys()), sorted(EX2.get_annotation_keys()))
+
+    for annotation_name in EX1.get_annotation_keys():
+        assert EX1.get_annotation(annotation_name) == EX2.get_annotation(annotation_name)
+
+
+def check_extractor_properties_equal(EX1, EX2) -> None:
+    assert np.array_equal(sorted(EX1.get_property_keys()), sorted(EX2.get_property_keys()))
+
+    for property_name in EX1.get_property_keys():
+        assert_array_equal(EX1.get_property(property_name), EX2.get_property(property_name))

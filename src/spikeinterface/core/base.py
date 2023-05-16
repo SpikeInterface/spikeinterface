@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Union, Optional
 import importlib
 import warnings
 import weakref
@@ -16,6 +17,7 @@ from .globals import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import check_json, is_dict_extractor, recursive_path_modifier, SIJsonEncoder
 from .job_tools import _shared_job_kwargs_doc
 
+
 class BaseExtractor:
     """
     Base class for Recording/Sorting
@@ -27,23 +29,21 @@ class BaseExtractor:
     default_missing_property_values = {"f": np.nan, "O": None, "S": "", "U": ""}
 
     # This replaces the old key_properties
-    # These are annotations/properties/features that always need to be
+    # These are annotations/properties that always need to be
     # dumped (for instance locations, groups, is_fileterd, etc.)
     _main_annotations = []
     _main_properties = []
-    _main_features = []
 
     installed = True
     installation_mesg = ""
     is_writable = False
-
 
     def __init__(self, main_ids):
         # store init kwargs for nested serialisation
         self._kwargs = {}
 
         # 'main_ids' will either be channel_ids or units_ids
-        # They is used for properties and features
+        # They is used for properties
         self._main_ids = np.array(main_ids)
 
         # dict at object level
@@ -55,14 +55,11 @@ class BaseExtractor:
         #  * number of units for sorting
         self._properties = {}
 
-        # features is a dict of arrays (at spike level)
-        self._features = {}
-
         self.is_dumpable = True
 
         # extractor specific list of pip extra requirements
         self.extra_requirements = []
-        
+
         # preferred context for multiprocessing
         self._preferred_mp_context = None
 
@@ -86,7 +83,6 @@ class BaseExtractor:
         Useful to manipulate:
           * data
           * properties
-          * features
 
         'prefer_slice' is an efficient option that tries to make a slice object
         when indices are consecutive.
@@ -139,7 +135,7 @@ class BaseExtractor:
         If None, the context is set by the multiprocessing package.
         """
         return self._preferred_mp_context
-    
+
     def get_annotation(self, key, copy=True):
         """
         Get a annotation.
@@ -159,7 +155,7 @@ class BaseExtractor:
 
         If ids is given AND property already exists,
         then it is modified only on a subset of channels/units.
-        missing_values allows to specify the values of unset 
+        missing_values allows to specify the values of unset
         properties if ids is used
 
 
@@ -172,11 +168,11 @@ class BaseExtractor:
         ids : list/np.array, optional
             List of subset of ids to set the values, by default None
         missing_value : object, optional
-            In case the property is set on a subset of values ('ids' not None), 
+            In case the property is set on a subset of values ('ids' not None),
             it specifies the how the missing values should be filled, by default None.
             The missing_value has to be specified for types int and unsigned int.
         """
-        
+
         if values is None:
             if key in self._properties:
                 self._properties.pop(key)
@@ -186,41 +182,45 @@ class BaseExtractor:
         values = np.asarray(values)
         dtype = values.dtype
         dtype_kind = dtype.kind
-        
+
         if ids is None:
             assert values.shape[0] == size
             self._properties[key] = values
         else:
             ids = np.array(ids)
             assert np.unique(ids).size == ids.size, "'ids' are not unique!"
-            
+
             if ids.size < size:
                 if key not in self._properties:
                     # create the property with nan or empty
                     shape = (size,) + values.shape[1:]
-                    
-        
+
                     if missing_value is None:
                         if dtype_kind not in self.default_missing_property_values.keys():
-                            raise Exception("For values dtypes other than float, string, object or unicode, the missing value "
-                                            "cannot be automatically inferred. Please specify it with the 'missing_value' "
-                                            "argument.")
+                            raise Exception(
+                                "For values dtypes other than float, string, object or unicode, the missing value "
+                                "cannot be automatically inferred. Please specify it with the 'missing_value' "
+                                "argument."
+                            )
                         else:
                             missing_value = self.default_missing_property_values[dtype_kind]
                     else:
-                        assert dtype_kind == np.array(missing_value).dtype.kind, ("Mismatch between values and "
-                                                                                  "missing_value types. Provide a "
-                                                                                  "missing_value with the same type "
-                                                                                  "as the values.")
-                        
+                        assert dtype_kind == np.array(missing_value).dtype.kind, (
+                            "Mismatch between values and "
+                            "missing_value types. Provide a "
+                            "missing_value with the same type "
+                            "as the values."
+                        )
+
                     empty_values = np.zeros(shape, dtype=dtype)
                     empty_values[:] = missing_value
                     self._properties[key] = empty_values
-                    if ids.size==0:
+                    if ids.size == 0:
                         return
                 else:
-                    assert dtype_kind == self._properties[key].dtype.kind, ("Mismatch between existing property dtype "
-                                                                            "values dtype.")
+                    assert dtype_kind == self._properties[key].dtype.kind, (
+                        "Mismatch between existing property dtype " "values dtype."
+                    )
 
                 indices = self.ids_to_indices(ids)
                 self._properties[key][indices] = values
@@ -247,9 +247,9 @@ class BaseExtractor:
 
     def copy_metadata(self, other, only_main=False, ids=None):
         """
-        Copy annotations/properties/features to another extractor.
+        Copy annotations/properties to another extractor.
 
-        If 'only main' is True, then only "main" annotations/properties/features one are copied.
+        If 'only main' is True, then only "main" annotations/properties one are copied.
         """
 
         if ids is None:
@@ -262,12 +262,9 @@ class BaseExtractor:
         if only_main:
             ann_keys = BaseExtractor._main_annotations
             prop_keys = BaseExtractor._main_properties
-            # feat_keys = BaseExtractor._main_features
         else:
             ann_keys = self._annotations.keys()
             prop_keys = self._properties.keys()
-            # TODO include features
-            # feat_keys = ExtractorBase._features.keys()
 
         other._annotations = deepcopy({k: self._annotations[k] for k in ann_keys})
         for k in prop_keys:
@@ -276,14 +273,15 @@ class BaseExtractor:
                 other.set_property(k, values[inds])
 
         other.extra_requirements.extend(self.extra_requirements)
-        
+
         if self._preferred_mp_context is not None:
             other._preferred_mp_context = self._preferred_mp_context
 
-    def to_dict(self, include_annotations=False, include_properties=False,
-                relative_to=None, folder_metadata=None):
+    def to_dict(
+        self, include_annotations=False, include_properties=False, relative_to=None, folder_metadata=None
+    ) -> dict:
         """
-        Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize 
+        Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize
         an extractor using load_extractor_from_dict(dump_dict)
 
         Parameters
@@ -300,40 +298,40 @@ class BaseExtractor:
         dump_dict: dict
             Serialized dictionary
         """
-        class_name = str(type(self)).replace("<class '", "").replace("'>", '')
-        module = class_name.split('.')[0]
+        class_name = str(type(self)).replace("<class '", "").replace("'>", "")
+        module = class_name.split(".")[0]
         imported_module = importlib.import_module(module)
 
         try:
             version = imported_module.__version__
         except AttributeError:
-            version = 'unknown'
+            version = "unknown"
 
         dump_dict = {
-            'class': class_name,
-            'module': module,
-            'kwargs': self._kwargs,
-            'dumpable': self.is_dumpable,
-            'version': version,
-            'relative_paths': (relative_to is not None),
+            "class": class_name,
+            "module": module,
+            "kwargs": self._kwargs,
+            "dumpable": self.is_dumpable,
+            "version": version,
+            "relative_paths": (relative_to is not None),
         }
 
         try:
-            dump_dict['version'] = imported_module.__version__
+            dump_dict["version"] = imported_module.__version__
         except AttributeError:
-            dump_dict['version'] = 'unknown'
+            dump_dict["version"] = "unknown"
 
         if include_annotations:
-            dump_dict['annotations'] = self._annotations
+            dump_dict["annotations"] = self._annotations
         else:
             # include only main annotations
-            dump_dict['annotations'] = {k: self._annotations.get(k, None) for k in self._main_annotations}
+            dump_dict["annotations"] = {k: self._annotations.get(k, None) for k in self._main_annotations}
 
         if include_properties:
-            dump_dict['properties'] = self._properties
+            dump_dict["properties"] = self._properties
         else:
             # include only main properties
-            dump_dict['properties'] = {k: self._properties.get(k, None) for k in self._main_properties}
+            dump_dict["properties"] = {k: self._properties.get(k, None) for k in self._main_properties}
 
         if relative_to is not None:
             relative_to = Path(relative_to).absolute()
@@ -343,12 +341,12 @@ class BaseExtractor:
         if folder_metadata is not None:
             if relative_to is not None:
                 folder_metadata = Path(folder_metadata).absolute().relative_to(relative_to)
-            dump_dict['folder_metadata'] = str(folder_metadata)
+            dump_dict["folder_metadata"] = str(folder_metadata)
 
         return dump_dict
 
     @staticmethod
-    def from_dict(d, base_folder=None):
+    def from_dict(dictionary: dict, base_folder: Optional[Union[Path, str]] = None) -> "BaseExtractor":
         """
         Instantiate extractor from dictionary
 
@@ -364,14 +362,14 @@ class BaseExtractor:
         extractor: RecordingExtractor or SortingExtractor
             The loaded extractor object
         """
-        if d['relative_paths']:
-            assert base_folder is not None, 'When  relative_paths=True, need to provide base_folder'
-            d = _make_paths_absolute(d, base_folder)
-        extractor = _load_extractor_from_dict(d)
-        folder_metadata = d.get('folder_metadata', None)
+        if dictionary["relative_paths"]:
+            assert base_folder is not None, "When  relative_paths=True, need to provide base_folder"
+            dictionary = _make_paths_absolute(dictionary, base_folder)
+        extractor = _load_extractor_from_dict(dictionary)
+        folder_metadata = dictionary.get("folder_metadata", None)
         if folder_metadata is not None:
             folder_metadata = Path(folder_metadata)
-            if d['relative_paths']:
+            if dictionary["relative_paths"]:
                 folder_metadata = base_folder / folder_metadata
             extractor.load_metadata_from_folder(folder_metadata)
         return extractor
@@ -383,10 +381,10 @@ class BaseExtractor:
         self._extra_metadata_from_folder(folder_metadata)
 
         # load properties
-        prop_folder = folder_metadata / 'properties'
+        prop_folder = folder_metadata / "properties"
         if prop_folder.is_dir():
             for prop_file in prop_folder.iterdir():
-                if prop_file.suffix == '.npy':
+                if prop_file.suffix == ".npy":
                     values = np.load(prop_file, allow_pickle=True)
                     key = prop_file.stem
                     self.set_property(key, values)
@@ -395,11 +393,11 @@ class BaseExtractor:
         self._extra_metadata_to_folder(folder_metadata)
 
         # save properties
-        prop_folder = folder_metadata / 'properties'
+        prop_folder = folder_metadata / "properties"
         prop_folder.mkdir(parents=True, exist_ok=False)
         for key in self.get_property_keys():
             values = self.get_property(key)
-            np.save(prop_folder / (key + '.npy'), values)
+            np.save(prop_folder / (key + ".npy"), values)
 
     def clone(self):
         """
@@ -437,11 +435,11 @@ class BaseExtractor:
         file_path = Path(file_path)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         folder_path = file_path.parent
-        if Path(file_path).suffix == '':
+        if Path(file_path).suffix == "":
             file_path = folder_path / (str(file_path) + ext)
-        assert file_path.suffix in extensions, \
-            "'file_path' should have one of the following extensions:" \
-            " %s" % (', '.join(extensions))
+        assert file_path.suffix in extensions, "'file_path' should have one of the following extensions:" " %s" % (
+            ", ".join(extensions)
+        )
         return file_path
 
     def dump(self, file_path, relative_to=None, folder_metadata=None):
@@ -455,12 +453,12 @@ class BaseExtractor:
         relative_to: str, Path, or None
             If not None, file_paths are serialized relative to this path
         """
-        if str(file_path).endswith('.json'):
+        if str(file_path).endswith(".json"):
             self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
-        elif str(file_path).endswith('.pkl') or str(file_path).endswith('.pickle'):
+        elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
             self.dump_to_pickle(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
         else:
-            raise ValueError('Dump: file must .json or .pkl')
+            raise ValueError("Dump: file must .json or .pkl")
 
     def dump_to_json(self, file_path=None, relative_to=None, folder_metadata=None):
         """
@@ -475,19 +473,17 @@ class BaseExtractor:
             If not None, file_paths are serialized relative to this path
         """
         assert self.check_if_dumpable()
-        dump_dict = self.to_dict(include_annotations=True,
-                                 include_properties=False,
-                                 relative_to=relative_to,
-                                 folder_metadata=folder_metadata)
-        file_path = self._get_file_path(file_path, ['.json'])
-        
+        dump_dict = self.to_dict(
+            include_annotations=True, include_properties=False, relative_to=relative_to, folder_metadata=folder_metadata
+        )
+        file_path = self._get_file_path(file_path, [".json"])
+
         file_path.write_text(
             json.dumps(dump_dict, indent=4, cls=SIJsonEncoder),
-            encoding='utf8',
+            encoding="utf8",
         )
 
-    def dump_to_pickle(self, file_path=None, include_properties=True,
-                       relative_to=None, folder_metadata=None):
+    def dump_to_pickle(self, file_path=None, include_properties=True, relative_to=None, folder_metadata=None):
         """
         Dump recording extractor to a pickle file.
         The extractor can be re-loaded with load_extractor_from_json(json_file)
@@ -502,11 +498,13 @@ class BaseExtractor:
             If not None, file_paths are serialized relative to this path
         """
         assert self.check_if_dumpable()
-        dump_dict = self.to_dict(include_annotations=True,
-                                 include_properties=include_properties,
-                                 relative_to=relative_to,
-                                 folder_metadata=folder_metadata)
-        file_path = self._get_file_path(file_path, ['.pkl', '.pickle'])
+        dump_dict = self.to_dict(
+            include_annotations=True,
+            include_properties=include_properties,
+            relative_to=relative_to,
+            folder_metadata=folder_metadata,
+        )
+        file_path = self._get_file_path(file_path, [".pkl", ".pickle"])
 
         file_path.write_bytes(pickle.dumps(dump_dict))
 
@@ -523,16 +521,16 @@ class BaseExtractor:
         file_path = Path(file_path)
         if file_path.is_file():
             # standard case based on a file (json or pickle)
-            if str(file_path).endswith('.json'):
-                with open(str(file_path), 'r') as f:
+            if str(file_path).endswith(".json"):
+                with open(str(file_path), "r") as f:
                     d = json.load(f)
-            elif str(file_path).endswith('.pkl') or str(file_path).endswith('.pickle'):
-                with open(str(file_path), 'rb') as f:
+            elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
+                with open(str(file_path), "rb") as f:
                     d = pickle.load(f)
             else:
-                raise ValueError(f'Impossible to load {file_path}')
-            if 'warning' in d and 'not dumpable' in d['warning']:
-                print('The extractor was not dumpable')
+                raise ValueError(f"Impossible to load {file_path}")
+            if "warning" in d and "not dumpable" in d["warning"]:
+                print("The extractor was not dumpable")
                 return None
             extractor = BaseExtractor.from_dict(d, base_folder=base_folder)
             return extractor
@@ -541,40 +539,45 @@ class BaseExtractor:
             # case from a folder after a calling extractor.save(...)
             folder = file_path
             file = None
-            
-            # the is spikeinterface<=0.94.0
-            # a folder came with 'cached.sjon'
-            for dump_ext in ('json', 'pkl', 'pickle'):
-                f = folder / f'cached.{dump_ext}'
+
+            if folder.suffix == ".zarr":
+                from .zarrrecordingextractor import read_zarr
+
+                extractor = read_zarr(folder)
+            else:
+                # the is spikeinterface<=0.94.0
+                # a folder came with 'cached.json'
+                for dump_ext in ("json", "pkl", "pickle"):
+                    f = folder / f"cached.{dump_ext}"
+                    if f.is_file():
+                        file = f
+
+                # spikeinterface>=0.95.0
+                f = folder / f"si_folder.json"
                 if f.is_file():
                     file = f
-            
-            # spikeinterface>=0.95.0
-            f = folder / f'si_folder.json'
-            if f.is_file():
-                file = f
 
-            if file is None:
-                raise ValueError(f'This folder is not a cached folder {file_path}')
-            extractor = BaseExtractor.load(file, base_folder=folder)
+                if file is None:
+                    raise ValueError(f"This folder is not a cached folder {file_path}")
+                extractor = BaseExtractor.load(file, base_folder=folder)
 
             return extractor
 
         else:
-            raise ValueError('spikeinterface.Base.load() file_path must be an existing folder or file')
+            raise ValueError("spikeinterface.Base.load() file_path must be an existing folder or file")
 
     def __reduce__(self):
         """
         This function is used by pickle to serialize the object.
         """
         instance_constructor = self.from_dict
-        intialization_args = (self.to_dict(), )
+        intialization_args = (self.to_dict(),)
         return (instance_constructor, intialization_args)
 
     @staticmethod
     def load_from_folder(folder):
         return BaseExtractor.load(folder)
-    
+
     def _save(self, folder, **save_kwargs):
         # This implemented in BaseRecording or baseSorting
         # this is internally call by cache(...) main function
@@ -590,18 +593,18 @@ class BaseExtractor:
 
     def save(self, **kwargs):
         """
-        Save a SpikeInterface object. 
+        Save a SpikeInterface object.
 
         Parameters
         ----------
         kwargs: Keyword arguments for saving.
             * format: "memory", "zarr", or "binary" (for recording) / "memory" or "npz" for sorting.
-                In case format is not memory, the recording is saved to a folder. See format specific functions for 
+                In case format is not memory, the recording is saved to a folder. See format specific functions for
                 more info (`save_to_memory()`, `save_to_folder()`, `save_to_zarr()`)
             * folder: if provided, the folder path where the object is saved
             * name: if provided and folder is not given, the name of the folder in the global temporary
                     folder (use set_global_tmp_folder() to change this folder) where the object is saved.
-              If folder and name are not given, the object is saved in the global temporary folder with 
+              If folder and name are not given, the object is saved in the global temporary folder with
               a random string
             * dump_ext: 'json' or 'pkl', default 'json' (if format is "folder")
             * verbose: if True output is verbose
@@ -613,10 +616,10 @@ class BaseExtractor:
         loaded_extractor: BaseRecording or BaseSorting
             The reference to the saved object after it is loaded back
         """
-        format = kwargs.get('format', None)
-        if format == 'memory':
+        format = kwargs.get("format", None)
+        if format == "memory":
             loaded_extractor = self.save_to_memory(**kwargs)
-        elif format == 'zarr':
+        elif format == "zarr":
             loaded_extractor = self.save_to_zarr(**kwargs)
         else:
             loaded_extractor = self.save_to_folder(**kwargs)
@@ -631,7 +634,7 @@ class BaseExtractor:
         return cached
 
     # TODO rename to saveto_binary_folder
-    def save_to_folder(self, name=None, folder=None,  verbose=True, **save_kwargs):
+    def save_to_folder(self, name=None, folder=None, verbose=True, **save_kwargs):
         """
         Save extractor to folder.
 
@@ -667,36 +670,33 @@ class BaseExtractor:
         -------
         cached: saved copy of the extractor.
         """
-        
+
         if folder is None:
             cache_folder = get_global_tmp_folder()
             if name is None:
-                name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
                 folder = cache_folder / name
                 if verbose:
-                    print(f'Use cache_folder={folder}')
+                    print(f"Use cache_folder={folder}")
             else:
                 folder = cache_folder / name
                 if not is_set_global_tmp_folder():
                     if verbose:
-                        print(f'Use cache_folder={folder}')
+                        print(f"Use cache_folder={folder}")
         else:
             folder = Path(folder)
-        assert not folder.exists(), f'folder {folder} already exists, choose another name'
+        assert not folder.exists(), f"folder {folder} already exists, choose another name"
         folder.mkdir(parents=True, exist_ok=False)
 
         # dump provenance
-        provenance_file = folder / f'provenance.json'
+        provenance_file = folder / f"provenance.json"
         if self.check_if_dumpable():
             self.dump(provenance_file)
         else:
-            provenance_file.write_text(
-                json.dumps({'warning': 'the provenace is not dumpable!!!'}),
-                encoding='utf8'
-            )
-        
+            provenance_file.write_text(json.dumps({"warning": "the provenace is not dumpable!!!"}), encoding="utf8")
+
         self.save_metadata_to_folder(folder)
-        
+
         # save data (done the subclass)
         cached = self._save(folder=folder, verbose=verbose, **save_kwargs)
 
@@ -704,19 +704,27 @@ class BaseExtractor:
         self.copy_metadata(cached)
 
         # dump
-        # cached.dump(folder / f'cached.json', relative_to=folder, folder_metadata=folder)
-        cached.dump(folder / f'si_folder.json', relative_to=folder)
+        # cached.dump(folder / f'cached.json', relative_to=folder, folder_metadata=folder)
+        cached.dump(folder / f"si_folder.json", relative_to=folder)
 
         return cached
 
-    def save_to_zarr(self, name=None, folder=None, storage_options=None, 
-                     channel_chunk_size=None, verbose=True, zarr_path=None, **save_kwargs):
+    def save_to_zarr(
+        self,
+        name=None,
+        folder=None,
+        storage_options=None,
+        channel_chunk_size=None,
+        verbose=True,
+        zarr_path=None,
+        **save_kwargs,
+    ):
         """
         Save extractor to zarr.
 
         The save consist of:
             * extracting traces by calling get_trace() method in chunks
-            * saving data into a zarr file 
+            * saving data into a zarr file
             * dumping the original extractor for provenance in attributes
 
         Parameters
@@ -725,7 +733,7 @@ class BaseExtractor:
             Name of the subfolder in get_global_tmp_folder()
             If 'name' is given, 'folder' must be None.
         folder: str, Path, or None
-            The folder used to save the zarr output. If the folder does not have a '.zarr' suffix, 
+            The folder used to save the zarr output. If the folder does not have a '.zarr' suffix,
             it will be automatically appended.
         storage_options: dict or None
             Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
@@ -735,34 +743,34 @@ class BaseExtractor:
         verbose: bool
             If True (default), the output is verbose.
         zarr_path: str, Path, or None
-            (Deprecated) Name of the zarr folder (.zarr). 
-        
+            (Deprecated) Name of the zarr folder (.zarr).
+
         Returns
         -------
         cached: ZarrRecordingExtractor
             Saved copy of the extractor.
         """
         import zarr
+        from .zarrrecordingextractor import read_zarr
 
         if zarr_path is not None:
-            warnings.warn("The 'zarr_path' argument is deprecated. "
-                          "Use 'folder' instead",
-                          DeprecationWarning, stacklevel=2)
+            warnings.warn(
+                "The 'zarr_path' argument is deprecated. " "Use 'folder' instead", DeprecationWarning, stacklevel=2
+            )
             folder = zarr_path
 
         if folder is None:
             cache_folder = get_global_tmp_folder()
             if name is None:
-                name = ''.join(random.choices(
-                    string.ascii_uppercase + string.digits, k=8))
+                name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
                 zarr_path = cache_folder / f"{name}.zarr"
                 if verbose:
-                    print(f'Use zarr_path={zarr_path}')
+                    print(f"Use zarr_path={zarr_path}")
             else:
                 zarr_path = cache_folder / f"{name}.zarr"
                 if not is_set_global_tmp_folder():
                     if verbose:
-                        print(f'Use zarr_path={zarr_path}')
+                        print(f"Use zarr_path={zarr_path}")
         else:
             if storage_options is None:
                 folder = Path(folder)
@@ -775,8 +783,8 @@ class BaseExtractor:
                 zarr_path_init = zarr_path
 
         if isinstance(zarr_path, Path):
-            assert not zarr_path.exists(), f'Path {zarr_path} already exists, choose another name'
-        
+            assert not zarr_path.exists(), f"Path {zarr_path} already exists, choose another name"
+
         zarr_root = zarr.open(zarr_path_init, mode="w", storage_options=storage_options)
 
         if self.check_if_dumpable():
@@ -785,15 +793,14 @@ class BaseExtractor:
             zarr_root.attrs["provenance"] = None
 
         # save data (done the subclass)
-        save_kwargs['zarr_root'] = zarr_root
-        save_kwargs['zarr_path'] = zarr_path
-        save_kwargs['storage_options'] = storage_options
-        save_kwargs['channel_chunk_size'] = channel_chunk_size
+        save_kwargs["zarr_root"] = zarr_root
+        save_kwargs["zarr_path"] = zarr_path
+        save_kwargs["storage_options"] = storage_options
+        save_kwargs["channel_chunk_size"] = channel_chunk_size
         cached = self._save(verbose=verbose, **save_kwargs)
-        cached_annotations = deepcopy(cached._annotations)
 
         # save properties
-        prop_group = zarr_root.create_group('properties')
+        prop_group = zarr_root.create_group("properties")
         for key in self.get_property_keys():
             values = self.get_property(key)
             prop_group.create_dataset(name=key, data=values, compressor=None)
@@ -801,47 +808,44 @@ class BaseExtractor:
         # save annotations
         zarr_root.attrs["annotations"] = check_json(self._annotations)
 
-        # copy properties/
-        self.copy_metadata(cached)
-        # append annotations on compression
-        cached._annotations.update(cached_annotations)
+        cached = read_zarr(zarr_path)
 
         return cached
 
 
-def _make_paths_relative(d, relative):
+def _make_paths_relative(d, relative) -> dict:
     relative = str(Path(relative).absolute())
     func = lambda p: os.path.relpath(str(p), start=relative)
-    return recursive_path_modifier(d,  func, target='path', copy=True)
+    return recursive_path_modifier(d, func, target="path", copy=True)
 
 
 def _make_paths_absolute(d, base):
     base = Path(base)
     func = lambda p: str((base / p).resolve().absolute())
-    return recursive_path_modifier(d,  func, target='path', copy=True)
+    return recursive_path_modifier(d, func, target="path", copy=True)
+
 
 def _check_if_dumpable(d):
-    kwargs = d['kwargs']
-    if np.any([isinstance(v, dict) and 'dumpable' in v.keys() for (k, v) in kwargs.items()]):
+    kwargs = d["kwargs"]
+    if np.any([isinstance(v, dict) and "dumpable" in v.keys() for (k, v) in kwargs.items()]):
         # check nested
         for k, v in kwargs.items():
-            if isinstance(v, dict) and 'dumpable' in v.keys():
+            if isinstance(v, dict) and "dumpable" in v.keys():
                 return _check_if_dumpable(v)
     else:
-        return d['dumpable']
+        return d["dumpable"]
 
 
 def _load_extractor_from_dict(dic):
     cls = None
     class_name = None
 
-    if 'kwargs' not in dic:
-        raise Exception(f'This dict cannot be load into extractor {dic}')
-    kwargs = deepcopy(dic['kwargs'])
+    if "kwargs" not in dic:
+        raise Exception(f"This dict cannot be load into extractor {dic}")
+    kwargs = deepcopy(dic["kwargs"])
 
     # handle nested
     for k, v in kwargs.items():
-
         if isinstance(v, dict) and is_dict_extractor(v):
             kwargs[k] = _load_extractor_from_dict(v)
 
@@ -851,29 +855,30 @@ def _load_extractor_from_dict(dic):
             if all(is_dict_extractor(e) for e in v):
                 kwargs[k] = [_load_extractor_from_dict(e) for e in v]
 
-    class_name = dic['class']
+    class_name = dic["class"]
     cls = _get_class_from_string(class_name)
 
     assert cls is not None and class_name is not None, "Could not load spikeinterface class"
-    if not _check_same_version(class_name, dic['version']):
-        print('Versions are not the same. This might lead to errors. Use ', class_name.split('.')[0],
-              'version', dic['version'])
+    if not _check_same_version(class_name, dic["version"]):
+        warnings.warn(
+            f"Versions are not the same. This might lead compatibility errors. "
+            f"Using {class_name.split('.')[0]}=={dic['version']} is recommended"
+        )
 
     # instantiate extrator object
     extractor = cls(**kwargs)
 
-    extractor._annotations.update(dic['annotations'])
-    for k, v in dic['properties'].items():
+    extractor._annotations.update(dic["annotations"])
+    for k, v in dic["properties"].items():
         # print(k, v)
         extractor.set_property(k, v)
-    # TODO features
 
     return extractor
 
 
 def _get_class_from_string(class_string):
-    class_name = class_string.split('.')[-1]
-    module = '.'.join(class_string.split('.')[:-1])
+    class_name = class_string.split(".")[-1]
+    module = ".".join(class_string.split(".")[:-1])
     imported_module = importlib.import_module(module)
 
     try:
@@ -885,16 +890,16 @@ def _get_class_from_string(class_string):
 
 
 def _check_same_version(class_string, version):
-    module = class_string.split('.')[0]
+    module = class_string.split(".")[0]
     imported_module = importlib.import_module(module)
-    
+
     current_version = parse(imported_module.__version__)
     saved_version = parse(version)
 
     try:
         return current_version.major == saved_version.major and current_version.minor == saved_version.minor
     except AttributeError:
-        return 'unknown'
+        return "unknown"
 
 
 def load_extractor(file_or_folder_or_dict, base_folder=None):
@@ -904,6 +909,7 @@ def load_extractor(file_or_folder_or_dict, base_folder=None):
       * a json file
       * a pickle file
       * folder (after save)
+      * a zarr folder (after save)
 
     Parameters
     ----------
@@ -921,17 +927,17 @@ def load_extractor(file_or_folder_or_dict, base_folder=None):
 
 
 def load_extractor_from_dict(d, base_folder=None):
-    print('Use load_extractor(..) instead')
+    print("Use load_extractor(..) instead")
     return BaseExtractor.from_dict(d, base_folder=base_folder)
 
 
 def load_extractor_from_json(json_file, base_folder=None):
-    print('Use load_extractor(..) instead')
+    print("Use load_extractor(..) instead")
     return BaseExtractor.load(json_file, base_folder=base_folder)
 
 
 def load_extractor_from_pickle(pkl_file, base_folder=None):
-    print('Use load_extractor(..) instead')
+    print("Use load_extractor(..) instead")
     return BaseExtractor.load(pkl_file, base_folder=base_folder)
 
 

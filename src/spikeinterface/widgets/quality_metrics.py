@@ -10,15 +10,17 @@ class QualityMetricsWidget(MetricsBaseWidget):
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
-        The object to compute/get crosscorrelograms from
+        The object to compute/get quality metrics from
     unit_ids: list
-        List of unit ids.
+        List of unit ids, default None
+    include_metrics: list
+        If given, a list of quality metrics to include, default None
     skip_metrics: list or None
-        If given, a list of quality metrics to skip
+        If given, a list of quality metrics to skip, default None
     unit_colors :  dict or None
-        If given, a dictionary with unit ids as keys and colors as values
+        If given, a dictionary with unit ids as keys and colors as values, default None
     hide_unit_selector : bool
-        For sortingview backend, if True the unit selector is not displayed
+        For sortingview backend, if True the unit selector is not displayed, default False
     """
 
     possible_backends = {}
@@ -32,7 +34,7 @@ class QualityMetricsWidget(MetricsBaseWidget):
         unit_colors=None,
         hide_unit_selector=False,
         backend=None,
-        **backend_kwargs
+        **backend_kwargs,
     ):
         self.check_extensions(waveform_extractor, "quality_metrics")
         qlc = waveform_extractor.load_extension("quality_metrics")
@@ -40,11 +42,15 @@ class QualityMetricsWidget(MetricsBaseWidget):
 
         sorting = waveform_extractor.sorting
 
-        MetricsBaseWidget.__init__(self, quality_metrics, sorting,
-                                   unit_ids=unit_ids, unit_colors=unit_colors,
-                                   include_metrics=include_metrics, 
-                                   skip_metrics=skip_metrics,
-                                   hide_unit_selector=hide_unit_selector,
-                                   backend=backend, **backend_kwargs)
-
-
+        MetricsBaseWidget.__init__(
+            self,
+            quality_metrics,
+            sorting,
+            unit_ids=unit_ids,
+            unit_colors=unit_colors,
+            include_metrics=include_metrics,
+            skip_metrics=skip_metrics,
+            hide_unit_selector=hide_unit_selector,
+            backend=backend,
+            **backend_kwargs,
+        )

@@ -9,6 +9,7 @@ from .external.kilosort3 import Kilosort3Sorter
 from .external.pykilosort import PyKilosortSorter
 from .external.klusta import KlustaSorter
 from .external.mountainsort4 import Mountainsort4Sorter
+from .external.mountainsort5 import Mountainsort5Sorter
 from .external.spyking_circus import SpykingcircusSorter
 from .external.tridesclous import TridesclousSorter
 from .external.waveclus import WaveClusSorter
@@ -34,16 +35,17 @@ sorter_full_list = [
     PyKilosortSorter,
     KlustaSorter,
     Mountainsort4Sorter,
+    Mountainsort5Sorter,
     SpykingcircusSorter,
     TridesclousSorter,
     WaveClusSorter,
     WaveClusSnippetsSorter,
     YassSorter,
-
     # internal
     Spykingcircus2Sorter,
     Tridesclous2Sorter,
     SimpleSorter
+
 ]
 
 sorter_dict = {s.sorter_name: s for s in sorter_full_list}
@@ -62,12 +64,12 @@ def installed_sorters():
 
 
 def print_sorter_versions():
-    """"Prints the versions of the installed sorters."""
+    """ "Prints the versions of the installed sorters."""
 
-    txt = ''
+    txt = ""
     for name in installed_sorters():
         version = sorter_dict[name].get_sorter_version()
-        txt += '{}: {}\n'.format(name, version)
+        txt += "{}: {}\n".format(name, version)
     txt = txt[:-1]
     print(txt)
 
@@ -91,7 +93,7 @@ def get_default_sorter_params(sorter_name_or_class):
     elif sorter_name_or_class in sorter_full_list:
         SorterClass = sorter_name_or_class
     else:
-        raise (ValueError('Unknown sorter'))
+        raise (ValueError("Unknown sorter"))
 
     return SorterClass.default_params()
 
@@ -115,7 +117,7 @@ def get_sorter_params_description(sorter_name_or_class):
     elif sorter_name_or_class in sorter_full_list:
         SorterClass = sorter_name_or_class
     else:
-        raise (ValueError('Unknown sorter'))
+        raise (ValueError("Unknown sorter"))
 
     return SorterClass.params_description()
 
@@ -139,6 +141,6 @@ def get_sorter_description(sorter_name_or_class):
     elif sorter_name_or_class in sorter_full_list:
         SorterClass = sorter_name_or_class
     else:
-        raise (ValueError('Unknown sorter'))
+        raise (ValueError("Unknown sorter"))
 
     return SorterClass.sorter_description

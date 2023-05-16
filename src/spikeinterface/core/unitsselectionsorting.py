@@ -27,8 +27,8 @@ class UnitsSelectionSorting(BaseSorting):
         sampling_frequency = parent_sorting.get_sampling_frequency()
 
         # some checks
-        assert all(unit_id in parents_unit_ids for unit_id in self._unit_ids), 'unit ids are not all in parents'
-        assert len(self._unit_ids) == len(self._renamed_unit_ids), 'renamed channel_ids must be the same size'
+        assert all(unit_id in parents_unit_ids for unit_id in self._unit_ids), "unit ids are not all in parents"
+        assert len(self._unit_ids) == len(self._renamed_unit_ids), "renamed channel_ids must be the same size"
 
         ids_conversion = dict(zip(self._renamed_unit_ids, self._unit_ids))
 
@@ -43,8 +43,7 @@ class UnitsSelectionSorting(BaseSorting):
         if parent_sorting.has_recording():
             self.register_recording(parent_sorting._recording)
 
-        self._kwargs = dict(parent_sorting=parent_sorting.to_dict(), unit_ids=unit_ids,
-                            renamed_unit_ids=renamed_unit_ids)
+        self._kwargs = dict(parent_sorting=parent_sorting, unit_ids=unit_ids, renamed_unit_ids=renamed_unit_ids)
 
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):
@@ -53,11 +52,12 @@ class UnitsSelectionSortingSegment(BaseSortingSegment):
         self._parent_segment = parent_segment
         self._ids_conversion = ids_conversion
 
-    def get_unit_spike_train(self,
-                             unit_id,
-                             start_frame: Union[int, None] = None,
-                             end_frame: Union[int, None] = None,
-                             ) -> np.ndarray:
+    def get_unit_spike_train(
+        self,
+        unit_id,
+        start_frame: Union[int, None] = None,
+        end_frame: Union[int, None] = None,
+    ) -> np.ndarray:
         unit_id_parent = self._ids_conversion[unit_id]
         times = self._parent_segment.get_unit_spike_train(unit_id_parent, start_frame, end_frame)
         return times

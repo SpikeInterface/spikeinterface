@@ -1,16 +1,12 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
-from matplotlib.animation import FuncAnimation
-
-from probeinterface.plotting import plot_probe
 
 
 class UnitProbeMapWidget(BaseWidget):
     """
     Plots unit map. Amplitude is color coded on probe contact.
-    
+
     Can be static (animated=False) or animated (animated=True)
 
     Parameters
@@ -26,9 +22,20 @@ class UnitProbeMapWidget(BaseWidget):
         add channel ids text on the probe
     """
 
-    def __init__(self, waveform_extractor, unit_ids=None, channel_ids=None,
-                 animated=None, with_channel_ids=False, colorbar=True,
-                 ncols=5,  axes=None):
+    def __init__(
+        self,
+        waveform_extractor,
+        unit_ids=None,
+        channel_ids=None,
+        animated=None,
+        with_channel_ids=False,
+        colorbar=True,
+        ncols=5,
+        axes=None,
+    ):
+        from matplotlib.animation import FuncAnimation
+        from matplotlib import pyplot as plt
+        from probeinterface.plotting import plot_probe
 
         self.waveform_extractor = waveform_extractor
         if unit_ids is None:
@@ -41,10 +48,12 @@ class UnitProbeMapWidget(BaseWidget):
         self.animated = animated
         self.with_channel_ids = with_channel_ids
         self.colorbar = colorbar
-        
+
         probes = waveform_extractor.recording.get_probes()
-        assert len(probes) == 1, "Unit probe map is only available for a single probe. If you have a probe group, "\
-                                 "consider splitting the recording from different probes"
+        assert len(probes) == 1, (
+            "Unit probe map is only available for a single probe. If you have a probe group, "
+            "consider splitting the recording from different probes"
+        )
 
         # layout
         n = len(unit_ids)
@@ -59,7 +68,7 @@ class UnitProbeMapWidget(BaseWidget):
         we = self.waveform_extractor
         probe = we.get_probe()
 
-        probe_shape_kwargs = dict(facecolor='w', edgecolor='k', lw=0.5, alpha=1.)
+        probe_shape_kwargs = dict(facecolor="w", edgecolor="k", lw=0.5, alpha=1.0)
 
         all_poly_contact = []
         for i, unit_id in enumerate(self.unit_ids):
@@ -73,9 +82,15 @@ class UnitProbeMapWidget(BaseWidget):
             text_on_contact = None
             if self.with_channel_ids:
                 text_on_contact = self.channel_ids
-            poly_contact, poly_contour = plot_probe(probe, contacts_values=contacts_values,
-                                                    ax=ax, probe_shape_kwargs=probe_shape_kwargs,
-                                                    text_on_contact=text_on_contact)
+            from probeinterface.plotting import plot_probe
+
+            poly_contact, poly_contour = plot_probe(
+                probe,
+                contacts_values=contacts_values,
+                ax=ax,
+                probe_shape_kwargs=probe_shape_kwargs,
+                text_on_contact=text_on_contact,
+            )
 
             poly_contact.set_zorder(2)
             if poly_contour is not None:
@@ -100,8 +115,9 @@ class UnitProbeMapWidget(BaseWidget):
                     poly_contact.set_array(contacts_values)
                 return all_poly_contact
 
-            self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames,
-                                           interval=20, blit=True)
+            from matplotlib.animation import FuncAnimation
+
+            self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames, interval=20, blit=True)
 
 
 def plot_unit_probe_map(*args, **kwargs):

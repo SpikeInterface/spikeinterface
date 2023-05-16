@@ -3,6 +3,7 @@ import json
 import pytest
 import numpy as np
 
+from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.core_tools import SIJsonEncoder
 from spikeinterface.core.generate import generate_recording, generate_sorting
 
@@ -32,6 +33,21 @@ def numpy_array_float():
 @pytest.fixture(scope="module")
 def numpy_array_bool(numpy_array_float):
     return numpy_array_float > 0.5
+
+
+@pytest.fixture(scope="module")
+def dictionary_with_numpy_scalar_keys(numpy_array_integer, numpy_array_float, numpy_array_bool):
+    numpy_integer_scalar = numpy_array_integer[0]
+    numpy_float_scalar = numpy_array_float[0]
+    numpy_boolean_scalar = numpy_array_bool[1]
+
+    dictionary = {
+        numpy_integer_scalar: "value_of_numpy_integer_scalar",
+        numpy_float_scalar: "value_of_numpy_float_scalar",
+        numpy_boolean_scalar: "value_of_boolean_scalar",
+    }
+
+    return dictionary
 
 
 def test_numpy_array_encoding(numpy_array_integer, numpy_array_float, numpy_array_bool):
@@ -66,17 +82,8 @@ def test_encoding_numpy_scalars_values(numpy_array_integer, numpy_array_float, n
     json.dumps(dict_with_numpy_scalar_values, cls=SIJsonEncoder)
 
 
-def test_encoding_numpy_scalars_keys(numpy_array_integer, numpy_array_float, numpy_array_bool):
-    numpy_integer_scalar = numpy_array_integer[0]
-    numpy_float_scalar = numpy_array_float[0]
-    numpy_boolean_scalar = numpy_array_bool[1]
-
-    dict_with_numpy_scalar_keys = {
-        numpy_integer_scalar: "first_string",
-        numpy_float_scalar: "second_string",
-        numpy_boolean_scalar: "third_string",
-    }
-    json.dumps(dict_with_numpy_scalar_keys, cls=SIJsonEncoder)
+def test_encoding_numpy_scalars_keys(dictionary_with_numpy_scalar_keys):
+    json.dumps(dictionary_with_numpy_scalar_keys, cls=SIJsonEncoder)
 
 
 def test_encoding_numpy_scalars_keys_nested(numpy_array_integer, numpy_array_float, numpy_array_bool):
@@ -88,7 +95,7 @@ def test_encoding_numpy_scalars_keys_nested(numpy_array_integer, numpy_array_flo
     json.dumps(dict_with_nested_numpy_scalars, cls=SIJsonEncoder)
 
 
-def test_encoding_numpy_scalars_keys_nestes_mixed(numpy_array_integer, numpy_array_float, numpy_array_bool):
+def test_encoding_numpy_scalars_keys_nested_mixed(numpy_array_integer, numpy_array_float, numpy_array_bool):
     numpy_integer_scalar = numpy_array_integer[0]
     numpy_float_scalar = numpy_array_float[0]
     numpy_boolean_scalar = numpy_array_bool[1]
@@ -112,7 +119,7 @@ def test_numpy_dtype_encoding():
 
 
 def test_numpy_dtype_alises_encoding():
-    # People tend to use as a dtype instead of the proper classes
+    # People tend to use this a dtype instead of the proper classes
     json.dumps(np.int32, cls=SIJsonEncoder)
     json.dumps(np.float32, cls=SIJsonEncoder)
     json.dumps(np.bool_, cls=SIJsonEncoder)  # Note that np.bool was deperecated in numpy 1.20.0
@@ -126,3 +133,62 @@ def test_recording_encoding(numpy_generated_recording):
 def test_sorting_encoding(numpy_generated_sorting):
     sorting = numpy_generated_sorting
     json.dumps(sorting, cls=SIJsonEncoder)
+
+
+class DummyExtractor(BaseExtractor):
+    def __init__(self, attribute, other_extractor=None, extractor_list=None, extractor_dict=None):
+        self.an_attribute = attribute
+        self.other_extractor = other_extractor
+        self.extractor_list = extractor_list
+        self.extractor_dict = extractor_dict
+        self.is_dumpable = True
+
+        self._kwargs = {
+            "attribute": attribute,
+            "other_extractor": other_extractor,
+            "extractor_list": extractor_list,
+            "extractor_dict": extractor_dict,
+        }
+
+
+@pytest.fixture(scope="module")
+def nested_extractor(dictionary_with_numpy_scalar_keys):
+    inner_extractor = DummyExtractor(attribute=dictionary_with_numpy_scalar_keys)
+    extractor = DummyExtractor(attribute="a random attribute", other_extractor=inner_extractor)
+
+    return extractor
+
+
+@pytest.fixture(scope="module")
+def nested_extractor_list(dictionary_with_numpy_scalar_keys):
+    inner_extractor1 = DummyExtractor(attribute=dictionary_with_numpy_scalar_keys)
+    inner_extractor2 = DummyExtractor(attribute=dictionary_with_numpy_scalar_keys)
+
+    extractor = DummyExtractor(attribute="a random attribute", extractor_list=[inner_extractor1, inner_extractor2])
+
+    return extractor
+
+
+@pytest.fixture(scope="module")
+def nested_extractor_dict(dictionary_with_numpy_scalar_keys):
+    inner_extractor1 = DummyExtractor(attribute=dictionary_with_numpy_scalar_keys)
+    inner_extractor2 = DummyExtractor(attribute=dictionary_with_numpy_scalar_keys)
+
+    extractor = DummyExtractor(
+        attribute="a random attribute",
+        extractor_dict=dict(inner_extractor1=inner_extractor1, inner_extractor2=inner_extractor2),
+    )
+
+    return extractor
+
+
+def test_encoding_numpy_scalars_within_nested_extractors(nested_extractor):
+    json.dumps(nested_extractor, cls=SIJsonEncoder)
+
+
+def test_encoding_numpy_scalars_within_nested_extractors_list(nested_extractor_list):
+    json.dumps(nested_extractor_list, cls=SIJsonEncoder)
+
+
+def test_encoding_numpy_scalars_within_nested_extractors_dict(nested_extractor_dict):
+    json.dumps(nested_extractor_dict, cls=SIJsonEncoder)

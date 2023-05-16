@@ -17,7 +17,6 @@ import shutil
 import json
 import os
 
-import pandas as pd
 
 from spikeinterface.core import load_extractor
 from spikeinterface.core.job_tools import fix_job_kwargs
@@ -45,23 +44,23 @@ def setup_comparison_study(study_folder, gt_dict, **job_kwargs):
     assert not study_folder.is_dir(), "'study_folder' already exists. Please remove it"
 
     study_folder.mkdir(parents=True, exist_ok=True)
-    sorting_folders = study_folder / 'sortings'
-    log_folder = sorting_folders / 'run_log'
+    sorting_folders = study_folder / "sortings"
+    log_folder = sorting_folders / "run_log"
     log_folder.mkdir(parents=True, exist_ok=True)
-    tables_folder = study_folder / 'tables'
+    tables_folder = study_folder / "tables"
     tables_folder.mkdir(parents=True, exist_ok=True)
 
     for rec_name, (recording, sorting_gt) in gt_dict.items():
         # write recording using save with binary
-        folder = study_folder / 'ground_truth' / rec_name
-        sorting_gt.save(folder=folder, format='npz')
-        folder = study_folder / 'raw_files' / rec_name
-        recording.save(folder=folder, format='binary', **job_kwargs)
+        folder = study_folder / "ground_truth" / rec_name
+        sorting_gt.save(folder=folder, format="npz")
+        folder = study_folder / "raw_files" / rec_name
+        recording.save(folder=folder, format="binary", **job_kwargs)
 
     # make an index of recording names
-    with open(study_folder / 'names.txt', mode='w', encoding='utf8') as f:
+    with open(study_folder / "names.txt", mode="w", encoding="utf8") as f:
         for rec_name in gt_dict:
-            f.write(rec_name + '\n')
+            f.write(rec_name + "\n")
 
 
 def get_rec_names(study_folder):
@@ -80,8 +79,8 @@ def get_rec_names(study_folder):
         List of names.
     """
     study_folder = Path(study_folder)
-    with open(study_folder / 'names.txt', mode='r', encoding='utf8') as f:
-        rec_names = f.read()[:-1].split('\n')
+    with open(study_folder / "names.txt", mode="r", encoding="utf8") as f:
+        rec_names = f.read()[:-1].split("\n")
     return rec_names
 
 
@@ -106,7 +105,7 @@ def get_recordings(study_folder):
     rec_names = get_rec_names(study_folder)
     recording_dict = {}
     for rec_name in rec_names:
-        rec = load_extractor(study_folder / 'raw_files' / rec_name)
+        rec = load_extractor(study_folder / "raw_files" / rec_name)
         recording_dict[rec_name] = rec
 
     return recording_dict
@@ -132,16 +131,16 @@ def get_ground_truths(study_folder):
     rec_names = get_rec_names(study_folder)
     ground_truths = {}
     for rec_name in rec_names:
-        sorting = load_extractor(study_folder / 'ground_truth' / rec_name)
+        sorting = load_extractor(study_folder / "ground_truth" / rec_name)
         ground_truths[rec_name] = sorting
     return ground_truths
 
 
 def iter_computed_names(study_folder):
-    sorting_folder = Path(study_folder) / 'sortings'
+    sorting_folder = Path(study_folder) / "sortings"
     for filename in os.listdir(sorting_folder):
-        if filename.endswith('.npz') and '[#]' in filename:
-            rec_name, sorter_name = filename.replace('.npz', '').split('[#]')
+        if filename.endswith(".npz") and "[#]" in filename:
+            rec_name, sorter_name = filename.replace(".npz", "").split("[#]")
             yield rec_name, sorter_name
 
 
@@ -149,10 +148,10 @@ def iter_computed_sorting(study_folder):
     """
     Iter over sorting files.
     """
-    sorting_folder = Path(study_folder) / 'sortings'
+    sorting_folder = Path(study_folder) / "sortings"
     for filename in os.listdir(sorting_folder):
-        if filename.endswith('.npz') and '[#]' in filename:
-            rec_name, sorter_name = filename.replace('.npz', '').split('[#]')
+        if filename.endswith(".npz") and "[#]" in filename:
+            rec_name, sorter_name = filename.replace(".npz", "").split("[#]")
             sorting = NpzSortingExtractor(sorting_folder / filename)
             yield rec_name, sorter_name, sorting
 
@@ -163,24 +162,26 @@ def collect_run_times(study_folder):
 
     The output is list of (rec_name, sorter_name, run_time)
     """
+    import pandas as pd
+
     study_folder = Path(study_folder)
-    sorting_folders = study_folder / 'sortings'
-    log_folder = sorting_folders / 'run_log'
-    tables_folder = study_folder / 'tables'
+    sorting_folders = study_folder / "sortings"
+    log_folder = sorting_folders / "run_log"
+    tables_folder = study_folder / "tables"
 
     tables_folder.mkdir(parents=True, exist_ok=True)
 
     run_times = []
     for filename in os.listdir(log_folder):
-        if filename.endswith('.json') and '[#]' in filename:
-            rec_name, sorter_name = filename.replace('.json', '').split('[#]')
-            with open(log_folder / filename, encoding='utf8', mode='r') as logfile:
+        if filename.endswith(".json") and "[#]" in filename:
+            rec_name, sorter_name = filename.replace(".json", "").split("[#]")
+            with open(log_folder / filename, encoding="utf8", mode="r") as logfile:
                 log = json.load(logfile)
-                run_time = log.get('run_time', None)
+                run_time = log.get("run_time", None)
             run_times.append((rec_name, sorter_name, run_time))
 
-    run_times = pd.DataFrame(run_times, columns=['rec_name', 'sorter_name', 'run_time'])
-    run_times = run_times.set_index(['rec_name', 'sorter_name'])
+    run_times = pd.DataFrame(run_times, columns=["rec_name", "sorter_name", "run_time"])
+    run_times = run_times.set_index(["rec_name", "sorter_name"])
 
     return run_times
 
@@ -242,9 +243,11 @@ def aggregate_performances_table(study_folder, exhaustive_gt=False, **karg_thres
         Return several useful DataFrame to compare all results.
         Note that count_units depend on karg_thresh.
     """
+    import pandas as pd
+
     study_folder = Path(study_folder)
-    sorter_folders = study_folder / 'sorter_folders'
-    tables_folder = study_folder / 'tables'
+    sorter_folders = study_folder / "sorter_folders"
+    tables_folder = study_folder / "tables"
 
     comparisons = aggregate_sorting_comparison(study_folder, exhaustive_gt=exhaustive_gt)
     ground_truths = get_ground_truths(study_folder)
@@ -255,23 +258,29 @@ def aggregate_performances_table(study_folder, exhaustive_gt=False, **karg_thres
     dataframes = {}
 
     # get run times:
-    run_times = pd.read_csv(str(tables_folder / 'run_times.csv'), sep='\t')
-    run_times.columns = ['rec_name', 'sorter_name', 'run_time']
-    run_times = run_times.set_index(['rec_name', 'sorter_name', ])
-    dataframes['run_times'] = run_times
+    run_times = pd.read_csv(str(tables_folder / "run_times.csv"), sep="\t")
+    run_times.columns = ["rec_name", "sorter_name", "run_time"]
+    run_times = run_times.set_index(
+        [
+            "rec_name",
+            "sorter_name",
+        ]
+    )
+    dataframes["run_times"] = run_times
 
     perf_pooled_with_sum = pd.DataFrame(index=run_times.index, columns=_perf_keys)
-    dataframes['perf_pooled_with_sum'] = perf_pooled_with_sum
+    dataframes["perf_pooled_with_sum"] = perf_pooled_with_sum
 
     perf_pooled_with_average = pd.DataFrame(index=run_times.index, columns=_perf_keys)
-    dataframes['perf_pooled_with_average'] = perf_pooled_with_average
+    dataframes["perf_pooled_with_average"] = perf_pooled_with_average
 
-    count_units = pd.DataFrame(index=run_times.index,
-                               columns=['num_gt', 'num_sorter', 'num_well_detected', 'num_redundant'])
-    dataframes['count_units'] = count_units
+    count_units = pd.DataFrame(
+        index=run_times.index, columns=["num_gt", "num_sorter", "num_well_detected", "num_redundant"]
+    )
+    dataframes["count_units"] = count_units
     if exhaustive_gt:
-        count_units['num_false_positive'] = None
-        count_units['num_bad'] = None
+        count_units["num_false_positive"] = None
+        count_units["num_bad"] = None
 
     perf_by_spiketrain = []
 
@@ -279,29 +288,29 @@ def aggregate_performances_table(study_folder, exhaustive_gt=False, **karg_thres
         gt_sorting = ground_truths[rec_name]
         sorting = results[(rec_name, sorter_name)]
 
-        perf = comp.get_performance(method='pooled_with_sum', output='pandas')
+        perf = comp.get_performance(method="pooled_with_sum", output="pandas")
         perf_pooled_with_sum.loc[(rec_name, sorter_name), :] = perf
 
-        perf = comp.get_performance(method='pooled_with_average', output='pandas')
+        perf = comp.get_performance(method="pooled_with_average", output="pandas")
         perf_pooled_with_average.loc[(rec_name, sorter_name), :] = perf
 
-        perf = comp.get_performance(method='by_spiketrain', output='pandas')
-        perf['rec_name'] = rec_name
-        perf['sorter_name'] = sorter_name
+        perf = comp.get_performance(method="by_spiketrain", output="pandas")
+        perf["rec_name"] = rec_name
+        perf["sorter_name"] = sorter_name
         perf = perf.reset_index()
 
         perf_by_spiketrain.append(perf)
 
-        count_units.loc[(rec_name, sorter_name), 'num_gt'] = len(gt_sorting.get_unit_ids())
-        count_units.loc[(rec_name, sorter_name), 'num_sorter'] = len(sorting.get_unit_ids())
-        count_units.loc[(rec_name, sorter_name), 'num_well_detected'] = comp.count_well_detected_units(**karg_thresh)
-        count_units.loc[(rec_name, sorter_name), 'num_redundant'] = comp.count_redundant_units()
+        count_units.loc[(rec_name, sorter_name), "num_gt"] = len(gt_sorting.get_unit_ids())
+        count_units.loc[(rec_name, sorter_name), "num_sorter"] = len(sorting.get_unit_ids())
+        count_units.loc[(rec_name, sorter_name), "num_well_detected"] = comp.count_well_detected_units(**karg_thresh)
+        count_units.loc[(rec_name, sorter_name), "num_redundant"] = comp.count_redundant_units()
         if exhaustive_gt:
-            count_units.loc[(rec_name, sorter_name), 'num_false_positive'] = comp.count_false_positive_units()
-            count_units.loc[(rec_name, sorter_name), 'num_bad'] = comp.count_bad_units()
+            count_units.loc[(rec_name, sorter_name), "num_false_positive"] = comp.count_false_positive_units()
+            count_units.loc[(rec_name, sorter_name), "num_bad"] = comp.count_bad_units()
 
     perf_by_spiketrain = pd.concat(perf_by_spiketrain)
-    perf_by_spiketrain = perf_by_spiketrain.set_index(['rec_name', 'sorter_name', 'gt_unit_id'])
-    dataframes['perf_by_spiketrain'] = perf_by_spiketrain
+    perf_by_spiketrain = perf_by_spiketrain.set_index(["rec_name", "sorter_name", "gt_unit_id"])
+    dataframes["perf_by_spiketrain"] = perf_by_spiketrain
 
     return dataframes
