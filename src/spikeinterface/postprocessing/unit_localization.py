@@ -399,6 +399,9 @@ def compute_grid_convolution(
         The margin for the grid of fake templates
     prototype: np.array
         Fake waveforms for the templates. If None, generated as Gaussian
+    percentile: float (default 10)
+        The percentage  in [0, 100] of the best scalar products kept to
+        estimate the position
 
     Returns
     -------
@@ -442,6 +445,11 @@ def compute_grid_convolution(
         for count, w in enumerate(weights):
             dot_products = np.dot(global_products, w[:, intersect])
             dot_products = np.maximum(0, dot_products)
+
+            if percentile < 100:
+                thresholds = np.percentile(dot_products, percentile)
+                dot_products[dot_products < thresholds] = 0
+
             scalar_products[intersect] += dot_products
             found_positions += np.dot(dot_products, template_positions[intersect])
 

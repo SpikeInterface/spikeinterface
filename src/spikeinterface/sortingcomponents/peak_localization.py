@@ -321,6 +321,9 @@ class LocalizeGridConvolution(PipelineNode):
         The margin for the grid of fake templates
     prototype: np.array
         Fake waveforms for the templates. If None, generated as Gaussian
+    percentile: float (default 10)
+        The percentage in [0, 100] of the best scalar products kept to
+        estimate the position
     """
 
     def __init__(
@@ -341,8 +344,10 @@ class LocalizeGridConvolution(PipelineNode):
         self.sigma_um = sigma_um
         self.margin_um = margin_um
         self.upsampling_um = upsampling_um
-        contact_locations = recording.get_channel_locations()
+        self.percentile = 100 - percentile
+        assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
 
+        contact_locations = recording.get_channel_locations()
         # Find waveform extractor in the parents
         waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
         if waveform_extractor is None:
@@ -398,6 +403,11 @@ class LocalizeGridConvolution(PipelineNode):
             for count, weights in enumerate(self.weights):
                 dot_products = np.dot(global_products, weights[:, intersect])
                 dot_products = np.maximum(0, dot_products)
+
+                if self.percentile < 100:
+                    thresholds = np.percentile(dot_products, self.percentile, axis=1)
+                    dot_products[dot_products < thresholds[:, np.newaxis]] = 0
+
                 scalar_products[:, intersect] += dot_products
                 found_positions += np.dot(dot_products, self.template_positions[intersect])
 
