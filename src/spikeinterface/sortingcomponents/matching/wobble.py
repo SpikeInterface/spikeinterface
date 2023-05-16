@@ -437,8 +437,9 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         spike_trains, scalings, distance_metrics = [], [], []
         for i in range(params.max_iter):
             # find peaks
-            spike_train, scaling, distance_metric = cls.find_peaks(objective, objective_normalized, np.array(spike_trains),
-                                                                   params, template_data, template_meta)
+            spike_train, scaling, distance_metric = cls.find_peaks(
+                objective, objective_normalized, np.array(spike_trains), params, template_data, template_meta
+            )
             if len(spike_train) == 0:
                 break
 
@@ -455,7 +456,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         spike_train = np.array(spike_trains)
         scalings = np.array(scalings)
         distance_metric = np.array(distance_metrics)
-        if len(spike_train) == 0: # no spikes found
+        if len(spike_train) == 0:  # no spikes found
             return np.zeros(0, dtype=cls.spike_dtype)
 
         # order spike times
@@ -926,7 +927,7 @@ def compute_objective(traces, template_data, approx_rank):
     # Filter using overlap-and-add convolution
     spatially_filtered_data = np.matmul(spatial_filters, traces.T[np.newaxis, :, :])
     scaled_filtered_data = spatially_filtered_data * singular_filters
-    objective_by_rank = signal.oaconvolve(scaled_filtered_data, temporal_filters, axes=2, mode='full')
+    objective_by_rank = signal.oaconvolve(scaled_filtered_data, temporal_filters, axes=2, mode="full")
     objective += np.sum(objective_by_rank, axis=0)
     return objective
 
