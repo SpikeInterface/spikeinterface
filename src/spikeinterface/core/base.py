@@ -277,8 +277,14 @@ class BaseExtractor:
         if self._preferred_mp_context is not None:
             other._preferred_mp_context = self._preferred_mp_context
 
-    def to_dict(self, include_annotations: bool = False, include_properties: bool = False,
-                relative_to=None, folder_metadata=None, recursive: bool = False) -> dict:
+    def to_dict(
+        self,
+        include_annotations: bool = False,
+        include_properties: bool = False,
+        relative_to=None,
+        folder_metadata=None,
+        recursive: bool = False,
+    ) -> dict:
         """
         Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize
         an extractor using load_extractor_from_dict(dump_dict)
@@ -337,8 +343,13 @@ class BaseExtractor:
             dump_dict["properties"] = {k: self._properties.get(k, None) for k in self._main_properties}
 
         if recursive:
-            dump_dict = _to_dict_iterative(dump_dict, include_annotations=include_annotations, include_properties=include_properties,
-                                           relative_to=relative_to, folder_metadata=folder_metadata)
+            dump_dict = _to_dict_iterative(
+                dump_dict,
+                include_annotations=include_annotations,
+                include_properties=include_properties,
+                relative_to=relative_to,
+                folder_metadata=folder_metadata,
+            )
 
         if relative_to is not None:
             relative_to = Path(relative_to).absolute()
@@ -490,8 +501,7 @@ class BaseExtractor:
             encoding="utf8",
         )
 
-    def dump_to_pickle(self, file_path=None, include_properties: bool = True,
-                       relative_to=None, folder_metadata=None):
+    def dump_to_pickle(self, file_path=None, include_properties: bool = True, relative_to=None, folder_metadata=None):
         """
         Dump recording extractor to a pickle file.
         The extractor can be re-loaded with load_extractor_from_json(json_file)
@@ -511,7 +521,7 @@ class BaseExtractor:
             include_properties=include_properties,
             relative_to=relative_to,
             folder_metadata=folder_metadata,
-            recursive=True
+            recursive=True,
         )
         file_path = self._get_file_path(file_path, [".pkl", ".pickle"])
 
