@@ -8,19 +8,17 @@ from .utils import get_unit_colors
 
 
 class AmplitudeBaseWidget(BaseWidget):
-    def __init__(self, waveform_extractor, unit_ids=None, 
-        compute_kwargs={},
-        unit_colors=None, figure=None, ax=None):
+    def __init__(self, waveform_extractor, unit_ids=None, compute_kwargs={}, unit_colors=None, figure=None, ax=None):
         BaseWidget.__init__(self, figure, ax)
 
         self.we = waveform_extractor
-        
-        if self.we.is_extension('spike_amplitudes'):
-            sac = self.we.load_extension('spike_amplitudes')
-            self.amplitudes = sac.get_data(outputs='by_unit')
+
+        if self.we.is_extension("spike_amplitudes"):
+            sac = self.we.load_extension("spike_amplitudes")
+            self.amplitudes = sac.get_data(outputs="by_unit")
         else:
-            self.amplitudes = compute_spike_amplitudes(self.we, outputs='by_unit', **compute_kwargs)
-        
+            self.amplitudes = compute_spike_amplitudes(self.we, outputs="by_unit", **compute_kwargs)
+
         if unit_ids is None:
             unit_ids = waveform_extractor.sorting.unit_ids
         self.unit_ids = unit_ids
@@ -68,11 +66,11 @@ class AmplitudeTimeseriesWidget(AmplitudeBaseWidget):
                 ax.scatter(times, amps, color=self.unit_colors[unit_id], s=3, alpha=1)
 
                 if i == 0:
-                    ax.set_title(f'segment {segment_index}')
+                    ax.set_title(f"segment {segment_index}")
                 if i == len(self.unit_ids) - 1:
-                    ax.set_xlabel('Times [s]')
+                    ax.set_xlabel("Times [s]")
                 if segment_index == 0:
-                    ax.set_ylabel(f'Amplitude')
+                    ax.set_ylabel(f"Amplitude")
 
         ylims = ax.get_ylim()
         if np.max(ylims) < 0:
@@ -115,10 +113,10 @@ class AmplitudeDistributionWidget(AmplitudeBaseWidget):
             unit_amps.append(amps)
         parts = ax.violinplot(unit_amps, showmeans=False, showmedians=False, showextrema=False)
 
-        for i, pc in enumerate(parts['bodies']):
+        for i, pc in enumerate(parts["bodies"]):
             color = self.unit_colors[unit_ids[i]]
             pc.set_facecolor(color)
-            pc.set_edgecolor('black')
+            pc.set_edgecolor("black")
             pc.set_alpha(1)
 
         ax.set_xticks(np.arange(len(unit_ids)) + 1)

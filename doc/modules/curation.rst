@@ -1,7 +1,7 @@
 Curation module
 ===============
 
-**Note:** As of February 2023, this module is still under construction and quite experimental. 
+**Note:** As of February 2023, this module is still under construction and quite experimental.
 The API of some of the functions could be changed/improved from time to time.
 
 Manual curation
@@ -15,8 +15,8 @@ The curation has several "steps" that can be repeated and chained:
   * merge units
 
 This functionality is done with :py:class:`~spikeinterface.curation.CurationSorting` class.
-Internally, this class keeps the history of curation as a graph. 
-The merging and splitting operations are handled by the :py:class:`~spikeinterface.curation.MergeUnitsSorting` and 
+Internally, this class keeps the history of curation as a graph.
+The merging and splitting operations are handled by the :py:class:`~spikeinterface.curation.MergeUnitsSorting` and
 :py:class:`~spikeinterface.curation.SplitUnitSorting`. These two classes can also be used independently.
 
 
@@ -45,13 +45,13 @@ The merging and splitting operations are handled by the :py:class:`~spikeinterfa
 Automatic curation tools
 ------------------------
 
-`Lussac <https://www.biorxiv.org/content/10.1101/2022.02.08.479192v1>`_ is an external package with several strategies 
+`Lussac <https://www.biorxiv.org/content/10.1101/2022.02.08.479192v1>`_ is an external package with several strategies
 for automatic curation of a spike sorting output.
 
 Some of them, like the auto-merging, have been ported to SpikeInterface.
 The :py:func:`~spikeinterface.curation.get_potential_auto_merge` function returns a list of potential merges.
 The list of potential merges can be then applied to the sorting output.
-:py:func:`~spikeinterface.curation.get_potential_auto_merge` has many internal tricks and steps to identify potential 
+:py:func:`~spikeinterface.curation.get_potential_auto_merge` has many internal tricks and steps to identify potential
 merges. Therefore, it has many parameters and options.
 **Read the function documentation carefully and do not apply it blindly!**
 
@@ -79,13 +79,13 @@ merges. Therefore, it has many parameters and options.
 Manual curation with sorting view
 ---------------------------------
 
-Within the :code:`sortingview` widgets backend (see :ref:`sorting_view`), the 
-:py:func:`~spikeinterface.widgets.plot_sorting_summary` produces a powerful web-based GUI that enables manual curation 
+Within the :code:`sortingview` widgets backend (see :ref:`sorting_view`), the
+:py:func:`~spikeinterface.widgets.plot_sorting_summary` produces a powerful web-based GUI that enables manual curation
 of the spike sorting output.
 
 .. image:: ../images/sv_summary.png
 
-The manual curation (including merges and labels) can be applied to a SpikeInterface 
+The manual curation (including merges and labels) can be applied to a SpikeInterface
 :py:class:`~spikeinterface.core.BaseSorting` object:
 
 
@@ -99,7 +99,7 @@ The manual curation (including merges and labels) can be applied to a SpikeInter
 
     # run a sorter and export waveforms
     sorting = run_sorter('kilosort2', recording)
-    we = extract_waveforms(recording, sorting, folder='wf_folder')    
+    we = extract_waveforms(recording, sorting, folder='wf_folder')
 
     # some postprocessing is required
     _ = compute_spike_amplitudes(we)
@@ -130,6 +130,5 @@ We have other tools for cleaning spike sorting outputs:
  * :py:func:`~spikeinterface.curation.find_duplicated_spikes` : find duplicated spikes in the spike trains
  * | :py:func:`~spikeinterface.curation.remove_duplicated_spikes` : remove all duplicated spikes from the spike trains
    | :py:class:`~spikeinterface.core.BaseSorting` object (internally using the previous function)
- * | :py:func:`~spikeinterface.curation.remove_excess_spikes` : remove spikes whose times are greater than the 
+ * | :py:func:`~spikeinterface.curation.remove_excess_spikes` : remove spikes whose times are greater than the
    | recording's number of samples (by segment)
-

@@ -71,7 +71,7 @@ Detailed documentation for spikeinterface can be found [here](https://spikeinter
 
 Several tutorials to get started can be found in [spiketutorials](https://github.com/SpikeInterface/spiketutorials).
 
-There are also some useful notebooks [on our blog](https://spikeinterface.github.io) that cover advanced benchmarking 
+There are also some useful notebooks [on our blog](https://spikeinterface.github.io) that cover advanced benchmarking
 and sorting components.
 
 You can also have a look at the [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui).
@@ -85,7 +85,7 @@ You can install the new `spikeinterface` version with pip:
 pip install spikeinterface[full]
 ```
 
-The `[full]` option installs all the extra dependencies for all the different sub-modules. 
+The `[full]` option installs all the extra dependencies for all the different sub-modules.
 
 To install all interactive widget backends, you can use:
 
