@@ -27,9 +27,10 @@ default_job_kwargs_description = {
     "chunk_size": "Number of samples per chunk (when saving ti binary) - default global",
     "chunk_memory": "Memory usage for each job (e.g. '100M', '1G') (when saving to binary) - default global",
     "total_memory": "Total memory usage (e.g. '500M', '2G') (when saving to binary) - default global",
-    "chunk_duration": "Chunk duration in s if float or with units if str (e.g. '1s', '500ms') (when saving to binary)" \
-                      " - default global",
-    "progress_bar": "If True, progress bar is shown (when saving to binary) - default global"}
+    "chunk_duration": "Chunk duration in s if float or with units if str (e.g. '1s', '500ms') (when saving to binary)"
+    " - default global",
+    "progress_bar": "If True, progress bar is shown (when saving to binary) - default global",
+}
 
 
 class BaseSorter:
@@ -39,10 +40,10 @@ class BaseSorter:
     compiled_name = None
     SortingExtractor_Class = None  # convenience to get the extractor
     requires_locations = False
-    gpu_capability = 'not-supported'
+    gpu_capability = "not-supported"
     requires_binary_data = False
-    compatible_with_parallel = {'loky': True, 'multiprocessing': True, 'threading': True}
-    
+    compatible_with_parallel = {"loky": True, "multiprocessing": True, "threading": True}
+
     _default_params = {}
     _params_description = {}
     sorter_description = ""
@@ -51,8 +52,14 @@ class BaseSorter:
     # by default no sorters handle multi segment
     handle_multi_segment = False
 
-    def __init__(self, recording=None, output_folder=None, verbose=False,
-                 remove_existing_folder=False, delete_output_folder=False, ):
+    def __init__(
+        self,
+        recording=None,
+        output_folder=None,
+        verbose=False,
+        remove_existing_folder=False,
+        delete_output_folder=False,
+    ):
         output_folder = self.initialize_folder(recording, output_folder, verbose, remove_existing_folder)
 
         self.recording = recording
@@ -92,24 +99,26 @@ class BaseSorter:
 
     @classmethod
     def initialize_folder(cls, recording, output_folder, verbose, remove_existing_folder):
-
         # installed ?
         if not cls.is_installed():
-            raise Exception(f"The sorter {cls.sorter_name} is not installed."
-                            f"Please install it with:  \n{cls.installation_mesg} ")
+            raise Exception(
+                f"The sorter {cls.sorter_name} is not installed." f"Please install it with:  \n{cls.installation_mesg} "
+            )
 
         if not isinstance(recording, BaseRecordingSnippets):
-            raise ValueError('recording must be a Recording or Snippets!!')
+            raise ValueError("recording must be a Recording or Snippets!!")
 
         if cls.requires_locations:
             locations = recording.get_channel_locations()
             if locations is None:
-                raise RuntimeError("Channel locations are required for this spike sorter. "
-                                   "Locations can be added to the RecordingExtractor by loading a probe file "
-                                   "(.prb or .csv) or by setting them manually.")
+                raise RuntimeError(
+                    "Channel locations are required for this spike sorter. "
+                    "Locations can be added to the RecordingExtractor by loading a probe file "
+                    "(.prb or .csv) or by setting them manually."
+                )
 
         if output_folder is None:
-            output_folder = cls.sorter_name + '_output'
+            output_folder = cls.sorter_name + "_output"
 
         #  .absolute() not anymore
         output_folder = Path(output_folder)
@@ -119,7 +128,7 @@ class BaseSorter:
             if remove_existing_folder:
                 shutil.rmtree(str(output_folder))
             else:
-                raise ValueError(f'Folder {output_folder} already exists')
+                raise ValueError(f"Folder {output_folder} already exists")
 
         output_folder.mkdir(parents=True, exist_ok=True)
         sorter_output_folder.mkdir()
@@ -127,14 +136,15 @@ class BaseSorter:
         if recording.get_num_segments() > 1:
             if not cls.handle_multi_segment:
                 raise ValueError(
-                    f'This sorter {cls.sorter_name} do not handle multi segment, use si.concatenate_recordings(...)')
+                    f"This sorter {cls.sorter_name} do not handle multi segment, use si.concatenate_recordings(...)"
+                )
 
-        rec_file = output_folder / 'spikeinterface_recording.json'
+        rec_file = output_folder / "spikeinterface_recording.json"
         if recording.is_dumpable:
             recording.dump_to_json(rec_file)
         else:
-            d = {'warning': 'The recording is not dumpable'}
-            rec_file.write_text(json.dumps(d, indent=4), encoding='utf8')
+            d = {"warning": "The recording is not dumpable"}
+            rec_file.write_text(json.dumps(d, indent=4), encoding="utf8")
 
         return output_folder
 
@@ -163,7 +173,7 @@ class BaseSorter:
             if p not in params.keys():
                 bad_params.append(p)
         if len(bad_params) > 0:
-            raise AttributeError('Bad parameters: ' + str(bad_params))
+            raise AttributeError("Bad parameters: " + str(bad_params))
 
         params.update(new_params)
 
@@ -180,19 +190,19 @@ class BaseSorter:
 
     @classmethod
     def _dump_params(cls, recording, output_folder, sorter_params, verbose):
-        with (output_folder / 'spikeinterface_params.json').open(mode='w', encoding='utf8') as f:
+        with (output_folder / "spikeinterface_params.json").open(mode="w", encoding="utf8") as f:
             all_params = dict()
-            all_params['sorter_name'] = cls.sorter_name
-            all_params['sorter_params'] = sorter_params
+            all_params["sorter_name"] = cls.sorter_name
+            all_params["sorter_params"] = sorter_params
             json.dump(check_json(all_params), f, indent=4)
 
     @classmethod
     def setup_recording(cls, recording, output_folder, verbose):
         output_folder = Path(output_folder)
         sorter_output_folder = output_folder / "sorter_output"
-        with (output_folder / 'spikeinterface_params.json').open(mode='r', encoding='utf8') as f:
+        with (output_folder / "spikeinterface_params.json").open(mode="r", encoding="utf8") as f:
             all_params = json.load(f)
-            sorter_params = all_params['sorter_params']
+            sorter_params = all_params["sorter_params"]
         cls._setup_recording(recording, sorter_output_folder, sorter_params, verbose)
 
     @classmethod
@@ -202,12 +212,13 @@ class BaseSorter:
         sorter_output_folder = output_folder / "sorter_output"
 
         # retrieve sorter_name and params
-        with (output_folder / 'spikeinterface_params.json').open(mode='r') as f:
-              params = json.load(f)
-        sorter_params = params['sorter_params']
-        sorter_name = params['sorter_name']
+        with (output_folder / "spikeinterface_params.json").open(mode="r") as f:
+            params = json.load(f)
+        sorter_params = params["sorter_params"]
+        sorter_name = params["sorter_name"]
 
         from .sorterlist import sorter_dict
+
         SorterClass = sorter_dict[sorter_name]
 
         # not needed normally
@@ -215,10 +226,10 @@ class BaseSorter:
 
         now = datetime.datetime.now()
         log = {
-            'sorter_name': str(SorterClass.sorter_name),
-            'sorter_version': str(SorterClass.get_sorter_version()),
-            'datetime': now,
-            'runtime_trace': []
+            "sorter_name": str(SorterClass.sorter_name),
+            "sorter_version": str(SorterClass.get_sorter_version()),
+            "datetime": now,
+            "runtime_trace": [],
         }
         t0 = time.perf_counter()
 
@@ -230,37 +241,38 @@ class BaseSorter:
         except Exception as err:
             has_error = True
             run_time = None
-            log['error'] = True
-            log['error_trace'] = traceback.format_exc()
+            log["error"] = True
+            log["error_trace"] = traceback.format_exc()
 
-        log['error'] = has_error
-        log['run_time'] = run_time
+        log["error"] = has_error
+        log["run_time"] = run_time
 
         # some sorter have a log file dur to shellscript launcher
-        runtime_trace_path = output_folder / f'{sorter_name}.log'
+        runtime_trace_path = output_folder / f"{sorter_name}.log"
         runtime_trace = []
         if runtime_trace_path.is_file():
-            with open(runtime_trace_path, 'r') as fp:
+            with open(runtime_trace_path, "r") as fp:
                 line = fp.readline()
                 while line:
                     runtime_trace.append(line.strip())
                     line = fp.readline()
-        log['runtime_trace'] = runtime_trace
+        log["runtime_trace"] = runtime_trace
 
         # dump to json
-        with (output_folder / 'spikeinterface_log.json').open('w', encoding='utf8') as f:
+        with (output_folder / "spikeinterface_log.json").open("w", encoding="utf8") as f:
             json.dump(check_json(log), f, indent=4)
 
         if verbose:
             if has_error:
-                print(f'Error running {sorter_name}')
+                print(f"Error running {sorter_name}")
             else:
-                print(f'{sorter_name} run time {run_time:0.2f}s')
+                print(f"{sorter_name} run time {run_time:0.2f}s")
 
         if has_error and raise_error:
-            print(log['error_trace'])
+            print(log["error_trace"])
             raise SpikeSortingError(
-                f"Spike sorting failed. You can inspect the runtime trace in {output_folder}/spikeinterface_log.json")
+                f"Spike sorting failed. You can inspect the runtime trace in {output_folder}/spikeinterface_log.json"
+            )
 
         return run_time
 
@@ -269,34 +281,35 @@ class BaseSorter:
         output_folder = Path(output_folder)
         sorter_output_folder = output_folder / "sorter_output"
         # check errors in log file
-        log_file = output_folder / 'spikeinterface_log.json'
+        log_file = output_folder / "spikeinterface_log.json"
         if not log_file.is_file():
-            raise SpikeSortingError('get result error: the folder do not contain spikeinterface_log.json')
+            raise SpikeSortingError("get result error: the folder do not contain spikeinterface_log.json")
 
-        with log_file.open('r', encoding='utf8') as f:
+        with log_file.open("r", encoding="utf8") as f:
             log = json.load(f)
 
-        if bool(log['error']):
+        if bool(log["error"]):
             raise SpikeSortingError(
-                "Spike sorting failed. You can inspect the runtime trace in spikeinterface_log.json")
+                "Spike sorting failed. You can inspect the runtime trace in spikeinterface_log.json"
+            )
 
         if sorter_output_folder.is_dir():
             sorting = cls._get_result_from_folder(sorter_output_folder)
         else:
             # back-compatibility
             sorting = cls._get_result_from_folder(output_folder)
-        
+
         # register recording to Sorting object
-        recording = load_extractor(output_folder / 'spikeinterface_recording.json')
+        recording = load_extractor(output_folder / "spikeinterface_recording.json")
         if recording is not None:
             # can be None when not dumpable
             sorting.register_recording(recording)
         # set sorting info to Sorting object
-        with open(output_folder /'spikeinterface_recording.json', 'r') as f:
+        with open(output_folder / "spikeinterface_recording.json", "r") as f:
             rec_dict = json.load(f)
-        with open(output_folder /'spikeinterface_params.json', 'r') as f:
+        with open(output_folder / "spikeinterface_params.json", "r") as f:
             params_dict = json.load(f)
-        with open(output_folder /'spikeinterface_log.json', 'r') as f:
+        with open(output_folder / "spikeinterface_log.json", "r") as f:
             log_dict = json.load(f)
         sorting.set_sorting_info(rec_dict, params_dict, log_dict)
 
@@ -315,13 +328,13 @@ class BaseSorter:
         if cls.compiled_name is None:
             return False
 
-        shell_cmd = f'''
+        shell_cmd = f"""
         #!/bin/bash
         if ! [ -x "$(command -v {cls.compiled_name})" ]; then
             echo 'Error: {cls.compiled_name} is not installed.' >&2
             exit 1
         fi
-        '''
+        """
         shell_script = ShellScript(shell_cmd)
         shell_script.start()
         shell_script.wait()
@@ -329,10 +342,10 @@ class BaseSorter:
         if retcode != 0:
             return False
         return True
-    
+
     @classmethod
     def use_gpu(cls, params):
-        return cls.gpu_capability != 'not-supported'
+        return cls.gpu_capability != "not-supported"
 
     #############################################
 

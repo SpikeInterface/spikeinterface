@@ -47,5 +47,5 @@ def test_depth_order():
     assert np.array_equal(rec_sorted.get_traces(), orig_traces[:, [3, 4, 2, 1, 0]])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_depth_order()

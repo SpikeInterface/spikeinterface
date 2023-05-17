@@ -7,5 +7,5 @@ from .correct_lsb import correct_lsb
 from .merge_ap_lfp import generate_RC_filter, MergeApLfpRecording, MergeNeuropixels1Recording
 
 
-#for snippets
+# for snippets
 from .align_snippets import AlignSnippets

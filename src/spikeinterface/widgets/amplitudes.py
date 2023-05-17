@@ -13,41 +13,52 @@ class AmplitudesWidget(BaseWidget):
 
     Parameters
     ----------
-    waveform_extractor: WaveformExtractor
+    waveform_extractor : WaveformExtractor
         The input waveform extractor
-    unit_ids: list
-        List of unit ids.
-    segment_index: int
-        The segment index (or None if mono-segment)
-    max_spikes_per_unit: int
+    unit_ids : list
+        List of unit ids, default None
+    segment_index : int
+        The segment index (or None if mono-segment), default None
+    max_spikes_per_unit : int
         Number of max spikes per unit to display. Use None for all spikes.
         Default None.
     hide_unit_selector : bool
-        If True the unit selector is not displayed
+        If True the unit selector is not displayed, default False
         (sortingview backend)
     plot_histogram : bool
-        If True, an histogram of the amplitudes is plotted on the right axis 
+        If True, an histogram of the amplitudes is plotted on the right axis, default False
         (matplotlib backend)
     bins : int
         If plot_histogram is True, the number of bins for the amplitude histogram.
-        If None (default), this is automatically adjusted.
-    plot_legend: bool (default True)
-        plot or not the legend
+        If None this is automatically adjusted, default None
+    plot_legend : bool
+        True includes legend in plot, default True
     """
+
     possible_backends = {}
 
-    
-    def __init__(self, waveform_extractor: WaveformExtractor, unit_ids=None, unit_colors=None,
-                 segment_index=None, max_spikes_per_unit=None, hide_unit_selector=False, 
-                 plot_histograms=False, bins=None, plot_legend=True, backend=None, **backend_kwargs):
+    def __init__(
+        self,
+        waveform_extractor: WaveformExtractor,
+        unit_ids=None,
+        unit_colors=None,
+        segment_index=None,
+        max_spikes_per_unit=None,
+        hide_unit_selector=False,
+        plot_histograms=False,
+        bins=None,
+        plot_legend=True,
+        backend=None,
+        **backend_kwargs,
+    ):
         sorting = waveform_extractor.sorting
         self.check_extensions(waveform_extractor, "spike_amplitudes")
-        sac = waveform_extractor.load_extension('spike_amplitudes')
-        amplitudes = sac.get_data(outputs='by_unit')
+        sac = waveform_extractor.load_extension("spike_amplitudes")
+        amplitudes = sac.get_data(outputs="by_unit")
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids
-    
+
         if unit_colors is None:
             unit_colors = get_some_colors(sorting.unit_ids)
 
@@ -58,9 +69,10 @@ class AmplitudesWidget(BaseWidget):
         else:
             segment_index = 0
         amplitudes_segment = amplitudes[segment_index]
-        total_duration = waveform_extractor.recording.get_num_samples(segment_index) / \
-            waveform_extractor.sampling_frequency
-        
+        total_duration = (
+            waveform_extractor.recording.get_num_samples(segment_index) / waveform_extractor.sampling_frequency
+        )
+
         spiketrains_segment = {}
         for i, unit_id in enumerate(sorting.unit_ids):
             times = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
@@ -102,6 +114,3 @@ class AmplitudesWidget(BaseWidget):
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
-
-
-
