@@ -68,7 +68,7 @@ def test_curation():
     all_units = cs.sorting.get_unit_ids()
     cs.merge(all_units, new_unit_id=all_units[0])
     assert len(cs.sorting.get_unit_ids()) == 1, "error merging units"
-    assert cs.sorting.unit_ids[0] = all_units[0]
+    assert cs.sorting.unit_ids[0] == all_units[0]
     cs.undo()
 
     assert cs.sorting is after_split
