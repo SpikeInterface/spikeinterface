@@ -20,13 +20,13 @@ SpikeInterface 0.93.0 release notes
 core:
   * fix timestamps when from h5py
   * allow concatenation of datasets with diff srate
-  * propagate properties in Recording and Sorting OldToNew wrappers 
+  * propagate properties in Recording and Sorting OldToNew wrappers
   * add WaveformExtractorExtension.
   * fix old to new scaling
   * implement filter_units() in waveform extractor and extensions
   * make waveform cache to memory optional
   * refactor old<->new API
-  * sorting have a link to the recording and so 
+  * sorting have a link to the recording and so
   * sorting.get_unit_spike_train have return_times=True/False
   * add 'missing_value' to set_property
   * improve portability of WaveformExtractor
@@ -38,12 +38,12 @@ extractors:
   * remove __del__ from nwbextractor
   * various fix
 
-  
+
 sorters:
-  * singularity integration 
+  * singularity integration
   * enhance container handling
   * matlab-compiled IronClust version
-  
+
 toolkit:
   * whiten by property
   * fix unit_localization
@@ -54,7 +54,7 @@ toolkit:
   * fix peak sign for amplitude cutoffs
   * refactor template metrics
 
-  
+
 comparison:
   * new framework for collision benchmark
   * refactor comparison module and add TemplateComparison
@@ -66,13 +66,13 @@ widgets:
 export:
   * fix export_to_phy
   * add quality metrics and SI unit ids to phy tsv
-  
+
 
 sortingcomponents:
   * add select_peaks()
   * add template_matching module (experimental)
   * add motion_correction module (experimental)
-  
+
 doc:
   * various improvements
   * fix some typos
