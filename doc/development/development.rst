@@ -17,9 +17,9 @@ There are various ways to contribute to SpikeInterface as a user or developer. S
 We use a forking workflow <https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow>_ to manage contributions. Here's a summary of the steps involved, with more details available in the provided link:
 
 * Fork the SpikeInterface repository.
-* Create a new branch (e.g., :code:git switch -c my-contribution).
+* Create a new branch (e.g., :code:`git switch -c my-contribution`).
 * Modify the code, commit, and push changes to your fork.
-* Open a pull request from the "Pull Requests" tab of your fork to :code:spikeinterface/main.
+* Open a pull request from the "Pull Requests" tab of your fork to :code:`spikeinterface/main`.
 * By following this process, we can review the code and even make changes as necessary.
 
 While we appreciate all the contributions please be mindful of the cost of reviewing pull requests <https://rgommers.github.io/2019/06/the-cost-of-an-open-source-contribution/>_ .
@@ -164,7 +164,7 @@ As described in the `black documentation <https://black.readthedocs.io/en/stable
 
 The following are some styling conventions that we follow in SpikeInterface:
 
-#. Avoid using abreviations in variable names (e.g., use :code:`recording` instead of :code:`rec`). It is specially important to avoid single letter variables.
+#. Avoid using abreviations in variable names (e.g., use :code:`recording` instead of :code:`rec`). It is especially important to avoid single letter variables.
 #. Use index as singular and indices for plural following Numpy. Avoid idx or indexes. Plus, id and ids are reserved for identifiers (i.e. channel_ids)
 #. We use file_path and folder_path (instead of file_name and folder_name) for clarity.
 #. Use the `numpy docstring standard <https://numpydoc.readthedocs.io/en/latest/format.html#numpydoc-docstring-guide>`_ in all the docstrings.
@@ -210,7 +210,7 @@ Once that is done, the new class can be easily wrapped into SpikeInterface as an
 code (e.g., see reader for `SpikeGLX <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/neoextractors/spikeglx.py>`_
 or `Neuralynx <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/neoextractors/neuralynx.py>`_).
 
-**NOTE:** implementing a `neo.rawio` Class is not required, but recommended. Several extractors (especially) for Sorting
+**NOTE:** implementing a `neo.rawio` Class is not required, but recommended. Several extractors (especially) for :code:`Sorting`
 objects are implemented directly in SpikeInterface and inherit from the base classes.
 As examples, see the `CompressedBinaryIblExtractor <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/cbin_ibl.py>`_
 for a :py:class:`~spikeinterface.core.BaseRecording` object, or the `SpykingCircusSortingExtractor <https://github.com/SpikeInterface/spikeinterface/blob/0.96.1/spikeinterface/extractors/spykingcircusextractors.py>`_
