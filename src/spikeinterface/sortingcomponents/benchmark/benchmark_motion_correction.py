@@ -62,7 +62,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
         self.sorter_cases = sorter_cases.copy()
         self.mearec_filenames = {}  
-        self.keys = ['static', 'drifting', 'corrected']
+        self.keys = ['static', 'drifting', 'corrected_gt', 'corrected_estimated']
         self.mearec_filenames['drifting'] = mearec_filename_drifting
         self.mearec_filenames['static'] = mearec_filename_static
         self.temporal_bins = temporal_bins
@@ -117,11 +117,10 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         return self._recordings
 
     def run(self):
-        # self.extract_waveforms()
-        # self.save_to_folder()
+        self.extract_waveforms()
+        self.save_to_folder()
         self.run_sorters()
         self.save_to_folder()
-
 
     def extract_waveforms(self):
 
@@ -248,6 +247,18 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
         n = len(self.sorter_cases)
 
+        if 'depth' in mode:
+            # gt_unit_positions, _ = mr.extract_units_drift_vector(self.mearec_filenames['drifting'], time_vector=np.array([0., 1.]))
+            # unit_depth = gt_unit_positions[0, :]
+
+            template_locations = np.array(mr.load_recordings(self.mearec_filenames['drifting']).template_locations)
+            assert len(template_locations.shape) == 3
+            mid = template_locations.shape[1] //2
+            unit_depth = template_locations[:, mid, 2]
+
+            chan_locations = self.recordings['drifting'].get_channel_locations()
+
+
         if mode == 'ordered_accuracy':
             fig, ax = plt.subplots(figsize=figsize)
 
@@ -266,11 +277,6 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         elif mode == 'depth_snr':
             fig, axs = plt.subplots(nrows=n, figsize=figsize, sharey=True, sharex=True)
 
-            gt_unit_positions, _ = mr.extract_units_drift_vector(self.mearec_filenames['drifting'], time_vector=np.array([0., 1.]))
-            depth = gt_unit_positions[0, :]
-
-            chan_locations = self.recordings['drifting'].get_channel_locations()
-
             metrics = compute_quality_metrics(self.waveforms['static'], metric_names=['snr'], load_if_exists=True)
             snr = metrics['snr'].values
 
@@ -278,15 +284,17 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 ax = axs[i]
                 label = case['label']
                 acc = accuracies[label]
-                s = ax.scatter(depth, snr, c=acc)
-                s.set_clim(0., 1.)
+                points = ax.scatter(unit_depth, snr, c=acc)
+                points.set_clim(0., 1.)
                 ax.set_title(label)
                 ax.axvline(np.min(chan_locations[:, 1]), ls='--', color='k')
                 ax.axvline(np.max(chan_locations[:, 1]), ls='--', color='k')
                 ax.set_ylabel('snr')
             ax.set_xlabel('depth')
 
-
+            cbar = fig.colorbar(points, ax=axs[:], location='right', shrink=0.6)
+            cbar.ax.set_ylabel('accuracy')
+            
         elif mode == 'snr':
             fig, ax = plt.subplots(figsize=figsize)
 
@@ -306,31 +314,30 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         elif mode == 'depth':
             fig, ax = plt.subplots(figsize=figsize)
 
-            gt_unit_positions, _ = mr.extract_units_drift_vector(self.mearec_filenames['drifting'], time_vector=np.array([0., 1.]))
-            depth = gt_unit_positions[0, :]
-
-            chan_locations = self.recordings['drifting'].get_channel_locations()
+            
 
             for i, case in enumerate(self.sorter_cases):
                 label = case['label']
                 acc = accuracies[label]
-                ax.scatter(depth, acc, label=label)
+                ax.scatter(unit_depth, acc, label=label)
             ax.axvline(np.min(chan_locations[:, 1]), ls='--', color='k')
             ax.axvline(np.max(chan_locations[:, 1]), ls='--', color='k')
             ax.legend()
             ax.set_xlabel('depth')
             ax.set_ylabel('accuracy')
 
+        return fig
+
     def plot_sortings_accuracy(self, mode='ordered_accuracy', figsize=(15, 5)):
 
         if len(self.accuracies) != len(self.sorter_cases):
             self.compute_accuracies()
         
-        self._plot_accuracy(self.accuracies, mode=mode, figsize=figsize, ls='-')
+        return self._plot_accuracy(self.accuracies, mode=mode, figsize=figsize, ls='-')
 
     def plot_best_merges_accuracy(self, mode='ordered_accuracy', figsize=(15, 5)):
 
-        self._plot_accuracy(self.merged_accuracies, mode=mode, figsize=figsize, ls='--')
+        return self._plot_accuracy(self.merged_accuracies, mode=mode, figsize=figsize, ls='--')
 
 
 

@@ -293,7 +293,7 @@ class LocalizeGridConvolution(PipelineNode):
         The percentage in [0, 100] of the best scalar products kept to 
         estimate the position
     """
-    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=50., upsampling_um=5,
+    def __init__(self, recording, return_output=True, parents=['extract_waveforms'], local_radius_um=50., upsampling_um=5.,
         sigma_um=np.linspace(10, 50., 5), sigma_ms=0.25, margin_um=50., prototype=None, percentile=10):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
         
