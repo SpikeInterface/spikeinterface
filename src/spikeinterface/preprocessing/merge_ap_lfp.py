@@ -29,53 +29,70 @@ class MergeApLfpRecording(BaseRecording):
         The result of the merge of both channels (with the whole frequency spectrum).
     """
 
-    def __init__(self, ap_recording: BaseRecording, lfp_recording: BaseRecording, ap_filter: Callable[[np.ndarray], np.ndarray],
-                 lfp_filter: Callable[[np.ndarray], np.ndarray], margin: int = 60_000) -> None:
+    def __init__(
+        self,
+        ap_recording: BaseRecording,
+        lfp_recording: BaseRecording,
+        ap_filter: Callable[[np.ndarray], np.ndarray],
+        lfp_filter: Callable[[np.ndarray], np.ndarray],
+        margin: int = 60_000,
+    ) -> None:
         BaseRecording.__init__(self, ap_recording.sampling_frequency, ap_recording.channel_ids, ap_recording.dtype)
         ap_recording.copy_metadata(self)
 
         for segment_index in range(ap_recording.get_num_segments()):
-            ap_recording_segment  = ap_recording._recording_segments[segment_index]
+            ap_recording_segment = ap_recording._recording_segments[segment_index]
             lfp_recording_segment = lfp_recording._recording_segments[segment_index]
-            self.add_recording_segment(MergeApLfpRecordingSegment(ap_recording_segment, lfp_recording_segment, ap_filter, lfp_filter, margin))
+            self.add_recording_segment(
+                MergeApLfpRecordingSegment(ap_recording_segment, lfp_recording_segment, ap_filter, lfp_filter, margin)
+            )
 
         self._kwargs = {  # TODO: Is callable serializable?
-            'ap_recording': ap_recording.to_dict(),
-            'lfp_recording': lfp_recording.to_dict(),
-            'margin': margin
+            "ap_recording": ap_recording.to_dict(),
+            "lfp_recording": lfp_recording.to_dict(),
+            "margin": margin,
         }
 
 
 class MergeApLfpRecordingSegment(BaseRecordingSegment):
-
-    def __init__(self, ap_recording_segment: BaseRecordingSegment, lfp_recording_segment: BaseRecordingSegment,
-                 ap_filter: Callable[[np.ndarray], np.ndarray], lfp_filter: Callable[[np.ndarray], np.ndarray], margin: int) -> None:
+    def __init__(
+        self,
+        ap_recording_segment: BaseRecordingSegment,
+        lfp_recording_segment: BaseRecordingSegment,
+        ap_filter: Callable[[np.ndarray], np.ndarray],
+        lfp_filter: Callable[[np.ndarray], np.ndarray],
+        margin: int,
+    ) -> None:
         BaseRecordingSegment.__init__(self, ap_recording_segment.sampling_frequency, ap_recording_segment.t_start)
 
-        self.ap_recording  = ap_recording_segment
+        self.ap_recording = ap_recording_segment
         self.lfp_recording = lfp_recording_segment
-        self.ap_filter  = ap_filter
+        self.ap_filter = ap_filter
         self.lfp_filter = lfp_filter
         self.margin = margin
 
         self.AP_TO_LFP = int(round(ap_recording_segment.sampling_frequency / lfp_recording_segment.sampling_frequency))
 
-
     def get_num_samples(self) -> int:
         # Trunk the recording to have a number of samples that is a multiple of 'AP_TO_LFP'.
         return self.ap_recording.get_num_samples() - (self.ap_recording.get_num_samples() % self.AP_TO_LFP)
 
-
-    def get_traces(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None,
-                   channel_indices: Union[List, None] = None) -> np.ndarray:
+    def get_traces(
+        self,
+        start_frame: Union[int, None] = None,
+        end_frame: Union[int, None] = None,
+        channel_indices: Union[List, None] = None,
+    ) -> np.ndarray:
         if start_frame is None:
             start_frame = 0
         if end_frame is None:
             end_frame = self.get_num_samples()
 
-        ap_traces, left_margin, right_margin = get_chunk_with_margin(self.ap_recording, start_frame, end_frame, channel_indices, self.margin + self.AP_TO_LFP)
-        
-        left_leftover  = (self.AP_TO_LFP - (start_frame - left_margin) % self.AP_TO_LFP) % self.AP_TO_LFP
+        ap_traces, left_margin, right_margin = get_chunk_with_margin(
+            self.ap_recording, start_frame, end_frame, channel_indices, self.margin + self.AP_TO_LFP
+        )
+
+        left_leftover = (self.AP_TO_LFP - (start_frame - left_margin) % self.AP_TO_LFP) % self.AP_TO_LFP
         left_margin -= left_leftover
         right_leftover = (end_frame + right_margin) % self.AP_TO_LFP
         right_margin -= right_leftover
@@ -84,19 +101,21 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
             ap_traces = ap_traces[:right_leftover]
         ap_traces = ap_traces[left_leftover:]
 
-        lfp_traces = self.lfp_recording.get_traces((start_frame - left_margin) // self.AP_TO_LFP, (end_frame + right_margin) // self.AP_TO_LFP, channel_indices)
+        lfp_traces = self.lfp_recording.get_traces(
+            (start_frame - left_margin) // self.AP_TO_LFP, (end_frame + right_margin) // self.AP_TO_LFP, channel_indices
+        )
 
-        ap_fourier  = np.fft.rfft(ap_traces, axis=0)
+        ap_fourier = np.fft.rfft(ap_traces, axis=0)
         lfp_fourier = np.fft.rfft(lfp_traces, axis=0)
-        ap_freq =  np.fft.rfftfreq(ap_traces.shape[0],  d=1/self.ap_recording.sampling_frequency)
-        lfp_freq = np.fft.rfftfreq(lfp_traces.shape[0], d=1/self.lfp_recording.sampling_frequency)
+        ap_freq = np.fft.rfftfreq(ap_traces.shape[0], d=1 / self.ap_recording.sampling_frequency)
+        lfp_freq = np.fft.rfftfreq(lfp_traces.shape[0], d=1 / self.lfp_recording.sampling_frequency)
 
-        ap_filter  = self.ap_filter(ap_freq)
+        ap_filter = self.ap_filter(ap_freq)
         lfp_filter = self.lfp_filter(lfp_freq)
-        ap_filter  = np.where(ap_filter  == 0, 1.0, ap_filter)
+        ap_filter = np.where(ap_filter == 0, 1.0, ap_filter)
         lfp_filter = np.where(lfp_filter == 0, 1.0, lfp_filter)
 
-        reconstructed_ap_fourier  = ap_fourier  /  ap_filter[:, None]
+        reconstructed_ap_fourier = ap_fourier / ap_filter[:, None]
         reconstructed_lfp_fourier = lfp_fourier / lfp_filter[:, None]
 
         # Compute aliasing of high frequencies on LFP channels
@@ -104,9 +123,9 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
         fourier_aliased = reconstructed_ap_fourier.copy()
         fourier_aliased[ap_freq <= lfp_nyquist] = 0.0
         fourier_aliased *= self.lfp_filter(ap_freq)[:, None]
-        traces_aliased = np.fft.irfft(fourier_aliased, axis=0)[::self.AP_TO_LFP]
+        traces_aliased = np.fft.irfft(fourier_aliased, axis=0)[:: self.AP_TO_LFP]
         fourier_aliased = np.fft.rfft(traces_aliased, axis=0) / lfp_filter[:, None]
-        fourier_aliased = fourier_aliased[:np.searchsorted(ap_freq, lfp_nyquist, side="right")]
+        fourier_aliased = fourier_aliased[: np.searchsorted(ap_freq, lfp_nyquist, side="right")]
         lfp_aa_fourier = reconstructed_lfp_fourier - fourier_aliased
 
         # Reconstruct using both AP and LFP channels
@@ -119,7 +138,9 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
         fourier_reconstructed = np.empty(reconstructed_ap_fourier.shape, dtype=np.complex128)
         idx = np.searchsorted(ap_freq, lfp_nyquist, side="right")
         fourier_reconstructed[idx:] = reconstructed_ap_fourier[idx:]
-        fourier_reconstructed[:idx] = self.AP_TO_LFP * lfp_aa_fourier * ratio[:idx] + reconstructed_ap_fourier[:idx] * (1 - ratio[:idx])
+        fourier_reconstructed[:idx] = self.AP_TO_LFP * lfp_aa_fourier * ratio[:idx] + reconstructed_ap_fourier[:idx] * (
+            1 - ratio[:idx]
+        )
 
         # To get back to the 0.5 - 10,000 Hz original filter
         # filter_reconstructed = generate_RC_filter(ap_freq, [0.5, 10000])[:, None]
@@ -127,23 +148,20 @@ class MergeApLfpRecordingSegment(BaseRecordingSegment):
 
         reconstructed_traces = np.fft.irfft(fourier_reconstructed, axis=0)
 
-
         if right_margin == 0:
             right_margin = -reconstructed_traces.shape[0]
 
-        reconstructed_traces = reconstructed_traces[left_margin : -right_margin]
+        reconstructed_traces = reconstructed_traces[left_margin:-right_margin]
 
         return reconstructed_traces.astype(self.ap_recording.dtype)
 
 
 class MergeNeuropixels1Recording(MergeApLfpRecording):
-    """
-
-    """
+    """ """
 
     def __init__(self, ap_recording: BaseRecording, lfp_recording: BaseRecording, margin: int = 60_000) -> None:
-        ap_filter  = lambda f : generate_RC_filter(f, [300, 10000])
-        lfp_filter = lambda f : generate_RC_filter(f, [0.5, 500])
+        ap_filter = lambda f: generate_RC_filter(f, [300, 10000])
+        lfp_filter = lambda f: generate_RC_filter(f, [0.5, 500])
         MergeApLfpRecording.__init__(self, ap_recording, lfp_recording, ap_filter, lfp_filter, margin)
 
 
@@ -168,7 +186,7 @@ def generate_RC_filter(frequencies: np.ndarray, cut: Union[float, List[float]], 
     """
 
     highpass = np.ones(len(frequencies), dtype=np.complex128)
-    lowpass  = np.ones(len(frequencies), dtype=np.complex128)
+    lowpass = np.ones(len(frequencies), dtype=np.complex128)
 
     if btype == "lowpass":
         lowpass = 1 / (1 + 1j * frequencies / cut)
@@ -176,7 +194,7 @@ def generate_RC_filter(frequencies: np.ndarray, cut: Union[float, List[float]], 
         highpass = (frequencies / cut) / (1 + 1j * frequencies / cut)
     elif btype == "bandpass":
         highpass = generate_RC_filter(frequencies, cut[0], btype="highpass")
-        lowpass  = generate_RC_filter(frequencies, cut[1], btype="lowpass")
+        lowpass = generate_RC_filter(frequencies, cut[1], btype="lowpass")
     else:
         raise AttributeError(f"btype '{btype}' is invalid for generate_RC_filter.")
 
