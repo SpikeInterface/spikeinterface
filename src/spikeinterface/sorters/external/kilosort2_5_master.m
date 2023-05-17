@@ -100,8 +100,6 @@ function kilosort2_5_master(fpath, kilosortPath)
 
         fprintf('found %d good units \n', sum(rez.good>0))
 
-        % save rez
-        save(fullfile(fpath, 'rez.mat'), 'rez', '-v7')
 
         % write to Phy
         fprintf('Saving results to Phy  \n')
@@ -110,6 +108,11 @@ function kilosort2_5_master(fpath, kilosortPath)
         % save the motion vector. Done after rezToPhy because it delete the entire folder
         if do_correction
             writeNPY(rez.dshift, fullfile(fpath, 'motion.npy'))
+        end
+
+        % save rez
+        if ops.save_rez_to_mat
+            save(fullfile(fpath, 'rez.mat'), 'rez', '-v7')
         end
 
     catch

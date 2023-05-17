@@ -55,6 +55,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "keep_good_only": False,
         "skip_kilosort_preprocessing": False,
         "scaleproc": None,
+        "save_rez_to_mat": False,
     }
 
     _params_description = {
@@ -77,6 +78,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
         "skip_kilosort_preprocessing": "Can optionaly skip the internal kilosort preprocessing",
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
+        "save_rez_to_mat": "Save the full rez internal struc to mat file",
     }
 
     sorter_description = """Kilosort2_5 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
@@ -226,5 +228,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         # int16 scaling of whitened data, when None then scaleproc is set to 200.
         scaleproc = params["scaleproc"]
         ops["scaleproc"] = scaleproc if scaleproc is not None else 200.0
+
+        ops["save_rez_to_mat"] = params["save_rez_to_mat"]
 
         return ops
