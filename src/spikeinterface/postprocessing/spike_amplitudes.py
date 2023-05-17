@@ -11,7 +11,7 @@ from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWavefo
 class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
     """
     Computes spike amplitudes from WaveformExtractor.
-    """    
+    """
 
     extension_name = "spike_amplitudes"
 
@@ -194,7 +194,7 @@ def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, p
     worker_ctx['peak_shifts'] = peak_shifts
     worker_ctx['min_shift'] = np.min(peak_shifts)
     worker_ctx['max_shifts'] = np.max(peak_shifts)
-    
+
     all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
 =======
     if isinstance(recording, dict):

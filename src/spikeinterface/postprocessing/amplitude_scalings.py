@@ -21,8 +21,7 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         self.spikes = self.waveform_extractor.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
 
     def _set_params(self, sparsity, max_dense_channels, ms_before, ms_after):
-        params = dict(sparsity=sparsity, max_dense_channels=max_dense_channels,
-                      ms_before=ms_before, ms_after=ms_after)
+        params = dict(sparsity=sparsity, max_dense_channels=max_dense_channels, ms_before=ms_before, ms_after=ms_after)
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -66,16 +65,14 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
                 assert recording.get_num_channels() <= self._params["max_dense_channels"], ""
             sparsity = ChannelSparsity.create_dense(we)
         sparsity_inds = sparsity.unit_id_to_channel_indices
-        unit_inds_to_channel_indices = {
-            unit_ind: sparsity_inds[unit_id] for unit_ind, unit_id in enumerate(unit_ids)
-        }
+        unit_inds_to_channel_indices = {unit_ind: sparsity_inds[unit_id] for unit_ind, unit_id in enumerate(unit_ids)}
         all_templates = we.get_all_templates()
 
         # precompute segment slice
         segment_slices = []
         for segment_index in range(we.get_num_segments()):
-            i0 = np.searchsorted(self.spikes['segment_index'], segment_index)
-            i1 = np.searchsorted(self.spikes['segment_index'], segment_index + 1)
+            i0 = np.searchsorted(self.spikes["segment_index"], segment_index)
+            i1 = np.searchsorted(self.spikes["segment_index"], segment_index + 1)
             segment_slices.append(slice(i0, i1))
 
         # and run
@@ -199,8 +196,7 @@ def compute_amplitude_scalings(
         sac = waveform_extractor.load_extension(AmplitudeScalingsCalculator.extension_name)
     else:
         sac = AmplitudeScalingsCalculator(waveform_extractor)
-        sac.set_params(sparsity=sparsity, max_dense_channels=max_dense_channels, ms_before=ms_before,
-                       ms_after=ms_after)
+        sac.set_params(sparsity=sparsity, max_dense_channels=max_dense_channels, ms_before=ms_before, ms_after=ms_after)
         sac.run(**job_kwargs)
 
     amps = sac.get_data(outputs=outputs)
