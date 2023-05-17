@@ -62,7 +62,7 @@ as :code:`spikeinterface` strongly relies on these packages to interface with va
    pip install git+https://github.com/SpikeInterface/probeinterface.git
 
 
-It is also sometimes useful to have local copies of :code: `neo` and :code:`probeinterface` to make changes to the code. To achieve this, repeat the first set of commands,
+It is also sometimes useful to have local copies of :code:`neo` and :code:`probeinterface` to make changes to the code. To achieve this, repeat the first set of commands,
 replacing `https://github.com/SpikeInterface/spikeinterface.git` with the appropriate repository in the first code block of this section.
 
 For beginners
