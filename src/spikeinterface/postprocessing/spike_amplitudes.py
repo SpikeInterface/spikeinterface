@@ -187,7 +187,6 @@ compute_spike_amplitudes.__doc__.format(_shared_job_kwargs_doc)
 def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, peak_shifts, return_scaled):
     # create a local dict per worker
     worker_ctx = {}
-<<<<<<< HEAD
     worker_ctx['recording'] = recording
     worker_ctx['sorting'] = sorting
     worker_ctx['return_scaled'] = return_scaled
@@ -195,25 +194,6 @@ def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, p
     worker_ctx['min_shift'] = np.min(peak_shifts)
     worker_ctx['max_shifts'] = np.max(peak_shifts)
     
-    all_spikes = sorting.get_all_spike_trains(outputs='unit_index')
-=======
-    if isinstance(recording, dict):
-        from spikeinterface.core import load_extractor
-
-        recording = load_extractor(recording)
-    if isinstance(sorting, dict):
-        from spikeinterface.core import load_extractor
->>>>>>> 5b88e70bd9f958c75d65686e8cd67ec56fe65933
-
-        sorting = load_extractor(sorting)
-
-    worker_ctx["recording"] = recording
-    worker_ctx["sorting"] = sorting
-    worker_ctx["return_scaled"] = return_scaled
-    worker_ctx["peak_shifts"] = peak_shifts
-    worker_ctx["min_shift"] = np.min(peak_shifts)
-    worker_ctx["max_shifts"] = np.max(peak_shifts)
-
     all_spikes = sorting.get_all_spike_trains(outputs="unit_index")
 
     worker_ctx["all_spikes"] = all_spikes
