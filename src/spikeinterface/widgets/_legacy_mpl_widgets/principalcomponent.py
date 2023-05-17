@@ -1,5 +1,4 @@
 import numpy as np
-from matplotlib import pyplot as plt
 
 from .basewidget import BaseWidget
 from ...postprocessing import WaveformPrincipalComponent, compute_principal_components
@@ -12,13 +11,12 @@ class PrincipalComponentWidget(BaseWidget):
     Parameters
     ----------
     waveform_extractor: WaveformExtractor
-    
+
     pc: None or WaveformPrincipalComponent
         If None then pc are recomputed
     """
 
-    def __init__(self, waveform_extractor, pc=None,
-                 figure=None, ax=None, axes=None, **pc_kwargs):
+    def __init__(self, waveform_extractor, pc=None, figure=None, ax=None, axes=None, **pc_kwargs):
         BaseWidget.__init__(self, figure, ax, axes)
 
         self.we = waveform_extractor
@@ -31,7 +29,7 @@ class PrincipalComponentWidget(BaseWidget):
             self.pc = compute_principal_components(self.we, **pc_kwargs)
 
     def plot(self):
-        print('Not done yet')
+        print("Not done yet")
         # @alessio : this is for you
 
 

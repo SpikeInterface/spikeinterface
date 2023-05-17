@@ -1,5 +1,5 @@
 import numpy as np
-import scipy.signal
+
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from ..core import order_channels_by_depth, get_chunk_with_margin
 from ..core.core_tools import define_function_from_class
@@ -27,9 +27,9 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
     recording : BaseRecording
         The parent recording
     n_channel_pad : int
-        Number of channels to pad prior to filtering. 
-        Channels are padded with mirroring. 
-        If None, no padding is applied, by default 5
+        Number of channels to pad prior to filtering.
+        Channels are padded with mirroring.
+        If None, no padding is applied, by default 60
     n_channel_taper : int
         Number of channels to perform cosine tapering on
         prior to filtering. If None and n_channel_pad is set,
@@ -58,19 +58,31 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
     International Brain Laboratory et al. (2022). Spike sorting pipeline for the International Brain Laboratory.
     https://www.internationalbrainlab.com/repro-ephys
     """
-    name = 'highpass_spatial_filter'
 
-    def __init__(self, recording, n_channel_pad=None, n_channel_taper=5, direction="y",
-                 apply_agc=True, agc_window_length_s=0.01, highpass_butter_order=3,
-                 highpass_butter_wn=0.01):
+    name = "highpass_spatial_filter"
+
+    def __init__(
+        self,
+        recording,
+        n_channel_pad=60,
+        n_channel_taper=0,
+        direction="y",
+        apply_agc=True,
+        agc_window_length_s=0.1,
+        highpass_butter_order=3,
+        highpass_butter_wn=0.01,
+    ):
         BasePreprocessor.__init__(self, recording)
+
+        import scipy.signal
 
         # Check single group
         channel_groups = recording.get_channel_groups()
-        assert len(np.unique(channel_groups)) == 1, \
-            ("The recording contains multiple groups! It is recommended to apply spatial filtering "
-             "separately for each group. You can split by group with: "
-             ">>> recording_split = recording.split_by(property='group')")
+        assert len(np.unique(channel_groups)) == 1, (
+            "The recording contains multiple groups! It is recommended to apply spatial filtering "
+            "separately for each group. You can split by group with: "
+            ">>> recording_split = recording.split_by(property='group')"
+        )
         # If location are not sorted, estimate forward and reverse sorting
         channel_locations = recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)
@@ -81,16 +93,18 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
             order_r = None
         else:
             # sort by x, y to avoid ambiguity
-            order_f, order_r = order_channels_by_depth(recording=recording, dimensions=('x', 'y'))
+            order_f, order_r = order_channels_by_depth(recording=recording, dimensions=("x", "y"))
 
         # Fix channel padding and tapering
         n_channels = recording.get_num_channels()
         n_channel_pad = 0 if n_channel_pad is None else int(n_channel_pad)
-        assert n_channel_pad <= recording.get_num_channels(), \
-            "'n_channel_pad' must be less than the number of channels in recording."
+        assert (
+            n_channel_pad <= recording.get_num_channels()
+        ), "'n_channel_pad' must be less than the number of channels in recording."
         n_channel_taper = n_channel_pad if n_channel_taper is None else int(n_channel_taper)
-        assert n_channel_taper <= recording.get_num_channels(), \
-            "'n_channel_taper' must be less than the number of channels in recording."
+        assert (
+            n_channel_taper <= recording.get_num_channels()
+        ), "'n_channel_taper' must be less than the number of channels in recording."
 
         # Fix Automatic Gain Control options
         sampling_interval = 1 / recording.sampling_frequency
@@ -98,45 +112,57 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
             agc_window_length_s = None
 
         # Pre-compute spatial filtering parameters
-        butter_kwargs = dict(
-            btype='highpass',
-            N=highpass_butter_order,
-            Wn=highpass_butter_wn
-        )
-        sos_filter = scipy.signal.butter(**butter_kwargs, output='sos')
+        butter_kwargs = dict(btype="highpass", N=highpass_butter_order, Wn=highpass_butter_wn)
+        sos_filter = scipy.signal.butter(**butter_kwargs, output="sos")
 
         for parent_segment in recording._recording_segments:
-            rec_segment = HighPassSpatialFilterSegment(parent_segment,
-                                                       n_channel_pad,
-                                                       n_channel_taper,
-                                                       n_channels,
-                                                       agc_window_length_s,
-                                                       sampling_interval,
-                                                       sos_filter,
-                                                       order_f,
-                                                       order_r)
+            rec_segment = HighPassSpatialFilterSegment(
+                parent_segment,
+                n_channel_pad,
+                n_channel_taper,
+                n_channels,
+                agc_window_length_s,
+                sampling_interval,
+                sos_filter,
+                order_f,
+                order_r,
+            )
             self.add_recording_segment(rec_segment)
 
-        self._kwargs = dict(recording=recording,
-                            n_channel_pad=n_channel_pad,
-                            n_channel_taper=n_channel_taper,
-                            direction=direction,
-                            apply_agc=apply_agc,
-                            agc_window_length_s=agc_window_length_s,
-                            highpass_butter_order=highpass_butter_order,
-                            highpass_butter_wn=highpass_butter_wn)
+        self._kwargs = dict(
+            recording=recording,
+            n_channel_pad=n_channel_pad,
+            n_channel_taper=n_channel_taper,
+            direction=direction,
+            apply_agc=apply_agc,
+            agc_window_length_s=agc_window_length_s,
+            highpass_butter_order=highpass_butter_order,
+            highpass_butter_wn=highpass_butter_wn,
+        )
 
 
 class HighPassSpatialFilterSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, n_channel_pad, n_channel_taper,
-                 n_channels, agc_window_length_s, sampling_interval, sos_filter, order_f, order_r):
+    def __init__(
+        self,
+        parent_recording_segment,
+        n_channel_pad,
+        n_channel_taper,
+        n_channels,
+        agc_window_length_s,
+        sampling_interval,
+        sos_filter,
+        order_f,
+        order_r,
+    ):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.parent_recording_segment = parent_recording_segment
         self.n_channel_pad = n_channel_pad
         if n_channel_taper > 0:
             num_channels_padded = n_channels + n_channel_pad * 2
             self.taper = fcn_cosine([0, n_channel_taper])(np.arange(num_channels_padded))  # taper up
-            self.taper *= 1 - fcn_cosine([num_channels_padded - n_channel_taper, num_channels_padded])(np.arange(num_channels_padded))   # taper down
+            self.taper *= 1 - fcn_cosine([num_channels_padded - n_channel_taper, num_channels_padded])(
+                np.arange(num_channels_padded)
+            )  # taper down
         else:
             self.taper = None
         if agc_window_length_s is not None:
@@ -158,9 +184,13 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
             margin = len(self.window) // 2
         else:
             margin = 0
-        traces, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment,
-                                                                  start_frame=start_frame, end_frame=end_frame,
-                                                                  channel_indices=slice(None), margin=margin)
+        traces, left_margin, right_margin = get_chunk_with_margin(
+            self.parent_recording_segment,
+            start_frame=start_frame,
+            end_frame=end_frame,
+            channel_indices=slice(None),
+            margin=margin,
+        )
         # apply sorting by depth
         if self.order_f is not None:
             traces = traces[:, self.order_f]
@@ -174,19 +204,21 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
             agc_gains = None
         # pad the array with a mirrored version of itself and apply a cosine taper
         if self.n_channel_pad > 0:
-            traces = np.c_[np.fliplr(traces[:, :self.n_channel_pad]),
-                           traces,
-                           np.fliplr(traces[:, -self.n_channel_pad:])]
+            traces = np.c_[
+                np.fliplr(traces[:, : self.n_channel_pad]), traces, np.fliplr(traces[:, -self.n_channel_pad :])
+            ]
         # apply tapering
         if self.taper is not None:
             traces = traces * self.taper[np.newaxis, :]
 
         # apply actual HP filter
+        import scipy
+
         traces = scipy.signal.sosfiltfilt(self.sos_filter, traces, axis=1)
 
         # remove padding
         if self.n_channel_pad > 0:
-            traces = traces[:, self.n_channel_pad:-self.n_channel_pad]
+            traces = traces[:, self.n_channel_pad : -self.n_channel_pad]
 
         # remove AGC gains
         if agc_gains is not None:
@@ -202,14 +234,17 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
             traces = traces[left_margin:, channel_indices]
         return traces
 
+
 # function for API
-highpass_spatial_filter = define_function_from_class(source_class=HighpassSpatialFilterRecording,
-                                                     name="highpass_spatial_filter")
+highpass_spatial_filter = define_function_from_class(
+    source_class=HighpassSpatialFilterRecording, name="highpass_spatial_filter"
+)
 
 
 # -----------------------------------------------------------------------------------------------
 # IBL Helper Functions
 # -----------------------------------------------------------------------------------------------
+
 
 def agc(traces, window, epsilon=1e-8):
     """
@@ -222,7 +257,9 @@ def agc(traces, window, epsilon=1e-8):
     :param epsilon: whitening (useful mainly for synthetic data)
     :return: AGC data array, gain applied to data
     """
-    gain = scipy.signal.fftconvolve(np.abs(traces), window[:, None], mode='same', axes=0)
+    import scipy.signal
+
+    gain = scipy.signal.fftconvolve(np.abs(traces), window[:, None], mode="same", axes=0)
 
     gain += (np.sum(gain, axis=0) * epsilon / traces.shape[0])[np.newaxis, :]
 
@@ -231,6 +268,7 @@ def agc(traces, window, epsilon=1e-8):
     traces[:, ~dead_channels] = traces[:, ~dead_channels] / gain[:, ~dead_channels]
 
     return traces, gain
+
 
 def fcn_extrap(x, f, bounds):
     """
@@ -254,7 +292,9 @@ def fcn_cosine(bounds):
     :param bounds:
     :return: lambda function
     """
+
     def _cos(x):
         return (1 - np.cos((x - bounds[0]) / (bounds[1] - bounds[0]) * np.pi)) / 2
+
     func = lambda x: fcn_extrap(x, _cos, bounds)  # noqa
     return func

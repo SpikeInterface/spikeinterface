@@ -1,5 +1,4 @@
 import numpy as np
-from scipy import signal
 import warnings
 
 from spikeinterface.core.core_tools import (
@@ -17,7 +16,7 @@ class ResampleRecording(BasePreprocessor):
     Resample the recording extractor traces.
 
     If the original sampling rate is multiple of the resample_rate, it will use
-    the signal.decimate method. In other cases, it uses signal.resample. In the
+    the signal.decimate method from scipy. In other cases, it uses signal.resample. In the
     later case, the resulting signal can have issues on the edges, mainly on the
     rightmost.
 
@@ -62,16 +61,12 @@ class ResampleRecording(BasePreprocessor):
         dtype = fix_dtype(recording, dtype).str
         # Ensure that the requested resample rate is doable:
         if skip_checks:
-            assert check_nyquist(
-                recording, resample_rate
-            ), "The requested resample rate would induce errors!"
+            assert check_nyquist(recording, resample_rate), "The requested resample rate would induce errors!"
 
         # Get a margin to avoid issues later
         margin = int(margin_ms * recording.get_sampling_frequency() / 1000)
 
-        BasePreprocessor.__init__(
-            self, recording, sampling_frequency=resample_rate, dtype=dtype
-        )
+        BasePreprocessor.__init__(self, recording, sampling_frequency=resample_rate, dtype=dtype)
         # in case there was a time_vector, it will be dropped for sanity.
         for parent_segment in recording._recording_segments:
             parent_segment.time_vector = None
@@ -115,11 +110,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         self._dtype = dtype
 
     def get_num_samples(self):
-        return int(
-            self._parent_segment.get_num_samples()
-            / self._parent_rate
-            * self.sampling_frequency
-        )
+        return int(self._parent_segment.get_num_samples() / self._parent_rate * self.sampling_frequency)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:
@@ -129,8 +120,7 @@ class ResampleRecordingSegment(BaseRecordingSegment):
 
         # get parent traces with margin
         parent_start_frame, parent_end_frame = [
-            int((frame / self.sampling_frequency) * self._parent_rate)
-            for frame in [start_frame, end_frame]
+            int((frame / self.sampling_frequency) * self._parent_rate) for frame in [start_frame, end_frame]
         ]
         parent_traces, left_margin, right_margin = get_chunk_with_margin(
             self._parent_segment,
@@ -143,17 +133,16 @@ class ResampleRecordingSegment(BaseRecordingSegment):
         )
         # get left and right margins for the resampled case
         left_margin_rs, right_margin_rs = [
-            int((margin / self._parent_rate) * self.sampling_frequency)
-            for margin in [left_margin, right_margin]
+            int((margin / self._parent_rate) * self.sampling_frequency) for margin in [left_margin, right_margin]
         ]
 
         # get the size for the resampled traces in case of resample:
-        num = int(
-            (end_frame + right_margin_rs) - (start_frame - left_margin_rs)
-        )
+        num = int((end_frame + right_margin_rs) - (start_frame - left_margin_rs))
 
         # Decimate can misbehave on some cases, while resample always looks nice enough.
         # Check which method to use:
+        from scipy import signal
+
         if np.mod(self._parent_rate, self.sampling_frequency) == 0:
             # Ratio between sampling frequencies
             q = int(self._parent_rate / self.sampling_frequency)
@@ -166,24 +155,18 @@ class ResampleRecordingSegment(BaseRecordingSegment):
             resampled_traces = signal.resample(parent_traces, num, axis=0)
 
         # now take care of the edges
-        resampled_traces = resampled_traces[
-            left_margin_rs : num - right_margin_rs
-        ]
+        resampled_traces = resampled_traces[left_margin_rs : num - right_margin_rs]
         return resampled_traces.astype(self._dtype)
 
 
-resample = define_function_from_class(
-    source_class=ResampleRecording, name="resample"
-)
+resample = define_function_from_class(source_class=ResampleRecording, name="resample")
 
 
 # Some helpers to do checks
 def check_nyquist(recording, resample_rate):
     # Check that the original and requested sampling rates will not induce aliasing
     # Basic test, compare the sampling frequency with the resample rate
-    sampling_frequency_check = (
-        recording.get_sampling_frequency() / 2 > resample_rate
-    )
+    sampling_frequency_check = recording.get_sampling_frequency() / 2 > resample_rate
     # Check that the signal, if it has been filtered, is still not violating
     if recording.is_filtered():
         # Check if we have access to the highcut frequency
@@ -194,15 +177,12 @@ def check_nyquist(recording, resample_rate):
             lowpass_cutoff_check = freq_max / 2 > resample_rate
         else:
             # If has been filterd but unknown high cutoff, give warning and asume the best
-            warnings.warn(
-                "The recording is filtered, but we can't ensure that it complies with the Nyquist limit."
-            )
+            warnings.warn("The recording is filtered, but we can't ensure that it complies with the Nyquist limit.")
             lowpass_cutoff_check = True
     else:
         # If it hasn't been filtered, we only depend on the previous test
         warnings.warn(
-            "The recording is not filtered, so cutoff frequencies cannot be checked. "
-            "Use resampling with caution"
+            "The recording is not filtered, so cutoff frequencies cannot be checked. " "Use resampling with caution"
         )
         lowpass_cutoff_check = True
     return all([sampling_frequency_check, lowpass_cutoff_check])

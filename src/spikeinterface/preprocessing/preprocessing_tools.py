@@ -1,13 +1,20 @@
 import numpy as np
-import scipy.spatial
 
 
-def get_spatial_interpolation_kernel(source_location, target_location, method='kriging',
-                                     sigma_um=20., p=1, sparse_thresh=None, num_closest=3, 
-                                     dtype='float32', force_extrapolate=False):
+def get_spatial_interpolation_kernel(
+    source_location,
+    target_location,
+    method="kriging",
+    sigma_um=20.0,
+    p=1,
+    num_closest=3,
+    sparse_thresh=None,
+    dtype="float32",
+    force_extrapolate=False,
+):
     """
     Compute the spatial kernel for linear spatial interpolation.
-    
+
     This is used for interpolation of bad channels or to correct the drift
     by interpolating between contacts.
 
@@ -43,14 +50,14 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
     -------
     interpolation_kernel: array (m, n)
     """
+    import scipy.spatial
 
     target_is_inside = np.ones(target_location.shape[0], dtype=bool)
     for dim in range(source_location.shape[1]):
         l0, l1 = np.min(source_location[:, dim]), np.max(source_location[:, dim])
         target_is_inside &= (target_location[:, dim] >= l0) & (target_location[:, dim] <= l1)
-    
-    
-    if method == 'kriging':
+
+    if method == "kriging":
         # this is an adaptation of the pykilosort implementation by Kush Benga
         # https://github.com/int-brain-lab/pykilosort/blob/ibl_prod/pykilosort/datashift2.py#L352
 
@@ -61,6 +68,7 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
         interpolation_kernel = interpolation_kernel.T.copy()
 
         # sparsify
+
         if sparse_thresh is not None:
             interpolation_kernel[interpolation_kernel < sparse_thresh] = 0.
 
@@ -68,16 +76,16 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
         s = np.sum(interpolation_kernel, axis=0)
         interpolation_kernel[:, target_is_inside] /= s[target_is_inside].reshape(1, -1)
 
-    elif method == 'idw':
-        distances = scipy.spatial.distance.cdist(source_location, target_location, metric='euclidean')
-        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype='float64')
+    elif method == "idw":
+        distances = scipy.spatial.distance.cdist(source_location, target_location, metric="euclidean")
+        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype="float64")
         for c in range(target_location.shape[0]):
             ind_sorted = np.argsort(distances[:, c])
             chan_closest = ind_sorted[:num_closest]
             dists = distances[chan_closest, c]
-            if dists[0] == 0.:
+            if dists[0] == 0.0:
                 # no interpolation the first have zeros distance
-                interpolation_kernel[chan_closest[0], c] = 1.
+                interpolation_kernel[chan_closest[0], c] = 1.0
             else:
                 interpolation_kernel[chan_closest, c] = 1 / dists
 
@@ -85,17 +93,16 @@ def get_spatial_interpolation_kernel(source_location, target_location, method='k
         s = np.sum(interpolation_kernel, axis=0)
         interpolation_kernel[:, target_is_inside] /= s[target_is_inside].reshape(1, -1)
 
-
-    elif method == 'nearest':
-        distances = scipy.spatial.distance.cdist(source_location, target_location, metric='euclidean')
-        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype='float64')
+    elif method == "nearest":
+        distances = scipy.spatial.distance.cdist(source_location, target_location, metric="euclidean")
+        interpolation_kernel = np.zeros((source_location.shape[0], target_location.shape[0]), dtype="float64")
         for c in range(target_location.shape[0]):
             ind_closest = np.argmin(distances[:, c])
-            interpolation_kernel[ind_closest, c] = 1.
+            interpolation_kernel[ind_closest, c] = 1.0
 
     else:
-        raise ValueError('get_interpolation_kernel wrong method')
-    
+        raise ValueError("get_interpolation_kernel wrong method")
+
     if not force_extrapolate:
         interpolation_kernel[:, ~target_is_inside] = 0
 
@@ -127,7 +134,9 @@ def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p, distance_
                   distances (gaussian kernel) between locations 1 and 2.
 
     """
+
     if np.isscalar(sigma_um):
+        import scipy
         dist = scipy.spatial.distance.cdist(locations_1, locations_2, metric=distance_metric)
         kernal_dist = np.exp(-(dist / sigma_um) ** p)
     else:
@@ -139,8 +148,9 @@ def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p, distance_
         kernal_dist = np.exp(- (distx / sigma_x) ** p - (disty / sigma_y) ** p)
     return kernal_dist
 
-def get_kriging_channel_weights(contact_positions1, contact_positions2, sigma_um, p,
-                                weight_threshold=0.005):
+
+
+def get_kriging_channel_weights(contact_positions1, contact_positions2, sigma_um, p, weight_threshold=0.005):
     """
     Calculate weights for kriging interpolation. Weights below weight_threshold are set to 0.
 
@@ -149,16 +159,12 @@ def get_kriging_channel_weights(contact_positions1, contact_positions2, sigma_um
     International Brain Laboratory et al. (2022). Spike sorting pipeline for the
     International Brain Laboratory. https://www.internationalbrainlab.com/repro-ephys
     """
-    weights = get_kriging_kernel_distance(contact_positions1,
-                                          contact_positions2,
-                                          sigma_um,
-                                          p)
+    weights = get_kriging_kernel_distance(contact_positions1, contact_positions2, sigma_um, p)
     weights[weights < weight_threshold] = 0
 
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         weights /= np.sum(weights, axis=0)[None, :]
 
-    weights[np.logical_or(weights < weight_threshold,
-                          np.isnan(weights))] = 0
+    weights[np.logical_or(weights < weight_threshold, np.isnan(weights))] = 0
 
     return weights
