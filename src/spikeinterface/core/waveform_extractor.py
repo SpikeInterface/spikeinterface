@@ -2,7 +2,7 @@ import math
 import pickle
 from pathlib import Path
 import shutil
-from typing import Literal, Optional
+from typing import Iterable, Literal, Optional
 import json
 
 import numpy as np
