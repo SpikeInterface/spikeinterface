@@ -76,7 +76,7 @@ class WaveformExtractor:
         rec_attributes=None,
         allow_unfiltered=False,
         sparsity=None,
-    ):
+    ) -> None:
         self.sorting = sorting
         self._rec_attributes = None
         self.set_recording(recording, rec_attributes, allow_unfiltered)
@@ -121,7 +121,7 @@ class WaveformExtractor:
         return txt
 
     @classmethod
-    def load(cls, folder, with_recording=True, sorting=None):
+    def load(cls, folder, with_recording=True, sorting=None) -> WaveformExtractor:
         folder = Path(folder)
         assert folder.is_dir(), "Waveform folder does not exists"
         if folder.suffix == ".zarr":
@@ -130,7 +130,7 @@ class WaveformExtractor:
             return WaveformExtractor.load_from_folder(folder, with_recording=with_recording, sorting=sorting)
 
     @classmethod
-    def load_from_folder(cls, folder, with_recording=True, sorting=None):
+    def load_from_folder(cls, folder, with_recording=True, sorting=None) -> WaveformExtractor:
         folder = Path(folder)
         assert folder.is_dir(), f"This waveform folder does not exists {folder}"
 
@@ -182,7 +182,7 @@ class WaveformExtractor:
         return we
 
     @classmethod
-    def load_from_zarr(cls, folder, with_recording=True, sorting=None):
+    def load_from_zarr(cls, folder, with_recording=True, sorting=None) -> WaveformExtractor:
         import zarr
 
         folder = Path(folder)
@@ -239,7 +239,7 @@ class WaveformExtractor:
         use_relative_path=False,
         allow_unfiltered=False,
         sparsity=None,
-    ):
+    ) -> WaveformExtractor:
         assert mode in ("folder", "memory")
         # create rec_attributes
         if has_exceeding_spikes(recording, sorting):
@@ -296,10 +296,10 @@ class WaveformExtractor:
             rec_attributes=rec_attributes,
         )
 
-    def is_sparse(self):
+    def is_sparse(self) -> bool:
         return self.sparsity is not None
 
-    def has_waveforms(self):
+    def has_waveforms(self) -> bool:
         if self.folder is not None:
             if self.format == "binary":
                 return (self.folder / "waveforms").is_dir()
@@ -311,7 +311,7 @@ class WaveformExtractor:
         else:
             return self._memory_objects is not None
 
-    def delete_waveforms(self):
+    def delete_waveforms(self) -> None:
         """
         Deletes waveforms folder.
         """
@@ -328,7 +328,7 @@ class WaveformExtractor:
             self._memory_objects = None
 
     @classmethod
-    def register_extension(cls, extension_class):
+    def register_extension(cls, extension_class) -> None:
         """
         This maintains a list of possible extensions that are available.
         It depends on the imported submodules (e.g. for postprocessing module).
@@ -350,7 +350,7 @@ class WaveformExtractor:
 
     # map some method from recording and sorting
     @property
-    def recording(self):
+    def recording(self) -> BaseRecording:
         if not self.has_recording():
             raise ValueError(
                 'WaveformExtractor is used in mode "with_recording=False" ' "this operation needs the recording"
@@ -365,7 +365,7 @@ class WaveformExtractor:
             return np.array(self._rec_attributes["channel_ids"])
 
     @property
-    def sampling_frequency(self):
+    def sampling_frequency(self) -> float:
         return self.sorting.get_sampling_frequency()
 
     @property
@@ -373,31 +373,31 @@ class WaveformExtractor:
         return self.sorting.unit_ids
 
     @property
-    def nbefore(self):
+    def nbefore(self) -> int:
         nbefore = int(self._params["ms_before"] * self.sampling_frequency / 1000.0)
         return nbefore
 
     @property
-    def nafter(self):
+    def nafter(self) -> int:
         nafter = int(self._params["ms_after"] * self.sampling_frequency / 1000.0)
         return nafter
 
     @property
-    def nsamples(self):
+    def nsamples(self) -> int:
         return self.nbefore + self.nafter
 
     @property
-    def return_scaled(self):
+    def return_scaled(self) -> bool:
         return self._params["return_scaled"]
 
     @property
     def dtype(self):
         return self._params["dtype"]
 
-    def has_recording(self):
+    def has_recording(self) -> bool:
         return self._recording is not None
 
-    def get_num_samples(self, segment_index=None):
+    def get_num_samples(self, segment_index=None) -> int:
         if self.has_recording():
             return self.recording.get_num_samples(segment_index)
         else:
@@ -406,23 +406,23 @@ class WaveformExtractor:
             segment_index = self.sorting._check_segment_index(segment_index)
             return self._rec_attributes["num_samples"][segment_index]
 
-    def get_total_samples(self):
+    def get_total_samples(self) -> int:
         s = 0
         for segment_index in range(self.get_num_segments()):
             s += self.get_num_samples(segment_index)
         return s
 
-    def get_total_duration(self):
+    def get_total_duration(self) -> float:
         duration = self.get_total_samples() / self.sampling_frequency
         return duration
 
-    def get_num_channels(self):
+    def get_num_channels(self) -> int:
         if self.has_recording():
             return self.recording.get_num_channels()
         else:
             return self._rec_attributes["num_channels"]
 
-    def get_num_segments(self):
+    def get_num_segments(self) -> int:
         return self.sorting.get_num_segments()
 
     def get_probegroup(self):
@@ -431,7 +431,7 @@ class WaveformExtractor:
         else:
             return self._rec_attributes["probegroup"]
 
-    def is_filtered(self):
+    def is_filtered(self) -> bool:
         if self.has_recording():
             return self.recording.is_filtered()
         else:
@@ -1196,7 +1196,7 @@ class WaveformExtractor:
         assert unit_id in self.sorting.unit_ids
 
         if sparsity is not None:
-            assert not self.is_sparse(), "Waveforms are alreayd sparse! Cannot apply an additional sparsity."
+            assert not self.is_sparse(), "Waveforms are already sparse! Cannot apply an additional sparsity."
 
         unit_ind = self.sorting.id_to_index(unit_id)
 
