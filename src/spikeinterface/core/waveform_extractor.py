@@ -130,7 +130,9 @@ class WaveformExtractor:
             return WaveformExtractor.load_from_folder(folder, with_recording=with_recording, sorting=sorting)
 
     @classmethod
-    def load_from_folder(cls, folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None) -> "WaveformExtractor":
+    def load_from_folder(
+        cls, folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None
+    ) -> "WaveformExtractor":
         folder = Path(folder)
         assert folder.is_dir(), f"This waveform folder does not exists {folder}"
 
@@ -182,7 +184,9 @@ class WaveformExtractor:
         return we
 
     @classmethod
-    def load_from_zarr(cls, folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None) -> "WaveformExtractor":
+    def load_from_zarr(
+        cls, folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None
+    ) -> "WaveformExtractor":
         import zarr
 
         folder = Path(folder)
@@ -665,7 +669,14 @@ class WaveformExtractor:
         self._recording = recording
         self._rec_attributes = rec_attributes
 
-    def set_params(self, ms_before: float = 1.0, ms_after: float = 2.0, max_spikes_per_unit: int = 500, return_scaled: bool = False, dtype=None) -> None:
+    def set_params(
+        self,
+        ms_before: float = 1.0,
+        ms_after: float = 2.0,
+        max_spikes_per_unit: int = 500,
+        return_scaled: bool = False,
+        dtype=None,
+    ) -> None:
         """
         Set parameters for waveform extraction
 
@@ -804,7 +815,9 @@ class WaveformExtractor:
 
         return we
 
-    def save(self, folder, format="binary", use_relative_path: bool = False, overwrite: bool = False, sparsity=None, **kwargs) -> "WaveformExtractor":
+    def save(
+        self, folder, format="binary", use_relative_path: bool = False, overwrite: bool = False, sparsity=None, **kwargs
+    ) -> "WaveformExtractor":
         """
         Save WaveformExtractor object to disk.
 
@@ -966,7 +979,15 @@ class WaveformExtractor:
 
         return new_we
 
-    def get_waveforms(self, unit_id, with_index: bool = False, cache: bool = False, lazy: bool = True, sparsity=None, force_dense: bool = False):
+    def get_waveforms(
+        self,
+        unit_id,
+        with_index: bool = False,
+        cache: bool = False,
+        lazy: bool = True,
+        sparsity=None,
+        force_dense: bool = False,
+    ):
         """
         Return waveforms for the specified unit id.
 
