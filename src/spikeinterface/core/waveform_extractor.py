@@ -446,7 +446,7 @@ class WaveformExtractor:
         assert len(probegroup.probes) == 1, "There are several probes. Use `get_probegroup()`"
         return probegroup.probes[0]
 
-    def get_channel_locations(self) -> no.ndarray:
+    def get_channel_locations(self) -> np.ndarray:
         # important note : contrary to recording
         # this give all channel locations, so no kwargs like channel_ids and axes
         if self.has_recording():
