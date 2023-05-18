@@ -245,7 +245,9 @@ class BaseExtractor:
         else:
             raise Exception(f"{key} is not a property key")
 
-    def copy_metadata(self, other: "BaseExtractor", only_main: bool = False, ids: Union[Iterable, slice, None] = None) -> None:
+    def copy_metadata(
+        self, other: "BaseExtractor", only_main: bool = False, ids: Union[Iterable, slice, None] = None
+    ) -> None:
         """
         Copy annotations/properties to another extractor.
 
@@ -278,7 +280,11 @@ class BaseExtractor:
             other._preferred_mp_context = self._preferred_mp_context
 
     def to_dict(
-        self, include_annotations: bool = False, include_properties: bool = False, relative_to: Union[str, Path, None] = None, folder_metadata=None
+        self,
+        include_annotations: bool = False,
+        include_properties: bool = False,
+        relative_to: Union[str, Path, None] = None,
+        folder_metadata=None,
     ) -> dict:
         """
         Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize
@@ -483,7 +489,13 @@ class BaseExtractor:
             encoding="utf8",
         )
 
-    def dump_to_pickle(self, file_path: Union[str, Path, None] = None, include_properties: bool = True, relative_to=None, folder_metadata=None):
+    def dump_to_pickle(
+        self,
+        file_path: Union[str, Path, None] = None,
+        include_properties: bool = True,
+        relative_to=None,
+        folder_metadata=None,
+    ):
         """
         Dump recording extractor to a pickle file.
         The extractor can be re-loaded with load_extractor_from_json(json_file)
