@@ -121,7 +121,7 @@ class WaveformExtractor:
         return txt
 
     @classmethod
-    def load(cls, folder, with_recording=True, sorting=None) -> WaveformExtractor:
+    def load(cls, folder, with_recording=True, sorting=None) -> 'WaveformExtractor':
         folder = Path(folder)
         assert folder.is_dir(), "Waveform folder does not exists"
         if folder.suffix == ".zarr":
@@ -130,7 +130,7 @@ class WaveformExtractor:
             return WaveformExtractor.load_from_folder(folder, with_recording=with_recording, sorting=sorting)
 
     @classmethod
-    def load_from_folder(cls, folder, with_recording=True, sorting=None) -> WaveformExtractor:
+    def load_from_folder(cls, folder, with_recording=True, sorting=None) -> 'WaveformExtractor':
         folder = Path(folder)
         assert folder.is_dir(), f"This waveform folder does not exists {folder}"
 
@@ -182,7 +182,7 @@ class WaveformExtractor:
         return we
 
     @classmethod
-    def load_from_zarr(cls, folder, with_recording=True, sorting=None) -> WaveformExtractor:
+    def load_from_zarr(cls, folder, with_recording=True, sorting=None) -> 'WaveformExtractor':
         import zarr
 
         folder = Path(folder)
@@ -239,7 +239,7 @@ class WaveformExtractor:
         use_relative_path=False,
         allow_unfiltered=False,
         sparsity=None,
-    ) -> WaveformExtractor:
+    ) -> 'WaveformExtractor':
         assert mode in ("folder", "memory")
         # create rec_attributes
         if has_exceeding_spikes(recording, sorting):
