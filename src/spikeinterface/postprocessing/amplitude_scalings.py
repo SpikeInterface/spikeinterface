@@ -167,10 +167,9 @@ def compute_amplitude_scalings(
         If waveforms are not sparse, sparsity is required if the number of channels is greater than
         `max_dense_channels`. If the waveform extractor is sparse, its sparsity is automatically used.
         By default None
-    max_dense_channels: int, optional
+    max_dense_channels: int, default: 16
         Maximum number of channels to allow running without sparsity. To compute amplitude scaling using
         dense waveforms, set this to None, sparsity to None, and pass dense waveforms as input.
-        By default 16
     ms_before : float, optional
         The cut out to apply before the spike peak to extract local waveforms.
         If None, the WaveformExtractor ms_before is used, by default None
