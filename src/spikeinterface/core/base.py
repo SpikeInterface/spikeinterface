@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union, Optional
+from typing import Any, Iterable, List, Optional, Sequence, Union
 import importlib
 import warnings
 import weakref
@@ -38,7 +38,7 @@ class BaseExtractor:
     installation_mesg = ""
     is_writable = False
 
-    def __init__(self, main_ids):
+    def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation
         self._kwargs = {}
 
@@ -63,11 +63,11 @@ class BaseExtractor:
         # preferred context for multiprocessing
         self._preferred_mp_context = None
 
-    def get_num_segments(self):
+    def get_num_segments(self) -> int:
         # This is implemented in BaseRecording or BaseSorting
         raise NotImplementedError
 
-    def _check_segment_index(self, segment_index=None):
+    def _check_segment_index(self, segment_index: Optional[int] = None) -> int:
         if segment_index is None:
             if self.get_num_segments() == 1:
                 return 0
@@ -76,7 +76,7 @@ class BaseExtractor:
         else:
             return segment_index
 
-    def ids_to_indices(self, ids, prefer_slice=False):
+    def ids_to_indices(self, ids: Iterable, prefer_slice: bool = False) -> Union[np.ndarray, slice]:
         """
         Transform a ids list (aka channel_ids or unit_ids)
         into a indices array.
@@ -101,14 +101,14 @@ class BaseExtractor:
                     indices = slice(indices[0], indices[-1] + 1)
         return indices
 
-    def id_to_index(self, id):
+    def id_to_index(self, id) -> int:
         ind = list(self._main_ids).index(id)
         return ind
 
-    def annotate(self, **new_annotations):
+    def annotate(self, **new_annotations) -> None:
         self._annotations.update(new_annotations)
 
-    def set_annotation(self, annotation_key, value, overwrite=False):
+    def set_annotation(self, annotation_key, value: Any, overwrite=False) -> None:
         """This function adds an entry to the annotations dictionary.
 
         Parameters
@@ -136,7 +136,7 @@ class BaseExtractor:
         """
         return self._preferred_mp_context
 
-    def get_annotation(self, key, copy=True):
+    def get_annotation(self, key, copy: bool = True) -> Any:
         """
         Get a annotation.
         Return a copy by default
@@ -146,10 +146,10 @@ class BaseExtractor:
             v = deepcopy(v)
         return v
 
-    def get_annotation_keys(self):
+    def get_annotation_keys(self) -> List:
         return list(self._annotations.keys())
 
-    def set_property(self, key, values, ids=None, missing_value=None):
+    def set_property(self, key, values: Sequence, ids: Optional[Sequence] = None, missing_value: Any = None) -> None:
         """
         Set property vector for main ids.
 
@@ -229,23 +229,23 @@ class BaseExtractor:
                 self._properties[key] = np.zeros_like(values, dtype=values.dtype)
                 self._properties[key][indices] = values
 
-    def get_property(self, key, ids=None):
+    def get_property(self, key, ids: Optional[Iterable] = None) -> np.ndarray:
         values = self._properties.get(key, None)
         if ids is not None and values is not None:
             inds = self.ids_to_indices(ids)
             values = values[inds]
         return values
 
-    def get_property_keys(self):
+    def get_property_keys(self) -> List:
         return list(self._properties.keys())
 
-    def delete_property(self, key):
+    def delete_property(self, key) -> None:
         if key in self._properties:
             del self._properties[key]
         else:
             raise Exception(f"{key} is not a property key")
 
-    def copy_metadata(self, other, only_main=False, ids=None):
+    def copy_metadata(self, other: "BaseExtractor", only_main: bool = False, ids: Union[Iterable, slice, None] = None) -> None:
         """
         Copy annotations/properties to another extractor.
 
@@ -278,7 +278,7 @@ class BaseExtractor:
             other._preferred_mp_context = self._preferred_mp_context
 
     def to_dict(
-        self, include_annotations=False, include_properties=False, relative_to=None, folder_metadata=None
+        self, include_annotations: bool = False, include_properties: bool = False, relative_to: Union[str, Path, None] = None, folder_metadata=None
     ) -> dict:
         """
         Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize
@@ -399,7 +399,7 @@ class BaseExtractor:
             values = self.get_property(key)
             np.save(prop_folder / (key + ".npy"), values)
 
-    def clone(self):
+    def clone(self) -> "BaseExtractor":
         """
         Clones an existing extractor into a new instance.
         """
@@ -411,7 +411,7 @@ class BaseExtractor:
         return _check_if_dumpable(self.to_dict())
 
     @staticmethod
-    def _get_file_path(file_path, extensions):
+    def _get_file_path(file_path: Union[str, Path], extensions: Sequence) -> Path:
         """
         Helper function to be used by various dump_to_file utilities.
 
@@ -442,7 +442,7 @@ class BaseExtractor:
         )
         return file_path
 
-    def dump(self, file_path, relative_to=None, folder_metadata=None):
+    def dump(self, file_path: Union[str, Path], relative_to=None, folder_metadata=None) -> None:
         """
         Dumps extractor to json or pickle
 
@@ -460,7 +460,7 @@ class BaseExtractor:
         else:
             raise ValueError("Dump: file must .json or .pkl")
 
-    def dump_to_json(self, file_path=None, relative_to=None, folder_metadata=None):
+    def dump_to_json(self, file_path: Union[str, Path, None] = None, relative_to=None, folder_metadata=None) -> None:
         """
         Dump recording extractor to json file.
         The extractor can be re-loaded with load_extractor_from_json(json_file)
@@ -483,7 +483,7 @@ class BaseExtractor:
             encoding="utf8",
         )
 
-    def dump_to_pickle(self, file_path=None, include_properties=True, relative_to=None, folder_metadata=None):
+    def dump_to_pickle(self, file_path: Union[str, Path, None] = None, include_properties: bool = True, relative_to=None, folder_metadata=None):
         """
         Dump recording extractor to a pickle file.
         The extractor can be re-loaded with load_extractor_from_json(json_file)
@@ -509,7 +509,7 @@ class BaseExtractor:
         file_path.write_bytes(pickle.dumps(dump_dict))
 
     @staticmethod
-    def load(file_path, base_folder=None):
+    def load(file_path: Union[str, Path], base_folder=None) -> "BaseExtractor":
         """
         Load extractor from file path (.json or .pkl)
 
@@ -575,7 +575,7 @@ class BaseExtractor:
         return (instance_constructor, intialization_args)
 
     @staticmethod
-    def load_from_folder(folder):
+    def load_from_folder(folder) -> "BaseExtractor":
         return BaseExtractor.load(folder)
 
     def _save(self, folder, **save_kwargs):
@@ -591,7 +591,7 @@ class BaseExtractor:
         # This implemented in BaseRecording for probe
         pass
 
-    def save(self, **kwargs):
+    def save(self, **kwargs) -> "BaseExtractor":
         """
         Save a SpikeInterface object.
 
@@ -627,7 +627,7 @@ class BaseExtractor:
 
     save.__doc__ = save.__doc__.format(_shared_job_kwargs_doc)
 
-    def save_to_memory(self, **kwargs):
+    def save_to_memory(self, **kwargs) -> "BaseExtractor":
         # used only by recording at the moment
         cached = self._save(**kwargs)
         self.copy_metadata(cached)
@@ -836,7 +836,7 @@ def _check_if_dumpable(d):
         return d["dumpable"]
 
 
-def _load_extractor_from_dict(dic):
+def _load_extractor_from_dict(dic) -> "BaseExtractor":
     cls = None
     class_name = None
 
@@ -902,7 +902,7 @@ def _check_same_version(class_string, version):
         return "unknown"
 
 
-def load_extractor(file_or_folder_or_dict, base_folder=None):
+def load_extractor(file_or_folder_or_dict, base_folder=None) -> "BaseExtractor":
     """
     Instantiate extractor from:
       * a dict
@@ -926,17 +926,17 @@ def load_extractor(file_or_folder_or_dict, base_folder=None):
         return BaseExtractor.load(file_or_folder_or_dict, base_folder=base_folder)
 
 
-def load_extractor_from_dict(d, base_folder=None):
+def load_extractor_from_dict(d: dict, base_folder=None) -> "BaseExtractor":
     print("Use load_extractor(..) instead")
     return BaseExtractor.from_dict(d, base_folder=base_folder)
 
 
-def load_extractor_from_json(json_file, base_folder=None):
+def load_extractor_from_json(json_file, base_folder=None) -> "BaseExtractor":
     print("Use load_extractor(..) instead")
     return BaseExtractor.load(json_file, base_folder=base_folder)
 
 
-def load_extractor_from_pickle(pkl_file, base_folder=None):
+def load_extractor_from_pickle(pkl_file, base_folder=None) -> "BaseExtractor":
     print("Use load_extractor(..) instead")
     return BaseExtractor.load(pkl_file, base_folder=base_folder)
 
@@ -946,8 +946,8 @@ class BaseSegment:
         self._parent_extractor = None
 
     @property
-    def parent_extractor(self):
+    def parent_extractor(self) -> Union[BaseExtractor, None]:
         return self._parent_extractor()
 
-    def set_parent_extractor(self, parent_extractor):
+    def set_parent_extractor(self, parent_extractor: BaseExtractor) -> None:
         self._parent_extractor = weakref.ref(parent_extractor)
