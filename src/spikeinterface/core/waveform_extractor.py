@@ -1193,7 +1193,7 @@ class WaveformExtractor:
 
         return np.array(templates)
 
-    def get_template(self, unit_id, mode="average", sparsity=None, force_dense: boool = False):
+    def get_template(self, unit_id, mode="average", sparsity=None, force_dense: bool = False):
         """
         Return template (average waveform).
 
