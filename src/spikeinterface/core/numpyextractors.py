@@ -164,7 +164,7 @@ class NumpySorting(BaseSorting):
     def from_dict(units_dict_list, sampling_frequency) -> "NumpySorting":
         """
         Construct sorting extractor from a list of dict.
-        The list lenght is the segment count
+        The list length is the segment count
         Each dict have unit_ids as keys and spike times as values.
 
         Parameters
