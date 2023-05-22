@@ -19,7 +19,7 @@ def get_potential_auto_merge(
     window_ms: float = 100.0,
     corr_diff_thresh: float = 0.16,
     template_diff_thresh: float = 0.25,
-    censored_period_ms: float = 0.0,
+    censored_period_ms: float = 0.3,
     refractory_period_ms: float = 1.0,
     sigma_smooth_ms: float = 0.6,
     contamination_threshold: float = 0.2,
@@ -487,9 +487,9 @@ def check_improve_contaminations_score(
 
         # make a merged sorting and tale one unit (unit_id1 is used)
         unit_id1, unit_id2 = sorting.unit_ids[ind1], sorting.unit_ids[ind2]
-        sorting_merged = MergeUnitsSorting(sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1]).select_units(
-            [unit_id1]
-        )
+        sorting_merged = MergeUnitsSorting(
+            sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1], delta_time_ms=censored_period_ms
+        ).select_units([unit_id1])
         # make a lazy fake WaveformExtractor to compute contamination and firing rate
         we_new = MockWaveformExtractor(recording, sorting_merged)
 
