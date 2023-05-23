@@ -973,8 +973,6 @@ class BaseSegment:
 
 
 def recursive_to_dict(obj, **kwargs):
-    from .base import BaseExtractor
-
     if isinstance(obj, dict):
         for key, value in obj.items():
             obj[key] = recursive_to_dict(value)
