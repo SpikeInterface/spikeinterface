@@ -14,7 +14,7 @@ from copy import deepcopy
 import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
-from .core_tools import check_json, is_dict_extractor, recursive_path_modifier, recursive_to_dict, SIJsonEncoder
+from .core_tools import check_json, is_dict_extractor, recursive_path_modifier, SIJsonEncoder
 from .job_tools import _shared_job_kwargs_doc
 
 
@@ -970,3 +970,19 @@ class BaseSegment:
 
     def set_parent_extractor(self, parent_extractor):
         self._parent_extractor = weakref.ref(parent_extractor)
+
+
+def recursive_to_dict(obj, **kwargs):
+    from .base import BaseExtractor
+
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            obj[key] = recursive_to_dict(value)
+    elif isinstance(obj, (list, np.ndarray)):
+        for i in range(len(obj)):
+            obj[i] = recursive_to_dict(obj[i])
+    elif isinstance(obj, BaseExtractor):
+        obj = obj.to_dict(**kwargs)
+        obj = recursive_to_dict(obj)
+
+    return obj
