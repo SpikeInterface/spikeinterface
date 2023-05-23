@@ -283,7 +283,7 @@ class BaseExtractor:
         include_properties: bool = False,
         relative_to=None,
         folder_metadata=None,
-        recursive: bool = True,
+        recursive: bool = False,
     ) -> dict:
         """
         Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize
