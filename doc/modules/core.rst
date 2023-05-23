@@ -247,7 +247,7 @@ Finally, an existing :py:class:`~spikeinterface.core.WaveformExtractor` can be s
 
 
 **IMPORTANT:** to load a waveform extractor object from disk, it needs to be able to reload the associated
-:code:`sorting` object (the :code:`recording` is optional, using :code:`with_recording=False`). 
+:code:`sorting` object (the :code:`recording` is optional, using :code:`with_recording=False`).
 In order to make a waveform folder portable (e.g. copied to another location or machine), one can do:
 
 .. code-block:: python
