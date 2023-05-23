@@ -14,7 +14,7 @@ from copy import deepcopy
 import numpy as np
 
 from .globals import get_global_tmp_folder, is_set_global_tmp_folder
-from .core_tools import check_json, is_dict_extractor, recursive_path_modifier, SIJsonEncoder
+from .core_tools import check_json, is_dict_extractor, recursive_path_modifier, recursive_to_dict, SIJsonEncoder
 from .job_tools import _shared_job_kwargs_doc
 
 
@@ -283,7 +283,7 @@ class BaseExtractor:
         include_properties: bool = False,
         relative_to=None,
         folder_metadata=None,
-        recursive: bool = False,
+        recursive: bool = True,
     ) -> dict:
         """
         Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize
@@ -297,8 +297,8 @@ class BaseExtractor:
             If True, all properties are added to the dict, by default False
         relative_to: str, Path, or None
             If not None, file_paths are serialized relative to this path, by default None
-        folder_metadata: ???
-            ???
+        folder_metadata: str or Path
+            Folder from which object metadata is loaded, by default None
         recursive: bool
             If True, will recursively call to_dict to all other extractors in kwargs, by default False
 
@@ -343,7 +343,7 @@ class BaseExtractor:
             dump_dict["properties"] = {k: self._properties.get(k, None) for k in self._main_properties}
 
         if recursive:
-            dump_dict = _to_dict_iterative(
+            dump_dict = recursive_to_dict(
                 dump_dict,
                 include_annotations=include_annotations,
                 include_properties=include_properties,
@@ -971,17 +971,3 @@ class BaseSegment:
     def set_parent_extractor(self, parent_extractor):
         self._parent_extractor = weakref.ref(parent_extractor)
 
-
-# I don't know where to put this
-def _to_dict_iterative(obj, **kwargs):
-    if isinstance(obj, dict):
-        for key, value in obj.items():
-            obj[key] = _to_dict_iterative(value)
-    elif isinstance(obj, (list, np.ndarray)):
-        for i in range(len(obj)):
-            obj[i] = _to_dict_iterative(obj[i])
-    elif isinstance(obj, BaseExtractor):
-        obj = obj.to_dict(**kwargs)
-        obj = _to_dict_iterative(obj)
-
-    return obj

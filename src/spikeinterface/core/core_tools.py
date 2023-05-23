@@ -788,6 +788,22 @@ def is_dict_extractor(d):
     return is_extractor
 
 
+def recursive_to_dict(obj, **kwargs):
+    from .base import BaseExtractor
+
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            obj[key] = recursive_to_dict(value)
+    elif isinstance(obj, (list, np.ndarray)):
+        for i in range(len(obj)):
+            obj[i] = recursive_to_dict(obj[i])
+    elif isinstance(obj, BaseExtractor):
+        obj = obj.to_dict(**kwargs)
+        obj = recursive_to_dict(obj)
+
+    return obj
+
+
 def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
     """
     Generic function for recursive modification of paths in an extractor dict.
