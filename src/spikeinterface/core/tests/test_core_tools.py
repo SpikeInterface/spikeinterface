@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.core import generate_recording
 from spikeinterface.core.core_tools import write_binary_recording, write_memory_recording, recursive_path_modifier
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
 from spikeinterface.core.generate import GeneratorRecording
