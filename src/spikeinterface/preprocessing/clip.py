@@ -101,7 +101,6 @@ class BlankSaturationRecording(BasePreprocessor):
                  num_chunks_per_segment=50, chunk_size=500, seed=0):
 
 
-    name = "blank_staturation"
 
     def __init__(
         self,
