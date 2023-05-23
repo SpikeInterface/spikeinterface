@@ -44,7 +44,7 @@ def download_dataset(
 
     if local_folder is None:
         base_local_folder = get_global_dataset_folder()
-        base_local_folder.mkdir(exist_ok=True)
+        base_local_folder.mkdir(exist_ok=True, parents=True)
         local_folder = base_local_folder / repo.split("/")[-1]
 
     local_folder = Path(local_folder)
