@@ -271,6 +271,50 @@ def write_binary_recording(
 write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
 
 
+def write_binary_recording_file_handle(
+    recording, file_handle=None, time_axis=0, dtype=None, byte_offset=0, verbose=False, **job_kwargs
+):
+    """
+    Old variant version of write_binary_recording with one file handle.
+    Can be useful in some case ???
+    Not used anymore at the moment.
+
+    @ SAM useful for writing with time_axis=1!
+    """
+    assert file_handle is not None
+    assert recording.get_num_segments() == 1, "If file_handle is given then only deals with one segment"
+
+    if dtype is None:
+        dtype = recording.get_dtype()
+
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    chunk_size = ensure_chunk_size(recording, **job_kwargs)
+
+    if chunk_size is not None and time_axis == 1:
+        print("Chunking disabled due to 'time_axis' == 1")
+        chunk_size = None
+
+    if chunk_size is None:
+        # no chunking
+        traces = recording.get_traces(segment_index=0)
+        if time_axis == 1:
+            traces = traces.T
+        if dtype is not None:
+            traces = traces.astype(dtype)
+        traces.tofile(file_handle)
+    else:
+        num_frames = recording.get_num_samples(segment_index=0)
+        chunks = divide_segment_into_chunks(num_frames, chunk_size)
+
+        for start_frame, end_frame in chunks:
+            traces = recording.get_traces(segment_index=0, start_frame=start_frame, end_frame=end_frame)
+            if time_axis == 1:
+                traces = traces.T
+            if dtype is not None:
+                traces = traces.astype(dtype)
+            file_handle.write(traces.tobytes())
+
+
 # used by write_binary_recording + ChunkRecordingExecutor
 def _init_binary_worker(recording, file_path_dict, dtype, byte_offest, cast_unsigned):
     # create a local dict per worker
