@@ -970,4 +970,3 @@ class BaseSegment:
 
     def set_parent_extractor(self, parent_extractor):
         self._parent_extractor = weakref.ref(parent_extractor)
-
