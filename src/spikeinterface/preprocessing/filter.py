@@ -95,7 +95,7 @@ class FilterRecording(BasePreprocessor):
 
         margin = int(margin_ms * fs / 1000.0)
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(FilterRecordingSegment(parent_segment, filter_coeff, filter_mode, margin, add_reflect_padding, dtype))
+            self.add_recording_segment(FilterRecordingSegment(parent_segment, filter_coeff, filter_mode, margin, dtype, add_reflect_padding=add_reflect_padding))
 
         self._kwargs = dict(
             recording=recording,
@@ -112,7 +112,7 @@ class FilterRecording(BasePreprocessor):
 
 
 class FilterRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, coeff, filter_mode, margin, add_reflect_padding, dtype):
+    def __init__(self, parent_recording_segment, coeff, filter_mode, margin, dtype, add_reflect_padding=False):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.coeff = coeff
         self.filter_mode = filter_mode
