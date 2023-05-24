@@ -62,7 +62,8 @@ class NaiveMatching(BaseTemplateMatchingEngine):
 
     @classmethod
     def get_margin(cls, recording, kwargs):
-        margin = max(kwargs["nbefore"], kwargs["nafter"])
+        templates = kwargs['templates']
+        margin = max(templates.nbefore, templates.nafter)
         return margin
 
     @classmethod
@@ -76,8 +77,9 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         exclude_sweep_size = method_kwargs["exclude_sweep_size"]
         neighbours_mask = method_kwargs["neighbours_mask"]
         templates = method_kwargs["templates"]
-        nbefore = method_kwargs["nbefore"]
-        nafter = method_kwargs["nafter"]
+        sparsity_mask = templates.sparsity_mask
+        nbefore = templates.nbefore
+        nafter = templates.nafter
         margin = method_kwargs["margin"]
 
         if margin > 0:
@@ -99,7 +101,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
             i1 = peak_sample_ind[i] + nafter
 
             waveforms = traces[i0:i1, :]
-            dist = np.sum(np.sum((templates - waveforms[None, :, :]) ** 2, axis=1), axis=1)
+            dist = np.sum(np.sum((templates.data - waveforms[None, :, :]) ** 2, axis=1), axis=1)
             cluster_index = np.argmin(dist)
 
             spikes["cluster_index"][i] = cluster_index

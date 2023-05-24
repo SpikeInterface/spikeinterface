@@ -203,7 +203,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         num_channels = d["num_channels"]
         templates = d["templates"]
         num_templates = len(templates)
-        d["circus_templates"] = d["templates"].copy()
+        d["circus_templates"] = d["templates"].data.copy()
         d["norms"] = np.zeros(num_templates, dtype=np.float32)
 
         for unit_ind in range(num_templates):
@@ -219,7 +219,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d["circus_templates"] = {}
 
         for unit_ind in range(num_templates):
-            active_channels = d["sparsity_mask"][unit_ind]
+            active_channels = d["templates"].sparsity_mask[unit_ind]
             d["circus_templates"][unit_ind] = templates[unit_ind][:, active_channels]
 
         return d
@@ -232,21 +232,15 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         for v in ["omp_min_sps"]:
             assert (d[v] >= 0) and (d[v] <= 1), f"{v} should be in [0, 1]"
 
-        d["num_channels"] = d["waveform_extractor"].recording.get_num_channels()
-        d["num_samples"] = d["waveform_extractor"].nsamples
-        d["num_templates"] = len(d["templates"])
-        d["sampling_frequency"] = d["waveform_extractor"].recording.get_sampling_frequency()
-
-        d["num_channels"] = d["waveform_extractor"].recording.get_num_channels()
-        d["num_samples"] = d["waveform_extractor"].nsamples
-        d["nbefore"] = d["waveform_extractor"].nbefore
-        d["nafter"] = d["waveform_extractor"].nafter
-        d["sampling_frequency"] = d["waveform_extractor"].recording.get_sampling_frequency()
+        num_templates = d["templates"].num_templates
+        num_channels = d["templates"].num_channels
+        num_samples = d["templates"].nsamples
+        d["sampling_frequency"] = recording.get_sampling_frequency()
 
         d = cls._prepare_templates(d)
 
         if d["overlaps"] is None:
-            d["overlaps"] = compute_overlaps(d["circus_templates"], d["num_samples"], d["num_channels"])
+            d["overlaps"] = compute_overlaps(d["circus_templates"], num_samples, num_channels)
 
         d = cls._compress_templates(d)
 
@@ -263,24 +257,24 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def get_margin(cls, recording, kwargs):
-        margin = 2 * max(kwargs["nbefore"], kwargs["nafter"])
+        templates = kwargs['templates']
+        margin = 2 * max(templates.nbefore, templates.nafter)
         return margin
 
     @classmethod
     def main_function(cls, traces, d):
         templates = d["circus_templates"]
-        num_templates = d["num_templates"]
-        num_channels = d["num_channels"]
-        num_samples = d["num_samples"]
+        num_templates = d["templates"].num_templates
+        num_channels = d["templates"].num_channels
+        num_samples = d["templates"].nsamples
         overlaps = d["overlaps"]
         norms = d["norms"]
-        nbefore = d["nbefore"]
-        nafter = d["nafter"]
+        nbefore = d["templates"].nbefore
+        nafter =d["templates"].nafter
         omp_tol = np.finfo(np.float32).eps
-        num_samples = d["nafter"] + d["nbefore"]
         neighbor_window = num_samples - 1
         min_amplitude, max_amplitude = d["amplitudes"]
-        sparsities = d["sparsity_mask"]
+        sparsity_mask = d["templates"].sparsity_mask
         ignored_ids = d["ignored_ids"]
         stop_criteria = d["stop_criteria"]
 
@@ -312,7 +306,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
                     cached_fft_kernels.update({i: sp_fft.rfftn(kernel_filter, fshape, axes=axes)})
                     cached_fft_kernels["fshape"] = fshape[0]
 
-                fft_cache.update({"mask": sparsities[i], "template": cached_fft_kernels[i]})
+                fft_cache.update({"mask": sparsity_mask[i], "template": cached_fft_kernels[i]})
 
                 convolution = fftconvolve_with_cache(dummy_filter, dummy_traces, fft_cache, axes=1, mode="valid")
                 if len(convolution) > 0:

@@ -1,7 +1,6 @@
 import numpy as np
 import scipy
 from spikeinterface.core import (
-    WaveformExtractor,
     get_noise_levels,
     get_channel_distances,
     get_template_extremum_channel,
@@ -65,24 +64,25 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         d = cls.default_params.copy()
         d.update(kwargs)
 
-        we = d["waveform_extractor"]
         templates = d["templates"]
-        unit_ids = we.unit_ids
-        channel_ids = we.channel_ids
+        unit_ids = templates.unit_ids
+        channel_ids = recording.get_channel_ids()
+        channel_locations = recording.get_channel_locations()
+        sparsity_mask = templates.sparsity_mask
 
-        sr = we.sampling_frequency
+        sr = recording.sampling_frequency
 
         nbefore_short = int(d["ms_before"] * sr / 1000.0)
         nafter_short = int(d["ms_before"] * sr / 1000.0)
-        assert nbefore_short <= we.nbefore
-        assert nafter_short <= we.nafter
+        assert nbefore_short <= templates.nbefore
+        assert nafter_short <= templates.nafter
         d["nbefore_short"] = nbefore_short
         d["nafter_short"] = nafter_short
-        s0 = we.nbefore - nbefore_short
-        s1 = -(we.nafter - nafter_short)
+        s0 = templates.nbefore - nbefore_short
+        s1 = -(templates.nafter - nafter_short)
         if s1 == 0:
             s1 = None
-        templates_short = templates[:, slice(s0, s1), :].copy()
+        templates_short = templates.data[:, slice(s0, s1), :].copy()
         d["templates_short"] = templates_short
 
         d["peak_shift"] = int(d["peak_shift_ms"] / 1000 * sr)
@@ -96,12 +96,10 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         channel_distance = get_channel_distances(recording)
         d["neighbours_mask"] = channel_distance < d["local_radius_um"]
 
-        extremum_channel = get_template_extremum_channel(we, peak_sign=d["peak_sign"], outputs="index")
+        extremum_channel = templates.get_template_extremum_channel(peak_sign=d["peak_sign"], outputs="index")
         # as numpy vector
         extremum_channel = np.array([extremum_channel[unit_id] for unit_id in unit_ids], dtype="int64")
         d["extremum_channel"] = extremum_channel
-
-        channel_locations = we.recording.get_channel_locations()
 
         # TODO try it with real locaion
         unit_locations = channel_locations[extremum_channel]
@@ -119,12 +117,12 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
             closest_u = np.array(closest_u[: d["num_closest"]])
 
             # compute unitary discriminent vector
-            (chans,) = np.nonzero(d["sparsity_mask"][unit_ind, :])
-            template_sparse = templates[unit_ind, :, :][:, chans]
+            (chans,) = np.nonzero(sparsity_mask[unit_ind, :])
+            template_sparse = templates[unit_ind][:, chans]
             closest_vec = []
             # against N closets
             for u in closest_u:
-                vec = templates[u, :, :][:, chans] - template_sparse
+                vec = templates[u][:, chans] - template_sparse
                 vec /= np.sum(vec**2)
                 closest_vec.append((u, vec))
             # against noise
@@ -155,7 +153,8 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def get_margin(cls, recording, kwargs):
-        margin = 2 * (kwargs["nbefore"] + kwargs["nafter"])
+        templates = kwargs['templates']
+        margin = 2 * (templates.nbefore + templates.nafter)
         return margin
 
     @classmethod
@@ -236,7 +235,7 @@ def _tdc_find_spikes(traces, d, level=0):
             # distances = np.sum(np.sum((templates[possible_clusters][:, :, union_channels] - wf[: , union_channels][None, : :])**2, axis=1), axis=1)
 
             ## numba with cluster+channel spasity
-            union_channels = np.any(d["sparsity_mask"][possible_clusters, :], axis=0)
+            union_channels = np.any(templates.sparsity_mask[possible_clusters, :], axis=0)
             # distances = numba_sparse_dist(wf, templates, union_channels, possible_clusters)
             distances = numba_sparse_dist(wf_short, templates_short, union_channels, possible_clusters)
 
@@ -247,8 +246,8 @@ def _tdc_find_spikes(traces, d, level=0):
             for ind in np.argsort(distances)[: d["num_template_try"]]:
                 cluster_index = possible_clusters[ind]
 
-                chan_sparsity = d["template_sparsity"][cluster_index, :]
-                template_sparse = templates[cluster_index, :, :][:, chan_sparsity]
+                sparsity_mask = templates.sparsity_mask[cluster_index, :]
+                template_sparse = templates[cluster_index][:, sparsity_mask]
 
                 # find best shift
 
@@ -262,9 +261,9 @@ def _tdc_find_spikes(traces, d, level=0):
                 ## numba version
                 numba_best_shift(
                     traces,
-                    templates[cluster_index, :, :],
+                    templates[cluster_index],
                     sample_index,
-                    d["nbefore"],
+                    templates.nbefore,
                     possible_shifts,
                     distances_shift,
                     chan_sparsity,
@@ -273,8 +272,8 @@ def _tdc_find_spikes(traces, d, level=0):
                 shift = possible_shifts[ind_shift]
 
                 sample_index = sample_index + shift
-                s0 = sample_index - d["nbefore"]
-                s1 = sample_index + d["nafter"]
+                s0 = sample_index - templates.nbefore
+                s1 = sample_index + templates.nafter
                 wf_sparse = traces[s0:s1, chan_sparsity]
 
                 # accept or not
@@ -296,9 +295,9 @@ def _tdc_find_spikes(traces, d, level=0):
                 amplitude = 1.0
 
                 # remove template
-                template = templates[cluster_index, :, :]
-                s0 = sample_index - d["nbefore"]
-                s1 = sample_index + d["nafter"]
+                template = templates[cluster_index]
+                s0 = sample_index - templates.nbefore
+                s1 = sample_index + templates.nafter
                 traces[s0:s1, :] -= template * amplitude
 
             else:
@@ -333,7 +332,7 @@ if HAVE_NUMBA:
                 if union_channels[chan_ind]:
                     for s in range(width):
                         v = wf[s, chan_ind]
-                        t = templates[cluster_index, s, chan_ind]
+                        t = templates[cluster_index][s, chan_ind]
                         sum_dist += (v - t) ** 2
             distances[i] = sum_dist
         return distances

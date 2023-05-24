@@ -4,13 +4,83 @@ import numpy as np
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs
 from spikeinterface.core import get_chunk_with_margin, compute_sparsity, WaveformExtractor
 
+from threadpoolctl import threadpool_limits
+import numpy as np
+
+from spikeinterface.core.job_tools import ChunkRecordingExecutor, fix_job_kwargs
+from spikeinterface.core import get_chunk_with_margin
+
+
+class TemplatesDictionary(object):
+
+    def __init__(
+        self,
+        data,
+        unit_ids,
+        ms_before,
+        ms_after,
+        sparsity_mask=None
+    ):
+
+        self.data = data.copy()
+        self.unit_ids = unit_ids
+        self.ms_before = ms_before
+        self.ms_after = ms_after
+        if sparsity_mask is None:
+            self.sparsity_mask = np.sum(data, axis=(1)) == 0
+        else:
+            assert sparsity_mask.shape == (data.shape[0], data.shape[2]), 'sparsity_mask has the wrong shape'
+            self.sparsity_mask = sparsity_mask
+        
+        for i in range(len(self.data)):
+            active_channels = self.sparsity_mask[i]
+            self.data[i][:, ~active_channels] = 0
+
+    def __getitem__(self, template_id):
+        return self.data[template_id]
+
+    def __getslice__(self, start, stop):
+        return self.data[start:stop]
+
+    @property
+    def shape(self):
+        return self.data.shape
+
+    @property
+    def num_channels(self):
+        return self.data.shape[2]
+
+    @property
+    def nsamples(self):
+        return self.data.shape[1]
+
+    def __len__(self):
+        return len(self.data)
+
+    def get_template_extremum_channel(self, peak_sign='neg', outputs="index"):
+        assert peak_sign in ['neg', 'pos'], "peak_sign should be in ['neg', 'pos']"
+        return 
+
+
+def create_templates_from_waveform_extractor(waveform_extractor,  mode='median', sparsity=None):
+
+    if sparsity is not None and not waveform_extractor.is_sparse():
+        sparsity_mask = compute_sparsity(waveform_extractor, **sparsity)
+    else:
+        sparsity_mask = None
+
+    data = waveform_extractor.get_all_templates(mode)
+    unit_ids = waveform_extractor.unit_ids
+    ms_before = waveform_extractor.ms_before
+    ms_after = waveform_extractor.ms_after
+    return TemplatesDictionary(data, waveform_extractor.unit_ids, ms_before, ms_after, sparsity_mask)
+
 
 def find_spikes_from_templates(
     recording,
     waveform_extractor,
     sparsity={"method": "ptp", "threshold": 1},
-    templates=None,
-    sparsity_mask=None,
+    templates_dictionary=None,
     method="naive",
     method_kwargs={},
     extra_outputs=False,
@@ -27,10 +97,8 @@ def find_spikes_from_templates(
     sparsity: dict or None
         Parameters that should be given to sparsify the templates, if waveform_extractor
         is not already sparse
-    templates: np.array
-        If provided, then the templates are used instead of the ones from the waveform_extractor
-    sparsity_mask: np.array, bool
-        If provided, the sparsity mask used for the provided templates
+    templates_dictionary: TemplatesDictionnary
+        If provided, then these templates are used instead of the ones from the waveform_extractor
     method: str
         Which method to use ('naive' | 'tridesclous' | 'circus' | 'circus-omp' | 'wobble')
     method_kwargs: dict, optional
@@ -61,7 +129,7 @@ def find_spikes_from_templates(
 
     # initialize the templates
     method_kwargs = method_class.initialize_and_sparsify_templates(
-        method_kwargs, waveform_extractor, sparsity, templates, sparsity_mask
+        method_kwargs, waveform_extractor, sparsity, templates
     )
 
     # initialize
@@ -141,37 +209,15 @@ def _find_spikes_chunk(segment_index, start_frame, end_frame, worker_ctx):
 # generic class for template engine
 class BaseTemplateMatchingEngine:
     @classmethod
-    def initialize_and_sparsify_templates(cls, kwargs, waveform_extractor, sparsity, templates, sparsity_mask):
+    def initialize_and_sparsify_templates(cls, kwargs, waveform_extractor, templates_dictionary, sparsity):
         assert isinstance(waveform_extractor, WaveformExtractor)
-        kwargs.update(
-            {
-                "nbefore": waveform_extractor.nbefore,
-                "nafter": waveform_extractor.nafter,
-                "sampling_frequency": waveform_extractor.sampling_frequency,
-            }
-        )
 
-        num_channels = waveform_extractor.get_num_channels()
+        if templates_dictionary is not None:
+            templates_dictionary = create_templates_from_waveform_extractor(waveform_extractor, sparsity=sparsity)
 
-        if templates is not None:
-            kwargs["templates"] = templates.copy()
-            num_templates = len(templates)
-            if sparsity_mask is None:
-                kwargs["sparsity_mask"] = np.ones((num_templates, num_channels), dtype=bool)
-        else:
-            kwargs["templates"] = waveform_extractor.get_all_templates().copy()
-            num_templates = len(kwargs["templates"])
-            if waveform_extractor.is_sparse():
-                kwargs["sparsity_mask"] = waveform_extractor.sparsity.mask
-            else:
-                if sparsity is not None:
-                    kwargs["sparsity_mask"] = compute_sparsity(waveform_extractor, **sparsity).mask
-                else:
-                    kwargs["sparsity_mask"] = np.ones((num_templates, num_channels), dtype=bool)
+        assert isinstance(templates_dictionary, TemplatesDictionary)
 
-        for unit_ind in range(num_templates):
-            active_channels = kwargs["sparsity_mask"][unit_ind]
-            kwargs["templates"][unit_ind][:, ~active_channels] = 0
+        kwargs["templates"] = templates_dictionary
 
         return kwargs
 
@@ -185,8 +231,6 @@ class BaseTemplateMatchingEngine:
     def serialize_method_kwargs(cls, kwargs):
         """This function serializes kwargs to distribute them to workers"""
         kwargs = dict(kwargs)
-        # remove waveform_extractor
-        kwargs.pop("waveform_extractor")
         return kwargs
 
     @classmethod
