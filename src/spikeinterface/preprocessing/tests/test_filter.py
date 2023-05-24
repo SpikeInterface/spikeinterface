@@ -22,45 +22,45 @@ def test_filter():
     rec = generate_recording()
     rec = rec.save()
 
-#     rec2 = bandpass_filter(rec, freq_min=300.0, freq_max=6000.0)
+    #     rec2 = bandpass_filter(rec, freq_min=300.0, freq_max=6000.0)
 
-#     # compute by chunk
-#     rec2_cached0 = rec2.save(chunk_size=100000, verbose=False, progress_bar=True)
+    #     # compute by chunk
+    #     rec2_cached0 = rec2.save(chunk_size=100000, verbose=False, progress_bar=True)
 
-#     # compute by chunkf with joblib
-#     rec2_cached1 = rec2.save(total_memory="10k", n_jobs=4, verbose=True)
+    #     # compute by chunkf with joblib
+    #     rec2_cached1 = rec2.save(total_memory="10k", n_jobs=4, verbose=True)
 
-#     # compute once
-#     rec2_cached2 = rec2.save(verbose=False)
+    #     # compute once
+    #     rec2_cached2 = rec2.save(verbose=False)
 
-#     trace0 = rec2.get_traces(segment_index=0)
-#     trace1 = rec2_cached1.get_traces(segment_index=0)
+    #     trace0 = rec2.get_traces(segment_index=0)
+    #     trace1 = rec2_cached1.get_traces(segment_index=0)
 
-#     # other filtering types
-#     rec3 = filter(rec, band=500.0, btype="highpass", filter_mode="ba", filter_order=2)
-#     rec4 = notch_filter(rec, freq=3000, q=30, margin_ms=5.0)
+    #     # other filtering types
+    #     rec3 = filter(rec, band=500.0, btype="highpass", filter_mode="ba", filter_order=2)
+    #     rec4 = notch_filter(rec, freq=3000, q=30, margin_ms=5.0)
 
-#     # filter from coefficients
-#     coeff = iirfilter(8, [0.02, 0.4], rs=30, btype="band", analog=False, ftype="cheby2", output="sos")
-#     rec5 = filter(rec, coeff=coeff, filter_mode="sos")
+    #     # filter from coefficients
+    #     coeff = iirfilter(8, [0.02, 0.4], rs=30, btype="band", analog=False, ftype="cheby2", output="sos")
+    #     rec5 = filter(rec, coeff=coeff, filter_mode="sos")
 
-#     # compute by chunk
-#     rec5_cached0 = rec5.save(chunk_size=100000, verbose=False, progress_bar=True)
+    #     # compute by chunk
+    #     rec5_cached0 = rec5.save(chunk_size=100000, verbose=False, progress_bar=True)
 
-#     trace50 = rec5.get_traces(segment_index=0)
-#     trace51 = rec5_cached0.get_traces(segment_index=0)
+    #     trace50 = rec5.get_traces(segment_index=0)
+    #     trace51 = rec5_cached0.get_traces(segment_index=0)
 
-#     assert np.allclose(rec.get_times(0), rec2.get_times(0))
+    #     assert np.allclose(rec.get_times(0), rec2.get_times(0))
 
     # reflect padding test
     rec6 = bandpass_filter(rec, freq_min=300.0, freq_max=6000.0, add_reflect_padding=True)
     rec6_cached = rec6.save(chunk_size=150000, verbose=False, progress_bar=True)
     trace0 = rec6.get_traces(segment_index=0)
     trace1 = rec6_cached.get_traces(segment_index=0)
-    
+
     print(trace0.shape, trace1.shape)
     print(np.abs(trace0 - trace1).max())
-    
+
     assert np.allclose(trace0, trace1)
 
 

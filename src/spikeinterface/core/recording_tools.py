@@ -204,7 +204,7 @@ def get_chunk_with_margin(
             start_frame = 0
         if end_frame is None:
             end_frame = length
-        
+
         chunk_size = end_frame - start_frame
         full_size = chunk_size + 2 * margin
 
