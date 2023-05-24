@@ -34,15 +34,7 @@ class TemplatesDictionary(object):
         The TemplatesDictionary object
     """
 
-    def __init__(
-        self, 
-        data : np.array,
-        unit_ids : list, 
-        nbefore : int,
-        nafter : int,
-        sparsity_mask=None
-    ) -> None:
-
+    def __init__(self, data: np.array, unit_ids: list, nbefore: int, nafter: int, sparsity_mask=None) -> None:
         self.data = data.copy().astype(np.float32, casting="safe")
         self.unit_ids = unit_ids
         self.nbefore = nbefore
@@ -85,11 +77,7 @@ class TemplatesDictionary(object):
     def __len__(self):
         return len(self.data)
 
-    def get_amplitudes(
-        self, 
-        peak_sign: str = "neg",
-        mode: str = "extremum"
-    ):
+    def get_amplitudes(self, peak_sign: str = "neg", mode: str = "extremum"):
         """
         Get amplitude per channel for each unit.
 
