@@ -868,12 +868,12 @@ def _load_extractor_from_dict(dic) -> BaseExtractor:
     new_kwargs = dict()
     transform_dict_to_extractor = lambda x: _load_extractor_from_dict(x) if is_dict_extractor(x) else x
     for name, value in dic["kwargs"].items():
-        if isinstance(value, dict) and is_dict_extractor(value):
+        if isinstance(value, dict):
             new_kwargs[name] = {k: transform_dict_to_extractor(v) for k, v in value.items()}
         elif isinstance(value, list):
             new_kwargs[name] = [transform_dict_to_extractor(e) for e in value]
         else:
-            new_kwargs[name] = value
+            new_kwargs[name] = transform_dict_to_extractor(value)
 
     class_name = dic["class"]
     extractor_class = _get_class_from_string(class_name)
