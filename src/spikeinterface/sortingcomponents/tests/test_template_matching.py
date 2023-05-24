@@ -54,10 +54,16 @@ def test_find_spikes_from_templates(method, waveform_extractor):
 
     result = {}
     spikes = find_spikes_from_templates(
-        recording, waveform_extractor, method=method, method_kwargs=method_kwargs_all, n_jobs=2, chunk_size=1000, progress_bar=True
+        recording,
+        waveform_extractor,
+        method=method,
+        method_kwargs=method_kwargs_all,
+        n_jobs=2,
+        chunk_size=1000,
+        progress_bar=True,
     )
-    if method == 'circus':
-        method_kwargs_all['waveform_extractor'] = waveform_extractor
+    if method == "circus":
+        method_kwargs_all["waveform_extractor"] = waveform_extractor
 
     result[method] = NumpySorting.from_times_labels(spikes["sample_index"], spikes["cluster_index"], sampling_frequency)
 

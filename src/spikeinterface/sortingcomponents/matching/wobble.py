@@ -416,7 +416,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             Resulting spike train.
         """
         # Unpack method_kwargs
-        nbefore, nafter = method_kwargs['templates'].nbefore, method_kwargs['templates'].nafter
+        nbefore, nafter = method_kwargs["templates"].nbefore, method_kwargs["templates"].nafter
         template_meta = method_kwargs["template_meta"]
         params = method_kwargs["params"]
         sparsity = method_kwargs["sparsity"]

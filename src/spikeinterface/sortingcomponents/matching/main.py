@@ -12,16 +12,7 @@ from spikeinterface.core import get_chunk_with_margin
 
 
 class TemplatesDictionary(object):
-
-    def __init__(
-        self,
-        data,
-        unit_ids,
-        nbefore,
-        nafter,
-        sparsity_mask=None
-    ):
-
+    def __init__(self, data, unit_ids, nbefore, nafter, sparsity_mask=None):
         self.data = data.copy().astype(np.float32, casting="safe")
         self.unit_ids = unit_ids
         self.nbefore = nbefore
@@ -29,9 +20,9 @@ class TemplatesDictionary(object):
         if sparsity_mask is None:
             self.sparsity_mask = np.sum(data, axis=(1)) == 0
         else:
-            assert sparsity_mask.shape == (data.shape[0], data.shape[2]), 'sparsity_mask has the wrong shape'
+            assert sparsity_mask.shape == (data.shape[0], data.shape[2]), "sparsity_mask has the wrong shape"
             self.sparsity_mask = sparsity_mask
-        
+
         for i in range(len(self.data)):
             active_channels = self.sparsity_mask[i]
             self.data[i][:, ~active_channels] = 0
@@ -61,11 +52,7 @@ class TemplatesDictionary(object):
     def __len__(self):
         return len(self.data)
 
-    def get_amplitudes(
-        self, 
-        peak_sign: str = "neg", 
-        mode: str = "extremum"
-        ):
+    def get_amplitudes(self, peak_sign: str = "neg", mode: str = "extremum"):
         """
         Get amplitude per channel for each unit.
 
@@ -110,11 +97,10 @@ class TemplatesDictionary(object):
         return peak_values
 
     def get_extremum_channel(
-        self, 
-        peak_sign: str = "neg", 
-        mode: str = "extremum", 
-        ):
-
+        self,
+        peak_sign: str = "neg",
+        mode: str = "extremum",
+    ):
         """
         Compute the channel with the extremum peak for each unit.
 
@@ -147,8 +133,7 @@ class TemplatesDictionary(object):
         return extremum_channels_index
 
 
-def create_templates_from_waveform_extractor(waveform_extractor,  mode='median', sparsity=None):
-
+def create_templates_from_waveform_extractor(waveform_extractor, mode="median", sparsity=None):
     if sparsity is not None and not waveform_extractor.is_sparse():
         sparsity_mask = compute_sparsity(waveform_extractor, **sparsity)
     else:

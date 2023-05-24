@@ -63,7 +63,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
 
     @classmethod
     def get_margin(cls, recording, kwargs):
-        templates = kwargs['templates']
+        templates = kwargs["templates"]
         margin = max(templates.nbefore, templates.nafter)
         return margin
 

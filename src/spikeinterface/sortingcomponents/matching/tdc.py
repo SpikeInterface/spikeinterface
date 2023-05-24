@@ -152,7 +152,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def get_margin(cls, recording, kwargs):
-        templates = kwargs['templates']
+        templates = kwargs["templates"]
         margin = 2 * (templates.nbefore + templates.nafter)
         return margin
 

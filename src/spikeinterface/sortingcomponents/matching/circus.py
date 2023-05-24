@@ -255,7 +255,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def get_margin(cls, recording, kwargs):
-        templates = kwargs['templates']
+        templates = kwargs["templates"]
         margin = 2 * max(templates.nbefore, templates.nafter)
         return margin
 
@@ -268,7 +268,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         overlaps = d["overlaps"]
         norms = d["norms"]
         nbefore = d["templates"].nbefore
-        nafter =d["templates"].nafter
+        nafter = d["templates"].nafter
         omp_tol = np.finfo(np.float32).eps
         neighbor_window = num_samples - 1
         min_amplitude, max_amplitude = d["amplitudes"]
@@ -572,9 +572,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         if d["noise_levels"] is None:
             print("CircusPeeler : noise should be computed outside")
-            d["noise_levels"] = get_noise_levels(
-                recording, **d["random_chunk_kwargs"], return_scaled=False
-            )
+            d["noise_levels"] = get_noise_levels(recording, **d["random_chunk_kwargs"], return_scaled=False)
 
         d["abs_threholds"] = d["noise_levels"] * d["detect_threshold"]
 
@@ -582,22 +580,18 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         d["overlaps"] = compute_overlaps(d["circus_templates"], num_samples, num_channels)
         d = cls._compress_templates(d)
 
-        d["exclude_sweep_size"] = int(
-            d["exclude_sweep_ms"] * recording.get_sampling_frequency() / 1000.0
-        )
+        d["exclude_sweep_size"] = int(d["exclude_sweep_ms"] * recording.get_sampling_frequency() / 1000.0)
 
         d["patch_sizes"] = (
             d["templates"].nsamples,
             d["templates"].num_channels,
         )
         d["sym_patch"] = d["templates"].nbefore == d["templates"].nafter
-        d["jitter"] = int(
-            d["jitter_ms"] * recording.get_sampling_frequency() / 1000.0
-        )
+        d["jitter"] = int(d["jitter_ms"] * recording.get_sampling_frequency() / 1000.0)
 
-        d['amplitudes'] = np.zeros((num_templates, 2))
-        d['amplitudes'][:, 0] = d["min_amplitude"]
-        d['amplitudes'][:, 1] = d["max_amplitude"]
+        d["amplitudes"] = np.zeros((num_templates, 2))
+        d["amplitudes"][:, 0] = d["min_amplitude"]
+        d["amplitudes"][:, 1] = d["max_amplitude"]
 
         # num_segments = recording.get_num_segments()
         # if d["waveform_extractor"]._params["max_spikes_per_unit"] is None:
