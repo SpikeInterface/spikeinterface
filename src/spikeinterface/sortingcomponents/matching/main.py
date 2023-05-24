@@ -12,11 +12,44 @@ from spikeinterface.core import get_chunk_with_margin
 
 
 class TemplatesDictionary(object):
-    def __init__(self, data, unit_ids, nbefore, nafter, sparsity_mask=None):
+    """
+    Class to extract handle the templates in order to work with the matching
+    engines
+
+    Parameters
+    ----------
+    data: array
+        The template matrix, as a numpy array of size (n_templates, n_samples, n_channels)
+    unit_ids: list
+        The list of unit_ids
+    nbefore: int
+        The number of samples before the peaks of the templates
+    nafter: int
+        The number of samples after the peaks of the templates
+    sparsity_mask: None or array
+        If not None, an array of size (n_templates, n_channels) to set some sparsity mask
+    Returns
+    -------
+    templates: TemplatesDictionary
+        The TemplatesDictionary object
+    """
+
+    def __init__(
+        self, 
+        data : np.array,
+        unit_ids : list, 
+        nbefore : int,
+        nafter : int,
+        sparsity_mask=None
+    ) -> None:
+
         self.data = data.copy().astype(np.float32, casting="safe")
         self.unit_ids = unit_ids
         self.nbefore = nbefore
         self.nafter = nafter
+
+        assert self.nbefore + self.nafter == data.shape[1]
+
         if sparsity_mask is None:
             self.sparsity_mask = np.sum(data, axis=(1)) == 0
         else:
@@ -52,7 +85,11 @@ class TemplatesDictionary(object):
     def __len__(self):
         return len(self.data)
 
-    def get_amplitudes(self, peak_sign: str = "neg", mode: str = "extremum"):
+    def get_amplitudes(
+        self, 
+        peak_sign: str = "neg",
+        mode: str = "extremum"
+    ):
         """
         Get amplitude per channel for each unit.
 

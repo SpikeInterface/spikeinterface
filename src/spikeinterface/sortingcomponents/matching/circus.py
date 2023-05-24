@@ -637,7 +637,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         patch_sizes = d["patch_sizes"]
         nbefore = d["templates"].nbefore
         nafter = d["templates"].nafter
-        num_samples = nbefore + nafter
+        num_samples = d["templates"].nsamples
         neighbor_window = num_samples - 1
         amplitudes = d["amplitudes"]
         sym_patch = d["sym_patch"]
