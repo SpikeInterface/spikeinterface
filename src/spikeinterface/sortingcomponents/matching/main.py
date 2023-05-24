@@ -308,7 +308,6 @@ def _find_spikes_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 # generic class for template engine
 class BaseTemplateMatchingEngine:
-
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
         """This function runs before loops"""
