@@ -378,10 +378,10 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if self.time_vector is not None:
-            # raise NotImplementedError(
-            #     "time_vector for CorrectMotionRecording do not work because temporal_bins start from 0"
-            # )
-            times = np.asarray(self.time_vector[start_frame:end_frame])
+            raise NotImplementedError(
+                "time_vector for CorrectMotionRecording do not work because temporal_bins start from 0"
+            )
+            # times = np.asarray(self.time_vector[start_frame:end_frame])
         else:
             times = np.arange((end_frame or self.get_num_samples()) - (start_frame or 0), dtype="float64")
             times /= self.sampling_frequency
