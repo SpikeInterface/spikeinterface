@@ -306,17 +306,14 @@ class BaseExtractor:
         )
 
         new_kwargs = dict()
-        transform_to_dict = lambda x: x.to_dict(**to_dict_kwargs) if isinstance(x, BaseExtractor) else x
+        transform_extractors_to_dict = lambda x: x.to_dict(**to_dict_kwargs) if isinstance(x, BaseExtractor) else x
         for name, value in self._kwargs.items():
             if isinstance(value, list):
-                new_list = [transform_to_dict(element) for element in value]
-                new_kwargs[name] = new_list
+                new_kwargs[name] = [transform_extractors_to_dict(element) for element in value]
             if isinstance(value, dict):
-                new_kwargs[name] = {k: transform_to_dict(v) for k, v in value.items()}
-            elif isinstance(value, BaseExtractor):
-                new_kwargs[name] = value.to_dict(**to_dict_kwargs)
+                new_kwargs[name] = {key: transform_extractors_to_dict(value) for key, value in value.items()}
             else:
-                new_kwargs[name] = value
+                new_kwargs[name] = transform_extractors_to_dict(value)
 
         class_name = str(type(self)).replace("<class '", "").replace("'>", "")
         module = class_name.split(".")[0]
