@@ -330,7 +330,7 @@ class BaseExtractor:
         dump_dict = {
             "class": class_name,
             "module": module,
-            "kwargs": self._kwargs,
+            "kwargs": new_kwargs,
             "dumpable": self.is_dumpable,
             "version": version,
             "relative_paths": (relative_to is not None),
