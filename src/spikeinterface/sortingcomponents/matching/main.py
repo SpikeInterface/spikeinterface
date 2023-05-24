@@ -222,9 +222,10 @@ def find_spikes_from_templates(
 
     method_class = matching_methods[method]
 
-    assert isinstance(waveform_extractor, WaveformExtractor)
+    assert (waveform_extractor is not None) or (templates_dictionary is not None)
 
     if templates_dictionary is None:
+        assert isinstance(waveform_extractor, WaveformExtractor)
         templates_dictionary = create_templates_from_waveform_extractor(waveform_extractor, sparsity=sparsity)
 
     assert isinstance(templates_dictionary, TemplatesDictionary)
