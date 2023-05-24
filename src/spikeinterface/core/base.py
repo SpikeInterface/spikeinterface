@@ -594,9 +594,6 @@ class BaseExtractor:
         intialization_args = (self.to_dict(),)
         return (instance_constructor, intialization_args)
 
-    def prepare_for_pickling(self):
-        return self.to_dict()
-
     @staticmethod
     def load_from_folder(folder):
         return BaseExtractor.load(folder)
