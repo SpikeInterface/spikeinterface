@@ -175,6 +175,7 @@ def get_chunk_with_margin(
     if not (add_zeros or add_reflect_padding):
         if window_on_margin and not add_zeros:
             raise ValueError("window_on_margin requires add_zeros=True")
+
         if start_frame is None:
             left_margin = 0
             start_frame = 0
@@ -190,6 +191,7 @@ def get_chunk_with_margin(
             right_margin = length - end_frame
         else:
             right_margin = margin
+
         traces_chunk = rec_segment.get_traces(
             start_frame - left_margin,
             end_frame + right_margin,
@@ -198,8 +200,11 @@ def get_chunk_with_margin(
 
     else:
         # either add_zeros or reflect_padding
-        assert start_frame is not None
-        assert end_frame is not None
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = length
+        
         chunk_size = end_frame - start_frame
         full_size = chunk_size + 2 * margin
 
