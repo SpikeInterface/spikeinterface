@@ -311,7 +311,7 @@ class BaseExtractor:
             if isinstance(value, list):
                 new_kwargs[name] = [transform_extractors_to_dict(element) for element in value]
             if isinstance(value, dict):
-                new_kwargs[name] = {key: transform_extractors_to_dict(value) for key, value in value.items()}
+                new_kwargs[name] = {k: transform_extractors_to_dict(v) for k, v in value.items()}
             else:
                 new_kwargs[name] = transform_extractors_to_dict(value)
 
