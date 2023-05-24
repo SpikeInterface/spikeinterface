@@ -620,6 +620,7 @@ class BaseRecording(BaseRecordingSnippets):
 
     def astype(self, dtype):
         from ..preprocessing.astype import astype
+
         return astype(self, dtype=dtype)
 
 
