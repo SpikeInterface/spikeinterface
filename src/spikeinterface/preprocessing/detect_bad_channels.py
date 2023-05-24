@@ -237,7 +237,7 @@ def detect_bad_channels(
         channel_index = np.full((num_channels, max_neighbors), num_channels)
         for c in range(num_channels):
             my_neighbors = np.flatnonzero(neighbors_mask[c])
-            channel_index[c, :my_neighbors.size] = my_neighbors
+            channel_index[c, : my_neighbors.size] = my_neighbors
 
         # get the correlation of each channel with its neighbors' median inside each chunk
         # note that we did not concatenate the chunks here
@@ -259,7 +259,7 @@ def detect_bad_channels(
 
         # now take the median over chunks and threshold to finish
         median_correlations = np.nanmedian(correlations, 0)
-        r2s = median_correlations ** 2
+        r2s = median_correlations**2
         # channels with no neighbors will have r2==nan, and nan<x==False always
         bad_channel_mask = r2s < neighborhood_r2_threshold
         bad_channel_ids = recording.channel_ids[bad_channel_mask]

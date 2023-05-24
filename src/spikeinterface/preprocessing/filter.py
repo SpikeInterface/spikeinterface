@@ -77,7 +77,9 @@ class FilterRecording(BasePreprocessor):
             assert btype in ("bandpass", "highpass")
             # coefficient
             # self.coeff is 'sos' or 'ab' style
-            filter_coeff = scipy.signal.iirfilter(filter_order, band, fs=fs, analog=False, btype=btype, ftype=ftype, output=filter_mode)
+            filter_coeff = scipy.signal.iirfilter(
+                filter_order, band, fs=fs, analog=False, btype=btype, ftype=ftype, output=filter_mode
+            )
         else:
             filter_coeff = coeff
             if not isinstance(coeff, list):
@@ -95,7 +97,11 @@ class FilterRecording(BasePreprocessor):
 
         margin = int(margin_ms * fs / 1000.0)
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(FilterRecordingSegment(parent_segment, filter_coeff, filter_mode, margin, dtype, add_reflect_padding=add_reflect_padding))
+            self.add_recording_segment(
+                FilterRecordingSegment(
+                    parent_segment, filter_coeff, filter_mode, margin, dtype, add_reflect_padding=add_reflect_padding
+                )
+            )
 
         self._kwargs = dict(
             recording=recording,
@@ -122,7 +128,12 @@ class FilterRecordingSegment(BasePreprocessorSegment):
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
-            self.parent_recording_segment, start_frame, end_frame, channel_indices, self.margin, add_reflect_padding=self.add_reflect_padding
+            self.parent_recording_segment,
+            start_frame,
+            end_frame,
+            channel_indices,
+            self.margin,
+            add_reflect_padding=self.add_reflect_padding,
         )
 
         traces_dtype = traces_chunk.dtype
