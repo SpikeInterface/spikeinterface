@@ -172,7 +172,7 @@ class TemplatesDictionary(object):
 
 def create_templates_from_waveform_extractor(waveform_extractor, mode="median", sparsity=None):
     if sparsity is not None and not waveform_extractor.is_sparse():
-        sparsity_mask = compute_sparsity(waveform_extractor, **sparsity)
+        sparsity_mask = compute_sparsity(waveform_extractor, **sparsity).mask
     else:
         sparsity_mask = None
 
@@ -234,10 +234,14 @@ def find_spikes_from_templates(
 
     method_class = matching_methods[method]
 
-    # initialize the templates
-    method_kwargs = method_class.initialize_and_sparsify_templates(
-        method_kwargs, waveform_extractor, sparsity, templates_dictionary
-    )
+    assert isinstance(waveform_extractor, WaveformExtractor)
+
+    if templates_dictionary is None:
+        templates_dictionary = create_templates_from_waveform_extractor(waveform_extractor, sparsity=sparsity)
+
+    assert isinstance(templates_dictionary, TemplatesDictionary)
+
+    method_kwargs["templates"] = templates_dictionary
 
     # initialize
     method_kwargs = method_class.initialize_and_check_kwargs(recording, method_kwargs)
@@ -315,18 +319,6 @@ def _find_spikes_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 # generic class for template engine
 class BaseTemplateMatchingEngine:
-    @classmethod
-    def initialize_and_sparsify_templates(cls, kwargs, waveform_extractor, templates_dictionary, sparsity):
-        assert isinstance(waveform_extractor, WaveformExtractor)
-
-        if templates_dictionary is not None:
-            templates_dictionary = create_templates_from_waveform_extractor(waveform_extractor, sparsity=sparsity)
-
-        assert isinstance(templates_dictionary, TemplatesDictionary)
-
-        kwargs["templates"] = templates_dictionary
-
-        return kwargs
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
