@@ -16,10 +16,7 @@ class SpikeLocationsPlotter(SortingviewPlotter):
         # ensure serializable for sortingview
         unit_ids, channel_ids = self.make_serializable(dp.unit_ids, dp.channel_ids)
 
-        locations = {
-            str(ch): dp.channel_locations[i_ch].astype("float32")
-            for i_ch, ch in enumerate(channel_ids)
-        }
+        locations = {str(ch): dp.channel_locations[i_ch].astype("float32") for i_ch, ch in enumerate(channel_ids)}
         xlims, ylims = estimate_axis_lims(spike_locations)
 
         unit_items = []

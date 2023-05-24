@@ -10,6 +10,7 @@ from .core_tools import define_function_from_class
 
 try:
     import zarr
+
     HAVE_ZARR = True
 except ImportError:
     HAVE_ZARR = False
@@ -31,16 +32,17 @@ class ZarrRecordingExtractor(BaseRecording):
     recording: ZarrRecordingExtractor
         The recording Extractor
     """
-    extractor_name = 'ZarrRecording'
+
+    extractor_name = "ZarrRecording"
     installed = HAVE_ZARR  # check at class level if installed or not
-    mode = 'file'
+    mode = "file"
     # error message when not installed
     installation_mesg = "To use the ZarrRecordingExtractor install zarr: \n\n pip install zarr\n\n"
     name = "zarr"
 
     def __init__(self, root_path: Union[Path, str], storage_options=None):
         assert self.installed, self.installation_mesg
-        
+
         if storage_options is None:
             if isinstance(root_path, str):
                 root_path_init = root_path
@@ -51,7 +53,7 @@ class ZarrRecordingExtractor(BaseRecording):
         else:
             root_path_init = root_path
             root_path_kwarg = root_path_init
-        
+
         self._root = zarr.open(root_path_init, mode="r", storage_options=storage_options)
 
         sampling_frequency = self._root.attrs.get("sampling_frequency", None)
@@ -64,7 +66,7 @@ class ZarrRecordingExtractor(BaseRecording):
 
         channel_ids = np.array(channel_ids)
 
-        dtype = self._root['traces_seg0'].dtype
+        dtype = self._root["traces_seg0"].dtype
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
@@ -76,8 +78,9 @@ class ZarrRecordingExtractor(BaseRecording):
         cr_by_segment = {}
         for segment_index in range(num_segments):
             trace_name = f"traces_seg{segment_index}"
-            assert len(channel_ids) == self._root[trace_name].shape[1], \
-                f'Segment {segment_index} has the wrong number of channels!'
+            assert (
+                len(channel_ids) == self._root[trace_name].shape[1]
+            ), f"Segment {segment_index} has the wrong number of channels!"
 
             time_kwargs = {}
             time_vector = self._root.get(f"times_seg{segment_index}", None)
@@ -94,11 +97,11 @@ class ZarrRecordingExtractor(BaseRecording):
                 time_kwargs["sampling_frequency"] = sampling_frequency
 
             rec_segment = ZarrRecordingSegment(self._root, trace_name, **time_kwargs)
-            
+
             nbytes_segment = self._root[trace_name].nbytes
             nbytes_stored_segment = self._root[trace_name].nbytes_stored
             cr_by_segment[segment_index] = nbytes_segment / nbytes_stored_segment
-            
+
             total_nbytes += nbytes_segment
             total_nbytes_stored += nbytes_stored_segment
             self.add_recording_segment(rec_segment)
@@ -110,10 +113,10 @@ class ZarrRecordingExtractor(BaseRecording):
             self.set_probegroup(probegroup, in_place=True)
 
         # load properties
-        if 'properties' in self._root:
-            prop_group = self._root['properties']
+        if "properties" in self._root:
+            prop_group = self._root["properties"]
             for key in prop_group.keys():
-                values = self._root['properties'][key]
+                values = self._root["properties"][key]
                 self.set_property(key, values)
 
         # load annotations
@@ -123,9 +126,8 @@ class ZarrRecordingExtractor(BaseRecording):
         # annotate compression ratios
         cr = total_nbytes / total_nbytes_stored
         self.annotate(compression_ratio=cr, compression_ratio_segments=cr_by_segment)
-        
-        self._kwargs = {'root_path': root_path_kwarg,
-                        'storage_options': storage_options}
+
+        self._kwargs = {"root_path": root_path_kwarg, "storage_options": storage_options}
 
 
 class ZarrRecordingSegment(BaseRecordingSegment):
@@ -141,11 +143,12 @@ class ZarrRecordingSegment(BaseRecordingSegment):
         """
         return self._timeseries.shape[0]
 
-    def get_traces(self,
-                   start_frame: Union[int, None] = None,
-                   end_frame: Union[int, None] = None,
-                   channel_indices: Union[List, None] = None,
-                   ) -> np.ndarray:
+    def get_traces(
+        self,
+        start_frame: Union[int, None] = None,
+        end_frame: Union[int, None] = None,
+        channel_indices: Union[List, None] = None,
+    ) -> np.ndarray:
         traces = self._timeseries[start_frame:end_frame]
         if channel_indices is not None:
             traces = traces[:, channel_indices]
@@ -157,7 +160,7 @@ read_zarr = define_function_from_class(source_class=ZarrRecordingExtractor, name
 
 def get_default_zarr_compressor(clevel=5):
     """
-    Return default Zarr compressor object for good preformance in int16 
+    Return default Zarr compressor object for good preformance in int16
     electrophysiology data.
 
     cname: zstd (zstandard)
@@ -177,4 +180,5 @@ def get_default_zarr_compressor(clevel=5):
     """
     assert ZarrRecordingExtractor.installed, ZarrRecordingExtractor.installation_mesg
     from numcodecs import Blosc
+
     return Blosc(cname="zstd", clevel=clevel, shuffle=Blosc.BITSHUFFLE)
