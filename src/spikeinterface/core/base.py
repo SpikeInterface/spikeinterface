@@ -836,41 +836,60 @@ def _check_if_dumpable(d):
         return d["dumpable"]
 
 
-def _load_extractor_from_dict(dic):
-    cls = None
+def _load_extractor_from_dict(dic) -> BaseExtractor:
+    """
+    Convert a dictionary into an instance of BaseExtractor or its subclass.
+
+    This function takes a dictionary that represents the state of an extractor,
+    and reconstructs the extractor from the dictionary.
+
+    Parameters
+    ----------
+    dic : dict
+        A dictionary representation of the extractor which  must contain the following keys:
+        - "kwargs": A dictionary of keyword arguments to be passed to the extractor class upon instantiation.
+        - "class": The full name of the extractor class, including the module name.
+        - "version": The version of the extractor class used when the dictionary was created.
+        - "annotations": A dictionary of annotations.
+        - "properties": A dictionary of properties.
+
+    Returns
+    -------
+    BaseExtractor
+        An instance of BaseExtractor or its subclass.
+    """
+    extractor_class = None
     class_name = None
 
     if "kwargs" not in dic:
         raise Exception(f"This dict cannot be load into extractor {dic}")
-    kwargs = deepcopy(dic["kwargs"])
 
-    # handle nested
-    for k, v in kwargs.items():
-        if isinstance(v, dict) and is_dict_extractor(v):
-            kwargs[k] = _load_extractor_from_dict(v)
-
-            # handle list of extractors list
-    for k, v in kwargs.items():
-        if isinstance(v, list):
-            if all(is_dict_extractor(e) for e in v):
-                kwargs[k] = [_load_extractor_from_dict(e) for e in v]
+    # Create new kwargs to avoid modifying the original dict["kwargs"]
+    new_kwargs = dict()
+    transform_dict_to_extractor = lambda x: _load_extractor_from_dict(x) if is_dict_extractor(x) else x
+    for name, value in dic["kwargs"].items():
+        if isinstance(value, dict) and is_dict_extractor(value):
+            new_kwargs[name] = {k: transform_dict_to_extractor(v) for k, v in value.items()}
+        elif isinstance(value, list):
+            new_kwargs[name] = [transform_dict_to_extractor(e) for e in value]
+        else:
+            new_kwargs[name] = value
 
     class_name = dic["class"]
-    cls = _get_class_from_string(class_name)
+    extractor_class = _get_class_from_string(class_name)
 
-    assert cls is not None and class_name is not None, "Could not load spikeinterface class"
+    assert extractor_class is not None and class_name is not None, "Could not load spikeinterface class"
     if not _check_same_version(class_name, dic["version"]):
         warnings.warn(
             f"Versions are not the same. This might lead compatibility errors. "
             f"Using {class_name.split('.')[0]}=={dic['version']} is recommended"
         )
 
-    # instantiate extrator object
-    extractor = cls(**kwargs)
+    # Initialize the extractor
+    extractor = extractor_class(**new_kwargs)
 
     extractor._annotations.update(dic["annotations"])
     for k, v in dic["properties"].items():
-        # print(k, v)
         extractor.set_property(k, v)
 
     return extractor
@@ -902,7 +921,7 @@ def _check_same_version(class_string, version):
         return "unknown"
 
 
-def load_extractor(file_or_folder_or_dict, base_folder=None):
+def load_extractor(file_or_folder_or_dict, base_folder=None) -> BaseExtractor:
     """
     Instantiate extractor from:
       * a dict
@@ -926,7 +945,7 @@ def load_extractor(file_or_folder_or_dict, base_folder=None):
         return BaseExtractor.load(file_or_folder_or_dict, base_folder=base_folder)
 
 
-def load_extractor_from_dict(d, base_folder=None):
+def load_extractor_from_dict(d, base_folder=None) -> BaseExtractor:
     print("Use load_extractor(..) instead")
     return BaseExtractor.from_dict(d, base_folder=base_folder)
 
