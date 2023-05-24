@@ -45,7 +45,7 @@ class AstypeRecordingSegment(BasePreprocessorSegment):
         if channel_indices is None:
             channel_indices = slice(None)
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
-        return traces.astype(self.dtype)
+        return traces.astype(self.dtype, copy=False)
 
 
 # function for API
