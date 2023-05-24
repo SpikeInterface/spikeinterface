@@ -21,6 +21,8 @@ def detect_bad_channels(
     num_random_chunks=10,
     welch_window_ms=10.0,
     highpass_filter_cutoff=300,
+    neighborhood_r2_threshold=0.9,
+    neighborhood_r2_radius_um=30.0,
     seed=None,
 ):
     """
@@ -34,12 +36,15 @@ def detect_bad_channels(
         channels standard deviations, the channel is flagged as noisy
     * mad : same as std, but using median absolute deviations instead
     * coeherence+psd : method developed by the International Brain Laboratory that detects bad channels of three types:
-
         * Dead channels are those with low similarity to the surrounding channels (n=`n_neighbors` median)
         * Noise channels are those with power at >80% Nyquist above the psd_hf_threshold (default 0.02 uV^2 / Hz)
           and a high coherence with "far away" channels"
         * Out of brain channels are contigious regions of channels dissimilar to the median of all channels
           at the top end of the probe (i.e. large channel number)
+    * neighborhood_r2
+        A method tuned for LFP use-cases, where channels should be highly correlated with their spatial
+        neighbors. This method estimates the correlation of each channel with the median of its spatial
+        neighbors, and considers channels bad when this correlation is too small.
 
     Parameters
     ----------
@@ -81,6 +86,10 @@ def detect_bad_channels(
         Number of random chunks, by default 10
     welch_window_ms : float
         Window size for the scipy.signal.welch that will be converted to nperseg, by default 10ms
+    neighborhood_r2_threshold : float, default 0.95
+        R^2 threshold for the neighborhood_r2 method.
+    neighborhood_r2_radius_um : float, default 30
+        Spatial radius below which two channels are considered neighbors in the neighborhood_r2 method.
     seed : int or None
         The random seed to extract chunks, by default None
 
@@ -109,7 +118,7 @@ def detect_bad_channels(
     """
     import scipy.stats
 
-    method_list = ("std", "mad", "coherence+psd")
+    method_list = ("std", "mad", "coherence+psd", "neighborhood_r2")
     assert method in method_list, f"{method} is not a valid method. Available methods are {method_list}"
 
     # Get random subset of data to estimate from
@@ -129,8 +138,11 @@ def detect_bad_channels(
     if method in ("std", "mad"):
         random_chunk_kwargs["return_scaled"] = False
         random_chunk_kwargs["concatenated"] = True
-    else:
+    elif method == "coherence+psd":
         random_chunk_kwargs["return_scaled"] = True
+        random_chunk_kwargs["concatenated"] = False
+    elif method == "neighborhood_r2":
+        random_chunk_kwargs["return_scaled"] = False
         random_chunk_kwargs["concatenated"] = False
 
     random_data = get_random_data_chunks(recording_hp, **random_chunk_kwargs)
@@ -205,6 +217,53 @@ def detect_bad_channels(
                 "number of dead / noisy channels, bad channel detection may fail "
                 "(erroneously label good channels as dead)."
             )
+
+    elif method == "neighborhood_r2":
+        # make neighboring channels structure. this should probably be a function in core.
+        geom = recording.get_channel_locations()
+        num_channels = recording.get_num_channels()
+        chan_distances = np.linalg.norm(geom[:, None, :] - geom[None, :, :], axis=2)
+        np.fill_diagonal(chan_distances, neighborhood_r2_radius_um + 1)
+        neighbors_mask = chan_distances < neighborhood_r2_radius_um
+        if neighbors_mask.sum(axis=1).min() < 1:
+            warnings.warn(
+                f"neighborhood_r2_radius_um={neighborhood_r2_radius_um} led "
+                "to channels with no neighbors for this geometry, which has "
+                f"minimal channel distance {chan_distances.min()}um. These "
+                "channels will not be marked as bad, but you might want to "
+                "check them."
+            )
+        max_neighbors = neighbors_mask.sum(axis=1).max()
+        channel_index = np.full((num_channels, max_neighbors), num_channels)
+        for c in range(num_channels):
+            my_neighbors = np.flatnonzero(neighbors_mask[c])
+            channel_index[c, :my_neighbors.size] = my_neighbors
+
+        # get the correlation of each channel with its neighbors' median inside each chunk
+        # note that we did not concatenate the chunks here
+        correlations = []
+        for chunk in random_data:
+            chunk = chunk.astype(np.float32)
+            chunk = chunk - np.median(chunk, axis=0, keepdims=True)
+            padded_chunk = np.pad(chunk, [(0, 0), (0, 1)], constant_values=np.nan)
+            # channels with no neighbors will get a pure-nan median trace here
+            neighbmeans = np.nanmedian(
+                padded_chunk[:, channel_index],
+                axis=2,
+            )
+            denom = np.sqrt(np.nanmean(np.square(chunk), axis=0) * np.nanmean(np.square(neighbmeans), axis=0))
+            denom[denom == 0] = 1
+            # channels with no neighbors will get a nan here
+            chunk_correlations = np.nanmean(chunk * neighbmeans, axis=0) / denom
+            correlations.append(chunk_correlations)
+
+        # now take the median over chunks and threshold to finish
+        median_correlations = np.nanmedian(correlations, 0)
+        r2s = median_correlations ** 2
+        # channels with no neighbors will have r2==nan, and nan<x==False always
+        bad_channel_mask = r2s < neighborhood_r2_threshold
+        bad_channel_ids = recording.channel_ids[bad_channel_mask]
+        channel_labels[bad_channel_mask] = "noise"
 
     return bad_channel_ids, channel_labels
 
