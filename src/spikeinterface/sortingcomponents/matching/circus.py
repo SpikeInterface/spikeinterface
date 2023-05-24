@@ -199,8 +199,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _prepare_templates(cls, d):
-        num_samples = d["num_samples"]
-        num_channels = d["num_channels"]
         templates = d["templates"]
         num_templates = len(templates)
         d["circus_templates"] = d["templates"].data.copy()
@@ -247,7 +245,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d["ignored_ids"] = np.array(d["ignored_ids"])
 
         omp_min_sps = d["omp_min_sps"]
-        d["stop_criteria"] = omp_min_sps * np.sqrt(d["noise_levels"].sum() * d["num_samples"])
+        d["stop_criteria"] = omp_min_sps * np.sqrt(d["noise_levels"].sum() * num_samples)
 
         return d
 
@@ -408,7 +406,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         valid_indices = np.where(is_valid)
 
         num_spikes = len(valid_indices[0])
-        spikes["sample_index"][:num_spikes] = valid_indices[1] + d["nbefore"]
+        spikes["sample_index"][:num_spikes] = valid_indices[1] + nbefore
         spikes["channel_index"][:num_spikes] = 0
         spikes["cluster_index"][:num_spikes] = valid_indices[0]
         spikes["amplitude"][:num_spikes] = final_amplitudes[valid_indices[0], valid_indices[1]]
@@ -478,13 +476,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def _prepare_templates(cls, d):
-        num_samples = d["num_samples"]
-        num_channels = d["num_channels"]
-        num_templates = d["num_templates"]
-        max_amplitude = d["max_amplitude"]
-        min_amplitude = d["min_amplitude"]
-        use_sparse_matrix_threshold = d["use_sparse_matrix_threshold"]
-        d["circus_templates"] = d["templates"].copy()
+        num_templates = d["templates"].num_templates
+        d["circus_templates"] = d["templates"].data.copy()
         d["norms"] = np.zeros(num_templates, dtype=np.float32)
 
         for unit_ind in range(num_templates):
@@ -497,8 +490,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     def _compress_templates(cls, d):
         circus_templates = d.pop("circus_templates")
         num_templates = len(circus_templates)
-        num_samples = d["num_samples"]
-        num_channels = d["num_channels"]
+        num_samples = d["templates"].nsamples
+        num_channels = d["templates"].num_channels
         circus_templates = circus_templates.reshape(num_templates, -1)
 
         nnz = np.sum(circus_templates != 0) / (num_templates * num_samples * num_channels)
@@ -506,7 +499,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             circus_templates = scipy.sparse.csr_matrix(circus_templates)
             d["is_dense"] = False
         else:
-            parameters["is_dense"] = True
+            d["is_dense"] = True
 
         d["circus_templates"] = circus_templates
         return d
@@ -532,100 +525,98 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         )
         return cost
 
-    @classmethod
-    def _optimize_amplitudes(cls, noise_snippets, d):
-        waveform_extractor = d["waveform_extractor"]
-        templates = d["circus_templates"]
-        num_templates = d["num_templates"]
-        max_amplitude = d["max_amplitude"]
-        min_amplitude = d["min_amplitude"]
-        alpha = 0.5
-        norms = parameters["norms"]
-        all_units = list(waveform_extractor.sorting.unit_ids)
+    # @classmethod
+    # def _optimize_amplitudes(cls, noise_snippets, d):
+    #     waveform_extractor = d["waveform_extractor"]
+    #     templates = d["circus_templates"]
+    #     num_templates = d["templates"].num_templates
+    #     max_amplitude = d["max_amplitude"]
+    #     min_amplitude = d["min_amplitude"]
+    #     alpha = 0.5
+    #     norms = d["norms"]
+    #     all_units = list(waveform_extractor.sorting.unit_ids)
 
-        parameters["amplitudes"] = np.zeros((num_templates, 2), dtype=np.float32)
-        noise = templates.dot(noise_snippets) / norms[:, np.newaxis]
+    #     d["amplitudes"] = np.zeros((num_templates, 2), dtype=np.float32)
+    #     noise = templates.dot(noise_snippets) / norms[:, np.newaxis]
 
-        all_amps = {}
-        for count, unit_id in enumerate(all_units):
-            waveform = waveform_extractor.get_waveforms(unit_id)
-            snippets = waveform.reshape(waveform.shape[0], -1).T
-            amps = templates.dot(snippets) / norms[:, np.newaxis]
-            good = amps[count, :].flatten()
+    #     all_amps = {}
+    #     for count, unit_id in enumerate(all_units):
+    #         waveform = waveform_extractor.get_waveforms(unit_id)
+    #         snippets = waveform.reshape(waveform.shape[0], -1).T
+    #         amps = templates.dot(snippets) / norms[:, np.newaxis]
+    #         good = amps[count, :].flatten()
 
-            sub_amps = amps[np.concatenate((np.arange(count), np.arange(count + 1, num_templates))), :]
-            bad = sub_amps[sub_amps >= good]
-            bad = np.concatenate((bad, noise[count]))
-            cost_kwargs = [good, bad, max_amplitude - min_amplitude, alpha]
-            cost_bounds = [(min_amplitude, 1), (1, max_amplitude)]
-            res = scipy.optimize.differential_evolution(cls._cost_function_mcc, bounds=cost_bounds, args=cost_kwargs)
-            parameters["amplitudes"][count] = res.x
+    #         sub_amps = amps[np.concatenate((np.arange(count), np.arange(count + 1, num_templates))), :]
+    #         bad = sub_amps[sub_amps >= good]
+    #         bad = np.concatenate((bad, noise[count]))
+    #         cost_kwargs = [good, bad, max_amplitude - min_amplitude, alpha]
+    #         cost_bounds = [(min_amplitude, 1), (1, max_amplitude)]
+    #         res = scipy.optimize.differential_evolution(cls._cost_function_mcc, bounds=cost_bounds, args=cost_kwargs)
+    #         d["amplitudes"][count] = res.x
 
-        return d
+    #     return d
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
         assert HAVE_SKLEARN, "CircusPeeler needs sklearn to work"
         default_parameters = cls._default_params.copy()
         default_parameters.update(kwargs)
+        d = default_parameters
 
         for v in ["use_sparse_matrix_threshold"]:
             assert (d[v] >= 0) and (d[v] <= 1), f"{v} should be in [0, 1]"
 
-        d["num_channels"] = d["waveform_extractor"].recording.get_num_channels()
-        d["num_samples"] = d["waveform_extractor"].nsamples
-        d["num_templates"] = len(d["templates"])
+        num_channels = d["templates"].num_channels
+        num_samples = d["templates"].nsamples
+        num_templates = d["templates"].num_templates
 
-        default_parameters["num_channels"] = default_parameters["waveform_extractor"].recording.get_num_channels()
-        default_parameters["num_samples"] = default_parameters["waveform_extractor"].nsamples
-        default_parameters["num_templates"] = len(default_parameters["waveform_extractor"].sorting.unit_ids)
-
-        if default_parameters["noise_levels"] is None:
+        if d["noise_levels"] is None:
             print("CircusPeeler : noise should be computed outside")
-            default_parameters["noise_levels"] = get_noise_levels(
-                recording, **default_parameters["random_chunk_kwargs"], return_scaled=False
+            d["noise_levels"] = get_noise_levels(
+                recording, **d["random_chunk_kwargs"], return_scaled=False
             )
 
+        d["abs_threholds"] = d["noise_levels"] * d["detect_threshold"]
+
         d = cls._prepare_templates(d)
-        d["overlaps"] = compute_overlaps(d["circus_templates"], d["num_samples"], d["num_channels"])
+        d["overlaps"] = compute_overlaps(d["circus_templates"], num_samples, num_channels)
         d = cls._compress_templates(d)
 
-        default_parameters = cls._prepare_templates(default_parameters)
-        default_parameters = cls._prepare_overlaps(default_parameters)
-
-        default_parameters["exclude_sweep_size"] = int(
-            default_parameters["exclude_sweep_ms"] * recording.get_sampling_frequency() / 1000.0
+        d["exclude_sweep_size"] = int(
+            d["exclude_sweep_ms"] * recording.get_sampling_frequency() / 1000.0
         )
 
-        default_parameters["nbefore"] = default_parameters["waveform_extractor"].nbefore
-        default_parameters["nafter"] = default_parameters["waveform_extractor"].nafter
-        default_parameters["patch_sizes"] = (
-            default_parameters["waveform_extractor"].nsamples,
-            default_parameters["num_channels"],
+        d["patch_sizes"] = (
+            d["templates"].nsamples,
+            d["templates"].num_channels,
         )
-        default_parameters["sym_patch"] = default_parameters["nbefore"] == default_parameters["nafter"]
-        default_parameters["jitter"] = int(
-            default_parameters["jitter_ms"] * recording.get_sampling_frequency() / 1000.0
+        d["sym_patch"] = d["templates"].nbefore == d["templates"].nafter
+        d["jitter"] = int(
+            d["jitter_ms"] * recording.get_sampling_frequency() / 1000.0
         )
 
-        num_segments = recording.get_num_segments()
-        if default_parameters["waveform_extractor"]._params["max_spikes_per_unit"] is None:
-            num_snippets = 1000
-        else:
-            num_snippets = 2 * default_parameters["waveform_extractor"]._params["max_spikes_per_unit"]
+        d['amplitudes'] = np.zeros((num_templates, 2))
+        d['amplitudes'][:, 0] = d["min_amplitude"]
+        d['amplitudes'][:, 1] = d["max_amplitude"]
 
-        num_chunks = num_snippets // num_segments
-        noise_snippets = get_random_data_chunks(
-            recording, num_chunks_per_segment=num_chunks, chunk_size=default_parameters["num_samples"], seed=42
-        )
-        noise_snippets = (
-            noise_snippets.reshape(num_chunks, default_parameters["num_samples"], default_parameters["num_channels"])
-            .reshape(num_chunks, -1)
-            .T
-        )
-        parameters = cls._optimize_amplitudes(noise_snippets, default_parameters)
+        # num_segments = recording.get_num_segments()
+        # if d["waveform_extractor"]._params["max_spikes_per_unit"] is None:
+        #     num_snippets = 1000
+        # else:
+        #     num_snippets = 2 * d["waveform_extractor"]._params["max_spikes_per_unit"]
 
-        return parameters
+        # num_chunks = num_snippets // num_segments
+        # noise_snippets = get_random_data_chunks(
+        #     recording, num_chunks_per_segment=num_chunks, chunk_size=d["num_samples"], seed=42
+        # )
+        # noise_snippets = (
+        #     noise_snippets.reshape(num_chunks, d["num_samples"], d["num_channels"])
+        #     .reshape(num_chunks, -1)
+        #     .T
+        # )
+        # d = cls._optimize_amplitudes(noise_snippets, d)
+
+        return d
 
     @classmethod
     def unserialize_in_worker(cls, kwargs):
@@ -633,7 +624,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def get_margin(cls, recording, kwargs):
-        margin = 2 * max(kwargs["nbefore"], kwargs["nafter"])
+        templates = kwargs["templates"]
+        margin = 2 * max(templates.nbefore, templates.nafter)
         return margin
 
     @classmethod
@@ -642,14 +634,16 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         abs_threholds = d["abs_threholds"]
         exclude_sweep_size = d["exclude_sweep_size"]
         templates = d["circus_templates"]
-        num_templates = d["num_templates"]
-        num_channels = d["num_channels"]
+        num_templates = d["templates"].num_templates
+        num_channels = d["templates"].num_channels
         overlaps = d["overlaps"]
         margin = d["margin"]
         norms = d["norms"]
         jitter = d["jitter"]
         patch_sizes = d["patch_sizes"]
-        num_samples = d["nafter"] + d["nbefore"]
+        nbefore = d["templates"].nbefore
+        nafter = d["templates"].nafter
+        num_samples = nbefore + nafter
         neighbor_window = num_samples - 1
         amplitudes = d["amplitudes"]
         sym_patch = d["sym_patch"]
@@ -678,7 +672,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             peak_sample_ind += margin // 2
         else:
             peak_sample_ind += margin // 2
-            snippet_window = np.arange(-d["nbefore"], d["nafter"])
+            snippet_window = np.arange(-nbefore, nafter)
             snippets = traces[peak_sample_ind[:, np.newaxis] + snippet_window]
 
         if num_peaks > 0:

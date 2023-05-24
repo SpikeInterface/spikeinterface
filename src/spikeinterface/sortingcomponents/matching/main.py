@@ -17,15 +17,15 @@ class TemplatesDictionary(object):
         self,
         data,
         unit_ids,
-        ms_before,
-        ms_after,
+        nbefore,
+        nafter,
         sparsity_mask=None
     ):
 
-        self.data = data.copy()
+        self.data = data.copy().astype(np.float32, casting="safe")
         self.unit_ids = unit_ids
-        self.ms_before = ms_before
-        self.ms_after = ms_after
+        self.nbefore = nbefore
+        self.nafter = nafter
         if sparsity_mask is None:
             self.sparsity_mask = np.sum(data, axis=(1)) == 0
         else:
@@ -47,6 +47,10 @@ class TemplatesDictionary(object):
         return self.data.shape
 
     @property
+    def num_templates(self):
+        return self.data.shape[0]
+
+    @property
     def num_channels(self):
         return self.data.shape[2]
 
@@ -57,9 +61,90 @@ class TemplatesDictionary(object):
     def __len__(self):
         return len(self.data)
 
-    def get_template_extremum_channel(self, peak_sign='neg', outputs="index"):
-        assert peak_sign in ['neg', 'pos'], "peak_sign should be in ['neg', 'pos']"
-        return 
+    def get_amplitudes(
+        self, 
+        peak_sign: str = "neg", 
+        mode: str = "extremum"
+        ):
+        """
+        Get amplitude per channel for each unit.
+
+        Parameters
+        ----------
+        waveform_extractor: WaveformExtractor
+            The waveform extractor
+        peak_sign: str
+            Sign of the template to compute best channels ('neg', 'pos', 'both')
+        mode: str
+            'extremum':  max or min
+            'at_index': take value at spike index
+
+        Returns
+        -------
+        peak_values: dict
+            Dictionary with unit ids as keys and template amplitudes as values
+        """
+        assert peak_sign in ("both", "neg", "pos")
+        assert mode in ("extremum", "at_index")
+        peak_values = {}
+        for unit_ind, unit_id in enumerate(self.unit_ids):
+            template = self.data[unit_ind]
+
+            if mode == "extremum":
+                if peak_sign == "both":
+                    values = np.max(np.abs(template), axis=0)
+                elif peak_sign == "neg":
+                    values = -np.min(template, axis=0)
+                elif peak_sign == "pos":
+                    values = np.max(template, axis=0)
+            elif mode == "at_index":
+                if peak_sign == "both":
+                    values = np.abs(template[self.nbefore, :])
+                elif peak_sign == "neg":
+                    values = -template[self.before, :]
+                elif peak_sign == "pos":
+                    values = template[self.before, :]
+
+            peak_values[unit_id] = values
+
+        return peak_values
+
+    def get_extremum_channel(
+        self, 
+        peak_sign: str = "neg", 
+        mode: str = "extremum", 
+        ):
+
+        """
+        Compute the channel with the extremum peak for each unit.
+
+        Parameters
+        ----------
+        waveform_extractor: WaveformExtractor
+            The waveform extractor
+        peak_sign: str
+            Sign of the template to compute best channels ('neg', 'pos', 'both')
+        mode: str
+            'extremum':  max or min
+            'at_index': take value at spike index
+
+        Returns
+        -------
+        extremum_channels: dict
+            Dictionary with unit ids as keys and extremum channels (id or index based on 'outputs')
+            as values
+        """
+
+        assert peak_sign in ("both", "neg", "pos")
+        assert mode in ("extremum", "at_index")
+
+        peak_values = self.get_amplitudes(peak_sign=peak_sign, mode=mode)
+        extremum_channels_index = {}
+        for unit_id in self.unit_ids:
+            max_ind = np.argmax(peak_values[unit_id])
+            extremum_channels_index[unit_id] = max_ind
+
+        return extremum_channels_index
 
 
 def create_templates_from_waveform_extractor(waveform_extractor,  mode='median', sparsity=None):
@@ -69,11 +154,11 @@ def create_templates_from_waveform_extractor(waveform_extractor,  mode='median',
     else:
         sparsity_mask = None
 
-    data = waveform_extractor.get_all_templates(mode)
+    data = waveform_extractor.get_all_templates(mode=mode)
     unit_ids = waveform_extractor.unit_ids
-    ms_before = waveform_extractor.ms_before
-    ms_after = waveform_extractor.ms_after
-    return TemplatesDictionary(data, waveform_extractor.unit_ids, ms_before, ms_after, sparsity_mask)
+    nbefore = waveform_extractor.nbefore
+    nafter = waveform_extractor.nafter
+    return TemplatesDictionary(data, waveform_extractor.unit_ids, nbefore, nafter, sparsity_mask)
 
 
 def find_spikes_from_templates(
@@ -129,7 +214,7 @@ def find_spikes_from_templates(
 
     # initialize the templates
     method_kwargs = method_class.initialize_and_sparsify_templates(
-        method_kwargs, waveform_extractor, sparsity, templates
+        method_kwargs, waveform_extractor, sparsity, templates_dictionary
     )
 
     # initialize

@@ -48,23 +48,16 @@ def test_find_spikes_from_templates(method, waveform_extractor):
     waveform = waveform_extractor.get_waveforms("#0")
     num_waveforms, _, _ = waveform.shape
     assert num_waveforms != 0
-    method_kwargs_all = {"waveform_extractor": waveform_extractor, "noise_levels": get_noise_levels(recording)}
-    method_kwargs = {}
-    method_kwargs["wobble"] = {
-        "templates": waveform_extractor.get_all_templates(),
-        "nbefore": waveform_extractor.nbefore,
-        "nafter": waveform_extractor.nafter,
-    }
+    method_kwargs_all = {"noise_levels": get_noise_levels(recording)}
 
     sampling_frequency = recording.get_sampling_frequency()
 
     result = {}
-
-    method_kwargs_ = method_kwargs.get(method, {})
-    method_kwargs_.update(method_kwargs_all)
     spikes = find_spikes_from_templates(
-        recording, method=method, method_kwargs=method_kwargs_, n_jobs=2, chunk_size=1000, progress_bar=True
+        recording, waveform_extractor, method=method, method_kwargs=method_kwargs_all, n_jobs=2, chunk_size=1000, progress_bar=True
     )
+    if method == 'circus':
+        method_kwargs_all['waveform_extractor'] = waveform_extractor
 
     result[method] = NumpySorting.from_times_labels(spikes["sample_index"], spikes["cluster_index"], sampling_frequency)
 

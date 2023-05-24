@@ -228,7 +228,7 @@ class Sparsity:
         sparsity : Sparsity
             Dataclass object for aggregating channel sparsity variables together.
         """
-        visible_channels = np.ptp(templates, axis=1) > params.visibility_threshold
+        visible_channels = np.ptp(templates.data, axis=1) > params.visibility_threshold
         unit_overlap = np.sum(
             np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]), axis=2
         )
@@ -337,7 +337,6 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         d.update(kwargs)
         parameters = d.get("parameters", {})
         templates = d["templates"]
-        templates = templates.astype(np.float32, casting="safe")
 
         # Aggregate useful parameters/variables for handy access in downstream functions
         params = WobbleParameters(**parameters)
@@ -347,14 +346,14 @@ class WobbleMatch(BaseTemplateMatchingEngine):
         )  # TODO: replace with spikeinterface sparsity
 
         # Perform initial computations on templates necessary for computing the objective
-        sparse_templates = np.where(sparsity.visible_channels[:, np.newaxis, :], templates, 0)
+        sparse_templates = np.where(sparsity.visible_channels[:, np.newaxis, :], templates.data, 0)
         temporal, singular, spatial = compress_templates(sparse_templates, params.approx_rank)
         temporal_jittered = upsample_and_jitter(temporal, params.jitter_factor, template_meta.num_samples)
         compressed_templates = (temporal, singular, spatial, temporal_jittered)
         pairwise_convolution = convolve_templates(
             compressed_templates, params.jitter_factor, params.approx_rank, template_meta.jittered_indices, sparsity
         )
-        norm_squared = compute_template_norm(sparsity.visible_channels, templates)
+        norm_squared = compute_template_norm(sparsity.visible_channels, templates.data)
         template_data = TemplateData(
             compressed_templates=compressed_templates,
             pairwise_convolution=pairwise_convolution,
@@ -372,8 +371,6 @@ class WobbleMatch(BaseTemplateMatchingEngine):
     def serialize_method_kwargs(cls, kwargs):
         # This function does nothing without a waveform extractor -- candidate for refactor
         kwargs = dict(kwargs)
-        # remove waveform_extractor
-        kwargs.pop("waveform_extractor")
         return kwargs
 
     @classmethod
@@ -419,7 +416,7 @@ class WobbleMatch(BaseTemplateMatchingEngine):
             Resulting spike train.
         """
         # Unpack method_kwargs
-        nbefore, nafter = method_kwargs["nbefore"], method_kwargs["nafter"]
+        nbefore, nafter = method_kwargs['templates'].nbefore, method_kwargs['templates'].nafter
         template_meta = method_kwargs["template_meta"]
         params = method_kwargs["params"]
         sparsity = method_kwargs["sparsity"]

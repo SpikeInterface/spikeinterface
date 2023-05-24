@@ -3,7 +3,6 @@ import scipy
 from spikeinterface.core import (
     get_noise_levels,
     get_channel_distances,
-    get_template_extremum_channel,
 )
 
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakLocallyExclusive
@@ -96,7 +95,7 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
         channel_distance = get_channel_distances(recording)
         d["neighbours_mask"] = channel_distance < d["local_radius_um"]
 
-        extremum_channel = templates.get_template_extremum_channel(peak_sign=d["peak_sign"], outputs="index")
+        extremum_channel = templates.get_extremum_channel(peak_sign=d["peak_sign"])
         # as numpy vector
         extremum_channel = np.array([extremum_channel[unit_id] for unit_id in unit_ids], dtype="int64")
         d["extremum_channel"] = extremum_channel
@@ -266,7 +265,7 @@ def _tdc_find_spikes(traces, d, level=0):
                     templates.nbefore,
                     possible_shifts,
                     distances_shift,
-                    chan_sparsity,
+                    sparsity_mask,
                 )
                 ind_shift = np.argmin(distances_shift)
                 shift = possible_shifts[ind_shift]
@@ -274,7 +273,7 @@ def _tdc_find_spikes(traces, d, level=0):
                 sample_index = sample_index + shift
                 s0 = sample_index - templates.nbefore
                 s1 = sample_index + templates.nafter
-                wf_sparse = traces[s0:s1, chan_sparsity]
+                wf_sparse = traces[s0:s1, sparsity_mask]
 
                 # accept or not
 
@@ -338,7 +337,7 @@ if HAVE_NUMBA:
         return distances
 
     @jit(nopython=True)
-    def numba_best_shift(traces, template, sample_index, nbefore, possible_shifts, distances_shift, chan_sparsity):
+    def numba_best_shift(traces, template, sample_index, nbefore, possible_shifts, distances_shift, sparsity_mask):
         """
         numba implementation to compute several sample shift before template substraction
         """
@@ -348,7 +347,7 @@ if HAVE_NUMBA:
             shift = possible_shifts[i]
             sum_dist = 0.0
             for chan_ind in range(num_chan):
-                if chan_sparsity[chan_ind]:
+                if sparsity_mask[chan_ind]:
                     for s in range(width):
                         v = traces[sample_index - nbefore + s + shift, chan_ind]
                         t = template[s, chan_ind]

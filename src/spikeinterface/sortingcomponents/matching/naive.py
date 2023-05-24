@@ -56,7 +56,8 @@ class NaiveMatching(BaseTemplateMatchingEngine):
 
         channel_distance = get_channel_distances(recording)
         d["neighbours_mask"] = channel_distance < d["local_radius_um"]
-        d["exclude_sweep_size"] = int(d["exclude_sweep_ms"] * d["sampling_frequency"] / 1000.0)
+        fs = recording.sampling_frequency
+        d["exclude_sweep_size"] = int(d["exclude_sweep_ms"] * fs / 1000.0)
 
         return d
 
