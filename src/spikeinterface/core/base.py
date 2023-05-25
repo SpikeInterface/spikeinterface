@@ -948,7 +948,7 @@ def load_extractor(file_or_folder_or_dict, base_folder=None) -> BaseExtractor:
 
 
 def load_extractor_from_dict(d, base_folder=None) -> BaseExtractor:
-    print("Use load_extractor(..) instead")
+    warnings.warn("Use load_extractor(..) instead")
     return BaseExtractor.from_dict(d, base_folder=base_folder)
 
 
