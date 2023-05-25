@@ -129,7 +129,7 @@ class CBinIblRecordingSegment(BaseRecordingSegment):
         if not self._load_sync_channel:
             traces = traces[:, :-1]
 
-        return traces
+        return traces[:, channel_indices]
 
 
 read_cbin_ibl = define_function_from_class(source_class=CompressedBinaryIblExtractor, name="read_cbin_ibl")
