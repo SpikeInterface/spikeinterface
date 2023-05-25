@@ -49,8 +49,7 @@ class TemplatesDictionary(object):
             self.sparsity_mask = sparsity_mask
 
         for i in range(len(self.data)):
-            active_channels = self.sparsity_mask[i]
-            self.data[i][:, ~active_channels] = 0
+            self.data[i][:, ~self.sparsity_mask[i]] = 0
 
     def __getitem__(self, template_id):
         return self.data[template_id]

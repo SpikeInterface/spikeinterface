@@ -235,6 +235,10 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         num_samples = d["templates"].nsamples
         d["sampling_frequency"] = recording.get_sampling_frequency()
 
+        if d["noise_levels"] is None:
+            print("CircusPeeler : noise should be computed outside")
+            d["noise_levels"] = get_noise_levels(recording, **d["random_chunk_kwargs"], return_scaled=False)
+
         d = cls._prepare_templates(d)
 
         if d["overlaps"] is None:
