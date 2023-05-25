@@ -243,7 +243,7 @@ def detect_bad_channels(
         # note that we did not concatenate the chunks here
         correlations = []
         for chunk in random_data:
-            chunk = chunk.astype(np.float32)
+            chunk = chunk.astype(np.float32, copy=False)
             chunk = chunk - np.median(chunk, axis=0, keepdims=True)
             padded_chunk = np.pad(chunk, [(0, 0), (0, 1)], constant_values=np.nan)
             # channels with no neighbors will get a pure-nan median trace here
