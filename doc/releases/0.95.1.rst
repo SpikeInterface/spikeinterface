@@ -7,7 +7,7 @@ SpikeInterface 0.95.1 release notes
 
 
 Minor change:
- 
-widgets: 
+
+widgets:
   * Fix creation of 2D axes when figure is passed (https://github.com/SpikeInterface/spikeinterface/pull/926)
   * Add check for matplotlib backend when using ipywidgets (https://github.com/SpikeInterface/spikeinterface/pull/927)

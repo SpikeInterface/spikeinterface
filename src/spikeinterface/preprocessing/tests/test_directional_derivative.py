@@ -55,5 +55,5 @@ def test_directional_derivative():
     assert (traces == 0).all()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_directional_derivative()

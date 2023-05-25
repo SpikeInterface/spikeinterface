@@ -106,7 +106,7 @@ if __name__ == '__main__':
         except:
             done = '...Fail'
         print(label, done)
-        
+
     if platform.system() == "Windows":
         pass
     else:
