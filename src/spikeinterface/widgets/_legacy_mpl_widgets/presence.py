@@ -33,9 +33,6 @@ class PresenceWidget(BaseWidget):
     def __init__(
         self, sorting, segment_index=None, unit_ids=None, time_range=None, figure=None, time_pixels=200, ax=None
     ):
-        from matplotlib import pyplot as plt
-        from scipy.stats import gaussian_kde
-
         BaseWidget.__init__(self, figure, ax)
         self._sorting = sorting
         self._time_pixels = time_pixels
@@ -70,6 +67,9 @@ class PresenceWidget(BaseWidget):
         self._do_plot()
 
     def _do_plot(self):
+        import matplotlib.pyplot as plt
+        from scipy.stats import gaussian_kde
+
         units_ids = self._unit_ids
         if units_ids is None:
             units_ids = self._sorting.get_unit_ids()
