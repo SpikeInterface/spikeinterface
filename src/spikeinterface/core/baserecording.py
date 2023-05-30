@@ -618,6 +618,11 @@ class BaseRecording(BaseRecordingSnippets):
         # good job you pass all crucible
         return True
 
+    def astype(self, dtype):
+        from ..preprocessing.astype import astype
+
+        return astype(self, dtype=dtype)
+
 
 class BaseRecordingSegment(BaseSegment):
     """
