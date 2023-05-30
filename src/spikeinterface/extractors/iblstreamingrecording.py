@@ -9,14 +9,6 @@ import probeinterface as pi
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-try:
-    import brainbox
-    from one.api import ONE
-
-    HAVE_BRAINBOX_ONE = True
-except ModuleNotFoundError:
-    HAVE_BRAINBOX_ONE = False
-
 
 class IblStreamingRecordingExtractor(BaseRecording):
     """
@@ -57,7 +49,6 @@ class IblStreamingRecordingExtractor(BaseRecording):
 
     extractor_name = "IblStreamingRecording"
     has_default_locations = True
-    installed = HAVE_BRAINBOX_ONE
     mode = "folder"
     installation_mesg = "To use the IblStreamingRecordingSegment, install ONE-api and ibllib: \n\n pip install ONE-api\npip install ibllib\n"
     name = "ibl_streaming_recording"
@@ -85,7 +76,10 @@ class IblStreamingRecordingExtractor(BaseRecording):
         stream_names : list of str
             List of stream names as expected by the `stream_name` argument for the class initialization.
         """
-        assert HAVE_BRAINBOX_ONE, cls.installation_mesg
+        try:
+            from one.api import ONE
+        except ImportError:
+            raise ImportError(IblStreamingRecordingExtractor.installation_mesg)
 
         cache_folder = Path(cache_folder) if cache_folder is not None else cache_folder
         one = ONE(
@@ -119,10 +113,12 @@ class IblStreamingRecordingExtractor(BaseRecording):
         cache_folder: Optional[Union[Path, str]] = None,
         remove_cached: bool = True,
     ):
-        assert HAVE_BRAINBOX_ONE, self.installation_mesg
+        try:
+            from brainbox.io.spikeglx import Streamer
+            from one.api import ONE
+        except ImportError:
+            raise ImportError(self.installation_mesg)
 
-        from brainbox.io.spikeglx import Streamer
-        from one.api import ONE
         from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
 
         cache_folder = Path(cache_folder) if cache_folder is not None else cache_folder

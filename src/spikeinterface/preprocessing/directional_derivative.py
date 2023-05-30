@@ -13,7 +13,7 @@ class DirectionalDerivativeRecording(BasePreprocessor):
         recording: BaseRecording,
         direction: str = "y",
         order: int = 1,
-        edge_order: int = 2,
+        edge_order: int = 1,
         dtype="float32",
     ):
         """Take derivative of any `order` along `direction`
