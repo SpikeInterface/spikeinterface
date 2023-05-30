@@ -404,6 +404,7 @@ class BaseExtractor:
         Clones an existing extractor into a new instance.
         """
         d = self.to_dict(include_annotations=True, include_properties=True)
+        d = deepcopy(d)
         clone = BaseExtractor.from_dict(d)
         return clone
 
