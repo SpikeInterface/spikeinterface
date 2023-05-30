@@ -278,7 +278,12 @@ class BaseExtractor:
             other._preferred_mp_context = self._preferred_mp_context
 
     def to_dict(
-        self, include_annotations=False, include_properties=False, relative_to=None, folder_metadata=None
+        self,
+        include_annotations=False,
+        include_properties=False,
+        relative_to=None,
+        folder_metadata=None,
+        recursive=False,
     ) -> dict:
         """
         Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize
@@ -292,29 +297,43 @@ class BaseExtractor:
             If True, all properties are added to the dict, by default False
         relative_to: str, Path, or None
             If not None, file_paths are serialized relative to this path, by default None
+            Used in waveform extractor to maintain relative paths to binary files even if the
+            containing folder / diretory is moved
+        folder_metadata: str, Path, or None
+            Folder with numpy `npy` files containing additional information (e.g. probe in BaseRecording) and properties.
+        recursive: bool
+            If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
+            This is done for backward compatibility with older versions of spikeinterface and to keep it here in case
+            a yet to be discovered use case requires it.
 
         Returns
         -------
         dump_dict: dict
-            Serialized dictionary
+            A dictionary representation of the extractor.
         """
-        to_dict_kwargs = dict(
-            include_annotations=include_annotations,
-            include_properties=include_properties,
-            relative_to=relative_to,
-            folder_metadata=folder_metadata,
-        )
 
-        new_kwargs = dict()
-        transform_extractors_to_dict = lambda x: x.to_dict(**to_dict_kwargs) if isinstance(x, BaseExtractor) else x
-        for name, value in self._kwargs.items():
-            if isinstance(value, list):
-                new_kwargs[name] = [transform_extractors_to_dict(element) for element in value]
-            elif isinstance(value, dict):
-                new_kwargs[name] = {k: transform_extractors_to_dict(v) for k, v in value.items()}
-            else:
-                new_kwargs[name] = transform_extractors_to_dict(value)
+        kwargs = self._kwargs
 
+        if recursive:
+            to_dict_kwargs = dict(
+                include_annotations=include_annotations,
+                include_properties=include_properties,
+                relative_to=relative_to,
+                folder_metadata=folder_metadata,
+            )
+
+            new_kwargs = dict()
+            transform_extractors_to_dict = lambda x: x.to_dict(**to_dict_kwargs) if isinstance(x, BaseExtractor) else x
+
+            for name, value in self._kwargs.items():
+                if isinstance(value, list):
+                    new_kwargs[name] = [transform_extractors_to_dict(element) for element in value]
+                elif isinstance(value, dict):
+                    new_kwargs[name] = {k: transform_extractors_to_dict(v) for k, v in value.items()}
+                else:
+                    new_kwargs[name] = transform_extractors_to_dict(value)
+
+            kwargs = new_kwargs
         class_name = str(type(self)).replace("<class '", "").replace("'>", "")
         module = class_name.split(".")[0]
         imported_module = importlib.import_module(module)
@@ -327,7 +346,7 @@ class BaseExtractor:
         dump_dict = {
             "class": class_name,
             "module": module,
-            "kwargs": new_kwargs,
+            "kwargs": kwargs,
             "dumpable": self.is_dumpable,
             "version": version,
             "relative_paths": (relative_to is not None),
