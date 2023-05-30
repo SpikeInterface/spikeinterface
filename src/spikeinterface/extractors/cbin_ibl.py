@@ -124,6 +124,8 @@ class CBinIblRecordingSegment(BaseRecordingSegment):
             start_frame = 0
         if end_frame is None:
             end_frame = self.get_num_samples()
+        if channel_indices is None:
+            channel_indices = slice(None)
 
         traces = self._cbuffer[start_frame:end_frame]
         if not self._load_sync_channel:
