@@ -13,4 +13,6 @@ dependencies:
     - MEArec>=1.7.1
     - hdbscan
     - numba
+    - git+https://github.com/NeuralEnsemble/python-neo.git
+    - git+https://github.com/SpikeInterface/probeinterface.git
     - git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full,widgets]
