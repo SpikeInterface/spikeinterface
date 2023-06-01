@@ -105,6 +105,7 @@ class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ["neuroscope"]
     entities = [
         "neuroscope/test1/test1.xml",
+        ("neuroscope/test2/signal1.dat", {"xml_file_path": local_folder / "neuroscope" / "test2" / "recording.xml"}),
     ]
 
 
