@@ -273,14 +273,17 @@ Template matching is the final step used in many sorters (Kilosort, SpyKING-Circ
 In this step, from a given catalogue (or dictionary) of templates (or atoms), the algorithms try to *explain* the
 traces as a linear sum of a template plus a residual noise.
 
-At the moment, there are four methods implemented:
+At the moment, there are five methods implemented:
 
   * 'naive': a very naive implemenation used as a reference for benchmarks
   * 'tridesclous': the algorithm for template matching implemented in Tridesclous
   * 'circus': the algorithm for template matching implemented in SpyKING-Circus
   * 'circus-omp': a updated algorithm similar to SpyKING-Circus but with OMP (orthogonal macthing
     pursuit)
+  * 'wobble' : an algorithm loosely based on YASS that scales template amplitudes and shifts them in time
+    to match detected spikes
 
-Very preliminary benchmarks suggest that:
- * 'circus-omp' is the most accurate, but a bit slow.
- * 'tridesclous' is the fastest and has very decent accuracy
+Preliminary benchmarks suggest that:
+ * 'circus-omp' is very accurate, but a bit slow.
+ * 'tridesclous' is the fastest with decent accuracy
+ * 'wobble' is much faster and a bit more accurate than 'circus-omp'
