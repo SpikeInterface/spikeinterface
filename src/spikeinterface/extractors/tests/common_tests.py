@@ -29,6 +29,7 @@ class RecordingCommonTestSuite(CommonTestSuite):
 
     def test_open(self):
         for entity in self.entities:
+            kwargs = {}
             if isinstance(entity, tuple):
                 path, kwargs = entity
             elif isinstance(entity, str):
@@ -37,13 +38,6 @@ class RecordingCommonTestSuite(CommonTestSuite):
 
             # test streams and blocks retrieval
             full_path = self.get_full_path(path)
-
-            extractor_name = self.ExtractorClass.name
-            print(f"Extractor name {extractor_name} - path {full_path}")
-            nblocks = get_neo_num_blocks(extractor_name, full_path)
-            stream_names, stream_ids = get_neo_streams(extractor_name, full_path)
-
-            print(f"Num blocks: {nblocks}, Stream names: {stream_names}, Stream IDs: {stream_ids}")
 
             rec = self.ExtractorClass(full_path, **kwargs)
 

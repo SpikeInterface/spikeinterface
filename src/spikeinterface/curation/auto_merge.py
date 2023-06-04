@@ -24,6 +24,7 @@ def get_potential_auto_merge(
     sigma_smooth_ms: float = 0.6,
     contamination_threshold: float = 0.2,
     adaptative_window_threshold: float = 0.5,
+    censor_correlograms_ms: float = 0.15,
     num_channels: int = 5,
     num_shift: int = 5,
     firing_contamination_balance: float = 1.5,
@@ -85,6 +86,8 @@ def get_potential_auto_merge(
         Threshold for not taking in account a unit when it is too contaminated, by default 0.2
     adaptative_window_threshold:: float
         Parameter to detect the window size in correlogram estimation, by default 0.5
+    censor_correlograms_ms: float
+        The period to censor on the auto and cross-correlograms, by default 0.15 ms
     num_channels: int
         Number of channel to use for template similarity computation, by default 5
     num_shift: int
@@ -173,6 +176,8 @@ def get_potential_auto_merge(
     # STEP 4 : potential auto merge by correlogram
     if "correlogram" in steps:
         correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba")
+        mask = (bins[:-1] >= -censor_correlograms_ms) & (bins[:-1] < censor_correlograms_ms)
+        correlograms[:, :, mask] = 0
         correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
         # find correlogram window for each units
         win_sizes = np.zeros(n, dtype=int)
