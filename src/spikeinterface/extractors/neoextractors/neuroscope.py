@@ -30,7 +30,9 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     Parameters
     ----------
     file_path: str
-        The file path to load the recordings from.
+        The file path to the binary container usually a .dat, .lfp, .eeg extension.
+    xml_file_path: str, optional
+        The path to the xml file. If None, the xml file is assumed to have the same name as the binary file.
     stream_id: str, optional
         If there are several streams, specify the stream id you want to load.
     stream_name: str, optional
@@ -43,16 +45,25 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     NeoRawIOClass = "NeuroScopeRawIO"
     name = "neuroscope"
 
-    def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
-        neo_kwargs = self.map_to_neo_kwargs(file_path)
+    def __init__(self, file_path, xml_file_path=None, stream_id=None, stream_name=None, all_annotations=False):
+        neo_kwargs = self.map_to_neo_kwargs(file_path, xml_file_path)
+
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update(dict(file_path=str(file_path)))
+        self._kwargs.update(dict(file_path=str(file_path), xml_file_path=xml_file_path))
 
     @classmethod
-    def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(file_path)}
+    def map_to_neo_kwargs(cls, file_path, xml_file_path=None):
+        # For this because of backwards compatibility we have a strange convention
+        # filename is the xml file
+        # binary_file is the binary file in .dat, .lfp, .eeg
+
+        if xml_file_path is not None:
+            neo_kwargs = {"binary_file": file_path, "filename": xml_file_path}
+        else:
+            neo_kwargs = {"filename": file_path}
+
         return neo_kwargs
 
 

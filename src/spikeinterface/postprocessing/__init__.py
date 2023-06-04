@@ -20,7 +20,10 @@ from .template_similarity import (
     check_equal_template_with_distribution_overlap,
 )
 
-from .principal_component import WaveformPrincipalComponent, compute_principal_components
+from .principal_component import (
+    WaveformPrincipalComponent,
+    compute_principal_components,
+)
 
 from .spike_amplitudes import compute_spike_amplitudes, SpikeAmplitudesCalculator
 
@@ -44,7 +47,13 @@ from .isi import (
 
 from .spike_locations import compute_spike_locations, SpikeLocationsCalculator
 
-from .unit_localization import compute_unit_locations, UnitLocationsCalculator, compute_center_of_mass
+from .unit_localization import (
+    compute_unit_locations,
+    UnitLocationsCalculator,
+    compute_center_of_mass,
+)
+
+from .amplitude_scalings import compute_amplitude_scalings, AmplitudeScalingsCalculator
 
 from .alignsorting import align_sorting, AlignSortingExtractor
 

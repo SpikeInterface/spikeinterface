@@ -16,9 +16,7 @@ class UnitTemplatesPlotter(SortingviewPlotter):
         unit_id_to_channel_ids = dp.sparsity.unit_id_to_channel_ids
         unit_id_to_channel_indices = dp.sparsity.unit_id_to_channel_indices
 
-        unit_ids, channel_ids, unit_id_to_channel_ids = self.make_serializable(
-            dp.unit_ids, dp.channel_ids, unit_id_to_channel_ids
-        )
+        unit_ids, channel_ids = self.make_serializable(dp.unit_ids, dp.channel_ids)
 
         templates_dict = {}
         for u_i, unit in enumerate(unit_ids):
