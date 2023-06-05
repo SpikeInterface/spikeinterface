@@ -160,7 +160,7 @@ def get_potential_auto_merge(
         "unit_positions" in steps
     ):  # If waveform extractor was not run, run it with few spikes for rough location estimation.
         if not we.was_run:
-            p = we._params
+            p = we._params.copy()
             p["max_spikes_per_unit"] = 100
             we1 = extract_waveforms(we.recording, sorting, mode="memory", **p)
         else:
