@@ -127,7 +127,7 @@ class MergeUnitsSorting(BaseSorting):
         self._kwargs = dict(
             parent_sorting=parent_sorting,
             units_to_merge=units_to_merge,
-            new_unit_id=new_unit_ids,
+            new_unit_ids=new_unit_ids,
             properties_policy=properties_policy,
             delta_time_ms=delta_time_ms,
         )

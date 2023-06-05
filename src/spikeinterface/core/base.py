@@ -278,7 +278,12 @@ class BaseExtractor:
             other._preferred_mp_context = self._preferred_mp_context
 
     def to_dict(
-        self, include_annotations=False, include_properties=False, relative_to=None, folder_metadata=None
+        self,
+        include_annotations=False,
+        include_properties=False,
+        relative_to=None,
+        folder_metadata=None,
+        recursive=False,
     ) -> dict:
         """
         Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize
@@ -292,12 +297,43 @@ class BaseExtractor:
             If True, all properties are added to the dict, by default False
         relative_to: str, Path, or None
             If not None, file_paths are serialized relative to this path, by default None
+            Used in waveform extractor to maintain relative paths to binary files even if the
+            containing folder / diretory is moved
+        folder_metadata: str, Path, or None
+            Folder with numpy `npy` files containing additional information (e.g. probe in BaseRecording) and properties.
+        recursive: bool
+            If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
+            This is done for backward compatibility with older versions of spikeinterface and to keep it here in case
+            a yet to be discovered use case requires it.
 
         Returns
         -------
         dump_dict: dict
-            Serialized dictionary
+            A dictionary representation of the extractor.
         """
+
+        kwargs = self._kwargs
+
+        if recursive:
+            to_dict_kwargs = dict(
+                include_annotations=include_annotations,
+                include_properties=include_properties,
+                relative_to=relative_to,
+                folder_metadata=folder_metadata,
+            )
+
+            new_kwargs = dict()
+            transform_extractors_to_dict = lambda x: x.to_dict(**to_dict_kwargs) if isinstance(x, BaseExtractor) else x
+
+            for name, value in self._kwargs.items():
+                if isinstance(value, list):
+                    new_kwargs[name] = [transform_extractors_to_dict(element) for element in value]
+                elif isinstance(value, dict):
+                    new_kwargs[name] = {k: transform_extractors_to_dict(v) for k, v in value.items()}
+                else:
+                    new_kwargs[name] = transform_extractors_to_dict(value)
+
+            kwargs = new_kwargs
         class_name = str(type(self)).replace("<class '", "").replace("'>", "")
         module = class_name.split(".")[0]
         imported_module = importlib.import_module(module)
@@ -310,7 +346,7 @@ class BaseExtractor:
         dump_dict = {
             "class": class_name,
             "module": module,
-            "kwargs": self._kwargs,
+            "kwargs": kwargs,
             "dumpable": self.is_dumpable,
             "version": version,
             "relative_paths": (relative_to is not None),
@@ -404,6 +440,7 @@ class BaseExtractor:
         Clones an existing extractor into a new instance.
         """
         d = self.to_dict(include_annotations=True, include_properties=True)
+        d = deepcopy(d)
         clone = BaseExtractor.from_dict(d)
         return clone
 
@@ -836,41 +873,62 @@ def _check_if_dumpable(d):
         return d["dumpable"]
 
 
-def _load_extractor_from_dict(dic):
-    cls = None
+def _load_extractor_from_dict(dic) -> BaseExtractor:
+    """
+    Convert a dictionary into an instance of BaseExtractor or its subclass.
+
+    This function takes a dictionary that represents the state of an extractor,
+    and reconstructs the extractor from the dictionary.
+
+    Parameters
+    ----------
+    dic : dict
+        A dictionary representation of the extractor which  must contain the following keys:
+        - "kwargs": A dictionary of keyword arguments to be passed to the extractor class upon instantiation.
+        - "class": The full name of the extractor class, including the module name.
+        - "version": The version of the extractor class used when the dictionary was created.
+        - "annotations": A dictionary of annotations.
+        - "properties": A dictionary of properties.
+
+    Returns
+    -------
+    BaseExtractor
+        An instance of BaseExtractor or its subclass.
+    """
+    extractor_class = None
     class_name = None
 
     if "kwargs" not in dic:
         raise Exception(f"This dict cannot be load into extractor {dic}")
-    kwargs = deepcopy(dic["kwargs"])
 
-    # handle nested
-    for k, v in kwargs.items():
-        if isinstance(v, dict) and is_dict_extractor(v):
-            kwargs[k] = _load_extractor_from_dict(v)
-
-            # handle list of extractors list
-    for k, v in kwargs.items():
-        if isinstance(v, list):
-            if all(is_dict_extractor(e) for e in v):
-                kwargs[k] = [_load_extractor_from_dict(e) for e in v]
+    # Create new kwargs to avoid modifying the original dict["kwargs"]
+    new_kwargs = dict()
+    transform_dict_to_extractor = lambda x: _load_extractor_from_dict(x) if is_dict_extractor(x) else x
+    for name, value in dic["kwargs"].items():
+        if is_dict_extractor(value):
+            new_kwargs[name] = _load_extractor_from_dict(value)
+        elif isinstance(value, dict):
+            new_kwargs[name] = {k: transform_dict_to_extractor(v) for k, v in value.items()}
+        elif isinstance(value, list):
+            new_kwargs[name] = [transform_dict_to_extractor(e) for e in value]
+        else:
+            new_kwargs[name] = value
 
     class_name = dic["class"]
-    cls = _get_class_from_string(class_name)
+    extractor_class = _get_class_from_string(class_name)
 
-    assert cls is not None and class_name is not None, "Could not load spikeinterface class"
+    assert extractor_class is not None and class_name is not None, "Could not load spikeinterface class"
     if not _check_same_version(class_name, dic["version"]):
         warnings.warn(
             f"Versions are not the same. This might lead compatibility errors. "
             f"Using {class_name.split('.')[0]}=={dic['version']} is recommended"
         )
 
-    # instantiate extrator object
-    extractor = cls(**kwargs)
+    # Initialize the extractor
+    extractor = extractor_class(**new_kwargs)
 
     extractor._annotations.update(dic["annotations"])
     for k, v in dic["properties"].items():
-        # print(k, v)
         extractor.set_property(k, v)
 
     return extractor
@@ -902,7 +960,7 @@ def _check_same_version(class_string, version):
         return "unknown"
 
 
-def load_extractor(file_or_folder_or_dict, base_folder=None):
+def load_extractor(file_or_folder_or_dict, base_folder=None) -> BaseExtractor:
     """
     Instantiate extractor from:
       * a dict
@@ -926,8 +984,8 @@ def load_extractor(file_or_folder_or_dict, base_folder=None):
         return BaseExtractor.load(file_or_folder_or_dict, base_folder=base_folder)
 
 
-def load_extractor_from_dict(d, base_folder=None):
-    print("Use load_extractor(..) instead")
+def load_extractor_from_dict(d, base_folder=None) -> BaseExtractor:
+    warnings.warn("Use load_extractor(..) instead")
     return BaseExtractor.from_dict(d, base_folder=base_folder)
 
 

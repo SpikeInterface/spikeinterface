@@ -222,6 +222,11 @@ def test_BaseRecording():
     )
     assert np.allclose(rec_u.get_traces(cast_unsigned=True), rec_i.get_traces().astype("float"))
 
+    # test cast with dtype
+    rec_float32 = rec_int16.astype("float32")
+    assert rec_float32.get_dtype() == "float32"
+    assert np.dtype(rec_float32.get_traces().dtype) == np.float32
+
     # test with t_start
     rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype, t_starts=np.arange(num_seg) * 10.0)
     times1 = rec.get_times(1)
