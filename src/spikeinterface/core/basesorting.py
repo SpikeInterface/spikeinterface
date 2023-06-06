@@ -451,7 +451,6 @@ class BaseSorting(BaseExtractor):
                     spikes_in_seg["channel_index"] = ext_channel_inds[spikes_in_seg["unit_index"]]
                 spikes.append(spikes_in_seg)
 
-
             if concatenated:
                 spikes = np.concatenate(spikes)
 
