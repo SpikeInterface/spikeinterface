@@ -348,7 +348,7 @@ class NumpySortingSegment(BaseSortingSegment):
 class SharedMemmorySorting(BaseSorting):
     def __init__(self, shm_name, shape, sampling_frequency, unit_ids, dtype=minimum_spike_dtype):
         assert len(shape) == 1
-        assert shape[0] > 0, 'SharedMemmorySorting only supported with no empty sorting'
+        assert shape[0] > 0, "SharedMemmorySorting only supported with no empty sorting"
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.is_dumpable = True
@@ -363,27 +363,27 @@ class SharedMemmorySorting(BaseSorting):
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = self.shm_spikes
 
-        self._kwargs = dict(shm_name=shm_name, shape=shape, 
-                            sampling_frequency=sampling_frequency, unit_ids=unit_ids)
+        self._kwargs = dict(shm_name=shm_name, shape=shape, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
     def __del__(self):
-        # this try to avoid 
+        # this try to avoid
         # "UserWarning: resource_tracker: There appear to be 1 leaked shared_memory objects to clean up at shutdown"
         # But still nedd investigation because do not work
-        print('__del__')
+        print("__del__")
         self._segments = None
         self.shm_spikes = None
         self.shm.close()
         self.shm = None
-        print('after __del__')
+        print("after __del__")
 
     @staticmethod
     def from_sorting(source_sorting):
         spikes = source_sorting.to_spike_vector()
         shm_spikes, shm = make_shared_array(spikes.shape, spikes.dtype)
         shm_spikes[:] = spikes
-        sorting = SharedMemmorySorting(shm.name, spikes.shape, source_sorting.get_sampling_frequency(),
-                                       source_sorting.unit_ids, dtype=spikes.dtype)
+        sorting = SharedMemmorySorting(
+            shm.name, spikes.shape, source_sorting.get_sampling_frequency(), source_sorting.unit_ids, dtype=spikes.dtype
+        )
         shm.close()
         return sorting
 

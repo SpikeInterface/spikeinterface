@@ -66,12 +66,11 @@ def test_NumpySorting():
     # TODO some test on caching
 
 
-
 def test_SharedMemmorySorting():
     sampling_frequency = 30000
-    unit_ids = ['a', 'b', 'c']
+    unit_ids = ["a", "b", "c"]
     spikes = np.zeros(100, dtype=minimum_spike_dtype)
-    spikes["sample_index"][:] = np.arange(0, 1000, 10, dtype='int64')
+    spikes["sample_index"][:] = np.arange(0, 1000, 10, dtype="int64")
     spikes["unit_index"][0::3] = 0
     spikes["unit_index"][1::3] = 1
     spikes["unit_index"][2::3] = 2
@@ -79,28 +78,23 @@ def test_SharedMemmorySorting():
     print(np_sorting)
 
     sorting = SharedMemmorySorting.from_sorting(np_sorting)
-    # print(sorting)
+    # print(sorting)
     assert sorting._cached_spike_vector is not None
 
     print(sorting.to_spike_vector())
     d = sorting.to_dict()
 
     sorting_reload = load_extractor(d)
-    # print(sorting_reload)
+    # print(sorting_reload)
     print(sorting_reload.to_spike_vector())
 
     assert sorting.shm.name == sorting_reload.shm.name
-    
-    # this try to avoid 
+
+    # this try to avoid
     # "UserWarning: resource_tracker: There appear to be 1 leaked shared_memory objects to clean up at shutdown"
     # But still need investigation because do not work
     del sorting_reload
     del sorting
-
-
-
-
-
 
 
 def test_NumpyEvent():
