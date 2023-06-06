@@ -1,4 +1,5 @@
 import platform
+from multiprocessing.shared_memory import SharedMemory
 from pathlib import Path
 
 import pytest
@@ -7,13 +8,6 @@ import numpy as np
 from spikeinterface.core.core_tools import write_binary_recording, write_memory_recording, recursive_path_modifier
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
 from spikeinterface.core.generate import GeneratorRecording
-
-try:
-    from multiprocessing.shared_memory import SharedMemory
-
-    HAVE_SHAREDMEMORY = True
-except:
-    HAVE_SHAREDMEMORY = False
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -144,7 +138,7 @@ def test_write_memory_recording():
 
     write_memory_recording(recording, dtype=None, verbose=True, n_jobs=1, chunk_memory="100k", progress_bar=True)
 
-    if HAVE_SHAREDMEMORY and platform.system() != "Windows":
+    if platform.system() != "Windows":
         # write parrallel
         write_memory_recording(recording, dtype=None, verbose=False, n_jobs=2, chunk_memory="100k")
 
