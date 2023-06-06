@@ -75,7 +75,6 @@ class MdaRecordingExtractor(BaseRecording):
         raw_fname="raw.mda",
         params_fname="params.json",
         geom_fname="geom.csv",
-        verbose=True,
         dtype=None,
         **job_kwargs,
     ):
@@ -98,8 +97,6 @@ class MdaRecordingExtractor(BaseRecording):
             File name of geom file. Defaults to 'geom.csv'.
         dtype: dtype
             Data type to be used. If None dtype is same as recording traces.
-        verbose: bool
-            If True, output is verbose.
         **job_kwargs:
             Use by job_tools modules to set:
 
@@ -136,7 +133,6 @@ class MdaRecordingExtractor(BaseRecording):
             file_paths=save_file_path,
             dtype=dtype,
             byte_offset=header_size,
-            verbose=verbose,
             add_file_extension=False,
             **job_kwargs,
         )
