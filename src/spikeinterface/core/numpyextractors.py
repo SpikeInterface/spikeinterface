@@ -10,6 +10,9 @@ from spikeinterface.core import (
     BaseSnippetsSegment,
 )
 from .basesorting import minimum_spike_dtype
+from .core_tools import make_shared_array
+
+from multiprocessing.shared_memory import SharedMemory
 
 from typing import List, Union
 
@@ -340,6 +343,27 @@ class NumpySortingSegment(BaseSortingSegment):
         if end_frame is not None:
             times = times[times < end_frame]
         return times
+
+
+# class SharedMemmorySorting(BaseSorting):
+#     def __init__(self, shm_name, shape, dtype=minimum_spike_dtype):
+
+#         shm = SharedMemory(shm_name)
+#         arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+
+
+    
+
+#     for segment_index in range(nseg):
+#         self.add_sorting_segment(NumpySortingSegment(spikes, segment_index, unit_ids))
+
+#     @staticmethod
+#     def from_sorting(source_sorting: BaseSorting) -> "SharedMemmorySorting":
+
+#         make_shared_array(shape, dtype)
+
+
+
 
 
 class NumpyEvent(BaseEvent):
