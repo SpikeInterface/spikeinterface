@@ -308,7 +308,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         file_path = Path(file_path)
 
         spikes = sorting.to_spike_vector(concatenated=False)
-        # This is the first segment only
+        # This is the first segment only
         spikes = spikes[0]
         spike_times = spikes["sample_index"]
         spike_labels = spikes["unit_index"]

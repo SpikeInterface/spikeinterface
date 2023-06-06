@@ -413,7 +413,6 @@ class BaseSorting(BaseExtractor):
                 spikes["unit_index"] = self._cached_spike_vector["unit_index"]
                 spikes["segment_index"] = self._cached_spike_vector["segment_index"]
                 if extremum_channel_inds is not None:
-                    
                     spikes["channel_index"] = ext_channel_inds[spikes["unit_index"]]
 
             if not concatenated:
