@@ -131,7 +131,7 @@ class NumpySorting(BaseSorting):
 
         for segment_index in range(nseg):
             self.add_sorting_segment(NumpySortingSegment(spikes, segment_index, unit_ids))
-        
+
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = spikes
 
