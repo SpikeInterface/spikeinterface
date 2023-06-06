@@ -16,7 +16,14 @@ function kilosort3_master(fpath, kilosortPath)
         % Load the configuration file, it builds the structure of options (ops)
         load(fullfile(fpath, 'ops.mat'));
 
-        if ops.skip_kilosort_preprocessing
+        % NEW STEP TO SKIP KS PREPROCESSING
+        if isfield(ops, 'skip_kilosort_preprocessing')
+            skip_kilosort_preprocessing = ops.skip_kilosort_preprocessing;
+        else
+            skip_kilosort_preprocessing = 0;
+        end
+
+        if skip_kilosort_preprocessing
             % hack to skip the internal preprocessing
             % this mimic the preprocessDataSub() function
             fprintf("SKIP kilosort2.5 preprocessing\n");
@@ -96,8 +103,14 @@ function kilosort3_master(fpath, kilosortPath)
             writeNPY(rez.dshift, fullfile(fpath, 'motion.npy'))
         end
 
+        % NEW STEP TO SAVE REZ TO MAT
+        if isfield(ops, 'save_rez_to_mat')
+            save_rez_to_mat = ops.save_rez_to_mat;
+        else
+            save_rez_to_mat = 0;
+        end
         % save rez
-        if ops.save_rez_to_mat
+        if save_rez_to_mat
             save(fullfile(fpath, 'rez.mat'), 'rez', '-v7')
         end
 
