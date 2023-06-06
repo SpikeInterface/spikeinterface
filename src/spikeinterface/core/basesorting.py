@@ -121,9 +121,9 @@ class BaseSorting(BaseExtractor):
                 self._cached_spike_trains[segment_index] = {}
             if unit_id not in self._cached_spike_trains[segment_index]:
                 segment = self._sorting_segments[segment_index]
-                spike_frames = segment.get_unit_spike_train(unit_id=unit_id,
-                                                            start_frame=None,
-                                                            end_frame=None).astype("int64")
+                spike_frames = segment.get_unit_spike_train(unit_id=unit_id, start_frame=None, end_frame=None).astype(
+                    "int64"
+                )
                 self._cached_spike_trains[segment_index][unit_id] = spike_frames
             else:
                 spike_frames = self._cached_spike_trains[segment_index][unit_id]
@@ -402,7 +402,6 @@ class BaseSorting(BaseExtractor):
         if extremum_channel_inds is not None:
             spike_dtype += [("channel_index", "int64")]
 
-
         if use_cache and self._cached_spike_vector is not None:
             # the cache already exists
             if extremum_channel_inds is not None:
@@ -436,8 +435,8 @@ class BaseSorting(BaseExtractor):
                     unit_indices.append(np.full(spike_times.size, u, dtype="int64"))
 
                 if len(sample_indices) > 0:
-                    sample_indices = np.concatenate(sample_indices, dtype='int64')
-                    unit_indices = np.concatenate(unit_indices, dtype='int64')
+                    sample_indices = np.concatenate(sample_indices, dtype="int64")
+                    unit_indices = np.concatenate(unit_indices, dtype="int64")
                     order = np.argsort(sample_indices)
                     sample_indices = sample_indices[order]
                     unit_indices = unit_indices[order]
@@ -455,7 +454,7 @@ class BaseSorting(BaseExtractor):
 
             if concatenated:
                 spikes = np.concatenate(spikes)
-            
+
             if use_cache and self._cached_spike_vector is None and extremum_channel_inds is None:
                 # cache it if necessary but only without "channel_index"
                 if concatenated:
