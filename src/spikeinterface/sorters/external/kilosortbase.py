@@ -121,18 +121,34 @@ class KilosortBase:
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         cls._generate_channel_map_file(recording, sorter_output_folder)
 
-        if recording.binary_compatible_with(dtype="int16", time_axis=0, file_paths_lenght=1):
+        skip_kilosort_preprocessing = params.get("skip_kilosort_preprocessing", False)
+
+        if (
+            recording.binary_compatible_with(dtype="int16", time_axis=0, file_paths_lenght=1)
+            and not skip_kilosort_preprocessing
+        ):
             # no copy
             d = recording.get_binary_description()
             binary_file_path = Path(d["file_paths"][0])
         else:
             # local copy needed
             binary_file_path = sorter_output_folder / "recording.dat"
+            if skip_kilosort_preprocessing:
+                # when we skip the kilosort preprocessing we need to extend the file with zero pad to ensure
+                # that the number of sample is compatible with batch size (NT)
+                nt = params["NT"]
+                num_samples = recording.get_num_samples()
+                pad = nt - num_samples % nt
+                zero_pad_samples = [0, pad]
+            else:
+                zero_pad_samples = None
+
             write_binary_recording(
                 recording,
                 file_paths=[binary_file_path],
                 dtype="int16",
                 verbose=False,
+                zero_pad_samples=zero_pad_samples,
                 **get_job_kwargs(params, verbose),
             )
 
