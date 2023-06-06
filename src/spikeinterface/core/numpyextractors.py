@@ -346,8 +346,7 @@ class NumpySortingSegment(BaseSortingSegment):
 
 
 class SharedMemmorySorting(BaseSorting):
-    def __init__(self, shm_name, shape, sampling_frequency, unit_ids,
-                 dtype=minimum_spike_dtype, main_shm_owner=True):
+    def __init__(self, shm_name, shape, sampling_frequency, unit_ids, dtype=minimum_spike_dtype, main_shm_owner=True):
         assert len(shape) == 1
         assert shape[0] > 0, "SharedMemmorySorting only supported with no empty sorting"
 
@@ -364,15 +363,18 @@ class SharedMemmorySorting(BaseSorting):
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = self.shm_spikes
 
-
         # this is very important for the shm.unlink()
         # only the main instance need to call it
         # all other instances that are loaded from dict are not the main owner
         self.main_shm_owner = main_shm_owner
 
-        self._kwargs = dict(shm_name=shm_name, shape=shape, 
-                            sampling_frequency=sampling_frequency, unit_ids=unit_ids,
-                            main_shm_owner=False)
+        self._kwargs = dict(
+            shm_name=shm_name,
+            shape=shape,
+            sampling_frequency=sampling_frequency,
+            unit_ids=unit_ids,
+            main_shm_owner=False,
+        )
 
     def __del__(self):
         self.shm.close()
