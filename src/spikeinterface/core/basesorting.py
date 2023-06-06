@@ -402,6 +402,7 @@ class BaseSorting(BaseExtractor):
         if extremum_channel_inds is not None:
             spike_dtype += [("channel_index", "int64")]
 
+
         if use_cache and self._cached_spike_vector is not None:
             # the cache already exists
             if extremum_channel_inds is not None:

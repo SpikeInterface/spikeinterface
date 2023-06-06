@@ -28,13 +28,13 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         # load filter and save amplitude files
         sorting = self.waveform_extractor.sorting
         spikes = sorting.to_spike_vector(concatenated=False)
-        keep_unit_indices, = np.nonzero(np.in1d(sorting.unit_ids, unit_ids))
+        (keep_unit_indices,) = np.nonzero(np.in1d(sorting.unit_ids, unit_ids))
 
         new_extension_data = dict()
         for seg_index in range(sorting.get_num_segments()):
             amp_data_name = f"amplitude_segment_{seg_index}"
             amps = self._extension_data[amp_data_name]
-            filtered_idxs = np.in1d(spikes[seg_index]['unit_index'], keep_unit_indices)
+            filtered_idxs = np.in1d(spikes[seg_index]["unit_index"], keep_unit_indices)
             new_extension_data[amp_data_name] = amps[filtered_idxs]
         return new_extension_data
 
@@ -110,7 +110,6 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         """
         we = self.waveform_extractor
         sorting = we.sorting
-        
 
         if outputs == "concatenated":
             amplitudes = []
@@ -124,7 +123,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
             for segment_index in range(we.get_num_segments()):
                 amplitudes_by_unit.append({})
                 for unit_index, unit_id in enumerate(sorting.unit_ids):
-                    spike_labels = all_spikes[segment_index]['unit_index']
+                    spike_labels = all_spikes[segment_index]["unit_index"]
                     mask = spike_labels == unit_index
                     amps = self._extension_data[f"amplitude_segment_{segment_index}"][mask]
                     amplitudes_by_unit[segment_index][unit_id] = amps
@@ -198,7 +197,6 @@ def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, p
     worker_ctx["min_shift"] = np.min(peak_shifts)
     worker_ctx["max_shifts"] = np.max(peak_shifts)
 
-
     worker_ctx["all_spikes"] = sorting.to_spike_vector(concatenated=False)
     worker_ctx["extremum_channels_index"] = extremum_channels_index
 
@@ -214,8 +212,8 @@ def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     seg_size = recording.get_num_samples(segment_index=segment_index)
 
-    spike_times = all_spikes[segment_index]['sample_index']
-    spike_labels = all_spikes[segment_index]['unit_index']
+    spike_times = all_spikes[segment_index]["sample_index"]
+    spike_labels = all_spikes[segment_index]["unit_index"]
 
     d = np.diff(spike_times)
     assert np.all(d >= 0)

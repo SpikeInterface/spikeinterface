@@ -350,8 +350,8 @@ def compute_refrac_period_violations(
     nb_rp_violations = np.zeros((num_units), dtype=np.int64)
 
     for seg_index in range(num_segments):
-        spike_times = spikes[seg_index]['sample_index'].astype(np.int64)
-        spike_labels = spikes[seg_index]['unit_index'].astype(np.int32)
+        spike_times = spikes[seg_index]["sample_index"].astype(np.int64)
+        spike_labels = spikes[seg_index]["unit_index"].astype(np.int32)
         _compute_rp_violations_numba(nb_rp_violations, spike_times, spike_labels, t_c, t_r)
 
     T = waveform_extractor.get_total_samples()

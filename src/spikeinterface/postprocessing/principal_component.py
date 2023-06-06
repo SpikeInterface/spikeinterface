@@ -308,8 +308,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         file_path = Path(file_path)
 
         spikes = sorting.to_spike_vector(concatenated=False)
-        spike_times = spikes['sample_index']
-        spike_labels = spikes['unit_index']
+        spike_times = spikes["sample_index"]
+        spike_labels = spikes["unit_index"]
 
         sparsity = self.get_sparsity()
         if sparsity is None:

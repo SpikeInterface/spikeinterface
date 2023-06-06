@@ -164,8 +164,9 @@ class BenchmarkClustering:
         spikes1 = self.gt_sorting.to_spike_vector(concatenated=False)[0]
         spikes2 = self.clustering.to_spike_vector(concatenated=False)[0]
 
-        matches = make_matching_events(spikes1['sample_index'], spikes2['sample_index'],
-                                       int(delta * self.sampling_rate / 1000))
+        matches = make_matching_events(
+            spikes1["sample_index"], spikes2["sample_index"], int(delta * self.sampling_rate / 1000)
+        )
 
         self.matches = matches
         idx = matches["index1"]
@@ -251,7 +252,7 @@ class BenchmarkClustering:
         # scatter and collect gaussian info
         means = {}
         covs = {}
-        labels = sorting.to_spike_vector(concatenated=False)[0]['unit_index']
+        labels = sorting.to_spike_vector(concatenated=False)[0]["unit_index"]
 
         for unit_ind, unit_id in enumerate(sorting.unit_ids):
             where = np.flatnonzero(labels == unit_ind)
