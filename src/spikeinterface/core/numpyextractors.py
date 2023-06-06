@@ -349,7 +349,7 @@ class SharedMemmorySorting(BaseSorting):
     def __init__(self, shm_name, shape, sampling_frequency, unit_ids,
                  dtype=minimum_spike_dtype, main_shm_owner=True):
         assert len(shape) == 1
-        assert shape[0] > 0, 'SharedMemmorySorting only supported with no empty sorting'
+        assert shape[0] > 0, "SharedMemmorySorting only supported with no empty sorting"
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.is_dumpable = True
@@ -363,6 +363,7 @@ class SharedMemmorySorting(BaseSorting):
 
         # important trick : the cache is already spikes vector
         self._cached_spike_vector = self.shm_spikes
+
 
         # this is very important for the shm.unlink()
         # only the main instance need to call it
@@ -383,8 +384,9 @@ class SharedMemmorySorting(BaseSorting):
         spikes = source_sorting.to_spike_vector()
         shm_spikes, shm = make_shared_array(spikes.shape, spikes.dtype)
         shm_spikes[:] = spikes
-        sorting = SharedMemmorySorting(shm.name, spikes.shape, source_sorting.get_sampling_frequency(),
-                                       source_sorting.unit_ids, dtype=spikes.dtype)
+        sorting = SharedMemmorySorting(
+            shm.name, spikes.shape, source_sorting.get_sampling_frequency(), source_sorting.unit_ids, dtype=spikes.dtype
+        )
         shm.close()
         return sorting
 
