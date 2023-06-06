@@ -124,7 +124,7 @@ class NumpySorting(BaseSorting):
         self.is_dumpable = True
 
         if spikes.size == 0:
-            nseg = 0
+            nseg = 1
         else:
             nseg = spikes[-1]['segment_index'] + 1
 
@@ -220,18 +220,19 @@ class NumpySorting(BaseSorting):
 
             sample_indices = []
             unit_indices = []
-            for u, unit_id in unit_ids:
+            for u, unit_id in enumerate(unit_ids):
                 spike_times = units_dict[unit_id]
                 sample_indices.append(spike_times)
                 unit_indices.append(np.full(spike_times.size, u, dtype='int64'))
-            sample_indices = np.concatenate(sample_indices)
-            unit_indices = np.concatenate(unit_indices)
-            
-            order = np.argsort(sample_indices)
-            sample_indices = sample_indices[order]
-            unit_indices = unit_indices[order]
+            if len(sample_indices) > 0:
+                sample_indices = np.concatenate(sample_indices)
+                unit_indices = np.concatenate(unit_indices)
+                
+                order = np.argsort(sample_indices)
+                sample_indices = sample_indices[order]
+                unit_indices = unit_indices[order]
 
-            spikes_in_seg = np.zeros(sample_indices.size, dtype=minimum_spike_dtype)
+            spikes_in_seg = np.zeros(len(sample_indices), dtype=minimum_spike_dtype)
             spikes_in_seg['sample_index'] = sample_indices
             spikes_in_seg['unit_index'] = unit_indices
             spikes_in_seg['segment_index'] = seg_index
@@ -332,7 +333,8 @@ class NumpySortingSegment(BaseSortingSegment):
         
         unit_index = self.unit_ids.index(unit_id)
 
-        times = self.spikes_in_seg[self.spikes_in_seg['unit_index'] == unit_index]
+        times = self.spikes_in_seg[self.spikes_in_seg['unit_index'] == unit_index]['sample_index']
+        
 
         if start_frame is not None:
             times = times[times >= start_frame]
