@@ -249,6 +249,7 @@ def write_binary_recording(
     verbose=False,
     byte_offset=0,
     auto_cast_uint=True,
+    zero_pad_samples=None,
     **job_kwargs,
 ):
     """
@@ -274,6 +275,8 @@ def write_binary_recording(
         Offset in bytes (default 0) to for the binary file (e.g. to write a header)
     auto_cast_uint: bool
         If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
+    zero_pad_samples: None or list of 2 int
+        Add some zeros before and after.
     {}
     """
     assert file_paths is not None, "Provide 'file_path'"
@@ -292,6 +295,12 @@ def write_binary_recording(
     cast_unsigned = False
     if auto_cast_uint:
         cast_unsigned = determine_cast_unsigned(recording, dtype)
+
+    if zero_pad_samples is not None:
+        pad0, pad1 = zero_pad_samples
+        pad0, pad1 = int(pad0), int(pad1)
+    else:
+        pad0, pad1 = 0, 0
 
     num_segments = recording.get_num_segments()
     file_path_dict = {segment_index: file_path_list[segment_index] for segment_index in range(num_segments)}
@@ -318,6 +327,16 @@ def write_binary_recording(
         recording, func, init_func, init_args, verbose=verbose, job_name="write_binary_recording", **job_kwargs
     )
     executor.run()
+
+    if zero_pad_samples is not None:
+        for segment_index in range(recording.get_num_segments()):
+            num_frames = recording.get_num_samples(segment_index)
+            file_path = file_paths[segment_index]
+            num_channels = recording.get_num_channels()
+            shape = (num_frames + pad0 + pad1, num_channels)
+            rec_memmap = np.memmap(str(file_path), dtype=dtype, mode="r+", offset=byte_offset, shape=shape)
+            rec_memmap[:pad0, :] = 0
+            rec_memmap[-pad1:, :] = 0
 
 
 write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
