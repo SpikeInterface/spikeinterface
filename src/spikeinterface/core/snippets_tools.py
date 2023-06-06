@@ -58,7 +58,7 @@ def snippets_from_sorting(recording, sorting, nbefore=20, nafter=44, wf_folder=N
 
     nse = NumpySnippets(
         snippets_list=wfs,
-        spikesframes_list=[s['sample_index'] for s in spikes],
+        spikesframes_list=[s["sample_index"] for s in spikes],
         sampling_frequency=recording.get_sampling_frequency(),
         nbefore=nbefore,
         channel_ids=recording.get_channel_ids(),

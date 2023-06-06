@@ -67,7 +67,7 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
         all_spikes_seg0 = we_copy.sorting.to_spike_vector(concatenated=False)[0]
         for unit_index, unit_id in enumerate(we.unit_ids):
             sparse_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
-            pc_unit = all_pc_sparse[all_spikes_seg0['unit_index'] == unit_index]
+            pc_unit = all_pc_sparse[all_spikes_seg0["unit_index"] == unit_index]
             assert np.allclose(pc_unit[:, :, len(sparse_channel_ids) :], 0)
 
     def test_sparse(self):

@@ -451,7 +451,7 @@ def plot_figure_1(benchmark, mode="average", cell_ind="auto"):
     unit_id = sorting.unit_ids[cell_ind]
 
     spikes_seg0 = sorting.to_spike_vector(concatenated=False)[0]
-    mask = spikes_seg0['unit_index'] == cell_ind
+    mask = spikes_seg0["unit_index"] == cell_ind
     times = spikes_seg0[mask] / sorting.get_sampling_frequency()
 
     print(benchmark.recording)

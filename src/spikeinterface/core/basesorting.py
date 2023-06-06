@@ -386,8 +386,8 @@ class BaseSorting(BaseExtractor):
                 unit_indices.append(np.full(spike_times.size, u, dtype="int64"))
 
             if len(sample_indices) > 0:
-                sample_indices = np.concatenate(sample_indices, dtype='int64')
-                unit_indices = np.concatenate(unit_indices, dtype='int64')
+                sample_indices = np.concatenate(sample_indices, dtype="int64")
+                unit_indices = np.concatenate(unit_indices, dtype="int64")
                 order = np.argsort(sample_indices)
                 sample_indices = sample_indices[order]
                 unit_indices = unit_indices[order]
@@ -405,7 +405,6 @@ class BaseSorting(BaseExtractor):
 
         if concatenated:
             spikes = np.concatenate(spikes)
-
 
         return spikes
 

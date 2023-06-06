@@ -118,11 +118,11 @@ class BenchmarkPeakSelection:
 
         print("The gt recording has {} peaks and {} have been detected".format(len(times1[0]), len(times2)))
 
-        matches = make_matching_events(spikes1['sample_index'], times2, int(delta * self.sampling_rate / 1000))
+        matches = make_matching_events(spikes1["sample_index"], times2, int(delta * self.sampling_rate / 1000))
         self.matches = matches
 
         self.deltas = {"labels": [], "delta": matches["delta_frame"]}
-        self.deltas["labels"] = spikes1['unit_index'][matches["index1"]]
+        self.deltas["labels"] = spikes1["unit_index"][matches["index1"]]
 
         gt_matches = matches["index1"]
         self.sliced_gt_sorting = NumpySorting(spikes1[gt_matches], self.sampling_rate, self.gt_sorting.unit_ids)
@@ -130,7 +130,7 @@ class BenchmarkPeakSelection:
         ratio = 100 * len(gt_matches) / len(spikes1)
         print("Only {0:.2f}% of gt peaks are matched to detected peaks".format(ratio))
 
-        matches = make_matching_events(times2, spikes1['sample_index'], int(delta * self.sampling_rate / 1000))
+        matches = make_matching_events(times2, spikes1["sample_index"], int(delta * self.sampling_rate / 1000))
         self.good_matches = matches["index1"]
 
         garbage_matches = ~np.in1d(np.arange(len(times2)), self.good_matches)
@@ -229,7 +229,7 @@ class BenchmarkPeakSelection:
         # scatter and collect gaussian info
         means = {}
         covs = {}
-        labels = sorting.to_spike_vector(concatenated=False)[0]['unit_index']
+        labels = sorting.to_spike_vector(concatenated=False)[0]["unit_index"]
 
         for unit_ind, unit_id in enumerate(sorting.unit_ids):
             where = np.flatnonzero(labels == unit_ind)
@@ -542,7 +542,7 @@ class BenchmarkPeakSelection:
         stds = []
         means = []
         for found, real in zip(inds_2, inds_1):
-            mask = spikes_seg0['unit_index'] == found
+            mask = spikes_seg0["unit_index"] == found
             center = np.array([self.sliced_gt_positions[mask]["x"], self.sliced_gt_positions[mask]["y"]]).mean()
             means += [np.mean(center - centers[real])]
             stds += [np.std(center - centers[real])]
@@ -620,8 +620,8 @@ class BenchmarkPeakSelection:
             delta = self.waveforms["garbage"].nafter
         else:
             delta = dt
-        matches = make_matching_events(times2, spikes1['sample_index'], delta)
-        unit_inds = spikes1['unit_index'][matches["index2"]]
+        matches = make_matching_events(times2, spikes1["sample_index"], delta)
+        unit_inds = spikes1["unit_index"][matches["index2"]]
         dt = matches["delta_frame"]
         res = {}
         fig, ax = plt.subplots()
