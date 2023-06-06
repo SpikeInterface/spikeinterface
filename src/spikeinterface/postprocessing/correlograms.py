@@ -306,7 +306,7 @@ def compute_correlograms_numba(sorting, window_size, bin_size):
 
     num_bins = 2 * int(window_size / bin_size)
     num_units = len(sorting.unit_ids)
-    spikes = sorting.to_spike_vector(concatenated=false)
+    spikes = sorting.to_spike_vector(concatenated=False)
     correlograms = np.zeros((num_units, num_units, num_bins), dtype=np.int64)
 
     for seg_index in range(sorting.get_num_segments()):

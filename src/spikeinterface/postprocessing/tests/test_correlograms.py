@@ -204,13 +204,13 @@ def test_detect_injected_correlation():
 
 
 if __name__ == "__main__":
-    # ~ test_make_bins()
-    # test_equal_results_correlograms()
-    # ~ test_flat_cross_correlogram()
-    # ~ test_auto_equal_cross_correlograms()
+    test_make_bins()
+    test_equal_results_correlograms()
+    test_flat_cross_correlogram()
+    test_auto_equal_cross_correlograms()
     test_detect_injected_correlation()
 
-    # test = CorrelogramsExtensionTest()
-    # test.setUp()
-    # test.test_compute_correlograms()
-    # test.test_extension()
+    test = CorrelogramsExtensionTest()
+    test.setUp()
+    test.test_compute_correlograms()
+    test.test_extension()
