@@ -377,7 +377,7 @@ def run_sorter_container(
     output_folder.mkdir(parents=True, exist_ok=True)
 
     # find input folder of recording for folder bind
-    rec_dict = recording.to_dict()
+    rec_dict = recording.to_dict(recursive=True)
     recording_input_folders = find_recording_folders(rec_dict)
 
     if platform.system() == "Windows":
