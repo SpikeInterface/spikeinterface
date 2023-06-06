@@ -220,19 +220,19 @@ class NumpySorting(BaseSorting):
                 spike_times = units_dict[unit_id]
                 sample_indices.append(spike_times)
 
-                unit_indices.append(np.full(spike_times.size, u, dtype='int64'))
+                unit_indices.append(np.full(spike_times.size, u, dtype="int64"))
             if len(sample_indices) > 0:
                 sample_indices = np.concatenate(sample_indices)
                 unit_indices = np.concatenate(unit_indices)
-                
+
                 order = np.argsort(sample_indices)
                 sample_indices = sample_indices[order]
                 unit_indices = unit_indices[order]
 
             spikes_in_seg = np.zeros(len(sample_indices), dtype=minimum_spike_dtype)
-            spikes_in_seg['sample_index'] = sample_indices
-            spikes_in_seg['unit_index'] = unit_indices
-            spikes_in_seg['segment_index'] = seg_index
+            spikes_in_seg["sample_index"] = sample_indices
+            spikes_in_seg["unit_index"] = unit_indices
+            spikes_in_seg["segment_index"] = seg_index
             spikes.append(spikes_in_seg)
         spikes = np.concatenate(spikes)
 
@@ -329,9 +329,8 @@ class NumpySortingSegment(BaseSortingSegment):
 
         unit_index = self.unit_ids.index(unit_id)
 
+        times = self.spikes_in_seg[self.spikes_in_seg["unit_index"] == unit_index]["sample_index"]
 
-        times = self.spikes_in_seg[self.spikes_in_seg['unit_index'] == unit_index]['sample_index']
-        
         if start_frame is not None:
             times = times[times >= start_frame]
         if end_frame is not None:
