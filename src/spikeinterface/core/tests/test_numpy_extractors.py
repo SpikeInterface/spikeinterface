@@ -59,7 +59,7 @@ def test_NumpySorting():
     create_sorting_npz(num_seg, file_path)
     other_sorting = NpzSortingExtractor(file_path)
 
-    sorting = NumpySorting.from_extractor(other_sorting)
+    sorting = NumpySorting.from_sorting(other_sorting)
     # print(sorting)
 
 

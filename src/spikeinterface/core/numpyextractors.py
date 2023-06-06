@@ -131,9 +131,9 @@ class NumpySorting(BaseSorting):
         self._kwargs = dict(spikes=spikes, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
     @staticmethod
-    def from_extractor(source_sorting: BaseSorting, with_metadata=False) -> "NumpySorting":
+    def from_sorting(source_sorting: BaseSorting, with_metadata=False) -> "NumpySorting":
         """
-        Create a numpy sorting from another extractor
+        Create a numpy sorting from another sorting extractor
         """
 
         sorting = NumpySorting(

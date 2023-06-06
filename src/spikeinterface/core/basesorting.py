@@ -217,7 +217,7 @@ class BaseSorting(BaseExtractor):
         elif format == "memory":
             from .numpyextractors import NumpySorting
 
-            cached = NumpySorting.from_extractor(self)
+            cached = NumpySorting.from_sorting(self)
         else:
             raise ValueError(f"format {format} not supported")
         return cached
