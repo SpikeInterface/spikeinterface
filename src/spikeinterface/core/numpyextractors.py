@@ -9,7 +9,11 @@ from spikeinterface.core import (
     BaseSnippets,
     BaseSnippetsSegment,
 )
+from .basesorting import minimum_spike_dtype
+
 from typing import List, Union
+
+
 
 
 class NumpyRecording(BaseRecording):
@@ -93,30 +97,53 @@ class NumpyRecordingSegment(BaseRecordingSegment):
 
 
 class NumpySorting(BaseSorting):
+    """
+    In memory sorting object.
+    The internal representation is always done with a long "spike vector".
+
+
+    But we have convinient function to instantiate from other sorting object, from time+labels, 
+    from dict of list or from neo. 
+
+    Parameters
+    ----------
+    spikes:  numpy.array
+        A numpy vector, the one given by Sorting.to_spike_vector().
+    sampling_frequency: float
+        The sampling frequency in Hz
+    channel_ids: list
+        A list of unit_ids.
+    """
     name = "numpy"
 
-    def __init__(self, sampling_frequency, unit_ids=[]):
+    def __init__(self, spikes, sampling_frequency, unit_ids):
+        """
+        
+        """
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        self.is_dumpable = False
+        self.is_dumpable = True
+
+        if spikes.size == 0:
+            nseg = 0
+        else:
+            nseg = spikes[-1]['segment_index'] + 1
+
+        for segment_index in range(nseg):
+            self.add_sorting_segment(NumpySortingSegment(spikes, segment_index, unit_ids))
+
+        self._kwargs = dict(spikes=spikes, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
     @staticmethod
-    def from_extractor(source_sorting: BaseSorting) -> "NumpySorting":
+    def from_extractor(source_sorting: BaseSorting, with_metadata=False) -> "NumpySorting":
         """
         Create a numpy sorting from another extractor
         """
-        unit_ids = source_sorting.get_unit_ids()
-        nseg = source_sorting.get_num_segments()
 
-        sorting = NumpySorting(source_sorting.get_sampling_frequency(), unit_ids)
-
-        for segment_index in range(nseg):
-            units_dict = {}
-            for unit_id in unit_ids:
-                units_dict[unit_id] = source_sorting.get_unit_spike_train(unit_id, segment_index)
-            sorting.add_sorting_segment(NumpySortingSegment(units_dict))
-
-        sorting.copy_metadata(source_sorting)
-
+        sorting = NumpySorting(source_sorting.to_spike_vector(),
+                               source_sorting.get_sampling_frequency(),
+                               source_sorting.unit_ids)
+        if with_metadata:
+            sorting.copy_metadata(source_sorting)
         return sorting
 
     @staticmethod
@@ -146,22 +173,32 @@ class NumpySorting(BaseSorting):
         labels_list = [np.asarray(e) for e in labels_list]
 
         nseg = len(times_list)
+
         if unit_ids is None:
             unit_ids = np.unique(np.concatenate([np.unique(labels_list[i]) for i in range(nseg)]))
 
-        sorting = NumpySorting(sampling_frequency, unit_ids)
+        
+        spikes = []
         for i in range(nseg):
-            units_dict = {}
             times, labels = times_list[i], labels_list[i]
-            for unit_id in unit_ids:
-                mask = labels == unit_id
-                units_dict[unit_id] = times[mask]
-            sorting.add_sorting_segment(NumpySortingSegment(units_dict))
+            unit_index = np.zeros(labels.size, dtype='int64')
+            for u, unit_id in enumerate(unit_ids):
+                unit_index[labels == unit_id] = u
+            spikes_in_seg = np.zeros(len(times), dtype=minimum_spike_dtype)
+            spikes_in_seg['sample_index'] = times
+            spikes_in_seg['unit_index'] = unit_index
+            spikes_in_seg['segment_index'] = i
+            order = np.argsort(times)
+            spikes_in_seg = spikes_in_seg[order]
+            spikes.append(spikes_in_seg)
+        spikes = np.concatenate(spikes)
+
+        sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
         return sorting
 
     @staticmethod
-    def from_dict(units_dict_list, sampling_frequency) -> "NumpySorting":
+    def from_unit_dict(units_dict_list, sampling_frequency) -> "NumpySorting":
         """
         Construct sorting extractor from a list of dict.
         The list length is the segment count
@@ -176,11 +213,35 @@ class NumpySorting(BaseSorting):
 
         unit_ids = list(units_dict_list[0].keys())
 
-        sorting = NumpySorting(sampling_frequency, unit_ids)
-        for i, units_dict in enumerate(units_dict_list):
-            sorting.add_sorting_segment(NumpySortingSegment(units_dict))
+        nseg = len(units_dict_list)
+        spikes = []
+        for seg_index in range(nseg):
+            units_dict = units_dict_list[seg_index]
 
-        return sorting
+            sample_indices = []
+            unit_indices = []
+            for u, unit_id in unit_ids:
+                spike_times = units_dict[unit_id]
+                sample_indices.append(spike_times)
+                unit_indices.append(np.full(spike_times.size, u, dtype='int64'))
+            sample_indices = np.concatenate(sample_indices)
+            unit_indices = np.concatenate(unit_indices)
+            
+            order = np.argsort(sample_indices)
+            sample_indices = sample_indices[order]
+            unit_indices = unit_indices[order]
+
+            spikes_in_seg = np.zeros(sample_indices.size, dtype=minimum_spike_dtype)
+            spikes_in_seg['sample_index'] = sample_indices
+            spikes_in_seg['unit_index'] = unit_indices
+            spikes_in_seg['segment_index'] = seg_index
+            spikes.append(spikes_in_seg)
+        spikes = np.concatenate(spikes)
+
+        sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
+
+        return sorting            
+
 
     @staticmethod
     def from_neo_spiketrain_list(neo_spiketrains, sampling_frequency, unit_ids=None) -> "NumpySorting":
@@ -209,18 +270,20 @@ class NumpySorting(BaseSorting):
         if unit_ids is None:
             unit_ids = np.arange(len(neo_spiketrains[0]), dtype="int64")
 
-        sorting = NumpySorting(sampling_frequency, unit_ids)
+        units_dict_list = []
         for seg_index in range(nseg):
             units_dict = {}
             for u, unit_id in enumerate(unit_ids):
                 st = neo_spiketrains[seg_index][u]
                 units_dict[unit_id] = (st.rescale("s").magnitude * sampling_frequency).astype("int64")
-            sorting.add_sorting_segment(NumpySortingSegment(units_dict))
+            units_dict_list.append(units_dict)
+
+        sorting = NumpySorting.from_unit_dict(units_dict_list, sampling_frequency)
 
         return sorting
 
     @staticmethod
-    def from_peaks(peaks, sampling_frequency) -> "NumpySorting":
+    def from_peaks(peaks, sampling_frequency, unit_ids=None) -> "NumpySorting":
         """
         Construct a sorting from peaks returned by 'detect_peaks()' function.
         The unit ids correspond to the recording channel ids and spike trains are the
@@ -238,24 +301,46 @@ class NumpySorting(BaseSorting):
         sorting
             The NumpySorting object
         """
-        return NumpySorting.from_times_labels(peaks["sample_index"], peaks["channel_index"], sampling_frequency)
+        spikes = np.zeros(peaks.size, dtype=minimum_spike_dtype)
+        spikes['sample_index'] = peaks['sample_index']
+        spikes['unit_index'] = peaks['channel_index']
+        spikes['segment_index'] = peaks['segment_index']
+
+        if unit_ids is None:
+            unit_ids = np.unique(peaks['channel_index'])
+
+        sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
+
+        return sorting
 
 
 class NumpySortingSegment(BaseSortingSegment):
-    def __init__(self, units_dict):
+    def __init__(self, spikes, segment_index, unit_ids):
         BaseSortingSegment.__init__(self)
-        for unit_id, times in units_dict.items():
-            assert times.dtype.kind == "i", "numpy array of spike times must be integer"
-            assert np.all(np.diff(times) >= 0), "unsorted times"
-        self._units_dict = units_dict
-
+        self.spikes = spikes
+        self.segment_index = segment_index
+        self.unit_ids = list(unit_ids)
+        self.spikes_in_seg = None
+    
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
-        times = self._units_dict[unit_id]
+        if self.spikes_in_seg is None:
+            # the slicing of segment is done only once the first time
+            # this fasten the constructor a lot
+            s0 = np.searchsorted(self.spikes["segment_index"], self.segment_index, side='left')
+            s1 = np.searchsorted(self.spikes["segment_index"], self.segment_index + 1, side='left')
+            self.spikes_in_seg = self.spikes[s0:s1]
+        
+        unit_index = self.unit_ids.index(unit_id)
+
+        times = self.spikes_in_seg[self.spikes_in_seg['unit_index'] == unit_index]
+
         if start_frame is not None:
             times = times[times >= start_frame]
         if end_frame is not None:
             times = times[times < end_frame]
         return times
+
+
 
 
 class NumpyEvent(BaseEvent):

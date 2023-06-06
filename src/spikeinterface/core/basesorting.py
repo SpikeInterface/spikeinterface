@@ -7,6 +7,8 @@ from .base import BaseExtractor, BaseSegment
 from .waveform_tools import has_exceeding_spikes
 
 
+minimum_spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
+
 class BaseSorting(BaseExtractor):
     """
     Abstract class representing several segment several units and relative spiketrains.
@@ -362,7 +364,7 @@ class BaseSorting(BaseExtractor):
         spikes_ = self.get_all_spike_trains(outputs="unit_index")
 
         n = np.sum([e[0].size for e in spikes_])
-        spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
+        spike_dtype = minimum_spike_dtype
 
         if extremum_channel_inds is not None:
             spike_dtype += [("channel_index", "int64")]

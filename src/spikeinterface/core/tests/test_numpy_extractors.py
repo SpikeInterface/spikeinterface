@@ -7,6 +7,7 @@ import numpy as np
 from spikeinterface.core import NumpyRecording, NumpySorting, NumpyEvent
 from spikeinterface.core import create_sorting_npz
 from spikeinterface.core import NpzSortingExtractor
+from spikeinterface.core.basesorting import minimum_spike_dtype
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
@@ -34,7 +35,8 @@ def test_NumpySorting():
 
     # empty
     unit_ids = []
-    sorting = NumpySorting(sampling_frequency, unit_ids)
+    spikes = np.zeros(0, dtype=minimum_spike_dtype)
+    sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
     # print(sorting)
 
     # 2 columns

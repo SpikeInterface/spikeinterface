@@ -113,7 +113,7 @@ def test_npy_sorting():
         "0": np.array([0, 1]),
         "1": np.array([], dtype="int64"),
     }
-    sorting = NumpySorting.from_dict(
+    sorting = NumpySorting.from_unit_dict(
         [spike_times_0, spike_times_1],
         sfreq,
     )
@@ -144,7 +144,7 @@ def test_npy_sorting():
 
 
 def test_empty_sorting():
-    sorting = NumpySorting.from_dict({}, 30000)
+    sorting = NumpySorting.from_unit_dict({}, 30000)
 
     assert len(sorting.unit_ids) == 0
 
