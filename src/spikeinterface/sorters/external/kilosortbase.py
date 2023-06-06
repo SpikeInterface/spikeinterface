@@ -120,6 +120,9 @@ class KilosortBase:
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         cls._generate_channel_map_file(recording, sorter_output_folder)
+        job_kwargs = get_job_kwargs(params, verbose)
+        if 'verbose' not job_kwargs:
+            job_kwargs['verbose'] = False
 
         if recording.binary_compatible_with(dtype="int16", time_axis=0, file_paths_lenght=1):
             # no copy
@@ -132,8 +135,7 @@ class KilosortBase:
                 recording,
                 file_paths=[binary_file_path],
                 dtype="int16",
-                verbose=False,
-                **get_job_kwargs(params, verbose),
+                **job_kwargs,
             )
 
         cls._generate_ops_file(recording, params, sorter_output_folder, binary_file_path)
