@@ -769,7 +769,7 @@ class TemplateComparison(BasePairComparison, MixinTemplateComparison):
         if self._verbose:
             print("Agreement scores...")
 
-        agreement_scores = compute_template_similarity(self.we1, self.we2, method=self.similarity_method)
+        agreement_scores = compute_template_similarity(self.we1, waveform_extractor_other=self.we2, method=self.similarity_method)
         import pandas as pd
 
         self.agreement_scores = pd.DataFrame(agreement_scores, index=self.unit_ids[0], columns=self.unit_ids[1])
