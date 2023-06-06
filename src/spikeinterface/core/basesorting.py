@@ -313,6 +313,13 @@ class BaseSorting(BaseExtractor):
         """
         Return all spike trains concatenated
         """
+
+        warnings.warn(
+            "Sorting.get_all_spike_trains() will be deprecated. Sorting.to_spike_vector() instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         assert outputs in ("unit_id", "unit_index")
         spikes = []
         for segment_index in range(self.get_num_segments()):
@@ -339,7 +346,7 @@ class BaseSorting(BaseExtractor):
             spikes.append((spike_times, spike_labels))
         return spikes
 
-    def to_spike_vector(self, extremum_channel_inds=None):
+    def to_spike_vector(self, concatenated=True, extremum_channel_inds=None):
         """
         Construct a unique structured numpy vector concatenating all spikes
         with several fields: sample_index, unit_index, segment_index.
@@ -348,6 +355,9 @@ class BaseSorting(BaseExtractor):
 
         Parameters
         ----------
+        concatenated: bool
+            By default the output is one numpy vector.
+            With concatenated=False then it is a list of vector by segment.
         extremum_channel_inds: None or dict
             If a dictionnary of unit_id to channel_ind is given then an extra field 'channel_index'.
             This can be convinient for computing spikes postion after sorter.
@@ -362,28 +372,40 @@ class BaseSorting(BaseExtractor):
             is given
 
         """
-        spikes_ = self.get_all_spike_trains(outputs="unit_index")
-
-        n = np.sum([e[0].size for e in spikes_])
         spike_dtype = minimum_spike_dtype
-
         if extremum_channel_inds is not None:
             spike_dtype += [("channel_index", "int64")]
 
-        spikes = np.zeros(n, dtype=spike_dtype)
+        spikes = []
+        for segment_index in range(self.get_num_segments()):
+            sample_indices = []
+            unit_indices = []
+            for u, unit_id in enumerate(self.unit_ids):
+                spike_times = st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                sample_indices.append(spike_times)
+                unit_indices.append(np.full(spike_times.size, u, dtype="int64"))
 
-        pos = 0
-        for segment_index, (spike_times, spike_labels) in enumerate(spikes_):
-            n = spike_times.size
-            spikes[pos : pos + n]["sample_index"] = spike_times
-            spikes[pos : pos + n]["unit_index"] = spike_labels
-            spikes[pos : pos + n]["segment_index"] = segment_index
-            pos += n
+            if len(sample_indices) > 0:
+                sample_indices = np.concatenate(sample_indices, dtype='int64')
+                unit_indices = np.concatenate(unit_indices, dtype='int64')
+                order = np.argsort(sample_indices)
+                sample_indices = sample_indices[order]
+                unit_indices = unit_indices[order]
 
-        if extremum_channel_inds is not None:
-            ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
-            # vector way
-            spikes["channel_index"] = ext_channel_inds[spikes["unit_index"]]
+            spikes_in_seg = np.zeros(len(sample_indices), dtype=minimum_spike_dtype)
+            spikes_in_seg["sample_index"] = sample_indices
+            spikes_in_seg["unit_index"] = unit_indices
+            spikes_in_seg["segment_index"] = segment_index
+            spikes.append(spikes_in_seg)
+
+            if extremum_channel_inds is not None:
+                ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
+                # vector way
+                spikes_in_seg["channel_index"] = ext_channel_inds[spikes_in_seg["unit_index"]]
+
+        if concatenated:
+            spikes = np.concatenate(spikes)
+
 
         return spikes
 

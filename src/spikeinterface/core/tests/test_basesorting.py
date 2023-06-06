@@ -81,7 +81,8 @@ def test_BaseSorting():
     sorting4 = sorting.save(format="memory")
     check_sortings_equal(sorting, sorting4, check_annotations=True, check_properties=True)
 
-    spikes = sorting.get_all_spike_trains()
+    with pytest.warns(DeprecationWarning):
+        spikes = sorting.get_all_spike_trains()
     # print(spikes)
 
     spikes = sorting.to_spike_vector()
@@ -148,10 +149,11 @@ def test_empty_sorting():
 
     assert len(sorting.unit_ids) == 0
 
-    spikes = sorting.get_all_spike_trains()
-    assert len(spikes) == 1
-    assert len(spikes[0][0]) == 0
-    assert len(spikes[0][1]) == 0
+    with pytest.warns(DeprecationWarning):
+        spikes = sorting.get_all_spike_trains()
+        assert len(spikes) == 1
+        assert len(spikes[0][0]) == 0
+        assert len(spikes[0][1]) == 0
 
     spikes = sorting.to_spike_vector()
     assert spikes.shape == (0,)

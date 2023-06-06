@@ -73,7 +73,7 @@ def sorting_fixture():
 
 
 def spike_trains(sorting):
-    spike_trains = sorting.get_all_spike_trains()[0][0]
+    spike_trains = sorting.to_spike_vector()['sample_index']
     return spike_trains
 
 
