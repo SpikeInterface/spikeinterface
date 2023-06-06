@@ -352,8 +352,6 @@ class NumpySortingSegment(BaseSortingSegment):
 #         arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
 
 
-    
-
 #     for segment_index in range(nseg):
 #         self.add_sorting_segment(NumpySortingSegment(spikes, segment_index, unit_ids))
 
@@ -361,9 +359,6 @@ class NumpySortingSegment(BaseSortingSegment):
 #     def from_sorting(source_sorting: BaseSorting) -> "SharedMemmorySorting":
 
 #         make_shared_array(shape, dtype)
-
-
-
 
 
 class NumpyEvent(BaseEvent):
