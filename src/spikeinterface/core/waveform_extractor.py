@@ -16,9 +16,10 @@ from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 from .core_tools import check_json
 from .job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
+from .numpyextractors import NumpySorting
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
-from .waveform_tools import extract_waveforms_to_buffers, has_exceeding_spikes
 from .sparsity import ChannelSparsity, compute_sparsity, _sparsity_doc
+from .waveform_tools import extract_waveforms_to_buffers, has_exceeding_spikes
 
 _possible_template_modes = ("average", "std", "median")
 
@@ -1324,32 +1325,16 @@ class WaveformExtractor:
 
         selected_spikes = self.sample_spikes(seed=seed)
 
-        selected_spike_times = {}
-        for unit_id in self.sorting.unit_ids:
-            selected_spike_times[unit_id] = []
-            for segment_index in range(self.sorting.get_num_segments()):
-                spike_times = self.sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                sel = selected_spikes[unit_id][segment_index]
-                selected_spike_times[unit_id].append(spike_times[sel])
-
-        spikes = []
+        selected_spike_times = []
         for segment_index in range(self.sorting.get_num_segments()):
-            num_in_seg = np.sum([selected_spikes[unit_id][segment_index].size for unit_id in unit_ids], dtype=np.int64)
-            spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
-            spikes_ = np.zeros(num_in_seg, dtype=spike_dtype)
-            pos = 0
-            for unit_ind, unit_id in enumerate(unit_ids):
+            selected_spike_times.append({})
+
+            for unit_id in self.sorting.unit_ids:
                 spike_times = self.sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 sel = selected_spikes[unit_id][segment_index]
-                n = sel.size
-                spikes_[pos : pos + n]["sample_index"] = spike_times[sel]
-                spikes_[pos : pos + n]["unit_index"] = unit_ind
-                spikes_[pos : pos + n]["segment_index"] = segment_index
-                pos += n
-            order = np.argsort(spikes_)
-            spikes_ = spikes_[order]
-            spikes.append(spikes_)
-        spikes = np.concatenate(spikes)
+                selected_spike_times[segment_index][unit_id] = spike_times[sel]
+
+        spikes = NumpySorting.from_dict(selected_spike_times, self.sampling_frequency).to_spike_vector()
 
         if self.folder is not None:
             wf_folder = self.folder / "waveforms"
