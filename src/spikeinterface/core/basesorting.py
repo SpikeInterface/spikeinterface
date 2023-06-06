@@ -400,7 +400,7 @@ class BaseSorting(BaseExtractor):
 
         spike_dtype = minimum_spike_dtype
         if extremum_channel_inds is not None:
-            spike_dtype += [("channel_index", "int64")]
+            spike_dtype = spike_dtype + [("channel_index", "int64")]
 
 
         if use_cache and self._cached_spike_vector is not None:
@@ -442,16 +442,16 @@ class BaseSorting(BaseExtractor):
                     sample_indices = sample_indices[order]
                     unit_indices = unit_indices[order]
 
-                spikes_in_seg = np.zeros(len(sample_indices), dtype=minimum_spike_dtype)
+                spikes_in_seg = np.zeros(len(sample_indices), dtype=spike_dtype)
                 spikes_in_seg["sample_index"] = sample_indices
                 spikes_in_seg["unit_index"] = unit_indices
                 spikes_in_seg["segment_index"] = segment_index
-                spikes.append(spikes_in_seg)
-
                 if extremum_channel_inds is not None:
                     ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
                     # vector way
                     spikes_in_seg["channel_index"] = ext_channel_inds[spikes_in_seg["unit_index"]]
+                spikes.append(spikes_in_seg)
+
 
             if concatenated:
                 spikes = np.concatenate(spikes)
