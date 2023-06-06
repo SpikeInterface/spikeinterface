@@ -121,9 +121,7 @@ def export_to_phy(
     if waveform_extractor.has_recording():
         if copy_binary:
             rec_path = output_folder / "recording.dat"
-            write_binary_recording(
-                waveform_extractor.recording, file_paths=rec_path, verbose=verbose, dtype=dtype, **job_kwargs
-            )
+            write_binary_recording(waveform_extractor.recording, file_paths=rec_path, dtype=dtype, **job_kwargs)
         elif isinstance(waveform_extractor.recording, BinaryRecordingExtractor):
             rec_path = waveform_extractor.recording._kwargs["file_paths"][0]
             dtype = waveform_extractor.recording.get_dtype()
