@@ -132,7 +132,6 @@ class KilosortBase:
                 recording,
                 file_paths=[binary_file_path],
                 dtype="int16",
-                verbose=False,
                 **get_job_kwargs(params, verbose),
             )
 

@@ -231,7 +231,6 @@ def write_binary_recording(
     file_paths=None,
     dtype=None,
     add_file_extension=True,
-    verbose=False,
     byte_offset=0,
     auto_cast_uint=True,
     **job_kwargs,
@@ -253,8 +252,6 @@ def write_binary_recording(
         Type of the saved data. Default float32.
     add_file_extension: bool
         If True (default), file the '.raw' file extension is added if the file name is not a 'raw', 'bin', or 'dat'
-    verbose: bool
-        If True, output is verbose (when chunks are used)
     byte_offset: int
         Offset in bytes (default 0) to for the binary file (e.g. to write a header)
     auto_cast_uint: bool
@@ -294,7 +291,7 @@ def write_binary_recording(
     init_func = _init_binary_worker
     init_args = (recording, rec_memmaps_dict, dtype, cast_unsigned)
     executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_binary_recording", **job_kwargs
+        recording, func, init_func, init_args, job_name="write_binary_recording", **job_kwargs
     )
     executor.run()
 
