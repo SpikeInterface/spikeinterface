@@ -118,6 +118,7 @@ class NumpySorting(BaseSorting):
     def __init__(self, spikes, sampling_frequency, unit_ids):
         """ """
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
+
         self.is_dumpable = True
 
         if spikes.size == 0:
@@ -127,6 +128,9 @@ class NumpySorting(BaseSorting):
 
         for segment_index in range(nseg):
             self.add_sorting_segment(NumpySortingSegment(spikes, segment_index, unit_ids))
+        
+        # important trick : the cache is already spikes vector
+        self._cached_spike_vector = spikes
 
         self._kwargs = dict(spikes=spikes, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
