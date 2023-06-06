@@ -345,20 +345,47 @@ class NumpySortingSegment(BaseSortingSegment):
         return times
 
 
-# class SharedMemmorySorting(BaseSorting):
-#     def __init__(self, shm_name, shape, dtype=minimum_spike_dtype):
+class SharedMemmorySorting(BaseSorting):
+    def __init__(self, shm_name, shape, sampling_frequency, unit_ids, dtype=minimum_spike_dtype):
+        assert len(shape) == 1
+        assert shape[0] > 0, 'SharedMemmorySorting only supported with no empty sorting'
 
-#         shm = SharedMemory(shm_name)
-#         arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+        BaseSorting.__init__(self, sampling_frequency, unit_ids)
+        self.is_dumpable = True
 
+        self.shm = SharedMemory(shm_name, create=False)
+        self.shm_spikes = np.ndarray(shape=shape, dtype=dtype, buffer=self.shm.buf)
 
-#     for segment_index in range(nseg):
-#         self.add_sorting_segment(NumpySortingSegment(spikes, segment_index, unit_ids))
+        nseg = self.shm_spikes[-1]["segment_index"] + 1
+        for segment_index in range(nseg):
+            self.add_sorting_segment(NumpySortingSegment(self.shm_spikes, segment_index, unit_ids))
 
-#     @staticmethod
-#     def from_sorting(source_sorting: BaseSorting) -> "SharedMemmorySorting":
+        # important trick : the cache is already spikes vector
+        self._cached_spike_vector = self.shm_spikes
 
-#         make_shared_array(shape, dtype)
+        self._kwargs = dict(shm_name=shm_name, shape=shape, 
+                            sampling_frequency=sampling_frequency, unit_ids=unit_ids)
+
+    def __del__(self):
+        # this try to avoid 
+        # "UserWarning: resource_tracker: There appear to be 1 leaked shared_memory objects to clean up at shutdown"
+        # But still nedd investigation because do not work
+        print('__del__')
+        self._segments = None
+        self.shm_spikes = None
+        self.shm.close()
+        self.shm = None
+        print('after __del__')
+
+    @staticmethod
+    def from_sorting(source_sorting):
+        spikes = source_sorting.to_spike_vector()
+        shm_spikes, shm = make_shared_array(spikes.shape, spikes.dtype)
+        shm_spikes[:] = spikes
+        sorting = SharedMemmorySorting(shm.name, spikes.shape, source_sorting.get_sampling_frequency(),
+                                       source_sorting.unit_ids, dtype=spikes.dtype)
+        shm.close()
+        return sorting
 
 
 class NumpyEvent(BaseEvent):

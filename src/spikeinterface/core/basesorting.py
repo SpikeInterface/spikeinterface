@@ -463,6 +463,25 @@ class BaseSorting(BaseExtractor):
 
         return spikes
 
+    def to_numpy_sorting(self):
+        """
+        Turn any sorting in a NumpySorting.
+        usefull to have it in memory with a unique vector representation.
+        """
+        from .numpyextractors import NumpySorting
+        sorting = NumpySorting.from_sorting(self)
+        return sorting
+    
+    def to_shared_memmory_sorting(self):
+        """
+        Turn any sorting in a SharedMemmorySorting.
+        Usefull to have it in memory with a unique vector representation and sharable acros processes.
+        """
+        from .numpyextractors import SharedMemmorySorting
+        sorting = SharedMemmorySorting.from_sorting(self)
+        return sorting
+
+
 
 class BaseSortingSegment(BaseSegment):
     """

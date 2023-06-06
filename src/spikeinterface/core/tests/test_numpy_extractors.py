@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.core import NumpyRecording, NumpySorting, NumpyEvent
-from spikeinterface.core import create_sorting_npz
+from spikeinterface.core import NumpyRecording, NumpySorting, SharedMemmorySorting, NumpyEvent
+from spikeinterface.core import create_sorting_npz, load_extractor
 from spikeinterface.core import NpzSortingExtractor
 from spikeinterface.core.basesorting import minimum_spike_dtype
 
@@ -62,6 +62,46 @@ def test_NumpySorting():
     sorting = NumpySorting.from_sorting(other_sorting)
     # print(sorting)
 
+    # TODO test too_dict()/
+    # TODO some test on caching
+
+
+
+def test_SharedMemmorySorting():
+    sampling_frequency = 30000
+    unit_ids = ['a', 'b', 'c']
+    spikes = np.zeros(100, dtype=minimum_spike_dtype)
+    spikes["sample_index"][:] = np.arange(0, 1000, 10, dtype='int64')
+    spikes["unit_index"][0::3] = 0
+    spikes["unit_index"][1::3] = 1
+    spikes["unit_index"][2::3] = 2
+    np_sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
+    print(np_sorting)
+
+    sorting = SharedMemmorySorting.from_sorting(np_sorting)
+    # print(sorting)
+    assert sorting._cached_spike_vector is not None
+
+    print(sorting.to_spike_vector())
+    d = sorting.to_dict()
+
+    sorting_reload = load_extractor(d)
+    # print(sorting_reload)
+    print(sorting_reload.to_spike_vector())
+
+    assert sorting.shm.name == sorting_reload.shm.name
+    
+    # this try to avoid 
+    # "UserWarning: resource_tracker: There appear to be 1 leaked shared_memory objects to clean up at shutdown"
+    # But still need investigation because do not work
+    del sorting_reload
+    del sorting
+
+
+
+
+
+
 
 def test_NumpyEvent():
     # one segment - dtype simple
@@ -102,6 +142,7 @@ def test_NumpyEvent():
 
 
 if __name__ == "__main__":
-    test_NumpyRecording()
-    test_NumpySorting()
-    test_NumpyEvent()
+    # test_NumpyRecording()
+    # test_NumpySorting()
+    test_SharedMemmorySorting()
+    # test_NumpyEvent()
