@@ -82,23 +82,15 @@ def test_SharedMemmorySorting():
     # print(sorting)
     assert sorting._cached_spike_vector is not None
 
-    print(sorting.to_spike_vector())
+    # print(sorting.to_spike_vector())
     d = sorting.to_dict()
 
     sorting_reload = load_extractor(d)
     # print(sorting_reload)
-    print(sorting_reload.to_spike_vector())
+    # print(sorting_reload.to_spike_vector())
 
     assert sorting.shm.name == sorting_reload.shm.name
     
-    # this try to avoid 
-    # "UserWarning: resource_tracker: There appear to be 1 leaked shared_memory objects to clean up at shutdown"
-    # But still need investigation because do not work
-    del sorting_reload
-    del sorting
-
-
-
 
 
 

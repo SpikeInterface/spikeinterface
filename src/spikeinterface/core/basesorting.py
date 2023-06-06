@@ -333,7 +333,9 @@ class BaseSorting(BaseExtractor):
 
     def get_all_spike_trains(self, outputs="unit_id"):
         """
-        Return all spike trains concatenated
+        Return all spike trains concatenated.
+
+        This is deprecated use  sorting.to_spike_vector() instead
         """
 
         warnings.warn(
