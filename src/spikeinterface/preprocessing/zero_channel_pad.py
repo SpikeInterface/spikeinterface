@@ -9,13 +9,13 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 class TracePaddedRecording(BasePreprocessor):
     """
-    A Pre-processor class to lazily pad recordingss.
+    A Pre-processor class to lazily pad recordings.
 
     The class retrieves traces from the parent recording segment and pads them with zeros at both ends.
 
     Parameters
     ----------
-    parent_recording_segment : BaseRecordingSegment
+    parent_recording_segment : BaseRecording
         The parent recording segment from which the traces are to be retrieved.
     padding_left : int
         The amount of padding to add to the left of the traces. Default is 0.
