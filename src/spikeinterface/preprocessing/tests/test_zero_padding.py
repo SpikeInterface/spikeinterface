@@ -68,7 +68,31 @@ def test_zero_padding_trace_recover_original_trace():
     padded_recording = ZeroTracePaddedRecording(
         parent_recording=recording, padding_left=padding_left, padding_right=padding_right
     )
-    padded_traces = padded_recording.get_traces(start_frame=padding_left, end_frame=num_samples + padding_left)
+
+    # These are the limits of the original trace
+    start_frame = padding_left
+    end_frame = num_samples + padding_left
+    padded_traces = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+
+    assert np.allclose(padded_traces, traces)
+
+
+def test_zero_padding_trace_retrieve_partial_padding():
+    num_channels = 4
+    num_samples = 10
+    traces = np.ones((num_samples, num_channels))
+    traces_list = [traces]
+    recording = NumpyRecording(traces_list=traces_list, sampling_frequency=30_000)
+
+    padding_left = 5
+    padding_right = 5
+    padded_recording = ZeroTracePaddedRecording(
+        parent_recording=recording, padding_left=padding_left, padding_right=padding_right
+    )
+
+    start_frame = padding_left - 2
+    end_frame = num_samples + padding_left + 2
+    padded_traces = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
 
     # Padd traces with zeros on the left and right
     assert np.allclose(padded_traces, traces)
