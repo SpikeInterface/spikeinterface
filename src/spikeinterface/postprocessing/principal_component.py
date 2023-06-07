@@ -340,7 +340,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         init_func = _init_work_all_pc_extractor
         init_args = (
             recording,
-            sorting.to_multiprocessing(job_kwargs['n_jobs']),
+            sorting.to_multiprocessing(job_kwargs["n_jobs"]),
             all_pcs_args,
             we.nbefore,
             we.nafter,
@@ -630,10 +630,7 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
                 all_pcs[i, :, c] = pca_model[chan_ind].transform(w)
 
 
-def _init_work_all_pc_extractor(
-    recording, sorting, all_pcs_args, nbefore, nafter, unit_channels, pca_model
-):
-
+def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafter, unit_channels, pca_model):
     worker_ctx = {}
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
@@ -647,7 +644,6 @@ def _init_work_all_pc_extractor(
     spikes = spikes[0]
     spike_times = spikes["sample_index"]
     spike_labels = spikes["unit_index"]
-    
 
     worker_ctx["all_pcs"] = np.lib.format.open_memmap(**all_pcs_args)
     worker_ctx["spike_times"] = spike_times
