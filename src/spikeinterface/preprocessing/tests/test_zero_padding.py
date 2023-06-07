@@ -56,7 +56,7 @@ def test_zero_padding_trace_full_trace():
     assert np.allclose(padded_traces[-padding_right:, :], np.zeros((padding_right, num_channels)))
 
 
-def test_zero_padding_trace_recover_original_trace():
+def test_zero_padding_trace_retrieve_original_trace():
     num_channels = 4
     num_samples = 10
     traces = np.ones((num_samples, num_channels))
@@ -77,7 +77,7 @@ def test_zero_padding_trace_recover_original_trace():
     assert np.allclose(padded_traces, traces)
 
 
-def test_zero_padding_trace_retrieve_partial_padding():
+def test_zero_padding_trace_retrieve_traces_with_partial_padding():
     num_channels = 4
     num_samples = 10
     traces = np.ones((num_samples, num_channels))
@@ -90,12 +90,26 @@ def test_zero_padding_trace_retrieve_partial_padding():
         parent_recording=recording, padding_left=padding_left, padding_right=padding_right
     )
 
-    start_frame = padding_left - 2
-    end_frame = num_samples + padding_left + 2
+    number_of_padded_frames_in_the_left = 2
+    start_frame = padding_left - number_of_padded_frames_in_the_left
+
+    number_of_paded_frames_in_the_right = 2
+    last_frame_or_original_trace = num_samples + padding_left
+    end_frame = last_frame_or_original_trace + number_of_paded_frames_in_the_right
     padded_traces = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
 
-    # Padd traces with zeros on the left and right
-    assert np.allclose(padded_traces, traces)
+    # Test that the traces are padded with zeros on the left and right
+    assert np.allclose(
+        padded_traces[:number_of_padded_frames_in_the_left, :],
+        np.zeros((number_of_padded_frames_in_the_left, num_channels)),
+    )
+    assert np.allclose(
+        padded_traces[number_of_padded_frames_in_the_left:-number_of_paded_frames_in_the_right, :], traces
+    )
+    assert np.allclose(
+        padded_traces[-number_of_paded_frames_in_the_right:, :],
+        np.zeros((number_of_paded_frames_in_the_right, num_channels)),
+    )
 
 
 if __name__ == "__main__":
