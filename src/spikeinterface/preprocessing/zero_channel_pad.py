@@ -42,21 +42,21 @@ class ZeroTracePaddedRecordingSegment(BasePreprocessorSegment):
         if end_frame is None:
             end_frame = self.get_num_samples()
 
-        shifted_start_frame = start_frame + self.padding_left
-        shifted_end_frame = end_frame + self.padding_left
-
         trace_size = end_frame - start_frame
         output_traces = np.zeros((trace_size, self.num_channels), dtype=self.dtype)
 
         # If the stat_frame is shorter than padding left then we add the zeros to till start_frame is reached
         if end_frame >= self.padding_left:
-            end_of_left_padding_frame = self.padding_left - start_frame
-            start_of_right_padding_frame = end_of_left_padding_frame + self.parent_recording_segment.get_num_samples()
             shifted_start_frame = max(start_frame - self.padding_left, 0)
             shifted_end_frame = end_frame - self.padding_left
             original_traces = self.parent_recording_segment.get_traces(
-                shifted_start_frame, shifted_end_frame, channel_indices
+                start_frame=shifted_start_frame,
+                end_frame=shifted_end_frame,
+                channel_indices=channel_indices,
             )
+
+            end_of_left_padding_frame = self.padding_left - start_frame
+            start_of_right_padding_frame = end_of_left_padding_frame + self.parent_recording_segment.get_num_samples()
             output_traces[end_of_left_padding_frame:start_of_right_padding_frame, :] = original_traces
 
         return output_traces
