@@ -10,7 +10,6 @@ from .core_tools import define_function_from_class
 from .numpyextractors import NumpySortingSegment
 
 
-
 class NumpyFolderSorting(BaseSorting):
     """
     NumpyFolderSorting is the new internal format used in spikeinterface (>=0.98.0)
@@ -20,6 +19,7 @@ class NumpyFolderSorting(BaseSorting):
     It is created with the function: `sorting.save(folder='/myfolder', format="numpy_folder")`
 
     """
+
     extractor_name = "NumpyFolderSorting"
     mode = "folder"
     name = "NumpyFolder"
@@ -29,14 +29,14 @@ class NumpyFolderSorting(BaseSorting):
 
         with open(folder_path / "numpysorting_info.json", "r") as f:
             d = json.load(f)
-        
-        sampling_frequency = d['sampling_frequency']
-        unit_ids = np.array(d['unit_ids'])
-        num_segments = d['num_segments']
+
+        sampling_frequency = d["sampling_frequency"]
+        unit_ids = np.array(d["unit_ids"])
+        num_segments = d["num_segments"]
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self.spikes = np.load(folder_path / 'spikes.npy', mmap_mode='r')
+        self.spikes = np.load(folder_path / "spikes.npy", mmap_mode="r")
 
         for segment_index in range(num_segments):
             self.add_sorting_segment(NumpySortingSegment(self.spikes, segment_index, unit_ids))
@@ -59,12 +59,12 @@ class NumpyFolderSorting(BaseSorting):
         if info_file.exists():
             raise ValueError("NumpyFolderSorting.write_sorting the folder already contains numpysorting_info.json")
         d = {
-            'sampling_frequency': float(sorting.get_sampling_frequency()),
-            'unit_ids': sorting.unit_ids.tolist(),
-            'num_segments': sorting.get_num_segments(),
+            "sampling_frequency": float(sorting.get_sampling_frequency()),
+            "unit_ids": sorting.unit_ids.tolist(),
+            "num_segments": sorting.get_num_segments(),
         }
         info_file.write_text(json.dumps(d), encoding="utf8")
-        np.save(save_path / 'spikes.npy', sorting.to_spike_vector())
+        np.save(save_path / "spikes.npy", sorting.to_spike_vector())
 
 
 class NpzFolderSorting(NpzSortingExtractor):

@@ -219,15 +219,16 @@ class BaseSorting(BaseExtractor):
         """
         This function replaces the old CachesortingExtractor, but enables more engines
         for caching a results.
-        
+
         Since v0.98.0 'numpy_folder' is used by defult.
         From v0.96.0 to 0.97.0 'npz_folder' was the default.
 
 
         At the moment only 'npz' is supported.
         """
-        if  format == "numpy_folder":
+        if format == "numpy_folder":
             from .sortingfolder import NumpyFolderSorting
+
             folder = save_kwargs.pop("folder")
             NumpyFolderSorting.write_sorting(self, folder)
             cached = NumpyFolderSorting(folder)
@@ -235,9 +236,10 @@ class BaseSorting(BaseExtractor):
             if self.has_recording():
                 warnings.warn("The registered recording will not be persistent on disk, but only available in memory")
                 cached.register_recording(self._recording)
-        
+
         elif format == "npz_folder":
             from .sortingfolder import NpzFolderSorting
+
             folder = save_kwargs.pop("folder")
             NpzFolderSorting.write_sorting(self, folder)
             cached = NpzFolderSorting(folder_path=folder)

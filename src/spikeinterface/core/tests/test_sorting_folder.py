@@ -27,8 +27,10 @@ def test_NumpyFolderSorting():
     sorting_loaded = NumpyFolderSorting(folder)
     check_sortings_equal(sorting_loaded, sorting)
     assert np.array_equal(sorting_loaded.unit_ids, sorting.unit_ids)
-    assert np.array_equal(sorting_loaded.to_spike_vector(), sorting.to_spike_vector(), )
-
+    assert np.array_equal(
+        sorting_loaded.to_spike_vector(),
+        sorting.to_spike_vector(),
+    )
 
 
 def test_NpzFolderSorting():
@@ -43,7 +45,10 @@ def test_NpzFolderSorting():
     sorting_loaded = NpzFolderSorting(folder)
     check_sortings_equal(sorting_loaded, sorting)
     assert np.array_equal(sorting_loaded.unit_ids, sorting.unit_ids)
-    assert np.array_equal(sorting_loaded.to_spike_vector(), sorting.to_spike_vector(), )
+    assert np.array_equal(
+        sorting_loaded.to_spike_vector(),
+        sorting.to_spike_vector(),
+    )
 
 
 if __name__ == "__main__":

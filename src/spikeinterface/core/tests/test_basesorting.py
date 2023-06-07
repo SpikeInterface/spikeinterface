@@ -72,14 +72,14 @@ def test_BaseSorting():
     # cache old format : npz_folder
     folder = cache_folder / "simple_sorting_npz_folder"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
-    sorting.save(folder=folder, format='npz_folder')
+    sorting.save(folder=folder, format="npz_folder")
     sorting2 = BaseExtractor.load_from_folder(folder)
     assert isinstance(sorting2, NpzFolderSorting)
 
     # cache new format : numpy_folder
     folder = cache_folder / "simple_sorting_numpy_folder"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
-    sorting.save(folder=folder, format='numpy_folder')
+    sorting.save(folder=folder, format="numpy_folder")
     sorting2 = BaseExtractor.load_from_folder(folder)
     assert isinstance(sorting2, NumpyFolderSorting)
 
