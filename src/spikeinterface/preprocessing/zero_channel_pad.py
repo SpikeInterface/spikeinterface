@@ -1,8 +1,64 @@
-from typing import Union
+from typing import List, Union
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core.core_tools import define_function_from_class
+
+
+class ZeroTracePaddedRecording(BaseRecording):
+    def __init__(self, parent_recording: BaseRecording, padding_left=0, padding_right=0):
+        BaseRecording.__init__(
+            self,
+            parent_recording.get_sampling_frequency(),
+            parent_recording.get_channel_ids(),
+            parent_recording.get_dtype(),
+        )
+        self.parent_recording = parent_recording
+        self.padding_left = padding_left
+        self.padding_right = padding_right
+        for segment in parent_recording._recording_segments:
+            recording_segment = ZeroTracePaddedRecordingSegment(
+                segment, parent_recording.get_num_channels(), self.dtype, self.padding_left, self.padding_right
+            )
+            self.add_recording_segment(recording_segment)
+
+        self._kwargs = dict(parent_recording=parent_recording, padding_left=padding_left, padding_right=padding_right)
+
+
+class ZeroTracePaddedRecordingSegment(BasePreprocessorSegment):
+    def __init__(
+        self, parent_recording_segment: BaseRecordingSegment, num_channels, dtype, paddign_left, padding_right
+    ):
+        self.padding_left = paddign_left
+        self.padding_right = padding_right
+        self.num_channels = num_channels
+        self.dtype = dtype
+
+        super().__init__(parent_recording_segment=parent_recording_segment)
+
+    def get_traces(self, start_frame, end_frame, channel_indices):
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = self.get_num_samples()
+
+        shifted_start_frame = start_frame + self.padding_left
+        shifted_end_frame = end_frame + self.padding_left
+
+        trace_size = end_frame - start_frame
+        output_traces = np.zeros((trace_size, self.num_channels), dtype=self.dtype)
+
+        # If the stat_frame is shorter than padding left then we add the zeros to till start_frame is reached
+        if end_frame >= self.padding_left:
+            end_of_left_padding_frame = self.padding_left - start_frame
+            start_of_right_padding_frame = end_of_left_padding_frame + self.parent_recording_segment.get_num_samples()
+            original_traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
+            output_traces[end_of_left_padding_frame:start_of_right_padding_frame, :] = original_traces
+
+        return output_traces
+
+    def get_num_samples(self):
+        return self.parent_recording_segment.get_num_samples() + self.padding_left + self.padding_right
 
 
 class ZeroChannelPaddedRecording(BaseRecording):
