@@ -231,9 +231,9 @@ def write_binary_recording(
     file_paths=None,
     dtype=None,
     add_file_extension=True,
-    verbose=False,
     byte_offset=0,
     auto_cast_uint=True,
+    zero_pad_samples=None,
     **job_kwargs,
 ):
     """
@@ -253,12 +253,12 @@ def write_binary_recording(
         Type of the saved data. Default float32.
     add_file_extension: bool
         If True (default), file the '.raw' file extension is added if the file name is not a 'raw', 'bin', or 'dat'
-    verbose: bool
-        If True, output is verbose (when chunks are used)
     byte_offset: int
         Offset in bytes (default 0) to for the binary file (e.g. to write a header)
     auto_cast_uint: bool
         If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
+    zero_pad_samples: None or list of 2 int
+        Add some zeros before and after.
     {}
     """
     assert file_paths is not None, "Provide 'file_path'"
@@ -272,31 +272,51 @@ def write_binary_recording(
 
     if dtype is None:
         dtype = recording.get_dtype()
+    else:
+        dtype = np.dtype(dtype)
     if auto_cast_uint:
         cast_unsigned = determine_cast_unsigned(recording, dtype)
     else:
         cast_unsigned = False
+
+    if zero_pad_samples is not None:
+        pad0, pad1 = zero_pad_samples
+        pad0, pad1 = int(pad0), int(pad1)
+    else:
+        pad0, pad1 = 0, 0
 
     # create memmap files
     rec_memmaps = []
     rec_memmaps_dict = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
-        num_channels = recording.get_num_channels()
+
         file_path = file_paths[segment_index]
-        shape = (num_frames, num_channels)
-        rec_memmap = np.memmap(str(file_path), dtype=dtype, mode="w+", offset=byte_offset, shape=shape)
+        num_channels = recording.get_num_channels()
+        offset = byte_offset + pad0 * dtype.itemsize * num_channels
+        shape = (num_frames + pad1, num_channels)
+        rec_memmap = np.memmap(str(file_path), dtype=dtype, mode="w+", offset=offset, shape=shape)
         rec_memmaps.append(rec_memmap)
-        rec_memmaps_dict.append(dict(filename=str(file_path), dtype=dtype, mode="r+", offset=byte_offset, shape=shape))
+        rec_memmaps_dict.append(dict(filename=str(file_path), dtype=dtype, mode="r+", offset=offset, shape=shape))
 
     # use executor (loop or workers)
     func = _write_binary_chunk
     init_func = _init_binary_worker
     init_args = (recording, rec_memmaps_dict, dtype, cast_unsigned)
     executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_binary_recording", **job_kwargs
+        recording, func, init_func, init_args, job_name="write_binary_recording", **job_kwargs
     )
     executor.run()
+
+    if zero_pad_samples is not None:
+        for segment_index in range(recording.get_num_segments()):
+            num_frames = recording.get_num_samples(segment_index)
+            file_path = file_paths[segment_index]
+            num_channels = recording.get_num_channels()
+            shape = (num_frames + pad0 + pad1, num_channels)
+            rec_memmap = np.memmap(str(file_path), dtype=dtype, mode="r+", offset=byte_offset, shape=shape)
+            rec_memmap[:pad0, :] = 0
+            rec_memmap[-pad1:, :] = 0
 
 
 write_binary_recording.__doc__ = write_binary_recording.__doc__.format(_shared_job_kwargs_doc)
@@ -395,11 +415,7 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 
 def make_shared_array(shape, dtype):
-    # https://docs.python.org/3/library/multiprocessing.shared_memory.html
-    try:
-        from multiprocessing.shared_memory import SharedMemory
-    except Exception as e:
-        raise Exception("SharedMemory is available only for python>=3.8")
+    from multiprocessing.shared_memory import SharedMemory
 
     dtype = np.dtype(dtype)
     nbytes = int(np.prod(shape) * dtype.itemsize)
