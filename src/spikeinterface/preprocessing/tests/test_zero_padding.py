@@ -36,8 +36,8 @@ def test_zero_paddin_channel():
     assert np.allclose(tr[:, :num_original_channels], rec.get_traces())
 
 
-@pytest.fixture(scope="module")
-def recording_numpy():
+@pytest.fixture
+def recording():
     num_channels = 4
     num_samples = 10
     rng = np.random.default_rng(seed=0)
@@ -47,36 +47,7 @@ def recording_numpy():
     return recording
 
 
-@pytest.fixture(scope="module")
-def recording_mearec():
-    from spikeinterface.core.datasets import download_dataset
-    from spikeinterface.extractors.neoextractors.mearec import MEArecRecordingExtractor
-
-    mearec_path = download_dataset()
-    recording = MEArecRecordingExtractor(file_path=mearec_path)
-
-    return recording
-
-
-@pytest.fixture(scope="module")
-def recording(request):
-    return request.getfixturevalue(request.param)
-
-
-@pytest.mark.parametrize(
-    "recording, padding_left, padding_right",
-    [
-        ("recording_numpy", 5, 5),
-        ("recording_numpy", 0, 5),
-        ("recording_numpy", 5, 0),
-        ("recording_numpy", 0, 0),
-        ("recording_mearec", 5, 5),
-        ("recording_mearec", 0, 5),
-        ("recording_mearec", 5, 0),
-        ("recording_mearec", 0, 0),
-    ],
-    indirect=["recording"],
-)
+@pytest.mark.parametrize("padding_left, padding_right", [(5, 5), (0, 5), (5, 0), (0, 0)])
 def test_trace_padded_recording_full_trace(recording, padding_left, padding_right):
     num_channels = recording.get_num_channels()
     num_samples = recording.get_num_samples()
@@ -101,20 +72,7 @@ def test_trace_padded_recording_full_trace(recording, padding_left, padding_righ
     assert np.allclose(padded_traces[last_frame_of_original_trace:, :], np.zeros((padding_right, num_channels)))
 
 
-@pytest.mark.parametrize(
-    "recording, padding_left, padding_right",
-    [
-        ("recording_numpy", 5, 5),
-        ("recording_numpy", 0, 5),
-        ("recording_numpy", 5, 0),
-        ("recording_numpy", 0, 0),
-        ("recording_mearec", 5, 5),
-        ("recording_mearec", 0, 5),
-        ("recording_mearec", 5, 0),
-        ("recording_mearec", 0, 0),
-    ],
-    indirect=["recording"],
-)
+@pytest.mark.parametrize("padding_left, padding_right", [(5, 5), (0, 5), (5, 0), (0, 0)])
 def test_trace_padded_recording_retrieve_original_trace(recording, padding_left, padding_right):
     num_samples = recording.get_num_samples()
 
@@ -133,20 +91,7 @@ def test_trace_padded_recording_retrieve_original_trace(recording, padding_left,
     assert np.allclose(padded_traces, original_traces)
 
 
-@pytest.mark.parametrize(
-    "recording, padding_left, padding_right",
-    [
-        ("recording_numpy", 5, 5),
-        ("recording_numpy", 0, 5),
-        ("recording_numpy", 5, 0),
-        ("recording_numpy", 0, 0),
-        ("recording_mearec", 5, 5),
-        ("recording_mearec", 0, 5),
-        ("recording_mearec", 5, 0),
-        ("recording_mearec", 0, 0),
-    ],
-    indirect=["recording"],
-)
+@pytest.mark.parametrize("padding_left, padding_right", [(5, 5), (0, 5), (5, 0), (0, 0)])
 def test_trace_padded_recording_retrieve_partial_original_trace(recording, padding_left, padding_right):
     num_samples = recording.get_num_samples()
 
@@ -168,20 +113,7 @@ def test_trace_padded_recording_retrieve_partial_original_trace(recording, paddi
     assert np.allclose(padded_traces, original_traces)
 
 
-@pytest.mark.parametrize(
-    "recording, padding_left, padding_right",
-    [
-        ("recording_numpy", 5, 5),
-        ("recording_numpy", 0, 5),
-        ("recording_numpy", 5, 0),
-        ("recording_numpy", 0, 0),
-        ("recording_mearec", 5, 5),
-        ("recording_mearec", 0, 5),
-        ("recording_mearec", 5, 0),
-        ("recording_mearec", 0, 0),
-    ],
-    indirect=["recording"],
-)
+@pytest.mark.parametrize("padding_left, padding_right", [(5, 5), (0, 5), (5, 0), (0, 0)])
 def test_trace_padded_recording_retrieve_traces_with_partial_padding(recording, padding_left, padding_right):
     num_samples = recording.get_num_samples()
     num_channels = recording.get_num_channels()
