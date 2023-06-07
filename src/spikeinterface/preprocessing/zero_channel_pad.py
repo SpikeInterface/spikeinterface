@@ -5,19 +5,29 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 
-class ZeroTracePaddedRecording(BaseRecording):
-    def __init__(self, parent_recording: BaseRecording, padding_left=0, padding_right=0):
-        BaseRecording.__init__(
-            self,
-            parent_recording.get_sampling_frequency(),
-            parent_recording.get_channel_ids(),
-            parent_recording.get_dtype(),
-        )
-        self.parent_recording = parent_recording
+class TracePaddedRecording(BasePreprocessor):
+    """
+    A Pre-processor class to lazily pad recordingss.
+
+    The class retrieves traces from the parent recording segment and pads them with zeros at both ends.
+
+    Parameters
+    ----------
+    parent_recording_segment : BaseRecordingSegment
+        The parent recording segment from which the traces are to be retrieved.
+    padding_left : int
+        The amount of padding to add to the left of the traces.
+    padding_right : int
+        The amount of padding to add to the right of the traces.
+    """
+
+    def __init__(self, parent_recording: BaseRecording, padding_left: int = 0, padding_right: int = 0):
+        super().__init__(recording=parent_recording)
+
         self.padding_left = padding_left
         self.padding_right = padding_right
         for segment in parent_recording._recording_segments:
-            recording_segment = ZeroTracePaddedRecordingSegment(
+            recording_segment = TracePaddedRecordingSegment(
                 segment, parent_recording.get_num_channels(), self.dtype, self.padding_left, self.padding_right
             )
             self.add_recording_segment(recording_segment)
@@ -25,7 +35,7 @@ class ZeroTracePaddedRecording(BaseRecording):
         self._kwargs = dict(parent_recording=parent_recording, padding_left=padding_left, padding_right=padding_right)
 
 
-class ZeroTracePaddedRecordingSegment(BasePreprocessorSegment):
+class TracePaddedRecordingSegment(BasePreprocessorSegment):
     def __init__(
         self, parent_recording_segment: BaseRecordingSegment, num_channels, dtype, paddign_left, padding_right
     ):
@@ -55,9 +65,9 @@ class ZeroTracePaddedRecordingSegment(BasePreprocessorSegment):
                 channel_indices=channel_indices,
             )
 
-            end_of_left_padding_frame = self.padding_left - start_frame
-            start_of_right_padding_frame = end_of_left_padding_frame + self.parent_recording_segment.get_num_samples()
-            output_traces[end_of_left_padding_frame:start_of_right_padding_frame, :] = original_traces
+            padded_frames = max(self.padding_left - start_frame, 0)
+            end_of_non_paded_frames = padded_frames + self.parent_recording_segment.get_num_samples()
+            output_traces[padded_frames:end_of_non_paded_frames, :] = original_traces
 
         return output_traces
 

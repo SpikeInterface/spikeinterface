@@ -7,7 +7,7 @@ from spikeinterface.core import generate_recording
 from spikeinterface.core.numpyextractors import NumpyRecording
 
 from spikeinterface.preprocessing import zero_channel_pad
-from spikeinterface.preprocessing.zero_channel_pad import ZeroTracePaddedRecording
+from spikeinterface.preprocessing.zero_channel_pad import TracePaddedRecording
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "preprocessing"
@@ -45,7 +45,7 @@ def test_trace_padded_recording_full_trace(padding_left, padding_right):
     traces_list = [traces]
     recording = NumpyRecording(traces_list=traces_list, sampling_frequency=30_000)
 
-    padded_recording = ZeroTracePaddedRecording(
+    padded_recording = TracePaddedRecording(
         parent_recording=recording,
         padding_left=padding_left,
         padding_right=padding_right,
@@ -55,8 +55,12 @@ def test_trace_padded_recording_full_trace(padding_left, padding_right):
     # Until padding_left the traces should be filled with zeros
     assert np.allclose(padded_traces[:padding_left, :], np.zeros((padding_left, num_channels)))
     last_frame_of_original_trace = num_samples + padding_left
+
     # Then from padding_left to the number of samples plus padding_left it should be the original traces
-    assert np.allclose(padded_traces[padding_left:last_frame_of_original_trace, :], traces)
+    original_traces = recording.get_traces()
+    original_traces_from_padding = padded_traces[padding_left:last_frame_of_original_trace, :]
+    assert np.allclose(original_traces_from_padding, original_traces)
+
     # After the original trace is over it should have zeros until the end of the padding right
     assert np.allclose(padded_traces[last_frame_of_original_trace:, :], np.zeros((padding_right, num_channels)))
 
@@ -70,7 +74,7 @@ def test_trace_padded_recording_retrieve_original_trace(padding_left, padding_ri
     traces_list = [traces]
     recording = NumpyRecording(traces_list=traces_list, sampling_frequency=30_000)
 
-    padded_recording = ZeroTracePaddedRecording(
+    padded_recording = TracePaddedRecording(
         parent_recording=recording,
         padding_left=padding_left,
         padding_right=padding_right,
@@ -81,7 +85,8 @@ def test_trace_padded_recording_retrieve_original_trace(padding_left, padding_ri
     end_frame = num_samples + padding_left
     padded_traces = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
 
-    assert np.allclose(padded_traces, traces)
+    original_traces = recording.get_traces()
+    assert np.allclose(padded_traces, original_traces)
 
 
 @pytest.mark.parametrize("padding_left, padding_right", [(5, 5), (0, 5), (5, 0), (0, 0)])
@@ -93,18 +98,22 @@ def test_trace_padded_recording_retrieve_partial_original_trace(padding_left, pa
     traces_list = [traces]
     recording = NumpyRecording(traces_list=traces_list, sampling_frequency=30_000)
 
-    padded_recording = ZeroTracePaddedRecording(
+    padded_recording = TracePaddedRecording(
         parent_recording=recording,
         padding_left=padding_left,
         padding_right=padding_right,
     )
 
     # These are the limits of the original trace
-    start_frame = padding_left + 2
-    end_frame = num_samples + padding_left - 1
-    padded_traces = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    start_frame_original_traces = 2
+    end_frame_original_traces = num_samples - 2
 
-    assert np.allclose(padded_traces, traces)
+    start_frame = padding_left + start_frame_original_traces
+    end_frame = padding_left + end_frame_original_traces
+    padded_traces = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    original_traces = recording.get_traces(start_frame=start_frame_original_traces, end_frame=end_frame_original_traces)
+
+    assert np.allclose(padded_traces, original_traces)
 
 
 @pytest.mark.parametrize("padding_left, padding_right", [(5, 5), (0, 5), (5, 0), (0, 0)])
@@ -116,7 +125,7 @@ def test_trace_padded_recording_retrieve_traces_with_partial_padding(padding_lef
     traces_list = [traces]
     recording = NumpyRecording(traces_list=traces_list, sampling_frequency=30_000)
 
-    padded_recording = ZeroTracePaddedRecording(
+    padded_recording = TracePaddedRecording(
         parent_recording=recording,
         padding_left=padding_left,
         padding_right=padding_right,
@@ -138,7 +147,9 @@ def test_trace_padded_recording_retrieve_traces_with_partial_padding(padding_lef
     assert np.allclose(padded_traces_start, expected_zeros)
 
     # Then from padding_left to the number of samples plus padding_left it should be the original traces
-    assert np.allclose(padded_traces[number_of_padded_frames_at_start:-number_of_paded_frames_at_end, :], traces)
+    original_traces_from_padding = padded_traces[number_of_padded_frames_at_start:-number_of_paded_frames_at_end, :]
+    original_traces = recording.get_traces()
+    assert np.allclose(original_traces_from_padding, original_traces)
 
     # Find that there as many frames padded at the end as expected
     padded_traces_end = padded_traces[-number_of_paded_frames_at_end:, :]
