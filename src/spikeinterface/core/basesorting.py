@@ -483,7 +483,7 @@ class BaseSorting(BaseExtractor):
 
         sorting = SharedMemorySorting.from_sorting(self)
         return sorting
-    
+
     def to_multiprocessing(self, n_jobs):
         """
         When necessary turn sorting object into:
@@ -496,10 +496,10 @@ class BaseSorting(BaseExtractor):
         n_jobs: int
             The number of jobs.
         Returns
-        -------    
-        sharable_sorting: 
-            A sorting that can be 
-        
+        -------
+        sharable_sorting:
+            A sorting that can be
+
         """
         from .numpyextractors import NumpySorting, SharedMemorySorting
         if n_jobs == 1:
@@ -512,7 +512,6 @@ class BaseSorting(BaseExtractor):
                 return self
             else:
                 return SharedMemorySorting.from_sorting(self)
-
 
 
 class BaseSortingSegment(BaseSegment):
