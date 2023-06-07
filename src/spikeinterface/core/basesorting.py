@@ -502,6 +502,7 @@ class BaseSorting(BaseExtractor):
 
         """
         from .numpyextractors import NumpySorting, SharedMemorySorting
+
         if n_jobs == 1:
             if isinstance(self, (NumpySorting, SharedMemorySorting)):
                 return self
