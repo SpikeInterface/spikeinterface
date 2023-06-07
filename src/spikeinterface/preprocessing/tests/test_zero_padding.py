@@ -36,7 +36,7 @@ def test_zero_paddin_channel():
     assert np.allclose(tr[:, :num_original_channels], rec.get_traces())
 
 
-def test_zero_padding_trace():
+def test_zero_padding_trace_full_trace():
     num_channels = 4
     num_samples = 10
     traces = np.ones((num_samples, num_channels))
@@ -54,6 +54,24 @@ def test_zero_padding_trace():
     assert np.allclose(padded_traces[:padding_left, :], np.zeros((padding_left, num_channels)))
     assert np.allclose(padded_traces[padding_left:-padding_right, :], traces)
     assert np.allclose(padded_traces[-padding_right:, :], np.zeros((padding_right, num_channels)))
+
+
+def test_zero_padding_trace_recover_original_trace():
+    num_channels = 4
+    num_samples = 10
+    traces = np.ones((num_samples, num_channels))
+    traces_list = [traces]
+    recording = NumpyRecording(traces_list=traces_list, sampling_frequency=30_000)
+
+    padding_left = 5
+    padding_right = 5
+    padded_recording = ZeroTracePaddedRecording(
+        parent_recording=recording, padding_left=padding_left, padding_right=padding_right
+    )
+    padded_traces = padded_recording.get_traces(start_frame=padding_left, end_frame=num_samples + padding_left)
+
+    # Padd traces with zeros on the left and right
+    assert np.allclose(padded_traces, traces)
 
 
 if __name__ == "__main__":
