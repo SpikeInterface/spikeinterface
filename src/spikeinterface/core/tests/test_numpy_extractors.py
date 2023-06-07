@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.core import NumpyRecording, NumpySorting, SharedMemmorySorting, NumpyEvent
+from spikeinterface.core import NumpyRecording, NumpySorting, SharedMemorySorting, NumpyEvent
 from spikeinterface.core import create_sorting_npz, load_extractor
 from spikeinterface.core import NpzSortingExtractor
 from spikeinterface.core.basesorting import minimum_spike_dtype
@@ -66,7 +66,7 @@ def test_NumpySorting():
     # TODO some test on caching
 
 
-def test_SharedMemmorySorting():
+def test_SharedMemorySorting():
     sampling_frequency = 30000
     unit_ids = ["a", "b", "c"]
     spikes = np.zeros(100, dtype=minimum_spike_dtype)
@@ -77,7 +77,7 @@ def test_SharedMemmorySorting():
     np_sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
     print(np_sorting)
 
-    sorting = SharedMemmorySorting.from_sorting(np_sorting)
+    sorting = SharedMemorySorting.from_sorting(np_sorting)
     # print(sorting)
     assert sorting._cached_spike_vector is not None
 
@@ -132,5 +132,5 @@ def test_NumpyEvent():
 if __name__ == "__main__":
     # test_NumpyRecording()
     # test_NumpySorting()
-    test_SharedMemmorySorting()
+    test_SharedMemorySorting()
     # test_NumpyEvent()

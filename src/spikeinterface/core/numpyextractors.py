@@ -345,10 +345,10 @@ class NumpySortingSegment(BaseSortingSegment):
         return times
 
 
-class SharedMemmorySorting(BaseSorting):
+class SharedMemorySorting(BaseSorting):
     def __init__(self, shm_name, shape, sampling_frequency, unit_ids, dtype=minimum_spike_dtype, main_shm_owner=True):
         assert len(shape) == 1
-        assert shape[0] > 0, "SharedMemmorySorting only supported with no empty sorting"
+        assert shape[0] > 0, "SharedMemorySorting only supported with no empty sorting"
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self.is_dumpable = True
@@ -386,7 +386,7 @@ class SharedMemmorySorting(BaseSorting):
         spikes = source_sorting.to_spike_vector()
         shm_spikes, shm = make_shared_array(spikes.shape, spikes.dtype)
         shm_spikes[:] = spikes
-        sorting = SharedMemmorySorting(
+        sorting = SharedMemorySorting(
             shm.name, spikes.shape, source_sorting.get_sampling_frequency(), source_sorting.unit_ids, dtype=spikes.dtype
         )
         shm.close()

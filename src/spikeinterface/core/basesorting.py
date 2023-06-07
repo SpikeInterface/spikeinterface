@@ -474,21 +474,21 @@ class BaseSorting(BaseExtractor):
         sorting = NumpySorting.from_sorting(self)
         return sorting
 
-    def to_shared_memmory_sorting(self):
+    def to_shared_memory_sorting(self):
         """
-        Turn any sorting in a SharedMemmorySorting.
+        Turn any sorting in a SharedMemorySorting.
         Usefull to have it in memory with a unique vector representation and sharable acros processes.
         """
-        from .numpyextractors import SharedMemmorySorting
+        from .numpyextractors import SharedMemorySorting
 
-        sorting = SharedMemmorySorting.from_sorting(self)
+        sorting = SharedMemorySorting.from_sorting(self)
         return sorting
     
     def to_multiprocessing(self, n_jobs):
         """
         When necessary turn sorting object into:
         * NumpySorting
-        * SharedMemmorySorting
+        * SharedMemorySorting
         * TODO add new format
 
         Parameters
@@ -501,17 +501,17 @@ class BaseSorting(BaseExtractor):
             A sorting that can be 
         
         """
-        from .numpyextractors import NumpySorting, SharedMemmorySorting
+        from .numpyextractors import NumpySorting, SharedMemorySorting
         if n_jobs == 1:
-            if isinstance(self, (NumpySorting, SharedMemmorySorting)):
+            if isinstance(self, (NumpySorting, SharedMemorySorting)):
                 return self
             else:
                 return NumpySorting.from_sorting(self)
         else:
-            if isinstance(self, SharedMemmorySorting):
+            if isinstance(self, SharedMemorySorting):
                 return self
             else:
-                return SharedMemmorySorting.from_sorting(self)
+                return SharedMemorySorting.from_sorting(self)
 
 
 
