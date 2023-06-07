@@ -36,7 +36,8 @@ def test_zero_paddin_channel():
     assert np.allclose(tr[:, :num_original_channels], rec.get_traces())
 
 
-def test_trace_padded_recording_full_trace():
+@pytest.mark.parametrize("padding_left, padding_right", [(5, 5), (0, 5), (5, 0), (0, 0)])
+def test_trace_padded_recording_full_trace(padding_left, padding_right):
     num_channels = 4
     num_samples = 10
     rng = np.random.default_rng(seed=0)
@@ -44,8 +45,6 @@ def test_trace_padded_recording_full_trace():
     traces_list = [traces]
     recording = NumpyRecording(traces_list=traces_list, sampling_frequency=30_000)
 
-    padding_left = 5
-    padding_right = 5
     padded_recording = ZeroTracePaddedRecording(
         parent_recording=recording, padding_left=padding_left, padding_right=padding_right
     )
