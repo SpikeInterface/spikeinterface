@@ -50,10 +50,13 @@ def test_trace_padded_recording_full_trace(padding_left, padding_right):
     )
     padded_traces = padded_recording.get_traces()
 
-    # Padd traces with zeros on the left and right
+    # Until padding_left the traces should be filled with zeros
     assert np.allclose(padded_traces[:padding_left, :], np.zeros((padding_left, num_channels)))
-    assert np.allclose(padded_traces[padding_left:-padding_right, :], traces)
-    assert np.allclose(padded_traces[-padding_right:, :], np.zeros((padding_right, num_channels)))
+    last_frame_of_original_trace = num_samples + padding_left
+    # Then from padding_left to the number of samples plus padding_left it should be the original traces
+    assert np.allclose(padded_traces[padding_left:last_frame_of_original_trace, :], traces)
+    # After the original trace is over it should have zeros until the end of the padding right
+    assert np.allclose(padded_traces[last_frame_of_original_trace:, :], np.zeros((padding_right, num_channels)))
 
 
 def test_trace_padded_recording_retrieve_original_trace():
@@ -96,8 +99,8 @@ def test_trace_padded_recording_retrieve_traces_with_partial_padding():
     start_frame = padding_left - number_of_padded_frames_in_the_left
 
     number_of_paded_frames_in_the_right = 2
-    last_frame_or_original_trace = num_samples + padding_left
-    end_frame = last_frame_or_original_trace + number_of_paded_frames_in_the_right
+    last_frame_of_original_trace = num_samples + padding_left
+    end_frame = last_frame_of_original_trace + number_of_paded_frames_in_the_right
     padded_traces = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
 
     # Test that the traces are padded with zeros on the left and right
