@@ -415,11 +415,7 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 
 def make_shared_array(shape, dtype):
-    # https://docs.python.org/3/library/multiprocessing.shared_memory.html
-    try:
-        from multiprocessing.shared_memory import SharedMemory
-    except Exception as e:
-        raise Exception("SharedMemory is available only for python>=3.8")
+    from multiprocessing.shared_memory import SharedMemory
 
     dtype = np.dtype(dtype)
     nbytes = int(np.prod(shape) * dtype.itemsize)
