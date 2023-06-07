@@ -85,6 +85,29 @@ def test_trace_padded_recording_retrieve_original_trace(padding_left, padding_ri
 
 
 @pytest.mark.parametrize("padding_left, padding_right", [(5, 5), (0, 5), (5, 0), (0, 0)])
+def test_trace_padded_recording_retrieve_partial_original_trace(padding_left, padding_right):
+    num_channels = 4
+    num_samples = 10
+    rng = np.random.default_rng(seed=0)
+    traces = rng.random(size=(num_samples, num_channels))
+    traces_list = [traces]
+    recording = NumpyRecording(traces_list=traces_list, sampling_frequency=30_000)
+
+    padded_recording = ZeroTracePaddedRecording(
+        parent_recording=recording,
+        padding_left=padding_left,
+        padding_right=padding_right,
+    )
+
+    # These are the limits of the original trace
+    start_frame = padding_left + 2
+    end_frame = num_samples + padding_left - 1
+    padded_traces = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+
+    assert np.allclose(padded_traces, traces)
+
+
+@pytest.mark.parametrize("padding_left, padding_right", [(5, 5), (0, 5), (5, 0), (0, 0)])
 def test_trace_padded_recording_retrieve_traces_with_partial_padding(padding_left, padding_right):
     num_channels = 4
     num_samples = 10
