@@ -52,7 +52,11 @@ class ZeroTracePaddedRecordingSegment(BasePreprocessorSegment):
         if end_frame >= self.padding_left:
             end_of_left_padding_frame = self.padding_left - start_frame
             start_of_right_padding_frame = end_of_left_padding_frame + self.parent_recording_segment.get_num_samples()
-            original_traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
+            shifted_start_frame = max(start_frame - self.padding_left, 0)
+            shifted_end_frame = end_frame - self.padding_left
+            original_traces = self.parent_recording_segment.get_traces(
+                shifted_start_frame, shifted_end_frame, channel_indices
+            )
             output_traces[end_of_left_padding_frame:start_of_right_padding_frame, :] = original_traces
 
         return output_traces
