@@ -307,11 +307,11 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             file_path = self.extension_folder / "all_pcs.npy"
         file_path = Path(file_path)
 
-        spikes = sorting.to_spike_vector(concatenated=False)
-        # This is the first segment only
-        spikes = spikes[0]
-        spike_times = spikes["sample_index"]
-        spike_labels = spikes["unit_index"]
+        # spikes = sorting.to_spike_vector(concatenated=False)
+        # # This is the first segment only
+        # spikes = spikes[0]
+        # spike_times = spikes["sample_index"]
+        # spike_labels = spikes["unit_index"]
 
         sparsity = self.get_sparsity()
         if sparsity is None:
@@ -330,7 +330,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         # nSpikes, nFeaturesPerChannel, nPCFeatures
         # this comes from  phy template-gui
         # https://github.com/kwikteam/phy-contrib/blob/master/docs/template-gui.md#datasets
-        shape = (spike_times.size, p["n_components"], max_channels_per_template)
+        num_spikes = sorting.to_spike_vector().size
+        shape = (num_spikes, p["n_components"], max_channels_per_template)
         all_pcs = np.lib.format.open_memmap(filename=file_path, mode="w+", dtype="float32", shape=shape)
         all_pcs_args = dict(filename=file_path, mode="r+", dtype="float32", shape=shape)
 
@@ -339,9 +340,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         init_func = _init_work_all_pc_extractor
         init_args = (
             recording,
+            sorting.to_multiprocessing(job_kwargs['n_jobs']),
             all_pcs_args,
-            spike_times,
-            spike_labels,
             we.nbefore,
             we.nafter,
             unit_channels,
@@ -631,14 +631,24 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 
 def _init_work_all_pc_extractor(
-    recording, all_pcs_args, spike_times, spike_labels, nbefore, nafter, unit_channels, pca_model
+    recording, sorting, all_pcs_args, nbefore, nafter, unit_channels, pca_model
 ):
+
     worker_ctx = {}
     if isinstance(recording, dict):
         from spikeinterface.core import load_extractor
 
         recording = load_extractor(recording)
     worker_ctx["recording"] = recording
+    worker_ctx["sorting"] = sorting
+
+    spikes = sorting.to_spike_vector(concatenated=False)
+    # This is the first segment only
+    spikes = spikes[0]
+    spike_times = spikes["sample_index"]
+    spike_labels = spikes["unit_index"]
+    
+
     worker_ctx["all_pcs"] = np.lib.format.open_memmap(**all_pcs_args)
     worker_ctx["spike_times"] = spike_times
     worker_ctx["spike_labels"] = spike_labels

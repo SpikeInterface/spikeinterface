@@ -79,7 +79,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
                 "The soring object is not dumpable and cannot be processed in parallel. You can use the "
                 "`sorting.save()` function to make it dumpable"
             )
-        init_args = (recording, sorting, extremum_channels_index, peak_shifts, return_scaled)
+        init_args = (recording, sorting.to_multiprocessing(n_jobs), extremum_channels_index, peak_shifts, return_scaled)
         processor = ChunkRecordingExecutor(
             recording, func, init_func, init_args, handle_returns=True, job_name="extract amplitudes", **job_kwargs
         )
