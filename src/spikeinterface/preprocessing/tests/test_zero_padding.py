@@ -17,7 +17,7 @@ else:
 set_global_tmp_folder(cache_folder)
 
 
-def test_zero_paddin_channel():
+def test_zero_padding_channel():
     num_original_channels = 4
     num_padded_channels = num_original_channels + 8
     rec = generate_recording(num_channels=num_original_channels, durations=[10])
