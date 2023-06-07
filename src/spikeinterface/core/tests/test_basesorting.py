@@ -13,6 +13,8 @@ from spikeinterface.core import (
     NpzSortingExtractor,
     NumpyRecording,
     NumpySorting,
+    NpzFolderSorting,
+    NumpyFolderSorting,
     create_sorting_npz,
     generate_sorting,
     load_extractor,
@@ -67,11 +69,20 @@ def test_BaseSorting():
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=True)
     check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=True)
 
-    # cache
-    folder = cache_folder / "simple_sorting"
+    # cache old format : npz_folder
+    folder = cache_folder / "simple_sorting_npz_folder"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
-    sorting.save(folder=folder)
+    sorting.save(folder=folder, format='npz_folder')
     sorting2 = BaseExtractor.load_from_folder(folder)
+    assert isinstance(sorting2, NpzFolderSorting)
+
+    # cache new format : numpy_folder
+    folder = cache_folder / "simple_sorting_numpy_folder"
+    sorting.set_property("test", np.ones(len(sorting.unit_ids)))
+    sorting.save(folder=folder, format='numpy_folder')
+    sorting2 = BaseExtractor.load_from_folder(folder)
+    assert isinstance(sorting2, NumpyFolderSorting)
+
     # but also possible
     sorting3 = BaseExtractor.load(folder)
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=True)

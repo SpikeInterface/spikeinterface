@@ -215,27 +215,37 @@ class BaseSorting(BaseExtractor):
         else:
             return None
 
-    def _save(self, format="npz", **save_kwargs):
+    def _save(self, format="numpy_folder", **save_kwargs):
         """
         This function replaces the old CachesortingExtractor, but enables more engines
-        for caching a results. At the moment only 'npz' is supported.
+        for caching a results.
+        
+        Since v0.98.0 'numpy_folder' is used by defult.
+        From v0.96.0 to 0.97.0 'npz_folder' was the default.
+
+
+        At the moment only 'npz' is supported.
         """
-        if format == "npz":
+        if  format == "numpy_folder":
+            from .sortingfolder import NumpyFolderSorting
             folder = save_kwargs.pop("folder")
-            # TODO save properties/features as npz!!!!!
-            from .npzsortingextractor import NpzSortingExtractor
+            NumpyFolderSorting.write_sorting(self, folder)
+            cached = NumpyFolderSorting(folder)
 
-            save_path = folder / "sorting_cached.npz"
-            NpzSortingExtractor.write_sorting(self, save_path)
-            cached = NpzSortingExtractor(save_path)
-            cached.dump(folder / "npz.json", relative_to=folder)
-
-            from .npzfolder import NpzFolderSorting
-
-            cached = NpzFolderSorting(folder_path=folder)
             if self.has_recording():
                 warnings.warn("The registered recording will not be persistent on disk, but only available in memory")
                 cached.register_recording(self._recording)
+        
+        elif format == "npz_folder":
+            from .sortingfolder import NpzFolderSorting
+            folder = save_kwargs.pop("folder")
+            NpzFolderSorting.write_sorting(self, folder)
+            cached = NpzFolderSorting(folder_path=folder)
+
+            if self.has_recording():
+                warnings.warn("The registered recording will not be persistent on disk, but only available in memory")
+                cached.register_recording(self._recording)
+
         elif format == "memory":
             from .numpyextractors import NumpySorting
 

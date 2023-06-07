@@ -122,7 +122,7 @@ class NumpySorting(BaseSorting):
         """ """
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self.is_dumpable = True
+        self.is_dumpable = False
 
         if spikes.size == 0:
             nseg = 1
