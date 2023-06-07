@@ -36,10 +36,11 @@ def test_zero_paddin_channel():
     assert np.allclose(tr[:, :num_original_channels], rec.get_traces())
 
 
-def test_zero_padding_trace_full_trace():
+def test_trace_padded_recording_full_trace():
     num_channels = 4
     num_samples = 10
-    traces = np.ones((num_samples, num_channels))
+    rng = np.random.default_rng(seed=0)
+    traces = rng.random(size=(num_samples, num_channels))
     traces_list = [traces]
     recording = NumpyRecording(traces_list=traces_list, sampling_frequency=30_000)
 
@@ -56,10 +57,11 @@ def test_zero_padding_trace_full_trace():
     assert np.allclose(padded_traces[-padding_right:, :], np.zeros((padding_right, num_channels)))
 
 
-def test_zero_padding_trace_retrieve_original_trace():
+def test_trace_padded_recording_retrieve_original_trace():
     num_channels = 4
     num_samples = 10
-    traces = np.ones((num_samples, num_channels))
+    rng = np.random.default_rng(seed=0)
+    traces = rng.random(size=(num_samples, num_channels))
     traces_list = [traces]
     recording = NumpyRecording(traces_list=traces_list, sampling_frequency=30_000)
 
@@ -77,10 +79,11 @@ def test_zero_padding_trace_retrieve_original_trace():
     assert np.allclose(padded_traces, traces)
 
 
-def test_zero_padding_trace_retrieve_traces_with_partial_padding():
+def test_trace_padded_recording_retrieve_traces_with_partial_padding():
     num_channels = 4
     num_samples = 10
-    traces = np.ones((num_samples, num_channels))
+    rng = np.random.default_rng(seed=0)
+    traces = rng.random(size=(num_samples, num_channels))
     traces_list = [traces]
     recording = NumpyRecording(traces_list=traces_list, sampling_frequency=30_000)
 
