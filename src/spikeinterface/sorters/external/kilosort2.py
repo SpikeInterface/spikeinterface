@@ -49,7 +49,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         "skip_kilosort_preprocessing": False,
         "scaleproc": None,
         "save_rez_to_mat": False,
-        "after_run_cleanup": True,
+        "delete_tmp_files": True,
     }
 
     _params_description = {
@@ -70,7 +70,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         "skip_kilosort_preprocessing": "Can optionaly skip the internal kilosort preprocessing",
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
         "save_rez_to_mat": "Save the full rez internal struc to mat file",
-        "after_run_cleanup": "Whether to delete all temporary files after a successful run",
+        "delete_tmp_files": "Whether to delete all temporary files after a successful run",
     }
 
     sorter_description = """Kilosort2 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
