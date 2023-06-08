@@ -140,6 +140,24 @@ def get_noise_levels(
     Internally it samples some chunk across segment.
     And then, it use MAD estimator (more robust than STD)
 
+    Parameters
+    ----------
+
+    recording: BaseRecording
+        The recording extractor to get noise levels
+    return_scaled: bool
+        If True, returned noise levels are scaled to uV
+    method: str
+        'mad' or 'std'
+    force_recompute: bool
+        If True, noise levels are recomputed even if they are already stored in the recording extractor
+    random_chunk_kwargs: dict
+        Kwargs for get_random_data_chunks
+
+    Returns
+    -------
+    noise_levels: array
+        Noise levels for each channel
     """
 
     if return_scaled:
@@ -147,7 +165,7 @@ def get_noise_levels(
     else:
         key = "noise_level_raw"
 
-    if key in recording._properties and not force_recompute:
+    if key in recording.get_property_keys() and not force_recompute:
         noise_levels = recording.get_property(key=key)
     else:
         random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
