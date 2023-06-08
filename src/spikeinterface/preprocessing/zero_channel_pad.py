@@ -18,9 +18,9 @@ class TracePaddedRecording(BasePreprocessor):
     parent_recording_segment : BaseRecording
         The parent recording segment from which the traces are to be retrieved.
     padding_start : int
-        The amount of padding to add to the left of the traces. Default is 0.
+        The amount of padding to add to the left of the traces. Default is 0. It has to be non-negative
     padding_end : int
-        The amount of padding to add to the right of the traces. Default is 0.
+        The amount of padding to add to the right of the traces. Default is 0. It has to be non-negative
     fill_value: float
         The value to pad with. Default is 0.
     """
@@ -28,6 +28,7 @@ class TracePaddedRecording(BasePreprocessor):
     def __init__(
         self, parent_recording: BaseRecording, padding_start: int = 0, padding_end: int = 0, fill_value: float = 0.0
     ):
+        assert padding_end >= 0 and padding_start >= 0, "Paddings must be >= 0"
         super().__init__(recording=parent_recording)
 
         self.padding_start = padding_start
