@@ -57,6 +57,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "scaleproc": None,
         "save_rez_to_mat": False,
         "delete_tmp_files": True,
+        "delete_recording_dat": False,
     }
 
     _params_description = {
@@ -81,6 +82,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
         "save_rez_to_mat": "Save the full rez internal struc to mat file",
         "delete_tmp_files": "Whether to delete all temporary files after a successful run",
+        "delete_recording_dat": "Whether to delete the 'recording.dat' file after a successful run",
     }
 
     sorter_description = """Kilosort2_5 is a GPU-accelerated and efficient template-matching spike sorter. On top of its

@@ -215,6 +215,8 @@ class KilosortBase:
             for temp_file in sorter_output_folder.glob("*.mat"):
                 temp_file.unlink()
             (sorter_output_folder / "temp_wh.dat").unlink()
+        if params["delete_recording_dat"]:
+            (sorter_output_folder / "recording.dat").unlink()
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):

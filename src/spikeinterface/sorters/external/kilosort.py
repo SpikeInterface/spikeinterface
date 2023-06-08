@@ -43,6 +43,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         "NT": None,
         "wave_length": 61,
         "delete_tmp_files": True,
+        "delete_recording_dat": False,
     }
 
     _params_description = {
@@ -56,6 +57,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         "NT": "Batch size (if None it is automatically computed)",
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
         "delete_tmp_files": "Whether to delete all temporary files after a successful run",
+        "delete_recording_dat": "Whether to delete the 'recording.dat' file after a successful run",
     }
 
     sorter_description = """Kilosort is a GPU-accelerated and efficient template-matching spike sorter.
