@@ -46,6 +46,11 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         "NT": None,
         "wave_length": 61,
         "keep_good_only": False,
+        "skip_kilosort_preprocessing": False,
+        "scaleproc": None,
+        "save_rez_to_mat": False,
+        "delete_tmp_files": True,
+        "delete_recording_dat": False,
     }
 
     _params_description = {
@@ -63,6 +68,11 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         "NT": "Batch size (if None it is automatically computed)",
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
         "keep_good_only": "If True only 'good' units are returned",
+        "skip_kilosort_preprocessing": "Can optionaly skip the internal kilosort preprocessing",
+        "scaleproc": "int16 scaling of whitened data, if None set to 200.",
+        "save_rez_to_mat": "Save the full rez internal struc to mat file",
+        "delete_tmp_files": "Whether to delete all temporary files after a successful run",
+        "delete_recording_dat": "Whether to delete the 'recording.dat' file after a successful run",
     }
 
     sorter_description = """Kilosort2 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
@@ -180,7 +190,6 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         ]  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
         ops["whiteningRange"] = 32.0  # number of channels to use for whitening each channel
         ops["nSkipCov"] = 25.0  # compute whitening matrix from every N-th batch
-        ops["scaleproc"] = 200.0  # int16 scaling of whitened data
         ops["nPCs"] = params["nPCs"]  # how many PCs to project the spikes into
         ops["useRAM"] = 0.0  # not yet available
 
@@ -188,4 +197,18 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         ops["nt0"] = params[
             "wave_length"
         ]  # size of the waveform extracted around each detected peak. Be sure to make it odd to make alignment easier.
+
+        ops["skip_kilosort_preprocessing"] = params["skip_kilosort_preprocessing"]
+        if params["skip_kilosort_preprocessing"]:
+            ops["fproc"] = ops["fbinary"]
+            assert (
+                params["scaleproc"] is not None
+            ), "When skip_kilosort_preprocessing=True scaleproc must explicitly given"
+
+        # int16 scaling of whitened data, when None then scaleproc is set to 200.
+        scaleproc = params["scaleproc"]
+        ops["scaleproc"] = scaleproc if scaleproc is not None else 200.0
+
+        ops["save_rez_to_mat"] = params["save_rez_to_mat"]
+
         return ops
