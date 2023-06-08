@@ -246,7 +246,11 @@ class BaseExtractor:
             raise Exception(f"{key} is not a property key")
 
     def copy_metadata(
-        self, other: "BaseExtractor", only_main: bool = False, ids: Union[Iterable, slice, None] = None
+        self,
+        other: "BaseExtractor",
+        only_main: bool = False,
+        ids: Union[Iterable, slice, None] = None,
+        skip_properties: Optional[Iterable[str]] = None,
     ) -> None:
         """
         Copy annotations/properties to another extractor.
@@ -270,6 +274,8 @@ class BaseExtractor:
 
         other._annotations = deepcopy({k: self._annotations[k] for k in ann_keys})
         for k in prop_keys:
+            if skip_properties is not None and k in skip_properties:
+                continue
             values = self._properties[k]
             if values is not None:
                 other.set_property(k, values[inds])
