@@ -209,13 +209,12 @@ class KilosortBase:
             raise Exception(f"{cls.sorter_name} returned a non-zero exit code")
 
         # Clean-up temporary files
-        if params['after_run_cleanup']:
+        if params["after_run_cleanup"]:
             for temp_file in sorter_output_folder.glob("*.m"):
                 temp_file.unlink()
             for temp_file in sorter_output_folder.glob("*.mat"):
                 temp_file.unlink()
             (sorter_output_folder / "temp_wh.dat").unlink()
-
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
