@@ -72,6 +72,10 @@ _common_param_doc = """
         singularity. Use a str to specify a non-default container. If that container is not local it will be pulled
         from Docker Hub.
         If False, the sorter is run locally.
+    delete_container_files: bool
+        If True, the container temporary files are deleted after the sorting is done (default False).
+    with_output: bool
+        If True, the output Sorting is returned as a Sorting (default True).
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
@@ -92,6 +96,7 @@ def run_sorter(
     raise_error: bool = True,
     docker_image: Optional[Union[bool, str]] = False,
     singularity_image: Optional[Union[bool, str]] = False,
+    delete_container_files: bool = True,
     with_output: bool = True,
     **sorter_params,
 ):
@@ -118,6 +123,7 @@ def run_sorter(
     )
 
     if docker_image or singularity_image:
+        common_kwargs.update(dict(delete_container_files=delete_container_files))
         if docker_image:
             mode = "docker"
             assert not singularity_image
@@ -336,6 +342,7 @@ def run_sorter_container(
     verbose: bool = False,
     raise_error: bool = True,
     with_output: bool = True,
+    delete_container_files: bool = True,
     extra_requirements=None,
     **sorter_params,
 ):
@@ -353,6 +360,7 @@ def run_sorter_container(
     verbose: bool, optional
     raise_error: bool, optional
     with_output: bool, optional
+    delete_container_files: bool, optional
     extra_requirements: list, optional
     sorter_params:
 
@@ -564,11 +572,12 @@ if __name__ == '__main__':
     container_client.stop()
 
     # clean useless files
-    os.remove(parent_folder / "in_container_recording.json")
-    os.remove(parent_folder / "in_container_params.json")
-    os.remove(parent_folder / "in_container_sorter_script.py")
-    if mode == "singularity":
-        shutil.rmtree(py_user_base_folder)
+    if delete_container_files:
+        os.remove(parent_folder / "in_container_recording.json")
+        os.remove(parent_folder / "in_container_params.json")
+        os.remove(parent_folder / "in_container_sorter_script.py")
+        if mode == "singularity":
+            shutil.rmtree(py_user_base_folder)
 
     # check error
     output_folder = Path(output_folder)
