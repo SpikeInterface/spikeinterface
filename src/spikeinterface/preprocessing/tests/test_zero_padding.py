@@ -47,89 +47,89 @@ def recording():
     return recording
 
 
-@pytest.mark.parametrize("padding_left, padding_right", [(5, 5), (0, 5), (5, 0), (0, 0)])
-def test_trace_padded_recording_full_trace(recording, padding_left, padding_right):
+@pytest.mark.parametrize("padding_start, padding_end", [(5, 5), (0, 5), (5, 0), (0, 0)])
+def test_trace_padded_recording_full_trace(recording, padding_start, padding_end):
     num_channels = recording.get_num_channels()
     num_samples = recording.get_num_samples()
 
     padded_recording = TracePaddedRecording(
         parent_recording=recording,
-        padding_left=padding_left,
-        padding_right=padding_right,
+        padding_start=padding_start,
+        padding_end=padding_end,
     )
     padded_traces = padded_recording.get_traces()
 
-    # Until padding_left the traces should be filled with zeros
-    assert np.allclose(padded_traces[:padding_left, :], np.zeros((padding_left, num_channels)))
-    last_frame_of_original_trace = num_samples + padding_left
+    # Until padding_start the traces should be filled with zeros
+    assert np.allclose(padded_traces[:padding_start, :], np.zeros((padding_start, num_channels)))
+    last_frame_of_original_trace = num_samples + padding_start
 
-    # Then from padding_left to the number of samples plus padding_left it should be the original traces
+    # Then from padding_start to the number of samples plus padding_start it should be the original traces
     original_traces = recording.get_traces()
-    original_traces_from_padding = padded_traces[padding_left:last_frame_of_original_trace, :]
+    original_traces_from_padding = padded_traces[padding_start:last_frame_of_original_trace, :]
     assert np.allclose(original_traces_from_padding, original_traces)
 
     # After the original trace is over it should have zeros until the end of the padding right
-    assert np.allclose(padded_traces[last_frame_of_original_trace:, :], np.zeros((padding_right, num_channels)))
+    assert np.allclose(padded_traces[last_frame_of_original_trace:, :], np.zeros((padding_end, num_channels)))
 
 
-@pytest.mark.parametrize("padding_left, padding_right", [(5, 5), (0, 5), (5, 0), (0, 0)])
-def test_trace_padded_recording_retrieve_original_trace(recording, padding_left, padding_right):
+@pytest.mark.parametrize("padding_start, padding_end", [(5, 5), (0, 5), (5, 0), (0, 0)])
+def test_trace_padded_recording_retrieve_original_trace(recording, padding_start, padding_end):
     num_samples = recording.get_num_samples()
 
     padded_recording = TracePaddedRecording(
         parent_recording=recording,
-        padding_left=padding_left,
-        padding_right=padding_right,
+        padding_start=padding_start,
+        padding_end=padding_end,
     )
 
     # These are the limits of the original trace
-    start_frame = padding_left
-    end_frame = num_samples + padding_left
+    start_frame = padding_start
+    end_frame = num_samples + padding_start
     padded_traces = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
 
     original_traces = recording.get_traces()
     assert np.allclose(padded_traces, original_traces)
 
 
-@pytest.mark.parametrize("padding_left, padding_right", [(5, 5), (0, 5), (5, 0), (0, 0)])
-def test_trace_padded_recording_retrieve_partial_original_trace(recording, padding_left, padding_right):
+@pytest.mark.parametrize("padding_start, padding_end", [(5, 5), (0, 5), (5, 0), (0, 0)])
+def test_trace_padded_recording_retrieve_partial_original_trace(recording, padding_start, padding_end):
     num_samples = recording.get_num_samples()
 
     padded_recording = TracePaddedRecording(
         parent_recording=recording,
-        padding_left=padding_left,
-        padding_right=padding_right,
+        padding_start=padding_start,
+        padding_end=padding_end,
     )
 
     # These are the limits of the original trace
     start_frame_original_traces = 2
     end_frame_original_traces = num_samples - 2
 
-    start_frame = padding_left + start_frame_original_traces
-    end_frame = padding_left + end_frame_original_traces
+    start_frame = padding_start + start_frame_original_traces
+    end_frame = padding_start + end_frame_original_traces
     padded_traces = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
     original_traces = recording.get_traces(start_frame=start_frame_original_traces, end_frame=end_frame_original_traces)
 
     assert np.allclose(padded_traces, original_traces)
 
 
-@pytest.mark.parametrize("padding_left, padding_right", [(5, 5), (0, 5), (5, 0), (0, 0)])
-def test_trace_padded_recording_retrieve_traces_with_partial_padding(recording, padding_left, padding_right):
+@pytest.mark.parametrize("padding_start, padding_end", [(5, 5), (0, 5), (5, 0), (0, 0)])
+def test_trace_padded_recording_retrieve_traces_with_partial_padding(recording, padding_start, padding_end):
     num_samples = recording.get_num_samples()
     num_channels = recording.get_num_channels()
 
     padded_recording = TracePaddedRecording(
         parent_recording=recording,
-        padding_left=padding_left,
-        padding_right=padding_right,
+        padding_start=padding_start,
+        padding_end=padding_end,
     )
 
     # Extract the traces with partial padding in the left and to the right
     number_of_padded_frames_at_start = 2
-    start_frame = padding_left - number_of_padded_frames_at_start
+    start_frame = padding_start - number_of_padded_frames_at_start
 
     number_of_paded_frames_at_end = 2
-    last_frame_of_original_trace = num_samples + padding_left
+    last_frame_of_original_trace = num_samples + padding_start
     end_frame = last_frame_of_original_trace + number_of_paded_frames_at_end
 
     padded_traces = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
@@ -139,7 +139,7 @@ def test_trace_padded_recording_retrieve_traces_with_partial_padding(recording, 
     expected_zeros = np.zeros((number_of_padded_frames_at_start, num_channels))
     assert np.allclose(padded_traces_start, expected_zeros)
 
-    # Then from padding_left to the number of samples plus padding_left it should be the original traces
+    # Then from padding_start to the number of samples plus padding_start it should be the original traces
     original_traces_from_padding = padded_traces[number_of_padded_frames_at_start:-number_of_paded_frames_at_end, :]
     original_traces = recording.get_traces()
     assert np.allclose(original_traces_from_padding, original_traces)

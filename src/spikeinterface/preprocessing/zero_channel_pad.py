@@ -17,37 +17,37 @@ class TracePaddedRecording(BasePreprocessor):
     ----------
     parent_recording_segment : BaseRecording
         The parent recording segment from which the traces are to be retrieved.
-    padding_left : int
+    padding_start : int
         The amount of padding to add to the left of the traces. Default is 0.
-    padding_right : int
+    padding_end : int
         The amount of padding to add to the right of the traces. Default is 0.
     fill_value: float
         The value to pad with. Default is 0.
     """
 
     def __init__(
-        self, parent_recording: BaseRecording, padding_left: int = 0, padding_right: int = 0, fill_value: float = 0.0
+        self, parent_recording: BaseRecording, padding_start: int = 0, padding_end: int = 0, fill_value: float = 0.0
     ):
         super().__init__(recording=parent_recording)
 
-        self.padding_left = padding_left
-        self.padding_right = padding_right
+        self.padding_start = padding_start
+        self.padding_end = padding_end
         self.fill_value = fill_value
         for segment in parent_recording._recording_segments:
             recording_segment = TracePaddedRecordingSegment(
                 segment,
                 parent_recording.get_num_channels(),
                 self.dtype,
-                self.padding_left,
-                self.padding_right,
+                self.padding_start,
+                self.padding_end,
                 self.fill_value,
             )
             self.add_recording_segment(recording_segment)
 
         self._kwargs = dict(
             parent_recording=parent_recording,
-            padding_left=padding_left,
-            padding_right=padding_right,
+            padding_start=padding_start,
+            padding_end=padding_end,
             fill_value=fill_value,
         )
 
@@ -59,11 +59,11 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         num_channels,
         dtype,
         paddign_left,
-        padding_right,
+        padding_end,
         fill_value,
     ):
-        self.padding_left = paddign_left
-        self.padding_right = padding_right
+        self.padding_start = paddign_left
+        self.padding_end = padding_end
         self.fill_value = fill_value
         self.num_channels = num_channels
         self.dtype = dtype
@@ -82,16 +82,16 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         output_traces = np.full(shape=(trace_size, self.num_channels), fill_value=self.fill_value, dtype=self.dtype)
 
         # After the padding, the original traces are placed in the middle until the end of the original segment
-        if end_frame >= self.padding_left:
-            original_start_frame = max(start_frame - self.padding_left, 0)
-            original_end_frame = end_frame - self.padding_left
+        if end_frame >= self.padding_start:
+            original_start_frame = max(start_frame - self.padding_start, 0)
+            original_end_frame = end_frame - self.padding_start
             original_traces = self.parent_recording_segment.get_traces(
                 start_frame=original_start_frame,
                 end_frame=original_end_frame,
                 channel_indices=channel_indices,
             )
 
-            padded_frames = max(self.padding_left - start_frame, 0)
+            padded_frames = max(self.padding_start - start_frame, 0)
             end_of_non_paded_frames = padded_frames + self.parent_recording_segment.get_num_samples()
             output_traces[padded_frames:end_of_non_paded_frames, :] = original_traces
 
@@ -99,7 +99,7 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
 
     def get_num_samples(self):
         "Overide the parent method to return the padded number of samples"
-        return self.parent_recording_segment.get_num_samples() + self.padding_left + self.padding_right
+        return self.parent_recording_segment.get_num_samples() + self.padding_start + self.padding_end
 
 
 class ZeroChannelPaddedRecording(BaseRecording):
