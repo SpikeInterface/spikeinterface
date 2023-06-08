@@ -374,7 +374,7 @@ def run_sorter_container(
     SorterClass = sorter_dict[sorter_name]
     output_folder = Path(output_folder).absolute().resolve()
     parent_folder = output_folder.parent.absolute().resolve()
-    output_folder.mkdir(parents=True, exist_ok=True)
+    parent_folder.mkdir(parents=True, exist_ok=True)
 
     # find input folder of recording for folder bind
     rec_dict = recording.to_dict(recursive=True)
@@ -420,8 +420,8 @@ if __name__ == '__main__':
     output_folder = '{output_folder_unix}'
     sorting = run_sorter_local(
         '{sorter_name}', recording, output_folder=output_folder,
-         remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
-          verbose={verbose}, raise_error={raise_error}, with_output=True, **sorter_params
+        remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
+        verbose={verbose}, raise_error={raise_error}, with_output=True, **sorter_params
     )
     sorting.save_to_folder(folder='{npz_sorting_path_unix}')
 """
@@ -545,6 +545,7 @@ if __name__ == '__main__':
     cmd = ["python", f"{in_container_script_path_unix}"]
     res_output = container_client.run_command(cmd)
     run_sorter_output = res_output
+    run_sorter_output = run_sorter_output[2:-1].replace("\\n", "\n").replace("\\'", "'")
 
     # chown folder to user uid
     if platform.system() != "Windows":
@@ -599,8 +600,9 @@ if __name__ == '__main__':
                 except FileNotFoundError:
                     SpikeSortingError(f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}")
 
+    sorter_output_folder = output_folder / "sorter_output"
     if delete_output_folder:
-        shutil.rmtree(output_folder)
+        shutil.rmtree(sorter_output_folder)
 
     return sorting
 
