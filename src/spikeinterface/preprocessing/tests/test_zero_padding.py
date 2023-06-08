@@ -152,4 +152,4 @@ def test_trace_padded_recording_retrieve_traces_with_partial_padding(recording, 
 
 
 if __name__ == "__main__":
-    test_zero_paddin_channel()
+    test_zero_padding_channel()
