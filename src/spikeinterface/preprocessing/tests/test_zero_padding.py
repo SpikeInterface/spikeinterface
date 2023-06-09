@@ -73,6 +73,33 @@ def test_trace_padded_recording_full_trace(recording, padding_start, padding_end
 
 
 @pytest.mark.parametrize("padding_start, padding_end", [(5, 5), (0, 5), (5, 0), (0, 0)])
+def test_trace_padded_recording_full_trace_with_channel_indices(recording, padding_start, padding_end):
+    num_channels = recording.get_num_channels()
+    num_samples = recording.get_num_samples()
+
+    padded_recording = TracePaddedRecording(
+        parent_recording=recording,
+        padding_start=padding_start,
+        padding_end=padding_end,
+    )
+
+    channel_indices = [0, 2]
+    padded_traces = padded_recording.get_traces(channel_ids=channel_indices)
+
+    # Until padding_start the traces should be filled with zeros
+    assert np.allclose(padded_traces[:padding_start, :], np.zeros((padding_start, num_channels)))
+    last_frame_of_original_trace = num_samples + padding_start
+
+    # Then from padding_start to the number of samples plus padding_start it should be the original traces
+    original_traces = recording.get_traces(channel_indices=channel_indices)
+    original_traces_from_padding = padded_traces[padding_start:last_frame_of_original_trace, :]
+    assert np.allclose(original_traces_from_padding, original_traces)
+
+    # After the original trace is over it should have zeros until the end of the padding right
+    assert np.allclose(padded_traces[last_frame_of_original_trace:, :], np.zeros((padding_end, num_channels)))
+
+
+@pytest.mark.parametrize("padding_start, padding_end", [(5, 5), (0, 5), (5, 0), (0, 0)])
 def test_trace_padded_recording_retrieve_original_trace(recording, padding_start, padding_end):
     num_samples = recording.get_num_samples()
 
