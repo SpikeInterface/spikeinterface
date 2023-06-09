@@ -67,6 +67,7 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         self.padding_end = padding_end
         self.fill_value = fill_value
         self.num_channels = num_channels
+        self.num_segments_in_original_recording = parent_recording_segment.get_num_samples()
         self.dtype = dtype
 
         super().__init__(parent_recording_segment=parent_recording_segment)
@@ -77,15 +78,14 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         if end_frame is None:
             end_frame = self.get_num_samples()
 
-        trace_size = end_frame - start_frame
-
         # This contains the padded elements by default and we add the original traces if necessary
+        trace_size = end_frame - start_frame
         output_traces = np.full(shape=(trace_size, self.num_channels), fill_value=self.fill_value, dtype=self.dtype)
 
         # After the padding, the original traces are placed in the middle until the end of the original segment
         if end_frame >= self.padding_start:
             original_start_frame = max(start_frame - self.padding_start, 0)
-            original_end_frame = end_frame - self.padding_start
+            original_end_frame = min(end_frame - self.padding_start, self.num_segments_in_original_recording)
             original_traces = self.parent_recording_segment.get_traces(
                 start_frame=original_start_frame,
                 end_frame=original_end_frame,
@@ -93,14 +93,14 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
             )
 
             padded_frames = max(self.padding_start - start_frame, 0)
-            end_of_non_paded_frames = padded_frames + self.parent_recording_segment.get_num_samples()
+            end_of_non_paded_frames = padded_frames + original_traces.shape[0]
             output_traces[padded_frames:end_of_non_paded_frames, :] = original_traces
 
         return output_traces
 
     def get_num_samples(self):
         "Overide the parent method to return the padded number of samples"
-        return self.parent_recording_segment.get_num_samples() + self.padding_start + self.padding_end
+        return self.num_segments_in_original_recording + self.padding_start + self.padding_end
 
 
 class ZeroChannelPaddedRecording(BaseRecording):
