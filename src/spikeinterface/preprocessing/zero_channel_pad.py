@@ -67,7 +67,7 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         self.padding_end = padding_end
         self.fill_value = fill_value
         self.num_channels = num_channels
-        self.num_segments_in_original_recording = parent_recording_segment.get_num_samples()
+        self.num_samples_in_original_segment = parent_recording_segment.get_num_samples()
         self.dtype = dtype
 
         super().__init__(parent_recording_segment=parent_recording_segment)
@@ -82,25 +82,25 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         trace_size = end_frame - start_frame
         output_traces = np.full(shape=(trace_size, self.num_channels), fill_value=self.fill_value, dtype=self.dtype)
 
-        # After the padding, the original traces are placed in the middle until the end of the original segment
+        # After the padding, the original traces are placed in the middle until the end of the original traces
         if end_frame >= self.padding_start:
             original_start_frame = max(start_frame - self.padding_start, 0)
-            original_end_frame = min(end_frame - self.padding_start, self.num_segments_in_original_recording)
+            original_end_frame = min(end_frame - self.padding_start, self.num_samples_in_original_segment)
             original_traces = self.parent_recording_segment.get_traces(
                 start_frame=original_start_frame,
                 end_frame=original_end_frame,
                 channel_indices=channel_indices,
             )
 
-            padded_frames = max(self.padding_start - start_frame, 0)
-            end_of_non_paded_frames = padded_frames + original_traces.shape[0]
-            output_traces[padded_frames:end_of_non_paded_frames, :] = original_traces
+            padded_frames_at_the_start = max(self.padding_start - start_frame, 0)
+            end_of_original_traces = padded_frames_at_the_start + original_traces.shape[0]
+            output_traces[padded_frames_at_the_start:end_of_original_traces, :] = original_traces
 
         return output_traces
 
     def get_num_samples(self):
         "Overide the parent method to return the padded number of samples"
-        return self.num_segments_in_original_recording + self.padding_start + self.padding_end
+        return self.num_samples_in_original_segment + self.padding_start + self.padding_end
 
 
 class ZeroChannelPaddedRecording(BaseRecording):
@@ -183,3 +183,4 @@ class ZeroChannelPaddedRecordingSegment(BasePreprocessorSegment):
 
 # function for API
 zero_channel_pad = define_function_from_class(source_class=ZeroChannelPaddedRecording, name="zero_channel_pad")
+pad_traces = define_function_from_class(source_class=TracePaddedRecording, name="pad_traces")
