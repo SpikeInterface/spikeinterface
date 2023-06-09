@@ -262,8 +262,16 @@ class BaseSorting(BaseExtractor):
         return v
 
     def get_total_num_spikes(self):
+        warnings.warn(
+            "Sorting.get_total_num_spikes() is deprecated, se sorting.count_num_spikes_per_unit()",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.count_num_spikes_per_unit()
+
+    def count_num_spikes_per_unit(self):
         """
-        Get total number of spikes for each unit across segments.
+        For each unit : get number of spikes  across segments.
 
         Returns
         -------
@@ -278,6 +286,17 @@ class BaseSorting(BaseExtractor):
                 n += st.size
             num_spikes[unit_id] = n
         return num_spikes
+
+    def count_total_num_spikes(self):
+        """
+        Get total number of spikes summed across segment and units.
+
+        Returns
+        -------
+        total_num_spikes: int
+            The total number of spike
+        """
+        return self.to_spike_vector().size
 
     def select_units(self, unit_ids, renamed_unit_ids=None):
         """
@@ -476,14 +495,22 @@ class BaseSorting(BaseExtractor):
 
         return spikes
 
-    def to_numpy_sorting(self):
+    def to_numpy_sorting(self, propagate_cache=True):
         """
         Turn any sorting in a NumpySorting.
         usefull to have it in memory with a unique vector representation.
+
+        Parameters
+        ----------
+        propagate_cache : bool
+            Propagate the cache of indivudual spike trains.
+
         """
         from .numpyextractors import NumpySorting
 
         sorting = NumpySorting.from_sorting(self)
+        if propagate_cache and self._cached_spike_trains is not None:
+            sorting._cached_spike_trains = self._cached_spike_trains
         return sorting
 
     def to_shared_memory_sorting(self):

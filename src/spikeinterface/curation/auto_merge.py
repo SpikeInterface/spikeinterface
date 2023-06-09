@@ -137,7 +137,7 @@ def get_potential_auto_merge(
 
     # STEP 1 :
     if "min_spikes" in steps:
-        num_spikes = np.array(list(sorting.get_total_num_spikes().values()))
+        num_spikes = np.array(list(sorting.count_num_spikes_per_unit().values()))
         to_remove = num_spikes < minimum_spikes
         pair_mask[to_remove, :] = False
         pair_mask[:, to_remove] = False
@@ -256,7 +256,7 @@ def compute_correlogram_diff(
 
     # Index of the middle of the correlograms.
     m = correlograms_smoothed.shape[2] // 2
-    num_spikes = sorting.get_total_num_spikes()
+    num_spikes = sorting.count_num_spikes_per_unit()
 
     corr_diff = np.full((n, n), np.nan, dtype="float64")
     for unit_ind1 in range(n):
