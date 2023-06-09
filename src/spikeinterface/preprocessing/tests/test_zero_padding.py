@@ -78,7 +78,6 @@ def test_trace_padded_recording_full_trace(recording, padding_start, padding_end
 
 @pytest.mark.parametrize("padding_start, padding_end", [(5, 5), (0, 5), (5, 0), (0, 0)])
 def test_trace_padded_recording_full_trace_with_channel_indices(recording, padding_start, padding_end):
-    num_channels = recording.get_num_channels()
     num_samples = recording.get_num_samples()
 
     padded_recording = TracePaddedRecording(
@@ -87,7 +86,7 @@ def test_trace_padded_recording_full_trace_with_channel_indices(recording, paddi
         padding_end=padding_end,
     )
 
-    channel_indices = [0, 2]
+    channel_indices = [2, 0]
     num_channels_sub_straces = len(channel_indices)
     padded_traces = padded_recording.get_traces(channel_ids=channel_indices)
 

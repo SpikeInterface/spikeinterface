@@ -80,7 +80,14 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
 
         # This contains the padded elements by default and we add the original traces if necessary
         trace_size = end_frame - start_frame
-        output_traces = np.full(shape=(trace_size, self.num_channels), fill_value=self.fill_value, dtype=self.dtype)
+        if isinstance(channel_indices, (np.ndarray, list)):
+            num_channels = len(channel_indices)
+        elif channel_indices == slice(None):
+            num_channels = self.num_channels
+        else:
+            raise ValueError(f"Unsupported channel_indices type: {type(channel_indices)} raise an issue on github ")
+
+        output_traces = np.full(shape=(trace_size, num_channels), fill_value=self.fill_value, dtype=self.dtype)
 
         # After the padding, the original traces are placed in the middle until the end of the original traces
         if end_frame >= self.padding_start:
