@@ -585,7 +585,7 @@ In this example, we create a recording and a sorting object from numpy objects:
                                                     sampling_frequency=sampling_frequency)
 
 
-Any sorting object can be transformed into a :py:class:`~spikeinterface.core.NumpySorting` or 
+Any sorting object can be transformed into a :py:class:`~spikeinterface.core.NumpySorting` or
 :py:class:`~spikeinterface.core.SharedMemorySorting` easily like this
 
 .. code-block:: python

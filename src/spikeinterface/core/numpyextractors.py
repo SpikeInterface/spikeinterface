@@ -390,8 +390,12 @@ class SharedMemorySorting(BaseSorting):
         shm_spikes, shm = make_shared_array(spikes.shape, spikes.dtype)
         shm_spikes[:] = spikes
         sorting = SharedMemorySorting(
-            shm.name, spikes.shape, source_sorting.get_sampling_frequency(), source_sorting.unit_ids,
-            dtype=spikes.dtype, main_shm_owner=True
+            shm.name,
+            spikes.shape,
+            source_sorting.get_sampling_frequency(),
+            source_sorting.unit_ids,
+            dtype=spikes.dtype,
+            main_shm_owner=True,
         )
         shm.close()
         return sorting

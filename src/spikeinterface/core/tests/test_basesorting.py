@@ -105,7 +105,6 @@ def test_BaseSorting():
     num_spikes_per_unit = sorting.count_num_spikes_per_unit()
     total_spikes = sorting.count_total_num_spikes()
 
-
     # select units
     keep_units = [0, 1]
     sorting_select = sorting.select_units(unit_ids=keep_units)
@@ -118,7 +117,7 @@ def test_BaseSorting():
     sorting_clean = sorting_empty.remove_empty_units()
     for unit in sorting_clean.get_unit_ids():
         assert unit not in empty_units
-    
+
     sorting4 = sorting.to_numpy_sorting()
     sorting5 = sorting.to_multiprocessing(n_jobs=2)
     del sorting5
