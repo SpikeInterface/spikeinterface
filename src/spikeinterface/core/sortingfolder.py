@@ -12,9 +12,13 @@ from .numpyextractors import NumpySortingSegment
 
 class NumpyFolderSorting(BaseSorting):
     """
-    NumpyFolderSorting is the new internal format used in spikeinterface (>=0.98.0)
+    NumpyFolderSorting is the new internal format used in spikeinterface (>=0.98.0) for caching
+    sorting obecjts.
 
-    It is a simple folder that contains all flatten spikes (using sorting.to_spike_vector() in a npy format.
+    It is a simple folder that contains:
+      * a file "spike.npy" (numpy formt) with all flatten spikes (using sorting.to_spike_vector())
+      * a "numpysorting_info.json" containing sampling_frequenc, unit_ids and num_segments
+      * a metadata folder for units properties.
 
     It is created with the function: `sorting.save(folder='/myfolder', format="numpy_folder")`
 
@@ -47,7 +51,7 @@ class NumpyFolderSorting(BaseSorting):
         folder_metadata = folder_path
         self.load_metadata_from_folder(folder_metadata)
 
-        self._kwargs = dict(folder_path=folder_path.absolute())
+        self._kwargs = dict(folder_path=str(folder_path.absolute()))
 
     @staticmethod
     def write_sorting(sorting, save_path):
@@ -70,9 +74,14 @@ class NumpyFolderSorting(BaseSorting):
 class NpzFolderSorting(NpzSortingExtractor):
     """
     NpzFolderSorting is the old internal format used in spikeinterface (<=0.97.0)
-    It is a NpzSortingExtractor + metadata contained in a folder.
 
-    It is created with the function: `sorting.save(folder='/myfolder', format="npz")`
+    This a folder that contains:
+
+      * "sorting_cached.npz" file in the NpzSortingExtractor format
+      * "npz.json" which the json description of NpzSortingExtractor
+      * a metadata folder for units properties.
+
+    It is created with the function: `sorting.save(folder='/myfolder', format="npz_folder")`
 
     Parameters
     ----------
@@ -111,11 +120,12 @@ class NpzFolderSorting(NpzSortingExtractor):
 
     @staticmethod
     def write_sorting(sorting, save_path):
-        # the folder can already exists but not contaning numpysorting_info.json
         save_path = Path(save_path)
         save_path.mkdir(parents=True, exist_ok=True)
 
         npz_file = save_path / "sorting_cached.npz"
+        if npz_file.exists():
+            raise ValueError("NpzFolderSorting.write_sorting the folder already contains sorting_cached.npz")
         NpzSortingExtractor.write_sorting(sorting, npz_file)
         cached = NpzSortingExtractor(npz_file)
         cached.dump(save_path / "npz.json", relative_to=save_path)

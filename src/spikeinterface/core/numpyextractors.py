@@ -153,7 +153,7 @@ class NumpySorting(BaseSorting):
     @staticmethod
     def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
         """
-        Construct sorting extractor from:
+        Construct NumpySorting extractor from:
           * an array of spike times (in frames)
           * an array of spike labels and adds all the
         In case of multisegment, it is a list of array.
@@ -203,8 +203,8 @@ class NumpySorting(BaseSorting):
     @staticmethod
     def from_unit_dict(units_dict_list, sampling_frequency) -> "NumpySorting":
         """
-        Construct sorting extractor from a list of dict.
-        The list length is the segment count
+        Construct NumpySorting from a list of dict.
+        The list length is the segment count.
         Each dict have unit_ids as keys and spike times as values.
 
         Parameters
@@ -253,7 +253,7 @@ class NumpySorting(BaseSorting):
     @staticmethod
     def from_neo_spiketrain_list(neo_spiketrains, sampling_frequency, unit_ids=None) -> "NumpySorting":
         """
-        Construct a sorting with a neo spiketrain list.
+        Construct a NumpySorting with a neo spiketrain list.
 
         If this is a list of list, it is multi segment.
 
@@ -338,7 +338,6 @@ class NumpySortingSegment(BaseSortingSegment):
             self.spikes_in_seg = self.spikes[s0:s1]
 
         unit_index = self.unit_ids.index(unit_id)
-
         times = self.spikes_in_seg[self.spikes_in_seg["unit_index"] == unit_index]["sample_index"]
 
         if start_frame is not None:
@@ -376,6 +375,7 @@ class SharedMemorySorting(BaseSorting):
             shape=shape,
             sampling_frequency=sampling_frequency,
             unit_ids=unit_ids,
+            # this ensure that all dump/load will not be main shm owner
             main_shm_owner=False,
         )
 
@@ -390,7 +390,8 @@ class SharedMemorySorting(BaseSorting):
         shm_spikes, shm = make_shared_array(spikes.shape, spikes.dtype)
         shm_spikes[:] = spikes
         sorting = SharedMemorySorting(
-            shm.name, spikes.shape, source_sorting.get_sampling_frequency(), source_sorting.unit_ids, dtype=spikes.dtype
+            shm.name, spikes.shape, source_sorting.get_sampling_frequency(), source_sorting.unit_ids,
+            dtype=spikes.dtype, main_shm_owner=True
         )
         shm.close()
         return sorting

@@ -526,9 +526,11 @@ class BaseSorting(BaseExtractor):
     def to_multiprocessing(self, n_jobs):
         """
         When necessary turn sorting object into:
-        * NumpySorting
-        * SharedMemorySorting
-        * TODO add new format
+        * NumpySorting when n_jobs=1
+        * SharedMemorySorting whe, n_jobs>1
+
+        If the sorting is already NumpySorting, SharedMemorySorting or NumpyFolderSorting
+        then this return the sortign itself, no transformation so.
 
         Parameters
         ----------
@@ -537,18 +539,18 @@ class BaseSorting(BaseExtractor):
         Returns
         -------
         sharable_sorting:
-            A sorting that can be
-
+            A sorting that can be used for multiprocessing.
         """
         from .numpyextractors import NumpySorting, SharedMemorySorting
+        from .sortingfolder import NumpyFolderSorting
 
         if n_jobs == 1:
-            if isinstance(self, (NumpySorting, SharedMemorySorting)):
+            if isinstance(self, (NumpySorting, SharedMemorySorting, NumpyFolderSorting)):
                 return self
             else:
                 return NumpySorting.from_sorting(self)
         else:
-            if isinstance(self, SharedMemorySorting):
+            if isinstance(self, (SharedMemorySorting, NumpyFolderSorting)):
                 return self
             else:
                 return SharedMemorySorting.from_sorting(self)

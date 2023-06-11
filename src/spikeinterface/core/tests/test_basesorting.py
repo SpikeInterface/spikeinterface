@@ -93,13 +93,18 @@ def test_BaseSorting():
     check_sortings_equal(sorting, sorting4, check_annotations=True, check_properties=True)
 
     with pytest.warns(DeprecationWarning):
-        spikes = sorting.get_all_spike_trains()
+        num_spikes = sorting.get_all_spike_trains()
     # print(spikes)
 
     spikes = sorting.to_spike_vector()
     # print(spikes)
+    assert sorting._cached_spike_vector is not None
     spikes = sorting.to_spike_vector(extremum_channel_inds={0: 15, 1: 5, 2: 18})
     # print(spikes)
+
+    num_spikes_per_unit = sorting.count_num_spikes_per_unit()
+    total_spikes = sorting.count_total_num_spikes()
+
 
     # select units
     keep_units = [0, 1]
@@ -113,6 +118,10 @@ def test_BaseSorting():
     sorting_clean = sorting_empty.remove_empty_units()
     for unit in sorting_clean.get_unit_ids():
         assert unit not in empty_units
+    
+    sorting4 = sorting.to_numpy_sorting()
+    sorting5 = sorting.to_multiprocessing(n_jobs=2)
+    del sorting5
 
 
 def test_npy_sorting():
