@@ -34,6 +34,9 @@ class BaseExtractor:
     _main_annotations = []
     _main_properties = []
 
+    # these properties are skipped by default in copy_metadata
+    _skip_properties = []
+
     installed = True
     installation_mesg = ""
     is_writable = False
@@ -253,9 +256,18 @@ class BaseExtractor:
         skip_properties: Optional[Iterable[str]] = None,
     ) -> None:
         """
-        Copy annotations/properties to another extractor.
+        Copy metadata (annotations/properties) to another extractor (`other`).
 
-        If 'only main' is True, then only "main" annotations/properties one are copied.
+        Parameters
+        ----------
+        other: BaseExtractor
+            The extractor to copy the metadata to.
+        only_main: bool
+            If True, only the main annotations/properties are copied.
+        ids: list
+            List of ids to copy the metadata to. If None, all ids are copied.
+        skip_properties: list
+            List of properties to skip. Default is None.
         """
 
         if ids is None:
@@ -273,8 +285,14 @@ class BaseExtractor:
             prop_keys = self._properties.keys()
 
         other._annotations = deepcopy({k: self._annotations[k] for k in ann_keys})
+
+        # skip properties based on target "other" extractor
+        skip_properties_all = other._skip_properties
+        if skip_properties is not None:
+            skip_properties_all = skip_properties_all + skip_properties
+
         for k in prop_keys:
-            if skip_properties is not None and k in skip_properties:
+            if k in skip_properties_all:
                 continue
             values = self._properties[k]
             if values is not None:

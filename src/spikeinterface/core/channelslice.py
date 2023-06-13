@@ -14,6 +14,8 @@ class ChannelSliceRecording(BaseRecording):
 
     """
 
+    _skip_properties = []
+
     def __init__(self, parent_recording, channel_ids=None, renamed_channel_ids=None):
         if channel_ids is None:
             channel_ids = parent_recording.get_channel_ids()

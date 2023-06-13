@@ -13,6 +13,8 @@ class ChannelsAggregationRecording(BaseRecording):
 
     """
 
+    _skip_properties = []
+
     def __init__(self, recording_list, renamed_channel_ids=None):
         channel_map = {}
 

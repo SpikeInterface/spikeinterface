@@ -20,9 +20,7 @@ class BasePreprocessor(BaseRecording):
             dtype = recording.get_dtype()
 
         BaseRecording.__init__(self, sampling_frequency, _channel_ids, dtype)
-        recording.copy_metadata(
-            self, only_main=False, ids=channel_ids, skip_properties=["noise_level_scaled", "noise_level_raw"]
-        )
+        recording.copy_metadata(self, only_main=False, ids=channel_ids)
 
         # self._kwargs have to be handled in subclass
 
