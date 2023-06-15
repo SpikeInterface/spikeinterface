@@ -80,7 +80,7 @@ class RemoveDuplicatedSpikesSortingSegment(BaseSortingSegment):
         if start_frame == None:
             start_frame = 0
         if end_frame == None:
-            end_frame = spike_train[-1]
+            end_frame = spike_train[-1] if len(spike_train) > 0 else 0
 
         start = np.searchsorted(spike_train, start_frame, side="left")
         end = np.searchsorted(spike_train, end_frame, side="right")
