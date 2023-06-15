@@ -21,23 +21,10 @@ from .job_tools import (
 )
 
 
-def copy_signature(source_fct):
-    def copy(target_fct):
-        target_fct.__signature__ = inspect.signature(source_fct)
-        return target_fct
-
-    return copy
-
-
 def define_function_from_class(source_class, name):
-    @copy_signature(source_class)
-    def reader_func(*args, **kwargs):
-        return source_class(*args, **kwargs)
+    "Wrapper to change the name of a class"
 
-    reader_func.__doc__ = source_class.__doc__
-    reader_func.__name__ = name
-
-    return reader_func
+    return source_class
 
 
 def read_python(path):
@@ -244,7 +231,6 @@ def write_binary_recording(
     file_paths=None,
     dtype=None,
     add_file_extension=True,
-    verbose=False,
     byte_offset=0,
     auto_cast_uint=True,
     zero_pad_samples=None,
@@ -267,8 +253,6 @@ def write_binary_recording(
         Type of the saved data. Default float32.
     add_file_extension: bool
         If True (default), file the '.raw' file extension is added if the file name is not a 'raw', 'bin', or 'dat'
-    verbose: bool
-        If True, output is verbose (when chunks are used)
     byte_offset: int
         Offset in bytes (default 0) to for the binary file (e.g. to write a header)
     auto_cast_uint: bool
@@ -320,7 +304,7 @@ def write_binary_recording(
     init_func = _init_binary_worker
     init_args = (recording, rec_memmaps_dict, dtype, cast_unsigned)
     executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_binary_recording", **job_kwargs
+        recording, func, init_func, init_args, job_name="write_binary_recording", **job_kwargs
     )
     executor.run()
 
@@ -431,11 +415,7 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 
 def make_shared_array(shape, dtype):
-    # https://docs.python.org/3/library/multiprocessing.shared_memory.html
-    try:
-        from multiprocessing.shared_memory import SharedMemory
-    except Exception as e:
-        raise Exception("SharedMemory is available only for python>=3.8")
+    from multiprocessing.shared_memory import SharedMemory
 
     dtype = np.dtype(dtype)
     nbytes = int(np.prod(shape) * dtype.itemsize)
@@ -888,6 +868,44 @@ def recursive_key_finder(d, key):
                 yield v
 
 
+def convert_seconds_to_str(seconds: float, long_notation: bool = True) -> str:
+    """
+    Convert seconds to a human-readable string representation.
+    Parameters
+    ----------
+    seconds : float
+        The duration in seconds.
+    long_notation : bool, optional, default: True
+        Whether to display the time with additional units (such as milliseconds, minutes,
+        hours, or days). If set to True, the function will display a more detailed
+        representation of the duration, including other units alongside the primary
+        seconds representation.
+    Returns
+    -------
+    str
+        A string representing the duration, with additional units included if
+        requested by the `long_notation` parameter.
+    """
+    base_str = f"{seconds:,.2f}s"
+
+    if long_notation:
+        if seconds < 1.0:
+            base_str += f" ({seconds * 1000:.2f} ms)"
+        elif seconds < 60:
+            pass  # seconds is already the primary representation
+        elif seconds < 3600:
+            minutes = seconds / 60
+            base_str += f" ({minutes:.2f} minutes)"
+        elif seconds < 86400 * 2:  # 2 days
+            hours = seconds / 3600
+            base_str += f" ({hours:.2f} hours)"
+        else:
+            days = seconds / 86400
+            base_str += f" ({days:.2f} days)"
+
+    return base_str
+
+
 def convert_bytes_to_str(byte_value: int) -> str:
     """
     Convert a number of bytes to a human-readable string with an appropriate unit.
@@ -923,43 +941,3 @@ def convert_bytes_to_str(byte_value: int) -> str:
         byte_value /= 1024
         i += 1
     return f"{byte_value:.2f} {suffixes[i]}"
-
-
-def convert_seconds_to_str(seconds: float, long_notation: bool = True) -> str:
-    """
-    Convert seconds to a human-readable string representation.
-
-    Parameters
-    ----------
-    seconds : float
-        The duration in seconds.
-    long_notation : bool, optional, default: True
-        Whether to display the time with additional units (such as milliseconds, minutes,
-        hours, or days). If set to True, the function will display a more detailed
-        representation of the duration, including other units alongside the primary
-        seconds representation.
-
-    Returns
-    -------
-    str
-        A string representing the duration, with additional units included if
-        requested by the `long_notation` parameter.
-    """
-    base_str = f"{seconds:,.2f}s"
-
-    if long_notation:
-        if seconds < 1.0:
-            base_str += f" ({seconds * 1000:.2f} ms)"
-        elif seconds < 60:
-            pass  # seconds is already the primary representation
-        elif seconds < 3600:
-            minutes = seconds / 60
-            base_str += f" ({minutes:.2f} minutes)"
-        elif seconds < 86400 * 2:  # 2 days
-            hours = seconds / 3600
-            base_str += f" ({hours:.2f} hours)"
-        else:
-            days = seconds / 86400
-            base_str += f" ({days:.2f} days)"
-
-    return base_str
