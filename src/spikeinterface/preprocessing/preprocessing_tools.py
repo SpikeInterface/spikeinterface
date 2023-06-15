@@ -70,7 +70,7 @@ def get_spatial_interpolation_kernel(
         # sparsify
 
         if sparse_thresh is not None:
-            interpolation_kernel[interpolation_kernel < sparse_thresh] = 0.
+            interpolation_kernel[interpolation_kernel < sparse_thresh] = 0.0
 
         # ensure sum = 1 for target inside
         s = np.sum(interpolation_kernel, axis=0)
@@ -109,7 +109,7 @@ def get_spatial_interpolation_kernel(
     return interpolation_kernel.astype(dtype)
 
 
-def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p, distance_metric='euclidean'):
+def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p, distance_metric="euclidean"):
     """
     Get the kriging kernel between two sets of locations.
 
@@ -123,7 +123,7 @@ def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p, distance_
         Scale paremter on  the Gaussian kernel,
         typically distance between contacts in micrometers.
         In case sigma_um is list then this mimic the kilosort2.5 behavior, whihch is on sigma scaling per dimention.
-        In the later case the metric is always a 'cityblock' 
+        In the later case the metric is always a 'cityblock'
     p : float
         Weight parameter on the exponential function. Default
         in IBL kriging interpolation is 1.3.
@@ -137,17 +137,17 @@ def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p, distance_
 
     if np.isscalar(sigma_um):
         import scipy
+
         dist = scipy.spatial.distance.cdist(locations_1, locations_2, metric=distance_metric)
-        kernal_dist = np.exp(-(dist / sigma_um) ** p)
+        kernal_dist = np.exp(-((dist / sigma_um) ** p))
     else:
         # this mimic the kilosort case where a sigma on x and y are diffrents.
         # note that in that case the distance metric become a cityblock
         sigma_x, sigma_y = sigma_um
         distx = np.abs(locations_1[:, 0][:, np.newaxis] - locations_2[:, 0][np.newaxis, :])
         disty = np.abs(locations_1[:, 1][:, np.newaxis] - locations_2[:, 1][np.newaxis, :])
-        kernal_dist = np.exp(- (distx / sigma_x) ** p - (disty / sigma_y) ** p)
+        kernal_dist = np.exp(-((distx / sigma_x) ** p) - (disty / sigma_y) ** p)
     return kernal_dist
-
 
 
 def get_kriging_channel_weights(contact_positions1, contact_positions2, sigma_um, p, weight_threshold=0.005):

@@ -528,6 +528,7 @@ def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colo
     ax1.sharey(ax0)
     ax2.sharey(ax0)
 
+
 def plot_error_map_several_benchmarks(benchmarks, axes=None, lim=15, figsize=(10, 10)):
     if axes is None:
         fig, axes = plt.subplots(nrows=len(benchmarks), sharex=True, sharey=True, figsize=figsize)
@@ -539,21 +540,29 @@ def plot_error_map_several_benchmarks(benchmarks, axes=None, lim=15, figsize=(10
         probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
 
         ax = axes[count]
-        im = ax.imshow(np.abs(errors).T, aspect='auto', interpolation='nearest', origin='lower', 
-                        extent=(benchmark.temporal_bins[0], benchmark.temporal_bins[-1],
-                                benchmark.spatial_bins[0], benchmark.spatial_bins[-1]))
-        fig.colorbar(im, ax=ax, label='error')
-        ax.set_ylabel('depth (um)')
-        
+        im = ax.imshow(
+            np.abs(errors).T,
+            aspect="auto",
+            interpolation="nearest",
+            origin="lower",
+            extent=(
+                benchmark.temporal_bins[0],
+                benchmark.temporal_bins[-1],
+                benchmark.spatial_bins[0],
+                benchmark.spatial_bins[-1],
+            ),
+        )
+        fig.colorbar(im, ax=ax, label="error")
+        ax.set_ylabel("depth (um)")
+
         ax.set_title(benchmark.title)
         if lim is not None:
             im.set_clim(0, lim)
 
-    axes[-1].set_xlabel('time (s)')
+    axes[-1].set_xlabel("time (s)")
 
     return fig
 
-    
 
 def plot_motions_several_benchmarks(benchmarks):
     fig, ax = plt.subplots(figsize=(15, 5))

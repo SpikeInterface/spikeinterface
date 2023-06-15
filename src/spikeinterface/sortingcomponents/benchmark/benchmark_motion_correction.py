@@ -28,44 +28,52 @@ import MEArec as mr
 
 
 class BenchmarkMotionCorrectionMearec(BenchmarkBase):
-
-    
-    _array_names = ('gt_motion', 'estimated_motion', 'temporal_bins', 'spatial_bins')
-    _waveform_names = ('static', 'drifting', 'corrected')
+    _array_names = ("gt_motion", "estimated_motion", "temporal_bins", "spatial_bins")
+    _waveform_names = ("static", "drifting", "corrected")
     _sorting_names = ()
 
     _array_names_from_parent = ()
     _waveform_names_from_parent = ("static", "drifting")
     _sorting_names_from_parent = ("static", "drifting")
 
+    def __init__(
+        self,
+        mearec_filename_drifting,
+        mearec_filename_static,
+        gt_motion,
+        estimated_motion,
+        temporal_bins,
+        spatial_bins,
+        do_preprocessing=True,
+        correct_motion_kwargs={},
+        sparse_kwargs=dict(
+            method="radius",
+            radius_um=100.0,
+        ),
+        sorter_cases={},
+        folder=None,
+        title="",
+        job_kwargs={"chunk_duration": "1s", "n_jobs": -1, "progress_bar": True, "verbose": True},
+        overwrite=False,
+        delete_output_folder=True,
+        parent_benchmark=None,
+    ):
+        BenchmarkBase.__init__(
+            self,
+            folder=folder,
+            title=title,
+            overwrite=overwrite,
+            job_kwargs=job_kwargs,
+            parent_benchmark=parent_benchmark,
+        )
 
-    def __init__(self, mearec_filename_drifting, mearec_filename_static,
-                gt_motion,
-                estimated_motion,
-                temporal_bins,
-                spatial_bins,
-                do_preprocessing=True,
-                correct_motion_kwargs={},
-                sparse_kwargs=dict( method="radius", radius_um=100.,),
-                sorter_cases={},
-                folder=None,
-                title='',
-                job_kwargs={'chunk_duration' : '1s', 'n_jobs' : -1, 'progress_bar':True, 'verbose' :True}, 
-                overwrite=False,
-                delete_output_folder=True,
-                parent_benchmark=None):
-
-        BenchmarkBase.__init__(self, folder=folder, title=title, overwrite=overwrite, job_kwargs=job_kwargs,
-                               parent_benchmark=parent_benchmark)
-
-        self._args.extend([str(mearec_filename_drifting), str(mearec_filename_static), None, None, None, None ])
-        
+        self._args.extend([str(mearec_filename_drifting), str(mearec_filename_static), None, None, None, None])
 
         self.sorter_cases = sorter_cases.copy()
-        self.mearec_filenames = {}  
-        self.keys = ['static', 'drifting', 'corrected_gt', 'corrected_estimated']
-        self.mearec_filenames['drifting'] = mearec_filename_drifting
-        self.mearec_filenames['static'] = mearec_filename_static
+        self.mearec_filenames = {}
+        self.keys = ["static", "drifting", "corrected_gt", "corrected_estimated"]
+        self.mearec_filenames["drifting"] = mearec_filename_drifting
+        self.mearec_filenames["static"] = mearec_filename_static
 
         self.temporal_bins = temporal_bins
         self.spatial_bins = spatial_bins
@@ -97,28 +105,32 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         if self._recordings is None:
             self._recordings = {}
 
-            for key in ('drifting', 'static',):
-                rec, _  = read_mearec(self.mearec_filenames[key])
-                self._recordings['raw_'+key] = rec
+            for key in (
+                "drifting",
+                "static",
+            ):
+                rec, _ = read_mearec(self.mearec_filenames[key])
+                self._recordings["raw_" + key] = rec
 
                 if self.do_preprocessing:
                     # all computation are done in float32
                     # rec = bandpass_filter(rec)
-                    rec = common_reference(rec, dtype='float32')
-                    rec = highpass_filter(rec, freq_min=150.)
+                    rec = common_reference(rec, dtype="float32")
+                    rec = highpass_filter(rec, freq_min=150.0)
                     # rec = zscore(rec)
                     # 150um is more or less 30 channels
-                    rec = whiten(rec, mode='local', radius_um=150., num_chunks_per_segment=40, chunk_size=32000)
-                    rec = scale(rec, gain=200, dtype='int16')
+                    rec = whiten(rec, mode="local", radius_um=150.0, num_chunks_per_segment=40, chunk_size=32000)
+                    rec = scale(rec, gain=200, dtype="int16")
                 self._recordings[key] = rec
 
+            rec = self._recordings["drifting"]
+            self._recordings["corrected_gt"] = CorrectMotionRecording(
+                rec, self.gt_motion, self.temporal_bins, self.spatial_bins, **self.correct_motion_kwargs
+            )
 
-            rec = self._recordings['drifting']
-            self._recordings['corrected_gt'] = CorrectMotionRecording(rec, self.gt_motion, 
-                        self.temporal_bins, self.spatial_bins, **self.correct_motion_kwargs)
-
-            self._recordings['corrected_estimated'] = CorrectMotionRecording(rec, self.estimated_motion, 
-                        self.temporal_bins, self.spatial_bins, **self.correct_motion_kwargs)
+            self._recordings["corrected_estimated"] = CorrectMotionRecording(
+                rec, self.estimated_motion, self.temporal_bins, self.spatial_bins, **self.correct_motion_kwargs
+            )
 
         return self._recordings
 
@@ -262,18 +274,16 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
         n = len(self.sorter_cases)
 
-
-        if 'depth' in mode:
+        if "depth" in mode:
             # gt_unit_positions, _ = mr.extract_units_drift_vector(self.mearec_filenames['drifting'], time_vector=np.array([0., 1.]))
             # unit_depth = gt_unit_positions[0, :]
 
-            template_locations = np.array(mr.load_recordings(self.mearec_filenames['drifting']).template_locations)
+            template_locations = np.array(mr.load_recordings(self.mearec_filenames["drifting"]).template_locations)
             assert len(template_locations.shape) == 3
-            mid = template_locations.shape[1] //2
+            mid = template_locations.shape[1] // 2
             unit_depth = template_locations[:, mid, 2]
 
-            chan_locations = self.recordings['drifting'].get_channel_locations()
-
+            chan_locations = self.recordings["drifting"].get_channel_locations()
 
         if mode == "ordered_accuracy":
             fig, ax = plt.subplots(figsize=figsize)
@@ -293,9 +303,8 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         elif mode == "depth_snr":
             fig, axs = plt.subplots(nrows=n, figsize=figsize, sharey=True, sharex=True)
 
-
-            metrics = compute_quality_metrics(self.waveforms['static'], metric_names=['snr'], load_if_exists=True)
-            snr = metrics['snr'].values
+            metrics = compute_quality_metrics(self.waveforms["static"], metric_names=["snr"], load_if_exists=True)
+            snr = metrics["snr"].values
 
             for i, case in enumerate(self.sorter_cases):
                 ax = axs[i]
@@ -303,17 +312,16 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 acc = accuracies[label]
 
                 points = ax.scatter(unit_depth, snr, c=acc)
-                points.set_clim(0., 1.)
+                points.set_clim(0.0, 1.0)
                 ax.set_title(label)
                 ax.axvline(np.min(chan_locations[:, 1]), ls="--", color="k")
                 ax.axvline(np.max(chan_locations[:, 1]), ls="--", color="k")
                 ax.set_ylabel("snr")
             ax.set_xlabel("depth")
 
+            cbar = fig.colorbar(points, ax=axs[:], location="right", shrink=0.6)
+            cbar.ax.set_ylabel("accuracy")
 
-            cbar = fig.colorbar(points, ax=axs[:], location='right', shrink=0.6)
-            cbar.ax.set_ylabel('accuracy')
-            
         elif mode == "snr":
             fig, ax = plt.subplots(figsize=figsize)
 
@@ -332,31 +340,27 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         elif mode == "depth":
             fig, ax = plt.subplots(figsize=figsize)
 
-
             for i, case in enumerate(self.sorter_cases):
                 label = case["label"]
                 acc = accuracies[label]
 
                 ax.scatter(unit_depth, acc, label=label)
-            ax.axvline(np.min(chan_locations[:, 1]), ls='--', color='k')
-            ax.axvline(np.max(chan_locations[:, 1]), ls='--', color='k')
+            ax.axvline(np.min(chan_locations[:, 1]), ls="--", color="k")
+            ax.axvline(np.max(chan_locations[:, 1]), ls="--", color="k")
             ax.legend()
-            ax.set_xlabel('depth')
-            ax.set_ylabel('accuracy')
+            ax.set_xlabel("depth")
+            ax.set_ylabel("accuracy")
 
         return fig
-
 
     def plot_sortings_accuracy(self, mode="ordered_accuracy", figsize=(15, 5)):
         if len(self.accuracies) != len(self.sorter_cases):
             self.compute_accuracies()
 
-        
-        return self._plot_accuracy(self.accuracies, mode=mode, figsize=figsize, ls='-')
+        return self._plot_accuracy(self.accuracies, mode=mode, figsize=figsize, ls="-")
 
-    def plot_best_merges_accuracy(self, mode='ordered_accuracy', figsize=(15, 5)):
-
-        return self._plot_accuracy(self.merged_accuracies, mode=mode, figsize=figsize, ls='--')
+    def plot_best_merges_accuracy(self, mode="ordered_accuracy", figsize=(15, 5)):
+        return self._plot_accuracy(self.merged_accuracies, mode=mode, figsize=figsize, ls="--")
 
         self._plot_accuracy(self.accuracies, mode=mode, figsize=figsize, ls="-")
 
