@@ -152,7 +152,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
                 self.set_property(key="original_cluster_id", values=cluster_info[prop_name])
             elif prop_name != "group":
                 self.set_property(key=prop_name, values=cluster_info[prop_name])
-            elif prop_name == "group":Add original folder to phy extractor
+            elif prop_name == "group":
                 # rename group property to 'quality'
                 self.set_property(key="quality", values=cluster_info[prop_name])
             else:
