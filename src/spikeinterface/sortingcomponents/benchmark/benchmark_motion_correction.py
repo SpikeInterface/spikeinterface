@@ -365,7 +365,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         self._plot_accuracy(self.accuracies, mode=mode, figsize=figsize, ls="-")
 
     def plot_best_merges_accuracy(self, mode="ordered_accuracy", figsize=(15, 5)):
-        self._plot_accuracy(self.merged_accuracies, mode=mode, figsize=figsize, ls="--")
+        return self._plot_accuracy(self.merged_accuracies, mode=mode, figsize=figsize, ls="--")
 
     def plot_sorting_units_categories(self):
         if len(self.accuracies) != len(self.sorter_cases):
@@ -407,8 +407,6 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
             self.units_to_merge[label] = to_merge
             merged_sporting = MergeUnitsSorting(sorting, to_merge)
-            print(sorting)
-            print(merged_sporting)
             comp_merged = GroundTruthComparison(self.sorting_gt, merged_sporting, exhaustive_gt=True)
 
             self.merged_sortings[label] = merged_sporting

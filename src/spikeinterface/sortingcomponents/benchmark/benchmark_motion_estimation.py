@@ -502,8 +502,8 @@ def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colo
         axes[2].plot(benchmark.spatial_bins, depth_error, label=benchmark.title, color=c)
 
     ax0 = ax = axes[0]
-    ax.set_xlabel("time (s)")
-    ax.set_ylabel("error")
+    ax.set_xlabel("time [s]")
+    ax.set_ylabel("error [um]")
     if show_legend:
         ax.legend()
     _simpleaxis(ax)
@@ -516,7 +516,7 @@ def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colo
 
     ax2 = axes[2]
     ax2.set_yticks([])
-    ax2.set_xlabel("depth (um)")
+    ax2.set_xlabel("depth [um]")
     # ax.set_ylabel('error')
     channel_positions = benchmark.recording.get_channel_locations()
     probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
@@ -532,6 +532,8 @@ def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colo
 def plot_error_map_several_benchmarks(benchmarks, axes=None, lim=15, figsize=(10, 10)):
     if axes is None:
         fig, axes = plt.subplots(nrows=len(benchmarks), sharex=True, sharey=True, figsize=figsize)
+    else:
+        fig = axes[0].figure
 
     for count, benchmark in enumerate(benchmarks):
         errors = benchmark.gt_motion - benchmark.motion
@@ -603,7 +605,7 @@ def plot_speed_several_benchmarks(benchmarks, ax=None):
             bottom += value
             i += 1
 
-    ax.legend()
+    # ax.legend()
     ax.set_ylabel("speed (s)")
     _simpleaxis(ax)
     ax.set_xticks([])
