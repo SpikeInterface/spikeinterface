@@ -526,7 +526,7 @@ class BaseExtractor:
         include_properties: bool = True,
         relative_to=None,
         folder_metadata=None,
-        recursive: bool = False
+        recursive: bool = False,
     ):
         """
         Dump recording extractor to a pickle file.
@@ -549,7 +549,7 @@ class BaseExtractor:
             include_properties=include_properties,
             relative_to=relative_to,
             folder_metadata=folder_metadata,
-            recursive=recursive
+            recursive=recursive,
         )
         file_path = self._get_file_path(file_path, [".pkl", ".pickle"])
 
