@@ -543,8 +543,6 @@ class BaseExtractor:
         recursive: bool
             If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
         """
-            This is done for backward compatibility with older versions of spikeinterface and to keep it here in case
-            a yet to be discovered use case requires it.
         assert self.check_if_dumpable()
         dump_dict = self.to_dict(
             include_annotations=True,
