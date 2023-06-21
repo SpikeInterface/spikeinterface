@@ -320,7 +320,7 @@ class BaseExtractor:
                 include_properties=include_properties,
                 relative_to=relative_to,
                 folder_metadata=folder_metadata,
-                recursive=recursive
+                recursive=recursive,
             )
 
             new_kwargs = dict()
