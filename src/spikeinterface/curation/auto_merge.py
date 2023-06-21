@@ -309,6 +309,7 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     """
     Smooths cross-correlogram with a Gaussian kernel.
     """
+    import scipy.signal
 
     # OLD implementation : smooth correlogram by low pass filter
     # b, a = scipy.signal.butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype='low')
