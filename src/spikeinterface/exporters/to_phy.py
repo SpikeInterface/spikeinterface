@@ -1,5 +1,6 @@
 from pathlib import Path
-from typing import Literal, Optional, Union
+from typing import Literal, Optional
+from __future__ import annotations
 
 import numpy as np
 import numpy.typing as npt
@@ -18,7 +19,7 @@ from spikeinterface.postprocessing import (
 
 def export_to_phy(
     waveform_extractor: WaveformExtractor,
-    output_folder: Union[str, Path],
+    output_folder: str | Path,
     compute_pc_features: bool = True,
     compute_amplitudes: bool = True,
     sparsity: Optional[ChannelSparsity] = None,
