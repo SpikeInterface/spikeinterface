@@ -285,7 +285,7 @@ class BaseExtractor:
         include_properties: bool = False,
         relative_to: Union[str, Path, None] = None,
         folder_metadata=None,
-        recursive=False,
+        recursive: bool = False,
     ) -> dict:
         """
         Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize
@@ -305,8 +305,6 @@ class BaseExtractor:
             Folder with numpy `npy` files containing additional information (e.g. probe in BaseRecording) and properties.
         recursive: bool
             If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
-            This is done for backward compatibility with older versions of spikeinterface and to keep it here in case
-            a yet to be discovered use case requires it.
 
         Returns
         -------
@@ -528,6 +526,7 @@ class BaseExtractor:
         include_properties: bool = True,
         relative_to=None,
         folder_metadata=None,
+        recursive: bool = False,
     ):
         """
         Dump recording extractor to a pickle file.
@@ -541,6 +540,8 @@ class BaseExtractor:
             If True, all properties are dumped
         relative_to: str, Path, or None
             If not None, file_paths are serialized relative to this path
+        recursive: bool
+            If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
         """
         assert self.check_if_dumpable()
         dump_dict = self.to_dict(
@@ -548,6 +549,7 @@ class BaseExtractor:
             include_properties=include_properties,
             relative_to=relative_to,
             folder_metadata=folder_metadata,
+            recursive=recursive,
         )
         file_path = self._get_file_path(file_path, [".pkl", ".pickle"])
 
