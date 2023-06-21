@@ -318,7 +318,7 @@ class BaseExtractor:
             to_dict_kwargs = dict(
                 include_annotations=include_annotations,
                 include_properties=include_properties,
-                relative_to=relative_to,
+                relative_to=None,  # '_make_paths_relative' is already recursive!
                 folder_metadata=folder_metadata,
                 recursive=recursive,
             )
