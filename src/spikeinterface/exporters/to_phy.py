@@ -1,6 +1,6 @@
+from __future__ import annotations
 from pathlib import Path
 from typing import Literal, Optional
-from __future__ import annotations
 
 import numpy as np
 import numpy.typing as npt
