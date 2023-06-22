@@ -25,8 +25,14 @@ from .openephys import (
     read_openephys_event,
 )
 from .plexon import PlexonRecordingExtractor, PlexonSortingExtractor, read_plexon, read_plexon_sorting
-from .plexon2 import (Plexon2SortingExtractor, Plexon2RecordingExtractor, Plexon2EventExtractor,
-                      read_plexon2, read_plexon2_sorting, read_plexon2_event)
+from .plexon2 import (
+    Plexon2SortingExtractor,
+    Plexon2RecordingExtractor,
+    Plexon2EventExtractor,
+    read_plexon2,
+    read_plexon2_sorting,
+    read_plexon2_event,
+)
 from .spike2 import Spike2RecordingExtractor, read_spike2
 from .spikegadgets import SpikeGadgetsRecordingExtractor, read_spikegadgets
 from .spikeglx import SpikeGLXRecordingExtractor, read_spikeglx
@@ -58,6 +64,11 @@ neo_recording_extractors_list = [
     TdtRecordingExtractor,
 ]
 
-neo_sorting_extractors_list = [BlackrockSortingExtractor, MEArecSortingExtractor, NeuralynxSortingExtractor, Plexon2SortingExtractor]
+neo_sorting_extractors_list = [
+    BlackrockSortingExtractor,
+    MEArecSortingExtractor,
+    NeuralynxSortingExtractor,
+    Plexon2SortingExtractor,
+]
 
 neo_event_extractors_list = [AlphaOmegaEventExtractor, OpenEphysBinaryEventExtractor, Plexon2EventExtractor]
