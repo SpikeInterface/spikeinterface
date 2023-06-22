@@ -87,15 +87,18 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         else:
             raise ValueError(f"Unsupported channel_indices type: {type(channel_indices)} raise an issue on github ")
 
+        # This avoids an extra memory allocation if no padding is necessary
+        if start_frame > self.padding_start and end_frame < self.num_samples_in_original_segment + self.padding_start:
+            return self.get_original_traces(start_frame, end_frame, channel_indices)
+
+        # Else, we start with the full padded traces and allocate the original traces in the middle
         output_traces = np.full(shape=(trace_size, num_channels), fill_value=self.fill_value, dtype=self.dtype)
 
         # After the padding, the original traces are placed in the middle until the end of the original traces
         if end_frame >= self.padding_start:
-            original_start_frame = max(start_frame - self.padding_start, 0)
-            original_end_frame = min(end_frame - self.padding_start, self.num_samples_in_original_segment)
-            original_traces = self.parent_recording_segment.get_traces(
-                start_frame=original_start_frame,
-                end_frame=original_end_frame,
+            original_traces = self.get_original_traces(
+                start_frame=start_frame,
+                end_frame=end_frame,
                 channel_indices=channel_indices,
             )
 
@@ -104,6 +107,17 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
             output_traces[padded_frames_at_the_start:end_of_original_traces, :] = original_traces
 
         return output_traces
+
+    def get_original_traces(self, start_frame, end_frame, channel_indices):
+        original_start_frame = max(start_frame - self.padding_start, 0)
+        original_end_frame = min(end_frame - self.padding_start, self.num_samples_in_original_segment)
+        original_traces = self.parent_recording_segment.get_traces(
+            start_frame=original_start_frame,
+            end_frame=original_end_frame,
+            channel_indices=channel_indices,
+        )
+
+        return original_traces
 
     def get_num_samples(self):
         "Overide the parent method to return the padded number of samples"
