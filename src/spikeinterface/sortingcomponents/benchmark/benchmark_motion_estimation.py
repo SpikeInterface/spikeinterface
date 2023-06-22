@@ -525,8 +525,8 @@ def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colo
 
     _simpleaxis(ax2)
 
-    ax1.sharey(ax0)
-    ax2.sharey(ax0)
+    # ax1.sharey(ax0)
+    # ax2.sharey(ax0)
 
 
 def plot_error_map_several_benchmarks(benchmarks, axes=None, lim=15, figsize=(10, 10)):
@@ -586,22 +586,21 @@ def plot_motions_several_benchmarks(benchmarks):
     _simpleaxis(ax)
 
 
-def plot_speed_several_benchmarks(benchmarks, ax=None):
+def plot_speed_several_benchmarks(benchmarks, ax=None, colors=None):
     if ax is None:
         fig, ax = plt.subplots(figsize=(5, 5))
 
     for count, benchmark in enumerate(benchmarks):
+        color = colors[count] if colors is not None else None
         bottom = 0
         i = 0
         patterns = ["/", "\\", "|", "*"]
         for key, value in benchmark.run_times.items():
             if count == 0:
-                label = key
+                label = key.replace("_", " ")
             else:
                 label = None
-            ax.bar(
-                [count], [value], label=label, bottom=bottom, color=f"C{count}", edgecolor="black", hatch=patterns[i]
-            )
+            ax.bar([count], [value], label=label, bottom=bottom, color=color, edgecolor="black", hatch=patterns[i])
             bottom += value
             i += 1
 

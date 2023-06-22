@@ -19,6 +19,7 @@ from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.widgets import plot_sorting_performance
 from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.curation import MergeUnitsSorting
+from spikeinterface.core import get_template_extremum_channel
 
 import sklearn
 
@@ -29,7 +30,7 @@ import MEArec as mr
 
 class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     _array_names = ("gt_motion", "estimated_motion", "temporal_bins", "spatial_bins")
-    _waveform_names = ("static", "drifting", "corrected")
+    _waveform_names = ("static", "drifting", "corrected_gt", "corrected_estimated")
     _sorting_names = ()
 
     _array_names_from_parent = ()
@@ -200,40 +201,75 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
         # for key in ['drifting', 'corrected']:
         for key in self.keys:
+            print(key)
             dist = self.distances[key] = {
-                "norm_static": np.zeros(n),
-                "template_euclidean": np.zeros(n),
+                # "norm_static": np.zeros(n),
+                # "template_euclidean": np.zeros(n),
                 "template_cosine": np.zeros(n),
-                "wf_euclidean_mean": np.zeros(n),
-                "wf_euclidean_std": np.zeros(n),
-                "wf_cosine_mean": np.zeros(n),
-                "wf_cosine_std": np.zeros(n),
+                # "wf_euclidean_mean": np.zeros(n),
+                # "wf_euclidean_std": np.zeros(n),
+                # "wf_cosine_mean": np.zeros(n),
+                # "wf_cosine_std": np.zeros(n),
+                "waveforms_std": np.zeros(n),
+                "waveforms_std40_60": np.zeros(n),
+                # "waveforms_std_to_static": np.zeros(n),
+                "template_norm_dist": np.zeros(n),
+                "spike_norm_dist": np.zeros(n),
             }
+
             templates = self.waveforms[key].get_all_templates()
+
+            extremum_channel = get_template_extremum_channel(self.waveforms["static"], outputs="index")
+
             for unit_ind, unit_id in enumerate(self.waveforms[key].sorting.unit_ids):
+                # print(unit_id)
+                # mask = sparsity.mask[unit_ind, :]
+                # ref_template = ref_templates[unit_ind][:, mask].reshape(1, -1)
+                # template = templates[unit_ind][:, mask].reshape(1, -1)
+
+                # # this is already sparse
+                # wfs = self.waveforms[key].get_waveforms(unit_id)
+                # wfs = wfs.reshape(wfs.shape[0], -1)
+
+                # dist["norm_static"][unit_ind] = np.linalg.norm(ref_template)
+                # dist["template_euclidean"][unit_ind] = sklearn.metrics.pairwise_distances(ref_template, template)[0]
+                # dist["template_cosine"][unit_ind] = sklearn.metrics.pairwise.cosine_similarity(ref_template, template)[0]
+
+                # d = sklearn.metrics.pairwise_distances(ref_template, wfs)[0]
+                # dist["wf_euclidean_mean"][unit_ind] = d.mean()
+                # dist["wf_euclidean_std"][unit_ind] = d.std()
+
+                # d = sklearn.metrics.pairwise.cosine_similarity(ref_template, wfs)[0]
+                # dist["wf_cosine_mean"][unit_ind] = d.mean()
+                # dist["wf_cosine_std"][unit_ind] = d.std()
+
                 mask = sparsity.mask[unit_ind, :]
-                ref_template = ref_templates[unit_ind][:, mask].reshape(1, -1)
-                template = templates[unit_ind][:, mask].reshape(1, -1)
+                ref_template = ref_templates[unit_ind][:, mask]
+                template = templates[unit_ind][:, mask]
+
+                max_chan = extremum_channel[unit_id]
+                max_chan
+
+                max_chan_sparse = list(np.nonzero(mask)[0]).index(max_chan)
 
                 # this is already sparse
-                # ref_wfs = self.waveforms['static'].get_waveforms(unit_id)
-                # ref_wfs = ref_wfs.reshape(ref_wfs.shape[0], -1)
                 wfs = self.waveforms[key].get_waveforms(unit_id)
-                wfs = wfs.reshape(wfs.shape[0], -1)
+                ref_wfs = self.waveforms["static"].get_waveforms(unit_id)
 
-                dist["norm_static"][unit_ind] = np.linalg.norm(ref_template)
-                dist["template_euclidean"][unit_ind] = sklearn.metrics.pairwise_distances(ref_template, template)[0]
-                dist["template_cosine"][unit_ind] = sklearn.metrics.pairwise.cosine_similarity(ref_template, template)[
-                    0
-                ]
+                dist["waveforms_std"][unit_ind] = np.std(wfs - template[None, :, :])
+                # dist['waveforms_std40_60'][unit_ind] = np.mean(np.std(wfs[:, 50:80, :] - template[None, 50:80, :], axis=0) / np.sum(ref_template**2), )
+                dist["waveforms_std40_60"][unit_ind] = np.mean(
+                    np.std(wfs[:, 50:80, max_chan_sparse], axis=0) / np.sum(ref_template**2)
+                )
 
-                d = sklearn.metrics.pairwise_distances(ref_template, wfs)[0]
-                dist["wf_euclidean_mean"][unit_ind] = d.mean()
-                dist["wf_euclidean_std"][unit_ind] = d.std()
-
-                d = sklearn.metrics.pairwise.cosine_similarity(ref_template, wfs)[0]
-                dist["wf_cosine_mean"][unit_ind] = d.mean()
-                dist["wf_cosine_std"][unit_ind] = d.std()
+                # dist['waveforms_std_to_static'][unit_ind] = np.std(wfs - ref_template[None, :, :])
+                dist["template_norm_dist"][unit_ind] = np.sum((ref_template - template) ** 2) / np.sum(
+                    ref_template**2
+                )
+                dist["spike_norm_dist"][unit_ind] = np.sum((wfs - ref_wfs) ** 2) / np.sum(ref_template**2)
+                dist["template_cosine"][unit_ind] = sklearn.metrics.pairwise.cosine_similarity(
+                    ref_template.reshape(1, -1), template.reshape(1, -1)
+                )[0]
 
         return self.distances
 
@@ -268,7 +304,9 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 self.comparisons[label] = comp
                 self.accuracies[label] = comp.get_performance()["accuracy"].values
 
-    def _plot_accuracy(self, accuracies, mode="ordered_accuracy", figsize=(15, 5), ls="-"):
+    def _plot_accuracy(
+        self, accuracies, mode="ordered_accuracy", figsize=(15, 5), axes=None, ax=None, ls="-", legend=True, colors=None
+    ):
         if len(self.accuracies) != len(self.sorter_cases):
             self.compute_accuracies()
 
@@ -286,22 +324,31 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             chan_locations = self.recordings["drifting"].get_channel_locations()
 
         if mode == "ordered_accuracy":
-            fig, ax = plt.subplots(figsize=figsize)
+            if ax is None:
+                fig, ax = plt.subplots(figsize=figsize)
+            else:
+                fig = ax.figure
 
             order = None
-            for case in self.sorter_cases:
+            for i, case in enumerate(self.sorter_cases):
+                color = colors[i] if colors is not None else None
                 label = case["label"]
                 # comp = self.comparisons[label]
                 acc = accuracies[label]
                 order = np.argsort(acc)[::-1]
                 acc = acc[order]
-                ax.plot(acc, label=label, ls=ls)
-            ax.legend()
+                ax.plot(acc, label=label, ls=ls, color=color)
+            if legend:
+                ax.legend()
             ax.set_ylabel("accuracy")
             ax.set_xlabel("units ordered by accuracy")
 
         elif mode == "depth_snr":
-            fig, axs = plt.subplots(nrows=n, figsize=figsize, sharey=True, sharex=True)
+            if axes is None:
+                fig, axs = plt.subplots(nrows=n, figsize=figsize, sharey=True, sharex=True)
+            else:
+                fig = axes[0].figure
+                axs = axes
 
             metrics = compute_quality_metrics(self.waveforms["static"], metric_names=["snr"], load_if_exists=True)
             snr = metrics["snr"].values
@@ -353,19 +400,14 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
         return fig
 
-    def plot_sortings_accuracy(self, mode="ordered_accuracy", figsize=(15, 5)):
+    def plot_sortings_accuracy(self, **kwargs):
         if len(self.accuracies) != len(self.sorter_cases):
             self.compute_accuracies()
 
-        return self._plot_accuracy(self.accuracies, mode=mode, figsize=figsize, ls="-")
+        return self._plot_accuracy(self.accuracies, ls="-", **kwargs)
 
-    def plot_best_merges_accuracy(self, mode="ordered_accuracy", figsize=(15, 5)):
-        return self._plot_accuracy(self.merged_accuracies, mode=mode, figsize=figsize, ls="--")
-
-        self._plot_accuracy(self.accuracies, mode=mode, figsize=figsize, ls="-")
-
-    def plot_best_merges_accuracy(self, mode="ordered_accuracy", figsize=(15, 5)):
-        return self._plot_accuracy(self.merged_accuracies, mode=mode, figsize=figsize, ls="--")
+    def plot_best_merges_accuracy(self, **kwargs):
+        return self._plot_accuracy(self.merged_accuracies, **kwargs, ls="--")
 
     def plot_sorting_units_categories(self):
         if len(self.accuracies) != len(self.sorter_cases):
@@ -389,8 +431,8 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         self.units_to_merge = {}
         for i, case in enumerate(self.sorter_cases):
             label = case["label"]
-            print()
-            print(label)
+            # print()
+            # print(label)
             gt_unit_ids = self.sorting_gt.unit_ids
             sorting = self.sortings[label]
             unit_ids = sorting.unit_ids
