@@ -153,6 +153,7 @@ def run_sorter_local(
     verbose=False,
     raise_error=True,
     with_output=True,
+    recording_relative_path=None,
     **sorter_params,
 ):
     if isinstance(recording, list):
@@ -161,12 +162,13 @@ def run_sorter_local(
     SorterClass = sorter_dict[sorter_name]
 
     # only classmethod call not instance (stateless at instance level but state is in folder)
-    output_folder = SorterClass.initialize_folder(recording, output_folder, verbose, remove_existing_folder)
+    output_folder = SorterClass.initialize_folder(recording, output_folder, verbose, remove_existing_folder,
+                                                  recording_relative_path=recording_relative_path)
     SorterClass.set_params_to_folder(recording, output_folder, sorter_params, verbose)
     SorterClass.setup_recording(recording, output_folder, verbose=verbose)
-    SorterClass.run_from_folder(output_folder, raise_error, verbose)
+    SorterClass.run_from_folder(output_folder, raise_error, verbose, recording_relative_path=recording_relative_path)
     if with_output:
-        sorting = SorterClass.get_result_from_folder(output_folder)
+        sorting = SorterClass.get_result_from_folder(output_folder, recording_relative_path=recording_relative_path)
     else:
         sorting = None
     sorter_output_folder = output_folder / "sorter_output"

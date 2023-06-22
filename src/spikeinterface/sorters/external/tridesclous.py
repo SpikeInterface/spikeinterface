@@ -123,7 +123,7 @@ class TridesclousSorter(BaseSorter):
             print(tdc_dataio)
 
     @classmethod
-    def _run_from_folder(cls, sorter_output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose, recording_relative_path=None):
         import tridesclous as tdc
 
         tdc_dataio = tdc.DataIO(dirname=str(sorter_output_folder))

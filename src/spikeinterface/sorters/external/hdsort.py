@@ -205,7 +205,7 @@ class HDSortSorter(BaseSorter):
         shutil.copy(str(source_dir / "hdsort_master.m"), str(sorter_output_folder))
 
     @classmethod
-    def _run_from_folder(cls, sorter_output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose, recording_relative_path=None):
         if cls.check_compiled():
             shell_cmd = f"""
                 #!/bin/bash

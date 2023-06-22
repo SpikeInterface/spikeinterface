@@ -147,7 +147,7 @@ class SpykingcircusSorter(BaseSorter):
             f.writelines(circus_config)
 
     @classmethod
-    def _run_from_folder(cls, sorter_output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose, recording_relative_path=None):
         sorter_name = cls.sorter_name
 
         num_workers = params["num_workers"]

@@ -194,7 +194,7 @@ class YassSorter(BaseSorter):
             yaml.dump(merge_params, file)
 
     @classmethod
-    def _run_from_folder(cls, sorter_output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose, recording_relative_path=None):
         """ """
         config_file = sorter_output_folder.absolute() / "config.yaml"
         if "win" in sys.platform and sys.platform != "darwin":

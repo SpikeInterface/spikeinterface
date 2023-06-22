@@ -146,7 +146,7 @@ class CombinatoSorter(BaseSorter):
             )
 
     @classmethod
-    def _run_from_folder(cls, sorter_output_folder, params, verbose):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose, recording_relative_path=None):
         p = params.copy()
         p["threshold_factor"] = p.pop("detect_threshold")
         sign_thr = p.pop("detect_sign")
