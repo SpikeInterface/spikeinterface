@@ -120,6 +120,12 @@ class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
         },
     ]
 
+class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
+    ExtractorClass = Plexon2EventExtractor
+    downloads = ["plexon"]
+    entities = [
+        ("plexon/4chDemoPL2.pl2"),
+    ]
 
 class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = PlexonRecordingExtractor
@@ -128,6 +134,12 @@ class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         "plexon/File_plexon_3.plx",
     ]
 
+class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = Plexon2RecordingExtractor
+    downloads = ["plexon"]
+    entities = [
+        ("plexon/4chDemoPL2.pl2", {"stream_id": "3"}),
+    ]
 
 class PlexonSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = PlexonSortingExtractor
@@ -136,6 +148,12 @@ class PlexonSortingTest(SortingCommonTestSuite, unittest.TestCase):
         ("plexon/File_plexon_1.plx"),
     ]
 
+class Plexon2SortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = Plexon2SortingExtractor
+    downloads = ["plexon"]
+    entities = [
+        ("plexon/4chDemoPL2.pl2"),
+    ]
 
 class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuralynxRecordingExtractor
