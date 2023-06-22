@@ -59,10 +59,11 @@ class BaseSorter:
         verbose=False,
         remove_existing_folder=False,
         delete_output_folder=False,
-        recording_relative_path=None
+        recording_relative_path=None,
     ):
-        output_folder = self.initialize_folder(recording, output_folder, verbose, remove_existing_folder,
-                                               recording_relative_path=recording_relative_path)
+        output_folder = self.initialize_folder(
+            recording, output_folder, verbose, remove_existing_folder, recording_relative_path=recording_relative_path
+        )
 
         self.recording = recording
         self.verbose = verbose
@@ -236,8 +237,9 @@ class BaseSorter:
         t0 = time.perf_counter()
 
         try:
-            SorterClass._run_from_folder(sorter_output_folder, sorter_params, verbose,
-                                         recording_relative_path=recording_relative_path)
+            SorterClass._run_from_folder(
+                sorter_output_folder, sorter_params, verbose, recording_relative_path=recording_relative_path
+            )
             t1 = time.perf_counter()
             run_time = float(t1 - t0)
             has_error = False
@@ -303,8 +305,7 @@ class BaseSorter:
             sorting = cls._get_result_from_folder(output_folder)
 
         # register recording to Sorting object
-        recording = load_extractor(output_folder / "spikeinterface_recording.json",
-                                   base_folder=recording_relative_path)
+        recording = load_extractor(output_folder / "spikeinterface_recording.json", base_folder=recording_relative_path)
         if recording is not None:
             # can be None when not dumpable
             sorting.register_recording(recording)

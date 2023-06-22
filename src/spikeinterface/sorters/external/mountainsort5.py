@@ -115,8 +115,9 @@ class Mountainsort5Sorter(BaseSorter):
     def _run_from_folder(cls, sorter_output_folder, params, verbose, recording_relative_path=None):
         import mountainsort5 as ms5
 
-        recording: BaseRecording = load_extractor(sorter_output_folder.parent / "spikeinterface_recording.json",
-                                                  base_folder=recording_relative_path)
+        recording: BaseRecording = load_extractor(
+            sorter_output_folder.parent / "spikeinterface_recording.json", base_folder=recording_relative_path
+        )
 
         # alias to params
         p = params
