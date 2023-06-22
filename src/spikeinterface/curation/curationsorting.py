@@ -44,7 +44,7 @@ class CurationSorting:
         if np.issubdtype(parent_units.dtype, np.character):
             self.max_used_id = max([-1] + [int(p) for p in parent_units if p.isdigit()])
         else:
-            self.max_used_id = max(parent_units)
+            self.max_used_id = max(parent_units) if len(parent_units) > 0 else 0
 
         self._kwargs = dict(parent_sorting=parent_sorting, make_graph=make_graph, properties_policy=properties_policy)
 
