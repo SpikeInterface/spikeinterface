@@ -87,16 +87,16 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         else:
             raise ValueError(f"Unsupported channel_indices type: {type(channel_indices)} raise an issue on github ")
 
-        # This avoids an extra memory allocation if no padding is necessary
+        # This avoids an extra memory allocation if we are within the confines of the old traces
         if start_frame > self.padding_start and end_frame < self.num_samples_in_original_segment + self.padding_start:
-            return self.get_original_traces(start_frame, end_frame, channel_indices)
+            return self.get_original_traces_shifted(start_frame, end_frame, channel_indices)
 
         # Else, we start with the full padded traces and allocate the original traces in the middle
         output_traces = np.full(shape=(trace_size, num_channels), fill_value=self.fill_value, dtype=self.dtype)
 
         # After the padding, the original traces are placed in the middle until the end of the original traces
         if end_frame >= self.padding_start:
-            original_traces = self.get_original_traces(
+            original_traces = self.get_original_traces_shifted(
                 start_frame=start_frame,
                 end_frame=end_frame,
                 channel_indices=channel_indices,
@@ -108,7 +108,15 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
 
         return output_traces
 
-    def get_original_traces(self, start_frame, end_frame, channel_indices):
+    def get_original_traces_shifted(self, start_frame, end_frame, channel_indices):
+        """
+        Retrieves the corresponding original (unpadded) traces from the parent recording segment.
+
+        This method calculates the start and end frames of the original traces, taking into account
+        the start padding. It then fetches the original traces using these frames from the parent
+        recording segment.
+
+        """
         original_start_frame = max(start_frame - self.padding_start, 0)
         original_end_frame = min(end_frame - self.padding_start, self.num_samples_in_original_segment)
         original_traces = self.parent_recording_segment.get_traces(
