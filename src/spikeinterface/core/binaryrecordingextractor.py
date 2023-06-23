@@ -162,6 +162,10 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         self.time_axis = time_axis
         self.datfile = datfile
         self.num_samples = (Path(datfile).stat().st_size - file_offset) // (num_chan * np.dtype(dtype).itemsize)
+        if self.time_axis == 0:
+            self.shape = (self.num_samples, self.num_chan)
+        else:
+            self.shape = (self.num_chan, self.num_samples)
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal block
@@ -177,13 +181,10 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         end_frame: Union[int, None] = None,
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
-        shape = (self.num_samples, self.num_chan)
-        if self.time_axis != 0:
-            shape = (self.num_chan, self.num_samples)
-
-        data = np.memmap(self.datfile, self.dtype, mode="r", offset=self.file_offset, shape=shape)
-        if self.time_axis != 0:
+        data = np.memmap(self.datfile, self.dtype, mode="r", offset=self.file_offset, shape=self.shape)
+        if self.time_axis == 1:
             data = data.T
+
         traces = data[start_frame:end_frame]
         if channel_indices is not None:
             traces = traces[:, channel_indices]
