@@ -3,8 +3,7 @@ import numpy as np
 from pathlib import Path
 
 from spikeinterface.core import BinaryRecordingExtractor
-from spikeinterface.core.datasets import download_dataset
-from spikeinterface.extractors.neoextractors import MEArecRecordingExtractor
+from spikeinterface.core.numpyextractors import NumpyRecording
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
@@ -34,9 +33,12 @@ def test_BinaryRecordingExtractor():
 
 
 def test_round_trip(tmp_path):
-    mearec_path = download_dataset()
+    num_channels = 10
+    num_samples = 50
+    traces_list = [np.ones(shape=(num_samples, num_channels), dtype="int32")]
+    sampling_frequency = 30_000.0
+    recording = NumpyRecording(traces_list=traces_list, sampling_frequency=sampling_frequency)
 
-    recording = MEArecRecordingExtractor(file_path=mearec_path)
     file_path = tmp_path / "test_BinaryRecordingExtractor.raw"
     dtype = recording.get_dtype()
     BinaryRecordingExtractor.write_recording(recording=recording, dtype=dtype, file_paths=file_path)
