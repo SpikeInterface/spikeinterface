@@ -47,6 +47,11 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         spatial_bins,
         do_preprocessing=True,
         correct_motion_kwargs={},
+        waveforms_kwargs=dict(
+            ms_before=1.0,
+            ms_after=3.0,
+            max_spikes_per_unit=500,
+        ),
         sparse_kwargs=dict(
             method="radius",
             radius_um=100.0,
@@ -88,6 +93,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
         self.correct_motion_kwargs = correct_motion_kwargs.copy()
         self.sparse_kwargs = sparse_kwargs.copy()
+        self.waveforms_kwargs = waveforms_kwargs.copy()
         self.comparisons = {}
         self.accuracies = {}
 
@@ -97,6 +103,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 sorter_cases=self.sorter_cases,
                 do_preprocessing=do_preprocessing,
                 delete_output_folder=delete_output_folder,
+                waveforms_kwargs=waveforms_kwargs,
                 sparse_kwargs=sparse_kwargs,
             )
         )
@@ -144,13 +151,14 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     def extract_waveforms(self):
         # the sparsity is estimated on the static recording and propagated to all of then
         if self.parent_benchmark is None:
+            wf_kwargs = self.waveforms_kwargs.copy()
+            wf_kwargs.pop("max_spikes_per_unit", None)
             sparsity = precompute_sparsity(
                 self.recordings["static"],
                 self.sorting_gt,
-                ms_before=2.0,
-                ms_after=3.0,
                 num_spikes_for_sparsity=200.0,
                 unit_batch_size=10000,
+                **wf_kwargs,
                 **self.sparse_kwargs,
                 **self.job_kwargs,
             )
@@ -170,7 +178,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 sparsity=sparsity,
                 remove_if_exists=True,
             )
-            we.set_params(ms_before=2.0, ms_after=3.0, max_spikes_per_unit=500.0, return_scaled=True)
+            we.set_params(**self.waveforms_kwargs, return_scaled=True)
             we.run_extract_waveforms(seed=22051977, **self.job_kwargs)
             self.waveforms[key] = we
 
@@ -203,18 +211,10 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         for key in self.keys:
             print(key)
             dist = self.distances[key] = {
-                # "norm_static": np.zeros(n),
-                # "template_euclidean": np.zeros(n),
+                "std": np.zeros(n),
+                "norm_std": np.zeros(n),
+                "template_norm_distance": np.zeros(n),
                 "template_cosine": np.zeros(n),
-                # "wf_euclidean_mean": np.zeros(n),
-                # "wf_euclidean_std": np.zeros(n),
-                # "wf_cosine_mean": np.zeros(n),
-                # "wf_cosine_std": np.zeros(n),
-                "waveforms_std": np.zeros(n),
-                "waveforms_std40_60": np.zeros(n),
-                # "waveforms_std_to_static": np.zeros(n),
-                "template_norm_dist": np.zeros(n),
-                "spike_norm_dist": np.zeros(n),
             }
 
             templates = self.waveforms[key].get_all_templates()
@@ -222,27 +222,6 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             extremum_channel = get_template_extremum_channel(self.waveforms["static"], outputs="index")
 
             for unit_ind, unit_id in enumerate(self.waveforms[key].sorting.unit_ids):
-                # print(unit_id)
-                # mask = sparsity.mask[unit_ind, :]
-                # ref_template = ref_templates[unit_ind][:, mask].reshape(1, -1)
-                # template = templates[unit_ind][:, mask].reshape(1, -1)
-
-                # # this is already sparse
-                # wfs = self.waveforms[key].get_waveforms(unit_id)
-                # wfs = wfs.reshape(wfs.shape[0], -1)
-
-                # dist["norm_static"][unit_ind] = np.linalg.norm(ref_template)
-                # dist["template_euclidean"][unit_ind] = sklearn.metrics.pairwise_distances(ref_template, template)[0]
-                # dist["template_cosine"][unit_ind] = sklearn.metrics.pairwise.cosine_similarity(ref_template, template)[0]
-
-                # d = sklearn.metrics.pairwise_distances(ref_template, wfs)[0]
-                # dist["wf_euclidean_mean"][unit_ind] = d.mean()
-                # dist["wf_euclidean_std"][unit_ind] = d.std()
-
-                # d = sklearn.metrics.pairwise.cosine_similarity(ref_template, wfs)[0]
-                # dist["wf_cosine_mean"][unit_ind] = d.mean()
-                # dist["wf_cosine_std"][unit_ind] = d.std()
-
                 mask = sparsity.mask[unit_ind, :]
                 ref_template = ref_templates[unit_ind][:, mask]
                 template = templates[unit_ind][:, mask]
@@ -256,17 +235,14 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 wfs = self.waveforms[key].get_waveforms(unit_id)
                 ref_wfs = self.waveforms["static"].get_waveforms(unit_id)
 
-                dist["waveforms_std"][unit_ind] = np.std(wfs - template[None, :, :])
-                # dist['waveforms_std40_60'][unit_ind] = np.mean(np.std(wfs[:, 50:80, :] - template[None, 50:80, :], axis=0) / np.sum(ref_template**2), )
-                dist["waveforms_std40_60"][unit_ind] = np.mean(
-                    np.std(wfs[:, 50:80, max_chan_sparse], axis=0) / np.sum(ref_template**2)
-                )
+                rms = np.sqrt(np.mean(template**2))
+                ref_rms = np.sqrt(np.mean(ref_template**2))
+                if rms == 0:
+                    print(key, unit_id, unit_ind, rms, ref_rms)
 
-                # dist['waveforms_std_to_static'][unit_ind] = np.std(wfs - ref_template[None, :, :])
-                dist["template_norm_dist"][unit_ind] = np.sum((ref_template - template) ** 2) / np.sum(
-                    ref_template**2
-                )
-                dist["spike_norm_dist"][unit_ind] = np.sum((wfs - ref_wfs) ** 2) / np.sum(ref_template**2)
+                dist["std"][unit_ind] = np.mean(np.std(wfs, axis=0), axis=(0, 1))
+                dist["norm_std"][unit_ind] = np.mean(np.std(wfs, axis=0), axis=(0, 1)) / rms
+                dist["template_norm_distance"][unit_ind] = np.sum((ref_template - template) ** 2) / ref_rms
                 dist["template_cosine"][unit_ind] = sklearn.metrics.pairwise.cosine_similarity(
                     ref_template.reshape(1, -1), template.reshape(1, -1)
                 )[0]
