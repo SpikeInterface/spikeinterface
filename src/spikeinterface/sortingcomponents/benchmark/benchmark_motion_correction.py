@@ -207,8 +207,10 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
         ref_templates = self.waveforms["static"].get_all_templates()
 
-        # for key in ['drifting', 'corrected']:
         for key in self.keys:
+            if self.parent_benchmark is not None and kei in ("drifting", "corrected"):
+                continue
+
             print(key)
             dist = self.distances[key] = {
                 "std": np.zeros(n),
