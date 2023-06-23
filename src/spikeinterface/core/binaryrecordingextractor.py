@@ -1,4 +1,5 @@
 from typing import List, Union
+import mmap
 
 import shutil
 from pathlib import Path
@@ -161,6 +162,7 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         self.file_offset = file_offset
         self.time_axis = time_axis
         self.datfile = datfile
+        self.file = open(self.datfile, "r")
         self.num_samples = (Path(datfile).stat().st_size - file_offset) // (num_chan * np.dtype(dtype).itemsize)
         if self.time_axis == 0:
             self.shape = (self.num_samples, self.num_chan)
@@ -181,13 +183,32 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         end_frame: Union[int, None] = None,
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
-        data = np.memmap(self.datfile, self.dtype, mode="r", offset=self.file_offset, shape=self.shape)
-        if self.time_axis == 1:
-            data = data.T
+        byte_offset = self.file_offset
+        dtype_size_bytes = self.dtype.itemsize
+        mmap_offset, array_offset = divmod(byte_offset, mmap.ALLOCATIONGRANULARITY)
+        data_size_bytes = dtype_size_bytes * self.num_samples * self.num_chan
+        mmmap_length = data_size_bytes + array_offset
+        memmap_obj = mmap.mmap(self.file.fileno(), length=mmmap_length, access=mmap.ACCESS_READ, offset=mmap_offset)
 
-        traces = data[start_frame:end_frame]
+        array = np.ndarray.__new__(
+            np.ndarray,
+            shape=self.shape,
+            dtype=self.dtype,
+            buffer=memmap_obj,
+            order="C",
+            offset=array_offset,
+        )
+
+        if self.time_axis == 1:
+            array = array.T
+
+        traces = array[start_frame:end_frame]
         if channel_indices is not None:
             traces = traces[:, channel_indices]
+
+        # Close the memmap
+        # memmap_obj.flush()
+        # memmap_obj.close()
 
         return traces
 

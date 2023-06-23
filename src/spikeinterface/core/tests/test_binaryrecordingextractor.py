@@ -49,6 +49,13 @@ def test_round_trip(tmp_path):
 
     assert np.allclose(recording.get_traces(), binary_recorder.get_traces())
 
+    start_frame = 200
+    end_frame = 500
+    smaller_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    binary_smaller_traces = binary_recorder.get_traces(start_frame=start_frame, end_frame=end_frame)
+
+    np.allclose(smaller_traces, binary_smaller_traces)
+
 
 if __name__ == "__main__":
     test_BinaryRecordingExtractor()
