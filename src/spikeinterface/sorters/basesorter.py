@@ -237,9 +237,7 @@ class BaseSorter:
         t0 = time.perf_counter()
 
         try:
-            SorterClass._run_from_folder(
-                sorter_output_folder, sorter_params, verbose, relative_to=relative_to
-            )
+            SorterClass._run_from_folder(sorter_output_folder, sorter_params, verbose, relative_to=relative_to)
             t1 = time.perf_counter()
             run_time = float(t1 - t0)
             has_error = False
