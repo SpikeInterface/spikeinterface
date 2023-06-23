@@ -194,7 +194,7 @@ class IronClustSorter(BaseSorter):
             f.write("{}".format(samplerate))
 
     @classmethod
-    def _run_from_folder(cls, sorter_output_folder, params, verbose, recording_relative_path=None):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose, relative_to=None):
         dataset_dir = (sorter_output_folder / "ironclust_dataset").absolute()
         source_dir = (Path(__file__).parent).absolute()
 

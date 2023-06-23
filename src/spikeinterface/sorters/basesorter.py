@@ -59,10 +59,10 @@ class BaseSorter:
         verbose=False,
         remove_existing_folder=False,
         delete_output_folder=False,
-        recording_relative_path=None,
+        relative_to=None,
     ):
         output_folder = self.initialize_folder(
-            recording, output_folder, verbose, remove_existing_folder, recording_relative_path=recording_relative_path
+            recording, output_folder, verbose, remove_existing_folder, relative_to=relative_to
         )
 
         self.recording = recording
@@ -79,7 +79,7 @@ class BaseSorter:
         p = self.set_params_to_folder(self.recording, self.output_folder, sorter_params, self.verbose)
         self.params = p
 
-    def run(self, raise_error=True, recording_relative_path=None):
+    def run(self, raise_error=True, relative_to=None):
         """
         Main function kept for backward compatibility.
         This should not be used anymore but still works.
@@ -88,10 +88,10 @@ class BaseSorter:
         self.setup_recording(self.recording, self.output_folder, self.params, self.verbose)
 
         # compute
-        self.run_from_folder(self.output_folder, raise_error=True, recording_relative_path=recording_relative_path)
+        self.run_from_folder(self.output_folder, raise_error=True, relative_to=relative_to)
 
-    def get_result(self, recording_relative_path=None):
-        sorting = self.get_result_from_folder(self.output_folder, recording_relative_path=recording_relative_path)
+    def get_result(self, relative_to=None):
+        sorting = self.get_result_from_folder(self.output_folder, relative_to=relative_to)
         if self.delete_output_folder:
             shutil.rmtree(str(self.sorter_folder), ignore_errors=True)
         return sorting
@@ -101,7 +101,7 @@ class BaseSorter:
     # class method zone
 
     @classmethod
-    def initialize_folder(cls, recording, output_folder, verbose, remove_existing_folder, recording_relative_path=None):
+    def initialize_folder(cls, recording, output_folder, verbose, remove_existing_folder, relative_to=None):
         # installed ?
         if not cls.is_installed():
             raise Exception(
@@ -144,7 +144,7 @@ class BaseSorter:
 
         rec_file = output_folder / "spikeinterface_recording.json"
         if recording.is_dumpable:
-            recording.dump_to_json(rec_file, relative_to=recording_relative_path)
+            recording.dump_to_json(rec_file, relative_to=relative_to)
         else:
             d = {"warning": "The recording is not dumpable"}
             rec_file.write_text(json.dumps(d, indent=4), encoding="utf8")
@@ -209,7 +209,7 @@ class BaseSorter:
         cls._setup_recording(recording, sorter_output_folder, sorter_params, verbose)
 
     @classmethod
-    def run_from_folder(cls, output_folder, raise_error, verbose, recording_relative_path=None):
+    def run_from_folder(cls, output_folder, raise_error, verbose, relative_to=None):
         # need setup_recording to be done.
         output_folder = Path(output_folder)
         sorter_output_folder = output_folder / "sorter_output"
@@ -238,7 +238,7 @@ class BaseSorter:
 
         try:
             SorterClass._run_from_folder(
-                sorter_output_folder, sorter_params, verbose, recording_relative_path=recording_relative_path
+                sorter_output_folder, sorter_params, verbose, relative_to=relative_to
             )
             t1 = time.perf_counter()
             run_time = float(t1 - t0)
@@ -282,7 +282,7 @@ class BaseSorter:
         return run_time
 
     @classmethod
-    def get_result_from_folder(cls, output_folder, recording_relative_path=None):
+    def get_result_from_folder(cls, output_folder, relative_to=None):
         output_folder = Path(output_folder)
         sorter_output_folder = output_folder / "sorter_output"
         # check errors in log file
@@ -305,7 +305,7 @@ class BaseSorter:
             sorting = cls._get_result_from_folder(output_folder)
 
         # register recording to Sorting object
-        recording = load_extractor(output_folder / "spikeinterface_recording.json", base_folder=recording_relative_path)
+        recording = load_extractor(output_folder / "spikeinterface_recording.json", base_folder=relative_to)
         if recording is not None:
             # can be None when not dumpable
             sorting.register_recording(recording)
@@ -393,7 +393,7 @@ class BaseSorter:
         # can be implemented in subclass to check if the filter will be applied
 
     @classmethod
-    def _run_from_folder(cls, sorter_output_folder, params, verbose, recording_relative_path=None):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose, relative_to=None):
         # need be implemented in subclass
         # this is where the script is launch for one recording from a folder already prepared
         # this must run or generate the command line to run the sorter for one recording

@@ -35,7 +35,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         return "2.0"
 
     @classmethod
-    def _run_from_folder(cls, sorter_output_folder, params, verbose, recording_relative_path=None):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose, relative_to=None):
         job_kwargs = params["job_kwargs"].copy()
         job_kwargs = fix_job_kwargs(job_kwargs)
         job_kwargs["progress_bar"] = verbose
@@ -50,7 +50,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         import hdbscan
 
         recording_raw = load_extractor(
-            sorter_output_folder.parent / "spikeinterface_recording.json", base_folder=recording_relative_path
+            sorter_output_folder.parent / "spikeinterface_recording.json", base_folder=relative_to
         )
 
         num_chans = recording_raw.get_num_channels()

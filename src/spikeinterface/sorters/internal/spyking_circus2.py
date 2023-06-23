@@ -40,7 +40,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         return "2.0"
 
     @classmethod
-    def _run_from_folder(cls, sorter_output_folder, params, verbose, recording_relative_path=None):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose, relative_to=None):
         assert HAVE_HDBSCAN, "spykingcircus2 needs hdbscan to be installed"
 
         # this is importanted only on demand because numba import are too heavy
@@ -55,7 +55,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         job_kwargs["progress_bar"] = verbose
 
         recording = load_extractor(
-            sorter_output_folder.parent / "spikeinterface_recording.json", base_folder=recording_relative_path
+            sorter_output_folder.parent / "spikeinterface_recording.json", base_folder=relative_to
         )
         sampling_rate = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()

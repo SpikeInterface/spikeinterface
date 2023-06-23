@@ -136,7 +136,7 @@ class HerdingspikesSorter(BaseSorter):
         pass
 
     @classmethod
-    def _run_from_folder(cls, sorter_output_folder, params, verbose, recording_relative_path=None):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose, relative_to=None):
         import herdingspikes as hs
         from spikeinterface.preprocessing import bandpass_filter, normalize_by_quantile
 
@@ -148,7 +148,7 @@ class HerdingspikesSorter(BaseSorter):
             new_api = False
 
         recording = load_extractor(
-            sorter_output_folder.parent / "spikeinterface_recording.json", base_folder=recording_relative_path
+            sorter_output_folder.parent / "spikeinterface_recording.json", base_folder=relative_to
         )
 
         p = params

@@ -122,7 +122,7 @@ class WaveClusSnippetsSorter(BaseSorter):
             print("Num. channels = {}, Num. snippets = {}".format(num_channels, num_snippets))
 
     @classmethod
-    def _run_from_folder(cls, sorter_output_folder, params, verbose, recording_relative_path=None):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose, relative_to=None):
         sorter_output_folder = sorter_output_folder.absolute()
 
         cls._generate_par_file(params, sorter_output_folder)

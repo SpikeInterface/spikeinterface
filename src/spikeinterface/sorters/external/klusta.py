@@ -137,7 +137,7 @@ class KlustaSorter(BaseSorter):
             f.writelines(klusta_config)
 
     @classmethod
-    def _run_from_folder(cls, sorter_output_folder, params, verbose, recording_relative_path=None):
+    def _run_from_folder(cls, sorter_output_folder, params, verbose, relative_to=None):
         if "win" in sys.platform and sys.platform != "darwin":
             shell_cmd = """
                         klusta --overwrite {klusta_config}
