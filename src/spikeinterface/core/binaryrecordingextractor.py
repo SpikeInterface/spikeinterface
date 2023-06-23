@@ -156,7 +156,12 @@ BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.writ
 class BinaryRecordingSegment(BaseRecordingSegment):
     def __init__(self, datfile, sampling_frequency, t_start, num_chan, dtype, time_axis, file_offset):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
-        self._timeseries = read_binary_recording(datfile, num_chan, dtype, time_axis, file_offset)
+        self.num_chan = num_chan
+        self.dtype = np.dtype(dtype)
+        self.file_offset = file_offset
+        self.time_axis = time_axis
+        self.datfile = datfile
+        self.num_samples = (Path(datfile).stat().st_size - file_offset) // (num_chan * np.dtype(dtype).itemsize)
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal block
@@ -164,7 +169,7 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         Returns:
             SampleIndex: Number of samples in the signal block
         """
-        return self._timeseries.shape[0]
+        return self.num_samples
 
     def get_traces(
         self,
@@ -172,9 +177,17 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         end_frame: Union[int, None] = None,
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
-        traces = self._timeseries[start_frame:end_frame]
+        shape = (self.num_samples, self.num_chan)
+        if self.time_axis != 0:
+            shape = (self.num_chan, self.num_samples)
+
+        data = np.memmap(self.datfile, self.dtype, mode="r", offset=self.file_offset, shape=shape)
+        if self.time_axis != 0:
+            data = data.T
+        traces = data[start_frame:end_frame]
         if channel_indices is not None:
             traces = traces[:, channel_indices]
+
         return traces
 
 
