@@ -208,7 +208,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         ref_templates = self.waveforms["static"].get_all_templates()
 
         for key in self.keys:
-            if self.parent_benchmark is not None and key in ("drifting", "corrected"):
+            if self.parent_benchmark is not None and key in ("drifting", "static"):
                 continue
 
             print(key)
