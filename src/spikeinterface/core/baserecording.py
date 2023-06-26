@@ -700,8 +700,10 @@ class BaseRecordingSegment(BaseSegment):
         -----
         The keys are always present, but the values may be None.
         """
-        d = dict(sampling_frequency=self.sampling_frequency, t_start=self.t_start, time_vector=self.time_vector)
-        return d
+        time_kwargs = dict(
+            sampling_frequency=self.sampling_frequency, t_start=self.t_start, time_vector=self.time_vector
+        )
+        return time_kwargs
 
     def sample_index_to_time(self, sample_ind):
         """
