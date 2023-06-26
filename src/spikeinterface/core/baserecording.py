@@ -321,6 +321,32 @@ class BaseRecording(BaseRecordingSnippets):
         """
         return self.has_scaled()
 
+    def get_times_kwargs(self, segment_index=None) -> dict:
+        """
+        Retrieves the timing attributes for a given segment index. As with
+        other recorders this method only needs a segment index in the case
+        of multi-segment recordings.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following key-value pairs:
+
+            - 'sampling_frequency': The sampling frequency of the RecordingSegment.
+            - 't_start': The start time of the RecordingSegment.
+            - 'time_vector': The time vector of the RecordingSegment.
+
+        Notes
+        -----
+        The keys are always present, but the values may be None.
+        """
+
+        segment_index = self._check_segment_index(segment_index)
+        rs = self._recording_segments[segment_index]
+        time_kwargs = rs.get_times_kwargs()
+
+        return time_kwargs
+
     def get_times(self, segment_index=None):
         """Get time vector for a recording segment.
 
@@ -657,8 +683,23 @@ class BaseRecordingSegment(BaseSegment):
                 time_vector += self.t_start
             return time_vector
 
-    def get_times_kwargs(self):
-        # useful for other internal RecordingSegment
+    def get_times_kwargs(self) -> dict:
+        """
+        Retrieves the timing attributes characterizing a RecordingSegment
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following key-value pairs:
+
+            - 'sampling_frequency': The sampling frequency of the RecordingSegment.
+            - 't_start': The start time of the RecordingSegment.
+            - 'time_vector': The time vector of the RecordingSegment.
+
+        Notes
+        -----
+        The keys are always present, but the values may be None.
+        """
         d = dict(sampling_frequency=self.sampling_frequency, t_start=self.t_start, time_vector=self.time_vector)
         return d
 
