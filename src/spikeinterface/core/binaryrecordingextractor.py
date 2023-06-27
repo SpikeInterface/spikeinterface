@@ -169,6 +169,12 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         else:
             self.shape = (self.num_chan, self.num_samples)
 
+        byte_offset = self.file_offset
+        dtype_size_bytes = self.dtype.itemsize
+        data_size_bytes = dtype_size_bytes * self.num_samples * self.num_chan
+        self.memmap_offset, self.array_offset = divmod(byte_offset, mmap.ALLOCATIONGRANULARITY)
+        self.memmap_length = data_size_bytes + self.array_offset
+
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal block
 
@@ -183,12 +189,9 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         end_frame: Union[int, None] = None,
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
-        byte_offset = self.file_offset
-        dtype_size_bytes = self.dtype.itemsize
-        mmap_offset, array_offset = divmod(byte_offset, mmap.ALLOCATIONGRANULARITY)
-        data_size_bytes = dtype_size_bytes * self.num_samples * self.num_chan
-        mmmap_length = data_size_bytes + array_offset
-        memmap_obj = mmap.mmap(self.file.fileno(), length=mmmap_length, access=mmap.ACCESS_READ, offset=mmap_offset)
+        length = self.mmemmap_length
+        memmap_offset = self.memmap_offset
+        memmap_obj = mmap.mmap(self.file.fileno(), length=length, access=mmap.ACCESS_READ, offset=memmap_offset)
 
         array = np.ndarray.__new__(
             np.ndarray,
@@ -196,7 +199,7 @@ class BinaryRecordingSegment(BaseRecordingSegment):
             dtype=self.dtype,
             buffer=memmap_obj,
             order="C",
-            offset=array_offset,
+            offset=self.array_offset,
         )
 
         if self.time_axis == 1:
@@ -205,10 +208,6 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         traces = array[start_frame:end_frame]
         if channel_indices is not None:
             traces = traces[:, channel_indices]
-
-        # Close the memmap
-        # memmap_obj.flush()
-        # memmap_obj.close()
 
         return traces
 
