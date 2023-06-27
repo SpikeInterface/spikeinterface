@@ -271,6 +271,7 @@ def write_binary_recording(
         dtype = recording.get_dtype()
     else:
         dtype = np.dtype(dtype)
+
     if auto_cast_uint:
         cast_unsigned = determine_cast_unsigned(recording, dtype)
     else:
@@ -284,11 +285,10 @@ def write_binary_recording(
 
         file_path = file_paths[segment_index]
         num_channels = recording.get_num_channels()
-        offset = byte_offset * dtype.itemsize * num_channels
         shape = (num_frames, num_channels)
-        rec_memmap = np.memmap(str(file_path), dtype=dtype, mode="w+", offset=offset, shape=shape)
+        rec_memmap = np.memmap(str(file_path), dtype=dtype, mode="w+", offset=byte_offset, shape=shape)
         rec_memmaps.append(rec_memmap)
-        rec_memmaps_dict.append(dict(filename=str(file_path), dtype=dtype, mode="r+", offset=offset, shape=shape))
+        rec_memmaps_dict.append(dict(filename=str(file_path), dtype=dtype, mode="r+", offset=byte_offset, shape=shape))
 
     # use executor (loop or workers)
     func = _write_binary_chunk
