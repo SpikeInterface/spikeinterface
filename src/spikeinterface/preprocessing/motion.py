@@ -25,7 +25,7 @@ motion_options_preset = {
 }
 
 
-def estimate_and_correct_motion(
+def correct_motion(
     recording,
     preset="",
     folder=None,
@@ -37,14 +37,14 @@ def estimate_and_correct_motion(
     job_kwargs={},
 ):
     """
-    Top level function that estimate and correct the motion for a recording.
+    Top level function that estimate and interpolate the motion for a recording.
 
     This function have some intermediate steps that should be all controlled one by one carfully:
       * detect peaks
       * optionaly sample some peaks to speed up the localization
       * localize peaks
       * estimate the motion vector
-      * create and return a `CorrectMotionRecording` recording object
+      * create and return a `InterpolateMotionRecording` recording object
 
     Even this function is convinient to begin with, we highly recommend to run all step manually and
     separatly to accuratly check then.
@@ -83,7 +83,7 @@ def estimate_and_correct_motion(
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks, localize_peak_methods
     from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-    from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
+    from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
 
     from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
 
@@ -125,7 +125,7 @@ def estimate_and_correct_motion(
     motion, temporal_bins, spatial_bins = estimate_motion(recording, peaks, peak_locations, **estimate_motion_kwargs)
     t4 = time.perf_counter()
 
-    recording_corrected = CorrectMotionRecording(
+    recording_corrected = InterpolateMotionRecording(
         recording, motion, temporal_bins, spatial_bins, **correct_motion_kwargs
     )
 
