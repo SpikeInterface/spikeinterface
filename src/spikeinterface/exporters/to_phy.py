@@ -8,7 +8,13 @@ import shutil
 import warnings
 
 import spikeinterface
-from spikeinterface.core import write_binary_recording, BinaryRecordingExtractor, ChannelSparsity, WaveformExtractor
+from spikeinterface.core import (
+    write_binary_recording,
+    BinaryRecordingExtractor,
+    WaveformExtractor,
+    BinaryFolderRecording,
+    ChannelSparsity,
+)
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.postprocessing import (
     compute_spike_amplitudes,
@@ -126,7 +132,11 @@ def export_to_phy(
             rec_path = output_folder / "recording.dat"
             write_binary_recording(waveform_extractor.recording, file_paths=rec_path, dtype=dtype, **job_kwargs)
         elif isinstance(waveform_extractor.recording, BinaryRecordingExtractor):
-            rec_path = waveform_extractor.recording._kwargs["file_paths"][0]
+            if isinstance(waveform_extractor.recording, BinaryFolderRecording):
+                bin_kwargs = waveform_extractor.recording._bin_kwargs
+            else:
+                bin_kwargs = waveform_extractor.recording._kwargs
+            rec_path = bin_kwargs["file_paths"][0]
             dtype = waveform_extractor.recording.get_dtype()
         else:
             rec_path = "None"
