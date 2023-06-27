@@ -33,7 +33,7 @@ def get_potential_auto_merge(
     """
     Algorithm to find and check potential merges between units.
 
-    This is taken from lussac version 1 done by Aurelien Wyngaard.
+    This is taken from lussac version 1 done by Aurelien Wyngaard and Victor Llobet.
     https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
 
 
