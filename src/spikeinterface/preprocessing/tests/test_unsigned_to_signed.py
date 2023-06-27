@@ -19,9 +19,10 @@ set_global_tmp_folder(cache_folder)
 
 
 def test_unsigned_to_signed():
-    traces = np.random.rand(10000, 4) * 100 + 2**15
+    rng = np.random.RandomState(0)
+    traces = rng.rand(10000, 4) * 100 + 2**15
     traces_uint16 = traces.astype("uint16")
-    traces = np.random.rand(10000, 4) * 100 + 2**31
+    traces = rng.rand(10000, 4) * 100 + 2**31
     traces_uint32 = traces.astype("uint32")
     rec_uint16 = NumpyRecording(traces_uint16, sampling_frequency=30000)
     rec_uint32 = NumpyRecording(traces_uint32, sampling_frequency=30000)

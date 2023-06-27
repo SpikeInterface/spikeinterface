@@ -44,10 +44,11 @@ class UnsignedToSignedRecordingSegment(BasePreprocessorSegment):
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         # if uint --> take care of offset
         traces_dtype = traces.dtype
-        itemsize = traces_dtype.itemsize
         nbits = traces_dtype.itemsize * 8
+        signed_dtype = f"int{2 * (traces_dtype.itemsize) * 8}"
+        offset = 2 ** (nbits - 1)
         # upcast to int with double itemsize
-        traces = traces.astype(f"int{2 * (traces_dtype.itemsize) * 8}", copy=False) - 2 ** (nbits - 1)
+        traces = traces.astype(signed_dtype, copy=False) - offset
         return traces.astype(self.dtype_signed, copy=False)
 
 
