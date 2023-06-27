@@ -80,7 +80,7 @@ class CurationSorting:
         current_sorting = self._sorting_stages[self._sorting_stages_i]
         if new_unit_id is None:
             new_unit_id = self._get_unused_id()[0]
-        else:
+        elif new_unit_id not in units_to_merge:
             assert new_unit_id not in current_sorting.unit_ids, f"new_unit_id already exists!"
         new_sorting = MergeUnitsSorting(
             parent_sorting=current_sorting,

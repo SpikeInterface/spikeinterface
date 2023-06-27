@@ -18,11 +18,12 @@ def get_potential_auto_merge(
     window_ms=100.0,
     corr_diff_thresh=0.16,
     template_diff_thresh=0.25,
-    censored_period_ms=0.0,
+    censored_period_ms=0.3,
     refractory_period_ms=1.0,
     sigma_smooth_ms=0.6,
     contamination_threshold=0.2,
     adaptative_window_threshold=0.5,
+    censor_correlograms_ms: float = 0.15,
     num_channels=5,
     num_shift=5,
     firing_contamination_balance=1.5,
@@ -84,6 +85,8 @@ def get_potential_auto_merge(
         Threshold for not taking in account a unit when it is too contaminated, by default 0.2
     adaptative_window_threshold:: float
         Parameter to detect the window size in correlogram estimation, by default 0.5
+    censor_correlograms_ms: float
+        The period to censor on the auto and cross-correlograms, by default 0.15 ms
     num_channels: int
         Number of channel to use for template similarity computation, by default 5
     num_shift: int
@@ -162,6 +165,8 @@ def get_potential_auto_merge(
     # STEP 4 : potential auto merge by correlogram
     if "correlogram" in steps:
         correlograms, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba")
+        mask = (bins[:-1] >= -censor_correlograms_ms) & (bins[:-1] < censor_correlograms_ms)
+        correlograms[:, :, mask] = 0
         correlograms_smoothed = smooth_correlogram(correlograms, bins, sigma_smooth_ms=sigma_smooth_ms)
         # find correlogram window for each units
         win_sizes = np.zeros(n, dtype=int)
@@ -464,9 +469,9 @@ def check_improve_contaminations_score(
 
         # make a merged sorting and tale one unit (unit_id1 is used)
         unit_id1, unit_id2 = sorting.unit_ids[ind1], sorting.unit_ids[ind2]
-        sorting_merged = MergeUnitsSorting(sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1]).select_units(
-            [unit_id1]
-        )
+        sorting_merged = MergeUnitsSorting(
+            sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1], delta_time_ms=censored_period_ms
+        ).select_units([unit_id1])
         # make a lazy fake WaveformExtractor to compute contamination and firing rate
         we_new = MockWaveformExtractor(recording, sorting_merged)
 

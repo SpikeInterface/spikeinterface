@@ -5,10 +5,10 @@ import numpy as np
 from spikeinterface import download_dataset
 from spikeinterface.extractors import read_mearec, MEArecRecordingExtractor
 
-from spikeinterface.sortingcomponents.motion_correction import (
+from spikeinterface.sortingcomponents.motion_interpolation import (
     correct_motion_on_peaks,
-    correct_motion_on_traces,
-    CorrectMotionRecording,
+    interpolate_motion_on_traces,
+    InterpolateMotionRecording,
 )
 
 
@@ -59,7 +59,7 @@ def test_correct_motion_on_peaks():
     # plt.show()
 
 
-def test_correct_motion_on_traces():
+def test_interpolate_motion_on_traces():
     local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
     rec = MEArecRecordingExtractor(local_path)
     motion, temporal_bins, spatial_bins = make_fake_motion(rec)
@@ -70,7 +70,7 @@ def test_correct_motion_on_traces():
     times = rec.get_times()[0:30000]
 
     for method in ("kriging", "idw", "nearest"):
-        traces_corrected = correct_motion_on_traces(
+        traces_corrected = interpolate_motion_on_traces(
             traces,
             times,
             channel_locations,
@@ -86,18 +86,18 @@ def test_correct_motion_on_traces():
         assert traces.dtype == traces_corrected.dtype
 
 
-def test_CorrectMotionRecording():
+def test_InterpolateMotionRecording():
     local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
     rec = MEArecRecordingExtractor(local_path)
     motion, temporal_bins, spatial_bins = make_fake_motion(rec)
 
-    rec2 = CorrectMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="force_extrapolate")
+    rec2 = InterpolateMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="force_extrapolate")
     assert rec2.channel_ids.size == 32
 
-    rec2 = CorrectMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="force_zeros")
+    rec2 = InterpolateMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="force_zeros")
     assert rec2.channel_ids.size == 32
 
-    rec2 = CorrectMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="remove_channels")
+    rec2 = InterpolateMotionRecording(rec, motion, temporal_bins, spatial_bins, border_mode="remove_channels")
     assert rec2.channel_ids.size == 26
     for ch_id in ("1", "11", "12", "21", "22", "23"):
         assert ch_id not in rec2.channel_ids
@@ -119,5 +119,5 @@ def test_CorrectMotionRecording():
 
 if __name__ == "__main__":
     # test_correct_motion_on_peaks()
-    test_correct_motion_on_traces()
-    # test_CorrectMotionRecording()
+    test_interpolate_motion_on_traces()
+    # test_InterpolateMotionRecording()

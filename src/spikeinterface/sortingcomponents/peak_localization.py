@@ -332,12 +332,12 @@ class LocalizeGridConvolution(PipelineNode):
         return_output=True,
         parents=["extract_waveforms"],
         local_radius_um=50.0,
-        upsampling_um=5,
+        upsampling_um=5.0,
         sigma_um=np.linspace(10, 50.0, 5),
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
-        percentile=10,
+        percentile=10.0,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
