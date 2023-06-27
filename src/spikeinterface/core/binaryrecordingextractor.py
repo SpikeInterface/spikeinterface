@@ -189,7 +189,7 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         end_frame: Union[int, None] = None,
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
-        length = self.mmemmap_length
+        length = self.memmap_length
         memmap_offset = self.memmap_offset
         memmap_obj = mmap.mmap(self.file.fileno(), length=length, access=mmap.ACCESS_READ, offset=memmap_offset)
 
