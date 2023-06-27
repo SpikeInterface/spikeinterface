@@ -13,7 +13,7 @@ from spikeinterface.sorters import run_sorter
 from spikeinterface.widgets import plot_unit_waveforms, plot_gt_performances
 
 from spikeinterface.comparison import GroundTruthComparison
-from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
+from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import BenchmarkBase, _simpleaxis
 from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.widgets import plot_sorting_performance
@@ -132,11 +132,11 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 self._recordings[key] = rec
 
             rec = self._recordings["drifting"]
-            self._recordings["corrected_gt"] = CorrectMotionRecording(
+            self._recordings["corrected_gt"] = InterpolateMotionRecording(
                 rec, self.gt_motion, self.temporal_bins, self.spatial_bins, **self.correct_motion_kwargs
             )
 
-            self._recordings["corrected_estimated"] = CorrectMotionRecording(
+            self._recordings["corrected_estimated"] = InterpolateMotionRecording(
                 rec, self.estimated_motion, self.temporal_bins, self.spatial_bins, **self.correct_motion_kwargs
             )
 

@@ -20,7 +20,7 @@ For now, we have methods for:
  * peak localization
  * peak selection
  * motion estimation
- * motion correction
+ * motion interpolation
  * clustering
  * template matching
 
@@ -200,24 +200,24 @@ Here is an example with non-rigid motion estimation:
 In this example, because it is a non-rigid estimation, :code:`motion` is a 2d array (num_time_bins, num_spatial_bins).
 
 
-Motion correction
------------------
+Motion interpolation
+--------------------
 
-The estimated motion can be used to correct the motion, in other words, for drift correction.
+The estimated motion can be used to interpolate traces, in other words, for drift correction.
 One possible way is to make an interpolation sample-by-sample to compensate for the motion.
-The :py:class:`~spikeinterface.sortingcomponents.motion_correction.CorrectMotionRecording` is a preprocessing step doing
-this. This preprocessing is *lazy*, so that interpolation is done on-the-fly. However, the class needs the
+The :py:class:`~spikeinterface.sortingcomponents.motion_interpolation.InterpolateMotionRecording` is a preprocessing 
+step doing this. This preprocessing is *lazy*, so that interpolation is done on-the-fly. However, the class needs the
 "motion vector" as input, which requires a relatively long computation (peak detection, localization and motion
 estimation).
 
-Here is a short example that depends on the output of "Motion estimation":
+Here is a short example that depends on the output of "Motion interpolation":
 
 
 .. code-block:: python
 
-  from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
+  from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
 
-  recording_corrected = CorrectMotionRecording(recording_with_drift, motion, temporal_bins, spatial_bins
+  recording_corrected = InterpolateMotionRecording(recording_with_drift, motion, temporal_bins, spatial_bins
                                               spatial_interpolation_method='kriging,
                                               border_mode='remove_channels')
 

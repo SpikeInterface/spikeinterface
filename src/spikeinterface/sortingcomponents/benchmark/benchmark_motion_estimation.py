@@ -10,7 +10,7 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
-from spikeinterface.sortingcomponents.motion_correction import correct_motion_on_peaks
+from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
 from spikeinterface.preprocessing import bandpass_filter, zscore, common_reference
 
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import BenchmarkBase, _simpleaxis
