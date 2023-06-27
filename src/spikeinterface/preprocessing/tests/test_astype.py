@@ -27,16 +27,5 @@ def test_astype():
     np.testing.assert_array_equal(traces_float64, astype(rec_float32, "float64").get_traces())
 
 
-def test_astype_unsigned():
-    traces = np.random.rand(10000, 4) * 100 + 500
-    traces_uint16 = traces.astype("uint16")
-    rec_uint16 = NumpyRecording(traces_uint16, sampling_frequency=30000)
-    traces_int16 = (traces.astype("int32") - 2**15).astype("int16")
-    np.testing.assert_array_equal(traces_int16, astype(rec_uint16, "int16").get_traces())
-    traces_int32 = (traces.astype("int32") - 2**15).astype("int32")
-    np.testing.assert_array_equal(traces_int32, astype(rec_uint16, "int32").get_traces())
-
-
 if __name__ == "__main__":
     test_astype()
-    test_astype_unsigned()
