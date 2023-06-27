@@ -114,7 +114,9 @@ def extract_waveforms_to_buffers(
             # release all sharedmem buffer
             for unit_id in unit_ids:
                 shm = wfs_arrays_info[unit_id][0]
-                shm.unlink()
+                if shm is not None:
+                    # empty array have None
+                    shm.unlink()
             return wfs_arrays
         else:
             return wfs_arrays, wfs_arrays_info
