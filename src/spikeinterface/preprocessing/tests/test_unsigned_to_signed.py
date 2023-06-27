@@ -10,14 +10,6 @@ from spikeinterface.preprocessing import unsigned_to_signed
 import numpy as np
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
-
-set_global_tmp_folder(cache_folder)
-
-
 def test_unsigned_to_signed():
     rng = np.random.RandomState(0)
     traces = rng.rand(10000, 4) * 100 + 2**15

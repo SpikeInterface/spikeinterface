@@ -10,14 +10,6 @@ from spikeinterface.preprocessing import astype
 import numpy as np
 
 
-if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
-else:
-    cache_folder = Path("cache_folder") / "preprocessing"
-
-set_global_tmp_folder(cache_folder)
-
-
 def test_astype():
     rng = np.random.RandomState(0)
     traces = (rng.randn(10000, 4) * 100).astype("float32")
