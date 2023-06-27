@@ -321,7 +321,7 @@ class BaseRecording(BaseRecordingSnippets):
         """
         return self.has_scaled()
 
-    def get_times_kwargs(self, segment_index=None) -> dict:
+    def get_time_info(self, segment_index=None) -> dict:
         """
         Retrieves the timing attributes for a given segment index. As with
         other recorders this method only needs a segment index in the case
