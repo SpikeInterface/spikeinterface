@@ -553,6 +553,9 @@ if __name__ == '__main__':
     cmd = ["python", f"{in_container_script_path_unix}"]
     res_output = container_client.run_command(cmd)
     run_sorter_output = res_output
+    # this line "cleans" the output from the container by:
+    # - removing the "r" of the raw string
+    # - correcting character for new line and '
     run_sorter_output = run_sorter_output[2:-1].replace("\\n", "\n").replace("\\'", "'")
 
     # chown folder to user uid
