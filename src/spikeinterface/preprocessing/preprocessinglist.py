@@ -36,6 +36,7 @@ from .average_across_direction import AverageAcrossDirectionRecording, average_a
 from .directional_derivative import DirectionalDerivativeRecording, directional_derivative
 from .depth_order import DepthOrderRecording, depth_order
 from .astype import AstypeRecording, astype
+from .unsigned_to_signed import UnsignedToSignedRecording, unsigned_to_signed
 
 
 preprocessers_full_list = [
@@ -70,6 +71,7 @@ preprocessers_full_list = [
     AverageAcrossDirectionRecording,
     DirectionalDerivativeRecording,
     AstypeRecording,
+    UnsignedToSignedRecording,
 ]
 
 installed_preprocessers_list = [pp for pp in preprocessers_full_list if pp.installed]
