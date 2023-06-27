@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import MEArec as mr
 
 
-class BenchmarkMotionCorrectionMearec(BenchmarkBase):
+class BenchmarkMotionInterpolationMearec(BenchmarkBase):
     _array_names = ("gt_motion", "estimated_motion", "temporal_bins", "spatial_bins")
     _waveform_names = ("static", "drifting", "corrected_gt", "corrected_estimated")
     _sorting_names = ()
