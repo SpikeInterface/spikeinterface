@@ -7,6 +7,8 @@ class AstypeRecording(BasePreprocessor):
     """The spikeinterface analog of numpy.astype
 
     Converts a recording to another dtype on the fly.
+
+    For recording with an unsigned dtype, please use the `unsigned_to_signed` preprocessing function.
     """
 
     name = "astype"
