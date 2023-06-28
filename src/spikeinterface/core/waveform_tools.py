@@ -68,6 +68,7 @@ def extract_waveforms_to_buffers(
         If True (default), the output shared memory object is copied to a numpy standard array.
         If copy=False then wfs_arrays_info is also return. Please keep in mind that wfs_arrays_info
         need to be referenced as long as wfs_arrays will be used otherwise it will be very hard to debug.
+        Also when copy=False the SharedMemory will need to be unlink manually
     {}
 
     Returns
@@ -110,8 +111,12 @@ def extract_waveforms_to_buffers(
     elif mode == "shared_memory":
         if copy:
             wfs_arrays = {unit_id: arr.copy() for unit_id, arr in wfs_arrays.items()}
-            # clear shared mem buffer
-            del wfs_arrays_info
+            # release all sharedmem buffer
+            for unit_id in unit_ids:
+                shm = wfs_arrays_info[unit_id][0]
+                if shm is not None:
+                    # empty array have None
+                    shm.unlink()
             return wfs_arrays
         else:
             return wfs_arrays, wfs_arrays_info
