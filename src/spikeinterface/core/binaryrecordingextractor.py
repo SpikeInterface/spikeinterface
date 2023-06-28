@@ -21,7 +21,9 @@ class BinaryRecordingExtractor(BaseRecording):
         Path to the binary file
     sampling_frequency: float
         The sampling frequency
-    num_chan: int
+    num_channels: int
+        Number of channels
+    num_chan: int [deprecated]
         Number of channels
     dtype: str or dtype
         The dtype of the binary file
@@ -55,8 +57,9 @@ class BinaryRecordingExtractor(BaseRecording):
         self,
         file_paths,
         sampling_frequency,
-        num_chan,
         dtype,
+        num_channels=None,
+        num_chan=None,
         t_starts=None,
         channel_ids=None,
         time_axis=0,
@@ -65,10 +68,17 @@ class BinaryRecordingExtractor(BaseRecording):
         offset_to_uV=None,
         is_filtered=None,
     ):
+        num_channels = num_channels or num_chan
+        assert num_channels is not None, "You must provide num_channels or num_chan"
+        if num_chan is not None:
+            import warnings
+
+            warnings.warn("num_chan is to be deprecated, use num_channels instead")
+
         if channel_ids is None:
-            channel_ids = list(range(num_chan))
+            channel_ids = list(range(num_channels))
         else:
-            assert len(channel_ids) == num_chan, "Provided recording channels have the wrong length"
+            assert len(channel_ids) == num_channels, "Provided recording channels have the wrong length"
 
         BaseRecording.__init__(self, sampling_frequency, channel_ids, dtype)
 
@@ -91,7 +101,7 @@ class BinaryRecordingExtractor(BaseRecording):
             else:
                 t_start = t_starts[i]
             rec_segment = BinaryRecordingSegment(
-                datfile, sampling_frequency, t_start, num_chan, dtype, time_axis, file_offset
+                datfile, sampling_frequency, t_start, num_channels, dtype, time_axis, file_offset
             )
             self.add_recording_segment(rec_segment)
 
@@ -108,7 +118,8 @@ class BinaryRecordingExtractor(BaseRecording):
             "file_paths": [str(e.absolute()) for e in datfiles],
             "sampling_frequency": sampling_frequency,
             "t_starts": t_starts,
-            "num_chan": num_chan,
+            "num_channels": num_channels,
+            "num_chan": num_channels,  # TODO: Remove carefully
             "dtype": dtype.str,
             "channel_ids": channel_ids,
             "time_axis": time_axis,
@@ -142,7 +153,7 @@ class BinaryRecordingExtractor(BaseRecording):
         d = dict(
             file_paths=self._kwargs["file_paths"],
             dtype=np.dtype(self._kwargs["dtype"]),
-            num_channels=self._kwargs["num_chan"],
+            num_channels=self._kwargs["num_channels"] or self._kwargs["num_chan"],  # TODO: Remove carefully
             time_axis=self._kwargs["time_axis"],
             file_offset=self._kwargs["file_offset"],
         )
@@ -155,23 +166,23 @@ BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.writ
 
 
 class BinaryRecordingSegment(BaseRecordingSegment):
-    def __init__(self, datfile, sampling_frequency, t_start, num_chan, dtype, time_axis, file_offset):
+    def __init__(self, datfile, sampling_frequency, t_start, num_channels, dtype, time_axis, file_offset):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
-        self.num_chan = num_chan
+        self.num_channels = num_channels
         self.dtype = np.dtype(dtype)
         self.file_offset = file_offset
         self.time_axis = time_axis
         self.datfile = datfile
         self.file = open(self.datfile, "r")
-        self.num_samples = (Path(datfile).stat().st_size - file_offset) // (num_chan * np.dtype(dtype).itemsize)
+        self.num_samples = (Path(datfile).stat().st_size - file_offset) // (num_channels * np.dtype(dtype).itemsize)
         if self.time_axis == 0:
-            self.shape = (self.num_samples, self.num_chan)
+            self.shape = (self.num_samples, self.num_channels)
         else:
-            self.shape = (self.num_chan, self.num_samples)
+            self.shape = (self.num_channels, self.num_samples)
 
         byte_offset = self.file_offset
         dtype_size_bytes = self.dtype.itemsize
-        data_size_bytes = dtype_size_bytes * self.num_samples * self.num_chan
+        data_size_bytes = dtype_size_bytes * self.num_samples * self.num_channels
         self.memmap_offset, self.array_offset = divmod(byte_offset, mmap.ALLOCATIONGRANULARITY)
         self.memmap_length = data_size_bytes + self.array_offset
 
