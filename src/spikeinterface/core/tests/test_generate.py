@@ -61,7 +61,11 @@ def test_lazy_random_recording(mode):
     )
 
     memory_after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    memory_after_instanciation_MiB == pytest.approx(initial_memory_MiB, rel=relative_tolerance)
+    expected_memory_usage_MiB = initial_memory_MiB
+    if mode == "white_noise":
+        expected_memory_usage_MiB += 50  # 50 MiB for the white noise generator
+
+    assert memory_after_instanciation_MiB == pytest.approx(expected_memory_usage_MiB, rel=relative_tolerance)
 
     traces = lazy_recording.get_traces()
     expected_traces_shape = (int(durations[0] * sampling_frequency), num_channels)
@@ -79,7 +83,8 @@ def test_lazy_random_recording(mode):
     print(f"Traces size {traces_size_MiB} MiB")
     print(f"Difference between the last two {(memory_after_traces_MiB - traces_size_MiB)} MiB")
 
-    (memory_after_instanciation_MiB + traces_size_MiB) == pytest.approx(memory_after_traces_MiB, rel=relative_tolerance)
+    expected_memory_usage_MiB = memory_after_instanciation_MiB + traces_size_MiB
+    assert memory_after_traces_MiB == pytest.approx(expected_memory_usage_MiB, rel=relative_tolerance)
 
 
 @pytest.mark.parametrize("mode", mode_list)
@@ -94,7 +99,7 @@ def test_generate_lazy_recording(mode):
     lazy_recording = generate_lazy_recording(full_traces_size_GiB=full_traces_size_GiB, mode=mode)
 
     memory_after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    memory_after_instanciation_MiB == pytest.approx(initial_memory_MiB, rel=relative_tolerance)
+    assert memory_after_instanciation_MiB == pytest.approx(initial_memory_MiB, rel=relative_tolerance)
 
     traces = lazy_recording.get_traces()
     traces_size_MiB = traces.nbytes / bytes_to_MiB_factor
@@ -109,7 +114,8 @@ def test_generate_lazy_recording(mode):
     print(f"Traces size {traces_size_MiB} MiB")
     print(f"Difference between the last two {(memory_after_traces_MiB - traces_size_MiB)} MiB")
 
-    (memory_after_instanciation_MiB + traces_size_MiB) == pytest.approx(memory_after_traces_MiB, rel=relative_tolerance)
+    expected_memory_usage_MiB = memory_after_instanciation_MiB + traces_size_MiB
+    assert expected_memory_usage_MiB == pytest.approx(memory_after_traces_MiB, rel=relative_tolerance)
 
 
 @pytest.mark.parametrize("mode", mode_list)
