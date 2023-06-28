@@ -63,7 +63,7 @@ def correct_motion_on_peaks(
     return corrected_peak_locations
 
 
-def correct_motion_on_traces(
+def interpolate_motion_on_traces(
     traces,
     times,
     channel_locations,
@@ -202,7 +202,7 @@ def _get_closest_ind(array, values):
     return idxs
 
 
-class CorrectMotionRecording(BasePreprocessor):
+class InterpolateMotionRecording(BasePreprocessor):
     """
     Recording that corrects motion on-the-fly given a motion vector estimation (rigid or non-rigid).
     This internally applies a spatial interpolation on the original traces after reversing the motion.
@@ -245,7 +245,7 @@ class CorrectMotionRecording(BasePreprocessor):
 
     Returns
     -------
-    corrected_recording: CorrectMotionRecording
+    corrected_recording: InterpolateMotionRecording
         Recording after motion correction
     """
 
@@ -325,7 +325,7 @@ class CorrectMotionRecording(BasePreprocessor):
                 self.set_property("contact_vector", contact_vector)
 
         for parent_segment in recording._recording_segments:
-            rec_segment = CorrectMotionRecordingSegment(
+            rec_segment = InterpolateMotionRecordingSegment(
                 parent_segment,
                 channel_locations,
                 motion,
@@ -353,7 +353,7 @@ class CorrectMotionRecording(BasePreprocessor):
         # self.is_dumpable= False
 
 
-class CorrectMotionRecordingSegment(BasePreprocessorSegment):
+class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
     def __init__(
         self,
         parent_recording_segment,
@@ -379,7 +379,7 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices):
         if self.time_vector is not None:
             raise NotImplementedError(
-                "time_vector for CorrectMotionRecording do not work because temporal_bins start from 0"
+                "time_vector for InterpolateMotionRecording do not work because temporal_bins start from 0"
             )
             # times = np.asarray(self.time_vector[start_frame:end_frame])
         else:
@@ -392,7 +392,7 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
 
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices=slice(None))
 
-        trace2 = correct_motion_on_traces(
+        trace2 = interpolate_motion_on_traces(
             traces,
             times,
             self.channel_locations,
@@ -411,4 +411,4 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
         return trace2
 
 
-correct_motion = define_function_from_class(source_class=CorrectMotionRecording, name="correct_motion")
+interpolate_motion = define_function_from_class(source_class=InterpolateMotionRecording, name="correct_motion")

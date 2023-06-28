@@ -348,9 +348,9 @@ Peak Detection
 
 Motion Correction
 ~~~~~~~~~~~~~~~~~
-.. automodule:: spikeinterface.sortingcomponents.motion_correction
+.. automodule:: spikeinterface.sortingcomponents.motion_interpolation
 
-    .. autoclass:: CorrectMotionRecording
+    .. autoclass:: InterpolateMotionRecording
 
 Clustering
 ~~~~~~~~~~
