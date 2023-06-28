@@ -320,7 +320,7 @@ class ContainerClient:
     def run_command(self, command):
         if self.mode == "docker":
             res = self.docker_container.exec_run(command)
-            return res.output.decode("utf-8")
+            return res.output.decode(encoding="utf-8", errors="ignore")
         elif self.mode == "singularity":
             from spython.main import Client
 
