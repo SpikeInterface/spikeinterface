@@ -33,7 +33,7 @@ def get_spatial_interpolation_kernel(
             'idw' : inverse  distance weithed
             'nearest' : use nereast channel
     sigma_um : float or list (default 20.)
-        Used in the 'kriging' formula
+        Used in the 'kriging' formula. When list, it needs to have 2 elements (for the x and y directions).
     p: int (default 1)
         Used in the 'kriging' formula
     sparse_thresh: None or float (default None)
@@ -122,7 +122,7 @@ def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p, distance_
     sigma_um : float or list
         Scale paremter on  the Gaussian kernel,
         typically distance between contacts in micrometers.
-        In case sigma_um is list then this mimic the kilosort2.5 behavior, whihch is on sigma scaling per dimention.
+        In case sigma_um is list then this mimics the Kilosort2.5 behavior, which uses two separate sigmas for each dimension.
         In the later case the metric is always a 'cityblock'
     p : float
         Weight parameter on the exponential function. Default

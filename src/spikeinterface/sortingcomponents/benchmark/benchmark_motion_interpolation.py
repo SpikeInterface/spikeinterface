@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import MEArec as mr
 
 
-class BenchmarkMotionCorrectionMearec(BenchmarkBase):
+class BenchmarkMotionInterpolationMearec(BenchmarkBase):
     _array_names = ("gt_motion", "estimated_motion", "temporal_bins", "spatial_bins")
     _waveform_names = ("static", "drifting", "corrected_gt", "corrected_estimated")
     _sorting_names = ()
@@ -121,12 +121,14 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 self._recordings["raw_" + key] = rec
 
                 if self.do_preprocessing:
-                    # all computation are done in float32
-                    # rec = bandpass_filter(rec)
+                    # this processing chain is the same as the kilosort2.5
+                    # this is important if we want to skip the kilosort preprocessing
+                    #   * all computation are done in float32
+                    #   * 150um is more or less 30 channels for the whittening
+                    #   * the lastet gain step is super important it is what KS2.5 is doing because the whiten traces
+                    #     have magnitude around 1 so a factor (200) is needed to go back to int16
                     rec = common_reference(rec, dtype="float32")
                     rec = highpass_filter(rec, freq_min=150.0)
-                    # rec = zscore(rec)
-                    # 150um is more or less 30 channels
                     rec = whiten(rec, mode="local", radius_um=150.0, num_chunks_per_segment=40, chunk_size=32000)
                     rec = scale(rec, gain=200, dtype="int16")
                 self._recordings[key] = rec

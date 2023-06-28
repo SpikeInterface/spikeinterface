@@ -212,9 +212,9 @@ class DecentralizedRegistration:
     histogram_depth_smooth_um: None or float
         Optional gaussian smoother on histogram on depth axis.
         This is given as the sigma of the gaussian in micrometers.
-    histogram_time_smooth_s:None or float
+    histogram_time_smooth_s: None or float
         Optional gaussian smoother on histogram on time axis.
-        This is given as the sigma of the gaussian in second.
+        This is given as the sigma of the gaussian in seconds.
     pairwise_displacement_method: 'conv' or 'phase_cross_correlation'
         How to estimate the displacement in the pairwise matrix.
     max_displacement_um: float

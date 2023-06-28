@@ -218,8 +218,8 @@ Here is a short example that depends on the output of "Motion interpolation":
   from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
 
   recording_corrected = InterpolateMotionRecording(recording_with_drift, motion, temporal_bins, spatial_bins
-                                              spatial_interpolation_method='kriging,
-                                              border_mode='remove_channels')
+                                                   spatial_interpolation_method='kriging,
+                                                   border_mode='remove_channels')
 
 **Notes**:
   * :code:`spatial_interpolation_method` "kriging" or "iwd" do not play a big role.
