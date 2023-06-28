@@ -1,13 +1,12 @@
 from typing import List, Union
 import mmap
-
-import shutil
+import warnings
 from pathlib import Path
 
 import numpy as np
 
 from .baserecording import BaseRecording, BaseRecordingSegment
-from .core_tools import read_binary_recording, write_binary_recording, define_function_from_class
+from .core_tools import write_binary_recording, define_function_from_class
 from .job_tools import _shared_job_kwargs_doc
 
 
@@ -59,7 +58,6 @@ class BinaryRecordingExtractor(BaseRecording):
         sampling_frequency,
         dtype,
         num_channels=None,
-        num_chan=None,
         t_starts=None,
         channel_ids=None,
         time_axis=0,
@@ -67,12 +65,11 @@ class BinaryRecordingExtractor(BaseRecording):
         gain_to_uV=None,
         offset_to_uV=None,
         is_filtered=None,
+        num_chan=None,
     ):
         num_channels = num_channels or num_chan
         assert num_channels is not None, "You must provide num_channels or num_chan"
         if num_chan is not None:
-            import warnings
-
             warnings.warn("num_chan is to be deprecated, use num_channels instead")
 
         if channel_ids is None:
@@ -119,7 +116,7 @@ class BinaryRecordingExtractor(BaseRecording):
             "sampling_frequency": sampling_frequency,
             "t_starts": t_starts,
             "num_channels": num_channels,
-            "num_chan": num_channels,  # TODO: Remove carefully
+            "num_chan": num_channels,  # TODO: Remove carefully in case someone expects to load from this
             "dtype": dtype.str,
             "channel_ids": channel_ids,
             "time_axis": time_axis,
@@ -153,7 +150,7 @@ class BinaryRecordingExtractor(BaseRecording):
         d = dict(
             file_paths=self._kwargs["file_paths"],
             dtype=np.dtype(self._kwargs["dtype"]),
-            num_channels=self._kwargs["num_channels"] or self._kwargs["num_chan"],  # TODO: Remove carefully
+            num_channels=self._kwargs["num_channels"],
             time_axis=self._kwargs["time_axis"],
             file_offset=self._kwargs["file_offset"],
         )
