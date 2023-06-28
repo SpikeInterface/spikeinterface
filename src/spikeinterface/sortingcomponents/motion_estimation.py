@@ -209,6 +209,12 @@ class DecentralizedRegistration:
 
     name = "decentralized"
     params_doc = """
+    histogram_depth_smooth_um: None or float
+        Optional gaussian smoother on histogram on depth axis.
+        This is given as the sigma of the gaussian in micrometers.
+    histogram_time_smooth_s: None or float
+        Optional gaussian smoother on histogram on time axis.
+        This is given as the sigma of the gaussian in seconds.
     pairwise_displacement_method: 'conv' or 'phase_cross_correlation'
         How to estimate the displacement in the pairwise matrix.
     max_displacement_um: float
@@ -268,6 +274,8 @@ class DecentralizedRegistration:
         verbose,
         progress_bar,
         extra_check,
+        histogram_depth_smooth_um=None,
+        histogram_time_smooth_s=None,
         pairwise_displacement_method="conv",
         max_displacement_um=100.0,
         weight_scale="linear",
@@ -307,6 +315,21 @@ class DecentralizedRegistration:
             spatial_bin_edges=spatial_bin_edges,
             weight_with_amplitude=weight_with_amplitude,
         )
+
+        if histogram_depth_smooth_um is not None:
+            bins = np.arange(motion_histogram.shape[1]) * bin_um
+            bins -= np.mean(bins)
+            smooth_kernel = np.exp(-(bins**2) / (2 * histogram_depth_smooth_um**2))
+            smooth_kernel /= np.sum(smooth_kernel)
+            motion_histogram = scipy.signal.fftconvolve(motion_histogram, smooth_kernel[None, :], mode="same", axes=1)
+
+        if histogram_time_smooth_s is not None:
+            bins = np.arange(motion_histogram.shape[0]) * bin_duration_s
+            bins -= np.mean(bins)
+            smooth_kernel = np.exp(-(bins**2) / (2 * histogram_time_smooth_s**2))
+            smooth_kernel /= np.sum(smooth_kernel)
+            motion_histogram = scipy.signal.fftconvolve(motion_histogram, smooth_kernel[:, None], mode="same", axes=0)
+
         if extra_check is not None:
             extra_check["motion_histogram"] = motion_histogram
             extra_check["pairwise_displacement_list"] = []

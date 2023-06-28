@@ -214,7 +214,8 @@ class KilosortBase:
                 temp_file.unlink()
             for temp_file in sorter_output_folder.glob("*.mat"):
                 temp_file.unlink()
-            (sorter_output_folder / "temp_wh.dat").unlink()
+            if (sorter_output_folder / "temp_wh.dat").exists():
+                (sorter_output_folder / "temp_wh.dat").unlink()
         if params["delete_recording_dat"] and (recording_file := sorter_output_folder / "recording.dat").exists():
             recording_file.unlink()
 
