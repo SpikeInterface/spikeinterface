@@ -290,17 +290,11 @@ def write_binary_recording(
     if auto_cast_uint:
         cast_unsigned = determine_cast_unsigned(recording, dtype)
 
-    # create memmap files
-    rec_memmaps = []
-    rec_memmaps_dict = []
-    for segment_index in range(recording.get_num_segments()):
-        num_frames = recording.get_num_samples(segment_index)
-
-    # Create the files of the correct size so they are accessed later by the workers
-    num_channels = recording.get_num_channels()
     dtype_size_bytes = np.dtype(dtype).itemsize
 
+    file_path_dict = {segment_index: file_path for segment_index, file_path in enumerate(file_path_list)}
     for segment_index, file_path in file_path_dict.items():
+        num_channels = recording.get_num_channels(segment_index=segment_index)
         num_frames = recording.get_num_frames(segment_index=segment_index)
         data_size_bytes = dtype_size_bytes * num_frames * num_channels
         file_size_bytes = data_size_bytes + byte_offset
