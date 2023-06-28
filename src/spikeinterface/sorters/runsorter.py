@@ -72,6 +72,10 @@ _common_param_doc = """
         singularity. Use a str to specify a non-default container. If that container is not local it will be pulled
         from Docker Hub.
         If False, the sorter is run locally.
+    delete_container_files: bool
+        If True, the container temporary files are deleted after the sorting is done (default False).
+    with_output: bool
+        If True, the output Sorting is returned as a Sorting (default True).
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
@@ -92,6 +96,7 @@ def run_sorter(
     raise_error: bool = True,
     docker_image: Optional[Union[bool, str]] = False,
     singularity_image: Optional[Union[bool, str]] = False,
+    delete_container_files: bool = True,
     with_output: bool = True,
     **sorter_params,
 ):
@@ -118,6 +123,7 @@ def run_sorter(
     )
 
     if docker_image or singularity_image:
+        common_kwargs.update(dict(delete_container_files=delete_container_files))
         if docker_image:
             mode = "docker"
             assert not singularity_image
@@ -314,7 +320,7 @@ class ContainerClient:
     def run_command(self, command):
         if self.mode == "docker":
             res = self.docker_container.exec_run(command)
-            return str(res.output)
+            return res.output.decode(encoding="utf-8", errors="ignore")
         elif self.mode == "singularity":
             from spython.main import Client
 
@@ -336,6 +342,7 @@ def run_sorter_container(
     verbose: bool = False,
     raise_error: bool = True,
     with_output: bool = True,
+    delete_container_files: bool = True,
     extra_requirements=None,
     **sorter_params,
 ):
@@ -353,6 +360,7 @@ def run_sorter_container(
     verbose: bool, optional
     raise_error: bool, optional
     with_output: bool, optional
+    delete_container_files: bool, optional
     extra_requirements: list, optional
     sorter_params:
 
@@ -374,10 +382,10 @@ def run_sorter_container(
     SorterClass = sorter_dict[sorter_name]
     output_folder = Path(output_folder).absolute().resolve()
     parent_folder = output_folder.parent.absolute().resolve()
-    output_folder.mkdir(parents=True, exist_ok=True)
+    parent_folder.mkdir(parents=True, exist_ok=True)
 
     # find input folder of recording for folder bind
-    rec_dict = recording.to_dict()
+    rec_dict = recording.to_dict(recursive=True)
     recording_input_folders = find_recording_folders(rec_dict)
 
     if platform.system() == "Windows":
@@ -420,8 +428,8 @@ if __name__ == '__main__':
     output_folder = '{output_folder_unix}'
     sorting = run_sorter_local(
         '{sorter_name}', recording, output_folder=output_folder,
-         remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
-          verbose={verbose}, raise_error={raise_error}, with_output=True, **sorter_params
+        remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
+        verbose={verbose}, raise_error={raise_error}, with_output=True, **sorter_params
     )
     sorting.save_to_folder(folder='{npz_sorting_path_unix}')
 """
@@ -563,11 +571,12 @@ if __name__ == '__main__':
     container_client.stop()
 
     # clean useless files
-    os.remove(parent_folder / "in_container_recording.json")
-    os.remove(parent_folder / "in_container_params.json")
-    os.remove(parent_folder / "in_container_sorter_script.py")
-    if mode == "singularity":
-        shutil.rmtree(py_user_base_folder)
+    if delete_container_files:
+        os.remove(parent_folder / "in_container_recording.json")
+        os.remove(parent_folder / "in_container_params.json")
+        os.remove(parent_folder / "in_container_sorter_script.py")
+        if mode == "singularity":
+            shutil.rmtree(py_user_base_folder)
 
     # check error
     output_folder = Path(output_folder)
@@ -599,8 +608,9 @@ if __name__ == '__main__':
                 except FileNotFoundError:
                     SpikeSortingError(f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}")
 
+    sorter_output_folder = output_folder / "sorter_output"
     if delete_output_folder:
-        shutil.rmtree(output_folder)
+        shutil.rmtree(sorter_output_folder)
 
     return sorting
 
