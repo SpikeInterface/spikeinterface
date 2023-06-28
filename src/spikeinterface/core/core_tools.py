@@ -291,10 +291,10 @@ def write_binary_recording(
         cast_unsigned = determine_cast_unsigned(recording, dtype)
 
     dtype_size_bytes = np.dtype(dtype).itemsize
+    num_channels = recording.get_num_channels()
 
     file_path_dict = {segment_index: file_path for segment_index, file_path in enumerate(file_path_list)}
     for segment_index, file_path in file_path_dict.items():
-        num_channels = recording.get_num_channels(segment_index=segment_index)
         num_frames = recording.get_num_frames(segment_index=segment_index)
         data_size_bytes = dtype_size_bytes * num_frames * num_channels
         file_size_bytes = data_size_bytes + byte_offset
