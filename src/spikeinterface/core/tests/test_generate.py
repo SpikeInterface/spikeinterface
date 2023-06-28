@@ -1,36 +1,11 @@
 import pytest
-import psutil
 
 import numpy as np
 
 from spikeinterface.core.generate import GeneratorRecording, generate_lazy_recording
-from spikeinterface.core.core_tools import convert_bytes_to_str
+from spikeinterface.core.core_tools import convert_bytes_to_str, measure_memory_allocation
 
 mode_list = GeneratorRecording.available_modes
-
-
-def measure_memory_allocation(measure_in_process: bool = True) -> float:
-    """
-    A local utility to measure memory allocation at a specific point in time.
-    Can measure either the process resident memory or system wide memory available
-
-    Uses psutil package.
-
-    Parameters
-    ----------
-    measure_in_process : bool, True by default
-        Mesure memory allocation in the current process only, if false then measures at the system
-        level.
-    """
-
-    if measure_in_process:
-        process = psutil.Process()
-        memory = process.memory_info().rss
-    else:
-        mem_info = psutil.virtual_memory()
-        memory = mem_info.total - mem_info.available
-
-    return memory
 
 
 @pytest.mark.parametrize("mode", mode_list)
@@ -38,7 +13,7 @@ def test_lazy_random_recording(mode):
     # Test that get_traces does not consume more memory than allocated.
 
     bytes_to_MiB_factor = 1024**2
-    relative_tolerance = 0.05  # relative tolerance of 5 per cent
+    relative_tolerance = 0.01  # relative tolerance of 5 per cent
 
     sampling_frequency = 30000  # Hz
     durations = [2.0]

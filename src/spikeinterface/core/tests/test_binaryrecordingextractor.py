@@ -4,6 +4,8 @@ from pathlib import Path
 
 from spikeinterface.core import BinaryRecordingExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
+from spikeinterface.core.core_tools import measure_memory_allocation
+from spikeinterface.core.generate import GeneratorRecording
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
@@ -35,9 +37,10 @@ def test_BinaryRecordingExtractor():
 def test_round_trip(tmp_path):
     num_channels = 10
     num_samples = 50
-    traces_list = [np.ones(shape=(num_samples, num_channels), dtype="int32")]
+
+    traces = np.arange(num_channels * num_samples, dtype="int16").reshape(num_samples, num_channels)
     sampling_frequency = 30_000.0
-    recording = NumpyRecording(traces_list=traces_list, sampling_frequency=sampling_frequency)
+    recording = NumpyRecording(traces_list=[traces], sampling_frequency=sampling_frequency)
 
     file_path = tmp_path / "test_BinaryRecordingExtractor.raw"
     dtype = recording.get_dtype()
@@ -57,6 +60,113 @@ def test_round_trip(tmp_path):
     binary_smaller_traces = binary_recorder.get_traces(start_frame=start_frame, end_frame=end_frame)
 
     np.allclose(smaller_traces, binary_smaller_traces)
+
+
+@pytest.fixture(scope="module")
+def folder_with_binary_files(tmpdir_factory):
+    tmp_path = Path(tmpdir_factory.mktemp("spike_interface_test"))
+    folder = tmp_path / "test_binary_recording"
+    num_channels = 32
+    sampling_frequency = 30_000.0
+    dtype = "float32"
+    recording = GeneratorRecording(
+        durations=[3600],
+        sampling_frequency=sampling_frequency,
+        num_channels=num_channels,
+        dtype=dtype,
+    )
+    dtype = recording.get_dtype()
+    recording.save(folder=folder, overwrite=True)
+
+    return folder
+
+
+def test_memory_effcienty(folder_with_binary_files):
+    folder = folder_with_binary_files
+    num_channels = 32
+    sampling_frequency = 30_000.0
+    dtype = "float32"
+
+    file_paths = [folder / "traces_cached_seg0.raw"]
+    recorder_binary = BinaryRecordingExtractor(
+        num_chan=num_channels,
+        file_paths=file_paths,
+        sampling_frequency=sampling_frequency,
+        dtype=dtype,
+    )
+
+    memory_before_traces_bytes = measure_memory_allocation()
+    traces = recorder_binary.get_traces(start_frame=1000, end_frame=10_000)
+    memory_after_traces_bytes = measure_memory_allocation()
+    traces_size_bytes = traces.nbytes
+
+    expected_memory_usage = memory_before_traces_bytes + traces_size_bytes
+    expected_memory_usage_GiB = expected_memory_usage / 1024**3
+    memory_after_traces_bytes_GiB = memory_after_traces_bytes / 1024**3
+    assert expected_memory_usage_GiB == pytest.approx(memory_after_traces_bytes_GiB, rel=0.1)
+
+
+def measure_peak_memory_usage():
+    """
+    Measure the peak memory usage in bytes for the current process.
+
+    The `resource.getrusage(resource.RUSAGE_SELF).ru_maxrss` command is used to get the peak memory usage.
+    The `ru_maxrss` attribute represents the maximum resident set size used (in kilobytes on Linux and bytes on MacOS),
+    which is the maximum memory used by the process since it was started.
+
+    This function only works on Unix systems (including Linux and MacOS).
+
+    Returns
+    -------
+    int
+        Peak memory usage in bytes.
+
+    Raises
+    ------
+    NotImplementedError
+        If the function is called on a Windows system.
+    """
+
+    import sys
+    import resource
+
+    if sys.platform == "win32":
+        raise NotImplementedError("Function cannot be used on Windows")
+
+    mem_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
+    # If ru_maxrss returns memory in kilobytes (like on Linux), convert to bytes
+    if hasattr(resource, "RLIMIT_AS"):
+        mem_usage = mem_usage * 1024
+
+    return mem_usage
+
+
+def test_peak_memory_usage(folder_with_binary_files):
+    folder = folder_with_binary_files
+    num_channels = 32
+    sampling_frequency = 30_000.0
+    dtype = "float32"
+
+    file_paths = [folder / "traces_cached_seg0.raw"]
+    recorder_binary = BinaryRecordingExtractor(
+        num_chan=num_channels,
+        file_paths=file_paths,
+        sampling_frequency=sampling_frequency,
+        dtype=dtype,
+    )
+
+    memory_before_traces_bytes = measure_memory_allocation()
+    traces = recorder_binary.get_traces(start_frame=1000, end_frame=10_000)
+    traces_size_bytes = traces.nbytes
+
+    expected_memory_usage = memory_before_traces_bytes + traces_size_bytes
+    peak_memory_GiB = measure_peak_memory_usage() / 1024**3
+    expected_memory_usage_GiB = expected_memory_usage / 1024**3
+    assert expected_memory_usage_GiB == pytest.approx(peak_memory_GiB, rel=0.1)
+
+    print("Expected memory usage: {:.2f} GiB".format(expected_memory_usage_GiB))
+    print(f"Peak memory usage: {peak_memory_GiB:.2f} GiB")
 
 
 if __name__ == "__main__":
