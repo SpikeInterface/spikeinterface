@@ -91,7 +91,7 @@ class SpikesOnTracesPlotter(MplPlotter):
                     waveforms_r = waveforms.reshape((waveforms.shape[0] * waveforms.shape[1], waveforms.shape[2]))
 
                     for i, chan_id in enumerate(dp.timeseries["channel_ids"]):
-                        offset = vspacing * (n - 1 - i)
+                        offset = vspacing * i
                         if chan_id in chan_ids:
                             l = ax.plot(times_r, offset + waveforms_r[:, i], color=dp.unit_colors[unit])
                             if not label_set:
