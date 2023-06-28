@@ -74,7 +74,7 @@ class BenchmarkBase:
         if self.parent_benchmark is None:
             parent_folder = None
         else:
-            parent_folder = self.parent_benchmark.folder
+            parent_folder = str(self.parent_benchmark.folder)
 
         info = {
             "args": self._args,

@@ -269,6 +269,29 @@ strategies:
 * :py:func:`~spikeinterface.preprocessing.remove_artifacts()`
 
 
+astype() / unsigned_to_signed()
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Similarly to :code:`numpy.astype()`, the :code:`astype()` casts the traces to the desired :code:`dtype`:
+
+.. code-block:: python
+
+    rec_int16 = astype(rec_float, "int16")
+
+
+For recordings whose traces are unsigned (e.g. Maxwell Biosystems), the :code:`unsigned_to_signed()` function makes them
+signed by removing the unsigned "offset". For example, :code:`uint16` traces will be first upcast to :code:`uint32`, 2**15
+is subtracted, and the traces are finally cast to :code:`int16`:
+
+
+.. code-block:: python
+
+    rec_int16 = unsigned_to_signed(rec_uint16)
+
+* :py:func:`~spikeinterface.preprocessing.astype()`
+* :py:func:`~spikeinterface.preprocessing.unsigned_to_signed()`
+
+
 zero_channel_pad()
 ^^^^^^^^^^^^^^^^^^
 

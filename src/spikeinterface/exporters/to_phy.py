@@ -1,11 +1,20 @@
+from __future__ import annotations
 from pathlib import Path
+from typing import Literal, Optional
 
 import numpy as np
+import numpy.typing as npt
 import shutil
 import warnings
 
 import spikeinterface
-from spikeinterface.core import write_binary_recording, BinaryRecordingExtractor, ChannelSparsity
+from spikeinterface.core import (
+    write_binary_recording,
+    BinaryRecordingExtractor,
+    WaveformExtractor,
+    BinaryFolderRecording,
+    ChannelSparsity,
+)
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.postprocessing import (
     compute_spike_amplitudes,
@@ -15,17 +24,17 @@ from spikeinterface.postprocessing import (
 
 
 def export_to_phy(
-    waveform_extractor,
-    output_folder,
-    compute_pc_features=True,
-    compute_amplitudes=True,
-    sparsity=None,
-    copy_binary=True,
-    remove_if_exists=False,
-    peak_sign="neg",
-    template_mode="median",
-    dtype=None,
-    verbose=True,
+    waveform_extractor: WaveformExtractor,
+    output_folder: str | Path,
+    compute_pc_features: bool = True,
+    compute_amplitudes: bool = True,
+    sparsity: Optional[ChannelSparsity] = None,
+    copy_binary: bool = True,
+    remove_if_exists: bool = False,
+    peak_sign: Literal["both", "neg", "pos"] = "neg",
+    template_mode: str = "median",
+    dtype: Optional[npt.DTypeLike] = None,
+    verbose: bool = True,
     **job_kwargs,
 ):
     """
@@ -35,7 +44,7 @@ def export_to_phy(
     ----------
     waveform_extractor: a WaveformExtractor or None
         If WaveformExtractor is provide then the compute is faster otherwise
-    output_folder: str
+    output_folder: str | Path
         The output folder where the phy template-gui files are saved
     compute_pc_features: bool
         If True (default), pc features are computed
@@ -121,11 +130,13 @@ def export_to_phy(
     if waveform_extractor.has_recording():
         if copy_binary:
             rec_path = output_folder / "recording.dat"
-            write_binary_recording(
-                waveform_extractor.recording, file_paths=rec_path, verbose=verbose, dtype=dtype, **job_kwargs
-            )
+            write_binary_recording(waveform_extractor.recording, file_paths=rec_path, dtype=dtype, **job_kwargs)
         elif isinstance(waveform_extractor.recording, BinaryRecordingExtractor):
-            rec_path = waveform_extractor.recording._kwargs["file_paths"][0]
+            if isinstance(waveform_extractor.recording, BinaryFolderRecording):
+                bin_kwargs = waveform_extractor.recording._bin_kwargs
+            else:
+                bin_kwargs = waveform_extractor.recording._kwargs
+            rec_path = bin_kwargs["file_paths"][0]
             dtype = waveform_extractor.recording.get_dtype()
         else:
             rec_path = "None"

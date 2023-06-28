@@ -248,7 +248,7 @@ class BaseSorter:
         log["run_time"] = run_time
 
         # some sorter have a log file dur to shellscript launcher
-        runtime_trace_path = output_folder / f"{sorter_name}.log"
+        runtime_trace_path = sorter_output_folder / f"{sorter_name}.log"
         runtime_trace = []
         if runtime_trace_path.is_file():
             with open(runtime_trace_path, "r") as fp:
