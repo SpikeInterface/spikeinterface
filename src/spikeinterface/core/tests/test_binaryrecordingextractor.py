@@ -52,10 +52,12 @@ def test_round_trip(tmp_path):
         file_paths=file_path, sampling_frequency=sampling_frequency, num_chan=num_chan, dtype=dtype
     )
 
+    # Test for full traces
     assert np.allclose(recording.get_traces(), binary_recorder.get_traces())
 
-    start_frame = 200
-    end_frame = 500
+    # Ttest for a sub-set of the traces
+    start_frame = 20
+    end_frame = 40
     smaller_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
     binary_smaller_traces = binary_recorder.get_traces(start_frame=start_frame, end_frame=end_frame)
 
@@ -70,7 +72,7 @@ def folder_with_binary_files(tmpdir_factory):
     sampling_frequency = 30_000.0
     dtype = "float32"
     recording = GeneratorRecording(
-        durations=[3600],
+        durations=[1.0],
         sampling_frequency=sampling_frequency,
         num_channels=num_channels,
         dtype=dtype,
@@ -81,14 +83,53 @@ def folder_with_binary_files(tmpdir_factory):
     return folder
 
 
-def test_memory_effcienty(folder_with_binary_files):
+def test_sequential_reading_of_small_traces(folder_with_binary_files):
     folder = folder_with_binary_files
     num_channels = 32
     sampling_frequency = 30_000.0
     dtype = "float32"
 
     file_paths = [folder / "traces_cached_seg0.raw"]
-    recorder_binary = BinaryRecordingExtractor(
+    recording = BinaryRecordingExtractor(
+        num_chan=num_channels,
+        file_paths=file_paths,
+        sampling_frequency=sampling_frequency,
+        dtype=dtype,
+    )
+
+    full_traces = recording.get_traces()
+
+    # Test for a sub-set of the traces
+    start_frame = 10
+    end_frame = 15
+    small_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    expected_traces = full_traces[start_frame:end_frame, :]
+    assert np.allclose(small_traces, expected_traces)
+
+    # Test for a sub-set of the traces
+    start_frame = 1000
+    end_frame = 1100
+    small_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    expected_traces = full_traces[start_frame:end_frame, :]
+    assert np.allclose(small_traces, expected_traces)
+
+    # Test for a sub-set of the traces
+    start_frame = 10_000
+    end_frame = 11_000
+    small_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    expected_traces = full_traces[start_frame:end_frame, :]
+    assert np.allclose(small_traces, expected_traces)
+
+
+def test_memory_effcienty(folder_with_binary_files):
+    "This test that memory is freed afte reading the traces"
+    folder = folder_with_binary_files
+    num_channels = 32
+    sampling_frequency = 30_000.0
+    dtype = "float32"
+
+    file_paths = [folder / "traces_cached_seg0.raw"]
+    recording = BinaryRecordingExtractor(
         num_chan=num_channels,
         file_paths=file_paths,
         sampling_frequency=sampling_frequency,
@@ -96,14 +137,14 @@ def test_memory_effcienty(folder_with_binary_files):
     )
 
     memory_before_traces_bytes = measure_memory_allocation()
-    traces = recorder_binary.get_traces(start_frame=1000, end_frame=10_000)
+    traces = recording.get_traces(start_frame=1000, end_frame=10_000)
     memory_after_traces_bytes = measure_memory_allocation()
     traces_size_bytes = traces.nbytes
 
     expected_memory_usage = memory_before_traces_bytes + traces_size_bytes
     expected_memory_usage_GiB = expected_memory_usage / 1024**3
     memory_after_traces_bytes_GiB = memory_after_traces_bytes / 1024**3
-    assert expected_memory_usage_GiB == pytest.approx(memory_after_traces_bytes_GiB, rel=0.1)
+    assert memory_after_traces_bytes_GiB == pytest.approx(expected_memory_usage_GiB, rel=0.1)
 
 
 def measure_peak_memory_usage():
@@ -143,13 +184,14 @@ def measure_peak_memory_usage():
 
 
 def test_peak_memory_usage(folder_with_binary_files):
+    "This tests that there are no spikes in memory usage when reading traces."
     folder = folder_with_binary_files
     num_channels = 32
     sampling_frequency = 30_000.0
     dtype = "float32"
 
     file_paths = [folder / "traces_cached_seg0.raw"]
-    recorder_binary = BinaryRecordingExtractor(
+    recording = BinaryRecordingExtractor(
         num_chan=num_channels,
         file_paths=file_paths,
         sampling_frequency=sampling_frequency,
@@ -157,16 +199,16 @@ def test_peak_memory_usage(folder_with_binary_files):
     )
 
     memory_before_traces_bytes = measure_memory_allocation()
-    traces = recorder_binary.get_traces(start_frame=1000, end_frame=10_000)
+    traces = recording.get_traces(start_frame=1000, end_frame=2000)
     traces_size_bytes = traces.nbytes
 
     expected_memory_usage = memory_before_traces_bytes + traces_size_bytes
-    peak_memory_GiB = measure_peak_memory_usage() / 1024**3
-    expected_memory_usage_GiB = expected_memory_usage / 1024**3
-    assert expected_memory_usage_GiB == pytest.approx(peak_memory_GiB, rel=0.1)
+    peak_memory_MiB = measure_peak_memory_usage() / 1024**2
+    expected_memory_usage_MiB = expected_memory_usage / 1024**2
+    assert expected_memory_usage_MiB == pytest.approx(peak_memory_MiB, rel=0.1)
 
-    print("Expected memory usage: {:.2f} GiB".format(expected_memory_usage_GiB))
-    print(f"Peak memory usage: {peak_memory_GiB:.2f} GiB")
+    print("Expected memory usage: {:.2f} MiB".format(expected_memory_usage_MiB))
+    print(f"Peak memory usage: {peak_memory_MiB:.2f} MiB")
 
 
 if __name__ == "__main__":
