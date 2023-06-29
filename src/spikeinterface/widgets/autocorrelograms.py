@@ -9,9 +9,3 @@ class AutoCorrelogramsWidget(CrossCorrelogramsWidget):
 
 
 AutoCorrelogramsWidget.__doc__ = CrossCorrelogramsWidget.__doc__
-
-
-
-
-
-

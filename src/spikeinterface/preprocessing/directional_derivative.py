@@ -13,7 +13,7 @@ class DirectionalDerivativeRecording(BasePreprocessor):
         recording: BaseRecording,
         direction: str = "y",
         order: int = 1,
-        edge_order: int = 2,
+        edge_order: int = 1,
         dtype="float32",
     ):
         """Take derivative of any `order` along `direction`
@@ -43,9 +43,7 @@ class DirectionalDerivativeRecording(BasePreprocessor):
         parent_channel_locations = recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)
         if dim > parent_channel_locations.shape[1]:
-            raise ValueError(
-                f"Direction {direction} not present in this recording."
-            )
+            raise ValueError(f"Direction {direction} not present in this recording.")
 
         # float32 by default if parent recording is integer
         dtype_ = dtype
@@ -97,14 +95,10 @@ class DirectionalDerivativeRecordingSegment(BasePreprocessorSegment):
         # to belong to a "column"/"row", and the derivative is applied in these
         # groups along `direction`
         ndim = self.channel_locations.shape[1]
-        geom_other_dims = self.channel_locations[
-            :, np.arange(ndim) != self.dim
-        ]
+        geom_other_dims = self.channel_locations[:, np.arange(ndim) != self.dim]
         # column_inds is the column grouping by channel,
         # so that geom_other_dims[i] == unique_pos_other_dims[column_inds[i]]
-        self.unique_pos_other_dims, self.column_inds = np.unique(
-            geom_other_dims, axis=0, return_inverse=True
-        )
+        self.unique_pos_other_dims, self.column_inds = np.unique(geom_other_dims, axis=0, return_inverse=True)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if start_frame is None:
@@ -123,9 +117,7 @@ class DirectionalDerivativeRecordingSegment(BasePreprocessorSegment):
         derivative_traces = np.empty_like(parent_traces)
         for column_ix, other_pos in enumerate(self.unique_pos_other_dims):
             chans_in_column = np.flatnonzero(self.column_inds == column_ix)
-            dim_pos_in_column = self.channel_locations[
-                chans_in_column, self.dim
-            ]
+            dim_pos_in_column = self.channel_locations[chans_in_column, self.dim]
 
             if dim_pos_in_column.size == 1:
                 column_traces = np.zeros((parent_traces.shape[0], 1), dtype=self._dtype)

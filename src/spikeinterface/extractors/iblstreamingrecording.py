@@ -9,14 +9,6 @@ import probeinterface as pi
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-try:
-    import brainbox
-    from one.api import ONE
-
-    HAVE_BRAINBOX_ONE = True
-except ModuleNotFoundError:
-    HAVE_BRAINBOX_ONE = False
-
 
 class IblStreamingRecordingExtractor(BaseRecording):
     """
@@ -57,11 +49,8 @@ class IblStreamingRecordingExtractor(BaseRecording):
 
     extractor_name = "IblStreamingRecording"
     has_default_locations = True
-    installed = HAVE_BRAINBOX_ONE
     mode = "folder"
-    installation_mesg = (
-        "To use the IblStreamingRecordingSegment, install ONE-api and ibllib: \n\n pip install ONE-api\npip install ibllib\n"
-    )
+    installation_mesg = "To use the IblStreamingRecordingSegment, install ONE-api and ibllib: \n\n pip install ONE-api\npip install ibllib\n"
     name = "ibl_streaming_recording"
 
     @classmethod
@@ -87,10 +76,18 @@ class IblStreamingRecordingExtractor(BaseRecording):
         stream_names : list of str
             List of stream names as expected by the `stream_name` argument for the class initialization.
         """
-        assert HAVE_BRAINBOX_ONE, cls.installation_mesg
+        try:
+            from one.api import ONE
+        except ImportError:
+            raise ImportError(IblStreamingRecordingExtractor.installation_mesg)
 
         cache_folder = Path(cache_folder) if cache_folder is not None else cache_folder
-        one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True, cache_dir=cache_folder)
+        one = ONE(
+            base_url="https://openalyx.internationalbrainlab.org",
+            password="international",
+            silent=True,
+            cache_dir=cache_folder,
+        )
 
         dataset_contents = one.list_datasets(eid=session, collection="raw_ephys_data/*")
         raw_contents = [dataset_content for dataset_content in dataset_contents if not dataset_content.endswith(".npy")]
@@ -116,14 +113,21 @@ class IblStreamingRecordingExtractor(BaseRecording):
         cache_folder: Optional[Union[Path, str]] = None,
         remove_cached: bool = True,
     ):
-        assert HAVE_BRAINBOX_ONE, self.installation_mesg
+        try:
+            from brainbox.io.spikeglx import Streamer
+            from one.api import ONE
+        except ImportError:
+            raise ImportError(self.installation_mesg)
 
-        from brainbox.io.spikeglx import Streamer
-        from one.api import ONE
         from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
 
         cache_folder = Path(cache_folder) if cache_folder is not None else cache_folder
-        one = ONE(base_url="https://openalyx.internationalbrainlab.org", password="international", silent=True, cache_dir=cache_folder)
+        one = ONE(
+            base_url="https://openalyx.internationalbrainlab.org",
+            password="international",
+            silent=True,
+            cache_dir=cache_folder,
+        )
 
         session_names = self.get_stream_names(session=session, cache_folder=cache_folder)
         assert stream_name in session_names, (
@@ -150,7 +154,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
             channel_ids = channel_ids[:-1]
             channel_gains = channel_gains[:-1]
             channel_offsets = channel_offsets[:-1]
-            
+
         # initialize main extractor
         sampling_frequency = self._file_streamer.fs
         dtype = self._file_streamer.dtype
@@ -190,7 +194,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
             inter_sample_shift = np.concatenate((electrodes_geometry["sample_shift"], [np.nan]))
             adc = np.concatenate((electrodes_geometry["adc"], [np.nan]))
             index_on_probe = np.concatenate((electrodes_geometry["ind"], [np.nan]))
-            good_channel = np.concatenate((electrodes_geometry["shank"], [1.]))
+            good_channel = np.concatenate((electrodes_geometry["shank"], [1.0]))
 
         self.set_property("shank", shank)
         self.set_property("shank_row", shank_row)
@@ -203,8 +207,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
 
         # init recording segment
         recording_segment = IblStreamingRecordingSegment(
-            file_streamer=self._file_streamer,
-            load_sync_channel=load_sync_channel
+            file_streamer=self._file_streamer, load_sync_channel=load_sync_channel
         )
         self.add_recording_segment(recording_segment)
 
@@ -240,4 +243,6 @@ class IblStreamingRecordingSegment(BaseRecordingSegment):
         return traces[:, channel_indices]
 
 
-read_ibl_streaming_recording = define_function_from_class(source_class=IblStreamingRecordingExtractor, name="read_ibl_streaming_recording")
+read_ibl_streaming_recording = define_function_from_class(
+    source_class=IblStreamingRecordingExtractor, name="read_ibl_streaming_recording"
+)

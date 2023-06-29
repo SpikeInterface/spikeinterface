@@ -8,35 +8,13 @@ from spikeinterface import get_global_tmp_folder
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
-try:
-    from pynwb import NWBHDF5IO, NWBFile
-    from pynwb.ecephys import ElectricalSeries, ElectrodeGroup
-    HAVE_NWB = True
-except ModuleNotFoundError:
-    HAVE_NWB = False
 
-try:
-    import h5py
-    HAVE_H5PY = True
-except:
-    HAVE_H5PY = False
-
-try:
-    import fsspec
-
-    HAVE_FSSPEC = True
-except ModuleNotFoundError:
-    HAVE_FSSPEC = False
-
-PathType = Union[str, Path, None]
-
-
-def check_nwb_install():
-    assert HAVE_NWB, NwbRecordingExtractor.installation_mesg
-
-
-def check_fsspec_install():
-    assert HAVE_FSSPEC, "To stream NWB data with fsspec, install fsspec: \n\n pip install fsspec aiohttp requests\n\n"
+def import_lazily():
+    "Makes annotations / typing available lazily"
+    global NWBFile, ElectricalSeries, NWBHDF5IO
+    from pynwb import NWBFile
+    from pynwb.ecephys import ElectricalSeries
+    from pynwb import NWBHDF5IO
 
 
 def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optional[str] = None) -> ElectricalSeries:
@@ -64,15 +42,15 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
     AssertionError
         If the specified electrical_series_name is not present in the NWBFile.
     """
+    from pynwb.ecephys import ElectricalSeries
+
     if electrical_series_name is not None:
         # TODO note that this case does not handle repetitions of the same name
         electrical_series_dict: Dict[str, ElectricalSeries] = {
             item.name: item for item in nwbfile.all_children() if isinstance(item, ElectricalSeries)
         }
         if electrical_series_name not in electrical_series_dict:
-            raise ValueError(
-                f"{electrical_series_name} not found in the NWBFile. "
-            )
+            raise ValueError(f"{electrical_series_name} not found in the NWBFile. ")
         electrical_series = electrical_series_dict[electrical_series_name]
     else:
         electrical_series_list: List[ElectricalSeries] = [
@@ -91,7 +69,9 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
 
 
 def read_nwbfile(
-    file_path: str, stream_mode: Optional[Literal["ffspec", "ros3"]] = None, stream_cache_path: Optional[str] = None
+    file_path: str | Path,
+    stream_mode: Literal["ffspec", "ros3"] | None = None,
+    stream_cache_path: str | Path | None = None,
 ) -> NWBFile:
     """
     Read an NWB file and return the NWBFile object.
@@ -125,8 +105,12 @@ def read_nwbfile(
     >>> nwbfile = read_nwbfile("data.nwb", stream_mode="ros3")
     """
     file_path = str(file_path)
+    from pynwb import NWBHDF5IO, NWBFile
+
     if stream_mode == "fsspec":
         import fsspec
+        import h5py
+
         from fsspec.implementations.cached import CachingFileSystem
 
         stream_cache_path = stream_cache_path if stream_cache_path is not None else str(get_global_tmp_folder())
@@ -135,10 +119,12 @@ def read_nwbfile(
             cache_storage=str(stream_cache_path),
         )
         cached_file = caching_file_system.open(path=file_path, mode="rb")
-        file_path = h5py.File(cached_file)
-        io = NWBHDF5IO(file=file_path, mode="r", load_namespaces=True)
+        file = h5py.File(cached_file)
+        io = NWBHDF5IO(file=file, mode="r", load_namespaces=True)
 
     elif stream_mode == "ros3":
+        import h5py
+
         drivers = h5py.registered_drivers()
         assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
         assert "ros3" in drivers, assertion_msg
@@ -149,7 +135,6 @@ def read_nwbfile(
 
     nwbfile = io.read()
     return nwbfile
-
 
 
 class NwbRecordingExtractor(BaseRecording):
@@ -199,7 +184,6 @@ class NwbRecordingExtractor(BaseRecording):
 
     extractor_name = "NwbRecording"
     has_default_locations = True
-    installed = HAVE_NWB  # check at class level if installed or not
     is_writable = True
     mode = "file"
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
@@ -207,14 +191,19 @@ class NwbRecordingExtractor(BaseRecording):
 
     def __init__(
         self,
-        file_path: PathType,
+        file_path: str | Path,
         electrical_series_name: str = None,
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 100000,
         stream_mode: Optional[Literal["fsspec", "ros3"]] = None,
-        stream_cache_path: PathType = None,
+        stream_cache_path: str | Path | None = None,
     ):
-        check_nwb_install()
+        try:
+            from pynwb import NWBHDF5IO, NWBFile
+            from pynwb.ecephys import ElectrodeGroup
+        except ImportError:
+            raise ImportError(self.installation_mesg)
+
         self.stream_mode = stream_mode
         self.stream_cache_path = stream_cache_path
         self._electrical_series_name = electrical_series_name
@@ -456,28 +445,31 @@ class NwbSortingExtractor(BaseSorting):
     """
 
     extractor_name = "NwbSorting"
-    installed = HAVE_NWB  # check at class level if installed or not
     mode = "file"
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
     name = "nwb"
 
     def __init__(
         self,
-        file_path: PathType,
-        electrical_series_name: str = None,
-        sampling_frequency: float = None,
+        file_path: str | Path,
+        electrical_series_name: str | None = None,
+        sampling_frequency: float | None = None,
         samples_for_rate_estimation: int = 100000,
-        stream_mode: str = None,
-        stream_cache_path: PathType = None,
+        stream_mode: str | None = None,
+        stream_cache_path: str | Path | None = None,
     ):
-        check_nwb_install()
+        try:
+            from pynwb import NWBHDF5IO, NWBFile
+            from pynwb.ecephys import ElectrodeGroup
+        except ImportError:
+            raise ImportError(self.installation_mesg)
+
         self.stream_mode = stream_mode
         self.stream_cache_path = stream_cache_path
         self._electrical_series_name = electrical_series_name
 
         self.file_path = file_path
         if stream_mode == "fsspec":
-            check_fsspec_install()
             import fsspec
             from fsspec.implementations.cached import CachingFileSystem
             import h5py
@@ -488,8 +480,8 @@ class NwbSortingExtractor(BaseSorting):
                 cache_storage=self.stream_cache_path,
             )
             self._file_path = self.cfs.open(str(file_path), "rb")
-            f = h5py.File(self._file_path)
-            self.io = NWBHDF5IO(file=f, mode="r", load_namespaces=True)
+            file = h5py.File(self._file_path)
+            self.io = NWBHDF5IO(file=file, mode="r", load_namespaces=True)
 
         elif stream_mode == "ros3":
             self._file_path = str(file_path)

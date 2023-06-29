@@ -1,14 +1,20 @@
 """
 Some simple function to retrieve public datasets with datalad
 """
+from __future__ import annotations
 
 from pathlib import Path
 
-import warnings
-from .globals import get_global_dataset_folder, is_set_global_dataset_folder
+from .globals import get_global_dataset_folder
 
 
-def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_exists=False, unlock=False):
+def download_dataset(
+    repo: str = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data",
+    remote_path: str = "mearec/mearec_test_10s.h5",
+    local_folder: Path | None = None,
+    update_if_exists: bool = False,
+    unlock: bool = False,
+) -> Path:
     """
     Function to download dataset from a remote repository using datalad.
 
@@ -19,10 +25,10 @@ def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_e
         defaults to: 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
     remote_path : str
         A specific subdirectory in the repository to download (e.g. Mearec, SpikeGLX, etc)
-        If not provided, the function returns None
+        defaults to: "mearec/mearec_test_10s.h5"
     local_folder : str, optional
         The destination folder / directory to download the dataset to.
-        defaults to the path "get_global_dataset_folder()" / f{repo_name} (see `spikeinterface.core.globals`) 
+        defaults to the path "get_global_dataset_folder()" / f{repo_name} (see `spikeinterface.core.globals`)
     update_if_exists : bool, optional
         Forces re-download of the dataset if it already exists, by default False
     unlock : bool, optional
@@ -30,23 +36,18 @@ def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_e
 
     Returns
     -------
-    str
+    Path
         The local path to the downloaded dataset
     """
     import datalad.api
     from datalad.support.gitrepo import GitRepo
 
-    if repo is None:
-        #  print('Use gin NeuralEnsemble/ephy_testing_data')
-        repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-
     if local_folder is None:
         base_local_folder = get_global_dataset_folder()
-        base_local_folder.mkdir(exist_ok=True)
+        base_local_folder.mkdir(exist_ok=True, parents=True)
         local_folder = base_local_folder / repo.split("/")[-1]
-    else:
-        local_folder = Path(local_folder)
-        
+
+    local_folder = Path(local_folder)
     if local_folder.exists() and GitRepo.is_valid_repo(local_folder):
         dataset = datalad.api.Dataset(path=local_folder)
         # make sure git repo is in clean state
@@ -56,10 +57,6 @@ def download_dataset(repo=None, remote_path=None, local_folder=None, update_if_e
             dataset.update(merge=True)
     else:
         dataset = datalad.api.install(path=local_folder, source=repo)
-
-    if remote_path is None:
-        warnings.warn(message="No remote path provided, returning None")
-        return
 
     local_path = local_folder / remote_path
 
