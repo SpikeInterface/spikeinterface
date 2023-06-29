@@ -6,19 +6,98 @@ import json
 import copy
 
 from spikeinterface.core import get_noise_levels, fix_job_kwargs
-
+from spikeinterface.core.core_tools import SIJsonEncoder
 
 motion_options_preset = {
-    "rigid_fast": {
-        "detect_kwargs": {},
+    # This preset should be the most acccurate
+    "nonrigid_accurate": {
+        "detect_kwargs": dict(
+            method="locally_exclusive",
+            peak_sign="neg",
+            detect_threshold=8.0,
+            exclude_sweep_ms=0.1,
+            local_radius_um=50,
+        ),
         "select_kwargs": None,
-        "localize_peaks_kwargs": {},
-        "estimate_motion_kwargs": {},
-        "correct_motion_kwargs": {},
+        "localize_peaks_kwargs": dict(
+            method="monopolar_triangulation",
+            local_radius_um=75.0,
+            max_distance_um=150.0,
+            optimizer="minimize_with_log_penality",
+            enforce_decrease=True,
+            feature="peak_voltage",
+        ),
+        "estimate_motion_kwargs": dict(
+            method="decentralized",
+            direction="y",
+            bin_duration_s=2.0,
+            rigid=False,
+            bin_um=5.0,
+            margin_um=0.0,
+            win_shape="gaussian",
+            win_step_um=50.0,
+            win_sigma_um=150.0,
+            histogram_depth_smooth_um=5.0,
+            histogram_time_smooth_s=None,
+            pairwise_displacement_method="conv",
+            max_displacement_um=100.0,
+            weight_scale="linear",
+            error_sigma=0.2,
+            conv_engine=None,
+            torch_device=None,
+            batch_size=1,
+            corr_threshold=0.0,
+            time_horizon_s=None,
+            convergence_method="lsmr",
+            soft_weights=False,
+            normalized_xcorr=True,
+            centered_xcorr=True,
+            temporal_prior=True,
+            spatial_prior=False,
+            force_spatial_median_continuity=False,
+            reference_displacement="median",
+            reference_displacement_time_s=0,
+            robust_regression_sigma=2,
+            weight_with_amplitude=False,
+        ),
+        "correct_motion_kwargs": dict(
+            direction=1,
+            border_mode="remove_channels",
+            spatial_interpolation_method="idw",
+            num_closest=3,
+        ),
     },
+    # This preset is a super fast rigid estimation with center of mass
+    "rigid_fast": {
+        "detect_kwargs": dict(
+            method="locally_exclusive",
+            peak_sign="neg",
+            detect_threshold=8.0,
+            exclude_sweep_ms=0.1,
+            local_radius_um=50,
+        ),
+        "select_kwargs": None,
+        "localize_peaks_kwargs": dict(
+            method="center_of_mass",
+            local_radius_um=75.0,
+            feature="ptp",
+        ),
+        "estimate_motion_kwargs": dict(
+            method="decentralized",
+            bin_duration_s=10.0,
+            rigid=True,
+        ),
+        "correct_motion_kwargs": dict(
+            direction=1,
+            border_mode="remove_channels",
+            spatial_interpolation_method="idw",
+            num_closest=3,
+        ),
+    },
+    # This preset try to mimic kilosort2.5 motion estimator
     "kilosort_like": {
         "detect_kwargs": dict(
-            method="localy_exclusive",
+            method="locally_exclusive",
             peak_sign="neg",
             detect_threshold=8.0,
             exclude_sweep_ms=0.1,
@@ -35,9 +114,24 @@ motion_options_preset = {
             prototype=None,
             percentile=10.0,
         ),
-        "estimate_motion_kwargs": {},
-        "correct_motion_kwargs": {},
+        "estimate_motion_kwargs": dict(
+            method="iterative_template",
+            bin_duration_s=2.0,
+            rigid=False,
+            win_step_um=50.0,
+            win_sigma_um=150.0,
+            margin_um=0,
+            win_shape="rect",
+        ),
+        "correct_motion_kwargs": dict(
+            direction=1,
+            border_mode="force_extrapolate",
+            spatial_interpolation_method="kriging",
+            sigma_um=[20.0, 30],
+            p=1,
+        ),
     },
+    # empty preset
     "": {
         "detect_kwargs": {},
         "select_kwargs": None,
@@ -57,7 +151,7 @@ def correct_motion(
     localize_peaks_kwargs={},
     estimate_motion_kwargs={},
     correct_motion_kwargs={},
-    output_extra_check=False,
+    output_motion_info=False,
     **job_kwargs,
 ):
     """
@@ -94,7 +188,7 @@ def correct_motion(
     recording: RecordingExtractor
         The recording extractor to be transformed
 
-    output_extra_check: bool
+    output_motion_info: bool
         If True then return an extra dict that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
 
@@ -102,8 +196,8 @@ def correct_motion(
     -------
     recording_corrected: Recording
         The motion corrected recording
-    extra_check: dict
-        Optional output if `output_extra_check=True`
+    motion_info: dict
+        Optional output if `output_motion_info=True`
 
 
 
@@ -120,7 +214,6 @@ def correct_motion(
 
     # get preset params and update if necessary
     params = motion_options_preset[preset]
-    print(params)
     detect_kwargs = dict(params["detect_kwargs"], **detect_kwargs)
     if params["select_kwargs"] is None:
         select_kwargs = None
@@ -130,10 +223,10 @@ def correct_motion(
     estimate_motion_kwargs = dict(params["estimate_motion_kwargs"], **estimate_motion_kwargs)
     correct_motion_kwargs = dict(params["correct_motion_kwargs"], **correct_motion_kwargs)
 
-    if output_extra_check:
-        extra_check = {}
+    if output_motion_info:
+        motion_info = {}
     else:
-        extra_check = None
+        motion_info = None
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
@@ -194,6 +287,7 @@ def correct_motion(
         localize_peaks=t3 - t2,
         estimate_motion=t4 - t3,
     )
+    print(run_times)
 
     if folder is not None:
         folder = Path(folder)
@@ -208,24 +302,49 @@ def correct_motion(
             correct_motion_kwargs=correct_motion_kwargs,
             job_kwargs=job_kwargs,
         )
-        (folder / "parameters.json").write_text(json.dumps(parameters, indent=4), encoding="utf8")
+        (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
         (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
 
         np.save(folder / "peaks.npy", peaks)
         np.save(folder / "peak_locations.npy", peak_locations)
         np.save(folder / "temporal_bins.npy", temporal_bins)
+        np.save(folder / "motion.npy", motion)
         np.save(folder / "peak_locations.npy", peak_locations)
         if spatial_bins is not None:
             np.save(folder / "spatial_bins.npy", spatial_bins)
 
-    if output_extra_check:
-        extra_check = dict(
+    if output_motion_info:
+        motion_info = dict(
             parameters=parameters,
             run_times=run_times,
             peaks=peaks,
             peak_locations=peak_locations,
             spatial_bins=None,
         )
-        return recording_corrected, extra_check
+        return recording_corrected, motion_info
     else:
         return recording_corrected
+
+
+def load_motion_info(folder):
+    folder = Path(folder)
+
+    motion_info = {}
+
+    with open(folder / "parameters.json") as f:
+        motion_info["parameters"] = json.load(f)
+
+    with open(folder / "run_times.json") as f:
+        motion_info["run_times"] = json.load(f)
+
+    # (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
+    # (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
+
+    array_names = ("peaks", "peak_locations", "temporal_bins", "peak_locations", "motion", "spatial_bins")
+    for name in array_names:
+        if (folder / f"{name}.npy").exists():
+            motion_info[name] = np.load(folder / f"{name}.npy")
+        else:
+            motion_info[name] = None
+
+    return motion_info
