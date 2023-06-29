@@ -99,7 +99,11 @@ def test_generate_lazy_recording(mode):
     lazy_recording = generate_lazy_recording(full_traces_size_GiB=full_traces_size_GiB, mode=mode)
 
     memory_after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    assert memory_after_instanciation_MiB == pytest.approx(initial_memory_MiB, rel=relative_tolerance)
+    expected_memory_usage_MiB = initial_memory_MiB
+    if mode == "white_noise":
+        expected_memory_usage_MiB += 50  # 50 MiB for the white noise generator
+
+    assert memory_after_instanciation_MiB == pytest.approx(expected_memory_usage_MiB, rel=relative_tolerance)
 
     traces = lazy_recording.get_traces()
     traces_size_MiB = traces.nbytes / bytes_to_MiB_factor
