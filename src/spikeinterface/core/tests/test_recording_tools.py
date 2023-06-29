@@ -29,13 +29,25 @@ def test_get_closest_channels():
 def test_get_noise_levels():
     rec = generate_recording(num_channels=2, sampling_frequency=1000.0, durations=[60.0])
 
-    noise_levels = get_noise_levels(rec, return_scaled=False)
+    noise_levels_1 = get_noise_levels(rec, return_scaled=False)
+    noise_levels_2 = get_noise_levels(rec, return_scaled=False)
 
     rec.set_channel_gains(0.1)
     rec.set_channel_offsets(0)
-    noise_levels = get_noise_levels(rec, return_scaled=True)
+    noise_levels = get_noise_levels(rec, return_scaled=True, force_recompute=True)
 
     noise_levels = get_noise_levels(rec, return_scaled=True, method="std")
+
+    # Generate a recording following a gaussian distribution to check the result of get_noise.
+    std = 6.0
+    seed = 0
+    rng = np.random.default_rng(seed=seed)
+    traces = rng.normal(loc=10.0, scale=std, size=(1_000_000, 2))
+    recording = NumpyRecording(traces, 30000)
+
+    assert np.all(noise_levels_1 == noise_levels_2)
+    assert np.allclose(get_noise_levels(recording, return_scaled=False), [std, std], rtol=1e-2, atol=1e-3)
+    assert np.allclose(get_noise_levels(recording, method="std", return_scaled=False), [std, std], rtol=1e-2, atol=1e-3)
 
 
 def test_get_noise_levels_output():

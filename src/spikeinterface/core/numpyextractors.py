@@ -46,7 +46,7 @@ class NumpyRecording(BaseRecording):
             traces_list = [traces_list]
 
         dtype = traces_list[0].dtype
-        assert all(dtype == ts.dtype for ts in traces_list)
+        assert all(dtype == trace.dtype for trace in traces_list)
 
         if channel_ids is None:
             channel_ids = np.arange(traces_list[0].shape[1])
@@ -80,9 +80,10 @@ class NumpyRecordingSegment(BaseRecordingSegment):
     def __init__(self, traces, sampling_frequency, t_start):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
         self._traces = traces
+        self.num_samples = traces.shape[0]
 
     def get_num_samples(self):
-        return self._traces.shape[0]
+        return self.num_samples
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self._traces[start_frame:end_frame, :]
