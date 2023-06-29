@@ -234,7 +234,7 @@ class NumpySortingSegment(BaseSortingSegment):
     def __init__(self, units_dict):
         BaseSortingSegment.__init__(self)
         for unit_id, times in units_dict.items():
-            assert times.dtype.kind == 'i', 'numpy array of spike times must be integer'
+            assert (times.dtype.kind == 'i') or (times.dtype.kind == 'u'), 'numpy array of spike times must be integer'
             assert np.all(np.diff(times) >= 0), 'unsorted times'
         self._units_dict = units_dict
 
