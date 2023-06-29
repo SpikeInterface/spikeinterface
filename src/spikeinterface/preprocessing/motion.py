@@ -181,6 +181,9 @@ def correct_motion(
       * :py:func:`~spikeinterface.sortingcomponents.motion_estimation.estimate_motion'
       * :py:func:`~spikeinterface.sortingcomponents.motion_correction.CorrectMotionRecording'
 
+    TODO:
+      * note about preprocessing
+      * generate doc for preset
 
 
     Parameters
@@ -248,7 +251,6 @@ def correct_motion(
         method_class = localize_peak_methods[method]
         node2 = method_class(recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs)
         pipeline_nodes = [node0, node1, node2]
-        print(pipeline_nodes)
         t0 = time.perf_counter()
         peaks, peak_locations = run_node_pipeline(
             recording,
@@ -287,7 +289,6 @@ def correct_motion(
         localize_peaks=t3 - t2,
         estimate_motion=t4 - t3,
     )
-    print(run_times)
 
     if folder is not None:
         folder = Path(folder)
@@ -319,7 +320,9 @@ def correct_motion(
             run_times=run_times,
             peaks=peaks,
             peak_locations=peak_locations,
-            spatial_bins=None,
+            temporal_bins=temporal_bins,
+            spatial_bins=spatial_bins,
+            motion=motion,
         )
         return recording_corrected, motion_info
     else:
@@ -337,10 +340,7 @@ def load_motion_info(folder):
     with open(folder / "run_times.json") as f:
         motion_info["run_times"] = json.load(f)
 
-    # (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
-    # (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
-
-    array_names = ("peaks", "peak_locations", "temporal_bins", "peak_locations", "motion", "spatial_bins")
+    array_names = ("peaks", "peak_locations", "temporal_bins", "spatial_bins", "motion")
     for name in array_names:
         if (folder / f"{name}.npy").exists():
             motion_info[name] = np.load(folder / f"{name}.npy")

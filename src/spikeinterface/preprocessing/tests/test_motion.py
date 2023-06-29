@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 
 
-from spikeinterface.preprocessing import correct_motion
+from spikeinterface.preprocessing import correct_motion, load_motion_info
 
 from spikeinterface.extractors import toy_example
 
@@ -27,6 +27,9 @@ def test_estimate_and_correct_motion():
         shutil.rmtree(folder)
     rec_corrected = correct_motion(rec, folder=folder)
     print(rec_corrected)
+
+    motion_info = load_motion_info(folder)
+    print(motion_info.keys())
 
 
 if __name__ == "__main__":
