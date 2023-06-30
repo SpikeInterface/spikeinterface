@@ -58,6 +58,9 @@ We propose at the moment 3 preset:
                       To be used as checker on a recording to check the presence of drift.
                       Note that, in this case the dirft is "rigid"
   * **"kilosort_like"**: this mimic what is done in kilosort. *grid convolution + iterative_template + kriging*
+                         This is not 100% what kilosort is doing because the peak detection is done with template
+                         in kilosort and this is not case in spikeinterface. But this "preset" give similar
+                         results than kilosort2.5 itself.
 
 
 .. code-block:: python
