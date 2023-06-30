@@ -144,7 +144,7 @@ motion_options_preset = {
 
 def correct_motion(
     recording,
-    preset="",
+    preset="nonrigid_accurate",
     folder=None,
     detect_kwargs={},
     select_kwargs=None,
