@@ -21,21 +21,14 @@ class MotionPlotter(MplPlotter):
 
         is_rigid = dp.motion.shape[1] == 1
 
-        gs = fig.add_gridspec(2, 2, wspace=0.3, hspace=0.1)
+        gs = fig.add_gridspec(2, 2, wspace=0.3, hspace=0.3)
         ax0 = fig.add_subplot(gs[0, 0])
         ax1 = fig.add_subplot(gs[0, 1])
         ax2 = fig.add_subplot(gs[1, 0])
         if not is_rigid:
             ax3 = fig.add_subplot(gs[1, 1])
-        ax0.sharex(ax1)
-
-        # run_times = motion_info['run_times']
-        # peaks = motion_info['peaks']
-        # peak_locations = motion_info['peak_locations']
-        # temporal_bins = motion_info['temporal_bins']
-        # spatial_bins = motion_info['spatial_bins']
-        # temporal_bins = motion_info['temporal_bins']
-        # motion = motion_info['motion']
+        ax1.sharex(ax0)
+        ax1.sharey(ax0)
 
         if dp.motion_lim is None:
             motion_lim = np.max(np.abs(dp.motion)) * 1.05
@@ -52,17 +45,23 @@ class MotionPlotter(MplPlotter):
 
         ax0.scatter(x, y, s=1, color="k", alpha=0.02)
         for i in range(dp.motion.shape[1]):
-            ax0.plot(dp.temporal_bins, dp.motion[:, i] + dp.spatial_bins[i], color="C3", alpha=0.4)
-
+            ax0.plot(dp.temporal_bins, dp.motion[:, i] + dp.spatial_bins[i], color="C3", alpha=0.6)
         if dp.depth_lim is not None:
             ax0.set_ylim(*dp.depth_lim)
+        ax0.set_title("Peak depth")
+        ax0.set_xlabel("Times [s]")
+        ax0.set_ylabel("Depth [um]")
 
         ax1.scatter(x, y2, s=1, color="k", alpha=0.02)
+        ax1.set_xlabel("Times [s]")
+        ax1.set_ylabel("Depth [um]")
+        ax1.set_title("Corrected peak depth")
 
         ax2.plot(dp.motion, alpha=0.2, color="black")
         ax2.plot(np.mean(dp.motion, axis=1), color="C0")
         ax2.set_ylim(-motion_lim, motion_lim)
         ax2.set_ylabel("motion [um]")
+        ax2.set_title("Motion vectors")
 
         if not is_rigid:
             im = ax3.imshow(
@@ -79,8 +78,9 @@ class MotionPlotter(MplPlotter):
             im.set_clim(-motion_lim, motion_lim)
             cbar = fig.colorbar(im)
             cbar.ax.set_xlabel("motion [um]")
-            ax3.set_xlabel("times [s]")
-            ax3.set_ylabel("depth [um]")
+            ax3.set_xlabel("Times [s]")
+            ax3.set_ylabel("Depth [um]")
+            ax3.set_title("Motion vectors")
 
 
 MotionPlotter.register(MotionWidget)
