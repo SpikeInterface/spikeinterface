@@ -22,7 +22,7 @@ and [Windolf2023]_) but this new method was not properly integrated in any sorte
 
 Because motion registration is a hard topic, with numerous hypothesis and/or implementations details that might have a large
 impact on the spike sorting performances (see [Garcia2023]_), in spikeinterface, we developed a full motion estimation
-and interpolation framework to make accessible all theses methods in one place. This modular approach has offers a major benefit : 
+and interpolation framework to make accessible all theses methods in one place. This modular approach has offers a major benefit :
 **the drift correction can be applied on a recording as a preprocessing step, and
 then used for any sorter!** In short, the motion correction is decoupled from the sorter itself.
 
