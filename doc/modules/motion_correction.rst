@@ -13,7 +13,7 @@ The first sorter that has introduced motion/drift correction as a prepossessing 
 
 Long story short, the main idea is the same as the one used for non-rigid image registration, for example with calcium
 imaging. However, because with extracellular recording we do not have a proper image to use as a reference, the main idea
-of the algorithm is create an ``image" via the activity profile of the cells during a given time window. Assuming this
+of the algorithm is create an "image" via the activity profile of the cells during a given time window. Assuming this
 activity profile should be kept constant over time, the motion can be estimated, by blocks, along the probe's insertion axis
 (i.e. depth) so that we can interpolate the traces to compensate this estimated motion.
 Users with a need to handle drift were currently forced to stick to the use of kilosort2.5 or pykilosort. Recently, the Paninski
@@ -22,11 +22,11 @@ and [Windolf2023]_) but this new method was not properly integrated in any sorte
 
 Because motion registration is a hard topic, with numerous hypothesis and/or implementations details that might have a large
 impact on the spike sorting performances (see [Garcia2023]_), in spikeinterface, we developed a full motion estimation
-and interpolation framework to make accessible all theses methods in one place. This modular approach has offers a major benefit : *
-*the drift correction can be applied on a recording as a preprocessing step, and
+and interpolation framework to make accessible all theses methods in one place. This modular approach has offers a major benefit : 
+**the drift correction can be applied on a recording as a preprocessing step, and
 then used for any sorter!** In short, the motion correction is decoupled from the sorter itself.
 
-This give the user an incredible flexibility to check/test and correct the drift before the sorting process.
+This gives the user an incredible flexibility to check/test and correct the drifts before the sorting process.
 
 Here the overview of the motion/drift correction as a preprocessing
 
@@ -48,8 +48,8 @@ For a better overview, the spikeinterface team have publish a manuscript to vali
 correction methods (see [Garcia2023]_).
 
 Spikeinterface offers two levels for motion correction:
- 1. A high level with a unique function and predefined parameters preset
- 2. A low level where the user need to call one by one all functions for a better control
+  1. A high level with a unique function and predefined parameters preset
+  2. A low level where the user need to call one by one all functions for a better control
 
 
 High level api
@@ -133,10 +133,10 @@ and checking. The folder will contain the motion vector itself of course but als
 Low level api
 -------------
 
-All steps (**activity profile**, **motion inference**, **motion interpolation**) can be with separated function.
-This can be useful to find the good method and finely tune parameters at every steps.
+All steps (**activity profile**, **motion inference**, **motion interpolation**) can be launched with distinct function.
+This can be useful to find the good method and finely tune/optimize parameters at every steps.
 All functions are implemented in :py:mod:`~spikeinterface.sortingcomponents`.
-They all have simple API with spikeinterface objects as input or numpy arrays, such that hacking this should be fairly accessible.
+They all have a simple API with spikeinterface objects as inputs or numpy arrays, such that hacking should be fairly accessible.
 Since motion correction is a hot topic, theses functions have many possible methods and also many possible parameters.
 Finding the good combination of method/parameters is not that easy but it should be doable, assuming the presets are not
 working properly for your particular case.
