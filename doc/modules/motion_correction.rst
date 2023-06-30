@@ -12,16 +12,16 @@ with the new generation of high-density devices used in-vivo such as the neuropi
 The first sorter that has introduced motion/drift correction as a prepossessing step was kilosort2.5 (see [Steinmetz2021]_)
 
 Long story short, the main idea is the same as the one used for non-rigid image registration, for example with calcium
-imaging. However, because with extracellular recording we do not have a proper image to use as a reference, the main idea 
+imaging. However, because with extracellular recording we do not have a proper image to use as a reference, the main idea
 of the algorithm is create an ``image" via the activity profile of the cells during a given time window. Assuming this
-activity profile should be kept constant over time, the motion can be estimated, by blocks, along the probe's insertion axis 
-(i.e. depth) so that we can interpolate the traces to compensate this estimated motion. 
-Users with a need to handle drift were currently forced to stick to the use of kilosort2.5 or pykilosort. Recently, the Paninski 
+activity profile should be kept constant over time, the motion can be estimated, by blocks, along the probe's insertion axis
+(i.e. depth) so that we can interpolate the traces to compensate this estimated motion.
+Users with a need to handle drift were currently forced to stick to the use of kilosort2.5 or pykilosort. Recently, the Paninski
 group from Columbia university introduced a possibly more accurate method to estimate the drift (see [Varol2021]_
 and [Windolf2023]_) but this new method was not properly integrated in any sorter.
 
 Because motion registration is a hard topic, with numerous hypothesis and/or implementations details that might have a large
-impact on the spike sorting performances (see [Garcia2023]_), in spikeinterface, we developed a full motion estimation 
+impact on the spike sorting performances (see [Garcia2023]_), in spikeinterface, we developed a full motion estimation
 and interpolation framework to make accessible all theses methods in one place. This modular approach has offers a major benefit : *
 *the drift correction can be applied on a recording as a preprocessing step, and
 then used for any sorter!** In short, the motion correction is decoupled from the sorter itself.
@@ -41,7 +41,7 @@ The motion correction process can be split into 3 steps:
 
 For every steps, we implemented several methods. The combination of the yellow boxes should gives more or less what
 kilosort2.5/3 is doing. Similarly, the combination of the green boxes gives the method developed by the Paninski group.
-Of course the end user can combine any of the methods to get the best motion correction possible. 
+Of course the end user can combine any of the methods to get the best motion correction possible.
 This make also an incredible framework for testing new ideas.
 
 For a better overview, the spikeinterface team have publish a manuscript to validate/benchmark/compare theses motion
@@ -63,7 +63,7 @@ We propose at the moment 3 presets:
 
   * **"nonrigid_accurate"**: the one by Paninski group. It consists of *monopolar triangulation + decentralized + inverse distance weighted*
                              This is the slowest combination but maybe the most accurate. The main bottleneck of this preset is the monopolar
-                             triangulation for the estimation of the peaks positions. To speed it up, one could think about subsampling the 
+                             triangulation for the estimation of the peaks positions. To speed it up, one could think about subsampling the
                              space of all the detected peaks.
   * **"rigid_fast"**: a fast but not very accurate method. *center of mass + decentralized + inverse distance weighted*
                       To be used as check and/or control on a recording to check the presence of drift.
