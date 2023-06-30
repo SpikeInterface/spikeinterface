@@ -7,18 +7,26 @@ Motion/drift correction
 Overview
 --------
 
-Mechanical drifts often observed in recording are currently a major issue for spike sorting.
-This have been put forward with neuropixel device.
-The first sorter having introduced motion/drift correcion as a peprocessing step was kilosort2.5. See [Steinmetz2021]_
-Long story short, the main idea is estimate the motion by block a long the probe and then interpolate trace to
-compensate the motion. Users with a need handle drift was stick to kilosort2.5 or pykilosort.
-Then Paninski group from Columbia university introduced more accurate method to estimate the drift. See  [Varol2021]_
-and [Windolf2023]_ but theses new method were not integrated in any sorter.
+Mechanical drifts, often observed in recordings, are currently a major issue for spike sorting. This is especially striking
+with the new generation of high-density devices used in-vivo such as the neuropixel electrodes.
+The first sorter that has introduced motion/drift correction as a prepossessing step was kilosort2.5 (see [Steinmetz2021]_)
 
-In spikeinterface, we developed a full motion estimation and interpolation framework to make accessible all theses
-methods in one place with a major benenit : **the drift correction can be applied on a recording as a preprocessing and
-then used for any sorter!** In short, the motion correction is decouple from the sorter itself.
-This give the user an incredible flexibility to check and correct the drift before the sorting process.
+Long story short, the main idea is the same as the one used for non-rigid image registration, for example with calcium
+imaging. However, because with extracellular recording we do not have a proper image to use as a reference, the main idea
+of the algorithm is create an "image" via the activity profile of the cells during a given time window. Assuming this
+activity profile should be kept constant over time, the motion can be estimated, by blocks, along the probe's insertion axis
+(i.e. depth) so that we can interpolate the traces to compensate this estimated motion.
+Users with a need to handle drift were currently forced to stick to the use of kilosort2.5 or pykilosort. Recently, the Paninski
+group from Columbia university introduced a possibly more accurate method to estimate the drift (see [Varol2021]_
+and [Windolf2023]_) but this new method was not properly integrated in any sorter.
+
+Because motion registration is a hard topic, with numerous hypothesis and/or implementations details that might have a large
+impact on the spike sorting performances (see [Garcia2023]_), in spikeinterface, we developed a full motion estimation
+and interpolation framework to make accessible all theses methods in one place. This modular approach has offers a major benefit :
+**the drift correction can be applied on a recording as a preprocessing step, and
+then used for any sorter!** In short, the motion correction is decoupled from the sorter itself.
+
+This gives the user an incredible flexibility to check/test and correct the drifts before the sorting process.
 
 Here the overview of the motion/drift correction as a preprocessing
 
@@ -27,38 +35,41 @@ Here the overview of the motion/drift correction as a preprocessing
 
 The motion correction process can be split into 3 steps:
 
-  1. **activity profile** : detect peaks and localize then a long time and depth
-  2. **motion inference**: estimate the drift motion by block for non ridig motion
+  1. **activity profile** : detect peaks and localize them along time and depth
+  2. **motion inference**: estimate the drift motion by blocks for non rigid motion
   3. **motion interpolation**: interpolate traces using the motion vector
 
-For every steps, we implemented several methods. Combining the yellow boxes should give more or less what
-kilosort2.5/3 is doing. Combining the green boxes give the method develop by the Paninski group.
-Of course the end user can combine any of the methods to get the best motion correction
-possible. This make also an incredible framework for testing new ideas.
+For every steps, we implemented several methods. The combination of the yellow boxes should gives more or less what
+kilosort2.5/3 is doing. Similarly, the combination of the green boxes gives the method developed by the Paninski group.
+Of course the end user can combine any of the methods to get the best motion correction possible.
+This make also an incredible framework for testing new ideas.
 
 For a better overview, the spikeinterface team have publish a manuscript to validate/benchmark/compare theses motion
-correction methods. See [Garcia2023]_
+correction methods (see [Garcia2023]_).
 
-Spikeinterface offer two levels for motion correction. A high level with a unique function and predined parameters
-preset and also low level where the user need to call one by one all function for a better control.
+Spikeinterface offers two levels for motion correction:
+  1. A high level with a unique function and predefined parameters preset
+  2. A low level where the user need to call one by one all functions for a better control
 
 
 High level api
 --------------
 
-One challenging task for motion correction is to find paramerters.
-The high level :py:func:`~spikeinterface.preprocessing.correct_motion()` propse a concept a **"preset"** that already
-have parameters predined.
+One challenging task for motion correction is to find parameters.
+The high level :py:func:`~spikeinterface.preprocessing.correct_motion()` propose the concept of a **"preset"** that already
+have predefined parameters, in order to achieve a calibrated behavior.
 
-We propose at the moment 3 preset:
+We propose at the moment 3 presets:
 
-  * **"nonrigid_accurate"**: the one by paninski group. *monopolar triangutation + decentralized + inverse distance weighted*
-                             This is the slowest combinaison but mayb eth most accurate.
+  * **"nonrigid_accurate"**: the one by Paninski group. It consists of *monopolar triangulation + decentralized + inverse distance weighted*
+                             This is the slowest combination but maybe the most accurate. The main bottleneck of this preset is the monopolar
+                             triangulation for the estimation of the peaks positions. To speed it up, one could think about subsampling the
+                             space of all the detected peaks.
   * **"rigid_fast"**: a fast but not very accurate method. *center of mass + decentralized + inverse distance weighted*
-                      To be used as checker on a recording to check the presence of drift.
-                      Note that, in this case the dirft is "rigid"
+                      To be used as check and/or control on a recording to check the presence of drift.
+                      Note that, in this case the drift is considered as "rigid" over the electrode.
   * **"kilosort_like"**: this mimic what is done in kilosort. *grid convolution + iterative_template + kriging*
-                         This is not 100% what kilosort is doing because the peak detection is done with template
+                         This is not exactly 100% what kilosort is doing because the peak detection is done with template
                          in kilosort and this is not case in spikeinterface. But this "preset" give similar
                          results than kilosort2.5 itself.
 
@@ -78,7 +89,7 @@ But the return :code:`rec_corrected` is a lazy recording object this will interp
 fly (step 3 motion interpolation).
 
 
-If you want to user other preset this is jus easy as
+If you want to user other preset this is just easy as
 
 .. code-block:: python
 
@@ -89,7 +100,7 @@ If you want to user other preset this is jus easy as
   rec_corrected = correct_motion(rec, preset="rigid_fast")
 
 
-Optionally any paramerter from the preset can be overwritten.
+Optionally any parameter from the preset can be overwritten.
 
 .. code-block:: python
 
@@ -105,8 +116,8 @@ Optionally any paramerter from the preset can be overwritten.
                                    )
                                    )
 
-Importantly, all the result and intermediate computation can be saved into in folder for further loading
-and checking. The folder will contain, the motion vector itself of course but also detected peaks, peak location, ...
+Importantly, all the result and intermediate computation can be saved into a folder for further loading
+and checking. The folder will contain the motion vector itself of course but also detected peaks, peak location, ...
 
 
 .. code-block:: python
@@ -122,12 +133,13 @@ and checking. The folder will contain, the motion vector itself of course but al
 Low level api
 -------------
 
-All steps (**activity profile**, **motion inference**, **motion interpolation**) can be with sperated function.
-This can be usefull find the good method and finely tune parameters at every steps.
+All steps (**activity profile**, **motion inference**, **motion interpolation**) can be launched with distinct function.
+This can be useful to find the good method and finely tune/optimize parameters at every steps.
 All functions are implemented in :py:mod:`~spikeinterface.sortingcomponents`.
-They all have simple API with spikeinterface object as input or numpy array. So hacking this should be accesible.
-Since, motion correction is a hot topic theses functions have many possible methods and also many possible parameters.
-Finding the good combination of method/parameters is not that easy but
+They all have a simple API with spikeinterface objects as inputs or numpy arrays, such that hacking should be fairly accessible.
+Since motion correction is a hot topic, theses functions have many possible methods and also many possible parameters.
+Finding the good combination of method/parameters is not that easy but it should be doable, assuming the presets are not
+working properly for your particular case.
 
 
 The high level :py:func:`~spikeinterface.preprocessing.correct_motion()` is internally equivalent to this:
@@ -145,7 +157,7 @@ The high level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
     job_kwargs = dict(chunk_duration="1s", n_jobs=20, progress_bar=True)
     # Step 1 : activity profile
     peaks = detect_peaks(rec, method="locally_exclusive", detect_threshold=8.0, **job_kwargs)
-    # optionaly we could sub select some peak to speed up the localization
+    # optionally we could sub select some peak to speed up the localization
     peaks = select_peaks(peaks, ...)
     peak_locations = localize_peaks(rec, peaks, method="monopolar_triangulation",local_radius_um=75.0,
                                     max_distance_um=150.0, **job_kwargs)
