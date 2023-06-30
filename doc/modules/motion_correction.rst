@@ -4,7 +4,7 @@
 Motion/drift correction
 =======================
 
-Overview 
+Overview
 --------
 
 Mechanical drifts often observed in recording are currently a major issue for spike sorting.
@@ -12,11 +12,11 @@ This have been put forward with neuropixel device.
 The first sorter having introduced motion/drift correcion as a peprocessing step was kilosort2.5. See [Steinmetz2021]_
 Long story short, the main idea is estimate the motion by block a long the probe and then interpolate trace to
 compensate the motion. Users with a need handle drift was stick to kilosort2.5 or pykilosort.
-Then Paninski group from Columbia university introduced more accurate method to estimate the drift. See  [Varol2021]_ 
+Then Paninski group from Columbia university introduced more accurate method to estimate the drift. See  [Varol2021]_
 and [Windolf2023]_ but theses new method were not integrated in any sorter.
 
 In spikeinterface, we developed a full motion estimation and interpolation framework to make accessible all theses
-methods in one place with a major benenit : **the drift correction can be applied on a recording as a preprocessing and 
+methods in one place with a major benenit : **the drift correction can be applied on a recording as a preprocessing and
 then used for any sorter!** In short, the motion correction is decouple from the sorter itself.
 This give the user an incredible flexibility to check and correct the drift before the sorting process.
 
@@ -71,7 +71,7 @@ We propose at the moment 3 preset:
   rec_corrected = correct_motion(rec, preset="nonrigid_accurate")
 
 The process is quite long due the two first steps (activity profile + motion inference)
-But the return :code:`rec_corrected` is a lazy recording object this will interpolate traces on the 
+But the return :code:`rec_corrected` is a lazy recording object this will interpolate traces on the
 fly (step 3 motion interpolation).
 
 
@@ -124,7 +124,7 @@ This can be usefull find the good method and finely tune parameters at every ste
 All functions are implemented in :py:mod:`~spikeinterface.sortingcomponents`.
 They all have simple API with spikeinterface object as input or numpy array. So hacking this should be accesible.
 Since, motion correction is a hot topic theses functions have many possible methods and also many possible parameters.
-Finding the good combination of method/parameters is not that easy but 
+Finding the good combination of method/parameters is not that easy but
 
 
 The high level :py:func:`~spikeinterface.preprocessing.correct_motion()` is internally equivalent to this:
@@ -146,7 +146,7 @@ The high level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
     peaks = select_peaks(peaks, ...)
     peak_locations = localize_peaks(rec, peaks, method="monopolar_triangulation",local_radius_um=75.0,
                                     max_distance_um=150.0, **job_kwargs)
-    
+
     # Step 2: motion inference
     motion, temporal_bins, spatial_bins = estimate_motion(rec, peaks, peak_locations,
                                                           method="decentralized",
@@ -157,7 +157,7 @@ The high level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
                                                           win_sigma_um=150.0,
                                                           )
 
-    # Step 3: motion interpolation 
+    # Step 3: motion interpolation
     # this step is lazy
     rec_corrected = interpolate_motion(rec, motion, temporal_bins, spatial_bins,
                                        border_mode="remove_channels",
@@ -180,9 +180,3 @@ References
 .. [Varol2021] `Decentralized Motion Inference and Registration of Neuropixel Data <https://ieeexplore.ieee.org/document/9414145>`_
 
 .. [Garcia2023] `A modular approach to handle in-vivo drift correction for high-density extracellular recordings <https://www.biorxiv.org/content/10.1101/2023.06.29.546882v1>`_
-
-
-
-
-
-
