@@ -43,7 +43,7 @@ class BinaryRecordingExtractor(BaseRecording):
 
     Notes
     -----
-    When both num_channels and num_chan are provided, num_channels is used and num_channels is ignored.
+    When both num_channels and num_chan are provided, `num_channels` is used and `num_chan` is ignored.
 
     Returns
     -------
