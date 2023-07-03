@@ -43,7 +43,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 txt += " - sparse"
         return txt
 
-    def _set_params(self, n_components=5, mode="by_channel_local", whiten=True, dtype="float32", sparsity=None):
+    def _set_params(self, n_components=5, mode="by_channel_local", whiten=True, dtype="float32", sparsity=None, tmp_folder=None):
         assert mode in _possible_modes, "Invalid mode!"
 
         if self.waveform_extractor.is_sparse():
@@ -56,6 +56,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             whiten=bool(whiten),
             dtype=np.dtype(dtype).str,
             sparsity=sparsity,
+            tmp_folder=tmp_folder,
         )
 
         return params
@@ -361,7 +362,12 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         mode = p["mode"]
         pca_model_files = []
-        tmp_folder = Path("tmp")
+
+        tmp_folder = p["tmp_folder"]
+        if tmp_folder is None:
+            tmp_folder = "tmp"
+        tmp_folder = Path(tmp_folder)
+        
         for chan_ind, chan_id in enumerate(channel_ids):
             pca_model = pca_models[chan_ind]
             if n_jobs > 1:
@@ -662,6 +668,7 @@ def compute_principal_components(
     sparsity=None,
     whiten=True,
     dtype="float32",
+    tmp_folder=None,
     **job_kwargs,
 ):
     """
@@ -691,7 +698,9 @@ def compute_principal_components(
         Number of jobs used to fit the PCA model (if mode is 'by_channel_local') - default 1
     progress_bar: bool
         If True, a progress bar is shown - default False
-
+    tmp_folder: str
+        You need to specify a tmp_folder, if mode=='by_channel_local' and if you run several compute_principal_components at the same time.         
+        Otherwise, let None.
     Returns
     -------
     pc: WaveformPrincipalComponent
@@ -716,7 +725,7 @@ def compute_principal_components(
         pc = waveform_extractor.load_extension(WaveformPrincipalComponent.extension_name)
     else:
         pc = WaveformPrincipalComponent.create(waveform_extractor)
-        pc.set_params(n_components=n_components, mode=mode, whiten=whiten, dtype=dtype, sparsity=sparsity)
+        pc.set_params(n_components=n_components, mode=mode, whiten=whiten, dtype=dtype, sparsity=sparsity, tmp_folder=tmp_folder)
         pc.run(**job_kwargs)
 
     return pc
