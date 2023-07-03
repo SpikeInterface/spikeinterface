@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.98.0.rst
   releases/0.97.1.rst
   releases/0.97.0.rst
   releases/0.96.1.rst
@@ -27,6 +28,11 @@ Release notes
   releases/0.9.9.rst
   releases/0.9.1.rst
 
+
+Version 0.98.0
+==============
+
+* ...
 
 Version 0.97.1
 ==============
