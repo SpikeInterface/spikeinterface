@@ -13,7 +13,6 @@ else:
     cache_folder = Path("cache_folder") / "sorters"
 
 
-os.environ["SINGULARITY_DISABLE_CACHE"] = "true"
 ON_GITHUB = os.getenv("CI")
 
 
