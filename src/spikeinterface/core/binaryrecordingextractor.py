@@ -22,7 +22,7 @@ class BinaryRecordingExtractor(BaseRecording):
         The sampling frequency
     num_channels: int
         Number of channels
-    num_chan: int [deprecated]
+    num_chan: int [deprecated, use num_channels instead, will be removed as early as v0.100.0]
         Number of channels
     dtype: str or dtype
         The dtype of the binary file
@@ -40,6 +40,10 @@ class BinaryRecordingExtractor(BaseRecording):
         The offset to apply to the traces
     is_filtered: bool or None
         If True, the recording is assumed to be filtered. If None, is_filtered is not set.
+
+    Notes
+    -----
+    When both num_channels and num_chan are provided, num_channels is used and num_channels is ignored.
 
     Returns
     -------
@@ -67,10 +71,11 @@ class BinaryRecordingExtractor(BaseRecording):
         is_filtered=None,
         num_chan=None,
     ):
+        # This assigns num_channels if num_channels is not None, otherwise num_chan is assigned
         num_channels = num_channels or num_chan
         assert num_channels is not None, "You must provide num_channels or num_chan"
         if num_chan is not None:
-            warnings.warn("num_chan is to be deprecated, use num_channels instead")
+            warnings.warn("`num_chan` is to be deprecated in version 0.100, please use `num_channels` instead")
 
         if channel_ids is None:
             channel_ids = list(range(num_channels))
@@ -81,24 +86,24 @@ class BinaryRecordingExtractor(BaseRecording):
 
         if isinstance(file_paths, list):
             # several segment
-            datfiles = [Path(p) for p in file_paths]
+            file_path_list = [Path(p) for p in file_paths]
         else:
             # one segment
-            datfiles = [Path(file_paths)]
+            file_path_list = [Path(file_paths)]
 
         if t_starts is not None:
-            assert len(t_starts) == len(datfiles), "t_starts must be a list of same size than file_paths"
+            assert len(t_starts) == len(file_path_list), "t_starts must be a list of same size than file_paths"
             t_starts = [float(t_start) for t_start in t_starts]
 
         dtype = np.dtype(dtype)
 
-        for i, datfile in enumerate(datfiles):
+        for i, file_path in enumerate(file_path_list):
             if t_starts is None:
                 t_start = None
             else:
                 t_start = t_starts[i]
             rec_segment = BinaryRecordingSegment(
-                datfile, sampling_frequency, t_start, num_channels, dtype, time_axis, file_offset
+                file_path, sampling_frequency, t_start, num_channels, dtype, time_axis, file_offset
             )
             self.add_recording_segment(rec_segment)
 
@@ -112,11 +117,11 @@ class BinaryRecordingExtractor(BaseRecording):
             self.set_channel_offsets(offset_to_uV)
 
         self._kwargs = {
-            "file_paths": [str(e.absolute()) for e in datfiles],
+            "file_paths": [str(e.absolute()) for e in file_path_list],
             "sampling_frequency": sampling_frequency,
             "t_starts": t_starts,
             "num_channels": num_channels,
-            "num_chan": num_channels,  # TODO: Remove carefully in case someone expects to load from this
+            "num_chan": num_channels,  # TODO: This should be here at least till version 0.100.0
             "dtype": dtype.str,
             "channel_ids": channel_ids,
             "time_axis": time_axis,
