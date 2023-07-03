@@ -24,6 +24,8 @@ def check_gh_settings():
 
 def generate_run_kwargs():
     test_recording, _ = se.toy_example(duration=30, seed=0, num_channels=64, num_segments=1)
+    # Workaround to fix tests on windows due to overflow in JSON str
+    test_recording.is_dumpable = False
     test_recording = test_recording.save(name="toy")
     test_recording.set_channel_gains(1)
     test_recording.set_channel_offsets(1)
