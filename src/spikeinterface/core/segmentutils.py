@@ -138,7 +138,11 @@ class ConcatenateSegmentRecording(BaseRecording):
         )
         self.add_recording_segment(rec_seg)
 
-        self._kwargs = {"recording_list": recording_list, "ignore_times": ignore_times, "sampling_frequency_max_diff": sampling_frequency_max_diff}
+        self._kwargs = {
+            "recording_list": recording_list,
+            "ignore_times": ignore_times,
+            "sampling_frequency_max_diff": sampling_frequency_max_diff,
+        }
 
 
 class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
