@@ -144,7 +144,7 @@ class KilosortBase:
                 padding_start = 0
                 padding_end = pad
                 padded_recording = TracePaddedRecording(
-                    recording=recording,
+                    parent_recording=recording,
                     padding_start=padding_start,
                     padding_end=padding_end,
                 )
