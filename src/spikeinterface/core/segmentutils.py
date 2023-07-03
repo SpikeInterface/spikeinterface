@@ -18,13 +18,13 @@ def _check_sampling_frequencies(sampling_frequency_list, sampling_frequency_max_
             f"`sampling_frequency_max_diff`={sampling_frequency_max_diff}Hz"
         )
     elif max_diff > 0:
-        diff_sec = 24 * 3600 * max_diff / freq_0
+        diff_msec = 24 * 3600000 * max_diff / freq_0
         import warnings
 
         warnings.warn(
             "Inconsistent sampling frequency across datasets."
             + f" Diff is below hard bound={sampling_frequency_max_diff}Hz: concatenating anyway."
-            + f" Expect ~{round(diff_sec, 5)}s shift over 24h dataset"
+            + f" Expect ~{round(diff_msec, 5)}msec shift over 24h dataset"
         )
 
 
@@ -69,7 +69,7 @@ class AppendSegmentRecording(BaseRecording):
                 rec_seg = ProxyAppendRecordingSegment(parent_segment)
                 self.add_recording_segment(rec_seg)
 
-        self._kwargs = {"recording_list": recording_list}
+        self._kwargs = {"recording_list": recording_list, "sampling_frequency_max_diff": sampling_frequency_max_diff}
 
 
 class ProxyAppendRecordingSegment(BaseRecordingSegment):
@@ -138,7 +138,7 @@ class ConcatenateSegmentRecording(BaseRecording):
         )
         self.add_recording_segment(rec_seg)
 
-        self._kwargs = {"recording_list": recording_list, "ignore_times": ignore_times}
+        self._kwargs = {"recording_list": recording_list, "ignore_times": ignore_times, "sampling_frequency_max_diff": sampling_frequency_max_diff}
 
 
 class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
