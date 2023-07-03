@@ -266,7 +266,6 @@ class BaseSorter:
                 print(f"{sorter_name} run time {run_time:0.2f}s")
 
         if has_error and raise_error:
-            print(log["error_trace"])
             raise SpikeSortingError(
                 f"Spike sorting failed. You can inspect the runtime trace in {output_folder}/spikeinterface_log.json. "
                 f"Error trace: {log['error_trace']}"
@@ -281,7 +280,7 @@ class BaseSorter:
         # check errors in log file
         log_file = output_folder / "spikeinterface_log.json"
         if not log_file.is_file():
-            raise SpikeSortingError("get result error: the folder do not contain spikeinterface_log.json")
+            raise SpikeSortingError("get result error: the folder does not contain spikeinterface_log.json")
 
         with log_file.open("r", encoding="utf8") as f:
             log = json.load(f)
