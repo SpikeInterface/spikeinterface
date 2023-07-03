@@ -19,7 +19,7 @@ ON_GITHUB = os.getenv("CI")
 
 def clean_singularity_cache():
     print("Cleaning singularity cache")
-    os.system("singularity cache clean --all")
+    os.system("singularity cache clean --force")
 
 
 def check_gh_settings():
