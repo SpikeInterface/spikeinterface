@@ -143,7 +143,6 @@ class PyKilosortSorter(BaseSorter):
             write_binary_recording(
                 recording,
                 file_paths=sorter_output_folder / "recording.dat",
-                verbose=False,
                 **get_job_kwargs(params, verbose),
             )
 

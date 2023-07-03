@@ -8,17 +8,18 @@ from spikeinterface.core import extract_waveforms, precompute_sparsity, Waveform
 
 
 from spikeinterface.extractors import read_mearec
-from spikeinterface.preprocessing import bandpass_filter, zscore, common_reference
+from spikeinterface.preprocessing import bandpass_filter, zscore, common_reference, scale, highpass_filter, whiten
 from spikeinterface.sorters import run_sorter
 from spikeinterface.widgets import plot_unit_waveforms, plot_gt_performances
 
 from spikeinterface.comparison import GroundTruthComparison
-from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
+from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import BenchmarkBase, _simpleaxis
 from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.widgets import plot_sorting_performance
 from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.curation import MergeUnitsSorting
+from spikeinterface.core import get_template_extremum_channel
 
 import sklearn
 
@@ -27,9 +28,9 @@ import matplotlib.pyplot as plt
 import MEArec as mr
 
 
-class BenchmarkMotionCorrectionMearec(BenchmarkBase):
-    _array_names = ("motion", "temporal_bins", "spatial_bins")
-    _waveform_names = ("static", "drifting", "corrected")
+class BenchmarkMotionInterpolationMearec(BenchmarkBase):
+    _array_names = ("gt_motion", "estimated_motion", "temporal_bins", "spatial_bins")
+    _waveform_names = ("static", "drifting", "corrected_gt", "corrected_estimated")
     _sorting_names = ()
 
     _array_names_from_parent = ()
@@ -40,11 +41,17 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         self,
         mearec_filename_drifting,
         mearec_filename_static,
-        motion,
+        gt_motion,
+        estimated_motion,
         temporal_bins,
         spatial_bins,
         do_preprocessing=True,
         correct_motion_kwargs={},
+        waveforms_kwargs=dict(
+            ms_before=1.0,
+            ms_after=3.0,
+            max_spikes_per_unit=500,
+        ),
         sparse_kwargs=dict(
             method="radius",
             radius_um=100.0,
@@ -66,16 +73,18 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
             parent_benchmark=parent_benchmark,
         )
 
-        self._args.extend([str(mearec_filename_drifting), str(mearec_filename_static), None, None, None])
+        self._args.extend([str(mearec_filename_drifting), str(mearec_filename_static), None, None, None, None])
 
         self.sorter_cases = sorter_cases.copy()
         self.mearec_filenames = {}
-        self.keys = ["static", "drifting", "corrected"]
+        self.keys = ["static", "drifting", "corrected_gt", "corrected_estimated"]
         self.mearec_filenames["drifting"] = mearec_filename_drifting
         self.mearec_filenames["static"] = mearec_filename_static
+
         self.temporal_bins = temporal_bins
         self.spatial_bins = spatial_bins
-        self.motion = motion
+        self.gt_motion = gt_motion
+        self.estimated_motion = estimated_motion
         self.do_preprocessing = do_preprocessing
         self.delete_output_folder = delete_output_folder
 
@@ -84,6 +93,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
         self.correct_motion_kwargs = correct_motion_kwargs.copy()
         self.sparse_kwargs = sparse_kwargs.copy()
+        self.waveforms_kwargs = waveforms_kwargs.copy()
         self.comparisons = {}
         self.accuracies = {}
 
@@ -93,6 +103,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 sorter_cases=self.sorter_cases,
                 do_preprocessing=do_preprocessing,
                 delete_output_folder=delete_output_folder,
+                waveforms_kwargs=waveforms_kwargs,
                 sparse_kwargs=sparse_kwargs,
             )
         )
@@ -101,20 +112,34 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     def recordings(self):
         if self._recordings is None:
             self._recordings = {}
+
             for key in (
                 "drifting",
                 "static",
             ):
                 rec, _ = read_mearec(self.mearec_filenames[key])
+                self._recordings["raw_" + key] = rec
+
                 if self.do_preprocessing:
-                    rec = bandpass_filter(rec)
-                    rec = common_reference(rec)
-                    # rec = zscore(rec)
+                    # this processing chain is the same as the kilosort2.5
+                    # this is important if we want to skip the kilosort preprocessing
+                    #   * all computation are done in float32
+                    #   * 150um is more or less 30 channels for the whittening
+                    #   * the lastet gain step is super important it is what KS2.5 is doing because the whiten traces
+                    #     have magnitude around 1 so a factor (200) is needed to go back to int16
+                    rec = common_reference(rec, dtype="float32")
+                    rec = highpass_filter(rec, freq_min=150.0)
+                    rec = whiten(rec, mode="local", radius_um=150.0, num_chunks_per_segment=40, chunk_size=32000)
+                    rec = scale(rec, gain=200, dtype="int16")
                 self._recordings[key] = rec
 
             rec = self._recordings["drifting"]
-            self._recordings["corrected"] = CorrectMotionRecording(
-                rec, self.motion, self.temporal_bins, self.spatial_bins, **self.correct_motion_kwargs
+            self._recordings["corrected_gt"] = InterpolateMotionRecording(
+                rec, self.gt_motion, self.temporal_bins, self.spatial_bins, **self.correct_motion_kwargs
+            )
+
+            self._recordings["corrected_estimated"] = InterpolateMotionRecording(
+                rec, self.estimated_motion, self.temporal_bins, self.spatial_bins, **self.correct_motion_kwargs
             )
 
         return self._recordings
@@ -128,13 +153,14 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
     def extract_waveforms(self):
         # the sparsity is estimated on the static recording and propagated to all of then
         if self.parent_benchmark is None:
+            wf_kwargs = self.waveforms_kwargs.copy()
+            wf_kwargs.pop("max_spikes_per_unit", None)
             sparsity = precompute_sparsity(
                 self.recordings["static"],
                 self.sorting_gt,
-                ms_before=2.0,
-                ms_after=3.0,
                 num_spikes_for_sparsity=200.0,
                 unit_batch_size=10000,
+                **wf_kwargs,
                 **self.sparse_kwargs,
                 **self.job_kwargs,
             )
@@ -154,7 +180,7 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 sparsity=sparsity,
                 remove_if_exists=True,
             )
-            we.set_params(ms_before=2.0, ms_after=3.0, max_spikes_per_unit=500.0, return_scaled=True)
+            we.set_params(**self.waveforms_kwargs, return_scaled=True)
             we.run_extract_waveforms(seed=22051977, **self.job_kwargs)
             self.waveforms[key] = we
 
@@ -183,42 +209,47 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
         ref_templates = self.waveforms["static"].get_all_templates()
 
-        # for key in ['drifting', 'corrected']:
         for key in self.keys:
+            if self.parent_benchmark is not None and key in ("drifting", "static"):
+                continue
+
+            print(key)
             dist = self.distances[key] = {
-                "norm_static": np.zeros(n),
-                "template_euclidean": np.zeros(n),
+                "std": np.zeros(n),
+                "norm_std": np.zeros(n),
+                "template_norm_distance": np.zeros(n),
                 "template_cosine": np.zeros(n),
-                "wf_euclidean_mean": np.zeros(n),
-                "wf_euclidean_std": np.zeros(n),
-                "wf_cosine_mean": np.zeros(n),
-                "wf_cosine_std": np.zeros(n),
             }
+
             templates = self.waveforms[key].get_all_templates()
+
+            extremum_channel = get_template_extremum_channel(self.waveforms["static"], outputs="index")
+
             for unit_ind, unit_id in enumerate(self.waveforms[key].sorting.unit_ids):
                 mask = sparsity.mask[unit_ind, :]
-                ref_template = ref_templates[unit_ind][:, mask].reshape(1, -1)
-                template = templates[unit_ind][:, mask].reshape(1, -1)
+                ref_template = ref_templates[unit_ind][:, mask]
+                template = templates[unit_ind][:, mask]
+
+                max_chan = extremum_channel[unit_id]
+                max_chan
+
+                max_chan_sparse = list(np.nonzero(mask)[0]).index(max_chan)
 
                 # this is already sparse
-                # ref_wfs = self.waveforms['static'].get_waveforms(unit_id)
-                # ref_wfs = ref_wfs.reshape(ref_wfs.shape[0], -1)
                 wfs = self.waveforms[key].get_waveforms(unit_id)
-                wfs = wfs.reshape(wfs.shape[0], -1)
+                ref_wfs = self.waveforms["static"].get_waveforms(unit_id)
 
-                dist["norm_static"][unit_ind] = np.linalg.norm(ref_template)
-                dist["template_euclidean"][unit_ind] = sklearn.metrics.pairwise_distances(ref_template, template)[0]
-                dist["template_cosine"][unit_ind] = sklearn.metrics.pairwise.cosine_similarity(ref_template, template)[
-                    0
-                ]
+                rms = np.sqrt(np.mean(template**2))
+                ref_rms = np.sqrt(np.mean(ref_template**2))
+                if rms == 0:
+                    print(key, unit_id, unit_ind, rms, ref_rms)
 
-                d = sklearn.metrics.pairwise_distances(ref_template, wfs)[0]
-                dist["wf_euclidean_mean"][unit_ind] = d.mean()
-                dist["wf_euclidean_std"][unit_ind] = d.std()
-
-                d = sklearn.metrics.pairwise.cosine_similarity(ref_template, wfs)[0]
-                dist["wf_cosine_mean"][unit_ind] = d.mean()
-                dist["wf_cosine_std"][unit_ind] = d.std()
+                dist["std"][unit_ind] = np.mean(np.std(wfs, axis=0), axis=(0, 1))
+                dist["norm_std"][unit_ind] = np.mean(np.std(wfs, axis=0), axis=(0, 1)) / rms
+                dist["template_norm_distance"][unit_ind] = np.sum((ref_template - template) ** 2) / ref_rms
+                dist["template_cosine"][unit_ind] = sklearn.metrics.pairwise.cosine_similarity(
+                    ref_template.reshape(1, -1), template.reshape(1, -1)
+                )[0]
 
         return self.distances
 
@@ -253,36 +284,51 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 self.comparisons[label] = comp
                 self.accuracies[label] = comp.get_performance()["accuracy"].values
 
-    def _plot_accuracy(self, accuracies, mode="ordered_accuracy", figsize=(15, 5), ls="-"):
+    def _plot_accuracy(
+        self, accuracies, mode="ordered_accuracy", figsize=(15, 5), axes=None, ax=None, ls="-", legend=True, colors=None
+    ):
         if len(self.accuracies) != len(self.sorter_cases):
             self.compute_accuracies()
 
         n = len(self.sorter_cases)
 
+        if "depth" in mode:
+            # gt_unit_positions, _ = mr.extract_units_drift_vector(self.mearec_filenames['drifting'], time_vector=np.array([0., 1.]))
+            # unit_depth = gt_unit_positions[0, :]
+
+            template_locations = np.array(mr.load_recordings(self.mearec_filenames["drifting"]).template_locations)
+            assert len(template_locations.shape) == 3
+            mid = template_locations.shape[1] // 2
+            unit_depth = template_locations[:, mid, 2]
+
+            chan_locations = self.recordings["drifting"].get_channel_locations()
+
         if mode == "ordered_accuracy":
-            fig, ax = plt.subplots(figsize=figsize)
+            if ax is None:
+                fig, ax = plt.subplots(figsize=figsize)
+            else:
+                fig = ax.figure
 
             order = None
-            for case in self.sorter_cases:
+            for i, case in enumerate(self.sorter_cases):
+                color = colors[i] if colors is not None else None
                 label = case["label"]
                 # comp = self.comparisons[label]
                 acc = accuracies[label]
                 order = np.argsort(acc)[::-1]
                 acc = acc[order]
-                ax.plot(acc, label=label, ls=ls)
-            ax.legend()
+                ax.plot(acc, label=label, ls=ls, color=color)
+            if legend:
+                ax.legend()
             ax.set_ylabel("accuracy")
             ax.set_xlabel("units ordered by accuracy")
 
         elif mode == "depth_snr":
-            fig, axs = plt.subplots(nrows=n, figsize=figsize, sharey=True, sharex=True)
-
-            gt_unit_positions, _ = mr.extract_units_drift_vector(
-                self.mearec_filenames["drifting"], time_vector=np.array([0.0, 1.0])
-            )
-            depth = gt_unit_positions[0, :]
-
-            chan_locations = self.recordings["drifting"].get_channel_locations()
+            if axes is None:
+                fig, axs = plt.subplots(nrows=n, figsize=figsize, sharey=True, sharex=True)
+            else:
+                fig = axes[0].figure
+                axs = axes
 
             metrics = compute_quality_metrics(self.waveforms["static"], metric_names=["snr"], load_if_exists=True)
             snr = metrics["snr"].values
@@ -291,13 +337,17 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
                 ax = axs[i]
                 label = case["label"]
                 acc = accuracies[label]
-                s = ax.scatter(depth, snr, c=acc)
-                s.set_clim(0.0, 1.0)
+
+                points = ax.scatter(unit_depth, snr, c=acc)
+                points.set_clim(0.0, 1.0)
                 ax.set_title(label)
                 ax.axvline(np.min(chan_locations[:, 1]), ls="--", color="k")
                 ax.axvline(np.max(chan_locations[:, 1]), ls="--", color="k")
                 ax.set_ylabel("snr")
             ax.set_xlabel("depth")
+
+            cbar = fig.colorbar(points, ax=axs[:], location="right", shrink=0.6)
+            cbar.ax.set_ylabel("accuracy")
 
         elif mode == "snr":
             fig, ax = plt.subplots(figsize=figsize)
@@ -317,31 +367,27 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         elif mode == "depth":
             fig, ax = plt.subplots(figsize=figsize)
 
-            gt_unit_positions, _ = mr.extract_units_drift_vector(
-                self.mearec_filenames["drifting"], time_vector=np.array([0.0, 1.0])
-            )
-            depth = gt_unit_positions[0, :]
-
-            chan_locations = self.recordings["drifting"].get_channel_locations()
-
             for i, case in enumerate(self.sorter_cases):
                 label = case["label"]
                 acc = accuracies[label]
-                ax.scatter(depth, acc, label=label)
+
+                ax.scatter(unit_depth, acc, label=label)
             ax.axvline(np.min(chan_locations[:, 1]), ls="--", color="k")
             ax.axvline(np.max(chan_locations[:, 1]), ls="--", color="k")
             ax.legend()
             ax.set_xlabel("depth")
             ax.set_ylabel("accuracy")
 
-    def plot_sortings_accuracy(self, mode="ordered_accuracy", figsize=(15, 5)):
+        return fig
+
+    def plot_sortings_accuracy(self, **kwargs):
         if len(self.accuracies) != len(self.sorter_cases):
             self.compute_accuracies()
 
-        self._plot_accuracy(self.accuracies, mode=mode, figsize=figsize, ls="-")
+        return self._plot_accuracy(self.accuracies, ls="-", **kwargs)
 
-    def plot_best_merges_accuracy(self, mode="ordered_accuracy", figsize=(15, 5)):
-        self._plot_accuracy(self.merged_accuracies, mode=mode, figsize=figsize, ls="--")
+    def plot_best_merges_accuracy(self, **kwargs):
+        return self._plot_accuracy(self.merged_accuracies, **kwargs, ls="--")
 
     def plot_sorting_units_categories(self):
         if len(self.accuracies) != len(self.sorter_cases):
@@ -365,8 +411,8 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
         self.units_to_merge = {}
         for i, case in enumerate(self.sorter_cases):
             label = case["label"]
-            print()
-            print(label)
+            # print()
+            # print(label)
             gt_unit_ids = self.sorting_gt.unit_ids
             sorting = self.sortings[label]
             unit_ids = sorting.unit_ids
@@ -383,8 +429,6 @@ class BenchmarkMotionCorrectionMearec(BenchmarkBase):
 
             self.units_to_merge[label] = to_merge
             merged_sporting = MergeUnitsSorting(sorting, to_merge)
-            print(sorting)
-            print(merged_sporting)
             comp_merged = GroundTruthComparison(self.sorting_gt, merged_sporting, exhaustive_gt=True)
 
             self.merged_sortings[label] = merged_sporting

@@ -264,7 +264,7 @@ def test_BaseRecording():
     rec_2d = rec_3d.planarize(axes="zy")
     assert np.allclose(rec_2d.get_channel_locations(), locations_3d[:, [2, 1]])
 
-    # Test save to zarr
+    # test save to zarr
     compressor = get_default_zarr_compressor()
     rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressor=compressor)
     rec_zarr_loaded = load_extractor(cache_folder / "recording.zarr")

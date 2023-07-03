@@ -62,7 +62,7 @@ def test_center():
 
 def test_zscore():
     seed = 0
-    rec = generate_recording()
+    rec = generate_recording(seed=seed)
     tr = rec.get_traces(segment_index=0)
 
     rec2 = zscore(rec, seed=seed)
@@ -81,7 +81,6 @@ def test_zscore():
     rec_int = scale(rec, dtype="int16", gain=100)
     with pytest.raises(AssertionError):
         rec4 = zscore(rec_int, dtype=None)
-    rec4 = zscore(rec_int, dtype="float32", mode="mean+std", seed=seed)
     rec4 = zscore(rec_int, dtype="int16", int_scale=256, mode="mean+std", seed=seed)
     tr = rec4.get_traces(segment_index=0)
     trace_mean = np.mean(tr, axis=0)

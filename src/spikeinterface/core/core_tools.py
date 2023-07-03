@@ -246,7 +246,6 @@ def write_binary_recording(
     file_paths=None,
     dtype=None,
     add_file_extension=True,
-    verbose=False,
     byte_offset=0,
     auto_cast_uint=True,
     **job_kwargs,
@@ -268,8 +267,6 @@ def write_binary_recording(
         Type of the saved data. Default float32.
     add_file_extension: bool
         If True (default), file the '.raw' file extension is added if the file name is not a 'raw', 'bin', or 'dat'
-    verbose: bool
-        If True, output is verbose (when chunks are used)
     byte_offset: int
         Offset in bytes (default 0) to for the binary file (e.g. to write a header)
     auto_cast_uint: bool
@@ -297,9 +294,10 @@ def write_binary_recording(
     file_path_dict = {segment_index: file_path_list[segment_index] for segment_index in range(num_segments)}
 
     # Create the files of the correct size so they are accessed later by the workers
-    num_channels = recording.get_num_channels()
     dtype_size_bytes = np.dtype(dtype).itemsize
+    num_channels = recording.get_num_channels()
 
+    file_path_dict = {segment_index: file_path for segment_index, file_path in enumerate(file_path_list)}
     for segment_index, file_path in file_path_dict.items():
         num_frames = recording.get_num_frames(segment_index=segment_index)
         data_size_bytes = dtype_size_bytes * num_frames * num_channels
@@ -315,7 +313,7 @@ def write_binary_recording(
     init_func = _init_binary_worker
     init_args = (recording, file_path_dict, dtype, byte_offset, cast_unsigned)
     executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_binary_recording", **job_kwargs
+        recording, func, init_func, init_args, job_name="write_binary_recording", **job_kwargs
     )
     executor.run()
 
@@ -416,11 +414,7 @@ def _write_memory_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 
 def make_shared_array(shape, dtype):
-    # https://docs.python.org/3/library/multiprocessing.shared_memory.html
-    try:
-        from multiprocessing.shared_memory import SharedMemory
-    except Exception as e:
-        raise Exception("SharedMemory is available only for python>=3.8")
+    from multiprocessing.shared_memory import SharedMemory
 
     dtype = np.dtype(dtype)
     nbytes = int(np.prod(shape) * dtype.itemsize)
