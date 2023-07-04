@@ -2,7 +2,6 @@ import pytest
 import numpy as np
 from pathlib import Path
 import sys
-import resource
 
 from spikeinterface.core import BinaryRecordingExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
@@ -188,7 +187,9 @@ def measure_peak_memory_usage():
     """
 
     if sys.platform == "win32":
-        raise NotImplementedError("Function cannot be used on Windows")
+        raise NotImplementedError("Resource module not available on Windows")
+
+    import resource
 
     mem_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
@@ -199,7 +200,7 @@ def measure_peak_memory_usage():
     return mem_usage
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Don't know how to calculate peak memory on widnows")
+@pytest.mark.skipif(sys.platform == "win32", reason="resource module not available on Windows")
 def test_peak_memory_usage(folder_with_binary_files):
     "This tests that there are no spikes in memory usage when reading traces."
     folder = folder_with_binary_files
