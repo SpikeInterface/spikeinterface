@@ -53,9 +53,6 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         self._bin_kwargs = d["kwargs"]
         if "num_channels" not in self._bin_kwargs:
             assert "num_chan" in self._bin_kwargs, "Cannot find num_channels or num_chan in binary.json"
-            warnings.warn(
-                f"`num_chan` contained in folder {folder_path} is deprecated: it will not be redeable starting with version 0.100."
-            )
             self._bin_kwargs["num_channels"] = self._bin_kwargs["num_chan"]
 
     def is_binary_compatible(self):
