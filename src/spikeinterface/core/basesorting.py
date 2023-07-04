@@ -300,10 +300,12 @@ class BaseSorting(BaseExtractor):
         units_to_keep = np.unique(units_to_keep)
         return self.select_units(units_to_keep)
 
-    def frame_slice(self, start_frame, end_frame):
+    def frame_slice(self, start_frame, end_frame, check_spike_frames=True):
         from spikeinterface import FrameSliceSorting
 
-        sub_sorting = FrameSliceSorting(self, start_frame=start_frame, end_frame=end_frame)
+        sub_sorting = FrameSliceSorting(
+            self, start_frame=start_frame, end_frame=end_frame, check_spike_frames=check_spike_frames
+        )
         return sub_sorting
 
     def get_all_spike_trains(self, outputs="unit_id"):
