@@ -304,7 +304,7 @@ class AppendSegmentSorting(BaseSorting):
                 sorting_seg = ProxyAppendSortingSegment(parent_segment)
                 self.add_sorting_segment(sorting_seg)
 
-        self._kwargs = {"sorting_list": sorting_list}
+        self._kwargs = {"sorting_list": sorting_list, "sampling_frequency_max_diff": sampling_frequency_max_diff}
 
 
 class ProxyAppendSortingSegment(BaseSortingSegment):
@@ -426,7 +426,12 @@ class ConcatenateSegmentSorting(BaseSorting):
                 concatenate_recordings([s._recording for s in sorting_list], ignore_times=ignore_times)
             )
 
-        self._kwargs = {"sorting_list": sorting_list, "ignore_times": ignore_times}
+        self._kwargs = {
+            "sorting_list": sorting_list,
+            "ignore_times": ignore_times,
+            "total_samples_list": total_samples_list,
+            "sampling_frequency_max_diff": sampling_frequency_max_diff,
+        }
 
     def get_num_samples(self, segment_index=None):
         """Overrides the BaseSorting method, which requires a recording."""
@@ -559,7 +564,7 @@ class SplitSegmentSorting(BaseSorting):
             sliced_segment = sliced_parent_sorting._sorting_segments[0]
             self.add_sorting_segment(sliced_segment)
 
-        self._kwargs = {"parent_sorting": parent_sorting, "recording_list": recording_list}
+        self._kwargs = {"parent_sorting": parent_sorting, "recording_or_recording_list": recording_list}
 
 
 split_sorting = define_function_from_class(source_class=SplitSegmentSorting, name="split_sorting")
