@@ -1,6 +1,5 @@
 from pathlib import Path
 import json
-import warnings
 
 import numpy as np
 
