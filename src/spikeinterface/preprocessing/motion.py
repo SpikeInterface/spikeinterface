@@ -6,11 +6,13 @@ import json
 import copy
 
 from spikeinterface.core import get_noise_levels, fix_job_kwargs
+from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.core.core_tools import SIJsonEncoder
 
 motion_options_preset = {
     # This preset should be the most acccurate
     "nonrigid_accurate": {
+        "doc": "method by Paninski lab (monopolar_triangulation + decentralized)",
         "detect_kwargs": dict(
             method="locally_exclusive",
             peak_sign="neg",
@@ -25,7 +27,8 @@ motion_options_preset = {
             max_distance_um=150.0,
             optimizer="minimize_with_log_penality",
             enforce_decrease=True,
-            feature="peak_voltage",
+            # feature="peak_voltage",
+            feature="ptp",
         ),
         "estimate_motion_kwargs": dict(
             method="decentralized",
@@ -72,6 +75,7 @@ motion_options_preset = {
     },
     # This preset is a super fast rigid estimation with center of mass
     "rigid_fast": {
+        "doc": "Rigid and not super accurate but fast. Use center of mass.",
         "detect_kwargs": dict(
             method="locally_exclusive",
             peak_sign="neg",
@@ -99,6 +103,7 @@ motion_options_preset = {
     },
     # This preset try to mimic kilosort2.5 motion estimator
     "kilosort_like": {
+        "doc": "Mimic the drift correction of kilosrt (grid_convolution + iterative_template)",
         "detect_kwargs": dict(
             method="locally_exclusive",
             peak_sign="neg",
@@ -109,13 +114,15 @@ motion_options_preset = {
         "select_kwargs": None,
         "localize_peaks_kwargs": dict(
             method="grid_convolution",
-            local_radius_um=50.0,
-            upsampling_um=5.0,
-            sigma_um=np.linspace(10, 50.0, 5),
+            # local_radius_um=50.0,
+            local_radius_um=30.0,
+            upsampling_um=3.0,
+            sigma_um=np.linspace(5.0, 20.0, 3),
+            # sigma_um=[15., ],
             sigma_ms=0.25,
-            margin_um=50.0,
+            margin_um=30.0,
             prototype=None,
-            percentile=10.0,
+            percentile=5.0,
         ),
         "estimate_motion_kwargs": dict(
             method="iterative_template",
@@ -184,10 +191,9 @@ def correct_motion(
       * :py:func:`~spikeinterface.sortingcomponents.motion_estimation.estimate_motion'
       * :py:func:`~spikeinterface.sortingcomponents.motion_correction.CorrectMotionRecording'
 
-    TODO:
       * note about preprocessing
-      * generate doc for preset
 
+    Possible presets:{}
 
     Parameters
     ----------
@@ -198,6 +204,8 @@ def correct_motion(
         If True then return an extra dict that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
 
+
+    {}
     Returns
     -------
     recording_corrected: Recording
@@ -330,6 +338,16 @@ def correct_motion(
         return recording_corrected, motion_info
     else:
         return recording_corrected
+
+
+_doc_presets = "\n"
+for k, v in motion_options_preset.items():
+    if k == "":
+        continue
+    doc = v["doc"]
+    _doc_presets = _doc_presets + f"      * {k}: {doc}\n"
+
+correct_motion.__doc__ = correct_motion.__doc__.format(_doc_presets, _shared_job_kwargs_doc)
 
 
 def load_motion_info(folder):

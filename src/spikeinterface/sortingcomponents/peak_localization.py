@@ -365,9 +365,11 @@ class LocalizeGridConvolution(PipelineNode):
             self.prototype = prototype
         self.prototype = self.prototype[:, np.newaxis]
 
-        self.template_positions, self.weights, self.neighbours_mask = get_grid_convolution_templates_and_weights(
+        self.template_positions, self.weights, self.nearest_template_mask = get_grid_convolution_templates_and_weights(
             contact_locations, self.local_radius_um, self.upsampling_um, self.sigma_um, self.margin_um
         )
+
+        self.weights_sparsity_mask = self.weights > 0.01
 
         self._dtype = np.dtype(dtype_localize_by_method["grid_convolution"])
         self._kwargs.update(
@@ -375,7 +377,7 @@ class LocalizeGridConvolution(PipelineNode):
                 local_radius_um=self.local_radius_um,
                 prototype=self.prototype,
                 template_positions=self.template_positions,
-                neighbours_mask=self.neighbours_mask,
+                nearest_template_mask=self.nearest_template_mask,
                 weights=self.weights,
                 nbefore=self.nbefore,
                 percentile=self.percentile,
@@ -396,22 +398,31 @@ class LocalizeGridConvolution(PipelineNode):
             else:
                 amplitudes = waveforms[idx, self.nbefore, main_chan]
 
-            intersect = self.neighbours_mask[:, main_chan] == True
-            global_products = (waveforms[idx] / (amplitudes[:, np.newaxis, np.newaxis]) * self.prototype).sum(axis=1)
+            nearest_templates = self.nearest_template_mask[main_chan, :]
+            channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
+            num_chans = np.sum(channel_mask)
+            num_templates = np.sum(nearest_templates)
+            # print(np.sum(nearest_templates), channel_mask.shape, self.weights.shape, np.sum(channel_mask))
+
+            global_products = (
+                waveforms[idx, :, :][:, :, channel_mask] / (amplitudes[:, np.newaxis, np.newaxis]) * self.prototype
+            ).sum(axis=1)
             nb_templates = len(self.template_positions)
             found_positions = np.zeros((len(idx), 2), dtype=np.float32)
             scalar_products = np.zeros((len(idx), nb_templates), dtype=np.float32)
 
+            dot_products = np.zeros((self.weights.shape[0], len(idx), num_templates), dtype=np.float32)
             for count, weights in enumerate(self.weights):
-                dot_products = np.dot(global_products, weights[:, intersect])
-                dot_products = np.maximum(0, dot_products)
+                dot_products[count, :, :] = np.dot(global_products, weights[channel_mask, :][:, nearest_templates])
+            dot_products = np.maximum(0, dot_products)
+            if self.percentile < 100:
+                thresholds = np.percentile(dot_products, self.percentile, axis=(0, 2))
+                # print(np.sum(dot_products > thresholds[np.newaxis, :, np.newaxis]))
+                dot_products[dot_products < thresholds[np.newaxis, :, np.newaxis]] = 0
 
-                if self.percentile < 100:
-                    thresholds = np.percentile(dot_products, self.percentile, axis=1)
-                    dot_products[dot_products < thresholds[:, np.newaxis]] = 0
-
-                scalar_products[:, intersect] += dot_products
-                found_positions += np.dot(dot_products, self.template_positions[intersect])
+            for count, weights in enumerate(self.weights):
+                scalar_products[:, nearest_templates] += dot_products[count, :, :]
+                found_positions += np.dot(dot_products[count, :, :], self.template_positions[nearest_templates, :])
 
             found_positions /= scalar_products.sum(1)[:, np.newaxis]
             peak_locations["x"][idx] = found_positions[:, 0]

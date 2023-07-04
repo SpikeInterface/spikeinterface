@@ -585,13 +585,15 @@ def get_grid_convolution_templates_and_weights(
 
     import sklearn
 
-    dist = sklearn.metrics.pairwise_distances(template_positions, contact_locations)
-    neighbours_mask = dist < local_radius_um
+    # mask to get nearest template given a channel
+    dist = sklearn.metrics.pairwise_distances(contact_locations, template_positions)
+    nearest_template_mask = dist < local_radius_um
 
     weights = np.zeros((len(sigma_um), len(contact_locations), nb_templates), dtype=np.float32)
     for count, sigma in enumerate(sigma_um):
-        weights[count] = (neighbours_mask * np.exp(-(dist**2) / (2 * (sigma**2)))).T
-    return template_positions, weights, neighbours_mask
+        weights[count] = np.exp(-(dist**2) / (2 * (sigma**2)))
+
+    return template_positions, weights, nearest_template_mask
 
 
 if HAVE_NUMBA:

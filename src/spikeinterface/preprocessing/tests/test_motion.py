@@ -33,4 +33,5 @@ def test_estimate_and_correct_motion():
 
 
 if __name__ == "__main__":
-    test_estimate_and_correct_motion()
+    print(correct_motion.__doc__)
+    # test_estimate_and_correct_motion()

@@ -20,7 +20,26 @@ class MotionWidget(BaseWidget):
 
     possible_backends = {}
 
-    def __init__(self, rec, motion_info, depth_lim=None, motion_lim=None, backend=None, **backend_kwargs):
-        plot_data = dict(rec=rec, depth_lim=depth_lim, motion_lim=motion_lim, **motion_info)
+    def __init__(
+        self,
+        rec,
+        motion_info,
+        depth_lim=None,
+        motion_lim=None,
+        color_amplitude=False,
+        scatter_decimate=None,
+        amplitude_cmap="inferno",
+        backend=None,
+        **backend_kwargs,
+    ):
+        plot_data = dict(
+            rec=rec,
+            depth_lim=depth_lim,
+            motion_lim=motion_lim,
+            color_amplitude=color_amplitude,
+            scatter_decimate=scatter_decimate,
+            amplitude_cmap=amplitude_cmap,
+            **motion_info,
+        )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
