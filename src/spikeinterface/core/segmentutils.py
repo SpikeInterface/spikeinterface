@@ -24,7 +24,7 @@ def _check_sampling_frequencies(sampling_frequency_list, sampling_frequency_max_
         warnings.warn(
             "Inconsistent sampling frequency across datasets."
             + f" Diff is below hard bound={sampling_frequency_max_diff}Hz: concatenating anyway."
-            + f" Expect ~{round(diff_msec, 5)}ms shift over 24h dataset"
+            + f" Expect ~{round(diff_ms, 5)}ms shift over 24h dataset"
         )
 
 
