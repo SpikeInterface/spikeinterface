@@ -79,7 +79,7 @@ se.BinaryRecordingExtractor.write_recording(recording, file_paths)
 # Note that this new recording is now "on disk" and not "in memory" as the Numpy recording.
 # This means that the loading is "lazy" and the data are not loaded in memory.
 
-recording2 = se.BinaryRecordingExtractor(file_paths, sampling_frequency, num_channels, traces0.dtype)
+recording2 = se.BinaryRecordingExtractor(file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=traces0.dtype)
 print(recording2)
 
 ##############################################################################
