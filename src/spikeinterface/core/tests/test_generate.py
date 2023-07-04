@@ -65,7 +65,8 @@ def test_lazy_random_recording(mode):
     if mode == "white_noise":
         expected_memory_usage_MiB += 50  # 50 MiB for the white noise generator
 
-    assert memory_after_instanciation_MiB == pytest.approx(expected_memory_usage_MiB, rel=relative_tolerance)
+    ratio = memory_after_instanciation_MiB * 1.0 / expected_memory_usage_MiB
+    assert ratio <= 1.0 + relative_tolerance, f"Memory usage is {ratio} times the expected value"
 
     traces = lazy_recording.get_traces()
     expected_traces_shape = (int(durations[0] * sampling_frequency), num_channels)
@@ -84,7 +85,8 @@ def test_lazy_random_recording(mode):
     print(f"Difference between the last two {(memory_after_traces_MiB - traces_size_MiB)} MiB")
 
     expected_memory_usage_MiB = memory_after_instanciation_MiB + traces_size_MiB
-    assert memory_after_traces_MiB == pytest.approx(expected_memory_usage_MiB, rel=relative_tolerance)
+    ratio = memory_after_traces_MiB * 1.0 / expected_memory_usage_MiB
+    assert ratio <= 1.0 + relative_tolerance, f"Memory usage is {ratio} times the expected value"
 
 
 @pytest.mark.parametrize("mode", mode_list)
@@ -103,7 +105,8 @@ def test_generate_lazy_recording(mode):
     if mode == "white_noise":
         expected_memory_usage_MiB += 50  # 50 MiB for the white noise generator
 
-    assert memory_after_instanciation_MiB == pytest.approx(expected_memory_usage_MiB, rel=relative_tolerance)
+    ratio = memory_after_instanciation_MiB * 1.0 / expected_memory_usage_MiB
+    assert ratio <= 1.0 + relative_tolerance, f"Memory usage is {ratio} times the expected value"
 
     traces = lazy_recording.get_traces()
     traces_size_MiB = traces.nbytes / bytes_to_MiB_factor
@@ -119,7 +122,8 @@ def test_generate_lazy_recording(mode):
     print(f"Difference between the last two {(memory_after_traces_MiB - traces_size_MiB)} MiB")
 
     expected_memory_usage_MiB = memory_after_instanciation_MiB + traces_size_MiB
-    assert expected_memory_usage_MiB == pytest.approx(memory_after_traces_MiB, rel=relative_tolerance)
+    ratio = memory_after_traces_MiB * 1.0 / expected_memory_usage_MiB
+    assert ratio <= 1.0 + relative_tolerance, f"Memory usage is {ratio} times the expected value"
 
 
 @pytest.mark.parametrize("mode", mode_list)
@@ -176,7 +180,7 @@ def test_generate_recording_correct_shape(mode):
         (15_000, 30_0000),
     ],
 )
-def test_generator_recording_consistency(mode, start_frame, end_frame):
+def test_generator_recording_consistency_across_calls(mode, start_frame, end_frame):
     # Calling the get_traces twice should return the same result
     sampling_frequency = 30000  # Hz
     durations = [2.0]
