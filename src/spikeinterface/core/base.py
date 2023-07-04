@@ -58,7 +58,9 @@ class BaseExtractor:
         #  * number of units for sorting
         self._properties = {}
 
-        self.is_dumpable = True
+        self._is_dumpable = True
+        self._is_json_serializable = True
+
 
         # extractor specific list of pip extra requirements
         self.extra_requirements = []
@@ -372,7 +374,7 @@ class BaseExtractor:
             "class": class_name,
             "module": module,
             "kwargs": kwargs,
-            "dumpable": self.is_dumpable,
+            "dumpable": self._is_dumpable,
             "version": version,
             "relative_paths": (relative_to is not None),
         }

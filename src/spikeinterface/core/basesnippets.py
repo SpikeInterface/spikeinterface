@@ -26,7 +26,7 @@ class BaseSnippets(BaseRecordingSnippets):
         )
         self._nbefore = nbefore
         self._snippet_len = snippet_len
-        self.is_dumpable = True
+        self._is_json_serializable = True
 
         self._snippets_segments: List[BaseSnippetsSegment] = []
         # initialize main annotation and properties

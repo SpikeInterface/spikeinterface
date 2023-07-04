@@ -350,7 +350,6 @@ class InterpolateMotionRecording(BasePreprocessor):
             p=p,
             num_closest=num_closest,
         )
-        # self.is_dumpable= False
 
 
 class InterpolateMotionRecordingSegment(BasePreprocessorSegment):

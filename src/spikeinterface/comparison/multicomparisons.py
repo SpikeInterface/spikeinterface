@@ -226,7 +226,7 @@ class AgreementSortingExtractor(BaseSorting):
         self, sampling_frequency, multisortingcomparison, min_agreement_count=1, min_agreement_count_only=False
     ):
         self._msc = multisortingcomparison
-        self.is_dumpable = False
+        self._is_json_serializable = False
 
         if min_agreement_count_only:
             unit_ids = list(
@@ -251,6 +251,9 @@ class AgreementSortingExtractor(BaseSorting):
         for segment_index in range(multisortingcomparison._num_segments):
             sorting_segment = AgreementSortingSegment(multisortingcomparison._spiketrains[segment_index])
             self.add_sorting_segment(sorting_segment)
+        
+        self._kwargs = dict(sampling_frequency=sampling_frequency, multisortingcomparison=multisortingcomparison,
+                            min_agreement_count=min_agreement_count, min_agreement_count_only=min_agreement_count_only)
 
 
 class AgreementSortingSegment(BaseSortingSegment):

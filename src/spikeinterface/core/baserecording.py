@@ -32,7 +32,7 @@ class BaseRecording(BaseRecordingSnippets):
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
         )
 
-        self.is_dumpable = True
+        self._is_json_serializable = True
 
         self._recording_segments: List[BaseRecordingSegment] = []
 
