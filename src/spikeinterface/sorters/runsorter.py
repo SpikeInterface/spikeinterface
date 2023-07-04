@@ -653,7 +653,7 @@ def read_sorter_folder(output_folder, raise_error=True):
 
 def run_hdsort(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_hdsort is deprecated. Use run_sorter(sorter_name='hdsort') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -665,7 +665,7 @@ run_hdsort.__doc__ = _common_run_doc.format("hdsort")
 
 def run_klusta(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_klusta is deprecated. Use run_sorter(sorter_name='klusta') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -677,7 +677,7 @@ run_klusta.__doc__ = _common_run_doc.format("klusta")
 
 def run_tridesclous(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_tridesclous is deprecated. Use run_sorter(sorter_name='tridesclous') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -689,7 +689,7 @@ run_tridesclous.__doc__ = _common_run_doc.format("tridesclous")
 
 def run_mountainsort4(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_mountainsort4 is deprecated. Use run_sorter(sorter_name='mountainsort4') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -701,7 +701,7 @@ run_mountainsort4.__doc__ = _common_run_doc.format("mountainsort4")
 
 def run_mountainsort5(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_mountainsort5 is deprecated. Use run_sorter(sorter_name='mountainsort5') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -713,7 +713,7 @@ run_mountainsort5.__doc__ = _common_run_doc.format("mountainsort5")
 
 def run_ironclust(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_ironclust is deprecated. Use run_sorter(sorter_name='ironclust') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -725,7 +725,7 @@ run_ironclust.__doc__ = _common_run_doc.format("ironclust")
 
 def run_kilosort(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_kilosort is deprecated. Use run_sorter(sorter_name='kilosort') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -737,7 +737,7 @@ run_kilosort.__doc__ = _common_run_doc.format("kilosort")
 
 def run_kilosort2(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_kilosort2 is deprecated. Use run_sorter(sorter_name='kilosort2') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -749,7 +749,7 @@ run_kilosort2.__doc__ = _common_run_doc.format("kilosort2")
 
 def run_kilosort2_5(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_kilosort2_5 is deprecated. Use run_sorter(sorter_name='kilosort2_5') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -761,7 +761,7 @@ run_kilosort2_5.__doc__ = _common_run_doc.format("kilosort2_5")
 
 def run_kilosort3(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_kilosort3 is deprecated. Use run_sorter(sorter_name='kilosort3') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -773,7 +773,7 @@ run_kilosort3.__doc__ = _common_run_doc.format("kilosort3")
 
 def run_spykingcircus(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_spykingcircus is deprecated. Use run_sorter(sorter_name='spykingcircus') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -785,7 +785,7 @@ run_spykingcircus.__doc__ = _common_run_doc.format("spykingcircus")
 
 def run_herdingspikes(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_herdingspikes is deprecated. Use run_sorter(sorter_name='herdingspikes') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -797,7 +797,7 @@ run_herdingspikes.__doc__ = _common_run_doc.format("herdingspikes")
 
 def run_waveclus(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_waveclus is deprecated. Use run_sorter(sorter_name='waveclus') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -809,7 +809,7 @@ run_waveclus.__doc__ = _common_run_doc.format("waveclus")
 
 def run_waveclus_snippets(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_waveclus_snippets is deprecated. Use run_sorter(sorter_name='waveclus_snippets') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -818,7 +818,7 @@ def run_waveclus_snippets(*args, **kwargs):
 
 def run_combinato(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_combinato is deprecated. Use run_sorter(sorter_name='combinato') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -830,7 +830,7 @@ run_combinato.__doc__ = _common_run_doc.format("combinato")
 
 def run_yass(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_yass is deprecated. Use run_sorter(sorter_name='yass') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -842,7 +842,7 @@ run_yass.__doc__ = _common_run_doc.format("yass")
 
 def run_pykilosort(*args, **kwargs):
     warn(
-        "run_{sortername} is deprecated. Use run_sorter(sorter_name='sortername') instead.",
+        "run_pykilosort is deprecated. Use run_sorter(sorter_name='pykilosort') instead.",
         DeprecationWarning,
         stacklevel=2,
     )
