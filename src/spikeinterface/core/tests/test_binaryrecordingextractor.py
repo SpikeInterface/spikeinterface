@@ -15,17 +15,21 @@ else:
 
 def test_BinaryRecordingExtractor():
     num_seg = 2
-    num_chan = 3
+    num_channels = 3
     num_samples = 30
     sampling_frequency = 10000
     dtype = "int16"
 
     file_paths = [cache_folder / f"test_BinaryRecordingExtractor_{i}.raw" for i in range(num_seg)]
     for i in range(num_seg):
-        np.memmap(file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_chan))
+        np.memmap(file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_channels))
 
-    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
-    print(rec)
+    rec = BinaryRecordingExtractor(
+        file_paths=file_paths,
+        sampling_frequency=sampling_frequency,
+        num_channels=num_channels,
+        dtype=dtype,
+    )
 
     file_paths = [cache_folder / f"test_BinaryRecordingExtractor_copied_{i}.raw" for i in range(num_seg)]
     BinaryRecordingExtractor.write_recording(rec, file_paths)
@@ -47,9 +51,12 @@ def test_round_trip(tmp_path):
     BinaryRecordingExtractor.write_recording(recording=recording, dtype=dtype, file_paths=file_path)
 
     sampling_frequency = recording.get_sampling_frequency()
-    num_chan = recording.get_num_channels()
+    num_channels = recording.get_num_channels()
     binary_recorder = BinaryRecordingExtractor(
-        file_paths=file_path, sampling_frequency=sampling_frequency, num_chan=num_chan, dtype=dtype
+        file_paths=file_path,
+        sampling_frequency=sampling_frequency,
+        num_channels=num_channels,
+        dtype=dtype,
     )
 
     # Test for full traces
