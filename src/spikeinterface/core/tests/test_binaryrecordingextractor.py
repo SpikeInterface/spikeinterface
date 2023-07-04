@@ -1,6 +1,8 @@
 import pytest
 import numpy as np
 from pathlib import Path
+import sys
+import resource
 
 from spikeinterface.core import BinaryRecordingExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
@@ -91,6 +93,7 @@ def folder_with_binary_files(tmpdir_factory):
 
 
 def test_sequential_reading_of_small_traces(folder_with_binary_files):
+    # Test that memmap is readed correctly when pointing to specific frames
     folder = folder_with_binary_files
     num_channels = 32
     sampling_frequency = 30_000.0
@@ -151,6 +154,15 @@ def test_memory_effcienty(folder_with_binary_files):
     expected_memory_usage = memory_before_traces_bytes + traces_size_bytes
     expected_memory_usage_GiB = expected_memory_usage / 1024**3
     memory_after_traces_bytes_GiB = memory_after_traces_bytes / 1024**3
+
+    ratio = memory_after_traces_bytes_GiB / expected_memory_usage_GiB
+
+    assertion_msg = (
+        f"Peak memory {memory_after_traces_bytes_GiB} GiB usage is {ratio:.2f} times"
+        f"the expected memory usage of {expected_memory_usage_GiB} GiB."
+    )
+    assert ratio <= 1.05, assertion_msg
+
     assert memory_after_traces_bytes_GiB == pytest.approx(expected_memory_usage_GiB, rel=0.1)
 
 
@@ -175,9 +187,6 @@ def measure_peak_memory_usage():
         If the function is called on a Windows system.
     """
 
-    import sys
-    import resource
-
     if sys.platform == "win32":
         raise NotImplementedError("Function cannot be used on Windows")
 
@@ -190,6 +199,7 @@ def measure_peak_memory_usage():
     return mem_usage
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Don't know how to calculate peak memory on widnows")
 def test_peak_memory_usage(folder_with_binary_files):
     "This tests that there are no spikes in memory usage when reading traces."
     folder = folder_with_binary_files
@@ -212,10 +222,12 @@ def test_peak_memory_usage(folder_with_binary_files):
     expected_memory_usage = memory_before_traces_bytes + traces_size_bytes
     peak_memory_MiB = measure_peak_memory_usage() / 1024**2
     expected_memory_usage_MiB = expected_memory_usage / 1024**2
-    assert expected_memory_usage_MiB == pytest.approx(peak_memory_MiB, rel=0.1)
-
-    print("Expected memory usage: {:.2f} MiB".format(expected_memory_usage_MiB))
-    print(f"Peak memory usage: {peak_memory_MiB:.2f} MiB")
+    ratio = peak_memory_MiB / expected_memory_usage_MiB
+    assertion_msg = (
+        f"Peak memory {peak_memory_MiB} MiB usage is {ratio:.2f} times"
+        f"the expected memory usage of {expected_memory_usage_MiB} MiB."
+    )
+    assert ratio <= 1.05, assertion_msg
 
 
 if __name__ == "__main__":
