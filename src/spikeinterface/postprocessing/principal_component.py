@@ -689,20 +689,23 @@ def compute_principal_components(
         - 'by_channel_local': a local PCA is fitted for each channel (projection by channel)
         - 'by_channel_global': a global PCA is fitted for all channels (projection by channel)
         - 'concatenated': channels are concatenated and a global PCA is fitted
+        default 'by_channel_local'
     sparsity: ChannelSparsity or None
         The sparsity to apply to waveforms.
-        If waveform_extractor is already sparse, the default sparsity will be used.
+        If waveform_extractor is already sparse, the default sparsity will be used - default None
     whiten: bool
-        If True, waveforms are pre-whitened
+        If True, waveforms are pre-whitened - default True
     dtype: dtype
-        Dtype of the pc scores (default float32)
+        Dtype of the pc scores - default float32
     n_jobs: int
         Number of jobs used to fit the PCA model (if mode is 'by_channel_local') - default 1
     progress_bar: bool
         If True, a progress bar is shown - default False
     tmp_folder: str
-        You need to specify a tmp_folder, if mode=='by_channel_local' and if you run several compute_principal_components at the same time.
-        Otherwise, let None.
+        The temporary folder to use for parallel computation. If you run several `compute_principal_components`
+        functions in parallel with mode 'by_channel_local', you need to specify a different `tmp_folder` for each call,
+        to avoid overwriting to the same folder - default None
+
     Returns
     -------
     pc: WaveformPrincipalComponent
