@@ -175,9 +175,9 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         self.time_axis = time_axis
         self.file_path = file_path
         self.file = open(self.file_path, "rb")
-        self.elements_per_sample = self.num_chan * self.dtype.itemsize
+        self.bytes_per_sample = self.num_channels * self.dtype.itemsize
         self.data_size_in_bytes = Path(file_path).stat().st_size - file_offset
-        self.num_samples = self.data_size_in_bytes // self.elements_per_sample
+        self.num_samples = self.data_size_in_bytes // self.bytes_per_sample
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal block
@@ -202,12 +202,9 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         if end_frame > self.get_num_samples():
             raise ValueError(f"end_frame {end_frame} is larger than the number of samples {self.get_num_samples()}")
 
-        dtype_size_bytes = np.dtype(self.dtype).itemsize
-        elements_per_sample = self.num_chan * dtype_size_bytes
-
         # Calculate byte offsets for start and end frames
-        start_byte = self.file_offset + start_frame * elements_per_sample
-        end_byte = self.file_offset + end_frame * elements_per_sample
+        start_byte = self.file_offset + start_frame * self.bytes_per_sample
+        end_byte = self.file_offset + end_frame * self.bytes_per_sample
 
         # Calculate the length of the data chunk to load into memory
         length = end_byte - start_byte
@@ -216,7 +213,8 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         memmap_offset, start_offset = divmod(start_byte, mmap.ALLOCATIONGRANULARITY)
         memmap_offset *= mmap.ALLOCATIONGRANULARITY
 
-        # Adjust the length so it includes the extra data from rounding down the memmap offset to a multiple of ALLOCATIONGRANULARITY
+        # Adjust the length so it includes the extra data from rounding down
+        # the memmap offset to a multiple of ALLOCATIONGRANULARITY
         length += start_offset
 
         # Create the mmap object
@@ -225,11 +223,12 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         # Create a numpy array using the mmap object as the buffer
         # Note that the shape must be recalculated based on the new data chunk
         if self.time_axis == 0:
-            shape = ((end_frame - start_frame), self.num_chan)
+            shape = ((end_frame - start_frame), self.num_channels)
         else:
-            shape = (self.num_chan, (end_frame - start_frame))
+            shape = (self.num_channels, (end_frame - start_frame))
 
-        array = np.ndarray(
+        # Now the entire array should correspond to the data between start_frame and end_frame, so we can use it directly
+        traces = np.ndarray(
             shape=shape,
             dtype=self.dtype,
             buffer=memmap_obj,
@@ -237,10 +236,7 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         )
 
         if self.time_axis == 1:
-            array = array.T
-
-        # Now the entire array should correspond to the data between start_frame and end_frame, so we can use it directly
-        traces = array
+            traces = traces.T
 
         if channel_indices is not None:
             traces = traces[:, channel_indices]
