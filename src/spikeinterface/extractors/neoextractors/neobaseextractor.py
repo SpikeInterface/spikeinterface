@@ -253,38 +253,56 @@ class NeoRecordingSegment(BaseRecordingSegment):
 
 class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
     neo_returns_timestamps = False
-    # `neo_returns_timestamps` is a class attribute indicating whether `neo_reader.get_spike_timestamps`
-    # returns timestamps instead of frames, If True, then the segments do a transformation to frames.
-    # This should be modified in subclasses if it is known that a specific format returns timestamps (e.g. Mearec)
+    # `neo_returns_timestamps` is a class attribute indicating whether
+    # `neo_reader.get_spike_timestamps` returns timestamps instead of frames,
+    # If True, then the segments do a transformation to frames.
+    # For formats that return timestamps (e.g. Mearec) this should be set to
+    # True in the format class that inherits from this.
 
     need_t_start_from_signal_stream = False
-    # `need_t_start_from_signal_streamClass` is a class attribute indicating whether
+    # `need_t_start_from_signal_stream` is a class attribute indicating whether
     # `neo_reader.get_signal_t_start` is needed to get the t_start of the sorting correctly.
-    # Examples of this neuralynx and blackrock
+    # Examples of this are neuralynx and blackrock formats.
 
-    def __init__(
-        self, block_index=None, stream_index=None, sampling_frequency=None, use_natural_unit_ids=False, **neo_kwargs
-    ):
-        if stream_index is None and self.need_t_start_from_signal_stream:
-            raise ValueError("'stream_index' must be specified when need_t_start_from_signal_stream is True")
-
+    def __init__(self, block_index=None, sampling_frequency=None, use_natural_unit_ids=False, **neo_kwargs):
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
 
         self.use_natural_unit_ids = use_natural_unit_ids
-
-        # Get the stream index corresponding to the extracted frequency
         spike_channels = self.neo_reader.header["spike_channels"]
-
         if use_natural_unit_ids:
             unit_ids = spike_channels["id"]
             assert np.unique(unit_ids).size == unit_ids.size, "unit_ids is have duplications"
         else:
             # use interger based unit_ids
-            unit_ids = np.arange(spike_channels.size, dtype="int64")
+            unit_ids = np.arange(spike_channels.size, dtype="int32")
 
-        sampling_frequency_not_provided = sampling_frequency is None
-        if sampling_frequency_not_provided:
-            sampling_frequency, stream_id = self._infer_sampling_frequency_from_analog_signal()
+        if sampling_frequency is None:
+            stream_to_sampling_frequencies = self.get_stream_sampling_frequencies()
+            availalable_sampling_frequencies = list(stream_to_sampling_frequencies.values())
+            unique_sampling_frequencies = set(availalable_sampling_frequencies)
+            # If there is only one stream or multiple one with the same sampling frequency use that one
+            if len(unique_sampling_frequencies) == 1:
+                sampling_frequency = float(availalable_sampling_frequencies[0])
+            else:
+                instructions_for_user = (
+                    "Multiple streams ids with different sampling frequencies found in the file: \n"
+                    f"{stream_to_sampling_frequencies} \n"
+                    f"Please specify one of the following sampling frequencies"
+                    "When initializing the sorting extractor with the sampling frequency parameter."
+                )
+                raise ValueError(instructions_for_user)
+
+        if self.need_t_start_from_signal_stream:
+            stream_to_sampling_frequencies = self.get_stream_sampling_frequencies()
+            streams_with_given_sampling_frequency = [
+                stream_id for stream_id, sf in stream_to_sampling_frequencies.items() if float(sf) == sampling_frequency
+            ]
+            if len(stream_to_sampling_frequencies) == 1:
+                stream_id = streams_with_given_sampling_frequency[0]
+                signal_streams = self.neo_reader.header["signal_streams"]
+                stream_index = (signal_streams["id"] == stream_id).nonzero()[0][0]
+            else:
+                raise ValueError("Multiple stream indexes with the corresponding sampling frequency found in the file.")
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
@@ -345,6 +363,26 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         sampling_frequency = sig_channels[argmax]["sampling_rate"]
         stream_id = sig_channels[argmax]["stream_id"]
         return sampling_frequency, stream_id
+
+    def get_stream_sampling_frequencies(self) -> Dict[str, float]:
+        """
+        Build a maping from stream_id to sampling frequencies.
+            _description_
+        """
+        neo_header = self.neo_reader.header
+        signal_channels = neo_header["signal_channels"]
+
+        # Get unique pairs of channel_stream_id and channel_sampling_frequencies
+        channel_sampling_frequencies = signal_channels["sampling_rate"]
+        channel_stream_id = signal_channels["stream_id"]
+        unique_pairs = np.unique(np.vstack((channel_stream_id, channel_sampling_frequencies)).T, axis=0)
+
+        # Form a dictionary of stream_id to sampling_frequency
+        stream_to_sampling_frequencies = {}
+        for stream_id, sampling_frequency in unique_pairs:
+            stream_to_sampling_frequencies[stream_id] = sampling_frequency
+
+        return stream_to_sampling_frequencies
 
 
 class NeoSortingSegment(BaseSortingSegment):

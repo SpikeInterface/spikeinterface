@@ -85,25 +85,11 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
     neo_returns_timestamps = True
     name = "blackrock"
 
-    def __init__(self, file_path, stream_index: Optional[int] = None):
+    def __init__(self, file_path, sampling_frequency: float = None):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
+        NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, **neo_kwargs)
 
-        if stream_index is None:
-            stream_names, stream_ids = self.get_streams(file_path)
-
-            error_msg = (
-                "Black rock requires analog signal streams nsx5 or nsx6 to be present in for inferring spike times"
-            )
-
-            # Return the index of the first stream that is named nsx5 or nsx6 in that order
-            stream_index = next((index for index, name in enumerate(stream_names) if name == "nsx5"), None)
-            if stream_index is None:
-                stream_index = next((index for index, name in enumerate(stream_names) if name == "nsx6"), None)
-            assert stream_index is not None, error_msg
-            stream_index = 0
-
-        NeoBaseSortingExtractor.__init__(self, **neo_kwargs, stream_index=stream_index)
-        self._kwargs.update({"file_path": str(file_path)})
+        self._kwargs.update({"file_path": file_path, "sampling_frequency": self._sampling_frequency})
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
