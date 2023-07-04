@@ -25,7 +25,12 @@ def test_ChannelSliceRecording():
     for i in range(num_seg):
         traces = np.memmap(file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_chan))
         traces[:] = np.arange(3)[None, :]
-    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
+    rec = BinaryRecordingExtractor(
+        file_paths=file_paths,
+        sampling_frequency=sampling_frequency,
+        num_channels=num_chan,
+        dtype=dtype,
+    )
 
     # keep original ids
     rec_sliced = ChannelSliceRecording(rec, channel_ids=[0, 2])

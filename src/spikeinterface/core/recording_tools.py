@@ -79,27 +79,6 @@ def get_random_data_chunks(
         return chunk_list
 
 
-def get_noise_levels(
-    recording: "BaseRecording", return_scaled: bool = True, method: Literal["mad", "std"] = "mad", **random_chunk_kwargs
-):
-    """
-    Estimate signal std for each channel using median absolute deviation (MAD) and std.
-
-    Internally it samples some chunk across segment.
-    And then, it use MAD estimator (more robust than STD)
-
-    """
-    random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
-
-    if method == "mad":
-        med = np.median(random_chunks, axis=0, keepdims=True)
-        # hard-coded so that core doesn't depend on scipy
-        noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
-    elif method == "std":
-        noise_levels = np.std(random_chunks, axis=0)
-    return noise_levels
-
-
 def get_channel_distances(recording):
     """
     Distance between channel pairs
@@ -147,6 +126,61 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
     return np.array(closest_channels_inds), np.array(dists)
 
 
+def get_noise_levels(
+    recording: "BaseRecording",
+    return_scaled: bool = True,
+    method: Literal["mad", "std"] = "mad",
+    force_recompute: bool = False,
+    **random_chunk_kwargs,
+):
+    """
+    Estimate noise for each channel using MAD methods.
+    You can use standard deviation with `method='std'`
+
+    Internally it samples some chunk across segment.
+    And then, it use MAD estimator (more robust than STD)
+
+    Parameters
+    ----------
+
+    recording: BaseRecording
+        The recording extractor to get noise levels
+    return_scaled: bool
+        If True, returned noise levels are scaled to uV
+    method: str
+        'mad' or 'std'
+    force_recompute: bool
+        If True, noise levels are recomputed even if they are already stored in the recording extractor
+    random_chunk_kwargs: dict
+        Kwargs for get_random_data_chunks
+
+    Returns
+    -------
+    noise_levels: array
+        Noise levels for each channel
+    """
+
+    if return_scaled:
+        key = "noise_level_scaled"
+    else:
+        key = "noise_level_raw"
+
+    if key in recording.get_property_keys() and not force_recompute:
+        noise_levels = recording.get_property(key=key)
+    else:
+        random_chunks = get_random_data_chunks(recording, return_scaled=return_scaled, **random_chunk_kwargs)
+
+        if method == "mad":
+            med = np.median(random_chunks, axis=0, keepdims=True)
+            # hard-coded so that core doesn't depend on scipy
+            noise_levels = np.median(np.abs(random_chunks - med), axis=0) / 0.6744897501960817
+        elif method == "std":
+            noise_levels = np.std(random_chunks, axis=0)
+        recording.set_property(key, noise_levels)
+
+    return noise_levels
+
+
 def get_chunk_with_margin(
     rec_segment,
     start_frame,
@@ -175,6 +209,7 @@ def get_chunk_with_margin(
     if not (add_zeros or add_reflect_padding):
         if window_on_margin and not add_zeros:
             raise ValueError("window_on_margin requires add_zeros=True")
+
         if start_frame is None:
             left_margin = 0
             start_frame = 0
@@ -190,6 +225,7 @@ def get_chunk_with_margin(
             right_margin = length - end_frame
         else:
             right_margin = margin
+
         traces_chunk = rec_segment.get_traces(
             start_frame - left_margin,
             end_frame + right_margin,
@@ -198,8 +234,11 @@ def get_chunk_with_margin(
 
     else:
         # either add_zeros or reflect_padding
-        assert start_frame is not None
-        assert end_frame is not None
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = length
+
         chunk_size = end_frame - start_frame
         full_size = chunk_size + 2 * margin
 

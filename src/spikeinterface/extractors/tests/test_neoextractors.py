@@ -105,6 +105,7 @@ class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ["neuroscope"]
     entities = [
         "neuroscope/test1/test1.xml",
+        ("neuroscope/test2/signal1.dat", {"xml_file_path": local_folder / "neuroscope" / "test2" / "recording.xml"}),
     ]
 
 
@@ -284,21 +285,6 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         See issue #1228.
         """
         pass
-
-
-class CellExplorerSortingTest(SortingCommonTestSuite, unittest.TestCase):
-    ExtractorClass = CellExplorerSortingExtractor
-    downloads = ["cellexplorer"]
-    entities = [
-        "cellexplorer/dataset_1/20170311_684um_2088um_170311_134350.spikes.cellinfo.mat",
-        (
-            "cellexplorer/dataset_2/20170504_396um_0um_merge.spikes.cellinfo.mat",
-            {
-                "session_info_matfile_path": local_folder
-                / "cellexplorer/dataset_2/20170504_396um_0um_merge.sessionInfo.mat"
-            },
-        ),
-    ]
 
 
 if __name__ == "__main__":

@@ -12,14 +12,12 @@ def find_spikes_from_templates(recording, method="naive", method_kwargs={}, extr
     ----------
     recording: RecordingExtractor
         The recording extractor object
-    waveform_extractor: WaveformExtractor
-        The waveform extractor
     method: str
-        Which method to use ('naive' | 'tridesclous' | 'circus')
+        Which method to use ('naive' | 'tridesclous' | 'circus' | 'circus-omp' | 'wobble')
     method_kwargs: dict, optional
         Keyword arguments for the chosen method
     extra_outputs: bool
-        If True then method_kwargs is also return
+        If True then method_kwargs is also returned
     job_kwargs: dict
         Parameters for ChunkRecordingExecutor
 
@@ -32,7 +30,8 @@ def find_spikes_from_templates(recording, method="naive", method_kwargs={}, extr
 
     Notes
     -----
-    Templates are represented as WaveformExtractor so statistics can be extracted.
+    For all methods except 'wobble', templates are represented as a WaveformExtractor in method_kwargs
+    so statistics can be extracted.  For 'wobble' templates are represented as a numpy.ndarray.
     """
     from .method_list import matching_methods
 

@@ -25,6 +25,8 @@ class BaseRecording(BaseRecordingSnippets):
     _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
     _main_features = []  # recording do not handle features
 
+    _skip_properties = ["noise_level_raw", "noise_level_scaled"]
+
     def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
         BaseRecordingSnippets.__init__(
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
@@ -321,6 +323,32 @@ class BaseRecording(BaseRecordingSnippets):
         """
         return self.has_scaled()
 
+    def get_time_info(self, segment_index=None) -> dict:
+        """
+        Retrieves the timing attributes for a given segment index. As with
+        other recorders this method only needs a segment index in the case
+        of multi-segment recordings.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following key-value pairs:
+
+            - 'sampling_frequency': The sampling frequency of the RecordingSegment.
+            - 't_start': The start time of the RecordingSegment.
+            - 'time_vector': The time vector of the RecordingSegment.
+
+        Notes
+        -----
+        The keys are always present, but the values may be None.
+        """
+
+        segment_index = self._check_segment_index(segment_index)
+        rs = self._recording_segments[segment_index]
+        time_kwargs = rs.get_times_kwargs()
+
+        return time_kwargs
+
     def get_times(self, segment_index=None):
         """Get time vector for a recording segment.
 
@@ -422,7 +450,7 @@ class BaseRecording(BaseRecordingSnippets):
             binary_rec = BinaryRecordingExtractor(
                 file_paths=file_paths,
                 sampling_frequency=self.get_sampling_frequency(),
-                num_chan=self.get_num_channels(),
+                num_channels=self.get_num_channels(),
                 dtype=dtype,
                 t_starts=t_starts,
                 channel_ids=self.get_channel_ids(),
@@ -618,6 +646,11 @@ class BaseRecording(BaseRecordingSnippets):
         # good job you pass all crucible
         return True
 
+    def astype(self, dtype):
+        from ..preprocessing.astype import astype
+
+        return astype(self, dtype=dtype)
+
 
 class BaseRecordingSegment(BaseSegment):
     """
@@ -652,10 +685,27 @@ class BaseRecordingSegment(BaseSegment):
                 time_vector += self.t_start
             return time_vector
 
-    def get_times_kwargs(self):
-        # useful for other internal RecordingSegment
-        d = dict(sampling_frequency=self.sampling_frequency, t_start=self.t_start, time_vector=self.time_vector)
-        return d
+    def get_times_kwargs(self) -> dict:
+        """
+        Retrieves the timing attributes characterizing a RecordingSegment
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following key-value pairs:
+
+            - 'sampling_frequency': The sampling frequency of the RecordingSegment.
+            - 't_start': The start time of the RecordingSegment.
+            - 'time_vector': The time vector of the RecordingSegment.
+
+        Notes
+        -----
+        The keys are always present, but the values may be None.
+        """
+        time_kwargs = dict(
+            sampling_frequency=self.sampling_frequency, t_start=self.t_start, time_vector=self.time_vector
+        )
+        return time_kwargs
 
     def sample_index_to_time(self, sample_ind):
         """

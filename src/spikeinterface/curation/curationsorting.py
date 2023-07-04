@@ -44,7 +44,7 @@ class CurationSorting:
         if np.issubdtype(parent_units.dtype, np.character):
             self.max_used_id = max([-1] + [int(p) for p in parent_units if p.isdigit()])
         else:
-            self.max_used_id = max(parent_units)
+            self.max_used_id = max(parent_units) if len(parent_units) > 0 else 0
 
         self._kwargs = dict(parent_sorting=parent_sorting, make_graph=make_graph, properties_policy=properties_policy)
 
@@ -80,7 +80,7 @@ class CurationSorting:
         current_sorting = self._sorting_stages[self._sorting_stages_i]
         if new_unit_id is None:
             new_unit_id = self._get_unused_id()[0]
-        else:
+        elif new_unit_id not in units_to_merge:
             assert new_unit_id not in current_sorting.unit_ids, f"new_unit_id already exists!"
         new_sorting = MergeUnitsSorting(
             parent_sorting=current_sorting,

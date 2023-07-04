@@ -2,7 +2,7 @@ import math
 import pickle
 from pathlib import Path
 import shutil
-from typing import Optional
+from typing import Iterable, Literal, Optional
 import json
 
 import numpy as np
@@ -16,9 +16,10 @@ from .baserecording import BaseRecording
 from .basesorting import BaseSorting
 from .core_tools import check_json
 from .job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
+from .numpyextractors import NumpySorting
 from .recording_tools import check_probe_do_not_overlap, get_rec_attributes
-from .waveform_tools import extract_waveforms_to_buffers, has_exceeding_spikes
 from .sparsity import ChannelSparsity, compute_sparsity, _sparsity_doc
+from .waveform_tools import extract_waveforms_to_buffers, has_exceeding_spikes
 
 _possible_template_modes = ("average", "std", "median")
 
@@ -74,9 +75,9 @@ class WaveformExtractor:
         sorting: BaseSorting,
         folder=None,
         rec_attributes=None,
-        allow_unfiltered=False,
+        allow_unfiltered: bool = False,
         sparsity=None,
-    ):
+    ) -> None:
         self.sorting = sorting
         self._rec_attributes = None
         self.set_recording(recording, rec_attributes, allow_unfiltered)
@@ -107,7 +108,7 @@ class WaveformExtractor:
             self.format = "memory"
             self._memory_objects = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         clsname = self.__class__.__name__
         nseg = self.get_num_segments()
         nchan = self.get_num_channels()
@@ -121,7 +122,7 @@ class WaveformExtractor:
         return txt
 
     @classmethod
-    def load(cls, folder, with_recording=True, sorting=None):
+    def load(cls, folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None) -> "WaveformExtractor":
         folder = Path(folder)
         assert folder.is_dir(), "Waveform folder does not exists"
         if folder.suffix == ".zarr":
@@ -130,7 +131,9 @@ class WaveformExtractor:
             return WaveformExtractor.load_from_folder(folder, with_recording=with_recording, sorting=sorting)
 
     @classmethod
-    def load_from_folder(cls, folder, with_recording=True, sorting=None):
+    def load_from_folder(
+        cls, folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None
+    ) -> "WaveformExtractor":
         folder = Path(folder)
         assert folder.is_dir(), f"This waveform folder does not exists {folder}"
 
@@ -154,7 +157,7 @@ class WaveformExtractor:
         else:
             try:
                 recording = load_extractor(folder / "recording.json", base_folder=folder)
-                rec_attributes = get_rec_attributes(recording)
+                rec_attributes = None
             except:
                 raise Exception("The recording could not be loaded. You can use the `with_recording=False` argument")
 
@@ -182,7 +185,9 @@ class WaveformExtractor:
         return we
 
     @classmethod
-    def load_from_zarr(cls, folder, with_recording=True, sorting=None):
+    def load_from_zarr(
+        cls, folder, with_recording: bool = True, sorting: Optional[BaseSorting] = None
+    ) -> "WaveformExtractor":
         import zarr
 
         folder = Path(folder)
@@ -205,7 +210,7 @@ class WaveformExtractor:
             try:
                 recording_dict = waveforms_root.attrs["recording"]
                 recording = load_extractor(recording_dict, base_folder=folder)
-                rec_attributes = get_rec_attributes(recording)
+                rec_attributes = None
             except:
                 raise Exception("The recording could not be loaded. You can use the `with_recording=False` argument")
 
@@ -231,15 +236,15 @@ class WaveformExtractor:
     @classmethod
     def create(
         cls,
-        recording,
-        sorting,
+        recording: BaseRecording,
+        sorting: BaseSorting,
         folder,
-        mode="folder",
-        remove_if_exists=False,
-        use_relative_path=False,
-        allow_unfiltered=False,
+        mode: Literal["folder", "memory"] = "folder",
+        remove_if_exists: bool = False,
+        use_relative_path: bool = False,
+        allow_unfiltered: bool = False,
         sparsity=None,
-    ):
+    ) -> "WaveformExtractor":
         assert mode in ("folder", "memory")
         # create rec_attributes
         if has_exceeding_spikes(recording, sorting):
@@ -296,10 +301,10 @@ class WaveformExtractor:
             rec_attributes=rec_attributes,
         )
 
-    def is_sparse(self):
+    def is_sparse(self) -> bool:
         return self.sparsity is not None
 
-    def has_waveforms(self):
+    def has_waveforms(self) -> bool:
         if self.folder is not None:
             if self.format == "binary":
                 return (self.folder / "waveforms").is_dir()
@@ -311,7 +316,7 @@ class WaveformExtractor:
         else:
             return self._memory_objects is not None
 
-    def delete_waveforms(self):
+    def delete_waveforms(self) -> None:
         """
         Deletes waveforms folder.
         """
@@ -328,7 +333,7 @@ class WaveformExtractor:
             self._memory_objects = None
 
     @classmethod
-    def register_extension(cls, extension_class):
+    def register_extension(cls, extension_class) -> None:
         """
         This maintains a list of possible extensions that are available.
         It depends on the imported submodules (e.g. for postprocessing module).
@@ -350,7 +355,7 @@ class WaveformExtractor:
 
     # map some method from recording and sorting
     @property
-    def recording(self):
+    def recording(self) -> BaseRecording:
         if not self.has_recording():
             raise ValueError(
                 'WaveformExtractor is used in mode "with_recording=False" ' "this operation needs the recording"
@@ -358,46 +363,46 @@ class WaveformExtractor:
         return self._recording
 
     @property
-    def channel_ids(self):
+    def channel_ids(self) -> np.ndarray:
         if self.has_recording():
             return self.recording.channel_ids
         else:
             return np.array(self._rec_attributes["channel_ids"])
 
     @property
-    def sampling_frequency(self):
+    def sampling_frequency(self) -> float:
         return self.sorting.get_sampling_frequency()
 
     @property
-    def unit_ids(self):
+    def unit_ids(self) -> np.ndarray:
         return self.sorting.unit_ids
 
     @property
-    def nbefore(self):
+    def nbefore(self) -> int:
         nbefore = int(self._params["ms_before"] * self.sampling_frequency / 1000.0)
         return nbefore
 
     @property
-    def nafter(self):
+    def nafter(self) -> int:
         nafter = int(self._params["ms_after"] * self.sampling_frequency / 1000.0)
         return nafter
 
     @property
-    def nsamples(self):
+    def nsamples(self) -> int:
         return self.nbefore + self.nafter
 
     @property
-    def return_scaled(self):
+    def return_scaled(self) -> bool:
         return self._params["return_scaled"]
 
     @property
     def dtype(self):
         return self._params["dtype"]
 
-    def has_recording(self):
+    def has_recording(self) -> bool:
         return self._recording is not None
 
-    def get_num_samples(self, segment_index=None):
+    def get_num_samples(self, segment_index: Optional[int] = None) -> int:
         if self.has_recording():
             return self.recording.get_num_samples(segment_index)
         else:
@@ -406,23 +411,23 @@ class WaveformExtractor:
             segment_index = self.sorting._check_segment_index(segment_index)
             return self._rec_attributes["num_samples"][segment_index]
 
-    def get_total_samples(self):
+    def get_total_samples(self) -> int:
         s = 0
         for segment_index in range(self.get_num_segments()):
             s += self.get_num_samples(segment_index)
         return s
 
-    def get_total_duration(self):
+    def get_total_duration(self) -> float:
         duration = self.get_total_samples() / self.sampling_frequency
         return duration
 
-    def get_num_channels(self):
+    def get_num_channels(self) -> int:
         if self.has_recording():
             return self.recording.get_num_channels()
         else:
             return self._rec_attributes["num_channels"]
 
-    def get_num_segments(self):
+    def get_num_segments(self) -> int:
         return self.sorting.get_num_segments()
 
     def get_probegroup(self):
@@ -431,7 +436,7 @@ class WaveformExtractor:
         else:
             return self._rec_attributes["probegroup"]
 
-    def is_filtered(self):
+    def is_filtered(self) -> bool:
         if self.has_recording():
             return self.recording.is_filtered()
         else:
@@ -442,7 +447,7 @@ class WaveformExtractor:
         assert len(probegroup.probes) == 1, "There are several probes. Use `get_probegroup()`"
         return probegroup.probes[0]
 
-    def get_channel_locations(self):
+    def get_channel_locations(self) -> np.ndarray:
         # important note : contrary to recording
         # this give all channel locations, so no kwargs like channel_ids and axes
         if self.has_recording():
@@ -457,7 +462,7 @@ class WaveformExtractor:
             else:
                 raise Exception("There are no channel locations")
 
-    def channel_ids_to_indices(self, channel_ids):
+    def channel_ids_to_indices(self, channel_ids) -> np.ndarray:
         if self.has_recording():
             return self.recording.ids_to_indices(channel_ids)
         else:
@@ -465,7 +470,7 @@ class WaveformExtractor:
             indices = np.array([all_channel_ids.index(id) for id in channel_ids], dtype=int)
             return indices
 
-    def get_recording_property(self, key):
+    def get_recording_property(self, key) -> np.ndarray:
         if self.has_recording():
             return self.recording.get_property(key)
         else:
@@ -473,7 +478,7 @@ class WaveformExtractor:
             values = np.array(self._rec_attributes["properties"].get(key, None))
             return values
 
-    def get_sorting_property(self, key):
+    def get_sorting_property(self, key) -> np.ndarray:
         return self.sorting.get_property(key)
 
     def get_extension_class(self, extension_name):
@@ -495,7 +500,7 @@ class WaveformExtractor:
         ext_class = extensions_dict[extension_name]
         return ext_class
 
-    def is_extension(self, extension_name):
+    def is_extension(self, extension_name) -> bool:
         """
         Check if the extension exists in memory or in the folder.
 
@@ -545,7 +550,7 @@ class WaveformExtractor:
             raise Exception(f"Extension {extension_name} not available")
         return self._loaded_extensions[extension_name]
 
-    def delete_extension(self, extension_name):
+    def delete_extension(self, extension_name) -> None:
         """
         Deletes an existing extension.
 
@@ -580,7 +585,7 @@ class WaveformExtractor:
                 extension_names_in_folder.append(extension_class.extension_name)
         return extension_names_in_folder
 
-    def _reset(self):
+    def _reset(self) -> None:
         self._waveforms = {}
         self._template_cache = {}
         self._params = {}
@@ -634,6 +639,9 @@ class WaveformExtractor:
                         f"some recordingless functions might not be available"
                     )
         else:
+            if rec_attributes is None:
+                rec_attributes = get_rec_attributes(recording)
+
             if recording.get_num_segments() != self.get_num_segments():
                 raise ValueError(
                     f"Couldn't set the WaveformExtractor recording: num_segments do not match!\n{self.get_num_segments()} != {recording.get_num_segments()}"
@@ -644,10 +652,8 @@ class WaveformExtractor:
                 )
             if self._rec_attributes is not None:
                 reference_channel_ids = self._rec_attributes["channel_ids"]
-            elif rec_attributes is not None:
-                reference_channel_ids = rec_attributes["channel_ids"]
             else:
-                raise ValueError("WaveformExtractor: rec_attributes is None")
+                reference_channel_ids = rec_attributes["channel_ids"]
             if not np.array_equal(reference_channel_ids, recording.channel_ids):
                 raise ValueError(
                     f"Couldn't set the WaveformExtractor recording: channel_ids do not match!\n{reference_channel_ids}"
@@ -664,7 +670,14 @@ class WaveformExtractor:
         self._recording = recording
         self._rec_attributes = rec_attributes
 
-    def set_params(self, ms_before=1.0, ms_after=2.0, max_spikes_per_unit=500, return_scaled=False, dtype=None):
+    def set_params(
+        self,
+        ms_before: float = 1.0,
+        ms_after: float = 2.0,
+        max_spikes_per_unit: int = 500,
+        return_scaled: bool = False,
+        dtype=None,
+    ) -> None:
         """
         Set parameters for waveform extraction
 
@@ -711,7 +724,7 @@ class WaveformExtractor:
         if self.folder is not None:
             (self.folder / "params.json").write_text(json.dumps(check_json(self._params), indent=4), encoding="utf8")
 
-    def select_units(self, unit_ids, new_folder=None, use_relative_path=False):
+    def select_units(self, unit_ids, new_folder=None, use_relative_path: bool = False) -> "WaveformExtractor":
         """
         Filters units by creating a new waveform extractor object in a new folder.
 
@@ -803,7 +816,9 @@ class WaveformExtractor:
 
         return we
 
-    def save(self, folder, format="binary", use_relative_path=False, overwrite=False, sparsity=None, **kwargs):
+    def save(
+        self, folder, format="binary", use_relative_path: bool = False, overwrite: bool = False, sparsity=None, **kwargs
+    ) -> "WaveformExtractor":
         """
         Save WaveformExtractor object to disk.
 
@@ -965,7 +980,15 @@ class WaveformExtractor:
 
         return new_we
 
-    def get_waveforms(self, unit_id, with_index=False, cache=False, lazy=True, sparsity=None, force_dense=False):
+    def get_waveforms(
+        self,
+        unit_id,
+        with_index: bool = False,
+        cache: bool = False,
+        lazy: bool = True,
+        sparsity=None,
+        force_dense: bool = False,
+    ):
         """
         Return waveforms for the specified unit id.
 
@@ -1077,7 +1100,7 @@ class WaveformExtractor:
             sampled_index = self._memory_objects["sampled_indices"][unit_id]
         return sampled_index
 
-    def get_waveforms_segment(self, segment_index, unit_id, sparsity):
+    def get_waveforms_segment(self, segment_index: int, unit_id, sparsity):
         """
         Return waveforms from a specified segment and unit_id.
 
@@ -1099,7 +1122,7 @@ class WaveformExtractor:
         mask = index_ar["segment_index"] == segment_index
         return wfs[mask, :, :]
 
-    def precompute_templates(self, modes=("average", "std")):
+    def precompute_templates(self, modes=("average", "std")) -> None:
         """
         Precompute all template for different "modes":
           * average
@@ -1144,7 +1167,7 @@ class WaveformExtractor:
                 template_file = self.folder / f"templates_{mode}.npy"
                 np.save(template_file, templates)
 
-    def get_all_templates(self, unit_ids=None, mode="average"):
+    def get_all_templates(self, unit_ids: Optional[Iterable] = None, mode="average"):
         """
         Return  templates (average waveform) for multiple units.
 
@@ -1171,7 +1194,7 @@ class WaveformExtractor:
 
         return np.array(templates)
 
-    def get_template(self, unit_id, mode="average", sparsity=None, force_dense=False):
+    def get_template(self, unit_id, mode="average", sparsity=None, force_dense: bool = False):
         """
         Return template (average waveform).
 
@@ -1195,7 +1218,7 @@ class WaveformExtractor:
         assert unit_id in self.sorting.unit_ids
 
         if sparsity is not None:
-            assert not self.is_sparse(), "Waveforms are alreayd sparse! Cannot apply an additional sparsity."
+            assert not self.is_sparse(), "Waveforms are already sparse! Cannot apply an additional sparsity."
 
         unit_ind = self.sorting.id_to_index(unit_id)
 
@@ -1302,32 +1325,16 @@ class WaveformExtractor:
 
         selected_spikes = self.sample_spikes(seed=seed)
 
-        selected_spike_times = {}
-        for unit_id in self.sorting.unit_ids:
-            selected_spike_times[unit_id] = []
-            for segment_index in range(self.sorting.get_num_segments()):
-                spike_times = self.sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                sel = selected_spikes[unit_id][segment_index]
-                selected_spike_times[unit_id].append(spike_times[sel])
-
-        spikes = []
+        selected_spike_times = []
         for segment_index in range(self.sorting.get_num_segments()):
-            num_in_seg = np.sum([selected_spikes[unit_id][segment_index].size for unit_id in unit_ids], dtype=np.int64)
-            spike_dtype = [("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
-            spikes_ = np.zeros(num_in_seg, dtype=spike_dtype)
-            pos = 0
-            for unit_ind, unit_id in enumerate(unit_ids):
+            selected_spike_times.append({})
+
+            for unit_id in self.sorting.unit_ids:
                 spike_times = self.sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                 sel = selected_spikes[unit_id][segment_index]
-                n = sel.size
-                spikes_[pos : pos + n]["sample_index"] = spike_times[sel]
-                spikes_[pos : pos + n]["unit_index"] = unit_ind
-                spikes_[pos : pos + n]["segment_index"] = segment_index
-                pos += n
-            order = np.argsort(spikes_)
-            spikes_ = spikes_[order]
-            spikes.append(spikes_)
-        spikes = np.concatenate(spikes)
+                selected_spike_times[segment_index][unit_id] = spike_times[sel]
+
+        spikes = NumpySorting.from_dict(selected_spike_times, self.sampling_frequency).to_spike_vector()
 
         if self.folder is not None:
             wf_folder = self.folder / "waveforms"

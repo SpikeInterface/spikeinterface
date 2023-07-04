@@ -20,7 +20,7 @@ For now, we have methods for:
  * peak localization
  * peak selection
  * motion estimation
- * motion correction
+ * motion interpolation
  * clustering
  * template matching
 
@@ -200,26 +200,26 @@ Here is an example with non-rigid motion estimation:
 In this example, because it is a non-rigid estimation, :code:`motion` is a 2d array (num_time_bins, num_spatial_bins).
 
 
-Motion correction
------------------
+Motion interpolation
+--------------------
 
-The estimated motion can be used to correct the motion, in other words, for drift correction.
+The estimated motion can be used to interpolate traces, in other words, for drift correction.
 One possible way is to make an interpolation sample-by-sample to compensate for the motion.
-The :py:class:`~spikeinterface.sortingcomponents.motion_correction.CorrectMotionRecording` is a preprocessing step doing
-this. This preprocessing is *lazy*, so that interpolation is done on-the-fly. However, the class needs the
+The :py:class:`~spikeinterface.sortingcomponents.motion_interpolation.InterpolateMotionRecording` is a preprocessing
+step doing this. This preprocessing is *lazy*, so that interpolation is done on-the-fly. However, the class needs the
 "motion vector" as input, which requires a relatively long computation (peak detection, localization and motion
 estimation).
 
-Here is a short example that depends on the output of "Motion estimation":
+Here is a short example that depends on the output of "Motion interpolation":
 
 
 .. code-block:: python
 
-  from spikeinterface.sortingcomponents.motion_correction import CorrectMotionRecording
+  from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
 
-  recording_corrected = CorrectMotionRecording(recording_with_drift, motion, temporal_bins, spatial_bins
-                                              spatial_interpolation_method='kriging,
-                                              border_mode='remove_channels')
+  recording_corrected = InterpolateMotionRecording(recording_with_drift, motion, temporal_bins, spatial_bins
+                                                   spatial_interpolation_method='kriging,
+                                                   border_mode='remove_channels')
 
 **Notes**:
   * :code:`spatial_interpolation_method` "kriging" or "iwd" do not play a big role.
@@ -273,14 +273,17 @@ Template matching is the final step used in many sorters (Kilosort, SpyKING-Circ
 In this step, from a given catalogue (or dictionary) of templates (or atoms), the algorithms try to *explain* the
 traces as a linear sum of a template plus a residual noise.
 
-At the moment, there are four methods implemented:
+At the moment, there are five methods implemented:
 
   * 'naive': a very naive implemenation used as a reference for benchmarks
   * 'tridesclous': the algorithm for template matching implemented in Tridesclous
   * 'circus': the algorithm for template matching implemented in SpyKING-Circus
   * 'circus-omp': a updated algorithm similar to SpyKING-Circus but with OMP (orthogonal macthing
     pursuit)
+  * 'wobble' : an algorithm loosely based on YASS that scales template amplitudes and shifts them in time
+    to match detected spikes
 
-Very preliminary benchmarks suggest that:
- * 'circus-omp' is the most accurate, but a bit slow.
- * 'tridesclous' is the fastest and has very decent accuracy
+Preliminary benchmarks suggest that:
+ * 'circus-omp' is very accurate, but a bit slow.
+ * 'tridesclous' is the fastest with decent accuracy
+ * 'wobble' is much faster and a bit more accurate than 'circus-omp'
