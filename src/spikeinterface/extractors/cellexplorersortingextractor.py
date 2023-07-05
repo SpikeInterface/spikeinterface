@@ -112,7 +112,7 @@ class CellExplorerSortingExtractor(BaseSorting):
             "filtWaveform_all",
             "timeWaveform_all",
             "channels_all",
-        ]
+        ]  # Note that the ignore_fields only works in matlab files that were saved on hdf5 files
         matlab_data = read_mat(self.spikes_cellinfo_path, ignore_fields=ignore_fields)
         spikes_data = matlab_data["spikes"]
 
@@ -150,7 +150,7 @@ class CellExplorerSortingExtractor(BaseSorting):
         sorting_segment = CellExplorerSortingSegment(spiketrains_dict, unit_ids)
         self.add_sorting_segment(sorting_segment)
 
-        self.extra_requirements.append(["scipy", "pymatreader"])
+        self.extra_requirements.append(["pymatreader"])
 
         self._kwargs = dict(
             file_path=str(self.spikes_cellinfo_path),
@@ -159,6 +159,19 @@ class CellExplorerSortingExtractor(BaseSorting):
         )
 
     def _retrieve_sampling_frequency_from_session_file(self) -> float | None:
+        """
+        Retrieve the sampling frequency from the `.session.mat` file if available.
+
+        This function tries to locate a .session.mat file corresponding to the current session. If found, it loads the
+        data from the file, ignoring certain fields. It then tries to find 'extracellular' in the 'session' data,
+        and if found, retrieves the sampling frequency ('sr') from the 'extracellular' data.
+
+        Returns
+        -------
+        float | None
+            The sampling frequency for the current session, or None if not found.
+
+        """
         from pymatreader import read_mat
 
         sampling_frequency = None
