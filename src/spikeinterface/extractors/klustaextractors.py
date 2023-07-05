@@ -139,8 +139,10 @@ class KlustaSortingExtractor(BaseSorting):
         quality = [e.lower() for e in cluster_groups_name]
         self.set_property("quality", quality)
 
-        self._kwargs = {"file_or_folder_path": str(Path(file_or_folder_path).absolute()),
-                        "exclude_cluster_groups": exclude_cluster_groups}
+        self._kwargs = {
+            "file_or_folder_path": str(Path(file_or_folder_path).absolute()),
+            "exclude_cluster_groups": exclude_cluster_groups,
+        }
 
 
 class KlustSortingSegment(BaseSortingSegment):
