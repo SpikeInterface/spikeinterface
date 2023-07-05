@@ -1,5 +1,5 @@
 """Classes and functions for computing multiple quality metrics."""
-
+import warnings
 from copy import deepcopy
 
 import numpy as np
@@ -91,6 +91,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         progress_bar = job_kwargs["progress_bar"]
 
         unit_ids = self.sorting.unit_ids
+        self._warn_on_empty_units()
         import pandas as pd
 
         metrics = pd.DataFrame(index=unit_ids)
@@ -138,6 +139,14 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
                 metrics[col] = pd.Series(values)
 
         self._extension_data["metrics"] = metrics
+
+    def _warn_on_empty_units(self):
+        empty_units = self.sorting.get_empty_units()
+        if np.any(empty_units):
+            warnings.warn(
+                f"Units {empty_units} are empty. Quality metrcs will be non-interpretable "
+                f"for these units.\n To remove empty units, use `sorting.remove_empty_units()`."
+            )
 
     def get_data(self):
         """
