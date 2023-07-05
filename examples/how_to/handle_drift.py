@@ -4,29 +4,29 @@
 
 # # Handle motion/drift with spikeinterface
 #
-# Spikeinterface offer a very flexible framework to handle drift as a preprocessing step.
-# Please read this in detail, `motion_correction`.
+# Spikeinterface offers a very flexible framework to handle drift as a preprocessing step.
+# If you want to know more, please read the `motion_correction` section of the documentation.
 #
-# Here a short demo to handle drift using the level function See `spikeinterface.preprocessing.correct_motion()`.
+# Here is a short demo on how to handle drift using the high-level function `spikeinterface.preprocessing.correct_motion()`.
 #
-# This function take as input a preprocessed recording and then internally run several steps (can be slow) and return lazy
-# recording that interpolate on-the-fly tarces to compensate the motion vector.
+# This function takes a preprocessed recording as input and then internally runs several steps (it can be slow!) and returns a lazy
+# recording that interpolates the traces on-the-fly to compensate for the motion.
 #
-# Internally this function do:
+# Internally this function runs the following steps:
 #
 #      1. localize_peaks()
 #      2. select_peaks() (optional)
 #      3. estimate_motion()
 #      4. interpolate_motion()
 #
-# All theses have many internal methods and many parameters.
+# All these sub-steps can be run with different methods and have many parameters.
 #
-# The high level function propose 3 predifined presets and we will explore theses preset using a very well known public dataset done Nick Steinmetz:
+# The high-level function suggests 3 predifined "presets" and we will explore them using a very well known public dataset recorded by Nick Steinmetz:
 # [Imposed motion datasets](https://figshare.com/articles/dataset/_Imposed_motion_datasets_from_Steinmetz_et_al_Science_2021/14024495)
 #
-# This dataset contain 3 recording and each recording contain neuropixel1 and neuropixel2.
+# This dataset contains 3 recordings and each recording contains a Neuropixels 1 and a Neuropixels 2 probe.
 #
-# Here we will use dataset1 with neuropixel1. This dataset is the *"hello world"* of the drift correction in spike sorting community!
+# Here we will use *dataset1* with *neuropixel1*. This dataset is the *"hello world"* for drift correction in the spike sorting community!
 #
 #
 
@@ -48,34 +48,36 @@ raw_rec = si.read_spikeglx(dataset_folder)
 raw_rec
 
 
+# We preprocess the recording with bandpass filter and a common median reference.
+# Note, that it is better to not whiten the recording before motion estimation to get a better estimate of peak locations!
+
 def preprocess_chain(rec):
-    rec = si.bandpass_filter(raw_rec, freq_min=300., freq_max=6000.)
+    rec = si.bandpass_filter(rec, freq_min=300., freq_max=6000.)
     rec = si.common_reference(rec, reference='global', operator='median')
     return rec
 rec = preprocess_chain(raw_rec)
 
 job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
 
-# ### Run with one function !
+# ### Run motion correction with one function!
 #
-# Correcting the drift is easy! It is a unique function.
+# Correcting for drift is easy! You just need to run a single function.
+# We will try this function with 3 presets.
 #
-# We will try this function with 3 parameters set.
+# Internally a preset is a dictionary of dictionaries containing all parameters for every steps.
 #
-# Internally a preset is a dict of dict contain all parameters for every steps.
-#
-# Here we will save the results into a folder for further loading and plotting.
+# Here we also save the motion correction results into a folder to be able to load them later.
 
-# internalt we can explore a preset like this
-# every sub dict can be overwritten
+# internally, we can explore a preset like this
+# every parameter can be overwritten at runtime
 from spikeinterface.preprocessing.motion import motion_options_preset
 motion_options_preset['kilosort_like']
 
 # lets try theses 3 presets
 some_presets = ('rigid_fast',  'kilosort_like', 'nonrigid_accurate')
-# some_presets = ('kilosort_like',  )
+# some_presets = ('nonrigid_accurate',  )
 
-# compute motion with 3 preset
+# compute motion with 3 presets
 for preset in some_presets:
     print('Computing with', preset)
     folder = base_folder / 'motion_folder_dataset1' / preset
@@ -87,27 +89,28 @@ for preset in some_presets:
 
 # ### Plot the results
 #
-# We load back the results and use the widget to explore the estimated drift motion vector.
+# We load back the results and use the widgets module to explore the estimated drift motion.
 #
-# For all method with have 4 plots:
-#   * upper left: time vs estimated peak depth
-#   * upper right: time vs corrected by motion peak depth
-#   * The motion vector (average across depth) and all motion across spatial depth
-#   * If non rigid the motion vector across depth is ploted as a map, color code the motion in micro meter.
+# For all methods we have 4 plots:
+#   * top left: time vs estimated peak depth
+#   * top right: time vs peak depth after motion correction
+#   * bottom left: the average motion vector across depths and all motion across spatial depths (for non-rigid estimation)
+#   * bottom right: if motion correction is non rigid, the motion vector across depths is plotted as a map, with the color code representing the motion in micrometers.
 #
-# You can note on the figures:
-#  * the preset **'rigid_fast'** has only one motion vector for the entire probe.
-#    The motion is globaly under estimated because average across depth.
-#    But the corrected peak are more flat then non corrected, so the job is partially done.
-#    The big jump à t=600s when the probe start moving is quitre well corrected.
-# * The preset **kilosort_like** give better results because it is a non rigid case. the motion vector is computed by depth.
-#   The corrected peak location is more flat than the non rigid case.
-#   The motion vector map seems to be a bit noisy at some depth
-# * The preset **nonrigid_accurate** seems to give the best results on this file. The motion vector seems less noisy.
-#   Note that at the top of the probe 3200um to 3800um the motion vector is a bit noisy.
-#   Also not that in the first part before the imposed motion (0-600s) we clearly have a non-rigid motion.
-#   The upper part of the probe (2000-3000um) have a small motion but the lower part (0-1000um) do not have
-#   and the method can handle this.
+# A few comments on the figures:
+# * the preset **'rigid_fast'** has only one motion vector for the entire probe because it is a "rigid" case.
+#   The motion amplitude is globally underestimated because it averages across depths.
+#   However, the corrected peaks are flatter than the non-corrected ones, so the job is partially done.
+#   The big jump at=600s when the probe start moving is recovered quite well.
+# * The preset **kilosort_like** gives better results because it is a non-rigid case.
+#   The motion vector is computed for different depths.
+#   The corrected peak locations are flatter than the rigid case.
+#   The motion vector map is still be a bit noisy at some depths (e.g around 1000um).
+# * The preset **nonrigid_accurate** seems to give the best results on this recording.
+#   The motion vector seems less noisy globally, but it is not "perfect" (see at the top of the probe 3200um to 3800um).
+#   Also note that in the first part of the recording before the imposed motion (0-600s) we clearly have a non-rigid motion:
+#   the upper part of the probe (2000-3000um) experience some drifts, but the lower part (0-1000um) is relatively stable.
+#   The method defined by this preset is able to capture this.
 
 for preset in some_presets:
     # load
@@ -120,22 +123,20 @@ for preset in some_presets:
                    color_amplitude=True, amplitude_cmap='inferno',  scatter_decimate=10)
     fig.suptitle(f"{preset=}")
 
-# ### plot peak localization
+# ### Plot peak localization
 #
-# We can also use internal results (peaks and peaks location) to check if peak putative cluster have a lower spatial spread after the motion correction.
+# We can also use the internal extra results (peaks and peaks location) to check if putative clusters have a lower spatial spread after the motion correction.
 #
-# Here we plot peak locations on the probe (left) and the corrected peak locations (on right).
+# Here we plot the estimated peak locations (left) and the corrected peak locations (on right) on top of the probe.
+# The color codes for the peak amplitudes.
 #
-# The amplitude is color coded.
+# We can see here that some clusters seem to be more compact on the 'y' axis, especially for the preset "nonrigid_accurate".
 #
-# We can see here that some cluster seems to be more compact on the 'y' axis.
+# Be aware that there are two ways to correct for the motion:
+#   1. Interpolate traces and detect/localize peaks again  (`interpolate_recording()`)
+#   2. Compensate for drifts directly on peak locations (`correct_motion_on_peaks()`)
 #
-# Be aware, there is two ways to corrected the motion:
-#   1. Interpolate trace and detect/localize peak again
-#   2. Remove bin by bin the motion vector in peak location
-#
-# The case 1 is used before running a sorter and the case 2 (used here) is for display only as  a checker.
-#
+# Case 1 is used before running a spike sorter and the case 2 is used here to display the results.
 
 # +
 from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
@@ -144,7 +145,7 @@ for preset in some_presets:
     folder = base_folder / 'motion_folder_dataset1' / preset
     motion_info = si.load_motion_info(folder)
 
-    fig, axs = plt.subplots(ncols=2, figsize=(8, 4), sharey=True)
+    fig, axs = plt.subplots(ncols=2, figsize=(12, 8), sharey=True)
 
     ax = axs[0]
     si.plot_probe_map(rec, ax=ax)
@@ -154,7 +155,7 @@ for preset in some_presets:
     time_lim0 = 750.
     time_lim1 = 1500.
     mask = (peaks['sample_index'] > int(sr * time_lim0)) & (peaks['sample_index'] < int(sr * time_lim1))
-    sl = slice(None, None, 10)
+    sl = slice(None, None, 5)
     amps = np.abs(peaks['amplitude'][mask][sl])
     amps /= np.quantile(amps, 0.95)
     c = plt.get_cmap('inferno')(amps)
@@ -177,3 +178,25 @@ for preset in some_presets:
     fig.suptitle(f"{preset=}")
 
 # -
+
+# ## run times
+#
+# Presets and related methods have differents accuracies but also computation speeds.
+# It is good to have this in mind!
+
+# +
+run_times = []
+for preset in some_presets:
+    folder = base_folder / 'motion_folder_dataset1' / preset
+    motion_info = si.load_motion_info(folder)
+    run_times.append(motion_info['run_times'])
+keys = run_times[0].keys()
+
+bottom = np.zeros(len(run_times))
+fig, ax = plt.subplots()
+for k in keys:
+    rtimes = np.array([rt[k] for rt in run_times])
+    if np.any(rtimes>0.):
+        ax.bar(some_presets, rtimes, bottom=bottom, label=k)
+    bottom += rtimes
+ax.legend()
