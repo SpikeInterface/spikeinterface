@@ -66,7 +66,7 @@ motion_options_preset = {
             robust_regression_sigma=2,
             weight_with_amplitude=False,
         ),
-        "correct_motion_kwargs": dict(
+        "interpolate_motion_kwargs": dict(
             direction=1,
             border_mode="remove_channels",
             spatial_interpolation_method="idw",
@@ -94,7 +94,7 @@ motion_options_preset = {
             bin_duration_s=10.0,
             rigid=True,
         ),
-        "correct_motion_kwargs": dict(
+        "interpolate_motion_kwargs": dict(
             direction=1,
             border_mode="remove_channels",
             spatial_interpolation_method="idw",
@@ -114,15 +114,14 @@ motion_options_preset = {
         "select_kwargs": None,
         "localize_peaks_kwargs": dict(
             method="grid_convolution",
-            # local_radius_um=50.0,
-            local_radius_um=30.0,
-            upsampling_um=3.0,
-            sigma_um=np.linspace(5.0, 20.0, 3),
-            # sigma_um=[15., ],
+            local_radius_um=40.0,
+            upsampling_um=5.0,
+            sigma_um=np.linspace(5.0, 30.0, 5),
             sigma_ms=0.25,
             margin_um=30.0,
             prototype=None,
-            percentile=5.0,
+            percentile=10.0,
+            sparsity_threshold=0.01,
         ),
         "estimate_motion_kwargs": dict(
             method="iterative_template",
@@ -133,7 +132,7 @@ motion_options_preset = {
             margin_um=0,
             win_shape="rect",
         ),
-        "correct_motion_kwargs": dict(
+        "interpolate_motion_kwargs": dict(
             direction=1,
             border_mode="force_extrapolate",
             spatial_interpolation_method="kriging",
@@ -147,7 +146,7 @@ motion_options_preset = {
         "select_kwargs": None,
         "localize_peaks_kwargs": {},
         "estimate_motion_kwargs": {},
-        "correct_motion_kwargs": {},
+        "interpolate_motion_kwargs": {},
     },
 }
 
@@ -156,12 +155,12 @@ def correct_motion(
     recording,
     preset="nonrigid_accurate",
     folder=None,
+    output_motion_info=False,
     detect_kwargs={},
     select_kwargs=None,
     localize_peaks_kwargs={},
     estimate_motion_kwargs={},
-    correct_motion_kwargs={},
-    output_motion_info=False,
+    interpolate_motion_kwargs={},
     **job_kwargs,
 ):
     """
@@ -174,14 +173,17 @@ def correct_motion(
       * estimate the motion vector
       * create and return a `InterpolateMotionRecording` recording object
 
-    Even this function is convinient to begin with, we highly recommend to run all step manually and
+    Even this function is convinient to begin with, we recommend to run all step manually and
     separatly to accuratly check then.
 
     Optionaly this function create a folder with files and figures ready to check.
 
     This function depend on several modular components of :py:mod:`spikeinterface.sortingcomponents`
 
-    if select_kwargs is None then all peak are used for localized.
+    If select_kwargs is None then all peak are used for localized.
+
+    The recording must preprocessed (filter and denoised at least), we recomand to not use whithening before motion
+    estimation.
 
     Parameters of steps are handled in a separate dict. For more information please check doc of the following
     functions:
@@ -191,7 +193,6 @@ def correct_motion(
       * :py:func:`~spikeinterface.sortingcomponents.motion_estimation.estimate_motion'
       * :py:func:`~spikeinterface.sortingcomponents.motion_correction.CorrectMotionRecording'
 
-      * note about preprocessing
 
     Possible presets:{}
 
@@ -199,23 +200,33 @@ def correct_motion(
     ----------
     recording: RecordingExtractor
         The recording extractor to be transformed
-
+    preset: str
+        The preset name. Default "nonrigid_accurate".
+    folder: Path str or None
+        If not None then intermediate motion info are saved into a folder.
     output_motion_info: bool
         If True then return an extra dict that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
-
+        This dict the same when reload from the folder.
+    detect_kwargs: dict
+        Optional parameters to overwrite the one in the preset for "detect" step.
+    select_kwargs: dict
+        I not None optional parameters to overwrite the one in the preset for "select" step.
+    localize_peaks_kwargs: dict
+        Optional parameters to overwrite the one in the preset for "localize" step.
+    estimate_motion_kwargs: dict
+        Optional parameters to overwrite the one in the preset for "estimate_motion" step.
+    interpolate_motion_kwargs: dict
+        Optional parameters to overwrite the one in the preset for "detect" step.
 
     {}
+
     Returns
     -------
     recording_corrected: Recording
         The motion corrected recording
     motion_info: dict
         Optional output if `output_motion_info=True`
-
-
-
-
     """
 
     # local import are important because "sortingcomponents" is not important by default
@@ -235,7 +246,7 @@ def correct_motion(
         select_kwargs = dict(params["select_kwargs"], **select_kwargs)
     localize_peaks_kwargs = dict(params["localize_peaks_kwargs"], **localize_peaks_kwargs)
     estimate_motion_kwargs = dict(params["estimate_motion_kwargs"], **estimate_motion_kwargs)
-    correct_motion_kwargs = dict(params["correct_motion_kwargs"], **correct_motion_kwargs)
+    interpolate_motion_kwargs = dict(params["interpolate_motion_kwargs"], **interpolate_motion_kwargs)
 
     if output_motion_info:
         motion_info = {}
@@ -273,7 +284,10 @@ def correct_motion(
             folder=None,
             names=None,
         )
-        t3 = t2 = t1 = time.perf_counter()
+        t1 = time.perf_counter()
+        run_times = dict(
+            detect_and_localize=t1 - t0,
+        )
     else:
         # lcalization is done after select_peaks()
         pipeline_nodes = None
@@ -287,18 +301,19 @@ def correct_motion(
         peak_locations = localize_peaks(recording, peaks, **localize_peaks_kwargs, **job_kwargs)
         t3 = time.perf_counter()
 
+        run_times = dict(
+            detect_peaks=t1 - t0,
+            select_peaks=t2 - t1,
+            localize_peaks=t3 - t2,
+        )
+
+    t0 = time.perf_counter()
     motion, temporal_bins, spatial_bins = estimate_motion(recording, peaks, peak_locations, **estimate_motion_kwargs)
-    t4 = time.perf_counter()
+    t1 = time.perf_counter()
+    run_times["estimate_motion"] = t1 - t0
 
     recording_corrected = InterpolateMotionRecording(
-        recording, motion, temporal_bins, spatial_bins, **correct_motion_kwargs
-    )
-
-    run_times = dict(
-        detect_peaks=t1 - t0,
-        select_peaks=t2 - t1,
-        localize_peaks=t3 - t2,
-        estimate_motion=t4 - t3,
+        recording, motion, temporal_bins, spatial_bins, **interpolate_motion_kwargs
     )
 
     if folder is not None:
@@ -311,11 +326,12 @@ def correct_motion(
             select_kwargs=select_kwargs,
             localize_peaks_kwargs=localize_peaks_kwargs,
             estimate_motion_kwargs=estimate_motion_kwargs,
-            correct_motion_kwargs=correct_motion_kwargs,
+            interpolate_motion_kwargs=interpolate_motion_kwargs,
             job_kwargs=job_kwargs,
         )
         (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
         (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
+        recording.dump_to_json(folder / "recording.json")
 
         np.save(folder / "peaks.npy", peaks)
         np.save(folder / "peak_locations.npy", peak_locations)

@@ -324,6 +324,8 @@ class LocalizeGridConvolution(PipelineNode):
     percentile: float (default 10)
         The percentage in [0, 100] of the best scalar products kept to
         estimate the position
+    sparsity_threshold: float (default 0.1)
+        The sparsity threshold (in 0-1) below which weights should be considered as 0.
     """
 
     def __init__(
@@ -333,11 +335,12 @@ class LocalizeGridConvolution(PipelineNode):
         parents=["extract_waveforms"],
         local_radius_um=50.0,
         upsampling_um=5.0,
-        sigma_um=np.linspace(10, 50.0, 5),
+        sigma_um=np.linspace(10.0, 40.0, 5),
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
-        percentile=10.0,
+        percentile=5.0,
+        sparsity_threshold=0.01,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -347,6 +350,8 @@ class LocalizeGridConvolution(PipelineNode):
         self.upsampling_um = upsampling_um
         self.percentile = 100 - percentile
         assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
+        self.sparsity_threshold = sparsity_threshold
+        assert 0 <= self.sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
 
         contact_locations = recording.get_channel_locations()
         # Find waveform extractor in the parents
@@ -369,7 +374,7 @@ class LocalizeGridConvolution(PipelineNode):
             contact_locations, self.local_radius_um, self.upsampling_um, self.sigma_um, self.margin_um
         )
 
-        self.weights_sparsity_mask = self.weights > 0.01
+        self.weights_sparsity_mask = self.weights > self.sparsity_threshold
 
         self._dtype = np.dtype(dtype_localize_by_method["grid_convolution"])
         self._kwargs.update(
@@ -393,38 +398,39 @@ class LocalizeGridConvolution(PipelineNode):
 
         for main_chan in np.unique(peaks["channel_index"]):
             (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
+            num_spikes = len(idx)
             if "amplitude" in peaks.dtype.names:
                 amplitudes = peaks["amplitude"][idx]
             else:
                 amplitudes = waveforms[idx, self.nbefore, main_chan]
 
             nearest_templates = self.nearest_template_mask[main_chan, :]
-            channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
-            num_chans = np.sum(channel_mask)
             num_templates = np.sum(nearest_templates)
+            channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
             # print(np.sum(nearest_templates), channel_mask.shape, self.weights.shape, np.sum(channel_mask))
 
             global_products = (
                 waveforms[idx, :, :][:, :, channel_mask] / (amplitudes[:, np.newaxis, np.newaxis]) * self.prototype
             ).sum(axis=1)
-            nb_templates = len(self.template_positions)
-            found_positions = np.zeros((len(idx), 2), dtype=np.float32)
-            scalar_products = np.zeros((len(idx), nb_templates), dtype=np.float32)
 
-            dot_products = np.zeros((self.weights.shape[0], len(idx), num_templates), dtype=np.float32)
-            for count, weights in enumerate(self.weights):
-                dot_products[count, :, :] = np.dot(global_products, weights[channel_mask, :][:, nearest_templates])
+            dot_products = np.zeros((self.weights.shape[0], num_spikes, num_templates), dtype=np.float32)
+            for count in range(self.weights.shape[0]):
+                w = self.weights[count, :, :][channel_mask, :][:, nearest_templates]
+                # w = w / np.sum(w, axis=0)[np.newaxis, :]
+                # w[np.isnan(w)] = 0.
+                dot_products[count, :, :] = np.dot(global_products, w)
             dot_products = np.maximum(0, dot_products)
             if self.percentile < 100:
                 thresholds = np.percentile(dot_products, self.percentile, axis=(0, 2))
-                # print(np.sum(dot_products > thresholds[np.newaxis, :, np.newaxis]))
                 dot_products[dot_products < thresholds[np.newaxis, :, np.newaxis]] = 0
 
-            for count, weights in enumerate(self.weights):
-                scalar_products[:, nearest_templates] += dot_products[count, :, :]
+            scalar_products = np.zeros((num_spikes, num_templates), dtype=np.float32)
+            found_positions = np.zeros((num_spikes, 2), dtype=np.float32)
+            for count in range(self.weights.shape[0]):
+                scalar_products += dot_products[count, :, :]
                 found_positions += np.dot(dot_products[count, :, :], self.template_positions[nearest_templates, :])
-
             found_positions /= scalar_products.sum(1)[:, np.newaxis]
+
             peak_locations["x"][idx] = found_positions[:, 0]
             peak_locations["y"][idx] = found_positions[:, 1]
 
