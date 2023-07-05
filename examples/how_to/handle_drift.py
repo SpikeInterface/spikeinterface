@@ -75,7 +75,7 @@ motion_options_preset['kilosort_like']
 
 # lets try theses 3 presets
 some_presets = ('rigid_fast',  'kilosort_like', 'nonrigid_accurate')
-# some_presets = ('nonrigid_accurate',  )
+# some_presets = ('kilosort_like',  )
 
 # compute motion with 3 presets
 for preset in some_presets:
@@ -200,3 +200,4 @@ for k in keys:
         ax.bar(some_presets, rtimes, bottom=bottom, label=k)
     bottom += rtimes
 ax.legend()
+# -
