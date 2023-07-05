@@ -14,15 +14,27 @@ class MotionWidget(BaseWidget):
 
     Parameters
     ----------
+    recording : RecordingExtractor
+        The recording extractor object
     motion_info: dict
         The motion info return by correct_motion() or load back with load_motion_info()
+    depth_lim: tuple
+        The min and max depth to display, default None (min and max of the recording)
+    motion_lim: tuple
+        The min and max motion to display, default None (min and max of the motion)
+    color_amplitude: bool
+        If True, the color of the scatter points is the amplitude of the peaks, default False
+    scatter_decimate: int
+        If > 1, the scatter points are decimated, default None
+    amplitude_cmap: str
+        The colormap to use for the amplitude, default 'inferno'
     """
 
     possible_backends = {}
 
     def __init__(
         self,
-        rec,
+        recording,
         motion_info,
         depth_lim=None,
         motion_lim=None,
@@ -33,7 +45,7 @@ class MotionWidget(BaseWidget):
         **backend_kwargs,
     ):
         plot_data = dict(
-            rec=rec,
+            rec=recording,
             depth_lim=depth_lim,
             motion_lim=motion_lim,
             color_amplitude=color_amplitude,

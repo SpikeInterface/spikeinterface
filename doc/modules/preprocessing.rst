@@ -308,7 +308,7 @@ required.
 Motion/drift correction
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Motion/drift correction is one of the more sophisticated preprocessing, see :ref:`motion_correction` for full
+Motion/drift correction is one of the most sophisticated preprocessing. See the :ref:`motion_correction` page for a full
 explanation.
 
 

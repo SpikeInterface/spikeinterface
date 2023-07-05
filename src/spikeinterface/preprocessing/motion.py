@@ -164,37 +164,36 @@ def correct_motion(
     **job_kwargs,
 ):
     """
-    Top level function that estimate and interpolate the motion for a recording.
+    High-level function that estimates the motion and interpolates the recording.
 
-    This function have some intermediate steps that should be all controlled one by one carfully:
+    This function has some intermediate steps that can be controlled one by one with parameters:
       * detect peaks
-      * optionaly sample some peaks to speed up the localization
+      * (optional) sub-sample peaks to speed up the localization
       * localize peaks
-      * estimate the motion vector
+      * estimate the motion
       * create and return a `InterpolateMotionRecording` recording object
 
-    Even this function is convinient to begin with, we recommend to run all step manually and
-    separatly to accuratly check then.
+    Even if this function is convinient, we recommend to run all step separately for fine tuning.
 
-    Optionaly this function create a folder with files and figures ready to check.
+    Optionally, this function can create a folder with files and figures ready to check.
 
-    This function depend on several modular components of :py:mod:`spikeinterface.sortingcomponents`
+    This function depends on several modular components of :py:mod:`spikeinterface.sortingcomponents`.
 
     If select_kwargs is None then all peak are used for localized.
 
-    The recording must preprocessed (filter and denoised at least), we recomand to not use whithening before motion
+    The recording must be preprocessed (filter and denoised at least), and we recommend to not use whithening before motion
     estimation.
 
-    Parameters of steps are handled in a separate dict. For more information please check doc of the following
-    functions:
+    Parameters for each step are handled as separate dictionaries.
+    For more information please check the documentation of the following functions:
       * :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks'
       * :py:func:`~spikeinterface.sortingcomponents.peak_selection.select_peaks'
       * :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks'
       * :py:func:`~spikeinterface.sortingcomponents.motion_estimation.estimate_motion'
-      * :py:func:`~spikeinterface.sortingcomponents.motion_correction.CorrectMotionRecording'
+      * :py:func:`~spikeinterface.sortingcomponents.motion_interpolation.interpolate_motion'
 
 
-    Possible presets:{}
+    Possible presets: {}
 
     Parameters
     ----------
@@ -203,21 +202,22 @@ def correct_motion(
     preset: str
         The preset name. Default "nonrigid_accurate".
     folder: Path str or None
-        If not None then intermediate motion info are saved into a folder.
+        If not None then intermediate motion info are saved into a folder. Default None
     output_motion_info: bool
-        If True then return an extra dict that contains variables
+        If True, then the function returns a `motion_info` dictionary that contains variables
         to check intermediate steps (motion_histogram, non_rigid_windows, pairwise_displacement)
-        This dict the same when reload from the folder.
+        This dictionary is the same when reloaded from the folder. Default False
     detect_kwargs: dict
-        Optional parameters to overwrite the one in the preset for "detect" step.
+        Optional parameters to overwrite the ones in the preset for "detect" step.
     select_kwargs: dict
-        I not None optional parameters to overwrite the one in the preset for "select" step.
+        If not None, optional parameters to overwrite the ones in the preset for "select" step.
+        If None, the "select" step is skipped.
     localize_peaks_kwargs: dict
-        Optional parameters to overwrite the one in the preset for "localize" step.
+        Optional parameters to overwrite the ones in the preset for "localize" step.
     estimate_motion_kwargs: dict
-        Optional parameters to overwrite the one in the preset for "estimate_motion" step.
+        Optional parameters to overwrite the ones in the preset for "estimate_motion" step.
     interpolate_motion_kwargs: dict
-        Optional parameters to overwrite the one in the preset for "detect" step.
+        Optional parameters to overwrite the ones in the preset for "detect" step.
 
     {}
 
