@@ -285,7 +285,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
             if np.any(spike_train):
                 spike_trains.append(spike_train / fs)
 
-        if not np.any(spike_trains):
+        if not any([np.any(train) for train in spike_trains]):
             continue
 
         ratio, _, count = isi_violations(spike_trains, total_duration_s, isi_threshold_s, min_isi_s)
@@ -436,7 +436,7 @@ def compute_sliding_rp_violations(
             if np.any(spike_train):
                 spike_train_list.append(spike_train)
 
-        if not np.any(spike_train_list):
+        if not any([np.any(train) for train in spike_train_list]):
             continue
 
         unit_n_spikes = np.sum([len(train) for train in spike_train_list])
