@@ -130,7 +130,7 @@ class KlustaSortingExtractor(BaseSorting):
             unit_ids = unique_units
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        self.is_dumpable = False
+
         self.extra_requirements.append("h5py")
 
         self.add_sorting_segment(KlustSortingSegment(unit_ids, spiketrains))
@@ -139,7 +139,10 @@ class KlustaSortingExtractor(BaseSorting):
         quality = [e.lower() for e in cluster_groups_name]
         self.set_property("quality", quality)
 
-        self._kwargs = {"file_or_folder_path": str(Path(file_or_folder_path).absolute())}
+        self._kwargs = {
+            "file_or_folder_path": str(Path(file_or_folder_path).absolute()),
+            "exclude_cluster_groups": exclude_cluster_groups,
+        }
 
 
 class KlustSortingSegment(BaseSortingSegment):
