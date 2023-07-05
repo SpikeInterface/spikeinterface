@@ -416,8 +416,6 @@ class LocalizeGridConvolution(PipelineNode):
             dot_products = np.zeros((self.weights.shape[0], num_spikes, num_templates), dtype=np.float32)
             for count in range(self.weights.shape[0]):
                 w = self.weights[count, :, :][channel_mask, :][:, nearest_templates]
-                # w = w / np.sum(w, axis=0)[np.newaxis, :]
-                # w[np.isnan(w)] = 0.
                 dot_products[count, :, :] = np.dot(global_products, w)
             dot_products = np.maximum(0, dot_products)
             if self.percentile < 100:

@@ -602,9 +602,11 @@ def get_grid_convolution_templates_and_weights(
     for count, sigma in enumerate(sigma_um):
         weights[count] = np.exp(-(dist**2) / (2 * (sigma**2)))
 
-    # check if we should normalized or not
-    # weights /= np.sum(weights, axis=1)[:, np.newaxis, :]
-    # weights[np.isnan(weights)] = 0.
+    # normalize
+    with np.errstate(divide="ignore", invalid="ignore"):
+        norm = np.sqrt(np.sum(weights**2, axis=1))[:, np.newaxis, :]
+        weights /= norm
+        weights[np.isnan(weights)] = 0.0
 
     return template_positions, weights, nearest_template_mask
 
