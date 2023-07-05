@@ -1,4 +1,6 @@
 from typing import Optional, Union, Dict, Any, List, Tuple
+import warnings
+from math import isclose
 
 import numpy as np
 import importlib
@@ -260,9 +262,9 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
     # True in the format class that inherits from this.
 
     need_t_start_from_signal_stream = False
-    # `need_t_start_from_signal_stream` is a class attribute indicating whether
-    # `neo_reader.get_signal_t_start` is needed to get the t_start of the sorting correctly.
-    # And example of this is the neuralynx format.
+    # `need_t_start_from_signal_stream` is a class attribute indicating whether t_start should be inferred
+    # from `neo_reader.get_signal_t_start`. If True, then we try to infer t_start from the signal stream with
+    # corresponding sampling frequency. If False, then t_start is set to None which is 0 for practical purposes.
 
     def __init__(self, block_index=None, sampling_frequency=None, use_natural_unit_ids=False, **neo_kwargs):
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
@@ -285,7 +287,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         for segment_index in range(num_segments):
             t_start = None  # This means t_start will be 0 for practical purposes
             if self.need_t_start_from_signal_stream:
-                t_start = self._get_t_start_from_signal_stream(segment_index=segment_index)
+                t_start = self._infer_t_start_from_signal_stream(segment_index=segment_index)
 
             sorting_segment = NeoSortingSegment(
                 neo_reader=self.neo_reader,
@@ -299,50 +301,6 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
             self.add_sorting_segment(sorting_segment)
 
-    def _get_t_start_from_signal_stream(self, segment_index):
-        # Get the stream index using the sampling frequency
-        sampling_frequency = self._sampling_frequency
-        stream_id_to_sampling_frequencies = self.build_stream_id_to_sampling_frequency_dict()
-
-        streams_with_given_sampling_frequency = [
-            stream_id for stream_id, sf in stream_id_to_sampling_frequencies.items() if sf == sampling_frequency
-        ]
-
-        # Get the stream index for each stream in streams_with_given_sampling_frequency
-        stream_id_to_stream_index = dict()
-        for stream_id in streams_with_given_sampling_frequency:
-            signal_streams = self.neo_reader.header["signal_streams"]
-            stream_index = (signal_streams["id"] == stream_id).nonzero()[0][0]
-            stream_id_to_stream_index[stream_id] = stream_index
-
-        # Get a dictionary from stream_index to t_start
-        stream_id_to_t_start = dict()
-        for stream_id, stream_index in stream_id_to_stream_index.items():
-            t_start = self.neo_reader.get_signal_t_start(
-                block_index=self.block_index,
-                seg_index=segment_index,
-                stream_index=stream_index,
-            )
-            stream_id_to_t_start[stream_id] = t_start
-
-        available_t_starts = list(stream_id_to_t_start.values())
-        unique_t_starts = set(available_t_starts)
-
-        if len(unique_t_starts) == 1:
-            t_start = available_t_starts[0]
-
-        else:
-            error_msg = (
-                "Multiple streams ids with corresponding sampling frequency found \n "
-                "Each stream has the correspoding t_start: \n"
-                f"{available_t_starts} \n"
-                f"Setting t_start to None. \n"
-            )
-
-            raise ValueError(error_msg)
-
-        return t_start
-
     def _infer_sampling_frequency_from_analog_signal(self) -> float:
         """
         Infer the sampling frequency from available signal channels.
@@ -350,7 +308,8 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         The function attempts to infer the sampling frequency by examining available signal
         channels. If there is only one unique sampling frequency available across all channels,
         that frequency is used. If streams have different sampling frequencies, a ValueError
-        is raised and the user is instructed to manually specify the sampling frequency when
+        is raised and the user is instructed to manually specify the sampling frequency
+        when
         initializing the sorting extractor.
 
         Returns
@@ -362,6 +321,20 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         ------
         ValueError
             If streams have different sampling frequencies.
+
+        Notes
+        -----
+        Neo handles spikes in either seconds or milliseconds.
+        However, SpikeInterface deals with frames related to signals so we need
+        the sampling frequency to convert from seconds to frames.
+
+        Most internal formats have spike timestamps at the same speed as the signal but at a higher
+        clock speed. Yet, in SpikeInterface, spike indexes need to be at the same speed as the
+        signal. Therefore, it is not logical to have spikes at 50kHz when the signal is 10kHz.
+        Neo can handle this discrepancy, but SpikeInterface cannot.
+
+        Another key point is that in Neo, spikes can have different sampling rates than signals,
+        hence the conversion from signal frames to times is format dependent.
         """
         stream_id_to_sampling_frequencies = self.build_stream_id_to_sampling_frequency_dict()
         available_sampling_frequencies = list(stream_id_to_sampling_frequencies.values())
@@ -413,6 +386,82 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
             stream_to_sampling_frequencies[stream_id] = float(sampling_frequency)
 
         return stream_to_sampling_frequencies
+
+    def _infer_t_start_from_signal_stream(self, segment_index) -> float | None:
+        """
+        Get the start time (t_start) from a signal stream.
+
+        This function fetches the stream IDs that match the sorting sampling frequency.
+        It then calculates the starting time for each of these streams using
+        the neo_reader's `get_signal_t_start` method.
+
+        If no streams are found with the matching frequency or if there are multiple such streams, it
+        issues a warning and returns None which means t_start will be 0 for practical purposes.
+
+        Parameters
+        ----------
+        segment_index : int
+            Index of the segment for which to get the starting time.
+
+        Returns
+        -------
+        float or None
+            The start time of the stream. Returns None if no streams are found with the matching frequency
+            or if there are multiple such streams.
+
+        Warns
+        -----
+        UserWarning
+            If no streams ids with the matching sampling frequency are found or if multiple
+            streams ids with the matching sampling frequency are found.
+        """
+        # Get the stream id corresponding to the sorter sampling frequency
+        sorter_sampling_frequency = self._sampling_frequency
+        stream_id_to_sampling_frequencies = self.build_stream_id_to_sampling_frequency_dict()
+
+        stream_ids_with_matching_frequency = [
+            stream_id
+            for stream_id, stream_sampling_frequency in stream_id_to_sampling_frequencies.items()
+            if isclose(stream_sampling_frequency, sorter_sampling_frequency, rel_tol=1e-9)
+        ]
+
+        # Get a dictionary from stream_id to t_start
+        signal_streams = self.neo_reader.header["signal_streams"]
+        stream_id_to_t_start = dict()
+        for stream_id in stream_ids_with_matching_frequency:
+            # Get stream_index from stream_id
+            stream_index = (signal_streams["id"] == stream_id).nonzero()[0][0]
+            t_start = self.neo_reader.get_signal_t_start(
+                block_index=self.block_index,
+                seg_index=segment_index,
+                stream_index=stream_index,
+            )
+            stream_id_to_t_start[stream_id] = t_start
+
+        available_t_starts = list(stream_id_to_t_start.values())
+        unique_t_starts = set(available_t_starts)
+
+        if len(unique_t_starts) == 0:
+            t_start = None
+            warning_message = (
+                "No stream ids with corresponding sampling frequency found \n " "Setting t_start to None. \n"
+            )
+            warnings.warn(warning_message)
+
+        if len(unique_t_starts) == 1:
+            t_start = available_t_starts[0]
+
+        else:
+            t_start = None
+            warning_message = (
+                "Multiple streams ids with corresponding sampling frequency found \n "
+                "Each stream has the correspoding t_start: \n"
+                f"{available_t_starts} \n"
+                f"Setting t_start to None. \n"
+            )
+            warnings.warn(warning_message)
+
+        return t_start
 
 
 class NeoSortingSegment(BaseSortingSegment):
