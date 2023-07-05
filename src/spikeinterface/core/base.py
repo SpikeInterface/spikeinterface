@@ -373,7 +373,6 @@ class BaseExtractor:
             "class": class_name,
             "module": module,
             "kwargs": kwargs,
-            "dumpable": self._is_dumpable,
             "version": version,
             "relative_paths": (relative_to is not None),
         }
@@ -471,9 +470,14 @@ class BaseExtractor:
         return clone
 
     def check_if_dumpable(self):
-        # Find all nested _is_dumpable
-        dict_repr = self.to_dict()
-        kwargs = dict_repr["kwargs"]
+        """Check if the object is dumpable, including nested objects.
+
+        Returns
+        -------
+        bool
+            True if the object is dumpable, False otherwise.
+        """
+        kwargs = self._kwargs
         for value in kwargs.values():
             # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
             if isinstance(value, BaseExtractor):
@@ -485,9 +489,15 @@ class BaseExtractor:
         return self._is_dumpable
 
     def check_if_json_serializable(self):
-        # Find all nested _json_serializable
-        dict_repr = self.to_dict()
-        kwargs = dict_repr["kwargs"]
+        """
+        Check if the object is json serializable, including nested objects.
+
+        Returns
+        -------
+        bool
+            True if the object is json serializable, False otherwise.
+        """
+        kwargs = self._kwargs
         for value in kwargs.values():
             # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
             if isinstance(value, BaseExtractor):
