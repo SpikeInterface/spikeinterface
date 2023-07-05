@@ -172,7 +172,9 @@ class PhySortingSegment(BaseSortingSegment):
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
         start = 0 if start_frame is None else np.searchsorted(self._all_spikes, start_frame, side="left")
-        end = len(self._all_spikes) if end_frame is None else np.searchsorted(self._all_spikes, end_frame, side="right")
+        end = (
+            len(self._all_spikes) if end_frame is None else np.searchsorted(self._all_spikes, end_frame, side="left")
+        )  # Exclude end frame
 
         spike_times = self._all_spikes[start:end][self._all_clusters[start:end] == unit_id]
         return np.atleast_1d(spike_times.copy().squeeze())

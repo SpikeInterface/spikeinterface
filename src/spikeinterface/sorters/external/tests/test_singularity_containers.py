@@ -32,7 +32,7 @@ def generate_run_kwargs():
     test_recording, _ = se.toy_example(duration=30, seed=0, num_channels=64, num_segments=1)
     test_recording = test_recording.save(name="toy")
     test_recording.set_channel_gains(1)
-    test_recording.set_channel_offsets(1)
+    test_recording.set_channel_offsets(0)
     run_kwargs = dict(recording=test_recording, verbose=True)
     run_kwargs["singularity_image"] = True
     return run_kwargs

@@ -6,8 +6,6 @@ import sys
 from ..basesorter import BaseSorter, get_job_kwargs
 from ..utils import ShellScript
 
-from spikeinterface.core import load_extractor
-
 from spikeinterface.core import write_binary_recording
 from spikeinterface.extractors import YassSortingExtractor
 
