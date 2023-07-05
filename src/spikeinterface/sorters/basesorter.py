@@ -140,7 +140,7 @@ class BaseSorter:
                 )
 
         rec_file = output_folder / "spikeinterface_recording.json"
-        if recording._is_json_serializable:
+        if recording.check_if_json_serializable():
             recording.dump_to_json(rec_file, relative_to=output_folder)
         else:
             d = {"warning": "The recording is not rerializable to json"}

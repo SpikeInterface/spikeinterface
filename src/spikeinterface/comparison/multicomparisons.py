@@ -181,7 +181,9 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
 
     def save_to_folder(self, save_folder):
         for sorting in self.object_list:
-            assert sorting.check_if_dumpable(), "MultiSortingComparison.save_to_folder() need dumpable sortings"
+            assert (
+                sorting.check_if_json_serializable()
+            ), "MultiSortingComparison.save_to_folder() need json serializable sortings"
 
         save_folder = Path(save_folder)
         save_folder.mkdir(parents=True, exist_ok=True)
@@ -251,9 +253,13 @@ class AgreementSortingExtractor(BaseSorting):
         for segment_index in range(multisortingcomparison._num_segments):
             sorting_segment = AgreementSortingSegment(multisortingcomparison._spiketrains[segment_index])
             self.add_sorting_segment(sorting_segment)
-        
-        self._kwargs = dict(sampling_frequency=sampling_frequency, multisortingcomparison=multisortingcomparison,
-                            min_agreement_count=min_agreement_count, min_agreement_count_only=min_agreement_count_only)
+
+        self._kwargs = dict(
+            sampling_frequency=sampling_frequency,
+            multisortingcomparison=multisortingcomparison,
+            min_agreement_count=min_agreement_count,
+            min_agreement_count_only=min_agreement_count_only,
+        )
 
 
 class AgreementSortingSegment(BaseSortingSegment):
