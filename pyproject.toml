@@ -66,6 +66,8 @@ extractors = [
     # ONE-api and ibllib for streaming IBL
     "ONE-api>=1.19.1",
     "ibllib>=2.21.0",
+    "pymatreader>=0.0.32", # For cell explorer matlab files
+
 ]
 
 streaming_extractors = [
