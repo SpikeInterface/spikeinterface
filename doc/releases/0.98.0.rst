@@ -8,10 +8,12 @@ SpikeInterface 0.98.0 release notes
 
 Main changes:
 
-* Moved to src/spikeinterface structure
-* Reformat to black and use pre-commit CI
+* Implemented motion correction in SpikeInterface
 * Get rid of to_dict in _kwargs and use JSON serializer
 * _ind to _index in complex dtype representation
+* Moved to src/spikeinterface structure
+* Reformat to black and use pre-commit CI
+
 
 core:
   * Fix bug in generate_erroneous_sorting and add docstring (#1433)
