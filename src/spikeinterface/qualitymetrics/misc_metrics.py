@@ -278,17 +278,17 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
 
     # all units converted to seconds
     for unit_id in unit_ids:
-        spike_trains = []
+        spike_train_list = []
 
         for segment_index in range(num_segs):
             spike_train = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
             if np.any(spike_train):
-                spike_trains.append(spike_train / fs)
+                spike_train_list.append(spike_train / fs)
 
-        if not any([np.any(train) for train in spike_trains]):
+        if not any([np.any(train) for train in spike_train_list]):
             continue
 
-        ratio, _, count = isi_violations(spike_trains, total_duration_s, isi_threshold_s, min_isi_s)
+        ratio, _, count = isi_violations(spike_train_list, total_duration_s, isi_threshold_s, min_isi_s)
 
         isi_violations_ratio[unit_id] = ratio
         isi_violations_count[unit_id] = count
