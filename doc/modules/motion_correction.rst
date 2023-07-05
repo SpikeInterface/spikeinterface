@@ -181,6 +181,48 @@ The high level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
     )
 
 
+Preprocessing details
+---------------------
+
+The function :py:func:`~spikeinterface.preprocessing.correct_motion()` need a already preprocessed recording.
+
+It is important to have in mind that the preprocessing have an impact on the motion estimation.
+
+In the context of motion we advice:
+  * to no use whittening before motion estimation (it breaks spatial amplitude informations )
+  * to remove high frequencies in traces, this lead to noise in peak location.
+  * if you use neuropixel, then use :py:func:`~spikeinterface.preprocessing.phase_shift()` in preprocessing.
+
+Note that given the flexibility and lazy preprocessing layer of spikeinterface, it is very easy to have 2
+different preprocessing chains: one for motion estimate and one for the sorter. See the following example:
+
+.. code-block:: python
+
+    raw_rec = read_spikeglx(...)
+
+    # preprocessing 1 : bandpass (this is smoother) + cmr
+    rec1 = si.bandpass_filter(raw_rec, freq_min=300., freq_max=5000.)
+    rec1 = si.common_reference(rec1, reference='global', operator='median')
+
+    # here the corrected recording is done on the preprocessing 1
+    # rec_corrected1 will not be used for sorting!
+    motion_folder = '/my/folder'
+    rec_corrected1 = correct_motion(rec1, preset="nonrigid_accurate", folder=motion_folder)
+
+    # preprocessing 2 : highpass + cmr
+    rec2 = si.highpass_filter(raw_rec, freq_min=300.)
+    rec2 = si.common_reference(rec2, reference='global', operator='median')
+
+    # we use another preprocessing for the final interpolation
+    motion_info = load_motion_info(motion_folder)
+    rec_corrected2 = interpolate_motion(
+                      recording=rec2,
+                      motion=motion_info['motion'],
+                      temporal_bins=motion_info['temporal_bins'],
+                      spatial_bins=motion_info['spatial_bins'],
+                      **motion_info['parameters']['interpolate_motion_kwargs'])
+
+    sorting = run_sorter("montainsort5", rec_corrected2)
 
 
 References
