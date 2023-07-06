@@ -330,12 +330,12 @@ class NeoRecordingSegment(BaseRecordingSegment):
 
 
 class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
-    neo_returns_timestamps = False
-    # `neo_returns_timestamps` is a class attribute indicating whether
-    # `neo_reader.get_spike_timestamps` returns timestamps instead of frames,
-    # If True, then the segments do a transformation to frames.
+    neo_returns_frames = True
+    # `neo_returns_frames` is a class attribute indicating whether
+    # `neo_reader.get_spike_timestamps` returns frames instead of timestamps (!),
+    # If False, then the segments need to transform timestamps to to frames.
     # For formats that return timestamps (e.g. Mearec, Blackrock, Neuralynx) this should be set to
-    # True in the format class that inherits from this.
+    # False in the format class that inherits from this.
 
     need_t_start_from_signal_stream = False
     # `need_t_start_from_signal_stream` is a class attribute indicating whether t_start should be inferred
@@ -385,7 +385,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                 use_natural_unit_ids=self.use_natural_unit_ids,
                 t_start=t_start,
                 sampling_frequency=sampling_frequency,
-                neo_returns_timestamps=self.neo_returns_timestamps,
+                neo_returns_frames=self.neo_returns_frames,
             )
 
             self.add_sorting_segment(sorting_segment)
@@ -575,7 +575,7 @@ class NeoSortingSegment(BaseSortingSegment):
         use_natural_unit_ids,
         t_start,
         sampling_frequency,
-        neo_returns_timestamps,
+        neo_returns_frames,
     ):
         BaseSortingSegment.__init__(self)
         self.neo_reader = neo_reader
@@ -585,7 +585,7 @@ class NeoSortingSegment(BaseSortingSegment):
         self._t_start = t_start
         self._sampling_frequency = sampling_frequency
         self._natural_ids = None
-        self.neo_returns_timestamps = neo_returns_timestamps
+        self.neo_returns_frames = neo_returns_frames
 
     def get_natural_ids(self):
         if self._natural_ids is None:
@@ -602,13 +602,13 @@ class NeoSortingSegment(BaseSortingSegment):
         spike_timestamps = self.neo_reader.get_spike_timestamps(
             block_index=self.block_index, seg_index=self.segment_index, spike_channel_index=unit_index
         )
-        if self.neo_returns_timestamps:
+        if self.neo_returns_frames:
+            spike_frames = spike_timestamps
+        else:
             spike_times_seconds = self.neo_reader.rescale_spike_timestamp(spike_timestamps, dtype="float64")
             # Re-center to zero for each segment and multiply by frequency to convert seconds to frames
             t_start = 0 if self._t_start is None else self._t_start
             spike_frames = ((spike_times_seconds - t_start) * self._sampling_frequency).astype("int64")
-        else:  # Neo already return spikes in frames
-            spike_frames = spike_timestamps
 
         # clip
         if start_frame is not None:

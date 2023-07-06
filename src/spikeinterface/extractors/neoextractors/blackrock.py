@@ -87,7 +87,7 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
 
     mode = "file"
     NeoRawIOClass = "BlackrockRawIO"
-    neo_returns_timestamps = True
+    neo_returns_frames = False
     name = "blackrock"
 
     def __init__(

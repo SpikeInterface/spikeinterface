@@ -61,7 +61,7 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
 
     mode = "folder"
     NeoRawIOClass = "NeuralynxRawIO"
-    neo_returns_timestamps = True
+    neo_returns_timestamps = False
     need_t_start_from_signal_stream = True
     name = "neuralynx"
 
@@ -83,7 +83,7 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
 
         self._kwargs.update(
             {
-                "file_path": folder_path,
+                "folder_path": folder_path,
                 "sampling_frequency": sampling_frequency,
                 "stream_id": stream_id,
                 "stream_name": stream_name,
