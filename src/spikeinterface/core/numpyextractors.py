@@ -59,7 +59,7 @@ class NumpyRecording(BaseRecording):
             assert len(t_starts) == len(traces_list), "t_starts must be a list of same size than traces_list"
             t_starts = [float(t_start) for t_start in t_starts]
 
-        self.is_dumpable = True
+        self._is_json_serializable = False
 
         for i, traces in enumerate(traces_list):
             if t_starts is None:
@@ -98,7 +98,8 @@ class NumpySorting(BaseSorting):
 
     def __init__(self, sampling_frequency, unit_ids=[]):
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        self.is_dumpable = False
+        self._is_dumpable = False
+        self._is_json_serializable = False
 
     @staticmethod
     def from_extractor(source_sorting: BaseSorting) -> "NumpySorting":
@@ -369,7 +370,8 @@ class NumpySnippets(BaseSnippets):
             dtype=dtype,
         )
 
-        self.is_dumpable = False
+        self._is_dumpable = False
+        self._is_json_serializable = False
 
         for snippets, spikesframes in zip(snippets_list, spikesframes_list):
             snp_segment = NumpySnippetsSegment(snippets, spikesframes)

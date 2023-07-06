@@ -23,8 +23,6 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
     """
 
     extractor_name = "SHYBRIDRecording"
-    has_default_locations = True
-    is_writable = True
     mode = "folder"
     installation_mesg = (
         "To use the SHYBRID extractors, install SHYBRID and pyyaml: " "\n\n pip install shybrid pyyaml\n\n"
@@ -154,7 +152,6 @@ class SHYBRIDSortingExtractor(BaseSorting):
     """
 
     extractor_name = "SHYBRIDSorting"
-    is_writable = True
     installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
     name = "shybrid"
 

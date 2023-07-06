@@ -52,7 +52,6 @@ class BinaryRecordingExtractor(BaseRecording):
     """
 
     extractor_name = "BinaryRecording"
-    is_writable = True
     mode = "file"
     name = "binary"
 
@@ -121,7 +120,6 @@ class BinaryRecordingExtractor(BaseRecording):
             "sampling_frequency": sampling_frequency,
             "t_starts": t_starts,
             "num_channels": num_channels,
-            "num_chan": num_channels,  # TODO: This should be here at least till version 0.100.0
             "dtype": dtype.str,
             "channel_ids": channel_ids,
             "time_axis": time_axis,

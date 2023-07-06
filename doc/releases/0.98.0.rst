@@ -53,6 +53,8 @@ core:
   * Optional check_spike_frames in sorting.frame_slice (#1771)
   * Add _is_json_serializable to extractor (#1775)
   * Fixed num_chan warning (#1776)
+  * Check probe in waveform extractor and add has_probe method (#1777, #1788)
+
 
 extractors:
   * Various Blackrock fixes (#1404)
@@ -71,6 +73,9 @@ extractors:
   * Make NWB imports lazy (#1675)
   * Neo sorting refactor (#1626)
   * Exclude end_frame in PhyKilosort get_unit_spike_train (#1772)
+  * Simplify CellExplorer sorting with pymat reader (#1780)
+  * Kilosort does not return empty units by default (#1783)
+  * Remove 'is_writable' and 'has_default_locations' (#1789)
 
 preprocessing:
   * Fix typo in class ClipRecording (#1430)
@@ -115,6 +120,7 @@ qualitymetrics:
   * Fix bug in contamination if unit is empty (#1544)
   * Change v_peak name and thresholder behavior (#1580)
   * Fix dtype bug in Windows for spost.compute_refrac_period_violations (#1613)
+  * Handle empty units in quality metrics (#1783)
 
 comparison:
   * Remove to_dict() mechanism in comparisons module  (#1461)
@@ -179,6 +185,7 @@ docs:
   * Install python-neo and probeinterface from main in docs (#1677)
   * Add wobble to the docs (#1686)
   * Update doc merge_units (#1749)
+  * Add docs on SI version in cointainer #1786
 
 ci / packaging / tests:
   * Use full tests with code coverage for build status in README.md (#1442)

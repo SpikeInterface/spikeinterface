@@ -63,7 +63,6 @@ class NewToOldSorting:
         assert sorting.get_num_segments() == 1
         self._sorting = sorting
         self._sampling_frequency = sorting.get_sampling_frequency()
-        self.is_dumpable = False
 
         unit_map = {}
         if np.all([isinstance(unit_id, int)] for unit_id in self._sorting.get_unit_ids()):
@@ -76,6 +75,8 @@ class NewToOldSorting:
             for i_u, u in enumerate(self._sorting.get_unit_ids()):
                 unit_map[i_u] = u
         self._unit_map = unit_map
+
+        self._kwargs = dict(sorting=sorting)
 
     def get_unit_ids(self):
         """This function returns a list of ids (ints) for each unit in the sorsted result.
@@ -180,8 +181,10 @@ class OldToNewRecording(BaseRecording):
             dtype=oldapi_recording_extractor.get_dtype(return_scaled=False),
         )
 
-        # set is_dumpable to False to use dumping mechanism of old extractor
-        self.is_dumpable = False
+        # set _is_dumpable to False to use dumping mechanism of old extractor
+        self._is_dumpable = False
+        self._is_json_serializable = False
+
         self.annotate(is_filtered=oldapi_recording_extractor.is_filtered)
 
         # add old recording as a recording segment
@@ -265,7 +268,8 @@ class OldToNewSorting(BaseSorting):
         sorting_segment = OldToNewSortingSegment(oldapi_sorting_extractor)
         self.add_sorting_segment(sorting_segment)
 
-        self.is_dumpable = False
+        self._is_dumpable = False
+        self._is_json_serializable = False
 
         # add old properties
         copy_properties(oldapi_extractor=oldapi_sorting_extractor, new_extractor=self)

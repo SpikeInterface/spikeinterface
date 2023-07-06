@@ -17,7 +17,13 @@ from spikeinterface.preprocessing import get_spatial_interpolation_kernel
 
 
 def correct_motion_on_peaks(
-    peaks, peak_locations, times, motion, temporal_bins, spatial_bins, direction="y", progress_bar=False
+    peaks,
+    peak_locations,
+    times,
+    motion,
+    temporal_bins,
+    spatial_bins,
+    direction="y",
 ):
     """
     Given the output of estimate_motion(), apply inverse motion on peak locations.
@@ -35,8 +41,8 @@ def correct_motion_on_peaks(
         motion.shape[1] equal 1 when "rigid" motion equal temporal_bins.shape[0] when "non-rigid"
     temporal_bins: np.array
         Temporal bins in second.
-    spatial_bins: None or np.array
-        Bins for non-rigid motion. If None, rigid motion is used
+    spatial_bins: np.array
+        Bins for non-rigid motion. If spatial_bins.sahpe[0] == 1 then rigid motion is used.
 
     Returns
     -------
@@ -45,7 +51,7 @@ def correct_motion_on_peaks(
     """
     corrected_peak_locations = peak_locations.copy()
 
-    if spatial_bins is None:
+    if spatial_bins.shape[0] == 1:
         # rigid motion interpolation 1D
         sample_bins = np.searchsorted(times, temporal_bins)
         f = scipy.interpolate.interp1d(sample_bins, motion[:, 0], bounds_error=False, fill_value="extrapolate")
@@ -125,7 +131,7 @@ def interpolate_motion_on_traces(
     # inperpolation kernel will be the same per temporal bin
     for bin_ind in np.unique(bin_inds):
         # Step 1 : channel motion
-        if spatial_bins is None:
+        if spatial_bins.shape[0] == 0:
             # rigid motion : same motion for all channels
             channel_motions = motion[bin_ind, 0]
         else:
@@ -269,8 +275,7 @@ class InterpolateMotionRecording(BasePreprocessor):
         # force as arrays
         temporal_bins = np.asarray(temporal_bins)
         motion = np.asarray(motion)
-        if spatial_bins is not None:
-            spatial_bins = np.asarray(spatial_bins)
+        spatial_bins = np.asarray(spatial_bins)
 
         channel_locations = recording.get_channel_locations()
         assert channel_locations.ndim >= direction, (
@@ -285,7 +290,7 @@ class InterpolateMotionRecording(BasePreprocessor):
             # and check if channels are inside
             channel_inside = np.ones(locs.shape[0], dtype="bool")
             for operator in (np.max, np.min):
-                if spatial_bins is None:
+                if spatial_bins.shape[0] == 1:
                     best_motions = operator(motion[:, 0])
                 else:
                     # non rigid : interpolation channel motion for this temporal bin
@@ -350,7 +355,6 @@ class InterpolateMotionRecording(BasePreprocessor):
             p=p,
             num_closest=num_closest,
         )
-        # self.is_dumpable= False
 
 
 class InterpolateMotionRecordingSegment(BasePreprocessorSegment):

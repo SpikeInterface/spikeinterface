@@ -44,7 +44,6 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     mode = "folder"
     NeoRawIOClass = "SpikeGLXRawIO"
     name = "spikeglx"
-    has_default_locations = True
 
     def __init__(self, folder_path, load_sync_channel=False, stream_id=None, stream_name=None, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(folder_path, load_sync_channel=load_sync_channel)

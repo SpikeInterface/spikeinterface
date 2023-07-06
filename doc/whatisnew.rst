@@ -32,7 +32,11 @@ Release notes
 Version 0.98.0
 ==============
 
-* ...
+* Implemented motion correction in SpikeInterface
+* Get rid of to_dict in _kwargs and use JSON serializer
+* _ind to _index in complex dtype representation
+* Moved to src/spikeinterface structure
+* Reformat to black and use pre-commit CI
 
 Version 0.97.1
 ==============
