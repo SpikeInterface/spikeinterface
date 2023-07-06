@@ -371,9 +371,9 @@ def compute_center_of_mass(waveform_extractor, peak_sign="neg", radius_um=75, fe
 def compute_grid_convolution(
     waveform_extractor,
     peak_sign="neg",
-    radius_um=50.0,
+    radius_um=40.0,
     upsampling_um=5,
-    sigma_um=np.linspace(10, 50, 5),
+    sigma_um=np.linspace(5.0, 25.0, 5),
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
@@ -418,6 +418,7 @@ def compute_grid_convolution(
     fs = waveform_extractor.sampling_frequency
     percentile = 100 - percentile
     assert 0 <= percentile <= 100, "Percentile should be in [0, 100]"
+    assert 0 <= sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
 
     time_axis = np.arange(-nbefore, nafter) * 1000 / fs
     if prototype is None:
