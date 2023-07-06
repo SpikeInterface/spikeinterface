@@ -107,21 +107,59 @@ class BaseSorting(BaseExtractor):
         end_frame: Union[int, None] = None,
         return_times: bool = False,
     ):
+        if return_times:
+            spike_times = self.get_unit_spike_times(
+                unit_id=unit_id,
+                segment_index=segment_index,
+                start_frame=start_frame,
+                end_frame=end_frame,
+            )
+            return spike_times
+        else:
+            spike_frames = self.get_unit_spike_frames(
+                unit_id=unit_id,
+                segment_index=segment_index,
+                start_frame=start_frame,
+                end_frame=end_frame,
+            )
+            return spike_frames
+
+    def get_unit_spike_frames(
+        self,
+        unit_id,
+        segment_index: Union[int, None] = None,
+        start_frame: Union[int, None] = None,
+        end_frame: Union[int, None] = None,
+    ):
+        segment_index = self._check_segment_index(segment_index)
+        segment = self._sorting_segments[segment_index]
+        spike_frames = segment.get_unit_spike_train(
+            unit_id=unit_id,
+            start_frame=start_frame,
+            end_frame=end_frame,
+        ).astype("int64")
+
+        return spike_frames
+
+    def get_unit_spike_times(
+        self,
+        unit_id,
+        segment_index: Union[int, None] = None,
+        start_frame: Union[int, None] = None,
+        end_frame: Union[int, None] = None,
+    ):
         segment_index = self._check_segment_index(segment_index)
         segment = self._sorting_segments[segment_index]
         spike_frames = segment.get_unit_spike_train(
             unit_id=unit_id, start_frame=start_frame, end_frame=end_frame
         ).astype("int64")
-        if return_times:
-            if self.has_recording():
-                times = self.get_times(segment_index=segment_index)
-                return times[spike_frames]
-            else:
-                t_start = segment._t_start if segment._t_start is not None else 0
-                spike_times = spike_frames / self.get_sampling_frequency()
-                return t_start + spike_times
+        if self.has_recording():
+            times = self.get_times(segment_index=segment_index)
+            return times[spike_frames]
         else:
-            return spike_frames
+            t_start = segment._t_start if segment._t_start is not None else 0
+            spike_times = spike_frames / self.get_sampling_frequency()
+            return t_start + spike_times
 
     def register_recording(self, recording, check_spike_frames=True):
         """Register a recording to the sorting.
@@ -405,6 +443,7 @@ class BaseSortingSegment(BaseSegment):
         self._t_start = t_start
         BaseSegment.__init__(self)
 
+    # This should be an abstract method
     def get_unit_spike_train(
         self,
         unit_id,

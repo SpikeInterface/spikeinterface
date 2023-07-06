@@ -563,6 +563,19 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
         return t_start
 
+    def get_unit_spike_times(
+        self,
+        unit_id,
+        segment_index: Union[int, None] = None,
+        start_frame: Union[int, None] = None,
+        end_frame: Union[int, None] = None,
+    ):
+        segment_index = self._check_segment_index(segment_index)
+        segment = self._sorting_segments[segment_index]
+        spike_times = segment.get_unit_spike_times(unit_it=unit_id, start_frame=start_frame, end_frame=end_frame)
+
+        return spike_times
+
 
 class NeoSortingSegment(BaseSortingSegment):
     def __init__(
@@ -578,6 +591,7 @@ class NeoSortingSegment(BaseSortingSegment):
         self.neo_reader = neo_reader
         self.segment_index = segment_index
         self.block_index = block_index
+        self.use_natural_unit_ids = use_natural_unit_ids
         self._t_start = t_start
         self._sampling_frequency = sampling_frequency
         self.neo_returns_frames = neo_returns_frames
@@ -609,6 +623,34 @@ class NeoSortingSegment(BaseSortingSegment):
             spike_frames = spike_frames[spike_frames <= end_frame]
 
         return spike_frames
+
+    def get_unit_spike_times(self, unit_id, start_frame, end_frame):
+        spike_channel_index = self.map_from_unit_id_to_spike_channel_index[unit_id]
+
+        spike_timestamps = self.neo_reader.get_spike_timestamps(
+            block_index=self.block_index,
+            seg_index=self.segment_index,
+            spike_channel_index=spike_channel_index,
+        )
+
+        # Rescale to seconds
+        spike_timestamps = self.neo_reader.rescale_spike_timestamp(spike_timestamps, dtype="float64")
+
+        if self.neo_returns_frames:
+            spike_frames = spike_timestamps
+            t_start = 0 if self._t_start is None else self._t_start
+            spike_timestamps = +t_start + spike_frames / self._sampling_frequency
+
+        # clip
+        if start_frame is not None:
+            start_time = start_frame / self._sampling_frequency
+            spike_timestamps = spike_timestamps[spike_timestamps >= start_time]
+
+        if end_frame is not None:
+            end_time = end_frame / self._sampling_frequency
+            spike_timestamps = spike_timestamps[spike_timestamps <= end_time]
+
+        return spike_timestamps
 
 
 _neo_event_dtype = np.dtype([("time", "float64"), ("duration", "float64"), ("label", "<U100")])
