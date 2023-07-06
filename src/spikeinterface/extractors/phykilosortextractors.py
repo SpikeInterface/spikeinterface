@@ -28,7 +28,12 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     name = "phykilosort"
 
     def __init__(
-        self, folder_path, exclude_cluster_groups=None, keep_good_only=False, load_all_cluster_properties=True
+        self,
+        folder_path,
+        exclude_cluster_groups=None,
+        keep_good_only=False,
+        remove_empty_units=False,
+        load_all_cluster_properties=True,
     ):
         try:
             import pandas as pd
@@ -52,7 +57,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         spike_clusters = np.atleast_1d(spike_clusters.squeeze())
 
         clust_id = np.unique(spike_clusters)
-        unit_ids = list(clust_id)
+        unique_unit_ids = list(clust_id)
         params = read_python(str(phy_folder / "params.py"))
         sampling_frequency = params["sample_rate"]
 
@@ -87,8 +92,8 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
         # in case no tsv/csv files are found populate cluster info with minimal info
         if cluster_info is None:
-            cluster_info = pd.DataFrame({"cluster_id": unit_ids})
-            cluster_info["group"] = ["unsorted"] * len(unit_ids)
+            cluster_info = pd.DataFrame({"cluster_id": unique_unit_ids})
+            cluster_info["group"] = ["unsorted"] * len(unique_unit_ids)
 
         if exclude_cluster_groups is not None:
             if isinstance(exclude_cluster_groups, str):
@@ -105,6 +110,9 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             assert "id" in cluster_info.columns, "Couldn't find cluster ids in the tsv files!"
             cluster_info.loc[:, "cluster_id"] = cluster_info["id"].values
             del cluster_info["id"]
+
+        if remove_empty_units:
+            cluster_info = cluster_info.query(f"cluster_id in {unique_unit_ids}")
 
         # update spike clusters and times values
         bad_clusters = [clust for clust in clust_id if clust not in cluster_info["cluster_id"].values]
@@ -220,6 +228,8 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     keep_good_only : bool, default: True
         Whether to only keep good units.
         If True, only Kilosort-labeled 'good' units are returned.
+    remove_empty_units : bool, default: True
+        If True, empty units are removed from the sorting extractor.
 
     Returns
     -------
@@ -230,9 +240,13 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     extractor_name = "KiloSortSorting"
     name = "kilosort"
 
-    def __init__(self, folder_path, keep_good_only=False):
+    def __init__(self, folder_path, keep_good_only=False, remove_empty_units=True):
         BasePhyKilosortSortingExtractor.__init__(
-            self, folder_path, exclude_cluster_groups=None, keep_good_only=keep_good_only
+            self,
+            folder_path,
+            exclude_cluster_groups=None,
+            keep_good_only=keep_good_only,
+            remove_empty_units=remove_empty_units,
         )
 
         self._kwargs = {"folder_path": str(Path(folder_path).absolute()), "keep_good_only": keep_good_only}
