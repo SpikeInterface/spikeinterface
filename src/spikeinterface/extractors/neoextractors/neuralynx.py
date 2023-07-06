@@ -81,14 +81,12 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
             **neo_kwargs,
         )
 
-        self._kwargs.update(
-            {
-                "folder_path": folder_path,
-                "sampling_frequency": sampling_frequency,
-                "stream_id": stream_id,
-                "stream_name": stream_name,
-            }
-        )
+        self._kwargs = {
+            "folder_path": folder_path,
+            "sampling_frequency": sampling_frequency,
+            "stream_id": stream_id,
+            "stream_name": stream_name,
+        }
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):

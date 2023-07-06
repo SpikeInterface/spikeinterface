@@ -106,14 +106,12 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
             **neo_kwargs,
         )
 
-        self._kwargs.update(
-            {
-                "file_path": file_path,
-                "sampling_frequency": sampling_frequency,
-                "stream_id": stream_id,
-                "stream_name": stream_name,
-            }
-        )
+        self._kwargs = {
+            "file_path": file_path,
+            "sampling_frequency": sampling_frequency,
+            "stream_id": stream_id,
+            "stream_name": stream_name,
+        }
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
