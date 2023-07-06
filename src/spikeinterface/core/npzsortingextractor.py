@@ -16,7 +16,6 @@ class NpzSortingExtractor(BaseSorting):
     """
 
     extractor_name = "NpzSortingExtractor"
-    is_writable = True
     mode = "file"
     name = "npz"
 

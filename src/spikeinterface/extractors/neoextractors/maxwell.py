@@ -37,7 +37,6 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     mode = "file"
     NeoRawIOClass = "MaxwellRawIO"
     name = "maxwell"
-    has_default_locations = True
 
     def __init__(
         self,

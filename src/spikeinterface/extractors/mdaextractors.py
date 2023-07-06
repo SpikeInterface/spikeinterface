@@ -35,8 +35,6 @@ class MdaRecordingExtractor(BaseRecording):
     """
 
     extractor_name = "MdaRecording"
-    has_default_locations = True
-    is_writable = True
     mode = "folder"
     name = "mda"
 
@@ -112,7 +110,7 @@ class MdaRecordingExtractor(BaseRecording):
         save_path.mkdir(parents=True, exist_ok=True)
         save_file_path = save_path / raw_fname
         parent_dir = save_path
-        num_chan = recording.get_num_channels()
+        num_channels = recording.get_num_channels()
         num_frames = recording.get_num_frames(0)
 
         geom = recording.get_channel_locations()
@@ -125,7 +123,7 @@ class MdaRecordingExtractor(BaseRecording):
         if dtype == "int":
             dtype = "int16"
 
-        header = MdaHeader(dt0=dtype, dims0=(num_chan, num_frames))
+        header = MdaHeader(dt0=dtype, dims0=(num_channels, num_frames))
         header_size = header.header_size
 
         write_binary_recording(
@@ -194,7 +192,6 @@ class MdaSortingExtractor(BaseSorting):
     """
 
     extractor_name = "MdaSorting"
-    is_writable = True
     mode = "file"
     name = "mda"
 

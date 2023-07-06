@@ -267,9 +267,9 @@ class WaveformExtractor:
             else:
                 relative_to = None
 
-            if recording.is_dumpable:
+            if recording.check_if_json_serializable():
                 recording.dump(folder / "recording.json", relative_to=relative_to)
-            if sorting.is_dumpable:
+            if sorting.check_if_json_serializable():
                 sorting.dump(folder / "sorting.json", relative_to=relative_to)
             else:
                 warn(
@@ -868,9 +868,9 @@ class WaveformExtractor:
             (folder / "params.json").write_text(json.dumps(check_json(self._params), indent=4), encoding="utf8")
 
             if self.has_recording():
-                if self.recording.is_dumpable:
+                if self.recording.check_if_json_serializable():
                     self.recording.dump(folder / "recording.json", relative_to=relative_to)
-            if self.sorting.is_dumpable:
+            if self.sorting.check_if_json_serializable():
                 self.sorting.dump(folder / "sorting.json", relative_to=relative_to)
             else:
                 warn(
@@ -920,10 +920,10 @@ class WaveformExtractor:
             # write metadata
             zarr_root.attrs["params"] = check_json(self._params)
             if self.has_recording():
-                if self.recording.is_dumpable:
+                if self.recording.check_if_json_serializable():
                     rec_dict = self.recording.to_dict(relative_to=relative_to)
                     zarr_root.attrs["recording"] = check_json(rec_dict)
-            if self.sorting.is_dumpable:
+            if self.sorting.check_if_json_serializable():
                 sort_dict = self.sorting.to_dict(relative_to=relative_to)
                 zarr_root.attrs["sorting"] = check_json(sort_dict)
             else:
@@ -1530,6 +1530,10 @@ def extract_waveforms(
         warn("load_if_exists=True/false is deprcated. Use load_waveforms() instead.", DeprecationWarning, stacklevel=2)
 
     estimate_kwargs, job_kwargs = split_job_kwargs(kwargs)
+
+    assert (
+        recording.has_channel_location()
+    ), "Recording must have a probe  or channel location to extract waveforms. Use the `set_probe()` or `set_dummy_probe_from_locations()` methods."
 
     if mode == "folder":
         assert folder is not None

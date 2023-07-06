@@ -238,7 +238,7 @@ def test_calculate_isi_violations(simulated_data):
     isi_viol_gt = {0: 0.0998002996004994, 1: 0.7904857139469347, 2: 1.929898371551754}
     counts_gt = {0: 2, 1: 4, 2: 10}
     we = setup_dataset(simulated_data)
-    isi_viol, counts = compute_isi_violations(we, 1, 0.0)
+    isi_viol, counts = compute_isi_violations(we, isi_threshold_ms=1, min_isi_ms=0.0)
 
     print(isi_viol)
     assert np.allclose(list(isi_viol_gt.values()), list(isi_viol.values()), rtol=0.05)
@@ -258,7 +258,7 @@ def test_calculate_rp_violations(simulated_data):
     rp_contamination_gt = {0: 0.10534956502609294, 1: 1.0, 2: 1.0}
     counts_gt = {0: 2, 1: 4, 2: 10}
     we = setup_dataset(simulated_data)
-    rp_contamination, counts = compute_refrac_period_violations(we, 1, 0.0)
+    rp_contamination, counts = compute_refrac_period_violations(we, refractory_period_ms=1, censored_period_ms=0.0)
 
     print(rp_contamination)
     assert np.allclose(list(rp_contamination_gt.values()), list(rp_contamination.values()), rtol=0.05)
@@ -266,7 +266,7 @@ def test_calculate_rp_violations(simulated_data):
 
     sorting = NumpySorting.from_dict({0: np.array([28, 150], dtype=np.int16), 1: np.array([], dtype=np.int16)}, 30000)
     we.sorting = sorting
-    rp_contamination, counts = compute_refrac_period_violations(we, 1, 0.0)
+    rp_contamination, counts = compute_refrac_period_violations(we, refractory_period_ms=1, censored_period_ms=0.0)
     assert np.isnan(rp_contamination[1])
 
 

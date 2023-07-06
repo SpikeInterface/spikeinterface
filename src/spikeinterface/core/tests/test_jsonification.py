@@ -141,7 +141,10 @@ class DummyExtractor(BaseExtractor):
         self.other_extractor = other_extractor
         self.extractor_list = extractor_list
         self.extractor_dict = extractor_dict
-        self.is_dumpable = True
+
+        # this already the case by default
+        self._is_dumpable = True
+        self._is_json_serializable = True
 
         self._kwargs = {
             "attribute": attribute,
