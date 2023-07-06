@@ -300,14 +300,6 @@ class BaseRecordingSnippets(BaseExtractor):
         probe = self.create_dummy_probe_from_locations(locations, shape=shape, shape_params=shape_params, axes=axes)
         self.set_probe(probe, in_place=True)
 
-    def set_dummy_probe(self):
-        """
-        Sets a 'dummy' probe to the recording object.
-        """
-        locations = np.zeros((self.get_num_channels(), 2))
-        locations[:, 0] = np.arange(self.get_num_channels())
-        self.set_dummy_probe_from_locations(locations)
-
     def set_channel_locations(self, locations, channel_ids=None):
         if self.get_property("contact_vector") is not None:
             raise ValueError("set_channel_locations(..) destroy the probe description, prefer set_probes(..)")

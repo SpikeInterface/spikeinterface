@@ -1533,7 +1533,7 @@ def extract_waveforms(
 
     assert (
         recording.has_probe()
-    ), "Recording must have a probe to extract waveforms. Use the `set_probe()`, `set_channel_locations()`, or `set_dummy_probe()` methods."
+    ), "Recording must have a probe to extract waveforms. Use the `set_probe()` or `set_dummy_probe_from_locations()` methods."
 
     if mode == "folder":
         assert folder is not None
