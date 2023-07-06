@@ -137,6 +137,18 @@ class _NeoBaseExtractor:
 
         return stream_id_to_t_start
 
+    def build_stream_name_to_stream_id_dict(self) -> Dict[str, str]:
+        neo_header = self.neo_reader.header
+        signal_streams = neo_header["signal_streams"]
+        stream_ids = signal_streams["id"]
+        stream_names = signal_streams["name"]
+
+        stream_name_to_stream_id = dict()
+        for stream_name, stream_id in zip(stream_names, stream_ids):
+            stream_name_to_stream_id[stream_name] = stream_id
+
+        return stream_name_to_stream_id
+
 
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
     def __init__(
@@ -344,9 +356,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
         # Get stream_id from stream_name
         if stream_name:
-            stream_ids = self.neo_reader.header["signal_streams"]["id"]
-            stream_index = self.neo_reader.header["signal_streams"]["name"] == stream_name
-            stream_id = stream_ids[stream_index][0]
+            stream_id = self.build_stream_name_to_stream_id_dict()["stream_name"]
 
         self.use_natural_unit_ids = use_natural_unit_ids
         spike_channels = self.neo_reader.header["spike_channels"]
