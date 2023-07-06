@@ -126,7 +126,6 @@ class NumpySorting(BaseSorting):
         self._is_dumpable = False
         self._is_json_serializable = False
 
-
         if spikes.size == 0:
             nseg = 1
         else:
