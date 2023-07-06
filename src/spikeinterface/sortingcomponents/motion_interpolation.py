@@ -17,7 +17,13 @@ from spikeinterface.preprocessing import get_spatial_interpolation_kernel
 
 
 def correct_motion_on_peaks(
-    peaks, peak_locations, times, motion, temporal_bins, spatial_bins, direction="y", progress_bar=False
+    peaks,
+    peak_locations,
+    times,
+    motion,
+    temporal_bins,
+    spatial_bins,
+    direction="y",
 ):
     """
     Given the output of estimate_motion(), apply inverse motion on peak locations.
@@ -35,8 +41,8 @@ def correct_motion_on_peaks(
         motion.shape[1] equal 1 when "rigid" motion equal temporal_bins.shape[0] when "non-rigid"
     temporal_bins: np.array
         Temporal bins in second.
-    spatial_bins: None or np.array
-        Bins for non-rigid motion. If None, rigid motion is used
+    spatial_bins: np.array
+        Bins for non-rigid motion. If spatial_bins.sahpe[0] == 1 then rigid motion is used.
 
     Returns
     -------
@@ -45,7 +51,7 @@ def correct_motion_on_peaks(
     """
     corrected_peak_locations = peak_locations.copy()
 
-    if spatial_bins is None:
+    if spatial_bins.shape[0] == 1:
         # rigid motion interpolation 1D
         sample_bins = np.searchsorted(times, temporal_bins)
         f = scipy.interpolate.interp1d(sample_bins, motion[:, 0], bounds_error=False, fill_value="extrapolate")
@@ -63,7 +69,7 @@ def correct_motion_on_peaks(
     return corrected_peak_locations
 
 
-def correct_motion_on_traces(
+def interpolate_motion_on_traces(
     traces,
     times,
     channel_locations,
@@ -125,7 +131,7 @@ def correct_motion_on_traces(
     # inperpolation kernel will be the same per temporal bin
     for bin_ind in np.unique(bin_inds):
         # Step 1 : channel motion
-        if spatial_bins is None:
+        if spatial_bins.shape[0] == 0:
             # rigid motion : same motion for all channels
             channel_motions = motion[bin_ind, 0]
         else:
@@ -202,7 +208,7 @@ def _get_closest_ind(array, values):
     return idxs
 
 
-class CorrectMotionRecording(BasePreprocessor):
+class InterpolateMotionRecording(BasePreprocessor):
     """
     Recording that corrects motion on-the-fly given a motion vector estimation (rigid or non-rigid).
     This internally applies a spatial interpolation on the original traces after reversing the motion.
@@ -245,7 +251,7 @@ class CorrectMotionRecording(BasePreprocessor):
 
     Returns
     -------
-    corrected_recording: CorrectMotionRecording
+    corrected_recording: InterpolateMotionRecording
         Recording after motion correction
     """
 
@@ -269,8 +275,7 @@ class CorrectMotionRecording(BasePreprocessor):
         # force as arrays
         temporal_bins = np.asarray(temporal_bins)
         motion = np.asarray(motion)
-        if spatial_bins is not None:
-            spatial_bins = np.asarray(spatial_bins)
+        spatial_bins = np.asarray(spatial_bins)
 
         channel_locations = recording.get_channel_locations()
         assert channel_locations.ndim >= direction, (
@@ -285,7 +290,7 @@ class CorrectMotionRecording(BasePreprocessor):
             # and check if channels are inside
             channel_inside = np.ones(locs.shape[0], dtype="bool")
             for operator in (np.max, np.min):
-                if spatial_bins is None:
+                if spatial_bins.shape[0] == 1:
                     best_motions = operator(motion[:, 0])
                 else:
                     # non rigid : interpolation channel motion for this temporal bin
@@ -325,7 +330,7 @@ class CorrectMotionRecording(BasePreprocessor):
                 self.set_property("contact_vector", contact_vector)
 
         for parent_segment in recording._recording_segments:
-            rec_segment = CorrectMotionRecordingSegment(
+            rec_segment = InterpolateMotionRecordingSegment(
                 parent_segment,
                 channel_locations,
                 motion,
@@ -350,10 +355,9 @@ class CorrectMotionRecording(BasePreprocessor):
             p=p,
             num_closest=num_closest,
         )
-        # self.is_dumpable= False
 
 
-class CorrectMotionRecordingSegment(BasePreprocessorSegment):
+class InterpolateMotionRecordingSegment(BasePreprocessorSegment):
     def __init__(
         self,
         parent_recording_segment,
@@ -379,7 +383,7 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
     def get_traces(self, start_frame, end_frame, channel_indices):
         if self.time_vector is not None:
             raise NotImplementedError(
-                "time_vector for CorrectMotionRecording do not work because temporal_bins start from 0"
+                "time_vector for InterpolateMotionRecording do not work because temporal_bins start from 0"
             )
             # times = np.asarray(self.time_vector[start_frame:end_frame])
         else:
@@ -392,7 +396,7 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
 
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices=slice(None))
 
-        trace2 = correct_motion_on_traces(
+        trace2 = interpolate_motion_on_traces(
             traces,
             times,
             self.channel_locations,
@@ -411,4 +415,4 @@ class CorrectMotionRecordingSegment(BasePreprocessorSegment):
         return trace2
 
 
-correct_motion = define_function_from_class(source_class=CorrectMotionRecording, name="correct_motion")
+interpolate_motion = define_function_from_class(source_class=InterpolateMotionRecording, name="correct_motion")

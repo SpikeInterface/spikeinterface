@@ -10,6 +10,7 @@ from ..utils import ShellScript, get_matlab_shell_name, get_bash_path
 from ..basesorter import get_job_kwargs
 from spikeinterface.extractors import KiloSortSortingExtractor
 from spikeinterface.core import write_binary_recording
+from spikeinterface.preprocessing.zero_channel_pad import TracePaddedRecording
 
 
 class KilosortBase:
@@ -121,18 +122,38 @@ class KilosortBase:
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         cls._generate_channel_map_file(recording, sorter_output_folder)
 
-        if recording.binary_compatible_with(dtype="int16", time_axis=0, file_paths_lenght=1):
+        skip_kilosort_preprocessing = params.get("skip_kilosort_preprocessing", False)
+
+        if (
+            recording.binary_compatible_with(dtype="int16", time_axis=0, file_paths_lenght=1)
+            and not skip_kilosort_preprocessing
+        ):
             # no copy
-            d = recording.get_binary_description()
-            binary_file_path = Path(d["file_paths"][0])
+            binary_description = recording.get_binary_description()
+            binary_file_path = Path(binary_description["file_paths"][0])
         else:
             # local copy needed
             binary_file_path = sorter_output_folder / "recording.dat"
+            if skip_kilosort_preprocessing:
+                # when we skip the kilosort preprocessing we need to extend the file with zero pad to ensure
+                # that the number of sample is compatible with batch size (NT)
+                nt = params["NT"]
+                num_samples = recording.get_num_samples()
+                pad = nt - num_samples % nt
+
+                padding_start = 0
+                padding_end = pad
+                padded_recording = TracePaddedRecording(
+                    parent_recording=recording,
+                    padding_start=padding_start,
+                    padding_end=padding_end,
+                )
+            else:
+                padded_recording = recording
             write_binary_recording(
-                recording,
+                recording=padded_recording,
                 file_paths=[binary_file_path],
                 dtype="int16",
-                verbose=False,
                 **get_job_kwargs(params, verbose),
             )
 
@@ -192,6 +213,17 @@ class KilosortBase:
 
         if retcode != 0:
             raise Exception(f"{cls.sorter_name} returned a non-zero exit code")
+
+        # Clean-up temporary files
+        if params["delete_tmp_files"]:
+            for temp_file in sorter_output_folder.glob("*.m"):
+                temp_file.unlink()
+            for temp_file in sorter_output_folder.glob("*.mat"):
+                temp_file.unlink()
+            if (sorter_output_folder / "temp_wh.dat").exists():
+                (sorter_output_folder / "temp_wh.dat").unlink()
+        if params["delete_recording_dat"] and (recording_file := sorter_output_folder / "recording.dat").exists():
+            recording_file.unlink()
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):

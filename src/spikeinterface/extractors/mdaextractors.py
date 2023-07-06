@@ -35,8 +35,6 @@ class MdaRecordingExtractor(BaseRecording):
     """
 
     extractor_name = "MdaRecording"
-    has_default_locations = True
-    is_writable = True
     mode = "folder"
     name = "mda"
 
@@ -75,7 +73,6 @@ class MdaRecordingExtractor(BaseRecording):
         raw_fname="raw.mda",
         params_fname="params.json",
         geom_fname="geom.csv",
-        verbose=True,
         dtype=None,
         **job_kwargs,
     ):
@@ -98,8 +95,6 @@ class MdaRecordingExtractor(BaseRecording):
             File name of geom file. Defaults to 'geom.csv'.
         dtype: dtype
             Data type to be used. If None dtype is same as recording traces.
-        verbose: bool
-            If True, output is verbose.
         **job_kwargs:
             Use by job_tools modules to set:
 
@@ -115,7 +110,7 @@ class MdaRecordingExtractor(BaseRecording):
         save_path.mkdir(parents=True, exist_ok=True)
         save_file_path = save_path / raw_fname
         parent_dir = save_path
-        num_chan = recording.get_num_channels()
+        num_channels = recording.get_num_channels()
         num_frames = recording.get_num_frames(0)
 
         geom = recording.get_channel_locations()
@@ -128,7 +123,7 @@ class MdaRecordingExtractor(BaseRecording):
         if dtype == "int":
             dtype = "int16"
 
-        header = MdaHeader(dt0=dtype, dims0=(num_chan, num_frames))
+        header = MdaHeader(dt0=dtype, dims0=(num_channels, num_frames))
         header_size = header.header_size
 
         write_binary_recording(
@@ -136,7 +131,6 @@ class MdaRecordingExtractor(BaseRecording):
             file_paths=save_file_path,
             dtype=dtype,
             byte_offset=header_size,
-            verbose=verbose,
             add_file_extension=False,
             **job_kwargs,
         )
@@ -198,7 +192,6 @@ class MdaSortingExtractor(BaseSorting):
     """
 
     extractor_name = "MdaSorting"
-    is_writable = True
     mode = "file"
     name = "mda"
 

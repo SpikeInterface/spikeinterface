@@ -23,8 +23,6 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
     """
 
     extractor_name = "SHYBRIDRecording"
-    has_default_locations = True
-    is_writable = True
     mode = "folder"
     installation_mesg = (
         "To use the SHYBRID extractors, install SHYBRID and pyyaml: " "\n\n pip install shybrid pyyaml\n\n"
@@ -65,7 +63,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
             self,
             file_paths=bin_file,
             sampling_frequency=float(params["fs"]),
-            num_chan=nb_channels,
+            num_channels=nb_channels,
             dtype=params["dtype"],
             time_axis=time_axis,
         )
@@ -77,7 +75,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         self.extra_requirements.extend(["hybridizer", "pyyaml"])
 
     @staticmethod
-    def write_recording(recording, save_path, initial_sorting_fn, dtype="float32", verbose=True, **job_kwargs):
+    def write_recording(recording, save_path, initial_sorting_fn, dtype="float32", **job_kwargs):
         """Convert and save the recording extractor to SHYBRID format.
 
         Parameters
@@ -116,7 +114,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
 
         # write recording
         recording_fn = (save_path / recording_name).absolute()
-        write_binary_recording(recording, file_paths=recording_fn, dtype=dtype, verbose=verbose, **job_kwargs)
+        write_binary_recording(recording, file_paths=recording_fn, dtype=dtype, **job_kwargs)
 
         # write probe file
         probe_fn = (save_path / probe_name).absolute()
@@ -154,7 +152,6 @@ class SHYBRIDSortingExtractor(BaseSorting):
     """
 
     extractor_name = "SHYBRIDSorting"
-    is_writable = True
     installation_mesg = "To use the SHYBRID extractors, install SHYBRID: \n\n pip install shybrid\n\n"
     name = "shybrid"
 

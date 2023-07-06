@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import json
 import platform
+from warnings import warn
 from typing import Optional, Union
 
 from ..core import BaseRecording
@@ -72,6 +73,10 @@ _common_param_doc = """
         singularity. Use a str to specify a non-default container. If that container is not local it will be pulled
         from Docker Hub.
         If False, the sorter is run locally.
+    delete_container_files: bool
+        If True, the container temporary files are deleted after the sorting is done (default False).
+    with_output: bool
+        If True, the output Sorting is returned as a Sorting (default True).
     **sorter_params: keyword args
         Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
 
@@ -92,6 +97,7 @@ def run_sorter(
     raise_error: bool = True,
     docker_image: Optional[Union[bool, str]] = False,
     singularity_image: Optional[Union[bool, str]] = False,
+    delete_container_files: bool = True,
     with_output: bool = True,
     **sorter_params,
 ):
@@ -118,6 +124,7 @@ def run_sorter(
     )
 
     if docker_image or singularity_image:
+        common_kwargs.update(dict(delete_container_files=delete_container_files))
         if docker_image:
             mode = "docker"
             assert not singularity_image
@@ -314,7 +321,7 @@ class ContainerClient:
     def run_command(self, command):
         if self.mode == "docker":
             res = self.docker_container.exec_run(command)
-            return str(res.output)
+            return res.output.decode(encoding="utf-8", errors="ignore")
         elif self.mode == "singularity":
             from spython.main import Client
 
@@ -336,6 +343,7 @@ def run_sorter_container(
     verbose: bool = False,
     raise_error: bool = True,
     with_output: bool = True,
+    delete_container_files: bool = True,
     extra_requirements=None,
     **sorter_params,
 ):
@@ -353,6 +361,7 @@ def run_sorter_container(
     verbose: bool, optional
     raise_error: bool, optional
     with_output: bool, optional
+    delete_container_files: bool, optional
     extra_requirements: list, optional
     sorter_params:
 
@@ -374,10 +383,10 @@ def run_sorter_container(
     SorterClass = sorter_dict[sorter_name]
     output_folder = Path(output_folder).absolute().resolve()
     parent_folder = output_folder.parent.absolute().resolve()
-    output_folder.mkdir(parents=True, exist_ok=True)
+    parent_folder.mkdir(parents=True, exist_ok=True)
 
     # find input folder of recording for folder bind
-    rec_dict = recording.to_dict()
+    rec_dict = recording.to_dict(recursive=True)
     recording_input_folders = find_recording_folders(rec_dict)
 
     if platform.system() == "Windows":
@@ -420,8 +429,8 @@ if __name__ == '__main__':
     output_folder = '{output_folder_unix}'
     sorting = run_sorter_local(
         '{sorter_name}', recording, output_folder=output_folder,
-         remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
-          verbose={verbose}, raise_error={raise_error}, with_output=True, **sorter_params
+        remove_existing_folder={remove_existing_folder}, delete_output_folder=False,
+        verbose={verbose}, raise_error={raise_error}, with_output=True, **sorter_params
     )
     sorting.save_to_folder(folder='{npz_sorting_path_unix}')
 """
@@ -563,11 +572,12 @@ if __name__ == '__main__':
     container_client.stop()
 
     # clean useless files
-    os.remove(parent_folder / "in_container_recording.json")
-    os.remove(parent_folder / "in_container_params.json")
-    os.remove(parent_folder / "in_container_sorter_script.py")
-    if mode == "singularity":
-        shutil.rmtree(py_user_base_folder)
+    if delete_container_files:
+        os.remove(parent_folder / "in_container_recording.json")
+        os.remove(parent_folder / "in_container_params.json")
+        os.remove(parent_folder / "in_container_sorter_script.py")
+        if mode == "singularity":
+            shutil.rmtree(py_user_base_folder)
 
     # check error
     output_folder = Path(output_folder)
@@ -599,8 +609,9 @@ if __name__ == '__main__':
                 except FileNotFoundError:
                     SpikeSortingError(f"Spike sorting in {mode} failed with the following error:\n{run_sorter_output}")
 
+    sorter_output_folder = output_folder / "sorter_output"
     if delete_output_folder:
-        shutil.rmtree(output_folder)
+        shutil.rmtree(sorter_output_folder)
 
     return sorting
 
@@ -641,6 +652,11 @@ def read_sorter_folder(output_folder, raise_error=True):
 
 
 def run_hdsort(*args, **kwargs):
+    warn(
+        "run_hdsort is deprecated. Use run_sorter(sorter_name='hdsort') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("hdsort", *args, **kwargs)
 
 
@@ -648,6 +664,11 @@ run_hdsort.__doc__ = _common_run_doc.format("hdsort")
 
 
 def run_klusta(*args, **kwargs):
+    warn(
+        "run_klusta is deprecated. Use run_sorter(sorter_name='klusta') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("klusta", *args, **kwargs)
 
 
@@ -655,6 +676,11 @@ run_klusta.__doc__ = _common_run_doc.format("klusta")
 
 
 def run_tridesclous(*args, **kwargs):
+    warn(
+        "run_tridesclous is deprecated. Use run_sorter(sorter_name='tridesclous') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("tridesclous", *args, **kwargs)
 
 
@@ -662,6 +688,11 @@ run_tridesclous.__doc__ = _common_run_doc.format("tridesclous")
 
 
 def run_mountainsort4(*args, **kwargs):
+    warn(
+        "run_mountainsort4 is deprecated. Use run_sorter(sorter_name='mountainsort4') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("mountainsort4", *args, **kwargs)
 
 
@@ -669,6 +700,11 @@ run_mountainsort4.__doc__ = _common_run_doc.format("mountainsort4")
 
 
 def run_mountainsort5(*args, **kwargs):
+    warn(
+        "run_mountainsort5 is deprecated. Use run_sorter(sorter_name='mountainsort5') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("mountainsort5", *args, **kwargs)
 
 
@@ -676,6 +712,11 @@ run_mountainsort5.__doc__ = _common_run_doc.format("mountainsort5")
 
 
 def run_ironclust(*args, **kwargs):
+    warn(
+        "run_ironclust is deprecated. Use run_sorter(sorter_name='ironclust') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("ironclust", *args, **kwargs)
 
 
@@ -683,6 +724,11 @@ run_ironclust.__doc__ = _common_run_doc.format("ironclust")
 
 
 def run_kilosort(*args, **kwargs):
+    warn(
+        "run_kilosort is deprecated. Use run_sorter(sorter_name='kilosort') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("kilosort", *args, **kwargs)
 
 
@@ -690,6 +736,11 @@ run_kilosort.__doc__ = _common_run_doc.format("kilosort")
 
 
 def run_kilosort2(*args, **kwargs):
+    warn(
+        "run_kilosort2 is deprecated. Use run_sorter(sorter_name='kilosort2') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("kilosort2", *args, **kwargs)
 
 
@@ -697,6 +748,11 @@ run_kilosort2.__doc__ = _common_run_doc.format("kilosort2")
 
 
 def run_kilosort2_5(*args, **kwargs):
+    warn(
+        "run_kilosort2_5 is deprecated. Use run_sorter(sorter_name='kilosort2_5') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("kilosort2_5", *args, **kwargs)
 
 
@@ -704,6 +760,11 @@ run_kilosort2_5.__doc__ = _common_run_doc.format("kilosort2_5")
 
 
 def run_kilosort3(*args, **kwargs):
+    warn(
+        "run_kilosort3 is deprecated. Use run_sorter(sorter_name='kilosort3') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("kilosort3", *args, **kwargs)
 
 
@@ -711,6 +772,11 @@ run_kilosort3.__doc__ = _common_run_doc.format("kilosort3")
 
 
 def run_spykingcircus(*args, **kwargs):
+    warn(
+        "run_spykingcircus is deprecated. Use run_sorter(sorter_name='spykingcircus') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("spykingcircus", *args, **kwargs)
 
 
@@ -718,6 +784,11 @@ run_spykingcircus.__doc__ = _common_run_doc.format("spykingcircus")
 
 
 def run_herdingspikes(*args, **kwargs):
+    warn(
+        "run_herdingspikes is deprecated. Use run_sorter(sorter_name='herdingspikes') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("herdingspikes", *args, **kwargs)
 
 
@@ -725,6 +796,11 @@ run_herdingspikes.__doc__ = _common_run_doc.format("herdingspikes")
 
 
 def run_waveclus(*args, **kwargs):
+    warn(
+        "run_waveclus is deprecated. Use run_sorter(sorter_name='waveclus') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("waveclus", *args, **kwargs)
 
 
@@ -732,10 +808,20 @@ run_waveclus.__doc__ = _common_run_doc.format("waveclus")
 
 
 def run_waveclus_snippets(*args, **kwargs):
+    warn(
+        "run_waveclus_snippets is deprecated. Use run_sorter(sorter_name='waveclus_snippets') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("waveclus_snippets", *args, **kwargs)
 
 
 def run_combinato(*args, **kwargs):
+    warn(
+        "run_combinato is deprecated. Use run_sorter(sorter_name='combinato') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("combinato", *args, **kwargs)
 
 
@@ -743,6 +829,11 @@ run_combinato.__doc__ = _common_run_doc.format("combinato")
 
 
 def run_yass(*args, **kwargs):
+    warn(
+        "run_yass is deprecated. Use run_sorter(sorter_name='yass') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("yass", *args, **kwargs)
 
 
@@ -750,6 +841,11 @@ run_yass.__doc__ = _common_run_doc.format("yass")
 
 
 def run_pykilosort(*args, **kwargs):
+    warn(
+        "run_pykilosort is deprecated. Use run_sorter(sorter_name='pykilosort') instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return run_sorter("pykilosort", *args, **kwargs)
 
 

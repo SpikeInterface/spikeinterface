@@ -34,7 +34,9 @@ def test_BaseRecording():
     for i in range(num_seg):
         a = np.memmap(file_paths[i], dtype=dtype, mode="w+", shape=(num_samples, num_chan))
         a[:] = np.random.randn(*a.shape).astype(dtype)
-    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
+    rec = BinaryRecordingExtractor(
+        file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_chan, dtype=dtype
+    )
 
     assert rec.get_num_segments() == 2
     assert rec.get_num_channels() == 3
@@ -228,14 +230,25 @@ def test_BaseRecording():
     assert np.dtype(rec_float32.get_traces().dtype) == np.float32
 
     # test with t_start
-    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype, t_starts=np.arange(num_seg) * 10.0)
+    rec = BinaryRecordingExtractor(
+        file_paths=file_paths,
+        sampling_frequency=sampling_frequency,
+        num_channels=num_chan,
+        dtype=dtype,
+        t_starts=np.arange(num_seg) * 10.0,
+    )
     times1 = rec.get_times(1)
     folder = cache_folder / "recording_with_t_start"
     rec2 = rec.save(folder=folder)
     assert np.allclose(times1, rec2.get_times(1))
 
     # test with time_vector
-    rec = BinaryRecordingExtractor(file_paths, sampling_frequency, num_chan, dtype)
+    rec = BinaryRecordingExtractor(
+        file_paths=file_paths,
+        sampling_frequency=sampling_frequency,
+        num_channels=num_chan,
+        dtype=dtype,
+    )
     rec.set_times(np.arange(num_samples) / sampling_frequency + 30.0, segment_index=0)
     rec.set_times(np.arange(num_samples) / sampling_frequency + 40.0, segment_index=1)
     times1 = rec.get_times(1)
@@ -264,7 +277,7 @@ def test_BaseRecording():
     rec_2d = rec_3d.planarize(axes="zy")
     assert np.allclose(rec_2d.get_channel_locations(), locations_3d[:, [2, 1]])
 
-    # Test save to zarr
+    # test save to zarr
     compressor = get_default_zarr_compressor()
     rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressor=compressor)
     rec_zarr_loaded = load_extractor(cache_folder / "recording.zarr")

@@ -54,6 +54,12 @@ class BaseRecordingSnippets(BaseExtractor):
         else:
             return True
 
+    def has_probe(self):
+        return "contact_vector" in self.get_property_keys()
+
+    def has_channel_location(self):
+        return self.has_probe() or "channel_location" in self.get_property_keys()
+
     def is_filtered(self):
         # the is_filtered is handle with annotation
         return self._annotations.get("is_filtered", False)
@@ -220,10 +226,7 @@ class BaseRecordingSnippets(BaseExtractor):
                 raise ValueError("There is no Probe attached to this recording. Use set_probe(...) to attach one.")
             else:
                 warn("There is no Probe attached to this recording. Creating a dummy one with contact positions")
-                ndim = positions.shape[1]
-                probe = Probe(ndim=ndim)
-                probe.set_contacts(positions=positions, shapes="circle", shape_params={"radius": 5})
-                probe.set_device_channel_indices(np.arange(self.get_num_channels(), dtype="int64"))
+                probe = self.create_dummy_probe_from_locations(positions)
                 #  probe.create_auto_shape()
                 probegroup = ProbeGroup()
                 probegroup.add_probe(probe)
@@ -248,6 +251,40 @@ class BaseRecordingSnippets(BaseExtractor):
             probegroup = self.get_probegroup()
             write_probeinterface(folder / "probe.json", probegroup)
 
+    def create_dummy_probe_from_locations(self, locations, shape="circle", shape_params={"radius": 1}, axes="xy"):
+        """
+        Creates a 'dummy' probe based on locations.
+
+        Parameters
+        ----------
+        locations : np.array
+            Array with channel locations (num_channels, ndim) [ndim can be 2 or 3]
+        shape : str, optional
+            Electrode shapes, by default "circle"
+        shape_params : dict, optional
+            Shape parameters, by default {"radius": 1}
+        axes : str, optional
+            If ndim is 3, indicates the axes that define the plane of the electrodes, by default "xy"
+
+        Returns
+        -------
+        probe : Probe
+            The created probe
+        """
+        ndim = locations.shape[1]
+        probe = Probe(ndim=2)
+        if ndim == 3:
+            locations_2d = select_axes(locations, axes)
+        else:
+            locations_2d = locations
+        probe.set_contacts(locations_2d, shapes=shape, shape_params=shape_params)
+        probe.set_device_channel_indices(np.arange(self.get_num_channels()))
+
+        if ndim == 3:
+            probe = probe.to_3d(axes=axes)
+
+        return probe
+
     def set_dummy_probe_from_locations(self, locations, shape="circle", shape_params={"radius": 1}, axes="xy"):
         """
         Sets a 'dummy' probe based on locations.
@@ -263,18 +300,7 @@ class BaseRecordingSnippets(BaseExtractor):
         axes : str, optional
             If ndim is 3, indicates the axes that define the plane of the electrodes, by default "xy"
         """
-        ndim = locations.shape[1]
-        probe = Probe(ndim=2)
-        if ndim == 3:
-            locations_2d = select_axes(locations, axes)
-        else:
-            locations_2d = locations
-        probe.set_contacts(locations_2d, shapes=shape, shape_params=shape_params)
-        probe.set_device_channel_indices(np.arange(self.get_num_channels()))
-
-        if ndim == 3:
-            probe = probe.to_3d(axes=axes)
-
+        probe = self.create_dummy_probe_from_locations(locations, shape=shape, shape_params=shape_params, axes=axes)
         self.set_probe(probe, in_place=True)
 
     def set_channel_locations(self, locations, channel_ids=None):

@@ -34,9 +34,11 @@ class BaseExtractor:
     _main_annotations = []
     _main_properties = []
 
+    # these properties are skipped by default in copy_metadata
+    _skip_properties = []
+
     installed = True
     installation_mesg = ""
-    is_writable = False
 
     def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation
@@ -55,7 +57,8 @@ class BaseExtractor:
         #  * number of units for sorting
         self._properties = {}
 
-        self.is_dumpable = True
+        self._is_dumpable = True
+        self._is_json_serializable = True
 
         # extractor specific list of pip extra requirements
         self.extra_requirements = []
@@ -246,12 +249,25 @@ class BaseExtractor:
             raise Exception(f"{key} is not a property key")
 
     def copy_metadata(
-        self, other: "BaseExtractor", only_main: bool = False, ids: Union[Iterable, slice, None] = None
+        self,
+        other: "BaseExtractor",
+        only_main: bool = False,
+        ids: Union[Iterable, slice, None] = None,
+        skip_properties: Optional[Iterable[str]] = None,
     ) -> None:
         """
-        Copy annotations/properties to another extractor.
+        Copy metadata (annotations/properties) to another extractor (`other`).
 
-        If 'only main' is True, then only "main" annotations/properties one are copied.
+        Parameters
+        ----------
+        other: BaseExtractor
+            The extractor to copy the metadata to.
+        only_main: bool
+            If True, only the main annotations/properties are copied.
+        ids: list
+            List of ids to copy the metadata to. If None, all ids are copied.
+        skip_properties: list
+            List of properties to skip. Default is None.
         """
 
         if ids is None:
@@ -269,7 +285,15 @@ class BaseExtractor:
             prop_keys = self._properties.keys()
 
         other._annotations = deepcopy({k: self._annotations[k] for k in ann_keys})
+
+        # skip properties based on target "other" extractor
+        skip_properties_all = other._skip_properties
+        if skip_properties is not None:
+            skip_properties_all = skip_properties_all + skip_properties
+
         for k in prop_keys:
+            if k in skip_properties_all:
+                continue
             values = self._properties[k]
             if values is not None:
                 other.set_property(k, values[inds])
@@ -285,7 +309,7 @@ class BaseExtractor:
         include_properties: bool = False,
         relative_to: Union[str, Path, None] = None,
         folder_metadata=None,
-        recursive=False,
+        recursive: bool = False,
     ) -> dict:
         """
         Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize
@@ -305,8 +329,6 @@ class BaseExtractor:
             Folder with numpy `npy` files containing additional information (e.g. probe in BaseRecording) and properties.
         recursive: bool
             If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
-            This is done for backward compatibility with older versions of spikeinterface and to keep it here in case
-            a yet to be discovered use case requires it.
 
         Returns
         -------
@@ -320,8 +342,9 @@ class BaseExtractor:
             to_dict_kwargs = dict(
                 include_annotations=include_annotations,
                 include_properties=include_properties,
-                relative_to=relative_to,
+                relative_to=None,  # '_make_paths_relative' is already recursive!
                 folder_metadata=folder_metadata,
+                recursive=recursive,
             )
 
             new_kwargs = dict()
@@ -349,7 +372,6 @@ class BaseExtractor:
             "class": class_name,
             "module": module,
             "kwargs": kwargs,
-            "dumpable": self.is_dumpable,
             "version": version,
             "relative_paths": (relative_to is not None),
         }
@@ -447,7 +469,43 @@ class BaseExtractor:
         return clone
 
     def check_if_dumpable(self):
-        return _check_if_dumpable(self.to_dict())
+        """Check if the object is dumpable, including nested objects.
+
+        Returns
+        -------
+        bool
+            True if the object is dumpable, False otherwise.
+        """
+        kwargs = self._kwargs
+        for value in kwargs.values():
+            # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
+            if isinstance(value, BaseExtractor):
+                return value.check_if_dumpable()
+            elif isinstance(value, list) and isinstance(value[0], BaseExtractor):
+                return all([v.check_if_dumpable() for v in value])
+            elif isinstance(value, dict) and isinstance(value[list(value.keys())[0]], BaseExtractor):
+                return all([v.check_if_dumpable() for k, v in value.items()])
+        return self._is_dumpable
+
+    def check_if_json_serializable(self):
+        """
+        Check if the object is json serializable, including nested objects.
+
+        Returns
+        -------
+        bool
+            True if the object is json serializable, False otherwise.
+        """
+        kwargs = self._kwargs
+        for value in kwargs.values():
+            # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
+            if isinstance(value, BaseExtractor):
+                return value.check_if_json_serializable()
+            elif isinstance(value, list) and isinstance(value[0], BaseExtractor):
+                return all([v.check_if_json_serializable() for v in value])
+            elif isinstance(value, dict) and isinstance(value[list(value.keys())[0]], BaseExtractor):
+                return all([v.check_if_json_serializable() for k, v in value.items()])
+        return self._is_json_serializable
 
     @staticmethod
     def _get_file_path(file_path: Union[str, Path], extensions: Sequence) -> Path:
@@ -528,6 +586,7 @@ class BaseExtractor:
         include_properties: bool = True,
         relative_to=None,
         folder_metadata=None,
+        recursive: bool = False,
     ):
         """
         Dump recording extractor to a pickle file.
@@ -541,6 +600,8 @@ class BaseExtractor:
             If True, all properties are dumped
         relative_to: str, Path, or None
             If not None, file_paths are serialized relative to this path
+        recursive: bool
+            If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
         """
         assert self.check_if_dumpable()
         dump_dict = self.to_dict(
@@ -548,6 +609,7 @@ class BaseExtractor:
             include_properties=include_properties,
             relative_to=relative_to,
             folder_metadata=folder_metadata,
+            recursive=recursive,
         )
         file_path = self._get_file_path(file_path, [".pkl", ".pickle"])
 
@@ -735,7 +797,7 @@ class BaseExtractor:
 
         # dump provenance
         provenance_file = folder / f"provenance.json"
-        if self.check_if_dumpable():
+        if self.check_if_json_serializable():
             self.dump(provenance_file)
         else:
             provenance_file.write_text(json.dumps({"warning": "the provenace is not dumpable!!!"}), encoding="utf8")
@@ -868,17 +930,6 @@ def _make_paths_absolute(d, base):
     base = Path(base)
     func = lambda p: str((base / p).resolve().absolute())
     return recursive_path_modifier(d, func, target="path", copy=True)
-
-
-def _check_if_dumpable(d):
-    kwargs = d["kwargs"]
-    if np.any([isinstance(v, dict) and "dumpable" in v.keys() for (k, v) in kwargs.items()]):
-        # check nested
-        for k, v in kwargs.items():
-            if isinstance(v, dict) and "dumpable" in v.keys():
-                return _check_if_dumpable(v)
-    else:
-        return d["dumpable"]
 
 
 def _load_extractor_from_dict(dic) -> BaseExtractor:

@@ -40,6 +40,10 @@ from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 from .quality_metrics import QualityMetricsWidget
 from .template_metrics import TemplateMetricsWidget
 
+
+# motion/drift
+from .motion import MotionWidget
+
 # similarity
 from .template_similarity import TemplateSimilarityWidget
 
@@ -60,6 +64,7 @@ widget_list = [
     SpikeLocationsWidget,
     SpikesOnTracesWidget,
     TemplateMetricsWidget,
+    MotionWidget,
     TemplateSimilarityWidget,
     TimeseriesWidget,
     UnitLocationsWidget,
@@ -106,6 +111,7 @@ plot_quality_metrics = define_widget_function_from_class(QualityMetricsWidget, "
 plot_spike_locations = define_widget_function_from_class(SpikeLocationsWidget, "plot_spike_locations")
 plot_spikes_on_traces = define_widget_function_from_class(SpikesOnTracesWidget, "plot_spikes_on_traces")
 plot_template_metrics = define_widget_function_from_class(TemplateMetricsWidget, "plot_template_metrics")
+plot_motion = define_widget_function_from_class(MotionWidget, "plot_motion")
 plot_template_similarity = define_widget_function_from_class(TemplateSimilarityWidget, "plot_template_similarity")
 plot_timeseries = define_widget_function_from_class(TimeseriesWidget, "plot_timeseries")
 plot_unit_locations = define_widget_function_from_class(UnitLocationsWidget, "plot_unit_locations")

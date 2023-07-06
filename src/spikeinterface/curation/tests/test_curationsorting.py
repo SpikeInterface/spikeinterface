@@ -80,6 +80,9 @@ def test_curation():
             == parent_sort.get_unit_spike_train("c", segment_index=i)
         )
 
+    # Test with empty sorting
+    empty_sorting = CurationSorting(NumpySorting.from_dict({}, parent_sort.sampling_frequency))
+
 
 if __name__ == "__main__":
     test_split_merge()

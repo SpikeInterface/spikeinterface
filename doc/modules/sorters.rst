@@ -222,6 +222,64 @@ by saving the in-memory  :code:`test_recording` object to a binary file in the
 :code:`test-docker-folder` folder.
 
 
+What version of SpikeInterface is run in the container?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The spike-sorter specific images do NOT include the :code:`spikeinterface` package.
+This is done because the spike sorters are "frozen" to a specific version, while the :code:`spikeinterface` package
+is in constant evolution with new releases.
+
+When starting a container, the first step is then to install :code:`spikeinterface` and its dependencies.
+
+
+What version of :code:`spikeinterface` is installed? It depends!
+
+There are three options:
+
+1. **released PyPi version**: if you installed :code:`spikeinterface` with :code:`pip install spikeinterface`,
+   the latest released version will be installed in the container.
+
+2. **development :code:`main` version**: if you installed :code:`spikeinterface` from source from the cloned repo
+   (with :code:`pip install .`) or with :code:`pip install git+https://github.com/SpikeInterface/spikeinterface.git`,
+   the current development version from the :code:`main` branch will be installed in the container.
+
+3. **local copy**: if you installed :code:`spikeinterface` from source and you have some changes in your branch or fork
+   that are not in the :code:`main` branch, you can install a copy of your :code:`spikeinterface` packahe in the container.
+   To do so, you need to set en environment variable :code:`SPIKEINTERFACE_DEV_PATH` to the location where you cloned the
+   :code:`spikeinterface` repo (e.g. on Linux: :code:`export SPIKEINTERFACE_DEV_PATH="path-to-spikeinterface-clone"`.
+
+In all cases, the :code:`[full]` extra is installed, which includes all optional dependencies.
+
+
+An alternative solution to finely control the version of :code:`spikeinterface` is to create a custom Docker image.
+For example, in this example we create a custom image for Kilosort3 that uses the :code:`test` branch of a fork:
+
+.. code-block:: dockerfile
+
+    FROM spikeinterface/kilosort3-compiled-base:0.1.0
+
+    RUN pip install "spikeinterface[full] @ git+https://github.com/my-username/spikeinterface@test"
+
+Then you can build and tag the docker image with:
+
+.. code-block:: bash
+
+    docker build -t my-user/ks3-with-spikeinterface-test:0.1.0 .
+
+
+And use the custom image whith the :code:`run_sorter` function:
+
+.. code-block:: python
+
+    sorting = run_sorter("kilosort3",
+                         recording=recording,
+                         docker_image="my-user/ks3-with-spikeinterface-test:0.1.0")
+
+
+Note that this solution of building a custom image based on the spike-sorting specific images can also be used
+to create containers for cloud deployment!
+
+
 Running several sorters in parallel
 -----------------------------------
 

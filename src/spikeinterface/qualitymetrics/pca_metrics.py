@@ -64,7 +64,7 @@ def get_quality_pca_metric_list():
 
 
 def calculate_pc_metrics(
-    pca, metric_names=None, sparsity=None, qm_params=None, seed=None, n_jobs=1, progress_bar=False
+    pca, unit_ids=None, metric_names=None, sparsity=None, qm_params=None, seed=None, n_jobs=1, progress_bar=False
 ):
     """Calculate principal component derived metrics.
 
@@ -72,6 +72,8 @@ def calculate_pc_metrics(
     ----------
     pca : WaveformPrincipalComponent
         Waveform object with principal components computed.
+    unit_ids : list of int or None
+        List of unit ids to compute metrics for.
     metric_names : list of str, optional
         The list of PC metrics to compute.
         If not provided, defaults to all PC metrics.
@@ -102,7 +104,8 @@ def calculate_pc_metrics(
     we = pca.waveform_extractor
     extremum_channels = get_template_extremum_channel(we)
 
-    unit_ids = we.unit_ids
+    if unit_ids is None:
+        unit_ids = we.unit_ids
     channel_ids = we.channel_ids
 
     # create output dict of dict  pc_metrics['metric_name'][unit_id]
@@ -117,8 +120,8 @@ def calculate_pc_metrics(
 
     # Compute nspikes and firing rate outside of main loop for speed
     if any([n in metric_names for n in ["nn_isolation", "nn_noise_overlap"]]):
-        n_spikes_all_units = compute_num_spikes(we)
-        fr_all_units = compute_firing_rates(we)
+        n_spikes_all_units = compute_num_spikes(we, unit_ids=unit_ids)
+        fr_all_units = compute_firing_rates(we, unit_ids=unit_ids)
     else:
         n_spikes_all_units = None
         fr_all_units = None

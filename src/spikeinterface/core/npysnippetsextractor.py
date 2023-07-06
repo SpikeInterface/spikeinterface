@@ -15,7 +15,6 @@ class NpySnippetsExtractor(BaseSnippets):
     """
 
     extractor_name = "NpySnippets"
-    is_writable = True
     mode = "file"
     name = "npy"
 
