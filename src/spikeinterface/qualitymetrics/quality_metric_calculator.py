@@ -93,7 +93,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         unit_ids = self.sorting.unit_ids
         non_empty_unit_ids = self.sorting.get_non_empty_unit_ids()
         empty_unit_ids = self.sorting.get_empty_unit_ids()
-        if len(empty_unit_ids > 0):
+        if len(empty_unit_ids) > 0:
             warnings.warn(
                 f"Units {empty_unit_ids} are empty. Quality metrcs will be set to NaN "
                 f"for these units.\n To remove empty units, use `sorting.remove_empty_units()`."
