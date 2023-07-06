@@ -1531,6 +1531,10 @@ def extract_waveforms(
 
     estimate_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
+    assert (
+        recording.has_channel_location()
+    ), "Recording must have a probe  or channel location to extract waveforms. Use the `set_probe()` or `set_dummy_probe_from_locations()` methods."
+
     if mode == "folder":
         assert folder is not None
         folder = Path(folder)

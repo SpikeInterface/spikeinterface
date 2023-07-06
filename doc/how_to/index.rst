@@ -6,3 +6,4 @@ How to guides
 
     get_started
     analyse_neuropixels
+    handle_drift

@@ -371,13 +371,14 @@ def compute_center_of_mass(waveform_extractor, peak_sign="neg", radius_um=75, fe
 def compute_grid_convolution(
     waveform_extractor,
     peak_sign="neg",
-    radius_um=50.0,
+    radius_um=40.0,
     upsampling_um=5,
-    sigma_um=np.linspace(10, 50, 5),
+    sigma_um=np.linspace(5.0, 25.0, 5),
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
     percentile=10,
+    sparsity_threshold=0.01,
 ):
     """
     Estimate the positions of the templates from a large grid of fake templates
@@ -403,7 +404,8 @@ def compute_grid_convolution(
     percentile: float (default 10)
         The percentage  in [0, 100] of the best scalar products kept to
         estimate the position
-
+    sparsity_threshold: float (default 0.01)
+        The sparsity threshold (in 0-1) below which weights should be considered as 0.
     Returns
     -------
     unit_location: np.array
@@ -416,6 +418,7 @@ def compute_grid_convolution(
     fs = waveform_extractor.sampling_frequency
     percentile = 100 - percentile
     assert 0 <= percentile <= 100, "Percentile should be in [0, 100]"
+    assert 0 <= sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
 
     time_axis = np.arange(-nbefore, nafter) * 1000 / fs
     if prototype is None:
@@ -423,38 +426,45 @@ def compute_grid_convolution(
 
     prototype = prototype[:, np.newaxis]
 
-    template_positions, weights, neighbours_mask = get_grid_convolution_templates_and_weights(
+    template_positions, weights, nearest_template_mask = get_grid_convolution_templates_and_weights(
         contact_locations, radius_um, upsampling_um, sigma_um, margin_um
     )
 
-    nb_templates = len(template_positions)
     templates = waveform_extractor.get_all_templates(mode="average")
 
     peak_channels = get_template_extremum_channel(waveform_extractor, peak_sign, outputs="index")
     unit_ids = waveform_extractor.sorting.unit_ids
+
+    weights_sparsity_mask = weights > sparsity_threshold
 
     unit_location = np.zeros((unit_ids.size, 2), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
         main_chan = peak_channels[unit_id]
         wf = templates[i, :, :]
         amplitude = wf[nbefore, main_chan]
-        intersect = neighbours_mask[:, main_chan] == True
+        nearest_templates = nearest_template_mask[main_chan, :]
 
-        global_products = ((wf / amplitude) * prototype).sum(axis=0)
+        channel_mask = np.sum(weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
+        num_templates = np.sum(nearest_templates)
+        global_products = ((wf[:, channel_mask] / amplitude) * prototype).sum(axis=0)
+
+        dot_products = np.zeros((weights.shape[0], num_templates), dtype=np.float32)
+        for count in range(weights.shape[0]):
+            w = weights[count, :, :][channel_mask, :][:, nearest_templates]
+            # w = w / np.sum(w, axis=0)[np.newaxis, None]
+            # w[np.isnan(w)] = 0.
+            dot_products[count, :] = np.dot(global_products, w)
+
+        dot_products = np.maximum(0, dot_products)
+        if percentile < 100:
+            thresholds = np.percentile(dot_products, percentile, axis=0)
+            dot_products[dot_products < thresholds[np.newaxis, :]] = 0
 
         found_positions = np.zeros(2, dtype=np.float32)
-        scalar_products = np.zeros(nb_templates, dtype=np.float32)
-
-        for count, w in enumerate(weights):
-            dot_products = np.dot(global_products, w[:, intersect])
-            dot_products = np.maximum(0, dot_products)
-
-            if percentile < 100:
-                thresholds = np.percentile(dot_products, percentile)
-                dot_products[dot_products < thresholds] = 0
-
-            scalar_products[intersect] += dot_products
-            found_positions += np.dot(dot_products, template_positions[intersect])
+        scalar_products = np.zeros(num_templates, dtype=np.float32)
+        for count in range(weights.shape[0]):
+            scalar_products += dot_products[count]
+            found_positions += np.dot(dot_products[count], template_positions[nearest_templates])
 
         unit_location[i, :] = found_positions / scalar_products.sum()
 
@@ -585,13 +595,21 @@ def get_grid_convolution_templates_and_weights(
 
     import sklearn
 
-    dist = sklearn.metrics.pairwise_distances(template_positions, contact_locations)
-    neighbours_mask = dist < local_radius_um
+    # mask to get nearest template given a channel
+    dist = sklearn.metrics.pairwise_distances(contact_locations, template_positions)
+    nearest_template_mask = dist < local_radius_um
 
     weights = np.zeros((len(sigma_um), len(contact_locations), nb_templates), dtype=np.float32)
     for count, sigma in enumerate(sigma_um):
-        weights[count] = (neighbours_mask * np.exp(-(dist**2) / (2 * (sigma**2)))).T
-    return template_positions, weights, neighbours_mask
+        weights[count] = np.exp(-(dist**2) / (2 * (sigma**2)))
+
+    # normalize
+    with np.errstate(divide="ignore", invalid="ignore"):
+        norm = np.sqrt(np.sum(weights**2, axis=1))[:, np.newaxis, :]
+        weights /= norm
+        weights[np.isnan(weights)] = 0.0
+
+    return template_positions, weights, nearest_template_mask
 
 
 if HAVE_NUMBA:

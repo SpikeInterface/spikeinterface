@@ -3,6 +3,7 @@ from .amplitudes import AmplitudesPlotter
 from .autocorrelograms import AutoCorrelogramsPlotter
 from .crosscorrelograms import CrossCorrelogramsPlotter
 from .quality_metrics import QualityMetricsPlotter
+from .motion import MotionPlotter
 from .spike_locations import SpikeLocationsPlotter
 from .spikes_on_traces import SpikesOnTracesPlotter
 from .template_metrics import TemplateMetricsPlotter

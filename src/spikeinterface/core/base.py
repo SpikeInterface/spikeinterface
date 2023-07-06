@@ -39,7 +39,6 @@ class BaseExtractor:
 
     installed = True
     installation_mesg = ""
-    is_writable = False
 
     def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation
