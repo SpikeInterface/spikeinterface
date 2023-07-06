@@ -57,6 +57,9 @@ class BaseRecordingSnippets(BaseExtractor):
     def has_probe(self):
         return "contact_vector" in self.get_property_keys()
 
+    def has_channel_location(self):
+        return self.has_probe() or "channel_location" in self.get_property_keys()
+
     def is_filtered(self):
         # the is_filtered is handle with annotation
         return self._annotations.get("is_filtered", False)
