@@ -347,7 +347,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         self,
         block_index=None,
         sampling_frequency=None,
-        use_natural_unit_ids=False,
+        use_format_ids=False,
         stream_id: Optional[str] = None,
         stream_name: Optional[str] = None,
         **neo_kwargs,
@@ -358,9 +358,8 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         if stream_name:
             stream_id = self.build_stream_name_to_stream_id_dict()["stream_name"]
 
-        self.use_natural_unit_ids = use_natural_unit_ids
         spike_channels = self.neo_reader.header["spike_channels"]
-        if use_natural_unit_ids:
+        if use_format_ids:
             unit_ids = spike_channels["id"]
             assert np.unique(unit_ids).size == unit_ids.size, "unit_ids is have duplications"
         else:
@@ -382,7 +381,6 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                 neo_reader=self.neo_reader,
                 block_index=self.block_index,
                 segment_index=segment_index,
-                use_natural_unit_ids=self.use_natural_unit_ids,
                 t_start=t_start,
                 sampling_frequency=sampling_frequency,
                 neo_returns_frames=self.neo_returns_frames,
@@ -572,7 +570,6 @@ class NeoSortingSegment(BaseSortingSegment):
         neo_reader,
         block_index,
         segment_index,
-        use_natural_unit_ids,
         t_start,
         sampling_frequency,
         neo_returns_frames,
@@ -581,27 +578,21 @@ class NeoSortingSegment(BaseSortingSegment):
         self.neo_reader = neo_reader
         self.segment_index = segment_index
         self.block_index = block_index
-        self.use_natural_unit_ids = use_natural_unit_ids
         self._t_start = t_start
         self._sampling_frequency = sampling_frequency
-        self._natural_ids = None
         self.neo_returns_frames = neo_returns_frames
 
-    def get_natural_ids(self):
-        if self._natural_ids is None:
-            self._natural_ids = list(self._parent_extractor().neo_reader.header["spike_channels"]["id"])
-        return self._natural_ids
+        unit_ids = self._parent_extractor.get_unit_ids()  # This is spikes id or integers
+        self.map_from_unit_id_to_spike_channel_index = {unit_id: index for index, unit_id in enumerate(unit_ids)}
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
-        if self.use_natural_unit_ids:
-            unit_index = self.get_natural_ids().index(unit_id)
-        else:
-            # already int
-            unit_index = unit_id
-
+        spike_channel_index = self.map_from_unit_id_to_spike_channel_index[unit_id]
         spike_timestamps = self.neo_reader.get_spike_timestamps(
-            block_index=self.block_index, seg_index=self.segment_index, spike_channel_index=unit_index
+            block_index=self.block_index,
+            seg_index=self.segment_index,
+            spike_channel_index=spike_channel_index,
         )
+
         if self.neo_returns_frames:
             spike_frames = spike_timestamps
         else:
@@ -616,6 +607,7 @@ class NeoSortingSegment(BaseSortingSegment):
 
         if end_frame is not None:
             spike_frames = spike_frames[spike_frames <= end_frame]
+
         return spike_frames
 
 
