@@ -356,7 +356,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
         # Get stream_id from stream_name
         if stream_name:
-            stream_id = self.build_stream_name_to_stream_id_dict()["stream_name"]
+            stream_id = self.build_stream_name_to_stream_id_dict()[stream_name]
 
         spike_channels = self.neo_reader.header["spike_channels"]
         if use_format_ids:
