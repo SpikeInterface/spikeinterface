@@ -17,7 +17,8 @@ class BaseRecordingSnippets(BaseExtractor):
     Mixin that handles all probe and channel operations
     """
 
-    has_default_locations = False
+    _main_annotations = ["is_filtered"]
+    _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
 
     def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
         BaseExtractor.__init__(self, channel_ids)
@@ -55,7 +56,7 @@ class BaseRecordingSnippets(BaseExtractor):
             return True
 
     def has_probe(self):
-        return "contact_vector" in self.get_property_keys()
+        return "contact_vector" in self.get_property_keys() or "location" in self.get_property_keys()
 
     def is_filtered(self):
         # the is_filtered is handle with annotation

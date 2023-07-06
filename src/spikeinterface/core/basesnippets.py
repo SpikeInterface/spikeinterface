@@ -15,8 +15,6 @@ class BaseSnippets(BaseRecordingSnippets):
     """
 
     _main_annotations = []
-    _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
-    _main_features = []
 
     def __init__(
         self, sampling_frequency: float, nbefore: Union[int, None], snippet_len: int, channel_ids: List, dtype

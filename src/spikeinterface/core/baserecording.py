@@ -21,10 +21,6 @@ class BaseRecording(BaseRecordingSnippets):
     Internally handle list of RecordingSegment
     """
 
-    _main_annotations = ["is_filtered"]
-    _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
-    _main_features = []  # recording do not handle features
-
     _skip_properties = ["noise_level_raw", "noise_level_scaled"]
 
     def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
