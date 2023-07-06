@@ -32,8 +32,6 @@ class BaseRecording(BaseRecordingSnippets):
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
         )
 
-        self.is_dumpable = True
-
         self._recording_segments: List[BaseRecordingSegment] = []
 
         # initialize main annotation and properties
@@ -450,7 +448,7 @@ class BaseRecording(BaseRecordingSnippets):
             binary_rec = BinaryRecordingExtractor(
                 file_paths=file_paths,
                 sampling_frequency=self.get_sampling_frequency(),
-                num_chan=self.get_num_channels(),
+                num_channels=self.get_num_channels(),
                 dtype=dtype,
                 t_starts=t_starts,
                 channel_ids=self.get_channel_ids(),
