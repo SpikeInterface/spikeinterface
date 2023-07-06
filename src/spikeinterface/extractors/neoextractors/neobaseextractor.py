@@ -446,9 +446,8 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                 f"stream_id_to_sampling_frequency = {stream_id_to_sampling_frequencies}"
             )
             assert stream_id in stream_id_to_sampling_frequencies, assertion_msg
-            return stream_id_to_sampling_frequencies[stream_id]
-
-        # Warning for guessing the sampling frequency
+            sampling_frequency = stream_id_to_sampling_frequencies[stream_id]
+            return sampling_frequency
 
         available_sampling_frequencies = list(stream_id_to_sampling_frequencies.values())
         unique_sampling_frequencies = set(available_sampling_frequencies)
@@ -456,7 +455,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         # If there is only one stream or multiple one with the same sampling frequency use that one
         if len(unique_sampling_frequencies) == 1:
             sampling_frequency = available_sampling_frequencies[0]
-            warning_message_about_interface = (
+            warning_about_inference = (
                 "SpikeInterface will use the following sampling frequency: \n"
                 f"sampling_frequency = {sampling_frequency} \n"
                 "Corresponding to the following stream_id: \n"
@@ -466,7 +465,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                 "The following stream_ids with corresponding sampling frequencies were found: \n"
                 f"stream_id_to_sampling_frequencies = {stream_id_to_sampling_frequencies} \n"
             )
-            warnings.warn(warning_message_about_interface)
+            warnings.warn(warning_about_inference)
         else:
             instructions_for_user = (
                 "Multiple streams ids with different sampling frequencies found in the file: \n"
@@ -540,7 +539,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
         if len(unique_t_starts) == 1:
             t_start = matching_t_starts[0]
-            warning_about_interface = (
+            warning_about_inference = (
                 "SpikeInterface will use the following t_start: \n"
                 f"t_start = {t_start} \n"
                 "Corresponding to the following stream_id: \n"
@@ -550,7 +549,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                 "The following stream_ids with corresponding t_starts were found: \n"
                 f"{stream_id_to_t_start} \n"
             )
-            warnings.warn(warning_about_interface)
+            warnings.warn(warning_about_inference)
         else:
             t_start = None
             warning_message = (
