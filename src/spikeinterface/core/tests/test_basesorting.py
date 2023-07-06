@@ -31,6 +31,7 @@ else:
 def test_BaseSorting():
     num_seg = 2
     file_path = cache_folder / "test_BaseSorting.npz"
+    file_path.parent.mkdir(exist_ok=True)
 
     create_sorting_npz(num_seg, file_path)
 

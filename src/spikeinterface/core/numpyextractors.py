@@ -123,7 +123,7 @@ class NumpySorting(BaseSorting):
         """ """
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self._is_dumpable = False
+        self._is_dumpable = True
         self._is_json_serializable = False
 
 
@@ -356,7 +356,8 @@ class SharedMemorySorting(BaseSorting):
         assert shape[0] > 0, "SharedMemorySorting only supported with no empty sorting"
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        self.is_dumpable = True
+        self._is_dumpable = True
+        self._is_json_serializable = False
 
         self.shm = SharedMemory(shm_name, create=False)
         self.shm_spikes = np.ndarray(shape=shape, dtype=dtype, buffer=self.shm.buf)
