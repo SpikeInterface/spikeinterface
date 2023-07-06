@@ -39,7 +39,6 @@ class CompressedBinaryIblExtractor(BaseRecording):
     """
 
     extractor_name = "CompressedBinaryIbl"
-    has_default_locations = True
     installed = HAVE_MTSCOMP
     mode = "folder"
     installation_mesg = "To use the CompressedBinaryIblExtractor, install mtscomp: \n\n pip install mtscomp\n\n"

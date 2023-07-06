@@ -35,8 +35,6 @@ class MdaRecordingExtractor(BaseRecording):
     """
 
     extractor_name = "MdaRecording"
-    has_default_locations = True
-    is_writable = True
     mode = "folder"
     name = "mda"
 
@@ -194,7 +192,6 @@ class MdaSortingExtractor(BaseSorting):
     """
 
     extractor_name = "MdaSorting"
-    is_writable = True
     mode = "file"
     name = "mda"
 
