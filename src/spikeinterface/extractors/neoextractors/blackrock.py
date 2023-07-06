@@ -70,6 +70,7 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
 
     Based on :py:class:`neo.rawio.BlackrockRawIO`
 
+
     Parameters
     ----------
     file_path: str
@@ -78,6 +79,10 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
         The sampling frequency for the sorting extractor. When the signal data is available (.ncs) those files will be
         used to extract the frequency automatically. Otherwise, the sampling frequency needs to be specified for
         this extractor to be initialized.
+    stream_id: str, optional
+        Used to extract information about the sampling frequency and t_start from the analog signal if provided.
+    stream_name: str, optional
+        Used to extract information about the sampling frequency and t_start from the analog signal if provided.
     """
 
     mode = "file"
@@ -85,11 +90,30 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
     neo_returns_timestamps = True
     name = "blackrock"
 
-    def __init__(self, file_path, sampling_frequency: float = None):
+    def __init__(
+        self,
+        file_path,
+        sampling_frequency: Optional[float] = None,
+        stream_id: Optional[str] = None,
+        stream_name: Optional[str] = None,
+    ):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, **neo_kwargs)
+        NeoBaseSortingExtractor.__init__(
+            self,
+            sampling_frequency=sampling_frequency,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            **neo_kwargs,
+        )
 
-        self._kwargs.update({"file_path": file_path, "sampling_frequency": self._sampling_frequency})
+        self._kwargs.update(
+            {
+                "file_path": file_path,
+                "sampling_frequency": sampling_frequency,
+                "stream_id": stream_id,
+                "stream_name": stream_name,
+            }
+        )
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):

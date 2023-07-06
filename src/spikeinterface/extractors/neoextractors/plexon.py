@@ -53,6 +53,7 @@ class PlexonSortingExtractor(NeoBaseSortingExtractor):
     mode = "file"
     NeoRawIOClass = "PlexonRawIO"
     name = "plexon"
+    neo_returns_timestamps = False
 
     def __init__(self, file_path):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
