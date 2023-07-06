@@ -581,7 +581,7 @@ class NeoSortingSegment(BaseSortingSegment):
         self._sampling_frequency = sampling_frequency
         self.neo_returns_frames = neo_returns_frames
 
-        unit_ids = self._parent_extractor.get_unit_ids()  # This is spikes id or integers
+        unit_ids = self.parent_extractor.get_unit_ids()  # This is spikes id or integers
         self.map_from_unit_id_to_spike_channel_index = {unit_id: index for index, unit_id in enumerate(unit_ids)}
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
