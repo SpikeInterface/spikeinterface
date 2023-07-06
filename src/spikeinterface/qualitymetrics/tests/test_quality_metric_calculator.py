@@ -6,12 +6,14 @@ import numpy as np
 
 from spikeinterface import (
     WaveformExtractor,
+    NumpySorting,
     compute_sparsity,
     load_extractor,
     extract_waveforms,
     split_recording,
     select_segment_sorting,
     load_waveforms,
+    aggregate_units,
 )
 from spikeinterface.extractors import toy_example
 
@@ -113,7 +115,10 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         print(metrics)
         print(metrics_par)
         for metric_name in metrics.columns:
-            assert np.allclose(metrics[metric_name], metrics_par[metric_name])
+            # skip NaNs
+            metric_values = metrics[metric_name].values[~np.isnan(metrics[metric_name].values)]
+            metric_par_values = metrics_par[metric_name].values[~np.isnan(metrics_par[metric_name].values)]
+            assert np.allclose(metric_values, metric_par_values)
         print(metrics)
 
         # with sparsity
@@ -270,6 +275,22 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         # check metrics are the same
         for metric_name in qm_rec.columns:
             assert np.allclose(qm_rec[metric_name], qm_no_rec[metric_name])
+
+    def test_empty_units(self):
+        we = self.we1
+        empty_spike_train = np.array([], dtype="int64")
+        empty_sorting = NumpySorting.from_dict(
+            {100: empty_spike_train, 200: empty_spike_train, 300: empty_spike_train},
+            sampling_frequency=we.sampling_frequency,
+        )
+        sorting_w_empty = aggregate_units([we.sorting, empty_sorting])
+        assert len(sorting_w_empty.get_empty_unit_ids()) == 3
+
+        we_empty = extract_waveforms(we.recording, sorting_w_empty, folder=None, mode="memory")
+        qm_empty = self.extension_class.get_extension_function()(we_empty)
+
+        for empty_unit in sorting_w_empty.get_empty_unit_ids():
+            assert np.all(np.isnan(qm_empty.loc[empty_unit]))
 
 
 if __name__ == "__main__":

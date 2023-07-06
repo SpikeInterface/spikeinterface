@@ -292,10 +292,10 @@ class BaseSorting(BaseExtractor):
         BaseSorting
             Sorting object with non-empty units
         """
-        non_empty_units = self.get_non_empty_units()
+        non_empty_units = self.get_non_empty_unit_ids()
         return self.select_units(non_empty_units)
 
-    def get_non_empty_units(self):
+    def get_non_empty_unit_ids(self):
         non_empty_units = []
         for segment_index in range(self.get_num_segments()):
             for unit in self.get_unit_ids():
@@ -304,9 +304,9 @@ class BaseSorting(BaseExtractor):
         non_empty_units = np.unique(non_empty_units)
         return non_empty_units
 
-    def get_empty_units(self):
+    def get_empty_unit_ids(self):
         unit_ids = self.get_unit_ids()
-        empty_units = unit_ids[~np.isin(unit_ids, self.get_non_empty_units())]
+        empty_units = unit_ids[~np.isin(unit_ids, self.get_non_empty_unit_ids())]
         return empty_units
 
     def frame_slice(self, start_frame, end_frame, check_spike_frames=True):
