@@ -17,7 +17,6 @@ class BaseRecordingSnippets(BaseExtractor):
     Mixin that handles all probe and channel operations
     """
 
-    _main_annotations = ["is_filtered"]
     _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
 
     def __init__(self, sampling_frequency: float, channel_ids: List, dtype):
