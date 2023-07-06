@@ -26,7 +26,6 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
     """
 
     extractor_name = "BinaryFolder"
-    has_default_locations = True
     mode = "folder"
     name = "binaryfolder"
 

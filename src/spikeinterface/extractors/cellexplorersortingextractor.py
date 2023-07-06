@@ -31,7 +31,6 @@ class CellExplorerSortingExtractor(BaseSorting):
     """
 
     extractor_name = "CellExplorerSortingExtractor"
-    is_writable = True
     mode = "file"
     installation_mesg = "To use the CellExplorerSortingExtractor install pymatreader"
 

@@ -52,7 +52,6 @@ class BinaryRecordingExtractor(BaseRecording):
     """
 
     extractor_name = "BinaryRecording"
-    is_writable = True
     mode = "file"
     name = "binary"
 

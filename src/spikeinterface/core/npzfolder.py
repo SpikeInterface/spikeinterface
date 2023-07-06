@@ -26,7 +26,6 @@ class NpzFolderSorting(NpzSortingExtractor):
     """
 
     extractor_name = "NpzFolder"
-    has_default_locations = True
     mode = "folder"
     name = "npzfolder"
 
