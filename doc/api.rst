@@ -149,6 +149,7 @@ spikeinterface.preprocessing
     .. autofunction:: clip
     .. autofunction:: common_reference
     .. autofunction:: correct_lsb
+    .. autofunction:: correct_motion
     .. autofunction:: depth_order
     .. autofunction:: detect_bad_channels
     .. autofunction:: directional_derivative

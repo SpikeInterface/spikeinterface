@@ -112,9 +112,10 @@ def estimate_motion(
         bins given by bin_um.
     temporal_bins: numpy.array 1d
         temporal bins (bin center)
-    spatial_bins: numpy.array 1d or None
-        If rigid then None
-        else motion.shape[1]
+    spatial_bins: numpy.array 1d
+        Windows center.
+        spatial_bins.shape[0] == motion.shape[1]
+        If rigid then spatial_bins.shape[0] == 1
     extra_check: dict
         Optional output if `output_extra_check=True`
         This dict contain histogram, pairwise_displacement usefull for ploting.
