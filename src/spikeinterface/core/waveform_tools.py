@@ -189,7 +189,7 @@ def allocate_waveforms_buffers(
             wfs_arrays[unit_id] = arr
             wfs_arrays_info[unit_id] = filename
         elif mode == "shared_memory":
-            if n_spikes == 0:
+            if n_spikes == 0 or num_chans == 0:
                 arr = np.zeros(shape, dtype=dtype)
                 shm = None
                 shm_name = None
@@ -431,15 +431,15 @@ def extract_waveforms_to_unique_buffer(
 
     if mode == "memmap":
         filename = str(folder / f"all_waveforms.npy")
-        wfs_array = np.lib.format.open_memmap(filename, mode="w+", dtype=dtype, shape=shape)
+        all_waveforms = np.lib.format.open_memmap(filename, mode="w+", dtype=dtype, shape=shape)
         wf_array_info = filename
     elif mode == "shared_memory":
-        if num_spikes == 0:
-            wfs_array = np.zeros(shape, dtype=dtype)
+        if num_spikes == 0 or num_chans == 0:
+            all_waveforms = np.zeros(shape, dtype=dtype)
             shm = None
             shm_name = None
         else:
-            wfs_array, shm = make_shared_array(shape, dtype)
+            all_waveforms, shm = make_shared_array(shape, dtype)
             shm_name = shm.name
         wf_array_info = (shm, shm_name, dtype.str, shape)
     else:
@@ -478,17 +478,16 @@ def extract_waveforms_to_unique_buffer(
 
 
     if mode == "memmap":
-        return wfs_array
+        return all_waveforms
     elif mode == "shared_memory":
         if copy:
-            wf_array_info = wf_array_info.copy()
             if shm is not None:
                 # release all sharedmem buffer
                 # empty array have None
                 shm.unlink()
-            return wfs_array
+            return all_waveforms.copy()
         else:
-            return wfs_array, wf_array_info
+            return all_waveforms, wf_array_info
 
 
 
@@ -500,18 +499,25 @@ def _init_worker_ditribute_one_buffer(
     worker_ctx = {}
     worker_ctx["recording"] = recording
     worker_ctx["wf_array_info"] = wf_array_info
+    worker_ctx["unit_ids"] = unit_ids
+    worker_ctx["spikes"] = spikes
+    worker_ctx["nbefore"] = nbefore
+    worker_ctx["nafter"] = nafter
+    worker_ctx["return_scaled"] = return_scaled
+    worker_ctx["sparsity_mask"] = sparsity_mask
+    worker_ctx["mode"] = mode
 
     if mode == "memmap":
         filename = wf_array_info
-        wfs_array = np.load(str(filename), mmap_mode="r+")
-        worker_ctx["wfs_array"] = wfs_array
+        all_waveforms = np.load(str(filename), mmap_mode="r+")
+        worker_ctx["all_waveforms"] = all_waveforms
     elif mode == "shared_memory":
         from multiprocessing.shared_memory import SharedMemory
         shm, shm_name, dtype, shape = wf_array_info
         shm = SharedMemory(shm_name)
-        wfs_array = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+        all_waveforms = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
         worker_ctx["shm"] = shm
-        worker_ctx["wfs_array"] = wfs_array
+        worker_ctx["all_waveforms"] = all_waveforms
 
     # prepare segment slices
     segment_slices = []
@@ -520,14 +526,6 @@ def _init_worker_ditribute_one_buffer(
         s1 = np.searchsorted(spikes["segment_index"], segment_index + 1)
         segment_slices.append((s0, s1))
     worker_ctx["segment_slices"] = segment_slices
-
-    worker_ctx["unit_ids"] = unit_ids
-    worker_ctx["spikes"] = spikes
-    worker_ctx["nbefore"] = nbefore
-    worker_ctx["nafter"] = nafter
-    worker_ctx["return_scaled"] = return_scaled
-    worker_ctx["sparsity_mask"] = sparsity_mask
-    worker_ctx["mode"] = mode
 
     return worker_ctx
 
@@ -543,7 +541,7 @@ def _worker_ditribute_one_buffer(segment_index, start_frame, end_frame, worker_c
     nafter = worker_ctx["nafter"]
     return_scaled = worker_ctx["return_scaled"]
     sparsity_mask = worker_ctx["sparsity_mask"]
-    wfs_array = worker_ctx["wfs_array"]
+    all_waveforms = worker_ctx["all_waveforms"]
 
     seg_size = recording.get_num_samples(segment_index=segment_index)
 
@@ -582,12 +580,25 @@ def _worker_ditribute_one_buffer(segment_index, start_frame, end_frame, worker_c
             wf = traces[sample_index - start - nbefore : sample_index - start + nafter, :]
 
             if sparsity_mask is None:
-                wfs_array[spike_ind, :, :] = None
+                all_waveforms[spike_ind, :, :] = wf
             else:
                 mask = sparsity_mask[unit_index, :]
                 wf = wf[:, mask]
-                wfs_array[spike_ind, :, :wf.shape[1]] = wf
+                all_waveforms[spike_ind, :, :wf.shape[1]] = wf
 
+
+def split_waveforms_by_units(unit_ids, spikes, all_waveforms, sparsity_mask=None):
+    waveform_by_units = {}
+    for unit_index, unit_id in enumerate(unit_ids):
+        mask = spikes["unit_index"] == unit_index
+        if sparsity_mask is not None:
+            chan_mask = sparsity_mask[unit_index, :]
+            num_chans = np.sum(chan_mask)
+            waveform_by_units[unit_id] = all_waveforms[mask, :, :][:, :, :num_chans]
+        else:
+            waveform_by_units[unit_id] = all_waveforms[mask, :, :]
+
+    return waveform_by_units
 
 
 def has_exceeding_spikes(recording, sorting):
