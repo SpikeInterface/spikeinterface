@@ -54,21 +54,4 @@ si.plot_peak_activity_map(rec_filtred, peaks=peaks)
 si.plot_peak_activity_map(rec_filtred, bin_duration_s=1.)
 
 
-##############################################################################
-# plot_drift_over_time()
-# ----------------------
-#
-# Plots detected peaks over time in scatter mode heatmap mode.
-# Here bin_duration_s=1.0 because the recording is short (10s).
-# A better value could 60s for normal recordings
-
-si.plot_drift_over_time(rec_filtred, peaks=peaks, bin_duration_s=1.,
-                        weight_with_amplitudes=True, mode='heatmap')
-
-##############################################################################
-# Plots detected peaks over time in scatter mode
-
-si.plot_drift_over_time(rec_filtred, peaks=peaks, weight_with_amplitudes=False, mode='scatter')
-
-
 plt.show()
