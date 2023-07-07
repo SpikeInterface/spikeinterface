@@ -21,10 +21,6 @@ def _check_all_wf_equal(list_wfs_arrays):
     wfs_arrays0 = list_wfs_arrays[0]
     for i, wfs_arrays in enumerate(list_wfs_arrays):
         for unit_id in wfs_arrays.keys():
-            print()
-            print('*'*10)
-            print(wfs_arrays[unit_id].shape)
-            print(wfs_arrays0[unit_id].shape)
             assert np.array_equal(wfs_arrays[unit_id], wfs_arrays0[unit_id])
 
 
@@ -79,8 +75,8 @@ def test_waveform_tools():
         for k, mode_kwargs in enumerate(some_modes):
             for l, sparsity_kwargs in enumerate(some_sparsity):
 
-                print()
-                print(job_kwargs, mode_kwargs, 'sparse=', sparsity_kwargs['sparsity_mask'] is None)
+                # print()
+                # print(job_kwargs, mode_kwargs, 'sparse=', sparsity_kwargs['sparsity_mask'] is None)
 
                 if mode_kwargs["mode"] == "memmap":
                     wf_folder = cache_folder / f"test_waveform_tools_{j}_{k}_{l}"
