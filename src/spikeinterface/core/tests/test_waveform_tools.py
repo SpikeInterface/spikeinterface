@@ -7,7 +7,9 @@ import numpy as np
 
 from spikeinterface.core import generate_recording, generate_sorting
 from spikeinterface.core.waveform_tools import (
-    extract_waveforms_to_buffers, extract_waveforms_to_unique_buffer, split_waveforms_by_units,
+    extract_waveforms_to_buffers,
+    extract_waveforms_to_unique_buffer,
+    split_waveforms_by_units,
 )
 
 
@@ -56,17 +58,20 @@ def test_waveform_tools():
         {"n_jobs": 2, "chunk_size": 3000, "progress_bar": True},
     ]
     some_modes = [
-        {"mode" : "memmap"},
+        {"mode": "memmap"},
     ]
     if platform.system() != "Windows":
         # shared memory on windows is buggy...
-        some_modes.append({"mode" : "shared_memory", })
+        some_modes.append(
+            {
+                "mode": "shared_memory",
+            }
+        )
 
     some_sparsity = [
         dict(sparsity_mask=None),
-        dict(sparsity_mask = np.random.randint(0, 2, size=(unit_ids.size, recording.channel_ids.size), dtype="bool")),
+        dict(sparsity_mask=np.random.randint(0, 2, size=(unit_ids.size, recording.channel_ids.size), dtype="bool")),
     ]
-    
 
     # memmap mode
     list_wfs_dense = []
@@ -74,7 +79,6 @@ def test_waveform_tools():
     for j, job_kwargs in enumerate(some_job_kwargs):
         for k, mode_kwargs in enumerate(some_modes):
             for l, sparsity_kwargs in enumerate(some_sparsity):
-
                 # print()
                 # print(job_kwargs, mode_kwargs, 'sparse=', sparsity_kwargs['sparsity_mask'] is None)
 
@@ -86,7 +90,7 @@ def test_waveform_tools():
                     mode_kwargs_ = dict(**mode_kwargs, folder=wf_folder)
                 else:
                     mode_kwargs_ = mode_kwargs
-                
+
                 wfs_arrays = extract_waveforms_to_buffers(
                     recording,
                     spikes,
@@ -103,12 +107,11 @@ def test_waveform_tools():
                 for unit_ind, unit_id in enumerate(unit_ids):
                     wf = wfs_arrays[unit_id]
                     assert wf.shape[0] == np.sum(spikes["unit_index"] == unit_ind)
-                
-                if sparsity_kwargs['sparsity_mask'] is None:
+
+                if sparsity_kwargs["sparsity_mask"] is None:
                     list_wfs_dense.append(wfs_arrays)
                 else:
                     list_wfs_sparse.append(wfs_arrays)
-
 
                 all_waveforms = extract_waveforms_to_unique_buffer(
                     recording,
@@ -123,17 +126,16 @@ def test_waveform_tools():
                     **mode_kwargs_,
                     **job_kwargs,
                 )
-                wfs_arrays = split_waveforms_by_units(unit_ids, spikes, all_waveforms, sparsity_mask=sparsity_kwargs['sparsity_mask'])
-                if sparsity_kwargs['sparsity_mask'] is None:
+                wfs_arrays = split_waveforms_by_units(
+                    unit_ids, spikes, all_waveforms, sparsity_mask=sparsity_kwargs["sparsity_mask"]
+                )
+                if sparsity_kwargs["sparsity_mask"] is None:
                     list_wfs_dense.append(wfs_arrays)
                 else:
                     list_wfs_sparse.append(wfs_arrays)
 
     _check_all_wf_equal(list_wfs_dense)
     _check_all_wf_equal(list_wfs_sparse)
-
-
-
 
 
 if __name__ == "__main__":

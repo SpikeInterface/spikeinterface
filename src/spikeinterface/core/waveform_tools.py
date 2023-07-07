@@ -274,7 +274,7 @@ def distribute_waveforms_to_buffers(
         sparsity_mask,
     )
     if job_name is None:
-        job_name=f"extract waveforms {mode} multi buffer"
+        job_name = f"extract waveforms {mode} multi buffer"
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
     processor.run()
 
@@ -413,7 +413,6 @@ def extract_waveforms_to_unique_buffer(
     job_name=None,
     **job_kwargs,
 ):
-
     nsamples = nbefore + nafter
 
     dtype = np.dtype(dtype)
@@ -445,7 +444,6 @@ def extract_waveforms_to_unique_buffer(
     else:
         raise ValueError("allocate_waveforms_buffers bad mode")
 
-
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     inds_by_unit = {}
@@ -468,14 +466,12 @@ def extract_waveforms_to_unique_buffer(
             return_scaled,
             mode,
             sparsity_mask,
-
         )
         if job_name is None:
             job_name = f"extract waveforms {mode} mono buffer"
 
         processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
         processor.run()
-
 
     if mode == "memmap":
         return all_waveforms
@@ -490,12 +486,9 @@ def extract_waveforms_to_unique_buffer(
             return all_waveforms, wf_array_info
 
 
-
-
 def _init_worker_ditribute_one_buffer(
     recording, unit_ids, spikes, wf_array_info, nbefore, nafter, return_scaled, mode, sparsity_mask
 ):
-
     worker_ctx = {}
     worker_ctx["recording"] = recording
     worker_ctx["wf_array_info"] = wf_array_info
@@ -513,6 +506,7 @@ def _init_worker_ditribute_one_buffer(
         worker_ctx["all_waveforms"] = all_waveforms
     elif mode == "shared_memory":
         from multiprocessing.shared_memory import SharedMemory
+
         shm, shm_name, dtype, shape = wf_array_info
         shm = SharedMemory(shm_name)
         all_waveforms = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
@@ -546,7 +540,7 @@ def _worker_ditribute_one_buffer(segment_index, start_frame, end_frame, worker_c
     seg_size = recording.get_num_samples(segment_index=segment_index)
 
     s0, s1 = segment_slices[segment_index]
-    in_seg_spikes = spikes[s0: s1]
+    in_seg_spikes = spikes[s0:s1]
 
     # take only spikes in range [start_frame, end_frame]
     # this is a slice so no copy!!
@@ -584,7 +578,7 @@ def _worker_ditribute_one_buffer(segment_index, start_frame, end_frame, worker_c
             else:
                 mask = sparsity_mask[unit_index, :]
                 wf = wf[:, mask]
-                all_waveforms[spike_ind, :, :wf.shape[1]] = wf
+                all_waveforms[spike_ind, :, : wf.shape[1]] = wf
 
 
 def split_waveforms_by_units(unit_ids, spikes, all_waveforms, sparsity_mask=None):
