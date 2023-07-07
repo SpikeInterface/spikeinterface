@@ -32,11 +32,13 @@ Release notes
 Version 0.98.0
 ==============
 
-* Implemented motion correction in SpikeInterface
-* Get rid of to_dict in _kwargs and use JSON serializer
-* _ind to _index in complex dtype representation
-* Moved to src/spikeinterface structure
-* Reformat to black and use pre-commit CI
+* Implemented motion correction framework in SpikeInterface
+* Added "grid convolution" as localization method
+* Added amplitude_scaling implementation in postprocessing
+* Improved container support for docker and singularity
+* Improved implementation and performance of quality metrics module
+* Extensive additions to :code:`sortingcomponents`` module (pipeline nodes, waveform denoising, sparsity)
+* :code:`_ind` to :code:`_index` in complex dtype representation for peak and spikes
 
 Version 0.97.1
 ==============
