@@ -91,21 +91,21 @@ def compute_firing_rates(waveform_extractor, unit_ids=None, **kwargs):
     return firing_rates
 
 
-def compute_presence_ratios(waveform_extractor, unit_ids=None, bin_duration_s=60.0, mean_fr_ratio_thresh=0.0, **kwargs):
+def compute_presence_ratios(waveform_extractor, bin_duration_s=60.0, mean_fr_ratio_thresh=0.0, unit_ids=None, **kwargs):
     """Calculate the presence ratio, the fraction of time the unit is firing above a certain threshold.
 
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    unit_ids : list or None
-        The list of unit ids to compute the presence ratio. If None, all units are used.
     bin_duration_s : float, default: 60
         The duration of each bin in seconds. If the duration is less than this value,
         presence_ratio is set to NaN
     mean_fr_ratio_thresh: float, default: 0
         The unit is considered active in a bin if its firing rate during that bin
         is strictly above `mean_fr_ratio_thresh` times its mean firing rate throughout the recording.
+    unit_ids : list or None
+        The list of unit ids to compute the presence ratio. If None, all units are used.
 
     Returns
     -------
@@ -173,10 +173,10 @@ _default_params["presence_ratio"] = dict(
 
 def compute_snrs(
     waveform_extractor,
-    unit_ids=None,
     peak_sign: str = "neg",
     peak_mode: str = "extremum",
     random_chunk_kwargs_dict=None,
+    unit_ids=None,
 ):
     """Compute signal to noise ratio.
 
@@ -184,8 +184,6 @@ def compute_snrs(
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    unit_ids : list or None
-        The list of unit ids to compute the SNR. If None, all units are used.
     peak_sign : {'neg', 'pos', 'both'}
         The sign of the template to compute best channels.
     peak_mode: {'extremum', 'at_index'}
@@ -195,6 +193,8 @@ def compute_snrs(
     random_chunk_kwarg_dict: dict or None
         Dictionary to control the get_random_data_chunks() function.
         If None, default values are used
+    unit_ids : list or None
+        The list of unit ids to compute the SNR. If None, all units are used.
 
     Returns
     -------
@@ -237,7 +237,7 @@ def compute_snrs(
 _default_params["snr"] = dict(peak_sign="neg", peak_mode="extremum", random_chunk_kwargs_dict=None)
 
 
-def compute_isi_violations(waveform_extractor, unit_ids=None, isi_threshold_ms=1.5, min_isi_ms=0):
+def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=0, unit_ids=None):
     """Calculate Inter-Spike Interval (ISI) violations.
 
     It computes several metrics related to isi violations:
@@ -249,8 +249,6 @@ def compute_isi_violations(waveform_extractor, unit_ids=None, isi_threshold_ms=1
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object
-    unit_ids : list or None
-        List of unit ids to compute the ISI violations. If None, all units are used.
     isi_threshold_ms : float, default: 1.5
         Threshold for classifying adjacent spikes as an ISI violation, in ms.
         This is the biophysical refractory period (default=1.5).
@@ -258,6 +256,8 @@ def compute_isi_violations(waveform_extractor, unit_ids=None, isi_threshold_ms=1
         Minimum possible inter-spike interval, in ms.
         This is the artificial refractory period enforced
         by the data acquisition system or post-processing algorithms.
+    unit_ids : list or None
+        List of unit ids to compute the ISI violations. If None, all units are used.
 
     Returns
     -------
@@ -319,7 +319,7 @@ _default_params["isi_violation"] = dict(isi_threshold_ms=1.5, min_isi_ms=0)
 
 
 def compute_refrac_period_violations(
-    waveform_extractor, unit_ids=None, refractory_period_ms: float = 1.0, censored_period_ms: float = 0.0
+    waveform_extractor, refractory_period_ms: float = 1.0, censored_period_ms: float = 0.0, unit_ids=None
 ):
     """Calculates the number of refractory period violations.
 
@@ -332,13 +332,13 @@ def compute_refrac_period_violations(
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object
-    unit_ids : list or None
-        List of unit ids to compute the refractory period violations. If None, all units are used.
     refractory_period_ms : float, default: 1.0
         The period (in ms) where no 2 good spikes can occur.
     censored_period_ùs : float, default: 0.0
         The period (in ms) where no 2 spikes can occur (because they are not detected, or
         because they were removed by another mean).
+    unit_ids : list or None
+        List of unit ids to compute the refractory period violations. If None, all units are used.
 
     Returns
     -------
@@ -403,13 +403,13 @@ _default_params["rp_violation"] = dict(refractory_period_ms=1.0, censored_period
 
 def compute_sliding_rp_violations(
     waveform_extractor,
-    unit_ids=None,
     min_spikes=0,
     bin_size_ms=0.25,
     window_size_s=1,
     exclude_ref_period_below_ms=0.5,
     max_ref_period_ms=10,
     contamination_values=None,
+    unit_ids=None,
 ):
     """Compute sliding refractory period violations, a metric developed by IBL which computes
     contamination by using a sliding refractory period.
@@ -419,8 +419,6 @@ def compute_sliding_rp_violations(
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    unit_ids : list or None
-        List of unit ids to compute the sliding RP violations. If None, all units are used.
     min_spikes : int, default 0
         Contamination  is set to np.nan if the unit has less than this many
         spikes across all segments.
@@ -434,6 +432,8 @@ def compute_sliding_rp_violations(
         Maximum refractory period to test in ms, by default 10 ms
     contamination_values : 1d array or None
         The contamination values to test, by default np.arange(0.5, 35, 0.5) %
+    unit_ids : list or None
+        List of unit ids to compute the sliding RP violations. If None, all units are used.
 
     Returns
     -------
@@ -497,11 +497,11 @@ _default_params["sliding_rp_violation"] = dict(
 
 def compute_amplitude_cutoffs(
     waveform_extractor,
-    unit_ids=None,
     peak_sign="neg",
     num_histogram_bins=500,
     histogram_smoothing_value=3,
     amplitudes_bins_min_ratio=5,
+    unit_ids=None,
 ):
     """Calculate approximate fraction of spikes missing from a distribution of amplitudes.
 
@@ -509,8 +509,6 @@ def compute_amplitude_cutoffs(
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    unit_ids : list or None
-        List of unit ids to compute the amplitude cutoffs. If None, all units are used.
     peak_sign : {'neg', 'pos', 'both'}
         The sign of the peaks.
     num_histogram_bins : int, default: 100
@@ -521,6 +519,8 @@ def compute_amplitude_cutoffs(
         The minimum ratio between number of amplitudes for a unit and the number of bins.
         If the ratio is less than this threshold, the amplitude_cutoff for the unit is set
         to NaN.
+    unit_ids : list or None
+        List of unit ids to compute the amplitude cutoffs. If None, all units are used.
 
     Returns
     -------
@@ -597,17 +597,17 @@ _default_params["amplitude_cutoff"] = dict(
 )
 
 
-def compute_amplitude_medians(waveform_extractor, unit_ids=None, peak_sign="neg"):
+def compute_amplitude_medians(waveform_extractor, peak_sign="neg", unit_ids=None):
     """Compute median of the amplitude distributions (in absolute value).
 
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    unit_ids : list or None
-        List of unit ids to compute the amplitude medians. If None, all units are used.
     peak_sign : {'neg', 'pos', 'both'}
         The sign of the peaks.
+    unit_ids : list or None
+        List of unit ids to compute the amplitude medians. If None, all units are used.
 
     Returns
     -------
@@ -658,13 +658,13 @@ _default_params["amplitude_median"] = dict(peak_sign="neg")
 
 def compute_drift_metrics(
     waveform_extractor,
-    unit_ids=None,
     interval_s=60,
     min_spikes_per_interval=100,
     direction="y",
     min_fraction_valid_intervals=0.5,
     min_num_bins=2,
     return_positions=False,
+    unit_ids=None,
 ):
     """Compute drifts metrics using estimated spike locations.
     Over the duration of the recording, the drift signal for each unit is calculated as the median
@@ -683,8 +683,6 @@ def compute_drift_metrics(
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    unit_ids : list or None
-        List of unit ids to compute the drift metrics. If None, all units are used.
     interval_s : int, optional
         Interval length is seconds for computing spike depth, by default 60
     min_spikes_per_interval : int, optional
@@ -700,6 +698,8 @@ def compute_drift_metrics(
         less bins, the metric values are set to NaN.
     return_positions : bool, optional
         If True, median positions are returned (for debugging), by default False
+    unit_ids : list or None
+        List of unit ids to compute the drift metrics. If None, all units are used.
 
     Returns
     -------

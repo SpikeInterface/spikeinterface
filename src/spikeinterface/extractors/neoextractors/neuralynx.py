@@ -1,3 +1,5 @@
+from typing import Optional
+
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
@@ -51,17 +53,40 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
     sampling_frequency: float
         The sampling frequency for the spiking channels. When the signal data is available (.ncs) those files will be
         used to extract the frequency. Otherwise, the sampling frequency needs to be specified for this extractor.
+    stream_id: str, optional
+        Used to extract information about the sampling frequency and t_start from the analog signal if provided.
+    stream_name: str, optional
+        Used to extract information about the sampling frequency and t_start from the analog signal if provided.
     """
 
     mode = "folder"
     NeoRawIOClass = "NeuralynxRawIO"
-    handle_spike_frame_directly = False
+    neo_returns_timestamps = False
+    need_t_start_from_signal_stream = True
     name = "neuralynx"
 
-    def __init__(self, folder_path, sampling_frequency=None):
+    def __init__(
+        self,
+        folder_path: str,
+        sampling_frequency: Optional[float] = None,
+        stream_id: Optional[str] = None,
+        stream_name: Optional[str] = None,
+    ):
         neo_kwargs = self.map_to_neo_kwargs(folder_path)
-        NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, **neo_kwargs)
-        self._kwargs.update(dict(folder_path=str(folder_path)))
+        NeoBaseSortingExtractor.__init__(
+            self,
+            sampling_frequency=sampling_frequency,
+            stream_id=stream_id,
+            stream_name=stream_name,
+            **neo_kwargs,
+        )
+
+        self._kwargs = {
+            "folder_path": folder_path,
+            "sampling_frequency": sampling_frequency,
+            "stream_id": stream_id,
+            "stream_name": stream_name,
+        }
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
