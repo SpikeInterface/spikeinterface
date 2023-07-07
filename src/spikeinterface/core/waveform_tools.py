@@ -214,6 +214,7 @@ def distribute_waveforms_to_buffers(
     return_scaled,
     mode="memmap",
     sparsity_mask=None,
+    job_name=None,
     **job_kwargs,
 ):
     """
@@ -272,9 +273,9 @@ def distribute_waveforms_to_buffers(
         mode,
         sparsity_mask,
     )
-    processor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, job_name=f"extract waveforms {mode}", **job_kwargs
-    )
+    if job_name is None:
+        job_name=f"extract waveforms {mode} multi buffer"
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
     processor.run()
 
 
@@ -409,6 +410,7 @@ def extract_waveforms_to_unique_buffer(
     dtype=None,
     sparsity_mask=None,
     copy=False,
+    job_name=None,
     **job_kwargs,
 ):
 
@@ -420,11 +422,11 @@ def extract_waveforms_to_unique_buffer(
     else:
         folder = Path(folder)
 
-    num_spikes = spike.size
+    num_spikes = spikes.size
     if sparsity_mask is None:
         num_chans = recording.get_num_channels()
     else:
-        num_chans = np.sum(sparsity_mask[unit_ind, :])
+        num_chans = max(np.sum(sparsity_mask, axis=1))
     shape = (num_spikes, nsamples, num_chans)
 
     if mode == "memmap":
@@ -454,7 +456,7 @@ def extract_waveforms_to_unique_buffer(
     if num_spikes > 0:
         # and run
         func = _worker_ditribute_one_buffer
-        init_func = _init_worker_ditribute_buffers
+        init_func = _init_worker_ditribute_one_buffer
 
         init_args = (
             recording,
@@ -466,27 +468,27 @@ def extract_waveforms_to_unique_buffer(
             return_scaled,
             mode,
             sparsity_mask,
+
         )
-        processor = ChunkRecordingExecutor(
-            recording, func, init_func, init_args, job_name=f"extract waveforms {mode}", **job_kwargs
-        )
+        if job_name is None:
+            job_name = f"extract waveforms {mode} mono buffer"
+
+        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
         processor.run()
 
 
-    # if mode == "memmap":
-    #     return wfs_arrays
-    # elif mode == "shared_memory":
-    #     if copy:
-    #         wfs_arrays = {unit_id: arr.copy() for unit_id, arr in wfs_arrays.items()}
-    #         # release all sharedmem buffer
-    #         for unit_id in unit_ids:
-    #             shm = wfs_arrays_info[unit_id][0]
-    #             if shm is not None:
-    #                 # empty array have None
-    #                 shm.unlink()
-    #         return wfs_arrays
-    #     else:
-    #         return wfs_arrays, wfs_arrays_info
+    if mode == "memmap":
+        return wfs_array
+    elif mode == "shared_memory":
+        if copy:
+            wf_array_info = wf_array_info.copy()
+            if shm is not None:
+                # release all sharedmem buffer
+                # empty array have None
+                shm.unlink()
+            return wfs_array
+        else:
+            return wfs_array, wf_array_info
 
 
 
@@ -501,35 +503,29 @@ def _init_worker_ditribute_one_buffer(
 
     if mode == "memmap":
         filename = wf_array_info
-        wfs = np.load(str(filename), mmap_mode="r+")
-
-        # in memmap mode we have the "too many open file" problem with linux
-        # memmap file will be open on demand and not globally per worker
-        worker_ctx["wf_array_info"] = wf_array_info
+        wfs_array = np.load(str(filename), mmap_mode="r+")
+        worker_ctx["wfs_array"] = wfs_array
     elif mode == "shared_memory":
         from multiprocessing.shared_memory import SharedMemory
+        shm, shm_name, dtype, shape = wf_array_info
+        shm = SharedMemory(shm_name)
+        wfs_array = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+        worker_ctx["shm"] = shm
+        worker_ctx["wfs_array"] = wfs_array
 
-        wfs_arrays = {}
-        shms = {}
-        for unit_id, (shm, shm_name, dtype, shape) in wfs_arrays_info.items():
-            if shm_name is None:
-                arr = np.zeros(shape=shape, dtype=dtype)
-            else:
-                shm = SharedMemory(shm_name)
-                arr = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
-            wfs_arrays[unit_id] = arr
-            # we need a reference to all sham otherwise we get segment fault!!!
-            shms[unit_id] = shm
-        worker_ctx["shms"] = shms
-        worker_ctx["wfs_arrays"] = wfs_arrays
+    # prepare segment slices
+    segment_slices = []
+    for segment_index in range(recording.get_num_segments()):
+        s0 = np.searchsorted(spikes["segment_index"], segment_index)
+        s1 = np.searchsorted(spikes["segment_index"], segment_index + 1)
+        segment_slices.append((s0, s1))
+    worker_ctx["segment_slices"] = segment_slices
 
     worker_ctx["unit_ids"] = unit_ids
     worker_ctx["spikes"] = spikes
-
     worker_ctx["nbefore"] = nbefore
     worker_ctx["nafter"] = nafter
     worker_ctx["return_scaled"] = return_scaled
-    worker_ctx["inds_by_unit"] = inds_by_unit
     worker_ctx["sparsity_mask"] = sparsity_mask
     worker_ctx["mode"] = mode
 
@@ -541,20 +537,18 @@ def _worker_ditribute_one_buffer(segment_index, start_frame, end_frame, worker_c
     # recover variables of the worker
     recording = worker_ctx["recording"]
     unit_ids = worker_ctx["unit_ids"]
+    segment_slices = worker_ctx["segment_slices"]
     spikes = worker_ctx["spikes"]
     nbefore = worker_ctx["nbefore"]
     nafter = worker_ctx["nafter"]
     return_scaled = worker_ctx["return_scaled"]
-    inds_by_unit = worker_ctx["inds_by_unit"]
     sparsity_mask = worker_ctx["sparsity_mask"]
+    wfs_array = worker_ctx["wfs_array"]
 
     seg_size = recording.get_num_samples(segment_index=segment_index)
 
-    # take only spikes with the correct segment_index
-    # this is a slice so no copy!!
-    s0 = np.searchsorted(spikes["segment_index"], segment_index)
-    s1 = np.searchsorted(spikes["segment_index"], segment_index + 1)
-    in_seg_spikes = spikes[s0:s1]
+    s0, s1 = segment_slices[segment_index]
+    in_seg_spikes = spikes[s0: s1]
 
     # take only spikes in range [start_frame, end_frame]
     # this is a slice so no copy!!
@@ -582,28 +576,18 @@ def _worker_ditribute_one_buffer(segment_index, start_frame, end_frame, worker_c
             start_frame=start, end_frame=end, segment_index=segment_index, return_scaled=return_scaled
         )
 
-        for unit_ind, unit_id in enumerate(unit_ids):
-            # find pos
-            inds = inds_by_unit[unit_id]
-            (in_chunk_pos,) = np.nonzero((inds >= l0) & (inds < l1))
-            if in_chunk_pos.size == 0:
-                continue
+        for spike_ind in range(l0, l1):
+            sample_index = spikes[spike_ind]["sample_index"]
+            unit_index = spikes[spike_ind]["unit_index"]
+            wf = traces[sample_index - start - nbefore : sample_index - start + nafter, :]
 
-            if worker_ctx["mode"] == "memmap":
-                # open file in demand (and also autoclose it after)
-                filename = worker_ctx["wfs_arrays_info"][unit_id]
-                wfs = np.load(str(filename), mmap_mode="r+")
-            elif worker_ctx["mode"] == "shared_memory":
-                wfs = worker_ctx["wfs_arrays"][unit_id]
+            if sparsity_mask is None:
+                wfs_array[spike_ind, :, :] = None
+            else:
+                mask = sparsity_mask[unit_index, :]
+                wf = wf[:, mask]
+                wfs_array[spike_ind, :, :wf.shape[1]] = wf
 
-            for pos in in_chunk_pos:
-                sample_index = spikes[inds[pos]]["sample_index"]
-                wf = traces[sample_index - start - nbefore : sample_index - start + nafter, :]
-
-                if sparsity_mask is None:
-                    wfs[pos, :, :] = wf
-                else:
-                    wfs[pos, :, :] = wf[:, sparsity_mask[unit_ind]]
 
 
 def has_exceeding_spikes(recording, sorting):
