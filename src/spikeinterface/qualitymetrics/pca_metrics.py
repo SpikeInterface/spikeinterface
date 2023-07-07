@@ -64,7 +64,7 @@ def get_quality_pca_metric_list():
 
 
 def calculate_pc_metrics(
-    pca, unit_ids=None, metric_names=None, sparsity=None, qm_params=None, seed=None, n_jobs=1, progress_bar=False
+    pca, metric_names=None, sparsity=None, qm_params=None, unit_ids=None, seed=None, n_jobs=1, progress_bar=False
 ):
     """Calculate principal component derived metrics.
 
@@ -72,8 +72,6 @@ def calculate_pc_metrics(
     ----------
     pca : WaveformPrincipalComponent
         Waveform object with principal components computed.
-    unit_ids : list of int or None
-        List of unit ids to compute metrics for.
     metric_names : list of str, optional
         The list of PC metrics to compute.
         If not provided, defaults to all PC metrics.
@@ -83,6 +81,8 @@ def calculate_pc_metrics(
         for each unit.
     qm_params : dict or None
         Dictionary with parameters for each PC metric function.
+    unit_ids : list of int or None
+        List of unit ids to compute metrics for.
     seed : int, default: None
         Random seed value.
     n_jobs : int
