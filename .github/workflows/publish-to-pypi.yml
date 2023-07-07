@@ -23,7 +23,6 @@ jobs:
           pip install zarr
           pip install setuptools wheel twine build
           pip install -e .[test_core]
-          pip install -e .
       - name: Test core with pytest
         run: |
           pytest -v src/spikeinterface/core
