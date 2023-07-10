@@ -103,3 +103,25 @@ def test_deepinterpolation_inference(recording_and_shape_fixture):
     # last 20 frames should be the same
     np.testing.assert_array_equal(traces_di_last[-post_frame:], traces_original_last[-post_frame:])
     np.any(np.not_equal(traces_di_last[:-post_frame:], traces_original_last[:-post_frame:]))
+
+
+@pytest.mark.dependency(depends=["test_deepinterpolation_training"])
+def test_deepinterpolation_inference_multi_job(recording_and_shape_fixture):
+    recording, desired_shape = recording_and_shape_fixture
+    pre_frame = post_frame = 20
+    existing_model_path = Path(cache_folder) / "training" / "si_test_training_model.h5"
+
+    recording_di = deepinterpolate(
+        recording,
+        model_path=existing_model_path,
+        pre_frame=pre_frame,
+        post_frame=post_frame,
+        pre_post_omission=1,
+        use_gpu=False,
+    )
+    recording_di_slice = recording_di.frame_slice(start_frame=0, end_frame=int(0.5 * recording.sampling_frequency))
+
+    recording_di_slice.save(folder=Path(cache_folder) / "di_slice", n_jobs=2, chunk_duration="50ms")
+    traces_chunks = recording_di_slice.get_traces()
+    traces_full = recording_di_slice.get_traces()
+    np.testing.assert_array_equal(traces_chunks, traces_full)

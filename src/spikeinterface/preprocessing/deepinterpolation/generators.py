@@ -66,7 +66,6 @@ def define_recording_generator_class():
             if self.last_batch_size == 0:
                 return int(len(self.list_samples) // self.batch_size)
             else:
-                self.has_partial_batch = True
                 return int(len(self.list_samples) // self.batch_size) + 1
 
         def generate_batch_indexes(self, index):
@@ -78,7 +77,7 @@ def define_recording_generator_class():
             indexes = slice(index * self.batch_size, (index + 1) * self.batch_size)
 
             if index == len(self) - 1 and self.last_batch_size > 0:
-                indexes = slice(-self.last_batch_size, -1)
+                indexes = slice(-self.last_batch_size, len(self.list_samples))
             shuffle_indexes = self.list_samples[indexes]
             return shuffle_indexes
 
@@ -209,7 +208,7 @@ def define_segment_generator_class():
                 indexes = slice(index * self.batch_size, (index + 1) * self.batch_size)
 
             if index == len(self) - 1 and self.last_batch_size > 0:
-                indexes = slice(-self.last_batch_size, -1)
+                indexes = slice(-self.last_batch_size, len(self.list_samples))
             shuffle_indexes = self.list_samples[indexes]
             return shuffle_indexes
 
