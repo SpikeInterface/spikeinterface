@@ -494,7 +494,7 @@ In general, parallelization is achieved by splitting the recording in many small
 them in parallel (for more details, see the :py:class:`~spikeinterface.core.ChunkRecordingExecutor` class).
 
 Many functions support parallel processing (e.g., :py:func:`~spikeinterface.core.extract_waveforms`, :code:`save`,
-and many more). All of this functions, in addition to other arguments, also accept the so-called **job_kwargs**.
+and many more). All of these functions, in addition to other arguments, also accept the so-called **job_kwargs**.
 These are a set of keyword arguments which are common to all functions that support parallelization:
 
 * chunk_duration or chunk_size or chunk_memory or total_memory
@@ -739,7 +739,7 @@ There are also some more advanced functions to generate sorting objects with var
 Downloading test datasets
 -------------------------
 
-The `NEO <https://github.com/NeuralEnsemble/python-neo>`_ package is maintaining a collection a files of many
+The `NEO <https://github.com/NeuralEnsemble/python-neo>`_ package is maintaining a collection of many
 electrophysiology file formats: https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
 
 The :py:func:`~spikeinterface.core.download_dataset` function is capable of downloading and caching locally dataset
