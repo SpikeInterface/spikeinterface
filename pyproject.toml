@@ -143,6 +143,13 @@ test = [
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
+docs = [
+    "sphinx-gallery",
+    "sphinx_rtd_theme",
+    "numpydoc",
+    "MEArec",
+    "datalad==0.16.2",
+]
 
 [tool.pytest.ini_options]
 markers = [
