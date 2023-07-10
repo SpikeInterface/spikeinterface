@@ -144,8 +144,9 @@ test = [
 ]
 
 docs = [
+    "Sphinx==5.1.1",
+    "sphinx_rtd_theme==1.0.0",
     "sphinx-gallery",
-    "sphinx_rtd_theme",
     "numpydoc",
     "MEArec",   # For examples
     "datalad==0.16.2",  # Download mearec data in examples
