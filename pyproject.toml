@@ -147,10 +147,11 @@ docs = [
     "sphinx-gallery",
     "sphinx_rtd_theme",
     "numpydoc",
-    "MEArec",
-    "datalad==0.16.2",
-    "pandas", # Don't know why yet
-    "hdbscan",   # For sorters I think
+    "MEArec",   # For examples
+    "datalad==0.16.2",  # Download mearec data in examples
+    "pandas", # Don't know where this is needed
+    "hdbscan",   # For sorters, probably spikingcircus
+    "numba", # For sorters, probably spikingcircus
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # Until next release
 
 ]
