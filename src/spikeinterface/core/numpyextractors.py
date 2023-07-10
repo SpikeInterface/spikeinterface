@@ -46,7 +46,7 @@ class NumpyRecording(BaseRecording):
             traces_list = [traces_list]
 
         dtype = traces_list[0].dtype
-        assert all(dtype == ts.dtype for ts in traces_list)
+        assert all(dtype == trace.dtype for trace in traces_list)
 
         if channel_ids is None:
             channel_ids = np.arange(traces_list[0].shape[1])
@@ -59,7 +59,7 @@ class NumpyRecording(BaseRecording):
             assert len(t_starts) == len(traces_list), "t_starts must be a list of same size than traces_list"
             t_starts = [float(t_start) for t_start in t_starts]
 
-        self.is_dumpable = True
+        self._is_json_serializable = False
 
         for i, traces in enumerate(traces_list):
             if t_starts is None:
@@ -80,9 +80,10 @@ class NumpyRecordingSegment(BaseRecordingSegment):
     def __init__(self, traces, sampling_frequency, t_start):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
         self._traces = traces
+        self.num_samples = traces.shape[0]
 
     def get_num_samples(self):
-        return self._traces.shape[0]
+        return self.num_samples
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         traces = self._traces[start_frame:end_frame, :]
@@ -97,7 +98,8 @@ class NumpySorting(BaseSorting):
 
     def __init__(self, sampling_frequency, unit_ids=[]):
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        self.is_dumpable = False
+        self._is_dumpable = False
+        self._is_json_serializable = False
 
     @staticmethod
     def from_extractor(source_sorting: BaseSorting) -> "NumpySorting":
@@ -368,7 +370,8 @@ class NumpySnippets(BaseSnippets):
             dtype=dtype,
         )
 
-        self.is_dumpable = False
+        self._is_dumpable = False
+        self._is_json_serializable = False
 
         for snippets, spikesframes in zip(snippets_list, spikesframes_list):
             snp_segment = NumpySnippetsSegment(snippets, spikesframes)

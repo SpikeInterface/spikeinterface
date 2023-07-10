@@ -269,6 +269,29 @@ strategies:
 * :py:func:`~spikeinterface.preprocessing.remove_artifacts()`
 
 
+astype() / unsigned_to_signed()
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Similarly to :code:`numpy.astype()`, the :code:`astype()` casts the traces to the desired :code:`dtype`:
+
+.. code-block:: python
+
+    rec_int16 = astype(rec_float, "int16")
+
+
+For recordings whose traces are unsigned (e.g. Maxwell Biosystems), the :code:`unsigned_to_signed()` function makes them
+signed by removing the unsigned "offset". For example, :code:`uint16` traces will be first upcast to :code:`uint32`, 2**15
+is subtracted, and the traces are finally cast to :code:`int16`:
+
+
+.. code-block:: python
+
+    rec_int16 = unsigned_to_signed(rec_uint16)
+
+* :py:func:`~spikeinterface.preprocessing.astype()`
+* :py:func:`~spikeinterface.preprocessing.unsigned_to_signed()`
+
+
 zero_channel_pad()
 ^^^^^^^^^^^^^^^^^^
 
@@ -280,6 +303,15 @@ required.
     rec_with_more_channels = zero_channel_pad(rec, 128)
 
 * :py:func:`~spikeinterface.preprocessing.zero_channel_pad()`
+
+
+Motion/drift correction
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Motion/drift correction is one of the most sophisticated preprocessing. See the :ref:`motion_correction` page for a full
+explanation.
+
+
 
 
 deepinterpolation() (experimental)
@@ -333,6 +365,8 @@ Here is a recipe to mimic the **SpikeGLX CatGT**:
 
 Of course, these pipelines can be enhanced and customized using other available steps in the
 :py:mod:`spikeinterface.preprocessing` module!
+
+
 
 
 

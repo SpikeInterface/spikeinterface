@@ -26,8 +26,6 @@ class AlignSortingExtractor(BaseSorting):
         The aligned sorting.
     """
 
-    is_dumpable = False
-
     def __init__(self, sorting, unit_peak_shifts):
         super().__init__(sorting.get_sampling_frequency(), sorting.unit_ids)
 

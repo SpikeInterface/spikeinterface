@@ -147,7 +147,9 @@ class HerdingspikesSorter(BaseSorter):
         else:
             new_api = False
 
-        recording = load_extractor(sorter_output_folder.parent / "spikeinterface_recording.json")
+        recording = load_extractor(
+            sorter_output_folder.parent / "spikeinterface_recording.json", base_folder=sorter_output_folder.parent
+        )
 
         p = params
 

@@ -634,6 +634,8 @@ class GroundTruthComparison(BasePairSorterComparison):
         overmerged_score=None,
         redundant_score=None,
     ):
+        import pandas as pd
+
         count = pd.Series(dtype="int64")
 
         count["num_gt"] = len(self.sorting1.get_unit_ids())

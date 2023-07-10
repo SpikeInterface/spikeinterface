@@ -31,9 +31,8 @@ class CellExplorerSortingExtractor(BaseSorting):
     """
 
     extractor_name = "CellExplorerSortingExtractor"
-    is_writable = True
     mode = "file"
-    installation_mesg = "To use the CellExplorerSortingExtractor install scipy and h5py"
+    installation_mesg = "To use the CellExplorerSortingExtractor install pymatreader"
 
     def __init__(
         self,
@@ -44,8 +43,7 @@ class CellExplorerSortingExtractor(BaseSorting):
         session_info_matfile_path: str | Path | None = None,
     ):
         try:
-            import h5py
-            import scipy.io
+            from pymatreader import read_mat
         except ImportError:
             raise ImportError(self.installation_mesg)
 
@@ -89,54 +87,56 @@ class CellExplorerSortingExtractor(BaseSorting):
                 session_info_matfile_path if session_info_file_path is None else session_info_file_path
             )
 
-        self.spikes_cellinfo_path = Path(file_path).absolute()
-        assert self.spikes_cellinfo_path.is_file(), f"The spikes.cellinfo.mat file must exist in {self.folder_path}!"
+        self.spikes_cellinfo_path = Path(file_path)
+        self.session_path = self.spikes_cellinfo_path.parent
+        self.session_id = self.spikes_cellinfo_path.stem.split(".")[0]
+        assert self.spikes_cellinfo_path.is_file(), f"The spikes.cellinfo.mat file must exist in {self.session_path}!"
 
-        self.folder_path = self.spikes_cellinfo_path.parent
         self.session_info_file_path = session_info_file_path
 
-        self.session_id = self.spikes_cellinfo_path.stem.split(".")[0]
+        ignore_fields = [  # This is useful in large files to avoid loading waveform data
+            "maxWaveformCh",
+            "maxWaveformCh1",
+            "peakVoltage",
+            "peakVoltage_expFitLengthConstant",
+            "peakVoltage_sorted",
+            "amplitudes",
+            "filtWaveform",
+            "filtWaveform_std",
+            "rawWaveform",
+            "rawWaveform_std",
+            "timeWaveform",
+            "maxWaveform_all",
+            "rawWaveform_all",
+            "filtWaveform_all",
+            "timeWaveform_all",
+            "channels_all",
+        ]  # Note that the ignore_fields only works in matlab files that were saved on hdf5 files
+        matlab_data = read_mat(self.spikes_cellinfo_path, ignore_fields=ignore_fields)
+        spikes_data = matlab_data["spikes"]
 
-        read_as_hdf5 = False
-        try:
-            matlab_file = scipy.io.loadmat(file_name=str(self.spikes_cellinfo_path), simplify_cells=True)
-            spikes_mat = matlab_file["spikes"]
-            assert isinstance(spikes_mat, dict), f"field `spikes` must be a dict, not {type(spikes_mat)}!"
-
-        except NotImplementedError:
-            matlab_file = h5py.File(name=self.spikes_cellinfo_path, mode="r")
-            spikes_mat = matlab_file["spikes"]
-            assert isinstance(spikes_mat, h5py.Group), f"field `spikes` must be a Group, not {type(spikes_mat)}!"
-            read_as_hdf5 = True
-
+        # First try to fetch it from the spikes.cellinfo file
         if sampling_frequency is None:
-            # First try the new format of spikes.cellinfo.mat files where sampling rate is included in the file
-            sr_data = spikes_mat.get("sr", None)
-            sampling_frequency = sr_data[()] if isinstance(sr_data, h5py.Dataset) else None
+            sampling_frequency = spikes_data.get("sr", None)
 
+        # If sampling rate is not available in the spikes cellinfo file, try to get it from the session file
         if sampling_frequency is None:
-            sampling_frequency = self._retrieve_sampling_frequency_from_session_info()
+            sampling_frequency = self._retrieve_sampling_frequency_from_session_file()
+
+        # Finally, fetch it from the sessionInfo file
+        if sampling_frequency is None:
+            sampling_frequency = self._retrieve_sampling_frequency_from_session_info_file()
 
         sampling_frequency = float(sampling_frequency)
 
-        unit_ids_available = "UID" in spikes_mat.keys()
-        assert unit_ids_available, f"The `spikes struct` must contain field 'UID'! fields: {spikes_mat.keys()}"
+        unit_ids_available = "UID" in spikes_data.keys()
+        assert unit_ids_available, f"The `spikes struct` must contain field 'UID'! fields: {spikes_data.keys()}"
 
-        spike_times_available = "times" in spikes_mat.keys()
-        assert spike_times_available, f"The `spike struct` must contain field 'times'! fields: {spikes_mat.keys()}"
+        spike_times_available = "times" in spikes_data.keys()
+        assert spike_times_available, f"The `spike struct` must contain field 'times'! fields: {spikes_data.keys()}"
 
-        unit_ids = spikes_mat["UID"]
-        spike_times = spikes_mat["times"]
-
-        if read_as_hdf5:
-            assert isinstance(unit_ids, h5py.Dataset), f"`unit_ids` must be a Dataset, not {type(unit_ids)}!"
-            assert isinstance(spike_times, h5py.Dataset), f"`spike_times` must be a Dataset, not {type(spike_times)}!"
-
-            unit_ids = unit_ids[:].squeeze().astype("int")
-            references = (ref[0] for ref in spike_times[:])  # These are HDF5 references
-            spike_times_data = (matlab_file[ref] for ref in references if isinstance(matlab_file[ref], h5py.Dataset))
-            # Format as a list of numpy arrays
-            spike_times = [data[()].squeeze() for data in spike_times_data]
+        unit_ids = spikes_data["UID"]
+        spike_times = spikes_data["times"]
 
         # CellExplorer reports spike times in units seconds; SpikeExtractors uses time units of sampling frames
         unit_ids = unit_ids[:].tolist()
@@ -149,7 +149,7 @@ class CellExplorerSortingExtractor(BaseSorting):
         sorting_segment = CellExplorerSortingSegment(spiketrains_dict, unit_ids)
         self.add_sorting_segment(sorting_segment)
 
-        self.extra_requirements.append("scipy")
+        self.extra_requirements.append(["pymatreader"])
 
         self._kwargs = dict(
             file_path=str(self.spikes_cellinfo_path),
@@ -157,7 +157,34 @@ class CellExplorerSortingExtractor(BaseSorting):
             session_info_file_path=str(session_info_file_path),
         )
 
-    def _retrieve_sampling_frequency_from_session_info(self) -> float:
+    def _retrieve_sampling_frequency_from_session_file(self) -> float | None:
+        """
+        Retrieve the sampling frequency from the `.session.mat` file if available.
+
+        This function tries to locate a .session.mat file corresponding to the current session. If found, it loads the
+        data from the file, ignoring certain fields. It then tries to find 'extracellular' in the 'session' data,
+        and if found, retrieves the sampling frequency ('sr') from the 'extracellular' data.
+
+        Returns
+        -------
+        float | None
+            The sampling frequency for the current session, or None if not found.
+
+        """
+        from pymatreader import read_mat
+
+        sampling_frequency = None
+        session_file_path = self.session_path / f"{self.session_id}.session.mat"
+        if session_file_path.is_file():
+            ignore_fields = ["animal", "behavioralTracking", "timeSeries", "spikeSorting", "epochs"]
+            matlab_data = read_mat(session_file_path, ignore_fields=ignore_fields)
+            session_data = matlab_data["session"]
+            if "extracellular" in session_data.keys():
+                sampling_frequency = session_data["extracellular"].get("sr", None)
+
+        return sampling_frequency
+
+    def _retrieve_sampling_frequency_from_session_info_file(self) -> float:
         """
         Retrieve the sampling frequency from the `sessionInfo.mat` file when available.
 
@@ -170,33 +197,24 @@ class CellExplorerSortingExtractor(BaseSorting):
         float
             The wideband sampling frequency for the current session.
         """
-        import h5py
-        import scipy.io
+
+        from pymatreader import read_mat
 
         if self.session_info_file_path is None:
-            self.session_info_file_path = self.folder_path / f"{self.session_id}.sessionInfo.mat"
+            self.session_info_file_path = self.session_path / f"{self.session_id}.sessionInfo.mat"
 
         self.session_info_file_path = Path(self.session_info_file_path).absolute()
         assert (
             self.session_info_file_path.is_file()
-        ), f"No {self.session_id}.sessionInfo.mat file found in the {self.folder_path}!, can't inferr sampling rate"
+        ), f"No {self.session_id}.sessionInfo.mat file found in the {self.session_path}!, can't inferr sampling rate, please pass the sampling rate at initialization"
 
-        read_as_hdf5 = False
-        try:
-            session_info_mat = scipy.io.loadmat(file_name=str(self.session_info_file_path), simplify_cells=True)
-        except NotImplementedError:
-            session_info_mat = h5py.File(name=str(self.session_info_file_path), mode="r")
-            read_as_hdf5 = True
-
+        session_info_mat = read_mat(self.session_info_file_path)
         rates = session_info_mat["sessionInfo"]["rates"]
         wideband_in_rates = "wideband" in rates.keys()
         assert wideband_in_rates, "a 'sessionInfo' should contain a  'wideband' to extract the sampling frequency!"
 
         # Not to be connfused with the lfpsamplingrate; reported in units Hz also present in rates
-        sampling_frequency = rates["wideband"]
-
-        if read_as_hdf5:
-            sampling_frequency = sampling_frequency[()]
+        sampling_frequency = float(rates["wideband"])
 
         return sampling_frequency
 
