@@ -8,7 +8,7 @@ import numpy as np
 from spikeinterface.core import generate_recording, generate_sorting
 from spikeinterface.core.waveform_tools import (
     extract_waveforms_to_buffers,
-    extract_waveforms_to_unique_buffer,
+    extract_waveforms_to_single_buffer,
     split_waveforms_by_units,
 )
 
@@ -113,7 +113,7 @@ def test_waveform_tools():
                 else:
                     list_wfs_sparse.append(wfs_arrays)
 
-                all_waveforms = extract_waveforms_to_unique_buffer(
+                all_waveforms = extract_waveforms_to_single_buffer(
                     recording,
                     spikes,
                     unit_ids,
