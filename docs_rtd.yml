@@ -6,4 +6,4 @@ dependencies:
   - pip
   - datalad
   - pip:
-    - -e ./spikeinterface[docs]
+    - -e .[docs]
