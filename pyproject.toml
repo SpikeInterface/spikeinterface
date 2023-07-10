@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.98.0.dev0"
+version = "0.99.0.dev0"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -67,7 +67,6 @@ extractors = [
     "ONE-api>=1.19.1",
     "ibllib>=2.21.0",
     "pymatreader>=0.0.32", # For cell explorer matlab files
-
 ]
 
 streaming_extractors = [
@@ -99,7 +98,7 @@ widgets = [
     "matplotlib",
     "ipympl",
     "ipywidgets",
-    "sortingview>=0.11.0",
+    "sortingview>=0.11.15",
     "figurl-jupyter"
 ]
 
@@ -142,7 +141,6 @@ test = [
     # for release we need pypi, so this need to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
-
 ]
 
 

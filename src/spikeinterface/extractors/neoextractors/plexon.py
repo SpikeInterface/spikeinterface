@@ -52,18 +52,16 @@ class PlexonSortingExtractor(NeoBaseSortingExtractor):
 
     mode = "file"
     NeoRawIOClass = "PlexonRawIO"
-    handle_spike_frame_directly = True
     name = "plexon"
+    neo_returns_frames = True
 
     def __init__(self, file_path):
-        from neo.rawio import PlexonRawIO
-
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        neo_reader = PlexonRawIO(**neo_kwargs)
-        neo_reader.parse_header()
-        sampling_frequency = neo_reader._global_ssampling_rate
+        self.neo_reader = NeoBaseSortingExtractor.get_neo_io_reader(self.NeoRawIOClass, **neo_kwargs)
+        self.neo_reader.parse_header()
+        sampling_frequency = self.neo_reader._global_ssampling_rate
         NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, **neo_kwargs)
-        self._kwargs.update({"file_path": str(file_path)})
+        self._kwargs = {"file_path": str(file_path)}
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
