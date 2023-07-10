@@ -1,9 +1,7 @@
 name: Test streaming extractors
-on:
-  pull_request:
-    types: [synchronize, opened, reopened]
-    branches:
-      - main
+
+on: workflow_dispatch
+
 concurrency:  # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

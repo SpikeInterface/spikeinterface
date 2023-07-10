@@ -481,7 +481,7 @@ class BaseExtractor:
             # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
             if isinstance(value, BaseExtractor):
                 return value.check_if_dumpable()
-            elif isinstance(value, list) and isinstance(value[0], BaseExtractor):
+            elif isinstance(value, list) and (len(value) > 0) and isinstance(value[0], BaseExtractor):
                 return all([v.check_if_dumpable() for v in value])
             elif isinstance(value, dict) and isinstance(value[list(value.keys())[0]], BaseExtractor):
                 return all([v.check_if_dumpable() for k, v in value.items()])
@@ -501,7 +501,7 @@ class BaseExtractor:
             # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
             if isinstance(value, BaseExtractor):
                 return value.check_if_json_serializable()
-            elif isinstance(value, list) and isinstance(value[0], BaseExtractor):
+            elif isinstance(value, list) and (len(value) > 0) and isinstance(value[0], BaseExtractor):
                 return all([v.check_if_json_serializable() for v in value])
             elif isinstance(value, dict) and isinstance(value[list(value.keys())[0]], BaseExtractor):
                 return all([v.check_if_json_serializable() for k, v in value.items()])
