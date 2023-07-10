@@ -159,6 +159,7 @@ markers = [
     "exporters",
     "widgets",
     "sortingcomponents",
+    "deepinterpolation",
     "streaming_extractors: extractors that require streaming such as ross and fsspec",
 ]
 filterwarnings =[
