@@ -32,5 +32,5 @@ jobs:
           pip install -e .[full,test_core]
       - name: Test core with pytest
         run: |
-          pytest -m deepinterpolation
+          pytest -v src/spikeinterface/preprocessing/deepinterpolation
         shell: bash  # Necessary for pipeline to work on windows
