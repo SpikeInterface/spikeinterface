@@ -149,6 +149,10 @@ docs = [
     "numpydoc",
     "MEArec",
     "datalad==0.16.2",
+    "pandas", # Don't know why yet
+    "hdbscan",   # For sorters I think
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # Until next release
+
 ]
 
 [tool.pytest.ini_options]
