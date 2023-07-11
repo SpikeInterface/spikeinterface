@@ -155,6 +155,7 @@ docs = [
     "pandas", # Don't know where this is needed
     "hdbscan",   # For sorters, probably spikingcircus
     "numba", # For sorters, probably spikingcircus
+    # for release we need pypi, so this needs to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 
