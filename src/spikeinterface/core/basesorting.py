@@ -109,18 +109,20 @@ class BaseSorting(BaseExtractor):
     ):
         segment_index = self._check_segment_index(segment_index)
         segment = self._sorting_segments[segment_index]
-        spike_frames = segment.get_unit_spike_train(
-            unit_id=unit_id, start_frame=start_frame, end_frame=end_frame
-        ).astype("int64")
         if return_times:
-            if self.has_recording():
-                times = self.get_times(segment_index=segment_index)
-                return times[spike_frames]
-            else:
-                t_start = segment._t_start if segment._t_start is not None else 0
-                spike_times = spike_frames / self.get_sampling_frequency()
-                return t_start + spike_times
+            spike_times = segment.get_unit_spike_times(
+                unit_id=unit_id,
+                start_frame=start_frame,
+                end_frame=end_frame,
+            )
+            return spike_times
         else:
+            spike_frames = segment.get_unit_spike_train(
+                unit_id=unit_id,
+                start_frame=start_frame,
+                end_frame=end_frame,
+            ).astype("int64")
+
             return spike_frames
 
     def register_recording(self, recording, check_spike_frames=True):
@@ -405,6 +407,7 @@ class BaseSortingSegment(BaseSegment):
         self._t_start = t_start
         BaseSegment.__init__(self)
 
+    # This should be an abstract method
     def get_unit_spike_train(
         self,
         unit_id,
@@ -426,3 +429,22 @@ class BaseSortingSegment(BaseSegment):
         """
         # must be implemented in subclass
         raise NotImplementedError
+
+    def get_unit_spike_times(self, unit_id, start_frame: Optional[int] = None, end_frame: Optional[int] = None):
+        parent_extractor = self.parent_extractor
+        segments = parent_extractor._recording_segments
+        segment_index = next(index for index, segment in enumerate(segments) if segment == self)
+        sampling_frequency = parent_extractor.get_sampling_frequency()
+        spike_frames = self.get_unit_spike_train(
+            unit_id=unit_id,
+            start_frame=start_frame,
+            end_frame=end_frame,
+        )
+
+        if parent_extractor.has_recording():
+            times = parent_extractor.get_times(segment_index=segment_index)
+            return times[spike_frames]
+        else:
+            t_start = self._t_start if self._t_start is not None else 0
+            spike_times = spike_frames / sampling_frequency
+            return t_start + spike_times
