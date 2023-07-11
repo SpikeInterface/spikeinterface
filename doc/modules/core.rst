@@ -190,7 +190,7 @@ The :py:class:`~spikeinterface.core.WaveformExtractor` class is the core object 
 Waveforms are very important for additional analysis, and the basis of several postprocessing and quality metrics
 computations.
 
-The :py:class:`~spikeinterface.core.WaveformExtractor` allows to:
+The :py:class:`~spikeinterface.core.WaveformExtractor` allows us to:
 
 * extract and waveforms
 * sub-sample spikes for waveform extraction
@@ -199,7 +199,7 @@ The :py:class:`~spikeinterface.core.WaveformExtractor` allows to:
 * save sparse waveforms or *sparsify* dense waveforms
 * select units and associated waveforms
 
-The default format (:code:`mode='folder'`) which waveforms are saved to is a folder structure with waveforms as
+The default format (:code:`mode='folder'`) which waveforms are saved to a folder structure with waveforms as
 :code:`.npy` files.
 In addition, waveforms can also be extracted in-memory for fast computations (:code:`mode='memory'`).
 Note that this mode can quickly fill up your RAM... Use it wisely!
@@ -231,7 +231,7 @@ Finally, an existing :py:class:`~spikeinterface.core.WaveformExtractor` can be s
     # (this can also be done within the 'extract_waveforms')
     we.precompute_templates(modes=("std",))
 
-    # retrieve all template means and standard devs
+    # retrieve all template means and standard deviations
     template_means = we.get_all_templates(mode="average")
     template_stds = we.get_all_templates(mode="std")
 
@@ -490,11 +490,11 @@ Parallel processing and job_kwargs
 
 The :py:mod:`~spikeinterface.core` module also contains the basic tools used throughout SpikeInterface for parallel
 processing of recordings.
-In general, parallelization is achieved by splitting the recording in many small time chunks and process
+In general, parallelization is achieved by splitting the recording in many small time chunks and processing
 them in parallel (for more details, see the :py:class:`~spikeinterface.core.ChunkRecordingExecutor` class).
 
 Many functions support parallel processing (e.g., :py:func:`~spikeinterface.core.extract_waveforms`, :code:`save`,
-and many more). All of this functions, in addition to other arguments, also accept the so-called **job_kwargs**.
+and many more). All of these functions, in addition to other arguments, also accept the so-called **job_kwargs**.
 These are a set of keyword arguments which are common to all functions that support parallelization:
 
 * chunk_duration or chunk_size or chunk_memory or total_memory
@@ -513,11 +513,11 @@ These are a set of keyword arguments which are common to all functions that supp
     If True, a progress bar is printed
 * mp_context: str or None
     Context for multiprocessing. It can be None (default), "fork" or "spawn".
-    Note that "fork" is only available on UNIX systems
+    Note that "fork" is only available on UNIX systems (not Windows)
 
 The default **job_kwargs** are :code:`n_jobs=1, chunk_duration="1s", progress_bar=True`.
 
-Any of these argument, can be overridden by manually passing the argument to a function
+Any of these arguments, can be overridden by manually passing the argument to a function
 (e.g., :code:`extract_waveforms(..., n_jobs=16)`). Alternatively, **job_kwargs** can be set globally
 (for each SpikeInterface session), with the :py:func:`~spikeinterface.core.set_global_job_kwargs` function:
 
@@ -707,13 +707,13 @@ The :py:mod:`spikeinterface.core.template_tools` submodule includes functionalit
 Generate toy objects
 --------------------
 
-The :py:mod:`~spikeinterface.core` module also offers some functions to generate toy/fake data.
+The :py:mod:`~spikeinterface.core` module also offers some functions to generate toy/simulated data.
 They are useful to make examples, tests, and small demos:
 
 .. code-block:: python
 
     # recording with 2 segments and 4 channels
-    recording = generate_recording(generate_recording(num_channels=4, sampling_frequency=30000.,
+    recording = generate_recording(num_channels=4, sampling_frequency=30000.,
                                    durations=[10.325, 3.5], set_probe=True)
 
     # sorting with 2 segments and 5 units
@@ -739,7 +739,7 @@ There are also some more advanced functions to generate sorting objects with var
 Downloading test datasets
 -------------------------
 
-The `NEO <https://github.com/NeuralEnsemble/python-neo>`_ package is maintaining a collection a files of many
+The `NEO <https://github.com/NeuralEnsemble/python-neo>`_ package is maintaining a collection of many
 electrophysiology file formats: https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
 
 The :py:func:`~spikeinterface.core.download_dataset` function is capable of downloading and caching locally dataset
