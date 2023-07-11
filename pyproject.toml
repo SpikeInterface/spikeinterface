@@ -151,7 +151,7 @@ docs = [
 
     # for notebooks in the gallery
     "MEArec",   # Use as an example
-    "datalad==0.16.2",  # Download mearec data in examples, needs to be installed with conda because of git-annex
+    "datalad==0.16.2",  # Download mearec data, not sure if needed as is installed with conda as well because of git-annex
     "pandas", # Don't know where this is needed
     "hdbscan",   # For sorters, probably spikingcircus
     "numba", # For sorters, probably spikingcircus
