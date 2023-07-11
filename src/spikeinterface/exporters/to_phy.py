@@ -168,7 +168,7 @@ def export_to_phy(
     # shape (num_units, num_samples, max_num_channels)
     max_num_channels = max(len(chan_inds) for chan_inds in sparse_dict.values())
     num_samples = waveform_extractor.nbefore + waveform_extractor.nafter
-    templates = np.zeros((len(unit_ids), num_samples, max_num_channels), dtype=waveform_extractor.dtype)
+    templates = np.zeros((len(unit_ids), num_samples, max_num_channels), dtype="float64")
     # here we pad template inds with -1 if len of sparse channels is unequal
     templates_ind = -np.ones((len(unit_ids), max_num_channels), dtype="int64")
     for unit_ind, unit_id in enumerate(unit_ids):
