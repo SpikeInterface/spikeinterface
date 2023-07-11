@@ -625,13 +625,13 @@ class NeoSortingSegment(BaseSortingSegment):
             spike_channel_index=spike_channel_index,
         )
 
-        # Rescale to seconds
-        # spike_timestamps = self.neo_reader.rescale_spike_timestamp(spike_timestamps, dtype="float64")
-
         if self.neo_returns_frames:
             spike_frames = spike_timestamps
             t_start = 0 if self._t_start is None else self._t_start
             spike_timestamps = t_start + spike_frames / self._sampling_frequency
+        else:
+            # Rescale to seconds
+            spike_timestamps = self.neo_reader.rescale_spike_timestamp(spike_timestamps, dtype="float64")
 
         # clip
         if start_frame is not None:
