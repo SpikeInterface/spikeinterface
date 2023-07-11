@@ -116,30 +116,15 @@ class BaseSorting(BaseExtractor):
             )
             return spike_times
         else:
-            spike_frames = self.get_unit_spike_frames(
+            # This even could be a method called `get_unit_spike_frames` that calls `get_unit_spike_train
+            segment_index = self._check_segment_index(segment_index)
+            segment = self._sorting_segments[segment_index]
+            spike_frames = segment.get_unit_spike_train(
                 unit_id=unit_id,
-                segment_index=segment_index,
                 start_frame=start_frame,
                 end_frame=end_frame,
-            )
+            ).astype("int64")
             return spike_frames
-
-    def get_unit_spike_frames(
-        self,
-        unit_id,
-        segment_index: Union[int, None] = None,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-    ):
-        segment_index = self._check_segment_index(segment_index)
-        segment = self._sorting_segments[segment_index]
-        spike_frames = segment.get_unit_spike_train(
-            unit_id=unit_id,
-            start_frame=start_frame,
-            end_frame=end_frame,
-        ).astype("int64")
-
-        return spike_frames
 
     def get_unit_spike_times(
         self,

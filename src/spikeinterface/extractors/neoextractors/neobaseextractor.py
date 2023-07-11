@@ -589,6 +589,8 @@ class NeoSortingSegment(BaseSortingSegment):
         return unit_ids_list.index(unit_id)
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
+        """This method is necessary in every segment extractor."""
+
         spike_channel_index = self.map_from_unit_id_to_spike_channel_index(unit_id)
         spike_timestamps = self.neo_reader.get_spike_timestamps(
             block_index=self.block_index,
@@ -614,6 +616,7 @@ class NeoSortingSegment(BaseSortingSegment):
         return spike_frames
 
     def get_unit_spike_times(self, unit_id, start_frame, end_frame):
+        """Useful for avoiding unecessary back and forth conversions between frames and times"""
         spike_channel_index = self.map_from_unit_id_to_spike_channel_index[unit_id]
 
         spike_timestamps = self.neo_reader.get_spike_timestamps(
@@ -628,7 +631,7 @@ class NeoSortingSegment(BaseSortingSegment):
         if self.neo_returns_frames:
             spike_frames = spike_timestamps
             t_start = 0 if self._t_start is None else self._t_start
-            spike_timestamps = +t_start + spike_frames / self._sampling_frequency
+            spike_timestamps = t_start + spike_frames / self._sampling_frequency
 
         # clip
         if start_frame is not None:
