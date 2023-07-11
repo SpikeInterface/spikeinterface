@@ -431,18 +431,18 @@ class BaseSortingSegment(BaseSegment):
         raise NotImplementedError
 
     def get_unit_spike_times(self, unit_id, start_frame: Optional[int] = None, end_frame: Optional[int] = None):
-        parent_extractor = self.parent_extractor
-        segments = parent_extractor._recording_segments
-        segment_index = next(index for index, segment in enumerate(segments) if segment == self)
-        sampling_frequency = parent_extractor.get_sampling_frequency()
+        parent_sorting = self.parent_extractor
+        sorting_segments = parent_sorting._sorting_sorting_
+        segment_index = next(index for index, segment in enumerate(sorting_segments) if segment == self)
+        sampling_frequency = parent_sorting.get_sampling_frequency()
         spike_frames = self.get_unit_spike_train(
             unit_id=unit_id,
             start_frame=start_frame,
             end_frame=end_frame,
         )
 
-        if parent_extractor.has_recording():
-            times = parent_extractor.get_times(segment_index=segment_index)
+        if parent_sorting.has_recording():
+            times = parent_sorting.get_times(segment_index=segment_index)
             return times[spike_frames]
         else:
             t_start = self._t_start if self._t_start is not None else 0
