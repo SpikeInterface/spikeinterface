@@ -617,7 +617,7 @@ class NeoSortingSegment(BaseSortingSegment):
 
     def get_unit_spike_times(self, unit_id, start_frame, end_frame):
         """Useful for avoiding unecessary back and forth conversions between frames and times"""
-        spike_channel_index = self.map_from_unit_id_to_spike_channel_index[unit_id]
+        spike_channel_index = self.map_from_unit_id_to_spike_channel_index(unit_id)
 
         spike_timestamps = self.neo_reader.get_spike_timestamps(
             block_index=self.block_index,
@@ -626,7 +626,7 @@ class NeoSortingSegment(BaseSortingSegment):
         )
 
         # Rescale to seconds
-        spike_timestamps = self.neo_reader.rescale_spike_timestamp(spike_timestamps, dtype="float64")
+        # spike_timestamps = self.neo_reader.rescale_spike_timestamp(spike_timestamps, dtype="float64")
 
         if self.neo_returns_frames:
             spike_frames = spike_timestamps
