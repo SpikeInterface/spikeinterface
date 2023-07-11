@@ -439,7 +439,7 @@ class BaseSortingSegment(BaseSegment):
             unit_id=unit_id,
             start_frame=start_frame,
             end_frame=end_frame,
-        )
+        ).astype("int64", copy=False)
 
         if parent_sorting.has_recording():
             times = parent_sorting.get_times(segment_index=segment_index)
