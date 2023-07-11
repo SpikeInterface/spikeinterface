@@ -432,7 +432,7 @@ class BaseSortingSegment(BaseSegment):
 
     def get_unit_spike_times(self, unit_id, start_frame: Optional[int] = None, end_frame: Optional[int] = None):
         parent_sorting = self.parent_extractor
-        sorting_segments = parent_sorting._sorting_sorting_
+        sorting_segments = parent_sorting._sorting_segments
         segment_index = next(index for index, segment in enumerate(sorting_segments) if segment == self)
         sampling_frequency = parent_sorting.get_sampling_frequency()
         spike_frames = self.get_unit_spike_train(
