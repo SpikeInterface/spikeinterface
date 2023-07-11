@@ -61,7 +61,7 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
 
     mode = "folder"
     NeoRawIOClass = "NeuralynxRawIO"
-    neo_returns_timestamps = False
+    neo_returns_frames = True
     need_t_start_from_signal_stream = True
     name = "neuralynx"
 
