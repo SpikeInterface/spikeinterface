@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional, Union, Dict, Any, List, Tuple
 import warnings
 from math import isclose
@@ -356,7 +358,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
         # Get stream_id from stream_name
         if stream_name:
-            stream_id = self.build_stream_name_to_stream_id_dict()["stream_name"]
+            stream_id = self.build_stream_name_to_stream_id_dict()[stream_name]
 
         spike_channels = self.neo_reader.header["spike_channels"]
         if use_format_ids:
@@ -446,9 +448,8 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                 f"stream_id_to_sampling_frequency = {stream_id_to_sampling_frequencies}"
             )
             assert stream_id in stream_id_to_sampling_frequencies, assertion_msg
-            return stream_id_to_sampling_frequencies[stream_id]
-
-        # Warning for guessing the sampling frequency
+            sampling_frequency = stream_id_to_sampling_frequencies[stream_id]
+            return sampling_frequency
 
         available_sampling_frequencies = list(stream_id_to_sampling_frequencies.values())
         unique_sampling_frequencies = set(available_sampling_frequencies)
@@ -456,7 +457,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         # If there is only one stream or multiple one with the same sampling frequency use that one
         if len(unique_sampling_frequencies) == 1:
             sampling_frequency = available_sampling_frequencies[0]
-            warning_message_about_interface = (
+            warning_about_inference = (
                 "SpikeInterface will use the following sampling frequency: \n"
                 f"sampling_frequency = {sampling_frequency} \n"
                 "Corresponding to the following stream_id: \n"
@@ -466,7 +467,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                 "The following stream_ids with corresponding sampling frequencies were found: \n"
                 f"stream_id_to_sampling_frequencies = {stream_id_to_sampling_frequencies} \n"
             )
-            warnings.warn(warning_message_about_interface)
+            warnings.warn(warning_about_inference)
         else:
             instructions_for_user = (
                 "Multiple streams ids with different sampling frequencies found in the file: \n"
@@ -540,7 +541,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
         if len(unique_t_starts) == 1:
             t_start = matching_t_starts[0]
-            warning_about_interface = (
+            warning_about_inference = (
                 "SpikeInterface will use the following t_start: \n"
                 f"t_start = {t_start} \n"
                 "Corresponding to the following stream_id: \n"
@@ -550,7 +551,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
                 "The following stream_ids with corresponding t_starts were found: \n"
                 f"{stream_id_to_t_start} \n"
             )
-            warnings.warn(warning_about_interface)
+            warnings.warn(warning_about_inference)
         else:
             t_start = None
             warning_message = (
@@ -562,19 +563,6 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
             warnings.warn(warning_message)
 
         return t_start
-
-    def get_unit_spike_times(
-        self,
-        unit_id,
-        segment_index: Union[int, None] = None,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-    ):
-        segment_index = self._check_segment_index(segment_index)
-        segment = self._sorting_segments[segment_index]
-        spike_times = segment.get_unit_spike_times(unit_it=unit_id, start_frame=start_frame, end_frame=end_frame)
-
-        return spike_times
 
 
 class NeoSortingSegment(BaseSortingSegment):
@@ -591,16 +579,17 @@ class NeoSortingSegment(BaseSortingSegment):
         self.neo_reader = neo_reader
         self.segment_index = segment_index
         self.block_index = block_index
-        self.use_natural_unit_ids = use_natural_unit_ids
         self._t_start = t_start
         self._sampling_frequency = sampling_frequency
         self.neo_returns_frames = neo_returns_frames
 
-        unit_ids = self._parent_extractor.get_unit_ids()  # This is spikes id or integers
-        self.map_from_unit_id_to_spike_channel_index = {unit_id: index for index, unit_id in enumerate(unit_ids)}
+    def map_from_unit_id_to_spike_channel_index(self, unit_id):
+        unit_ids_list = list(self.parent_extractor.get_unit_ids())
+
+        return unit_ids_list.index(unit_id)
 
     def get_unit_spike_train(self, unit_id, start_frame, end_frame):
-        spike_channel_index = self.map_from_unit_id_to_spike_channel_index[unit_id]
+        spike_channel_index = self.map_from_unit_id_to_spike_channel_index(unit_id)
         spike_timestamps = self.neo_reader.get_spike_timestamps(
             block_index=self.block_index,
             seg_index=self.segment_index,

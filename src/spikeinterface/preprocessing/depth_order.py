@@ -31,6 +31,11 @@ class DepthOrderRecording(ChannelSliceRecording):
             parent_recording,
             channel_ids=reordered_channel_ids,
         )
+        self._kwargs = dict(
+            parent_recording=parent_recording,
+            channel_ids=channel_ids,
+            dimensions=dimensions,
+        )
 
 
 depth_order = define_function_from_class(source_class=DepthOrderRecording, name="depth_order")
