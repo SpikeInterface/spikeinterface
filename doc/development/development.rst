@@ -4,8 +4,6 @@ Development
 How to contribute
 -----------------
 
-I WANT TO TEST THAT THE DOCUMENTATION IS CALLING THE RIGHT BRANCH!
-
 There are various ways to contribute to SpikeInterface as a user or developer. Some tasks you can help us with include:
 
 * Developing a new extractor for a different file format.

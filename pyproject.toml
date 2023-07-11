@@ -148,12 +148,15 @@ docs = [
     "sphinx_rtd_theme==1.0.0",
     "sphinx-gallery",
     "numpydoc",
-    "MEArec",   # For examples
-    "datalad==0.16.2",  # Download mearec data in examples
+
+    # for notebooks in the gallery
+    "MEArec",   # Use as an example
+    "datalad==0.16.2",  # Download mearec data in examples, needs to be installed with conda because of git-annex
     "pandas", # Don't know where this is needed
     "hdbscan",   # For sorters, probably spikingcircus
     "numba", # For sorters, probably spikingcircus
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # Until next release
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 
 ]
 
