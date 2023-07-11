@@ -191,7 +191,7 @@ Mountainsort5
       pip install mountainsort5
 
 SpyKING CIRCUS
-^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
 
 * Python, requires MPICH
 * Url: https://spyking-circus.readthedocs.io
