@@ -39,7 +39,6 @@ class BaseExtractor:
 
     installed = True
     installation_mesg = ""
-    is_writable = False
 
     def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation
@@ -58,7 +57,8 @@ class BaseExtractor:
         #  * number of units for sorting
         self._properties = {}
 
-        self.is_dumpable = True
+        self._is_dumpable = True
+        self._is_json_serializable = True
 
         # extractor specific list of pip extra requirements
         self.extra_requirements = []
@@ -372,7 +372,6 @@ class BaseExtractor:
             "class": class_name,
             "module": module,
             "kwargs": kwargs,
-            "dumpable": self.is_dumpable,
             "version": version,
             "relative_paths": (relative_to is not None),
         }
@@ -470,7 +469,43 @@ class BaseExtractor:
         return clone
 
     def check_if_dumpable(self):
-        return _check_if_dumpable(self.to_dict())
+        """Check if the object is dumpable, including nested objects.
+
+        Returns
+        -------
+        bool
+            True if the object is dumpable, False otherwise.
+        """
+        kwargs = self._kwargs
+        for value in kwargs.values():
+            # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
+            if isinstance(value, BaseExtractor):
+                return value.check_if_dumpable()
+            elif isinstance(value, list) and (len(value) > 0) and isinstance(value[0], BaseExtractor):
+                return all([v.check_if_dumpable() for v in value])
+            elif isinstance(value, dict) and isinstance(value[list(value.keys())[0]], BaseExtractor):
+                return all([v.check_if_dumpable() for k, v in value.items()])
+        return self._is_dumpable
+
+    def check_if_json_serializable(self):
+        """
+        Check if the object is json serializable, including nested objects.
+
+        Returns
+        -------
+        bool
+            True if the object is json serializable, False otherwise.
+        """
+        kwargs = self._kwargs
+        for value in kwargs.values():
+            # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
+            if isinstance(value, BaseExtractor):
+                return value.check_if_json_serializable()
+            elif isinstance(value, list) and (len(value) > 0) and isinstance(value[0], BaseExtractor):
+                return all([v.check_if_json_serializable() for v in value])
+            elif isinstance(value, dict) and isinstance(value[list(value.keys())[0]], BaseExtractor):
+                return all([v.check_if_json_serializable() for k, v in value.items()])
+        return self._is_json_serializable
 
     @staticmethod
     def _get_file_path(file_path: Union[str, Path], extensions: Sequence) -> Path:
@@ -775,7 +810,7 @@ class BaseExtractor:
 
         # dump provenance
         provenance_file = folder / f"provenance.json"
-        if self.check_if_dumpable():
+        if self.check_if_json_serializable():
             self.dump(provenance_file)
         else:
             provenance_file.write_text(json.dumps({"warning": "the provenace is not dumpable!!!"}), encoding="utf8")
@@ -908,17 +943,6 @@ def _make_paths_absolute(d, base):
     base = Path(base)
     func = lambda p: str((base / p).resolve().absolute())
     return recursive_path_modifier(d, func, target="path", copy=True)
-
-
-def _check_if_dumpable(d):
-    kwargs = d["kwargs"]
-    if np.any([isinstance(v, dict) and "dumpable" in v.keys() for (k, v) in kwargs.items()]):
-        # check nested
-        for k, v in kwargs.items():
-            if isinstance(v, dict) and "dumpable" in v.keys():
-                return _check_if_dumpable(v)
-    else:
-        return d["dumpable"]
 
 
 def _load_extractor_from_dict(dic) -> BaseExtractor:

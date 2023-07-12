@@ -183,8 +183,6 @@ class NwbRecordingExtractor(BaseRecording):
     """
 
     extractor_name = "NwbRecording"
-    has_default_locations = True
-    is_writable = True
     mode = "file"
     installation_mesg = "To use the Nwb extractors, install pynwb: \n\n pip install pynwb\n\n"
     name = "nwb"

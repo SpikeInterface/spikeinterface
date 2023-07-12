@@ -149,6 +149,7 @@ spikeinterface.preprocessing
     .. autofunction:: clip
     .. autofunction:: common_reference
     .. autofunction:: correct_lsb
+    .. autofunction:: correct_motion
     .. autofunction:: depth_order
     .. autofunction:: detect_bad_channels
     .. autofunction:: directional_derivative
@@ -294,7 +295,6 @@ These widgets are only available with the "matplotlib" backend
     .. autofunction:: plot_rasters
     .. autofunction:: plot_probe_map
     .. autofunction:: plot_isi_distribution
-    .. autofunction:: plot_drift_over_time
     .. autofunction:: plot_peak_activity_map
     .. autofunction:: plot_principal_component
     .. autofunction:: plot_unit_probe_map

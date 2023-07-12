@@ -111,12 +111,26 @@ class SortingCommonTestSuite(CommonTestSuite):
                 kwargs = entity
                 sorting = self.ExtractorClass(**kwargs)
 
-            num_seg = sorting.get_num_segments()
+            num_segments = sorting.get_num_segments()
             unit_ids = sorting.unit_ids
+            sampling_frequency = sorting.get_sampling_frequency()
 
-            for segment_index in range(num_seg):
+            for segment_index in range(num_segments):
                 for unit_id in unit_ids:
-                    st = sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id)
+                    # Test that spike train has the propert units
+                    spike_train = sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id)
+                    sample_differences = np.diff(spike_train)
+                    no_spike_firing_in_the_same_frame = np.all(sample_differences > 0)
+                    assert no_spike_firing_in_the_same_frame
+
+                    # Test that return times are working properly
+                    spike_train_times = sorting.get_unit_spike_train(
+                        segment_index=segment_index, unit_id=unit_id, return_times=True
+                    )
+                    differences = np.diff(spike_train_times)
+                    minimal_time_resolution = 0.95 / sampling_frequency
+                    no_pairs_of_spikes_too_close_in_time = np.all(differences >= minimal_time_resolution)
+                    assert no_pairs_of_spikes_too_close_in_time
 
     def test_pickling(self):
         for entity in self.entities:

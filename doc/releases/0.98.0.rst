@@ -1,0 +1,208 @@
+.. _release0.98.0:
+
+SpikeInterface 0.98.0 release notes
+-----------------------------------
+
+7th July 2023
+
+
+Main changes:
+
+* Implemented motion correction in SpikeInterface
+* Get rid of to_dict in _kwargs and use JSON serializer
+* _ind to _index in complex dtype representation
+* Moved to src/spikeinterface structure
+* Reformat to black and use pre-commit CI
+
+
+core:
+  * Fix bug in generate_erroneous_sorting and add docstring (#1433)
+  * Add GeneratorRecording for testing and diagnosing memory issues (#1391)
+  * Add specialized JsonEncoder for writing to json (#1397)
+  * Change default value for end_frame in FrameSliceSorting (#1425)
+  * Add memory to recording __repr__ (#1452)
+  * Implement sorting concatenation (#1419)
+  * Remove to_dict mechanism from core module (#1462, #1508, #1509)
+  * Add gather_func concept to ChunkRecordingExecutor. (#1357)
+  * Version mismatch: print --> warning (#1504)
+  * Allow option to compute noise with std (#1548)
+  * Extend load_extractor to load zarr and fix zarr annotations (#1567)
+  * Add pure white noise generation to generator recording (#1581)
+  * Force_dense mode for waveforms and templates (#1599)
+  * Allow to set the recording of WaveformExtractor (#1543)
+  * Richer Recording representations (#1591)
+  * Fix generator recording (#1606)
+  * rec_attributes None in Wvf extractor set_recording (#1607)
+  * Adding ptp sparsity (#1656)
+  * Simplify define_function_from_class (#1612)
+  * Fix pickle loading (#1674)
+  * Cleaner WaveformExtractor.run_extract_waveforms (#1665)
+  * Remove verbose from write_binary_recording (#1697)
+  * Remove unecessary try-except for shared memory (#1700)
+  * Expand recursive to dump_to_pickle (#1728)
+  * Fixes to_dict(recursive) that isn't recursive (#1732)
+  * Fix bug with to_dict(recurvise, relative_to) (#1734)
+  * Propagate get_times_kwargs to BaseRecording (#1746)
+  * Fix SharedMem warning/errors (#1704)
+  * Caching noise levels (#1583)
+  * Make binary recording memmap efficient (#1742, #1602)
+  * Remove zero pad samples from write_binary_recorder (#1750)
+  * Refactor to_dict() to allow recursive dict expansion in BaseExtractor (#1762)
+  * num_chan to num_channels in BinaryRecordingExtractor (#1754)
+  * Fix sampling_frequency_max_diff kwarg for recording concat (#1770)
+  * Optional check_spike_frames in sorting.frame_slice (#1771)
+  * Add _is_json_serializable to extractor (#1775)
+  * Fixed num_chan warning (#1776)
+  * Check probe in waveform extractor and add has_probe method (#1777, #1788)
+
+
+extractors:
+  * Various Blackrock fixes (#1404)
+  * Fix in PhyKilosortSortingExtractor (#1453)
+  * Propagate use_names_as_ids to Intan extractor (#1422)
+  * NWBRecordingExtractor: retrieve max number of channels given by electrical series (#1492)
+  * Add original_cluster_id to PhySortingExtractor (#1518)
+  * Remove insecure eval for importlib in neo extractors (#1551)
+  * Refactor nwb extractor (#1513)
+  * Update mearec recording and sorting to read only required data (#1550)
+  * Adapt CellExplorerSortingExtractor to new format (#1628)
+  * Fix CBIN slicing (#1680)
+  * Allow PhyExtractor to handle splits from Phy (#1718)
+  * Add original folder to phy extractor (#1723)
+  * Add xml_file_path option to Neuroscope (#1687)
+  * Make NWB imports lazy (#1675)
+  * Neo sorting refactor (#1626)
+  * Exclude end_frame in PhyKilosort get_unit_spike_train (#1772)
+  * Simplify CellExplorer sorting with pymat reader (#1780)
+  * Kilosort does not return empty units by default (#1783)
+  * Remove 'is_writable' and 'has_default_locations' (#1789)
+
+preprocessing:
+  * Fix typo in class ClipRecording (#1430)
+  * Remove to_dict mechanism in pre-processing (#1446)
+  * Add some preprocessing tools (general and LFP-oriented) (#1415)
+  * Improve whitening and zscore arguments (#1437)
+  * Silence interval (#1310)
+  * Gaussian filter implementation (#973)
+  * Fixed wrong inter_sample_shift for NP1.0 AP channels (#1511)
+  * Fixed IndexError when interpolating artifacts (#1549)
+  * Match IBL highpass spatial filtering more closely (#1589)
+  * More LFP-oriented preprocessing tools (#1673)
+  * Deal with unsigned int to int conversion (#1707)
+  * Add preprocessing for padding traces (#1706)
+  * High level function for drift : correct_motion() (#1300)
+
+sorters:
+  * Add channel_labels to Probe bunch for pykilosort (#1435)
+  * Add mountainsort5 sorter (#1519)
+  * Save motion and skip preprocessing option in Kilosort2.5 (#1418)
+  * Added cleanup of temp files after Kilosort run (#1709)
+  * Point to correct folder to get runtime_trace from sorter (#1743)
+  * Add recursive=True when caching objects before container (#1698)
+  * Fix KS padded recording (#1766)
+  * Make recording JSON relative_to output_folder default for BaseSorter (#1753)
+  * Deprecate run_*** functions (#1768)
+
+postprocessing:
+  * Remove to_dict in postprocessing module (#1455)
+  * Check wvf_extractor with recording for spike amplitudes (#1545)
+  * Add amplitude_scaling implementation (#1503)
+  * Fix cosine similarity matrix in TemplateComparison (#1701)
+  * Pass tmp_folder as parameter for compute_principal_components (#1762)
+
+qualitymetrics:
+  * Add min_spikes to slidingRP_violations (support unit with no spike) (#1439)
+  * Add mean_fr_ratio_thresh kwarg to presence_ratio metric (#1420)
+  * Add min_fr kwarg to nn_isolation and nn_noise_overlap (#1443)
+  * Return nn_unit_id along with nn_isolation (#1500)
+  * NN metrics performance: Compute we n_spikes/fr out of main_loop (#1499)
+  * Add silhouette score quality metric (#1517)
+  * Fix bug in contamination if unit is empty (#1544)
+  * Change v_peak name and thresholder behavior (#1580)
+  * Fix dtype bug in Windows for spost.compute_refrac_period_violations (#1613)
+  * Handle empty units in quality metrics (#1783)
+
+comparison:
+  * Remove to_dict() mechanism in comparisons module  (#1461)
+  * Fix MultiSortingComparison._populate_spiketrains to prevent overwriting agreement sorting spiketrains (#1560)
+
+curation:
+  * Remove to_dict mechanism in curation module (#1456)
+  * Add pairs with decreased score to auto_merge output (#1604)
+  * Allow new_unit_id to be same id in CurationSorting.merge (#1658)
+  * Use censored_period when merging units in scur.merge_units (#1657)
+  * Fixed crash when loading MergeUnitsSorting (#1671)
+  * Add censorship of correlograms in scur.auto_merge (#1659)
+  * Fixed bug in remove_duplicated_spikes (#1711)
+  * Optimization of curation.RemoveExcessSpikeSorting (#1714)
+  * Fix bug in auto_merge with no units (#1733)
+  * Fix crash in CurationSorting with empty sorting (#1738)
+
+exporters:
+  * Fix crash in export_to_phy (#1539)
+  * Take care of BinaryFolderRecording in export_to_phy (#1716)
+
+widgets:
+  * Hide Y axis when plot_timeseries without channel labels (#1475)
+  * Fix sortingview timeseries bug (#1460)
+  * Update SV curation mechanism (#1416)
+  * Fix Sortingview scalebar (#1507)
+  * Fixes plot_unit_waveforms bug (#1578)
+  * Fix SV plot_templates when unit ids are integers (#1676)
+  * Patch for spikes_on_traces (#1726)
+
+
+sortingcomponents:
+  * Add a savgol denoiser for the waveforms (#1414)
+  * Localization from templates (#1474)
+  * Refactor detect_peak() (#1486)
+  * Add a WaveformThresholder (#1502)
+  * Choices of Feature for the monopolar triangulation (#1510)
+  * Change _ind for _index in peak_dtype for sortingcomponents (#1534, #1535, #1556, #1558, #1571)
+  * Refactor detect peak tests without testing recall (#1564)
+  * Fix torch detector for case when non peaks are found (#1572)
+  * Sign consistency test in peak detection (#1574)
+  * Add iterative peak detection (#1563)
+  * Template matching bug (#1611)
+  * Adding percentile as an option for grid localization (#1587)
+  * Add New Benchmarks for Matching (#1625)
+  * Template Matching Method from Paninski Lab (#1448)
+  * Benchmark motion (#1438)
+
+docs:
+  * Add Numba to requirements of spykingcircus2 in the documentation (#1445)
+  * Improve Documentation (#1471)
+  * Typo in aggregation section  (#1477)
+  * Updated OpenEphysBinaryRecordingExtractor doc (#1449, #1451)
+  * Improve Documentation VI (Docstrings + Asserts) (#1501)
+  * Improve installation instructions (#1540)
+  * Fix wrong path in read the docs (#1555)
+  * Add development section to docs (#1577)
+  * Update Docstrings I (Widgets Module) (#1598)
+  * Documentation-Fix RST formatting Typos (#1655)
+  * Typo in NumpyExtractor.from_dict doc (#1664)
+  * Extend waveform docs to cover 'portability' (#1634)
+  * Install python-neo and probeinterface from main in docs (#1677)
+  * Add wobble to the docs (#1686)
+  * Update doc merge_units (#1749)
+  * Add docs on SI version in cointainer #1786
+
+ci / packaging / tests:
+  * Use full tests with code coverage for build status in README.md (#1442)
+  * Update pyproject.toml to include numba in full installation (1573)
+  * Set line-length to 120 and reformat black (#1488)
+  * Refactor package installation in CI (#1516)
+  * Refactor CI tests (#1532, #1533, #1531, #1529)
+  * Warning that setup.py is legacy (#1524)
+  * Use latest version of neo in tests (#1505)
+  * Make gin-data-caches great again (#1552)
+  * Fix path in singularity tests (#1569)
+  * Check extractor properties (#1562)
+  * Testing and profiling imports (#1597)
+  * Add pre-commit-config file (#1632)
+  * Black formatting (#1633, #1645)
+  * Enable filtering warnings for distutils and imp (#1635)
+  * Refactor clustering tests (#1620)
+  * Refactor write_binary_recording tests (#1668)
+  * Add docker container tests (#1764)
+  * Add GPU container tests (#1767)

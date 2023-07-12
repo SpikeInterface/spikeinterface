@@ -9,7 +9,6 @@ from typing import List, Union
 
 class WaveClusSnippetsExtractor(MatlabHelper, BaseSnippets):
     extractor_name = "WaveClusSnippetsExtractor"
-    is_writable = True
     name = "waveclus"
 
     def __init__(self, file_path):

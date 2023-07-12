@@ -173,7 +173,10 @@ class BlackrockRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 class BlackrockSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = BlackrockSortingExtractor
     downloads = ["blackrock"]
-    entities = ["blackrock/FileSpec2.3001.nev", "blackrock/blackrock_2_1/l101210-001.nev"]
+    entities = [
+        "blackrock/FileSpec2.3001.nev",
+        dict(file_path=local_folder / "blackrock/blackrock_2_1/l101210-001.nev", sampling_frequency=30_000.0),
+    ]
 
 
 class MCSRawRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
