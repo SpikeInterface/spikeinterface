@@ -30,7 +30,6 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
     mode = "file"
     NeoRawIOClass = "BiocamRawIO"
     name = "biocam"
-    has_default_locations = True
 
     def __init__(
         self,

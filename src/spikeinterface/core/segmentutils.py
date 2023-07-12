@@ -18,13 +18,13 @@ def _check_sampling_frequencies(sampling_frequency_list, sampling_frequency_max_
             f"`sampling_frequency_max_diff`={sampling_frequency_max_diff}Hz"
         )
     elif max_diff > 0:
-        diff_sec = 24 * 3600 * max_diff / freq_0
+        diff_ms = 24 * 3600000 * max_diff / freq_0
         import warnings
 
         warnings.warn(
             "Inconsistent sampling frequency across datasets."
             + f" Diff is below hard bound={sampling_frequency_max_diff}Hz: concatenating anyway."
-            + f" Expect ~{round(diff_sec, 5)}s shift over 24h dataset"
+            + f" Expect ~{round(diff_ms, 5)}ms shift over 24h dataset"
         )
 
 
@@ -69,7 +69,7 @@ class AppendSegmentRecording(BaseRecording):
                 rec_seg = ProxyAppendRecordingSegment(parent_segment)
                 self.add_recording_segment(rec_seg)
 
-        self._kwargs = {"recording_list": recording_list}
+        self._kwargs = {"recording_list": recording_list, "sampling_frequency_max_diff": sampling_frequency_max_diff}
 
 
 class ProxyAppendRecordingSegment(BaseRecordingSegment):
@@ -138,7 +138,11 @@ class ConcatenateSegmentRecording(BaseRecording):
         )
         self.add_recording_segment(rec_seg)
 
-        self._kwargs = {"recording_list": recording_list, "ignore_times": ignore_times}
+        self._kwargs = {
+            "recording_list": recording_list,
+            "ignore_times": ignore_times,
+            "sampling_frequency_max_diff": sampling_frequency_max_diff,
+        }
 
 
 class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
@@ -300,7 +304,7 @@ class AppendSegmentSorting(BaseSorting):
                 sorting_seg = ProxyAppendSortingSegment(parent_segment)
                 self.add_sorting_segment(sorting_seg)
 
-        self._kwargs = {"sorting_list": sorting_list}
+        self._kwargs = {"sorting_list": sorting_list, "sampling_frequency_max_diff": sampling_frequency_max_diff}
 
 
 class ProxyAppendSortingSegment(BaseSortingSegment):
@@ -422,7 +426,12 @@ class ConcatenateSegmentSorting(BaseSorting):
                 concatenate_recordings([s._recording for s in sorting_list], ignore_times=ignore_times)
             )
 
-        self._kwargs = {"sorting_list": sorting_list, "ignore_times": ignore_times}
+        self._kwargs = {
+            "sorting_list": sorting_list,
+            "ignore_times": ignore_times,
+            "total_samples_list": total_samples_list,
+            "sampling_frequency_max_diff": sampling_frequency_max_diff,
+        }
 
     def get_num_samples(self, segment_index=None):
         """Overrides the BaseSorting method, which requires a recording."""
@@ -555,7 +564,7 @@ class SplitSegmentSorting(BaseSorting):
             sliced_segment = sliced_parent_sorting._sorting_segments[0]
             self.add_sorting_segment(sliced_segment)
 
-        self._kwargs = {"parent_sorting": parent_sorting, "recording_list": recording_list}
+        self._kwargs = {"parent_sorting": parent_sorting, "recording_or_recording_list": recording_list}
 
 
 split_sorting = define_function_from_class(source_class=SplitSegmentSorting, name="split_sorting")

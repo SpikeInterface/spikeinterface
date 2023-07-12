@@ -160,7 +160,7 @@ def add_suffix(file_path, possible_suffix):
     return file_path
 
 
-def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
+def read_binary_recording(file, num_channels, dtype, time_axis=0, offset=0):
     """
     Read binary .bin or .dat file.
 
@@ -168,7 +168,7 @@ def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
     ----------
     file: str
         File name
-    num_chan: int
+    num_channels: int
         Number of channels
     dtype: dtype
         dtype of the file
@@ -179,13 +179,13 @@ def read_binary_recording(file, num_chan, dtype, time_axis=0, offset=0):
         number of offset bytes
 
     """
-    num_chan = int(num_chan)
+    num_channels = int(num_channels)
     with Path(file).open() as f:
-        nsamples = (os.fstat(f.fileno()).st_size - offset) // (num_chan * np.dtype(dtype).itemsize)
+        nsamples = (os.fstat(f.fileno()).st_size - offset) // (num_channels * np.dtype(dtype).itemsize)
     if time_axis == 0:
-        samples = np.memmap(file, np.dtype(dtype), mode="r", offset=offset, shape=(nsamples, num_chan))
+        samples = np.memmap(file, np.dtype(dtype), mode="r", offset=offset, shape=(nsamples, num_channels))
     else:
-        samples = np.memmap(file, np.dtype(dtype), mode="r", offset=offset, shape=(num_chan, nsamples)).T
+        samples = np.memmap(file, np.dtype(dtype), mode="r", offset=offset, shape=(num_channels, nsamples)).T
     return samples
 
 

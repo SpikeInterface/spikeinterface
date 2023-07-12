@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.98.0.rst
   releases/0.97.1.rst
   releases/0.97.0.rst
   releases/0.96.1.rst
@@ -27,6 +28,17 @@ Release notes
   releases/0.9.9.rst
   releases/0.9.1.rst
 
+
+Version 0.98.0
+==============
+
+* Implemented motion correction framework in SpikeInterface
+* Added "grid convolution" as localization method
+* Added amplitude_scaling implementation in postprocessing
+* Improved container support for docker and singularity
+* Improved implementation and performance of quality metrics module
+* Extensive additions to :code:`sortingcomponents`` module (pipeline nodes, waveform denoising, sparsity)
+* :code:`_ind` to :code:`_index` in complex dtype representation for peak and spikes
 
 Version 0.97.1
 ==============

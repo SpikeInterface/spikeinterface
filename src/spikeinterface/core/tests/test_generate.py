@@ -61,7 +61,16 @@ def test_lazy_random_recording(mode):
     )
 
     memory_after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    memory_after_instanciation_MiB == pytest.approx(initial_memory_MiB, rel=relative_tolerance)
+    expected_memory_usage_MiB = initial_memory_MiB
+    if mode == "white_noise":
+        expected_memory_usage_MiB += 50  # 50 MiB for the white noise generator
+
+    ratio = memory_after_instanciation_MiB * 1.0 / expected_memory_usage_MiB
+    assertion_msg = (
+        f"Memory after instantation is {memory_after_instanciation_MiB} MiB and is {ratio:.2f} times"
+        f"the expected memory usage of {expected_memory_usage_MiB} MiB."
+    )
+    assert ratio <= 1.0 + relative_tolerance, assertion_msg
 
     traces = lazy_recording.get_traces()
     expected_traces_shape = (int(durations[0] * sampling_frequency), num_channels)
@@ -72,14 +81,13 @@ def test_lazy_random_recording(mode):
 
     memory_after_traces_MiB = measure_memory_allocation() / bytes_to_MiB_factor
 
-    print("Memory footprint")
-    print(f"Initial memory = {initial_memory_MiB} MiB")
-    print(f"Memory after instantiate class {memory_after_instanciation_MiB} MiB")
-    print(f"Memory after traces {memory_after_traces_MiB} MiB")
-    print(f"Traces size {traces_size_MiB} MiB")
-    print(f"Difference between the last two {(memory_after_traces_MiB - traces_size_MiB)} MiB")
-
-    (memory_after_instanciation_MiB + traces_size_MiB) == pytest.approx(memory_after_traces_MiB, rel=relative_tolerance)
+    expected_memory_usage_MiB = memory_after_instanciation_MiB + traces_size_MiB
+    ratio = memory_after_traces_MiB * 1.0 / expected_memory_usage_MiB
+    assertion_msg = (
+        f"Memory after loading traces is {memory_after_traces_MiB} MiB and is {ratio:.2f} times"
+        f"the expected memory usage of {expected_memory_usage_MiB} MiB."
+    )
+    assert ratio <= 1.0 + relative_tolerance, assertion_msg
 
 
 @pytest.mark.parametrize("mode", mode_list)
@@ -94,7 +102,16 @@ def test_generate_lazy_recording(mode):
     lazy_recording = generate_lazy_recording(full_traces_size_GiB=full_traces_size_GiB, mode=mode)
 
     memory_after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    memory_after_instanciation_MiB == pytest.approx(initial_memory_MiB, rel=relative_tolerance)
+    expected_memory_usage_MiB = initial_memory_MiB
+    if mode == "white_noise":
+        expected_memory_usage_MiB += 50  # 50 MiB for the white noise generator
+
+    ratio = memory_after_instanciation_MiB * 1.0 / expected_memory_usage_MiB
+    assertion_msg = (
+        f"Memory after instantation is {memory_after_instanciation_MiB} MiB and is {ratio:.2f} times"
+        f"the expected memory usage of {expected_memory_usage_MiB} MiB."
+    )
+    assert ratio <= 1.0 + relative_tolerance, assertion_msg
 
     traces = lazy_recording.get_traces()
     traces_size_MiB = traces.nbytes / bytes_to_MiB_factor
@@ -102,14 +119,13 @@ def test_generate_lazy_recording(mode):
 
     memory_after_traces_MiB = measure_memory_allocation() / bytes_to_MiB_factor
 
-    print("Memory footprint")
-    print(f"Initial memory = {initial_memory_MiB} MiB")
-    print(f"Memory after instantiate class {memory_after_instanciation_MiB} MiB")
-    print(f"Memory after traces {memory_after_traces_MiB} MiB")
-    print(f"Traces size {traces_size_MiB} MiB")
-    print(f"Difference between the last two {(memory_after_traces_MiB - traces_size_MiB)} MiB")
-
-    (memory_after_instanciation_MiB + traces_size_MiB) == pytest.approx(memory_after_traces_MiB, rel=relative_tolerance)
+    expected_memory_usage_MiB = memory_after_instanciation_MiB + traces_size_MiB
+    ratio = memory_after_traces_MiB * 1.0 / expected_memory_usage_MiB
+    assertion_msg = (
+        f"Memory after loading traces is {memory_after_traces_MiB} MiB and is {ratio:.2f} times"
+        f"the expected memory usage of {expected_memory_usage_MiB} MiB."
+    )
+    assert ratio <= 1.0 + relative_tolerance, assertion_msg
 
 
 @pytest.mark.parametrize("mode", mode_list)
@@ -166,7 +182,7 @@ def test_generate_recording_correct_shape(mode):
         (15_000, 30_0000),
     ],
 )
-def test_generator_recording_consistency(mode, start_frame, end_frame):
+def test_generator_recording_consistency_across_calls(mode, start_frame, end_frame):
     # Calling the get_traces twice should return the same result
     sampling_frequency = 30000  # Hz
     durations = [2.0]

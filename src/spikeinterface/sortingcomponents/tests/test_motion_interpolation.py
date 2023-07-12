@@ -47,7 +47,13 @@ def test_correct_motion_on_peaks():
     times = rec.get_times()
 
     corrected_peak_locations = correct_motion_on_peaks(
-        peaks, peak_locations, times, motion, temporal_bins, spatial_bins, direction="y", progress_bar=False
+        peaks,
+        peak_locations,
+        times,
+        motion,
+        temporal_bins,
+        spatial_bins,
+        direction="y",
     )
     # print(corrected_peak_locations)
     assert np.any(corrected_peak_locations["y"] != 0)
@@ -118,6 +124,6 @@ def test_InterpolateMotionRecording():
 
 
 if __name__ == "__main__":
-    # test_correct_motion_on_peaks()
+    test_correct_motion_on_peaks()
     test_interpolate_motion_on_traces()
-    # test_InterpolateMotionRecording()
+    test_InterpolateMotionRecording()

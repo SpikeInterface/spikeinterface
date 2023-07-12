@@ -109,7 +109,6 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     mode = "folder"
     NeoRawIOClass = "OpenEphysBinaryRawIO"
     name = "openephys"
-    has_default_locations = True
 
     def __init__(
         self,
