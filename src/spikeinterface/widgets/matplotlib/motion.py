@@ -37,13 +37,16 @@ class MotionPlotter(MplPlotter):
         else:
             motion_lim = dp.motion_lim
 
+        temporal_bins = dp.temporal_bins
         if dp.times is None:
             times = np.arange(np.max(dp.peaks["sample_index"]) + 1) / dp.sampling_frequency
         else:
+            # use real times and adjust temporal bins with t_start
             times = dp.times
+            temporal_bins += times[0]
 
         corrected_location = correct_motion_on_peaks(
-            dp.peaks, dp.peak_locations, times, dp.motion, dp.temporal_bins, dp.spatial_bins, direction="y"
+            dp.peaks, dp.peak_locations, times, dp.motion, temporal_bins, dp.spatial_bins, direction="y"
         )
 
         x = dp.peaks["sample_index"] / dp.sampling_frequency
@@ -78,8 +81,6 @@ class MotionPlotter(MplPlotter):
             color_kwargs = dict(color="k", c=None, alpha=dp.amplitude_alpha)
 
         ax0.scatter(x, y, s=1, **color_kwargs)
-        # for i in range(dp.motion.shape[1]):
-        #     ax0.plot(dp.temporal_bins, dp.motion[:, i] + dp.spatial_bins[i], color="C8", alpha=1.0)
         if dp.depth_lim is not None:
             ax0.set_ylim(*dp.depth_lim)
         ax0.set_title("Peak depth")
@@ -91,8 +92,8 @@ class MotionPlotter(MplPlotter):
         ax1.set_ylabel("Depth [um]")
         ax1.set_title("Corrected peak depth")
 
-        ax2.plot(dp.temporal_bins, dp.motion, alpha=0.2, color="black")
-        ax2.plot(dp.temporal_bins, np.mean(dp.motion, axis=1), color="C0")
+        ax2.plot(temporal_bins, dp.motion, alpha=0.2, color="black")
+        ax2.plot(temporal_bins, np.mean(dp.motion, axis=1), color="C0")
         ax2.set_ylim(-motion_lim, motion_lim)
         ax2.set_ylabel("motion [um]")
         ax2.set_title("Motion vectors")
@@ -104,8 +105,8 @@ class MotionPlotter(MplPlotter):
                 aspect="auto",
                 origin="lower",
                 extent=(
-                    dp.temporal_bins[0],
-                    dp.temporal_bins[-1],
+                    temporal_bins[0],
+                    temporal_bins[-1],
                     dp.spatial_bins[0],
                     dp.spatial_bins[-1],
                 ),
