@@ -531,10 +531,15 @@ class BaseExtractor:
         ----------
         file_path: str
             Path of the json file
-        relative_to: str, Path, or None
-            If not None, file_paths are serialized relative to this path
+        relative_to: str, Path, True or None
+            If not None, file_path is serialized relative to this path
+            If True, file_path is serialized relative to the folder of file_path
         """
         assert self.check_if_dumpable()
+
+        if relative_to is True:
+            relative_to = Path(file_path).parent
+
         dump_dict = self.to_dict(
             include_annotations=True, include_properties=False, relative_to=relative_to, folder_metadata=folder_metadata
         )
@@ -563,12 +568,17 @@ class BaseExtractor:
             Path of the json file
         include_properties: bool
             If True, all properties are dumped
-        relative_to: str, Path, or None
-            If not None, file_paths are serialized relative to this path
+        relative_to: str, Path, True or None
+            If not None, file_path is serialized relative to this path
+            If True, file_path is serialized relative to the folder of file_path
         recursive: bool
             If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
         """
         assert self.check_if_dumpable()
+
+        if relative_to is True:
+            relative_to = Path(file_path).parent
+
         dump_dict = self.to_dict(
             include_annotations=True,
             include_properties=include_properties,
@@ -591,6 +601,9 @@ class BaseExtractor:
         """
 
         file_path = Path(file_path)
+        if base_folder is True:
+            base_folder = file_path.parent
+
         if file_path.is_file():
             # standard case based on a file (json or pickle)
             if str(file_path).endswith(".json"):
