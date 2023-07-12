@@ -60,6 +60,7 @@ class MotionPlotter(MplPlotter):
             q_95 = np.quantile(amps_abs, 0.95)
             if dp.scatter_decimate is not None:
                 amps = amps[:: dp.scatter_decimate]
+                amps_abs = amps_abs[:: dp.scatter_decimate]
             cmap = plt.get_cmap(dp.amplitude_cmap)
             if dp.amplitude_clim is None:
                 amps = amps_abs
