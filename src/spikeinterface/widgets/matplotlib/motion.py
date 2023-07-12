@@ -40,16 +40,17 @@ class MotionPlotter(MplPlotter):
         temporal_bins = dp.temporal_bins
         if dp.times is None:
             times = np.arange(np.max(dp.peaks["sample_index"]) + 1) / dp.sampling_frequency
+            x = dp.peaks["sample_index"] / dp.sampling_frequency
         else:
             # use real times and adjust temporal bins with t_start
             times = dp.times
             temporal_bins += times[0]
+            x = times[dp.peaks["sample_index"]]
 
         corrected_location = correct_motion_on_peaks(
             dp.peaks, dp.peak_locations, times, dp.motion, temporal_bins, dp.spatial_bins, direction="y"
         )
 
-        x = dp.peaks["sample_index"] / dp.sampling_frequency
         y = dp.peak_locations["y"]
         y2 = corrected_location["y"]
         if dp.scatter_decimate is not None:
