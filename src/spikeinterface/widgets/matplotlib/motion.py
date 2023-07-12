@@ -96,7 +96,7 @@ class MotionPlotter(MplPlotter):
         ax2.plot(temporal_bins, dp.motion, alpha=0.2, color="black")
         ax2.plot(temporal_bins, np.mean(dp.motion, axis=1), color="C0")
         ax2.set_ylim(-motion_lim, motion_lim)
-        ax2.set_ylabel("motion [um]")
+        ax2.set_ylabel("Motion [um]")
         ax2.set_title("Motion vectors")
         axes = [ax0, ax1, ax2]
 
