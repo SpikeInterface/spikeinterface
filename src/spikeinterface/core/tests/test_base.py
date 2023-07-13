@@ -9,6 +9,7 @@ from pathlib import Path
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core import generate_recording, concatenate_recordings
 from spikeinterface.core.core_tools import dict_contains_extractors
+from spikeinterface.core.testing import check_recordings_equal
 
 
 class DummyDictExtractor(BaseExtractor):
@@ -106,6 +107,9 @@ def test_relative_to(recording, tmp_path):
     assert (
         str((relative_folder / Path(d2["kwargs"]["folder_path"])).resolve().absolute()) == d1["kwargs"]["folder_path"]
     )
+
+    recording_loaded = BaseExtractor.from_dict(d2, base_folder=relative_folder)
+    check_recordings_equal(recording_saved, recording_loaded, return_scaled=False)
 
 
 if __name__ == "__main__":

@@ -555,7 +555,9 @@ class BaseExtractor:
         else:
             raise ValueError("Dump: file must .json or .pkl")
 
-    def dump_to_json(self, file_path: Union[str, Path, None] = None, relative_to=None, folder_metadata=None) -> None:
+    def dump_to_json(
+        self, file_path: Union[str, Path, None] = None, relative_to=None, folder_metadata=None, recursive=False
+    ) -> None:
         """
         Dump recording extractor to json file.
         The extractor can be re-loaded with load_extractor_from_json(json_file)
@@ -566,10 +568,18 @@ class BaseExtractor:
             Path of the json file
         relative_to: str, Path, or None
             If not None, file_paths are serialized relative to this path
+        folder_metadata: str, Path, or None
+            Folder with numpy files containing additional information (e.g. probe in BaseRecording) and properties.
+        recursive: bool
+            If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
         """
-        assert self.check_if_dumpable()
+        assert self.check_if_json_serializable()
         dump_dict = self.to_dict(
-            include_annotations=True, include_properties=False, relative_to=relative_to, folder_metadata=folder_metadata
+            include_annotations=True,
+            include_properties=False,
+            relative_to=relative_to,
+            folder_metadata=folder_metadata,
+            recursive=recursive,
         )
         file_path = self._get_file_path(file_path, [".json"])
 
@@ -577,6 +587,9 @@ class BaseExtractor:
             json.dumps(dump_dict, indent=4, cls=SIJsonEncoder),
             encoding="utf8",
         )
+        if relative_to and dict_contains_extractors(dump_dict):
+            # Make paths absolute again
+            dump_dict = _make_paths_absolute(dump_dict, relative_to, copy=False)
 
     def dump_to_pickle(
         self,
@@ -612,6 +625,10 @@ class BaseExtractor:
         file_path = self._get_file_path(file_path, [".pkl", ".pickle"])
 
         file_path.write_bytes(pickle.dumps(dump_dict))
+
+        if relative_to and dict_contains_extractors(dump_dict):
+            # Make paths absolute again
+            dump_dict = _make_paths_absolute(dump_dict, relative_to, copy=False)
 
     @staticmethod
     def load(file_path: Union[str, Path], base_folder=None) -> "BaseExtractor":

@@ -530,8 +530,8 @@ class BaseRecording(BaseRecordingSnippets):
             cached.set_probegroup(probegroup)
 
         for segment_index, rs in enumerate(self._recording_segments):
-            d = rs.get_times_kwargs()
-            time_vector = d["time_vector"]
+            time_kwargs = rs.get_times_kwargs()
+            time_vector = time_kwargs["time_vector"]
             if time_vector is not None:
                 cached._recording_segments[segment_index].time_vector = time_vector
 
@@ -559,8 +559,8 @@ class BaseRecording(BaseRecordingSnippets):
 
         # save time vector if any
         for segment_index, rs in enumerate(self._recording_segments):
-            d = rs.get_times_kwargs()
-            time_vector = d["time_vector"]
+            time_kwargs = rs.get_times_kwargs()
+            time_vector = time_kwargs["time_vector"]
             if time_vector is not None:
                 np.save(folder / f"times_cached_seg{segment_index}.npy", time_vector)
 
