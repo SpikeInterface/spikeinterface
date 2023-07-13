@@ -11,11 +11,13 @@ import numpy as np
 
 from spikeinterface.core.job_tools import get_poolexecutor
 
+from .tools import aggregate_sparse_features, FeaturesLoader
+
 
 def split_clusters(
-    labels,
+    peak_labels,
     recording,
-    feature_folder,
+    features_dict_or_folder,
     method="hdbscan_on_local_pca",
     method_kwargs={},
     recursive=False,
@@ -30,9 +32,9 @@ def split_clusters(
 
     Parameters
     ----------
-    labels
+    peak_labels
 
-    feature_folder
+    features_dict_or_folder
 
     n_jobs=1
 
@@ -43,11 +45,10 @@ def split_clusters(
 
 
     """
-    feature_folder = Path(feature_folder)
 
-    original_labels = labels
-    labels = labels.copy()
-    split_count = np.zeros(labels.size, dtype=int)
+    original_labels = peak_labels
+    peak_labels = peak_labels.copy()
+    split_count = np.zeros(peak_labels.size, dtype=int)
 
     Executor = get_poolexecutor(n_jobs)
 
@@ -55,14 +56,14 @@ def split_clusters(
         max_workers=n_jobs,
         initializer=split_worker_init,
         mp_context=get_context(mp_context),
-        initargs=(recording, feature_folder, original_labels, method, method_kwargs, max_threads_per_process),
+        initargs=(recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_process),
     ) as pool:
-        labels_set = np.setdiff1d(labels, [-1])
+        labels_set = np.setdiff1d(peak_labels, [-1])
         current_max_label = np.max(labels_set) + 1
 
         jobs = []
         for label in labels_set:
-            peak_indices = np.flatnonzero(labels == label)
+            peak_indices = np.flatnonzero(peak_labels == label)
             if peak_indices.size > 0:
                 jobs.append(pool.submit(split_function_wrapper, peak_indices))
 
@@ -77,8 +78,8 @@ def split_clusters(
                 continue
 
             mask = local_labels >= 0
-            labels[peak_indices[mask]] = local_labels[mask] + current_max_label
-            labels[peak_indices[~mask]] = local_labels[~mask]
+            peak_labels[peak_indices[mask]] = local_labels[mask] + current_max_label
+            peak_labels[peak_indices[~mask]] = local_labels[~mask]
 
             split_count[peak_indices] += 1
 
@@ -87,43 +88,38 @@ def split_clusters(
             if recursive:
                 new_labels_set = np.setdiff1d(labels[peak_indices], [-1])
                 for label in new_labels_set:
-                    peak_indices = np.flatnonzero(labels == label)
+                    peak_indices = np.flatnonzero(peak_labels == label)
                     if peak_indices.size > 0:
                         jobs.append(pool.submit(split_function_wrapper, peak_indices))
                         if progress_bar:
                             iterator.total += 1
 
     if returns_split_count:
-        return labels, split_count
+        return peak_labels, split_count
     else:
-        return labels
+        return peak_labels
 
 
 global _ctx
 
 
-def split_worker_init(recording, feature_folder, original_labels, method, method_kwargs, max_threads_per_process):
+def split_worker_init(recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_process):
     global _ctx
     _ctx = {}
 
     _ctx["recording"] = recording
-    _ctx["feature_folder"] = feature_folder
+    features_dict_or_folder
     _ctx["original_labels"] = original_labels
     _ctx["method"] = method
     _ctx["method_kwargs"] = method_kwargs
     _ctx["method_class"] = split_methods_dict[method]
     _ctx["max_threads_per_process"] = max_threads_per_process
 
-    features = {}
-    for file in feature_folder.glob("*.npy"):
-        name = file.stem
-        if name == "peaks":
-            # load in memory
-            _ctx["peaks"] = np.load(file, mmap_mode="r")
-        else:
-            # memmap load
-            features[name] = np.load(file, mmap_mode="r")
-    _ctx["features"] = features
+    if isinstance(features_dict_or_folder, dict):
+        _ctx["features"] = features_dict_or_folder
+    else:
+        _ctx["features"] = FeaturesLoader(features_dict_or_folder)
+    _ctx["peaks"] = _ctx["features"]["peaks"]
 
 
 def split_function_wrapper(peak_indices):
@@ -205,32 +201,6 @@ class HdbscanOnLocalPca:
 
         return is_split, local_labels
 
-
-def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, target_channels):
-    """
-    Aggregate sparse features that have unaligned channels and realigned then on target_channels
-
-
-    """
-    local_peaks = peaks[peak_indices]
-
-    aligned_features = np.zeros(
-        (local_peaks.size, sparse_feature.shape[1], target_channels.size), dtype=sparse_feature.dtype
-    )
-    dont_have_channels = np.zeros(peak_indices.size, dtype=bool)
-
-    for chan in np.unique(local_peaks["channel_index"]):
-        sparse_chans = np.flatnonzero(sparse_mask[chan, :])
-        peak_inds = np.flatnonzero(local_peaks["channel_index"] == chan)
-        if np.all(np.in1d(target_channels, sparse_chans)):
-            # peaks feature channel have all target_channels
-            source_chans = np.flatnonzero(np.in1d(sparse_chans, target_channels))
-            aligned_features[peak_inds, :, :] = sparse_feature[peak_indices[peak_inds], :, :][:, :, source_chans]
-        else:
-            # some channel are missing, peak are not removde
-            dont_have_channels[peak_inds] = True
-
-    return aligned_features, dont_have_channels
 
 
 split_methods_list = [
