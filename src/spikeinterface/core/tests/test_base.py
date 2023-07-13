@@ -2,9 +2,13 @@
 test for BaseRecording are done with BinaryRecordingExtractor.
 but check only for BaseRecording general methods.
 """
+import pytest
 from typing import Sequence
+from pathlib import Path
+
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core import generate_recording, concatenate_recordings
+from spikeinterface.core.core_tools import dict_contains_extractors
 
 
 class DummyDictExtractor(BaseExtractor):
@@ -12,6 +16,15 @@ class DummyDictExtractor(BaseExtractor):
         super().__init__(main_ids)
 
         self._kwargs = dict(base_dicts=base_dicts)
+
+
+def generate():
+    return generate_recording(seed=0, durations=[2])
+
+
+@pytest.fixture
+def recording():
+    return generate()
 
 
 def make_nested_extractors(extractor):
@@ -31,8 +44,8 @@ def make_nested_extractors(extractor):
     )
 
 
-def test_check_if_dumpable():
-    test_extractor = generate_recording(seed=0, durations=[2])
+def test_check_if_dumpable(recording):
+    test_extractor = recording
 
     # make a list of dumpable objects
     extractors_dumpable = make_nested_extractors(test_extractor)
@@ -46,8 +59,8 @@ def test_check_if_dumpable():
         assert not extractor.check_if_dumpable()
 
 
-def test_check_if_json_serializable():
-    test_extractor = generate_recording(seed=0, durations=[2])
+def test_check_if_json_serializable(recording):
+    test_extractor = recording
 
     # make a list of dumpable objects
     test_extractor._is_json_serializable = True
@@ -64,6 +77,44 @@ def test_check_if_json_serializable():
         assert not extractor.check_if_json_serializable()
 
 
+def test_to_dict(recording):
+    d0 = recording.to_dict()
+    d0_recursive = recording.to_dict(recursive=True)
+    assert not dict_contains_extractors(d0)
+    assert not dict_contains_extractors(d0_recursive)
+
+    nested_extractors = make_nested_extractors(recording)
+    for extractor in nested_extractors:
+        d1 = extractor.to_dict()
+        d1_recursive = extractor.to_dict(recursive=True)
+
+        assert dict_contains_extractors(d1)
+        assert not dict_contains_extractors(d1_recursive)
+
+
+def test_relative_to(recording, tmp_path):
+    recording_saved = recording.save(folder=tmp_path / "test")
+    folder_path = Path(recording_saved._kwargs["folder_path"])
+    relative_folder = tmp_path.parent
+
+    d1 = recording_saved.to_dict(recursive=True)
+    d2 = recording_saved.to_dict(recursive=True, relative_to=relative_folder)
+
+    assert d1["kwargs"]["folder_path"] == str(folder_path.absolute())
+    assert d2["kwargs"]["folder_path"] != str(folder_path.absolute())
+    assert d2["kwargs"]["folder_path"] == str(folder_path.relative_to(relative_folder))
+    assert (
+        str((relative_folder / Path(d2["kwargs"]["folder_path"])).resolve().absolute()) == d1["kwargs"]["folder_path"]
+    )
+
+
 if __name__ == "__main__":
-    test_check_if_dumpable()
-    test_check_if_json_serializable()
+    recording = generate()
+    test_check_if_dumpable(recording)
+    test_check_if_json_serializable(recording)
+    test_to_dict(recording)
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmp_path = Path(tmpdirname)
+        test_relative_to(recording, tmp_path)

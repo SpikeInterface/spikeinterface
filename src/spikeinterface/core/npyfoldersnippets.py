@@ -34,22 +34,23 @@ class NpyFolderSnippets(NpySnippetsExtractor):
         folder_path = Path(folder_path)
 
         with open(folder_path / "npy.json", "r") as f:
-            d = json.load(f)
+            dictionary = json.load(f)
 
-        if not d["class"].endswith(".NpySnippetsExtractor"):
+        if not dictionary["class"].endswith(".NpySnippetsExtractor"):
             raise ValueError("This folder is not a binary spikeinterface folder")
 
-        assert d["relative_paths"]
+        assert dictionary["relative_paths"]
 
-        d = _make_paths_absolute(d, folder_path)
+        kwargs = dictionary["kwargs"]
+        kwargs = _make_paths_absolute(kwargs, folder_path)
 
-        NpySnippetsExtractor.__init__(self, **d["kwargs"])
+        NpySnippetsExtractor.__init__(self, **kwargs)
 
         folder_metadata = folder_path
         self.load_metadata_from_folder(folder_metadata)
 
         self._kwargs = dict(folder_path=str(folder_path.absolute()))
-        self._bin_kwargs = d["kwargs"]
+        self._bin_kwargs = kwargs
 
 
 read_npy_snippets_folder = define_function_from_class(source_class=NpyFolderSnippets, name="read_npy_snippets_folder")

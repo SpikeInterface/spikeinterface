@@ -385,8 +385,9 @@ def run_sorter_container(
     parent_folder = output_folder.parent.absolute().resolve()
     parent_folder.mkdir(parents=True, exist_ok=True)
 
-    # find input folder of recording for folder bind
+    # here we need recursive True because we need a copy of the dict to be saved to JSON
     rec_dict = recording.to_dict(recursive=True)
+    # find input folder of recording for folder bind
     recording_input_folders = find_recording_folders(rec_dict)
 
     if platform.system() == "Windows":

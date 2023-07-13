@@ -385,8 +385,8 @@ class BaseRecording(BaseRecordingSnippets):
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self._recording_segments[segment_index]
-        d = rs.get_times_kwargs()
-        return d["time_vector"] is not None
+        time_kwargs = rs.get_times_kwargs()
+        return time_kwargs["time_vector"] is not None
 
     def set_times(self, times, segment_index=None, with_warning=True):
         """Set times for a recording segment.
@@ -501,8 +501,8 @@ class BaseRecording(BaseRecordingSnippets):
             # save time vector if any
             t_starts = np.zeros(self.get_num_segments(), dtype="float64") * np.nan
             for segment_index, rs in enumerate(self._recording_segments):
-                d = rs.get_times_kwargs()
-                time_vector = d["time_vector"]
+                time_kwargs = rs.get_times_kwargs()
+                time_vector = time_kwargs["time_vector"]
                 if time_vector is not None:
                     _ = zarr_root.create_dataset(
                         name=f"times_seg{segment_index}",
@@ -511,7 +511,7 @@ class BaseRecording(BaseRecordingSnippets):
                         compressor=zarr_kwargs["compressor"],
                     )
                 elif d["t_start"] is not None:
-                    t_starts[segment_index] = d["t_start"]
+                    t_starts[segment_index] = time_kwargs["t_start"]
 
             if np.any(~np.isnan(t_starts)):
                 zarr_root.create_dataset(name="t_starts", data=t_starts, compressor=None)

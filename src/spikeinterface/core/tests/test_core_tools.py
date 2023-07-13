@@ -148,7 +148,7 @@ def test_write_memory_recording():
 
 def test_recursive_path_modifier():
     # this test nested depth 2 path modifier
-    d = {
+    d1 = {
         "kwargs": {
             "path": "/yep/path1",
             "recording": {
@@ -161,7 +161,7 @@ def test_recursive_path_modifier():
         }
     }
 
-    d2 = recursive_path_modifier(d, lambda p: p.replace("/yep", "/yop"))
+    d2 = recursive_path_modifier(d1, lambda p: p.replace("/yep", "/yop"))
     assert d2["kwargs"]["path"].startswith("/yop")
     assert d2["kwargs"]["recording"]["kwargs"]["path"].startswith("/yop")
 
@@ -173,5 +173,6 @@ if __name__ == "__main__":
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp_path = Path(tmpdirname)
         test_write_binary_recording(tmp_path)
-        # test_write_memory_recording()
-        # test_recursive_path_modifier()
+        test_write_memory_recording()
+        test_recursive_path_modifier()
+    test_recursive_path_modifier()

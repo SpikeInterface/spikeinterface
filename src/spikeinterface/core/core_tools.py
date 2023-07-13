@@ -1,24 +1,24 @@
-from pathlib import Path
-from typing import Union
+import datetime
+import gc
+import json
+import mmap
 import os
 import sys
-import datetime
-import json
+import warnings
 from copy import deepcopy
-import gc
-import mmap
-import inspect
+from pathlib import Path
+from typing import Union
 
 import numpy as np
 from tqdm import tqdm
 
 from .job_tools import (
-    ensure_chunk_size,
-    ensure_n_jobs,
-    divide_segment_into_chunks,
-    fix_job_kwargs,
     ChunkRecordingExecutor,
     _shared_job_kwargs_doc,
+    divide_segment_into_chunks,
+    ensure_chunk_size,
+    ensure_n_jobs,
+    fix_job_kwargs,
 )
 
 
@@ -42,8 +42,9 @@ def read_python(path):
         dictionary containing parsed file
 
     """
-    from six import exec_
     import re
+
+    from six import exec_
 
     path = Path(path).absolute()
     assert path.is_file()
@@ -786,7 +787,42 @@ def is_dict_extractor(d):
     return is_extractor
 
 
-def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
+def dict_contains_extractors(dictionary):
+    """
+    Checks if a dictionary containes BaseExtractor objects.
+
+    Parameters
+    ----------
+    dictionary : dict
+        Dictionary to check
+
+    Returns
+    -------
+    bool
+        True if the dictionary contains extractors, False otherwise
+    """
+    from .base import BaseExtractor
+
+    contains_extractors = False
+    for name, value in dictionary.items():
+        if isinstance(value, dict):
+            return dict_contains_extractors(value)
+        elif isinstance(value, list):
+            if any([isinstance(v, BaseExtractor) for v in value]):
+                return True
+            else:
+                all_vals = [dict_contains_extractors(v) for v in value if isinstance(v, dict)]
+                if len(all_vals) > 0:
+                    return all(all_vals)
+                else:
+                    return False
+        else:
+            if isinstance(value, BaseExtractor):
+                contains_extractors = True
+    return contains_extractors
+
+
+def recursive_path_modifier(dictionary, func, target="path", copy=True) -> dict:
     """
     Generic function for recursive modification of paths in an extractor dict.
     A recording can be nested and this function explores the dictionary recursively
@@ -796,12 +832,13 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
       * relative/absolute path change
       * docker rebase path change
 
-    Modification is inplace with an optional copy.
+    Modification is in-place with an optional copy.
+    If the dictionary contains extractors, the copy argument is ignored and an exception is raised.
 
     Parameters
     ----------
-    d : dict
-        Extractor dictionary
+    dictionary : dict
+        Extractor dictionary, including "kwargs" key.
     func : function
         Function to apply to the path. It must take a path as input and return a path
     target : str, optional
@@ -814,43 +851,49 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
     dict
         Modified dictionary
     """
+    from .base import BaseExtractor
+
     if copy:
-        dc = deepcopy(d)
+        if dict_contains_extractors(dictionary):
+            raise Exception("The copy argument is only available if the input dictionary does not contain objects")
+        dc = deepcopy(dictionary)
     else:
-        dc = d
+        dc = dictionary
 
-    if "kwargs" in dc.keys():
+    if "kwargs" in dc:
         kwargs = dc["kwargs"]
-
-        # change in place (copy=False)
         recursive_path_modifier(kwargs, func, copy=False)
-
-        # find nested and also change inplace (copy=False)
-        nested_extractor_dict = None
-        for k, v in kwargs.items():
-            if isinstance(v, dict) and is_dict_extractor(v):
-                nested_extractor_dict = v
-                recursive_path_modifier(nested_extractor_dict, func, copy=False)
-            # deal with list of extractor objects (e.g. concatenate_recordings)
-            elif isinstance(v, list):
-                for vl in v:
-                    if isinstance(vl, dict) and is_dict_extractor(vl):
-                        nested_extractor_dict = vl
-                        recursive_path_modifier(nested_extractor_dict, func, copy=False)
-
-        return dc
     else:
-        for k, v in d.items():
-            if target in k:
-                # paths can be str or list of str or None
-                if v is None:
-                    continue
-                if isinstance(v, (str, Path)):
-                    dc[k] = func(v)
-                elif isinstance(v, list):
-                    dc[k] = [func(e) for e in v]
-                else:
-                    raise ValueError(f"{k} key for path  must be str or list[str]")
+        for name, value in dictionary.items():
+            # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
+            if isinstance(value, BaseExtractor):
+                kwargs = value._kwargs
+                recursive_path_modifier(kwargs, func, copy=False)
+            elif isinstance(value, list) and (len(value) > 0) and isinstance(value[0], BaseExtractor):
+                for v in value:
+                    kwargs = v._kwargs
+                    recursive_path_modifier(kwargs, func, copy=False)
+            elif isinstance(value, dict):
+                if isinstance(value[list(value.keys())[0]], BaseExtractor):
+                    for v in value.values():
+                        kwargs = v._kwargs
+                        recursive_path_modifier(kwargs, func, copy=False)
+                elif is_dict_extractor(value):
+                    kwargs = value["kwargs"]
+                    recursive_path_modifier(kwargs, func, copy=False)
+            else:
+                # relative_paths is protected!
+                if target in name and name != "relative_paths":
+                    # paths can be str or list of str or None
+                    if value is None:
+                        continue
+                    if isinstance(value, (str, Path)):
+                        dc[name] = func(value)
+                    elif isinstance(value, list):
+                        dc[name] = [func(e) for e in value]
+                    else:
+                        raise ValueError(f"{name} key for path  must be str or list[str]")
+    return dc
 
 
 def recursive_key_finder(d, key):

@@ -33,22 +33,23 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         folder_path = Path(folder_path)
 
         with open(folder_path / "binary.json", "r") as f:
-            d = json.load(f)
+            dictionary = json.load(f)
 
-        if not d["class"].endswith(".BinaryRecordingExtractor"):
+        if not dictionary["class"].endswith(".BinaryRecordingExtractor"):
             raise ValueError("This folder is not a binary spikeinterface folder")
 
-        assert d["relative_paths"]
+        assert dictionary["relative_paths"]
 
-        d = _make_paths_absolute(d, folder_path)
+        kwargs = dictionary["kwargs"]
+        kwargs = _make_paths_absolute(kwargs, folder_path)
 
-        BinaryRecordingExtractor.__init__(self, **d["kwargs"])
+        BinaryRecordingExtractor.__init__(self, **kwargs)
 
         folder_metadata = folder_path
         self.load_metadata_from_folder(folder_metadata)
 
         self._kwargs = dict(folder_path=str(folder_path.absolute()))
-        self._bin_kwargs = d["kwargs"]
+        self._bin_kwargs = kwargs
         if "num_channels" not in self._bin_kwargs:
             assert "num_chan" in self._bin_kwargs, "Cannot find num_channels or num_chan in binary.json"
             self._bin_kwargs["num_channels"] = self._bin_kwargs["num_chan"]
