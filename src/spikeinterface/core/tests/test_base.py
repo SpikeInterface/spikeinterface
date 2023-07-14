@@ -3,6 +3,7 @@ test for BaseRecording are done with BinaryRecordingExtractor.
 but check only for BaseRecording general methods.
 """
 import pytest
+import numpy as np
 from typing import Sequence
 from pathlib import Path
 
@@ -113,7 +114,8 @@ def test_relative_to(recording, tmp_path):
 
     # test double pass in memory
     recording_nested = recording_saved.channel_slice(recording_saved.channel_ids)
-    d3 = recording_nested.to_dict(relative_to=relative_folder)
+    with pytest.warns(UserWarning):
+        d3 = recording_nested.to_dict(relative_to=relative_folder)
     recording_loaded2 = BaseExtractor.from_dict(d3, base_folder=relative_folder)
     check_recordings_equal(recording_nested, recording_loaded2, return_scaled=False)
     d4 = recording_nested.to_dict(relative_to=relative_folder)
@@ -121,7 +123,21 @@ def test_relative_to(recording, tmp_path):
     check_recordings_equal(recording_nested, recording_loaded3, return_scaled=False)
 
     # check that dump to json/pickle don't modify paths
-    # full_folder_path = str(recording_saved._kwargs["folder_path"])
+    full_folder_path = str(recording_saved._kwargs["folder_path"])
+    recording_saved.dump_to_json(tmp_path / "test.json", relative_to=relative_folder)
+    assert str(recording_saved._kwargs["folder_path"]) == full_folder_path
+    assert str(recording_saved._kwargs["folder_path"]) == full_folder_path
+    # now with nested
+    recording_nested.dump_to_json(tmp_path / "test_nested.json", relative_to=relative_folder)
+    assert str(recording_saved._kwargs["folder_path"]) == full_folder_path
+
+    # this raises an exception
+    np.testing.assert_raises(
+        AssertionError,
+        recording_nested.dump_to_pickle,
+        file_path=tmp_path / "test_nested.pkl",
+        relative_to=relative_folder,
+    )
 
 
 if __name__ == "__main__":

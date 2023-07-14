@@ -621,6 +621,8 @@ class BaseExtractor:
             If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
         """
         assert self.check_if_dumpable(), "The extractor is not dumpable to pickle"
+        if relative_to:
+            assert recursive, "When relative_to is given, recursive must be True"
         dump_dict = self.to_dict(
             include_annotations=True,
             include_properties=include_properties,
@@ -633,9 +635,7 @@ class BaseExtractor:
 
         file_path.write_bytes(pickle.dumps(dump_dict))
 
-        if relative_to:
-            # Make paths absolute again
-            dump_dict = _make_paths_absolute(dump_dict, relative_to, copy=False, skip_warning=True)
+        # we don't need to make paths absolute, because for pickle this is only available for recursive=True
 
     @staticmethod
     def load(file_path: Union[str, Path], base_folder=None) -> "BaseExtractor":
