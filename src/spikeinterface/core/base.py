@@ -573,7 +573,7 @@ class BaseExtractor:
         recursive: bool
             If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
         """
-        assert self.check_if_json_serializable()
+        assert self.check_if_json_serializable(), "The extractor is not json serializable"
         dump_dict = self.to_dict(
             include_annotations=True,
             include_properties=False,
@@ -614,7 +614,7 @@ class BaseExtractor:
         recursive: bool
             If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
         """
-        assert self.check_if_dumpable()
+        assert self.check_if_dumpable(), "The extractor is not dumpable to pickle"
         dump_dict = self.to_dict(
             include_annotations=True,
             include_properties=include_properties,
