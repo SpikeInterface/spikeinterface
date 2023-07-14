@@ -936,8 +936,8 @@ class BaseExtractor:
 
 
 def _make_paths_relative(d, relative, copy=True) -> dict:
-    relative = str(Path(relative).absolute())
-    func = lambda p: os.path.relpath(str(p), start=relative)
+    relative = Path(relative).absolute()
+    func = lambda p: os.path.relpath(p, start=relative)
     return recursive_path_modifier(d, func, target="path", copy=copy)
 
 

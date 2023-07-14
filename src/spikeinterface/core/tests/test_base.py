@@ -111,6 +111,15 @@ def test_relative_to(recording, tmp_path):
     recording_loaded = BaseExtractor.from_dict(d2, base_folder=relative_folder)
     check_recordings_equal(recording_saved, recording_loaded, return_scaled=False)
 
+    # test double pass in memory
+    recording_nested = recording_saved.channel_slice(recording_saved.channel_ids)
+    d3 = recording_nested.to_dict(relative_to=relative_folder)
+    recording_loaded2 = BaseExtractor.from_dict(d3, base_folder=relative_folder)
+    check_recordings_equal(recording_nested, recording_loaded2, return_scaled=False)
+    d4 = recording_nested.to_dict(relative_to=relative_folder)
+    recording_loaded3 = BaseExtractor.from_dict(d4, base_folder=relative_folder)
+    check_recordings_equal(recording_nested, recording_loaded3, return_scaled=False)
+
 
 if __name__ == "__main__":
     recording = generate()
