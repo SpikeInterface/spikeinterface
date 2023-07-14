@@ -123,9 +123,9 @@ def test_relative_to(recording, tmp_path):
 
 if __name__ == "__main__":
     recording = generate()
-    test_check_if_dumpable(recording)
-    test_check_if_json_serializable(recording)
-    test_to_dict(recording)
+    # test_check_if_dumpable(recording)
+    # test_check_if_json_serializable(recording)
+    # test_to_dict(recording)
     import tempfile
 
     with tempfile.TemporaryDirectory() as tmpdirname:

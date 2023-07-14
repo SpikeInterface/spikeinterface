@@ -822,7 +822,7 @@ def dict_contains_extractors(dictionary):
     return contains_extractors
 
 
-def recursive_path_modifier(dictionary, func, target="path", copy=True) -> dict:
+def recursive_path_modifier(dictionary, func, target="path", copy=True, skip_targets=None, skip_warning=False) -> dict:
     """
     Generic function for recursive modification of paths in an extractor dict.
     A recording can be nested and this function explores the dictionary recursively
@@ -845,6 +845,10 @@ def recursive_path_modifier(dictionary, func, target="path", copy=True) -> dict:
         String to match to dictionary key, by default 'path'
     copy : bool, optional
         If True the original dictionary is deep copied, by default True (at first call)
+    skip_targets : list or str, optional
+        List of targets to skip
+    skip_warning : bool, optional
+        If True, skip the warning when the dictionary contains extractors, by default False
 
     Returns
     -------
@@ -853,9 +857,21 @@ def recursive_path_modifier(dictionary, func, target="path", copy=True) -> dict:
     """
     from .base import BaseExtractor
 
-    if copy:
-        if dict_contains_extractors(dictionary):
+    if skip_targets is None:
+        skip_targets = []
+    elif isinstance(skip_targets, str):
+        skip_targets = [skip_targets]
+
+    if dict_contains_extractors(dictionary):
+        if copy:
             raise Exception("The copy argument is only available if the input dictionary does not contain objects")
+        else:
+            if not skip_warning:
+                warnings.warn(
+                    "The dictionary contains extractors, so the paths will be modified in-place!" "Use with caution"
+                )
+
+    if copy:
         dc = deepcopy(dictionary)
     else:
         dc = dictionary
@@ -883,7 +899,8 @@ def recursive_path_modifier(dictionary, func, target="path", copy=True) -> dict:
                     recursive_path_modifier(kwargs, func, copy=False)
             else:
                 # relative_paths is protected!
-                if target in name and name != "relative_paths":
+                if target in name and target not in skip_targets:
+                    print(target, name, value)
                     # paths can be str or list of str or None
                     if value is None:
                         continue

@@ -310,6 +310,7 @@ class BaseExtractor:
         relative_to: Union[str, Path, None] = None,
         folder_metadata=None,
         recursive: bool = False,
+        skip_recursive_path_modifier_warning: bool = False,
     ) -> dict:
         """
         Make a nested serialized dictionary out of the extractor. The dictionary produced can be used to re-initialize
@@ -329,6 +330,8 @@ class BaseExtractor:
             Folder with numpy `npy` files containing additional information (e.g. probe in BaseRecording) and properties.
         recursive: bool
             If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
+        skip_recursive_path_modifier_warning: bool
+            If True, skip the warning that is raised when `recursive=True` and `relative_to` is not None.
 
         Returns
         -------
@@ -390,10 +393,12 @@ class BaseExtractor:
             dump_dict["properties"] = {k: self._properties.get(k, None) for k in self._main_properties}
 
         if relative_to is not None:
-            relative_to = Path(relative_to).absolute()
+            relative_to = Path(relative_to).resolve().absolute()
             assert relative_to.is_dir(), "'relative_to' must be an existing directory"
             copy = False if dict_contains_extractors(dump_dict) else True
-            dump_dict["kwargs"] = _make_paths_relative(dump_dict["kwargs"], relative_to, copy=copy)
+            dump_dict["kwargs"] = _make_paths_relative(
+                dump_dict["kwargs"], relative_to, copy=copy, skip_warning=skip_recursive_path_modifier_warning
+            )
 
         if folder_metadata is not None:
             if relative_to is not None:
@@ -580,6 +585,7 @@ class BaseExtractor:
             relative_to=relative_to,
             folder_metadata=folder_metadata,
             recursive=recursive,
+            skip_recursive_path_modifier_warning=True,  # we skip warning because we will make paths absolute again
         )
         file_path = self._get_file_path(file_path, [".json"])
 
@@ -587,9 +593,9 @@ class BaseExtractor:
             json.dumps(dump_dict, indent=4, cls=SIJsonEncoder),
             encoding="utf8",
         )
-        if relative_to and dict_contains_extractors(dump_dict):
+        if relative_to:
             # Make paths absolute again
-            dump_dict = _make_paths_absolute(dump_dict, relative_to, copy=False)
+            dump_dict = _make_paths_absolute(dump_dict, relative_to, copy=False, skip_warning=True)
 
     def dump_to_pickle(
         self,
@@ -621,14 +627,15 @@ class BaseExtractor:
             relative_to=relative_to,
             folder_metadata=folder_metadata,
             recursive=recursive,
+            skip_recursive_path_modifier_warning=True,  # we skip warning because we will make paths absolute again
         )
         file_path = self._get_file_path(file_path, [".pkl", ".pickle"])
 
         file_path.write_bytes(pickle.dumps(dump_dict))
 
-        if relative_to and dict_contains_extractors(dump_dict):
+        if relative_to:
             # Make paths absolute again
-            dump_dict = _make_paths_absolute(dump_dict, relative_to, copy=False)
+            dump_dict = _make_paths_absolute(dump_dict, relative_to, copy=False, skip_warning=True)
 
     @staticmethod
     def load(file_path: Union[str, Path], base_folder=None) -> "BaseExtractor":
@@ -935,16 +942,20 @@ class BaseExtractor:
         return cached
 
 
-def _make_paths_relative(d, relative, copy=True) -> dict:
+def _make_paths_relative(d, relative, copy=True, skip_warning=False) -> dict:
     relative = Path(relative).absolute()
-    func = lambda p: os.path.relpath(p, start=relative)
-    return recursive_path_modifier(d, func, target="path", copy=copy)
+    func = lambda p: os.path.relpath(Path(p).resolve().absolute(), start=relative)
+    return recursive_path_modifier(
+        d, func, target="path", copy=copy, skip_targets=["relative_paths"], skip_warning=skip_warning
+    )
 
 
-def _make_paths_absolute(d, base, copy=True):
+def _make_paths_absolute(d, base, copy=True, skip_warning=False) -> dict:
     base = Path(base)
     func = lambda p: str((base / p).resolve().absolute())
-    return recursive_path_modifier(d, func, target="path", copy=copy)
+    return recursive_path_modifier(
+        d, func, target="path", copy=copy, skip_targets=["relative_paths"], skip_warning=skip_warning
+    )
 
 
 def _load_extractor_from_dict(dic) -> BaseExtractor:
