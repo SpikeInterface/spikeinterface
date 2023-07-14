@@ -34,6 +34,9 @@ class DeepInterpolatedRecording(BasePreprocessor):
         Number of frames to be omitted before and after the frame to be predicted
     batch_size: int
         Batch size to be used for the prediction
+    predict_workers: int
+        Number of workers to be used for the tensorflow `predict` function.
+        Multiple workers can be used to speed up the prediction by pre-fetching the data.
     use_gpu: bool
         If True, the gpu will be used for the prediction
     disable_tf_logger: bool
@@ -58,6 +61,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
         pre_post_omission: int = 1,
         batch_size: int = 128,
         use_gpu: bool = True,
+        predict_workers: int = 1,
         disable_tf_logger: bool = True,
         memory_gpu: Optional[int] = None,
     ):
@@ -88,7 +92,14 @@ class DeepInterpolatedRecording(BasePreprocessor):
         # add segment
         for segment in recording._recording_segments:
             recording_segment = DeepInterpolatedRecordingSegment(
-                segment, self.model, pre_frame, post_frame, pre_post_omission, desired_shape, batch_size
+                segment,
+                self.model,
+                pre_frame,
+                post_frame,
+                pre_post_omission,
+                desired_shape,
+                batch_size,
+                predict_workers,
             )
             self.add_recording_segment(recording_segment)
 
@@ -100,6 +111,7 @@ class DeepInterpolatedRecording(BasePreprocessor):
             post_frame=post_frame,
             pre_post_omission=pre_post_omission,
             batch_size=batch_size,
+            predict_workers=predict_workers,
             use_gpu=use_gpu,
             disable_tf_logger=disable_tf_logger,
             memory_gpu=memory_gpu,
@@ -117,6 +129,7 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         pre_post_omission,
         desired_shape,
         batch_size,
+        predict_workers,
     ):
         BasePreprocessorSegment.__init__(self, recording_segment)
 
@@ -126,6 +139,7 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         self.pre_post_omission = pre_post_omission
         self.batch_size = batch_size
         self.desired_shape = desired_shape
+        self.predict_workers = predict_workers
 
         self.SpikeInterfaceGenerator = define_segment_generator_class()
 
@@ -170,7 +184,7 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         )
         input_generator.randomize = False
         input_generator._calculate_list_samples(input_generator.total_samples)
-        di_output = self.model.predict(input_generator, verbose=2)
+        di_output = self.model.predict(input_generator, workers=self.predict_workers, verbose=2)
 
         out_traces = input_generator.reshape_output(di_output)
 
