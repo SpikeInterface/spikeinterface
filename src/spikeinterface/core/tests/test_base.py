@@ -120,12 +120,15 @@ def test_relative_to(recording, tmp_path):
     recording_loaded3 = BaseExtractor.from_dict(d4, base_folder=relative_folder)
     check_recordings_equal(recording_nested, recording_loaded3, return_scaled=False)
 
+    # check that dump to json/pickle don't modify paths
+    # full_folder_path = str(recording_saved._kwargs["folder_path"])
+
 
 if __name__ == "__main__":
     recording = generate()
-    # test_check_if_dumpable(recording)
-    # test_check_if_json_serializable(recording)
-    # test_to_dict(recording)
+    test_check_if_dumpable(recording)
+    test_check_if_json_serializable(recording)
+    test_to_dict(recording)
     import tempfile
 
     with tempfile.TemporaryDirectory() as tmpdirname:

@@ -900,7 +900,6 @@ def recursive_path_modifier(dictionary, func, target="path", copy=True, skip_tar
             else:
                 # relative_paths is protected!
                 if target in name and target not in skip_targets:
-                    print(target, name, value)
                     # paths can be str or list of str or None
                     if value is None:
                         continue

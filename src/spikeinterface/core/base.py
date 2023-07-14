@@ -396,8 +396,8 @@ class BaseExtractor:
             relative_to = Path(relative_to).resolve().absolute()
             assert relative_to.is_dir(), "'relative_to' must be an existing directory"
             copy = False if dict_contains_extractors(dump_dict) else True
-            dump_dict["kwargs"] = _make_paths_relative(
-                dump_dict["kwargs"], relative_to, copy=copy, skip_warning=skip_recursive_path_modifier_warning
+            dump_dict = _make_paths_relative(
+                dump_dict, relative_to, copy=copy, skip_warning=skip_recursive_path_modifier_warning
             )
 
         if folder_metadata is not None:
