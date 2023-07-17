@@ -338,6 +338,9 @@ class BaseExtractor:
 
         kwargs = self._kwargs
 
+        if relative_to and not recursive:
+            raise Exception("`relative_to` is only posible when `recursive=True`")
+
         if recursive:
             to_dict_kwargs = dict(
                 include_annotations=include_annotations,
@@ -560,7 +563,7 @@ class BaseExtractor:
     def dump_to_json(self, file_path: Union[str, Path, None] = None, relative_to=None, folder_metadata=None) -> None:
         """
         Dump recording extractor to json file.
-        The extractor can be re-loaded with load_extractor_from_json(json_file)
+        The extractor can be re-loaded with load_extractor(json_file)
 
         Parameters
         ----------
@@ -568,10 +571,16 @@ class BaseExtractor:
             Path of the json file
         relative_to: str, Path, or None
             If not None, file_paths are serialized relative to this path
+        folder_metadata: str, Path, or None
+            Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
-        assert self.check_if_dumpable()
+        assert self.check_if_json_serializable(), "The extractor is not json serializable"
         dump_dict = self.to_dict(
-            include_annotations=True, include_properties=False, relative_to=relative_to, folder_metadata=folder_metadata
+            include_annotations=True,
+            include_properties=False,
+            relative_to=relative_to,
+            folder_metadata=folder_metadata,
+            recursive=True,
         )
         file_path = self._get_file_path(file_path, [".json"])
 
@@ -584,13 +593,11 @@ class BaseExtractor:
         self,
         file_path: Union[str, Path, None] = None,
         include_properties: bool = True,
-        relative_to=None,
         folder_metadata=None,
-        recursive: bool = False,
     ):
         """
         Dump recording extractor to a pickle file.
-        The extractor can be re-loaded with load_extractor_from_json(json_file)
+        The extractor can be re-loaded with load_extractor(pickle_file)
 
         Parameters
         ----------
@@ -600,16 +607,15 @@ class BaseExtractor:
             If True, all properties are dumped
         relative_to: str, Path, or None
             If not None, file_paths are serialized relative to this path
-        recursive: bool
-            If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
+        folder_metadata: str, Path, or None
+            Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
         assert self.check_if_dumpable()
         dump_dict = self.to_dict(
             include_annotations=True,
             include_properties=include_properties,
-            relative_to=relative_to,
             folder_metadata=folder_metadata,
-            recursive=recursive,
+            recursive=False,
         )
         file_path = self._get_file_path(file_path, [".pkl", ".pickle"])
 
