@@ -238,7 +238,8 @@ class RandomProjectionClustering:
             if params["tmp_folder"] is None:
                 shutil.rmtree(tmp_folder)
             else:
-                shutil.rmtree(tmp_folder / "waveforms")
+                if not params["shared_memory"]:
+                    shutil.rmtree(tmp_folder / "waveforms")
                 shutil.rmtree(tmp_folder / "sorting")
 
         if verbose:
