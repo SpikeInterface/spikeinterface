@@ -322,7 +322,7 @@ class BaseExtractor:
         include_properties: bool
             If True, all properties are added to the dict, by default False
         relative_to: str, Path, or None
-            If not None, file_paths are serialized relative to this path, by default None
+            If not None, files and folders are serialized relative to this path, by default None
             Used in waveform extractor to maintain relative paths to binary files even if the
             containing folder / diretory is moved
         folder_metadata: str, Path, or None
@@ -548,7 +548,7 @@ class BaseExtractor:
         file_path: str or Path
             The output file (either .json or .pkl/.pickle)
         relative_to: str, Path, True or None
-            If not None, file_path is serialized relative to this path. If True, file_path is serialized relative to the parent folder.
+            If not None, files and folders is serialized relative to this path. If True, the relative folder is the parent folder.
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         """
         if str(file_path).endswith(".json"):
@@ -568,7 +568,7 @@ class BaseExtractor:
         file_path: str
             Path of the json file
         relative_to: str, Path, True or None
-            If not None, file_path is serialized relative to this path. If True, file_path is serialized relative to the parent folder.
+            If not None, files and folders is serialized relative to this path. If True, the relative folder is the parent folder.
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         """
         assert self.check_if_dumpable()
@@ -605,7 +605,7 @@ class BaseExtractor:
         include_properties: bool
             If True, all properties are dumped
         relative_to: str, Path, True or None
-            If not None, file_path is serialized relative to this path. If True, file_path is serialized relative to the parent folder.
+            If not None, files and folders is serialized relative to this path. If True, the relative folder is the parent folder.
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         recursive: bool
             If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
