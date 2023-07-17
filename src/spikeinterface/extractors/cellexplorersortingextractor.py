@@ -203,7 +203,7 @@ class CellExplorerSortingExtractor(BaseSorting):
         if self.session_info_file_path is None:
             self.session_info_file_path = self.session_path / f"{self.session_id}.sessionInfo.mat"
 
-        self.session_info_file_path = Path(self.session_info_file_path).absolute()
+        self.session_info_file_path = Path(self.session_info_file_path).resolve().absolute()
         assert (
             self.session_info_file_path.is_file()
         ), f"No {self.session_id}.sessionInfo.mat file found in the {self.session_path}!, can't inferr sampling rate, please pass the sampling rate at initialization"

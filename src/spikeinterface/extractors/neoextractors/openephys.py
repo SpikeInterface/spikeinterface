@@ -61,11 +61,11 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
             all_annotations=all_annotations,
             **neo_kwargs,
         )
-        self._kwargs.update(dict(folder_path=str(folder_path)))
+        self._kwargs.update(dict(folder_path=str(Path(folder_path).resolve().absolute())))
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": str(folder_path)}
+        neo_kwargs = {"dirname": str(Path(folder_path).resolve().absolute())}
         return neo_kwargs
 
 
@@ -204,7 +204,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
         self._kwargs.update(
             dict(
-                folder_path=str(folder_path),
+                folder_path=str(Path(folder_path).resolve().absolute()),
                 load_sync_channel=load_sync_channel,
                 load_sync_timestamps=load_sync_timestamps,
                 experiment_names=experiment_names,
@@ -214,7 +214,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, load_sync_channel=False, experiment_names=None):
         neo_kwargs = {
-            "dirname": str(folder_path),
+            "dirname": str(Path(folder_path).resolve().absolute()),
             "load_sync_channel": load_sync_channel,
             "experiment_names": experiment_names,
         }
@@ -248,7 +248,7 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": str(folder_path)}
+        neo_kwargs = {"dirname": str(Path(folder_path).resolve().absolute())}
         return neo_kwargs
 
 

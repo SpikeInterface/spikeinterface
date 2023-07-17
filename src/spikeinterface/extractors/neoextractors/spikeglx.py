@@ -90,11 +90,13 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
             self.set_property("inter_sample_shift", sample_shifts)
 
-        self._kwargs.update(dict(folder_path=str(folder_path), load_sync_channel=load_sync_channel))
+        self._kwargs.update(
+            dict(folder_path=str(Path(folder_path).resolve().absolute()), load_sync_channel=load_sync_channel)
+        )
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, load_sync_channel=False):
-        neo_kwargs = {"dirname": str(folder_path), "load_sync_channel": load_sync_channel}
+        neo_kwargs = {"dirname": str(Path(folder_path).resolve().absolute()), "load_sync_channel": load_sync_channel}
         return neo_kwargs
 
 

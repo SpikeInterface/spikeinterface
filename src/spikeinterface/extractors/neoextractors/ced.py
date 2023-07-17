@@ -34,12 +34,12 @@ class CedRecordingExtractor(NeoBaseRecordingExtractor):
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update(dict(file_path=str(file_path)))
+        self._kwargs.update(dict(file_path=str(Path(file_path).resolve().absolute())))
         self.extra_requirements.append("neo[ced]")
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(file_path)}
+        neo_kwargs = {"filename": str(Path(file_path).resolve().absolute())}
         return neo_kwargs
 
 

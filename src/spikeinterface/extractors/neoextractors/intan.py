@@ -36,11 +36,11 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
             **neo_kwargs,
         )
 
-        self._kwargs.update(dict(file_path=str(file_path)))
+        self._kwargs.update(dict(file_path=str(Path(file_path).resolve().absolute())))
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(file_path)}
+        neo_kwargs = {"filename": str(Path(file_path).resolve().absolute())}
         return neo_kwargs
 
 

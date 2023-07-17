@@ -57,11 +57,17 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
         self.set_property("row", self.get_property("contact_vector")["row"])
         self.set_property("col", self.get_property("contact_vector")["col"])
 
-        self._kwargs.update({"file_path": str(file_path), "mea_pitch": mea_pitch, "electrode_width": electrode_width})
+        self._kwargs.update(
+            {
+                "file_path": str(Path(file_path).resolve().absolute()),
+                "mea_pitch": mea_pitch,
+                "electrode_width": electrode_width,
+            }
+        )
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(file_path)}
+        neo_kwargs = {"filename": str(Path(file_path).resolve().absolute())}
         return neo_kwargs
 
 

@@ -40,14 +40,18 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
         if hasattr(self.neo_reader._recgen, "gain_to_uV"):
             self.set_channel_gains(self.neo_reader._recgen.gain_to_uV)
 
-        self._kwargs.update({"file_path": str(file_path)})
+        self._kwargs.update({"file_path": str(Path(file_path).resolve().absolute())})
 
     @classmethod
     def map_to_neo_kwargs(
         cls,
         file_path,
     ):
-        neo_kwargs = {"filename": str(file_path), "load_spiketrains": False, "load_analogsignal": True}
+        neo_kwargs = {
+            "filename": str(Path(file_path).resolve().absolute()),
+            "load_spiketrains": False,
+            "load_analogsignal": True,
+        }
         return neo_kwargs
 
 
@@ -63,11 +67,15 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
         sampling_frequency = self.read_sampling_frequency(file_path=file_path)
         NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, use_format_ids=True, **neo_kwargs)
 
-        self._kwargs = {"file_path": str(file_path)}
+        self._kwargs = {"file_path": str(Path(file_path).resolve().absolute())}
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(file_path), "load_spiketrains": True, "load_analogsignal": False}
+        neo_kwargs = {
+            "filename": str(Path(file_path).resolve().absolute()),
+            "load_spiketrains": True,
+            "load_analogsignal": False,
+        }
         return neo_kwargs
 
     def read_sampling_frequency(self, file_path: Union[str, Path]) -> float:

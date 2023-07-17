@@ -111,7 +111,7 @@ def export_to_phy(
     if len(unit_ids) == 0:
         raise Exception("No non-empty units in the sorting result, can't save to Phy.")
 
-    output_folder = Path(output_folder).absolute()
+    output_folder = Path(output_folder).resolve().absolute()
     if output_folder.is_dir():
         if remove_if_exists:
             shutil.rmtree(output_folder)

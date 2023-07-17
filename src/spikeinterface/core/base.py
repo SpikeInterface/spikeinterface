@@ -394,13 +394,13 @@ class BaseExtractor:
             dump_dict["properties"] = {k: self._properties.get(k, None) for k in self._main_properties}
 
         if relative_to is not None:
-            relative_to = Path(relative_to).absolute()
+            relative_to = Path(relative_to).resolve().absolute()
             assert relative_to.is_dir(), "'relative_to' must be an existing directory"
             dump_dict = _make_paths_relative(dump_dict, relative_to)
 
         if folder_metadata is not None:
             if relative_to is not None:
-                folder_metadata = Path(folder_metadata).absolute().relative_to(relative_to)
+                folder_metadata = Path(folder_metadata).resolve().absolute().relative_to(relative_to)
             dump_dict["folder_metadata"] = str(folder_metadata)
 
         return dump_dict
@@ -533,7 +533,7 @@ class BaseExtractor:
         file_path.parent.mkdir(parents=True, exist_ok=True)
         folder_path = file_path.parent
         if Path(file_path).suffix == "":
-            file_path = folder_path / (str(file_path) + ext)
+            file_path = folder_path / (str(Path(file_path).resolve().absolute()) + ext)
         assert file_path.suffix in extensions, "'file_path' should have one of the following extensions:" " %s" % (
             ", ".join(extensions)
         )
@@ -551,9 +551,11 @@ class BaseExtractor:
             If not None, files and folders are serialized relative to this path. If True, the relative folder is the parent folder.
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         """
-        if str(file_path).endswith(".json"):
+        if str(Path(file_path).resolve().absolute()).endswith(".json"):
             self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
-        elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
+        elif str(Path(file_path).resolve().absolute()).endswith(".pkl") or str(
+            Path(file_path).resolve().absolute()
+        ).endswith(".pickle"):
             self.dump_to_pickle(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
         else:
             raise ValueError("Dump: file must .json or .pkl")
@@ -643,11 +645,13 @@ class BaseExtractor:
 
         if file_path.is_file():
             # standard case based on a file (json or pickle)
-            if str(file_path).endswith(".json"):
-                with open(str(file_path), "r") as f:
+            if str(Path(file_path).resolve().absolute()).endswith(".json"):
+                with open(str(Path(file_path).resolve().absolute()), "r") as f:
                     d = json.load(f)
-            elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-                with open(str(file_path), "rb") as f:
+            elif str(Path(file_path).resolve().absolute()).endswith(".pkl") or str(
+                Path(file_path).resolve().absolute()
+            ).endswith(".pickle"):
+                with open(str(Path(file_path).resolve().absolute()), "rb") as f:
                     d = pickle.load(f)
             else:
                 raise ValueError(f"Impossible to load {file_path}")
@@ -936,7 +940,7 @@ class BaseExtractor:
 
 
 def _make_paths_relative(d, relative) -> dict:
-    relative = str(Path(relative).absolute())
+    relative = str(Path(relative).resolve().absolute())
     func = lambda p: os.path.relpath(str(p), start=relative)
     return recursive_path_modifier(d, func, target="path", copy=True)
 

@@ -104,7 +104,7 @@ def read_nwbfile(
     --------
     >>> nwbfile = read_nwbfile("data.nwb", stream_mode="ros3")
     """
-    file_path = str(file_path)
+    file_path = str(Path(file_path).resolve().absolute())
     from pynwb import NWBHDF5IO, NWBFile
 
     if stream_mode == "fsspec":
@@ -359,7 +359,7 @@ class NwbRecordingExtractor(BaseRecording):
                 self.set_property(property_name, values)
 
         if stream_mode not in ["fsspec", "ros3"]:
-            file_path = str(Path(file_path).absolute())
+            file_path = str(Path(file_path).resolve().absolute())
         if stream_mode == "fsspec":
             # only add stream_cache_path to kwargs if it was passed as an argument
             if stream_cache_path is not None:
@@ -477,16 +477,16 @@ class NwbSortingExtractor(BaseSorting):
                 fs=fsspec.filesystem("http"),
                 cache_storage=self.stream_cache_path,
             )
-            self._file_path = self.cfs.open(str(file_path), "rb")
+            self._file_path = self.cfs.open(str(Path(file_path).resolve().absolute()), "rb")
             file = h5py.File(self._file_path)
             self.io = NWBHDF5IO(file=file, mode="r", load_namespaces=True)
 
         elif stream_mode == "ros3":
-            self._file_path = str(file_path)
+            self._file_path = str(Path(file_path).resolve().absolute())
             self.io = NWBHDF5IO(self._file_path, mode="r", load_namespaces=True, driver="ros3")
 
         else:
-            self._file_path = str(file_path)
+            self._file_path = str(Path(file_path).resolve().absolute())
             self.io = NWBHDF5IO(self._file_path, mode="r", load_namespaces=True)
 
         self._nwbfile = self.io.read()
@@ -537,7 +537,7 @@ class NwbSortingExtractor(BaseSorting):
             self.set_property(prop_name, np.array(values))
 
         if stream_mode not in ["fsspec", "ros3"]:
-            file_path = str(Path(file_path).absolute())
+            file_path = str(Path(file_path).resolve().absolute())
         if stream_mode == "fsspec":
             stream_cache_path = str(Path(self.stream_cache_path).absolute())
         self._kwargs = {
