@@ -1,3 +1,4 @@
+import importlib
 import shutil
 import pytest
 from pathlib import Path
@@ -33,6 +34,7 @@ def _setup_comparison_study():
     study = GroundTruthStudy.create(study_folder, gt_dict)
 
 
+@pytest.mark.skipif(importlib.util.find_spec("tridesclous") is None, reason="Test requires Python package 'tridesclous'")
 def test_run_study_sorters():
     study = GroundTruthStudy(study_folder)
     sorter_list = [
@@ -45,6 +47,7 @@ def test_run_study_sorters():
     study.run_sorters(sorter_list)
 
 
+@pytest.mark.skipif(importlib.util.find_spec("tridesclous") is None, reason="Test requires Python package 'tridesclous'")
 def test_extract_sortings():
     study = GroundTruthStudy(study_folder)
 
