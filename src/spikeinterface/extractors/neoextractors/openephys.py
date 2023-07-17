@@ -149,8 +149,8 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         else:
             exp_id = exp_ids[block_index]
 
-        # do not load probe for NIDQ stream
-        if "NI-DAQmx" not in stream_name:
+        # do not load probe for NIDQ stream or if load_sync_channel is True
+        if "NI-DAQmx" not in stream_name and not load_sync_channel:
             settings_file = self.neo_reader.folder_structure[record_node]["experiments"][exp_id]["settings_file"]
 
             if Path(settings_file).is_file():
