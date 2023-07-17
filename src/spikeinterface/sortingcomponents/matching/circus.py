@@ -194,7 +194,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
     """
 
     _default_params = {
-        "sparsify_threshold": 1,
         "amplitudes": [0.6, 2],
         "omp_min_sps": 0.1,
         "waveform_extractor": None,
@@ -219,6 +218,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         else:
             sparsity = waveform_extractor.sparsity.mask
     
+        print(sparsity.mean())
         templates = waveform_extractor.get_all_templates(mode='median').copy()
 
         d['sparsities'] = {}
@@ -226,10 +226,10 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d['norms'] = np.zeros(num_templates, dtype=np.float32)
 
         for count, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
-            template = templates[count]
+            template = templates[count][:, sparsity[count]]
             d['sparsities'][count], = np.nonzero(sparsity[count])
             d['norms'][count] = np.linalg.norm(template)
-            d['templates'][count] = template[:, d['sparsities'][count]]/d['norms'][count]
+            d['templates'][count] = template/d['norms'][count]
 
         return d
 
@@ -269,8 +269,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d['ignored_ids'] = np.array(d['ignored_ids'])
 
         omp_min_sps = d['omp_min_sps']
-        nb_active_channels = np.array([len(d['sparsities'][count]) for count in range(d['num_templates'])])
-        d['stop_criteria'] = omp_min_sps * np.sqrt(nb_active_channels * d['num_samples'])
+        #nb_active_channels = np.array([len(d['sparsities'][count]) for count in range(d['num_templates'])])
+        d['stop_criteria'] = omp_min_sps * np.sqrt(d['noise_levels'].sum() * d['num_samples'])
 
         return d        
 
@@ -307,7 +307,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         min_amplitude, max_amplitude = d['amplitudes']
         sparsities = d['sparsities']
         ignored_ids = d['ignored_ids']
-        stop_criteria = d['stop_criteria'][:, np.newaxis]
+        stop_criteria = d['stop_criteria']
         vicinity = d['vicinity']
 
         if 'cached_fft_kernels' not in d:
@@ -356,7 +356,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         spikes = np.empty(scalar_products.size, dtype=spike_dtype)
         idx_lookup = np.arange(scalar_products.size).reshape(num_templates, -1)
 
-        M = np.zeros((100, 100), dtype=np.float32)
+        M = np.zeros((num_peaks, num_peaks), dtype=np.float32)
 
         all_selections = np.empty((2, scalar_products.size), dtype=np.int32)
         final_amplitudes = np.zeros(scalar_products.shape, dtype=np.float32)
@@ -647,7 +647,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         default_parameters.update(kwargs)
 
         # assert isinstance(d['waveform_extractor'], WaveformExtractor)
-        for v in ["sparsify_threshold", "use_sparse_matrix_threshold"]:
+        for v in ["use_sparse_matrix_threshold"]:
             assert (default_parameters[v] >= 0) and (default_parameters[v] <= 1), f"{v} should be in [0, 1]"
 
         default_parameters["num_channels"] = default_parameters["waveform_extractor"].recording.get_num_channels()
