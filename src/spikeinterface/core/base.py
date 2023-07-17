@@ -533,7 +533,7 @@ class BaseExtractor:
         file_path.parent.mkdir(parents=True, exist_ok=True)
         folder_path = file_path.parent
         if Path(file_path).suffix == "":
-            file_path = folder_path / (str(Path(file_path).resolve().absolute()) + ext)
+            file_path = folder_path / (str(file_path) + ext)
         assert file_path.suffix in extensions, "'file_path' should have one of the following extensions:" " %s" % (
             ", ".join(extensions)
         )
@@ -551,11 +551,9 @@ class BaseExtractor:
             If not None, files and folders are serialized relative to this path. If True, the relative folder is the parent folder.
             This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         """
-        if str(Path(file_path).resolve().absolute()).endswith(".json"):
+        if str(file_path).endswith(".json"):
             self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
-        elif str(Path(file_path).resolve().absolute()).endswith(".pkl") or str(
-            Path(file_path).resolve().absolute()
-        ).endswith(".pickle"):
+        elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
             self.dump_to_pickle(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
         else:
             raise ValueError("Dump: file must .json or .pkl")
@@ -645,12 +643,10 @@ class BaseExtractor:
 
         if file_path.is_file():
             # standard case based on a file (json or pickle)
-            if str(Path(file_path).resolve().absolute()).endswith(".json"):
+            if str(file_path).endswith(".json"):
                 with open(str(Path(file_path).resolve().absolute()), "r") as f:
                     d = json.load(f)
-            elif str(Path(file_path).resolve().absolute()).endswith(".pkl") or str(
-                Path(file_path).resolve().absolute()
-            ).endswith(".pickle"):
+            elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
                 with open(str(Path(file_path).resolve().absolute()), "rb") as f:
                     d = pickle.load(f)
             else:
