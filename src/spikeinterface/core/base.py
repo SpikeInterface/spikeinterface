@@ -339,7 +339,7 @@ class BaseExtractor:
         kwargs = self._kwargs
 
         if relative_to and not recursive:
-            raise Exception("`relative_to` is only posible when `recursive=True`")
+            raise ValueError("`relative_to` is only posible when `recursive=True`")
 
         if recursive:
             to_dict_kwargs = dict(
@@ -570,15 +570,19 @@ class BaseExtractor:
         ----------
         file_path: str
             Path of the json file
-        relative_to: str, Path, or None
-            If not None, file_paths are serialized relative to this path
+        relative_to: str, Path, True or None
+            If not None, files and folders are serialized relative to this path. If True, the relative folder is the parent folder.
+            This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         folder_metadata: str, Path, or None
             Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
         assert self.check_if_json_serializable(), "The extractor is not json serializable"
 
-        if relative_to is True:
-            relative_to = Path(file_path).parent
+        # Writing paths as relative_to requires recursively expanding the dict
+        if relative_to:
+            recursive = True
+            # We use relative_to == True to encode using the parent_folder
+            relative_to = Path(file_path).parent if relative_to is True else relative_to
 
         dump_dict = self.to_dict(
             include_annotations=True,
