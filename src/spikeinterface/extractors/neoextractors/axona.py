@@ -30,7 +30,7 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(Path(file_path).resolve().absolute())}
+        neo_kwargs = {"filename": str(Path(file_path).absolute())}
         return neo_kwargs
 
 

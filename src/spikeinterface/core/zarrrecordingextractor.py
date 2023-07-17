@@ -49,7 +49,7 @@ class ZarrRecordingExtractor(BaseRecording):
                 root_path = Path(root_path)
             else:
                 root_path_init = str(root_path)
-            root_path_kwarg = str(Path(root_path).resolve().absolute())
+            root_path_kwarg = str(Path(root_path).absolute())
         else:
             root_path_init = root_path
             root_path_kwarg = root_path_init

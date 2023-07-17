@@ -33,12 +33,12 @@ class Spike2RecordingExtractor(NeoBaseRecordingExtractor):
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update({"file_path": str(Path(file_path).resolve().absolute())})
+        self._kwargs.update({"file_path": str(Path(file_path).absolute())})
         self.extra_requirements.append("sonpy")
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(Path(file_path).resolve().absolute())}
+        neo_kwargs = {"filename": str(Path(file_path).absolute())}
         return neo_kwargs
 
 

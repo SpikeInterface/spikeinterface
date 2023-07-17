@@ -32,11 +32,11 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update({"file_path": str(Path(file_path).resolve().absolute())})
+        self._kwargs.update({"file_path": str(Path(file_path).absolute())})
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(Path(file_path).resolve().absolute())}
+        neo_kwargs = {"filename": str(Path(file_path).absolute())}
         return neo_kwargs
 
 
@@ -63,11 +63,11 @@ class PlexonSortingExtractor(NeoBaseSortingExtractor):
         self.neo_reader.parse_header()
         sampling_frequency = self.neo_reader._global_ssampling_rate
         NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, **neo_kwargs)
-        self._kwargs = {"file_path": str(Path(file_path).resolve().absolute())}
+        self._kwargs = {"file_path": str(Path(file_path).absolute())}
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(Path(file_path).resolve().absolute())}
+        neo_kwargs = {"filename": str(Path(file_path).absolute())}
         return neo_kwargs
 
 

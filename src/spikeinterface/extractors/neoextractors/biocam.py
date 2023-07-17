@@ -61,7 +61,7 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
 
         self._kwargs.update(
             {
-                "file_path": str(Path(file_path).resolve().absolute()),
+                "file_path": str(Path(file_path).absolute()),
                 "mea_pitch": mea_pitch,
                 "electrode_width": electrode_width,
             }
@@ -69,7 +69,7 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(Path(file_path).resolve().absolute())}
+        neo_kwargs = {"filename": str(Path(file_path).absolute())}
         return neo_kwargs
 
 

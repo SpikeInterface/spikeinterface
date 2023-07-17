@@ -33,11 +33,11 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update(dict(folder_path=str(Path(folder_path).resolve().absolute())))
+        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute())))
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": str(Path(folder_path).resolve().absolute())}
+        neo_kwargs = {"dirname": str(Path(folder_path).absolute())}
         return neo_kwargs
 
 
@@ -91,7 +91,7 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": str(Path(folder_path).resolve().absolute())}
+        neo_kwargs = {"dirname": str(Path(folder_path).absolute())}
         return neo_kwargs
 
 

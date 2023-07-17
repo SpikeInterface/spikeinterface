@@ -71,11 +71,11 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         probe = pi.read_maxwell(file_path, well_name=well_name, rec_name=rec_name)
         self.set_probe(probe, in_place=True)
         self.set_property("electrode", self.get_property("contact_vector")["electrode"])
-        self._kwargs.update(dict(file_path=str(Path(file_path).resolve().absolute()), rec_name=rec_name))
+        self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), rec_name=rec_name))
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path, rec_name=None):
-        neo_kwargs = {"filename": str(Path(file_path).resolve().absolute()), "rec_name": rec_name}
+        neo_kwargs = {"filename": str(Path(file_path).absolute()), "rec_name": rec_name}
         return neo_kwargs
 
     def install_maxwell_plugin(self, force_download=False):

@@ -34,12 +34,12 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update(dict(folder_path=str(Path(folder_path).resolve().absolute()), lsx_files=lsx_files))
+        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute()), lsx_files=lsx_files))
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, lsx_files=None):
         neo_kwargs = {
-            "dirname": str(Path(folder_path).resolve().absolute()),
+            "dirname": str(Path(folder_path).absolute()),
             "lsx_files": lsx_files,
         }
         return neo_kwargs
@@ -60,7 +60,7 @@ class AlphaOmegaEventExtractor(NeoBaseEventExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": str(Path(folder_path).resolve().absolute())}
+        neo_kwargs = {"dirname": str(Path(folder_path).absolute())}
         return neo_kwargs
 
 

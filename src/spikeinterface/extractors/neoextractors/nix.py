@@ -39,12 +39,12 @@ class NixRecordingExtractor(NeoBaseRecordingExtractor):
             all_annotations=all_annotations,
             **neo_kwargs,
         )
-        self._kwargs.update(dict(file_path=str(Path(file_path).resolve().absolute()), stream_id=stream_id))
+        self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), stream_id=stream_id))
         self.extra_requirements.append("neo[nixio]")
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(Path(file_path).resolve().absolute())}
+        neo_kwargs = {"filename": str(Path(file_path).absolute())}
         return neo_kwargs
 
 

@@ -121,7 +121,7 @@ class BaseSorter:
             output_folder = cls.sorter_name + "_output"
 
         # Resolve path
-        output_folder = Path(output_folder).resolve().absolute()
+        output_folder = Path(output_folder).absolute()
         sorter_output_folder = output_folder / "sorter_output"
 
         if output_folder.is_dir():
