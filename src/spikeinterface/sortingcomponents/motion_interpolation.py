@@ -49,22 +49,19 @@ def correct_motion_on_peaks(
     corrected_peak_locations: np.array
         Motion-corrected peak locations
     """
-    # make linear times
-    times = np.arange(np.max(peaks["sample_index"]) + 1) / sampling_frequency
     corrected_peak_locations = peak_locations.copy()
 
+    spike_times = peaks["sample_index"] / sampling_frequency
     if spatial_bins.shape[0] == 1:
         # rigid motion interpolation 1D
-        sample_bins = np.searchsorted(times, temporal_bins)
-        f = scipy.interpolate.interp1d(sample_bins, motion[:, 0], bounds_error=False, fill_value="extrapolate")
-        shift = f(peaks["sample_index"])
+        f = scipy.interpolate.interp1d(temporal_bins, motion[:, 0], bounds_error=False, fill_value="extrapolate")
+        shift = f(spike_times)
         corrected_peak_locations[direction] -= shift
     else:
         # non rigid motion = interpolation 2D
         f = scipy.interpolate.RegularGridInterpolator(
             (temporal_bins, spatial_bins), motion, method="linear", bounds_error=False, fill_value=None
         )
-        spike_times = times[peaks["sample_index"]]
         shift = f(np.c_[spike_times, peak_locations[direction]])
         corrected_peak_locations[direction] -= shift
 
