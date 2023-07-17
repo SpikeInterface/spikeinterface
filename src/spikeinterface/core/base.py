@@ -580,9 +580,8 @@ class BaseExtractor:
 
         # Writing paths as relative_to requires recursively expanding the dict
         if relative_to:
-            recursive = True
-            # We use relative_to == True to encode using the parent_folder
             relative_to = Path(file_path).parent if relative_to is True else relative_to
+            relative_to = relative_to.resolve().absolute()
 
         dump_dict = self.to_dict(
             include_annotations=True,
