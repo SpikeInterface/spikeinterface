@@ -580,7 +580,7 @@ class BaseExtractor:
 
         # Writing paths as relative_to requires recursively expanding the dict
         if relative_to:
-            relative_to = Path(file_path).parent if relative_to is True else relative_to
+            relative_to = Path(file_path).parent if relative_to is True else Path(relative_to)
             relative_to = relative_to.resolve().absolute()
 
         dump_dict = self.to_dict(
