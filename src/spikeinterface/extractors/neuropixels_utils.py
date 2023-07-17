@@ -1,7 +1,13 @@
+from typing import Optional
 import numpy as np
 
+from probeinterface import Probe, ProbeGroup
+from spikeinterface.core import BaseRecording
 
-def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12, num_cycles=None):
+
+def get_neuropixels_sample_shifts(
+    num_channels: int = 384, num_channels_per_adc: int = 12, num_cycles: Optional[int] = None
+):
     """
     Calculates the relative sampling phase of each channel that results
     from Neuropixels ADC multiplexing.
@@ -48,7 +54,7 @@ def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12, num
     return sample_shifts
 
 
-def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
+def get_neuropixels_channel_groups(num_channels: int = 384, num_adcs: int = 12):
     """
     Returns groups of simultaneously sampled channels on a Neuropixels probe.
 
@@ -104,7 +110,7 @@ def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
     return groups
 
 
-def synchronize_neuropixel_streams(recording_ref, recording_other):
+def synchronize_neuropixel_streams(recording_ref: BaseRecording, recording_other: BaseRecording):
     """
     Use the last "sync" channel from spikeglx or openephys neuropixels to synchronize
     recordings.
@@ -134,3 +140,45 @@ def synchronize_neuropixel_streams(recording_ref, recording_other):
     # ax.plot(times_ref, trig_ref)
     # ax.plot(times_other, trig_other)
     # plt.show()
+
+
+def get_neuropixels_probe_group(probe: Probe, load_sync_channel: bool, num_channels_recording: int):
+    """
+    Constructs a probegroup for a Neuropixels probe, handling the sync channel if necessary.
+
+    Parameters
+    ----------
+    probe : Probe
+        The NP probe
+    load_sync_channel : bool
+        True if the sync channel should be handles, False otherwise
+    num_channels_recording : int
+        The number of channels in the recording
+
+    Returns
+    -------
+    probegroup : ProbeGroup
+        The NP probe group
+    """
+    probegroup = ProbeGroup()
+    group_mode = "by_shank" if probe.shank_ids is not None else "by_probe"
+
+    if load_sync_channel:
+        # create a dummy probe for the sync channel
+        sync_channel_dummy = Probe(ndim=2, si_units="um")
+        if group_mode == "by_shank":
+            shankd_ids = [-1]
+        sync_channel_dummy.set_contacts(positions=[[0, -1000]], shank_ids=shankd_ids)
+        sync_channel_dummy.set_device_channel_indices([len(probe.contact_positions)])
+        probegroup.add_probe(probe)
+        probegroup.add_probe(sync_channel_dummy)
+    else:
+        probegroup.add_probe(probe)
+
+    if probegroup.get_channel_count() > num_channels_recording:
+        exception_msg = f"The probe group loaded exceeds the number of channels in the recording: {probegroup.get_channel_count()} vs {num_channels_recording}."
+        if load_sync_channel:
+            exception_msg += "\nThe dataset may not contain a SYNC channel. Try setting load_sync_channel=False."
+        raise Exception(exception_msg)
+
+    return probegroup

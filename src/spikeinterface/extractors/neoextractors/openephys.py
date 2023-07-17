@@ -19,7 +19,7 @@ import probeinterface as pi
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor, NeoBaseEventExtractor
 
-from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
+from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts, get_neuropixels_probe_group
 
 
 class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
@@ -159,7 +159,10 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 probe = None
 
             if probe is not None:
-                self = self.set_probe(probe, in_place=True)
+                group_mode = "by_shank" if probe.shank_ids is not None else "by_probe"
+                probegroup = get_neuropixels_probe_group(probe, load_sync_channel, self.get_num_channels())
+                self.set_probegroup(probegroup, in_place=True, group_mode=group_mode)
+
                 probe_name = probe.annotations["probe_name"]
                 # load num_channels_per_adc depending on probe type
                 if "2.0" in probe_name:
@@ -180,6 +183,10 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     # lets clip to 384 because this contains also the synchro channel
                     chans = chans[chans < total_channels]
                     sample_shifts = sample_shifts[chans]
+
+                if load_sync_channel:
+                    sample_shifts = np.concatenate((sample_shifts, [0]))
+
                 self.set_property("inter_sample_shift", sample_shifts)
 
         # load synchronized timestamps and set_times to recording
@@ -260,6 +267,17 @@ def read_openephys(folder_path, **kwargs):
     ----------
     folder_path: str or Path
         Path to openephys folder
+    load_sync_channel : bool
+        If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
+        If True, the SYNC channel is loaded and can be accessed in the analog signals.
+    load_sync_timestamps : bool
+        If True, the synchronized_timestamps are loaded and set as times to the recording.
+        If False (default), only the t_start and sampling rate are set, and timestamps are assumed
+        to be uniform and linearly increasing.
+    experiment_names: str, list, or None
+        If multiple experiments are available, this argument allows users to select one
+        or more experiments. If None, all experiements are loaded as blocks.
+        E.g. 'experiment_names="experiment2"', 'experiment_names=["experiment1", "experiment2"]'
     stream_id: str, optional
         If there are several streams, specify the stream id you want to load.
     stream_name: str, optional

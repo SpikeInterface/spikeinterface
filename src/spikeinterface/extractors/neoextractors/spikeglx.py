@@ -9,7 +9,7 @@ from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_s
 
 
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
+from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts, get_neuropixels_probe_group
 
 from .neobaseextractor import NeoBaseRecordingExtractor
 
@@ -53,18 +53,17 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
         # open the corresponding stream probe for LF and AP
         # if load_sync_channel=False
-        if "nidq" not in self.stream_id and not load_sync_channel:
+        if "nidq" not in self.stream_id:
             signals_info_dict = {e["stream_name"]: e for e in self.neo_reader.signals_info_list}
             meta_filename = signals_info_dict[self.stream_id]["meta_file"]
             # Load probe geometry if available
             if "lf" in self.stream_id:
                 meta_filename = meta_filename.replace(".lf", ".ap")
             probe = pi.read_spikeglx(meta_filename)
+            group_mode = "by_shank" if probe.shank_ids is not None else "by_probe"
+            probegroup = get_neuropixels_probe_group(probe, load_sync_channel, self.get_num_channels())
 
-            if probe.shank_ids is not None:
-                self.set_probe(probe, in_place=True, group_mode="by_shank")
-            else:
-                self.set_probe(probe, in_place=True)
+            self.set_probegroup(probegroup, in_place=True, group_mode=group_mode)
 
             # load num_channels_per_adc depending on probe type
             ptype = probe.annotations["probe_type"]
@@ -82,11 +81,14 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             # when only some channels are saved we need to slice this vector (like we do for the probe)
             sample_shifts = get_neuropixels_sample_shifts(total_channels, num_channels_per_adc, num_cycles_in_adc)
             if self.get_num_channels() != total_channels:
-                # need slice because not all channel are saved
+                # need slicing because not all channels are saved
                 chans = pi.get_saved_channel_indices_from_spikeglx_meta(meta_filename)
-                # lets clip to 384 because this contains also the synchro channel
+                # let's clip to 384 because this contains also the sync channel
                 chans = chans[chans < total_channels]
                 sample_shifts = sample_shifts[chans]
+
+            if load_sync_channel:
+                sample_shifts = np.concatenate((sample_shifts, [0]))
 
             self.set_property("inter_sample_shift", sample_shifts)
 

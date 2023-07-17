@@ -147,7 +147,7 @@ class BaseRecordingSnippets(BaseExtractor):
         if number_of_device_channel_indices >= self.get_num_channels():
             error_msg = (
                 f"The given Probe have 'device_channel_indices' that do not match channel count \n"
-                f"{number_of_device_channel_indices} vs {self.get_num_channels()} \n"
+                f"{number_of_device_channel_indices + 1} vs {self.get_num_channels()} \n"
                 f"device_channel_indices are the following: {device_channel_indices} \n"
                 f"recording channels are the following: {self.get_channel_ids()} \n"
             )
