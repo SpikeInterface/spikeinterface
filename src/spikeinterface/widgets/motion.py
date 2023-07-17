@@ -17,7 +17,7 @@ class MotionWidget(BaseWidget):
     motion_info: dict
         The motion info return by correct_motion() or load back with load_motion_info()
     recording : RecordingExtractor, optional
-        The recording extractor object (used to get sampling frequency and times), default None)
+        The recording extractor object (only used to get "real" times), default None
     sampling_frequency : float, optional
         The sampling frequency (needed if recording is None), default None
     depth_lim : tuple
@@ -42,7 +42,6 @@ class MotionWidget(BaseWidget):
         self,
         motion_info,
         recording=None,
-        sampling_frequency=None,
         depth_lim=None,
         motion_lim=None,
         color_amplitude=False,
@@ -53,14 +52,10 @@ class MotionWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        assert recording or sampling_frequency, "recording or sampling_frequency must be provided"
-        if recording is not None:
-            sampling_frequency = recording.sampling_frequency
-
         times = recording.get_times() if recording is not None else None
 
         plot_data = dict(
-            sampling_frequency=sampling_frequency,
+            sampling_frequency=motion_info["parameters"]["sampling_frequency"],
             times=times,
             depth_lim=depth_lim,
             motion_lim=motion_lim,

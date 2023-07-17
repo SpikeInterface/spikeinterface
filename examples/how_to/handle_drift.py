@@ -166,7 +166,7 @@ for preset in some_presets:
     #color='black',
     ax.scatter(loc['x'][mask][sl], loc['y'][mask][sl], **color_kargs)
 
-    loc2 = correct_motion_on_peaks(motion_info['peaks'], motion_info['peak_locations'], rec.get_times(),
+    loc2 = correct_motion_on_peaks(motion_info['peaks'], motion_info['peak_locations'], rec.sampling_frequency,
                                    motion_info['motion'], motion_info['temporal_bins'], motion_info['spatial_bins'], direction="y")
 
     ax = axs[1]

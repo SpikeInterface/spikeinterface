@@ -19,7 +19,7 @@ from spikeinterface.preprocessing import get_spatial_interpolation_kernel
 def correct_motion_on_peaks(
     peaks,
     peak_locations,
-    times,
+    sampling_frequency,
     motion,
     temporal_bins,
     spatial_bins,
@@ -34,8 +34,8 @@ def correct_motion_on_peaks(
         peaks vector
     peak_locations: np.array
         peaks location vector
-    times: np.array
-        times vector of recording
+    sampling_frequency: np.array
+        sampling_frequency of the recording
     motion: np.array 2D
         motion.shape[0] equal temporal_bins.shape[0]
         motion.shape[1] equal 1 when "rigid" motion equal temporal_bins.shape[0] when "non-rigid"
@@ -49,6 +49,8 @@ def correct_motion_on_peaks(
     corrected_peak_locations: np.array
         Motion-corrected peak locations
     """
+    # make linear times
+    times = np.arange(np.max(peaks["sample_index"]) + 1) / sampling_frequency
     corrected_peak_locations = peak_locations.copy()
 
     if spatial_bins.shape[0] == 1:

@@ -37,18 +37,23 @@ class MotionPlotter(MplPlotter):
         else:
             motion_lim = dp.motion_lim
 
-        temporal_bins = dp.temporal_bins
         if dp.times is None:
-            times = np.arange(np.max(dp.peaks["sample_index"]) + 1) / dp.sampling_frequency
+            temporal_bins_plot = dp.temporal_bins
             x = dp.peaks["sample_index"] / dp.sampling_frequency
         else:
             # use real times and adjust temporal bins with t_start
-            times = dp.times
-            temporal_bins += times[0]
+            temporal_bins_plot = dp.temporal_bins + times[0]
             x = times[dp.peaks["sample_index"]]
 
         corrected_location = correct_motion_on_peaks(
-            dp.peaks, dp.peak_locations, times, dp.motion, temporal_bins, dp.spatial_bins, direction="y"
+            dp.peaks,
+            dp.peak_locations,
+            dp,
+            sampling_frequency,
+            dp.motion,
+            dp.temporal_bins,
+            dp.spatial_bins,
+            direction="y",
         )
 
         y = dp.peak_locations["y"]
@@ -93,8 +98,8 @@ class MotionPlotter(MplPlotter):
         ax1.set_ylabel("Depth [um]")
         ax1.set_title("Corrected peak depth")
 
-        ax2.plot(temporal_bins, dp.motion, alpha=0.2, color="black")
-        ax2.plot(temporal_bins, np.mean(dp.motion, axis=1), color="C0")
+        ax2.plot(temporal_bins_plot, dp.motion, alpha=0.2, color="black")
+        ax2.plot(temporal_bins_plot, np.mean(dp.motion, axis=1), color="C0")
         ax2.set_ylim(-motion_lim, motion_lim)
         ax2.set_ylabel("Motion [um]")
         ax2.set_title("Motion vectors")
@@ -106,8 +111,8 @@ class MotionPlotter(MplPlotter):
                 aspect="auto",
                 origin="lower",
                 extent=(
-                    temporal_bins[0],
-                    temporal_bins[-1],
+                    temporal_bins_plot[0],
+                    temporal_bins_plot[-1],
                     dp.spatial_bins[0],
                     dp.spatial_bins[-1],
                 ),
