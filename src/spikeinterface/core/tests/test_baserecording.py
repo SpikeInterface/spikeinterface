@@ -115,6 +115,12 @@ def test_BaseRecording():
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
     rec3 = load_extractor(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
 
+    # dump/load relative=True
+
+    rec.dump_to_json(cache_folder / "test_BaseRecording_rel_true.json", relative_to=True)
+    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
+    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
+
     # cache to binary
     folder = cache_folder / "simple_recording"
     rec.save(format="binary", folder=folder)

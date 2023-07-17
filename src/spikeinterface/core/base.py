@@ -547,8 +547,9 @@ class BaseExtractor:
         ----------
         file_path: str or Path
             The output file (either .json or .pkl/.pickle)
-        relative_to: str, Path, or None
-            If not None, file_paths are serialized relative to this path
+        relative_to: str, Path, True or None
+            If not None, file_path is serialized relative to this path. If True, file_path is serialized relative to the parent folder.
+            This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         """
         if str(file_path).endswith(".json"):
             self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
@@ -567,8 +568,8 @@ class BaseExtractor:
         file_path: str
             Path of the json file
         relative_to: str, Path, True or None
-            If not None, file_path is serialized relative to this path
-            If True, file_path is serialized relative to the folder of file_path
+            If not None, file_path is serialized relative to this path. If True, file_path is serialized relative to the parent folder.
+            This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         """
         assert self.check_if_dumpable()
 
@@ -604,8 +605,8 @@ class BaseExtractor:
         include_properties: bool
             If True, all properties are dumped
         relative_to: str, Path, True or None
-            If not None, file_path is serialized relative to this path
-            If True, file_path is serialized relative to the folder of file_path
+            If not None, file_path is serialized relative to this path. If True, file_path is serialized relative to the parent folder.
+            This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         recursive: bool
             If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
         """
