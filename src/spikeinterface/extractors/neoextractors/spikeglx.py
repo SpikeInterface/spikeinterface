@@ -1,6 +1,7 @@
 from packaging import version
 
 import numpy as np
+from pathlib import Path
 
 import neo
 import probeinterface as pi
