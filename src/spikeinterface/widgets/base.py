@@ -19,15 +19,63 @@ def set_default_plotter_backend(backend):
     default_backend_ = backend
 
 
+
+backend_kwargs_desc = {
+    "matplotlib": {
+        "figure": "Matplotlib figure. When None, it is created. Default None",
+        "ax": "Single matplotlib axis. When None, it is created. Default None",
+        "axes": "Multiple matplotlib axes. When None, they is created. Default None",
+        "ncols": "Number of columns to create in subplots.  Default 5",
+        "figsize": "Size of matplotlib figure. Default None",
+        "figtitle": "The figure title. Default None",
+    },
+    'sortingview': {
+        "generate_url": "If True, the figurl URL is generated and printed. Default True",
+        "display": "If True and in jupyter notebook/lab, the widget is displayed in the cell. Default True.",
+        "figlabel": "The figurl figure label. Default None",
+        "height": "The height of the sortingview View in jupyter. Default None",
+    },
+    "ipywidgets" : {
+    "width_cm": "Width of the figure in cm (default 10)",
+    "height_cm": "Height of the figure in cm (default 6)",
+    "display": "If True, widgets are immediately displayed",
+    },
+
+}
+
+default_backend_kwargs = {
+    "matplotlib": {"figure": None, "ax": None, "axes": None, "ncols": 5, "figsize": None, "figtitle": None},
+    "sortingview": {"generate_url": True, "display": True, "figlabel": None, "height": None},
+    "ipywidgets" : {"width_cm": 25, "height_cm": 10, "display": True},
+}
+
+
+
 class BaseWidget:
     # this need to be reset in the subclass
     possible_backends = None
 
-    def __init__(self, plot_data=None, backend=None, **backend_kwargs):
+    def __init__(self, data_plot=None, backend=None, **backend_kwargs):
         # every widgets must prepare a dict "plot_data" in the init
-        self.plot_data = plot_data
+        self.data_plot = data_plot
         self.backend = backend
-        self.backend_kwargs = backend_kwargs
+
+
+        for k in backend_kwargs:
+            if k not in default_backend_kwargs[backend]:
+                raise Exception(
+                    f"{k} is not a valid plot argument or backend keyword argument. "
+                    f"Possible backend keyword arguments for {backend} are: {list(plotter_kwargs.keys())}"
+                )
+        backend_kwargs_ = default_backend_kwargs[backend].copy()
+        backend_kwargs_.update(backend_kwargs)
+        
+        self.backend_kwargs = backend_kwargs_
+
+
+        func = getattr(self, f'plot_{backend}')
+        func(self)
+        
 
     def check_backend(self, backend):
         if backend is None:
@@ -36,15 +84,16 @@ class BaseWidget:
             f"{backend} backend not available! Available backends are: " f"{list(self.possible_backends.keys())}"
         )
         return backend
+    
 
-    def check_backend_kwargs(self, plotter, backend, **backend_kwargs):
-        plotter_kwargs = plotter.default_backend_kwargs
-        for k in backend_kwargs:
-            if k not in plotter_kwargs:
-                raise Exception(
-                    f"{k} is not a valid plot argument or backend keyword argument. "
-                    f"Possible backend keyword arguments for {backend} are: {list(plotter_kwargs.keys())}"
-                )
+    # def check_backend_kwargs(self, plotter, backend, **backend_kwargs):
+    #     plotter_kwargs = plotter.default_backend_kwargs
+    #     for k in backend_kwargs:
+    #         if k not in plotter_kwargs:
+    #             raise Exception(
+    #                 f"{k} is not a valid plot argument or backend keyword argument. "
+    #                 f"Possible backend keyword arguments for {backend} are: {list(plotter_kwargs.keys())}"
+    #             )
 
     def do_plot(self, backend, **backend_kwargs):
         backend = self.check_backend(backend)
@@ -74,17 +123,17 @@ class BaseWidget:
             raise Exception(error_msg)
 
 
-class BackendPlotter:
-    backend = ""
+# class BackendPlotter:
+#     backend = ""
 
-    @classmethod
-    def register(cls, widget_cls):
-        widget_cls.register_backend(cls)
+#     @classmethod
+#     def register(cls, widget_cls):
+#         widget_cls.register_backend(cls)
 
-    def update_backend_kwargs(self, **backend_kwargs):
-        backend_kwargs_ = self.default_backend_kwargs.copy()
-        backend_kwargs_.update(backend_kwargs)
-        return backend_kwargs_
+#     def update_backend_kwargs(self, **backend_kwargs):
+#         backend_kwargs_ = self.default_backend_kwargs.copy()
+#         backend_kwargs_.update(backend_kwargs)
+#         return backend_kwargs_
 
 
 def copy_signature(source_fct):
