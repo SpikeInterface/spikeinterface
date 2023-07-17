@@ -19,7 +19,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "numpy<1.25",
+    "numpy",
     "neo>=0.11.1",
     "joblib",
     "threadpoolctl",
