@@ -124,7 +124,9 @@ def test_BaseRecording():
     check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True)
     with open(cache_folder / "test_BaseRecording_rel_true.json") as json_file:
         data = json.load(json_file)
-        assert '/' not in data["kwargs"]["file_paths"][0]  # Relative to parent folder, so there shouldn't be any '/' in the path.
+        assert (
+            "/" not in data["kwargs"]["file_paths"][0]
+        )  # Relative to parent folder, so there shouldn't be any '/' in the path.
 
     # cache to binary
     folder = cache_folder / "simple_recording"
