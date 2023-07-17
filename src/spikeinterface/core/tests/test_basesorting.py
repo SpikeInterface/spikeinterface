@@ -134,7 +134,7 @@ def test_npy_sorting():
     seg_nframes = [9, 5]
     rec = NumpyRecording([np.zeros((nframes, 10)) for nframes in seg_nframes], sampling_frequency=sfreq)
     # assert_raises(Exception, sorting.register_recording, rec)
-    with pytest.warns():
+    with pytest.warns(UserWarning):
         sorting.register_recording(rec)
 
     # Registering a rec with too many segments
