@@ -976,24 +976,16 @@ def _load_extractor_from_dict(dic) -> BaseExtractor:
 
     # Create new kwargs to avoid modifying the original dict["kwargs"]
     new_kwargs = dict()
-    transform_dict_to_extractor = (
-        lambda x: _load_extractor_from_dict(x, preloaded_extractor_dict) if is_dict_extractor(x) else x
-    )
+    transform_dict_to_extractor = lambda x: _load_extractor_from_dict(x) if is_dict_extractor(x) else x
     for name, value in dic["kwargs"].items():
         if is_dict_extractor(value):
-            hash_value = hash(value)
-            if hash_value in preloaded_extractor_dict:
-                new_kwargs[name] = preloaded_extractor_dict[hash_value]
-            else:
-                new_kwargs[name] = _load_extractor_from_dict(value)
+            new_kwargs[name] = _load_extractor_from_dict(value)
         elif isinstance(value, dict):
             new_kwargs[name] = {k: transform_dict_to_extractor(v) for k, v in value.items()}
         elif isinstance(value, list):
             new_kwargs[name] = [transform_dict_to_extractor(e) for e in value]
         else:
             new_kwargs[name] = value
-            hash_value = hash(value)
-            preloaded_extractor_dict[hash_value] = value
 
     class_name = dic["class"]
     extractor_class = _get_class_from_string(class_name)

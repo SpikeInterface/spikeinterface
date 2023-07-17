@@ -107,7 +107,7 @@ def test_BaseRecording():
     check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True, check_properties=True)
 
     # dump/load dict - relative
-    d = rec.to_dict(relative_to=cache_folder)
+    d = rec.to_dict(relative_to=cache_folder, recursive=True)
     rec2 = BaseExtractor.from_dict(d, base_folder=cache_folder)
     rec3 = load_extractor(d, base_folder=cache_folder)
 
