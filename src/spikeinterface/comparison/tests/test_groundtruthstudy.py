@@ -7,6 +7,13 @@ from spikeinterface.extractors import toy_example
 from spikeinterface.sorters import installed_sorters
 from spikeinterface.comparison import GroundTruthStudy
 
+try:
+    import tridesclous
+
+    HAVE_TDC = True
+except ImportError:
+    HAVE_TDC = False
+
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "comparison"
@@ -34,9 +41,7 @@ def _setup_comparison_study():
     study = GroundTruthStudy.create(study_folder, gt_dict)
 
 
-@pytest.mark.skipif(
-    importlib.util.find_spec("tridesclous") is None, reason="Test requires Python package 'tridesclous'"
-)
+@pytest.mark.skipif(not HAVE_TDC, reason="Test requires Python package 'tridesclous'")
 def test_run_study_sorters():
     study = GroundTruthStudy(study_folder)
     sorter_list = [
@@ -49,9 +54,7 @@ def test_run_study_sorters():
     study.run_sorters(sorter_list)
 
 
-@pytest.mark.skipif(
-    importlib.util.find_spec("tridesclous") is None, reason="Test requires Python package 'tridesclous'"
-)
+@pytest.mark.skipif(not HAVE_TDC, reason="Test requires Python package 'tridesclous'")
 def test_extract_sortings():
     study = GroundTruthStudy(study_folder)
 
