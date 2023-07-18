@@ -120,7 +120,7 @@ test = [
     # tridesclous
     "numpy<1.24",
     "numba",
-    "hdbscan<=0.8.30",
+    "hdbscan<=0.8.29",
 
     # for sortingview backend
     "sortingview",
