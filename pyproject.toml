@@ -20,11 +20,11 @@ classifiers = [
 
 dependencies = [
     "numpy",
-    "neo>=0.11.1",
+    "neo>=0.12.0",
     "joblib",
     "threadpoolctl",
     "tqdm",
-    "probeinterface>=0.2.16",
+    "probeinterface>=0.2.17",
 ]
 
 [build-system]
