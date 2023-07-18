@@ -3,6 +3,7 @@ from ..motion import MotionWidget
 from .base_mpl import MplPlotter
 
 import numpy as np
+from matplotlib.colors import Normalize
 
 
 class MotionPlotter(MplPlotter):
@@ -36,11 +37,24 @@ class MotionPlotter(MplPlotter):
         else:
             motion_lim = dp.motion_lim
 
+        if dp.times is None:
+            temporal_bins_plot = dp.temporal_bins
+            x = dp.peaks["sample_index"] / dp.sampling_frequency
+        else:
+            # use real times and adjust temporal bins with t_start
+            temporal_bins_plot = dp.temporal_bins + dp.times[0]
+            x = dp.times[dp.peaks["sample_index"]]
+
         corrected_location = correct_motion_on_peaks(
-            dp.peaks, dp.peak_locations, dp.rec.get_times(), dp.motion, dp.temporal_bins, dp.spatial_bins, direction="y"
+            dp.peaks,
+            dp.peak_locations,
+            dp.sampling_frequency,
+            dp.motion,
+            dp.temporal_bins,
+            dp.spatial_bins,
+            direction="y",
         )
 
-        x = dp.peaks["sample_index"] / dp.rec.get_sampling_frequency()
         y = dp.peak_locations["y"]
         y2 = corrected_location["y"]
         if dp.scatter_decimate is not None:
@@ -49,21 +63,29 @@ class MotionPlotter(MplPlotter):
             y2 = y2[:: dp.scatter_decimate]
 
         if dp.color_amplitude:
-            amps = np.abs(dp.peaks["amplitude"])
-            amps /= np.quantile(amps, 0.95)
+            amps = dp.peaks["amplitude"]
+            amps_abs = np.abs(amps)
+            q_95 = np.quantile(amps_abs, 0.95)
             if dp.scatter_decimate is not None:
                 amps = amps[:: dp.scatter_decimate]
-            c = plt.get_cmap(dp.amplitude_cmap)(amps)
+                amps_abs = amps_abs[:: dp.scatter_decimate]
+            cmap = plt.get_cmap(dp.amplitude_cmap)
+            if dp.amplitude_clim is None:
+                amps = amps_abs
+                amps /= q_95
+                c = cmap(amps)
+            else:
+                norm_function = Normalize(vmin=dp.amplitude_clim[0], vmax=dp.amplitude_clim[1], clip=True)
+                c = cmap(norm_function(amps))
             color_kwargs = dict(
                 color=None,
                 c=c,
-            )  # alpha=0.02
+                alpha=dp.amplitude_alpha,
+            )
         else:
-            color_kwargs = dict(color="k", c=None)  # alpha=0.02
+            color_kwargs = dict(color="k", c=None, alpha=dp.amplitude_alpha)
 
         ax0.scatter(x, y, s=1, **color_kwargs)
-        # for i in range(dp.motion.shape[1]):
-        #     ax0.plot(dp.temporal_bins, dp.motion[:, i] + dp.spatial_bins[i], color="C8", alpha=1.0)
         if dp.depth_lim is not None:
             ax0.set_ylim(*dp.depth_lim)
         ax0.set_title("Peak depth")
@@ -75,11 +97,12 @@ class MotionPlotter(MplPlotter):
         ax1.set_ylabel("Depth [um]")
         ax1.set_title("Corrected peak depth")
 
-        ax2.plot(dp.temporal_bins, dp.motion, alpha=0.2, color="black")
-        ax2.plot(dp.temporal_bins, np.mean(dp.motion, axis=1), color="C0")
+        ax2.plot(temporal_bins_plot, dp.motion, alpha=0.2, color="black")
+        ax2.plot(temporal_bins_plot, np.mean(dp.motion, axis=1), color="C0")
         ax2.set_ylim(-motion_lim, motion_lim)
-        ax2.set_ylabel("motion [um]")
+        ax2.set_ylabel("Motion [um]")
         ax2.set_title("Motion vectors")
+        axes = [ax0, ax1, ax2]
 
         if not is_rigid:
             im = ax3.imshow(
@@ -87,8 +110,8 @@ class MotionPlotter(MplPlotter):
                 aspect="auto",
                 origin="lower",
                 extent=(
-                    dp.temporal_bins[0],
-                    dp.temporal_bins[-1],
+                    temporal_bins_plot[0],
+                    temporal_bins_plot[-1],
                     dp.spatial_bins[0],
                     dp.spatial_bins[-1],
                 ),
@@ -99,6 +122,8 @@ class MotionPlotter(MplPlotter):
             ax3.set_xlabel("Times [s]")
             ax3.set_ylabel("Depth [um]")
             ax3.set_title("Motion vectors")
+            axes.append(ax3)
+        self.axes = np.array(axes)
 
 
 MotionPlotter.register(MotionWidget)

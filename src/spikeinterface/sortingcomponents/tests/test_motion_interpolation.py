@@ -44,12 +44,11 @@ def test_correct_motion_on_peaks():
 
     # fake locations
     peak_locations = np.zeros((peaks.size), dtype=[("x", "float32"), ("y", "float")])
-    times = rec.get_times()
 
     corrected_peak_locations = correct_motion_on_peaks(
         peaks,
         peak_locations,
-        times,
+        rec.sampling_frequency,
         motion,
         temporal_bins,
         spatial_bins,

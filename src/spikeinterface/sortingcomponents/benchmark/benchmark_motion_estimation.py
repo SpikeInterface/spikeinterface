@@ -337,12 +337,10 @@ class BenchmarkMotionEstimationMearec(BenchmarkBase):
         channel_positions = self.recording.get_channel_locations()
         probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
 
-        times = self.recording.get_times()
-
         peak_locations_corrected = correct_motion_on_peaks(
             self.selected_peaks,
             self.peak_locations,
-            times,
+            self.recording.sampling_frequency,
             self.motion,
             self.temporal_bins,
             self.spatial_bins,
