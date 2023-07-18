@@ -7,7 +7,7 @@
 Handle motion/drift with spikeinterface
 =======================================
 
-Spikeinterface offers a very flexible framework to handle drift as a
+SpikeInterface offers a very flexible framework to handle drift as a
 preprocessing step. If you want to know more, please read the
 :ref:`motion_correction` section of the documentation.
 
@@ -96,7 +96,7 @@ Correcting for drift is easy! You just need to run a single function. We
 will try this function with 3 presets.
 
 Internally a preset is a dictionary of dictionaries containing all
-parameters for every steps.
+parameters for each step.
 
 Here we also save the motion correction results into a folder to be able
 to load them later.
@@ -185,14 +185,14 @@ A few comments on the figures:
     start moving is recovered quite well.
   * The preset **kilosort_like** gives better results because it is a non-rigid case. The motion vector
     is computed for different depths. The corrected peak locations are
-    flatter than the rigid case. The motion vector map is still be a bit
-    noisy at some depths (e.g around 1000um).
+    flatter than the rigid case. The motion vector map is still a bit
+    noisy at some depths (e.g. around 1000um).
   * The preset **nonrigid_accurate** seems to give the best results on this recording.
     The motion vector seems less noisy globally, but it is not “perfect”
     (see at the top of the probe 3200um to 3800um). Also note that in the first part
     of the recording before the imposed motion (0-600s) we
     clearly have a non-rigid motion: the upper part of the probe
-    (2000-3000um) experience some drifts, but the lower part (0-1000um) is
+    (2000-3000um) experience some drift, but the lower part (0-1000um) is
     relatively stable. The method defined by this preset is able to capture this.
 
 .. code:: ipython3
@@ -204,8 +204,8 @@ A few comments on the figures:
 
         # and plot
         fig = plt.figure(figsize=(14, 8))
-        si.plot_motion(rec, motion_info, figure=fig, depth_lim=(400, 600),
-                       color_amplitude=True, amplitude_cmap='inferno',  scatter_decimate=10)
+        si.plot_motion(motion_info, figure=fig, depth_lim=(400, 600),
+                       color_amplitude=True, amplitude_cmap='inferno', scatter_decimate=10)
         fig.suptitle(f"{preset=}")
 
 
@@ -237,7 +237,7 @@ axis, especially for the preset “nonrigid_accurate”.
 
 Be aware that there are two ways to correct for the motion: 1.
 Interpolate traces and detect/localize peaks again
-(:py:func:`interpolate_recording()`) 2. Compensate for drifts directly on peak
+(:py:func:`interpolate_recording()`) 2. Compensate for drift directly on peak
 locations (:py:func:`correct_motion_on_peaks()`)
 
 Case 1 is used before running a spike sorter and the case 2 is used here
@@ -272,7 +272,7 @@ to display the results.
         #color='black',
         ax.scatter(loc['x'][mask][sl], loc['y'][mask][sl], **color_kargs)
 
-        loc2 = correct_motion_on_peaks(motion_info['peaks'], motion_info['peak_locations'], rec.get_times(),
+        loc2 = correct_motion_on_peaks(motion_info['peaks'], motion_info['peak_locations'], rec.sampling_frequency,
                                        motion_info['motion'], motion_info['temporal_bins'], motion_info['spatial_bins'], direction="y")
 
         ax = axs[1]

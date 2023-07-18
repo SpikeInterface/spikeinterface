@@ -197,7 +197,7 @@ class HybridSpikesRecording(InjectTemplatesRecording):
 
         self._kwargs = dict(
             wvf_extractor=str(wvf_extractor.folder.absolute()),
-            injected_sorting=self.injected_sorting.to_dict(),
+            injected_sorting=self.injected_sorting,
             unit_ids=unit_ids,
             max_injected_per_unit=max_injected_per_unit,
             injected_rate=injected_rate,
