@@ -14,43 +14,56 @@ class MotionWidget(BaseWidget):
 
     Parameters
     ----------
-    recording : RecordingExtractor
-        The recording extractor object
     motion_info: dict
         The motion info return by correct_motion() or load back with load_motion_info()
-    depth_lim: tuple
+    recording : RecordingExtractor, optional
+        The recording extractor object (only used to get "real" times), default None
+    sampling_frequency : float, optional
+        The sampling frequency (needed if recording is None), default None
+    depth_lim : tuple
         The min and max depth to display, default None (min and max of the recording)
-    motion_lim: tuple
+    motion_lim : tuple
         The min and max motion to display, default None (min and max of the motion)
-    color_amplitude: bool
+    color_amplitude : bool
         If True, the color of the scatter points is the amplitude of the peaks, default False
-    scatter_decimate: int
+    scatter_decimate : int
         If > 1, the scatter points are decimated, default None
-    amplitude_cmap: str
+    amplitude_cmap : str
         The colormap to use for the amplitude, default 'inferno'
+    amplitude_clim : tuple
+        The min and max amplitude to display, default None (min and max of the amplitudes)
+    amplitude_alpha : float
+        The alpha of the scatter points, default 0.5
     """
 
     possible_backends = {}
 
     def __init__(
         self,
-        recording,
         motion_info,
+        recording=None,
         depth_lim=None,
         motion_lim=None,
         color_amplitude=False,
         scatter_decimate=None,
         amplitude_cmap="inferno",
+        amplitude_clim=None,
+        amplitude_alpha=1,
         backend=None,
         **backend_kwargs,
     ):
+        times = recording.get_times() if recording is not None else None
+
         plot_data = dict(
-            rec=recording,
+            sampling_frequency=motion_info["parameters"]["sampling_frequency"],
+            times=times,
             depth_lim=depth_lim,
             motion_lim=motion_lim,
             color_amplitude=color_amplitude,
             scatter_decimate=scatter_decimate,
             amplitude_cmap=amplitude_cmap,
+            amplitude_clim=amplitude_clim,
+            amplitude_alpha=amplitude_alpha,
             **motion_info,
         )
 
