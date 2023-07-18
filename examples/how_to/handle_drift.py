@@ -1,3 +1,19 @@
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     formats: py,ipynb
+#     text_representation:
+#       extension: .py
+#       format_name: light
+#       format_version: '1.5'
+#       jupytext_version: 1.14.6
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
 # %matplotlib inline
 # %load_ext autoreload
 # %autoreload 2
@@ -119,8 +135,9 @@ for preset in some_presets:
 
     # and plot
     fig = plt.figure(figsize=(14, 8))
-    si.plot_motion(rec, motion_info, figure=fig, depth_lim=(400, 600),
+    si.plot_motion(motion_info, figure=fig, depth_lim=(400, 600),
                    color_amplitude=True, amplitude_cmap='inferno',  scatter_decimate=10)
+
     fig.suptitle(f"{preset=}")
 
 # ### Plot peak localization
@@ -166,7 +183,7 @@ for preset in some_presets:
     #color='black',
     ax.scatter(loc['x'][mask][sl], loc['y'][mask][sl], **color_kargs)
 
-    loc2 = correct_motion_on_peaks(motion_info['peaks'], motion_info['peak_locations'], rec.get_times(),
+    loc2 = correct_motion_on_peaks(motion_info['peaks'], motion_info['peak_locations'], rec.sampling_frequency,
                                    motion_info['motion'], motion_info['temporal_bins'], motion_info['spatial_bins'], direction="y")
 
     ax = axs[1]
