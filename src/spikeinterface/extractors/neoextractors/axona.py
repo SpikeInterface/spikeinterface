@@ -26,11 +26,11 @@ class AxonaRecordingExtractor(NeoBaseRecordingExtractor):
     def __init__(self, file_path, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
         NeoBaseRecordingExtractor.__init__(self, all_annotations=all_annotations, **neo_kwargs)
-        self._kwargs.update({"file_path": file_path})
+        self._kwargs.update({"file_path": str(Path(file_path).absolute())})
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(Path(file_path).absolute())}
+        neo_kwargs = {"filename": file_path}
         return neo_kwargs
 
 

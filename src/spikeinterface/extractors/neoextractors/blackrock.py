@@ -60,7 +60,7 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(Path(file_path).absolute())}
+        neo_kwargs = {"filename": file_path}
         return neo_kwargs
 
 
@@ -107,7 +107,7 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
         )
 
         self._kwargs = {
-            "file_path": file_path,
+            "file_path": str(Path(file_path).absolute()),
             "sampling_frequency": sampling_frequency,
             "stream_id": stream_id,
             "stream_name": stream_name,
@@ -115,7 +115,7 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": str(Path(file_path).absolute())}
+        neo_kwargs = {"filename": file_path}
         return neo_kwargs
 
 

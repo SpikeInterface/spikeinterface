@@ -646,10 +646,10 @@ class BaseExtractor:
         if file_path.is_file():
             # standard case based on a file (json or pickle)
             if str(file_path).endswith(".json"):
-                with open(str(Path(file_path)), "r") as f:
+                with open(file_path, "r") as f:
                     d = json.load(f)
             elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-                with open(str(Path(file_path)), "rb") as f:
+                with open(file_path, "rb") as f:
                     d = pickle.load(f)
             else:
                 raise ValueError(f"Impossible to load {file_path}")

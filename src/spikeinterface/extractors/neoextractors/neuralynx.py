@@ -37,7 +37,7 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": str(Path(folder_path).absolute())}
+        neo_kwargs = {"dirname": folder_path}
         return neo_kwargs
 
 
@@ -83,7 +83,7 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
         )
 
         self._kwargs = {
-            "folder_path": folder_path,
+            "folder_path": str(Path(folder_path).absolute()),
             "sampling_frequency": sampling_frequency,
             "stream_id": stream_id,
             "stream_name": stream_name,
@@ -91,7 +91,7 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": str(Path(folder_path).absolute())}
+        neo_kwargs = {"dirname": folder_path}
         return neo_kwargs
 
 

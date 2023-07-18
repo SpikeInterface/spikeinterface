@@ -41,7 +41,7 @@ class TdtRecordingExtractor(NeoBaseRecordingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": str(Path(folder_path).absolute())}
+        neo_kwargs = {"dirname": folder_path}
         return neo_kwargs
 
 

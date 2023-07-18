@@ -75,7 +75,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path, rec_name=None):
-        neo_kwargs = {"filename": str(Path(file_path).absolute()), "rec_name": rec_name}
+        neo_kwargs = {"filename": file_path, "rec_name": rec_name}
         return neo_kwargs
 
     def install_maxwell_plugin(self, force_download=False):
