@@ -1,0 +1,24 @@
+.. _release0.98.1:
+
+SpikeInterface 0.98.1 release notes
+-----------------------------------
+
+18th July 2023
+
+Minor release with some bug fixes.
+
+* Make all paths resolved and absolute (#1834)
+* Improve Documentation (#1809)
+* Fix hdbascan installation in read the docs (#1838)
+* Fixed numba.jit and binary num_chan warnings (#1836)
+* Fix neo release bug in Mearec  (#1835)
+* Do not load NP probe in OE if load_sync_channel=True (#1832)
+* Cleanup dumping/to_dict (#1831)
+* Expose AUCpslit param in KS2+ (#1829)
+* Add option relative_to=True (#1820)
+* plot_motion: make recording optional, add amplitude_clim and alpha (#1818)
+* Fix typo in class attribute for NeuralynxSortingExtractor (#1814)
+* Make to_phy write templates.npy with datatype np.float64 as required by phy (#1810)
+* Add docs requirements and build read-the-docs documentation faster (#1807)
+* Fix has_channel_locations function (#1806)
+* Add depth_order kwargs (#1803)
