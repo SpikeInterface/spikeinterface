@@ -65,7 +65,6 @@ def test_NumpySorting():
     # construct back from kwargs keep the same array
     sorting2 = load_extractor(sorting.to_dict())
     assert np.shares_memory(sorting2._cached_spike_vector, sorting._cached_spike_vector)
-    
 
 
 def test_SharedMemorySorting():
@@ -134,5 +133,5 @@ def test_NumpyEvent():
 if __name__ == "__main__":
     # test_NumpyRecording()
     test_NumpySorting()
-    # test_SharedMemorySorting()
+    # test_SharedMemorySorting()
     # test_NumpyEvent()
