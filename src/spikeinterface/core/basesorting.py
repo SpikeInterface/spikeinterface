@@ -223,8 +223,6 @@ class BaseSorting(BaseExtractor):
         Since v0.98.0 'numpy_folder' is used by defult.
         From v0.96.0 to 0.97.0 'npz_folder' was the default.
 
-
-        At the moment only 'npz' is supported.
         """
         if format == "numpy_folder":
             from .sortingfolder import NumpyFolderSorting
@@ -474,7 +472,7 @@ class BaseSorting(BaseExtractor):
                 sample_indices = []
                 unit_indices = []
                 for u, unit_id in enumerate(self.unit_ids):
-                    spike_times = st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                    spike_times = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
                     sample_indices.append(spike_times)
                     unit_indices.append(np.full(spike_times.size, u, dtype="int64"))
 
@@ -527,7 +525,7 @@ class BaseSorting(BaseExtractor):
     def to_shared_memory_sorting(self):
         """
         Turn any sorting in a SharedMemorySorting.
-        Usefull to have it in memory with a unique vector representation and sharable acros processes.
+        Usefull to have it in memory with a unique vector representation and sharable across processes.
         """
         from .numpyextractors import SharedMemorySorting
 
@@ -538,7 +536,7 @@ class BaseSorting(BaseExtractor):
         """
         When necessary turn sorting object into:
         * NumpySorting when n_jobs=1
-        * SharedMemorySorting whe, n_jobs>1
+        * SharedMemorySorting when n_jobs>1
 
         If the sorting is already NumpySorting, SharedMemorySorting or NumpyFolderSorting
         then this return the sortign itself, no transformation so.

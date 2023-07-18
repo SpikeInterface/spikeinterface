@@ -12,12 +12,11 @@ from .numpyextractors import NumpySortingSegment
 
 class NumpyFolderSorting(BaseSorting):
     """
-    NumpyFolderSorting is the new internal format used in spikeinterface (>=0.98.0) for caching
-    sorting obecjts.
+    NumpyFolderSorting is the new internal format used in spikeinterface (>=0.99.0) for caching sorting objects.
 
     It is a simple folder that contains:
-      * a file "spike.npy" (numpy formt) with all flatten spikes (using sorting.to_spike_vector())
-      * a "numpysorting_info.json" containing sampling_frequenc, unit_ids and num_segments
+      * a file "spike.npy" (numpy format) with all flatten spikes (using sorting.to_spike_vector())
+      * a "numpysorting_info.json" containing sampling_frequency, unit_ids and num_segments
       * a metadata folder for units properties.
 
     It is created with the function: `sorting.save(folder='/myfolder', format="numpy_folder")`
@@ -73,7 +72,7 @@ class NumpyFolderSorting(BaseSorting):
 
 class NpzFolderSorting(NpzSortingExtractor):
     """
-    NpzFolderSorting is the old internal format used in spikeinterface (<=0.97.0)
+    NpzFolderSorting is the old internal format used in spikeinterface (<=0.98.0)
 
     This a folder that contains:
 
@@ -131,7 +130,7 @@ class NpzFolderSorting(NpzSortingExtractor):
         cached.dump(save_path / "npz.json", relative_to=save_path)
 
 
-read_numpy_sorting_folder_folder = define_function_from_class(
-    source_class=NumpyFolderSorting, name="read_numpy_sorting_folder_folder"
+read_numpy_sorting_folder = define_function_from_class(
+    source_class=NumpyFolderSorting, name="read_numpy_sorting_folder"
 )
 read_npz_folder = define_function_from_class(source_class=NpzFolderSorting, name="read_npz_folder")

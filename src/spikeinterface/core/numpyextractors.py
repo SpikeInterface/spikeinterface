@@ -104,8 +104,11 @@ class NumpySorting(BaseSorting):
     The internal representation is always done with a long "spike vector".
 
 
-    But we have convinient function to instantiate from other sorting object, from time+labels,
-    from dict of list or from neo.
+    But we have convenient class methods to instantiate from:
+      * other sorting object: `NumpySorting.from_sorting()`
+      * from time+labels: `NumpySorting.from_times_labels()`
+      * from dict of list: `NumpySorting.from_unit_dict()`
+      * from neo: `NumpySorting.from_neo_spiketrain_list()`
 
     Parameters
     ----------
@@ -247,7 +250,7 @@ class NumpySorting(BaseSorting):
 
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
-        # Trick : pupulate the cache with dict that already exists
+        # Trick : populate the cache with dict that already exists
         sorting._cached_spike_trains = {seg_ind: d for seg_ind, d in enumerate(units_dict_list)}
 
         return sorting
