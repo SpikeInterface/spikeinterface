@@ -107,7 +107,7 @@ def test_BaseSnippets():
     snippets3 = load_extractor(cache_folder / "test_BaseSnippets.pkl")
 
     # dump/load dict - relative
-    d = snippets.to_dict(relative_to=cache_folder)
+    d = snippets.to_dict(relative_to=cache_folder, recursive=True)
     snippets2 = BaseExtractor.from_dict(d, base_folder=cache_folder)
     snippets3 = load_extractor(d, base_folder=cache_folder)
 

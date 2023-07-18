@@ -56,7 +56,7 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
             use_names_as_ids=use_names_as_ids,
             **neo_kwargs,
         )
-        self._kwargs.update({"file_path": str(file_path)})
+        self._kwargs.update({"file_path": str(Path(file_path).absolute())})
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
@@ -107,7 +107,7 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
         )
 
         self._kwargs = {
-            "file_path": file_path,
+            "file_path": str(Path(file_path).absolute()),
             "sampling_frequency": sampling_frequency,
             "stream_id": stream_id,
             "stream_name": stream_name,

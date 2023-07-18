@@ -47,7 +47,7 @@ class NpzFolderSorting(NpzSortingExtractor):
         folder_metadata = folder_path
         self.load_metadata_from_folder(folder_metadata)
 
-        self._kwargs = dict(folder_path=str(folder_path.absolute()))
+        self._kwargs = dict(folder_path=str(Path(folder_path).absolute()))
         self._npz_kwargs = d["kwargs"]
 
 

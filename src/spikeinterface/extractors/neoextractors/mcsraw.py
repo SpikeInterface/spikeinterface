@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
@@ -40,7 +42,7 @@ class MCSRawRecordingExtractor(NeoBaseRecordingExtractor):
             all_annotations=all_annotations,
             **neo_kwargs,
         )
-        self._kwargs.update(dict(file_path=str(file_path)))
+        self._kwargs.update(dict(file_path=str(Path(file_path).absolute())))
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
