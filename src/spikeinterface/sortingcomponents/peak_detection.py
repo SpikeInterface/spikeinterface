@@ -640,7 +640,7 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
 
 if HAVE_NUMBA:
 
-    @numba.jit(parallel=False)
+    @numba.jit(nopython=True, parallel=False)
     def _numba_detect_peak_pos(
         traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
     ):
@@ -665,7 +665,7 @@ if HAVE_NUMBA:
                         break
         return peak_mask
 
-    @numba.jit(parallel=False)
+    @numba.jit(nopython=True, parallel=False)
     def _numba_detect_peak_neg(
         traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
     ):
