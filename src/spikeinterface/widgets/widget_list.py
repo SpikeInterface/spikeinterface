@@ -1,29 +1,30 @@
-from .base import define_widget_function_from_class
+# from .base import define_widget_function_from_class
+from .base import backend_kwargs_desc
 
 # basics
-from .timeseries import TimeseriesWidget
+# from .timeseries import TimeseriesWidget
 
 # waveform
-from .unit_waveforms import UnitWaveformsWidget
-from .unit_templates import UnitTemplatesWidget
-from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
+# from .unit_waveforms import UnitWaveformsWidget
+# from .unit_templates import UnitTemplatesWidget
+# from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
 
 # isi/ccg/acg
-from .autocorrelograms import AutoCorrelogramsWidget
-from .crosscorrelograms import CrossCorrelogramsWidget
+# from .autocorrelograms import AutoCorrelogramsWidget
+# from .crosscorrelograms import CrossCorrelogramsWidget
 
 # peak activity
 
 # drift/motion
 
 # spikes-traces
-from .spikes_on_traces import SpikesOnTracesWidget
+# from .spikes_on_traces import SpikesOnTracesWidget
 
 # PC related
 
 # units on probe
 from .unit_locations import UnitLocationsWidget
-from .spike_locations import SpikeLocationsWidget
+# from .spike_locations import SpikeLocationsWidget
 
 # unit presence
 
@@ -33,26 +34,26 @@ from .spike_locations import SpikeLocationsWidget
 # correlogram comparison
 
 # amplitudes
-from .amplitudes import AmplitudesWidget
-from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
+# from .amplitudes import AmplitudesWidget
+# from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 
 # metrics
-from .quality_metrics import QualityMetricsWidget
-from .template_metrics import TemplateMetricsWidget
+# from .quality_metrics import QualityMetricsWidget
+# from .template_metrics import TemplateMetricsWidget
 
 
 # motion/drift
-from .motion import MotionWidget
+# from .motion import MotionWidget
 
 # similarity
-from .template_similarity import TemplateSimilarityWidget
+# from .template_similarity import TemplateSimilarityWidget
 
 
-from .unit_depths import UnitDepthsWidget
+# from .unit_depths import UnitDepthsWidget
 
 # summary
-from .unit_summary import UnitSummaryWidget
-from .sorting_summary import SortingSummaryWidget
+# from .unit_summary import UnitSummaryWidget
+# from .sorting_summary import SortingSummaryWidget
 
 
 widget_list = [
@@ -89,13 +90,16 @@ for wcls in widget_list:
     **backend_kwargs: kwargs
     {backend_kwargs}
     """
-    backend_str = f"    {list(wcls.possible_backends.keys())}"
+    # backend_str = f"    {list(wcls.possible_backends.keys())}"
+    backend_str = f"    {wcls.get_possible_backends()}"
     backend_kwargs_str = ""
-    for backend, backend_plotter in wcls.possible_backends.items():
-        backend_kwargs_desc = backend_plotter.backend_kwargs_desc
-        if len(backend_kwargs_desc) > 0:
+    # for backend, backend_plotter in wcls.possible_backends.items():
+    for backend in wcls.get_possible_backends():
+        # backend_kwargs_desc = backend_plotter.backend_kwargs_desc
+        kwargs_desc = backend_kwargs_desc[backend]
+        if len(kwargs_desc) > 0:
             backend_kwargs_str += f"\n        {backend}:\n\n"
-            for bk, bk_dsc in backend_kwargs_desc.items():
+            for bk, bk_dsc in kwargs_desc.items():
                 backend_kwargs_str += f"        * {bk}: {bk_dsc}\n"
     wcls.__doc__ = wcls_doc.format(backends=backend_str, backend_kwargs=backend_kwargs_str)
 

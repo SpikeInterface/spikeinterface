@@ -55,12 +55,12 @@ class BaseWidget:
     # this need to be reset in the subclass
     possible_backends = None
 
-    def __init__(self, data_plot=None, backend=None, **backend_kwargs, do_plot=True):
+    def __init__(self, data_plot=None, backend=None, immediate_plot=True, **backend_kwargs, ):
         # every widgets must prepare a dict "plot_data" in the init
         self.data_plot = data_plot
-        self.backend = backend
+        self.backend = self.check_backend(backend)
 
-
+        # check backend kwargs
         for k in backend_kwargs:
             if k not in default_backend_kwargs[backend]:
                 raise Exception(
@@ -72,18 +72,18 @@ class BaseWidget:
         
         self.backend_kwargs = backend_kwargs_
 
-        if do_plot:
-            self.do_plot()
+        if immediate_plot:
+            self.do_plot(self.backend, **self.backend_kwargs)
 
-
-
-        
+    @classmethod
+    def get_possible_backends(cls):
+        return [ k for k in default_backend_kwargs if hasattr(cls, f"plot_{k}") ]
 
     def check_backend(self, backend):
         if backend is None:
             backend = get_default_plotter_backend()
-        assert backend in self.possible_backends, (
-            f"{backend} backend not available! Available backends are: " f"{list(self.possible_backends.keys())}"
+        assert backend in self.get_possible_backends(), (
+            f"{backend} backend not available! Available backends are: " f"{self.get_possible_backends()}"
         )
         return backend
     
@@ -99,18 +99,13 @@ class BaseWidget:
 
     def do_plot(self, backend, **backend_kwargs):
         # backend = self.check_backend(backend)
-        # plotter = self.possible_backends[backend]()
-        # self.check_backend_kwargs(plotter, backend, **backend_kwargs)
-        # plotter.do_plot(self.plot_data, **backend_kwargs)
-        # self.plotter = plotter
 
         func = getattr(self, f'plot_{backend}')
-        func(self, self.data_plot, self.backend_kwargs)
+        func(data_plot=self.data_plot, **self.backend_kwargs)
 
-
-    @classmethod
-    def register_backend(cls, backend_plotter):
-        cls.possible_backends[backend_plotter.backend] = backend_plotter
+    # @classmethod
+    # def register_backend(cls, backend_plotter):
+    #     cls.possible_backends[backend_plotter.backend] = backend_plotter
 
     @staticmethod
     def check_extensions(waveform_extractor, extensions):
@@ -142,12 +137,12 @@ class BaseWidget:
 #         return backend_kwargs_
 
 
-def copy_signature(source_fct):
-    def copy(target_fct):
-        target_fct.__signature__ = inspect.signature(source_fct)
-        return target_fct
+# def copy_signature(source_fct):
+#     def copy(target_fct):
+#         target_fct.__signature__ = inspect.signature(source_fct)
+#         return target_fct
 
-    return copy
+#     return copy
 
 
 class to_attr(object):
@@ -168,14 +163,14 @@ class to_attr(object):
         return d[k]
 
 
-def define_widget_function_from_class(widget_class, name):
-    @copy_signature(widget_class)
-    def widget_func(*args, **kwargs):
-        W = widget_class(*args, **kwargs)
-        W.do_plot(W.backend, **W.backend_kwargs)
-        return W.plotter
+# def define_widget_function_from_class(widget_class, name):
+#     @copy_signature(widget_class)
+#     def widget_func(*args, **kwargs):
+#         W = widget_class(*args, **kwargs)
+#         W.do_plot(W.backend, **W.backend_kwargs)
+#         return W.plotter
 
-    widget_func.__doc__ = widget_class.__doc__
-    widget_func.__name__ = name
+#     widget_func.__doc__ = widget_class.__doc__
+#     widget_func.__name__ = name
 
-    return widget_func
+#     return widget_func

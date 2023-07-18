@@ -1,35 +1,35 @@
 # check if backend are available
-try:
-    import matplotlib
+# try:
+#     import matplotlib
 
-    HAVE_MPL = True
-except:
-    HAVE_MPL = False
+#     HAVE_MPL = True
+# except:
+#     HAVE_MPL = False
 
-try:
-    import sortingview
+# try:
+#     import sortingview
 
-    HAVE_SV = True
-except:
-    HAVE_SV = False
+#     HAVE_SV = True
+# except:
+#     HAVE_SV = False
 
-try:
-    import ipywidgets
+# try:
+#     import ipywidgets
 
-    HAVE_IPYW = True
-except:
-    HAVE_IPYW = False
+#     HAVE_IPYW = True
+# except:
+#     HAVE_IPYW = False
 
 
-# theses import make the Widget.resgister() at import time
-if HAVE_MPL:
-    import spikeinterface.widgets.matplotlib
+# # theses import make the Widget.resgister() at import time
+# if HAVE_MPL:
+#     import spikeinterface.widgets.matplotlib
 
-if HAVE_SV:
-    import spikeinterface.widgets.sortingview
+# if HAVE_SV:
+#     import spikeinterface.widgets.sortingview
 
-if HAVE_IPYW:
-    import spikeinterface.widgets.ipywidgets
+# if HAVE_IPYW:
+#     import spikeinterface.widgets.ipywidgets
 
 # when importing widget list backend are already registered
 from .widget_list import *

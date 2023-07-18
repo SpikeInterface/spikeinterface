@@ -79,10 +79,11 @@ class UnitLocationsWidget(BaseWidget):
             plot_legend=plot_legend,
             hide_axis=hide_axis,
         )
-
+        
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
+        print(data_plot, backend_kwargs)
         import matplotlib.pyplot as plt
         from .matplotlib_utils import make_mpl_figure
         from probeinterface.plotting import plot_probe
