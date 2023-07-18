@@ -108,7 +108,7 @@ class HDSortSortingExtractor(MatlabHelper, BaseSorting):
         self.set_property("template", np.array(templates))
         self.set_property("template_frames_cut_before", np.array(templates_frames_cut_before))
 
-        self._kwargs = {"file_path": str(file_path), "keep_good_only": keep_good_only}
+        self._kwargs = {"file_path": str(Path(file_path).absolute()), "keep_good_only": keep_good_only}
 
         # TODO features
         # ~ for uc, unit in enumerate(units):

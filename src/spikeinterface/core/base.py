@@ -397,13 +397,13 @@ class BaseExtractor:
             dump_dict["properties"] = {k: self._properties.get(k, None) for k in self._main_properties}
 
         if relative_to is not None:
-            relative_to = Path(relative_to).absolute()
+            relative_to = Path(relative_to).resolve().absolute()
             assert relative_to.is_dir(), "'relative_to' must be an existing directory"
             dump_dict = _make_paths_relative(dump_dict, relative_to)
 
         if folder_metadata is not None:
             if relative_to is not None:
-                folder_metadata = Path(folder_metadata).absolute().relative_to(relative_to)
+                folder_metadata = Path(folder_metadata).resolve().absolute().relative_to(relative_to)
             dump_dict["folder_metadata"] = str(folder_metadata)
 
         return dump_dict
@@ -646,10 +646,10 @@ class BaseExtractor:
         if file_path.is_file():
             # standard case based on a file (json or pickle)
             if str(file_path).endswith(".json"):
-                with open(str(file_path), "r") as f:
+                with open(file_path, "r") as f:
                     d = json.load(f)
             elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-                with open(str(file_path), "rb") as f:
+                with open(file_path, "rb") as f:
                     d = pickle.load(f)
             else:
                 raise ValueError(f"Impossible to load {file_path}")
@@ -938,7 +938,7 @@ class BaseExtractor:
 
 
 def _make_paths_relative(d, relative) -> dict:
-    relative = str(Path(relative).absolute())
+    relative = str(Path(relative).resolve().absolute())
     func = lambda p: os.path.relpath(str(p), start=relative)
     return recursive_path_modifier(d, func, target="path", copy=True)
 
