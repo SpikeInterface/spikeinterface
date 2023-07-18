@@ -55,7 +55,7 @@ class BaseWidget:
     # this need to be reset in the subclass
     possible_backends = None
 
-    def __init__(self, data_plot=None, backend=None, **backend_kwargs):
+    def __init__(self, data_plot=None, backend=None, **backend_kwargs, do_plot=True):
         # every widgets must prepare a dict "plot_data" in the init
         self.data_plot = data_plot
         self.backend = backend
@@ -72,9 +72,11 @@ class BaseWidget:
         
         self.backend_kwargs = backend_kwargs_
 
+        if do_plot:
+            self.do_plot()
 
-        func = getattr(self, f'plot_{backend}')
-        func(self)
+
+
         
 
     def check_backend(self, backend):
@@ -96,11 +98,15 @@ class BaseWidget:
     #             )
 
     def do_plot(self, backend, **backend_kwargs):
-        backend = self.check_backend(backend)
-        plotter = self.possible_backends[backend]()
-        self.check_backend_kwargs(plotter, backend, **backend_kwargs)
-        plotter.do_plot(self.plot_data, **backend_kwargs)
-        self.plotter = plotter
+        # backend = self.check_backend(backend)
+        # plotter = self.possible_backends[backend]()
+        # self.check_backend_kwargs(plotter, backend, **backend_kwargs)
+        # plotter.do_plot(self.plot_data, **backend_kwargs)
+        # self.plotter = plotter
+
+        func = getattr(self, f'plot_{backend}')
+        func(self, self.data_plot, self.backend_kwargs)
+
 
     @classmethod
     def register_backend(cls, backend_plotter):

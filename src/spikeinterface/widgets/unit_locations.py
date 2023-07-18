@@ -82,7 +82,7 @@ class UnitLocationsWidget(BaseWidget):
 
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
 
-    def plot_matplotlib(self, **backend_kwargs):
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         from .matplotlib_utils import make_mpl_figure
         from probeinterface.plotting import plot_probe
@@ -93,12 +93,12 @@ class UnitLocationsWidget(BaseWidget):
         
 
 
-        dp = to_attr(self.data_plot)
+        dp = to_attr(data_plot)
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
 
         # self.make_mpl_figure(**backend_kwargs)
-        self.figure, self.axes, self.ax = make_mpl_figure(self.backend_kwargs)
+        self.figure, self.axes, self.ax = make_mpl_figure(backend_kwargs)
 
 
         unit_locations = dp.unit_locations
@@ -171,13 +171,12 @@ class UnitLocationsWidget(BaseWidget):
         if dp.hide_axis:
             self.ax.axis("off")
 
-    def plot_sortingview(self):
+    def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
         from .sortingview_utils import generate_unit_table_view, make_serializable, handle_display_and_url
 
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-        backend_kwargs = self.backend_kwargs
-        dp = to_attr(self.data_plot)
+        dp = to_attr(data_plot)
 
         # ensure serializable for sortingview
         unit_ids, channel_ids = make_serializable(dp.unit_ids, dp.channel_ids)
@@ -215,6 +214,8 @@ class UnitLocationsWidget(BaseWidget):
 
         from .ipywidgets_utils import check_ipywidget_backend, make_unit_controller
 
+        self.next_data_plot = data_plot.copy()
+
         cm = 1 / 2.54
 
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
@@ -228,7 +229,7 @@ class UnitLocationsWidget(BaseWidget):
         with plt.ioff():
             output = widgets.Output()
             with output:
-                fig, ax = plt.subplots(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
+                fig, self.ax = plt.subplots(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
         data_plot["unit_ids"] = data_plot["unit_ids"][:1]
@@ -266,40 +267,6 @@ class UnitLocationsWidget(BaseWidget):
         unit_ids = self.controller["unit_ids"].value
 
         # matplotlib next_data_plot dict update at each call
-        # data_plot = self.next_data_plot
-        self.data_plot["unit_ids"] = unit_ids
-        self.data_plot["plot_all_units"] = True
-        self.data_plot["plot_legend"] = True
-        self.data_plot["hide_axis"] = True
-
-        backend_kwargs = {}
-        backend_kwargs["ax"] = self.ax
-
-        # self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
-        self.plot_matplotlib(data_plot, **backend_kwargs)
-        fig = self.ax.get_figure()
-        fig.canvas.draw()
-        fig.canvas.flush_events()
-
-
-
-
-
-class PlotUpdater:
-    def __init__(self, data_plot, mpl_plotter, ax, controller):
-        self.data_plot = data_plot
-        self.mpl_plotter = mpl_plotter
-        self.ax = ax
-        self.controller = controller
-
-        self.next_data_plot = data_plot.copy()
-
-    def __call__(self, change):
-        self.ax.clear()
-
-        unit_ids = self.controller["unit_ids"].value
-
-        # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
         data_plot["unit_ids"] = unit_ids
         data_plot["plot_all_units"] = True
@@ -310,9 +277,10 @@ class PlotUpdater:
         backend_kwargs["ax"] = self.ax
 
         # self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
-        UnitLocationsWidget.plot_matplotlib(data_plot, **backend_kwargs)
+        self.plot_matplotlib(data_plot, **backend_kwargs)
         fig = self.ax.get_figure()
         fig.canvas.draw()
         fig.canvas.flush_events()
+
 
 
