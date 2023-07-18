@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
@@ -30,7 +32,7 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update(dict(file_path=str(file_path), stream_id=stream_id))
+        self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), stream_id=stream_id))
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):

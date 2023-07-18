@@ -38,7 +38,6 @@ class RecordingCommonTestSuite(CommonTestSuite):
 
             # test streams and blocks retrieval
             full_path = self.get_full_path(path)
-
             rec = self.ExtractorClass(full_path, **kwargs)
 
             assert hasattr(rec, "extra_requirements")
