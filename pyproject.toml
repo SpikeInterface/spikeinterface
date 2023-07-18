@@ -121,7 +121,7 @@ test = [
     "numpy<1.24",
     "numba",
     "Cython<3.0.0",
-    "hdbscan",
+    "hdbscan<=0.8.29",
 
     # for sortingview backend
     "sortingview",
