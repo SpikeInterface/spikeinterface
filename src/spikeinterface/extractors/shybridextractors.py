@@ -169,7 +169,7 @@ class SHYBRIDSortingExtractor(BaseSorting):
 
         if Path(file_path).is_file():
             spike_clusters = sbio.SpikeClusters()
-            spike_clusters.fromCSV(str(Path(file_path).absolute()), None, delimiter=delimiter)
+            spike_clusters.fromCSV(str(file_path), None, delimiter=delimiter)
         else:
             raise FileNotFoundError(f"The ground truth file {file_path} could not be found")
 
