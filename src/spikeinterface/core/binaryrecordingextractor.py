@@ -116,7 +116,7 @@ class BinaryRecordingExtractor(BaseRecording):
             self.set_channel_offsets(offset_to_uV)
 
         self._kwargs = {
-            "file_paths": [str(e.absolute()) for e in file_path_list],
+            "file_paths": [str(Path(e).absolute()) for e in file_path_list],
             "sampling_frequency": sampling_frequency,
             "t_starts": t_starts,
             "num_channels": num_channels,

@@ -258,7 +258,7 @@ def correct_motion(
     noise_levels = get_noise_levels(recording, return_scaled=False)
 
     if select_kwargs is None:
-        # maybe do this directly in the folderwhen not None
+        # maybe do this directly in the folder when not None
         gather_mode = "memory"
 
         # node detect
@@ -328,10 +328,12 @@ def correct_motion(
             estimate_motion_kwargs=estimate_motion_kwargs,
             interpolate_motion_kwargs=interpolate_motion_kwargs,
             job_kwargs=job_kwargs,
+            sampling_frequency=recording.sampling_frequency,
         )
         (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
         (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
-        recording.dump_to_json(folder / "recording.json")
+        if recording.check_if_json_serializable():
+            recording.dump_to_json(folder / "recording.json")
 
         np.save(folder / "peaks.npy", peaks)
         np.save(folder / "peak_locations.npy", peak_locations)
