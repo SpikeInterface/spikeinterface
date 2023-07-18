@@ -22,4 +22,3 @@ Minor release with some bug fixes.
 * Add docs requirements and build read-the-docs documentation faster (#1807)
 * Fix has_channel_locations function (#1806)
 * Add depth_order kwargs (#1803)
-
