@@ -64,7 +64,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
         file_path,
     ):
         neo_kwargs = {
-            "filename": file_path,
+            "filename": str(file_path),
             "load_spiketrains": False,
             "load_analogsignal": True,
         }
@@ -90,7 +90,7 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
         neo_kwargs = {
-            "filename": file_path,
+            "filename": str(file_path),
             "load_spiketrains": True,
             "load_analogsignal": False,
         }

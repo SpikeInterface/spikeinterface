@@ -29,7 +29,7 @@ class EDFRecordingExtractor(NeoBaseRecordingExtractor):
     name = "edf"
 
     def __init__(self, file_path, stream_id=None, stream_name=None, all_annotations=False):
-        neo_kwargs = {"filename": file_path}
+        neo_kwargs = {"filename": str(file_path)}
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
@@ -38,7 +38,7 @@ class EDFRecordingExtractor(NeoBaseRecordingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": file_path}
+        neo_kwargs = {"filename": str(file_path)}
         return neo_kwargs
 
 

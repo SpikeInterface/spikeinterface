@@ -37,7 +37,7 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": folder_path}
+        neo_kwargs = {"dirname": str(folder_path)}
         return neo_kwargs
 
 
@@ -91,7 +91,7 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": folder_path}
+        neo_kwargs = {"dirname": str(folder_path)}
         return neo_kwargs
 
 

@@ -95,7 +95,7 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, load_sync_channel=False):
-        neo_kwargs = {"dirname": folder_path, "load_sync_channel": load_sync_channel}
+        neo_kwargs = {"dirname": str(folder_path), "load_sync_channel": load_sync_channel}
         return neo_kwargs
 
 

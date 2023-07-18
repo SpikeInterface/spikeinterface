@@ -36,7 +36,7 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": file_path}
+        neo_kwargs = {"filename": str(file_path)}
         return neo_kwargs
 
 
@@ -67,7 +67,7 @@ class PlexonSortingExtractor(NeoBaseSortingExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {"filename": file_path}
+        neo_kwargs = {"filename": str(file_path)}
         return neo_kwargs
 
 

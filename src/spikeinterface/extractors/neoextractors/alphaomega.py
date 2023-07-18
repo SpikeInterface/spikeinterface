@@ -39,7 +39,7 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, lsx_files=None):
         neo_kwargs = {
-            "dirname": folder_path,
+            "dirname": str(folder_path),
             "lsx_files": lsx_files,
         }
         return neo_kwargs
@@ -60,7 +60,7 @@ class AlphaOmegaEventExtractor(NeoBaseEventExtractor):
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": folder_path}
+        neo_kwargs = {"dirname": str(folder_path)}
         return neo_kwargs
 
 
