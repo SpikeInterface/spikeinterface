@@ -204,7 +204,7 @@ A few comments on the figures:
 
         # and plot
         fig = plt.figure(figsize=(14, 8))
-        si.plot_motion(motion_info, recording=rec, figure=fig, depth_lim=(400, 600),
+        si.plot_motion(motion_info, figure=fig, depth_lim=(400, 600),
                        color_amplitude=True, amplitude_cmap='inferno', scatter_decimate=10)
         fig.suptitle(f"{preset=}")
 
