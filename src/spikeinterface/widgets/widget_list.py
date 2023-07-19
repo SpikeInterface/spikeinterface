@@ -38,8 +38,8 @@ from .amplitudes import AmplitudesWidget
 from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 
 # metrics
-# from .quality_metrics import QualityMetricsWidget
-# from .template_metrics import TemplateMetricsWidget
+from .quality_metrics import QualityMetricsWidget
+from .template_metrics import TemplateMetricsWidget
 
 
 # motion/drift
@@ -61,10 +61,10 @@ widget_list = [
     AllAmplitudesDistributionsWidget,
     AutoCorrelogramsWidget,
     # CrossCorrelogramsWidget,
-    # QualityMetricsWidget,
+    QualityMetricsWidget,
     SpikeLocationsWidget,
     # SpikesOnTracesWidget,
-    # TemplateMetricsWidget,
+    TemplateMetricsWidget,
     # MotionWidget,
     # TemplateSimilarityWidget,
     # TimeseriesWidget,
@@ -135,4 +135,6 @@ plot_unit_locations = UnitLocationsWidget
 plot_autocorrelograms = AutoCorrelogramsWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_spike_locations = SpikeLocationsWidget
+plot_template_metrics = TemplateMetricsWidget
+plot_quality_metrics = QualityMetricsWidget
 

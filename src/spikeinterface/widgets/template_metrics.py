@@ -22,7 +22,7 @@ class TemplateMetricsWidget(MetricsBaseWidget):
         For sortingview backend, if True the unit selector is not displayed, default False
     """
 
-    possible_backends = {}
+    # possible_backends = {}
 
     def __init__(
         self,
