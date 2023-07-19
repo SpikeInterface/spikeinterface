@@ -46,7 +46,7 @@ from .template_metrics import TemplateMetricsWidget
 from .motion import MotionWidget
 
 # similarity
-# from .template_similarity import TemplateSimilarityWidget
+from .template_similarity import TemplateSimilarityWidget
 
 
 # from .unit_depths import UnitDepthsWidget
@@ -66,7 +66,7 @@ widget_list = [
     # SpikesOnTracesWidget,
     TemplateMetricsWidget,
     MotionWidget,
-    # TemplateSimilarityWidget,
+    TemplateSimilarityWidget,
     # TimeseriesWidget,
     UnitLocationsWidget,
     # UnitTemplatesWidget,
@@ -138,4 +138,5 @@ plot_spike_locations = SpikeLocationsWidget
 plot_template_metrics = TemplateMetricsWidget
 plot_quality_metrics = QualityMetricsWidget
 plot_motion = MotionWidget
+plot_template_similarity = TemplateSimilarityWidget
 

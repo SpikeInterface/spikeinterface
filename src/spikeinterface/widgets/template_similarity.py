@@ -1,9 +1,8 @@
 import numpy as np
 from typing import Union
 
-from .base import BaseWidget
+from .base import BaseWidget, to_attr
 from ..core.waveform_extractor import WaveformExtractor
-from ..core.basesorting import BaseSorting
 
 
 class TemplateSimilarityWidget(BaseWidget):
@@ -27,7 +26,7 @@ class TemplateSimilarityWidget(BaseWidget):
         If True, color bar is displayed, default True.
     """
 
-    possible_backends = {}
+    # possible_backends = {}
 
     def __init__(
         self,
@@ -63,3 +62,54 @@ class TemplateSimilarityWidget(BaseWidget):
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
+    
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import matplotlib.pyplot as plt
+        from .matplotlib_utils import make_mpl_figure
+
+        dp = to_attr(data_plot)
+        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
+
+        # self.make_mpl_figure(**backend_kwargs)
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+
+        im = self.ax.matshow(dp.similarity, cmap=dp.cmap)
+
+        if dp.show_unit_ticks:
+            # Major ticks
+            self.ax.set_xticks(np.arange(0, len(dp.unit_ids)))
+            self.ax.set_yticks(np.arange(0, len(dp.unit_ids)))
+            self.ax.xaxis.tick_bottom()
+
+            # Labels for major ticks
+            self.ax.set_yticklabels(dp.unit_ids, fontsize=12)
+            self.ax.set_xticklabels(dp.unit_ids, fontsize=12)
+        if dp.show_colorbar:
+            self.figure.colorbar(im)
+
+    def plot_sortingview(self, data_plot, **backend_kwargs):
+        import sortingview.views as vv
+        from .sortingview_utils import generate_unit_table_view, make_serializable, handle_display_and_url
+
+
+        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
+        dp = to_attr(data_plot)
+
+        # ensure serializable for sortingview
+        # unit_ids = self.make_serializable(dp.unit_ids)
+        unit_ids = make_serializable(dp.unit_ids)
+
+        # similarity
+        ss_items = []
+        for i1, u1 in enumerate(unit_ids):
+            for i2, u2 in enumerate(unit_ids):
+                ss_items.append(
+                    vv.UnitSimilarityScore(unit_id1=u1, unit_id2=u2, similarity=dp.similarity[i1, i2].astype("float32"))
+                )
+
+        self.view = vv.UnitSimilarityMatrix(unit_ids=list(unit_ids), similarity_scores=ss_items)
+
+        # self.handle_display_and_url(view, **backend_kwargs)
+        # return view
+        self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
+
