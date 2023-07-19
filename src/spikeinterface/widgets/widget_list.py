@@ -24,7 +24,7 @@ from .crosscorrelograms import CrossCorrelogramsWidget
 
 # units on probe
 from .unit_locations import UnitLocationsWidget
-# from .spike_locations import SpikeLocationsWidget
+from .spike_locations import SpikeLocationsWidget
 
 # unit presence
 
@@ -62,7 +62,7 @@ widget_list = [
     AutoCorrelogramsWidget,
     # CrossCorrelogramsWidget,
     # QualityMetricsWidget,
-    # SpikeLocationsWidget,
+    SpikeLocationsWidget,
     # SpikesOnTracesWidget,
     # TemplateMetricsWidget,
     # MotionWidget,
@@ -134,4 +134,5 @@ plot_all_amplitudes_distributions = AllAmplitudesDistributionsWidget
 plot_unit_locations = UnitLocationsWidget
 plot_autocorrelograms = AutoCorrelogramsWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
+plot_spike_locations = SpikeLocationsWidget
 
