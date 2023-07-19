@@ -7,7 +7,7 @@ from .base import backend_kwargs_desc
 # waveform
 from .unit_waveforms import UnitWaveformsWidget
 from .unit_templates import UnitTemplatesWidget
-# from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
+from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
 
 # isi/ccg/acg
 from .autocorrelograms import AutoCorrelogramsWidget
@@ -71,7 +71,7 @@ widget_list = [
     UnitLocationsWidget,
     UnitTemplatesWidget,
     UnitWaveformsWidget,
-    # UnitWaveformDensityMapWidget,
+    UnitWaveformDensityMapWidget,
     # UnitDepthsWidget,
     # summary
     # UnitSummaryWidget,
@@ -141,4 +141,5 @@ plot_motion = MotionWidget
 plot_template_similarity = TemplateSimilarityWidget
 plot_unit_templates = UnitTemplatesWidget
 plot_unit_waveforms = UnitWaveformsWidget
+plot_unit_waveforms_density_map = UnitWaveformDensityMapWidget
 
