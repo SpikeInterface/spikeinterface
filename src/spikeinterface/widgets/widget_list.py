@@ -43,7 +43,7 @@ from .template_metrics import TemplateMetricsWidget
 
 
 # motion/drift
-# from .motion import MotionWidget
+from .motion import MotionWidget
 
 # similarity
 # from .template_similarity import TemplateSimilarityWidget
@@ -60,12 +60,12 @@ widget_list = [
     AmplitudesWidget,
     AllAmplitudesDistributionsWidget,
     AutoCorrelogramsWidget,
-    # CrossCorrelogramsWidget,
+    CrossCorrelogramsWidget,
     QualityMetricsWidget,
     SpikeLocationsWidget,
     # SpikesOnTracesWidget,
     TemplateMetricsWidget,
-    # MotionWidget,
+    MotionWidget,
     # TemplateSimilarityWidget,
     # TimeseriesWidget,
     UnitLocationsWidget,
@@ -137,4 +137,5 @@ plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_spike_locations = SpikeLocationsWidget
 plot_template_metrics = TemplateMetricsWidget
 plot_quality_metrics = QualityMetricsWidget
+plot_motion = MotionWidget
 
