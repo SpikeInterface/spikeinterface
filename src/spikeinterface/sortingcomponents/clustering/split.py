@@ -154,7 +154,7 @@ class HdbscanOnLocalPca:
         local_chans = np.unique(peaks["channel_index"][peak_indices])
         target_channels = np.flatnonzero(np.all(neighbours_mask[local_chans, :], axis=0))
 
-        aligned_features, dont_have_channels = aggregate_sparse_features(
+        aligned_wfs, dont_have_channels = aggregate_sparse_features(
             peaks, peak_indices, sparse_wfs, waveforms_sparse_mask, target_channels
         )
 
@@ -163,7 +163,14 @@ class HdbscanOnLocalPca:
         if kept.size < min_size_split:
             return False, None
 
-        flatten_features = aligned_features[kept].reshape(kept.size, -1)
+        # compress in time
+        # u, s, v = np.linalg.svd(np.transpose(aligned_wfs, (2, 0, 1)))
+        # u = np.transpose(u, (1, 2, 0))
+        # comp_wfs = u 
+        # print(aligned_wfs.shape, u.shape)
+
+
+        flatten_features = aligned_wfs[kept].reshape(kept.size, -1)
         pca_features = PCA(n_pca_features, whiten=True).fit_transform(flatten_features)
 
         clust = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples)
@@ -182,7 +189,7 @@ class HdbscanOnLocalPca:
             colors[-1] = "k"
             fix, axs = plt.subplots(nrows=2)
 
-            flatten_wfs = aligned_features.swapaxes(1, 2).reshape(aligned_features.shape[0], -1)
+            flatten_wfs = aligned_wfs.swapaxes(1, 2).reshape(aligned_wfs.shape[0], -1)
 
             for k in np.unique(possible_labels):
                 mask = possible_labels == k
