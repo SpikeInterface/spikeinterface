@@ -1,7 +1,7 @@
 import numpy as np
 from warnings import warn
 
-from .base import BaseWidget
+from .base import BaseWidget, to_attr
 from .utils import get_some_colors
 
 from ..core.waveform_extractor import WaveformExtractor
@@ -47,3 +47,42 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
+
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import matplotlib.pyplot as plt
+        from .matplotlib_utils import make_mpl_figure
+
+        from matplotlib.patches import Ellipse
+        from matplotlib.lines import Line2D
+
+
+        dp = to_attr(data_plot)
+        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
+        # self.make_mpl_figure(**backend_kwargs)
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+
+        ax = self.ax
+
+        unit_amps = []
+        for i, unit_id in enumerate(dp.unit_ids):
+            amps = []
+            for segment_index in range(dp.num_segments):
+                amps.append(dp.amplitudes[segment_index][unit_id])
+            amps = np.concatenate(amps)
+            unit_amps.append(amps)
+        parts = ax.violinplot(unit_amps, showmeans=False, showmedians=False, showextrema=False)
+
+        for i, pc in enumerate(parts["bodies"]):
+            color = dp.unit_colors[dp.unit_ids[i]]
+            pc.set_facecolor(color)
+            pc.set_edgecolor("black")
+            pc.set_alpha(1)
+
+        ax.set_xticks(np.arange(len(dp.unit_ids)) + 1)
+        ax.set_xticklabels([str(unit_id) for unit_id in dp.unit_ids])
+
+        ylims = ax.get_ylim()
+        if np.max(ylims) < 0:
+            ax.set_ylim(min(ylims), 0)
+        if np.min(ylims) > 0:
+            ax.set_ylim(0, max(ylims))

@@ -171,50 +171,16 @@ class UnitLocationsWidget(BaseWidget):
         if dp.hide_axis:
             self.ax.axis("off")
 
-    def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .sortingview_utils import generate_unit_table_view, make_serializable, handle_display_and_url
 
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-        dp = to_attr(data_plot)
-
-        # ensure serializable for sortingview
-        print(dp.unit_ids, dp.channel_ids)
-        print(make_serializable(dp.unit_ids, dp.channel_ids))
-        unit_ids, channel_ids = make_serializable(dp.unit_ids, dp.channel_ids)
-
-        locations = {str(ch): dp.channel_locations[i_ch].astype("float32") for i_ch, ch in enumerate(channel_ids)}
-
-        unit_items = []
-        for unit_id in unit_ids:
-            unit_items.append(
-                vv.UnitLocationsItem(
-                    unit_id=unit_id, x=float(dp.unit_locations[unit_id][0]), y=float(dp.unit_locations[unit_id][1])
-                )
-            )
-
-        v_unit_locations = vv.UnitLocations(units=unit_items, channel_locations=locations, disable_auto_rotate=True)
-
-        if not dp.hide_unit_selector:
-            v_units_table = generate_unit_table_view(dp.sorting)
-
-            self.view = vv.Box(
-                direction="horizontal",
-                items=[vv.LayoutItem(v_units_table, max_size=150), vv.LayoutItem(v_unit_locations)],
-            )
-        else:
-            self.view = v_unit_locations
-
-        # self.handle_display_and_url(view, **backend_kwargs)
-        self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
     
     
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
-
         from .ipywidgets_utils import check_ipywidget_backend, make_unit_controller
+
+        check_ipywidget_backend()
 
         self.next_data_plot = data_plot.copy()
 
@@ -248,7 +214,7 @@ class UnitLocationsWidget(BaseWidget):
         #     w.observe(self.updater)
 
         for w in self.controller.values():
-            w.observe(self.update_widget)
+            w.observe(self._update_ipywidget)
 
         self.widget = widgets.AppLayout(
             center=fig.canvas,
@@ -257,13 +223,12 @@ class UnitLocationsWidget(BaseWidget):
         )
 
         # a first update
-        self.update_widget(None)
+        self._update_ipywidget(None)
 
         if backend_kwargs["display"]:
-            # self.check_backend()
             display(self.widget)
     
-    def update_widget(self, change):
+    def _update_ipywidget(self, change):
         self.ax.clear()
 
         unit_ids = self.controller["unit_ids"].value
@@ -284,5 +249,38 @@ class UnitLocationsWidget(BaseWidget):
         fig.canvas.draw()
         fig.canvas.flush_events()
 
+    def plot_sortingview(self, data_plot, **backend_kwargs):
+        import sortingview.views as vv
+        from .sortingview_utils import generate_unit_table_view, make_serializable, handle_display_and_url
 
+        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
+        dp = to_attr(data_plot)
+
+        # ensure serializable for sortingview
+        unit_ids, channel_ids = make_serializable(dp.unit_ids, dp.channel_ids)
+
+        locations = {str(ch): dp.channel_locations[i_ch].astype("float32") for i_ch, ch in enumerate(channel_ids)}
+
+        unit_items = []
+        for unit_id in unit_ids:
+            unit_items.append(
+                vv.UnitLocationsItem(
+                    unit_id=unit_id, x=float(dp.unit_locations[unit_id][0]), y=float(dp.unit_locations[unit_id][1])
+                )
+            )
+
+        v_unit_locations = vv.UnitLocations(units=unit_items, channel_locations=locations, disable_auto_rotate=True)
+
+        if not dp.hide_unit_selector:
+            v_units_table = generate_unit_table_view(dp.sorting)
+
+            self.view = vv.Box(
+                direction="horizontal",
+                items=[vv.LayoutItem(v_units_table, max_size=150), vv.LayoutItem(v_unit_locations)],
+            )
+        else:
+            self.view = v_unit_locations
+
+        # self.handle_display_and_url(view, **backend_kwargs)
+        self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
 

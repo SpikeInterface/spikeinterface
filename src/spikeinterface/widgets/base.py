@@ -58,16 +58,17 @@ class BaseWidget:
     def __init__(self, data_plot=None, backend=None, immediate_plot=True, **backend_kwargs, ):
         # every widgets must prepare a dict "plot_data" in the init
         self.data_plot = data_plot
-        self.backend = self.check_backend(backend)
+        backend = self.check_backend(backend)
+        self.backend = backend
 
         # check backend kwargs
         for k in backend_kwargs:
             if k not in default_backend_kwargs[backend]:
                 raise Exception(
                     f"{k} is not a valid plot argument or backend keyword argument. "
-                    f"Possible backend keyword arguments for {backend} are: {list(plotter_kwargs.keys())}"
+                    f"Possible backend keyword arguments for {backend} are: {list(default_backend_kwargs[backend].keys())}"
                 )
-        backend_kwargs_ = default_backend_kwargs[backend].copy()
+        backend_kwargs_ = default_backend_kwargs[self.backend].copy()
         backend_kwargs_.update(backend_kwargs)
         
         self.backend_kwargs = backend_kwargs_

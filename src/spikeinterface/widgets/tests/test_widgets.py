@@ -344,9 +344,10 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_depths()
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_summary()
-    mytest.test_unit_locations()
+    # mytest.test_unit_locations()
     # mytest.test_quality_metrics()
     # mytest.test_template_metrics()
+    mytest.test_amplitudes()
 
     # plt.ion()
     plt.show()

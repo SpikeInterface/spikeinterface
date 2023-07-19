@@ -34,8 +34,8 @@ from .unit_locations import UnitLocationsWidget
 # correlogram comparison
 
 # amplitudes
-# from .amplitudes import AmplitudesWidget
-# from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
+from .amplitudes import AmplitudesWidget
+from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 
 # metrics
 # from .quality_metrics import QualityMetricsWidget
@@ -57,8 +57,8 @@ from .unit_locations import UnitLocationsWidget
 
 
 widget_list = [
-    # AmplitudesWidget,
-    # AllAmplitudesDistributionsWidget,
+    AmplitudesWidget,
+    AllAmplitudesDistributionsWidget,
     # AutoCorrelogramsWidget,
     # CrossCorrelogramsWidget,
     # QualityMetricsWidget,
@@ -129,4 +129,7 @@ for wcls in widget_list:
 # plot_sorting_summary = define_widget_function_from_class(SortingSummaryWidget, "plot_sorting_summary")
 
 
+plot_amplitudes = AmplitudesWidget
+plot_all_amplitudes_distributions = AllAmplitudesDistributionsWidget
 plot_unit_locations = UnitLocationsWidget
+
