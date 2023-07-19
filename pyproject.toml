@@ -99,7 +99,6 @@ widgets = [
     "ipympl",
     "ipywidgets",
     "sortingview>=0.11.15",
-    "figurl-jupyter"
 ]
 
 test_core = [
