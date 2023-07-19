@@ -118,7 +118,6 @@ test = [
     "huggingface_hub",
 
     # tridesclous
-    "numpy<1.24",
     "numba",
     "hdbscan>=0.8.33",  # Previous version had a broken wheel
 
@@ -130,7 +129,7 @@ test = [
     "datalad==0.16.2",
 
     ## install tridesclous for testing ##
-    "tridesclous>=1.6.6.1",
+    "tridesclous>=1.6.7",
 
     ## sliding_nn
     "pymde",
