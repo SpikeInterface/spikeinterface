@@ -10,8 +10,8 @@ from .base import backend_kwargs_desc
 # from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
 
 # isi/ccg/acg
-# from .autocorrelograms import AutoCorrelogramsWidget
-# from .crosscorrelograms import CrossCorrelogramsWidget
+from .autocorrelograms import AutoCorrelogramsWidget
+from .crosscorrelograms import CrossCorrelogramsWidget
 
 # peak activity
 
@@ -59,7 +59,7 @@ from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 widget_list = [
     AmplitudesWidget,
     AllAmplitudesDistributionsWidget,
-    # AutoCorrelogramsWidget,
+    AutoCorrelogramsWidget,
     # CrossCorrelogramsWidget,
     # QualityMetricsWidget,
     # SpikeLocationsWidget,
@@ -132,4 +132,6 @@ for wcls in widget_list:
 plot_amplitudes = AmplitudesWidget
 plot_all_amplitudes_distributions = AllAmplitudesDistributionsWidget
 plot_unit_locations = UnitLocationsWidget
+plot_autocorrelograms = AutoCorrelogramsWidget
+plot_crosscorrelograms = CrossCorrelogramsWidget
 
