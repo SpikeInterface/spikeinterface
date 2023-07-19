@@ -12,24 +12,36 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.9
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
-      - name: Install dependencies for testing
+          python-version: '3.10'
+      - name: Install packages
         run: |
+          sudo apt install git
+          git config --global user.email "CI@example.com"
+          git config --global user.name "CI Almighty"
           python -m pip install -U pip  # Official recommended way
-          pip install pytest
-          pip install zarr
-          pip install setuptools wheel twine build
-          pip install -e .[test_core]
-      - name: Test core with pytest
+          pip install -e .[test,extractors,full]
+      - name: Install git-annex
         run: |
-          pytest -v src/spikeinterface/core
-      - name: Publish on PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+          wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
+          tar xvzf git-annex-standalone-amd64.tar.gz
+          echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
+      - name: Check if spikeinterface version is correct
         run: |
-          python -m build --sdist --wheel
-          twine upload dist/*
+          is_dev_version=$(python -c "import importlib.metadata; package_name = 'spikeinterface'; version = importlib.metadata.version(package_name); print(version.endswith('dev0'))")
+          if [ $is_dev_version = "True" ]; then
+            echo "Dev version detected,remember to fix the version before the release!"
+            exit 1
+          fi
+      - name: Test everything but external sorters before release
+        run: |
+          pytest -m "not sorters_external"
+      # - name: Publish on PyPI
+      #   env:
+      #     TWINE_USERNAME: __token__
+      #     TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      #   run: |
+      #     python -m build --sdist --wheel
+      #     twine upload dist/*

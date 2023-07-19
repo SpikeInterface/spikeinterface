@@ -23,19 +23,14 @@ runs:
         pip install tabulate  # This produces summaries at the end
         pip install -e .[test,extractors,full]
       shell: bash
-    - name: Force installation of latest dev from key-packages when running dev (not release)
+    - name: Force installation of latest dev from key-packages
       id: version
       run: |
         source ${{ github.workspace }}/test_env/bin/activate
-        if python ./.github/is_spikeinterface_dev.py; then
-          echo "Running spikeinterface dev version"
-          pip uninstall -y neo
-          pip uninstall -y probeinterface
-          pip install git+https://github.com/NeuralEnsemble/python-neo
-          pip install git+https://github.com/SpikeInterface/probeinterface
-        else
-          echo "Running tests for release"
-        fi
+        pip uninstall -y neo  # The -y flag is needed to avoid the user prompt
+        pip uninstall -y probeinterface
+        pip install git+https://github.com/NeuralEnsemble/python-neo
+        pip install git+https://github.com/SpikeInterface/probeinterface
       shell: bash
     - name: git-annex install
       run: |
