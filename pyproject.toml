@@ -129,7 +129,7 @@ test = [
     "datalad==0.16.2",
 
     ## install tridesclous for testing ##
-    "tridesclous>=1.6.7",
+    "tridesclous>=1.6.8",
 
     ## sliding_nn
     "pymde",
