@@ -579,7 +579,7 @@ def remove_duplicates_via_matching(
     f.write(blanck)
     f.close()
 
-    recording = BinaryRecordingExtractor(tmp_filename, num_chan=num_chans, sampling_frequency=fs, dtype="float32")
+    recording = BinaryRecordingExtractor(tmp_filename, num_channels=num_chans, sampling_frequency=fs, dtype="float32")
     recording.annotate(is_filtered=True)
 
     margin = 2 * max(waveform_extractor.nbefore, waveform_extractor.nafter)

@@ -35,7 +35,7 @@ def test_write_binary_recording(tmp_path):
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
-        file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
+        file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype
     )
     assert np.allclose(recorder_binary.get_traces(), recording.get_traces())
 
@@ -62,7 +62,7 @@ def test_write_binary_recording_offset(tmp_path):
     recorder_binary = BinaryRecordingExtractor(
         file_paths=file_paths,
         sampling_frequency=sampling_frequency,
-        num_chan=num_channels,
+        num_channels=num_channels,
         dtype=dtype,
         file_offset=byte_offset,
     )
@@ -91,7 +91,7 @@ def test_write_binary_recording_parallel(tmp_path):
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
-        file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
+        file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype
     )
     for segment_index in range(recording.get_num_segments()):
         binary_traces = recorder_binary.get_traces(segment_index=segment_index)
@@ -118,7 +118,7 @@ def test_write_binary_recording_multiple_segment(tmp_path):
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
-        file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
+        file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype
     )
 
     for segment_index in range(recording.get_num_segments()):
