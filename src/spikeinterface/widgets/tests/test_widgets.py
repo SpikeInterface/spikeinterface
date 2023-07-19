@@ -36,6 +36,7 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "widgets"
 
+print(cache_folder)
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))

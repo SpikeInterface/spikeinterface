@@ -16,10 +16,10 @@ sortingview_default_backend_kwargs = {"generate_url": True, "display": True, "fi
 
 
 def make_serializable(*args):
-    dict_to_serialize = {int(i): a for i, a in enumerate(args[1:])}
+    dict_to_serialize = {int(i): a for i, a in enumerate(args)}
     serializable_dict = check_json(dict_to_serialize)
     returns = ()
-    for i in range(len(args) - 1):
+    for i in range(len(args)):
         returns += (serializable_dict[str(i)],)
     if len(returns) == 1:
         returns = returns[0]
@@ -44,7 +44,8 @@ def handle_display_and_url(widget, view, **backend_kwargs):
     if backend_kwargs["generate_url"]:
         figlabel = backend_kwargs.get("figlabel")
         if figlabel is None:
-            figlabel = widget.default_label
+            # figlabel = widget.default_label
+            figlabel = ""
         url = view.url(label=figlabel)
         print(url)
     

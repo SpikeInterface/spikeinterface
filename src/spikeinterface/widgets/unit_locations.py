@@ -83,7 +83,6 @@ class UnitLocationsWidget(BaseWidget):
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        print(data_plot, backend_kwargs)
         import matplotlib.pyplot as plt
         from .matplotlib_utils import make_mpl_figure
         from probeinterface.plotting import plot_probe
@@ -99,7 +98,7 @@ class UnitLocationsWidget(BaseWidget):
 
 
         # self.make_mpl_figure(**backend_kwargs)
-        self.figure, self.axes, self.ax = make_mpl_figure(backend_kwargs)
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
 
         unit_locations = dp.unit_locations
@@ -180,6 +179,8 @@ class UnitLocationsWidget(BaseWidget):
         dp = to_attr(data_plot)
 
         # ensure serializable for sortingview
+        print(dp.unit_ids, dp.channel_ids)
+        print(make_serializable(dp.unit_ids, dp.channel_ids))
         unit_ids, channel_ids = make_serializable(dp.unit_ids, dp.channel_ids)
 
         locations = {str(ch): dp.channel_locations[i_ch].astype("float32") for i_ch, ch in enumerate(channel_ids)}
@@ -256,10 +257,10 @@ class UnitLocationsWidget(BaseWidget):
         )
 
         # a first update
-        self.updater(None)
+        self.update_widget(None)
 
         if backend_kwargs["display"]:
-            self.check_backend()
+            # self.check_backend()
             display(self.widget)
     
     def update_widget(self, change):

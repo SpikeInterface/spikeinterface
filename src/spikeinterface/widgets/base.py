@@ -73,6 +73,7 @@ class BaseWidget:
         self.backend_kwargs = backend_kwargs_
 
         if immediate_plot:
+            print('immediate_plot', self.backend, self.backend_kwargs)
             self.do_plot(self.backend, **self.backend_kwargs)
 
     @classmethod
@@ -101,7 +102,7 @@ class BaseWidget:
         # backend = self.check_backend(backend)
 
         func = getattr(self, f'plot_{backend}')
-        func(data_plot=self.data_plot, **self.backend_kwargs)
+        func(self.data_plot, **self.backend_kwargs)
 
     # @classmethod
     # def register_backend(cls, backend_plotter):
