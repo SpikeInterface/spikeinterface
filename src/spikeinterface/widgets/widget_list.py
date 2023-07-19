@@ -52,7 +52,7 @@ from .template_similarity import TemplateSimilarityWidget
 from .unit_depths import UnitDepthsWidget
 
 # summary
-# from .unit_summary import UnitSummaryWidget
+from .unit_summary import UnitSummaryWidget
 # from .sorting_summary import SortingSummaryWidget
 
 
@@ -74,7 +74,7 @@ widget_list = [
     UnitWaveformDensityMapWidget,
     UnitDepthsWidget,
     # summary
-    # UnitSummaryWidget,
+    UnitSummaryWidget,
     # SortingSummaryWidget,
 ]
 
@@ -143,4 +143,5 @@ plot_unit_templates = UnitTemplatesWidget
 plot_unit_waveforms = UnitWaveformsWidget
 plot_unit_waveforms_density_map = UnitWaveformDensityMapWidget
 plot_unit_depths = UnitDepthsWidget
+plot_unit_summary = UnitSummaryWidget
 
