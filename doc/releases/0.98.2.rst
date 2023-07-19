@@ -1,0 +1,13 @@
+.. _release0.98.2:
+
+SpikeInterface 0.98.2 release notes
+-----------------------------------
+
+19th July 2023
+
+Minor release with some bug fixes.
+
+* Remove warning (#1843)
+* Fix Mearec handling of new arguments before neo release 0.13 (#1848)
+* Fix full tests by updating hdbscan version (#1849)
+* Relax numpy upper bound and update tridesclous dependency (#1850)
