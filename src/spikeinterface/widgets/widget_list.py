@@ -53,7 +53,7 @@ from .unit_depths import UnitDepthsWidget
 
 # summary
 from .unit_summary import UnitSummaryWidget
-# from .sorting_summary import SortingSummaryWidget
+from .sorting_summary import SortingSummaryWidget
 
 
 widget_list = [
@@ -75,7 +75,7 @@ widget_list = [
     UnitDepthsWidget,
     # summary
     UnitSummaryWidget,
-    # SortingSummaryWidget,
+    SortingSummaryWidget,
 ]
 
 
@@ -144,4 +144,5 @@ plot_unit_waveforms = UnitWaveformsWidget
 plot_unit_waveforms_density_map = UnitWaveformDensityMapWidget
 plot_unit_depths = UnitDepthsWidget
 plot_unit_summary = UnitSummaryWidget
+plot_sorting_summary = SortingSummaryWidget
 
