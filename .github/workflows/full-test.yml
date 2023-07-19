@@ -66,6 +66,10 @@ jobs:
         id: modules-changed
         run: |
           for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            if [[ $file == *"pyproject.toml" ]]; then
+              echo "pyproject.toml changed"
+              echo "CORE_CHANGED=true" >> $GITHUB_OUTPUT
+            fi
             if [[ $file == *"/core/"* || $file == *"/extractors/neoextractors/neobaseextractor.py" ]]; then
               echo "Core changed"
               echo "CORE_CHANGED=true" >> $GITHUB_OUTPUT
