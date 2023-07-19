@@ -445,6 +445,8 @@ class BaseRecording(BaseRecordingSnippets):
 
             from .binaryrecordingextractor import BinaryRecordingExtractor
 
+            # This is created so it can be saved as json because the `BinaryFolderRecording` requires it loading
+            # See the __init__ of `BinaryFolderRecording`
             binary_rec = BinaryRecordingExtractor(
                 file_paths=file_paths,
                 sampling_frequency=self.get_sampling_frequency(),
