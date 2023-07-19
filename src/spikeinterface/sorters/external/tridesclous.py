@@ -45,7 +45,7 @@ class TridesclousSorter(BaseSorter):
     installation_mesg = """\nTo use Tridesclous run:\n
        >>> pip install tridesclous
 
-    More information on tridesclous can be found at:
+    More information on tridesclous at:
       * https://github.com/tridesclous/tridesclous
       * https://tridesclous.readthedocs.io
     """

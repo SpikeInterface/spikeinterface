@@ -75,7 +75,7 @@ def run_sorter_by_property(
     **sorter_params,
 ):
     """
-    Generic function to run a sorter on a recording after splitting by a 'grouping_property' (e.g. 'group').
+    Generic function to run a sorter on a recording after splitting by a 'grouping_property' (e.g. 'group') [TEST].
 
     Internally, the function works as follows:
         * the recording is split based on the provided 'grouping_property' (using the 'split_by' function)
