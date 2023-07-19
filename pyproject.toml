@@ -120,7 +120,7 @@ test = [
     # tridesclous
     "numpy<1.24",
     "numba",
-    "hdbscan",
+    "hdbscan">=0.8.33,
 
     # for sortingview backend
     "sortingview",
@@ -153,7 +153,7 @@ docs = [
     "MEArec",   # Use as an example
     "datalad==0.16.2",  # Download mearec data, not sure if needed as is installed with conda as well because of git-annex
     "pandas", # Don't know where this is needed
-    "hdbscan",   # For sorters, probably spikingcircus
+    "hdbscan">=0.8.33,   # For sorters, probably spikingcircus
     "numba", # For sorters, probably spikingcircus
     # for release we need pypi, so this needs to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
