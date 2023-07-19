@@ -4,7 +4,9 @@ on:
   push:
     tags:
        - '*'
-
+  pull_request:  # Temporary enabled to tests on branch
+    branches: [main]
+    types: [synchronize, opened, reopened]
 jobs:
   deploy:
 
