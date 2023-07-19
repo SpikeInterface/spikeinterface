@@ -4,9 +4,7 @@ on:
   push:
     tags:
        - '*'
-  pull_request:  # Temporary enabled to tests on branch
-    branches: [main]
-    types: [synchronize, opened, reopened]
+
 jobs:
   deploy:
 
@@ -30,20 +28,20 @@ jobs:
           wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
           tar xvzf git-annex-standalone-amd64.tar.gz
           echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
-      # - name: Check if spikeinterface version is correct
-      #   run: |
-      #     is_dev_version=$(python -c "import importlib.metadata; package_name = 'spikeinterface'; version = importlib.metadata.version(package_name); print(version.endswith('dev0'))")
-      #     if [ $is_dev_version = "True" ]; then
-      #       echo "Dev version detected,remember to fix the version before the release!"
-      #       exit 1
-      #     fi
+      - name: Check if spikeinterface version is correct
+        run: |
+          is_dev_version=$(python -c "import importlib.metadata; package_name = 'spikeinterface'; version = importlib.metadata.version(package_name); print(version.endswith('dev0'))")
+          if [ $is_dev_version = "True" ]; then
+            echo "Dev version detected,remember to fix the version before the release!"
+            exit 1
+          fi
       - name: Test everything but external sorters before release
         run: |
           pytest -m "not sorters_external"
-      # - name: Publish on PyPI
-      #   env:
-      #     TWINE_USERNAME: __token__
-      #     TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      #   run: |
-      #     python -m build --sdist --wheel
-      #     twine upload dist/*
+      - name: Publish on PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          python -m build --sdist --wheel
+          twine upload dist/*
