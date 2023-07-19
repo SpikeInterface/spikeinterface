@@ -5,8 +5,8 @@ from .base import backend_kwargs_desc
 # from .timeseries import TimeseriesWidget
 
 # waveform
-# from .unit_waveforms import UnitWaveformsWidget
-# from .unit_templates import UnitTemplatesWidget
+from .unit_waveforms import UnitWaveformsWidget
+from .unit_templates import UnitTemplatesWidget
 # from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
 
 # isi/ccg/acg
@@ -69,8 +69,8 @@ widget_list = [
     TemplateSimilarityWidget,
     # TimeseriesWidget,
     UnitLocationsWidget,
-    # UnitTemplatesWidget,
-    # UnitWaveformsWidget,
+    UnitTemplatesWidget,
+    UnitWaveformsWidget,
     # UnitWaveformDensityMapWidget,
     # UnitDepthsWidget,
     # summary
@@ -139,4 +139,6 @@ plot_template_metrics = TemplateMetricsWidget
 plot_quality_metrics = QualityMetricsWidget
 plot_motion = MotionWidget
 plot_template_similarity = TemplateSimilarityWidget
+plot_unit_templates = UnitTemplatesWidget
+plot_unit_waveforms = UnitWaveformsWidget
 
