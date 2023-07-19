@@ -40,7 +40,7 @@ class GaussianBandpassFilterRecording(BasePreprocessor):
         for parent_segment in recording._recording_segments:
             self.add_recording_segment(GaussianFilterRecordingSegment(parent_segment, freq_min, freq_max))
 
-        self._kwargs = {"recording": recording.to_dict(), "freq_min": freq_min, "freq_max": freq_max}
+        self._kwargs = {"recording": recording, "freq_min": freq_min, "freq_max": freq_max}
 
 
 class GaussianFilterRecordingSegment(BasePreprocessorSegment):

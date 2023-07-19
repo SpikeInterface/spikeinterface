@@ -273,7 +273,7 @@ def run_sorters(
             if need_dump:
                 if not recording.check_if_dumpable():
                     raise Exception("recording not dumpable call recording.save() before")
-                recording_arg = recording.to_dict()
+                recording_arg = recording.to_dict(recursive=True)
             else:
                 recording_arg = recording
 

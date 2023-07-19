@@ -26,7 +26,7 @@ class MatlabHelper:
         if not file_path.is_file():
             raise ValueError(f"Specified file path '{file_path}' is not a file.")
 
-        self._kwargs = {"file_path": str(file_path.absolute())}
+        self._kwargs = {"file_path": str(Path(file_path).absolute())}
 
         try:  # load old-style (up to 7.2) .mat file
             self._data = loadmat(file_path, matlab_compatible=True)
