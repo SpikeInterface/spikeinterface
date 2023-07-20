@@ -81,7 +81,7 @@ def test_curation():
         )
 
     # Test with empty sorting
-    empty_sorting = CurationSorting(NumpySorting.from_dict({}, parent_sort.sampling_frequency))
+    empty_sorting = CurationSorting(NumpySorting.from_unit_dict({}, parent_sort.sampling_frequency))
 
 
 if __name__ == "__main__":
