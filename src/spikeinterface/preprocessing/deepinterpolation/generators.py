@@ -1,5 +1,6 @@
 import tempfile
 import json
+from typing import Any
 import numpy as np
 
 from .tf_utils import has_tf, import_tf
@@ -60,6 +61,26 @@ def define_recording_generator_class():
             self._update_end_frame(self.total_samples)
             self._calculate_list_samples(self.total_samples)
             self.last_batch_size = np.mod(self.end_frame - self.start_frame, self.batch_size)
+
+            self._kwargs = dict(
+                recording=recording,
+                pre_frame=pre_frame,
+                post_frame=post_frame,
+                pre_post_omission=pre_post_omission,
+                desired_shape=desired_shape,
+                batch_size=batch_size,
+                steps_per_epoch=steps_per_epoch,
+                start_frame=start_frame,
+                end_frame=end_frame,
+            )
+
+        def __reduce__(self):
+            """
+            This function is used by pickle to serialize the object.
+            """
+            instance_constructor = self.__init__
+            intialization_args = (self._kwargs,)
+            return (instance_constructor, intialization_args)
 
         def __len__(self):
             "Denotes the total number of batches"
