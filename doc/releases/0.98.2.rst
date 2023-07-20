@@ -15,3 +15,4 @@ Minor release with some bug fixes.
 * Update Tridesclous 1.6.8 (#1857)
 * Eliminate restore keys in CI and simplify installation of dev version dependencies (#1858)
 * Allow order_channel_by_depth to accept dimentsions as list (#1861)
+* Fixes to Neuroscope extractor before neo release 0.13 (#1863)
