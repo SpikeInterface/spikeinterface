@@ -8,7 +8,8 @@ from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
 
 from .tf_utils import import_tf
-from .generators import define_recording_generator_class
+
+# from .generators import define_recording_generator_class
 
 from ...core import BaseRecording
 
@@ -180,11 +181,10 @@ def train_deepinterpolation_process(
 ):
     from deepinterpolation.trainor_collection import core_trainer
     from deepinterpolation.generic import ClassLoader
+    from .generators import SpikeInterfaceRecordingGenerator
 
     # initialize TF
     _ = import_tf(use_gpu, disable_tf_logger, memory_gpu=memory_gpu)
-
-    recording_generator = define_recording_generator_class()
 
     trained_model_folder = Path(model_folder)
     trained_model_folder.mkdir(exist_ok=True)
@@ -224,7 +224,7 @@ def train_deepinterpolation_process(
         training_params["model_path"] = str(existing_model_path)
 
     # Training (from core_trainor class)
-    training_data_generator = recording_generator(
+    training_data_generator = SpikeInterfaceRecordingGenerator(
         recording,
         pre_frame=pre_frame,
         post_frame=post_frame,
@@ -233,7 +233,7 @@ def train_deepinterpolation_process(
         end_frame=end_frame_training,
         desired_shape=desired_shape,
     )
-    test_data_generator = recording_generator(
+    test_data_generator = SpikeInterfaceRecordingGenerator(
         recording,
         pre_frame=pre_frame,
         post_frame=post_frame,

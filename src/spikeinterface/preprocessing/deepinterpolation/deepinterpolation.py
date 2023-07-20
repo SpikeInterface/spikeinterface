@@ -2,7 +2,6 @@ import numpy as np
 from typing import Optional
 
 from .tf_utils import has_tf, import_tf
-from .generators import define_segment_generator_class
 from ...core import BaseRecording
 from ...core.core_tools import define_function_from_class
 from ..basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -141,9 +140,9 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
         self.desired_shape = desired_shape
         self.predict_workers = predict_workers
 
-        self.SpikeInterfaceGenerator = define_segment_generator_class()
-
     def get_traces(self, start_frame, end_frame, channel_indices):
+        from .generators import SpikeInterfaceRecordingSegmentGenerator
+
         n_frames = self.parent_recording_segment.get_num_samples()
 
         if start_frame == None:
@@ -172,7 +171,7 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
 
         # instantiate an input generator that can be passed directly to model.predict
         batch_size = min(self.batch_size, true_end_frame - true_start_frame)
-        input_generator = self.SpikeInterfaceGenerator(
+        input_generator = SpikeInterfaceRecordingSegmentGenerator(
             recording_segment=self.parent_recording_segment,
             start_frame=true_start_frame,
             end_frame=true_end_frame,
