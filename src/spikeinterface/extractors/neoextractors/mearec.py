@@ -8,8 +8,8 @@ import probeinterface as pi
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
 
-def drop_neo_arguments_in_version_0_11_0(neo_kwargs):
-    # Temporary function until neo version 0.12.0 is released
+def drop_invalid_neo_arguments_before_version_0_13_0(neo_kwargs):
+    # Temporary function until neo version 0.13.0 is released
     from packaging.version import parse as parse_version
     from importlib.metadata import version
 
@@ -17,7 +17,7 @@ def drop_neo_arguments_in_version_0_11_0(neo_kwargs):
     minor_version = parse_version(neo_version).minor
 
     # The possibility of loading only spike_trains or only analog_signals is not present in neo <= 0.11.0
-    if minor_version < 12:
+    if minor_version < 13:
         neo_kwargs.pop("load_spiketrains")
         neo_kwargs.pop("load_analogsignal")
 
@@ -68,8 +68,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
             "load_spiketrains": False,
             "load_analogsignal": True,
         }
-        # The possibility of loading only spike_trains or only analog_signals will be added in neo version 0.12.0
-        neo_kwargs = drop_neo_arguments_in_version_0_11_0(neo_kwargs=neo_kwargs)
+        neo_kwargs = drop_invalid_neo_arguments_before_version_0_13_0(neo_kwargs=neo_kwargs)
         return neo_kwargs
 
 
@@ -94,8 +93,7 @@ class MEArecSortingExtractor(NeoBaseSortingExtractor):
             "load_spiketrains": True,
             "load_analogsignal": False,
         }
-        # The possibility of loading only spike_trains or only analog_signals will be added in neo version 0.12.0
-        neo_kwargs = drop_neo_arguments_in_version_0_11_0(neo_kwargs=neo_kwargs)
+        neo_kwargs = drop_invalid_neo_arguments_before_version_0_13_0(neo_kwargs=neo_kwargs)
 
         return neo_kwargs
 
