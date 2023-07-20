@@ -37,6 +37,7 @@ def train_deepinterpolation(
     learning_rate: float = 0.0001,
     loss: str = "mean_absolute_error",
     nb_workers: int = -1,
+    caching_validation: bool = False,
     run_uid: str = "si",
     network_name: str = "unet_single_ephys_1024",
     use_gpu: bool = True,
@@ -88,6 +89,8 @@ def train_deepinterpolation(
         Loss function to be used
     nb_workers : int
         Number of workers to be used for the training
+    caching_validation : bool
+        Whether to cache the validation data, default is False
     run_uid : str
         Unique identifier for the training
     network_name : str
@@ -131,6 +134,7 @@ def train_deepinterpolation(
         learning_rate,
         loss,
         nb_workers,
+        caching_validation,
         run_uid,
         network_name,
         use_gpu,
@@ -167,6 +171,7 @@ def train_deepinterpolation_process(
     learning_rate: float = 0.0001,
     loss: str = "mean_absolute_error",
     nb_workers: int = -1,
+    caching_validation: bool = False,
     run_uid: str = "training",
     network_name: str = "unet_single_ephys_1024",
     use_gpu: bool = True,
@@ -216,7 +221,7 @@ def train_deepinterpolation_process(
     training_params["caching_validation"] = False
     training_params["model_string"] = model_name
     if existing_model_path:
-        training_params["existing_model_path"] = str(existing_model_path)
+        training_params["model_path"] = str(existing_model_path)
 
     # Training (from core_trainor class)
     training_data_generator = recording_generator(
