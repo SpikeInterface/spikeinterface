@@ -10,14 +10,16 @@ def has_tf(use_gpu=True, disable_tf_logger=True, memory_gpu=None):
 
 
 def import_tf(use_gpu=True, disable_tf_logger=True, memory_gpu=None):
-    import tensorflow as tf
-
     if not use_gpu:
         os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
     if disable_tf_logger:
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-        tf.logging.set_verbosity(tf.logging.ERROR)
+
+    import tensorflow as tf
+
+    if disable_tf_logger:
+        tf.get_logger().setLevel("ERROR")
 
     tf.compat.v1.disable_eager_execution()
     gpus = tf.config.list_physical_devices("GPU")
