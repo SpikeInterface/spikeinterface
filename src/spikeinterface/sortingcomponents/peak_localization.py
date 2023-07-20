@@ -158,12 +158,8 @@ class LocalizeCenterOfMass(LocalizeBase):
         Feature to consider for computation. Default is 'ptp'
     """
 
-    def __init__(
-        self, recording, return_output=True, parents=["extract_waveforms"], radius_um=75.0, feature="ptp"
-    ):
-        LocalizeBase.__init__(
-            self, recording, return_output=return_output, parents=parents, radius_um=radius_um
-        )
+    def __init__(self, recording, return_output=True, parents=["extract_waveforms"], radius_um=75.0, feature="ptp"):
+        LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, radius_um=radius_um)
         self._dtype = np.dtype(dtype_localize_by_method["center_of_mass"])
 
         assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
@@ -240,9 +236,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         enforce_decrease=True,
         feature="ptp",
     ):
-        LocalizeBase.__init__(
-            self, recording, return_output=return_output, parents=parents, radius_um=radius_um
-        )
+        LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, radius_um=radius_um)
 
         assert feature in ["ptp", "energy", "peak_voltage"], f"{feature} is not a valid feature"
         self.max_distance_um = max_distance_um
