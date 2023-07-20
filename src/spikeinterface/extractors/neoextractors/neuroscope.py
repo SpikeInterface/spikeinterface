@@ -62,9 +62,9 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
         # binary_file is the binary file in .dat, .lfp, .eeg
 
         if xml_file_path is not None:
-            neo_kwargs = {"binary_file": str(file_path), "filename": str(xml_file_path)}
+            neo_kwargs = {"binary_file": Path(file_path), "filename": Path(xml_file_path)}
         else:
-            neo_kwargs = {"filename": str(file_path)}
+            neo_kwargs = {"filename": Path(file_path)}
 
         return neo_kwargs
 
