@@ -142,6 +142,7 @@ class BaseSorting(BaseExtractor):
                 times = self.get_times(segment_index=segment_index)
                 return times[spike_frames]
             else:
+                segment = self._sorting_segments[segment_index]
                 t_start = segment._t_start if segment._t_start is not None else 0
                 spike_times = spike_frames / self.get_sampling_frequency()
                 return t_start + spike_times
