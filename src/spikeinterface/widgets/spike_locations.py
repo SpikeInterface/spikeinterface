@@ -111,7 +111,7 @@ class SpikeLocationsWidget(BaseWidget):
         from matplotlib.lines import Line2D
 
         from probeinterface import ProbeGroup
-        from probeinterface.plotting import plot_probe        
+        from probeinterface.plotting import plot_probe
 
         dp = to_attr(data_plot)
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
@@ -169,7 +169,7 @@ class SpikeLocationsWidget(BaseWidget):
         ]
         if dp.plot_legend:
             # if self.legend is not None:
-            if hasattr(self, 'legend') and self.legend is not None:
+            if hasattr(self, "legend") and self.legend is not None:
                 self.legend.remove()
             self.legend = self.figure.legend(
                 handles, labels, loc="upper center", bbox_to_anchor=(0.5, 1.0), ncol=5, fancybox=True, shadow=True
@@ -245,13 +245,11 @@ class SpikeLocationsWidget(BaseWidget):
         # self.updater(None)
         self._update_ipywidget(None)
 
-
         if backend_kwargs["display"]:
             # self.check_backend()
             display(self.widget)
 
     def _update_ipywidget(self, change):
-
         self.ax.clear()
 
         unit_ids = self.controller["unit_ids"].value
@@ -272,7 +270,6 @@ class SpikeLocationsWidget(BaseWidget):
         fig.canvas.draw()
         fig.canvas.flush_events()
 
-
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
         from .sortingview_utils import generate_unit_table_view, make_serializable, handle_display_and_url
@@ -282,7 +279,7 @@ class SpikeLocationsWidget(BaseWidget):
         spike_locations = dp.spike_locations
 
         # ensure serializable for sortingview
-        # unit_ids, channel_ids = self.make_serializable(dp.unit_ids, dp.channel_ids)
+        # unit_ids, channel_ids = self.make_serializable(dp.unit_ids, dp.channel_ids)
         unit_ids, channel_ids = make_serializable(dp.unit_ids, dp.channel_ids)
 
         locations = {str(ch): dp.channel_locations[i_ch].astype("float32") for i_ch, ch in enumerate(channel_ids)}
@@ -329,8 +326,6 @@ class SpikeLocationsWidget(BaseWidget):
         # self.handle_display_and_url(view, **backend_kwargs)
         # return view
         self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
-
-
 
 
 def estimate_axis_lims(spike_locations, quantile=0.02):

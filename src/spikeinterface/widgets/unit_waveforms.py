@@ -250,7 +250,7 @@ class UnitWaveformsWidget(BaseWidget):
 
             if dp.same_axis and dp.plot_legend:
                 # if self.legend is not None:
-                if hasattr(self, 'legend') and self.legend is not None:
+                if hasattr(self, "legend") and self.legend is not None:
                     self.legend.remove()
                 self.legend = self.figure.legend(
                     loc="upper center", bbox_to_anchor=(0.5, 1.0), ncol=5, fancybox=True, shadow=True
@@ -326,7 +326,6 @@ class UnitWaveformsWidget(BaseWidget):
         for w in self.controller.values():
             w.observe(self._update_ipywidget)
 
-
         self.widget = widgets.AppLayout(
             center=self.fig_wf.canvas,
             left_sidebar=unit_widget,
@@ -342,7 +341,7 @@ class UnitWaveformsWidget(BaseWidget):
         if backend_kwargs["display"]:
             # self.check_backend()
             display(self.widget)
-    
+
     def _update_ipywidget(self, change):
         self.fig_wf.clear()
         self.ax_probe.clear()
@@ -373,10 +372,10 @@ class UnitWaveformsWidget(BaseWidget):
         # self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
         self.plot_matplotlib(data_plot, **backend_kwargs)
         if same_axis:
-            # self.mpl_plotter.ax.axis("equal")
+            # self.mpl_plotter.ax.axis("equal")
             self.ax.axis("equal")
             if hide_axis:
-                # self.mpl_plotter.ax.axis("off")
+                # self.mpl_plotter.ax.axis("off")
                 self.ax.axis("off")
         else:
             if hide_axis:

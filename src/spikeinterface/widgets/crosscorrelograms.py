@@ -124,9 +124,7 @@ class CrossCorrelogramsWidget(BaseWidget):
                     )
                 )
 
-        self.view = vv.CrossCorrelograms(
-            cross_correlograms=cc_items, hide_unit_selector=dp.hide_unit_selector
-        )
+        self.view = vv.CrossCorrelograms(cross_correlograms=cc_items, hide_unit_selector=dp.hide_unit_selector)
 
         # self.handle_display_and_url(v_cross_correlograms, **backend_kwargs)
         # return v_cross_correlograms

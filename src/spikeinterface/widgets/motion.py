@@ -76,10 +76,8 @@ class MotionWidget(BaseWidget):
 
         from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
 
-
         dp = to_attr(data_plot)
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-        
 
         assert backend_kwargs["axes"] is None
         assert backend_kwargs["ax"] is None

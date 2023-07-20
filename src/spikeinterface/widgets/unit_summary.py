@@ -109,12 +109,11 @@ class UnitSummaryWidget(BaseWidget):
         from .matplotlib_utils import make_mpl_figure
 
         dp = to_attr(data_plot)
-        
+
         unit_id = dp.unit_id
         we = dp.we
         unit_colors = dp.unit_colors
         sparsity = dp.sparsity
-
 
         # force the figure without axes
         if "figsize" not in backend_kwargs:
@@ -136,7 +135,6 @@ class UnitSummaryWidget(BaseWidget):
             ncols += 1
         # if dp.plot_data_amplitudes is not None :
         if we.is_extension("spike_amplitudes"):
-
             nrows += 1
         gs = fig.add_gridspec(nrows, ncols)
 
@@ -145,9 +143,9 @@ class UnitSummaryWidget(BaseWidget):
             ax1 = fig.add_subplot(gs[:2, 0])
             # UnitLocationsPlotter().do_plot(dp.plot_data_unit_locations, ax=ax1)
             w = UnitLocationsWidget(
-                    we, unit_ids=[unit_id], unit_colors=unit_colors, plot_legend=False,
-                    backend='matplotlib', ax=ax1)
-            
+                we, unit_ids=[unit_id], unit_colors=unit_colors, plot_legend=False, backend="matplotlib", ax=ax1
+            )
+
             unit_locations = we.load_extension("unit_locations").get_data(outputs="by_unit")
             unit_location = unit_locations[unit_id]
             # x, y = dp.unit_location[0], dp.unit_location[1]
@@ -161,22 +159,30 @@ class UnitSummaryWidget(BaseWidget):
         ax2 = fig.add_subplot(gs[:2, 1])
         # UnitWaveformPlotter().do_plot(dp.plot_data_waveforms, ax=ax2)
         w = UnitWaveformsWidget(
-                we,
-                unit_ids=[unit_id],
-                unit_colors=unit_colors,
-                plot_templates=True,
-                same_axis=True,
-                plot_legend=False,
-                sparsity=sparsity,
-                backend='matplotlib', ax=ax2)
-        
+            we,
+            unit_ids=[unit_id],
+            unit_colors=unit_colors,
+            plot_templates=True,
+            same_axis=True,
+            plot_legend=False,
+            sparsity=sparsity,
+            backend="matplotlib",
+            ax=ax2,
+        )
+
         ax2.set_title(None)
 
         ax3 = fig.add_subplot(gs[:2, 2])
         # UnitWaveformDensityMapPlotter().do_plot(dp.plot_data_waveform_density, ax=ax3)
         UnitWaveformDensityMapWidget(
-            we, unit_ids=[unit_id], unit_colors=unit_colors, use_max_channel=True, same_axis=False,
-            backend='matplotlib', ax=ax3)
+            we,
+            unit_ids=[unit_id],
+            unit_colors=unit_colors,
+            use_max_channel=True,
+            same_axis=False,
+            backend="matplotlib",
+            ax=ax3,
+        )
         ax3.set_ylabel(None)
 
         # if dp.plot_data_acc is not None:
@@ -187,9 +193,9 @@ class UnitSummaryWidget(BaseWidget):
                 we,
                 unit_ids=[unit_id],
                 unit_colors=unit_colors,
-                backend='matplotlib', ax=ax4,
+                backend="matplotlib",
+                ax=ax4,
             )
-
 
             ax4.set_title(None)
             ax4.set_yticks([])
@@ -201,7 +207,13 @@ class UnitSummaryWidget(BaseWidget):
             axes = np.array([ax5, ax6])
             # AmplitudesPlotter().do_plot(dp.plot_data_amplitudes, axes=axes)
             AmplitudesWidget(
-                we, unit_ids=[unit_id], unit_colors=unit_colors, plot_legend=False, plot_histograms=True,
-                backend='matplotlib', axes=axes)
+                we,
+                unit_ids=[unit_id],
+                unit_colors=unit_colors,
+                plot_legend=False,
+                plot_histograms=True,
+                backend="matplotlib",
+                axes=axes,
+            )
 
         fig.suptitle(f"unit_id: {dp.unit_id}")

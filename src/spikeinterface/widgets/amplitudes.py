@@ -121,9 +121,6 @@ class AmplitudesWidget(BaseWidget):
         from matplotlib.patches import Ellipse
         from matplotlib.lines import Line2D
 
-
-        
-
         dp = to_attr(data_plot)
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
@@ -168,7 +165,7 @@ class AmplitudesWidget(BaseWidget):
 
         if dp.plot_legend:
             # if self.legend is not None:
-            if hasattr(self, 'legend') and self.legend is not None:
+            if hasattr(self, "legend") and self.legend is not None:
                 self.legend.remove()
             self.legend = self.figure.legend(
                 loc="upper center", bbox_to_anchor=(0.5, 1.0), ncol=5, fancybox=True, shadow=True
@@ -186,7 +183,7 @@ class AmplitudesWidget(BaseWidget):
         import ipywidgets.widgets as widgets
         from IPython.display import display
         from .ipywidgets_utils import check_ipywidget_backend, make_unit_controller
-        
+
         check_ipywidget_backend()
 
         self.next_data_plot = data_plot.copy()
@@ -232,7 +229,10 @@ class AmplitudesWidget(BaseWidget):
 
         self.widget = widgets.AppLayout(
             # center=fig.canvas, left_sidebar=unit_widget, pane_widths=ratios + [0], footer=footer
-            center=self.figure.canvas, left_sidebar=unit_widget, pane_widths=ratios + [0], footer=footer
+            center=self.figure.canvas,
+            left_sidebar=unit_widget,
+            pane_widths=ratios + [0],
+            footer=footer,
         )
 
         # a first update
@@ -241,7 +241,7 @@ class AmplitudesWidget(BaseWidget):
 
         if backend_kwargs["display"]:
             # self.check_backend()
-            display(self.widget)        
+            display(self.widget)
 
     def _update_ipywidget(self, change):
         # self.fig.clear()
