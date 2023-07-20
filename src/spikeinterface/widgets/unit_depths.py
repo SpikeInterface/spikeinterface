@@ -62,8 +62,7 @@ class UnitDepthsWidget(BaseWidget):
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-        # self.make_mpl_figure(**backend_kwargs)
+
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         ax = self.ax

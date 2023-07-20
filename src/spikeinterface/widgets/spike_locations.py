@@ -1,5 +1,4 @@
 import numpy as np
-from typing import Union
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
@@ -114,9 +113,7 @@ class SpikeLocationsWidget(BaseWidget):
         from probeinterface.plotting import plot_probe
 
         dp = to_attr(data_plot)
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
-        # self.make_mpl_figure(**backend_kwargs)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         spike_locations = dp.spike_locations
@@ -168,7 +165,6 @@ class SpikeLocationsWidget(BaseWidget):
             for unit in dp.unit_ids
         ]
         if dp.plot_legend:
-            # if self.legend is not None:
             if hasattr(self, "legend") and self.legend is not None:
                 self.legend.remove()
             self.legend = self.figure.legend(
@@ -203,7 +199,6 @@ class SpikeLocationsWidget(BaseWidget):
 
         cm = 1 / 2.54
 
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         width_cm = backend_kwargs["width_cm"]
         height_cm = backend_kwargs["height_cm"]
 
@@ -226,12 +221,6 @@ class SpikeLocationsWidget(BaseWidget):
 
         self.controller = unit_controller
 
-        # mpl_plotter = MplSpikeLocationsPlotter()
-
-        # self.updater = PlotUpdater(data_plot, mpl_plotter, ax, self.controller)
-        # for w in self.controller.values():
-        #     w.observe(self.updater)
-
         for w in self.controller.values():
             w.observe(self._update_ipywidget)
 
@@ -242,11 +231,9 @@ class SpikeLocationsWidget(BaseWidget):
         )
 
         # a first update
-        # self.updater(None)
         self._update_ipywidget(None)
 
         if backend_kwargs["display"]:
-            # self.check_backend()
             display(self.widget)
 
     def _update_ipywidget(self, change):
@@ -274,12 +261,10 @@ class SpikeLocationsWidget(BaseWidget):
         import sortingview.views as vv
         from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
 
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         dp = to_attr(data_plot)
         spike_locations = dp.spike_locations
 
         # ensure serializable for sortingview
-        # unit_ids, channel_ids = self.make_serializable(dp.unit_ids, dp.channel_ids)
         unit_ids, channel_ids = make_serializable(dp.unit_ids, dp.channel_ids)
 
         locations = {str(ch): dp.channel_locations[i_ch].astype("float32") for i_ch, ch in enumerate(channel_ids)}
@@ -321,11 +306,7 @@ class SpikeLocationsWidget(BaseWidget):
         else:
             self.view = v_spike_locations
 
-        # self.set_view(view)
-
-        # self.handle_display_and_url(view, **backend_kwargs)
-        # return view
-        self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
+        self.url = handle_display_and_url(self, self.view, **backend_kwargs)
 
 
 def estimate_axis_lims(spike_locations, quantile=0.02):

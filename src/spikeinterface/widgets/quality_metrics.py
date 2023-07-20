@@ -1,6 +1,5 @@
 from .metrics import MetricsBaseWidget
 from ..core.waveform_extractor import WaveformExtractor
-from ..qualitymetrics import compute_quality_metrics
 
 
 class QualityMetricsWidget(MetricsBaseWidget):

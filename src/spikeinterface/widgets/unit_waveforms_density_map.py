@@ -33,8 +33,6 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         all channel per units, default False
     """
 
-    # possible_backends = {}
-
     def __init__(
         self,
         waveform_extractor,
@@ -162,10 +160,8 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
         if backend_kwargs["axes"] is not None or backend_kwargs["ax"] is not None:
-            # self.make_mpl_figure(**backend_kwargs)
             self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
         else:
             if dp.same_axis:
@@ -174,7 +170,6 @@ class UnitWaveformDensityMapWidget(BaseWidget):
                 num_axes = len(dp.unit_ids)
             backend_kwargs["ncols"] = 1
             backend_kwargs["num_axes"] = num_axes
-            # self.make_mpl_figure(**backend_kwargs)
             self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         if dp.same_axis:

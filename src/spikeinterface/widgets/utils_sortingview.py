@@ -3,14 +3,6 @@ import numpy as np
 from ..core.core_tools import check_json
 
 
-sortingview_backend_kwargs_desc = {
-    "generate_url": "If True, the figurl URL is generated and printed. Default True",
-    "display": "If True and in jupyter notebook/lab, the widget is displayed in the cell. Default True.",
-    "figlabel": "The figurl figure label. Default None",
-    "height": "The height of the sortingview View in jupyter. Default None",
-}
-sortingview_default_backend_kwargs = {"generate_url": True, "display": True, "figlabel": None, "height": None}
-
 
 def make_serializable(*args):
     dict_to_serialize = {int(i): a for i, a in enumerate(args)}

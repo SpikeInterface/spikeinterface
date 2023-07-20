@@ -1,5 +1,4 @@
 import numpy as np
-from typing import Union
 
 from .base import BaseWidget, to_attr
 from ..core.waveform_extractor import WaveformExtractor
@@ -68,9 +67,7 @@ class TemplateSimilarityWidget(BaseWidget):
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
-        # self.make_mpl_figure(**backend_kwargs)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         im = self.ax.matshow(dp.similarity, cmap=dp.cmap)
@@ -91,11 +88,9 @@ class TemplateSimilarityWidget(BaseWidget):
         import sortingview.views as vv
         from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
 
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         dp = to_attr(data_plot)
 
         # ensure serializable for sortingview
-        # unit_ids = self.make_serializable(dp.unit_ids)
         unit_ids = make_serializable(dp.unit_ids)
 
         # similarity
@@ -108,6 +103,4 @@ class TemplateSimilarityWidget(BaseWidget):
 
         self.view = vv.UnitSimilarityMatrix(unit_ids=list(unit_ids), similarity_scores=ss_items)
 
-        # self.handle_display_and_url(view, **backend_kwargs)
-        # return view
-        self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
+        self.url = handle_display_and_url(self, self.view, **backend_kwargs)

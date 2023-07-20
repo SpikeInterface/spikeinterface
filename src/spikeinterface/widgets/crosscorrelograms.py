@@ -27,8 +27,6 @@ class CrossCorrelogramsWidget(BaseWidget):
         If given, a dictionary with unit ids as keys and colors as values, default None
     """
 
-    # possible_backends = {}
-
     def __init__(
         self,
         waveform_or_sorting_extractor: Union[WaveformExtractor, BaseSorting],
@@ -71,11 +69,9 @@ class CrossCorrelogramsWidget(BaseWidget):
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         backend_kwargs["ncols"] = len(dp.unit_ids)
         backend_kwargs["num_axes"] = int(len(dp.unit_ids) ** 2)
 
-        # self.make_mpl_figure(**backend_kwargs)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         assert self.axes.ndim == 2
@@ -106,10 +102,8 @@ class CrossCorrelogramsWidget(BaseWidget):
         import sortingview.views as vv
         from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
 
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         dp = to_attr(data_plot)
 
-        # unit_ids = self.make_serializable(dp.unit_ids)
         unit_ids = make_serializable(dp.unit_ids)
 
         cc_items = []
@@ -126,6 +120,4 @@ class CrossCorrelogramsWidget(BaseWidget):
 
         self.view = vv.CrossCorrelograms(cross_correlograms=cc_items, hide_unit_selector=dp.hide_unit_selector)
 
-        # self.handle_display_and_url(v_cross_correlograms, **backend_kwargs)
-        # return v_cross_correlograms
-        self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
+        self.url = handle_display_and_url(self, self.view, **backend_kwargs)

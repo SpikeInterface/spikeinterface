@@ -9,7 +9,7 @@ from .unit_locations import UnitLocationsWidget
 from .unit_templates import UnitTemplatesWidget
 
 
-from ..core import WaveformExtractor, ChannelSparsity
+from ..core import WaveformExtractor
 
 
 class SortingSummaryWidget(BaseWidget):
@@ -55,26 +55,10 @@ class SortingSummaryWidget(BaseWidget):
         if unit_ids is None:
             unit_ids = sorting.get_unit_ids()
 
-        # use other widgets to generate data (except for similarity)
-        # template_plot_data = UnitTemplatesWidget(
-        #     we, unit_ids=unit_ids, sparsity=sparsity, hide_unit_selector=True
-        # ).plot_data
-        # ccg_plot_data = CrossCorrelogramsWidget(we, unit_ids=unit_ids, hide_unit_selector=True).plot_data
-        # amps_plot_data = AmplitudesWidget(
-        #     we, unit_ids=unit_ids, max_spikes_per_unit=max_amplitudes_per_unit, hide_unit_selector=True
-        # ).plot_data
-        # locs_plot_data = UnitLocationsWidget(we, unit_ids=unit_ids, hide_unit_selector=True).plot_data
-        # sim_plot_data = TemplateSimilarityWidget(we, unit_ids=unit_ids).plot_data
-
         plot_data = dict(
             waveform_extractor=waveform_extractor,
             unit_ids=unit_ids,
             sparsity=sparsity,
-            # templates=template_plot_data,
-            # correlograms=ccg_plot_data,
-            # amplitudes=amps_plot_data,
-            # similarity=sim_plot_data,
-            # unit_locations=locs_plot_data,
             unit_table_properties=unit_table_properties,
             curation=curation,
             label_choices=label_choices,
@@ -92,27 +76,7 @@ class SortingSummaryWidget(BaseWidget):
         unit_ids = dp.unit_ids
         sparsity = dp.sparsity
 
-        # unit_ids = self.make_serializable(dp.unit_ids)
         unit_ids = make_serializable(dp.unit_ids)
-
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-
-        # amplitudes_plotter = AmplitudesPlotter()
-        # v_spike_amplitudes = amplitudes_plotter.do_plot(
-        #     dp.amplitudes, generate_url=False, display=False, backend="sortingview"
-        # )
-        # template_plotter = UnitTemplatesPlotter()
-        # v_average_waveforms = template_plotter.do_plot(
-        #     dp.templates, generate_url=False, display=False, backend="sortingview"
-        # )
-        # xcorrelograms_plotter = CrossCorrelogramsPlotter()
-        # v_cross_correlograms = xcorrelograms_plotter.do_plot(
-        #     dp.correlograms, generate_url=False, display=False, backend="sortingview"
-        # )
-        # unitlocation_plotter = UnitLocationsPlotter()
-        # v_unit_locations = unitlocation_plotter.do_plot(
-        #     dp.unit_locations, generate_url=False, display=False, backend="sortingview"
-        # )
 
         v_spike_amplitudes = AmplitudesWidget(
             we,
@@ -144,7 +108,6 @@ class SortingSummaryWidget(BaseWidget):
             we, unit_ids=unit_ids, immediate_plot=False, generate_url=False, display=False, backend="sortingview"
         )
         similarity = w.data_plot["similarity"]
-        print(similarity.shape)
 
         # similarity
         similarity_scores = []
@@ -183,10 +146,6 @@ class SortingSummaryWidget(BaseWidget):
         )
 
         # assemble layout
-        # v_summary = vv.Splitter(direction="horizontal", item1=vv.LayoutItem(v1), item2=vv.LayoutItem(v2))
         self.view = vv.Splitter(direction="horizontal", item1=vv.LayoutItem(v1), item2=vv.LayoutItem(v2))
 
-        # self.handle_display_and_url(v_summary, **backend_kwargs)
-        # return v_summary
-
-        self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
+        self.url = handle_display_and_url(self, self.view, **backend_kwargs)

@@ -58,8 +58,6 @@ class TimeseriesWidget(BaseWidget):
         The output widget
     """
 
-    # possible_backends = {}
-
     def __init__(
         self,
         recording,
@@ -221,9 +219,7 @@ class TimeseriesWidget(BaseWidget):
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
-        # self.make_mpl_figure(**backend_kwargs)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         ax = self.ax
@@ -302,7 +298,6 @@ class TimeseriesWidget(BaseWidget):
 
         cm = 1 / 2.54
 
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         width_cm = backend_kwargs["width_cm"]
         height_cm = backend_kwargs["height_cm"]
         ratios = [0.1, 0.8, 0.2]
@@ -335,15 +330,6 @@ class TimeseriesWidget(BaseWidget):
         self.controller.update(ch_controller)
         self.controller.update(scale_controller)
 
-        # mpl_plotter = MplTimeseriesPlotter()
-
-        # self.updater = PlotUpdater(data_plot, mpl_plotter, ax, self.controller)
-        # for w in self.controller.values():
-        #     if isinstance(w, widgets.Button):
-        #         w.on_click(self.updater)
-        #     else:
-        #         w.observe(self.updater)
-
         self.recordings = data_plot["recordings"]
         self.return_scaled = data_plot["return_scaled"]
         self.list_traces = None
@@ -371,7 +357,6 @@ class TimeseriesWidget(BaseWidget):
         )
 
         # a first update
-        # self.updater(None)
         self._update_ipywidget(None)
 
         if backend_kwargs["display"]:
@@ -497,7 +482,7 @@ class TimeseriesWidget(BaseWidget):
 
         backend_kwargs = {}
         backend_kwargs["ax"] = self.ax
-        # self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
+
         self.plot_matplotlib(data_plot, **backend_kwargs)
 
         fig = self.ax.figure
@@ -506,7 +491,7 @@ class TimeseriesWidget(BaseWidget):
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
-        from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
+        from .utils_sortingview import handle_display_and_url
 
         try:
             import pyvips
@@ -536,17 +521,12 @@ class TimeseriesWidget(BaseWidget):
 
             tiled_layers.append(vv.TiledImageLayer(layer_key, img))
 
-        # view_ts = vv.TiledImage(tile_size=dp.tile_size, layers=tiled_layers)
         self.view = vv.TiledImage(tile_size=dp.tile_size, layers=tiled_layers)
-
-        # self.set_view(view_ts)
 
         # timeseries currently doesn't display on the jupyter backend
         backend_kwargs["display"] = False
-        # self.handle_display_and_url(view_ts, **backend_kwargs)
-        # return view_ts
 
-        self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
+        self.url = handle_display_and_url(self, self.view, **backend_kwargs)
 
 
 def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=None, return_scaled=False):

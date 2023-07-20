@@ -4,7 +4,7 @@ from .crosscorrelograms import CrossCorrelogramsWidget
 
 
 class AutoCorrelogramsWidget(CrossCorrelogramsWidget):
-    # possible_backends = {}
+    # the doc is copied form CrossCorrelogramsWidget
 
     def __init__(self, *args, **kargs):
         CrossCorrelogramsWidget.__init__(self, *args, **kargs)
@@ -14,11 +14,8 @@ class AutoCorrelogramsWidget(CrossCorrelogramsWidget):
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         backend_kwargs["num_axes"] = len(dp.unit_ids)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
-
-        # self.make_mpl_figure(**backend_kwargs)
 
         bins = dp.bins
         unit_ids = dp.unit_ids
@@ -39,9 +36,7 @@ class AutoCorrelogramsWidget(CrossCorrelogramsWidget):
         import sortingview.views as vv
         from .utils_sortingview import make_serializable, handle_display_and_url
 
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         dp = to_attr(data_plot)
-        # unit_ids = self.make_serializable(dp.unit_ids)
         unit_ids = make_serializable(dp.unit_ids)
 
         ac_items = []
@@ -58,9 +53,7 @@ class AutoCorrelogramsWidget(CrossCorrelogramsWidget):
 
         self.view = vv.Autocorrelograms(autocorrelograms=ac_items)
 
-        # self.handle_display_and_url(v_autocorrelograms, **backend_kwargs)
-        # return v_autocorrelograms
-        self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
+        self.url = handle_display_and_url(self, self.view, **backend_kwargs)
 
 
 AutoCorrelogramsWidget.__doc__ = CrossCorrelogramsWidget.__doc__

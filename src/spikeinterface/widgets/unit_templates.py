@@ -3,7 +3,7 @@ from .base import to_attr
 
 
 class UnitTemplatesWidget(UnitWaveformsWidget):
-    # possible_backends = {}
+    # doc is copied from UnitWaveformsWidget
 
     def __init__(self, *args, **kargs):
         kargs["plot_waveforms"] = False
@@ -14,13 +14,11 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
 
         dp = to_attr(data_plot)
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
         # ensure serializable for sortingview
         unit_id_to_channel_ids = dp.sparsity.unit_id_to_channel_ids
         unit_id_to_channel_indices = dp.sparsity.unit_id_to_channel_indices
 
-        # unit_ids, channel_ids = self.make_serializable(dp.unit_ids, dp.channel_ids)
         unit_ids, channel_ids = make_serializable(dp.unit_ids, dp.channel_ids)
 
         templates_dict = {}
@@ -52,9 +50,7 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         else:
             self.view = v_average_waveforms
 
-        # self.handle_display_and_url(view, **backend_kwargs)
-        # return view
-        self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
+        self.url = handle_display_and_url(self, self.view, **backend_kwargs)
 
 
 UnitTemplatesWidget.__doc__ = UnitWaveformsWidget.__doc__

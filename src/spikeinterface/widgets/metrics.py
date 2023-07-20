@@ -30,8 +30,6 @@ class MetricsBaseWidget(BaseWidget):
         If True, metrics data are included in unit table, by default True
     """
 
-    # possible_backends = {}
-
     def __init__(
         self,
         metrics,
@@ -90,13 +88,11 @@ class MetricsBaseWidget(BaseWidget):
         if "figsize" not in backend_kwargs:
             backend_kwargs["figsize"] = (2 * num_metrics, 2 * num_metrics)
 
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         backend_kwargs["num_axes"] = num_metrics**2
         backend_kwargs["ncols"] = num_metrics
 
         all_unit_ids = metrics.index.values
 
-        # self.make_mpl_figure(**backend_kwargs)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         assert self.axes.ndim == 2
@@ -160,11 +156,6 @@ class MetricsBaseWidget(BaseWidget):
 
         self.controller = unit_controller
 
-        # mpl_plotter = MplMetricsPlotter()
-
-        # self.updater = PlotUpdater(data_plot, mpl_plotter, fig, self.controller)
-        # for w in self.controller.values():
-        #     w.observe(self.updater)
         for w in self.controller.values():
             w.observe(self._update_ipywidget)
 
@@ -175,11 +166,9 @@ class MetricsBaseWidget(BaseWidget):
         )
 
         # a first update
-        # self.updater(None)
         self._update_ipywidget(None)
 
         if backend_kwargs["display"]:
-            # self.check_backend()
             display(self.widget)
 
     def _update_ipywidget(self, change):
@@ -199,16 +188,13 @@ class MetricsBaseWidget(BaseWidget):
             sizes.append(size)
 
         # here we do a trick: we just update colors
-        # if hasattr(self.mpl_plotter, "patches"):
         if hasattr(self, "patches"):
-            # for p in self.mpl_plotter.patches:
             for p in self.patches:
                 p.set_color(colors)
                 p.set_sizes(sizes)
         else:
             backend_kwargs = {}
             backend_kwargs["figure"] = self.figure
-            # self.mpl_plotter.do_plot(self.data_plot, **backend_kwargs)
             self.plot_matplotlib(self.data_plot, **backend_kwargs)
 
         if len(unit_ids) > 0:
@@ -231,7 +217,6 @@ class MetricsBaseWidget(BaseWidget):
         from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
 
         dp = to_attr(data_plot)
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
         metrics = dp.metrics
         metric_names = list(metrics.columns)
@@ -240,7 +225,6 @@ class MetricsBaseWidget(BaseWidget):
             unit_ids = metrics.index.values
         else:
             unit_ids = dp.unit_ids
-        # unit_ids = self.make_serializable(unit_ids)
         unit_ids = make_serializable(unit_ids)
 
         metrics_sv = []
@@ -279,6 +263,4 @@ class MetricsBaseWidget(BaseWidget):
         else:
             self.view = v_metrics
 
-        # self.handle_display_and_url(view, **backend_kwargs)
-        # return view
-        self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
+        self.url = handle_display_and_url(self, self.view, **backend_kwargs)

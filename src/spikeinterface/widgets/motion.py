@@ -1,11 +1,6 @@
 import numpy as np
-from warnings import warn
 
 from .base import BaseWidget, to_attr
-from .utils import get_unit_colors
-
-
-from ..core.template_tools import get_template_extremum_amplitude
 
 
 class MotionWidget(BaseWidget):
@@ -35,8 +30,6 @@ class MotionWidget(BaseWidget):
     amplitude_alpha : float
         The alpha of the scatter points, default 0.5
     """
-
-    # possible_backends = {}
 
     def __init__(
         self,
@@ -77,12 +70,10 @@ class MotionWidget(BaseWidget):
         from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
 
         dp = to_attr(data_plot)
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
         assert backend_kwargs["axes"] is None
         assert backend_kwargs["ax"] is None
 
-        # self.make_mpl_figure(**backend_kwargs)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
         fig = self.figure
         fig.clear()

@@ -35,8 +35,6 @@ class AmplitudesWidget(BaseWidget):
         True includes legend in plot, default True
     """
 
-    possible_backends = {}
-
     def __init__(
         self,
         waveform_extractor: WaveformExtractor,
@@ -116,13 +114,8 @@ class AmplitudesWidget(BaseWidget):
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
-        from probeinterface.plotting import plot_probe
-
-        from matplotlib.patches import Ellipse
-        from matplotlib.lines import Line2D
 
         dp = to_attr(data_plot)
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
         if backend_kwargs["axes"] is not None:
             axes = backend_kwargs["axes"]
@@ -139,7 +132,6 @@ class AmplitudesWidget(BaseWidget):
             else:
                 backend_kwargs["num_axes"] = None
 
-        # self.make_mpl_figure(**backend_kwargs)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         scatter_ax = self.axes.flatten()[0]
@@ -164,7 +156,6 @@ class AmplitudesWidget(BaseWidget):
             self.figure.tight_layout()
 
         if dp.plot_legend:
-            # if self.legend is not None:
             if hasattr(self, "legend") and self.legend is not None:
                 self.legend.remove()
             self.legend = self.figure.legend(
@@ -191,7 +182,6 @@ class AmplitudesWidget(BaseWidget):
         cm = 1 / 2.54
         we = data_plot["waveform_extractor"]
 
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         width_cm = backend_kwargs["width_cm"]
         height_cm = backend_kwargs["height_cm"]
 
@@ -200,7 +190,6 @@ class AmplitudesWidget(BaseWidget):
         with plt.ioff():
             output = widgets.Output()
             with output:
-                # fig = plt.figure(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 self.figure = plt.figure(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
@@ -220,15 +209,10 @@ class AmplitudesWidget(BaseWidget):
         self.controller = {"plot_histograms": plot_histograms}
         self.controller.update(unit_controller)
 
-        # mpl_plotter = MplAmplitudesPlotter()
-
-        # self.updater = PlotUpdater(data_plot, mpl_plotter, fig, self.controller)
         for w in self.controller.values():
-            # w.observe(self.updater)
             w.observe(self._update_ipywidget)
 
         self.widget = widgets.AppLayout(
-            # center=fig.canvas, left_sidebar=unit_widget, pane_widths=ratios + [0], footer=footer
             center=self.figure.canvas,
             left_sidebar=unit_widget,
             pane_widths=ratios + [0],
@@ -236,15 +220,12 @@ class AmplitudesWidget(BaseWidget):
         )
 
         # a first update
-        # self.updater(None)
         self._update_ipywidget(None)
 
         if backend_kwargs["display"]:
-            # self.check_backend()
             display(self.widget)
 
     def _update_ipywidget(self, change):
-        # self.fig.clear()
         self.figure.clear()
 
         unit_ids = self.controller["unit_ids"].value
@@ -261,7 +242,6 @@ class AmplitudesWidget(BaseWidget):
         backend_kwargs["axes"] = None
         backend_kwargs["ax"] = None
 
-        # self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
         self.plot_matplotlib(data_plot, **backend_kwargs)
 
         self.figure.canvas.draw()
@@ -271,10 +251,8 @@ class AmplitudesWidget(BaseWidget):
         import sortingview.views as vv
         from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
 
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         dp = to_attr(data_plot)
 
-        # unit_ids = self.make_serializable(dp.unit_ids)
         unit_ids = make_serializable(dp.unit_ids)
 
         sa_items = [
@@ -286,10 +264,8 @@ class AmplitudesWidget(BaseWidget):
             for u in unit_ids
         ]
 
-        # v_spike_amplitudes = vv.SpikeAmplitudes(
         self.view = vv.SpikeAmplitudes(
             start_time_sec=0, end_time_sec=dp.total_duration, plots=sa_items, hide_unit_selector=dp.hide_unit_selector
         )
 
-        # self.handle_display_and_url(v_spike_amplitudes, **backend_kwargs)
-        self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
+        self.url = handle_display_and_url(self, self.view, **backend_kwargs)

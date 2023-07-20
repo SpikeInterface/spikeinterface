@@ -59,8 +59,6 @@ class UnitWaveformsWidget(BaseWidget):
         Display legend, default True
     """
 
-    # possible_backends = {}
-
     def __init__(
         self,
         waveform_extractor: WaveformExtractor,
@@ -168,14 +166,8 @@ class UnitWaveformsWidget(BaseWidget):
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
-        from probeinterface.plotting import plot_probe
-
-        from matplotlib.patches import Ellipse
-        from matplotlib.lines import Line2D
 
         dp = to_attr(data_plot)
-
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
         if backend_kwargs.get("axes", None) is not None:
             assert len(backend_kwargs["axes"]) >= len(dp.unit_ids), "Provide as many 'axes' as neurons"
@@ -189,7 +181,6 @@ class UnitWaveformsWidget(BaseWidget):
                 backend_kwargs["num_axes"] = len(dp.unit_ids)
                 backend_kwargs["ncols"] = min(dp.ncols, len(dp.unit_ids))
 
-        # self.make_mpl_figure(**backend_kwargs)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         for i, unit_id in enumerate(dp.unit_ids):
@@ -249,7 +240,6 @@ class UnitWaveformsWidget(BaseWidget):
                 ax.scatter(dp.channel_locations[:, 0], dp.channel_locations[:, 1], color="k")
 
             if dp.same_axis and dp.plot_legend:
-                # if self.legend is not None:
                 if hasattr(self, "legend") and self.legend is not None:
                     self.legend.remove()
                 self.legend = self.figure.legend(
@@ -269,7 +259,6 @@ class UnitWaveformsWidget(BaseWidget):
         cm = 1 / 2.54
         self.we = we = data_plot["waveform_extractor"]
 
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         width_cm = backend_kwargs["width_cm"]
         height_cm = backend_kwargs["height_cm"]
 
@@ -317,12 +306,6 @@ class UnitWaveformsWidget(BaseWidget):
         }
         self.controller.update(unit_controller)
 
-        # mpl_plotter = MplUnitWaveformPlotter()
-
-        # self.updater = PlotUpdater(data_plot, mpl_plotter, fig_wf, ax_probe, self.controller)
-        # for w in self.controller.values():
-        #     w.observe(self.updater)
-
         for w in self.controller.values():
             w.observe(self._update_ipywidget)
 
@@ -335,11 +318,9 @@ class UnitWaveformsWidget(BaseWidget):
         )
 
         # a first update
-        # self.updater(None)
         self._update_ipywidget(None)
 
         if backend_kwargs["display"]:
-            # self.check_backend()
             display(self.widget)
 
     def _update_ipywidget(self, change):
@@ -369,18 +350,14 @@ class UnitWaveformsWidget(BaseWidget):
         else:
             backend_kwargs["figure"] = self.fig_wf
 
-        # self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
         self.plot_matplotlib(data_plot, **backend_kwargs)
         if same_axis:
-            # self.mpl_plotter.ax.axis("equal")
             self.ax.axis("equal")
             if hide_axis:
-                # self.mpl_plotter.ax.axis("off")
                 self.ax.axis("off")
         else:
             if hide_axis:
                 for i in range(len(unit_ids)):
-                    # ax = self.mpl_plotter.axes.flatten()[i]
                     ax = self.axes.flatten()[i]
                     ax.axis("off")
 

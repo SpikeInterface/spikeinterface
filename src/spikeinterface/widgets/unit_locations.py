@@ -121,7 +121,6 @@ class UnitLocationsWidget(BaseWidget):
 
         self.ax.set_title("")
 
-        # color = np.array([dp.unit_colors[unit_id] for unit_id in dp.unit_ids])
         width = height = 10
         ellipse_kwargs = dict(width=width, height=height, lw=2)
 
@@ -178,8 +177,6 @@ class UnitLocationsWidget(BaseWidget):
 
         cm = 1 / 2.54
 
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-
         width_cm = backend_kwargs["width_cm"]
         height_cm = backend_kwargs["height_cm"]
 
@@ -197,12 +194,6 @@ class UnitLocationsWidget(BaseWidget):
         )
 
         self.controller = unit_controller
-
-        # mpl_plotter = MplUnitLocationsPlotter()
-
-        # self.updater = PlotUpdater(data_plot, mpl_plotter, ax, self.controller)
-        # for w in self.controller.values():
-        #     w.observe(self.updater)
 
         for w in self.controller.values():
             w.observe(self._update_ipywidget)
@@ -234,7 +225,6 @@ class UnitLocationsWidget(BaseWidget):
         backend_kwargs = {}
         backend_kwargs["ax"] = self.ax
 
-        # self.mpl_plotter.do_plot(data_plot, **backend_kwargs)
         self.plot_matplotlib(data_plot, **backend_kwargs)
         fig = self.ax.get_figure()
         fig.canvas.draw()
@@ -244,7 +234,6 @@ class UnitLocationsWidget(BaseWidget):
         import sortingview.views as vv
         from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
 
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         dp = to_attr(data_plot)
 
         # ensure serializable for sortingview
@@ -272,5 +261,4 @@ class UnitLocationsWidget(BaseWidget):
         else:
             self.view = v_unit_locations
 
-        # self.handle_display_and_url(view, **backend_kwargs)
-        self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
+        self.url = handle_display_and_url(self, self.view, **backend_kwargs)

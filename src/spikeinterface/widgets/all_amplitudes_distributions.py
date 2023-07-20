@@ -21,8 +21,6 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
         Dict of colors with key: unit, value: color, default None
     """
 
-    possible_backends = {}
-
     def __init__(
         self, waveform_extractor: WaveformExtractor, unit_ids=None, unit_colors=None, backend=None, **backend_kwargs
     ):
@@ -56,8 +54,7 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
         from matplotlib.lines import Line2D
 
         dp = to_attr(data_plot)
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-        # self.make_mpl_figure(**backend_kwargs)
+
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         ax = self.ax

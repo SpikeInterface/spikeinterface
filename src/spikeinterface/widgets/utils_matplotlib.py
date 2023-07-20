@@ -65,11 +65,3 @@ def make_mpl_figure(figure=None, ax=None, axes=None, ncols=None, num_axes=None, 
         figure.suptitle(figtitle)
 
     return figure, axes, ax
-
-    # self.figure = figure
-    # self.ax = ax
-    # axes is always a 2D array of ax
-    # self.axes = axes
-
-    # if figtitle is not None:
-    #     self.figure.suptitle(figtitle)
