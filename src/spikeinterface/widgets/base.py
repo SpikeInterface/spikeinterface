@@ -77,10 +77,9 @@ class BaseWidget:
             self.do_plot()
 
     # subclass must define one method per supported backend:
-    # def plot_matplotlib(self, data_plot, **backend_kwargs):
-    # def plot_ipywidgets(self, data_plot, **backend_kwargs):
-    # def plot_sortingview(self, data_plot, **backend_kwargs):
-
+    # def plot_matplotlib(self, data_plot, **backend_kwargs):
+    # def plot_ipywidgets(self, data_plot, **backend_kwargs):
+    # def plot_sortingview(self, data_plot, **backend_kwargs):
 
     @classmethod
     def get_possible_backends(cls):
