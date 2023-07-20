@@ -3,7 +3,6 @@ import numpy as np
 from ..core.core_tools import check_json
 
 
-
 def make_serializable(*args):
     dict_to_serialize = {int(i): a for i, a in enumerate(args)}
     serializable_dict = check_json(dict_to_serialize)
