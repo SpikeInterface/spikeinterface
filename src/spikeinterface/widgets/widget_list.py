@@ -2,7 +2,7 @@
 from .base import backend_kwargs_desc
 
 # basics
-# from .timeseries import TimeseriesWidget
+from .timeseries import TimeseriesWidget
 
 # waveform
 from .unit_waveforms import UnitWaveformsWidget
@@ -67,7 +67,7 @@ widget_list = [
     TemplateMetricsWidget,
     MotionWidget,
     TemplateSimilarityWidget,
-    # TimeseriesWidget,
+    TimeseriesWidget,
     UnitLocationsWidget,
     UnitTemplatesWidget,
     UnitWaveformsWidget,
@@ -136,6 +136,7 @@ plot_autocorrelograms = AutoCorrelogramsWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_spike_locations = SpikeLocationsWidget
 plot_template_metrics = TemplateMetricsWidget
+plot_timeseries = TimeseriesWidget
 plot_quality_metrics = QualityMetricsWidget
 plot_motion = MotionWidget
 plot_template_similarity = TemplateSimilarityWidget
