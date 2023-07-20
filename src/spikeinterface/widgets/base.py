@@ -74,8 +74,8 @@ class BaseWidget:
         self.backend_kwargs = backend_kwargs_
 
         if immediate_plot:
-            print('immediate_plot', self.backend, self.backend_kwargs)
-            self.do_plot(self.backend, **self.backend_kwargs)
+            # print('immediate_plot', self.backend, self.backend_kwargs)
+            self.do_plot()
 
     @classmethod
     def get_possible_backends(cls):
@@ -99,10 +99,10 @@ class BaseWidget:
     #                 f"Possible backend keyword arguments for {backend} are: {list(plotter_kwargs.keys())}"
     #             )
 
-    def do_plot(self, backend, **backend_kwargs):
+    def do_plot(self):
         # backend = self.check_backend(backend)
 
-        func = getattr(self, f'plot_{backend}')
+        func = getattr(self, f'plot_{self.backend}')
         func(self.data_plot, **self.backend_kwargs)
 
     # @classmethod

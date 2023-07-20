@@ -39,8 +39,9 @@ def is_notebook() -> bool:
 
 def handle_display_and_url(widget, view, **backend_kwargs):
     url = None
-    if is_notebook() and backend_kwargs["display"]:
-        display(view.jupyter(height=backend_kwargs["height"]))
+    # TODO: put this back when figurl-jupyter is working again
+    # if is_notebook() and backend_kwargs["display"]:
+    #     display(view.jupyter(height=backend_kwargs["height"]))
     if backend_kwargs["generate_url"]:
         figlabel = backend_kwargs.get("figlabel")
         if figlabel is None:
