@@ -3,7 +3,7 @@
 SpikeInterface 0.98.2 release notes
 -----------------------------------
 
-19th July 2023
+20th July 2023
 
 Minor release with some bug fixes.
 
