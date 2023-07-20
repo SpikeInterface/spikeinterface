@@ -312,9 +312,9 @@ def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y")):
         The input recording
     channel_ids : list/array or None
         If given, a subset of channels to order locations for
-    dimensions : str or tuple
+    dimensions : str, tuple, or list
         If str, it needs to be 'x', 'y', 'z'.
-        If tuple, it sorts the locations in two dimensions using lexsort.
+        If tuple or list, it sorts the locations in two dimensions using lexsort.
         This approach is recommended since there is less ambiguity, by default ('x', 'y')
 
     Returns
@@ -334,7 +334,7 @@ def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y")):
         assert dim < ndim, "Invalid dimensions!"
         order_f = np.argsort(locations[:, dim], kind="stable")
     else:
-        assert isinstance(dimensions, tuple), "dimensions can be a str or a tuple"
+        assert isinstance(dimensions, (tuple, list)), "dimensions can be str, tuple, or list"
         locations_to_sort = ()
         for dim in dimensions:
             dim = ["x", "y", "z"].index(dim)
