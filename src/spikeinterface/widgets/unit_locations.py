@@ -84,7 +84,7 @@ class UnitLocationsWidget(BaseWidget):
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
-        from .matplotlib_utils import make_mpl_figure
+        from .utils_matplotlib import make_mpl_figure
         from probeinterface.plotting import plot_probe
 
         from matplotlib.patches import Ellipse
@@ -170,7 +170,7 @@ class UnitLocationsWidget(BaseWidget):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
-        from .ipywidgets_utils import check_ipywidget_backend, make_unit_controller
+        from .utils_ipywidgets import check_ipywidget_backend, make_unit_controller
 
         check_ipywidget_backend()
 
@@ -242,7 +242,7 @@ class UnitLocationsWidget(BaseWidget):
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
-        from .sortingview_utils import generate_unit_table_view, make_serializable, handle_display_and_url
+        from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
 
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         dp = to_attr(data_plot)

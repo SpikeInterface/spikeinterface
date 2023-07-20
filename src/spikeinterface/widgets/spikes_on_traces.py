@@ -163,7 +163,7 @@ class SpikesOnTracesWidget(BaseWidget):
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
-        from .matplotlib_utils import make_mpl_figure
+        from .utils_matplotlib import make_mpl_figure
 
         from matplotlib.patches import Ellipse
         from matplotlib.lines import Line2D
@@ -286,7 +286,7 @@ class SpikesOnTracesWidget(BaseWidget):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
-        from .ipywidgets_utils import check_ipywidget_backend, make_unit_controller
+        from .utils_ipywidgets import check_ipywidget_backend, make_unit_controller
 
         check_ipywidget_backend()
 

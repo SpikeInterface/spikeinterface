@@ -59,7 +59,7 @@ class UnitDepthsWidget(BaseWidget):
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
-        from .matplotlib_utils import make_mpl_figure
+        from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)

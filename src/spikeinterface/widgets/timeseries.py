@@ -218,7 +218,7 @@ class TimeseriesWidget(BaseWidget):
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         from matplotlib.ticker import MaxNLocator
-        from .matplotlib_utils import make_mpl_figure
+        from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
@@ -284,7 +284,7 @@ class TimeseriesWidget(BaseWidget):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
-        from .ipywidgets_utils import (
+        from .utils_ipywidgets import (
             check_ipywidget_backend,
             make_timeseries_controller,
             make_channel_controller,
@@ -506,7 +506,7 @@ class TimeseriesWidget(BaseWidget):
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
-        from .sortingview_utils import generate_unit_table_view, make_serializable, handle_display_and_url
+        from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
 
         try:
             import pyvips

@@ -1,81 +1,44 @@
-# from .base import define_widget_function_from_class
 from .base import backend_kwargs_desc
 
-# basics
-from .timeseries import TimeseriesWidget
-
-# waveform
-from .unit_waveforms import UnitWaveformsWidget
-from .unit_templates import UnitTemplatesWidget
-from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
-
-# isi/ccg/acg
+from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
+from .amplitudes import AmplitudesWidget
 from .autocorrelograms import AutoCorrelogramsWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
-
-# peak activity
-
-# drift/motion
-
-# spikes-traces
-from .spikes_on_traces import SpikesOnTracesWidget
-
-# PC related
-
-# units on probe
-from .unit_locations import UnitLocationsWidget
-from .spike_locations import SpikeLocationsWidget
-
-# unit presence
-
-
-# comparison related
-
-# correlogram comparison
-
-# amplitudes
-from .amplitudes import AmplitudesWidget
-from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
-
-# metrics
-from .quality_metrics import QualityMetricsWidget
-from .template_metrics import TemplateMetricsWidget
-
-
-# motion/drift
 from .motion import MotionWidget
-
-# similarity
-from .template_similarity import TemplateSimilarityWidget
-
-
-from .unit_depths import UnitDepthsWidget
-
-# summary
-from .unit_summary import UnitSummaryWidget
+from .quality_metrics import QualityMetricsWidget
 from .sorting_summary import SortingSummaryWidget
+from .spike_locations import SpikeLocationsWidget
+from .spikes_on_traces import SpikesOnTracesWidget
+from .template_metrics import TemplateMetricsWidget
+from .template_similarity import TemplateSimilarityWidget
+from .timeseries import TimeseriesWidget
+from .unit_depths import UnitDepthsWidget
+from .unit_locations import UnitLocationsWidget
+from .unit_summary import UnitSummaryWidget
+from .unit_templates import UnitTemplatesWidget
+from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
+from .unit_waveforms import UnitWaveformsWidget
 
 
 widget_list = [
-    AmplitudesWidget,
     AllAmplitudesDistributionsWidget,
+    AmplitudesWidget,
     AutoCorrelogramsWidget,
     CrossCorrelogramsWidget,
+    MotionWidget,
     QualityMetricsWidget,
+    SortingSummaryWidget,
     SpikeLocationsWidget,
     SpikesOnTracesWidget,
     TemplateMetricsWidget,
-    MotionWidget,
     TemplateSimilarityWidget,
     TimeseriesWidget,
-    UnitLocationsWidget,
-    UnitTemplatesWidget,
-    UnitWaveformsWidget,
-    UnitWaveformDensityMapWidget,
     UnitDepthsWidget,
-    # summary
+    UnitLocationsWidget,
     UnitSummaryWidget,
-    SortingSummaryWidget,
+    UnitTemplatesWidget,
+    UnitWaveformDensityMapWidget,
+    UnitWaveformsWidget,
 ]
 
 
@@ -105,45 +68,21 @@ for wcls in widget_list:
 
 
 # make function for all widgets
-# plot_amplitudes = define_widget_function_from_class(AmplitudesWidget, "plot_amplitudes")
-# plot_all_amplitudes_distributions = define_widget_function_from_class(
-#     AllAmplitudesDistributionsWidget, "plot_all_amplitudes_distributions"
-# )
-# plot_autocorrelograms = define_widget_function_from_class(AutoCorrelogramsWidget, "plot_autocorrelograms")
-# plot_crosscorrelograms = define_widget_function_from_class(CrossCorrelogramsWidget, "plot_crosscorrelograms")
-# plot_quality_metrics = define_widget_function_from_class(QualityMetricsWidget, "plot_quality_metrics")
-# plot_spike_locations = define_widget_function_from_class(SpikeLocationsWidget, "plot_spike_locations")
-# plot_spikes_on_traces = define_widget_function_from_class(SpikesOnTracesWidget, "plot_spikes_on_traces")
-# plot_template_metrics = define_widget_function_from_class(TemplateMetricsWidget, "plot_template_metrics")
-# plot_motion = define_widget_function_from_class(MotionWidget, "plot_motion")
-# plot_template_similarity = define_widget_function_from_class(TemplateSimilarityWidget, "plot_template_similarity")
-# plot_timeseries = define_widget_function_from_class(TimeseriesWidget, "plot_timeseries")
-# plot_unit_locations = define_widget_function_from_class(UnitLocationsWidget, "plot_unit_locations")
-# plot_unit_templates = define_widget_function_from_class(UnitTemplatesWidget, "plot_unit_templates")
-# plot_unit_waveforms = define_widget_function_from_class(UnitWaveformsWidget, "plot_unit_waveforms")
-# plot_unit_waveforms_density_map = define_widget_function_from_class(
-#     UnitWaveformDensityMapWidget, "plot_unit_waveforms_density_map"
-# )
-# plot_unit_depths = define_widget_function_from_class(UnitDepthsWidget, "plot_unit_depths")
-# plot_unit_summary = define_widget_function_from_class(UnitSummaryWidget, "plot_unit_summary")
-# plot_sorting_summary = define_widget_function_from_class(SortingSummaryWidget, "plot_sorting_summary")
-
-
-plot_amplitudes = AmplitudesWidget
 plot_all_amplitudes_distributions = AllAmplitudesDistributionsWidget
-plot_unit_locations = UnitLocationsWidget
+plot_amplitudes = AmplitudesWidget
 plot_autocorrelograms = AutoCorrelogramsWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
+plot_motion = MotionWidget
+plot_quality_metrics = QualityMetricsWidget
+plot_sorting_summary = SortingSummaryWidget
 plot_spike_locations = SpikeLocationsWidget
 plot_spikes_on_traces = SpikesOnTracesWidget
 plot_template_metrics = TemplateMetricsWidget
-plot_timeseries = TimeseriesWidget
-plot_quality_metrics = QualityMetricsWidget
-plot_motion = MotionWidget
 plot_template_similarity = TemplateSimilarityWidget
-plot_unit_templates = UnitTemplatesWidget
-plot_unit_waveforms = UnitWaveformsWidget
-plot_unit_waveforms_density_map = UnitWaveformDensityMapWidget
+plot_timeseries = TimeseriesWidget
 plot_unit_depths = UnitDepthsWidget
+plot_unit_locations = UnitLocationsWidget
 plot_unit_summary = UnitSummaryWidget
-plot_sorting_summary = SortingSummaryWidget
+plot_unit_templates = UnitTemplatesWidget
+plot_unit_waveforms_density_map = UnitWaveformDensityMapWidget
+plot_unit_waveforms = UnitWaveformsWidget
