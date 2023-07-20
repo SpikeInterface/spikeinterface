@@ -7,7 +7,7 @@ from .base import BaseWidget, to_attr
 from .utils import get_some_colors, array_to_image
 
 
-class TimeseriesWidget(BaseWidget):
+class TracesWidget(BaseWidget):
     """
     Plots recording timeseries.
 
@@ -54,7 +54,7 @@ class TimeseriesWidget(BaseWidget):
 
     Returns
     -------
-    W: TimeseriesWidget
+    W: TracesWidget
         The output widget
     """
 
@@ -90,7 +90,7 @@ class TimeseriesWidget(BaseWidget):
             recordings = {f"rec{i}": rec for i, rec in enumerate(recording)}
             rec0 = recordings[0]
         else:
-            raise ValueError("plot_timeseries recording must be recording or dict or list")
+            raise ValueError("plot_traces recording must be recording or dict or list")
 
         layer_keys = list(recordings.keys())
 
@@ -256,7 +256,7 @@ class TimeseriesWidget(BaseWidget):
                 ax.legend(loc="upper right")
 
         elif dp.mode == "map":
-            assert len(dp.list_traces) == 1, 'plot_timeseries with mode="map" do not support multi recording'
+            assert len(dp.list_traces) == 1, 'plot_traces with mode="map" do not support multi recording'
             assert len(dp.clims) == 1
             clim = list(dp.clims.values())[0]
             extent = (dp.time_range[0], dp.time_range[1], min_y, max_y)
@@ -501,7 +501,7 @@ class TimeseriesWidget(BaseWidget):
         backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         dp = to_attr(data_plot)
 
-        assert dp.mode == "map", 'sortingview plot_timeseries is only mode="map"'
+        assert dp.mode == "map", 'sortingview plot_traces is only mode="map"'
 
         if not dp.order_channel_by_depth:
             warnings.warn(

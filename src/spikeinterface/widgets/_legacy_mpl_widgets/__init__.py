@@ -1,5 +1,5 @@
 # basics
-# from .timeseries import plot_timeseries, TimeseriesWidget
+# from .timeseries import plot_timeseries, TracesWidget
 from .rasters import plot_rasters, RasterWidget
 from .probemap import plot_probe_map, ProbeMapWidget
 

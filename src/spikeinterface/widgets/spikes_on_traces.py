@@ -2,7 +2,7 @@ import numpy as np
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
-from .timeseries import TimeseriesWidget
+from .traces import TracesWidget
 from ..core import ChannelSparsity
 from ..core.template_tools import get_template_extremum_channel
 from ..core.waveform_extractor import WaveformExtractor
@@ -150,7 +150,7 @@ class SpikesOnTracesWidget(BaseWidget):
         sorting = we.sorting
 
         # first plot time series
-        ts_widget = TimeseriesWidget(recording, **dp.options, backend="matplotlib", **backend_kwargs)
+        ts_widget = TracesWidget(recording, **dp.options, backend="matplotlib", **backend_kwargs)
         self.ax = ts_widget.ax
         self.axes = ts_widget.axes
         self.figure = ts_widget.figure
@@ -257,7 +257,7 @@ class SpikesOnTracesWidget(BaseWidget):
         width_cm = backend_kwargs["width_cm"]
 
         # plot timeseries
-        ts_widget = TimeseriesWidget(we.recording, **dp.options, backend="ipywidgets", **backend_kwargs_ts)
+        ts_widget = TracesWidget(we.recording, **dp.options, backend="ipywidgets", **backend_kwargs_ts)
         self.ax = ts_widget.ax
         self.axes = ts_widget.axes
         self.figure = ts_widget.figure

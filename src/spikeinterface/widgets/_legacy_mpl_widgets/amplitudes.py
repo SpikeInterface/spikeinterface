@@ -31,7 +31,7 @@ class AmplitudeBaseWidget(BaseWidget):
         self._do_plot()
 
 
-class AmplitudeTimeseriesWidget(AmplitudeBaseWidget):
+class AmplitudeTracesWidget(AmplitudeBaseWidget):
     """
     Plots waveform amplitudes distribution.
 
@@ -130,12 +130,12 @@ class AmplitudeDistributionWidget(AmplitudeBaseWidget):
 
 
 def plot_amplitudes_timeseries(*args, **kwargs):
-    W = AmplitudeTimeseriesWidget(*args, **kwargs)
+    W = AmplitudeTracesWidget(*args, **kwargs)
     W.plot()
     return W
 
 
-plot_amplitudes_timeseries.__doc__ = AmplitudeTimeseriesWidget.__doc__
+plot_amplitudes_timeseries.__doc__ = AmplitudeTracesWidget.__doc__
 
 
 def plot_amplitudes_distribution(*args, **kwargs):

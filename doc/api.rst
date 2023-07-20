@@ -275,7 +275,7 @@ spikeinterface.widgets
     .. autofunction:: plot_spikes_on_traces
     .. autofunction:: plot_template_metrics
     .. autofunction:: plot_template_similarity
-    .. autofunction:: plot_timeseries
+    .. autofunction:: plot_traces
     .. autofunction:: plot_unit_depths
     .. autofunction:: plot_unit_locations
     .. autofunction:: plot_unit_summary

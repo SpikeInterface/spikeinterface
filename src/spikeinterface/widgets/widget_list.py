@@ -1,3 +1,5 @@
+import warnings
+
 from .base import backend_kwargs_desc
 
 from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
@@ -11,7 +13,7 @@ from .spike_locations import SpikeLocationsWidget
 from .spikes_on_traces import SpikesOnTracesWidget
 from .template_metrics import TemplateMetricsWidget
 from .template_similarity import TemplateSimilarityWidget
-from .timeseries import TimeseriesWidget
+from .traces import TracesWidget
 from .unit_depths import UnitDepthsWidget
 from .unit_locations import UnitLocationsWidget
 from .unit_summary import UnitSummaryWidget
@@ -32,7 +34,7 @@ widget_list = [
     SpikesOnTracesWidget,
     TemplateMetricsWidget,
     TemplateSimilarityWidget,
-    TimeseriesWidget,
+    TracesWidget,
     UnitDepthsWidget,
     UnitLocationsWidget,
     UnitSummaryWidget,
@@ -79,10 +81,15 @@ plot_spike_locations = SpikeLocationsWidget
 plot_spikes_on_traces = SpikesOnTracesWidget
 plot_template_metrics = TemplateMetricsWidget
 plot_template_similarity = TemplateSimilarityWidget
-plot_timeseries = TimeseriesWidget
+plot_traces = TracesWidget
 plot_unit_depths = UnitDepthsWidget
 plot_unit_locations = UnitLocationsWidget
 plot_unit_summary = UnitSummaryWidget
 plot_unit_templates = UnitTemplatesWidget
 plot_unit_waveforms_density_map = UnitWaveformDensityMapWidget
 plot_unit_waveforms = UnitWaveformsWidget
+
+
+def plot_timeseries(*args, **kwargs):
+    warnings.warn("plot_timeseries() is now plot_traces()")
+    return plot_traces(*args, **kwargs)

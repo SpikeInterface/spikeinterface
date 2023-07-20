@@ -104,7 +104,7 @@ and the raster plots.
 
 .. code:: ipython3
 
-    w_ts = sw.plot_timeseries(recording, time_range=(0, 5))
+    w_ts = sw.plot_traces(recording, time_range=(0, 5))
     w_rs = sw.plot_rasters(sorting_true, time_range=(0, 5))
 
 

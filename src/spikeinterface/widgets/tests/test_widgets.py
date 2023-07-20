@@ -86,16 +86,16 @@ class TestWidgets(unittest.TestCase):
 
         cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
 
-    def test_plot_timeseries(self):
-        possible_backends = list(sw.TimeseriesWidget.get_possible_backends())
+    def test_plot_traces(self):
+        possible_backends = list(sw.TracesWidget.get_possible_backends())
         for backend in possible_backends:
             if ON_GITHUB and backend == "sortingview":
                 continue
             if backend not in self.skip_backends:
-                sw.plot_timeseries(
+                sw.plot_traces(
                     self.recording, mode="map", show_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
                 )
-                sw.plot_timeseries(
+                sw.plot_traces(
                     self.recording,
                     mode="map",
                     show_channel_ids=True,
@@ -105,8 +105,8 @@ class TestWidgets(unittest.TestCase):
                 )
 
                 if backend != "sortingview":
-                    sw.plot_timeseries(self.recording, mode="auto", backend=backend, **self.backend_kwargs[backend])
-                    sw.plot_timeseries(
+                    sw.plot_traces(self.recording, mode="auto", backend=backend, **self.backend_kwargs[backend])
+                    sw.plot_traces(
                         self.recording,
                         mode="line",
                         show_channel_ids=True,
@@ -114,7 +114,7 @@ class TestWidgets(unittest.TestCase):
                         **self.backend_kwargs[backend],
                     )
                     # multi layer
-                    sw.plot_timeseries(
+                    sw.plot_traces(
                         {"rec0": self.recording, "rec1": scale(self.recording, gain=0.8, offset=0)},
                         color="r",
                         mode="line",
@@ -337,7 +337,7 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_waveforms_density_map()
     # mytest.test_plot_unit_summary()
     # mytest.test_plot_all_amplitudes_distributions()
-    # mytest.test_plot_timeseries()
+    # mytest.test_plot_traces()
     # mytest.test_plot_unit_waveforms()
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_templates()
