@@ -43,8 +43,9 @@ class SortingviewPlotter(BackendPlotter):
 
     def handle_display_and_url(self, view, **backend_kwargs):
         self.set_view(view)
-        if self.is_notebook() and backend_kwargs["display"]:
-            display(self.view.jupyter(height=backend_kwargs["height"]))
+        # figurl_jupyter is broken. Comment it out for now.
+        # if self.is_notebook() and backend_kwargs["display"]:
+        #     display(self.view.jupyter(height=backend_kwargs["height"]))
         if backend_kwargs["generate_url"]:
             figlabel = backend_kwargs.get("figlabel")
             if figlabel is None:
