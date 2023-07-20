@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -108,9 +109,8 @@ def train_deepinterpolation(
         Path to the model
     """
 
-    # q: can you list all argument of the train_deepinterpolation function in a tuple?
-    #   a: yes, see below
-    # q: can you list all argument of the train_deepinterpolation function in a tuple?
+    if nb_workers == -1:
+        nb_workers = os.cpu_count()
 
     args = (
         recording,
@@ -218,7 +218,7 @@ def train_deepinterpolation_process(
     training_params["learning_rate"] = learning_rate
     training_params["loss"] = loss
     training_params["nb_workers"] = nb_workers
-    training_params["caching_validation"] = False
+    training_params["caching_validation"] = caching_validation
     training_params["model_string"] = model_name
     if existing_model_path:
         training_params["model_path"] = str(existing_model_path)
