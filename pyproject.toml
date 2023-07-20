@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.98.1"
+version = "0.99.0.dev0"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -17,6 +17,7 @@ classifiers = [
     "Operating System :: MacOS",
     "Operating System :: OS Independent"
 ]
+
 
 dependencies = [
     "numpy",
@@ -99,7 +100,6 @@ widgets = [
     "ipympl",
     "ipywidgets",
     "sortingview>=0.11.15",
-    "figurl-jupyter"
 ]
 
 test_core = [
@@ -118,9 +118,8 @@ test = [
     "huggingface_hub",
 
     # tridesclous
-    "numpy<1.24",
     "numba",
-    "hdbscan",
+    "hdbscan>=0.8.33",  # Previous version had a broken wheel
 
     # for sortingview backend
     "sortingview",
@@ -130,7 +129,7 @@ test = [
     "datalad==0.16.2",
 
     ## install tridesclous for testing ##
-    "tridesclous>=1.6.6.1",
+    "tridesclous>=1.6.8",
 
     ## sliding_nn
     "pymde",
@@ -139,8 +138,8 @@ test = [
 
     # for github test : probeinterface and neo from master
     # for release we need pypi, so this need to be commented
-    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
 ]
 
 docs = [
@@ -153,11 +152,11 @@ docs = [
     "MEArec",   # Use as an example
     "datalad==0.16.2",  # Download mearec data, not sure if needed as is installed with conda as well because of git-annex
     "pandas", # Don't know where this is needed
-    "hdbscan",   # For sorters, probably spikingcircus
+    "hdbscan>=0.8.33",   # For sorters, probably spikingcircus
     "numba", # For sorters, probably spikingcircus
     # for release we need pypi, so this needs to be commented
-    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
-    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
+    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
+    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
 
 ]
 

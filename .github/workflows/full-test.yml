@@ -37,8 +37,6 @@ jobs:
         with:
           path: ${{ github.workspace }}/test_env
           key: ${{ runner.os }}-venv-${{ hashFiles('**/pyproject.toml') }}-${{ steps.date.outputs.date }}
-          restore-keys: |
-            ${{ runner.os }}-venv-
       - name: Get ephy_testing_data current head hash
         # the key depends on the last comit repo https://gin.g-node.org/NeuralEnsemble/ephy_testing_data.git
         id: vars
@@ -53,8 +51,7 @@ jobs:
         with:
           path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
-          restore-keys: |
-            ${{ runner.os }}-datasets
+          restore-keys: ${{ runner.os }}-datasets
       - name: Install packages
         uses: ./.github/actions/build-test-environment
       - name: Shows installed packages by pip, git-annex and cached testing files
@@ -66,6 +63,10 @@ jobs:
         id: modules-changed
         run: |
           for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            if [[ $file == *"pyproject.toml" ]]; then
+              echo "pyproject.toml changed"
+              echo "CORE_CHANGED=true" >> $GITHUB_OUTPUT
+            fi
             if [[ $file == *"/core/"* || $file == *"/extractors/neoextractors/neobaseextractor.py" ]]; then
               echo "Core changed"
               echo "CORE_CHANGED=true" >> $GITHUB_OUTPUT
