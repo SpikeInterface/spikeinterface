@@ -33,7 +33,7 @@ jobs:
         with:
           path: ${{ github.workspace }}/test_env
           key: ${{ runner.os }}-venv-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
-          lookup-only: 'true'
+          lookup-only: 'true'   # Avoids downloading the data, saving behavior is not affected.
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-venv.outputs.cache-hit == 'true'}}"
       - name: Create the virtual environment to be cached
