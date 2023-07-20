@@ -18,7 +18,7 @@ from .crosscorrelograms import CrossCorrelogramsWidget
 # drift/motion
 
 # spikes-traces
-# from .spikes_on_traces import SpikesOnTracesWidget
+from .spikes_on_traces import SpikesOnTracesWidget
 
 # PC related
 
@@ -63,7 +63,7 @@ widget_list = [
     CrossCorrelogramsWidget,
     QualityMetricsWidget,
     SpikeLocationsWidget,
-    # SpikesOnTracesWidget,
+    SpikesOnTracesWidget,
     TemplateMetricsWidget,
     MotionWidget,
     TemplateSimilarityWidget,
@@ -135,6 +135,7 @@ plot_unit_locations = UnitLocationsWidget
 plot_autocorrelograms = AutoCorrelogramsWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_spike_locations = SpikeLocationsWidget
+plot_spikes_on_traces = SpikesOnTracesWidget
 plot_template_metrics = TemplateMetricsWidget
 plot_timeseries = TimeseriesWidget
 plot_quality_metrics = QualityMetricsWidget
