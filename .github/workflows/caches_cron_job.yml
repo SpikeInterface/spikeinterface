@@ -65,7 +65,7 @@ jobs:
         with:
           path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
-          lookup-only: 'true'
+          lookup-only: 'true'   # Avoids downloading the data, saving behavior is not affected.
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}}"
       - name: Installing datalad and git-annex
