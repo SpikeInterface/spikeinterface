@@ -25,7 +25,8 @@ runs:
       shell: bash
     - name: Force installation of latest dev from key-packages when running dev (not release)
       run: |
-        spikeinterface_is_dev_version=$(python -c "import importlib.metadata; package_name = 'spikeinterface'; version = importlib.metadata.version(package_name); print(version.endswith('dev0'))")
+        source ${{ github.workspace }}/test_env/bin/activate
+        spikeinterface_is_dev_version=$(python -c "import importlib.metadata; version = importlib.metadata.version('spikeinterface'); print(version.endswith('dev0'))")
         if [ $spikeinterface_is_dev_version = "True" ]; then
           echo "Running spikeinterface dev version"
           pip install --no-cache-dir git+https://github.com/NeuralEnsemble/python-neo
