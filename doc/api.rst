@@ -269,6 +269,7 @@ spikeinterface.widgets
     .. autofunction:: plot_amplitudes
     .. autofunction:: plot_autocorrelograms
     .. autofunction:: plot_crosscorrelograms
+    .. autofunction:: plot_motion
     .. autofunction:: plot_quality_metrics
     .. autofunction:: plot_sorting_summary
     .. autofunction:: plot_spike_locations

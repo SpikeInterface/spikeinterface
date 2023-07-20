@@ -498,7 +498,6 @@ class TracesWidget(BaseWidget):
         except ImportError:
             raise ImportError("To use the timeseries in sorting view you need the pyvips package.")
 
-        backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         dp = to_attr(data_plot)
 
         assert dp.mode == "map", 'sortingview plot_traces is only mode="map"'
