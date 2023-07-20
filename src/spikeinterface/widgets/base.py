@@ -19,7 +19,6 @@ def set_default_plotter_backend(backend):
     default_backend_ = backend
 
 
-
 backend_kwargs_desc = {
     "matplotlib": {
         "figure": "Matplotlib figure. When None, it is created. Default None",
@@ -29,33 +28,37 @@ backend_kwargs_desc = {
         "figsize": "Size of matplotlib figure. Default None",
         "figtitle": "The figure title. Default None",
     },
-    'sortingview': {
+    "sortingview": {
         "generate_url": "If True, the figurl URL is generated and printed. Default True",
         "display": "If True and in jupyter notebook/lab, the widget is displayed in the cell. Default True.",
         "figlabel": "The figurl figure label. Default None",
         "height": "The height of the sortingview View in jupyter. Default None",
     },
-    "ipywidgets" : {
-    "width_cm": "Width of the figure in cm (default 10)",
-    "height_cm": "Height of the figure in cm (default 6)",
-    "display": "If True, widgets are immediately displayed",
+    "ipywidgets": {
+        "width_cm": "Width of the figure in cm (default 10)",
+        "height_cm": "Height of the figure in cm (default 6)",
+        "display": "If True, widgets are immediately displayed",
     },
-
 }
 
 default_backend_kwargs = {
     "matplotlib": {"figure": None, "ax": None, "axes": None, "ncols": 5, "figsize": None, "figtitle": None},
     "sortingview": {"generate_url": True, "display": True, "figlabel": None, "height": None},
-    "ipywidgets" : {"width_cm": 25, "height_cm": 10, "display": True},
+    "ipywidgets": {"width_cm": 25, "height_cm": 10, "display": True},
 }
-
 
 
 class BaseWidget:
     # this need to be reset in the subclass
     possible_backends = None
 
-    def __init__(self, data_plot=None, backend=None, immediate_plot=True, **backend_kwargs, ):
+    def __init__(
+        self,
+        data_plot=None,
+        backend=None,
+        immediate_plot=True,
+        **backend_kwargs,
+    ):
         # every widgets must prepare a dict "plot_data" in the init
         self.data_plot = data_plot
         backend = self.check_backend(backend)
@@ -70,16 +73,16 @@ class BaseWidget:
                 )
         backend_kwargs_ = default_backend_kwargs[self.backend].copy()
         backend_kwargs_.update(backend_kwargs)
-        
+
         self.backend_kwargs = backend_kwargs_
 
         if immediate_plot:
-            print('immediate_plot', self.backend, self.backend_kwargs)
+            print("immediate_plot", self.backend, self.backend_kwargs)
             self.do_plot(self.backend, **self.backend_kwargs)
 
     @classmethod
     def get_possible_backends(cls):
-        return [ k for k in default_backend_kwargs if hasattr(cls, f"plot_{k}") ]
+        return [k for k in default_backend_kwargs if hasattr(cls, f"plot_{k}")]
 
     def check_backend(self, backend):
         if backend is None:
@@ -88,7 +91,6 @@ class BaseWidget:
             f"{backend} backend not available! Available backends are: " f"{self.get_possible_backends()}"
         )
         return backend
-    
 
     # def check_backend_kwargs(self, plotter, backend, **backend_kwargs):
     #     plotter_kwargs = plotter.default_backend_kwargs
@@ -102,7 +104,7 @@ class BaseWidget:
     def do_plot(self, backend, **backend_kwargs):
         # backend = self.check_backend(backend)
 
-        func = getattr(self, f'plot_{backend}')
+        func = getattr(self, f"plot_{backend}")
         func(self.data_plot, **self.backend_kwargs)
 
     # @classmethod

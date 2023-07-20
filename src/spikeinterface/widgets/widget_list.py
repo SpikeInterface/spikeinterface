@@ -1,4 +1,4 @@
-# from .base import define_widget_function_from_class
+# from .base import define_widget_function_from_class
 from .base import backend_kwargs_desc
 
 # basics
@@ -90,12 +90,12 @@ for wcls in widget_list:
     **backend_kwargs: kwargs
     {backend_kwargs}
     """
-    # backend_str = f"    {list(wcls.possible_backends.keys())}"
+    # backend_str = f"    {list(wcls.possible_backends.keys())}"
     backend_str = f"    {wcls.get_possible_backends()}"
     backend_kwargs_str = ""
-    # for backend, backend_plotter in wcls.possible_backends.items():
+    # for backend, backend_plotter in wcls.possible_backends.items():
     for backend in wcls.get_possible_backends():
-        # backend_kwargs_desc = backend_plotter.backend_kwargs_desc
+        # backend_kwargs_desc = backend_plotter.backend_kwargs_desc
         kwargs_desc = backend_kwargs_desc[backend]
         if len(kwargs_desc) > 0:
             backend_kwargs_str += f"\n        {backend}:\n\n"
@@ -147,4 +147,3 @@ plot_unit_waveforms_density_map = UnitWaveformDensityMapWidget
 plot_unit_depths = UnitDepthsWidget
 plot_unit_summary = UnitSummaryWidget
 plot_sorting_summary = SortingSummaryWidget
-

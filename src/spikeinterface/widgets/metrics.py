@@ -91,7 +91,7 @@ class MetricsBaseWidget(BaseWidget):
             backend_kwargs["figsize"] = (2 * num_metrics, 2 * num_metrics)
 
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-        backend_kwargs["num_axes"] = num_metrics ** 2
+        backend_kwargs["num_axes"] = num_metrics**2
         backend_kwargs["ncols"] = num_metrics
 
         all_unit_ids = metrics.index.values
@@ -127,7 +127,6 @@ class MetricsBaseWidget(BaseWidget):
                 self.axes[i, j].spines["right"].set_visible(False)
 
         self.figure.subplots_adjust(top=0.8, wspace=0.2, hspace=0.2)
-
 
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
@@ -169,7 +168,6 @@ class MetricsBaseWidget(BaseWidget):
         for w in self.controller.values():
             w.observe(self._update_ipywidget)
 
-
         self.widget = widgets.AppLayout(
             center=self.figure.canvas,
             left_sidebar=unit_widget,
@@ -203,7 +201,7 @@ class MetricsBaseWidget(BaseWidget):
         # here we do a trick: we just update colors
         # if hasattr(self.mpl_plotter, "patches"):
         if hasattr(self, "patches"):
-            # for p in self.mpl_plotter.patches:
+            # for p in self.mpl_plotter.patches:
             for p in self.patches:
                 p.set_color(colors)
                 p.set_sizes(sizes)
@@ -242,7 +240,7 @@ class MetricsBaseWidget(BaseWidget):
             unit_ids = metrics.index.values
         else:
             unit_ids = dp.unit_ids
-        # unit_ids = self.make_serializable(unit_ids)
+        # unit_ids = self.make_serializable(unit_ids)
         unit_ids = make_serializable(unit_ids)
 
         metrics_sv = []

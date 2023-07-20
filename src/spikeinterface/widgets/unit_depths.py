@@ -74,4 +74,3 @@ class UnitDepthsWidget(BaseWidget):
         ax.set_xlabel("amplitude")
         ax.set_ylabel("depth [um]")
         ax.set_xlim(0, max(dp.unit_amplitudes) * 1.2)
-

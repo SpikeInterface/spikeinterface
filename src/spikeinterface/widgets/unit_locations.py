@@ -79,7 +79,7 @@ class UnitLocationsWidget(BaseWidget):
             plot_legend=plot_legend,
             hide_axis=hide_axis,
         )
-        
+
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
@@ -90,16 +90,11 @@ class UnitLocationsWidget(BaseWidget):
         from matplotlib.patches import Ellipse
         from matplotlib.lines import Line2D
 
-        
-
-
         dp = to_attr(data_plot)
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
-
         # self.make_mpl_figure(**backend_kwargs)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
-
 
         unit_locations = dp.unit_locations
 
@@ -161,8 +156,8 @@ class UnitLocationsWidget(BaseWidget):
         ]
 
         if dp.plot_legend:
-            if hasattr(self, 'legend') and self.legend is not None:
-            # if self.legend is not None:
+            if hasattr(self, "legend") and self.legend is not None:
+                # if self.legend is not None:
                 self.legend.remove()
             self.legend = self.figure.legend(
                 handles, labels, loc="upper center", bbox_to_anchor=(0.5, 1.0), ncol=5, fancybox=True, shadow=True
@@ -171,9 +166,6 @@ class UnitLocationsWidget(BaseWidget):
         if dp.hide_axis:
             self.ax.axis("off")
 
-
-    
-    
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
@@ -187,7 +179,6 @@ class UnitLocationsWidget(BaseWidget):
         cm = 1 / 2.54
 
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
-
 
         width_cm = backend_kwargs["width_cm"]
         height_cm = backend_kwargs["height_cm"]
@@ -227,7 +218,7 @@ class UnitLocationsWidget(BaseWidget):
 
         if backend_kwargs["display"]:
             display(self.widget)
-    
+
     def _update_ipywidget(self, change):
         self.ax.clear()
 
@@ -283,4 +274,3 @@ class UnitLocationsWidget(BaseWidget):
 
         # self.handle_display_and_url(view, **backend_kwargs)
         self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
-

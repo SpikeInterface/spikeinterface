@@ -41,7 +41,7 @@ class AutoCorrelogramsWidget(CrossCorrelogramsWidget):
 
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         dp = to_attr(data_plot)
-        # unit_ids = self.make_serializable(dp.unit_ids)
+        # unit_ids = self.make_serializable(dp.unit_ids)
         unit_ids = make_serializable(dp.unit_ids)
 
         ac_items = []
@@ -61,8 +61,6 @@ class AutoCorrelogramsWidget(CrossCorrelogramsWidget):
         # self.handle_display_and_url(v_autocorrelograms, **backend_kwargs)
         # return v_autocorrelograms
         self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
-
-
 
 
 AutoCorrelogramsWidget.__doc__ = CrossCorrelogramsWidget.__doc__

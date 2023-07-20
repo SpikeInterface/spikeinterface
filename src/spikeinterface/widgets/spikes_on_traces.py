@@ -173,8 +173,6 @@ class SpikesOnTracesWidget(BaseWidget):
         recording = we.recording
         sorting = we.sorting
 
-
-
         # first plot time series
         # tsplotter = TimeseriesPlotter()
         # data_plot["timeseries"]["add_legend"] = False
@@ -189,7 +187,6 @@ class SpikesOnTracesWidget(BaseWidget):
         self.axes = ts_widget.axes
         self.figure = ts_widget.figure
 
-
         ax = self.ax
 
         # we = dp.waveform_extractor
@@ -203,7 +200,6 @@ class SpikesOnTracesWidget(BaseWidget):
         segment_index = ts_widget.data_plot["segment_index"]
         min_y = np.min(ts_widget.data_plot["channel_locations"][:, 1])
         max_y = np.max(ts_widget.data_plot["channel_locations"][:, 1])
-
 
         # n = len(dp.timeseries["channel_ids"])
         # order = dp.timeseries["order"]
@@ -263,10 +259,10 @@ class SpikesOnTracesWidget(BaseWidget):
                     traces = ts_widget.data_plot["list_traces"][0]
 
                     waveform_idxs = spike_frames_to_plot[:, None] + np.arange(-we.nbefore, we.nafter) - frame_range[0]
-                    # waveform_idxs = np.clip(waveform_idxs, 0, len(dp.timeseries["times"]) - 1)
+                    # waveform_idxs = np.clip(waveform_idxs, 0, len(dp.timeseries["times"]) - 1)
                     waveform_idxs = np.clip(waveform_idxs, 0, len(ts_widget.data_plot["times"]) - 1)
 
-                    # times = dp.timeseries["times"][waveform_idxs]
+                    # times = dp.timeseries["times"][waveform_idxs]
                     times = ts_widget.data_plot["times"][waveform_idxs]
 
                     # discontinuity
@@ -286,7 +282,6 @@ class SpikesOnTracesWidget(BaseWidget):
                                 label_set = True
         ax.legend(handles, labels)
 
-
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
@@ -299,7 +294,6 @@ class SpikesOnTracesWidget(BaseWidget):
 
         dp = to_attr(data_plot)
         we = dp.waveform_extractor
-
 
         ratios = [0.2, 0.8]
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
@@ -323,15 +317,14 @@ class SpikesOnTracesWidget(BaseWidget):
         self.axes = ts_widget.axes
         self.figure = ts_widget.figure
 
-
         # we = data_plot["waveform_extractor"]
-        
+
         unit_widget, unit_controller = make_unit_controller(
             data_plot["unit_ids"], we.unit_ids, ratios[0] * width_cm, height_cm
         )
 
         self.controller = dict()
-        # self.controller = ts_updater.controller
+        # self.controller = ts_updater.controller
         self.controller.update(ts_widget.controller)
         self.controller.update(unit_controller)
 
@@ -343,7 +336,6 @@ class SpikesOnTracesWidget(BaseWidget):
 
         for w in self.controller.values():
             w.observe(self._update_ipywidget)
-
 
         self.widget = widgets.AppLayout(center=ts_widget.widget, left_sidebar=unit_widget, pane_widths=ratios + [0])
 

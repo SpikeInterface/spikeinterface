@@ -55,7 +55,6 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
         from matplotlib.patches import Ellipse
         from matplotlib.lines import Line2D
 
-
         dp = to_attr(data_plot)
         # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
         # self.make_mpl_figure(**backend_kwargs)

@@ -1,5 +1,6 @@
 from .unit_waveforms import UnitWaveformsWidget
-from .base import  to_attr
+from .base import to_attr
+
 
 class UnitTemplatesWidget(UnitWaveformsWidget):
     # possible_backends = {}
@@ -54,8 +55,6 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         # self.handle_display_and_url(view, **backend_kwargs)
         # return view
         self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
-
-
 
 
 UnitTemplatesWidget.__doc__ = UnitWaveformsWidget.__doc__

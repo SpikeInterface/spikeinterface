@@ -284,7 +284,12 @@ class TimeseriesWidget(BaseWidget):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
-        from .ipywidgets_utils import check_ipywidget_backend, make_timeseries_controller, make_channel_controller, make_scale_controller
+        from .ipywidgets_utils import (
+            check_ipywidget_backend,
+            make_timeseries_controller,
+            make_channel_controller,
+            make_scale_controller,
+        )
 
         check_ipywidget_backend()
 
@@ -499,7 +504,6 @@ class TimeseriesWidget(BaseWidget):
         fig.canvas.draw()
         fig.canvas.flush_events()
 
-
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv
         from .sortingview_utils import generate_unit_table_view, make_serializable, handle_display_and_url
@@ -543,11 +547,6 @@ class TimeseriesWidget(BaseWidget):
         # return view_ts
 
         self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
-
-
-
-
-
 
 
 def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=None, return_scaled=False):

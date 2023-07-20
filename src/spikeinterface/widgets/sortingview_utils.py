@@ -3,8 +3,6 @@ import numpy as np
 from ..core.core_tools import check_json
 
 
-
-
 sortingview_backend_kwargs_desc = {
     "generate_url": "If True, the figurl URL is generated and printed. Default True",
     "display": "If True and in jupyter notebook/lab, the widget is displayed in the cell. Default True.",
@@ -12,7 +10,6 @@ sortingview_backend_kwargs_desc = {
     "height": "The height of the sortingview View in jupyter. Default None",
 }
 sortingview_default_backend_kwargs = {"generate_url": True, "display": True, "figlabel": None, "height": None}
-
 
 
 def make_serializable(*args):
@@ -24,6 +21,7 @@ def make_serializable(*args):
     if len(returns) == 1:
         returns = returns[0]
     return returns
+
 
 def is_notebook() -> bool:
     try:
@@ -37,6 +35,7 @@ def is_notebook() -> bool:
     except NameError:
         return False
 
+
 def handle_display_and_url(widget, view, **backend_kwargs):
     url = None
     if is_notebook() and backend_kwargs["display"]:
@@ -44,14 +43,12 @@ def handle_display_and_url(widget, view, **backend_kwargs):
     if backend_kwargs["generate_url"]:
         figlabel = backend_kwargs.get("figlabel")
         if figlabel is None:
-            # figlabel = widget.default_label
+            # figlabel = widget.default_label
             figlabel = ""
         url = view.url(label=figlabel)
         print(url)
-    
+
     return url
-
-
 
 
 def generate_unit_table_view(sorting, unit_properties=None, similarity_scores=None):

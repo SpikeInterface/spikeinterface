@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 from spikeinterface import extract_waveforms, load_waveforms, download_dataset, compute_sparsity
 
-# from spikeinterface.widgets import HAVE_MPL, HAVE_SV
+# from spikeinterface.widgets import HAVE_MPL, HAVE_SV
 
 
 import spikeinterface.extractors as se

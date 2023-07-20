@@ -78,7 +78,6 @@ class SortingSummaryWidget(BaseWidget):
             unit_table_properties=unit_table_properties,
             curation=curation,
             label_choices=label_choices,
-
             max_amplitudes_per_unit=max_amplitudes_per_unit,
         )
 
@@ -92,7 +91,6 @@ class SortingSummaryWidget(BaseWidget):
         we = dp.waveform_extractor
         unit_ids = dp.unit_ids
         sparsity = dp.sparsity
-
 
         # unit_ids = self.make_serializable(dp.unit_ids)
         unit_ids = make_serializable(dp.unit_ids)
@@ -117,21 +115,34 @@ class SortingSummaryWidget(BaseWidget):
         # )
 
         v_spike_amplitudes = AmplitudesWidget(
-            we, unit_ids=unit_ids, max_spikes_per_unit=dp.max_amplitudes_per_unit, hide_unit_selector=True,
-            generate_url=False, display=False, backend="sortingview"
+            we,
+            unit_ids=unit_ids,
+            max_spikes_per_unit=dp.max_amplitudes_per_unit,
+            hide_unit_selector=True,
+            generate_url=False,
+            display=False,
+            backend="sortingview",
         ).view
         v_average_waveforms = UnitTemplatesWidget(
-            we, unit_ids=unit_ids, sparsity=sparsity, hide_unit_selector=True,
-            generate_url=False, display=False, backend="sortingview"
+            we,
+            unit_ids=unit_ids,
+            sparsity=sparsity,
+            hide_unit_selector=True,
+            generate_url=False,
+            display=False,
+            backend="sortingview",
         ).view
-        v_cross_correlograms = CrossCorrelogramsWidget(we, unit_ids=unit_ids, hide_unit_selector=True,
-                                                       generate_url=False, display=False, backend="sortingview").view
+        v_cross_correlograms = CrossCorrelogramsWidget(
+            we, unit_ids=unit_ids, hide_unit_selector=True, generate_url=False, display=False, backend="sortingview"
+        ).view
 
-        v_unit_locations = UnitLocationsWidget(we, unit_ids=unit_ids, hide_unit_selector=True,
-                                               generate_url=False, display=False, backend="sortingview").view
-        
-        w = TemplateSimilarityWidget(we, unit_ids=unit_ids, immediate_plot=False,
-                                      generate_url=False, display=False, backend="sortingview" )
+        v_unit_locations = UnitLocationsWidget(
+            we, unit_ids=unit_ids, hide_unit_selector=True, generate_url=False, display=False, backend="sortingview"
+        ).view
+
+        w = TemplateSimilarityWidget(
+            we, unit_ids=unit_ids, immediate_plot=False, generate_url=False, display=False, backend="sortingview"
+        )
         similarity = w.data_plot["similarity"]
         print(similarity.shape)
 
@@ -140,9 +151,7 @@ class SortingSummaryWidget(BaseWidget):
         for i1, u1 in enumerate(unit_ids):
             for i2, u2 in enumerate(unit_ids):
                 similarity_scores.append(
-                    vv.UnitSimilarityScore(
-                        unit_id1=u1, unit_id2=u2, similarity=similarity[i1, i2].astype("float32")
-                    )
+                    vv.UnitSimilarityScore(unit_id1=u1, unit_id2=u2, similarity=similarity[i1, i2].astype("float32"))
                 )
 
         # unit ids
@@ -179,7 +188,5 @@ class SortingSummaryWidget(BaseWidget):
 
         # self.handle_display_and_url(v_summary, **backend_kwargs)
         # return v_summary
-    
+
         self.url = handle_display_and_url(self, self.view, **self.backend_kwargs)
-
-
