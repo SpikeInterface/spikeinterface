@@ -17,7 +17,7 @@ def import_tf(use_gpu=True, disable_tf_logger=True, memory_gpu=None):
 
     if disable_tf_logger:
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-        tf.get_logger().setLevel("ERROR")
+        tf.logging.set_verbosity(tf.logging.ERROR)
 
     tf.compat.v1.disable_eager_execution()
     gpus = tf.config.list_physical_devices("GPU")
@@ -26,7 +26,6 @@ def import_tf(use_gpu=True, disable_tf_logger=True, memory_gpu=None):
             try:
                 # Currently, memory growth needs to be the same across GPUs
                 for gpu in gpus:
-                    print("Setting memory growth")
                     tf.config.experimental.set_memory_growth(gpu, True)
             except RuntimeError as e:
                 # Memory growth must be set before GPUs have been initialized
