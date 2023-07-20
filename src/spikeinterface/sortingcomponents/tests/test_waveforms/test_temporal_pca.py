@@ -83,7 +83,7 @@ def test_pca_denoising_sparse(mearec_recording, detected_peaks, model_path_of_tr
     peaks = detected_peaks
 
     # Parameters
-    local_radius_um = 40
+    radius_um = 40
     ms_before = 1.0
     ms_after = 1.0
 
@@ -94,7 +94,7 @@ def test_pca_denoising_sparse(mearec_recording, detected_peaks, model_path_of_tr
         parents=[peak_retriever],
         ms_before=ms_before,
         ms_after=ms_after,
-        local_radius_um=local_radius_um,
+        radius_um=radius_um,
         return_output=True,
     )
     pca_denoising = TemporalPCADenoising(
@@ -143,7 +143,7 @@ def test_pca_projection_sparsity(mearec_recording, detected_peaks, model_path_of
     peaks = detected_peaks
 
     # Parameters
-    local_radius_um = 40
+    radius_um = 40
     ms_before = 1.0
     ms_after = 1.0
 
@@ -154,7 +154,7 @@ def test_pca_projection_sparsity(mearec_recording, detected_peaks, model_path_of
         parents=[peak_retriever],
         ms_before=ms_before,
         ms_after=ms_after,
-        local_radius_um=local_radius_um,
+        radius_um=radius_um,
         return_output=True,
     )
     temporal_pca = TemporalPCAProjection(
@@ -181,7 +181,7 @@ def test_initialization_with_wrong_parents_failure(mearec_recording, model_path_
     model_folder_path = model_path_of_trained_pca
     dummy_parent = PipelineNode(recording=recording)
     extract_waveforms = ExtractSparseWaveforms(
-        recording=recording, ms_before=1, ms_after=1, local_radius_um=40, return_output=True
+        recording=recording, ms_before=1, ms_after=1, radius_um=40, return_output=True
     )
 
     match_error = f"TemporalPCA should have a single {WaveformsNode.__name__} in its parents"
