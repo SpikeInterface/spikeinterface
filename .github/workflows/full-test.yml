@@ -51,6 +51,7 @@ jobs:
         with:
           path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.vars.outputs.HASH_EPHY_DATASET }}
+          restore-keys: ${{ runner.os }}-datasets
       - name: Install packages
         uses: ./.github/actions/build-test-environment
       - name: Shows installed packages by pip, git-annex and cached testing files
