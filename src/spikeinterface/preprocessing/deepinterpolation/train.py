@@ -143,7 +143,7 @@ def train_deepinterpolation(
     )
     global train_func
     train_func = train_deepinterpolation_process
-    with ProcessPoolExecutor(mp_context=mp.get_context("spawn")) as executor:
+    with ProcessPoolExecutor(mp_context=mp.get_context("spawn"), max_workers=nb_workers) as executor:
         f = executor.submit(train_func, *args)
         model_path = f.result()
     return model_path
