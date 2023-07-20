@@ -11,3 +11,7 @@ Minor release with some bug fixes.
 * Fix Mearec handling of new arguments before neo release 0.13 (#1848)
 * Fix full tests by updating hdbscan version (#1849)
 * Relax numpy upper bound and update tridesclous dependency (#1850)
+* Drop figurl-jupyter dependency (#1855)
+* Update Tridesclous 1.6.8 (#1857)
+* Eliminate restore keys in CI and simplify installation of dev version dependencies (#1858)
+* Allow order_channel_by_depth to accept dimentsions as list (#1861)
