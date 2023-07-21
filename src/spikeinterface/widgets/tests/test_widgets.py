@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 
 from spikeinterface import extract_waveforms, load_waveforms, download_dataset, compute_sparsity
 
-# from spikeinterface.widgets import HAVE_MPL, HAVE_SV
 
 
 import spikeinterface.extractors as se
@@ -36,7 +35,6 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "widgets"
 
-print(cache_folder)
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))

@@ -34,8 +34,6 @@ class SortingSummaryWidget(BaseWidget):
         (sortingview backend)
     """
 
-    # possible_backends = {}
-
     def __init__(
         self,
         waveform_extractor: WaveformExtractor,

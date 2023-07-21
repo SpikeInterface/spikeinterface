@@ -25,8 +25,6 @@ class TemplateSimilarityWidget(BaseWidget):
         If True, color bar is displayed, default True.
     """
 
-    # possible_backends = {}
-
     def __init__(
         self,
         waveform_extractor: WaveformExtractor,

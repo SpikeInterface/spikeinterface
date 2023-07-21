@@ -24,8 +24,6 @@ class UnitDepthsWidget(BaseWidget):
         Sign of peak for amplitudes, default 'neg'
     """
 
-    # possible_backends = {}
-
     def __init__(
         self, waveform_extractor, unit_colors=None, depth_axis=1, peak_sign="neg", backend=None, **backend_kwargs
     ):

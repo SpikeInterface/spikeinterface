@@ -50,9 +50,6 @@ class AllAmplitudesDistributionsWidget(BaseWidget):
         import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
 
-        from matplotlib.patches import Ellipse
-        from matplotlib.lines import Line2D
-
         dp = to_attr(data_plot)
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
