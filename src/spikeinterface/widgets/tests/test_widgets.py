@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 from spikeinterface import extract_waveforms, load_waveforms, download_dataset, compute_sparsity
 
 
-
 import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
 import spikeinterface.comparison as sc
