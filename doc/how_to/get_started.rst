@@ -266,7 +266,7 @@ available parameters are dictionaries and can be accessed with:
      'clustering': {},
      'detection': {'detect_threshold': 5, 'peak_sign': 'neg'},
      'filtering': {'dtype': 'float32'},
-     'general': {'local_radius_um': 100, 'ms_after': 2, 'ms_before': 2},
+     'general': {'radius_um': 100, 'ms_after': 2, 'ms_before': 2},
      'job_kwargs': {},
      'localization': {},
      'matching': {},
