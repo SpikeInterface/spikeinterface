@@ -327,6 +327,7 @@ def run_node_pipeline(
     job_name="peak_pipeline",
     mp_context=None,
     gather_mode="memory",
+    gather_kwargs={},
     squeeze_output=True,
     folder=None,
     names=None,
@@ -343,7 +344,7 @@ def run_node_pipeline(
     if gather_mode == "memory":
         gather_func = GatherToMemory()
     elif gather_mode == "npy":
-        gather_func = GatherToNpy(folder, names)
+        gather_func = GatherToNpy(folder, names, **gather_kwargs)
     else:
         raise ValueError(f"wrong gather_mode : {gather_mode}")
 
@@ -528,9 +529,9 @@ class GatherToNpy:
       * create the npy v1.0 header at the end with the correct shape and dtype
     """
 
-    def __init__(self, folder, names, npy_header_size=1024):
+    def __init__(self, folder, names, npy_header_size=1024, exist_ok=False):
         self.folder = Path(folder)
-        self.folder.mkdir(parents=True, exist_ok=False)
+        self.folder.mkdir(parents=True, exist_ok=exist_ok)
         assert names is not None
         self.names = names
         self.npy_header_size = npy_header_size

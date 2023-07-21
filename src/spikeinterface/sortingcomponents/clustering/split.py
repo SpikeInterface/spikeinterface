@@ -4,7 +4,7 @@ from concurrent.futures import ProcessPoolExecutor
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
 
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, TruncatedSVD
 from hdbscan import HDBSCAN
 
 import numpy as np
@@ -12,6 +12,7 @@ import numpy as np
 from spikeinterface.core.job_tools import get_poolexecutor
 
 from .tools import aggregate_sparse_features, FeaturesLoader
+from .isocut5 import isocut5
 
 
 def split_clusters(
@@ -86,7 +87,7 @@ def split_clusters(
             current_max_label += np.max(local_labels[mask]) + 1
 
             if recursive:
-                new_labels_set = np.setdiff1d(labels[peak_indices], [-1])
+                new_labels_set = np.setdiff1d(peak_labels[peak_indices], [-1])
                 for label in new_labels_set:
                     peak_indices = np.flatnonzero(peak_labels == label)
                     if peak_indices.size > 0:
@@ -163,22 +164,44 @@ class HdbscanOnLocalPca:
         if kept.size < min_size_split:
             return False, None
 
-        # compress in time
-        # u, s, v = np.linalg.svd(np.transpose(aligned_wfs, (2, 0, 1)))
-        # u = np.transpose(u, (1, 2, 0))
-        # comp_wfs = u 
-        # print(aligned_wfs.shape, u.shape)
+        aligned_wfs = aligned_wfs[kept, :, :]
+
+        # compress in time then across channels
+        # n_components_by_channel = 5
+        # tsvd = TruncatedSVD(n_components=n_components_by_channel)
+        # local_features = np.zeros((aligned_wfs.shape[0], n_components_by_channel, aligned_wfs.shape[2]))
+        # for c in range(aligned_wfs.shape[2]):
+        #     local_features[:, :, c] = tsvd.fit_transform(aligned_wfs[:, :, c])
+        # flatten_features = local_features.reshape(local_features.shape[0], -1)
+        # print(aligned_wfs.shape, local_features.shape, flatten_features.shape)
 
 
-        flatten_features = aligned_wfs[kept].reshape(kept.size, -1)
-        pca_features = PCA(n_pca_features, whiten=True).fit_transform(flatten_features)
+        # compress in time + channels flatten
+        flatten_features = aligned_wfs.reshape(aligned_wfs.shape[0], -1)
+        # print(aligned_wfs.shape, flatten_features.shape)
+        
+
+        # final_features = PCA(n_pca_features, whiten=True).fit_transform(flatten_features)
+        # final_features = PCA(n_pca_features, whiten=False).fit_transform(flatten_features)
+        #~ final_features = TruncatedSVD(n_pca_features).fit_transform(flatten_features)
+        final_features = TruncatedSVD(n_pca_features).fit_transform(flatten_features)
 
         clust = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples)
-        clust.fit(pca_features)
+        clust.fit(final_features)
         possible_labels = clust.labels_
+        
+        # dipscore, cutpoint = isocut5(final_features[:, 0])
+        # possible_labels = np.zeros(final_features.shape[0])
+        # if dipscore > 1.5:
+        #     mask = final_features[:, 0] > cutpoint
+        #     if np.sum(mask) > min_cluster_size and np.sum(~mask):
+        #         possible_labels[mask] = 1
+        # else:
+        #     return False, None
 
         is_split = np.setdiff1d(possible_labels, [-1]).size > 1
 
+        # DEBUG = True
         DEBUG = False
         if DEBUG:
             import matplotlib.pyplot as plt
@@ -190,14 +213,17 @@ class HdbscanOnLocalPca:
             fix, axs = plt.subplots(nrows=2)
 
             flatten_wfs = aligned_wfs.swapaxes(1, 2).reshape(aligned_wfs.shape[0], -1)
-
+            
+            sl = slice(None, None, 10)
             for k in np.unique(possible_labels):
                 mask = possible_labels == k
                 ax = axs[0]
-                ax.scatter(pca_features[:, 0][mask], pca_features[:, 1][mask], s=5, color=colors[k])
+                ax.scatter(final_features[:, 0][mask][sl], final_features[:, 1][mask][sl], s=5, color=colors[k])
 
                 ax = axs[1]
-                ax.plot(flatten_wfs[mask].T, color=colors[k], alpha=0.5)
+                ax.plot(flatten_wfs[mask][sl].T, color=colors[k], alpha=0.5)
+                
+                ax.set_title(f"{dipscore, cutpoint}")
 
             plt.show()
 
