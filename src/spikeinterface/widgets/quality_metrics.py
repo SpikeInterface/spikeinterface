@@ -1,6 +1,5 @@
 from .metrics import MetricsBaseWidget
 from ..core.waveform_extractor import WaveformExtractor
-from ..qualitymetrics import compute_quality_metrics
 
 
 class QualityMetricsWidget(MetricsBaseWidget):
@@ -22,8 +21,6 @@ class QualityMetricsWidget(MetricsBaseWidget):
     hide_unit_selector : bool
         For sortingview backend, if True the unit selector is not displayed, default False
     """
-
-    possible_backends = {}
 
     def __init__(
         self,

@@ -6,7 +6,7 @@ from .basewidget import BaseWidget
 import scipy.spatial
 
 
-class TimeseriesWidget(BaseWidget):
+class TracesWidget(BaseWidget):
     """
     Plots recording timeseries.
 
@@ -46,7 +46,7 @@ class TimeseriesWidget(BaseWidget):
 
     Returns
     -------
-    W: TimeseriesWidget
+    W: TracesWidget
         The output widget
     """
 
@@ -225,9 +225,9 @@ class TimeseriesWidget(BaseWidget):
 
 
 def plot_timeseries(*args, **kwargs):
-    W = TimeseriesWidget(*args, **kwargs)
+    W = TracesWidget(*args, **kwargs)
     W.plot()
     return W
 
 
-plot_timeseries.__doc__ = TimeseriesWidget.__doc__
+plot_timeseries.__doc__ = TracesWidget.__doc__
