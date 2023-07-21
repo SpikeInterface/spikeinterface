@@ -290,7 +290,8 @@ class TracesWidget(BaseWidget):
         check_ipywidget_backend()
 
         self.next_data_plot = data_plot.copy()
-
+        self.next_data_plot["add_legend"] = False
+        
         recordings = data_plot["recordings"]
 
         # first layer
