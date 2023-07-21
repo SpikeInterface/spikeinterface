@@ -171,6 +171,11 @@ class HdbscanOnLocalPca:
         local_chans = np.unique(peaks["channel_index"][peak_indices])
         target_channels = np.flatnonzero(np.all(neighbours_mask[local_chans, :], axis=0))
 
+        # TODO fix this a better way, this when cluster have too few overlapping channels
+        minimum_channels = 2
+        if target_channels.size < minimum_channels:
+            return False, None
+
         aligned_wfs, dont_have_channels = aggregate_sparse_features(
             peaks, peak_indices, sparse_features, waveforms_sparse_mask, target_channels
         )

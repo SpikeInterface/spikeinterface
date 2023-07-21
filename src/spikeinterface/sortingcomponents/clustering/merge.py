@@ -15,6 +15,8 @@ from spikeinterface.core.job_tools import get_poolexecutor
 
 from .tools import aggregate_sparse_features, FeaturesLoader
 
+# This is not working at the moment
+
 def merge_clusters(
     peak_labels,
     recording,
@@ -33,7 +35,7 @@ def merge_clusters(
 
 
     """
-    feature_folder = Path(feature_folder)
+    # features_dict_or_folder = Path(features_dict_or_folder)
 
     original_labels = peak_labels
     peak_labels = peak_labels.copy()
