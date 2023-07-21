@@ -4,6 +4,7 @@ from typing import Type
 from spikeinterface.core import (
     BaseRecording,
     BaseSorting,
+    BinaryFolderRecording,
     BinaryRecordingExtractor,
     NumpyRecording,
     NpzSortingExtractor,
@@ -58,6 +59,7 @@ from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
 ########################################
 
 recording_extractor_full_list = [
+    BinaryFolderRecording,
     BinaryRecordingExtractor,
     ZarrRecordingExtractor,
     # natively implemented in spikeinterface.extractors
