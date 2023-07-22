@@ -395,6 +395,8 @@ class GroundTruthComparison(BasePairSorterComparison):
         perf: pandas dataframe/series (or dict)
             dataframe/series (based on 'output') with performance entries
         """
+        import pandas as pd
+
         possibles = ("raw_count", "by_unit", "pooled_with_average")
         if method not in possibles:
             raise Exception("'method' can be " + " or ".join(possibles))
