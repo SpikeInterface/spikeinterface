@@ -504,7 +504,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
     params_doc = (
         DetectPeakByChannel.params_doc
         + """
-    local_radius_um: float
+    radius_um: float
         The radius to use to select neighbour channels for locally exclusive detection.
     """
     )
@@ -516,7 +516,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         peak_sign="neg",
         detect_threshold=5,
         exclude_sweep_ms=0.1,
-        local_radius_um=50,
+        radius_um=50,
         noise_levels=None,
         random_chunk_kwargs={},
     ):
@@ -533,7 +533,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
         )
 
         channel_distance = get_channel_distances(recording)
-        neighbours_mask = channel_distance < local_radius_um
+        neighbours_mask = channel_distance < radius_um
         return args + (neighbours_mask,)
 
     @classmethod
@@ -580,7 +580,7 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
     params_doc = (
         DetectPeakByChannel.params_doc
         + """
-    local_radius_um: float
+    radius_um: float
         The radius to use to select neighbour channels for locally exclusive detection.
     """
     )
@@ -594,7 +594,7 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
         exclude_sweep_ms=0.1,
         noise_levels=None,
         device=None,
-        local_radius_um=50,
+        radius_um=50,
         return_tensor=False,
         random_chunk_kwargs={},
     ):
@@ -615,7 +615,7 @@ class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
         neighbour_indices_by_chan = []
         num_channels = recording.get_num_channels()
         for chan in range(num_channels):
-            neighbour_indices_by_chan.append(np.nonzero(channel_distance[chan] < local_radius_um)[0])
+            neighbour_indices_by_chan.append(np.nonzero(channel_distance[chan] < radius_um)[0])
         max_neighbs = np.max([len(neigh) for neigh in neighbour_indices_by_chan])
         neighbours_idxs = num_channels * np.ones((num_channels, max_neighbs), dtype=int)
         for i, neigh in enumerate(neighbour_indices_by_chan):
@@ -836,7 +836,7 @@ class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
         peak_sign="neg",
         detect_threshold=5,
         exclude_sweep_ms=0.1,
-        local_radius_um=50,
+        radius_um=50,
         noise_levels=None,
         random_chunk_kwargs={},
     ):
@@ -847,7 +847,7 @@ class DetectPeakLocallyExclusiveOpenCL(PeakDetectorWrapper):
         abs_threholds = noise_levels * detect_threshold
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         channel_distance = get_channel_distances(recording)
-        neighbours_mask = channel_distance < local_radius_um
+        neighbours_mask = channel_distance < radius_um
 
         executor = OpenCLDetectPeakExecutor(abs_threholds, exclude_sweep_size, neighbours_mask, peak_sign)
 

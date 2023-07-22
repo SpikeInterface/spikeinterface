@@ -37,7 +37,7 @@ class CircusClustering:
         },
         "cleaning_kwargs": {},
         "tmp_folder": None,
-        "local_radius_um": 100,
+        "radius_um": 100,
         "n_pca": 10,
         "max_spikes_per_unit": 200,
         "ms_before": 1.5,
@@ -104,7 +104,7 @@ class CircusClustering:
         chan_distances = get_channel_distances(recording)
 
         for main_chan in unit_inds:
-            (closest_chans,) = np.nonzero(chan_distances[main_chan, :] <= params["local_radius_um"])
+            (closest_chans,) = np.nonzero(chan_distances[main_chan, :] <= params["radius_um"])
             sparsity_mask[main_chan, closest_chans] = True
 
         if params["waveform_mode"] == "shared_memory":

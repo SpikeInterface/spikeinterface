@@ -29,7 +29,7 @@ def get_prototype_spike(recording, peaks, job_kwargs, nb_peaks=1000, ms_before=0
         ms_before=ms_before,
         ms_after=ms_after,
         return_output=True,
-        local_radius_um=5,
+        radius_um=5,
     )
 
     nbefore = sparse_waveforms.nbefore

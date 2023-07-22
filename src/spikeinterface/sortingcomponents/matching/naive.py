@@ -35,7 +35,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         "exclude_sweep_ms": 0.1,
         "detect_threshold": 5,
         "noise_levels": None,
-        "local_radius_um": 100,
+        "radius_um": 100,
         "random_chunk_kwargs": {},
     }
 
@@ -54,7 +54,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         d["abs_threholds"] = d["noise_levels"] * d["detect_threshold"]
 
         channel_distance = get_channel_distances(recording)
-        d["neighbours_mask"] = channel_distance < d["local_radius_um"]
+        d["neighbours_mask"] = channel_distance < d["radius_um"]
 
         d["nbefore"] = we.nbefore
         d["nafter"] = we.nafter
