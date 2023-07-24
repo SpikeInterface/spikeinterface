@@ -58,7 +58,7 @@ def test_compare_sorter_to_ground_truth():
             import pandas as pd
 
             perf_df = sc.get_performance(method=method, output="pandas")
-            assert isinstance(perf_df, pd.DataFrame)
+            assert isinstance(perf_df, (pd.Series, pd.DataFrame))
             perf_dict = sc.get_performance(method=method, output="dict")
             assert isinstance(perf_dict, dict)
 
