@@ -218,7 +218,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         else:
             sparsity = waveform_extractor.sparsity.mask
     
-        print(sparsity.mean())
         templates = waveform_extractor.get_all_templates(mode='median').copy()
 
         d['sparsities'] = {}
@@ -542,7 +541,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'use_sparse_matrix_threshold' : 0.25,
         'progess_bar_steps' : False,
         'waveform_extractor': None,
-        'sparse_kwargs' : {'method' : 'threshold', 'threshold' : 0.5, 'peak_sign' : 'both'}
+        'sparse_kwargs' : {'method' : 'ptp', 'threshold' : 1}
     }
 
     @classmethod
