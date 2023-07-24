@@ -410,7 +410,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         elif method == "pooled_with_average":
             perf = self.get_performance(method="by_unit").mean(axis=0)
 
-        if output == "dict":
+        if output == "dict" and isinstance(perf, (pd.DataFrame, pd.Series)):
             perf = perf.to_dict()
 
         return perf
