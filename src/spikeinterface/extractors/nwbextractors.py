@@ -104,7 +104,6 @@ def read_nwbfile(
     --------
     >>> nwbfile = read_nwbfile("data.nwb", stream_mode="ros3")
     """
-    file_path = str(Path(file_path).absolute())
     from pynwb import NWBHDF5IO, NWBFile
 
     if stream_mode == "fsspec":
@@ -131,6 +130,7 @@ def read_nwbfile(
         io = NWBHDF5IO(path=file_path, mode="r", load_namespaces=True, driver="ros3")
 
     else:
+        file_path = str(Path(file_path).absolute())
         io = NWBHDF5IO(path=file_path, mode="r", load_namespaces=True)
 
     nwbfile = io.read()
