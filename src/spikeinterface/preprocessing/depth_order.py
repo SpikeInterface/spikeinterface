@@ -14,9 +14,9 @@ class DepthOrderRecording(ChannelSliceRecording):
         The recording to re-order.
     channel_ids : list/array or None
         If given, a subset of channels to order locations for
-    dimensions : str or tuple
+    dimensions : str, tuple, list
         If str, it needs to be 'x', 'y', 'z'.
-        If tuple, it sorts the locations in two dimensions using lexsort.
+        If tuple or list, it sorts the locations in two dimensions using lexsort.
         This approach is recommended since there is less ambiguity, by default ('x', 'y')
     """
 

@@ -34,7 +34,7 @@ class RandomProjectionClustering:
             "cluster_selection_method": "leaf",
         },
         "cleaning_kwargs": {},
-        "local_radius_um": 100,
+        "radius_um": 100,
         "max_spikes_per_unit": 200,
         "selection_method": "closest_to_centroid",
         "nb_projections": {"ptp": 8, "energy": 2},
@@ -106,7 +106,7 @@ class RandomProjectionClustering:
 
                 projections = np.random.randn(num_chans, d["nb_projections"][proj_type])
                 features_params[f"random_projections_{proj_type}"] = {
-                    "local_radius_um": params["local_radius_um"],
+                    "radius_um": params["radius_um"],
                     "projections": projections,
                     "min_values": min_values,
                 }

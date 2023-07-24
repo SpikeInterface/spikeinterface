@@ -93,7 +93,7 @@ class TemporalPCBaseNode(WaveformsNode):
         ms_before: float = 1.0,
         ms_after: float = 1.0,
         whiten: bool = True,
-        local_radius_um: float = None,
+        radius_um: float = None,
     ) -> IncrementalPCA:
         """
         Train a pca model using the data in the recording object and the parameters provided.
@@ -114,7 +114,7 @@ class TemporalPCBaseNode(WaveformsNode):
             The parameters for peak selection.
         whiten : bool, optional
             Whether to whiten the data, by default True.
-        local_radius_um : float, optional
+        radius_um : float, optional
             The radius (in micrometers) to use for definint sparsity, by default None.
         ms_before : float, optional
             The number of milliseconds to include before the peak of the spike, by default 1.
@@ -148,7 +148,7 @@ class TemporalPCBaseNode(WaveformsNode):
         )
 
         # compute PCA by_channel_global (with sparsity)
-        sparsity = ChannelSparsity.from_radius(we, radius_um=local_radius_um) if local_radius_um else None
+        sparsity = ChannelSparsity.from_radius(we, radius_um=radius_um) if radius_um else None
         pc = compute_principal_components(
             we, n_components=n_components, mode="by_channel_global", sparsity=sparsity, whiten=whiten
         )
