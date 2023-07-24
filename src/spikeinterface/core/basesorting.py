@@ -508,7 +508,7 @@ class BaseSorting(BaseExtractor):
     def to_numpy_sorting(self, propagate_cache=True):
         """
         Turn any sorting in a NumpySorting.
-        usefull to have it in memory with a unique vector representation.
+        useful to have it in memory with a unique vector representation.
 
         Parameters
         ----------
