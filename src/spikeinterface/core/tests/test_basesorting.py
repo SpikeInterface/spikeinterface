@@ -13,6 +13,7 @@ from spikeinterface.core import (
     NpzSortingExtractor,
     NumpyRecording,
     NumpySorting,
+    SharedMemorySorting,
     NpzFolderSorting,
     NumpyFolderSorting,
     create_sorting_npz,
@@ -121,6 +122,10 @@ def test_BaseSorting():
 
     sorting4 = sorting.to_numpy_sorting()
     sorting5 = sorting.to_multiprocessing(n_jobs=2)
+    # create a clone with the same share mem buffer
+    sorting6 = load_extractor(sorting5.to_dict())
+    assert isinstance(sorting6, SharedMemorySorting)
+    del sorting6
     del sorting5
 
 
