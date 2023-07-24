@@ -55,8 +55,12 @@ def test_compare_sorter_to_ground_truth():
             "pooled_with_average",
         ]
         for method in methods:
-            perf = sc.get_performance(method=method)
-            # ~ print(perf)
+            import pandas as pd
+
+            perf_df = sc.get_performance(method=method, output="pandas")
+            assert isinstance(perf_df, pd.DataFrame)
+            perf_dict = sc.get_performance(method=method, output="dict")
+            assert isinstance(perf_dict, dict)
 
         for method in methods:
             sc.print_performance(method=method)
