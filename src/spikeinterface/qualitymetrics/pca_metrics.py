@@ -472,7 +472,7 @@ def nearest_neighbors_isolation(
         return np.nan, np.nan
     elif fr_all_units[this_unit_id] < min_fr:
         warnings.warn(
-            f"Warning: unit {this_uit_id} has a firing rate below the specified `min_fr` "
+            f"Warning: unit {this_unit_id} has a firing rate below the specified `min_fr` "
             f"({min_fr}Hz); returning NaN as the quality metric..."
         )
         return np.nan, np.nan
