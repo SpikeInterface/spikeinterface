@@ -55,9 +55,23 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
 
     return aligned_features, dont_have_channels
 
-def compute_template(peaks, peak_indices, sparse_waveforms, sparse_mask, target_channels):
 
-    wfs = aggregate_sparse_features(peaks, peak_indices, sparse_waveforms, sparse_mask, target_channels)
+def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sparse_mask, total_channels):
+    n = len(labels_set)
+    
 
-    np.mean(wfs, axis=0)
+    templates = np.zeros((n, sparse_waveforms.shape[1], total_channels), dtype=sparse_waveforms.dtype)
+    
+    for i, label in enumerate(labels_set):
+        peak_indices = np.flatnonzero(labels == label)
+
+        local_chans = np.unique(peaks["channel_index"][peak_indices])
+        target_channels = np.flatnonzero(np.all(sparse_mask[local_chans, :], axis=0))
+
+        aligned_wfs, dont_have_channels = aggregate_sparse_features(
+            peaks, peak_indices, sparse_waveforms, sparse_mask, target_channels
+        )
+        templates[i, :, :][:, target_channels] = np.mean(aligned_wfs[~dont_have_channels], axis=0)
+        
+    return templates
 

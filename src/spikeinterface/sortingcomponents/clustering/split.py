@@ -147,6 +147,7 @@ class HdbscanOnLocalPca:
 
     name = "hdbscan_on_local_pca"
 
+    @staticmethod
     def split(
         peak_indices,
         peaks,
@@ -195,7 +196,8 @@ class HdbscanOnLocalPca:
         final_features = TruncatedSVD(n_pca_features).fit_transform(flatten_features)
 
         if clusterer == "hdbscan":
-            clust = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples)
+            clust = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples,
+                            allow_single_cluster=True)
             clust.fit(final_features)
             possible_labels = clust.labels_
         elif clusterer == "isocut5":
@@ -215,9 +217,9 @@ class HdbscanOnLocalPca:
         if DEBUG:
             import matplotlib.pyplot as plt
 
-            label_sets = np.setdiff1d(possible_labels, [-1])
-            colors = plt.get_cmap("tab10", len(label_sets))
-            colors = {k: colors(i) for i, k in enumerate(label_sets)}
+            labels_set = np.setdiff1d(possible_labels, [-1])
+            colors = plt.get_cmap("tab10", len(labels_set))
+            colors = {k: colors(i) for i, k in enumerate(labels_set)}
             colors[-1] = "k"
             fix, axs = plt.subplots(nrows=2)
 
