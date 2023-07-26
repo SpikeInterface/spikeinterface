@@ -722,7 +722,7 @@ class BaseExtractor:
         Parameters
         ----------
         kwargs: Keyword arguments for saving.
-            * format: "memory", "zarr", or "binary" (for recording) / "memory" or "npz" for sorting.
+            * format: "memory", "zarr", or "binary" (for recording) / "memory" or "numpy_folder" or "npz_folder" for sorting.
                 In case format is not memory, the recording is saved to a folder. See format specific functions for
                 more info (`save_to_memory()`, `save_to_folder()`, `save_to_zarr()`)
             * folder: if provided, the folder path where the object is saved

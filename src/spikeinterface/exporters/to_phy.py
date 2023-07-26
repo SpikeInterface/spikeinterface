@@ -158,8 +158,9 @@ def export_to_phy(
 
     # export spike_times/spike_templates/spike_clusters
     # here spike_labels is a remapping to unit_index
-    all_spikes = sorting.get_all_spike_trains(outputs="unit_index")
-    spike_times, spike_labels = all_spikes[0]
+    all_spikes_seg0 = sorting.to_spike_vector(concatenated=False)[0]
+    spike_times = all_spikes_seg0["sample_index"]
+    spike_labels = all_spikes_seg0["unit_index"]
     np.save(str(output_folder / "spike_times.npy"), spike_times[:, np.newaxis])
     np.save(str(output_folder / "spike_templates.npy"), spike_labels[:, np.newaxis])
     np.save(str(output_folder / "spike_clusters.npy"), spike_labels[:, np.newaxis])

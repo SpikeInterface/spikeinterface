@@ -264,7 +264,9 @@ def test_calculate_rp_violations(simulated_data):
     assert np.allclose(list(rp_contamination_gt.values()), list(rp_contamination.values()), rtol=0.05)
     np.testing.assert_array_equal(list(counts_gt.values()), list(counts.values()))
 
-    sorting = NumpySorting.from_dict({0: np.array([28, 150], dtype=np.int16), 1: np.array([], dtype=np.int16)}, 30000)
+    sorting = NumpySorting.from_unit_dict(
+        {0: np.array([28, 150], dtype=np.int16), 1: np.array([], dtype=np.int16)}, 30000
+    )
     we.sorting = sorting
     rp_contamination, counts = compute_refrac_period_violations(we, refractory_period_ms=1, censored_period_ms=0.0)
     assert np.isnan(rp_contamination[1])
