@@ -3,6 +3,7 @@ import numpy as np
 
 from .tools import FeaturesLoader, compute_template_from_sparse
 
+# This is work in progress ...
 
 def clean_clusters(
     peaks,

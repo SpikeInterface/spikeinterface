@@ -3,11 +3,20 @@ from typing import Any
 import numpy as np
 
 
+# TODO find a way to attach a a sparse_mask to a given features (waveforms, pca, tsvd ....)
+
 class FeaturesLoader:
     """
     Feature can be computed in memory or in a folder contaning npy files.
 
     This class read the folder and behave like a dict of array lazily.
+
+    Parameters
+    ----------
+    feature_folder
+
+    preload
+    
     """
     def __init__(self, feature_folder, preload=['peaks']):
         self.feature_folder = Path(feature_folder)
@@ -39,9 +48,30 @@ class FeaturesLoader:
 
 def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, target_channels):
     """
-    Aggregate sparse features that have unaligned channels and realigned then on target_channels
+    Aggregate sparse features that have unaligned channels and realigned then on target_channels.
+
+    This is usefull to aligned back peaks waveform or pca or tsvd when detected a differents channels.
 
 
+    Parameters
+    ----------
+    peaks
+    
+    peak_indices
+    
+    sparse_feature
+    
+    sparse_mask
+    
+    target_channels
+
+    Returns
+    -------
+    aligned_features: numpy.array
+        Aligned features. shape is (local_peaks.size, sparse_feature.shape[1], target_channels.size)
+    dont_have_channels: numpy.array
+        Boolean vector to indicate spikes that do not have all target channels to be taken in account
+        shape is peak_indices.size
     """
     local_peaks = peaks[peak_indices]
 
@@ -65,6 +95,28 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
 
 
 def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sparse_mask, total_channels):
+    """
+    Compute template average from single sparse waveforms buffer.
+
+    Parameters
+    ----------
+    peaks
+    
+    labels
+    
+    labels_set
+    
+    sparse_waveforms
+    
+    sparse_mask
+    
+    total_channels
+
+    Returns
+    -------
+    templates: numpy.array
+        Templates shape : (len(labels_set), num_samples, total_channels)
+    """
     n = len(labels_set)
     
 

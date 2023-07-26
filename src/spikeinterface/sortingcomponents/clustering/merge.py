@@ -13,7 +13,7 @@ from hdbscan import HDBSCAN
 import numpy as np
 
 
-from spikeinterface.core.job_tools import get_poolexecutor
+from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
 
 from .isocut5 import isocut5
@@ -28,10 +28,35 @@ def merge_clusters(
     radius_um=70,
     method="waveforms_lda",
     method_kwargs={},
-
     **job_kwargs
-
 ):
+    """
+    Merge cluster using differents methods.
+
+    Parameters
+    ----------
+    peaks: numpy.ndarray 1d
+        detected peaks (or a subset)
+    peak_labels: numpy.ndarray 1d
+        original label before merge
+        peak_labels.size == peaks.size
+    recording: Recording object
+        A recording object
+    features_dict_or_folder: dict or folder
+        A dictionary of features precomputed with peak_pipeline or a folder containing npz file for features.
+    method: str
+        The method used
+    method_kwargs: dict
+        Option for the method.
+    Returns
+    -------
+    peak_labels: numpy.ndarray 1d
+        New vectors label after merges.
+    """
+
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    print(job_kwargs)
+
     labels_set = np.setdiff1d(peak_labels, [-1])
 
     features = FeaturesLoader.from_dict_or_folder(features_dict_or_folder)
