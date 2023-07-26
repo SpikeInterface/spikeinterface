@@ -22,9 +22,8 @@ def split_clusters(
     recursive=False,
     recursive_depth=None,
     returns_split_count=False,
-    **job_kwargs
-    ):
-
+    **job_kwargs,
+):
     """
     Run recusrsively or not in a multi process pool a local split method.
 
@@ -56,10 +55,10 @@ def split_clusters(
     """
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-    n_jobs = job_kwargs['n_jobs']
-    mp_context = job_kwargs['mp_context']
-    progress_bar = job_kwargs['progress_bar']
-    max_threads_per_process = job_kwargs['max_threads_per_process']
+    n_jobs = job_kwargs["n_jobs"]
+    mp_context = job_kwargs["mp_context"]
+    progress_bar = job_kwargs["progress_bar"]
+    max_threads_per_process = job_kwargs["max_threads_per_process"]
     print(job_kwargs, n_jobs, mp_context, progress_bar)
 
     original_labels = peak_labels
@@ -127,7 +126,9 @@ def split_clusters(
 global _ctx
 
 
-def split_worker_init(recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_process):
+def split_worker_init(
+    recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_process
+):
     global _ctx
     _ctx = {}
 
@@ -153,7 +154,7 @@ def split_function_wrapper(peak_indices):
 
 class HdbscanOnLocalPca:
     # @charlie : this is the equivalent of "herding_split()" in DART
-    #  but simplified, flexible and renamed
+    #  but simplified, flexible and renamed
 
     name = "hdbscan_on_local_pca"
 
@@ -173,9 +174,9 @@ class HdbscanOnLocalPca:
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
 
-        # can be sparse_tsvd or sparse_wfs
+        # can be sparse_tsvd or sparse_wfs
         sparse_features = features[feature_name]
-        
+
         assert waveforms_sparse_mask is not None
 
         # target channel subset is done intersect local channels + neighbours
@@ -200,13 +201,12 @@ class HdbscanOnLocalPca:
 
         flatten_features = aligned_wfs.reshape(aligned_wfs.shape[0], -1)
 
-        # final_features = PCA(n_pca_features, whiten=True).fit_transform(flatten_features)
-        # final_features = PCA(n_pca_features, whiten=False).fit_transform(flatten_features)
+        # final_features = PCA(n_pca_features, whiten=True).fit_transform(flatten_features)
+        # final_features = PCA(n_pca_features, whiten=False).fit_transform(flatten_features)
         final_features = TruncatedSVD(n_pca_features).fit_transform(flatten_features)
 
         if clusterer == "hdbscan":
-            clust = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples,
-                            allow_single_cluster=True)
+            clust = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples, allow_single_cluster=True)
             clust.fit(final_features)
             possible_labels = clust.labels_
         elif clusterer == "isocut5":
@@ -235,7 +235,7 @@ class HdbscanOnLocalPca:
             fix, axs = plt.subplots(nrows=2)
 
             flatten_wfs = aligned_wfs.swapaxes(1, 2).reshape(aligned_wfs.shape[0], -1)
-            
+
             sl = slice(None, None, 10)
             for k in np.unique(possible_labels):
                 mask = possible_labels == k

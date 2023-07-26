@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from multiprocessing import get_context
 from concurrent.futures import ProcessPoolExecutor
@@ -20,6 +19,7 @@ from .isocut5 import isocut5
 
 from .tools import aggregate_sparse_features, FeaturesLoader, compute_template_from_sparse
 
+
 def merge_clusters(
     peaks,
     peak_labels,
@@ -28,7 +28,7 @@ def merge_clusters(
     radius_um=70,
     method="waveforms_lda",
     method_kwargs={},
-    **job_kwargs
+    **job_kwargs,
 ):
     """
     Merge cluster using differents methods.
@@ -60,27 +60,24 @@ def merge_clusters(
     labels_set = np.setdiff1d(peak_labels, [-1])
 
     features = FeaturesLoader.from_dict_or_folder(features_dict_or_folder)
-    sparse_wfs = features['sparse_wfs']
-    sparse_mask = features['sparse_mask']
-
+    sparse_wfs = features["sparse_wfs"]
+    sparse_mask = features["sparse_mask"]
 
     pair_mask, pair_shift = find_merge_pairs(
-                                            peaks,
-                                            peak_labels,
-                                            recording,
-                                            features_dict_or_folder,
-                                            sparse_wfs,
-                                            sparse_mask,
-                                            radius_um=radius_um,
-                                            
-                                            method=method,
-                                            method_kwargs=method_kwargs,
+        peaks,
+        peak_labels,
+        recording,
+        features_dict_or_folder,
+        sparse_wfs,
+        sparse_mask,
+        radius_um=radius_um,
+        method=method,
+        method_kwargs=method_kwargs,
+        **job_kwargs,
+    )
 
-                                            **job_kwargs)
+    merges = find_connected_pairs(pair_mask, labels_set, connection_mode="partial")
 
-    merges = find_connected_pairs(pair_mask, labels_set, connection_mode='partial')
-
-    
     peak_labels = peak_labels.copy()
 
     for merge in merges:
@@ -90,8 +87,7 @@ def merge_clusters(
     return peak_labels
 
 
-
-def find_connected_pairs(pair_mask, labels_set, connection_mode='full'):
+def find_connected_pairs(pair_mask, labels_set, connection_mode="full"):
     import networkx as nx
 
     labels_set = np.array(labels_set)
@@ -111,37 +107,36 @@ def find_connected_pairs(pair_mask, labels_set, connection_mode='full'):
             merges.append(labels_set[cliques[0]])
         elif len(cliques) > 1:
             # the subgraph is not fully connected
-            if connection_mode == 'full':
+            if connection_mode == "full":
                 # node merge
                 pass
-            elif connection_mode == 'partial':
+            elif connection_mode == "partial":
                 group = list(group)
                 merges.append(labels_set[group])
-            elif connection_mode == 'clique':
+            elif connection_mode == "clique":
                 raise NotImplementedError
             else:
                 raise ValueError
-
 
             # DEBUG = True
             DEBUG = False
             if DEBUG:
                 import matplotlib.pyplot as plt
+
                 fig = plt.figure()
                 nx.draw_networkx(sub_graph)
-                plt.show()            
-
+                plt.show()
 
     # DEBUG = True
     DEBUG = False
     if DEBUG:
         import matplotlib.pyplot as plt
+
         fig = plt.figure()
         nx.draw_networkx(graph)
         plt.show()
 
     return merges
-
 
 
 def find_merge_pairs(
@@ -152,10 +147,8 @@ def find_merge_pairs(
     sparse_wfs,
     sparse_mask,
     radius_um=70,
-    
     method="waveforms_lda",
     method_kwargs={},
-
     n_jobs=1,
     mp_context="fork",
     max_threads_per_process=1,
@@ -173,27 +166,23 @@ def find_merge_pairs(
 
     # sparse_wfs = features['sparse_wfs']
 
-    
     labels_set = np.setdiff1d(peak_labels, [-1]).tolist()
     n = len(labels_set)
     pair_mask = np.triu(np.ones((n, n), dtype="bool")) & ~np.eye(n, dtype="bool")
     pair_shift = np.zeros((n, n), dtype="int64")
-
 
     # compute template
 
     templates = compute_template_from_sparse(peaks, peak_labels, labels_set, sparse_wfs, sparse_mask, total_channels)
 
     max_chans = np.argmax(np.max(np.abs(templates), axis=1), axis=1)
-    
+
     channel_locs = recording.get_channel_locations()
     template_locs = channel_locs[max_chans, :]
     template_dist = scipy.spatial.distance.cdist(template_locs, template_locs, metric="euclidean")
 
-    
     pair_mask = pair_mask & (template_dist < radius_um)
     indices0, indices1 = np.nonzero(pair_mask)
-
 
     Executor = get_poolexecutor(n_jobs)
 
@@ -220,9 +209,8 @@ def find_merge_pairs(
             ind1 = labels_set.index(label1)
 
             pair_mask[ind0, ind1] = is_merge
-            if is_merge: 
+            if is_merge:
                 pair_shift[ind0, ind1] = shift
-
 
     pair_mask = pair_mask & (template_dist < radius_um)
     indices0, indices1 = np.nonzero(pair_mask)
@@ -230,9 +218,9 @@ def find_merge_pairs(
     return pair_mask, pair_shift
 
 
-
-
-def find_pair_worker_init(recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_process):
+def find_pair_worker_init(
+    recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_process
+):
     global _ctx
     _ctx = {}
 
@@ -247,7 +235,7 @@ def find_pair_worker_init(recording, features_dict_or_folder, original_labels, m
     #     _ctx["features"] = features_dict_or_folder
     # else:
     #     _ctx["features"] = FeaturesLoader(features_dict_or_folder)
-    
+
     _ctx["features"] = FeaturesLoader.from_dict_or_folder(features_dict_or_folder)
 
     _ctx["peaks"] = _ctx["features"]["peaks"]
@@ -257,48 +245,48 @@ def find_pair_function_wrapper(label0, label1):
     global _ctx
     with threadpool_limits(limits=_ctx["max_threads_per_process"]):
         is_merge, label0, label1, shift = _ctx["method_class"].merge(
-            label0, label1, _ctx["original_labels"], _ctx["peaks"], _ctx["features"],
-            **_ctx["method_kwargs"])
+            label0, label1, _ctx["original_labels"], _ctx["peaks"], _ctx["features"], **_ctx["method_kwargs"]
+        )
     return is_merge, label0, label1, shift
 
 
 class WaveformsLda:
-    name = 'waveforms_lda'
+    name = "waveforms_lda"
 
     @staticmethod
-    def merge(label0, 
-              label1,
-              original_labels,
-              peaks,
-              features,
-              waveforms_sparse_mask=None,
-              feature_name="sparse_tsvd",
-              projection="centroid",
-              criteria="diptest",
-              threshold_diptest=0.5,
-              threshold_percentile=80.,
-              num_shift=2,
+    def merge(
+        label0,
+        label1,
+        original_labels,
+        peaks,
+        features,
+        waveforms_sparse_mask=None,
+        feature_name="sparse_tsvd",
+        projection="centroid",
+        criteria="diptest",
+        threshold_diptest=0.5,
+        threshold_percentile=80.0,
+        num_shift=2,
     ):
-
         if num_shift > 0:
             assert feature_name == "sparse_wfs"
         sparse_wfs = features[feature_name]
 
         assert waveforms_sparse_mask is not None
 
-        inds0, = np.nonzero(original_labels == label0)
+        (inds0,) = np.nonzero(original_labels == label0)
         chans0 = np.unique(peaks["channel_index"][inds0])
         target_chans0 = np.flatnonzero(np.all(waveforms_sparse_mask[chans0, :], axis=0))
 
-        inds1, = np.nonzero(original_labels == label1)
+        (inds1,) = np.nonzero(original_labels == label1)
         chans1 = np.unique(peaks["channel_index"][inds1])
         target_chans1 = np.flatnonzero(np.all(waveforms_sparse_mask[chans1, :], axis=0))
 
         target_chans = np.intersect1d(target_chans0, target_chans1)
 
         inds = np.concatenate([inds0, inds1])
-        labels = np.zeros(inds.size, dtype='int')
-        labels[inds0.size:] = 1
+        labels = np.zeros(inds.size, dtype="int")
+        labels[inds0.size :] = 1
         wfs, out = aggregate_sparse_features(peaks, inds, sparse_wfs, waveforms_sparse_mask, target_chans)
         wfs = wfs[~out]
         labels = labels[~out]
@@ -311,10 +299,9 @@ class WaveformsLda:
         template1_ = np.mean(wfs1_, axis=0)
         num_samples = template0_.shape[0]
 
-        template0 = template0_[num_shift:num_samples - num_shift, :]
+        template0 = template0_[num_shift : num_samples - num_shift, :]
 
-        wfs0 = wfs0_[:, num_shift:num_samples - num_shift, :]
-
+        wfs0 = wfs0_[:, num_shift : num_samples - num_shift, :]
 
         values = []
         for shift in range(num_shift * 2 + 1):
@@ -324,12 +311,11 @@ class WaveformsLda:
             value = np.sum(template0.flatten() * template1.flatten()) / norm
             values.append(value)
 
-
         best_shift = np.argmax(values)
 
         wfs1 = wfs1_[:, best_shift : best_shift + template0.shape[0], :]
         template1 = template1_[best_shift : best_shift + template0.shape[0], :]
-        
+
         if projection == "lda":
             wfs_0_1 = np.concatenate([wfs0, wfs1], axis=0)
             flat_wfs = wfs_0_1.reshape(wfs_0_1.shape[0], -1)
@@ -348,22 +334,21 @@ class WaveformsLda:
 
         else:
             raise ValueError(f"bad projection {projection}")
-        
+
         if criteria == "diptest":
             dipscore, cutpoint = isocut5(feat)
             is_merge = dipscore < threshold_diptest
         elif criteria == "percentile":
             l0 = np.percentile(feat0, threshold_percentile)
-            l1 = np.percentile(feat1, 100. - threshold_percentile)
+            l1 = np.percentile(feat1, 100.0 - threshold_percentile)
             is_merge = l0 >= l1
         else:
             raise ValueError(f"bad criteria {criteria}")
-        
+
         if is_merge:
             final_shift = best_shift - num_shift
         else:
             final_shift = 0
-        
 
         # DEBUG = True
         DEBUG = False
@@ -375,29 +360,26 @@ class WaveformsLda:
 
             fig, axs = plt.subplots(ncols=2)
             ax = axs[0]
-            ax.plot(flatten_wfs0.T, color='C0', alpha=.01)
-            ax.plot(flatten_wfs1.T, color='C1', alpha=.01)
+            ax.plot(flatten_wfs0.T, color="C0", alpha=0.01)
+            ax.plot(flatten_wfs1.T, color="C1", alpha=0.01)
             m0 = np.mean(flatten_wfs0, axis=0)
             m1 = np.mean(flatten_wfs1, axis=0)
-            ax.plot(m0, color='C0', alpha=1, lw=4)
-            ax.plot(m1, color='C1', alpha=1, lw=4)
-
+            ax.plot(m0, color="C0", alpha=1, lw=4)
+            ax.plot(m1, color="C1", alpha=1, lw=4)
 
             bins = np.linspace(np.percentile(feat, 1), np.percentile(feat, 99), 100)
 
             count0, _ = np.histogram(feat0, bins=bins)
             count1, _ = np.histogram(feat1, bins=bins)
 
-
             ax = axs[1]
-            ax.plot(bins[:-1], count0, color='C0')
-            ax.plot(bins[:-1], count1, color='C1')
+            ax.plot(bins[:-1], count0, color="C0")
+            ax.plot(bins[:-1], count1, color="C1")
 
-            ax.set_title(f'{dipscore}')
-
-
+            ax.set_title(f"{dipscore}")
 
         return is_merge, label0, label1, final_shift
+
 
 find_pair_method_list = [
     WaveformsLda,
