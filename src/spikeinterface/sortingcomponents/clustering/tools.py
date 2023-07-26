@@ -26,6 +26,14 @@ class FeaturesLoader:
             return self.loaded_features[name]
         else:
             return np.load(self.file_feature[name], mmap_mode="r")
+    
+    @staticmethod
+    def from_dict_or_folder(features_dict_or_folder):
+        if isinstance(features_dict_or_folder, dict):
+            return features_dict_or_folder
+        else:
+           return FeaturesLoader(features_dict_or_folder)
+
 
 
 
