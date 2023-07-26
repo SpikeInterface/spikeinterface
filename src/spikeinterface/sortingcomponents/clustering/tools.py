@@ -5,6 +5,7 @@ import numpy as np
 
 # TODO find a way to attach a a sparse_mask to a given features (waveforms, pca, tsvd ....)
 
+
 class FeaturesLoader:
     """
     Feature can be computed in memory or in a folder contaning npy files.
@@ -16,9 +17,10 @@ class FeaturesLoader:
     feature_folder
 
     preload
-    
+
     """
-    def __init__(self, feature_folder, preload=['peaks']):
+
+    def __init__(self, feature_folder, preload=["peaks"]):
         self.feature_folder = Path(feature_folder)
 
         self.file_feature = {}
@@ -29,21 +31,19 @@ class FeaturesLoader:
                 self.loaded_features[name] = np.load(file)
             else:
                 self.file_feature[name] = file
-    
+
     def __getitem__(self, name):
         if name in self.loaded_features:
             return self.loaded_features[name]
         else:
             return np.load(self.file_feature[name], mmap_mode="r")
-    
+
     @staticmethod
     def from_dict_or_folder(features_dict_or_folder):
         if isinstance(features_dict_or_folder, dict):
             return features_dict_or_folder
         else:
-           return FeaturesLoader(features_dict_or_folder)
-
-
+            return FeaturesLoader(features_dict_or_folder)
 
 
 def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, target_channels):
@@ -56,13 +56,13 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
     Parameters
     ----------
     peaks
-    
+
     peak_indices
-    
+
     sparse_feature
-    
+
     sparse_mask
-    
+
     target_channels
 
     Returns
@@ -101,15 +101,15 @@ def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sp
     Parameters
     ----------
     peaks
-    
+
     labels
-    
+
     labels_set
-    
+
     sparse_waveforms
-    
+
     sparse_mask
-    
+
     total_channels
 
     Returns
@@ -118,10 +118,9 @@ def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sp
         Templates shape : (len(labels_set), num_samples, total_channels)
     """
     n = len(labels_set)
-    
 
     templates = np.zeros((n, sparse_waveforms.shape[1], total_channels), dtype=sparse_waveforms.dtype)
-    
+
     for i, label in enumerate(labels_set):
         peak_indices = np.flatnonzero(labels == label)
 
@@ -132,6 +131,5 @@ def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sp
             peaks, peak_indices, sparse_waveforms, sparse_mask, target_channels
         )
         templates[i, :, :][:, target_channels] = np.mean(aligned_wfs[~dont_have_channels], axis=0)
-        
-    return templates
 
+    return templates
