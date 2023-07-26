@@ -223,7 +223,7 @@ class ExtractSparseWaveforms(WaveformsNode):
         ms_after: float,
         parents: Optional[List[PipelineNode]] = None,
         return_output: bool = False,
-        local_radius_um: float = 100.0,
+        radius_um: float = 100.0,
     ):
         """
         Extract sparse waveforms from a recording. The strategy in this specific node is to reshape the waveforms
@@ -260,10 +260,10 @@ class ExtractSparseWaveforms(WaveformsNode):
             return_output=return_output,
         )
 
-        self.local_radius_um = local_radius_um
+        self.radius_um = radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < local_radius_um
+        self.neighbours_mask = self.channel_distance < radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
 
     def get_trace_margin(self):
