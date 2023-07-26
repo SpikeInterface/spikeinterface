@@ -86,7 +86,7 @@ def test_waveform_tools():
                     wf_folder = cache_folder / f"test_waveform_tools_{j}_{k}_{l}"
                     if wf_folder.is_dir():
                         shutil.rmtree(wf_folder)
-                    wf_folder.mkdir()
+                    wf_folder.mkdir(parents=True)
                     mode_kwargs_ = dict(**mode_kwargs, folder=wf_folder)
                 else:
                     mode_kwargs_ = mode_kwargs
