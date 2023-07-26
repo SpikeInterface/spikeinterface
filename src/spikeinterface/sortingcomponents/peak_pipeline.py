@@ -127,8 +127,7 @@ class PeakRetriever(PipelineNode):
 
 
 class PeakCenterer(PeakRetriever):
-
-    def __init__(self, recording, peaks, radius_um=50, peak_sign='neg'):
+    def __init__(self, recording, peaks, radius_um=50, peak_sign="neg"):
         PeakRetriever.__init__(self, recording, peaks)
         self.radius_um = radius_um
         self.contact_locations = recording.get_channel_locations()
@@ -153,18 +152,19 @@ class PeakCenterer(PeakRetriever):
         # make sample index local to traces
         local_peaks = local_peaks.copy()
         local_peaks["sample_index"] -= start_frame - max_margin
-        
+
         for i, peak in enumerate(local_peaks):
             (chans,) = np.nonzero(self.neighbours_mask[peak["channel_index"]])
             sparse_wfs = traces[peak["sample_index"], chans]
-            if self.peak_sign == 'neg':
-                local_peaks[i]['channel_index'] = chans[np.argmin(sparse_wfs)]
-            elif self.peak_sign == 'pos':
-                local_peaks[i]['channel_index'] = chans[np.argmax(sparse_wfs)]
-            elif self.peak_sign == 'both':
-                local_peaks[i]['channel_index'] = chans[np.argmax(np.abs(sparse_wfs))]
-    
+            if self.peak_sign == "neg":
+                local_peaks[i]["channel_index"] = chans[np.argmin(sparse_wfs)]
+            elif self.peak_sign == "pos":
+                local_peaks[i]["channel_index"] = chans[np.argmax(sparse_wfs)]
+            elif self.peak_sign == "both":
+                local_peaks[i]["channel_index"] = chans[np.argmax(np.abs(sparse_wfs))]
+
         return (local_peaks,)
+
 
 class WaveformsNode(PipelineNode):
     """
@@ -345,7 +345,9 @@ def check_graph(nodes):
 
     node0 = nodes[0]
     if not (isinstance(node0, PeakDetector) or isinstance(node0, PeakRetriever) or isinstance(node0, PeakCenterer)):
-        raise ValueError("Peak pipeline graph must contain PeakDetector or PeakRetriever or PeakCenterer as first element")
+        raise ValueError(
+            "Peak pipeline graph must contain PeakDetector or PeakRetriever or PeakCenterer as first element"
+        )
 
     for i, node in enumerate(nodes):
         assert isinstance(node, PipelineNode), f"Node {node} is not an instance of PipelineNode"

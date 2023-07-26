@@ -19,11 +19,11 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 
     extension_name = "spike_locations"
 
-    def __init__(self, waveform_extractor, peak_sign='neg'):
+    def __init__(self, waveform_extractor, peak_sign="neg"):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
         extremum_channel_inds = get_template_extremum_channel(self.waveform_extractor, peak_sign, outputs="index")
         self.spikes = self.waveform_extractor.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
-        
+
     def _set_params(self, ms_before=0.5, ms_after=0.5, method="center_of_mass", method_kwargs={}, radius_um=None):
         params = dict(ms_before=ms_before, ms_after=ms_after, method=method, radius_um=radius_um)
         params.update(**method_kwargs)
@@ -102,7 +102,7 @@ def compute_spike_locations(
     method="center_of_mass",
     method_kwargs={},
     outputs="concatenated",
-    peak_sign='neg',
+    peak_sign="neg",
     radius_um=None,
     **job_kwargs,
 ):
@@ -143,7 +143,9 @@ def compute_spike_locations(
         slc = waveform_extractor.load_extension(SpikeLocationsCalculator.extension_name)
     else:
         slc = SpikeLocationsCalculator(waveform_extractor, peak_sign)
-        slc.set_params(ms_before=ms_before, ms_after=ms_after, method=method, method_kwargs=method_kwargs, radius_um=radius_um)
+        slc.set_params(
+            ms_before=ms_before, ms_after=ms_after, method=method, method_kwargs=method_kwargs, radius_um=radius_um
+        )
         slc.run(**job_kwargs)
 
     locs = slc.get_data(outputs=outputs)
