@@ -233,15 +233,18 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
     assert num_bins >= 1
 
     bins = np.arange(0, window_size + bin_size, bin_size) * 1e3 / fs
-    spikes = sorting.get_all_spike_trains(outputs="unit_index")
+    spikes = sorting.to_spike_vector(concatenated=False)
 
     ISIs = np.zeros((num_units, num_bins), dtype=np.int64)
 
     for seg_index in range(sorting.get_num_segments()):
+        spike_times = spikes[seg_index]["sample_index"].astype(np.int64)
+        spike_labels = spikes[seg_index]["unit_index"].astype(np.int32)
+
         _compute_isi_histograms_numba(
             ISIs,
-            spikes[seg_index][0].astype(np.int64),
-            spikes[seg_index][1].astype(np.int32),
+            spike_times,
+            spike_labels,
             window_size,
             bin_size,
             fs,
