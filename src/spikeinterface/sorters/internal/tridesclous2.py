@@ -29,8 +29,14 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "split_radius_um": 40.,
             "merge_radius_um": 40.,
         },
+        "templates": {
+            "ms_before": 1.5,
+            "ms_after": 2.5,
+            # "peak_shift_ms": 0.2,
+        },
         "matching": {
             "peak_shift_ms": 0.2,
+            "radius_um": 100.
         },
         "job_kwargs": {},
         "save_array": True,
@@ -51,7 +57,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # from spikeinterface.sortingcomponents.peak_localization import localize_peaks
         # from spikeinterface.sortingcomponents.peak_selection import select_peaks
         # from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
-        # from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
+        from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 
         from spikeinterface.sortingcomponents.peak_pipeline import run_node_pipeline, ExtractDenseWaveforms, ExtractSparseWaveforms, PeakRetriever
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks, DetectPeakLocallyExclusive
@@ -61,6 +67,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         from spikeinterface.sortingcomponents.clustering.split import split_clusters
         from spikeinterface.sortingcomponents.clustering.merge import merge_clusters
+        from spikeinterface.sortingcomponents.clustering.tools import compute_template_from_sparse
 
         from sklearn.decomposition import TruncatedSVD
 
@@ -86,7 +93,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         # detection
         detection_params = params["detection"].copy()
-        detection_params["radius_um"] = params["general"]["radius_um"]
+        # detection_params["radius_um"] = params["general"]["radius_um"]
         detection_params["noise_levels"] = noise_levels
         all_peaks = detect_peaks(recording, method="locally_exclusive", **detection_params, **job_kwargs)
 
@@ -183,13 +190,13 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         ms_before = params["waveforms"]["ms_before"]
         ms_after = params["waveforms"]["ms_after"]
-        params = {
+        model_params = {
             "ms_before": ms_before,
             "ms_after": ms_after,
-            "sampling_frequency": float(rec.get_sampling_frequency()),
+            "sampling_frequency": float(sampling_frequency),
         }
         with open(model_folder / "params.json", "w") as f:
-            json.dump(params, f)
+            json.dump(model_params, f)
 
         # features
 
@@ -213,7 +220,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         node3 = ExtractSparseWaveforms(recording, parents=[node0], return_output=True,
                                     ms_before=0.5,
                                     ms_after=1.5,
-                                    local_radius_um=100.0,
+                                    radius_um=100.0,
         )
 
         model_folder_path = sorter_output_folder  / 'tsvd_model'
@@ -231,6 +238,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # TODO make this generic in GatherNPY ???
         sparse_mask = node3.neighbours_mask
         np.save(features_folder/ 'sparse_mask.npy', sparse_mask)
+        np.save(features_folder/ 'peaks.npy', peaks)
+        
 
 
         # Clustering: channel index > split > merge
@@ -307,21 +316,63 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             # progress_bar=False,
         )
             
-            
-        
+        sparse_wfs = np.load(features_folder / "sparse_wfs.npy", mmap_mode="r")
+
+
+
+        # labels_set = np.unique(post_merge_label)
+        # labels_set = labels_set[labels_set >= 0]
+        # mask = post_merge_label >= 0
+        # templates = compute_template_from_sparse(peaks[mask], post_merge_label[mask], labels_set,
+        #                                          sparse_wfs, sparse_mask, num_chans)
+        # matching_params = params["matching"].copy()
+        # matching_params = 
+        # spikes = find_spikes_from_templates(
+        #     recording, method="wobble", method_kwargs=matching_params, **job_kwargs
+        # )
+
+
+        labels_set = np.unique(post_merge_label)
+        labels_set = labels_set[labels_set >= 0]
+        mask = post_merge_label >= 0
+
+        sorting_temp = NumpySorting.from_times_labels(
+            peaks["sample_index"][mask], post_merge_label[mask], sampling_frequency,
+            unit_ids=labels_set,
+        )
+        sorting_temp = sorting_temp.save(folder=sorter_output_folder / "sorting_temp")
+
+        ms_before = params["templates"]["ms_before"]
+        ms_after = params["templates"]["ms_after"]
+        max_spikes_per_unit = 300
+
+        we = extract_waveforms(
+            recording, sorting_temp, sorter_output_folder / "waveforms_temp", ms_before=ms_before, ms_after=ms_after,
+            max_spikes_per_unit=max_spikes_per_unit, **job_kwargs
+        )
+
+        matching_params = params["matching"].copy()
+        matching_params["waveform_extractor"] = we
+        matching_params["noise_levels"] = noise_levels
+        matching_params["peak_sign"] = params["detection"]["peak_sign"]
+        matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
+        matching_params["radius_um"] = params["detection"]["radius_um"]
+
+        spikes = find_spikes_from_templates(
+            recording, method="tridesclous", method_kwargs=matching_params, **job_kwargs
+        )
 
 
         if params["save_array"]:
-            np.save(sorter_output_folder / 'peaks.npy', peaks)
             np.save(sorter_output_folder / 'all_peaks.npy', all_peaks)
             np.save(sorter_output_folder / 'post_split_label.npy', post_split_label)
             np.save(sorter_output_folder / 'split_count.npy', split_count)
             np.save(sorter_output_folder / 'post_merge_label.npy', post_split_label)
+            np.save(sorter_output_folder / 'spikes.npy', spikes)
 
 
 
-
-
+        # TODO multi segments
         sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["cluster_index"], sampling_frequency)
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
 
@@ -330,6 +381,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
 
 # TODO remove this when extrac waveforms to single buffer is merge
+from spikeinterface.core import extract_waveforms_to_buffers
 def extract_best_channel_waveform_chan(rec, peaks,
                                        ms_before=0.5, ms_after=1.5,
                                        **job_kwargs):
