@@ -6,6 +6,7 @@ from .peak_pipeline import (
     run_node_pipeline,
     find_parent_of_type,
     PeakRetriever,
+    PeakCenterer,
     PipelineNode,
     WaveformsNode,
     ExtractDenseWaveforms,
@@ -26,7 +27,7 @@ from ..postprocessing.unit_localization import (
 from .tools import get_prototype_spike
 
 
-def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs):
+def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_after=0.5, radius_um=None, **kwargs):
     """Localize peak (spike) in 2D or 3D depending the method.
 
     When a probe is 2D then:
@@ -40,6 +41,9 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
         The recording extractor object.
     peaks: array
         Peaks array, as returned by detect_peaks() in "compact_numpy" way.
+    radius_um: float (default None)
+        If not None, the radius used to perform peak centering, i.e. find the real channel where
+        the peaks actually occur
 
     {method_doc}
 
@@ -57,7 +61,11 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
 
     method_kwargs, job_kwargs = split_job_kwargs(kwargs)
 
-    peak_retriever = PeakRetriever(recording, peaks)
+    if radius_um is not None:
+        peak_retriever = PeakCenterer(recording, peaks, radius_um=radius_um)
+    else:
+        peak_retriever = PeakRetriever(recording, peaks)
+
     if method == "center_of_mass":
         extract_dense_waveforms = ExtractDenseWaveforms(
             recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False

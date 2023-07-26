@@ -19,14 +19,13 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 
     extension_name = "spike_locations"
 
-    def __init__(self, waveform_extractor):
+    def __init__(self, waveform_extractor, peak_sign='neg'):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
-
-        extremum_channel_inds = get_template_extremum_channel(self.waveform_extractor, outputs="index")
+        extremum_channel_inds = get_template_extremum_channel(self.waveform_extractor, peak_sign, outputs="index")
         self.spikes = self.waveform_extractor.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
-
-    def _set_params(self, ms_before=0.5, ms_after=0.5, method="center_of_mass", method_kwargs={}):
-        params = dict(ms_before=ms_before, ms_after=ms_after, method=method)
+        
+    def _set_params(self, ms_before=0.5, ms_after=0.5, method="center_of_mass", method_kwargs={}, radius_um=None):
+        params = dict(ms_before=ms_before, ms_after=ms_after, method=method, radius_um=radius_um)
         params.update(**method_kwargs)
         return params
 
@@ -47,11 +46,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
         job_kwargs = fix_job_kwargs(job_kwargs)
-
         we = self.waveform_extractor
-
-        extremum_channel_inds = get_template_extremum_channel(we, outputs="index")
-        self.spikes = we.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
 
         spike_locations = localize_peaks(we.recording, self.spikes, **self._params, **job_kwargs)
         self._extension_data["spike_locations"] = spike_locations
@@ -107,6 +102,8 @@ def compute_spike_locations(
     method="center_of_mass",
     method_kwargs={},
     outputs="concatenated",
+    peak_sign='neg',
+    radius_um=None,
     **job_kwargs,
 ):
     """
@@ -126,6 +123,11 @@ def compute_spike_locations(
         'center_of_mass' / 'monopolar_triangulation' / 'grid_convolution'
     method_kwargs : dict
         Other kwargs depending on the method.
+    peak_sign: str
+        Sign of the template to compute best channels ('neg', 'pos', 'both')
+    radius_um: None
+        If not None, the radius used to perform peak centering, i.e. look for the
+        real channel, in the data, where the peaks occur
     outputs : str
         'concatenated' (default) / 'by_unit'
     {}
@@ -140,8 +142,8 @@ def compute_spike_locations(
     if load_if_exists and waveform_extractor.is_extension(SpikeLocationsCalculator.extension_name):
         slc = waveform_extractor.load_extension(SpikeLocationsCalculator.extension_name)
     else:
-        slc = SpikeLocationsCalculator(waveform_extractor)
-        slc.set_params(ms_before=ms_before, ms_after=ms_after, method=method, method_kwargs=method_kwargs)
+        slc = SpikeLocationsCalculator(waveform_extractor, peak_sign)
+        slc.set_params(ms_before=ms_before, ms_after=ms_after, method=method, method_kwargs=method_kwargs, radius_um=radius_um)
         slc.run(**job_kwargs)
 
     locs = slc.get_data(outputs=outputs)

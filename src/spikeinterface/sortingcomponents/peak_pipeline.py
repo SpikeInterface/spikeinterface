@@ -126,6 +126,46 @@ class PeakRetriever(PipelineNode):
         return (local_peaks,)
 
 
+class PeakCenterer(PeakRetriever):
+
+    def __init__(self, recording, peaks, radius_um=50, peak_sign='neg'):
+        PeakRetriever.__init__(self, recording, peaks)
+        self.radius_um = radius_um
+        self.contact_locations = recording.get_channel_locations()
+        self.channel_distance = get_channel_distances(recording)
+        self.neighbours_mask = self.channel_distance < radius_um
+        self.peak_sign = peak_sign
+
+    def get_trace_margin(self):
+        return 0
+
+    def get_dtype(self):
+        return base_peak_dtype
+
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+        # get local peaks
+        sl = self.segment_slices[segment_index]
+        peaks_in_segment = self.peaks[sl]
+        i0 = np.searchsorted(peaks_in_segment["sample_index"], start_frame)
+        i1 = np.searchsorted(peaks_in_segment["sample_index"], end_frame)
+        local_peaks = peaks_in_segment[i0:i1]
+
+        # make sample index local to traces
+        local_peaks = local_peaks.copy()
+        local_peaks["sample_index"] -= start_frame - max_margin
+        
+        for i, peak in enumerate(local_peaks):
+            (chans,) = np.nonzero(self.neighbours_mask[peak["channel_index"]])
+            sparse_wfs = traces[peak["sample_index"], chans]
+            if self.peak_sign == 'neg':
+                local_peaks[i]['channel_index'] = chans[np.argmin(sparse_wfs)]
+            elif self.peak_sign == 'pos':
+                local_peaks[i]['channel_index'] = chans[np.argmax(sparse_wfs)]
+            elif self.peak_sign == 'both':
+                local_peaks[i]['channel_index'] = chans[np.argmax(np.abs(sparse_wfs))]
+    
+        return (local_peaks,)
+
 class WaveformsNode(PipelineNode):
     """
     Base class for waveforms in a node pipeline.
@@ -304,8 +344,8 @@ def check_graph(nodes):
     """
 
     node0 = nodes[0]
-    if not (isinstance(node0, PeakDetector) or isinstance(node0, PeakRetriever)):
-        raise ValueError("Peak pipeline graph must contain PeakDetector or PeakRetriever as first element")
+    if not (isinstance(node0, PeakDetector) or isinstance(node0, PeakRetriever) or isinstance(node0, PeakCenterer)):
+        raise ValueError("Peak pipeline graph must contain PeakDetector or PeakRetriever or PeakCenterer as first element")
 
     for i, node in enumerate(nodes):
         assert isinstance(node, PipelineNode), f"Node {node} is not an instance of PipelineNode"
