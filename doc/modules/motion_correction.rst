@@ -159,7 +159,7 @@ The high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
     peaks = detect_peaks(rec, method="locally_exclusive", detect_threshold=8.0, **job_kwargs)
     # (optional) sub-select some peaks to speed up the localization
     peaks = select_peaks(peaks, ...)
-    peak_locations = localize_peaks(rec, peaks, method="monopolar_triangulation",local_radius_um=75.0,
+    peak_locations = localize_peaks(rec, peaks, method="monopolar_triangulation",radius_um=75.0,
                                     max_distance_um=150.0, **job_kwargs)
 
     # Step 2: motion inference

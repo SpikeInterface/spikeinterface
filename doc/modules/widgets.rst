@@ -123,7 +123,7 @@ The :code:`plot_*(..., backend="matplotlib")` functions come with the following 
 .. code-block:: python
 
     # matplotlib backend
-    w = plot_timeseries(recording, backend="matplotlib")
+    w = plot_traces(recording, backend="matplotlib")
 
 **Output:**
 
@@ -146,9 +146,9 @@ Each function has the following additional arguments:
 
     from spikeinterface.preprocessing import common_reference
 
-    # ipywidgets backend also supports multiple "layers" for plot_timeseries
+    # ipywidgets backend also supports multiple "layers" for plot_traces
     rec_dict = dict(filt=recording, cmr=common_reference(recording))
-    w = sw.plot_timeseries(rec_dict, backend="ipywidgets")
+    w = sw.plot_traces(rec_dict, backend="ipywidgets")
 
 **Output:**
 
@@ -171,7 +171,7 @@ The functions have the following additional arguments:
 .. code-block:: python
 
     # sortingview backend
-    w_ts = sw.plot_timeseries(recording, backend="ipywidgets")
+    w_ts = sw.plot_traces(recording, backend="ipywidgets")
     w_ss = sw.plot_sorting_summary(recording, backend="sortingview")
 
 

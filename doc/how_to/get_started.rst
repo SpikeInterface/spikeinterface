@@ -104,7 +104,7 @@ and the raster plots.
 
 .. code:: ipython3
 
-    w_ts = sw.plot_timeseries(recording, time_range=(0, 5))
+    w_ts = sw.plot_traces(recording, time_range=(0, 5))
     w_rs = sw.plot_rasters(sorting_true, time_range=(0, 5))
 
 
@@ -266,7 +266,7 @@ available parameters are dictionaries and can be accessed with:
      'clustering': {},
      'detection': {'detect_threshold': 5, 'peak_sign': 'neg'},
      'filtering': {'dtype': 'float32'},
-     'general': {'local_radius_um': 100, 'ms_after': 2, 'ms_before': 2},
+     'general': {'radius_um': 100, 'ms_after': 2, 'ms_before': 2},
      'job_kwargs': {},
      'localization': {},
      'matching': {},
