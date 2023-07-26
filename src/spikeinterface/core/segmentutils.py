@@ -169,6 +169,11 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
         if end_frame is None:
             end_frame = self.get_num_samples()
 
+        # # Ensures that we won't request invalid segment indices
+        if (start_frame >= self.get_num_samples()) or (end_frame <= start_frame):
+            # Return (0 * num_channels) array of correct dtype
+            return self.parent_segments[0].get_traces(0, 0, channel_indices)
+
         i0 = np.searchsorted(self.cumsum_length, start_frame, side="right") - 1
         i1 = np.searchsorted(self.cumsum_length, end_frame, side="right") - 1
 
