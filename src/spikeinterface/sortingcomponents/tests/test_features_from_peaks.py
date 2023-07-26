@@ -34,8 +34,8 @@ def test_features_from_peaks():
     feature_params = {
         "amplitude": {"all_channels": False, "peak_sign": "neg"},
         "ptp": {"all_channels": False},
-        "center_of_mass": {"local_radius_um": 120.0},
-        "energy": {"local_radius_um": 160.0},
+        "center_of_mass": {"radius_um": 120.0},
+        "energy": {"radius_um": 160.0},
     }
     features = compute_features_from_peaks(recording, peaks, feature_list, feature_params=feature_params, **job_kwargs)
 

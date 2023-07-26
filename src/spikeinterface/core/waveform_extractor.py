@@ -921,10 +921,10 @@ class WaveformExtractor:
             zarr_root.attrs["params"] = check_json(self._params)
             if self.has_recording():
                 if self.recording.check_if_json_serializable():
-                    rec_dict = self.recording.to_dict(relative_to=relative_to)
+                    rec_dict = self.recording.to_dict(relative_to=relative_to, recursive=True)
                     zarr_root.attrs["recording"] = check_json(rec_dict)
             if self.sorting.check_if_json_serializable():
-                sort_dict = self.sorting.to_dict(relative_to=relative_to)
+                sort_dict = self.sorting.to_dict(relative_to=relative_to, recursive=True)
                 zarr_root.attrs["sorting"] = check_json(sort_dict)
             else:
                 warn(
@@ -1334,7 +1334,7 @@ class WaveformExtractor:
                 sel = selected_spikes[unit_id][segment_index]
                 selected_spike_times[segment_index][unit_id] = spike_times[sel]
 
-        spikes = NumpySorting.from_dict(selected_spike_times, self.sampling_frequency).to_spike_vector()
+        spikes = NumpySorting.from_unit_dict(selected_spike_times, self.sampling_frequency).to_spike_vector()
 
         if self.folder is not None:
             wf_folder = self.folder / "waveforms"

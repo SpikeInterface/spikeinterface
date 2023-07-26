@@ -19,7 +19,7 @@ from spikeinterface.preprocessing import get_spatial_interpolation_kernel
 def correct_motion_on_peaks(
     peaks,
     peak_locations,
-    times,
+    sampling_frequency,
     motion,
     temporal_bins,
     spatial_bins,
@@ -34,8 +34,8 @@ def correct_motion_on_peaks(
         peaks vector
     peak_locations: np.array
         peaks location vector
-    times: np.array
-        times vector of recording
+    sampling_frequency: np.array
+        sampling_frequency of the recording
     motion: np.array 2D
         motion.shape[0] equal temporal_bins.shape[0]
         motion.shape[1] equal 1 when "rigid" motion equal temporal_bins.shape[0] when "non-rigid"
@@ -51,18 +51,17 @@ def correct_motion_on_peaks(
     """
     corrected_peak_locations = peak_locations.copy()
 
+    spike_times = peaks["sample_index"] / sampling_frequency
     if spatial_bins.shape[0] == 1:
         # rigid motion interpolation 1D
-        sample_bins = np.searchsorted(times, temporal_bins)
-        f = scipy.interpolate.interp1d(sample_bins, motion[:, 0], bounds_error=False, fill_value="extrapolate")
-        shift = f(peaks["sample_index"])
+        f = scipy.interpolate.interp1d(temporal_bins, motion[:, 0], bounds_error=False, fill_value="extrapolate")
+        shift = f(spike_times)
         corrected_peak_locations[direction] -= shift
     else:
         # non rigid motion = interpolation 2D
         f = scipy.interpolate.RegularGridInterpolator(
             (temporal_bins, spatial_bins), motion, method="linear", bounds_error=False, fill_value=None
         )
-        spike_times = times[peaks["sample_index"]]
         shift = f(np.c_[spike_times, peak_locations[direction]])
         corrected_peak_locations[direction] -= shift
 

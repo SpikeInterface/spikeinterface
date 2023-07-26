@@ -18,12 +18,12 @@ motion_options_preset = {
             peak_sign="neg",
             detect_threshold=8.0,
             exclude_sweep_ms=0.1,
-            local_radius_um=50,
+            radius_um=50,
         ),
         "select_kwargs": None,
         "localize_peaks_kwargs": dict(
             method="monopolar_triangulation",
-            local_radius_um=75.0,
+            radius_um=75.0,
             max_distance_um=150.0,
             optimizer="minimize_with_log_penality",
             enforce_decrease=True,
@@ -81,12 +81,12 @@ motion_options_preset = {
             peak_sign="neg",
             detect_threshold=8.0,
             exclude_sweep_ms=0.1,
-            local_radius_um=50,
+            radius_um=50,
         ),
         "select_kwargs": None,
         "localize_peaks_kwargs": dict(
             method="center_of_mass",
-            local_radius_um=75.0,
+            radius_um=75.0,
             feature="ptp",
         ),
         "estimate_motion_kwargs": dict(
@@ -109,12 +109,12 @@ motion_options_preset = {
             peak_sign="neg",
             detect_threshold=8.0,
             exclude_sweep_ms=0.1,
-            local_radius_um=50,
+            radius_um=50,
         ),
         "select_kwargs": None,
         "localize_peaks_kwargs": dict(
             method="grid_convolution",
-            local_radius_um=40.0,
+            radius_um=40.0,
             upsampling_um=5.0,
             sigma_um=np.linspace(5.0, 25.0, 5),
             sigma_ms=0.25,
@@ -258,7 +258,7 @@ def correct_motion(
     noise_levels = get_noise_levels(recording, return_scaled=False)
 
     if select_kwargs is None:
-        # maybe do this directly in the folderwhen not None
+        # maybe do this directly in the folder when not None
         gather_mode = "memory"
 
         # node detect
@@ -328,10 +328,12 @@ def correct_motion(
             estimate_motion_kwargs=estimate_motion_kwargs,
             interpolate_motion_kwargs=interpolate_motion_kwargs,
             job_kwargs=job_kwargs,
+            sampling_frequency=recording.sampling_frequency,
         )
         (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
         (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
-        recording.dump_to_json(folder / "recording.json")
+        if recording.check_if_json_serializable():
+            recording.dump_to_json(folder / "recording.json")
 
         np.save(folder / "peaks.npy", peaks)
         np.save(folder / "peak_locations.npy", peak_locations)

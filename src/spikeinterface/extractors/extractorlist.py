@@ -4,11 +4,13 @@ from typing import Type
 from spikeinterface.core import (
     BaseRecording,
     BaseSorting,
+    BinaryFolderRecording,
     BinaryRecordingExtractor,
     NumpyRecording,
     NpzSortingExtractor,
     NumpySorting,
     NpySnippetsExtractor,
+    ZarrRecordingExtractor,
 )
 
 # sorting/recording/event from neo
@@ -57,7 +59,9 @@ from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
 ########################################
 
 recording_extractor_full_list = [
+    BinaryFolderRecording,
     BinaryRecordingExtractor,
+    ZarrRecordingExtractor,
     # natively implemented in spikeinterface.extractors
     NumpyRecording,
     SHYBRIDRecordingExtractor,

@@ -197,7 +197,7 @@ class HybridSpikesRecording(InjectTemplatesRecording):
 
         self._kwargs = dict(
             wvf_extractor=str(wvf_extractor.folder.absolute()),
-            injected_sorting=self.injected_sorting.to_dict(),
+            injected_sorting=self.injected_sorting,
             unit_ids=unit_ids,
             max_injected_per_unit=max_injected_per_unit,
             injected_rate=injected_rate,
@@ -241,7 +241,7 @@ def generate_injected_sorting(
 
             injected_spike_trains[segment_index][unit_id] = injected_spike_train
 
-    return NumpySorting.from_dict(injected_spike_trains, sorting.get_sampling_frequency())
+    return NumpySorting.from_unit_dict(injected_spike_trains, sorting.get_sampling_frequency())
 
 
 create_hybrid_units_recording = define_function_from_class(

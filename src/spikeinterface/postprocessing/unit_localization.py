@@ -568,7 +568,7 @@ def enforce_decrease_shells_data(wf_data, maxchan, radial_parents, in_place=Fals
 
 
 def get_grid_convolution_templates_and_weights(
-    contact_locations, local_radius_um=50, upsampling_um=5, sigma_um=np.linspace(10, 50.0, 5), margin_um=50
+    contact_locations, radius_um=50, upsampling_um=5, sigma_um=np.linspace(10, 50.0, 5), margin_um=50
 ):
     x_min, x_max = contact_locations[:, 0].min(), contact_locations[:, 0].max()
     y_min, y_max = contact_locations[:, 1].min(), contact_locations[:, 1].max()
@@ -597,7 +597,7 @@ def get_grid_convolution_templates_and_weights(
 
     # mask to get nearest template given a channel
     dist = sklearn.metrics.pairwise_distances(contact_locations, template_positions)
-    nearest_template_mask = dist < local_radius_um
+    nearest_template_mask = dist < radius_um
 
     weights = np.zeros((len(sigma_um), len(contact_locations), nb_templates), dtype=np.float32)
     for count, sigma in enumerate(sigma_um):

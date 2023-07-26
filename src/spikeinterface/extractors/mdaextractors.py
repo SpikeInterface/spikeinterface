@@ -196,7 +196,7 @@ class MdaSortingExtractor(BaseSorting):
     name = "mda"
 
     def __init__(self, file_path, sampling_frequency):
-        firings = readmda(str(file_path))
+        firings = readmda(str(Path(file_path).absolute()))
         labels = firings[2, :]
         unit_ids = np.unique(labels).astype(int)
         BaseSorting.__init__(self, unit_ids=unit_ids, sampling_frequency=sampling_frequency)
@@ -204,7 +204,10 @@ class MdaSortingExtractor(BaseSorting):
         sorting_segment = MdaSortingSegment(firings)
         self.add_sorting_segment(sorting_segment)
 
-        self._kwargs = {"file_path": str(Path(file_path).absolute()), "sampling_frequency": sampling_frequency}
+        self._kwargs = {
+            "file_path": str(Path(file_path).absolute()),
+            "sampling_frequency": sampling_frequency,
+        }
 
     @staticmethod
     def write_sorting(sorting, save_path, write_primary_channels=False):

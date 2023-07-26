@@ -120,8 +120,8 @@ class BaseSorter:
         if output_folder is None:
             output_folder = cls.sorter_name + "_output"
 
-        #  .absolute() not anymore
-        output_folder = Path(output_folder)
+        # Resolve path
+        output_folder = Path(output_folder).absolute()
         sorter_output_folder = output_folder / "sorter_output"
 
         if output_folder.is_dir():
