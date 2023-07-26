@@ -184,8 +184,8 @@ def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
     unit1_ids = np.array(sorting1.get_unit_ids())
     unit2_ids = np.array(sorting2.get_unit_ids())
 
-    ev_counts1 = np.array(list(sorting1.get_total_num_spikes().values()))
-    ev_counts2 = np.array(list(sorting2.get_total_num_spikes().values()))
+    ev_counts1 = np.array(list(sorting1.count_num_spikes_per_unit().values()))
+    ev_counts2 = np.array(list(sorting2.count_num_spikes_per_unit().values()))
     event_counts1 = pd.Series(ev_counts1, index=unit1_ids)
     event_counts2 = pd.Series(ev_counts2, index=unit2_ids)
 

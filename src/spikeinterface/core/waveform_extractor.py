@@ -1334,7 +1334,7 @@ class WaveformExtractor:
                 sel = selected_spikes[unit_id][segment_index]
                 selected_spike_times[segment_index][unit_id] = spike_times[sel]
 
-        spikes = NumpySorting.from_dict(selected_spike_times, self.sampling_frequency).to_spike_vector()
+        spikes = NumpySorting.from_unit_dict(selected_spike_times, self.sampling_frequency).to_spike_vector()
 
         if self.folder is not None:
             wf_folder = self.folder / "waveforms"
