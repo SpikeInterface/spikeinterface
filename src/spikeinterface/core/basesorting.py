@@ -421,15 +421,15 @@ class BaseSorting(BaseExtractor):
         Parameters
         ----------
         concatenated: bool
-            By default the output is one numpy vector with all spikes from all segments
-            With concatenated=False then it is a list of spike vector by segment.
+            With concatenated=True (default) the output is one numpy "spike vector" with spikes from all segments.
+            With concatenated=False the output is a list "spike vector" by segment.
         extremum_channel_inds: None or dict
             If a dictionnary of unit_id to channel_ind is given then an extra field 'channel_index'.
             This can be convinient for computing spikes postion after sorter.
 
             This dict can be computed with `get_template_extremum_channel(we, outputs="index")`
         use_cache: bool
-            When True (default) the spikes vector is cache in an attribute of the object.
+            When True (default) the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
             This caching only occurs when extremum_channel_inds=None.
 
         Returns

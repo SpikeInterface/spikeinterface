@@ -31,11 +31,11 @@ class NumpyFolderSorting(BaseSorting):
         folder_path = Path(folder_path)
 
         with open(folder_path / "numpysorting_info.json", "r") as f:
-            d = json.load(f)
+            info = json.load(f)
 
-        sampling_frequency = d["sampling_frequency"]
-        unit_ids = np.array(d["unit_ids"])
-        num_segments = d["num_segments"]
+        sampling_frequency = info["sampling_frequency"]
+        unit_ids = np.array(info["unit_ids"])
+        num_segments = info["num_segments"]
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
