@@ -81,7 +81,9 @@ def merge_clusters(
         **job_kwargs,
     )
 
-    merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="partial")
+    # merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="partial")
+    merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full")
+
 
     group_shifts = resolve_final_shifts(labels_set, merges, pair_mask, pair_shift)
 
@@ -90,8 +92,6 @@ def merge_clusters(
     peak_shifts = np.zeros(peak_labels.size, dtype="int64")
     for merge, shifts in zip(merges, group_shifts):
         label0 = merge[0]
-        print(label0)
-        print(merge, shifts)
         mask = np.in1d(peak_labels, merge)
         merge_peak_labels[mask] = label0
         for l, label1 in enumerate(merge):
@@ -99,7 +99,6 @@ def merge_clusters(
                 # the first label is the reference (shift=0)
                 continue
             peak_shifts[peak_labels == label1] = shifts[l]
-            print(" ", shifts[l])
 
     return merge_peak_labels, peak_shifts
 
