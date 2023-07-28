@@ -272,11 +272,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             recursive_depth=3,
 
             returns_split_count=True,
+            **job_kwargs
 
-            n_jobs=1,
-            mp_context="fork",
-            max_threads_per_process=1,
-            progress_bar=True,
         )
 
         merge_radius_um = params["clustering"]["merge_radius_um"]
@@ -308,12 +305,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 num_shift=2,
                 
                 ),
-
-            n_jobs=10,
-            mp_context="fork",
-            max_threads_per_process=1,
-            progress_bar=True,
-            # progress_bar=False,
+            **job_kwargs
         )
             
         sparse_wfs = np.load(features_folder / "sparse_wfs.npy", mmap_mode="r")
