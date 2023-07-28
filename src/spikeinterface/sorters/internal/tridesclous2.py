@@ -3,6 +3,7 @@ from .si_based import ComponentsBasedSorter
 from spikeinterface.core import load_extractor, BaseRecording, get_noise_levels, extract_waveforms, NumpySorting, get_channel_distances
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore
+from spikeinterface.core.basesorting import minimum_spike_dtype
 
 import numpy as np
 
@@ -278,7 +279,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         merge_radius_um = params["clustering"]["merge_radius_um"]
 
-        post_merge_label = merge_clusters(
+        post_merge_label, peak_shifts = merge_clusters(
             peaks,
             post_split_label,
             recording,
@@ -310,6 +311,9 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             
         sparse_wfs = np.load(features_folder / "sparse_wfs.npy", mmap_mode="r")
 
+        
+        new_peaks = peaks.copy()
+        new_peaks["sample_index"] -= peak_shifts
 
 
         # labels_set = np.unique(post_merge_label)
@@ -329,7 +333,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         mask = post_merge_label >= 0
 
         sorting_temp = NumpySorting.from_times_labels(
-            peaks["sample_index"][mask], post_merge_label[mask], sampling_frequency,
+            new_peaks["sample_index"][mask], post_merge_label[mask], sampling_frequency,
             unit_ids=labels_set,
         )
         sorting_temp = sorting_temp.save(folder=sorter_output_folder / "sorting_temp")
@@ -362,10 +366,18 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             np.save(sorter_output_folder / 'post_merge_label.npy', post_split_label)
             np.save(sorter_output_folder / 'spikes.npy', spikes)
 
-
+        print('labels_set', labels_set)
 
         # TODO multi segments
-        sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["cluster_index"], sampling_frequency)
+        # , unit_ids=labels_set
+
+        final_spikes = np.zeros(spikes.size, dtype=minimum_spike_dtype)
+        final_spikes["sample_index"] = spikes["sample_index"]
+        final_spikes["unit_index"] = spikes["cluster_index"]
+        final_spikes["segment_index"] = spikes["segment_index"]
+
+        # sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["cluster_index"], sampling_frequency)
+        sorting = NumpySorting(final_spikes, sampling_frequency, labels_set)
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
 
         return sorting
