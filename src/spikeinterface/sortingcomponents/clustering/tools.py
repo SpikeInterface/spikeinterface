@@ -94,7 +94,9 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
     return aligned_features, dont_have_channels
 
 
-def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sparse_mask, total_channels, peak_shifts=None):
+def compute_template_from_sparse(
+    peaks, labels, labels_set, sparse_waveforms, sparse_mask, total_channels, peak_shifts=None
+):
     """
     Compute template average from single sparse waveforms buffer.
 
@@ -140,6 +142,7 @@ def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sp
 
     return templates
 
+
 def apply_waveforms_shift(waveforms, peak_shifts, inplace=False):
     """
     Apply a shift a spike level to realign waveforms buffers.
@@ -155,7 +158,7 @@ def apply_waveforms_shift(waveforms, peak_shifts, inplace=False):
     ----------
 
     waveforms
-    
+
     peak_shifts
 
     inplace

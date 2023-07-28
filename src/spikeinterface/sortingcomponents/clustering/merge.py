@@ -81,14 +81,13 @@ def merge_clusters(
         **job_kwargs,
     )
 
-
     merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="partial")
 
     group_shifts = resolve_final_shifts(labels_set, merges, pair_mask, pair_shift)
 
     # apply final label and shift
     merge_peak_labels = peak_labels.copy()
-    peak_shifts = np.zeros(peak_labels.size, dtype='int64')
+    peak_shifts = np.zeros(peak_labels.size, dtype="int64")
     for merge, shifts in zip(merges, group_shifts):
         label0 = merge[0]
         print(label0)
@@ -100,7 +99,7 @@ def merge_clusters(
                 # the first label is the reference (shift=0)
                 continue
             peak_shifts[peak_labels == label1] = shifts[l]
-            print(' ', shifts[l])
+            print(" ", shifts[l])
 
     return merge_peak_labels, peak_shifts
 
@@ -110,8 +109,7 @@ def resolve_final_shifts(labels_set, merges, pair_mask, pair_shift):
 
     group_shifts = []
     for merge in merges:
-        
-        shifts = np.zeros(len(merge), dtype='int64')
+        shifts = np.zeros(len(merge), dtype="int64")
 
         label_inds = [labels_set.index(label) for label in merge]
 
@@ -147,7 +145,6 @@ def resolve_final_shifts(labels_set, merges, pair_mask, pair_shift):
         group_shifts.append(shifts)
 
     return group_shifts
-
 
 
 def agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full"):
@@ -215,14 +212,11 @@ def find_merge_pairs(
     peak_labels,
     recording,
     features_dict_or_folder,
-
     sparse_wfs,
     sparse_mask,
     radius_um=70,
-
     method="waveforms_lda",
     method_kwargs={},
-
     **job_kwargs
     # n_jobs=1,
     # mp_context="fork",
@@ -249,7 +243,9 @@ def find_merge_pairs(
 
     # compute template (no shift at this step)
 
-    templates = compute_template_from_sparse(peaks, peak_labels, labels_set, sparse_wfs, sparse_mask, total_channels, peak_shifts=None)
+    templates = compute_template_from_sparse(
+        peaks, peak_labels, labels_set, sparse_wfs, sparse_mask, total_channels, peak_shifts=None
+    )
 
     max_chans = np.argmax(np.max(np.abs(templates), axis=1), axis=1)
 
@@ -260,12 +256,10 @@ def find_merge_pairs(
     pair_mask = pair_mask & (template_dist < radius_um)
     indices0, indices1 = np.nonzero(pair_mask)
 
-
     n_jobs = job_kwargs["n_jobs"]
     mp_context = job_kwargs["mp_context"]
     max_threads_per_process = job_kwargs["max_threads_per_process"]
     progress_bar = job_kwargs["progress_bar"]
-    
 
     Executor = get_poolexecutor(n_jobs)
 
@@ -408,7 +402,6 @@ class WaveformsLda:
         channel_shift = np.argmax(np.abs(template1_), axis=0) - np.argmax(np.abs(template0_), axis=0)
         best_shift = int(np.round(np.mean(channel_shift[np.abs(channel_shift) <= num_shift]))) + num_shift
 
-
         wfs1 = wfs1_[:, best_shift : best_shift + template0.shape[0], :]
         template1 = template1_[best_shift : best_shift + template0.shape[0], :]
 
@@ -464,8 +457,8 @@ class WaveformsLda:
             ax.plot(flatten_wfs1.T, color="C1", alpha=0.01)
             m0 = np.mean(flatten_wfs0, axis=0)
             m1 = np.mean(flatten_wfs1, axis=0)
-            ax.plot(m0, color="C0", alpha=1, lw=4, label='label0')
-            ax.plot(m1, color="C1", alpha=1, lw=4, label='label1')
+            ax.plot(m0, color="C0", alpha=1, lw=4, label="label0")
+            ax.plot(m1, color="C1", alpha=1, lw=4, label="label1")
 
             ax.legend()
 
@@ -479,7 +472,6 @@ class WaveformsLda:
             ax.plot(bins[:-1], count1, color="C1")
 
             ax.set_title(f"{dipscore}")
-            
 
         return is_merge, label0, label1, final_shift, merge_value
 
