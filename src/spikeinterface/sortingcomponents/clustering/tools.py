@@ -94,7 +94,7 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
     return aligned_features, dont_have_channels
 
 
-def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sparse_mask, total_channels):
+def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sparse_mask, total_channels, shifts=None):
     """
     Compute template average from single sparse waveforms buffer.
 
@@ -111,6 +111,8 @@ def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sp
     sparse_mask
 
     total_channels
+
+    shifts
 
     Returns
     -------
@@ -130,6 +132,62 @@ def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sp
         aligned_wfs, dont_have_channels = aggregate_sparse_features(
             peaks, peak_indices, sparse_waveforms, sparse_mask, target_channels
         )
+
+        if shifts is not None:
+            apply_waveforms_shift(aligned_wfs, shifts[peak_indices], inplace=True)
+
         templates[i, :, :][:, target_channels] = np.mean(aligned_wfs[~dont_have_channels], axis=0)
 
     return templates
+
+def apply_waveforms_shift(waveforms, shifts, inplace=False):
+    """
+    Apply a shift a spike level to realign waveforms buffers.
+
+    This is usefull to compute template after merge when to cluster are shifted.
+
+    A negative shift need the waveforms to be moved toward the right because the trough was too early.
+    A positive shift need the waveforms to be moved toward the left because the trough was too late.
+
+    Note the border sample are left as before without move.
+
+    Parameters
+    ----------
+
+    waveforms
+    
+    shifts
+
+    inplace
+
+    Returns
+    -------
+    aligned_waveforms
+
+
+    """
+
+    print('apply_waveforms_shift')
+
+    if inplace:
+        aligned_waveforms = waveforms
+    else:
+        aligned_waveforms = waveforms.copy()
+
+    shift_set = np.unique(shifts)
+    assert max(np.abs(shift_set)) < aligned_waveforms.shape[1]
+
+    for shift in shift_set:
+        if shift == 0:
+            continue
+        mask = shifts == shift
+        wfs = waveforms[mask]
+
+        if shift > 0:
+            aligned_waveforms[mask, :-shift, :] = wfs[:, shift:, :]
+        else:
+            aligned_waveforms[mask, -shift:, :] = wfs[:,:-shift, :]
+
+    print('apply_waveforms_shift DONE')
+    
+    return aligned_waveforms

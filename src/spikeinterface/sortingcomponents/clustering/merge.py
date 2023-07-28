@@ -10,7 +10,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from hdbscan import HDBSCAN
 
 import numpy as np
-
+import networkx as nx
 
 from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
@@ -57,13 +57,11 @@ def merge_clusters(
     job_kwargs = fix_job_kwargs(job_kwargs)
     print(job_kwargs)
 
-    labels_set = np.setdiff1d(peak_labels, [-1])
-
     features = FeaturesLoader.from_dict_or_folder(features_dict_or_folder)
     sparse_wfs = features["sparse_wfs"]
     sparse_mask = features["sparse_mask"]
 
-    pair_mask, pair_shift = find_merge_pairs(
+    labels_set, pair_mask, pair_shift, pair_values = find_merge_pairs(
         peaks,
         peak_labels,
         recording,
@@ -76,19 +74,73 @@ def merge_clusters(
         **job_kwargs,
     )
 
-    merges = find_connected_pairs(pair_mask, labels_set, connection_mode="partial")
+    merges = agglomerate_pairs(pair_mask, labels_set, connection_mode="partial")
 
+    peak_labels, shifts = apply_merges_and_shift(labels_set, peak_labels, merges,pair_mask, pair_shift)
+
+    return peak_labels, shifts
+
+
+
+def apply_merges_and_shift(labels_set, peak_labels, merges, pair_mask, pair_shift):
+    """
+    Apply merges on peak_labels and compute the final peak shift per spikes with propagation when needed.
+    """
+    labels_set = list(labels_set)
     peak_labels = peak_labels.copy()
-
+    peak_shifts = np.zeros(peak_labels.size, dtype='int64')
     for merge in merges:
+        
+        label_inds = [labels_set.index(label) for label in merge]
+
+        label0 = merge[0]
+        ind0 = label_inds[0]
+        
+        # First find relative shift to label0 (l=0) in the subgraph
+        local_pair_mask = pair_mask[label_inds, :][:, label_inds]
+        local_pair_shift = None
+        G = None
+        for l, label1 in enumerate(merge):
+            if l == 0:
+                # the first label is the reference (shift=0)
+                continue
+            ind1 = label_inds[l]
+            if local_pair_mask[0, l]:
+                # easy case the pair label0<>label1 was existing
+                shift = pair_shift[ind0, ind1]
+            else:
+                # more complicated case need to find intermediate label and propagate the shift!!
+                if G is None:
+                    # the the graph only once and only if needed
+                    G = nx.from_numpy_array(local_pair_mask | local_pair_mask.T)
+                    local_pair_shift = pair_shift[label_inds, :][:, label_inds]
+                    local_pair_shift += local_pair_shift.T
+                
+                shift_chain = nx.shortest_path(G, source=l, target=0)
+                print('shift_chain', shift_chain)
+                # print('local_pair_shift', local_pair_shift)
+                shift = 0
+                for i in range(len(shift_chain) - 1):
+                    print('  ', shift_chain[i], shift_chain[i+1], ':', local_pair_shift[shift_chain[i + 1], shift_chain[i]])
+                    shift += local_pair_shift[shift_chain[i + 1], shift_chain[i]]
+                print('shift', shift)
+            peak_shifts[peak_labels == label1] = shift
+
+        # Then assign the new label to the group
         mask = np.in1d(peak_labels, merge)
-        peak_labels[mask] = min(merge)
+        peak_labels[mask] = label0
 
-    return peak_labels
+    return peak_labels, peak_shifts
 
 
-def find_connected_pairs(pair_mask, labels_set, connection_mode="full"):
-    import networkx as nx
+def agglomerate_pairs(pair_mask, labels_set, connection_mode="full"):
+    """
+    Agglomerate merge pairs into final merge groups.
+
+    The merges are ordered by label.
+
+    """
+    
 
     labels_set = np.array(labels_set)
 
@@ -136,6 +188,9 @@ def find_connected_pairs(pair_mask, labels_set, connection_mode="full"):
         nx.draw_networkx(graph)
         plt.show()
 
+    # ensure ordered label
+    merges = [np.sort(merge) for merge in merges]
+
     return merges
 
 
@@ -155,10 +210,9 @@ def find_merge_pairs(
     progress_bar=True,
 ):
     """
-    Try some merges on clusters in parralel
-
-
+    Searh some possible merge 2 by 2.
     """
+
     # features_dict_or_folder = Path(features_dict_or_folder)
 
     # peaks = features_dict_or_folder['peaks']
@@ -170,6 +224,7 @@ def find_merge_pairs(
     n = len(labels_set)
     pair_mask = np.triu(np.ones((n, n), dtype="bool")) & ~np.eye(n, dtype="bool")
     pair_shift = np.zeros((n, n), dtype="int64")
+    pair_values = np.zeros((n, n), dtype="float64")
 
     # compute template
 
@@ -204,18 +259,19 @@ def find_merge_pairs(
             iterator = jobs
 
         for res in iterator:
-            is_merge, label0, label1, shift = res.result()
+            is_merge, label0, label1, shift, merge_value = res.result()
             ind0 = labels_set.index(label0)
             ind1 = labels_set.index(label1)
 
             pair_mask[ind0, ind1] = is_merge
             if is_merge:
                 pair_shift[ind0, ind1] = shift
+                pair_values[ind0, ind1] = merge_value
 
     pair_mask = pair_mask & (template_dist < radius_um)
     indices0, indices1 = np.nonzero(pair_mask)
 
-    return pair_mask, pair_shift
+    return labels_set, pair_mask, pair_shift, pair_values
 
 
 def find_pair_worker_init(
@@ -244,10 +300,10 @@ def find_pair_worker_init(
 def find_pair_function_wrapper(label0, label1):
     global _ctx
     with threadpool_limits(limits=_ctx["max_threads_per_process"]):
-        is_merge, label0, label1, shift = _ctx["method_class"].merge(
+        is_merge, label0, label1, shift, merge_value = _ctx["method_class"].merge(
             label0, label1, _ctx["original_labels"], _ctx["peaks"], _ctx["features"], **_ctx["method_kwargs"]
         )
-    return is_merge, label0, label1, shift
+    return is_merge, label0, label1, shift, merge_value
 
 
 class WaveformsLda:
@@ -338,10 +394,12 @@ class WaveformsLda:
         if criteria == "diptest":
             dipscore, cutpoint = isocut5(feat)
             is_merge = dipscore < threshold_diptest
+            merge_value = dipscore
         elif criteria == "percentile":
             l0 = np.percentile(feat0, threshold_percentile)
             l1 = np.percentile(feat1, 100.0 - threshold_percentile)
             is_merge = l0 >= l1
+            merge_value = l0 - l1
         else:
             raise ValueError(f"bad criteria {criteria}")
 
@@ -378,7 +436,7 @@ class WaveformsLda:
 
             ax.set_title(f"{dipscore}")
 
-        return is_merge, label0, label1, final_shift
+        return is_merge, label0, label1, final_shift, merge_value
 
 
 find_pair_method_list = [
