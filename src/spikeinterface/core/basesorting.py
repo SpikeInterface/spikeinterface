@@ -291,7 +291,7 @@ class BaseSorting(BaseExtractor):
             unit_indices, counts = np.unique(spike_vector["unit_index"], return_counts=True)
             for unit_index, unit_id in enumerate(self.unit_ids):
                 if unit_index in unit_indices:
-                    idx = np.argmax(unit_indecex == unit_index)
+                    idx = np.argmax(unit_indices == unit_index)
                     num_spikes[unit_id] = counts[idx]
                 else:  # This unit has no spikes, hence it's not in the counts array.
                     num_spikes[unit_id] = 0
