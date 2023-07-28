@@ -140,6 +140,7 @@ def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sp
 
     return templates
 
+
 def apply_waveforms_shift(waveforms, shifts, inplace=False):
     """
     Apply a shift a spike level to realign waveforms buffers.
@@ -155,7 +156,7 @@ def apply_waveforms_shift(waveforms, shifts, inplace=False):
     ----------
 
     waveforms
-    
+
     shifts
 
     inplace
@@ -167,7 +168,7 @@ def apply_waveforms_shift(waveforms, shifts, inplace=False):
 
     """
 
-    print('apply_waveforms_shift')
+    print("apply_waveforms_shift")
 
     if inplace:
         aligned_waveforms = waveforms
@@ -186,8 +187,8 @@ def apply_waveforms_shift(waveforms, shifts, inplace=False):
         if shift > 0:
             aligned_waveforms[mask, :-shift, :] = wfs[:, shift:, :]
         else:
-            aligned_waveforms[mask, -shift:, :] = wfs[:,:-shift, :]
+            aligned_waveforms[mask, -shift:, :] = wfs[:, :-shift, :]
 
-    print('apply_waveforms_shift DONE')
-    
+    print("apply_waveforms_shift DONE")
+
     return aligned_waveforms

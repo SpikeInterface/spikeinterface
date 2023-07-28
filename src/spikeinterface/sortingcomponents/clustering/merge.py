@@ -76,10 +76,9 @@ def merge_clusters(
 
     merges = agglomerate_pairs(pair_mask, labels_set, connection_mode="partial")
 
-    peak_labels, shifts = apply_merges_and_shift(labels_set, peak_labels, merges,pair_mask, pair_shift)
+    peak_labels, shifts = apply_merges_and_shift(labels_set, peak_labels, merges, pair_mask, pair_shift)
 
     return peak_labels, shifts
-
 
 
 def apply_merges_and_shift(labels_set, peak_labels, merges, pair_mask, pair_shift):
@@ -88,14 +87,13 @@ def apply_merges_and_shift(labels_set, peak_labels, merges, pair_mask, pair_shif
     """
     labels_set = list(labels_set)
     peak_labels = peak_labels.copy()
-    peak_shifts = np.zeros(peak_labels.size, dtype='int64')
+    peak_shifts = np.zeros(peak_labels.size, dtype="int64")
     for merge in merges:
-        
         label_inds = [labels_set.index(label) for label in merge]
 
         label0 = merge[0]
         ind0 = label_inds[0]
-        
+
         # First find relative shift to label0 (l=0) in the subgraph
         local_pair_mask = pair_mask[label_inds, :][:, label_inds]
         local_pair_shift = None
@@ -115,15 +113,21 @@ def apply_merges_and_shift(labels_set, peak_labels, merges, pair_mask, pair_shif
                     G = nx.from_numpy_array(local_pair_mask | local_pair_mask.T)
                     local_pair_shift = pair_shift[label_inds, :][:, label_inds]
                     local_pair_shift += local_pair_shift.T
-                
+
                 shift_chain = nx.shortest_path(G, source=l, target=0)
-                print('shift_chain', shift_chain)
+                print("shift_chain", shift_chain)
                 # print('local_pair_shift', local_pair_shift)
                 shift = 0
                 for i in range(len(shift_chain) - 1):
-                    print('  ', shift_chain[i], shift_chain[i+1], ':', local_pair_shift[shift_chain[i + 1], shift_chain[i]])
+                    print(
+                        "  ",
+                        shift_chain[i],
+                        shift_chain[i + 1],
+                        ":",
+                        local_pair_shift[shift_chain[i + 1], shift_chain[i]],
+                    )
                     shift += local_pair_shift[shift_chain[i + 1], shift_chain[i]]
-                print('shift', shift)
+                print("shift", shift)
             peak_shifts[peak_labels == label1] = shift
 
         # Then assign the new label to the group
@@ -140,7 +144,6 @@ def agglomerate_pairs(pair_mask, labels_set, connection_mode="full"):
     The merges are ordered by label.
 
     """
-    
 
     labels_set = np.array(labels_set)
 
