@@ -50,12 +50,19 @@ def merge_clusters(
         Option for the method.
     Returns
     -------
-    peak_labels: numpy.ndarray 1d
+    merge_peak_labels: numpy.ndarray 1d
         New vectors label after merges.
+    peak_shifts: numpy.ndarray 1d
+        A vector of sample shift to be reverse applied on original sample_index on peak detection
+        Negative shift means too early.
+        Posituve shift means too late.
+        So the correction must be applied like this externaly:
+        final_peaks = peaks.copy()
+        final_peaks['sample_index'] -= peak_shifts
+
     """
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-    print(job_kwargs)
 
     features = FeaturesLoader.from_dict_or_folder(features_dict_or_folder)
     sparse_wfs = features["sparse_wfs"]
@@ -74,23 +81,38 @@ def merge_clusters(
         **job_kwargs,
     )
 
-    merges = agglomerate_pairs(pair_mask, labels_set, connection_mode="partial")
 
-    peak_labels, shifts = apply_merges_and_shift(labels_set, peak_labels, merges,pair_mask, pair_shift)
+    merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="partial")
 
-    return peak_labels, shifts
+    group_shifts = resolve_final_shifts(labels_set, merges, pair_mask, pair_shift)
 
-
-
-def apply_merges_and_shift(labels_set, peak_labels, merges, pair_mask, pair_shift):
-    """
-    Apply merges on peak_labels and compute the final peak shift per spikes with propagation when needed.
-    """
-    labels_set = list(labels_set)
-    peak_labels = peak_labels.copy()
+    # apply final label and shift
+    merge_peak_labels = peak_labels.copy()
     peak_shifts = np.zeros(peak_labels.size, dtype='int64')
+    for merge, shifts in zip(merges, group_shifts):
+        label0 = merge[0]
+        print(label0)
+        print(merge, shifts)
+        mask = np.in1d(peak_labels, merge)
+        merge_peak_labels[mask] = label0
+        for l, label1 in enumerate(merge):
+            if l == 0:
+                # the first label is the reference (shift=0)
+                continue
+            peak_shifts[peak_labels == label1] = shifts[l]
+            print(' ', shifts[l])
+
+    return merge_peak_labels, peak_shifts
+
+
+def resolve_final_shifts(labels_set, merges, pair_mask, pair_shift):
+    labels_set = list(labels_set)
+
+    group_shifts = []
     for merge in merges:
         
+        shifts = np.zeros(len(merge), dtype='int64')
+
         label_inds = [labels_set.index(label) for label in merge]
 
         label0 = merge[0]
@@ -117,23 +139,18 @@ def apply_merges_and_shift(labels_set, peak_labels, merges, pair_mask, pair_shif
                     local_pair_shift += local_pair_shift.T
                 
                 shift_chain = nx.shortest_path(G, source=l, target=0)
-                print('shift_chain', shift_chain)
-                # print('local_pair_shift', local_pair_shift)
                 shift = 0
                 for i in range(len(shift_chain) - 1):
-                    print('  ', shift_chain[i], shift_chain[i+1], ':', local_pair_shift[shift_chain[i + 1], shift_chain[i]])
                     shift += local_pair_shift[shift_chain[i + 1], shift_chain[i]]
-                print('shift', shift)
-            peak_shifts[peak_labels == label1] = shift
+            shifts[l] = shift
 
-        # Then assign the new label to the group
-        mask = np.in1d(peak_labels, merge)
-        peak_labels[mask] = label0
+        group_shifts.append(shifts)
 
-    return peak_labels, peak_shifts
+    return group_shifts
 
 
-def agglomerate_pairs(pair_mask, labels_set, connection_mode="full"):
+
+def agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full"):
     """
     Agglomerate merge pairs into final merge groups.
 
@@ -199,19 +216,24 @@ def find_merge_pairs(
     peak_labels,
     recording,
     features_dict_or_folder,
+
     sparse_wfs,
     sparse_mask,
     radius_um=70,
+
     method="waveforms_lda",
     method_kwargs={},
-    n_jobs=1,
-    mp_context="fork",
-    max_threads_per_process=1,
-    progress_bar=True,
+
+    **job_kwargs
+    # n_jobs=1,
+    # mp_context="fork",
+    # max_threads_per_process=1,
+    # progress_bar=True,
 ):
     """
     Searh some possible merge 2 by 2.
     """
+    job_kwargs = fix_job_kwargs(job_kwargs)
 
     # features_dict_or_folder = Path(features_dict_or_folder)
 
@@ -226,9 +248,9 @@ def find_merge_pairs(
     pair_shift = np.zeros((n, n), dtype="int64")
     pair_values = np.zeros((n, n), dtype="float64")
 
-    # compute template
+    # compute template (no shift at this step)
 
-    templates = compute_template_from_sparse(peaks, peak_labels, labels_set, sparse_wfs, sparse_mask, total_channels)
+    templates = compute_template_from_sparse(peaks, peak_labels, labels_set, sparse_wfs, sparse_mask, total_channels, peak_shifts=None)
 
     max_chans = np.argmax(np.max(np.abs(templates), axis=1), axis=1)
 
@@ -238,6 +260,13 @@ def find_merge_pairs(
 
     pair_mask = pair_mask & (template_dist < radius_um)
     indices0, indices1 = np.nonzero(pair_mask)
+
+
+    n_jobs = job_kwargs["n_jobs"]
+    mp_context = job_kwargs["mp_context"]
+    max_threads_per_process = job_kwargs["max_threads_per_process"]
+    progress_bar = job_kwargs["progress_bar"]
+    
 
     Executor = get_poolexecutor(n_jobs)
 
@@ -359,15 +388,27 @@ class WaveformsLda:
 
         wfs0 = wfs0_[:, num_shift : num_samples - num_shift, :]
 
-        values = []
-        for shift in range(num_shift * 2 + 1):
-            template1 = template1_[shift : shift + template0.shape[0], :]
+        # best shift strategy 1 = max cosine
+        # values = []
+        # for shift in range(num_shift * 2 + 1):
+        #     template1 = template1_[shift : shift + template0.shape[0], :]
+        #     norm = np.linalg.norm(template0.flatten()) * np.linalg.norm(template1.flatten())
+        #     value = np.sum(template0.flatten() * template1.flatten()) / norm
+        #     values.append(value)
+        # best_shift = np.argmax(values)
 
-            norm = np.linalg.norm(template0.flatten()) * np.linalg.norm(template1.flatten())
-            value = np.sum(template0.flatten() * template1.flatten()) / norm
-            values.append(value)
+        # best shift strategy 2 = min dist**2
+        # values = []
+        # for shift in range(num_shift * 2 + 1):
+        #     template1 = template1_[shift : shift + template0.shape[0], :]
+        #     value = np.sum((template1 - template0)**2)
+        #     values.append(value)
+        # best_shift = np.argmin(values)
 
-        best_shift = np.argmax(values)
+        # best shift strategy 3 : average delta argmin between channels
+        channel_shift = np.argmax(np.abs(template1_), axis=0) - np.argmax(np.abs(template0_), axis=0)
+        best_shift = int(np.round(np.mean(channel_shift[np.abs(channel_shift) <= num_shift]))) + num_shift
+
 
         wfs1 = wfs1_[:, best_shift : best_shift + template0.shape[0], :]
         template1 = template1_[best_shift : best_shift + template0.shape[0], :]
@@ -410,7 +451,9 @@ class WaveformsLda:
 
         # DEBUG = True
         DEBUG = False
-        if DEBUG and is_merge:
+
+        # if DEBUG and is_merge:
+        if DEBUG:
             import matplotlib.pyplot as plt
 
             flatten_wfs0 = wfs0.swapaxes(1, 2).reshape(wfs0.shape[0], -1)
@@ -422,8 +465,10 @@ class WaveformsLda:
             ax.plot(flatten_wfs1.T, color="C1", alpha=0.01)
             m0 = np.mean(flatten_wfs0, axis=0)
             m1 = np.mean(flatten_wfs1, axis=0)
-            ax.plot(m0, color="C0", alpha=1, lw=4)
-            ax.plot(m1, color="C1", alpha=1, lw=4)
+            ax.plot(m0, color="C0", alpha=1, lw=4, label='label0')
+            ax.plot(m1, color="C1", alpha=1, lw=4, label='label1')
+
+            ax.legend()
 
             bins = np.linspace(np.percentile(feat, 1), np.percentile(feat, 99), 100)
 
@@ -435,6 +480,7 @@ class WaveformsLda:
             ax.plot(bins[:-1], count1, color="C1")
 
             ax.set_title(f"{dipscore}")
+            
 
         return is_merge, label0, label1, final_shift, merge_value
 

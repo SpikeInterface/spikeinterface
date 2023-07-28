@@ -94,7 +94,7 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
     return aligned_features, dont_have_channels
 
 
-def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sparse_mask, total_channels, shifts=None):
+def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sparse_mask, total_channels, peak_shifts=None):
     """
     Compute template average from single sparse waveforms buffer.
 
@@ -112,7 +112,7 @@ def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sp
 
     total_channels
 
-    shifts
+    peak_shifts
 
     Returns
     -------
@@ -133,14 +133,14 @@ def compute_template_from_sparse(peaks, labels, labels_set, sparse_waveforms, sp
             peaks, peak_indices, sparse_waveforms, sparse_mask, target_channels
         )
 
-        if shifts is not None:
-            apply_waveforms_shift(aligned_wfs, shifts[peak_indices], inplace=True)
+        if peak_shifts is not None:
+            apply_waveforms_shift(aligned_wfs, peak_shifts[peak_indices], inplace=True)
 
         templates[i, :, :][:, target_channels] = np.mean(aligned_wfs[~dont_have_channels], axis=0)
 
     return templates
 
-def apply_waveforms_shift(waveforms, shifts, inplace=False):
+def apply_waveforms_shift(waveforms, peak_shifts, inplace=False):
     """
     Apply a shift a spike level to realign waveforms buffers.
 
@@ -156,7 +156,7 @@ def apply_waveforms_shift(waveforms, shifts, inplace=False):
 
     waveforms
     
-    shifts
+    peak_shifts
 
     inplace
 
@@ -174,13 +174,13 @@ def apply_waveforms_shift(waveforms, shifts, inplace=False):
     else:
         aligned_waveforms = waveforms.copy()
 
-    shift_set = np.unique(shifts)
+    shift_set = np.unique(peak_shifts)
     assert max(np.abs(shift_set)) < aligned_waveforms.shape[1]
 
     for shift in shift_set:
         if shift == 0:
             continue
-        mask = shifts == shift
+        mask = peak_shifts == shift
         wfs = waveforms[mask]
 
         if shift > 0:
