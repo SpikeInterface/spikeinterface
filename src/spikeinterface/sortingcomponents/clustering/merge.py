@@ -117,7 +117,7 @@ def resolve_final_shifts(labels_set, merges, pair_mask, pair_shift):
 
         label0 = merge[0]
         ind0 = label_inds[0]
-        
+
         # First find relative shift to label0 (l=0) in the subgraph
         local_pair_mask = pair_mask[label_inds, :][:, label_inds]
         local_pair_shift = None
@@ -137,7 +137,7 @@ def resolve_final_shifts(labels_set, merges, pair_mask, pair_shift):
                     G = nx.from_numpy_array(local_pair_mask | local_pair_mask.T)
                     local_pair_shift = pair_shift[label_inds, :][:, label_inds]
                     local_pair_shift += local_pair_shift.T
-                
+
                 shift_chain = nx.shortest_path(G, source=l, target=0)
                 shift = 0
                 for i in range(len(shift_chain) - 1):
@@ -157,7 +157,6 @@ def agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full"
     The merges are ordered by label.
 
     """
-    
 
     labels_set = np.array(labels_set)
 
