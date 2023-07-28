@@ -400,7 +400,12 @@ class WaveformsLda:
 
         # best shift strategy 3 : average delta argmin between channels
         channel_shift = np.argmax(np.abs(template1_), axis=0) - np.argmax(np.abs(template0_), axis=0)
-        best_shift = int(np.round(np.mean(channel_shift[np.abs(channel_shift) <= num_shift]))) + num_shift
+        mask = np.abs(channel_shift) <= num_shift
+        channel_shift = channel_shift[mask]
+        if channel_shift.size > 0:
+            best_shift = int(np.round(np.mean(channel_shift))) + num_shift
+        else:
+            best_shift = num_shift
 
         wfs1 = wfs1_[:, best_shift : best_shift + template0.shape[0], :]
         template1 = template1_[best_shift : best_shift + template0.shape[0], :]
