@@ -120,8 +120,8 @@ class BaseSorter:
         if output_folder is None:
             output_folder = cls.sorter_name + "_output"
 
-        #  .absolute() not anymore
-        output_folder = Path(output_folder)
+        # Resolve path
+        output_folder = Path(output_folder).absolute()
         sorter_output_folder = output_folder / "sorter_output"
 
         if output_folder.is_dir():
@@ -140,10 +140,10 @@ class BaseSorter:
                 )
 
         rec_file = output_folder / "spikeinterface_recording.json"
-        if recording.is_dumpable:
-            recording.dump_to_json(rec_file)
+        if recording.check_if_json_serializable():
+            recording.dump_to_json(rec_file, relative_to=output_folder)
         else:
-            d = {"warning": "The recording is not dumpable"}
+            d = {"warning": "The recording is not rerializable to json"}
             rec_file.write_text(json.dumps(d, indent=4), encoding="utf8")
 
         return output_folder
@@ -221,9 +221,6 @@ class BaseSorter:
 
         SorterClass = sorter_dict[sorter_name]
 
-        # not needed normally
-        #  recording = load_extractor(output_folder / 'spikeinterface_recording.json')
-
         now = datetime.datetime.now()
         log = {
             "sorter_name": str(SorterClass.sorter_name),
@@ -269,9 +266,9 @@ class BaseSorter:
                 print(f"{sorter_name} run time {run_time:0.2f}s")
 
         if has_error and raise_error:
-            print(log["error_trace"])
             raise SpikeSortingError(
-                f"Spike sorting failed. You can inspect the runtime trace in {output_folder}/spikeinterface_log.json"
+                f"Spike sorting error trace:\n{log['error_trace']}\n"
+                f"Spike sorting failed. You can inspect the runtime trace in {output_folder}/spikeinterface_log.json."
             )
 
         return run_time
@@ -283,14 +280,15 @@ class BaseSorter:
         # check errors in log file
         log_file = output_folder / "spikeinterface_log.json"
         if not log_file.is_file():
-            raise SpikeSortingError("get result error: the folder do not contain spikeinterface_log.json")
+            raise SpikeSortingError("get result error: the folder does not contain the `spikeinterface_log.json` file")
 
         with log_file.open("r", encoding="utf8") as f:
             log = json.load(f)
 
         if bool(log["error"]):
             raise SpikeSortingError(
-                "Spike sorting failed. You can inspect the runtime trace in spikeinterface_log.json"
+                f"Spike sorting error trace:\n{log['error_trace']}\n"
+                f"Spike sorting failed. You can inspect the runtime trace in {output_folder}/spikeinterface_log.json."
             )
 
         if sorter_output_folder.is_dir():
@@ -300,7 +298,7 @@ class BaseSorter:
             sorting = cls._get_result_from_folder(output_folder)
 
         # register recording to Sorting object
-        recording = load_extractor(output_folder / "spikeinterface_recording.json")
+        recording = load_extractor(output_folder / "spikeinterface_recording.json", base_folder=output_folder)
         if recording is not None:
             # can be None when not dumpable
             sorting.register_recording(recording)

@@ -271,9 +271,9 @@ def run_sorters(
             _check_container_images(docker_image, singularity_image, sorter_name)
 
             if need_dump:
-                if not recording.is_dumpable:
+                if not recording.check_if_dumpable():
                     raise Exception("recording not dumpable call recording.save() before")
-                recording_arg = recording.to_dict()
+                recording_arg = recording.to_dict(recursive=True)
             else:
                 recording_arg = recording
 

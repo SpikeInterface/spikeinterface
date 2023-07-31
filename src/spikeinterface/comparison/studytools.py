@@ -53,7 +53,7 @@ def setup_comparison_study(study_folder, gt_dict, **job_kwargs):
     for rec_name, (recording, sorting_gt) in gt_dict.items():
         # write recording using save with binary
         folder = study_folder / "ground_truth" / rec_name
-        sorting_gt.save(folder=folder, format="npz")
+        sorting_gt.save(folder=folder, format="numpy_folder")
         folder = study_folder / "raw_files" / rec_name
         recording.save(folder=folder, format="binary", **job_kwargs)
 

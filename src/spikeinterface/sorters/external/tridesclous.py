@@ -95,13 +95,13 @@ class TridesclousSorter(BaseSorter):
             d = recording.get_binary_description()
             file_paths = d["file_paths"]
             dtype = str(d["dtype"])
-            num_chan = d["num_channels"]
+            num_channels = d["num_channels"]
             file_offset = d["file_offset"]
         else:
             if verbose:
                 print("Local copy of recording")
             # save binary file (chunk by chunk) into a new file
-            num_chan = recording.get_num_channels()
+            num_channels = recording.get_num_channels()
             dtype = recording.get_dtype().str
             file_paths = [str(sorter_output_folder / f"raw_signals_{i}.raw") for i in range(num_seg)]
             write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **get_job_kwargs(params, verbose))
@@ -115,7 +115,7 @@ class TridesclousSorter(BaseSorter):
             filenames=file_paths,
             dtype=dtype,
             sample_rate=float(sr),
-            total_channel=int(num_chan),
+            total_channel=int(num_channels),
             offset=int(file_offset),
         )
         tdc_dataio.set_probe_file(str(prb_file))

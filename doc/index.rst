@@ -32,7 +32,7 @@ SpikeInterface is made of several modules to deal with different aspects of the 
 - export a report and/or export to Phy.
 - offer a powerful Qt-based viewer in a separate package `spikeinterface-gui <https://github.com/SpikeInterface/spikeinterface-gui>`_
 - have some powerful sorting components to build your own sorter.
-
+- have a full motion/drift correction framework (See :ref:`motion_correction`)
 
 .. toctree::
     :maxdepth: 1

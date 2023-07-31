@@ -51,7 +51,7 @@ follows:
         peak_sign='neg',
         detect_threshold=5,
         exclude_sweep_ms=0.2,
-        local_radius_um=100,
+        radius_um=100,
         noise_levels=None,
         random_chunk_kwargs={},
         outputs='numpy_compact',
@@ -95,7 +95,7 @@ follows:
     job_kwargs = dict(chunk_duration='1s', n_jobs=8, progress_bar=True)
 
     peak_locations = localize_peaks(recording, peaks, method='center_of_mass',
-                                    local_radius_um=70., ms_before=0.3, ms_after=0.6,
+                                    radius_um=70., ms_before=0.3, ms_after=0.6,
                                     **job_kwargs)
 
 

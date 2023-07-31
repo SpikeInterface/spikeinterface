@@ -149,6 +149,7 @@ spikeinterface.preprocessing
     .. autofunction:: clip
     .. autofunction:: common_reference
     .. autofunction:: correct_lsb
+    .. autofunction:: correct_motion
     .. autofunction:: depth_order
     .. autofunction:: detect_bad_channels
     .. autofunction:: directional_derivative
@@ -268,13 +269,14 @@ spikeinterface.widgets
     .. autofunction:: plot_amplitudes
     .. autofunction:: plot_autocorrelograms
     .. autofunction:: plot_crosscorrelograms
+    .. autofunction:: plot_motion
     .. autofunction:: plot_quality_metrics
     .. autofunction:: plot_sorting_summary
     .. autofunction:: plot_spike_locations
     .. autofunction:: plot_spikes_on_traces
     .. autofunction:: plot_template_metrics
     .. autofunction:: plot_template_similarity
-    .. autofunction:: plot_timeseries
+    .. autofunction:: plot_traces
     .. autofunction:: plot_unit_depths
     .. autofunction:: plot_unit_locations
     .. autofunction:: plot_unit_summary
@@ -294,7 +296,6 @@ These widgets are only available with the "matplotlib" backend
     .. autofunction:: plot_rasters
     .. autofunction:: plot_probe_map
     .. autofunction:: plot_isi_distribution
-    .. autofunction:: plot_drift_over_time
     .. autofunction:: plot_peak_activity_map
     .. autofunction:: plot_principal_component
     .. autofunction:: plot_unit_probe_map

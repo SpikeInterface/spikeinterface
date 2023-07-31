@@ -96,7 +96,6 @@ def test_filter_opencl():
     rec = rec.save(total_memory="100M", n_jobs=1, progress_bar=True)
 
     print(rec.get_dtype())
-    print(rec.is_dumpable)
 
     rec_filtered = filter(rec, engine="scipy")
     rec_filtered = rec_filtered.save(chunk_size=1000, progress_bar=True, n_jobs=30)
@@ -106,10 +105,10 @@ def test_filter_opencl():
     # rec2_cached0 = rec2.save(chunk_size=1000,verbose=False, progress_bar=True, n_jobs=4)
 
     # import matplotlib.pyplot as plt
-    # from spikeinterface.widgets import plot_timeseries
-    # plot_timeseries(rec, segment_index=0)
-    # plot_timeseries(rec_filtered, segment_index=0)
-    # plot_timeseries(rec2_cached0, segment_index=0)
+    # from spikeinterface.widgets import plot_traces
+    # plot_traces(rec, segment_index=0)
+    # plot_traces(rec_filtered, segment_index=0)
+    # plot_traces(rec2_cached0, segment_index=0)
     # plt.show()
 
 

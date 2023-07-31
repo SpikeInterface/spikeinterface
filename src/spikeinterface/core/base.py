@@ -39,7 +39,6 @@ class BaseExtractor:
 
     installed = True
     installation_mesg = ""
-    is_writable = False
 
     def __init__(self, main_ids: Sequence) -> None:
         # store init kwargs for nested serialisation
@@ -58,7 +57,8 @@ class BaseExtractor:
         #  * number of units for sorting
         self._properties = {}
 
-        self.is_dumpable = True
+        self._is_dumpable = True
+        self._is_json_serializable = True
 
         # extractor specific list of pip extra requirements
         self.extra_requirements = []
@@ -322,7 +322,7 @@ class BaseExtractor:
         include_properties: bool
             If True, all properties are added to the dict, by default False
         relative_to: str, Path, or None
-            If not None, file_paths are serialized relative to this path, by default None
+            If not None, files and folders are serialized relative to this path, by default None
             Used in waveform extractor to maintain relative paths to binary files even if the
             containing folder / diretory is moved
         folder_metadata: str, Path, or None
@@ -337,6 +337,9 @@ class BaseExtractor:
         """
 
         kwargs = self._kwargs
+
+        if relative_to and not recursive:
+            raise ValueError("`relative_to` is only posible when `recursive=True`")
 
         if recursive:
             to_dict_kwargs = dict(
@@ -372,7 +375,6 @@ class BaseExtractor:
             "class": class_name,
             "module": module,
             "kwargs": kwargs,
-            "dumpable": self.is_dumpable,
             "version": version,
             "relative_paths": (relative_to is not None),
         }
@@ -395,13 +397,13 @@ class BaseExtractor:
             dump_dict["properties"] = {k: self._properties.get(k, None) for k in self._main_properties}
 
         if relative_to is not None:
-            relative_to = Path(relative_to).absolute()
+            relative_to = Path(relative_to).resolve().absolute()
             assert relative_to.is_dir(), "'relative_to' must be an existing directory"
             dump_dict = _make_paths_relative(dump_dict, relative_to)
 
         if folder_metadata is not None:
             if relative_to is not None:
-                folder_metadata = Path(folder_metadata).absolute().relative_to(relative_to)
+                folder_metadata = Path(folder_metadata).resolve().absolute().relative_to(relative_to)
             dump_dict["folder_metadata"] = str(folder_metadata)
 
         return dump_dict
@@ -470,7 +472,43 @@ class BaseExtractor:
         return clone
 
     def check_if_dumpable(self):
-        return _check_if_dumpable(self.to_dict())
+        """Check if the object is dumpable, including nested objects.
+
+        Returns
+        -------
+        bool
+            True if the object is dumpable, False otherwise.
+        """
+        kwargs = self._kwargs
+        for value in kwargs.values():
+            # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
+            if isinstance(value, BaseExtractor):
+                return value.check_if_dumpable()
+            elif isinstance(value, list) and (len(value) > 0) and isinstance(value[0], BaseExtractor):
+                return all([v.check_if_dumpable() for v in value])
+            elif isinstance(value, dict) and isinstance(value[list(value.keys())[0]], BaseExtractor):
+                return all([v.check_if_dumpable() for k, v in value.items()])
+        return self._is_dumpable
+
+    def check_if_json_serializable(self):
+        """
+        Check if the object is json serializable, including nested objects.
+
+        Returns
+        -------
+        bool
+            True if the object is json serializable, False otherwise.
+        """
+        kwargs = self._kwargs
+        for value in kwargs.values():
+            # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
+            if isinstance(value, BaseExtractor):
+                return value.check_if_json_serializable()
+            elif isinstance(value, list) and (len(value) > 0) and isinstance(value[0], BaseExtractor):
+                return all([v.check_if_json_serializable() for v in value])
+            elif isinstance(value, dict) and isinstance(value[list(value.keys())[0]], BaseExtractor):
+                return all([v.check_if_json_serializable() for k, v in value.items()])
+        return self._is_json_serializable
 
     @staticmethod
     def _get_file_path(file_path: Union[str, Path], extensions: Sequence) -> Path:
@@ -512,8 +550,9 @@ class BaseExtractor:
         ----------
         file_path: str or Path
             The output file (either .json or .pkl/.pickle)
-        relative_to: str, Path, or None
-            If not None, file_paths are serialized relative to this path
+        relative_to: str, Path, True or None
+            If not None, files and folders are serialized relative to this path. If True, the relative folder is the parent folder.
+            This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
         """
         if str(file_path).endswith(".json"):
             self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
@@ -525,18 +564,31 @@ class BaseExtractor:
     def dump_to_json(self, file_path: Union[str, Path, None] = None, relative_to=None, folder_metadata=None) -> None:
         """
         Dump recording extractor to json file.
-        The extractor can be re-loaded with load_extractor_from_json(json_file)
+        The extractor can be re-loaded with load_extractor(json_file)
 
         Parameters
         ----------
         file_path: str
             Path of the json file
-        relative_to: str, Path, or None
-            If not None, file_paths are serialized relative to this path
+        relative_to: str, Path, True or None
+            If not None, files and folders are serialized relative to this path. If True, the relative folder is the parent folder.
+            This means that file and folder paths in extractor objects kwargs are changed to be relative rather than absolute.
+        folder_metadata: str, Path, or None
+            Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
-        assert self.check_if_dumpable()
+        assert self.check_if_json_serializable(), "The extractor is not json serializable"
+
+        # Writing paths as relative_to requires recursively expanding the dict
+        if relative_to:
+            relative_to = Path(file_path).parent if relative_to is True else Path(relative_to)
+            relative_to = relative_to.resolve().absolute()
+
         dump_dict = self.to_dict(
-            include_annotations=True, include_properties=False, relative_to=relative_to, folder_metadata=folder_metadata
+            include_annotations=True,
+            include_properties=False,
+            relative_to=relative_to,
+            folder_metadata=folder_metadata,
+            recursive=True,
         )
         file_path = self._get_file_path(file_path, [".json"])
 
@@ -549,13 +601,11 @@ class BaseExtractor:
         self,
         file_path: Union[str, Path, None] = None,
         include_properties: bool = True,
-        relative_to=None,
         folder_metadata=None,
-        recursive: bool = False,
     ):
         """
         Dump recording extractor to a pickle file.
-        The extractor can be re-loaded with load_extractor_from_pickle(pickle_file)
+        The extractor can be re-loaded with load_extractor(pickle_file)
 
         Parameters
         ----------
@@ -563,41 +613,43 @@ class BaseExtractor:
             Path of the pickle file
         include_properties: bool
             If True, all properties are dumped
-        relative_to: str, Path, or None
-            If not None, file_paths are serialized relative to this path
-        recursive: bool
-            If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
+        folder_metadata: str, Path, or None
+            Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
-        assert self.check_if_dumpable()
+        assert self.check_if_dumpable(), "The extractor is not dumpable"
+
         dump_dict = self.to_dict(
             include_annotations=True,
             include_properties=include_properties,
-            relative_to=relative_to,
             folder_metadata=folder_metadata,
-            recursive=recursive,
+            recursive=False,
         )
         file_path = self._get_file_path(file_path, [".pkl", ".pickle"])
 
         file_path.write_bytes(pickle.dumps(dump_dict))
 
     @staticmethod
-    def load(file_path: Union[str, Path], base_folder=None) -> "BaseExtractor":
+    def load(file_path: Union[str, Path], base_folder: Optional[Union[Path, str, bool]] = None) -> "BaseExtractor":
         """
         Load extractor from file path (.json or .pkl)
 
         Used both after:
           * dump(...) json or pickle file
           * save (...)  a folder which contain data  + json (or pickle) + metadata.
+
         """
 
         file_path = Path(file_path)
+        if base_folder is True:
+            base_folder = file_path.parent
+
         if file_path.is_file():
             # standard case based on a file (json or pickle)
             if str(file_path).endswith(".json"):
-                with open(str(file_path), "r") as f:
+                with open(file_path, "r") as f:
                     d = json.load(f)
             elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-                with open(str(file_path), "rb") as f:
+                with open(file_path, "rb") as f:
                     d = pickle.load(f)
             else:
                 raise ValueError(f"Impossible to load {file_path}")
@@ -670,7 +722,7 @@ class BaseExtractor:
         Parameters
         ----------
         kwargs: Keyword arguments for saving.
-            * format: "memory", "zarr", or "binary" (for recording) / "memory" or "npz" for sorting.
+            * format: "memory", "zarr", or "binary" (for recording) / "memory" or "numpy_folder" or "npz_folder" for sorting.
                 In case format is not memory, the recording is saved to a folder. See format specific functions for
                 more info (`save_to_memory()`, `save_to_folder()`, `save_to_zarr()`)
             * folder: if provided, the folder path where the object is saved
@@ -762,7 +814,7 @@ class BaseExtractor:
 
         # dump provenance
         provenance_file = folder / f"provenance.json"
-        if self.check_if_dumpable():
+        if self.check_if_json_serializable():
             self.dump(provenance_file)
         else:
             provenance_file.write_text(json.dumps({"warning": "the provenace is not dumpable!!!"}), encoding="utf8")
@@ -886,7 +938,7 @@ class BaseExtractor:
 
 
 def _make_paths_relative(d, relative) -> dict:
-    relative = str(Path(relative).absolute())
+    relative = str(Path(relative).resolve().absolute())
     func = lambda p: os.path.relpath(str(p), start=relative)
     return recursive_path_modifier(d, func, target="path", copy=True)
 
@@ -895,17 +947,6 @@ def _make_paths_absolute(d, base):
     base = Path(base)
     func = lambda p: str((base / p).resolve().absolute())
     return recursive_path_modifier(d, func, target="path", copy=True)
-
-
-def _check_if_dumpable(d):
-    kwargs = d["kwargs"]
-    if np.any([isinstance(v, dict) and "dumpable" in v.keys() for (k, v) in kwargs.items()]):
-        # check nested
-        for k, v in kwargs.items():
-            if isinstance(v, dict) and "dumpable" in v.keys():
-                return _check_if_dumpable(v)
-    else:
-        return d["dumpable"]
 
 
 def _load_extractor_from_dict(dic) -> BaseExtractor:
@@ -1006,7 +1047,11 @@ def load_extractor(file_or_folder_or_dict, base_folder=None) -> BaseExtractor:
 
     Parameters
     ----------
-    file_or_folder_or_dict: dictionary or folder or file (json, pickle)
+    file_or_folder_or_dict : dictionary or folder or file (json, pickle)
+        The file path, folder path, or dictionary to load the extractor from
+    base_folder : str | Path | bool (optional)
+        The base folder to make relative paths absolute.
+        If True and file_or_folder_or_dict is a file, the parent folder of the file is used.
 
     Returns
     -------
@@ -1014,6 +1059,7 @@ def load_extractor(file_or_folder_or_dict, base_folder=None) -> BaseExtractor:
         The loaded extractor object
     """
     if isinstance(file_or_folder_or_dict, dict):
+        assert not isinstance(base_folder, bool), "`base_folder` must be a string or Path when loading from dict"
         return BaseExtractor.from_dict(file_or_folder_or_dict, base_folder=base_folder)
     else:
         return BaseExtractor.load(file_or_folder_or_dict, base_folder=base_folder)

@@ -39,7 +39,6 @@ class CompressedBinaryIblExtractor(BaseRecording):
     """
 
     extractor_name = "CompressedBinaryIbl"
-    has_default_locations = True
     installed = HAVE_MTSCOMP
     mode = "folder"
     installation_mesg = "To use the CompressedBinaryIblExtractor, install mtscomp: \n\n pip install mtscomp\n\n"
@@ -107,7 +106,10 @@ class CompressedBinaryIblExtractor(BaseRecording):
             sample_shifts = get_neuropixels_sample_shifts(self.get_num_channels(), num_channels_per_adc)
             self.set_property("inter_sample_shift", sample_shifts)
 
-        self._kwargs = {"folder_path": str(folder_path.absolute()), "load_sync_channel": load_sync_channel}
+        self._kwargs = {
+            "folder_path": str(Path(folder_path).absolute()),
+            "load_sync_channel": load_sync_channel,
+        }
 
 
 class CBinIblRecordingSegment(BaseRecordingSegment):

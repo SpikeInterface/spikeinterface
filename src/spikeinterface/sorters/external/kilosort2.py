@@ -44,6 +44,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         "ntbuff": 64,
         "nfilt_factor": 4,
         "NT": None,
+        "AUCsplit": 0.9,
         "wave_length": 61,
         "keep_good_only": False,
         "skip_kilosort_preprocessing": False,
@@ -66,6 +67,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         "ntbuff": "Samples of symmetrical buffer for whitening and spike detection",
         "nfilt_factor": "Max number of clusters per good channel (even temporary ones) 4",
         "NT": "Batch size (if None it is automatically computed)",
+        "AUCsplit": "Threshold on the area under the curve (AUC) criterion for performing a split in the final step",
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
         "keep_good_only": "If True only 'good' units are returned",
         "skip_kilosort_preprocessing": "Can optionaly skip the internal kilosort preprocessing",
@@ -161,7 +163,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         ops["lam"] = 10.0
 
         # splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
-        ops["AUCsplit"] = 0.9
+        ops["AUCsplit"] = params["AUCsplit"]
 
         # minimum spike rate (Hz), if a cluster falls below this for too long it gets removed
         ops["minFR"] = params["minFR"]

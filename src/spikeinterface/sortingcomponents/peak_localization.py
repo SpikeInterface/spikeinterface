@@ -101,14 +101,14 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
 
 
 class LocalizeBase(PipelineNode):
-    def __init__(self, recording, return_output=True, parents=None, local_radius_um=75.0):
+    def __init__(self, recording, return_output=True, parents=None, radius_um=75.0):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
-        self.local_radius_um = local_radius_um
+        self.radius_um = radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < local_radius_um
-        self._kwargs["local_radius_um"] = local_radius_um
+        self.neighbours_mask = self.channel_distance < radius_um
+        self._kwargs["radius_um"] = radius_um
 
     def get_dtype(self):
         return self._dtype
@@ -152,18 +152,14 @@ class LocalizeCenterOfMass(LocalizeBase):
     need_waveforms = True
     name = "center_of_mass"
     params_doc = """
-    local_radius_um: float
+    radius_um: float
         Radius in um for channel sparsity.
     feature: str ['ptp', 'mean', 'energy', 'peak_voltage']
         Feature to consider for computation. Default is 'ptp'
     """
 
-    def __init__(
-        self, recording, return_output=True, parents=["extract_waveforms"], local_radius_um=75.0, feature="ptp"
-    ):
-        LocalizeBase.__init__(
-            self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um
-        )
+    def __init__(self, recording, return_output=True, parents=["extract_waveforms"], radius_um=75.0, feature="ptp"):
+        LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, radius_um=radius_um)
         self._dtype = np.dtype(dtype_localize_by_method["center_of_mass"])
 
         assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
@@ -216,7 +212,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
     need_waveforms = False
     name = "monopolar_triangulation"
     params_doc = """
-    local_radius_um: float
+    radius_um: float
         For channel sparsity.
     max_distance_um: float, default: 1000
         Boundary for distance estimation.
@@ -234,15 +230,13 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         recording,
         return_output=True,
         parents=["extract_waveforms"],
-        local_radius_um=75.0,
+        radius_um=75.0,
         max_distance_um=150.0,
         optimizer="minimize_with_log_penality",
         enforce_decrease=True,
         feature="ptp",
     ):
-        LocalizeBase.__init__(
-            self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um
-        )
+        LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, radius_um=radius_um)
 
         assert feature in ["ptp", "energy", "peak_voltage"], f"{feature} is not a valid feature"
         self.max_distance_um = max_distance_um
@@ -309,7 +303,7 @@ class LocalizeGridConvolution(PipelineNode):
     need_waveforms = True
     name = "grid_convolution"
     params_doc = """
-    local_radius_um: float
+    radius_um: float
         Radius in um for channel sparsity.
     upsampling_um: float
         Upsampling resolution for the grid of templates
@@ -324,6 +318,8 @@ class LocalizeGridConvolution(PipelineNode):
     percentile: float (default 10)
         The percentage in [0, 100] of the best scalar products kept to
         estimate the position
+    sparsity_threshold: float (default 0.1)
+        The sparsity threshold (in 0-1) below which weights should be considered as 0.
     """
 
     def __init__(
@@ -331,22 +327,25 @@ class LocalizeGridConvolution(PipelineNode):
         recording,
         return_output=True,
         parents=["extract_waveforms"],
-        local_radius_um=50.0,
+        radius_um=40.0,
         upsampling_um=5.0,
-        sigma_um=np.linspace(10, 50.0, 5),
+        sigma_um=np.linspace(5.0, 25.0, 5),
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
-        percentile=10.0,
+        percentile=5.0,
+        sparsity_threshold=0.01,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
-        self.local_radius_um = local_radius_um
+        self.radius_um = radius_um
         self.sigma_um = sigma_um
         self.margin_um = margin_um
         self.upsampling_um = upsampling_um
         self.percentile = 100 - percentile
         assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
+        self.sparsity_threshold = sparsity_threshold
+        assert 0 <= self.sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
 
         contact_locations = recording.get_channel_locations()
         # Find waveform extractor in the parents
@@ -365,17 +364,19 @@ class LocalizeGridConvolution(PipelineNode):
             self.prototype = prototype
         self.prototype = self.prototype[:, np.newaxis]
 
-        self.template_positions, self.weights, self.neighbours_mask = get_grid_convolution_templates_and_weights(
-            contact_locations, self.local_radius_um, self.upsampling_um, self.sigma_um, self.margin_um
+        self.template_positions, self.weights, self.nearest_template_mask = get_grid_convolution_templates_and_weights(
+            contact_locations, self.radius_um, self.upsampling_um, self.sigma_um, self.margin_um
         )
+
+        self.weights_sparsity_mask = self.weights > self.sparsity_threshold
 
         self._dtype = np.dtype(dtype_localize_by_method["grid_convolution"])
         self._kwargs.update(
             dict(
-                local_radius_um=self.local_radius_um,
+                radius_um=self.radius_um,
                 prototype=self.prototype,
                 template_positions=self.template_positions,
-                neighbours_mask=self.neighbours_mask,
+                nearest_template_mask=self.nearest_template_mask,
                 weights=self.weights,
                 nbefore=self.nbefore,
                 percentile=self.percentile,
@@ -391,29 +392,37 @@ class LocalizeGridConvolution(PipelineNode):
 
         for main_chan in np.unique(peaks["channel_index"]):
             (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
+            num_spikes = len(idx)
             if "amplitude" in peaks.dtype.names:
                 amplitudes = peaks["amplitude"][idx]
             else:
                 amplitudes = waveforms[idx, self.nbefore, main_chan]
 
-            intersect = self.neighbours_mask[:, main_chan] == True
-            global_products = (waveforms[idx] / (amplitudes[:, np.newaxis, np.newaxis]) * self.prototype).sum(axis=1)
-            nb_templates = len(self.template_positions)
-            found_positions = np.zeros((len(idx), 2), dtype=np.float32)
-            scalar_products = np.zeros((len(idx), nb_templates), dtype=np.float32)
+            nearest_templates = self.nearest_template_mask[main_chan, :]
+            num_templates = np.sum(nearest_templates)
+            channel_mask = np.sum(self.weights_sparsity_mask[:, :, nearest_templates], axis=(0, 2)) > 0
+            # print(np.sum(nearest_templates), channel_mask.shape, self.weights.shape, np.sum(channel_mask))
 
-            for count, weights in enumerate(self.weights):
-                dot_products = np.dot(global_products, weights[:, intersect])
-                dot_products = np.maximum(0, dot_products)
+            global_products = (
+                waveforms[idx, :, :][:, :, channel_mask] / (amplitudes[:, np.newaxis, np.newaxis]) * self.prototype
+            ).sum(axis=1)
 
-                if self.percentile < 100:
-                    thresholds = np.percentile(dot_products, self.percentile, axis=1)
-                    dot_products[dot_products < thresholds[:, np.newaxis]] = 0
+            dot_products = np.zeros((self.weights.shape[0], num_spikes, num_templates), dtype=np.float32)
+            for count in range(self.weights.shape[0]):
+                w = self.weights[count, :, :][channel_mask, :][:, nearest_templates]
+                dot_products[count, :, :] = np.dot(global_products, w)
+            dot_products = np.maximum(0, dot_products)
+            if self.percentile < 100:
+                thresholds = np.percentile(dot_products, self.percentile, axis=(0, 2))
+                dot_products[dot_products < thresholds[np.newaxis, :, np.newaxis]] = 0
 
-                scalar_products[:, intersect] += dot_products
-                found_positions += np.dot(dot_products, self.template_positions[intersect])
-
+            scalar_products = np.zeros((num_spikes, num_templates), dtype=np.float32)
+            found_positions = np.zeros((num_spikes, 2), dtype=np.float32)
+            for count in range(self.weights.shape[0]):
+                scalar_products += dot_products[count, :, :]
+                found_positions += np.dot(dot_products[count, :, :], self.template_positions[nearest_templates, :])
             found_positions /= scalar_products.sum(1)[:, np.newaxis]
+
             peak_locations["x"][idx] = found_positions[:, 0]
             peak_locations["y"][idx] = found_positions[:, 1]
 

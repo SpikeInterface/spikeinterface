@@ -15,7 +15,6 @@ class NpySnippetsExtractor(BaseSnippets):
     """
 
     extractor_name = "NpySnippets"
-    is_writable = True
     mode = "file"
     name = "npy"
 
@@ -48,7 +47,7 @@ class NpySnippetsExtractor(BaseSnippets):
             self.set_channel_offsets(offset_to_uV)
 
         self._kwargs = {
-            "file_paths": [str(f) for f in file_paths],
+            "file_paths": [str(Path(f).absolute()) for f in file_paths],
             "sampling_frequency": sampling_frequency,
             "channel_ids": channel_ids,
             "nbefore": nbefore,

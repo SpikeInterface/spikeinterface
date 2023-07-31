@@ -73,7 +73,7 @@ def sorting_fixture():
 
 
 def spike_trains(sorting):
-    spike_trains = sorting.get_all_spike_trains()[0][0]
+    spike_trains = sorting.to_spike_vector()["sample_index"]
     return spike_trains
 
 
@@ -139,7 +139,7 @@ def peak_detector_kwargs(recording):
         exclude_sweep_ms=1.0,
         peak_sign="both",
         detect_threshold=5,
-        local_radius_um=50,
+        radius_um=50,
     )
 
     return peak_detector_keyword_arguments
@@ -194,12 +194,12 @@ def test_iterative_peak_detection_sparse(recording, job_kwargs, pca_model_folder
 
     ms_before = 1.0
     ms_after = 1.0
-    local_radius_um = 40
+    radius_um = 40
     waveform_extraction_node = ExtractSparseWaveforms(
         recording=recording,
         ms_before=ms_before,
         ms_after=ms_after,
-        local_radius_um=local_radius_um,
+        radius_um=radius_um,
     )
 
     waveform_denoising_node = TemporalPCADenoising(
@@ -368,7 +368,7 @@ def test_peak_detection_with_pipeline(recording, job_kwargs, torch_job_kwargs):
     pipeline_nodes = [
         extract_dense_waveforms,
         PeakToPeakFeature(recording, all_channels=False, parents=[extract_dense_waveforms]),
-        LocalizeCenterOfMass(recording, local_radius_um=50.0, parents=[extract_dense_waveforms]),
+        LocalizeCenterOfMass(recording, radius_um=50.0, parents=[extract_dense_waveforms]),
     ]
     peaks, ptp, peak_locations = detect_peaks(
         recording,
