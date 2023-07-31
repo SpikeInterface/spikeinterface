@@ -555,12 +555,12 @@ class BaseExtractor:
     ):
         """
         Dump recording extractor to a pickle file.
-        The extractor can be re-loaded with load_extractor_from_json(json_file)
+        The extractor can be re-loaded with load_extractor_from_pickle(pickle_file)
 
         Parameters
         ----------
         file_path: str
-            Path of the json file
+            Path of the pickle file
         include_properties: bool
             If True, all properties are dumped
         relative_to: str, Path, or None
