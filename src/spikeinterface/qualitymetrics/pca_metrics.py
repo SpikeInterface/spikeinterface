@@ -967,6 +967,6 @@ def pca_metrics_one_unit(
                 unit_silhouette_score = silhouette_score(pcs_flat, labels, unit_id)
             except:
                 unit_silhouette_score = np.nan
-            pc_metrics["silhouette_full"] = unit_silhouette_socre
+            pc_metrics["silhouette_full"] = unit_silhouette_score
 
     return pc_metrics
