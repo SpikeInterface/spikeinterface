@@ -83,7 +83,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
         "save_rez_to_mat": "Save the full rez internal struc to mat file",
         "delete_intermediate_files": "Delete intermediate files created during sorting. Tuple indicating the "
-                                     "files to delete. Options are: ('recording.dat', 'temp_wh.dat', 'matlab_files')"
+        "files to delete. Options are: ('recording.dat', 'temp_wh.dat', 'matlab_files')",
     }
 
     sorter_description = """Kilosort2_5 is a GPU-accelerated and efficient template-matching spike sorter. On top of its

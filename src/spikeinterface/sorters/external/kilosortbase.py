@@ -215,8 +215,7 @@ class KilosortBase:
             raise Exception(f"{cls.sorter_name} returned a non-zero exit code")
 
         # Clean-up temporary files
-        print(f"Cleaning up temporary files created during sorting: "
-              f"{params['delete_intermediate_files']}")
+        print(f"Cleaning up temporary files created during sorting: " f"{params['delete_intermediate_files']}")
 
         if "recording.dat" in params["delete_intermediate_files"]:
             if (recording_file := sorter_output_folder / "recording.dat").exists():

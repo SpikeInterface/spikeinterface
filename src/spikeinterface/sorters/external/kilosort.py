@@ -56,7 +56,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         "NT": "Batch size (if None it is automatically computed)",
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
         "delete_intermediate_files": "Delete intermediate files created during sorting. Tuple indicating the "
-                                     "files to delete. Options are: ('recording.dat', 'temp_wh.dat', 'matlab_files')"
+        "files to delete. Options are: ('recording.dat', 'temp_wh.dat', 'matlab_files')",
     }
 
     sorter_description = """Kilosort is a GPU-accelerated and efficient template-matching spike sorter.
