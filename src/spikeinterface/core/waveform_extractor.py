@@ -1558,6 +1558,7 @@ def extract_waveforms(
             ms_before=ms_before,
             ms_after=ms_after,
             num_spikes_for_sparsity=num_spikes_for_sparsity,
+            allow_unfiltered=allow_unfiltered,
             **estimate_kwargs,
             **job_kwargs,
         )
