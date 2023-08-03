@@ -8,8 +8,8 @@ from spikeinterface.extractors import get_neo_streams, get_neo_num_blocks
 
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 
-gin_repo = 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
-local_folder = get_global_dataset_folder() / 'ephy_testing_data'
+gin_repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
+local_folder = get_global_dataset_folder() / "ephy_testing_data"
 
 
 class CommonTestSuite:
@@ -19,38 +19,28 @@ class CommonTestSuite:
 
     def setUp(self):
         for remote_path in self.downloads:
-            download_dataset(repo=gin_repo, remote_path=remote_path, local_folder=local_folder,
-                             update_if_exists=True)
+            download_dataset(repo=gin_repo, remote_path=remote_path, local_folder=local_folder, update_if_exists=True)
 
 
 class RecordingCommonTestSuite(CommonTestSuite):
-
     @staticmethod
     def get_full_path(path):
         return local_folder / path
 
     def test_open(self):
         for entity in self.entities:
-
+            kwargs = {}
             if isinstance(entity, tuple):
                 path, kwargs = entity
             elif isinstance(entity, str):
                 path = entity
                 kwargs = {}
-                
+
             # test streams and blocks retrieval
             full_path = self.get_full_path(path)
-
-            extractor_name = self.ExtractorClass.name
-            print(f"Extractor name {extractor_name} - path {full_path}")
-            nblocks = get_neo_num_blocks(extractor_name, full_path)
-            stream_names, stream_ids = get_neo_streams(extractor_name, full_path)
-            
-            print(f"Num blocks: {nblocks}, Stream names: {stream_names}, Stream IDs: {stream_ids}")
-
             rec = self.ExtractorClass(full_path, **kwargs)
 
-            assert hasattr(rec, 'extra_requirements')
+            assert hasattr(rec, "extra_requirements")
 
             num_seg = rec.get_num_segments()
             num_chans = rec.get_num_channels()
@@ -67,40 +57,39 @@ class RecordingCommonTestSuite(CommonTestSuite):
                 assert traces_sample_first.shape == (1, num_chans)
                 assert np.all(full_traces[0, :] == traces_sample_first[0, :])
 
-                traces_sample_last = rec.get_traces(segment_index=segment_index, start_frame=num_samples - 1,
-                                                    end_frame=num_samples)
+                traces_sample_last = rec.get_traces(
+                    segment_index=segment_index, start_frame=num_samples - 1, end_frame=num_samples
+                )
                 assert traces_sample_last.shape == (1, num_chans)
                 assert np.all(full_traces[-1, :] == traces_sample_last[0, :])
 
             # try return_scaled
             if isinstance(rec, NeoBaseRecordingExtractor):
-                assert rec.get_property('gain_to_uV') is not None
-                assert rec.get_property('offset_to_uV') is not None
+                assert rec.get_property("gain_to_uV") is not None
+                assert rec.get_property("offset_to_uV") is not None
 
-            if rec.get_property('gain_to_uV') is not None and rec.get_property('offset_to_uV') is not None:
+            if rec.get_property("gain_to_uV") is not None and rec.get_property("offset_to_uV") is not None:
                 trace_scaled = rec.get_traces(segment_index=segment_index, return_scaled=True, end_frame=2)
-                assert trace_scaled.dtype == 'float32'
-            
-                            
+                assert trace_scaled.dtype == "float32"
+
     def test_neo_annotations(self):
         for entity in self.entities:
-
             if isinstance(entity, tuple):
                 path, kwargs = entity
             elif isinstance(entity, str):
                 path = entity
                 kwargs = {}
-            if hasattr(self.ExtractorClass , "NeoRawIOClass"):
+            if hasattr(self.ExtractorClass, "NeoRawIOClass"):
                 rec = self.ExtractorClass(self.get_full_path(path), all_annotations=True, **kwargs)
-                
+
     def test_pickling(self):
         for entity in self.entities:
             if isinstance(entity, tuple):
-                            path, kwargs = entity
+                path, kwargs = entity
             elif isinstance(entity, str):
                 path = entity
                 kwargs = {}
-            
+
             full_path = self.get_full_path(path)
             recording = self.ExtractorClass(full_path, **kwargs)
             pickled_recording = pickle.dumps(recording)
@@ -109,10 +98,8 @@ class RecordingCommonTestSuite(CommonTestSuite):
 
 
 class SortingCommonTestSuite(CommonTestSuite):
-
     def test_open(self):
         for entity in self.entities:
-
             if isinstance(entity, tuple):
                 path, kwargs = entity
                 sorting = self.ExtractorClass(local_folder / path, **kwargs)
@@ -123,12 +110,26 @@ class SortingCommonTestSuite(CommonTestSuite):
                 kwargs = entity
                 sorting = self.ExtractorClass(**kwargs)
 
-            num_seg = sorting.get_num_segments()
+            num_segments = sorting.get_num_segments()
             unit_ids = sorting.unit_ids
+            sampling_frequency = sorting.get_sampling_frequency()
 
-            for segment_index in range(num_seg):
+            for segment_index in range(num_segments):
                 for unit_id in unit_ids:
-                    st = sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id)
+                    # Test that spike train has the propert units
+                    spike_train = sorting.get_unit_spike_train(segment_index=segment_index, unit_id=unit_id)
+                    sample_differences = np.diff(spike_train)
+                    no_spike_firing_in_the_same_frame = np.all(sample_differences > 0)
+                    assert no_spike_firing_in_the_same_frame
+
+                    # Test that return times are working properly
+                    spike_train_times = sorting.get_unit_spike_train(
+                        segment_index=segment_index, unit_id=unit_id, return_times=True
+                    )
+                    differences = np.diff(spike_train_times)
+                    minimal_time_resolution = 0.95 / sampling_frequency
+                    no_pairs_of_spikes_too_close_in_time = np.all(differences >= minimal_time_resolution)
+                    assert no_pairs_of_spikes_too_close_in_time
 
     def test_pickling(self):
         for entity in self.entities:
@@ -148,10 +149,8 @@ class SortingCommonTestSuite(CommonTestSuite):
 
 
 class EventCommonTestSuite(CommonTestSuite):
-
     def test_open(self):
         for entity in self.entities:
-
             if isinstance(entity, tuple):
                 path, kwargs = entity
             elif isinstance(entity, str):

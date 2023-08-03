@@ -40,10 +40,10 @@ import spikeinterface
 # There are several modules:
 #
 # - `extractors` : file IO
-# - `preprocessing` : preprocessing 
+# - `preprocessing` : preprocessing
 # - `sorters` : Python wrappers of spike sorters
 # - `postprocessing` : postprocessing
-# - `qualitymetrics` : quality metrics on units found by sorters 
+# - `qualitymetrics` : quality metrics on units found by sorters
 # - `curation` : automatic curation of spike sorting output
 # - `comparison` : comparison of spike sorting outputs
 # - `widgets` : visualization
@@ -92,7 +92,7 @@ print(sorting_true)
 #
 # Let's use the `spikeinterface.widgets` module to visualize the traces and the raster plots.
 
-w_ts = sw.plot_timeseries(recording, time_range=(0, 5))
+w_ts = sw.plot_traces(recording, time_range=(0, 5))
 w_rs = sw.plot_rasters(sorting_true, time_range=(0, 5))
 
 # This is how you retrieve info from a `BaseRecording`...
@@ -180,7 +180,7 @@ other_params = ss.get_default_sorter_params('tridesclous')
 other_params['detect_threshold'] = 6
 
 # parameters set by params dictionary
-sorting_TDC_2 = ss.run_sorter(sorter_name="tridesclous", recording=recording_preprocessed, 
+sorting_TDC_2 = ss.run_sorter(sorter_name="tridesclous", recording=recording_preprocessed,
                               output_folder="tdc_output2", **other_params)
 print(sorting_TDC_2)
 # -

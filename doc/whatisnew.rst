@@ -8,6 +8,9 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.98.2.rst
+  releases/0.98.1.rst
+  releases/0.98.0.rst
   releases/0.97.1.rst
   releases/0.97.0.rst
   releases/0.96.1.rst
@@ -28,6 +31,29 @@ Release notes
   releases/0.9.1.rst
 
 
+Version 0.98.2
+==============
+
+* Minor release with some bug fixes
+
+
+Version 0.98.1
+==============
+
+* Minor release with some bug fixes
+
+
+Version 0.98.0
+==============
+
+* Implemented motion correction framework in SpikeInterface
+* Added "grid convolution" as localization method
+* Added amplitude_scaling implementation in postprocessing
+* Improved container support for docker and singularity
+* Improved implementation and performance of quality metrics module
+* Extensive additions to :code:`sortingcomponents`` module (pipeline nodes, waveform denoising, sparsity)
+* :code:`_ind` to :code:`_index` in complex dtype representation for peak and spikes
+
 Version 0.97.1
 ==============
 
@@ -38,16 +64,16 @@ Version 0.97.0
 ==============
 
 * Implemented "sparse" waveforms in core and propagated to all modules:
-  
+
   * Add waveform extractor :code:`save()` function and Zarr backend
   * Dense waveforms can be saved as sparse with the :code:`save()` function
   * Sparse waveforms can be extracted directly with :code:`sparse=True`
 * Added IBL preprocessing tools for Neuropixels:
 
-  * Bad channel detection 
+  * Bad channel detection
   * Channel interpolation
-  * High-pass spatial filter 
-* | Add subfolder for sorter output ("output_folder/sorter_output") and :code:`sorting_info` field to Sorting, 
+  * High-pass spatial filter
+* | Add subfolder for sorter output ("output_folder/sorter_output") and :code:`sorting_info` field to Sorting,
   | so that "sorter_output" can be deleted without deleting metadata and :code:`sorting_info`
 * Refactor Quality Metrics module:
 

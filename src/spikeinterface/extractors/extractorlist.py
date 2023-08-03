@@ -1,10 +1,17 @@
 from typing import Type
 
 # most important extractor are in spikeinterface.core
-from spikeinterface.core import (BaseRecording, BaseSorting,
-                                 BinaryRecordingExtractor, NumpyRecording,
-                                 NpzSortingExtractor, NumpySorting,
-                                 NpySnippetsExtractor)
+from spikeinterface.core import (
+    BaseRecording,
+    BaseSorting,
+    BinaryFolderRecording,
+    BinaryRecordingExtractor,
+    NumpyRecording,
+    NpzSortingExtractor,
+    NumpySorting,
+    NpySnippetsExtractor,
+    ZarrRecordingExtractor,
+)
 
 # sorting/recording/event from neo
 from .neoextractors import *
@@ -13,8 +20,7 @@ from .neoextractors import *
 from .neoextractors import NeuroScopeSortingExtractor, MaxwellEventExtractor
 
 # NWB sorting/recording/event
-from .nwbextractors import (NwbRecordingExtractor, NwbSortingExtractor,
-                            read_nwb, read_nwb_recording, read_nwb_sorting)
+from .nwbextractors import NwbRecordingExtractor, NwbSortingExtractor, read_nwb, read_nwb_recording, read_nwb_sorting
 
 from .cbin_ibl import CompressedBinaryIblExtractor, read_cbin_ibl
 from .iblstreamingrecording import IblStreamingRecordingExtractor, read_ibl_streaming_recording
@@ -35,8 +41,12 @@ from .mdaextractors import MdaRecordingExtractor, MdaSortingExtractor, read_mda_
 from .phykilosortextractors import PhySortingExtractor, KiloSortSortingExtractor, read_phy, read_kilosort
 
 # sorting in relation with simulator
-from .shybridextractors import (SHYBRIDRecordingExtractor, SHYBRIDSortingExtractor,
-                                read_shybrid_recording, read_shybrid_sorting)
+from .shybridextractors import (
+    SHYBRIDRecordingExtractor,
+    SHYBRIDSortingExtractor,
+    read_shybrid_recording,
+    read_shybrid_sorting,
+)
 
 # snippers
 from .waveclussnippetstextractors import WaveClusSnippetsExtractor, read_waveclus_snippets
@@ -49,14 +59,14 @@ from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
 ########################################
 
 recording_extractor_full_list = [
+    BinaryFolderRecording,
     BinaryRecordingExtractor,
-
+    ZarrRecordingExtractor,
     # natively implemented in spikeinterface.extractors
     NumpyRecording,
     SHYBRIDRecordingExtractor,
     MdaRecordingExtractor,
     NwbRecordingExtractor,
-
     # others
     CompressedBinaryIblExtractor,
     IblStreamingRecordingExtractor,
@@ -66,13 +76,11 @@ recording_extractor_full_list += neo_recording_extractors_list
 
 sorting_extractor_full_list = [
     NpzSortingExtractor,
-
     # natively implemented in spikeinterface.extractors
     NumpySorting,
     MdaSortingExtractor,
     SHYBRIDSortingExtractor,
     ALFSortingExtractor,
-
     KlustaSortingExtractor,
     HDSortSortingExtractor,
     MClustSortingExtractor,
@@ -89,21 +97,15 @@ sorting_extractor_full_list = [
 ]
 sorting_extractor_full_list += neo_sorting_extractors_list
 
-event_extractor_full_list = [
-    MaxwellEventExtractor
-]
+event_extractor_full_list = [MaxwellEventExtractor]
 event_extractor_full_list += neo_event_extractors_list
 
-snippets_extractor_full_list = [
-    NpySnippetsExtractor,
-    WaveClusSnippetsExtractor
-]
+snippets_extractor_full_list = [NpySnippetsExtractor, WaveClusSnippetsExtractor]
 
 
 recording_extractor_full_dict = {recext.name: recext for recext in recording_extractor_full_list}
 sorting_extractor_full_dict = {recext.name: recext for recext in sorting_extractor_full_list}
 snippets_extractor_full_dict = {recext.name: recext for recext in snippets_extractor_full_list}
-
 
 
 def get_recording_extractor_from_name(name: str) -> Type[BaseRecording]:

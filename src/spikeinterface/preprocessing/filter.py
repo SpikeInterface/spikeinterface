@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.signal
 
 from spikeinterface.core.core_tools import define_function_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -7,8 +6,7 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 from ..core import get_chunk_with_margin
 
 
-_common_filter_docs = \
-    """**filter_kwargs: keyword arguments for parallel processing:
+_common_filter_docs = """**filter_kwargs: keyword arguments for parallel processing:
 
             * filter_order: order
                 The order of the filter
@@ -44,7 +42,7 @@ class FilterRecording(BasePreprocessor):
         - second-order sections (default): 'sos'
         - numerator/denominator: 'ba'
     coef: ndarray or None
-        Filter coefficients in the filter_mode form. 
+        Filter coefficients in the filter_mode form.
     dtype: dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     {}
@@ -55,29 +53,37 @@ class FilterRecording(BasePreprocessor):
         The filtered recording extractor object
 
     """
-    name = 'filter'
 
-    def __init__(self, recording, band=[300., 6000.], btype='bandpass',
-                 filter_order=5, ftype='butter', filter_mode='sos', margin_ms=5.0,
-                 coeff=None, dtype=None):
+    name = "filter"
 
-        assert filter_mode in ('sos', 'ba')
-        sf = recording.get_sampling_frequency()
+    def __init__(
+        self,
+        recording,
+        band=[300.0, 6000.0],
+        btype="bandpass",
+        filter_order=5,
+        ftype="butter",
+        filter_mode="sos",
+        margin_ms=5.0,
+        add_reflect_padding=False,
+        coeff=None,
+        dtype=None,
+    ):
+        import scipy.signal
+
+        assert filter_mode in ("sos", "ba")
+        fs = recording.get_sampling_frequency()
         if coeff is None:
-            assert btype in ('bandpass', 'highpass')
+            assert btype in ("bandpass", "highpass")
             # coefficient
-            if btype in ('bandpass', 'bandstop'):
-                assert len(band) == 2
-                Wn = [e / sf * 2 for e in band]
-            else:
-                Wn = float(band) / sf * 2
-            N = filter_order
             # self.coeff is 'sos' or 'ab' style
-            filter_coeff = scipy.signal.iirfilter(N, Wn, analog=False, btype=btype, ftype=ftype, output=filter_mode)
+            filter_coeff = scipy.signal.iirfilter(
+                filter_order, band, fs=fs, analog=False, btype=btype, ftype=ftype, output=filter_mode
+            )
         else:
             filter_coeff = coeff
             if not isinstance(coeff, list):
-                if filter_mode == 'ba':
+                if filter_mode == "ba":
                     coeff = [c.tolist() for c in coeff]
                 else:
                     coeff = coeff.tolist()
@@ -89,38 +95,57 @@ class FilterRecording(BasePreprocessor):
         if "offset_to_uV" in self.get_property_keys():
             self.set_channel_offsets(0)
 
-        margin = int(margin_ms * sf / 1000.)
+        margin = int(margin_ms * fs / 1000.0)
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(FilterRecordingSegment(parent_segment, filter_coeff, filter_mode, margin,
-                                                              dtype))
+            self.add_recording_segment(
+                FilterRecordingSegment(
+                    parent_segment, filter_coeff, filter_mode, margin, dtype, add_reflect_padding=add_reflect_padding
+                )
+            )
 
-        self._kwargs = dict(recording=recording, band=band, btype=btype,
-                            filter_order=filter_order, ftype=ftype, filter_mode=filter_mode, coeff=coeff,
-                            margin_ms=margin_ms, dtype=dtype.str)
+        self._kwargs = dict(
+            recording=recording,
+            band=band,
+            btype=btype,
+            filter_order=filter_order,
+            ftype=ftype,
+            filter_mode=filter_mode,
+            coeff=coeff,
+            margin_ms=margin_ms,
+            add_reflect_padding=add_reflect_padding,
+            dtype=dtype.str,
+        )
 
 
 class FilterRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, coeff, filter_mode, margin, dtype):
+    def __init__(self, parent_recording_segment, coeff, filter_mode, margin, dtype, add_reflect_padding=False):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
-
         self.coeff = coeff
         self.filter_mode = filter_mode
         self.margin = margin
+        self.add_reflect_padding = add_reflect_padding
         self.dtype = dtype
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-        traces_chunk, left_margin, right_margin = get_chunk_with_margin(self.parent_recording_segment,
-                                                                        start_frame, end_frame, channel_indices,
-                                                                        self.margin)
+        traces_chunk, left_margin, right_margin = get_chunk_with_margin(
+            self.parent_recording_segment,
+            start_frame,
+            end_frame,
+            channel_indices,
+            self.margin,
+            add_reflect_padding=self.add_reflect_padding,
+        )
 
         traces_dtype = traces_chunk.dtype
         # if uint --> force int
         if traces_dtype.kind == "u":
             traces_chunk = traces_chunk.astype("float32")
 
-        if self.filter_mode == 'sos':
+        import scipy.signal
+
+        if self.filter_mode == "sos":
             filtered_traces = scipy.signal.sosfiltfilt(self.coeff, traces_chunk, axis=0)
-        elif self.filter_mode == 'ba':
+        elif self.filter_mode == "ba":
             b, a = self.coeff
             filtered_traces = scipy.signal.filtfilt(b, a, traces_chunk, axis=0)
 
@@ -153,13 +178,17 @@ class BandpassFilterRecording(FilterRecording):
     filter_recording: BandpassFilterRecording
         The bandpass-filtered recording extractor object
     """
-    name = 'bandpass_filter'
 
-    def __init__(self, recording, freq_min=300., freq_max=6000., margin_ms=5.0, dtype=None, **filter_kwargs):
-        FilterRecording.__init__(self, recording, band=[freq_min, freq_max], margin_ms=margin_ms, dtype=dtype,
-                                 **filter_kwargs)
+    name = "bandpass_filter"
+
+    def __init__(self, recording, freq_min=300.0, freq_max=6000.0, margin_ms=5.0, dtype=None, **filter_kwargs):
+        FilterRecording.__init__(
+            self, recording, band=[freq_min, freq_max], margin_ms=margin_ms, dtype=dtype, **filter_kwargs
+        )
         dtype = fix_dtype(recording, dtype)
-        self._kwargs = dict(recording=recording, freq_min=freq_min, freq_max=freq_max, margin_ms=margin_ms, dtype=dtype.str)
+        self._kwargs = dict(
+            recording=recording, freq_min=freq_min, freq_max=freq_max, margin_ms=margin_ms, dtype=dtype.str
+        )
         self._kwargs.update(filter_kwargs)
 
 
@@ -183,11 +212,13 @@ class HighpassFilterRecording(FilterRecording):
     filter_recording: HighpassFilterRecording
         The highpass-filtered recording extractor object
     """
-    name = 'highpass_filter'
 
-    def __init__(self, recording, freq_min=300., margin_ms=5.0, dtype=None, **filter_kwargs):
-        FilterRecording.__init__(self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype,
-                                 btype='highpass', **filter_kwargs)
+    name = "highpass_filter"
+
+    def __init__(self, recording, freq_min=300.0, margin_ms=5.0, dtype=None, **filter_kwargs):
+        FilterRecording.__init__(
+            self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype, btype="highpass", **filter_kwargs
+        )
         dtype = fix_dtype(recording, dtype)
         self._kwargs = dict(recording=recording, freq_min=freq_min, margin_ms=margin_ms, dtype=dtype.str)
         self._kwargs.update(filter_kwargs)
@@ -209,11 +240,14 @@ class NotchFilterRecording(BasePreprocessor):
     filter_recording: NotchFilterRecording
         The notch-filtered recording extractor object
     """
-    name = 'notch_filter'
+
+    name = "notch_filter"
 
     def __init__(self, recording, freq=3000, q=30, margin_ms=5.0, dtype=None):
         # coeef is 'ba' type
         fn = 0.5 * float(recording.get_sampling_frequency())
+        import scipy.signal
+
         coeff = scipy.signal.iirnotch(freq / fn, q)
 
         if dtype is None:
@@ -222,16 +256,18 @@ class NotchFilterRecording(BasePreprocessor):
 
         # if uint --> unsupported
         if dtype.kind == "u":
-            raise TypeError("The notch filter only supports signed types. Use the 'dtype' argument"
-                            "to specify a signed type (e.g. 'int16', 'float32'")
+            raise TypeError(
+                "The notch filter only supports signed types. Use the 'dtype' argument"
+                "to specify a signed type (e.g. 'int16', 'float32'"
+            )
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
         self.annotate(is_filtered=True)
 
         sf = recording.get_sampling_frequency()
-        margin = int(margin_ms * sf / 1000.)
+        margin = int(margin_ms * sf / 1000.0)
         for parent_segment in recording._recording_segments:
-            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, 'ba', margin, dtype))
+            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, "ba", margin, dtype))
 
         self._kwargs = dict(recording=recording, freq=freq, q=q, margin_ms=margin_ms, dtype=dtype.str)
 

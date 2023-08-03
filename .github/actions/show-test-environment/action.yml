@@ -12,7 +12,7 @@ runs:
       shell: bash
     - name: Packages installed
       run: |
-        source ~/test_env/bin/activate
+        source ${{ github.workspace }}/test_env/bin/activate
         pip list
       shell: bash
     - name: Check ephy_testing_data files

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
@@ -20,21 +22,21 @@ class SpikeGadgetsRecordingExtractor(NeoBaseRecordingExtractor):
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
     """
-    mode = 'file'
-    NeoRawIOClass = 'SpikeGadgetsRawIO'
+
+    mode = "file"
+    NeoRawIOClass = "SpikeGadgetsRawIO"
     name = "spikegadgets"
 
     def __init__(self, file_path, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
         neo_kwargs = self.map_to_neo_kwargs(file_path)
-        NeoBaseRecordingExtractor.__init__(self, stream_id=stream_id, 
-                                           stream_name=stream_name,
-                                           all_annotations=all_annotations, 
-                                           **neo_kwargs)
-        self._kwargs.update(dict(file_path=str(file_path), stream_id=stream_id))
+        NeoBaseRecordingExtractor.__init__(
+            self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
+        )
+        self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), stream_id=stream_id))
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
-        neo_kwargs = {'filename': str(file_path)}
+        neo_kwargs = {"filename": str(file_path)}
         return neo_kwargs
 
 

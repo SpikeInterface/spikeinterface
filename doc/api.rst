@@ -49,7 +49,7 @@ spikeinterface.core
     .. autofunction:: get_template_extremum_channel_peak_shift
     .. autofunction:: get_template_extremum_amplitude
 
-.. 
+..
     .. autofunction:: read_binary
     .. autofunction:: read_zarr
     .. autofunction:: append_recordings
@@ -78,7 +78,7 @@ NEO-based
 ~~~~~~~~~
 
 .. automodule:: spikeinterface.extractors
- 
+
     .. autofunction:: read_alphaomega
     .. autofunction:: read_alphaomega_event
     .. autofunction:: read_axona
@@ -141,13 +141,18 @@ spikeinterface.preprocessing
 
 .. automodule:: spikeinterface.preprocessing
 
+    .. autofunction:: astype
+    .. autofunction:: average_across_direction
     .. autofunction:: bandpass_filter
     .. autofunction:: blank_staturation
     .. autofunction:: center
     .. autofunction:: clip
     .. autofunction:: common_reference
     .. autofunction:: correct_lsb
+    .. autofunction:: correct_motion
+    .. autofunction:: depth_order
     .. autofunction:: detect_bad_channels
+    .. autofunction:: directional_derivative
     .. autofunction:: filter
     .. autofunction:: gaussian_bandpass_filter
     .. autofunction:: highpass_filter
@@ -158,7 +163,10 @@ spikeinterface.preprocessing
     .. autofunction:: phase_shift
     .. autofunction:: rectify
     .. autofunction:: remove_artifacts
+    .. autofunction:: resample
     .. autofunction:: scale
+    .. autofunction:: silence_periods
+    .. autofunction:: unsigned_to_signed
     .. autofunction:: whiten
     .. autofunction:: zero_channel_pad
     .. autofunction:: zscore
@@ -241,7 +249,7 @@ spikeinterface.comparison
 
     .. autoclass:: MultiSortingComparison
         :members:
-    
+
     .. autoclass:: CollisionGTComparison
     .. autoclass:: CorrelogramGTComparison
     .. autoclass:: CollisionGTStudy
@@ -261,13 +269,14 @@ spikeinterface.widgets
     .. autofunction:: plot_amplitudes
     .. autofunction:: plot_autocorrelograms
     .. autofunction:: plot_crosscorrelograms
+    .. autofunction:: plot_motion
     .. autofunction:: plot_quality_metrics
     .. autofunction:: plot_sorting_summary
     .. autofunction:: plot_spike_locations
     .. autofunction:: plot_spikes_on_traces
     .. autofunction:: plot_template_metrics
     .. autofunction:: plot_template_similarity
-    .. autofunction:: plot_timeseries
+    .. autofunction:: plot_traces
     .. autofunction:: plot_unit_depths
     .. autofunction:: plot_unit_locations
     .. autofunction:: plot_unit_summary
@@ -287,7 +296,6 @@ These widgets are only available with the "matplotlib" backend
     .. autofunction:: plot_rasters
     .. autofunction:: plot_probe_map
     .. autofunction:: plot_isi_distribution
-    .. autofunction:: plot_drift_over_time
     .. autofunction:: plot_peak_activity_map
     .. autofunction:: plot_principal_component
     .. autofunction:: plot_unit_probe_map
@@ -341,9 +349,9 @@ Peak Detection
 
 Motion Correction
 ~~~~~~~~~~~~~~~~~
-.. automodule:: spikeinterface.sortingcomponents.motion_correction
+.. automodule:: spikeinterface.sortingcomponents.motion_interpolation
 
-    .. autoclass:: CorrectMotionRecording
+    .. autoclass:: InterpolateMotionRecording
 
 Clustering
 ~~~~~~~~~~
@@ -356,4 +364,3 @@ Template Matching
 .. automodule:: spikeinterface.sortingcomponents.matching
 
     .. autofunction:: find_spikes_from_templates
-
