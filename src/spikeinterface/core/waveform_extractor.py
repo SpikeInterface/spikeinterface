@@ -1615,7 +1615,14 @@ def load_waveforms(folder, with_recording: bool = True, sorting: Optional[BaseSo
 
 
 def precompute_sparsity(
-    recording, sorting, num_spikes_for_sparsity=100, unit_batch_size=200, ms_before=2.0, ms_after=3.0, allow_unfiltered=False, **kwargs
+    recording,
+    sorting,
+    num_spikes_for_sparsity=100,
+    unit_batch_size=200,
+    ms_before=2.0,
+    ms_after=3.0,
+    allow_unfiltered=False,
+    **kwargs,
 ):
     """
     Pre-estimate sparsity with few spikes and by unit batch.
@@ -1640,7 +1647,7 @@ def precompute_sparsity(
     allow_unfiltered: bool
         If true, will accept an allow_unfiltered recording.
         False by default.
-        
+
 
     kwargs for sparsity strategy:
     {}
