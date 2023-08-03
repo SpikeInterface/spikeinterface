@@ -42,8 +42,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         "Nfilt": None,
         "NT": None,
         "wave_length": 61,
-        "delete_tmp_files": True,
-        "delete_recording_dat": False,
+        "delete_intermediate_files": ("matlab_files",),
     }
 
     _params_description = {
@@ -56,8 +55,8 @@ class KilosortSorter(KilosortBase, BaseSorter):
         "Nfilt": "Number of clusters to use (if None it is automatically computed)",
         "NT": "Batch size (if None it is automatically computed)",
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
-        "delete_tmp_files": "Whether to delete all temporary files after a successful run",
-        "delete_recording_dat": "Whether to delete the 'recording.dat' file after a successful run",
+        "delete_intermediate_files": "Delete intermediate files created during sorting. Tuple indicating the "
+                                     "files to delete. Options are: ('recording.dat', 'temp_wh.dat', 'matlab_files')"
     }
 
     sorter_description = """Kilosort is a GPU-accelerated and efficient template-matching spike sorter.

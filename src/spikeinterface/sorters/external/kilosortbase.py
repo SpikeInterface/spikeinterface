@@ -215,15 +215,21 @@ class KilosortBase:
             raise Exception(f"{cls.sorter_name} returned a non-zero exit code")
 
         # Clean-up temporary files
-        if params["delete_tmp_files"]:
-            for temp_file in sorter_output_folder.glob("*.m"):
-                temp_file.unlink()
-            for temp_file in sorter_output_folder.glob("*.mat"):
-                temp_file.unlink()
-            if (sorter_output_folder / "temp_wh.dat").exists():
-                (sorter_output_folder / "temp_wh.dat").unlink()
-        if params["delete_recording_dat"] and (recording_file := sorter_output_folder / "recording.dat").exists():
-            recording_file.unlink()
+        print(f"Cleaning up temporary files created during sorting: "
+              f"{params['delete_intermediate_files']}")
+
+        if "recording.dat" in params["delete_intermediate_files"]:
+            if (recording_file := sorter_output_folder / "recording.dat").exists():
+                recording_file.unlink()
+
+        if "temp_wh.dat" in params["delete_intermediate_files"]:
+            if (temp_wh_file := sorter_output_folder / "temp_wh.dat").exists():
+                temp_wh_file.unlink()
+
+        if "matlab_files" in params["delete_intermediate_files"]:
+            for ext in ["*.m", "*.mat"]:
+                for temp_file in sorter_output_folder.glob(ext):
+                    temp_file.unlink()
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):

@@ -50,8 +50,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         "skip_kilosort_preprocessing": False,
         "scaleproc": None,
         "save_rez_to_mat": False,
-        "delete_tmp_files": True,
-        "delete_recording_dat": False,
+        "delete_intermediate_files": ("matlab_files",),
     }
 
     _params_description = {
@@ -73,8 +72,8 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         "skip_kilosort_preprocessing": "Can optionaly skip the internal kilosort preprocessing",
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
         "save_rez_to_mat": "Save the full rez internal struc to mat file",
-        "delete_tmp_files": "Whether to delete all temporary files after a successful run",
-        "delete_recording_dat": "Whether to delete the 'recording.dat' file after a successful run",
+        "delete_intermediate_files": "Delete intermediate files created during sorting. Tuple indicating the "
+                                     "files to delete. Options are: ('recording.dat', 'temp_wh.dat', 'matlab_files')"
     }
 
     sorter_description = """Kilosort2 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
