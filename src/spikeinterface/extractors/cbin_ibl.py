@@ -47,7 +47,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
     installation_mesg = "To use the CompressedBinaryIblExtractor, install mtscomp: \n\n pip install mtscomp\n\n"
     name = "cbin_ibl"
 
-    def __init__(self, folder_path, load_sync_channel=False, stream_name = "ap"):
+    def __init__(self, folder_path, load_sync_channel=False, stream_name="ap"):
         # this work only for future neo
         from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
 
