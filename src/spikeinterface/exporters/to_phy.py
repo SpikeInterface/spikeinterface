@@ -81,7 +81,7 @@ def export_to_phy(
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     # check sparsity
-    if (num_chans > 64) and (sparsity is None or not waveform_extractor.is_sparse()):
+    if (num_chans > 64) and (sparsity is None and not waveform_extractor.is_sparse()):
         warnings.warn(
             "Exporting to Phy with many channels and without sparsity might result in a heavy and less "
             "informative visualization. You can use use a sparse WaveformExtractor or you can use the 'sparsity' "
