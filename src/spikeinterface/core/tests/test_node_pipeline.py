@@ -6,6 +6,7 @@ import shutil
 import scipy.signal
 
 from spikeinterface import download_dataset, BaseSorting, extract_waveforms, get_template_extremum_channel
+
 # from spikeinterface.extractors import MEArecRecordingExtractor
 from spikeinterface.extractors import read_mearec
 
@@ -15,7 +16,7 @@ from spikeinterface.core.node_pipeline import (
     PeakRetriever,
     PipelineNode,
     ExtractDenseWaveforms,
-    base_peak_dtype
+    base_peak_dtype,
 )
 
 
@@ -93,9 +94,8 @@ def test_run_node_pipeline():
     peaks = np.zeros(spikes.size, dtype=base_peak_dtype)
     peaks["sample_index"] = spikes["sample_index"]
     peaks["channel_index"] = ext_channel_inds[spikes["unit_index"]]
-    peaks["amplitude"] = 0.
+    peaks["amplitude"] = 0.0
     peaks["segment_index"] = 0
-    
 
     # one step only : squeeze output
     peak_retriever = PeakRetriever(recording, peaks)

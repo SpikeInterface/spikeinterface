@@ -19,7 +19,6 @@ def make_multi_method_doc(methods, ident="    "):
 
 
 def get_prototype_spike(recording, peaks, job_kwargs, nb_peaks=1000, ms_before=0.5, ms_after=0.5):
-
     nb_peaks = min(len(peaks), nb_peaks)
     idx = np.sort(np.random.choice(len(peaks), nb_peaks, replace=False))
     peak_retriever = PeakRetriever(recording, peaks[idx])

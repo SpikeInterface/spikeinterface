@@ -16,7 +16,7 @@ to compute some additional features on-the-fly:
 There are two ways for using theses "plugin nodes":
   * during `peak_detect()`
   * when peaks are already detected and reduced with `select_peaks()`
-  * on a sorting object  
+  * on a sorting object
 """
 
 from typing import Optional, List, Type
@@ -39,6 +39,7 @@ base_peak_dtype = [
     ("amplitude", "float64"),
     ("segment_index", "int64"),
 ]
+
 
 class PipelineNode:
     def __init__(
@@ -86,6 +87,7 @@ class PipelineNode:
 # nodes graph must have either a PeakSource (PeakDetector or PeakRetriever or SpikeRetriever)
 # as first element they play the same role in pipeline : give some peaks (and eventually more)
 
+
 class PeakSource(PipelineNode):
     # base class for peak detector
     def get_trace_margin(self):
@@ -132,7 +134,8 @@ class PeakRetriever(PeakSource):
         local_peaks["sample_index"] -= start_frame - max_margin
 
         return (local_peaks,)
-    
+
+
 # this is not implemented yet this will be done in separted PR
 class SpikeRetriever(PeakSource):
     pass
@@ -293,7 +296,6 @@ class ExtractSparseWaveforms(WaveformsNode):
         return sparse_wfs
 
 
-
 def find_parent_of_type(list_of_parents, parent_type, unique=True):
     if list_of_parents is None:
         return None
@@ -318,7 +320,9 @@ def check_graph(nodes):
 
     node0 = nodes[0]
     if not isinstance(node0, PeakSource):
-        raise ValueError("Peak pipeline graph must have as first element a PeakSource (PeakDetector or PeakRetriever or SpikeRetriever")
+        raise ValueError(
+            "Peak pipeline graph must have as first element a PeakSource (PeakDetector or PeakRetriever or SpikeRetriever"
+        )
 
     for i, node in enumerate(nodes):
         assert isinstance(node, PipelineNode), f"Node {node} is not an instance of PipelineNode"
@@ -452,7 +456,6 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
         pipeline_outputs_tuple[0]["sample_index"] += start_frame - left_margin
 
     return pipeline_outputs_tuple
-
 
 
 class GatherToMemory:
