@@ -16,7 +16,7 @@ def test_split_merge():
         },
         {0: np.arange(15), 1: np.arange(17), 2: np.arange(40, 140), 4: np.arange(40, 140), 5: np.arange(40, 140)},
     ]
-    parent_sort = NumpySorting.from_dict(spikestimes, sampling_frequency=1000)  # to have 1 sample=1ms
+    parent_sort = NumpySorting.from_unit_dict(spikestimes, sampling_frequency=1000)  # to have 1 sample=1ms
     parent_sort.set_property("someprop", [float(k) for k in spikestimes[0].keys()])  # float
 
     # %%
@@ -54,7 +54,7 @@ def test_curation():
         },
         {"a": np.arange(12, 15), "b": np.arange(3, 17), "c": np.arange(50)},
     ]
-    parent_sort = NumpySorting.from_dict(spikestimes, sampling_frequency=1000)  # to have 1 sample=1ms
+    parent_sort = NumpySorting.from_unit_dict(spikestimes, sampling_frequency=1000)  # to have 1 sample=1ms
     parent_sort.set_property("some_names", ["unit_{}".format(k) for k in spikestimes[0].keys()])  # float
     cs = CurationSorting(parent_sort, properties_policy="remove")
     # %%
@@ -81,7 +81,7 @@ def test_curation():
         )
 
     # Test with empty sorting
-    empty_sorting = CurationSorting(NumpySorting.from_dict({}, parent_sort.sampling_frequency))
+    empty_sorting = CurationSorting(NumpySorting.from_unit_dict({}, parent_sort.sampling_frequency))
 
 
 if __name__ == "__main__":

@@ -107,7 +107,7 @@ def generate_sorting(
             else:
                 units_dict[unit_id] = np.array([], dtype=int)
         units_dict_list.append(units_dict)
-    sorting = NumpySorting.from_dict(units_dict_list, sampling_frequency)
+    sorting = NumpySorting.from_unit_dict(units_dict_list, sampling_frequency)
 
     return sorting
 
@@ -319,7 +319,7 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
             d[unit_id] = times
         spiketrains.append(d)
 
-    sorting_with_dup = NumpySorting.from_dict(spiketrains, sampling_frequency=sorting.get_sampling_frequency())
+    sorting_with_dup = NumpySorting.from_unit_dict(spiketrains, sampling_frequency=sorting.get_sampling_frequency())
 
     return sorting_with_dup
 
@@ -357,7 +357,7 @@ def inject_some_split_units(sorting, split_ids=[], num_split=2, output_ids=False
                 new_units[unit_id] = original_times
         spiketrains.append(new_units)
 
-    sorting_with_split = NumpySorting.from_dict(spiketrains, sampling_frequency=sorting.get_sampling_frequency())
+    sorting_with_split = NumpySorting.from_unit_dict(spiketrains, sampling_frequency=sorting.get_sampling_frequency())
     if output_ids:
         return sorting_with_split, other_ids
     else:

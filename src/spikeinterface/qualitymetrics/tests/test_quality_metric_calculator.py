@@ -279,7 +279,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
     def test_empty_units(self):
         we = self.we1
         empty_spike_train = np.array([], dtype="int64")
-        empty_sorting = NumpySorting.from_dict(
+        empty_sorting = NumpySorting.from_unit_dict(
             {100: empty_spike_train, 200: empty_spike_train, 300: empty_spike_train},
             sampling_frequency=we.sampling_frequency,
         )
@@ -296,7 +296,8 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
 if __name__ == "__main__":
     test = QualityMetricsExtensionTest()
     test.setUp()
-    test.test_drift_metrics()
-    test.test_extension()
+    # test.test_drift_metrics()
+    # test.test_extension()
     # test.test_nn_metrics()
     # test.test_peak_sign()
+    test.test_empty_units()

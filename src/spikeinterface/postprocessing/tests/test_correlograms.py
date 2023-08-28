@@ -128,7 +128,7 @@ def test_auto_equal_cross_correlograms():
     spike_times = np.sort(np.unique(np.random.randint(0, 100000, num_spike)))
     num_spike = spike_times.size
     units_dict = {"1": spike_times, "2": spike_times}
-    sorting = NumpySorting.from_dict([units_dict], sampling_frequency=10000.0)
+    sorting = NumpySorting.from_unit_dict([units_dict], sampling_frequency=10000.0)
 
     for method in methods:
         correlograms, bins = compute_correlograms(sorting, window_ms=10.0, bin_ms=0.1, method=method)
@@ -178,7 +178,7 @@ def test_detect_injected_correlation():
     spike_times2 = np.sort(spike_times2)
 
     units_dict = {"1": spike_times1, "2": spike_times2}
-    sorting = NumpySorting.from_dict([units_dict], sampling_frequency=sampling_frequency)
+    sorting = NumpySorting.from_unit_dict([units_dict], sampling_frequency=sampling_frequency)
 
     for method in methods:
         correlograms, bins = compute_correlograms(sorting, window_ms=10.0, bin_ms=0.1, method=method)
@@ -204,13 +204,13 @@ def test_detect_injected_correlation():
 
 
 if __name__ == "__main__":
-    # ~ test_make_bins()
-    # test_equal_results_correlograms()
-    # ~ test_flat_cross_correlogram()
-    # ~ test_auto_equal_cross_correlograms()
+    test_make_bins()
+    test_equal_results_correlograms()
+    test_flat_cross_correlogram()
+    test_auto_equal_cross_correlograms()
     test_detect_injected_correlation()
 
-    # test = CorrelogramsExtensionTest()
-    # test.setUp()
-    # test.test_compute_correlograms()
-    # test.test_extension()
+    test = CorrelogramsExtensionTest()
+    test.setUp()
+    test.test_compute_correlograms()
+    test.test_extension()

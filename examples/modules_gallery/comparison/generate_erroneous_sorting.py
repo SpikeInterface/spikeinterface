@@ -88,7 +88,7 @@ def generate_erroneous_sorting():
     for u in [15,16,17]:
         st = np.sort(np.random.randint(0, high=nframes, size=35))
         units_err[u] = st
-    sorting_err = se.NumpySorting.from_dict(units_err, sampling_frequency)
+    sorting_err = se.NumpySorting.from_unit_dict(units_err, sampling_frequency)
 
 
     return sorting_true, sorting_err
