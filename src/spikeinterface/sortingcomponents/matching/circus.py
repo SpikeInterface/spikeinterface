@@ -5,7 +5,6 @@ import warnings
 
 import scipy.spatial
 
-from tqdm import tqdm
 import scipy
 
 try:
@@ -190,6 +189,9 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         computed
     random_chunk_kwargs: dict
         Parameters for computing noise levels, if not provided (sub optimal)
+    sparse_kwargs: dict
+        Parameters to extract a sparsity mask from the waveform_extractor, if not
+        already sparse.
     -----
     """
 
@@ -522,8 +524,9 @@ class CircusPeeler(BaseTemplateMatchingEngine):
     use_sparse_matrix_threshold: float
         If density of the templates is below a given threshold, sparse matrix
         are used (memory efficient)
-    progress_bar_steps: bool
-        In order to display or not steps from the algorithm
+    sparse_kwargs: dict
+        Parameters to extract a sparsity mask from the waveform_extractor, if not
+        already sparse.
     -----
 
 
@@ -539,7 +542,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         'max_amplitude' : 1.5,
         'min_amplitude' : 0.5,
         'use_sparse_matrix_threshold' : 0.25,
-        'progess_bar_steps' : False,
         'waveform_extractor': None,
         'sparse_kwargs' : {'method' : 'ptp', 'threshold' : 1}
     }
@@ -618,8 +620,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         alpha = 0.5
         norms = parameters["norms"]
         all_units = list(waveform_extractor.sorting.unit_ids)
-        if parameters["progess_bar_steps"]:
-            all_units = tqdm(all_units, desc="[2] compute amplitudes")
 
         parameters["amplitudes"] = np.zeros((num_templates, 2), dtype=np.float32)
         noise = templates.dot(noise_snippets) / norms[:, np.newaxis]
