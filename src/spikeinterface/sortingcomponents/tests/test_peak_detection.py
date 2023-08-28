@@ -26,7 +26,6 @@ from spikeinterface.sortingcomponents.peak_detection import (
 from spikeinterface.core.node_pipeline import run_node_pipeline
 
 
-
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "sortingcomponents"
 else:

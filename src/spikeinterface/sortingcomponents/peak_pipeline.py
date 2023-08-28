@@ -3,10 +3,6 @@ import copy
 from spikeinterface.core.node_pipeline import PeakRetriever, run_node_pipeline
 
 
-
-
-
-
 def run_peak_pipeline(
     recording,
     peaks,
@@ -45,4 +41,3 @@ def run_peak_pipeline(
         names=names,
     )
     return outs
-

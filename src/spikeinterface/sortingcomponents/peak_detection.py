@@ -13,7 +13,13 @@ from spikeinterface.core.job_tools import (
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 
 from spikeinterface.core.baserecording import BaseRecording
-from spikeinterface.core.node_pipeline import PeakDetector, WaveformsNode, ExtractSparseWaveforms, run_node_pipeline, base_peak_dtype
+from spikeinterface.core.node_pipeline import (
+    PeakDetector,
+    WaveformsNode,
+    ExtractSparseWaveforms,
+    run_node_pipeline,
+    base_peak_dtype,
+)
 
 from ..core import get_chunk_with_margin
 
