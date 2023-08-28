@@ -559,6 +559,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         if not waveform_extractor.is_sparse():
             sparsity = compute_sparsity(waveform_extractor, **d['sparse_kwargs']).mask
+        else:
+            sparsity = waveform_extractor.sparsity.mask
 
         templates = waveform_extractor.get_all_templates(mode='median').copy()
         d['sparsities'] = {}
