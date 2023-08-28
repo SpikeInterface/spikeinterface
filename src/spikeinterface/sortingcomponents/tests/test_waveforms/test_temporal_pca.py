@@ -2,7 +2,7 @@ import pytest
 
 
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection, TemporalPCADenoising
-from spikeinterface.sortingcomponents.peak_pipeline import (
+from spikeinterface.core.node_pipeline import import (
     PeakRetriever,
     ExtractDenseWaveforms,
     ExtractSparseWaveforms,
