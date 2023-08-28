@@ -4,7 +4,6 @@ import pytest
 from spikeinterface.extractors import MEArecRecordingExtractor
 from spikeinterface import download_dataset
 
-
 from spikeinterface.core.node_pipeline import run_node_pipeline, PeakRetriever, ExtractDenseWaveforms
 from spikeinterface.sortingcomponents.waveforms.neural_network_denoiser import SingleChannelToyDenoiser
 

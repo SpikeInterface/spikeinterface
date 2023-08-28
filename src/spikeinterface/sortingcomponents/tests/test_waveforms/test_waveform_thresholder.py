@@ -4,7 +4,8 @@ import operator
 
 
 from spikeinterface.sortingcomponents.waveforms.waveform_thresholder import WaveformThresholder
-from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_peak_pipeline
+from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
+from spikeinterface.sortingcomponents.peak_pipeline import run_peak_pipeline
 
 
 @pytest.fixture(scope="module")

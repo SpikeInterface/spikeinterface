@@ -7,7 +7,7 @@ import operator
 from typing import Literal
 
 from spikeinterface.core import BaseRecording, get_noise_levels
-from spikeinterface.core.node_pipeline import import PipelineNode, WaveformsNode, find_parent_of_type
+from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
 
 
 class WaveformThresholder(WaveformsNode):
