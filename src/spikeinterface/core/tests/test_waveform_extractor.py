@@ -212,7 +212,8 @@ def test_extract_waveforms():
     if folder_sort.is_dir():
         shutil.rmtree(folder_sort)
     recording = recording.save(folder=folder_rec)
-    sorting = sorting.save(folder=folder_sort)
+    # we force "npz_folder" because we want to force the to_multiprocessing to be a SharedMemorySorting
+    sorting = sorting.save(folder=folder_sort, format="npz_folder")
 
     # 1 job
     folder1 = cache_folder / "test_extract_waveforms_1job"
@@ -467,7 +468,7 @@ def test_empty_sorting():
     num_channels = 2
 
     recording = generate_recording(num_channels=num_channels, sampling_frequency=sf, durations=[15.32])
-    sorting = NumpySorting.from_dict({}, sf)
+    sorting = NumpySorting.from_unit_dict({}, sf)
 
     folder = cache_folder / "empty_sorting"
     wvf_extractor = extract_waveforms(recording, sorting, folder, allow_unfiltered=True)

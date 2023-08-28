@@ -104,7 +104,6 @@ def read_nwbfile(
     --------
     >>> nwbfile = read_nwbfile("data.nwb", stream_mode="ros3")
     """
-    file_path = str(Path(file_path).absolute())
     from pynwb import NWBHDF5IO, NWBFile
 
     if stream_mode == "fsspec":
@@ -131,6 +130,7 @@ def read_nwbfile(
         io = NWBHDF5IO(path=file_path, mode="r", load_namespaces=True, driver="ros3")
 
     else:
+        file_path = str(Path(file_path).absolute())
         io = NWBHDF5IO(path=file_path, mode="r", load_namespaces=True)
 
     nwbfile = io.read()
@@ -475,19 +475,17 @@ class NwbSortingExtractor(BaseSorting):
             self.stream_cache_path = stream_cache_path if stream_cache_path is not None else "cache"
             self.cfs = CachingFileSystem(
                 fs=fsspec.filesystem("http"),
-                cache_storage=self.stream_cache_path,
+                cache_storage=str(self.stream_cache_path),
             )
-            self._file_path = self.cfs.open(str(Path(file_path).absolute()), "rb")
-            file = h5py.File(self._file_path)
+            file_path_ = self.cfs.open(file_path, "rb")
+            file = h5py.File(file_path_)
             self.io = NWBHDF5IO(file=file, mode="r", load_namespaces=True)
 
         elif stream_mode == "ros3":
-            self._file_path = str(Path(file_path).absolute())
-            self.io = NWBHDF5IO(self._file_path, mode="r", load_namespaces=True, driver="ros3")
-
+            self.io = NWBHDF5IO(file_path, mode="r", load_namespaces=True, driver="ros3")
         else:
-            self._file_path = str(Path(file_path).absolute())
-            self.io = NWBHDF5IO(self._file_path, mode="r", load_namespaces=True)
+            file_path_ = str(Path(file_path).absolute())
+            self.io = NWBHDF5IO(file_path_, mode="r", load_namespaces=True)
 
         self._nwbfile = self.io.read()
         units_ids = list(self._nwbfile.units.id[:])

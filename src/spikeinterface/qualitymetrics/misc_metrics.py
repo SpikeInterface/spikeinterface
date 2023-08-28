@@ -367,9 +367,12 @@ def compute_refrac_period_violations(
     fs = sorting.get_sampling_frequency()
     num_units = len(sorting.unit_ids)
     num_segments = sorting.get_num_segments()
-    spikes = sorting.get_all_spike_trains(outputs="unit_index")
+
+    spikes = sorting.to_spike_vector(concatenated=False)
+
     if unit_ids is None:
         unit_ids = sorting.unit_ids
+
     num_spikes = compute_num_spikes(waveform_extractor)
 
     t_c = int(round(censored_period_ms * fs * 1e-3))
@@ -377,9 +380,9 @@ def compute_refrac_period_violations(
     nb_rp_violations = np.zeros((num_units), dtype=np.int64)
 
     for seg_index in range(num_segments):
-        _compute_rp_violations_numba(
-            nb_rp_violations, spikes[seg_index][0].astype(np.int64), spikes[seg_index][1].astype(np.int32), t_c, t_r
-        )
+        spike_times = spikes[seg_index]["sample_index"].astype(np.int64)
+        spike_labels = spikes[seg_index]["unit_index"].astype(np.int32)
+        _compute_rp_violations_numba(nb_rp_violations, spike_times, spike_labels, t_c, t_r)
 
     T = waveform_extractor.get_total_samples()
 

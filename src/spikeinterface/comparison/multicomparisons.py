@@ -228,7 +228,6 @@ class AgreementSortingExtractor(BaseSorting):
         self, sampling_frequency, multisortingcomparison, min_agreement_count=1, min_agreement_count_only=False
     ):
         self._msc = multisortingcomparison
-        self._is_json_serializable = False
 
         if min_agreement_count_only:
             unit_ids = list(
@@ -244,6 +243,8 @@ class AgreementSortingExtractor(BaseSorting):
             )
 
         BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
+
+        self._is_json_serializable = False
 
         if len(unit_ids) > 0:
             for k in ("agreement_number", "avg_agreement", "unit_ids"):
