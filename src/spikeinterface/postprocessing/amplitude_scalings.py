@@ -21,6 +21,7 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         self.spikes = self.waveform_extractor.sorting.to_spike_vector(
             extremum_channel_inds=extremum_channel_inds, use_cache=False
         )
+        self.overlapping_mask = None
 
     def _set_params(
         self,
@@ -132,8 +133,30 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
             **job_kwargs,
         )
         out = processor.run()
-        (amp_scalings,) = zip(*out)
+        (amp_scalings, overlapping_mask) = zip(*out)
         amp_scalings = np.concatenate(amp_scalings)
+        if handle_collisions > 0:
+            from ..core.job_tools import divide_recording_into_chunks
+
+            overlapping_mask_corrected = []
+            all_chunks = divide_recording_into_chunks(processor.recording, processor.chunk_size)
+            num_spikes_so_far = 0
+            for i, overlapping in enumerate(overlapping_mask):
+                if i == 0:
+                    continue
+                segment_index = all_chunks[i - 1][0]
+                spikes_in_segment = self.spikes[segment_slices[segment_index]]
+                i0 = np.searchsorted(spikes_in_segment["sample_index"], all_chunks[i - 1][1])
+                i1 = np.searchsorted(spikes_in_segment["sample_index"], all_chunks[i - 1][2])
+                num_spikes_so_far += i1 - i0
+                overlapping_corrected = overlapping.copy()
+                overlapping_corrected[overlapping_corrected >= 0] += num_spikes_so_far
+                overlapping_mask_corrected.append(overlapping_corrected)
+            overlapping_mask = np.concatenate(overlapping_mask_corrected)
+            print(f"Found {len(overlapping_mask)} overlapping spikes")
+            self.overlapping_mask = overlapping_mask
+        else:
+            overlapping_mask = np.concatenate(overlapping_mask)
 
         self._extension_data[f"amplitude_scalings"] = amp_scalings
 
@@ -314,12 +337,9 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
 
     spikes_in_segment = spikes[segment_slices[segment_index]]
 
+    # TODO: handle spikes in margin!
     i0 = np.searchsorted(spikes_in_segment["sample_index"], start_frame)
     i1 = np.searchsorted(spikes_in_segment["sample_index"], end_frame)
-
-    local_waveforms = []
-    templates = []
-    scalings = []
 
     if i0 != i1:
         local_spikes = spikes_in_segment[i0:i1]
@@ -335,13 +355,10 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
 
         # set colliding spikes apart (if needed)
         if handle_collisions:
-            overlapping_mask = _find_overlapping_mask(
+            overlapping_mask = find_overlapping_mask(
                 local_spikes, max_consecutive_collisions, delta_collision_samples, unit_inds_to_channel_indices
             )
             overlapping_spike_indices = overlapping_mask[:, max_consecutive_collisions]
-            print(
-                f"Found {len(overlapping_spike_indices)} overlapping spikes in segment {segment_index}! - chunk {start_frame} - {end_frame}"
-            )
         else:
             overlapping_spike_indices = np.array([], dtype=int)
 
@@ -368,17 +385,18 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
             else:
                 local_waveform = traces_with_margin[cut_out_start:cut_out_end, sparse_indices]
             assert template.shape == local_waveform.shape
-            local_waveforms.append(local_waveform)
-            templates.append(template)
+
             linregress_res = linregress(template.flatten(), local_waveform.flatten())
             scalings[spike_index] = linregress_res[0]
 
         # deal with collisions
         if len(overlapping_spike_indices) > 0:
             for overlapping in overlapping_mask:
+                # the current spike is the one at the 'max_consecutive_collisions' position
                 spike_index = overlapping[max_consecutive_collisions]
                 overlapping_spikes = local_spikes[overlapping[overlapping >= 0]]
-                scaled_amps = _fit_collision(
+                current_spike_index_within_overlapping = np.where(overlapping >= 0)[0] == max_consecutive_collisions
+                scaled_amps = fit_collision(
                     overlapping_spikes,
                     traces_with_margin,
                     start_frame,
@@ -392,9 +410,12 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
                     cut_out_after,
                 )
                 # get the right amplitude scaling
-                scalings[spike_index] = scaled_amps[np.where(overlapping >= 0)[0] == max_consecutive_collisions]
+                scalings[spike_index] = scaled_amps[current_spike_index_within_overlapping]
+    else:
+        scalings = np.array([])
+        overlapping_mask = np.array([], shape=(0, max_consecutive_collisions + 1))
 
-    return (scalings,)
+    return (scalings, overlapping_mask)
 
 
 ### Collision handling ###
@@ -422,7 +443,7 @@ def _are_unit_indices_overlapping(unit_inds_to_channel_indices, i, j):
         return False
 
 
-def _find_overlapping_mask(spikes, max_consecutive_spikes, delta_overlap_samples, unit_inds_to_channel_indices):
+def find_overlapping_mask(spikes, max_consecutive_spikes, delta_overlap_samples, unit_inds_to_channel_indices):
     """
     Finds the overlapping spikes for each spike in spikes and returns a boolean mask of shape
     (n_spikes, 2 * max_consecutive_spikes + 1).
@@ -525,7 +546,7 @@ def _find_overlapping_mask(spikes, max_consecutive_spikes, delta_overlap_samples
     return overlapping_mask
 
 
-def _fit_collision(
+def fit_collision(
     overlapping_spikes,
     traces_with_margin,
     start_frame,
@@ -537,8 +558,41 @@ def _fit_collision(
     unit_inds_to_channel_indices,
     cut_out_before,
     cut_out_after,
+    debug=True,
 ):
-    """ """
+    """
+    Compute the best fit for a collision between a spike and its overlapping spikes.
+
+    Parameters
+    ----------
+    overlapping_spikes: np.ndarray
+        A numpy array of shape (n_overlapping_spikes, ) containing the overlapping spikes (spike_dtype).
+    traces_with_margin: np.ndarray
+        A numpy array of shape (n_samples, n_channels) containing the traces with a margin.
+    start_frame: int
+        The start frame of the chunk for traces_with_margin.
+    end_frame: int
+        The end frame of the chunk for traces_with_margin.
+    left: int
+        The left margin of the chunk for traces_with_margin.
+    right: int
+        The right margin of the chunk for traces_with_margin.
+    nbefore: int
+        The number of samples before the spike to consider for the fit.
+    all_templates: np.ndarray
+        A numpy array of shape (n_units, n_samples, n_channels) containing the templates.
+    unit_inds_to_channel_indices: dict
+        A dictionary mapping unit indices to channel indices.
+    cut_out_before: int
+        The number of samples to cut out before the spike.
+    cut_out_after: int
+        The number of samples to cut out after the spike.
+
+    Returns
+    -------
+    np.ndarray
+        The fitted scaling factors for the overlapping spikes.
+    """
     from sklearn.linear_model import LinearRegression
 
     sample_first_centered = overlapping_spikes[0]["sample_index"] - start_frame - left
@@ -550,6 +604,7 @@ def _fit_collision(
         sparse_indices_i = unit_inds_to_channel_indices[spike["unit_index"]]
         sparse_indices = np.union1d(sparse_indices, sparse_indices_i)
 
+    # TODO: check alignment!!!
     local_waveform_start = max(0, sample_first_centered - cut_out_before)
     local_waveform_end = min(traces_with_margin.shape[0], sample_last_centered + cut_out_after)
     local_waveform = traces_with_margin[local_waveform_start:local_waveform_end, sparse_indices]
@@ -559,7 +614,7 @@ def _fit_collision(
     for i, spike in enumerate(overlapping_spikes):
         full_template = np.zeros_like(local_waveform)
         # center wrt cutout traces
-        sample_centered = spike["sample_index"] - local_waveform_start
+        sample_centered = spike["sample_index"] - start_frame - left - local_waveform_start
         template = all_templates[spike["unit_index"]][:, sparse_indices]
         template_cut = template[nbefore - cut_out_before : nbefore + cut_out_after]
         # deal with borders
@@ -571,86 +626,136 @@ def _fit_collision(
             full_template[sample_centered - cut_out_before : sample_centered + cut_out_after] = template_cut
         X[:, i] = full_template.T.flatten()
 
+    if debug:
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots()
+        max_tr = np.max(np.abs(local_waveform))
+
+        _ = ax.plot(y, color="k")
+
+        for i, spike in enumerate(overlapping_spikes):
+            _ = ax.plot(X[:, i], color=f"C{i}", alpha=0.5)
+        plt.show()
+
     reg = LinearRegression().fit(X, y)
-    amps = reg.coef_
-    return amps
+    scalings = reg.coef_
+    return scalings
 
 
-# TODO: fix this!
-# def plot_overlapping_spikes(we, overlap,
-#                             spikes, cut_out_samples=100,
-#                             max_consecutive_spikes=3,
-#                             sparsity=None,
-#                             fitted_amps=None):
-#     recording = we.recording
-#     nbefore_nafter_max = max(we.nafter, we.nbefore)
-#     cut_out_samples = max(cut_out_samples, nbefore_nafter_max)
-#     spike_index = overlap[max_consecutive_spikes]
-#     overlap_indices = overlap[overlap != -1]
-#     overlapping_spikes = spikes[overlap_indices]
+def plot_collisions(we, sparsity=None, num_collisions=None):
+    """
+    Plot the fitting of collision spikes.
 
-#     if sparsity is not None:
-#         unit_inds_to_channel_indices = sparsity.unit_id_to_channel_indices
-#         sparse_indices = np.array([], dtype="int")
-#         for spike in overlapping_spikes:
-#             sparse_indices_i = unit_inds_to_channel_indices[we.unit_ids[spike["unit_index"]]]
-#             sparse_indices = np.union1d(sparse_indices, sparse_indices_i)
-#     else:
-#         sparse_indices = np.unique(overlapping_spikes["channel_index"])
+    Parameters
+    ----------
+    we : WaveformExtractor
+        The WaveformExtractor object.
+    sparsity : ChannelSparsity, default=None
+        The ChannelSparsity. If None, only main channels are plotted.
+    num_collisions : int, default=None
+        Number of collisions to plot. If None, all collisions are plotted.
+    """
+    assert we.is_extension("amplitude_scalings"), "Could not find amplitude scalings extension!"
+    sac = we.load_extension("amplitude_scalings")
+    handle_collisions = sac._params["handle_collisions"]
+    assert handle_collisions, "Amplitude scalings was run without handling collisions!"
+    scalings = sac.get_data()
 
-#     channel_ids = recording.channel_ids[sparse_indices]
+    overlapping_mask = sac.overlapping_mask
+    num_collisions = num_collisions or len(overlapping_mask)
+    spikes = sac.spikes
+    max_consecutive_collisions = sac._params["max_consecutive_collisions"]
 
-#     center_spike = spikes[spike_index]["sample_index"]
-#     max_delta = np.max([np.abs(center_spike - overlapping_spikes[0]["sample_index"]),
-#                         np.abs(center_spike - overlapping_spikes[-1]["sample_index"])])
-#     sf = center_spike - max_delta - cut_out_samples
-#     ef = center_spike + max_delta + cut_out_samples
-#     tr_overlap = recording.get_traces(start_frame=sf,
-#                                       end_frame=ef,
-#                                       channel_ids=channel_ids, return_scaled=True)
-#     ts = np.arange(sf, ef) / recording.sampling_frequency * 1000
-#     max_tr = np.max(np.abs(tr_overlap))
-#     fig, ax = plt.subplots()
-#     for ch, tr in enumerate(tr_overlap.T):
-#         _ = ax.plot(ts, tr + 1.2 * ch * max_tr, color="k")
-#         ax.text(ts[0], 1.2 * ch * max_tr - 0.3 * max_tr, f"Ch:{channel_ids[ch]}")
-
-#     used_labels = []
-#     for spike in overlapping_spikes:
-#         label = f"U{spike['unit_index']}"
-#         if label in used_labels:
-#             label = None
-#         else:
-#             used_labels.append(label)
-#         ax.axvline(spike["sample_index"] / recording.sampling_frequency * 1000,
-#                    color=f"C{spike['unit_index']}", label=label)
-
-#     if fitted_amps is not None:
-#         fitted_traces = np.zeros_like(tr_overlap)
-
-#         all_templates = we.get_all_templates()
-#         for i, spike in enumerate(overlapping_spikes):
-#             template = all_templates[spike["unit_index"]]
-#             template_scaled = fitted_amps[overlap_indices[i]] * template
-#             template_scaled_sparse = template_scaled[:, sparse_indices]
-#             sample_start = spike["sample_index"] - we.nbefore
-#             sample_end = sample_start + template_scaled_sparse.shape[0]
-
-#             fitted_traces[sample_start - sf: sample_end - sf] += template_scaled_sparse
-
-#             for ch, temp in enumerate(template_scaled_sparse.T):
-
-#                 ts_template = np.arange(sample_start, sample_end) / recording.sampling_frequency * 1000
-#                 _ = ax.plot(ts_template, temp + 1.2 * ch * max_tr, color=f"C{spike['unit_index']}",
-#                             ls="--")
-
-#         for ch, tr in enumerate(fitted_traces.T):
-#             _ = ax.plot(ts, tr + 1.2 * ch * max_tr, color="gray", alpha=0.7)
-
-#         fitted_line = ax.get_lines()[-1]
-#         fitted_line.set_label("Fitted")
+    for i in range(num_collisions):
+        ax = _plot_one_collision(
+            we, overlapping_mask[i], spikes, scalings=scalings, max_consecutive_collisions=max_consecutive_collisions
+        )
 
 
-#     ax.legend()
-#     ax.set_title(f"Spike {spike_index} - sample {center_spike}")
-#     return tr_overlap, ax
+def _plot_one_collision(
+    we,
+    overlap,
+    spikes,
+    scalings=None,
+    sparsity=None,
+    cut_out_samples=100,
+    max_consecutive_collisions=3,
+):
+    import matplotlib.pyplot as plt
+
+    recording = we.recording
+    nbefore_nafter_max = max(we.nafter, we.nbefore)
+    cut_out_samples = max(cut_out_samples, nbefore_nafter_max)
+    spike_index = overlap[max_consecutive_collisions]
+    overlap_indices = overlap[overlap != -1]
+    overlapping_spikes = spikes[overlap_indices]
+
+    if sparsity is not None:
+        unit_inds_to_channel_indices = sparsity.unit_id_to_channel_indices
+        sparse_indices = np.array([], dtype="int")
+        for spike in overlapping_spikes:
+            sparse_indices_i = unit_inds_to_channel_indices[we.unit_ids[spike["unit_index"]]]
+            sparse_indices = np.union1d(sparse_indices, sparse_indices_i)
+    else:
+        sparse_indices = np.unique(overlapping_spikes["channel_index"])
+
+    channel_ids = recording.channel_ids[sparse_indices]
+
+    center_spike = spikes[spike_index]
+    max_delta = np.max(
+        [
+            np.abs(center_spike["sample_index"] - overlapping_spikes[0]["sample_index"]),
+            np.abs(center_spike["sample_index"] - overlapping_spikes[-1]["sample_index"]),
+        ]
+    )
+    sf = max(0, center_spike["sample_index"] - max_delta - cut_out_samples)
+    ef = min(
+        center_spike["sample_index"] + max_delta + cut_out_samples,
+        recording.get_num_samples(segment_index=center_spike["segment_index"]),
+    )
+    tr_overlap = recording.get_traces(start_frame=sf, end_frame=ef, channel_ids=channel_ids, return_scaled=True)
+    ts = np.arange(sf, ef) / recording.sampling_frequency * 1000
+    max_tr = np.max(np.abs(tr_overlap))
+    fig, ax = plt.subplots()
+    for ch, tr in enumerate(tr_overlap.T):
+        _ = ax.plot(ts, tr + 1.2 * ch * max_tr, color="k")
+        ax.text(ts[0], 1.2 * ch * max_tr - 0.3 * max_tr, f"Ch:{channel_ids[ch]}")
+
+    used_labels = []
+    for spike in overlapping_spikes:
+        label = f"U{spike['unit_index']}"
+        if label in used_labels:
+            label = None
+        else:
+            used_labels.append(label)
+        ax.axvline(
+            spike["sample_index"] / recording.sampling_frequency * 1000, color=f"C{spike['unit_index']}", label=label
+        )
+
+    if scalings is not None:
+        fitted_traces = np.zeros_like(tr_overlap)
+
+        all_templates = we.get_all_templates()
+        for i, spike in enumerate(overlapping_spikes):
+            template = all_templates[spike["unit_index"]]
+            template_scaled = scalings[overlap_indices[i]] * template
+            template_scaled_sparse = template_scaled[:, sparse_indices]
+            sample_start = spike["sample_index"] - we.nbefore
+            sample_end = sample_start + template_scaled_sparse.shape[0]
+
+            fitted_traces[sample_start - sf : sample_end - sf] += template_scaled_sparse
+
+            for ch, temp in enumerate(template_scaled_sparse.T):
+                ts_template = np.arange(sample_start, sample_end) / recording.sampling_frequency * 1000
+                _ = ax.plot(ts_template, temp + 1.2 * ch * max_tr, color=f"C{spike['unit_index']}", ls="--")
+
+        for ch, tr in enumerate(fitted_traces.T):
+            _ = ax.plot(ts, tr + 1.2 * ch * max_tr, color="gray", alpha=0.7)
+
+        fitted_line = ax.get_lines()[-1]
+        fitted_line.set_label("Fitted")
+
+    ax.legend()
+    ax.set_title(f"Spike {spike_index} - sample {center_spike['sample_index']}")
+    return ax
