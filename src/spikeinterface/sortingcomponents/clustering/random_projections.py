@@ -41,7 +41,6 @@ class RandomProjectionClustering:
         "ms_before": 1.5,
         "ms_after": 1.5,
         "random_seed": 42,
-        "cleaning_method": "matching",
         "shared_memory": False,
         "min_values": {"ptp": 0, "energy": 0},
         "tmp_folder": None,
@@ -160,87 +159,57 @@ class RandomProjectionClustering:
         spikes["segment_index"] = peaks[mask]["segment_index"]
         spikes["unit_index"] = peak_labels[mask]
 
-        cleaning_method = params["cleaning_method"]
-
         if verbose:
-            print("We found %d raw clusters, starting to clean with %s..." % (len(labels), cleaning_method))
+            print("We found %d raw clusters, starting to clean with matching..." % (len(labels)))
 
-        if cleaning_method == "cosine":
-            wfs_arrays = extract_waveforms_to_buffers(
-                recording,
-                spikes,
-                labels,
-                nbefore,
-                nafter,
-                mode="shared_memory",
-                return_scaled=False,
-                folder=None,
-                dtype=recording.get_dtype(),
-                sparsity_mask=None,
-                copy=True,
-                **params["job_kwargs"],
-            )
+        
+        # create a tmp folder
+        if params["tmp_folder"] is None:
+            name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+            tmp_folder = get_global_tmp_folder() / name
+        else:
+            tmp_folder = Path(params["tmp_folder"])
 
-            labels, peak_labels = remove_duplicates(
-                wfs_arrays, noise_levels, peak_labels, num_samples, num_chans, **params["cleaning_kwargs"]
-            )
+        if params["shared_memory"]:
+            waveform_folder = None
+            mode = "memory"
+        else:
+            waveform_folder = tmp_folder / "waveforms"
+            mode = "folder"
 
-        elif cleaning_method == "dip":
-            wfs_arrays = {}
-            for label in labels:
-                mask = label == peak_labels
-                wfs_arrays[label] = hdbscan_data[mask]
+        sorting_folder = tmp_folder / "sorting"
+        sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["unit_index"], fs)
+        sorting = sorting.save(folder=sorting_folder)
+        we = extract_waveforms(
+            recording,
+            sorting,
+            waveform_folder,
+            ms_before=params["ms_before"],
+            ms_after=params["ms_after"],
+            **params["job_kwargs"],
+            return_scaled=False,
+            mode=mode,
+        )
 
-            labels, peak_labels = remove_duplicates_via_dip(wfs_arrays, peak_labels, **params["cleaning_kwargs"])
+        cleaning_matching_params = params["job_kwargs"].copy()
+        cleaning_matching_params["chunk_duration"] = "100ms"
+        cleaning_matching_params["n_jobs"] = 1
+        cleaning_matching_params["verbose"] = False
+        cleaning_matching_params["progress_bar"] = False
 
-        elif cleaning_method == "matching":
-            # create a tmp folder
-            if params["tmp_folder"] is None:
-                name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-                tmp_folder = get_global_tmp_folder() / name
-            else:
-                tmp_folder = Path(params["tmp_folder"])
+        cleaning_params = params["cleaning_kwargs"].copy()
+        cleaning_params["tmp_folder"] = tmp_folder
 
-            if params["shared_memory"]:
-                waveform_folder = None
-                mode = "memory"
-            else:
-                waveform_folder = tmp_folder / "waveforms"
-                mode = "folder"
+        labels, peak_labels = remove_duplicates_via_matching(
+            we, noise_levels, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
+        )
 
-            sorting_folder = tmp_folder / "sorting"
-            sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["unit_index"], fs)
-            sorting = sorting.save(folder=sorting_folder)
-            we = extract_waveforms(
-                recording,
-                sorting,
-                waveform_folder,
-                ms_before=params["ms_before"],
-                ms_after=params["ms_after"],
-                **params["job_kwargs"],
-                return_scaled=False,
-                mode=mode,
-            )
-
-            cleaning_matching_params = params["job_kwargs"].copy()
-            cleaning_matching_params["chunk_duration"] = "100ms"
-            cleaning_matching_params["n_jobs"] = 1
-            cleaning_matching_params["verbose"] = False
-            cleaning_matching_params["progress_bar"] = False
-
-            cleaning_params = params["cleaning_kwargs"].copy()
-            cleaning_params["tmp_folder"] = tmp_folder
-
-            labels, peak_labels = remove_duplicates_via_matching(
-                we, noise_levels, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
-            )
-
-            if params["tmp_folder"] is None:
-                shutil.rmtree(tmp_folder)
-            else:
-                if not params["shared_memory"]:
-                    shutil.rmtree(tmp_folder / "waveforms")
-                shutil.rmtree(tmp_folder / "sorting")
+        if params["tmp_folder"] is None:
+            shutil.rmtree(tmp_folder)
+        else:
+            if not params["shared_memory"]:
+                shutil.rmtree(tmp_folder / "waveforms")
+            shutil.rmtree(tmp_folder / "sorting")
 
         if verbose:
             print("We kept %d non-duplicated clusters..." % len(labels))
