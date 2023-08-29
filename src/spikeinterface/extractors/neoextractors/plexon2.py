@@ -64,7 +64,7 @@ class Plexon2SortingExtractor(NeoBaseSortingExtractor):
         neo_reader = Plexon2RawIO(**neo_kwargs)
         neo_reader.parse_header()
         NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, **neo_kwargs)
-        self._kwargs.update({"file_path": str(file_path)})
+        self._kwargs.update({"file_path": str(file_path), "sampling_frequency": sampling_frequency})
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
