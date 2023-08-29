@@ -566,7 +566,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             templates[count][:, ~sparsity[count]] = 0
             d["norms"][count] = np.linalg.norm(templates[count])
             templates[count] /= d["norms"][count]
-            d['circus_templates'][count] = templates[count][:, sparsity[count]]
+            d["circus_templates"][count] = templates[count][:, sparsity[count]]
 
         templates = templates.reshape(num_templates, -1)
 
@@ -662,7 +662,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         default_parameters = cls._prepare_templates(default_parameters)
 
         default_parameters["overlaps"] = compute_overlaps(
-            default_parameters['circus_templates'],
+            default_parameters["circus_templates"],
             default_parameters["num_samples"],
             default_parameters["num_channels"],
             default_parameters["sparsities"],
