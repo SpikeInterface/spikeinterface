@@ -565,7 +565,6 @@ def remove_duplicates_via_matching(
     if waveform_extractor.is_sparse():
         for count, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
             templates[count][:, ~sparsity[count]] = 0
-    
 
     zdata = templates.reshape(nb_templates, -1)
 

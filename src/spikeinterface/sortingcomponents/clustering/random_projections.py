@@ -162,7 +162,6 @@ class RandomProjectionClustering:
         if verbose:
             print("We found %d raw clusters, starting to clean with matching..." % (len(labels)))
 
-        
         # create a tmp folder
         if params["tmp_folder"] is None:
             name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
