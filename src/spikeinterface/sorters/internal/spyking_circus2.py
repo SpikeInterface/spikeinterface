@@ -145,8 +145,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         matching_params.update({"noise_levels": noise_levels})
 
         matching_job_params = job_kwargs.copy()
-        if 'chunk_memory' in matching_job_params:
-            matching_job_params.pop('chunk_memory')
+        if "chunk_memory" in matching_job_params:
+            matching_job_params.pop("chunk_memory")
 
         matching_job_params["chunk_duration"] = "100ms"
 
