@@ -40,3 +40,9 @@ runs:
         tar xvzf git-annex-standalone-amd64.tar.gz
         echo "$(pwd)/git-annex.linux" >> $GITHUB_PATH
       shell: bash
+    - name: Install wine (needed for Plexon2)
+      run: |
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+        sudo dpkg --add-architecture i386
+        sudo apt-get update -qq
+        sudo apt-get install -yqq --allow-downgrades libc6:i386 libgcc-s1:i386 libstdc++6:i386 wine
