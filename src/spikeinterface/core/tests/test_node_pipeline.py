@@ -3,8 +3,6 @@ import numpy as np
 from pathlib import Path
 import shutil
 
-import scipy.signal
-
 from spikeinterface import download_dataset, BaseSorting, extract_waveforms, get_template_extremum_channel
 
 # from spikeinterface.extractors import MEArecRecordingExtractor
@@ -53,8 +51,8 @@ class WaveformDenoiser(PipelineNode):
         return np.dtype("float32")
 
     def compute(self, traces, peaks, waveforms):
-        kernel = np.array([0.1, 0.8, 0.1])[np.newaxis, :, np.newaxis]
-        denoised_waveforms = scipy.signal.fftconvolve(waveforms, kernel, axes=1, mode="same")
+        kernel = np.array([0.1, 0.8, 0.1])
+        denoised_waveforms = np.apply_along_axis(lambda m: np.convolve(m, kernel, mode='same'), axis=1, arr=waveforms)
         return denoised_waveforms
 
 
