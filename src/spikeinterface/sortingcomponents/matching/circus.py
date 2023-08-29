@@ -136,6 +136,7 @@ def compute_overlaps(templates, num_samples, num_channels, sparsities):
 
     dense_templates = np.zeros((num_templates, num_samples, num_channels), dtype=np.float32)
     for i in range(num_templates):
+        print(templates[i].shape, len(sparsities[i]))
         dense_templates[i, :, sparsities[i]] = templates[i].T
 
     size = 2 * num_samples - 1
@@ -558,12 +559,14 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         templates = waveform_extractor.get_all_templates(mode="median").copy()
         d["sparsities"] = {}
+        d["circus_templates"] = {}
 
         for count, unit_id in enumerate(all_units):
             (d["sparsities"][count],) = np.nonzero(sparsity[count])
             templates[count][:, ~sparsity[count]] = 0
             d["norms"][count] = np.linalg.norm(templates[count])
             templates[count] /= d["norms"][count]
+            d['circus_templates'][count] = templates[count][:, sparsity[count]]
 
         templates = templates.reshape(num_templates, -1)
 
@@ -617,7 +620,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         all_amps = {}
         for count, unit_id in enumerate(all_units):
-            waveform = waveform_extractor.get_waveforms(unit_id)
+            waveform = waveform_extractor.get_waveforms(unit_id, force_dense=True)
             snippets = waveform.reshape(waveform.shape[0], -1).T
             amps = templates.dot(snippets) / norms[:, np.newaxis]
             good = amps[count, :].flatten()
@@ -658,12 +661,8 @@ class CircusPeeler(BaseTemplateMatchingEngine):
 
         default_parameters = cls._prepare_templates(default_parameters)
 
-        templates = default_parameters["templates"].reshape(
-            len(default_parameters["templates"]), default_parameters["num_samples"], default_parameters["num_channels"]
-        )
-
         default_parameters["overlaps"] = compute_overlaps(
-            templates,
+            default_parameters['circus_templates'],
             default_parameters["num_samples"],
             default_parameters["num_channels"],
             default_parameters["sparsities"],
