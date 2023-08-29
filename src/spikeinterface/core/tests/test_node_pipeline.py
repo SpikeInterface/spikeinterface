@@ -52,7 +52,7 @@ class WaveformDenoiser(PipelineNode):
 
     def compute(self, traces, peaks, waveforms):
         kernel = np.array([0.1, 0.8, 0.1])
-        denoised_waveforms = np.apply_along_axis(lambda m: np.convolve(m, kernel, mode='same'), axis=1, arr=waveforms)
+        denoised_waveforms = np.apply_along_axis(lambda m: np.convolve(m, kernel, mode="same"), axis=1, arr=waveforms)
         return denoised_waveforms
 
 
