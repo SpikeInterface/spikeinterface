@@ -121,27 +121,11 @@ class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ]
 
 
-class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
-    ExtractorClass = Plexon2EventExtractor
-    downloads = ["plexon"]
-    entities = [
-        ("plexon/4chDemoPL2.pl2"),
-    ]
-
-
 class PlexonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = PlexonRecordingExtractor
     downloads = ["plexon"]
     entities = [
         "plexon/File_plexon_3.plx",
-    ]
-
-
-class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
-    ExtractorClass = Plexon2RecordingExtractor
-    downloads = ["plexon"]
-    entities = [
-        ("plexon/4chDemoPL2.pl2", {"stream_id": "3"}),
     ]
 
 
@@ -151,12 +135,6 @@ class PlexonSortingTest(SortingCommonTestSuite, unittest.TestCase):
     entities = [
         ("plexon/File_plexon_1.plx"),
     ]
-
-
-class Plexon2SortingTest(SortingCommonTestSuite, unittest.TestCase):
-    ExtractorClass = Plexon2SortingExtractor
-    downloads = ["plexon"]
-    entities = [("plexon/4chDemoPL2.pl2", {"sampling_frequency": 40000})]
 
 
 class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -310,6 +288,32 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         See issue #1228.
         """
         pass
+
+
+# We mark plexon2 tests as they require additional dependencies (wine)
+@pytest.mark.plexon2
+class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = Plexon2RecordingExtractor
+    downloads = ["plexon"]
+    entities = [
+        ("plexon/4chDemoPL2.pl2", {"stream_id": "3"}),
+    ]
+
+
+@pytest.mark.plexon2
+class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
+    ExtractorClass = Plexon2EventExtractor
+    downloads = ["plexon"]
+    entities = [
+        ("plexon/4chDemoPL2.pl2"),
+    ]
+
+
+@pytest.mark.plexon2
+class Plexon2SortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = Plexon2SortingExtractor
+    downloads = ["plexon"]
+    entities = [("plexon/4chDemoPL2.pl2", {"sampling_frequency": 40000})]
 
 
 if __name__ == "__main__":
