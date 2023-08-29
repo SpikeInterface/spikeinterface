@@ -357,7 +357,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         spikes = np.empty(scalar_products.size, dtype=spike_dtype)
         idx_lookup = np.arange(scalar_products.size).reshape(num_templates, -1)
 
-        M = np.zeros((num_peaks, num_peaks), dtype=np.float32)
+        M = np.zeros((100, 100), dtype=np.float32)
 
         all_selections = np.empty((2, scalar_products.size), dtype=np.int32)
         final_amplitudes = np.zeros(scalar_products.shape, dtype=np.float32)
@@ -570,7 +570,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         for count, unit_id in enumerate(all_units):
 
             d['sparsities'][count], = np.nonzero(sparsity[count])
-            templates[count][sparsity[count] == False] = 0
+            templates[count][:, ~sparsity[count]] = 0
             d['norms'][count] = np.linalg.norm(templates[count])
             templates[count] /= d['norms'][count]
 
@@ -666,7 +666,15 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         )
 
         default_parameters = cls._prepare_templates(default_parameters)
-        default_parameters = cls._prepare_overlaps(default_parameters)
+
+        templates = default_parameters['templates'].reshape(len(default_parameters['templates']),  
+            default_parameters['num_samples'], 
+            default_parameters['num_channels'])
+
+        default_parameters['overlaps'] = compute_overlaps(templates, 
+            default_parameters['num_samples'], 
+            default_parameters['num_channels'], 
+            default_parameters['sparsities'])
 
         default_parameters["exclude_sweep_size"] = int(
             default_parameters["exclude_sweep_ms"] * recording.get_sampling_frequency() / 1000.0
