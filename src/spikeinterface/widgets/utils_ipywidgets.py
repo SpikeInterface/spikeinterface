@@ -2,6 +2,13 @@ import ipywidgets.widgets as widgets
 import numpy as np
 
 
+def check_ipywidget_backend():
+    import matplotlib
+
+    mpl_backend = matplotlib.get_backend()
+    assert "ipympl" in mpl_backend, "To use the 'ipywidgets' backend, you have to set %matplotlib widget"
+
+
 def make_timeseries_controller(t_start, t_stop, layer_keys, num_segments, time_range, mode, all_layers, width_cm):
     time_slider = widgets.FloatSlider(
         orientation="horizontal",

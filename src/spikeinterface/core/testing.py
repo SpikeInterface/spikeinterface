@@ -78,6 +78,7 @@ def check_sortings_equal(
 ) -> None:
     assert SX1.get_num_segments() == SX2.get_num_segments()
 
+    # TODO for later  use to_spike_vector() to do this without looping
     for segment_idx in range(SX1.get_num_segments()):
         # get_unit_ids
         ids1 = np.sort(np.array(SX1.get_unit_ids()))

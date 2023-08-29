@@ -1,4 +1,5 @@
 from typing import Optional
+from pathlib import Path
 
 from spikeinterface.core.core_tools import define_function_from_class
 
@@ -32,7 +33,7 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update(dict(folder_path=str(folder_path)))
+        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute())))
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
@@ -61,7 +62,7 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
 
     mode = "folder"
     NeoRawIOClass = "NeuralynxRawIO"
-    neo_returns_timestamps = False
+    neo_returns_frames = True
     need_t_start_from_signal_stream = True
     name = "neuralynx"
 
@@ -82,7 +83,7 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
         )
 
         self._kwargs = {
-            "folder_path": folder_path,
+            "folder_path": str(Path(folder_path).absolute()),
             "sampling_frequency": sampling_frequency,
             "stream_id": stream_id,
             "stream_name": stream_name,

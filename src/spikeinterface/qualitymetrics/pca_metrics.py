@@ -64,7 +64,7 @@ def get_quality_pca_metric_list():
 
 
 def calculate_pc_metrics(
-    pca, unit_ids=None, metric_names=None, sparsity=None, qm_params=None, seed=None, n_jobs=1, progress_bar=False
+    pca, metric_names=None, sparsity=None, qm_params=None, unit_ids=None, seed=None, n_jobs=1, progress_bar=False
 ):
     """Calculate principal component derived metrics.
 
@@ -72,8 +72,6 @@ def calculate_pc_metrics(
     ----------
     pca : WaveformPrincipalComponent
         Waveform object with principal components computed.
-    unit_ids : list of int or None
-        List of unit ids to compute metrics for.
     metric_names : list of str, optional
         The list of PC metrics to compute.
         If not provided, defaults to all PC metrics.
@@ -83,6 +81,8 @@ def calculate_pc_metrics(
         for each unit.
     qm_params : dict or None
         Dictionary with parameters for each PC metric function.
+    unit_ids : list of int or None
+        List of unit ids to compute metrics for.
     seed : int, default: None
         Random seed value.
     n_jobs : int
@@ -466,15 +466,14 @@ def nearest_neighbors_isolation(
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
         warnings.warn(
-            f"Warning: unit {this_unit_id} has fewer spikes than ",
-            f"specified by `min_spikes` ({min_spikes}); ",
-            f"returning NaN as the quality metric...",
+            f"Unit {this_unit_id} has fewer spikes than specified by `min_spikes` "
+            f"({min_spikes}); returning NaN as the quality metric..."
         )
         return np.nan, np.nan
     elif fr_all_units[this_unit_id] < min_fr:
         warnings.warn(
-            f"Warning: unit {this_unit_id} has a firing rate ",
-            f"below the specified `min_fr` ({min_fr}Hz); " f"returning NaN as the quality metric...",
+            f"Unit {this_unit_id} has a firing rate below the specified `min_fr` "
+            f"({min_fr} Hz); returning NaN as the quality metric..."
         )
         return np.nan, np.nan
     else:
@@ -652,15 +651,14 @@ def nearest_neighbors_noise_overlap(
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
         warnings.warn(
-            f"Warning: unit {this_unit_id} has fewer spikes than ",
-            f"specified by `min_spikes` ({min_spikes}); ",
-            f"returning NaN as the quality metric...",
+            f"Unit {this_unit_id} has fewer spikes than specified by `min_spikes` "
+            f"({min_spikes}); returning NaN as the quality metric..."
         )
         return np.nan
     elif fr_all_units[this_unit_id] < min_fr:
         warnings.warn(
-            f"Warning: unit {this_unit_id} has a firing rate ",
-            f"below the specified `min_fr` ({min_fr}Hz); " f"returning NaN as the quality metric...",
+            f"Unit {this_unit_id} has a firing rate below the specified `min_fr` "
+            f"({min_fr} Hz); returning NaN as the quality metric...",
         )
         return np.nan
     else:
@@ -969,6 +967,6 @@ def pca_metrics_one_unit(
                 unit_silhouette_score = silhouette_score(pcs_flat, labels, unit_id)
             except:
                 unit_silhouette_score = np.nan
-            pc_metrics["silhouette_full"] = unit_silhouette_socre
+            pc_metrics["silhouette_full"] = unit_silhouette_score
 
     return pc_metrics

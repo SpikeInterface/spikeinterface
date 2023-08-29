@@ -101,14 +101,14 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
 
 
 class LocalizeBase(PipelineNode):
-    def __init__(self, recording, return_output=True, parents=None, local_radius_um=75.0):
+    def __init__(self, recording, return_output=True, parents=None, radius_um=75.0):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
-        self.local_radius_um = local_radius_um
+        self.radius_um = radius_um
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
-        self.neighbours_mask = self.channel_distance < local_radius_um
-        self._kwargs["local_radius_um"] = local_radius_um
+        self.neighbours_mask = self.channel_distance < radius_um
+        self._kwargs["radius_um"] = radius_um
 
     def get_dtype(self):
         return self._dtype
@@ -152,18 +152,14 @@ class LocalizeCenterOfMass(LocalizeBase):
     need_waveforms = True
     name = "center_of_mass"
     params_doc = """
-    local_radius_um: float
+    radius_um: float
         Radius in um for channel sparsity.
     feature: str ['ptp', 'mean', 'energy', 'peak_voltage']
         Feature to consider for computation. Default is 'ptp'
     """
 
-    def __init__(
-        self, recording, return_output=True, parents=["extract_waveforms"], local_radius_um=75.0, feature="ptp"
-    ):
-        LocalizeBase.__init__(
-            self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um
-        )
+    def __init__(self, recording, return_output=True, parents=["extract_waveforms"], radius_um=75.0, feature="ptp"):
+        LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, radius_um=radius_um)
         self._dtype = np.dtype(dtype_localize_by_method["center_of_mass"])
 
         assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
@@ -216,7 +212,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
     need_waveforms = False
     name = "monopolar_triangulation"
     params_doc = """
-    local_radius_um: float
+    radius_um: float
         For channel sparsity.
     max_distance_um: float, default: 1000
         Boundary for distance estimation.
@@ -234,15 +230,13 @@ class LocalizeMonopolarTriangulation(PipelineNode):
         recording,
         return_output=True,
         parents=["extract_waveforms"],
-        local_radius_um=75.0,
+        radius_um=75.0,
         max_distance_um=150.0,
         optimizer="minimize_with_log_penality",
         enforce_decrease=True,
         feature="ptp",
     ):
-        LocalizeBase.__init__(
-            self, recording, return_output=return_output, parents=parents, local_radius_um=local_radius_um
-        )
+        LocalizeBase.__init__(self, recording, return_output=return_output, parents=parents, radius_um=radius_um)
 
         assert feature in ["ptp", "energy", "peak_voltage"], f"{feature} is not a valid feature"
         self.max_distance_um = max_distance_um
@@ -309,7 +303,7 @@ class LocalizeGridConvolution(PipelineNode):
     need_waveforms = True
     name = "grid_convolution"
     params_doc = """
-    local_radius_um: float
+    radius_um: float
         Radius in um for channel sparsity.
     upsampling_um: float
         Upsampling resolution for the grid of templates
@@ -333,7 +327,7 @@ class LocalizeGridConvolution(PipelineNode):
         recording,
         return_output=True,
         parents=["extract_waveforms"],
-        local_radius_um=40.0,
+        radius_um=40.0,
         upsampling_um=5.0,
         sigma_um=np.linspace(5.0, 25.0, 5),
         sigma_ms=0.25,
@@ -344,7 +338,7 @@ class LocalizeGridConvolution(PipelineNode):
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
-        self.local_radius_um = local_radius_um
+        self.radius_um = radius_um
         self.sigma_um = sigma_um
         self.margin_um = margin_um
         self.upsampling_um = upsampling_um
@@ -371,7 +365,7 @@ class LocalizeGridConvolution(PipelineNode):
         self.prototype = self.prototype[:, np.newaxis]
 
         self.template_positions, self.weights, self.nearest_template_mask = get_grid_convolution_templates_and_weights(
-            contact_locations, self.local_radius_um, self.upsampling_um, self.sigma_um, self.margin_um
+            contact_locations, self.radius_um, self.upsampling_um, self.sigma_um, self.margin_um
         )
 
         self.weights_sparsity_mask = self.weights > self.sparsity_threshold
@@ -379,7 +373,7 @@ class LocalizeGridConvolution(PipelineNode):
         self._dtype = np.dtype(dtype_localize_by_method["grid_convolution"])
         self._kwargs.update(
             dict(
-                local_radius_um=self.local_radius_um,
+                radius_um=self.radius_um,
                 prototype=self.prototype,
                 template_positions=self.template_positions,
                 nearest_template_mask=self.nearest_template_mask,

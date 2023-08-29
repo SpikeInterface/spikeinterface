@@ -48,6 +48,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         "nfilt_factor": 4,
         "do_correction": True,
         "NT": None,
+        "AUCsplit": 0.8,
         "wave_length": 61,
         "keep_good_only": False,
         "skip_kilosort_preprocessing": False,
@@ -73,6 +74,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         "nfilt_factor": "Max number of clusters per good channel (even temporary ones) 4",
         "do_correction": "If True drift registration is applied",
         "NT": "Batch size (if None it is automatically computed)",
+        "AUCsplit": "Threshold on the area under the curve (AUC) criterion for performing a split in the final step",
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
         "keep_good_only": "If True only 'good' units are returned",
         "skip_kilosort_preprocessing": "Can optionaly skip the internal kilosort preprocessing",
@@ -171,7 +173,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         ops["lam"] = 20.0
 
         # splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
-        ops["AUCsplit"] = 0.8
+        ops["AUCsplit"] = params["AUCsplit"]
 
         # minimum firing rate on a "good" channel (0 to skip)
         ops["minfr_goodchannels"] = params["minfr_goodchannels"]

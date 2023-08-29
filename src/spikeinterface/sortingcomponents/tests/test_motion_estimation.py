@@ -45,7 +45,7 @@ def setup_module():
     extract_dense_waveforms = ExtractDenseWaveforms(recording, ms_before=0.1, ms_after=0.3, return_output=False)
     pipeline_nodes = [
         extract_dense_waveforms,
-        LocalizeCenterOfMass(recording, parents=[extract_dense_waveforms], local_radius_um=60.0),
+        LocalizeCenterOfMass(recording, parents=[extract_dense_waveforms], radius_um=60.0),
     ]
     peaks, peak_locations = detect_peaks(
         recording,

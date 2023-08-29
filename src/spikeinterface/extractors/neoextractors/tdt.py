@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
@@ -35,7 +37,7 @@ class TdtRecordingExtractor(NeoBaseRecordingExtractor):
             all_annotations=all_annotations,
             **neo_kwargs,
         )
-        self._kwargs.update(dict(folder_path=str(folder_path)))
+        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute())))
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):

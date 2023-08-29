@@ -22,10 +22,10 @@ jobs:
           pip install pytest
           pip install zarr
           pip install setuptools wheel twine build
-          pip install -e .
+          pip install -e .[test_core]
       - name: Test core with pytest
         run: |
-          pytest -v spikeinterface/core
+          pytest -v src/spikeinterface/core
       - name: Publish on PyPI
         env:
           TWINE_USERNAME: __token__

@@ -2,6 +2,7 @@
 test for BaseRecording are done with BinaryRecordingExtractor.
 but check only for BaseRecording general methods.
 """
+import json
 import shutil
 from pathlib import Path
 import pytest
@@ -106,7 +107,7 @@ def test_BaseRecording():
     check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True, check_properties=True)
 
     # dump/load dict - relative
-    d = rec.to_dict(relative_to=cache_folder)
+    d = rec.to_dict(relative_to=cache_folder, recursive=True)
     rec2 = BaseExtractor.from_dict(d, base_folder=cache_folder)
     rec3 = load_extractor(d, base_folder=cache_folder)
 
@@ -114,6 +115,18 @@ def test_BaseRecording():
     rec.dump_to_json(cache_folder / "test_BaseRecording_rel.json", relative_to=cache_folder)
     rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
     rec3 = load_extractor(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
+
+    # dump/load relative=True
+    rec.dump_to_json(cache_folder / "test_BaseRecording_rel_true.json", relative_to=True)
+    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
+    rec3 = load_extractor(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
+    check_recordings_equal(rec, rec2, return_scaled=False, check_annotations=True)
+    check_recordings_equal(rec, rec3, return_scaled=False, check_annotations=True)
+    with open(cache_folder / "test_BaseRecording_rel_true.json") as json_file:
+        data = json.load(json_file)
+        assert (
+            "/" not in data["kwargs"]["file_paths"][0]
+        )  # Relative to parent folder, so there shouldn't be any '/' in the path.
 
     # cache to binary
     folder = cache_folder / "simple_recording"

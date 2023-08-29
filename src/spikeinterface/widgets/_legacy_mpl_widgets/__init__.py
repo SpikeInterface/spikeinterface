@@ -1,29 +1,19 @@
 # basics
-# from .timeseries import plot_timeseries, TimeseriesWidget
+# from .timeseries import plot_timeseries, TracesWidget
 from .rasters import plot_rasters, RasterWidget
 from .probemap import plot_probe_map, ProbeMapWidget
 
 # isi/ccg/acg
 from .isidistribution import plot_isi_distribution, ISIDistributionWidget
 
-# from .correlograms import (plot_crosscorrelograms, CrossCorrelogramsWidget,
-#                            plot_autocorrelograms, AutoCorrelogramsWidget)
-
 # peak activity
 from .activity import plot_peak_activity_map, PeakActivityMapWidget
 
 # waveform/PC related
-# from .unitwaveforms import plot_unit_waveforms, plot_unit_templates
-# from .unitwaveformdensitymap import plot_unit_waveform_density_map, UnitWaveformDensityMapWidget
-# from .amplitudes import plot_amplitudes_distribution
 from .principalcomponent import plot_principal_component
-
-# from .unitlocalization import plot_unit_localization, UnitLocalizationWidget
 
 # units on probe
 from .unitprobemap import plot_unit_probe_map, UnitProbeMapWidget
-
-# from .depthamplitude import plot_units_depth_vs_amplitude
 
 # comparison related
 from .confusionmatrix import plot_confusion_matrix, ConfusionMatrixWidget
@@ -77,8 +67,6 @@ from .gtcomparison import (
     ComparisonPerformancesByTemplateSimilarity,
 )
 
-# unit summary
-# from .unitsummary import plot_unit_summary, UnitSummaryWidget
 
 # unit presence
 from .presence import plot_presence, PresenceWidget

@@ -12,7 +12,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "apply_preprocessing": True,
-        "general": {"ms_before": 2.5, "ms_after": 3.5, "local_radius_um": 100},
+        "general": {"ms_before": 2.5, "ms_after": 3.5, "radius_um": 100},
         "filtering": {"freq_min": 300, "freq_max": 8000.0},
         "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 0.4},
         "hdbscan_kwargs": {
@@ -68,7 +68,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         # detection
         detection_params = params["detection"].copy()
-        detection_params["local_radius_um"] = params["general"]["local_radius_um"]
+        detection_params["radius_um"] = params["general"]["radius_um"]
         detection_params["noise_levels"] = noise_levels
         peaks = detect_peaks(recording, method="locally_exclusive", **detection_params, **job_kwargs)
 
@@ -89,7 +89,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         # localization
         localization_params = params["localization"].copy()
-        localization_params["local_radius_um"] = params["general"]["local_radius_um"]
+        localization_params["radius_um"] = params["general"]["radius_um"]
         peak_locations = localize_peaks(
             recording, some_peaks, method="monopolar_triangulation", **localization_params, **job_kwargs
         )
@@ -127,7 +127,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         matching_params["noise_levels"] = noise_levels
         matching_params["peak_sign"] = params["detection"]["peak_sign"]
         matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
-        matching_params["local_radius_um"] = params["general"]["local_radius_um"]
+        matching_params["radius_um"] = params["general"]["radius_um"]
 
         # TODO: route that params
         # ~ 'num_closest' : 5,

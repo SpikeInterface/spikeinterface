@@ -104,7 +104,7 @@ and the raster plots.
 
 .. code:: ipython3
 
-    w_ts = sw.plot_timeseries(recording, time_range=(0, 5))
+    w_ts = sw.plot_traces(recording, time_range=(0, 5))
     w_rs = sw.plot_rasters(sorting_true, time_range=(0, 5))
 
 
@@ -266,7 +266,7 @@ available parameters are dictionaries and can be accessed with:
      'clustering': {},
      'detection': {'detect_threshold': 5, 'peak_sign': 'neg'},
      'filtering': {'dtype': 'float32'},
-     'general': {'local_radius_um': 100, 'ms_after': 2, 'ms_before': 2},
+     'general': {'radius_um': 100, 'ms_after': 2, 'ms_before': 2},
      'job_kwargs': {},
      'localization': {},
      'matching': {},
@@ -497,218 +497,19 @@ accomodate the duration:
     qm = sqm.compute_quality_metrics(we_TDC, qm_params=qm_params)
     display(qm)
 
+.. parsed-literal::
 
-
-.. raw:: html
-
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>num_spikes</th>
-          <th>firing_rate</th>
-          <th>presence_ratio</th>
-          <th>snr</th>
-          <th>isi_violations_ratio</th>
-          <th>isi_violations_count</th>
-          <th>rp_contamination</th>
-          <th>rp_violations</th>
-          <th>sliding_rp_violation</th>
-          <th>amplitude_cutoff</th>
-          <th>amplitude_median</th>
-          <th>drift_ptp</th>
-          <th>drift_std</th>
-          <th>drift_mad</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>0</th>
-          <td>30</td>
-          <td>3.0</td>
-          <td>0.9</td>
-          <td>27.258799</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>NaN</td>
-          <td>0.200717</td>
-          <td>307.199036</td>
-          <td>1.313088</td>
-          <td>0.492143</td>
-          <td>0.476104</td>
-        </tr>
-        <tr>
-          <th>1</th>
-          <td>51</td>
-          <td>5.1</td>
-          <td>1.0</td>
-          <td>24.213808</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>NaN</td>
-          <td>0.500000</td>
-          <td>274.444977</td>
-          <td>0.934371</td>
-          <td>0.325045</td>
-          <td>0.216362</td>
-        </tr>
-        <tr>
-          <th>2</th>
-          <td>53</td>
-          <td>5.3</td>
-          <td>0.9</td>
-          <td>24.229277</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>NaN</td>
-          <td>0.500000</td>
-          <td>270.204590</td>
-          <td>0.901922</td>
-          <td>0.392344</td>
-          <td>0.372247</td>
-        </tr>
-        <tr>
-          <th>3</th>
-          <td>50</td>
-          <td>5.0</td>
-          <td>1.0</td>
-          <td>27.080778</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>NaN</td>
-          <td>0.500000</td>
-          <td>312.545715</td>
-          <td>0.598991</td>
-          <td>0.225554</td>
-          <td>0.185147</td>
-        </tr>
-        <tr>
-          <th>4</th>
-          <td>36</td>
-          <td>3.6</td>
-          <td>1.0</td>
-          <td>9.544292</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>NaN</td>
-          <td>0.207231</td>
-          <td>107.953278</td>
-          <td>1.913661</td>
-          <td>0.659317</td>
-          <td>0.507955</td>
-        </tr>
-        <tr>
-          <th>5</th>
-          <td>42</td>
-          <td>4.2</td>
-          <td>1.0</td>
-          <td>13.283191</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>NaN</td>
-          <td>0.204838</td>
-          <td>151.833191</td>
-          <td>0.671453</td>
-          <td>0.231825</td>
-          <td>0.156004</td>
-        </tr>
-        <tr>
-          <th>6</th>
-          <td>48</td>
-          <td>4.8</td>
-          <td>1.0</td>
-          <td>8.319447</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>NaN</td>
-          <td>0.500000</td>
-          <td>91.358444</td>
-          <td>2.391275</td>
-          <td>0.885580</td>
-          <td>0.772367</td>
-        </tr>
-        <tr>
-          <th>7</th>
-          <td>193</td>
-          <td>19.3</td>
-          <td>1.0</td>
-          <td>8.690839</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.155</td>
-          <td>0.500000</td>
-          <td>103.491577</td>
-          <td>0.710640</td>
-          <td>0.300565</td>
-          <td>0.316645</td>
-        </tr>
-        <tr>
-          <th>8</th>
-          <td>129</td>
-          <td>12.9</td>
-          <td>1.0</td>
-          <td>11.167040</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.310</td>
-          <td>0.500000</td>
-          <td>128.252319</td>
-          <td>0.985251</td>
-          <td>0.375529</td>
-          <td>0.301622</td>
-        </tr>
-        <tr>
-          <th>9</th>
-          <td>110</td>
-          <td>11.0</td>
-          <td>1.0</td>
-          <td>8.377251</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.270</td>
-          <td>0.203415</td>
-          <td>98.207291</td>
-          <td>1.386857</td>
-          <td>0.526532</td>
-          <td>0.410644</td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
+    id	num_spikes	firing_rate	presence_ratio	        snr	isi_violations_ratio	isi_violations_count	rp_contamination	rp_violations	sliding_rp_violation	amplitude_cutoff	amplitude_median	drift_ptp	drift_std	drift_mad
+     0	        30	        3.0	           0.9	  27.258799	                 0.0	                   0	             0.0	            0	                 NaN	        0.200717	      307.199036	 1.313088	 0.492143	 0.476104
+     1	        51	        5.1	           1.0	  24.213808	                 0.0	                   0	             0.0	            0	                 NaN	        0.500000	      274.444977	 0.934371	 0.325045	 0.216362
+     2	        53	        5.3	           0.9	  24.229277	                 0.0	                   0	             0.0	            0	                 NaN	        0.500000	      270.204590	 0.901922	 0.392344	 0.372247
+     3	        50	        5.0	           1.0	  27.080778	                 0.0	                   0	             0.0	            0	                 NaN	        0.500000	      312.545715	 0.598991	 0.225554	 0.185147
+     4	        36	        3.6	           1.0	  9.544292	                 0.0	                   0	             0.0	            0	                 NaN	        0.207231	      107.953278	 1.913661	 0.659317	 0.507955
+     5	        42	        4.2	           1.0	  13.283191	                 0.0	                   0	             0.0	            0	                 NaN	        0.204838	      151.833191	 0.671453	 0.231825	 0.156004
+     6	        48	        4.8	           1.0	  8.319447	                 0.0	                   0	             0.0	            0	                 NaN	        0.500000	       91.358444	 2.391275	 0.885580	 0.772367
+     7	        193	       19.3	           1.0	  8.690839	                 0.0	                   0	             0.0	            0	               0.155	        0.500000	      103.491577	 0.710640	 0.300565 	 0.316645
+     8	        129	       12.9	           1.0	  11.167040	                 0.0	                   0	             0.0	            0	               0.310	        0.500000	      128.252319	 0.985251	 0.375529	 0.301622
+     9	        110	       11.0	           1.0	  8.377251	                 0.0	                   0	             0.0	            0	               0.270	        0.203415	       98.207291	 1.386857	 0.526532	 0.410644
 
 
 Quality metrics are also extensions (and become part of the waveform

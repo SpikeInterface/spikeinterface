@@ -4,9 +4,10 @@ from pathlib import Path
 import pytest
 import numpy as np
 
-from spikeinterface.core import NumpyRecording, NumpySorting, NumpyEvent
-from spikeinterface.core import create_sorting_npz
+from spikeinterface.core import NumpyRecording, NumpySorting, SharedMemorySorting, NumpyEvent
+from spikeinterface.core import create_sorting_npz, load_extractor
 from spikeinterface.core import NpzSortingExtractor
+from spikeinterface.core.basesorting import minimum_spike_dtype
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
@@ -34,7 +35,8 @@ def test_NumpySorting():
 
     # empty
     unit_ids = []
-    sorting = NumpySorting(sampling_frequency, unit_ids)
+    spikes = np.zeros(0, dtype=minimum_spike_dtype)
+    sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
     # print(sorting)
 
     # 2 columns
@@ -57,8 +59,37 @@ def test_NumpySorting():
     create_sorting_npz(num_seg, file_path)
     other_sorting = NpzSortingExtractor(file_path)
 
-    sorting = NumpySorting.from_extractor(other_sorting)
+    sorting = NumpySorting.from_sorting(other_sorting)
     # print(sorting)
+
+    # construct back from kwargs keep the same array
+    sorting2 = load_extractor(sorting.to_dict())
+    assert np.shares_memory(sorting2._cached_spike_vector, sorting._cached_spike_vector)
+
+
+def test_SharedMemorySorting():
+    sampling_frequency = 30000
+    unit_ids = ["a", "b", "c"]
+    spikes = np.zeros(100, dtype=minimum_spike_dtype)
+    spikes["sample_index"][:] = np.arange(0, 1000, 10, dtype="int64")
+    spikes["unit_index"][0::3] = 0
+    spikes["unit_index"][1::3] = 1
+    spikes["unit_index"][2::3] = 2
+    np_sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
+    print(np_sorting)
+
+    sorting = SharedMemorySorting.from_sorting(np_sorting)
+    # print(sorting)
+    assert sorting._cached_spike_vector is not None
+
+    # print(sorting.to_spike_vector())
+    d = sorting.to_dict()
+
+    sorting_reload = load_extractor(d)
+    # print(sorting_reload)
+    # print(sorting_reload.to_spike_vector())
+
+    assert sorting.shm.name == sorting_reload.shm.name
 
 
 def test_NumpyEvent():
@@ -100,6 +131,7 @@ def test_NumpyEvent():
 
 
 if __name__ == "__main__":
-    test_NumpyRecording()
+    # test_NumpyRecording()
     test_NumpySorting()
-    test_NumpyEvent()
+    # test_SharedMemorySorting()
+    # test_NumpyEvent()
