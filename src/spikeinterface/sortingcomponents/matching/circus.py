@@ -432,13 +432,14 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             selection = all_selections[:, :num_selection]
             res_sps = full_sps[selection[0], selection[1]]
 
-            if vicinity == 0:
+            if True: #vicinity == 0:
                 all_amplitudes, _ = potrs(M[:num_selection, :num_selection], res_sps,
                     lower=True, overwrite_b=False)
                 all_amplitudes /= norms[selection[0]]
             else:
+                # This is not working, need to figure out why
                 is_in_vicinity = np.append(is_in_vicinity, num_selection - 1)
-                all_amplitudes = np.append(all_amplitudes, np.float32(0))
+                all_amplitudes = np.append(all_amplitudes, np.float32(1))
                 L = M[is_in_vicinity, :][:, is_in_vicinity]
                 all_amplitudes[is_in_vicinity], _ = potrs(L, res_sps[is_in_vicinity],
                     lower=True, overwrite_b=False)
