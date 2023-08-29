@@ -191,6 +191,8 @@ class RandomProjectionClustering:
         )
 
         cleaning_matching_params = params["job_kwargs"].copy()
+        if 'chunk_memory' in cleaning_matching_params:
+            cleaning_matching_params.pop('chunk_memory')
         cleaning_matching_params["chunk_duration"] = "100ms"
         cleaning_matching_params["n_jobs"] = 1
         cleaning_matching_params["verbose"] = False
