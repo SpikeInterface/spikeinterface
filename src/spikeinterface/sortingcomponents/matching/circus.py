@@ -136,7 +136,6 @@ def compute_overlaps(templates, num_samples, num_channels, sparsities):
 
     dense_templates = np.zeros((num_templates, num_samples, num_channels), dtype=np.float32)
     for i in range(num_templates):
-        print(templates[i].shape, len(sparsities[i]))
         dense_templates[i, :, sparsities[i]] = templates[i].T
 
     size = 2 * num_samples - 1
