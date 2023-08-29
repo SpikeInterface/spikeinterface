@@ -156,9 +156,7 @@ class PlexonSortingTest(SortingCommonTestSuite, unittest.TestCase):
 class Plexon2SortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2SortingExtractor
     downloads = ["plexon"]
-    entities = [
-        ("plexon/4chDemoPL2.pl2"),
-    ]
+    entities = [("plexon/4chDemoPL2.pl2", {"sampling_frequency": 40000})]
 
 
 class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -328,7 +326,7 @@ if __name__ == "__main__":
     # test = PlexonRecordingTest()
     # test = PlexonSortingTest()
     # test = NeuralynxRecordingTest()
-    test = BlackrockRecordingTest()
+    test = Plexon2RecordingTest()
     # test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
     # test = Spike2RecordingTest()
