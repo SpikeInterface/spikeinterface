@@ -30,7 +30,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matching": {},
         "apply_preprocessing": True,
         "shared_memory": True,
-        "job_kwargs": {"n_jobs": -1, "chunk_memory": "10M"},
+        "job_kwargs": {"n_jobs": -1},
     }
 
     @classmethod
@@ -145,6 +145,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         matching_params.update({"noise_levels": noise_levels})
 
         matching_job_params = job_kwargs.copy()
+        if 'chunk_memory' in matching_job_params:
+            matching_job_params.pop('chunk_memory')
+
         matching_job_params["chunk_duration"] = "100ms"
 
         spikes = find_spikes_from_templates(
