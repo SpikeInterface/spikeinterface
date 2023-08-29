@@ -68,7 +68,7 @@ extractors = [
     "ONE-api>=1.19.1",
     "ibllib>=2.21.0",
     "pymatreader>=0.0.32", # For cell explorer matlab files
-    "zugbruecke", # For plexon2
+    "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
