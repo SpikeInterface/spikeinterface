@@ -4,7 +4,12 @@ import psutil
 import numpy as np
 
 from spikeinterface.core import load_extractor, extract_waveforms
-from spikeinterface.core.generate import generate_recording, NoiseGeneratorRecording, generate_recording_by_size, InjectTemplatesRecording, generate_single_fake_waveform
+from spikeinterface.core.generate import (generate_recording, NoiseGeneratorRecording, generate_recording_by_size, 
+                                          InjectTemplatesRecording, generate_single_fake_waveform, generate_templates,
+                                          generate_channel_locations, generate_unit_locations,
+                                          toy_example)
+
+
 from spikeinterface.core.core_tools import convert_bytes_to_str
 
 from spikeinterface.core.testing import check_recordings_equal
@@ -244,6 +249,49 @@ def test_generate_single_fake_waveform():
     # ax.axvline(0)
     # plt.show()
 
+def test_generate_templates():
+
+    rng = np.random.default_rng(seed=0)
+
+    num_chans = 12
+    num_columns = 1
+    num_units = 10
+    margin_um= 15.
+    channel_locations = generate_channel_locations(num_chans, num_columns, 20.)
+    unit_locations = generate_unit_locations(num_units, channel_locations, margin_um, rng)
+
+    
+    sampling_frequency = 30000.
+    ms_before = 1.
+    ms_after = 3.
+    templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
+            upsample_factor=None,
+            seed=42,
+            dtype="float32",
+        )
+    assert templates.ndim == 3
+    assert templates.shape[2] == num_chans
+    assert templates.shape[0] == num_units
+
+
+    # templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
+    #         upsample_factor=3,
+    #         seed=42,
+    #         dtype="float32",
+    #     )
+    # assert templates.ndim == 4
+    # assert templates.shape[2] == num_chans
+    # assert templates.shape[0] == num_units
+    # assert templates.shape[3] == 3
+
+
+    # import matplotlib.pyplot as plt
+    # fig, ax = plt.subplots()
+    # for u in range(num_units):
+    #     ax.plot(templates[u, :, ].T.flatten())
+    # for f in range(templates.shape[3]):
+    #     ax.plot(templates[0, :, :, f].T.flatten())
+    # plt.show()
 
 
 def test_inject_templates():
@@ -296,11 +344,24 @@ def test_inject_templates():
     # check_recordings_equal(recording_template_injected, saved_1job, return_scaled=False)
     # check_recordings_equal(recording_template_injected, saved_2job, return_scaled=False)
 
+def test_toy_example():
+    rec, sorting = toy_example(num_segments=2, num_units=10)
+    assert rec.get_num_segments() == 2
+    assert sorting.get_num_segments() == 2
+    assert sorting.get_num_units() == 10
 
+    # rec, sorting = toy_example(num_segments=1, num_channels=16, num_columns=2)
+    # assert rec.get_num_segments() == 1
+    # assert sorting.get_num_segments() == 1
+    # print(rec)
+    # print(sorting)
+
+    probe = rec.get_probe()
+    # print(probe)
 
 
 if __name__ == "__main__":
-    strategy = "tile_pregenerated"
+    # strategy = "tile_pregenerated"
     # strategy = "on_the_fly"
     # test_noise_generator_memory(strategy)
     # test_noise_generator_under_giga()
@@ -309,6 +370,8 @@ if __name__ == "__main__":
     # test_noise_generator_consistency_across_traces(strategy, 0, 1000, 10)
     # test_noise_generator_consistency_after_dump(strategy)
     # test_generate_recording()
-    test_generate_single_fake_waveform()
+    # test_generate_single_fake_waveform()
+    # test_generate_templates()
     # test_inject_templates()
 
+    test_toy_example()
