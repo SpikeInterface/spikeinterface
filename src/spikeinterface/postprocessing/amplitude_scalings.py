@@ -187,7 +187,7 @@ def compute_amplitude_scalings(
     max_dense_channels=16,
     ms_before=None,
     ms_after=None,
-    handle_collisions=False,
+    handle_collisions=True,
     delta_collision_ms=2,
     load_if_exists=False,
     outputs="concatenated",
@@ -212,7 +212,7 @@ def compute_amplitude_scalings(
     ms_after : float, default: None
         The cut out to apply after the spike peak to extract local waveforms.
         If None, the WaveformExtractor ms_after is used.
-    handle_collisions: bool, default: False
+    handle_collisions: bool, default: True
         Whether to handle collisions between spikes. If True, the amplitude scaling of colliding spikes
         (defined as spikes within `delta_collision_ms` ms and with overlapping sparsity) is computed by fitting a
         multi-linear regression model (with `sklearn.LinearRegression`). If False, each spike is fitted independently.
@@ -598,12 +598,12 @@ def fit_collision(
 
 #     for i in range(num_collisions):
 #         overlapping_spikes = collisions[collision_keys[i]]
-#         ax = _plot_one_collision(
+#         ax = plot_one_collision(
 #             we, collision_keys[i], overlapping_spikes, spikes, scalings=scalings, sparsity=sparsity
 #         )
 
 
-# def _plot_one_collision(
+# def plot_one_collision(
 #     we,
 #     spike_index,
 #     overlapping_spikes,
@@ -611,8 +611,12 @@ def fit_collision(
 #     scalings=None,
 #     sparsity=None,
 #     cut_out_samples=100,
+#     ax=None
 # ):
 #     import matplotlib.pyplot as plt
+
+#     if ax is None:
+#         fig, ax = plt.subplots()
 
 #     recording = we.recording
 #     nbefore_nafter_max = max(we.nafter, we.nbefore)
@@ -644,7 +648,7 @@ def fit_collision(
 #     tr_overlap = recording.get_traces(start_frame=sf, end_frame=ef, channel_ids=channel_ids, return_scaled=True)
 #     ts = np.arange(sf, ef) / recording.sampling_frequency * 1000
 #     max_tr = np.max(np.abs(tr_overlap))
-#     fig, ax = plt.subplots()
+
 #     for ch, tr in enumerate(tr_overlap.T):
 #         _ = ax.plot(ts, tr + 1.2 * ch * max_tr, color="k")
 #         ax.text(ts[0], 1.2 * ch * max_tr - 0.3 * max_tr, f"Ch:{channel_ids[ch]}")
