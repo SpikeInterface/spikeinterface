@@ -368,10 +368,12 @@ if __name__ == "__main__":
     # test_noise_generator_correct_shape(strategy)
     # test_noise_generator_consistency_across_calls(strategy, 0, 5)
     # test_noise_generator_consistency_across_traces(strategy, 0, 1000, 10)
-    # test_noise_generator_consistency_after_dump(strategy)
+    # test_noise_generator_consistency_after_dump(strategy, None)
     # test_generate_recording()
     # test_generate_single_fake_waveform()
     # test_generate_templates()
+
+    # TODO
     # test_inject_templates()
 
     test_toy_example()

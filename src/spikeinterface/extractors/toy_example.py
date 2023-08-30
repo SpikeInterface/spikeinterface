@@ -1,3 +1,5 @@
+#from spikeinterface.core.generate import toy_example
+
 import numpy as np
 
 from probeinterface import Probe

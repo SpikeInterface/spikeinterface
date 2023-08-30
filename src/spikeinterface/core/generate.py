@@ -19,6 +19,16 @@ from .core_tools import define_function_from_class
 
 
 
+def _ensure_seed(seed):
+    # when seed is None:
+    # we want to set one to push it in the Recordind._kwargs to reconstruct the same signal
+    # this is a better approach than having seed=42 or seed=my_dog_birth because we ensure to have
+    # a new signal for all call with seed=None but the dump/load will still work
+    if seed is None:
+        seed = np.random.default_rng(seed=None).integers(0, 2 ** 63)
+    return seed
+
+
 def generate_recording(
     num_channels: Optional[int] = 2,
     sampling_frequency: Optional[float] = 30000.0,
@@ -56,6 +66,8 @@ def generate_recording(
     NumpyRecording
         Returns a NumpyRecording object with the specified parameters.
     """
+    seed = _ensure_seed(seed)
+
     if mode == "legacy":
         recording = _generate_recording_legacy(num_channels, sampling_frequency, durations, seed)
     elif mode == "lazy":
@@ -107,39 +119,39 @@ def generate_sorting(
     num_units=5,
     sampling_frequency=30000.0,  # in Hz
     durations=[10.325, 3.5],  #  in s for 2 segments
-    firing_rate=15,  # in Hz
+    firing_rates=3.,
     empty_units=None,
-    refractory_period=1.5,  # in ms
+    refractory_period_ms=3.,  # in ms
+    seed=None,
 ):
+    seed = _ensure_seed(seed)
     num_segments = len(durations)
-    num_timepoints = [int(sampling_frequency * d) for d in durations]
-    t_r = int(round(refractory_period * 1e-3 * sampling_frequency))
-
     unit_ids = np.arange(num_units)
 
-    if empty_units is None:
-        empty_units = []
+    spikes = []
+    for segment_index in range(num_segments):
+        times, labels = synthesize_random_firings(
+            num_units=num_units,
+            sampling_frequency=sampling_frequency,
+            duration=durations[segment_index],
+            refractory_period_ms=refractory_period_ms,
+            firing_rates=firing_rates,
+            seed=seed,
+        )
 
-    units_dict_list = []
-    for seg_index in range(num_segments):
-        units_dict = {}
-        for unit_id in unit_ids:
-            if unit_id not in empty_units:
-                n_spikes = int(firing_rate * durations[seg_index])
-                n = int(n_spikes + 10 * np.sqrt(n_spikes))
-                spike_times = np.sort(np.unique(np.random.randint(0, num_timepoints[seg_index], n)))
+        if empty_units is not None:
+            keep = ~np.in1d(labels, empty_units)
+            times = times[keep]
+            labels = times[labels]
 
-                violations = np.where(np.diff(spike_times) < t_r)[0]
-                spike_times = np.delete(spike_times, violations)
+        spikes_in_seg = np.zeros(times.size, dtype=minimum_spike_dtype)
+        spikes_in_seg["sample_index"] = times
+        spikes_in_seg["unit_index"] = labels
+        spikes_in_seg["segment_index"] = segment_index
+        spikes.append(spikes_in_seg)
+    spikes = np.concatenate(spikes)
 
-                if len(spike_times) > n_spikes:
-                    spike_times = np.sort(np.random.choice(spike_times, n_spikes, replace=False))
-
-                units_dict[unit_id] = spike_times
-            else:
-                units_dict[unit_id] = np.array([], dtype=int)
-        units_dict_list.append(units_dict)
-    sorting = NumpySorting.from_unit_dict(units_dict_list, sampling_frequency)
+    sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
     return sorting
 
@@ -200,7 +212,8 @@ def generate_snippets(
 ## spiketrain zone ##
 
 def synthesize_random_firings(
-    num_units=20, sampling_frequency=30000.0, duration=60, refractory_period_ms=4.0, firing_rates=3.0, seed=None
+    num_units=20, sampling_frequency=30000.0, duration=60, refractory_period_ms=4.0, firing_rates=3.0, add_shift_shuffle=False,
+    seed=None
 ):
     """ "
     Generate some spiketrain with random firing for one segment.
@@ -218,6 +231,8 @@ def synthesize_random_firings(
     firing_rates: float or list[float]
         The firing rate of each unit (in Hz).
         If float, all units will have the same firing rate.
+    add_shift_shuffle: bool, default False
+        Optionaly add a small shuffle on half spike to autocorrelogram
     seed: int, optional
         seed for the generator
 
@@ -229,39 +244,52 @@ def synthesize_random_firings(
         Concatenated and sorted label vector
 
     """
-    if seed is not None:
-        np.random.seed(seed)
-        seeds = np.random.RandomState(seed=seed).randint(0, 2147483647, num_units)
-    else:
-        seeds = np.random.randint(0, 2147483647, num_units)
 
-    if isinstance(firing_rates, (int, float)):
-        firing_rates = np.array([firing_rates] * num_units)
+    rng = np.random.default_rng(seed=seed)
+
+    # unit_seeds = [rng.integers(0, 2 ** 63) for i in range(num_units)]
+
+    # if seed is not None:
+    #     np.random.seed(seed)
+    #     seeds = np.random.RandomState(seed=seed).randint(0, 2147483647, num_units)
+    # else:
+    #     seeds = np.random.randint(0, 2147483647, num_units)
+
+    if np.isscalar(firing_rates):
+        firing_rates = np.full(num_units, firing_rates, dtype="float64")
 
     refractory_sample = int(refractory_period_ms / 1000.0 * sampling_frequency)
-    refr = 4
 
-    N = np.int64(duration * sampling_frequency)
+    segment_size = int(sampling_frequency * duration)
 
-    # events/sec * sec/timepoint * N
-    populations = np.ceil(firing_rates / sampling_frequency * N).astype("int")
     times = []
     labels = []
-    for unit_id in range(num_units):
-        times0 = np.random.rand(populations[unit_id]) * (N - 1) + 1
+    for unit_ind in range(num_units):
+        n_spikes = int(firing_rates[unit_ind] * duration)
+        # we take a bit more spikes and then remove if too much of then
+        n = int(n_spikes + 10 * np.sqrt(n_spikes))
+        spike_times = rng.integers(0, segment_size, n)
+        spike_times = np.sort(spike_times)
 
-        ## make an interesting autocorrelogram shape
-        times0 = np.hstack(
-            (times0, times0 + rand_distr2(refractory_sample, refractory_sample * 20, times0.size, seeds[unit_id]))
-        )
-        times0 = times0[np.random.RandomState(seed=seeds[unit_id]).choice(times0.size, int(times0.size / 2))]
-        times0 = times0[(0 <= times0) & (times0 < N)]
+        if add_shift_shuffle:
+            ## make an interesting autocorrelogram shape
+            # this replace the previous rand_distr2()
+            some = rng.choice(spike_times.size, spike_times.size//2, replace=False)
+            x = rng.random(some.size)
+            a = refractory_sample
+            b = refractory_sample * 20
+            shift = a + (b - a) * x**2
+            spike_times[some] += shift
 
-        times0 = clean_refractory_period(times0, refractory_sample)
-        labels0 = np.ones(times0.size, dtype="int64") * unit_id
+        violations, = np.nonzero(np.diff(spike_times) < refractory_sample)
+        spike_times = np.delete(spike_times, violations)
+        if len(spike_times) > n_spikes:
+            spike_times = rng.choice(spike_times, n_spikes, replace=False)
 
-        times.append(times0.astype("int64"))
-        labels.append(labels0)
+        spike_labels = np.ones(spike_times.size, dtype="int64") * unit_ind
+
+        times.append(spike_times.astype("int64"))
+        labels.append(spike_labels)
 
     times = np.concatenate(times)
     labels = np.concatenate(labels)
@@ -273,10 +301,10 @@ def synthesize_random_firings(
     return (times, labels)
 
 
-def rand_distr2(a, b, num, seed):
-    X = np.random.RandomState(seed=seed).rand(num)
-    X = a + (b - a) * X**2
-    return X
+# def rand_distr2(a, b, num, seed):
+#     X = np.random.RandomState(seed=seed).rand(num)
+#     X = a + (b - a) * X**2
+#     return X
 
 
 def clean_refractory_period(times, refractory_period):
@@ -494,10 +522,8 @@ class NoiseGeneratorRecording(BaseRecording):
 
         num_segments = len(durations)
 
-        # if seed is not given we generate one from the global generator
-        # so that we have a real seed in kwargs to be store in json eventually
-        if seed is None:
-            seed = np.random.default_rng().integers(0, 2 ** 63)
+        # very important here when multiprocessing and dump/load
+        seed = _ensure_seed(seed)
         
         # we need one seed per segment
         rng = np.random.default_rng(seed)
@@ -1018,8 +1044,6 @@ inject_templates = define_function_from_class(source_class=InjectTemplatesRecord
 
 
 ## toy example zone ##
-
-
 def generate_channel_locations(num_channels, num_columns, contact_spacing_um):
     # legacy code from old toy example, this should be changed with probeinterface generators
     channel_locations = np.zeros((num_channels, 2))
@@ -1046,6 +1070,93 @@ def generate_unit_locations(num_units, channel_locations, margin_um, seed):
     return units_locations
 
 
+def generate_ground_truth_recording(
+        durations=[10.],
+        sampling_frequency=25000.0,
+        num_channels=4,
+        num_units=10,
+        sorting=None,
+        probe=None,
+        templates=None,
+        ms_before=1.5,
+        ms_after=3.,
+        generate_sorting_kwargs=dict(firing_rate=15, refractory_period=1.5),
+        noise_kwargs=dict(amplitude=5., strategy="on_the_fly"),
+
+        dtype="float32",
+        seed=None,
+    ):
+    """
+    Generate a recording with spike given a probe+sorting+templates.
+
+
+
+
+    """
+
+    # TODO implement upsample_factor in InjectTemplatesRecording and propagate into toy_example
+
+    # if None so the same seed will be used for all steps
+    seed = _ensure_seed(seed)
+
+    if sorting is None:
+        generate_sorting_kwargs = generate_sorting_kwargs.copy()
+        generate_sorting_kwargs["durations"] = durations
+        generate_sorting_kwargs["num_units"] = num_units
+        generate_sorting_kwargs["sampling_frequency"] = sampling_frequency
+        generate_sorting_kwargs["seed"] = seed
+        sorting = generate_sorting(**generate_sorting_kwargs)
+    else:
+        num_units =  sorting.get_num_units()
+        assert sorting.sampling_frequency == sampling_frequency
+
+    if probe is None:
+        probe = generate_linear_probe(num_elec=num_channels)
+        probe.set_device_channel_indices(np.arange(num_channels))
+    else:
+        num_channels = probe.get_contact_count()
+
+    if templates is None:
+        channel_locations = probe.contact_positions
+        margin_um = 20.
+        upsample_factor = None
+        unit_locations = generate_unit_locations(num_units, channel_locations, margin_um, seed)
+        templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
+                upsample_factor=upsample_factor, seed=seed, dtype=dtype)
+    else:
+        assert templates.shape[0] == num_units
+
+    if templates.ndim == 3:
+        upsample_factor = None
+    else:
+        upsample_factor = templates.shape[3]
+
+    nbefore = int(ms_before * sampling_frequency  / 1000.)
+    nafter = int(ms_after * sampling_frequency  / 1000.)
+    assert (nbefore + nafter) == templates.shape[1]
+
+    # construct recording
+    noise_rec = NoiseGeneratorRecording(
+                    num_channels=num_channels,
+                    sampling_frequency=sampling_frequency,
+                    durations=durations,
+                    dtype=dtype,
+                    seed=seed,
+                    noise_block_size=int(sampling_frequency),
+                    **noise_kwargs
+    )
+
+    recording = InjectTemplatesRecording(
+        sorting, templates, nbefore=nbefore, parent_recording=noise_rec
+    )
+    recording.annotate(is_filtered=True)
+    recording.set_probe(probe, in_place=True)
+
+
+    return recording, sorting
+
+
+
 def toy_example(
     duration=10,
     num_channels=4,
@@ -1058,7 +1169,7 @@ def toy_example(
     num_columns=1,
     spike_times=None,
     spike_labels=None,
-    score_detection=1,
+    # score_detection=1,
     firing_rate=3.0,
     seed=None,
 ):
@@ -1066,10 +1177,13 @@ def toy_example(
     This return a generated dataset with "toy" units and spikes on top on white noise.
     This is usefull to test api, algos, postprocessing and vizualition without any downloading.
 
-    This a rewrite (with the lazy approach) of the old spikeinterface.extractor.toy_example() wich was also
+    This a rewrite (with the lazy approach) of the old spikeinterface.extractor.toy_example() which itself was also
     a rewrite from the very old spikeextractor.toy_example() (from Jeremy Magland).
     In this new version, the recording is totally lazy and so do not use disk space or memory.
     It internally uses NoiseGeneratorRecording + generate_waveforms + InjectTemplatesRecording.
+
+    The signature is still the same as before.
+    For better control you should use generate_ground_truth_recording() which is similar but with better signature.
 
     Parameters
     ----------
@@ -1102,15 +1216,11 @@ def toy_example(
         The output sorting extractor.
 
     """
-    # TODO later when this work: deprecate duration and add durations instead and also remove num_segments.
-    # TODO later when this work: deprecate spike_times and spike_labels and add sorting object instead.
-    # TODO implement upsample_factor in InjectTemplatesRecording and propagate into toy_example
-
-    rng = np.random.default_rng(seed=seed)
-
     if upsample_factor is not None:
         raise NotImplementedError("InjectTemplatesRecording do not support yet upsample_factor but this will be done soon")
 
+    assert num_channels > 0
+    assert num_units > 0
 
     if isinstance(duration, int):
         duration = float(duration)
@@ -1123,73 +1233,57 @@ def toy_example(
         assert len(durations) == num_segments
         assert all(isinstance(d, float) for d in durations)
 
+    unit_ids = np.arange(num_units, dtype="int64")
+
+    # generate probe
+    channel_locations = generate_channel_locations(num_channels, num_columns, contact_spacing_um)
+    probe = Probe(ndim=2)
+    probe.set_contacts(positions=channel_locations, shapes="circle", shape_params={"radius": 5})
+    probe.create_auto_shape(probe_type="rect", margin=20.)
+    probe.set_device_channel_indices(np.arange(num_channels, dtype="int64"))
+
+    # generate templates
+    # this is hard coded now but it use to be like this
+    ms_before = 1.5
+    ms_after = 3.    
+    margin_um = 15.
+    unit_locations = generate_unit_locations(num_units, channel_locations, margin_um, seed)
+    templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
+            upsample_factor=upsample_factor, seed=seed, dtype="float32")
+
+    if average_peak_amplitude is not None:
+        # ajustement au mean amplitude
+        amps = np.min(templates, axis=(1, 2))
+        templates *= (average_peak_amplitude / np.mean(amps))
+
+    
+    # construct sorting
     if spike_times is not None:
         assert isinstance(spike_times, list)
         assert isinstance(spike_labels, list)
         assert len(spike_times) == len(spike_labels)
         assert len(spike_times) == num_segments
+        sorting = NumpySorting.from_times_labels(spike_times, spike_labels, sampling_frequency, unit_ids=np.arange(num_units))
+    else:
+        sorting = generate_sorting(
+            num_units=num_units,
+            sampling_frequency=sampling_frequency,
+            durations=durations,
+            firing_rates=firing_rate,
+            empty_units=None,
+            refractory_period_ms=1.5,
+        )
 
-    assert num_channels > 0
-    assert num_units > 0
-
-    unit_ids = np.arange(num_units, dtype="int64")
-
-    # this is hard coded now but it use to be like this
-    ms_before = 2
-    ms_after = 3
-
-    # generate templates
-    channel_locations = generate_channel_locations(num_channels, num_columns, contact_spacing_um)
-    margin_um = 15.
-    unit_locations = generate_unit_locations(num_units, channel_locations, margin_um, seed)
-    templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
-            upsample_factor=upsample_factor, seed=seed, dtype="float32")
-    
-    # construct sorting
-    spikes = []
-    for segment_index in range(num_segments):
-        if spike_times is None:
-            times, labels = synthesize_random_firings(
-                num_units=num_units,
-                duration=durations[segment_index],
-                sampling_frequency=sampling_frequency,
-                firing_rates=firing_rate,
-                seed=seed,
-            )
-        else:
-            times = spike_times[segment_index]
-            labels = spike_labels[segment_index]
-        spikes_in_seg = np.zeros(times.size, dtype=minimum_spike_dtype)
-        spikes_in_seg["sample_index"] = times
-        spikes_in_seg["unit_index"] = labels
-        spikes_in_seg["segment_index"] = segment_index
-        spikes.append(spikes_in_seg)
-    spikes = np.concatenate(spikes)
-
-    sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
-
-    # construct recording
-    noise_rec = NoiseGeneratorRecording(
-                    num_channels=num_channels,
-                    sampling_frequency=sampling_frequency,
-                    durations=durations,
-                    amplitude=5.,
-                    dtype="float32",
-                    seed=seed,
-                    strategy="tile_pregenerated",
-                    noise_block_size=int(sampling_frequency)
-    )
-
-    nbefore = int(ms_before * sampling_frequency  / 1000.)
-    recording = InjectTemplatesRecording(
-        sorting, templates, nbefore=nbefore, parent_recording=noise_rec
-    )
-    recording.annotate(is_filtered=True)
-
-    probe = Probe(ndim=2)
-    probe.set_contacts(positions=channel_locations, shapes="circle", shape_params={"radius": 5})
-    probe.create_auto_shape(probe_type="rect", margin=20.)
-    probe.set_device_channel_indices(np.arange(num_channels, dtype="int64"))
-    recording.set_probe(probe, in_place=True)
+    recording, sorting = generate_ground_truth_recording(
+            durations=durations,
+            sampling_frequency=sampling_frequency,
+            sorting=sorting,
+            probe=probe,
+            templates=templates,
+            ms_before=ms_before,
+            ms_after=ms_after,
+            dtype="float32",
+            seed=seed,
+        )
 
     return recording, sorting
