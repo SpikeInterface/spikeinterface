@@ -34,6 +34,10 @@ from .generate import (
     inject_some_duplicate_units,
     inject_some_split_units,
     synthetize_spike_train_bad_isi,
+    NoiseGeneratorRecording, noise_generator_recording,
+    generate_recording_by_size,
+    InjectTemplatesRecording, inject_templates,
+
 )
 
 # utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)
@@ -109,7 +113,7 @@ from .old_api_utils import (
 )
 
 # templates addition
-from .injecttemplates import InjectTemplatesRecording, InjectTemplatesRecordingSegment, inject_templates
+# from .injecttemplates import InjectTemplatesRecording, InjectTemplatesRecordingSegment, inject_templates
 
 # template tools
 from .template_tools import (
