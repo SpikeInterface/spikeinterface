@@ -83,7 +83,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         "delete_tmp_files": "Delete temporary files created during sorting (matlab files and the `temp_wh.dat` file that"
         "contains kilosort-preprocessed data). Accepts `False` (deletes no files), `True` (deltes all files)"
         "or a Tuple containing the files to delete. Options are: ('temp_wh.dat', 'matlab_files')",
-        "delete_recording_dat": "Whether to delete the 'recording.dat' file after a " "successful run",
+        "delete_recording_dat": "Whether to delete the 'recording.dat' file after a successful run",
     }
 
     sorter_description = """Kilosort3 is a GPU-accelerated and efficient template-matching spike sorter. On top of its
