@@ -84,7 +84,9 @@ def generate_recording(
 
     else:
         raise ValueError("generate_recording() : wrong mode")
-
+    
+    recording.annotate(is_filtered=True)
+    
     if set_probe:
         probe = generate_linear_probe(num_elec=num_channels)
         if ndim == 3:
@@ -354,7 +356,8 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
 
     """
     other_ids = np.arange(np.max(sorting.unit_ids) + 1, np.max(sorting.unit_ids) + num + 1)
-    shifts = np.random.RandomState(seed).randint(low=-max_shift, high=max_shift, size=num)
+    shifts = np.random.default_rng(seed).intergers(low=-max_shift, high=max_shift, size=num)
+
     shifts[shifts == 0] += max_shift
     unit_peak_shifts = dict(zip(other_ids, shifts))
 
@@ -373,7 +376,7 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
                 # select a portion of then
                 assert 0.0 < ratio <= 1.0
                 n = original_times.size
-                sel = np.random.RandomState(seed).choice(n, int(n * ratio), replace=False)
+                sel = np.random.default_rng(seed).choice(n, int(n * ratio), replace=False)
                 times = times[sel]
             # clip inside 0 and last spike
             times = np.clip(times, 0, original_times[-1])
@@ -410,7 +413,7 @@ def inject_some_split_units(sorting, split_ids=[], num_split=2, output_ids=False
         for unit_id in sorting.unit_ids:
             original_times = d[unit_id]
             if unit_id in split_ids:
-                split_inds = np.random.RandomState().randint(0, num_split, original_times.size)
+                split_inds = np.random.default_rng(seed).integers(0, num_split, original_times.size)
                 for split in range(num_split):
                     mask = split_inds == split
                     other_id = other_ids[unit_id][split]
@@ -1078,9 +1081,9 @@ def generate_ground_truth_recording(
         sorting=None,
         probe=None,
         templates=None,
-        ms_before=1.5,
+        ms_before=1.,
         ms_after=3.,
-        generate_sorting_kwargs=dict(firing_rate=15, refractory_period=1.5),
+        generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=1.5),
         noise_kwargs=dict(amplitude=5., strategy="on_the_fly"),
 
         dtype="float32",
@@ -1089,9 +1092,46 @@ def generate_ground_truth_recording(
     """
     Generate a recording with spike given a probe+sorting+templates.
 
+    Parameters
+    ----------
+    durations: list of float, default [10.]
+        Durations in seconds for all segments.
+    sampling_frequency: float, default 25000
+        Sampling frequency.
+    num_channels: int, default 4
+        Number of channels, not used when probe is given.
+    num_units: int, default 10.
+        Number of units,  not used when sorting is given.
+    sorting: Sorting or None
+        An external sorting object. If not provide, one is genrated.
+    probe: Probe or None
+        An external Probe object. If not provided of linear probe is generated.
+    templates: np.array or None
+        The template of units.
+        Shape can:
+            * (num_units, num_samples, num_channels): standard case
+            * (num_units, num_samples, num_channels, num_over_sampling): case with oversample template to introduce jitter.
+    ms_before: float, default 1.5
+        Cut out in ms before spike peak.
+    ms_after: float, default 3.
+        Cut out in ms after spike peak.
+    generate_sorting_kwargs: dict
+        When sorting is not provide, this dict is used to generated a Sorting.
+    noise_kwargs: dict
+        Dict used to generated the noise with NoiseGeneratorRecording.
+    dtype: np.dtype, default "float32"
+        The dtype of the recording.
+    seed: int or None
+        Seed for random initialization.
+        If None a diffrent Recording is generated at every call.
+        Note: even with None a generated recording keep internaly a seed to regenerate the same signal after dump/load.
 
-
-
+    Returns
+    -------
+    recording: Recording
+        The generated recording extractor.
+    sorting: Sorting
+        The generated sorting extractor.
     """
 
     # TODO implement upsample_factor in InjectTemplatesRecording and propagate into toy_example

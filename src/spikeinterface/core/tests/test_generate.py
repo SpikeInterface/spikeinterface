@@ -4,9 +4,9 @@ import psutil
 import numpy as np
 
 from spikeinterface.core import load_extractor, extract_waveforms
-from spikeinterface.core.generate import (generate_recording, NoiseGeneratorRecording, generate_recording_by_size, 
+from spikeinterface.core.generate import (generate_recording, generate_sorting, NoiseGeneratorRecording, generate_recording_by_size, 
                                           InjectTemplatesRecording, generate_single_fake_waveform, generate_templates,
-                                          generate_channel_locations, generate_unit_locations,
+                                          generate_channel_locations, generate_unit_locations, generate_ground_truth_recording,
                                           toy_example)
 
 
@@ -15,6 +15,15 @@ from spikeinterface.core.core_tools import convert_bytes_to_str
 from spikeinterface.core.testing import check_recordings_equal
 
 strategy_list = ["tile_pregenerated", "on_the_fly"]
+
+
+def test_generate_recording():
+    # TODO even this is extenssivly tested in all other function
+    pass
+
+def test_generate_sorting():
+    # TODO even this is extenssivly tested in all other function
+    pass
 
 def measure_memory_allocation(measure_in_process: bool = True) -> float:
     """
@@ -296,53 +305,43 @@ def test_generate_templates():
 
 def test_inject_templates():
     num_channels = 4
+    num_units = 3
     durations = [5.0, 2.5]
+    sampling_frequency = 20000.0
+    ms_before = 0.9
+    ms_after = 1.9
+    nbefore = int(ms_before * sampling_frequency)
 
-    recording = generate_recording(num_channels=4, durations=durations, mode="lazy")
-    recording.annotate(is_filtered=True)
-    # recording = recording.save(folder=cache_folder / "recording")
+    # generate some sutff
+    rec_noise = generate_recording(num_channels=num_channels, durations=durations, sampling_frequency=sampling_frequency, mode="lazy", seed=42)
+    channel_locations = rec_noise.get_channel_locations()
+    sorting = generate_sorting(num_units=num_units, durations=durations, sampling_frequency=sampling_frequency, firing_rates=1., seed=42)
+    units_locations = generate_unit_locations(num_units, channel_locations, margin_um=10., seed=42)
+    templates = generate_templates(channel_locations, units_locations, sampling_frequency, ms_before, ms_after, seed=42, upsample_factor=None)
 
-    # npz_filename = cache_folder / "sorting.npz"
-    # sorting_npz = create_sorting_npz(num_seg=2, file_path=npz_filename)
-    # sorting = NpzSortingExtractor(npz_filename)
-
-    # wvf_extractor = extract_waveforms(recording, sorting, mode="memory", ms_before=3.0, ms_after=3.0)
-    # templates = wvf_extractor.get_all_templates()
-    # templates[:, 0] = templates[:, -1] = 0.0  # Go around the check for the edge, this is just testing.
-
-    # parent_recording = None
-    recording_template_injected = InjectTemplatesRecording(
+    # Case 1: parent_recording = None
+    rec1 = InjectTemplatesRecording(
         sorting,
         templates,
-        nbefore=wvf_extractor.nbefore,
-        num_samples=[recording.get_num_frames(seg_ind) for seg_ind in range(recording.get_num_segments())],
+        nbefore=nbefore,
+        num_samples=[rec_noise.get_num_frames(seg_ind) for seg_ind in range(rec_noise.get_num_segments())],
     )
 
-    assert recording_template_injected.get_traces(end_frame=600, segment_index=0).shape == (600, 4)
-    assert recording_template_injected.get_traces(start_frame=100, end_frame=600, segment_index=1).shape == (500, 4)
-    assert recording_template_injected.get_traces(
-        start_frame=recording.get_num_frames(0) - 200, segment_index=0
-    ).shape == (200, 4)
+    # Case 2: parent_recording != None
+    rec2 = InjectTemplatesRecording(sorting, templates, nbefore=nbefore, parent_recording=rec_noise)
 
-    # parent_recording != None
-    recording_template_injected = InjectTemplatesRecording(
-        sorting, templates, nbefore=wvf_extractor.nbefore, parent_recording=recording
-    )
+    for rec in (rec1, rec2):
+        assert rec.get_traces(end_frame=600, segment_index=0).shape == (600, 4)
+        assert rec.get_traces(start_frame=100, end_frame=600, segment_index=1).shape == (500, 4)
+        assert rec.get_traces(start_frame=rec_noise.get_num_frames(0) - 200, segment_index=0).shape == (200, 4)
 
-    assert recording_template_injected.get_traces(end_frame=600, segment_index=0).shape == (600, 4)
-    assert recording_template_injected.get_traces(start_frame=100, end_frame=600, segment_index=1).shape == (500, 4)
-    assert recording_template_injected.get_traces(
-        start_frame=recording.get_num_frames(0) - 200, segment_index=0
-    ).shape == (200, 4)
+        # Check dumpability
+        saved_loaded = load_extractor(rec.to_dict())
+        check_recordings_equal(rec, saved_loaded, return_scaled=False)
 
-    # Check dumpability
-    saved_loaded = load_extractor(recording_template_injected.to_dict())
-    check_recordings_equal(recording_template_injected, saved_loaded, return_scaled=False)
 
-    # saved_1job = recording_template_injected.save(folder=cache_folder / "1job")
-    # saved_2job = recording_template_injected.save(folder=cache_folder / "2job", n_jobs=2, chunk_duration="1s")
-    # check_recordings_equal(recording_template_injected, saved_1job, return_scaled=False)
-    # check_recordings_equal(recording_template_injected, saved_2job, return_scaled=False)
+def test_generate_ground_truth_recording():
+    rec, sorting = generate_ground_truth_recording()
 
 def test_toy_example():
     rec, sorting = toy_example(num_segments=2, num_units=10)
@@ -372,8 +371,7 @@ if __name__ == "__main__":
     # test_generate_recording()
     # test_generate_single_fake_waveform()
     # test_generate_templates()
-
-    # TODO
     # test_inject_templates()
+    test_generate_ground_truth_recording()
 
-    test_toy_example()
+    # test_toy_example()
