@@ -120,7 +120,8 @@ def toy_example(
             durations=durations,
             firing_rates=firing_rate,
             empty_units=None,
-            refractory_period_ms=1.5,
+            refractory_period_ms=4.0,
+            seed=seed
         )
 
     recording, sorting = generate_ground_truth_recording(
@@ -133,6 +134,7 @@ def toy_example(
             ms_after=ms_after,
             dtype="float32",
             seed=seed,
+            noise_kwargs=dict(noise_level=10., strategy="on_the_fly"),
         )
 
     return recording, sorting

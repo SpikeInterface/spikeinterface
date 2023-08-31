@@ -356,8 +356,10 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
 
 
     """
+    rng = np.random.default_rng(seed)
+
     other_ids = np.arange(np.max(sorting.unit_ids) + 1, np.max(sorting.unit_ids) + num + 1)
-    shifts = np.random.default_rng(seed).intergers(low=-max_shift, high=max_shift, size=num)
+    shifts = rng.integers(low=-max_shift, high=max_shift, size=num)
 
     shifts[shifts == 0] += max_shift
     unit_peak_shifts = dict(zip(other_ids, shifts))
@@ -377,7 +379,7 @@ def inject_some_duplicate_units(sorting, num=4, max_shift=5, ratio=None, seed=No
                 # select a portion of then
                 assert 0.0 < ratio <= 1.0
                 n = original_times.size
-                sel = np.random.default_rng(seed).choice(n, int(n * ratio), replace=False)
+                sel = rng.choice(n, int(n * ratio), replace=False)
                 times = times[sel]
             # clip inside 0 and last spike
             times = np.clip(times, 0, original_times[-1])
@@ -402,6 +404,7 @@ def inject_some_split_units(sorting, split_ids=[], num_split=2, output_ids=False
         other_ids[unit_id] = np.arange(m, m + num_split, dtype=unit_ids.dtype)
         m += num_split
 
+    rng = np.random.default_rng(seed)
     spiketrains = []
     for segment_index in range(sorting.get_num_segments()):
         # sorting to dict
@@ -413,7 +416,7 @@ def inject_some_split_units(sorting, split_ids=[], num_split=2, output_ids=False
         for unit_id in sorting.unit_ids:
             original_times = d[unit_id]
             if unit_id in split_ids:
-                split_inds = np.random.default_rng(seed).integers(0, num_split, original_times.size)
+                split_inds = rng.integers(0, num_split, original_times.size)
                 for split in range(num_split):
                     mask = split_inds == split
                     other_id = other_ids[unit_id][split]
