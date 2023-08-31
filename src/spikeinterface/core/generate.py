@@ -763,7 +763,7 @@ def generate_templates(
         dtype="float32",
         upsample_factor=None,
 
-        
+
     ):
     """
     Generate some template from given channel position and neuron position.
@@ -846,7 +846,7 @@ def generate_templates(
         # the espilon avoid enormous factors
         scale = 17000.
         eps = 4.
-        pow = 2
+        pow = 1.5
         channel_factors = scale / (distances[u, :] + eps) ** pow
         if upsample_factor is not None:
             for f in range(upsample_factor):

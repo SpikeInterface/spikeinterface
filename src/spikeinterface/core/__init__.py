@@ -34,9 +34,11 @@ from .generate import (
     inject_some_duplicate_units,
     inject_some_split_units,
     synthetize_spike_train_bad_isi,
+    generate_templates,
     NoiseGeneratorRecording, noise_generator_recording,
     generate_recording_by_size,
     InjectTemplatesRecording, inject_templates,
+    generate_ground_truth_recording,
 
 )
 

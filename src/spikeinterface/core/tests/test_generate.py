@@ -259,15 +259,14 @@ def test_generate_single_fake_waveform():
     # plt.show()
 
 def test_generate_templates():
-
-    rng = np.random.default_rng(seed=0)
+    seed= 0
 
     num_chans = 12
     num_columns = 1
     num_units = 10
     margin_um= 15.
     channel_locations = generate_channel_locations(num_chans, num_columns, 20.)
-    unit_locations = generate_unit_locations(num_units, channel_locations, margin_um, rng)
+    unit_locations = generate_unit_locations(num_units, channel_locations, margin_um, seed)
 
     
     sampling_frequency = 30000.
@@ -369,7 +368,7 @@ if __name__ == "__main__":
     # test_noise_generator_consistency_after_dump(strategy, None)
     # test_generate_recording()
     # test_generate_single_fake_waveform()
-    # test_generate_templates()
+    test_generate_templates()
     # test_inject_templates()
-    test_generate_ground_truth_recording()
+    # test_generate_ground_truth_recording()
 
