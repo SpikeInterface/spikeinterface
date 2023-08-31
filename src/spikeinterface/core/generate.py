@@ -401,7 +401,6 @@ def inject_some_split_units(sorting, split_ids=[], num_split=2, output_ids=False
     for unit_id in split_ids:
         other_ids[unit_id] = np.arange(m, m + num_split, dtype=unit_ids.dtype)
         m += num_split
-    # print(other_ids)
 
     spiketrains = []
     for segment_index in range(sorting.get_num_segments()):
@@ -940,9 +939,14 @@ class InjectTemplatesRecording(BaseRecording):
         parent_recording: Union[BaseRecording, None] = None,
         num_samples: Optional[List[int]] = None,
         upsample_vector: Union[List[int], None] = None,
+        check_borbers: bool =True,
     ) -> None:
-        templates = np.array(templates)
-        self._check_templates(templates)
+        
+        templates = np.asarray(templates)
+        if check_borbers:
+            self._check_templates(templates)
+            # lets test this only once so force check_borbers=false for kwargs
+            check_borbers = False
         self.templates = templates
 
         channel_ids = parent_recording.channel_ids if parent_recording is not None else list(range(templates.shape[2]))
@@ -954,12 +958,8 @@ class InjectTemplatesRecording(BaseRecording):
         self.spike_vector = sorting.to_spike_vector()
 
         if nbefore is None:
-            nbefore = np.argmax(np.max(np.abs(templates), axis=2), axis=1)
-        elif isinstance(nbefore, (int, np.integer)):
-            nbefore = [nbefore] * n_units
-        else:
-            assert len(nbefore) == n_units
-
+            # take the best peak of all template
+            nbefore = np.argmax(np.max(np.abs(templates), axis=(0, 2)), axis=0)
 
         if templates.ndim == 3:
             # standard case
@@ -980,9 +980,10 @@ class InjectTemplatesRecording(BaseRecording):
 
         if amplitude_factor is None:
             amplitude_vector = None
-        elif np.isscalar(amplitude_factor, float):
+        elif np.isscalar(amplitude_factor):
             amplitude_vector = np.full(self.spike_vector.size, amplitude_factor, dtype="float32")
         else:
+            amplitude_factor = np.asarray(amplitude_factor)
             assert amplitude_factor.shape == self.spike_vector.shape
             amplitude_vector = amplitude_factor
 
@@ -1033,6 +1034,7 @@ class InjectTemplatesRecording(BaseRecording):
             "nbefore": nbefore,
             "amplitude_factor": amplitude_factor,
             "upsample_vector": upsample_vector,
+            "check_borbers": check_borbers,
         }
         if parent_recording is None:
             self._kwargs["num_samples"] = num_samples
@@ -1057,7 +1059,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         dtype,
         spike_vector: np.ndarray,
         templates: np.ndarray,
-        nbefore: List[int],
+        nbefore: int,
         amplitude_vector: Union[List[float], None],
         upsample_vector: Union[List[float], None],
         parent_recording_segment: Union[BaseRecordingSegment, None] = None,
@@ -1120,7 +1122,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
             if channel_indices is not None:
                 template = template[:, channel_indices]
 
-            start_traces = t - self.nbefore[unit_ind] - start_frame
+            start_traces = t - self.nbefore - start_frame
             end_traces = start_traces + template.shape[0]
             if start_traces >= end_frame - start_frame or end_traces <= 0:
                 continue
