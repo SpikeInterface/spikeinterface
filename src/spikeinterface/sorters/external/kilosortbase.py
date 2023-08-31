@@ -215,20 +215,22 @@ class KilosortBase:
             raise Exception(f"{cls.sorter_name} returned a non-zero exit code")
 
         # Clean-up temporary files
-        print(f"Cleaning up temporary files created during sorting: " f"{params['delete_intermediate_files']}")
+        if params["delete_recording_dat"] and (recording_file := sorter_output_folder / "recording.dat").exists():
+            recording_file.unlink()
 
-        if "recording.dat" in params["delete_intermediate_files"]:
-            if (recording_file := sorter_output_folder / "recording.dat").exists():
-                recording_file.unlink()
+        if params["delete_tmp_files"]:
+            tmp_to_remove = (
+                ("matlab_files", "temp_wh.dat") if params["delete_tmp_files"] is True else params["delete_tmp_files"]
+            )
 
-        if "temp_wh.dat" in params["delete_intermediate_files"]:
-            if (temp_wh_file := sorter_output_folder / "temp_wh.dat").exists():
-                temp_wh_file.unlink()
+            if "temp_wh.dat" in tmp_to_remove:
+                if (temp_wh_file := sorter_output_folder / "temp_wh.dat").exists():
+                    temp_wh_file.unlink()
 
-        if "matlab_files" in params["delete_intermediate_files"]:
-            for ext in ["*.m", "*.mat"]:
-                for temp_file in sorter_output_folder.glob(ext):
-                    temp_file.unlink()
+            if "matlab_files" in tmp_to_remove:
+                for ext in ["*.m", "*.mat"]:
+                    for temp_file in sorter_output_folder.glob(ext):
+                        temp_file.unlink()
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
