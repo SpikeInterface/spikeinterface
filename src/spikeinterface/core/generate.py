@@ -925,6 +925,9 @@ class InjectTemplatesRecording(BaseRecording):
     num_samples: list[int] | int | None
         The number of samples in the recording per segment.
         You can use int for mono-segment objects.
+    upsample_vector: np.array or None, default None.
+        When templates is 4d we can simulate a jitter.
+        Optional the upsample_vector is the jitter index with a number per spike in range 0-templates.sahpe[3]
 
     Returns
     -------
@@ -939,7 +942,7 @@ class InjectTemplatesRecording(BaseRecording):
         nbefore: Union[List[int], int, None] = None,
         amplitude_factor: Union[List[List[float]], List[float], float, None] = None,
         parent_recording: Union[BaseRecording, None] = None,
-        num_samples: Union[List[int], None] = None,
+        num_samples: Optional[List[int]] = None,
         upsample_vector: Union[List[int], None] = None,
     ) -> None:
         templates = np.array(templates)
