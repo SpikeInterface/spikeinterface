@@ -498,6 +498,52 @@ _default_params["sliding_rp_violation"] = dict(
 )
 
 
+def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), **kwargs):
+    spike_counts = waveform_extractor.sorting.count_num_spikes_per_unit()
+    sorting = waveform_extractor.sorting
+    spikes = sorting.to_spike_vector(concatenated=False)
+
+    # Pre-allocate synchrony counts
+    synchrony_counts = {}
+    for synchrony_size in synchrony_sizes:
+        synchrony_counts[synchrony_size] = np.zeros(len(waveform_extractor.unit_ids), dtype=np.int64)
+
+    for segment_index in range(sorting.get_num_segments()):
+        num_samples = waveform_extractor.get_num_samples(segment_index)
+        spikes_in_segment = spikes[segment_index]
+
+        # we compute the complexity as an histogram with a single sample as bin
+        bins = np.arange(0, num_samples + 1)
+        complexity = np.histogram(spikes_in_segment["sample_index"], bins)[0]
+
+        # add counts for this segment
+        for unit_index in np.arange(len(sorting.unit_ids)):
+            spikes_per_unit = spikes_in_segment[spikes_in_segment["unit_index"] == unit_index]
+            # some segments/units might have no spikes
+            if len(spikes_per_unit) == 0:
+                continue
+            spike_complexity = complexity[spikes_per_unit["sample_index"]]
+            for synchrony_size in synchrony_sizes:
+                synchrony_counts[synchrony_size][unit_index] += np.count_nonzero(spike_complexity >= synchrony_size)
+
+    # add counts for this segment
+    synchrony_metrics_dict = {
+        f"sync_spike_{synchrony_size}": {
+            unit_id: synchrony_counts[synchrony_size][unit_index] / spike_counts[unit_id]
+            for unit_index, unit_id in enumerate(sorting.unit_ids)
+        }
+        for synchrony_size in synchrony_sizes
+    }
+
+    # Convert dict to named tuple
+    synchrony_metrics_tuple = namedtuple("synchrony_metrics", synchrony_metrics_dict.keys())
+    synchrony_metrics = synchrony_metrics_tuple(**synchrony_metrics_dict)
+    return synchrony_metrics
+
+
+_default_params["synchrony_metrics"] = dict(synchrony_sizes=(0, 2, 4))
+
+
 def compute_amplitude_cutoffs(
     waveform_extractor,
     peak_sign="neg",
