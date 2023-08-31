@@ -696,8 +696,8 @@ def generate_single_fake_waveform(
         sampling_frequency=None,
         ms_before=1.0,
         ms_after=3.0,
-        amplitude=-1,
-        refactory_amplitude=.15,
+        negative_amplitude=-1,
+        positive_amplitude=.15,
         depolarization_ms=.1,
         repolarization_ms=0.6,
         hyperpolarization_ms=1.1,
@@ -717,19 +717,21 @@ def generate_single_fake_waveform(
     wf = np.zeros(width, dtype=dtype)
 
     # depolarization
-    ndepo = int(sampling_frequency * depolarization_ms/ 1000.)
+    ndepo = int(depolarization_ms * sampling_frequency / 1000.)
+    assert ndepo < nafter, "ms_before is too short"
     tau_ms = depolarization_ms * .2
-    wf[nbefore - ndepo:nbefore] = exp_growth(0, amplitude, depolarization_ms, tau_ms, sampling_frequency, flip=False)
+    wf[nbefore - ndepo:nbefore] = exp_growth(0, negative_amplitude, depolarization_ms, tau_ms, sampling_frequency, flip=False)
 
     # repolarization
-    nrepol = int(sampling_frequency * repolarization_ms / 1000.)
+    nrepol = int(repolarization_ms  * sampling_frequency / 1000.)
     tau_ms = repolarization_ms * .5
-    wf[nbefore:nbefore + nrepol] = exp_growth(amplitude, refactory_amplitude, repolarization_ms, tau_ms, sampling_frequency, flip=True)
+    wf[nbefore:nbefore + nrepol] = exp_growth(negative_amplitude, positive_amplitude, repolarization_ms, tau_ms, sampling_frequency, flip=True)
 
-    # refactory
-    nrefac = int(sampling_frequency * hyperpolarization_ms/ 1000.)
+    # hyperpolarization
+    nrefac = int(hyperpolarization_ms * sampling_frequency / 1000.)
+    assert nrefac + nrepol < nafter, "ms_after is too short"
     tau_ms = hyperpolarization_ms * 0.5
-    wf[nbefore + nrepol:nbefore + nrepol + nrefac] = exp_growth(refactory_amplitude, 0., hyperpolarization_ms, tau_ms, sampling_frequency, flip=True)
+    wf[nbefore + nrepol:nbefore + nrepol + nrefac] = exp_growth(positive_amplitude, 0., hyperpolarization_ms, tau_ms, sampling_frequency, flip=True)
 
 
     # gaussian smooth
@@ -753,6 +755,15 @@ def generate_single_fake_waveform(
     return wf
 
 
+default_unit_params_range = dict(
+    alpha=(5_000., 15_000.),
+    depolarization_ms=(.09, .14),
+    repolarization_ms=(0.5, 0.8),
+    hyperpolarization_ms=(1., 1.5),
+    positive_amplitude=(0.05, 0.15),
+    smooth_ms=(0.03, 0.07),
+)
+
 def generate_templates(
         channel_locations,
         units_locations,
@@ -762,8 +773,8 @@ def generate_templates(
         seed=None,
         dtype="float32",
         upsample_factor=None,
-
-
+        unit_params=dict(),
+        unit_params_range=dict(),
     ):
     """
     Generate some template from given channel position and neuron position.
@@ -793,6 +804,14 @@ def generate_templates(
         If not None then template are generated upsampled by this factor.
         Then a new dimention (axis=3) is added to the template with intermediate inter sample representation.
         This allow easy random jitter by choising a template this new dim
+    unit_params: dict of arrays
+        An optional dict containing parameters per units.
+        Keys are parameter names: 'alpha', 'depolarization_ms', 'repolarization_ms', 'hyperpolarization_ms'
+        Values contains vector with same size of units.
+        If the key is not in dict then it is generated using unit_params_range
+    unit_params_range: dict of tuple
+        Used to generate parameters when no given.
+        The random if uniform in the range.
 
     Returns
     -------
@@ -803,6 +822,7 @@ def generate_templates(
     
     """
     rng = np.random.default_rng(seed=seed)
+
 
     # neuron location must be 3D
     assert units_locations.shape[1] == 3
@@ -828,26 +848,41 @@ def generate_templates(
         templates = np.zeros((num_units, width, num_channels), dtype=dtype)
         fs = sampling_frequency
 
+    # check or generate params per units
+    params = dict()
+    for k in default_unit_params_range.keys():
+        if k in unit_params:
+            assert unit_params[k].size == num_units
+            params[k] = unit_params[k]
+        else:
+            v = rng.random(num_units)
+            if k in unit_params_range:
+                lim0, lim1 = unit_params_range[k]
+            else:
+                lim0, lim1 = default_unit_params_range[k]
+            params[k] = v * (lim1 - lim0) + lim0
+
     for u in range(num_units):
         wf = generate_single_fake_waveform(
                 sampling_frequency=fs,
                 ms_before=ms_before,
                 ms_after=ms_after,
-                amplitude=-1,
-                refactory_amplitude=.15,
-                depolarization_ms=.1,
-                repolarization_ms=0.6,
-                hyperpolarization_ms=1.1,
-                smooth_ms=0.05,
+                negative_amplitude=-1,
+                positive_amplitude=params["positive_amplitude"][u],                
+                depolarization_ms=params["depolarization_ms"][u],
+                repolarization_ms=params["repolarization_ms"][u],
+                hyperpolarization_ms=params["hyperpolarization_ms"][u],
+                smooth_ms=params["smooth_ms"][u],
                 dtype=dtype,
             )
         
-        # naive formula for spatial decay
+                
+        alpha = params["alpha"][u]
         # the espilon avoid enormous factors
-        scale = 17000.
-        eps = 4.
+        eps = 1.
         pow = 1.5
-        channel_factors = scale / (distances[u, :] + eps) ** pow
+        # naive formula for spatial decay
+        channel_factors = alpha / (distances[u, :] + eps) ** pow
         if upsample_factor is not None:
             for f in range(upsample_factor):
                 templates[u, :, :, f] = wf[f::upsample_factor, np.newaxis] * channel_factors[np.newaxis, :]
@@ -1131,14 +1166,15 @@ def generate_channel_locations(num_channels, num_columns, contact_spacing_um):
             j += num_contact_per_column
     return channel_locations
 
-def generate_unit_locations(num_units, channel_locations, margin_um, seed):
+def generate_unit_locations(num_units, channel_locations, margin_um=20., minimum_z=5., maximum_z=50., seed=None):
     rng = np.random.default_rng(seed=seed)
     units_locations = np.zeros((num_units, 3), dtype='float32')
     for dim in (0, 1):
         lim0 = np.min(channel_locations[:, dim]) - margin_um
         lim1 = np.max(channel_locations[:, dim]) + margin_um
         units_locations[:, dim] = rng.uniform(lim0, lim1, size=num_units)
-    units_locations[:, 2] = rng.uniform(0, margin_um, size=num_units)
+    units_locations[:, 2] = rng.uniform(minimum_z, maximum_z, size=num_units)
+
     return units_locations
 
 
@@ -1156,6 +1192,7 @@ def generate_ground_truth_recording(
         upsample_vector=None,
         generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=1.5),
         noise_kwargs=dict(noise_level=5., strategy="on_the_fly"),
+        generate_unit_locations_kwargs=dict(margin_um=10., minimum_z=5., maximum_z=50.),
         generate_templates_kwargs=dict(),
         dtype="float32",
         seed=None,
@@ -1195,8 +1232,10 @@ def generate_ground_truth_recording(
         When sorting is not provide, this dict is used to generated a Sorting.
     noise_kwargs: dict
         Dict used to generated the noise with NoiseGeneratorRecording.
+    generate_unit_locations_kwargs: dict
+        Dict used to generated template when template not provided.
     generate_templates_kwargs: dict
-        Dict ised to generated template when template not provided.
+        Dict used to generated template when template not provided.
     dtype: np.dtype, default "float32"
         The dtype of the recording.
     seed: int or None
@@ -1238,8 +1277,7 @@ def generate_ground_truth_recording(
 
     if templates is None:
         channel_locations = probe.contact_positions
-        margin_um = 20.
-        unit_locations = generate_unit_locations(num_units, channel_locations, margin_um, seed)
+        unit_locations = generate_unit_locations(num_units, channel_locations, seed=seed, **generate_unit_locations_kwargs)
         templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
                 upsample_factor=upsample_factor, seed=seed, dtype=dtype, **generate_templates_kwargs)
     else:

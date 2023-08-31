@@ -272,6 +272,8 @@ def test_generate_templates():
     sampling_frequency = 30000.
     ms_before = 1.
     ms_after = 3.
+
+    # standard case
     templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
             upsample_factor=None,
             seed=42,
@@ -281,16 +283,25 @@ def test_generate_templates():
     assert templates.shape[2] == num_chans
     assert templates.shape[0] == num_units
 
+    # play with params
+    templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
+            upsample_factor=None,
+            seed=42,
+            dtype="float32",
+            unit_params=dict(alpha=np.ones(num_units) * 8000.),
+            unit_params_range=dict(smooth_ms=(0.04, 0.05)),
+        )
 
-    # templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
-    #         upsample_factor=3,
-    #         seed=42,
-    #         dtype="float32",
-    #     )
-    # assert templates.ndim == 4
-    # assert templates.shape[2] == num_chans
-    # assert templates.shape[0] == num_units
-    # assert templates.shape[3] == 3
+    # upsampling case
+    templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
+            upsample_factor=3,
+            seed=42,
+            dtype="float32",
+        )
+    assert templates.ndim == 4
+    assert templates.shape[2] == num_chans
+    assert templates.shape[0] == num_units
+    assert templates.shape[3] == 3
 
 
     # import matplotlib.pyplot as plt
@@ -308,7 +319,7 @@ def test_inject_templates():
     durations = [5.0, 2.5]
     sampling_frequency = 20000.0
     ms_before = 0.9
-    ms_after = 1.9
+    ms_after = 2.2
     nbefore = int(ms_before * sampling_frequency)
     upsample_factor = 3
 
