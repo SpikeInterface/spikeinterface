@@ -1165,7 +1165,7 @@ def generate_channel_locations(num_channels, num_columns, contact_spacing_um):
             j += num_contact_per_column
     return channel_locations
 
-def generate_unit_locations(num_units, channel_locations, margin_um=20., minimum_z=5., maximum_z=50., seed=None):
+def generate_unit_locations(num_units, channel_locations, margin_um=20., minimum_z=5., maximum_z=40., seed=None):
     rng = np.random.default_rng(seed=seed)
     units_locations = np.zeros((num_units, 3), dtype='float32')
     for dim in (0, 1):

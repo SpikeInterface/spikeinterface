@@ -95,8 +95,9 @@ def toy_example(
     # this is hard coded now but it use to be like this
     ms_before = 1.5
     ms_after = 3.    
-    margin_um = 15.
-    unit_locations = generate_unit_locations(num_units, channel_locations, margin_um, seed)
+    unit_locations = generate_unit_locations(
+        num_units, channel_locations, margin_um=15., minimum_z=5., maximum_z=50., seed=seed
+    )
     templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
             upsample_factor=upsample_factor, seed=seed, dtype="float32")
 
