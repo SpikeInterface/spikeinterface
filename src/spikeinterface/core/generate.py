@@ -86,7 +86,7 @@ def generate_recording(
         raise ValueError("generate_recording() : wrong mode")
     
     recording.annotate(is_filtered=True)
-    
+
     if set_probe:
         probe = generate_linear_probe(num_elec=num_channels)
         if ndim == 3:
@@ -144,8 +144,8 @@ def generate_sorting(
         if empty_units is not None:
             keep = ~np.in1d(labels, empty_units)
             times = times[keep]
-            labels = times[labels]
-
+            labels = labels[keep]
+        
         spikes_in_seg = np.zeros(times.size, dtype=minimum_spike_dtype)
         spikes_in_seg["sample_index"] = times
         spikes_in_seg["unit_index"] = labels
@@ -282,6 +282,7 @@ def synthesize_random_firings(
             b = refractory_sample * 20
             shift = a + (b - a) * x**2
             spike_times[some] += shift
+            times0 = times0[(0 <= times0) & (times0 < N)]
 
         violations, = np.nonzero(np.diff(spike_times) < refractory_sample)
         spike_times = np.delete(spike_times, violations)
@@ -479,7 +480,7 @@ class NoiseGeneratorRecording(BaseRecording):
         The sampling frequency of the recorder.
     durations : List[float]
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
-    amplitude: float, default 5:
+    noise_level: float, default 5:
         Std of the white noise
     dtype : Optional[Union[np.dtype, str]], default='float32'
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
@@ -494,7 +495,7 @@ class NoiseGeneratorRecording(BaseRecording):
         mode: 'random_peaks'
             The recording segment is composed of a signal with bumpy peaks.
             The peaks are non biologically realistic but are useful for testing memory problems with
-            spike sorting algorithms.
+            spike sorting algorithms.strategy
 
             See `GeneratorRecordingSegment._random_peaks_generator` for more details.
 
@@ -508,7 +509,7 @@ class NoiseGeneratorRecording(BaseRecording):
         num_channels: int,
         sampling_frequency: float,
         durations: List[float],
-        amplitude: float = 5.,        
+        noise_level: float = 5.,        
         dtype: Optional[Union[np.dtype, str]] = "float32",
         seed: Optional[int] = None,
         strategy: Literal["tile_pregenerated", "on_the_fly"] = "tile_pregenerated",
@@ -535,7 +536,7 @@ class NoiseGeneratorRecording(BaseRecording):
         for i in range(num_segments):
             num_samples = int(durations[i] * sampling_frequency)
             rec_segment = NoiseGeneratorRecordingSegment(num_samples, num_channels, sampling_frequency,
-                                                         noise_block_size, amplitude, dtype,
+                                                         noise_block_size, noise_level, dtype,
                                                          segments_seeds[i], strategy)
             self.add_recording_segment(rec_segment)
 
@@ -551,7 +552,7 @@ class NoiseGeneratorRecording(BaseRecording):
 
 
 class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
-    def __init__(self, num_samples, num_channels, sampling_frequency, noise_block_size, amplitude, dtype, seed, strategy):
+    def __init__(self, num_samples, num_channels, sampling_frequency, noise_block_size, noise_level, dtype, seed, strategy):
         assert seed is not None
         
         
@@ -560,14 +561,14 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
         self.num_samples = num_samples
         self.num_channels = num_channels
         self.noise_block_size = noise_block_size
-        self.amplitude = amplitude
+        self.noise_level = noise_level
         self.dtype = dtype
         self.seed = seed
         self.strategy = strategy
 
         if self.strategy == "tile_pregenerated":
             rng = np.random.default_rng(seed=self.seed)
-            self.noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels)).astype(self.dtype) * amplitude
+            self.noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels)).astype(self.dtype) * noise_level
         elif self.strategy == "on_the_fly":
             pass
         
@@ -600,7 +601,7 @@ class NoiseGeneratorRecordingSegment(BaseRecordingSegment):
             elif self.strategy == "on_the_fly":
                 rng = np.random.default_rng(seed=(self.seed, block_index))
                 noise_block = rng.standard_normal(size=(self.noise_block_size, self.num_channels)).astype(self.dtype)
-                noise_block *= self.amplitude
+                noise_block *= self.noise_level
 
             if block_index == start_block_index:
                 if start_block_index != end_block_index:
@@ -699,7 +700,7 @@ def generate_single_fake_waveform(
         refactory_amplitude=.15,
         depolarization_ms=.1,
         repolarization_ms=0.6,
-        refactory_ms=1.1,
+        hyperpolarization_ms=1.1,
         smooth_ms=0.05,
         dtype="float32",
     ):
@@ -726,9 +727,9 @@ def generate_single_fake_waveform(
     wf[nbefore:nbefore + nrepol] = exp_growth(amplitude, refactory_amplitude, repolarization_ms, tau_ms, sampling_frequency, flip=True)
 
     # refactory
-    nrefac = int(sampling_frequency * refactory_ms/ 1000.)
-    tau_ms = refactory_ms * 0.5
-    wf[nbefore + nrepol:nbefore + nrepol + nrefac] = exp_growth(refactory_amplitude, 0., refactory_ms, tau_ms, sampling_frequency, flip=True)
+    nrefac = int(sampling_frequency * hyperpolarization_ms/ 1000.)
+    tau_ms = hyperpolarization_ms * 0.5
+    wf[nbefore + nrepol:nbefore + nrepol + nrefac] = exp_growth(refactory_amplitude, 0., hyperpolarization_ms, tau_ms, sampling_frequency, flip=True)
 
 
     # gaussian smooth
@@ -761,11 +762,51 @@ def generate_templates(
         seed=None,
         dtype="float32",
         upsample_factor=None,
+
+        
     ):
+    """
+    Generate some template from given channel position and neuron position.
+
+    The implementation is very naive : it generates a mono channel waveform using generate_single_fake_waveform()
+    and duplicates this same waveform on all channel given a simple monopolar decay law per unit.
+
+
+    Parameters
+    ----------
+
+    channel_locations: np.ndarray
+        Channel locations.
+    units_locations: np.ndarray
+        Must be 3D.
+    sampling_frequency: float
+        Sampling frequency.
+    ms_before: float
+        Cut out in ms before spike peak.
+    ms_after: float
+        Cut out in ms after spike peak.
+    seed: int or None
+        A seed for random.
+    dtype: numpy.dtype, default "float32"
+        Templates dtype
+    upsample_factor: None or int
+        If not None then template are generated upsampled by this factor.
+        Then a new dimention (axis=3) is added to the template with intermediate inter sample representation.
+        This allow easy random jitter by choising a template this new dim
+
+    Returns
+    -------
+    templates: np.array
+        The template array with shape
+            * (num_units, num_samples, num_channels): standard case
+            * (num_units, num_samples, num_channels, upsample_factor) if upsample_factor is not None
+    
+    """
     rng = np.random.default_rng(seed=seed)
 
-    # neuron location is 3D
+    # neuron location must be 3D
     assert units_locations.shape[1] == 3
+
     # channel_locations to 3D
     if channel_locations.shape[1] == 2:
         channel_locations = np.hstack([channel_locations, np.zeros((channel_locations.shape[0], 1))])
@@ -796,7 +837,7 @@ def generate_templates(
                 refactory_amplitude=.15,
                 depolarization_ms=.1,
                 repolarization_ms=0.6,
-                refactory_ms=1.1,
+                hyperpolarization_ms=1.1,
                 smooth_ms=0.05,
                 dtype=dtype,
             )
@@ -804,7 +845,7 @@ def generate_templates(
         # naive formula for spatial decay
         # the espilon avoid enormous factors
         scale = 17000.
-        eps = 1.
+        eps = 4.
         pow = 2
         channel_factors = scale / (distances[u, :] + eps) ** pow
         if upsample_factor is not None:
@@ -830,15 +871,19 @@ class InjectTemplatesRecording(BaseRecording):
     ----------
     sorting: BaseSorting
         Sorting object containing all the units and their spike train.
-    templates: np.ndarray[n_units, n_samples, n_channels]
+    templates: np.ndarray[n_units, n_samples, n_channels] or np.ndarray[n_units, n_samples, n_oversampling]
         Array containing the templates to inject for all the units.
+        Shape can be:
+            * (num_units, num_samples, num_channels): standard case
+            * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce sampling jitter.
     nbefore: list[int] | int | None
         Where is the center of the template for each unit?
         If None, will default to the highest peak.
-    amplitude_factor: list[list[float]] | list[float] | float
-        The amplitude of each spike for each unit (1.0=default).
-        Can be sent as a list[float] the same size as the spike vector.
-        Will default to 1.0 everywhere.
+    amplitude_factor: list[float] | float | None, default None
+        The amplitude of each spike for each unit.
+        Can be None (no scaling).
+        Can be scalar all spikes have the same factor (certainly useless).
+        Can be a vector with same shape of spike_vector of the sorting.
     parent_recording: BaseRecording | None
         The recording over which to add the templates.
         If None, will default to traces containing all 0.
@@ -857,9 +902,10 @@ class InjectTemplatesRecording(BaseRecording):
         sorting: BaseSorting,
         templates: np.ndarray,
         nbefore: Union[List[int], int, None] = None,
-        amplitude_factor: Union[List[List[float]], List[float], float] = 1.0,
+        amplitude_factor: Union[List[List[float]], List[float], float, None] = None,
         parent_recording: Union[BaseRecording, None] = None,
         num_samples: Union[List[int], None] = None,
+        upsample_vector: Union[List[int], None] = None,
     ) -> None:
         templates = np.array(templates)
         self._check_templates(templates)
@@ -881,24 +927,30 @@ class InjectTemplatesRecording(BaseRecording):
             assert len(nbefore) == n_units
 
 
-        if isinstance(amplitude_factor, float):
-            amplitude_factor = np.array([1.0] * len(self.spike_vector), dtype=np.float32)
-        elif len(amplitude_factor) != len(
-            self.spike_vector
-        ):  # In this case, it's a list of list for amplitude by unit by spike.
-            tmp = np.array([], dtype=np.float32)
+        if templates.ndim == 3:
+            # standard case
+            upsample_factor = None
+        elif templates.ndim == 4:
+            # handle also upsampling and jitter
+            upsample_factor = templates.shape[3]
+        elif templates.ndim == 5:
+            # handle also dirft
+            raise NotImplementedError("Drift will be implented soon...")
+            # upsample_factor = templates.shape[3]
+        else:
+            raise ValueError("templates have wring dim should 3 or 4")
 
-            for segment_index in range(sorting.get_num_segments()):
-                spike_times = [
-                    sorting.get_unit_spike_train(unit_id, segment_index=segment_index) for unit_id in sorting.unit_ids
-                ]
-                spike_times = np.concatenate(spike_times)
-                spike_amplitudes = np.concatenate(amplitude_factor[segment_index])
+        if upsample_factor is not None:
+            assert upsample_vector is not None
+            assert upsample_vector.shape == self.spike_vector.shape
 
-                order = np.argsort(spike_times)
-                tmp = np.append(tmp, spike_amplitudes[order])
-
-            amplitude_factor = tmp
+        if amplitude_factor is None:
+            amplitude_vector = None
+        elif np.isscalar(amplitude_factor, float):
+            amplitude_vector = np.full(self.spike_vector.size, amplitude_factor, dtype="float32")
+        else:
+            assert amplitude_factor.shape == self.spike_vector.shape
+            amplitude_vector = amplitude_factor
 
         if parent_recording is not None:
             assert parent_recording.get_num_segments() == sorting.get_num_segments()
@@ -914,7 +966,7 @@ class InjectTemplatesRecording(BaseRecording):
                     parent_recording.get_num_frames(segment_index)
                     for segment_index in range(sorting.get_num_segments())
                 ]
-        if isinstance(num_samples, int):
+        elif isinstance(num_samples, int):
             assert sorting.get_num_segments() == 1
             num_samples = [num_samples]
 
@@ -922,6 +974,8 @@ class InjectTemplatesRecording(BaseRecording):
             start = np.searchsorted(self.spike_vector["segment_index"], segment_index, side="left")
             end = np.searchsorted(self.spike_vector["segment_index"], segment_index, side="right")
             spikes = self.spike_vector[start:end]
+            amplitude_vec = amplitude_vector[start:end] if amplitude_vector is not None else None
+            upsample_vec = upsample_vector[start:end] if upsample_vector is not None else None
 
             parent_recording_segment = (
                 None if parent_recording is None else parent_recording._recording_segments[segment_index]
@@ -932,7 +986,8 @@ class InjectTemplatesRecording(BaseRecording):
                 spikes,
                 templates,
                 nbefore,
-                amplitude_factor[start:end],
+                amplitude_vec,
+                upsample_vec,
                 parent_recording_segment,
                 num_samples[segment_index],
             )
@@ -943,6 +998,7 @@ class InjectTemplatesRecording(BaseRecording):
             "templates": templates.tolist(),
             "nbefore": nbefore,
             "amplitude_factor": amplitude_factor,
+            "upsample_vector": upsample_vector,
         }
         if parent_recording is None:
             self._kwargs["num_samples"] = num_samples
@@ -968,7 +1024,8 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         spike_vector: np.ndarray,
         templates: np.ndarray,
         nbefore: List[int],
-        amplitude_factor: List[List[float]],
+        amplitude_vector: Union[List[float], None],
+        upsample_vector: Union[List[float], None],
         parent_recording_segment: Union[BaseRecordingSegment, None] = None,
         num_samples: Union[int, None] = None,
     ) -> None:
@@ -983,7 +1040,8 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         self.spike_vector = spike_vector
         self.templates = templates
         self.nbefore = nbefore
-        self.amplitude_factor = amplitude_factor
+        self.amplitude_vector = amplitude_vector
+        self.upsample_vector = upsample_vector
         self.parent_recording = parent_recording_segment
         self.num_samples = parent_recording_segment.get_num_frames() if num_samples is None else num_samples
 
@@ -993,10 +1051,13 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         end_frame: Union[int, None] = None,
         channel_indices: Union[List, None] = None,
     ) -> np.ndarray:
+        
         start_frame = 0 if start_frame is None else start_frame
         end_frame = self.num_samples if end_frame is None else end_frame
-        channel_indices = list(range(self.templates.shape[2])) if channel_indices is None else channel_indices
-        if isinstance(channel_indices, slice):
+
+        if channel_indices is None:
+            n_channels = self.templates.shape[2]
+        elif isinstance(channel_indices, slice):
             stop = channel_indices.stop if channel_indices.stop is not None else self.templates.shape[2]
             start = channel_indices.start if channel_indices.start is not None else 0
             step = channel_indices.step if channel_indices.step is not None else 1
@@ -1016,7 +1077,14 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
             spike = self.spike_vector[i]
             t = spike["sample_index"]
             unit_ind = spike["unit_index"]
-            template = self.templates[unit_ind][:, channel_indices]
+            if self.upsample_vector is None:
+                template = self.templates[unit_ind]
+            else:
+                upsample_ind = self.upsample_vector[i]
+                template = self.templates[unit_ind, :, :, upsample_ind]
+
+            if channel_indices is not None:
+                template = template[:, channel_indices]
 
             start_traces = t - self.nbefore[unit_ind] - start_frame
             end_traces = start_traces + template.shape[0]
@@ -1033,9 +1101,10 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
                 end_template = template.shape[0] + end_frame - start_frame - end_traces
                 end_traces = end_frame - start_frame
 
-            traces[start_traces:end_traces] += (
-                template[start_template:end_template].astype(np.float64) * self.amplitude_factor[i]
-            ).astype(traces.dtype)
+            wf = template[start_template:end_template]
+            if self.amplitude_vector is not None:
+                wf *= self.amplitude_vector[i]
+            traces[start_traces:end_traces] += wf
 
         return traces.astype(self.dtype)
 
@@ -1083,9 +1152,11 @@ def generate_ground_truth_recording(
         templates=None,
         ms_before=1.,
         ms_after=3.,
+        upsample_factor=None,
+        upsample_vector=None,
         generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=1.5),
-        noise_kwargs=dict(amplitude=5., strategy="on_the_fly"),
-
+        noise_kwargs=dict(noise_level=5., strategy="on_the_fly"),
+        generate_templates_kwargs=dict(),
         dtype="float32",
         seed=None,
     ):
@@ -1107,18 +1178,25 @@ def generate_ground_truth_recording(
     probe: Probe or None
         An external Probe object. If not provided of linear probe is generated.
     templates: np.array or None
-        The template of units.
-        Shape can:
+        The templates of units.
+        If None they are generated. 
+        Shape can be:
             * (num_units, num_samples, num_channels): standard case
-            * (num_units, num_samples, num_channels, num_over_sampling): case with oversample template to introduce jitter.
+            * (num_units, num_samples, num_channels, upsample_factor): case with oversample template to introduce jitter.
     ms_before: float, default 1.5
         Cut out in ms before spike peak.
     ms_after: float, default 3.
         Cut out in ms after spike peak.
+    upsample_factor: None or int, default None
+        A upsampling factor used only when templates are not provided.
+    upsample_vector: np.array or None
+        Optional the upsample_vector can given. This has the same shape as spike_vector
     generate_sorting_kwargs: dict
         When sorting is not provide, this dict is used to generated a Sorting.
     noise_kwargs: dict
         Dict used to generated the noise with NoiseGeneratorRecording.
+    generate_templates_kwargs: dict
+        Dict ised to generated template when template not provided.
     dtype: np.dtype, default "float32"
         The dtype of the recording.
     seed: int or None
@@ -1138,6 +1216,7 @@ def generate_ground_truth_recording(
 
     # if None so the same seed will be used for all steps
     seed = _ensure_seed(seed)
+    rng = np.random.default_rng(seed)
 
     if sorting is None:
         generate_sorting_kwargs = generate_sorting_kwargs.copy()
@@ -1149,6 +1228,7 @@ def generate_ground_truth_recording(
     else:
         num_units =  sorting.get_num_units()
         assert sorting.sampling_frequency == sampling_frequency
+    num_spikes = sorting.to_spike_vector().size
 
     if probe is None:
         probe = generate_linear_probe(num_elec=num_channels)
@@ -1159,17 +1239,18 @@ def generate_ground_truth_recording(
     if templates is None:
         channel_locations = probe.contact_positions
         margin_um = 20.
-        upsample_factor = None
         unit_locations = generate_unit_locations(num_units, channel_locations, margin_um, seed)
         templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
-                upsample_factor=upsample_factor, seed=seed, dtype=dtype)
+                upsample_factor=upsample_factor, seed=seed, dtype=dtype, **generate_templates_kwargs)
     else:
         assert templates.shape[0] == num_units
 
     if templates.ndim == 3:
-        upsample_factor = None
+        upsample_vector = None
     else:
-        upsample_factor = templates.shape[3]
+        if upsample_vector is None:
+            upsample_factor = templates.shape[3]
+            upsample_vector = rng.integers(0, upsample_factor, size=num_spikes)
 
     nbefore = int(ms_before * sampling_frequency  / 1000.)
     nafter = int(ms_after * sampling_frequency  / 1000.)
@@ -1187,7 +1268,7 @@ def generate_ground_truth_recording(
     )
 
     recording = InjectTemplatesRecording(
-        sorting, templates, nbefore=nbefore, parent_recording=noise_rec
+        sorting, templates, nbefore=nbefore, parent_recording=noise_rec, upsample_vector=upsample_vector,
     )
     recording.annotate(is_filtered=True)
     recording.set_probe(probe, in_place=True)
@@ -1195,135 +1276,3 @@ def generate_ground_truth_recording(
 
     return recording, sorting
 
-
-
-def toy_example(
-    duration=10,
-    num_channels=4,
-    num_units=10,
-    sampling_frequency=30000.0,
-    num_segments=2,
-    average_peak_amplitude=-100,
-    upsample_factor=None,
-    contact_spacing_um=40.,
-    num_columns=1,
-    spike_times=None,
-    spike_labels=None,
-    # score_detection=1,
-    firing_rate=3.0,
-    seed=None,
-):
-    """
-    This return a generated dataset with "toy" units and spikes on top on white noise.
-    This is usefull to test api, algos, postprocessing and vizualition without any downloading.
-
-    This a rewrite (with the lazy approach) of the old spikeinterface.extractor.toy_example() which itself was also
-    a rewrite from the very old spikeextractor.toy_example() (from Jeremy Magland).
-    In this new version, the recording is totally lazy and so do not use disk space or memory.
-    It internally uses NoiseGeneratorRecording + generate_waveforms + InjectTemplatesRecording.
-
-    The signature is still the same as before.
-    For better control you should use generate_ground_truth_recording() which is similar but with better signature.
-
-    Parameters
-    ----------
-    duration: float (or list if multi segment)
-        Duration in seconds (default 10).
-    num_channels: int
-        Number of channels (default 4).
-    num_units: int
-        Number of units (default 10).
-    sampling_frequency: float
-        Sampling frequency (default 30000).
-    num_segments: int
-        Number of segments (default 2).
-    spike_times: ndarray (or list of multi segment)
-        Spike time in the recording.
-    spike_labels: ndarray (or list of multi segment)
-        Cluster label for each spike time (needs to specified both together).
-    score_detection: int (between 0 and 1)
-        Generate the sorting based on a subset of spikes compare with the trace generation.
-    firing_rate: float
-        The firing rate for the units (in Hz).
-    seed: int
-        Seed for random initialization.
-
-    Returns
-    -------
-    recording: RecordingExtractor
-        The output recording extractor.
-    sorting: SortingExtractor
-        The output sorting extractor.
-
-    """
-    if upsample_factor is not None:
-        raise NotImplementedError("InjectTemplatesRecording do not support yet upsample_factor but this will be done soon")
-
-    assert num_channels > 0
-    assert num_units > 0
-
-    if isinstance(duration, int):
-        duration = float(duration)
-
-    if isinstance(duration, float):
-        durations = [duration] * num_segments
-    else:
-        durations = duration
-        assert isinstance(duration, list)
-        assert len(durations) == num_segments
-        assert all(isinstance(d, float) for d in durations)
-
-    unit_ids = np.arange(num_units, dtype="int64")
-
-    # generate probe
-    channel_locations = generate_channel_locations(num_channels, num_columns, contact_spacing_um)
-    probe = Probe(ndim=2)
-    probe.set_contacts(positions=channel_locations, shapes="circle", shape_params={"radius": 5})
-    probe.create_auto_shape(probe_type="rect", margin=20.)
-    probe.set_device_channel_indices(np.arange(num_channels, dtype="int64"))
-
-    # generate templates
-    # this is hard coded now but it use to be like this
-    ms_before = 1.5
-    ms_after = 3.    
-    margin_um = 15.
-    unit_locations = generate_unit_locations(num_units, channel_locations, margin_um, seed)
-    templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
-            upsample_factor=upsample_factor, seed=seed, dtype="float32")
-
-    if average_peak_amplitude is not None:
-        # ajustement au mean amplitude
-        amps = np.min(templates, axis=(1, 2))
-        templates *= (average_peak_amplitude / np.mean(amps))
-
-    
-    # construct sorting
-    if spike_times is not None:
-        assert isinstance(spike_times, list)
-        assert isinstance(spike_labels, list)
-        assert len(spike_times) == len(spike_labels)
-        assert len(spike_times) == num_segments
-        sorting = NumpySorting.from_times_labels(spike_times, spike_labels, sampling_frequency, unit_ids=np.arange(num_units))
-    else:
-        sorting = generate_sorting(
-            num_units=num_units,
-            sampling_frequency=sampling_frequency,
-            durations=durations,
-            firing_rates=firing_rate,
-            empty_units=None,
-            refractory_period_ms=1.5,
-        )
-
-    recording, sorting = generate_ground_truth_recording(
-            durations=durations,
-            sampling_frequency=sampling_frequency,
-            sorting=sorting,
-            probe=probe,
-            templates=templates,
-            ms_before=ms_before,
-            ms_after=ms_after,
-            dtype="float32",
-            seed=seed,
-        )
-
-    return recording, sorting

@@ -80,8 +80,8 @@ class HybridUnitsRecording(InjectTemplatesRecording):
                 num_units=len(templates),
                 sampling_frequency=fs,
                 durations=durations,
-                firing_rate=firing_rate,
-                refractory_period=refractory_period_ms,
+                firing_rates=firing_rate,
+                refractory_period_ms=refractory_period_ms,
             )
         # save injected sorting if necessary
         self.injected_sorting = injected_sorting

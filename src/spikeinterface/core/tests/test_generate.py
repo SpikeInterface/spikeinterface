@@ -7,7 +7,7 @@ from spikeinterface.core import load_extractor, extract_waveforms
 from spikeinterface.core.generate import (generate_recording, generate_sorting, NoiseGeneratorRecording, generate_recording_by_size, 
                                           InjectTemplatesRecording, generate_single_fake_waveform, generate_templates,
                                           generate_channel_locations, generate_unit_locations, generate_ground_truth_recording,
-                                          toy_example)
+                                          )
 
 
 from spikeinterface.core.core_tools import convert_bytes_to_str
@@ -311,26 +311,34 @@ def test_inject_templates():
     ms_before = 0.9
     ms_after = 1.9
     nbefore = int(ms_before * sampling_frequency)
+    upsample_factor = 3
 
     # generate some sutff
     rec_noise = generate_recording(num_channels=num_channels, durations=durations, sampling_frequency=sampling_frequency, mode="lazy", seed=42)
     channel_locations = rec_noise.get_channel_locations()
     sorting = generate_sorting(num_units=num_units, durations=durations, sampling_frequency=sampling_frequency, firing_rates=1., seed=42)
     units_locations = generate_unit_locations(num_units, channel_locations, margin_um=10., seed=42)
-    templates = generate_templates(channel_locations, units_locations, sampling_frequency, ms_before, ms_after, seed=42, upsample_factor=None)
+    templates_3d = generate_templates(channel_locations, units_locations, sampling_frequency, ms_before, ms_after, seed=42, upsample_factor=None)
+    templates_4d = generate_templates(channel_locations, units_locations, sampling_frequency, ms_before, ms_after, seed=42, upsample_factor=upsample_factor)
 
     # Case 1: parent_recording = None
     rec1 = InjectTemplatesRecording(
         sorting,
-        templates,
+        templates_3d,
         nbefore=nbefore,
         num_samples=[rec_noise.get_num_frames(seg_ind) for seg_ind in range(rec_noise.get_num_segments())],
     )
 
-    # Case 2: parent_recording != None
-    rec2 = InjectTemplatesRecording(sorting, templates, nbefore=nbefore, parent_recording=rec_noise)
+    # Case 2: with parent_recording
+    rec2 = InjectTemplatesRecording(sorting, templates_3d, nbefore=nbefore, parent_recording=rec_noise)
 
-    for rec in (rec1, rec2):
+    # Case 3: with parent_recording + upsample_factor
+    rng = np.random.default_rng(seed=42)
+    upsample_vector = rng.integers(0, upsample_factor, size=sorting.to_spike_vector().size)
+    rec3 = InjectTemplatesRecording(sorting, templates_4d, nbefore=nbefore, parent_recording=rec_noise, upsample_vector=upsample_vector)
+
+
+    for rec in (rec1, rec2, rec3):
         assert rec.get_traces(end_frame=600, segment_index=0).shape == (600, 4)
         assert rec.get_traces(start_frame=100, end_frame=600, segment_index=1).shape == (500, 4)
         assert rec.get_traces(start_frame=rec_noise.get_num_frames(0) - 200, segment_index=0).shape == (200, 4)
@@ -341,22 +349,13 @@ def test_inject_templates():
 
 
 def test_generate_ground_truth_recording():
-    rec, sorting = generate_ground_truth_recording()
+    rec, sorting = generate_ground_truth_recording(upsample_factor=None)
+    assert rec.templates.ndim == 3
 
-def test_toy_example():
-    rec, sorting = toy_example(num_segments=2, num_units=10)
-    assert rec.get_num_segments() == 2
-    assert sorting.get_num_segments() == 2
-    assert sorting.get_num_units() == 10
+    rec, sorting = generate_ground_truth_recording(upsample_factor=2)
+    assert rec.templates.ndim == 4
 
-    # rec, sorting = toy_example(num_segments=1, num_channels=16, num_columns=2)
-    # assert rec.get_num_segments() == 1
-    # assert sorting.get_num_segments() == 1
-    # print(rec)
-    # print(sorting)
 
-    probe = rec.get_probe()
-    # print(probe)
 
 
 if __name__ == "__main__":
@@ -374,4 +373,3 @@ if __name__ == "__main__":
     # test_inject_templates()
     test_generate_ground_truth_recording()
 
-    # test_toy_example()
