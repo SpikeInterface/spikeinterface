@@ -486,18 +486,14 @@ class NoiseGeneratorRecording(BaseRecording):
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
     seed : Optional[int], default=None
         The seed for np.random.default_rng.
-    mode : Literal['white_noise', 'random_peaks'], default='white_noise'
-        The mode of the recording segment.
-
-        mode: 'white_noise'
-            The recording segment is pure noise sampled from a normal distribution.
-            See `GeneratorRecordingSegment._white_noise_generator` for more details.
-        mode: 'random_peaks'
-            The recording segment is composed of a signal with bumpy peaks.
-            The peaks are non biologically realistic but are useful for testing memory problems with
-            spike sorting algorithms.strategy
-
-            See `GeneratorRecordingSegment._random_peaks_generator` for more details.
+    strategy : "tile_pregenerated" or "on_the_fly"
+        The strategy of generating noise chunk:
+          * "tile_pregenerated": pregenerate a noise chunk of noise_block_size sample and repeat it
+                                 very fast and cusume only one noise block.
+          * "on_the_fly": generate on the fly a new noise block by combining seed + noise block index
+                          no memory preallocation but a bit more computaion (random)
+    noise_block_size: int
+        Size in sample of noise block.
 
     Note
     ----

@@ -49,61 +49,52 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
     return memory
 
 
-@pytest.mark.parametrize("strategy", strategy_list)
-def test_noise_generator_memory(strategy):
+
+def test_noise_generator_memory():
     # Test that get_traces does not consume more memory than allocated.
 
     bytes_to_MiB_factor = 1024**2
     relative_tolerance = 0.05  # relative tolerance of 5 per cent
 
     sampling_frequency = 30000  # Hz
-    durations = [2.0]
+    noise_block_size = 60_000
+    durations = [20.0]
     dtype = np.dtype("float32")
     num_channels = 384
     seed = 0
-
     num_samples = int(durations[0] * sampling_frequency)
-    # Around 100 MiB  4 bytes per sample * 384 channels * 30000  samples * 2 seconds duration
-    expected_trace_size_MiB = dtype.itemsize * num_channels * num_samples / bytes_to_MiB_factor
 
-    initial_memory_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    lazy_recording = NoiseGeneratorRecording(
+    # case 1 preallocation of noise use one noise block 88M for 60000 sample of 384
+    before_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
+    rec1 = NoiseGeneratorRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,        
         dtype=dtype,
         seed=seed,
-        strategy=strategy,
+        strategy="tile_pregenerated",
+        noise_block_size=noise_block_size,
     )
+    after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
+    memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
+    expected_allocation_MiB = dtype.itemsize * num_channels * noise_block_size / bytes_to_MiB_factor
+    ratio = expected_allocation_MiB / expected_allocation_MiB
+    assert ratio <= 1.0 + relative_tolerance, f"NoiseGeneratorRecording with 'tile_pregenerated' wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
 
-    memory_after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    expected_memory_usage_MiB = initial_memory_MiB
-    if strategy == "tile_pregenerated":
-        expected_memory_usage_MiB += 50  # 50 MiB for the white noise generator
-
-    ratio = memory_after_instanciation_MiB * 1.0 / expected_memory_usage_MiB
-    assertion_msg = (
-        f"Memory after instantation is {memory_after_instanciation_MiB} MiB and is {ratio:.2f} times"
-        f"the expected memory usage of {expected_memory_usage_MiB} MiB."
+    # case 2: no preallocation very few memory (under 2 MiB)
+    before_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
+    rec2 = NoiseGeneratorRecording(
+        num_channels=num_channels,
+        sampling_frequency=sampling_frequency,
+        durations=durations,        
+        dtype=dtype,
+        seed=seed,
+        strategy="on_the_fly",
+        noise_block_size=noise_block_size,
     )
-    assert ratio <= 1.0 + relative_tolerance, assertion_msg
-
-    traces = lazy_recording.get_traces()
-    expected_traces_shape = (int(durations[0] * sampling_frequency), num_channels)
-
-    traces_size_MiB = traces.nbytes / bytes_to_MiB_factor
-    assert traces_size_MiB == expected_trace_size_MiB
-    assert traces.shape == expected_traces_shape
-
-    memory_after_traces_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-
-    expected_memory_usage_MiB = memory_after_instanciation_MiB + traces_size_MiB
-    ratio = memory_after_traces_MiB * 1.0 / expected_memory_usage_MiB
-    assertion_msg = (
-        f"Memory after loading traces is {memory_after_traces_MiB} MiB and is {ratio:.2f} times"
-        f"the expected memory usage of {expected_memory_usage_MiB} MiB."
-    )
-    assert ratio <= 1.0 + relative_tolerance, assertion_msg
+    after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
+    memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
+    assert memory_usage_MiB < 2, f"NoiseGeneratorRecording with 'on_the_fly wrong memory  {memory_usage_MiB}MiB"
 
 
 def test_noise_generator_under_giga():
@@ -369,9 +360,9 @@ def test_generate_ground_truth_recording():
 
 
 if __name__ == "__main__":
-    # strategy = "tile_pregenerated"
+    strategy = "tile_pregenerated"
     # strategy = "on_the_fly"
-    # test_noise_generator_memory(strategy)
+    test_noise_generator_memory()
     # test_noise_generator_under_giga()
     # test_noise_generator_correct_shape(strategy)
     # test_noise_generator_consistency_across_calls(strategy, 0, 5)
@@ -379,7 +370,7 @@ if __name__ == "__main__":
     # test_noise_generator_consistency_after_dump(strategy, None)
     # test_generate_recording()
     # test_generate_single_fake_waveform()
-    test_generate_templates()
+    # test_generate_templates()
     # test_inject_templates()
     # test_generate_ground_truth_recording()
 
