@@ -136,7 +136,7 @@ def test_run_node_pipeline():
     folder = cache_folder / "pipeline_folder"
     if folder.is_dir():
         shutil.rmtree(folder)
-    
+
     output = run_node_pipeline(
         recording,
         nodes,
