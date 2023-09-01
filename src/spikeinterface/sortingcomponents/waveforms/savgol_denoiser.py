@@ -4,7 +4,7 @@ from typing import List, Optional
 import scipy.signal
 
 from spikeinterface.core import BaseRecording
-from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
+from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
 
 
 class SavGolDenoiser(WaveformsNode):
