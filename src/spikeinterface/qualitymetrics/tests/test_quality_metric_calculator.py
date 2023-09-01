@@ -261,7 +261,6 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
             we_sparse, metric_names=metric_names, sparsity=None, seed=0, n_jobs=2
         )
         for metric_name in metrics.columns:
-            
             assert np.allclose(metrics[metric_name], metrics_par[metric_name])
 
     def test_recordingless(self):
@@ -278,7 +277,6 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
 
         print(qm_rec)
         print(qm_no_rec)
-
 
         # check metrics are the same
         for metric_name in qm_rec.columns:

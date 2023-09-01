@@ -35,11 +35,12 @@ from .generate import (
     inject_some_split_units,
     synthetize_spike_train_bad_isi,
     generate_templates,
-    NoiseGeneratorRecording, noise_generator_recording,
+    NoiseGeneratorRecording,
+    noise_generator_recording,
     generate_recording_by_size,
-    InjectTemplatesRecording, inject_templates,
+    InjectTemplatesRecording,
+    inject_templates,
     generate_ground_truth_recording,
-
 )
 
 # utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)

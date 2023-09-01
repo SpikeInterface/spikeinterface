@@ -2,8 +2,13 @@ import numpy as np
 
 from probeinterface import Probe
 from spikeinterface.core import NumpySorting
-from spikeinterface.core.generate import (generate_sorting, generate_channel_locations,
-                                 generate_unit_locations, generate_templates, generate_ground_truth_recording)
+from spikeinterface.core.generate import (
+    generate_sorting,
+    generate_channel_locations,
+    generate_unit_locations,
+    generate_templates,
+    generate_ground_truth_recording,
+)
 
 
 def toy_example(
@@ -14,7 +19,7 @@ def toy_example(
     num_segments=2,
     average_peak_amplitude=-100,
     upsample_factor=None,
-    contact_spacing_um=40.,
+    contact_spacing_um=40.0,
     num_columns=1,
     spike_times=None,
     spike_labels=None,
@@ -66,7 +71,9 @@ def toy_example(
 
     """
     if upsample_factor is not None:
-        raise NotImplementedError("InjectTemplatesRecording do not support yet upsample_factor but this will be done soon")
+        raise NotImplementedError(
+            "InjectTemplatesRecording do not support yet upsample_factor but this will be done soon"
+        )
 
     assert num_channels > 0
     assert num_units > 0
@@ -88,24 +95,32 @@ def toy_example(
     channel_locations = generate_channel_locations(num_channels, num_columns, contact_spacing_um)
     probe = Probe(ndim=2)
     probe.set_contacts(positions=channel_locations, shapes="circle", shape_params={"radius": 5})
-    probe.create_auto_shape(probe_type="rect", margin=20.)
+    probe.create_auto_shape(probe_type="rect", margin=20.0)
     probe.set_device_channel_indices(np.arange(num_channels, dtype="int64"))
 
     # generate templates
     # this is hard coded now but it use to be like this
     ms_before = 1.5
-    ms_after = 3.    
+    ms_after = 3.0
     unit_locations = generate_unit_locations(
-        num_units, channel_locations, margin_um=15., minimum_z=5., maximum_z=50., seed=seed
+        num_units, channel_locations, margin_um=15.0, minimum_z=5.0, maximum_z=50.0, seed=seed
     )
-    templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
-            upsample_factor=upsample_factor, seed=seed, dtype="float32")
+    templates = generate_templates(
+        channel_locations,
+        unit_locations,
+        sampling_frequency,
+        ms_before,
+        ms_after,
+        upsample_factor=upsample_factor,
+        seed=seed,
+        dtype="float32",
+    )
 
     if average_peak_amplitude is not None:
         # ajustement au mean amplitude
         amps = np.min(templates, axis=(1, 2))
-        templates *= (average_peak_amplitude / np.mean(amps))
-    
+        templates *= average_peak_amplitude / np.mean(amps)
+
     # construct sorting
     if spike_times is not None:
         assert isinstance(spike_times, list)
@@ -121,20 +136,20 @@ def toy_example(
             firing_rates=firing_rate,
             empty_units=None,
             refractory_period_ms=4.0,
-            seed=seed
+            seed=seed,
         )
 
     recording, sorting = generate_ground_truth_recording(
-            durations=durations,
-            sampling_frequency=sampling_frequency,
-            sorting=sorting,
-            probe=probe,
-            templates=templates,
-            ms_before=ms_before,
-            ms_after=ms_after,
-            dtype="float32",
-            seed=seed,
-            noise_kwargs=dict(noise_level=10., strategy="on_the_fly"),
-        )
+        durations=durations,
+        sampling_frequency=sampling_frequency,
+        sorting=sorting,
+        probe=probe,
+        templates=templates,
+        ms_before=ms_before,
+        ms_after=ms_after,
+        dtype="float32",
+        seed=seed,
+        noise_kwargs=dict(noise_level=10.0, strategy="on_the_fly"),
+    )
 
     return recording, sorting
