@@ -14,7 +14,8 @@ from spikeinterface.sortingcomponents.motion_estimation import (
 )
 
 from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
-from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
+from spikeinterface.core.node_pipeline import ExtractDenseWaveforms
+
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 
 repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"

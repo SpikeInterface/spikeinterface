@@ -6,7 +6,7 @@ from typing import List
 import numpy as np
 from sklearn.decomposition import IncrementalPCA
 
-from spikeinterface.sortingcomponents.peak_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
+from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_selection import select_peaks
 from spikeinterface.postprocessing import compute_principal_components
