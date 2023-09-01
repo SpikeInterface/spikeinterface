@@ -17,7 +17,7 @@ from .core_tools import define_function_from_class
 def _ensure_seed(seed):
     # when seed is None:
     # we want to set one to push it in the Recordind._kwargs to reconstruct the same signal
-    # this is a better approach than having seed=42 or seed=my_dog_birth because we ensure to have
+    # this is a better approach than having seed=42 or seed=my_dog_birthday because we ensure to have
     # a new signal for all call with seed=None but the dump/load will still work
     if seed is None:
         seed = np.random.default_rng(seed=None).integers(0, 2**63)
@@ -46,7 +46,7 @@ def generate_recording(
     durations: List[float], default [5.0, 2.5]
         The duration in seconds of each segment in the recording, by default [5.0, 2.5].
         Note that the number of segments is determined by the length of this list.
-    set_probe: boolb, default True
+    set_probe: bool, default True
     ndim : int, default 2
         The number of dimensions of the probe, by default 2. Set to 3 to make 3 dimensional probes.
     seed : Optional[int]
@@ -302,12 +302,6 @@ def synthesize_random_firings(
     labels = labels[sort_inds]
 
     return (times, labels)
-
-
-# def rand_distr2(a, b, num, seed):
-#     X = np.random.RandomState(seed=seed).rand(num)
-#     X = a + (b - a) * X**2
-#     return X
 
 
 def clean_refractory_period(times, refractory_period):
@@ -711,12 +705,12 @@ def generate_single_fake_waveform(
     positive_amplitude=0.15,
     depolarization_ms=0.1,
     repolarization_ms=0.6,
-    hyperpolarization_ms=1.1,
+    recovery_ms=1.1,
     smooth_ms=0.05,
     dtype="float32",
 ):
     """
-    Very naive spike waveforms generator with 3 exponentials.
+    Very naive spike waveforms generator with 3 exponentials (depolarization, repolarization, recovery)
     """
     assert ms_after > depolarization_ms + repolarization_ms
     assert ms_before > depolarization_ms
@@ -741,12 +735,12 @@ def generate_single_fake_waveform(
         negative_amplitude, positive_amplitude, repolarization_ms, tau_ms, sampling_frequency, flip=True
     )
 
-    # hyperpolarization
-    nrefac = int(hyperpolarization_ms * sampling_frequency / 1000.0)
+    # recovery
+    nrefac = int(recovery_ms * sampling_frequency / 1000.0)
     assert nrefac + nrepol < nafter, "ms_after is too short"
-    tau_ms = hyperpolarization_ms * 0.5
+    tau_ms = recovery_ms * 0.5
     wf[nbefore + nrepol : nbefore + nrepol + nrefac] = exp_growth(
-        positive_amplitude, 0.0, hyperpolarization_ms, tau_ms, sampling_frequency, flip=True
+        positive_amplitude, 0.0, recovery_ms, tau_ms, sampling_frequency, flip=True
     )
 
     # gaussian smooth
@@ -774,9 +768,10 @@ default_unit_params_range = dict(
     alpha=(5_000.0, 15_000.0),
     depolarization_ms=(0.09, 0.14),
     repolarization_ms=(0.5, 0.8),
-    hyperpolarization_ms=(1.0, 1.5),
+    recovery_ms=(1.0, 1.5),
     positive_amplitude=(0.05, 0.15),
     smooth_ms=(0.03, 0.07),
+    decay_power=(1.2, 1.8),
 )
 
 
@@ -793,10 +788,10 @@ def generate_templates(
     unit_params_range=dict(),
 ):
     """
-    Generate some template from given channel position and neuron position.
+    Generate some templates from the given channel positions and neuron position.s
 
     The implementation is very naive : it generates a mono channel waveform using generate_single_fake_waveform()
-    and duplicates this same waveform on all channel given a simple monopolar decay law per unit.
+    and duplicates this same waveform on all channel given a simple decay law per unit.
 
 
     Parameters
@@ -822,12 +817,20 @@ def generate_templates(
         This allow easy random jitter by choising a template this new dim
     unit_params: dict of arrays
         An optional dict containing parameters per units.
-        Keys are parameter names: 'alpha', 'depolarization_ms', 'repolarization_ms', 'hyperpolarization_ms'
-        Values contains vector with same size of units.
+        Keys are parameter names:
+
+            * 'alpha': amplitude of the action potential in a.u. (default range: (5'000-15'000))
+            * 'depolarization_ms': the depolarization interval in ms (default range: (0.09-0.14))
+            * 'repolarization_ms': the repolarization interval in ms (default range: (0.5-0.8))
+            * 'recovery_ms': the recovery interval in ms (default range: (1.0-1.5))
+            * 'positive_amplitude': the positive amplitude in a.u. (default range: (0.05-0.15)) (negative is always -1)
+            * 'smooth_ms': the gaussian smooth in ms (default range: (0.03-0.07))
+            * 'decay_power': the decay power (default range: (1.2-1.8))
+        Values contains vector with same size of num_units.
         If the key is not in dict then it is generated using unit_params_range
     unit_params_range: dict of tuple
-        Used to generate parameters when no given.
-        The random if uniform in the range.
+        Used to generate parameters when unit_params are not given.
+        In this case, a uniform ranfom value for each unit is generated within the provided range.
 
     Returns
     -------
@@ -886,7 +889,7 @@ def generate_templates(
             positive_amplitude=params["positive_amplitude"][u],
             depolarization_ms=params["depolarization_ms"][u],
             repolarization_ms=params["repolarization_ms"][u],
-            hyperpolarization_ms=params["hyperpolarization_ms"][u],
+            recovery_ms=params["recovery_ms"][u],
             smooth_ms=params["smooth_ms"][u],
             dtype=dtype,
         )
@@ -894,8 +897,8 @@ def generate_templates(
         alpha = params["alpha"][u]
         # the espilon avoid enormous factors
         eps = 1.0
-        pow = 1.5
         # naive formula for spatial decay
+        pow = params["decay_power"][u]
         channel_factors = alpha / (distances[u, :] + eps) ** pow
         if upsample_factor is not None:
             for f in range(upsample_factor):
