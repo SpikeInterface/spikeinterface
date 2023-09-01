@@ -69,7 +69,7 @@ class WaveformsRootMeanSquare(PipelineNode):
 
 
 def test_run_node_pipeline():
-    recording, sorting = generate_ground_truth_recording(num_channels=10, num_units=10, durations=[10.])
+    recording, sorting = generate_ground_truth_recording(num_channels=10, num_units=10, durations=[10.0])
 
     job_kwargs = dict(chunk_duration="0.5s", n_jobs=2, progress_bar=False)
 

@@ -25,7 +25,10 @@ def test_write_binary_recording(tmp_path):
 
     durations = [10.0]
     recording = NoiseGeneratorRecording(
-        durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency, strategy="tile_pregenerated"
+        durations=durations,
+        num_channels=num_channels,
+        sampling_frequency=sampling_frequency,
+        strategy="tile_pregenerated",
     )
     file_paths = [tmp_path / "binary01.raw"]
 
@@ -49,7 +52,10 @@ def test_write_binary_recording_offset(tmp_path):
 
     durations = [10.0]
     recording = NoiseGeneratorRecording(
-        durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency, strategy="tile_pregenerated"
+        durations=durations,
+        num_channels=num_channels,
+        sampling_frequency=sampling_frequency,
+        strategy="tile_pregenerated",
     )
     file_paths = [tmp_path / "binary01.raw"]
 
@@ -82,7 +88,7 @@ def test_write_binary_recording_parallel(tmp_path):
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         dtype=dtype,
-        strategy="tile_pregenerated"
+        strategy="tile_pregenerated",
     )
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
@@ -109,7 +115,10 @@ def test_write_binary_recording_multiple_segment(tmp_path):
 
     durations = [10.30, 3.5]
     recording = NoiseGeneratorRecording(
-        durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency, strategy="tile_pregenerated"
+        durations=durations,
+        num_channels=num_channels,
+        sampling_frequency=sampling_frequency,
+        strategy="tile_pregenerated",
     )
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
@@ -130,7 +139,9 @@ def test_write_binary_recording_multiple_segment(tmp_path):
 
 def test_write_memory_recording():
     # 2 segments
-    recording = NoiseGeneratorRecording(num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated")
+    recording = NoiseGeneratorRecording(
+        num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
+    )
     # make dumpable
     recording = recording.save()
 

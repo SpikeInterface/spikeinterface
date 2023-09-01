@@ -41,7 +41,7 @@ def test_get_auto_merge_list():
     #     shutil.rmtree(wf_folder)
     # we = extract_waveforms(rec, sorting_with_split, mode="folder", folder=wf_folder, n_jobs=1)
 
-    we = extract_waveforms(rec, sorting_with_split, mode='memory', folder=None, n_jobs=1)
+    we = extract_waveforms(rec, sorting_with_split, mode="memory", folder=None, n_jobs=1)
     # print(we)
 
     potential_merges, outs = get_potential_auto_merge(
@@ -70,7 +70,6 @@ def test_get_auto_merge_list():
     for true_pair in other_ids.values():
         true_pair = tuple(true_pair)
         assert true_pair in potential_merges
-
 
     # import matplotlib.pyplot as plt
     # templates_diff = outs['templates_diff']

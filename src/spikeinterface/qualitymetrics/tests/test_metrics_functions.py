@@ -165,7 +165,7 @@ def simulated_data():
 
 
 def setup_dataset(spike_data, score_detection=1):
-# def setup_dataset(spike_data):
+    # def setup_dataset(spike_data):
     recording, sorting = toy_example(
         duration=[spike_data["duration"]],
         spike_times=[spike_data["times"]],
@@ -195,7 +195,7 @@ def test_calculate_firing_rate_num_spikes(simulated_data):
     firing_rates = compute_firing_rates(we)
     num_spikes = compute_num_spikes(we)
 
-    # testing method accuracy with magic number is not a good pratcice, I remove this. 
+    # testing method accuracy with magic number is not a good pratcice, I remove this.
     # firing_rates_gt = {0: 10.01, 1: 5.03, 2: 5.09}
     # num_spikes_gt = {0: 1001, 1: 503, 2: 509}
     # assert np.allclose(list(firing_rates_gt.values()), list(firing_rates.values()), rtol=0.05)
@@ -208,7 +208,7 @@ def test_calculate_amplitude_cutoff(simulated_data):
     amp_cuts = compute_amplitude_cutoffs(we, num_histogram_bins=10)
     print(amp_cuts)
 
-    # testing method accuracy with magic number is not a good pratcice, I remove this. 
+    # testing method accuracy with magic number is not a good pratcice, I remove this.
     # amp_cuts_gt = {0: 0.33067210050787543, 1: 0.43482247296942045, 2: 0.43482247296942045}
     # assert np.allclose(list(amp_cuts_gt.values()), list(amp_cuts.values()), rtol=0.05)
 
@@ -219,7 +219,7 @@ def test_calculate_amplitude_median(simulated_data):
     amp_medians = compute_amplitude_medians(we)
     print(amp_medians)
 
-    # testing method accuracy with magic number is not a good pratcice, I remove this. 
+    # testing method accuracy with magic number is not a good pratcice, I remove this.
     # amp_medians_gt = {0: 130.77323354628675, 1: 130.7461997791725, 2: 130.7461997791725}
     # assert np.allclose(list(amp_medians_gt.values()), list(amp_medians.values()), rtol=0.05)
 
@@ -229,7 +229,7 @@ def test_calculate_snrs(simulated_data):
     snrs = compute_snrs(we)
     print(snrs)
 
-    # testing method accuracy with magic number is not a good pratcice, I remove this. 
+    # testing method accuracy with magic number is not a good pratcice, I remove this.
     # snrs_gt = {0: 12.92, 1: 12.99, 2: 12.99}
     # assert np.allclose(list(snrs_gt.values()), list(snrs.values()), rtol=0.05)
 
@@ -239,7 +239,7 @@ def test_calculate_presence_ratio(simulated_data):
     ratios = compute_presence_ratios(we, bin_duration_s=10)
     print(ratios)
 
-    # testing method accuracy with magic number is not a good pratcice, I remove this. 
+    # testing method accuracy with magic number is not a good pratcice, I remove this.
     # ratios_gt = {0: 1.0, 1: 1.0, 2: 1.0}
     # np.testing.assert_array_equal(list(ratios_gt.values()), list(ratios.values()))
 
@@ -249,7 +249,7 @@ def test_calculate_isi_violations(simulated_data):
     isi_viol, counts = compute_isi_violations(we, isi_threshold_ms=1, min_isi_ms=0.0)
     print(isi_viol)
 
-    # testing method accuracy with magic number is not a good pratcice, I remove this. 
+    # testing method accuracy with magic number is not a good pratcice, I remove this.
     # isi_viol_gt = {0: 0.0998002996004994, 1: 0.7904857139469347, 2: 1.929898371551754}
     # counts_gt = {0: 2, 1: 4, 2: 10}
     # assert np.allclose(list(isi_viol_gt.values()), list(isi_viol.values()), rtol=0.05)
@@ -261,13 +261,12 @@ def test_calculate_sliding_rp_violations(simulated_data):
     contaminations = compute_sliding_rp_violations(we, bin_size_ms=0.25, window_size_s=1)
     print(contaminations)
 
-    # testing method accuracy with magic number is not a good pratcice, I remove this. 
+    # testing method accuracy with magic number is not a good pratcice, I remove this.
     # contaminations_gt = {0: 0.03, 1: 0.185, 2: 0.325}
     # assert np.allclose(list(contaminations_gt.values()), list(contaminations.values()), rtol=0.05)
 
 
 def test_calculate_rp_violations(simulated_data):
-    
     counts_gt = {0: 2, 1: 4, 2: 10}
     we = setup_dataset(simulated_data)
     rp_contamination, counts = compute_refrac_period_violations(we, refractory_period_ms=1, censored_period_ms=0.0)
@@ -289,7 +288,6 @@ def test_calculate_rp_violations(simulated_data):
 
 @pytest.mark.sortingcomponents
 def test_calculate_drift_metrics(simulated_data):
-
     we = setup_dataset(simulated_data)
     spike_locs = compute_spike_locations(we)
     drifts_ptps, drifts_stds, drift_mads = compute_drift_metrics(we, interval_s=10, min_spikes_per_interval=10)

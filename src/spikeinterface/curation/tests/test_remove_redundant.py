@@ -36,9 +36,8 @@ def test_remove_redundant_units():
     #     shutil.rmtree(wf_folder)
     # we = extract_waveforms(rec, sorting_with_dup, folder=wf_folder)
 
-    we = extract_waveforms(rec, sorting_with_dup, mode='memory', folder=None, n_jobs=1)
+    we = extract_waveforms(rec, sorting_with_dup, mode="memory", folder=None, n_jobs=1)
 
-     
     # print(we)
 
     for remove_strategy in ("max_spikes", "minimum_shift", "highest_amplitude"):
