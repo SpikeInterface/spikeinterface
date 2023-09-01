@@ -141,7 +141,7 @@ class SpikeRetriever(PeakSource):
     """
     This class is usefull to inject a sorting object in the node pipepline mechanisim.
     It allows to compute some post processing with the same machinery used for sorting components.
-    This is a first step to totaly refactor: 
+    This is a first step to totaly refactor:
       * compute_spike_locations()
       * compute_amplitude_scalings()
       * compute_spike_amplitudes()
@@ -164,16 +164,14 @@ class SpikeRetriever(PeakSource):
         Peak sign to find the max channel.
         Used only when channel_from_template=False
     """
-    def __init__(self, recording, sorting,
-                 channel_from_template=True,
-                 extremum_channel_inds=None,
-                 radius_um=50,
-                 peak_sign="neg"
-                 ):
+
+    def __init__(
+        self, recording, sorting, channel_from_template=True, extremum_channel_inds=None, radius_um=50, peak_sign="neg"
+    ):
         PipelineNode.__init__(self, recording, return_output=False)
 
         self.channel_from_template = channel_from_template
-        
+
         assert extremum_channel_inds is not None, "SpikeRetriever need the dict extremum_channel_inds"
 
         self.peaks = sorting_to_peak(sorting, extremum_channel_inds)
@@ -181,8 +179,7 @@ class SpikeRetriever(PeakSource):
         if not channel_from_template:
             channel_distance = get_channel_distances(recording)
             self.neighbours_mask = channel_distance < radius_um
-            self.peak_sign = peak_sign            
-        
+            self.peak_sign = peak_sign
 
         # precompute segment slice
         self.segment_slices = []
@@ -219,7 +216,7 @@ class SpikeRetriever(PeakSource):
                 elif self.peak_sign == "pos":
                     local_peaks[i]["channel_index"] = chans[np.argmax(sparse_wfs)]
                 elif self.peak_sign == "both":
-                    local_peaks[i]["channel_index"] = chans[np.argmax(np.abs(sparse_wfs))]            
+                    local_peaks[i]["channel_index"] = chans[np.argmax(np.abs(sparse_wfs))]
 
         # TODO: "amplitude" ???
 

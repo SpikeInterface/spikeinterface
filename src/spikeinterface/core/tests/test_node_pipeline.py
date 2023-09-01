@@ -81,22 +81,24 @@ def test_run_node_pipeline():
     we = extract_waveforms(recording, sorting, mode="memory", **job_kwargs)
     extremum_channel_inds = get_template_extremum_channel(we, peak_sign="neg", outputs="index")
     peaks = sorting_to_peak(sorting, extremum_channel_inds)
-    
+
     peak_retriever = PeakRetriever(recording, peaks)
     # channel index is from template
-    spike_retriever_T = SpikeRetriever(recording, sorting,
-                                     channel_from_template=True,
-                                     extremum_channel_inds=extremum_channel_inds)
+    spike_retriever_T = SpikeRetriever(
+        recording, sorting, channel_from_template=True, extremum_channel_inds=extremum_channel_inds
+    )
     # channel index is per spike
-    spike_retriever_S = SpikeRetriever(recording, sorting,
-                                     channel_from_template=False,
-                                     extremum_channel_inds=extremum_channel_inds,
-                                     radius_um=50,
-                                     peak_sign="neg")
+    spike_retriever_S = SpikeRetriever(
+        recording,
+        sorting,
+        channel_from_template=False,
+        extremum_channel_inds=extremum_channel_inds,
+        radius_um=50,
+        peak_sign="neg",
+    )
 
     # test with 2 diffrents first node
     for peak_source in (peak_retriever, spike_retriever_T, spike_retriever_S):
-
         # one step only : squeeze output
         nodes = [
             peak_source,

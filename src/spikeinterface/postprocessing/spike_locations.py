@@ -26,10 +26,12 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         extremum_channel_inds = get_template_extremum_channel(self.waveform_extractor, outputs="index")
         self.spikes = self.waveform_extractor.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
 
-
-
-    def _set_params(self, ms_before=0.5, ms_after=0.5, channel_from_template=True, method="center_of_mass", method_kwargs={}):
-        params = dict(ms_before=ms_before, ms_after=ms_after, channel_from_template=channel_from_template, method=method)
+    def _set_params(
+        self, ms_before=0.5, ms_after=0.5, channel_from_template=True, method="center_of_mass", method_kwargs={}
+    ):
+        params = dict(
+            ms_before=ms_before, ms_after=ms_after, channel_from_template=channel_from_template, method=method
+        )
         params.update(**method_kwargs)
         print(params)
         return params
@@ -66,7 +68,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
             channel_from_template=channel_from_template,
             extremum_channel_inds=extremum_channel_inds,
             radius_um=50,
-            peak_sign=self._params.get("peaks_sign", "neg")
+            peak_sign=self._params.get("peaks_sign", "neg"),
         )
         spike_locations = _run_localization_from_peak_source(we.recording, spike_retriever, **params, **job_kwargs)
 
@@ -117,6 +119,7 @@ WaveformExtractor.register_extension(SpikeLocationsCalculator)
 # @alessio @pierre: channel_from_template=True is the old behavior but this is not accurate
 # what do we put by default ?
 
+
 def compute_spike_locations(
     waveform_extractor,
     load_if_exists=False,
@@ -164,8 +167,13 @@ def compute_spike_locations(
         slc = waveform_extractor.load_extension(SpikeLocationsCalculator.extension_name)
     else:
         slc = SpikeLocationsCalculator(waveform_extractor)
-        slc.set_params(ms_before=ms_before, ms_after=ms_after, channel_from_template=channel_from_template, 
-                       method=method, method_kwargs=method_kwargs)
+        slc.set_params(
+            ms_before=ms_before,
+            ms_after=ms_after,
+            channel_from_template=channel_from_template,
+            method=method,
+            method_kwargs=method_kwargs,
+        )
         slc.run(**job_kwargs)
 
     locs = slc.get_data(outputs=outputs)

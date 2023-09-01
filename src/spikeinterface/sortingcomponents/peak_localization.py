@@ -28,7 +28,9 @@ from ..postprocessing.unit_localization import (
 from .tools import get_prototype_spike
 
 
-def _run_localization_from_peak_source(recording, peak_source, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs):
+def _run_localization_from_peak_source(
+    recording, peak_source, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs
+):
     # use by localize_peaks() and compute_spike_locations()
     assert (
         method in possible_localization_methods
@@ -52,9 +54,7 @@ def _run_localization_from_peak_source(recording, peak_source, method="center_of
         pipeline_nodes = [
             peak_source,
             extract_dense_waveforms,
-            LocalizeMonopolarTriangulation(
-                recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs
-            ),
+            LocalizeMonopolarTriangulation(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs),
         ]
     elif method == "peak_channel":
         pipeline_nodes = [peak_source, LocalizePeakChannel(recording, parents=[peak_source], **method_kwargs)]
@@ -77,7 +77,6 @@ def _run_localization_from_peak_source(recording, peak_source, method="center_of
     peak_locations = run_node_pipeline(recording, pipeline_nodes, job_kwargs, job_name=job_name, squeeze_output=True)
 
     return peak_locations
-
 
 
 def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs):
@@ -106,9 +105,10 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
         The dtype depends on the method. ('x', 'y') or ('x', 'y', 'z', 'alpha').
     """
     peak_retriever = PeakRetriever(recording, peaks)
-    peak_locations = _run_localization_from_peak_source(recording, peak_retriever, method=method, ms_before=ms_before, ms_after=ms_after, **kwargs)
+    peak_locations = _run_localization_from_peak_source(
+        recording, peak_retriever, method=method, ms_before=ms_before, ms_after=ms_after, **kwargs
+    )
     return peak_locations
-
 
 
 class LocalizeBase(PipelineNode):
