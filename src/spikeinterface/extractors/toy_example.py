@@ -28,16 +28,16 @@ def toy_example(
     seed=None,
 ):
     """
-    This return a generated dataset with "toy" units and spikes on top on white noise.
-    This is usefull to test api, algos, postprocessing and vizualition without any downloading.
+    Returns a generated dataset with "toy" units and spikes on top on white noise.
+    This is useful to test api, algos, postprocessing and visualization without any downloading.
 
     This a rewrite (with the lazy approach) of the old spikeinterface.extractor.toy_example() which itself was also
     a rewrite from the very old spikeextractor.toy_example() (from Jeremy Magland).
-    In this new version, the recording is totally lazy and so do not use disk space or memory.
-    It internally uses NoiseGeneratorRecording + generate_waveforms + InjectTemplatesRecording.
+    In this new version, the recording is totally lazy and so it does not use disk space or memory.
+    It internally uses NoiseGeneratorRecording + generate_templates + InjectTemplatesRecording.
 
-    The signature is still the same as before.
-    For better control you should use generate_ground_truth_recording() which is similar but with better signature.
+    For better control, you should use the  `generate_ground_truth_recording()`, but provides better control over
+    the parameters.
 
     Parameters
     ----------
