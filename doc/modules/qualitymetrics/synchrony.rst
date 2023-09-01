@@ -10,7 +10,7 @@ trains. This way synchronous events can be found both in multi-unit and single-u
 Complexity is calculated by counting the number of spikes (i.e. non-empty bins) that occur at the same sample index,
 within and across spike trains.
 
-Synchrony metrics can be computed for different syncrony sizes (>1), defining the number of simultanous spikes to count.
+Synchrony metrics can be computed for different synchrony sizes (>1), defining the number of simultaneous spikes to count.
 
 
 
