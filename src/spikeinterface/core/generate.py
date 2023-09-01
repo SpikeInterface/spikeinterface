@@ -46,7 +46,7 @@ def generate_recording(
     durations: List[float], default [5.0, 2.5]
         The duration in seconds of each segment in the recording, by default [5.0, 2.5].
         Note that the number of segments is determined by the length of this list.
-    set_probe: boolb, default True
+    set_probe: bool, default True
     ndim : int, default 2
         The number of dimensions of the probe, by default 2. Set to 3 to make 3 dimensional probes.
     seed : Optional[int]
