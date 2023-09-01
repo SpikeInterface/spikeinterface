@@ -219,5 +219,5 @@ def test_resample_by_chunks():
 
 
 if __name__ == "__main__":
-    # test_resample_freq_domain()
+    test_resample_freq_domain()
     test_resample_by_chunks()
