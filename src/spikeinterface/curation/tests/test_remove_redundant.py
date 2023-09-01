@@ -23,17 +23,22 @@ set_global_tmp_folder(cache_folder)
 
 
 def test_remove_redundant_units():
-    rec, sorting = toy_example(num_segments=1, duration=[10.0], seed=0)
+    rec, sorting = toy_example(num_segments=1, duration=[100.0], seed=2205)
 
-    sorting_with_dup = inject_some_duplicate_units(sorting, ratio=0.8, num=4, seed=1)
+    sorting_with_dup = inject_some_duplicate_units(sorting, ratio=0.8, num=4, seed=2205)
+    print(sorting.unit_ids)
+    print(sorting_with_dup.unit_ids)
 
-    rec = rec.save()
-    sorting_with_dup = sorting_with_dup.save()
-    wf_folder = cache_folder / "wf_dup"
-    if wf_folder.exists():
-        shutil.rmtree(wf_folder)
-    we = extract_waveforms(rec, sorting_with_dup, folder=wf_folder)
-    print(we)
+    # rec = rec.save()
+    # sorting_with_dup = sorting_with_dup.save()
+    # wf_folder = cache_folder / "wf_dup"
+    # if wf_folder.exists():
+    #     shutil.rmtree(wf_folder)
+    # we = extract_waveforms(rec, sorting_with_dup, folder=wf_folder)
+
+    we = extract_waveforms(rec, sorting_with_dup, mode="memory", folder=None, n_jobs=1)
+
+    # print(we)
 
     for remove_strategy in ("max_spikes", "minimum_shift", "highest_amplitude"):
         sorting_clean = remove_redundant_units(we, remove_strategy=remove_strategy)
