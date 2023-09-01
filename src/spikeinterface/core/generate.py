@@ -1182,6 +1182,7 @@ def generate_unit_locations(num_units, channel_locations, margin_um=20., minimum
     return units_locations
 
 
+
 def generate_ground_truth_recording(
         durations=[10.],
         sampling_frequency=25000.0,
