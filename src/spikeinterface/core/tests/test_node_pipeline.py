@@ -97,9 +97,6 @@ def test_run_node_pipeline():
     # test with 2 diffrents first node
     for peak_source in (peak_retriever, spike_retriever_T, spike_retriever_S):
 
-
-
-
         # one step only : squeeze output
         nodes = [
             peak_source,
