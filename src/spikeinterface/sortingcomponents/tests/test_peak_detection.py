@@ -10,10 +10,9 @@ from spikeinterface.extractors.neoextractors.mearec import MEArecRecordingExtrac
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms
+from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, ExtractSparseWaveforms
 from spikeinterface.sortingcomponents.peak_localization import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.features_from_peaks import PeakToPeakFeature
-from spikeinterface.sortingcomponents.peak_pipeline import ExtractSparseWaveforms
 
 from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCADenoising
 from spikeinterface.sortingcomponents.peak_detection import IterativePeakDetector
@@ -23,7 +22,8 @@ from spikeinterface.sortingcomponents.peak_detection import (
     DetectPeakLocallyExclusive,
     DetectPeakLocallyExclusiveTorch,
 )
-from spikeinterface.sortingcomponents.peak_pipeline import run_node_pipeline
+
+from spikeinterface.core.node_pipeline import run_node_pipeline
 
 
 if hasattr(pytest, "global_test_folder"):

@@ -2,7 +2,8 @@ import pytest
 
 
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
-from spikeinterface.sortingcomponents.peak_pipeline import (
+
+from spikeinterface.core.node_pipeline import (
     PeakRetriever,
     ExtractDenseWaveforms,
     run_node_pipeline,
