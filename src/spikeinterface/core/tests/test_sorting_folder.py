@@ -16,7 +16,7 @@ else:
 
 
 def test_NumpyFolderSorting():
-    sorting = generate_sorting()
+    sorting = generate_sorting(seed=42)
 
     folder = cache_folder / "numpy_sorting_1"
     if folder.is_dir():
@@ -34,7 +34,7 @@ def test_NumpyFolderSorting():
 
 
 def test_NpzFolderSorting():
-    sorting = generate_sorting()
+    sorting = generate_sorting(seed=42)
 
     folder = cache_folder / "npz_folder_sorting_1"
     if folder.is_dir():
