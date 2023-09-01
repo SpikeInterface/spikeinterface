@@ -18,7 +18,7 @@ Expectation and use
 -------------------
 
 A larger value indicates a higher synchrony of the respective spike train with the other spike trains.
-Higher values, especially for high sizes, indicate a higher probability of noisy spikes in spike trains.
+Larger values, especially for larger sizes, indicate a higher probability of noisy spikes in spike trains.
 
 Example code
 ------------
