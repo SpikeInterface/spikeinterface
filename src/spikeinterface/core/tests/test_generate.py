@@ -4,10 +4,18 @@ import psutil
 import numpy as np
 
 from spikeinterface.core import load_extractor, extract_waveforms
-from spikeinterface.core.generate import (generate_recording, generate_sorting, NoiseGeneratorRecording, generate_recording_by_size, 
-                                          InjectTemplatesRecording, generate_single_fake_waveform, generate_templates,
-                                          generate_channel_locations, generate_unit_locations, generate_ground_truth_recording,
-                                          )
+from spikeinterface.core.generate import (
+    generate_recording,
+    generate_sorting,
+    NoiseGeneratorRecording,
+    generate_recording_by_size,
+    InjectTemplatesRecording,
+    generate_single_fake_waveform,
+    generate_templates,
+    generate_channel_locations,
+    generate_unit_locations,
+    generate_ground_truth_recording,
+)
 
 
 from spikeinterface.core.core_tools import convert_bytes_to_str
@@ -21,9 +29,11 @@ def test_generate_recording():
     # TODO even this is extenssivly tested in all other function
     pass
 
+
 def test_generate_sorting():
     # TODO even this is extenssivly tested in all other function
     pass
+
 
 def measure_memory_allocation(measure_in_process: bool = True) -> float:
     """
@@ -49,7 +59,6 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
     return memory
 
 
-
 def test_noise_generator_memory():
     # Test that get_traces does not consume more memory than allocated.
 
@@ -69,7 +78,7 @@ def test_noise_generator_memory():
     rec1 = NoiseGeneratorRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
-        durations=durations,        
+        durations=durations,
         dtype=dtype,
         seed=seed,
         strategy="tile_pregenerated",
@@ -79,14 +88,16 @@ def test_noise_generator_memory():
     memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
     expected_allocation_MiB = dtype.itemsize * num_channels * noise_block_size / bytes_to_MiB_factor
     ratio = expected_allocation_MiB / expected_allocation_MiB
-    assert ratio <= 1.0 + relative_tolerance, f"NoiseGeneratorRecording with 'tile_pregenerated' wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
+    assert (
+        ratio <= 1.0 + relative_tolerance
+    ), f"NoiseGeneratorRecording with 'tile_pregenerated' wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
 
     # case 2: no preallocation very few memory (under 2 MiB)
     before_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
     rec2 = NoiseGeneratorRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
-        durations=durations,        
+        durations=durations,
         dtype=dtype,
         seed=seed,
         strategy="on_the_fly",
@@ -126,7 +137,7 @@ def test_noise_generator_correct_shape(strategy):
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
-       dtype=dtype,
+        dtype=dtype,
         seed=seed,
         strategy=strategy,
     )
@@ -161,7 +172,7 @@ def test_noise_generator_consistency_across_calls(strategy, start_frame, end_fra
     lazy_recording = NoiseGeneratorRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
-        durations=durations,        
+        durations=durations,
         dtype=dtype,
         seed=seed,
         strategy=strategy,
@@ -215,19 +226,18 @@ def test_noise_generator_consistency_after_dump(strategy, seed):
     # test same noise after dump even with seed=None
     rec0 = NoiseGeneratorRecording(
         num_channels=2,
-        sampling_frequency=30000.,
+        sampling_frequency=30000.0,
         durations=[2.0],
         dtype="float32",
         seed=seed,
         strategy=strategy,
     )
     traces0 = rec0.get_traces()
-    
+
     rec1 = load_extractor(rec0.to_dict())
     traces1 = rec1.get_traces()
 
     assert np.allclose(traces0, traces1)
-
 
 
 def test_generate_recording():
@@ -237,9 +247,9 @@ def test_generate_recording():
 
 
 def test_generate_single_fake_waveform():
-    sampling_frequency = 30000.
-    ms_before = 1.
-    ms_after = 3.
+    sampling_frequency = 30000.0
+    ms_before = 1.0
+    ms_after = 3.0
     wf = generate_single_fake_waveform(ms_before=ms_before, ms_after=ms_after, sampling_frequency=sampling_frequency)
 
     # import matplotlib.pyplot as plt
@@ -249,51 +259,65 @@ def test_generate_single_fake_waveform():
     # ax.axvline(0)
     # plt.show()
 
+
 def test_generate_templates():
-    seed= 0
+    seed = 0
 
     num_chans = 12
     num_columns = 1
     num_units = 10
-    margin_um= 15.
-    channel_locations = generate_channel_locations(num_chans, num_columns, 20.)
+    margin_um = 15.0
+    channel_locations = generate_channel_locations(num_chans, num_columns, 20.0)
     unit_locations = generate_unit_locations(num_units, channel_locations, margin_um, seed)
 
-    
-    sampling_frequency = 30000.
-    ms_before = 1.
-    ms_after = 3.
+    sampling_frequency = 30000.0
+    ms_before = 1.0
+    ms_after = 3.0
 
     # standard case
-    templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
-            upsample_factor=None,
-            seed=42,
-            dtype="float32",
-        )
+    templates = generate_templates(
+        channel_locations,
+        unit_locations,
+        sampling_frequency,
+        ms_before,
+        ms_after,
+        upsample_factor=None,
+        seed=42,
+        dtype="float32",
+    )
     assert templates.ndim == 3
     assert templates.shape[2] == num_chans
     assert templates.shape[0] == num_units
 
     # play with params
-    templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
-            upsample_factor=None,
-            seed=42,
-            dtype="float32",
-            unit_params=dict(alpha=np.ones(num_units) * 8000.),
-            unit_params_range=dict(smooth_ms=(0.04, 0.05)),
-        )
+    templates = generate_templates(
+        channel_locations,
+        unit_locations,
+        sampling_frequency,
+        ms_before,
+        ms_after,
+        upsample_factor=None,
+        seed=42,
+        dtype="float32",
+        unit_params=dict(alpha=np.ones(num_units) * 8000.0),
+        unit_params_range=dict(smooth_ms=(0.04, 0.05)),
+    )
 
     # upsampling case
-    templates = generate_templates(channel_locations, unit_locations, sampling_frequency, ms_before, ms_after,
-            upsample_factor=3,
-            seed=42,
-            dtype="float32",
-        )
+    templates = generate_templates(
+        channel_locations,
+        unit_locations,
+        sampling_frequency,
+        ms_before,
+        ms_after,
+        upsample_factor=3,
+        seed=42,
+        dtype="float32",
+    )
     assert templates.ndim == 4
     assert templates.shape[2] == num_chans
     assert templates.shape[0] == num_units
     assert templates.shape[3] == 3
-
 
     # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
@@ -315,12 +339,26 @@ def test_inject_templates():
     upsample_factor = 3
 
     # generate some sutff
-    rec_noise = generate_recording(num_channels=num_channels, durations=durations, sampling_frequency=sampling_frequency, mode="lazy", seed=42)
+    rec_noise = generate_recording(
+        num_channels=num_channels, durations=durations, sampling_frequency=sampling_frequency, mode="lazy", seed=42
+    )
     channel_locations = rec_noise.get_channel_locations()
-    sorting = generate_sorting(num_units=num_units, durations=durations, sampling_frequency=sampling_frequency, firing_rates=1., seed=42)
-    units_locations = generate_unit_locations(num_units, channel_locations, margin_um=10., seed=42)
-    templates_3d = generate_templates(channel_locations, units_locations, sampling_frequency, ms_before, ms_after, seed=42, upsample_factor=None)
-    templates_4d = generate_templates(channel_locations, units_locations, sampling_frequency, ms_before, ms_after, seed=42, upsample_factor=upsample_factor)
+    sorting = generate_sorting(
+        num_units=num_units, durations=durations, sampling_frequency=sampling_frequency, firing_rates=1.0, seed=42
+    )
+    units_locations = generate_unit_locations(num_units, channel_locations, margin_um=10.0, seed=42)
+    templates_3d = generate_templates(
+        channel_locations, units_locations, sampling_frequency, ms_before, ms_after, seed=42, upsample_factor=None
+    )
+    templates_4d = generate_templates(
+        channel_locations,
+        units_locations,
+        sampling_frequency,
+        ms_before,
+        ms_after,
+        seed=42,
+        upsample_factor=upsample_factor,
+    )
 
     # Case 1: parent_recording = None
     rec1 = InjectTemplatesRecording(
@@ -336,8 +374,9 @@ def test_inject_templates():
     # Case 3: with parent_recording + upsample_factor
     rng = np.random.default_rng(seed=42)
     upsample_vector = rng.integers(0, upsample_factor, size=sorting.to_spike_vector().size)
-    rec3 = InjectTemplatesRecording(sorting, templates_4d, nbefore=nbefore, parent_recording=rec_noise, upsample_vector=upsample_vector)
-
+    rec3 = InjectTemplatesRecording(
+        sorting, templates_4d, nbefore=nbefore, parent_recording=rec_noise, upsample_vector=upsample_vector
+    )
 
     for rec in (rec1, rec2, rec3):
         assert rec.get_traces(end_frame=600, segment_index=0).shape == (600, 4)
@@ -357,8 +396,6 @@ def test_generate_ground_truth_recording():
     assert rec.templates.ndim == 4
 
 
-
-
 if __name__ == "__main__":
     strategy = "tile_pregenerated"
     # strategy = "on_the_fly"
@@ -373,4 +410,3 @@ if __name__ == "__main__":
     # test_generate_templates()
     # test_inject_templates()
     # test_generate_ground_truth_recording()
-
