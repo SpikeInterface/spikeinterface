@@ -532,12 +532,10 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), **k
         synchrony_counts[synchrony_size] = np.zeros(len(waveform_extractor.unit_ids), dtype=np.int64)
 
     for segment_index in range(sorting.get_num_segments()):
-        num_samples = waveform_extractor.get_num_samples(segment_index)
         spikes_in_segment = spikes[segment_index]
 
-        # we compute the complexity as an histogram with a single sample as bin
-        bins = np.arange(0, num_samples + 1)
-        complexity = np.histogram(spikes_in_segment["sample_index"], bins)[0]
+        # we compute just by counting the occurrence of each sample_index
+        unique_spike_index, complexity = np.unique(spikes_in_segment["sample_index"], return_counts=True)
 
         # add counts for this segment
         for unit_index in np.arange(len(sorting.unit_ids)):
@@ -545,7 +543,7 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), **k
             # some segments/units might have no spikes
             if len(spikes_per_unit) == 0:
                 continue
-            spike_complexity = complexity[spikes_per_unit["sample_index"]]
+            spike_complexity = complexity[np.in1d(unique_spike_index, spikes_per_unit["sample_index"])]
             for synchrony_size in synchrony_sizes:
                 synchrony_counts[synchrony_size][unit_index] += np.count_nonzero(spike_complexity >= synchrony_size)
 
