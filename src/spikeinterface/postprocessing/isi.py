@@ -202,11 +202,10 @@ if HAVE_NUMBA:
         nopython=True,
         nogil=True,
         cache=True,
-        parallel=True,
     )
     def _compute_isi_histograms_numba(ISIs, spike_trains, spike_clusters, bins):
         n_units = ISIs.shape[0]
 
-        for i in numba.prange(n_units):
+        for i in range(n_units):
             spike_train = spike_trains[spike_clusters == i]
             ISIs[i] += np.histogram(np.diff(spike_train), bins=bins)[0]
