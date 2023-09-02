@@ -91,7 +91,7 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
-    "cuda-python; sys_platform != 'darwin'",
+    "cuda-python; platform_system != 'Darwin'",
     "numba",
 ]
 
