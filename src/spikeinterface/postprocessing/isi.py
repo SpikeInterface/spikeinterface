@@ -136,7 +136,7 @@ def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float
     """
     fs = sorting.get_sampling_frequency()
     num_units = len(sorting.unit_ids)
-    assert bin_ms * 1e-3 >= 1/fs, f"bin size must be larger than the sampling period {1/fs}"
+    assert bin_ms * 1e-3 >= 1 / fs, f"bin size must be larger than the sampling period {1e3 / fs}"
     assert bin_ms <= window_ms
     window_size = int(round(fs * window_ms * 1e-3))
     bin_size = int(round(fs * bin_ms * 1e-3))
@@ -168,7 +168,7 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
 
     assert HAVE_NUMBA
     fs = sorting.get_sampling_frequency()
-    assert bin_ms * 1e-3 >= 1/fs, f"the bin_ms must be larger than the sampling period: {1/fs}"
+    assert bin_ms * 1e-3 >= 1 / fs, f"the bin_ms must be larger than the sampling period: {1e3 / fs}"
     assert bin_ms <= window_ms
     num_units = len(sorting.unit_ids)
 
