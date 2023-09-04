@@ -134,7 +134,7 @@ def generate_sorting(
     firing_rates : float, default: 3.0
         The firing rate of each unit (in Hz).
     empty_units : list, default: None
-        List of units to remove from the sorting
+        List of units that will have no spikes. (used for testing mainly).
     refractory_period_ms : float, default: 3.0
         The refractory period in ms
     seed : int, default: None
