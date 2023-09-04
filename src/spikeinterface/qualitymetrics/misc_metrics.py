@@ -242,7 +242,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
 
     It computes several metrics related to isi violations:
         * isi_violations_ratio: the relative firing rate of the hypothetical neurons that are
-                                generating the ISI violations. Described in [1]. See Notes.
+                                generating the ISI violations. Described in [Hill]_. See Notes.
         * isi_violation_count: number of ISI violations
 
     Parameters
@@ -262,7 +262,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     Returns
     -------
     isi_violations_ratio : dict
-        The isi violation ratio described in [1].
+        The isi violation ratio described in [Hill]_.
     isi_violation_count : dict
         Number of violations.
 
@@ -343,7 +343,7 @@ def compute_refrac_period_violations(
     Returns
     -------
     rp_contamination : dict
-        The refactory period contamination described in [1].
+        The refactory period contamination described in [Llobet]_.
     rp_violations : dict
         Number of refractory period violations.
 
@@ -446,7 +446,8 @@ def compute_sliding_rp_violations(
     References
     ----------
     Based on metrics described in [IBL]_
-    This code was adapted from https://github.com/SteinmetzLab/slidingRefractory/blob/1.0.0/python/slidingRP/metrics.py
+    This code was adapted from:
+    https://github.com/SteinmetzLab/slidingRefractory/blob/1.0.0/python/slidingRP/metrics.py
     """
     duration = waveform_extractor.get_total_duration()
     sorting = waveform_extractor.sorting
@@ -542,7 +543,8 @@ def compute_amplitude_cutoffs(
     ----------
     Inspired by metric described in [Hill]_
 
-    This code was adapted from https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
+    This code was adapted from:
+    https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
 
     """
     sorting = waveform_extractor.sorting
@@ -1013,7 +1015,8 @@ def slidingRP_violations(
     return_conf_matrix : bool
         If True, the confidence matrix (n_contaminations, n_ref_periods) is returned, by default False
 
-    See: https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
+    Code adapted from:
+    https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
 
     Returns
     -------

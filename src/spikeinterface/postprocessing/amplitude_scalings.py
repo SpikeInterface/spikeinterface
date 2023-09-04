@@ -295,6 +295,7 @@ def _init_worker_amplitude_scalings(
 
 
 def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx):
+    # from sklearn.linear_model import LinearRegression
     from scipy.stats import linregress
 
     # recover variables of the worker
@@ -313,7 +314,6 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
 
     spikes_in_segment = spikes[segment_slices[segment_index]]
 
-    # TODO: handle spikes in margin!
     i0 = np.searchsorted(spikes_in_segment["sample_index"], start_frame)
     i1 = np.searchsorted(spikes_in_segment["sample_index"], end_frame)
 
@@ -335,17 +335,18 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
             i0_margin = np.searchsorted(spikes_in_segment["sample_index"], start_frame - left)
             i1_margin = np.searchsorted(spikes_in_segment["sample_index"], end_frame + right)
             local_spikes_w_margin = spikes_in_segment[i0_margin:i1_margin]
-            collisions = find_collisions(
+            collisions_local = find_collisions(
                 local_spikes, local_spikes_w_margin, delta_collision_samples, unit_inds_to_channel_indices
             )
         else:
-            collisions = {}
+            collisions_local = {}
 
         # compute the scaling for each spike
         scalings = np.zeros(len(local_spikes), dtype=float)
-        collisions_dict = {}
+        # collision_global transforms local spike index to global spike index
+        collisions_global = {}
         for spike_index, spike in enumerate(local_spikes):
-            if spike_index in collisions.keys():
+            if spike_index in collisions_local.keys():
                 # we deal with overlapping spikes later
                 continue
             unit_index = spike["unit_index"]
@@ -366,15 +367,20 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
                 local_waveform = traces_with_margin[cut_out_start:cut_out_end, sparse_indices]
             assert template.shape == local_waveform.shape
 
+            # here we use linregress, which is equivalent to using sklearn LinearRegression with fit_intercept=True
+            # y = local_waveform.flatten()
+            # X = template.flatten()[:, np.newaxis]
+            # reg = LinearRegression(positive=True, fit_intercept=True).fit(X, y)
+            # scalings[spike_index] = reg.coef_[0]
             linregress_res = linregress(template.flatten(), local_waveform.flatten())
             scalings[spike_index] = linregress_res[0]
 
         # deal with collisions
-        if len(collisions) > 0:
+        if len(collisions_local) > 0:
             num_spikes_in_previous_segments = int(
                 np.sum([len(spikes[segment_slices[s]]) for s in range(segment_index)])
             )
-            for spike_index, collision in collisions.items():
+            for spike_index, collision in collisions_local.items():
                 scaled_amps = fit_collision(
                     collision,
                     traces_with_margin,
@@ -392,12 +398,12 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
                 scalings[spike_index] = scaled_amps[0]
 
                 # make collision_dict indices "absolute" by adding i0 and the cumulative number of spikes in previous segments
-                collisions_dict.update({spike_index + i0 + num_spikes_in_previous_segments: collision})
+                collisions_global.update({spike_index + i0 + num_spikes_in_previous_segments: collision})
     else:
         scalings = np.array([])
-        collisions_dict = {}
+        collisions_global = {}
 
-    return (scalings, collisions_dict)
+    return (scalings, collisions_global)
 
 
 ### Collision handling ###
@@ -446,6 +452,7 @@ def find_collisions(spikes, spikes_w_margin, delta_collision_samples, unit_inds_
         A dictionary with collisions. The key is the index of the spike with collision, the value is an
         array of overlapping spikes, including the spike itself at position 0.
     """
+    # TODO: refactor to speed-up
     collision_spikes_dict = {}
     for spike_index, spike in enumerate(spikes):
         # find the index of the spike within the spikes_w_margin
@@ -563,7 +570,7 @@ def fit_collision(
             full_template[sample_centered - cut_out_before : sample_centered + cut_out_after] = template_cut
         X[:, i] = full_template.T.flatten()
 
-    reg = LinearRegression().fit(X, y)
+    reg = LinearRegression(fit_intercept=True, positive=True).fit(X, y)
     scalings = reg.coef_
     return scalings
 
