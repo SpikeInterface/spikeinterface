@@ -89,7 +89,7 @@ def test_equal_results_correlograms():
 
 
 def test_flat_cross_correlogram():
-    sorting = generate_sorting(num_units=2, sampling_frequency=10000.0, durations=[100000.0])
+    sorting = generate_sorting(num_units=2, sampling_frequency=10000.0, durations=[100000.0], seed=371532)
 
     methods = ["numpy"]
     if HAVE_NUMBA:
