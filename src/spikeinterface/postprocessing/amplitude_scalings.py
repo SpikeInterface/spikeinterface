@@ -24,6 +24,7 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         self.spikes = self.waveform_extractor.sorting.to_spike_vector(
             extremum_channel_inds=extremum_channel_inds, use_cache=False
         )
+        self.collisions = None
 
     def _set_params(
         self,
@@ -138,9 +139,11 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         if handle_collisions:
             for collision in collisions:
                 collisions_dict.update(collision)
+            self.collisions = collisions_dict
+            # Note: collisions are note in _extension_data because they are not pickable. We only store the indices
+            self._extension_data["collisions"] = np.array(list(collisions_dict.keys()))
 
-        self._extension_data[f"amplitude_scalings"] = amp_scalings
-        self._extension_data[f"collisions"] = collisions_dict
+        self._extension_data["amplitude_scalings"] = amp_scalings
 
     def get_data(self, outputs="concatenated"):
         """
