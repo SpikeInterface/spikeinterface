@@ -4,6 +4,7 @@ from pathlib import Path
 import shutil
 from typing import Iterable, Literal, Optional
 import json
+import os
 
 import numpy as np
 from copy import deepcopy
@@ -87,6 +88,7 @@ class WaveformExtractor:
         self._template_cache = {}
         self._params = {}
         self._loaded_extensions = dict()
+        self._is_read_only = False
         self.sparsity = sparsity
 
         self.folder = folder
@@ -103,6 +105,8 @@ class WaveformExtractor:
                 if (self.folder / "params.json").is_file():
                     with open(str(self.folder / "params.json"), "r") as f:
                         self._params = json.load(f)
+            if not os.access(self.folder, os.W_OK):
+                self._is_read_only = True
         else:
             # this is in case of in-memory
             self.format = "memory"
@@ -399,6 +403,9 @@ class WaveformExtractor:
     def dtype(self):
         return self._params["dtype"]
 
+    def is_read_only(self) -> bool:
+        return self._is_read_only
+
     def has_recording(self) -> bool:
         return self._recording is not None
 
@@ -514,18 +521,8 @@ class WaveformExtractor:
         exists: bool
             Whether the extension exists or not
         """
-        if self.folder is None:
-            return extension_name in self._loaded_extensions
-        else:
-            if self.format == "binary":
-                return (self.folder / extension_name).is_dir() and (
-                    self.folder / extension_name / "params.json"
-                ).is_file()
-            elif self.format == "zarr":
-                return (
-                    extension_name in self._waveforms_root.keys()
-                    and "params" in self._waveforms_root[extension_name].attrs.keys()
-                )
+        # Extensions are always loaded in memory
+        return extension_name in self._loaded_extensions
 
     def load_extension(self, extension_name):
         """
@@ -1735,20 +1732,28 @@ class BaseWaveformExtractorExtension:
         self.waveform_extractor = waveform_extractor
 
         if self.waveform_extractor.folder is not None:
-            self.folder = self.waveform_extractor.folder
-            self.format = self.waveform_extractor.format
-            if self.format == "binary":
-                self.extension_folder = self.folder / self.extension_name
-                if not self.extension_folder.is_dir():
-                    self.extension_folder.mkdir()
-            else:
-                import zarr
-
-                zarr_root = zarr.open(self.folder, mode="r+")
-                if self.extension_name not in zarr_root.keys():
-                    self.extension_group = zarr_root.create_group(self.extension_name)
+            if not self.waveform_extractor.is_read_only():
+                self.folder = self.waveform_extractor.folder
+                self.format = self.waveform_extractor.format
+                if self.format == "binary":
+                    self.extension_folder = self.folder / self.extension_name
+                    if not self.extension_folder.is_dir():
+                        self.extension_folder.mkdir()
                 else:
-                    self.extension_group = zarr_root[self.extension_name]
+                    import zarr
+
+                    zarr_root = zarr.open(self.folder, mode="r+")
+                    if self.extension_name not in zarr_root.keys():
+                        self.extension_group = zarr_root.create_group(self.extension_name)
+                    else:
+                        self.extension_group = zarr_root[self.extension_name]
+            else:
+                warn(
+                    "WaveformExtractor: cannot save extension in read-only mode. " "Extension will be saved in memory."
+                )
+                self.format = "memory"
+                self.extension_folder = None
+                self.folder = None
         else:
             self.format = "memory"
             self.extension_folder = None
