@@ -104,7 +104,7 @@ if __name__ == '__main__':
             func()
             done = '...OK'
         except Exception as err:
-            done = f'...Fail, Error: {err}' 
+            done = f'...Fail, Error: {err}'
         print(label, done)
 
     if platform.system() == "Windows":
