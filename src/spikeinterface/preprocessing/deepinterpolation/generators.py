@@ -27,12 +27,13 @@ class SpikeInterfaceRecordingGenerator(SequentialGenerator):
         steps_per_epoch=10,
         start_frame=None,
         end_frame=None,
+        total_samples=-1,
     ):
-        "Initialization"
         assert recording.get_num_segments() == 1, "Only supported for mono-segment recordings"
 
         self.recording = recording
-        self.total_samples = recording.get_num_samples()
+        num_samples = recording.get_num_samples()
+        self.total_samples = num_samples if total_samples == -1 else total_samples
         assert len(desired_shape) == 2, "desired_shape should be 2D"
         assert (
             desired_shape[0] * desired_shape[1] == recording.get_num_channels()
@@ -40,7 +41,7 @@ class SpikeInterfaceRecordingGenerator(SequentialGenerator):
         self.desired_shape = desired_shape
 
         start_frame = start_frame if start_frame is not None else 0
-        end_frame = end_frame if end_frame is not None else self.total_samples
+        end_frame = end_frame if end_frame is not None else recording.get_num_samples()
 
         assert end_frame > start_frame, "end_frame must be greater than start_frame"
 
@@ -59,8 +60,8 @@ class SpikeInterfaceRecordingGenerator(SequentialGenerator):
             json.dump(sequential_generator_params, f)
         super().__init__(json_path)
 
-        self._update_end_frame(self.total_samples)
-        self._calculate_list_samples(self.total_samples)
+        self._update_end_frame(num_samples)
+        self._calculate_list_samples(num_samples)
         self.last_batch_size = np.mod(self.end_frame - self.start_frame, self.batch_size)
 
         self._kwargs = dict(
@@ -74,26 +75,6 @@ class SpikeInterfaceRecordingGenerator(SequentialGenerator):
             start_frame=start_frame,
             end_frame=end_frame,
         )
-
-    def __len__(self):
-        "Denotes the total number of batches"
-        if self.last_batch_size == 0:
-            return int(len(self.list_samples) // self.batch_size)
-        else:
-            return int(len(self.list_samples) // self.batch_size) + 1
-
-    def generate_batch_indexes(self, index):
-        # This is to ensure we are going through
-        # the entire data when steps_per_epoch<self.__len__
-        if self.steps_per_epoch > 0:
-            index = index + self.steps_per_epoch * self.epoch_index
-        # Generate indexes of the batch
-        indexes = slice(index * self.batch_size, (index + 1) * self.batch_size)
-
-        if index == len(self) - 1 and self.last_batch_size > 0:
-            indexes = slice(-self.last_batch_size, len(self.list_samples))
-        shuffle_indexes = self.list_samples[indexes]
-        return shuffle_indexes
 
     def __getitem__(self, index):
         # This is to ensure we are going through

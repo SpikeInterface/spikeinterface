@@ -23,8 +23,10 @@ def train_deepinterpolation(
     model_name: str,
     train_start_s: float,
     train_end_s: float,
+    train_duration_s: float,
     test_start_s: float,
     test_end_s: float,
+    test_duration_s: float,
     desired_shape: tuple[int, int],
     pre_frame: int = 30,
     post_frame: int = 30,
@@ -37,7 +39,7 @@ def train_deepinterpolation(
     apply_learning_decay: int = 0,
     nb_times_through_data: int = 1,
     learning_rate: float = 0.0001,
-    loss: str = "mean_absolute_error",
+    loss: str = "mean_squared_error",
     nb_workers: int = -1,
     caching_validation: bool = False,
     run_uid: str = "si",
@@ -61,10 +63,14 @@ def train_deepinterpolation(
         Start time of the training in seconds
     train_end_s : float
         End time of the training in seconds
+    train_duration_s : float
+        Duration of the training in seconds
     test_start_s : float
         Start time of the testing in seconds
     test_end_s : float
         End time of the testing in seconds
+    test_duration_s : float
+        Duration of the testing in seconds
     desired_shape : tuple
         Shape of the input to the network
     pre_frame : int
@@ -119,8 +125,10 @@ def train_deepinterpolation(
         model_name,
         train_start_s,
         train_end_s,
+        train_duration_s,
         test_start_s,
         test_end_s,
+        test_duration_s,
         pre_frame,
         post_frame,
         pre_post_omission,
@@ -156,8 +164,10 @@ def train_deepinterpolation_process(
     model_name: str,
     train_start_s: float,
     train_end_s: float,
+    train_duration_s: float | None,
     test_start_s: float,
     test_end_s: float,
+    test_duration_s: float | None,
     pre_frame: int,
     post_frame: int,
     pre_post_omission: int,
@@ -195,8 +205,16 @@ def train_deepinterpolation_process(
     ### Define params
     start_frame_training = int(train_start_s * fs)
     end_frame_training = int(train_end_s * fs)
+    if train_duration_s is not None:
+        total_samples_training = int(train_duration_s * fs)
+    else:
+        total_samples_training = -1
     start_frame_test = int(test_start_s * fs)
     end_frame_test = int(test_end_s * fs)
+    if test_duration_s is not None:
+        total_samples_testing = int(test_duration_s * fs)
+    else:
+        total_samples_testing = -1
 
     # Those are parameters used for the network topology
     network_params = dict()
@@ -232,6 +250,7 @@ def train_deepinterpolation_process(
         start_frame=start_frame_training,
         end_frame=end_frame_training,
         desired_shape=desired_shape,
+        total_samples=total_samples_training,
     )
     test_data_generator = SpikeInterfaceRecordingGenerator(
         recording,
@@ -242,6 +261,7 @@ def train_deepinterpolation_process(
         end_frame=end_frame_test,
         steps_per_epoch=-1,
         desired_shape=desired_shape,
+        total_samples=total_samples_testing,
     )
 
     network_json_path = trained_model_folder / "network_params.json"
