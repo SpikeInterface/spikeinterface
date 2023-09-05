@@ -1746,28 +1746,39 @@ class BaseWaveformExtractorExtension:
         self.waveform_extractor = waveform_extractor
 
         if self.waveform_extractor.folder is not None:
-            if not self.waveform_extractor.is_read_only():
-                self.folder = self.waveform_extractor.folder
-                self.format = self.waveform_extractor.format
-                if self.format == "binary":
-                    self.extension_folder = self.folder / self.extension_name
-                    if not self.extension_folder.is_dir():
+            self.folder = self.waveform_extractor.folder
+            self.format = self.waveform_extractor.format
+            if self.format == "binary":
+                self.extension_folder = self.folder / self.extension_name
+                if not self.extension_folder.is_dir():
+                    if not self.waveform_extractor.is_read_only():
                         self.extension_folder.mkdir()
-                else:
-                    import zarr
+                    else:
+                        raise Exception(
+                            "WaveformExtractor: cannot save extension in read-only mode. "
+                            "Extension will be saved in memory."
+                        )
+                        self.format = "memory"
+                        self.extension_folder = None
+                        self.folder = None
+            else:
+                import zarr
 
-                    zarr_root = zarr.open(self.folder, mode="r+")
-                    if self.extension_name not in zarr_root.keys():
+                mode = "r+" if not self.waveform_extractor.is_read_only() else "r"
+                zarr_root = zarr.open(self.folder, mode=mode)
+                if self.extension_name not in zarr_root.keys():
+                    if not self.waveform_extractor.is_read_only():
                         self.extension_group = zarr_root.create_group(self.extension_name)
                     else:
-                        self.extension_group = zarr_root[self.extension_name]
-            else:
-                warn(
-                    "WaveformExtractor: cannot save extension in read-only mode. " "Extension will be saved in memory."
-                )
-                self.format = "memory"
-                self.extension_folder = None
-                self.folder = None
+                        raise Exception(
+                            "WaveformExtractor: cannot save extension in read-only mode. "
+                            "Extension will be saved in memory."
+                        )
+                        self.format = "memory"
+                        self.extension_folder = None
+                        self.folder = None
+                else:
+                    self.extension_group = zarr_root[self.extension_name]
         else:
             self.format = "memory"
             self.extension_folder = None
@@ -1882,53 +1893,56 @@ class BaseWaveformExtractorExtension:
         self._save(**kwargs)
 
     def _save(self, **kwargs):
-        if self.format == "binary":
-            import pandas as pd
+        if not self.waveform_extractor.is_read_only():
+            if self.format == "binary":
+                import pandas as pd
 
-            for ext_data_name, ext_data in self._extension_data.items():
-                if isinstance(ext_data, dict):
-                    with (self.extension_folder / f"{ext_data_name}.json").open("w") as f:
-                        json.dump(ext_data, f)
-                elif isinstance(ext_data, np.ndarray):
-                    np.save(self.extension_folder / f"{ext_data_name}.npy", ext_data)
-                elif isinstance(ext_data, pd.DataFrame):
-                    ext_data.to_csv(self.extension_folder / f"{ext_data_name}.csv", index=True)
-                else:
-                    try:
-                        with (self.extension_folder / f"{ext_data_name}.pkl").open("wb") as f:
-                            pickle.dump(ext_data, f)
-                    except:
-                        raise Exception(f"Could not save {ext_data_name} as extension data")
-        elif self.format == "zarr":
-            from .zarrrecordingextractor import get_default_zarr_compressor
-            import pandas as pd
-            import numcodecs
+                for ext_data_name, ext_data in self._extension_data.items():
+                    if isinstance(ext_data, dict):
+                        with (self.extension_folder / f"{ext_data_name}.json").open("w") as f:
+                            json.dump(ext_data, f)
+                    elif isinstance(ext_data, np.ndarray):
+                        np.save(self.extension_folder / f"{ext_data_name}.npy", ext_data)
+                    elif isinstance(ext_data, pd.DataFrame):
+                        ext_data.to_csv(self.extension_folder / f"{ext_data_name}.csv", index=True)
+                    else:
+                        try:
+                            with (self.extension_folder / f"{ext_data_name}.pkl").open("wb") as f:
+                                pickle.dump(ext_data, f)
+                        except:
+                            raise Exception(f"Could not save {ext_data_name} as extension data")
+            elif self.format == "zarr":
+                from .zarrrecordingextractor import get_default_zarr_compressor
+                import pandas as pd
+                import numcodecs
 
-            compressor = kwargs.get("compressor", None)
-            if compressor is None:
-                compressor = get_default_zarr_compressor()
-            for ext_data_name, ext_data in self._extension_data.items():
-                if ext_data_name in self.extension_group:
-                    del self.extension_group[ext_data_name]
-                if isinstance(ext_data, dict):
-                    self.extension_group.create_dataset(
-                        name=ext_data_name, data=[ext_data], object_codec=numcodecs.JSON()
-                    )
-                    self.extension_group[ext_data_name].attrs["dict"] = True
-                elif isinstance(ext_data, np.ndarray):
-                    self.extension_group.create_dataset(name=ext_data_name, data=ext_data, compressor=compressor)
-                elif isinstance(ext_data, pd.DataFrame):
-                    ext_data.to_xarray().to_zarr(
-                        store=self.extension_group.store, group=f"{self.extension_group.name}/{ext_data_name}", mode="a"
-                    )
-                    self.extension_group[ext_data_name].attrs["dataframe"] = True
-                else:
-                    try:
+                compressor = kwargs.get("compressor", None)
+                if compressor is None:
+                    compressor = get_default_zarr_compressor()
+                for ext_data_name, ext_data in self._extension_data.items():
+                    if ext_data_name in self.extension_group:
+                        del self.extension_group[ext_data_name]
+                    if isinstance(ext_data, dict):
                         self.extension_group.create_dataset(
-                            name=ext_data_name, data=ext_data, object_codec=numcodecs.Pickle()
+                            name=ext_data_name, data=[ext_data], object_codec=numcodecs.JSON()
                         )
-                    except:
-                        raise Exception(f"Could not save {ext_data_name} as extension data")
+                        self.extension_group[ext_data_name].attrs["dict"] = True
+                    elif isinstance(ext_data, np.ndarray):
+                        self.extension_group.create_dataset(name=ext_data_name, data=ext_data, compressor=compressor)
+                    elif isinstance(ext_data, pd.DataFrame):
+                        ext_data.to_xarray().to_zarr(
+                            store=self.extension_group.store,
+                            group=f"{self.extension_group.name}/{ext_data_name}",
+                            mode="a",
+                        )
+                        self.extension_group[ext_data_name].attrs["dataframe"] = True
+                    else:
+                        try:
+                            self.extension_group.create_dataset(
+                                name=ext_data_name, data=ext_data, object_codec=numcodecs.Pickle()
+                            )
+                        except:
+                            raise Exception(f"Could not save {ext_data_name} as extension data")
 
     def reset(self):
         """
