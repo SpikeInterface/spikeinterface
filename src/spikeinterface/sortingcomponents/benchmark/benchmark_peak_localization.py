@@ -447,15 +447,15 @@ def plot_figure_1(benchmark, mode="average", cell_ind="auto"):
 
     import spikeinterface.full as si
 
-    unit_id = benchmark.waveforms.sorting.unit_ids[cell_ind]
+    sorting = benchmark.waveforms.sorting
+    unit_id = sorting.unit_ids[cell_ind]
 
-    mask = benchmark.waveforms.sorting.get_all_spike_trains()[0][1] == unit_id
-    times = (
-        benchmark.waveforms.sorting.get_all_spike_trains()[0][0][mask] / benchmark.recording.get_sampling_frequency()
-    )
+    spikes_seg0 = sorting.to_spike_vector(concatenated=False)[0]
+    mask = spikes_seg0["unit_index"] == cell_ind
+    times = spikes_seg0[mask] / sorting.get_sampling_frequency()
 
     print(benchmark.recording)
-    # si.plot_timeseries(benchmark.recording, mode='line', time_range=(times[0]-0.01, times[0] + 0.1), channel_ids=benchmark.recording.channel_ids[:20], ax=axs[0, 1])
+    # si.plot_traces(benchmark.recording, mode='line', time_range=(times[0]-0.01, times[0] + 0.1), channel_ids=benchmark.recording.channel_ids[:20], ax=axs[0, 1])
     # axs[0, 1].set_ylabel('Neurons')
 
     # si.plot_spikes_on_traces(benchmark.waveforms, unit_ids=[unit_id], time_range=(times[0]-0.01, times[0] + 0.1), unit_colors={unit_id : 'r'}, ax=axs[0, 1],

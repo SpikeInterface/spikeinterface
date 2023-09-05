@@ -8,10 +8,10 @@ from .baserecordingsnippets import BaseRecordingSnippets
 # main extractor from dump and cache
 from .binaryrecordingextractor import BinaryRecordingExtractor, read_binary
 from .npzsortingextractor import NpzSortingExtractor, read_npz_sorting
-from .numpyextractors import NumpyRecording, NumpySorting, NumpyEvent, NumpySnippets
+from .numpyextractors import NumpyRecording, NumpySorting, SharedMemorySorting, NumpyEvent, NumpySnippets
 from .zarrrecordingextractor import ZarrRecordingExtractor, read_zarr, get_default_zarr_compressor
 from .binaryfolder import BinaryFolderRecording, read_binary_folder
-from .npzfolder import NpzFolderSorting, read_npz_folder
+from .sortingfolder import NumpyFolderSorting, NpzFolderSorting, read_numpy_sorting_folder, read_npz_folder
 from .npysnippetsextractor import NpySnippetsExtractor, read_npy_snippets
 from .npyfoldersnippets import NpyFolderSnippets, read_npy_snippets_folder
 
@@ -34,6 +34,13 @@ from .generate import (
     inject_some_duplicate_units,
     inject_some_split_units,
     synthetize_spike_train_bad_isi,
+    generate_templates,
+    NoiseGeneratorRecording,
+    noise_generator_recording,
+    generate_recording_by_size,
+    InjectTemplatesRecording,
+    inject_templates,
+    generate_ground_truth_recording,
 )
 
 # utils to append and concatenate segment (equivalent to OLD MultiRecordingTimeExtractor)
@@ -109,7 +116,7 @@ from .old_api_utils import (
 )
 
 # templates addition
-from .injecttemplates import InjectTemplatesRecording, InjectTemplatesRecordingSegment, inject_templates
+# from .injecttemplates import InjectTemplatesRecording, InjectTemplatesRecordingSegment, inject_templates
 
 # template tools
 from .template_tools import (

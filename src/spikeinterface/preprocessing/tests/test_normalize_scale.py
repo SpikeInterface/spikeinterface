@@ -30,7 +30,7 @@ def test_normalize_by_quantile():
     rec2.save(verbose=False)
 
     # import matplotlib.pyplot as plt
-    # from spikeinterface.widgets import plot_timeseries
+    # from spikeinterface.widgets import plot_traces
     # fig, ax = plt.subplots()
     # ax.plot(rec.get_traces(segment_index=0)[:, 0], color='g')
     # ax.plot(rec2.get_traces(segment_index=0)[:, 0], color='r')

@@ -466,15 +466,14 @@ def nearest_neighbors_isolation(
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
         warnings.warn(
-            f"Warning: unit {this_unit_id} has fewer spikes than ",
-            f"specified by `min_spikes` ({min_spikes}); ",
-            f"returning NaN as the quality metric...",
+            f"Unit {this_unit_id} has fewer spikes than specified by `min_spikes` "
+            f"({min_spikes}); returning NaN as the quality metric..."
         )
         return np.nan, np.nan
     elif fr_all_units[this_unit_id] < min_fr:
         warnings.warn(
-            f"Warning: unit {this_unit_id} has a firing rate ",
-            f"below the specified `min_fr` ({min_fr}Hz); " f"returning NaN as the quality metric...",
+            f"Unit {this_unit_id} has a firing rate below the specified `min_fr` "
+            f"({min_fr} Hz); returning NaN as the quality metric..."
         )
         return np.nan, np.nan
     else:
@@ -652,15 +651,14 @@ def nearest_neighbors_noise_overlap(
     # if target unit has fewer than `min_spikes` spikes, print out a warning and return NaN
     if n_spikes_all_units[this_unit_id] < min_spikes:
         warnings.warn(
-            f"Warning: unit {this_unit_id} has fewer spikes than ",
-            f"specified by `min_spikes` ({min_spikes}); ",
-            f"returning NaN as the quality metric...",
+            f"Unit {this_unit_id} has fewer spikes than specified by `min_spikes` "
+            f"({min_spikes}); returning NaN as the quality metric..."
         )
         return np.nan
     elif fr_all_units[this_unit_id] < min_fr:
         warnings.warn(
-            f"Warning: unit {this_unit_id} has a firing rate ",
-            f"below the specified `min_fr` ({min_fr}Hz); " f"returning NaN as the quality metric...",
+            f"Unit {this_unit_id} has a firing rate below the specified `min_fr` "
+            f"({min_fr} Hz); returning NaN as the quality metric...",
         )
         return np.nan
     else:
@@ -969,6 +967,6 @@ def pca_metrics_one_unit(
                 unit_silhouette_score = silhouette_score(pcs_flat, labels, unit_id)
             except:
                 unit_silhouette_score = np.nan
-            pc_metrics["silhouette_full"] = unit_silhouette_socre
+            pc_metrics["silhouette_full"] = unit_silhouette_score
 
     return pc_metrics

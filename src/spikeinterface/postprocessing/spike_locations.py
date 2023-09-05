@@ -50,9 +50,6 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 
         we = self.waveform_extractor
 
-        extremum_channel_inds = get_template_extremum_channel(we, outputs="index")
-        self.spikes = we.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
-
         spike_locations = localize_peaks(we.recording, self.spikes, **self._params, **job_kwargs)
         self._extension_data["spike_locations"] = spike_locations
 

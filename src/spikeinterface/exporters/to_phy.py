@@ -81,7 +81,7 @@ def export_to_phy(
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     # check sparsity
-    if (num_chans > 64) and (sparsity is None or not waveform_extractor.is_sparse()):
+    if (num_chans > 64) and (sparsity is None and not waveform_extractor.is_sparse()):
         warnings.warn(
             "Exporting to Phy with many channels and without sparsity might result in a heavy and less "
             "informative visualization. You can use use a sparse WaveformExtractor or you can use the 'sparsity' "
@@ -158,8 +158,9 @@ def export_to_phy(
 
     # export spike_times/spike_templates/spike_clusters
     # here spike_labels is a remapping to unit_index
-    all_spikes = sorting.get_all_spike_trains(outputs="unit_index")
-    spike_times, spike_labels = all_spikes[0]
+    all_spikes_seg0 = sorting.to_spike_vector(concatenated=False)[0]
+    spike_times = all_spikes_seg0["sample_index"]
+    spike_labels = all_spikes_seg0["unit_index"]
     np.save(str(output_folder / "spike_times.npy"), spike_times[:, np.newaxis])
     np.save(str(output_folder / "spike_templates.npy"), spike_labels[:, np.newaxis])
     np.save(str(output_folder / "spike_clusters.npy"), spike_labels[:, np.newaxis])

@@ -26,12 +26,15 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
 
     def _select_extension_data(self, unit_ids):
         # load filter and save amplitude files
+        sorting = self.waveform_extractor.sorting
+        spikes = sorting.to_spike_vector(concatenated=False)
+        (keep_unit_indices,) = np.nonzero(np.in1d(sorting.unit_ids, unit_ids))
+
         new_extension_data = dict()
-        for seg_index in range(self.waveform_extractor.recording.get_num_segments()):
+        for seg_index in range(sorting.get_num_segments()):
             amp_data_name = f"amplitude_segment_{seg_index}"
             amps = self._extension_data[amp_data_name]
-            _, all_labels = self.waveform_extractor.sorting.get_all_spike_trains()[seg_index]
-            filtered_idxs = np.in1d(all_labels, np.array(unit_ids)).nonzero()
+            filtered_idxs = np.in1d(spikes[seg_index]["unit_index"], keep_unit_indices)
             new_extension_data[amp_data_name] = amps[filtered_idxs]
         return new_extension_data
 
@@ -45,7 +48,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         recording = we.recording
         sorting = we.sorting
 
-        all_spikes = sorting.get_all_spike_trains(outputs="unit_index")
+        all_spikes = sorting.to_spike_vector()
         self._all_spikes = all_spikes
 
         peak_sign = self._params["peak_sign"]
@@ -76,7 +79,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
                 "The sorting object is not dumpable and cannot be processed in parallel. You can use the "
                 "`sorting.save()` function to make it dumpable"
             )
-        init_args = (recording, sorting, extremum_channels_index, peak_shifts, return_scaled)
+        init_args = (recording, sorting.to_multiprocessing(n_jobs), extremum_channels_index, peak_shifts, return_scaled)
         processor = ChunkRecordingExecutor(
             recording, func, init_func, init_args, handle_returns=True, job_name="extract amplitudes", **job_kwargs
         )
@@ -107,7 +110,6 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         """
         we = self.waveform_extractor
         sorting = we.sorting
-        all_spikes = sorting.get_all_spike_trains(outputs="unit_index")
 
         if outputs == "concatenated":
             amplitudes = []
@@ -115,11 +117,13 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
                 amplitudes.append(self._extension_data[f"amplitude_segment_{segment_index}"])
             return amplitudes
         elif outputs == "by_unit":
+            all_spikes = sorting.to_spike_vector(concatenated=False)
+
             amplitudes_by_unit = []
             for segment_index in range(we.get_num_segments()):
                 amplitudes_by_unit.append({})
                 for unit_index, unit_id in enumerate(sorting.unit_ids):
-                    _, spike_labels = all_spikes[segment_index]
+                    spike_labels = all_spikes[segment_index]["unit_index"]
                     mask = spike_labels == unit_index
                     amps = self._extension_data[f"amplitude_segment_{segment_index}"][mask]
                     amplitudes_by_unit[segment_index][unit_id] = amps
@@ -193,8 +197,7 @@ def _init_worker_spike_amplitudes(recording, sorting, extremum_channels_index, p
     worker_ctx["min_shift"] = np.min(peak_shifts)
     worker_ctx["max_shifts"] = np.max(peak_shifts)
 
-    all_spikes = sorting.get_all_spike_trains(outputs="unit_index")
-    worker_ctx["all_spikes"] = all_spikes
+    worker_ctx["all_spikes"] = sorting.to_spike_vector(concatenated=False)
     worker_ctx["extremum_channels_index"] = extremum_channels_index
 
     return worker_ctx
@@ -209,7 +212,9 @@ def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     seg_size = recording.get_num_samples(segment_index=segment_index)
 
-    spike_times, spike_labels = all_spikes[segment_index]
+    spike_times = all_spikes[segment_index]["sample_index"]
+    spike_labels = all_spikes[segment_index]["unit_index"]
+
     d = np.diff(spike_times)
     assert np.all(d >= 0)
 

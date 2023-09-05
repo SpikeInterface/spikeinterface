@@ -395,6 +395,8 @@ class GroundTruthComparison(BasePairSorterComparison):
         perf: pandas dataframe/series (or dict)
             dataframe/series (based on 'output') with performance entries
         """
+        import pandas as pd
+
         possibles = ("raw_count", "by_unit", "pooled_with_average")
         if method not in possibles:
             raise Exception("'method' can be " + " or ".join(possibles))
@@ -408,7 +410,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         elif method == "pooled_with_average":
             perf = self.get_performance(method="by_unit").mean(axis=0)
 
-        if output == "dict" and isinstance(perf, pd.Series):
+        if output == "dict" and isinstance(perf, (pd.DataFrame, pd.Series)):
             perf = perf.to_dict()
 
         return perf

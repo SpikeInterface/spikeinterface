@@ -87,7 +87,7 @@ sorting = se.MEArecSortingExtractor(mearec_folder_path)
 
 import spikeinterface.widgets as sw
 
-w_ts = sw.plot_timeseries(recording, time_range=(0, 5))
+w_ts = sw.plot_traces(recording, time_range=(0, 5))
 w_rs = sw.plot_rasters(sorting, time_range=(0, 5))
 
 plt.show()

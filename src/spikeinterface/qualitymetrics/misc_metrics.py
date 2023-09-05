@@ -242,7 +242,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
 
     It computes several metrics related to isi violations:
         * isi_violations_ratio: the relative firing rate of the hypothetical neurons that are
-                                generating the ISI violations. Described in [1]. See Notes.
+                                generating the ISI violations. Described in [Hill]_. See Notes.
         * isi_violation_count: number of ISI violations
 
     Parameters
@@ -262,7 +262,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
     Returns
     -------
     isi_violations_ratio : dict
-        The isi violation ratio described in [1].
+        The isi violation ratio described in [Hill]_.
     isi_violation_count : dict
         Number of violations.
 
@@ -343,7 +343,7 @@ def compute_refrac_period_violations(
     Returns
     -------
     rp_contamination : dict
-        The refactory period contamination described in [1].
+        The refactory period contamination described in [Llobet]_.
     rp_violations : dict
         Number of refractory period violations.
 
@@ -367,9 +367,12 @@ def compute_refrac_period_violations(
     fs = sorting.get_sampling_frequency()
     num_units = len(sorting.unit_ids)
     num_segments = sorting.get_num_segments()
-    spikes = sorting.get_all_spike_trains(outputs="unit_index")
+
+    spikes = sorting.to_spike_vector(concatenated=False)
+
     if unit_ids is None:
         unit_ids = sorting.unit_ids
+
     num_spikes = compute_num_spikes(waveform_extractor)
 
     t_c = int(round(censored_period_ms * fs * 1e-3))
@@ -377,9 +380,9 @@ def compute_refrac_period_violations(
     nb_rp_violations = np.zeros((num_units), dtype=np.int64)
 
     for seg_index in range(num_segments):
-        _compute_rp_violations_numba(
-            nb_rp_violations, spikes[seg_index][0].astype(np.int64), spikes[seg_index][1].astype(np.int32), t_c, t_r
-        )
+        spike_times = spikes[seg_index]["sample_index"].astype(np.int64)
+        spike_labels = spikes[seg_index]["unit_index"].astype(np.int32)
+        _compute_rp_violations_numba(nb_rp_violations, spike_times, spike_labels, t_c, t_r)
 
     T = waveform_extractor.get_total_samples()
 
@@ -443,7 +446,8 @@ def compute_sliding_rp_violations(
     References
     ----------
     Based on metrics described in [IBL]_
-    This code was adapted from https://github.com/SteinmetzLab/slidingRefractory/blob/1.0.0/python/slidingRP/metrics.py
+    This code was adapted from:
+    https://github.com/SteinmetzLab/slidingRefractory/blob/1.0.0/python/slidingRP/metrics.py
     """
     duration = waveform_extractor.get_total_duration()
     sorting = waveform_extractor.sorting
@@ -539,7 +543,8 @@ def compute_amplitude_cutoffs(
     ----------
     Inspired by metric described in [Hill]_
 
-    This code was adapted from https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
+    This code was adapted from:
+    https://github.com/AllenInstitute/ecephys_spike_sorting/tree/master/ecephys_spike_sorting/modules/quality_metrics
 
     """
     sorting = waveform_extractor.sorting
@@ -1010,7 +1015,8 @@ def slidingRP_violations(
     return_conf_matrix : bool
         If True, the confidence matrix (n_contaminations, n_ref_periods) is returned, by default False
 
-    See: https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
+    Code adapted from:
+    https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
 
     Returns
     -------
