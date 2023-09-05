@@ -30,7 +30,7 @@ print(rec_filtred)
 peaks = detect_peaks(
         rec_filtred, method='locally_exclusive',
         peak_sign='neg', detect_threshold=6, exclude_sweep_ms=0.3,
-        local_radius_um=100,
+        radius_um=100,
         noise_levels=None,
         random_chunk_kwargs={},
         chunk_memory='10M', n_jobs=1, progress_bar=True)

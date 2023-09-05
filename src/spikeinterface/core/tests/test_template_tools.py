@@ -82,7 +82,7 @@ if __name__ == "__main__":
     setup_module()
 
     test_get_template_amplitudes()
-    # test_get_template_extremum_channel()
-    # test_get_template_extremum_channel_peak_shift()
-    # test_get_template_extremum_amplitude()
-    # test_get_template_channel_sparsity()
+    test_get_template_extremum_channel()
+    test_get_template_extremum_channel_peak_shift()
+    test_get_template_extremum_amplitude()
+    test_get_template_channel_sparsity()

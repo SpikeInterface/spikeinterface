@@ -21,7 +21,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
     _default_params = {
-        "general": {"ms_before": 2, "ms_after": 2, "local_radius_um": 100},
+        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
         "waveforms": {"max_spikes_per_unit": 200, "overwrite": True},
         "filtering": {"dtype": "float32"},
         "detection": {"peak_sign": "neg", "detect_threshold": 5},
@@ -75,8 +75,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
         detection_params.update(job_kwargs)
-        if "local_radius_um" not in detection_params:
-            detection_params["local_radius_um"] = params["general"]["local_radius_um"]
+        if "radius_um" not in detection_params:
+            detection_params["radius_um"] = params["general"]["radius_um"]
         if "exclude_sweep_ms" not in detection_params:
             detection_params["exclude_sweep_ms"] = max(params["general"]["ms_before"], params["general"]["ms_after"])
 

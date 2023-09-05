@@ -3,25 +3,25 @@ import numpy as np
 from pathlib import Path
 import shutil
 
-import scipy.signal
+from spikeinterface import extract_waveforms, get_template_extremum_channel, generate_ground_truth_recording
 
-from spikeinterface import download_dataset, BaseSorting
-from spikeinterface.extractors import MEArecRecordingExtractor
+# from spikeinterface.extractors import MEArecRecordingExtractor
+from spikeinterface.extractors import read_mearec
 
-from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-from spikeinterface.sortingcomponents.peak_pipeline import (
+# from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
     PeakRetriever,
     PipelineNode,
     ExtractDenseWaveforms,
-    ExtractSparseWaveforms,
+    base_peak_dtype,
 )
 
 
 if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "sortingcomponents"
+    cache_folder = pytest.global_test_folder / "core"
 else:
-    cache_folder = Path("cache_folder") / "sortingcomponents"
+    cache_folder = Path("cache_folder") / "core"
 
 
 class AmplitudeExtractionNode(PipelineNode):
@@ -51,8 +51,8 @@ class WaveformDenoiser(PipelineNode):
         return np.dtype("float32")
 
     def compute(self, traces, peaks, waveforms):
-        kernel = np.array([0.1, 0.8, 0.1])[np.newaxis, :, np.newaxis]
-        denoised_waveforms = scipy.signal.fftconvolve(waveforms, kernel, axes=1, mode="same")
+        kernel = np.array([0.1, 0.8, 0.1])
+        denoised_waveforms = np.apply_along_axis(lambda m: np.convolve(m, kernel, mode="same"), axis=1, arr=waveforms)
         return denoised_waveforms
 
 
@@ -69,16 +69,23 @@ class WaveformsRootMeanSquare(PipelineNode):
 
 
 def test_run_node_pipeline():
-    repo = "https://gin.g-node.org/NeuralEnsemble/ephy_testing_data"
-    remote_path = "mearec/mearec_test_10s.h5"
-    local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
-    recording = MEArecRecordingExtractor(local_path)
+    recording, sorting = generate_ground_truth_recording(num_channels=10, num_units=10, durations=[10.0])
 
     job_kwargs = dict(chunk_duration="0.5s", n_jobs=2, progress_bar=False)
 
-    peaks = detect_peaks(
-        recording, method="locally_exclusive", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=0.1, **job_kwargs
-    )
+    spikes = sorting.to_spike_vector()
+
+    # create peaks from spikes
+    we = extract_waveforms(recording, sorting, mode="memory", **job_kwargs)
+    extremum_channel_inds = get_template_extremum_channel(we, peak_sign="neg", outputs="index")
+    # print(extremum_channel_inds)
+    ext_channel_inds = np.array([extremum_channel_inds[unit_id] for unit_id in sorting.unit_ids])
+    # print(ext_channel_inds)
+    peaks = np.zeros(spikes.size, dtype=base_peak_dtype)
+    peaks["sample_index"] = spikes["sample_index"]
+    peaks["channel_index"] = ext_channel_inds[spikes["unit_index"]]
+    peaks["amplitude"] = 0.0
+    peaks["segment_index"] = 0
 
     # one step only : squeeze output
     peak_retriever = PeakRetriever(recording, peaks)
@@ -93,19 +100,19 @@ def test_run_node_pipeline():
     ms_before = 0.5
     ms_after = 1.0
     peak_retriever = PeakRetriever(recording, peaks)
-    extract_waveforms = ExtractDenseWaveforms(
+    dense_waveforms = ExtractDenseWaveforms(
         recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
     )
-    waveform_denoiser = WaveformDenoiser(recording, parents=[peak_retriever, extract_waveforms], return_output=False)
+    waveform_denoiser = WaveformDenoiser(recording, parents=[peak_retriever, dense_waveforms], return_output=False)
     amplitue_extraction = AmplitudeExtractionNode(recording, parents=[peak_retriever], param0=6.6, return_output=True)
-    waveforms_rms = WaveformsRootMeanSquare(recording, parents=[peak_retriever, extract_waveforms], return_output=True)
+    waveforms_rms = WaveformsRootMeanSquare(recording, parents=[peak_retriever, dense_waveforms], return_output=True)
     denoised_waveforms_rms = WaveformsRootMeanSquare(
         recording, parents=[peak_retriever, waveform_denoiser], return_output=True
     )
 
     nodes = [
         peak_retriever,
-        extract_waveforms,
+        dense_waveforms,
         waveform_denoiser,
         amplitue_extraction,
         waveforms_rms,
@@ -129,6 +136,7 @@ def test_run_node_pipeline():
     folder = cache_folder / "pipeline_folder"
     if folder.is_dir():
         shutil.rmtree(folder)
+
     output = run_node_pipeline(
         recording,
         nodes,
