@@ -181,8 +181,6 @@ class DeepInterpolatedRecordingSegment(BasePreprocessorSegment):
             batch_size=batch_size,
             desired_shape=self.desired_shape,
         )
-        input_generator.randomize = False
-        input_generator._calculate_list_samples(input_generator.total_samples)
         di_output = self.model.predict(input_generator, workers=self.predict_workers, verbose=2)
 
         out_traces = input_generator.reshape_output(di_output)

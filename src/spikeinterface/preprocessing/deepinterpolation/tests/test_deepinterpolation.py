@@ -3,17 +3,20 @@ import numpy as np
 from pathlib import Path
 
 import probeinterface as pi
-from spikeinterface import download_dataset, generate_recording
+from spikeinterface import download_dataset, generate_recording, append_recordings, concatenate_recordings
 from spikeinterface.extractors import read_mearec, read_spikeglx, read_openephys
 from spikeinterface.preprocessing import depth_order, zscore
 
 from spikeinterface.preprocessing.deepinterpolation import train_deepinterpolation, deepinterpolate
+from spikeinterface.preprocessing.deepinterpolation import train_deepinterpolation, deepinterpolate
 
 
 if hasattr(pytest, "global_test_folder"):
-    cache_folder = pytest.global_test_folder / "preprocessing"
+    cache_folder = pytest.global_test_folder / "deepinterpolation"
 else:
-    cache_folder = Path("cache_folder") / "preprocessing"
+    cache_folder = Path("cache_folder") / "deepinterpolation"
+    if not cache_folder.is_dir():
+        cache_folder.mkdir(parents=True)
 
 
 def recording_and_shape():
@@ -34,6 +37,27 @@ def recording_and_shape_fixture():
     return recording_and_shape()
 
 
+def test_deepinterpolation_generator_borders(recording_and_shape_fixture):
+    """Test that the generator avoids borders in multi-segment and recording lists cases"""
+    from spikeinterface.preprocessing.deepinterpolation.generators import SpikeInterfaceRecordingGenerator
+
+    recording, desired_shape = recording_and_shape_fixture
+    recording_multi_segment = append_recordings([recording, recording, recording])
+    recording_list = [recording, recording, recording]
+    recording_multi_list = [recording_multi_segment, recording_multi_segment, recording_multi_segment]
+
+    gen_multi_segment = SpikeInterfaceRecordingGenerator(recording_multi_segment, desired_shape=desired_shape)
+    gen_list = SpikeInterfaceRecordingGenerator(recording_list, desired_shape=desired_shape)
+    gen_multi_list = SpikeInterfaceRecordingGenerator(recording_multi_list, desired_shape=desired_shape)
+
+    # exclude in between segments
+    assert len(gen_multi_segment.exclude_intervals) == 2
+    # exclude in between recordings
+    assert len(gen_list.exclude_intervals) == 2
+    # exclude in between recordings and segments
+    assert len(gen_multi_list.exclude_intervals) == 2 * len(recording_multi_list) + 2
+
+
 def test_deepinterpolation_training(recording_and_shape_fixture):
     recording, desired_shape = recording_and_shape_fixture
 
@@ -45,10 +69,10 @@ def test_deepinterpolation_training(recording_and_shape_fixture):
         model_name="training",
         train_start_s=1,
         train_end_s=10,
-        train_duration_s=0.1,
+        train_duration_s=0.02,
         test_start_s=0,
         test_end_s=1,
-        test_duration_s=0.05,
+        test_duration_s=0.01,
         pre_frame=20,
         post_frame=20,
         run_uid="si_test",
@@ -73,10 +97,10 @@ def test_deepinterpolation_transfer(recording_and_shape_fixture, tmp_path):
         existing_model_path=existing_model_path,
         train_start_s=1,
         train_end_s=10,
-        train_duration_s=0.1,
+        train_duration_s=0.02,
         test_start_s=0,
         test_end_s=1,
-        test_duration_s=0.05,
+        test_duration_s=0.01,
         pre_frame=20,
         post_frame=20,
         pre_post_omission=1,
@@ -94,6 +118,7 @@ def test_deepinterpolation_inference(recording_and_shape_fixture):
     recording_di = deepinterpolate(
         recording, model_path=existing_model_path, pre_frame=pre_frame, post_frame=post_frame, pre_post_omission=1
     )
+    print(recording_di)
     traces_original_first = recording.get_traces(start_frame=0, end_frame=100)
     traces_di_first = recording_di.get_traces(start_frame=0, end_frame=100)
     assert traces_di_first.shape == (100, recording.get_num_channels())
@@ -123,9 +148,19 @@ def test_deepinterpolation_inference_multi_job(recording_and_shape_fixture):
         pre_post_omission=1,
         use_gpu=False,
     )
+    print(recording_di)
     recording_di_slice = recording_di.frame_slice(start_frame=0, end_frame=int(0.5 * recording.sampling_frequency))
 
     recording_di_slice.save(folder=Path(cache_folder) / "di_slice", n_jobs=2, chunk_duration="50ms")
     traces_chunks = recording_di_slice.get_traces()
     traces_full = recording_di_slice.get_traces()
     np.testing.assert_array_equal(traces_chunks, traces_full)
+
+
+if __name__ == "__main__":
+    recording_shape = recording_and_shape()
+    # test_deepinterpolation_training(recording_shape)
+    # test_deepinterpolation_transfer()
+    test_deepinterpolation_inference(recording_shape)
+    # test_deepinterpolation_inference_multi_job()
+    # test_deepinterpolation_generator_borders(recording_shape)

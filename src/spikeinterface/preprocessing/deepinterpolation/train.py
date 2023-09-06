@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json
 import os
+import warnings
 from pathlib import Path
 from typing import Optional
 
@@ -18,16 +19,17 @@ global train_func
 
 
 def train_deepinterpolation(
-    recording: BaseRecording,
+    recordings: BaseRecording | list[BaseRecording],
     model_folder: str | Path,
     model_name: str,
-    train_start_s: float,
-    train_end_s: float,
-    test_start_s: float,
-    test_end_s: float,
     desired_shape: tuple[int, int],
+    train_start_s: Optional[float] = None,
+    train_end_s: Optional[float] = None,
     train_duration_s: Optional[float] = None,
+    test_start_s: Optional[float] = None,
+    test_end_s: Optional[float] = None,
     test_duration_s: Optional[float] = None,
+    test_recordings: Optional[BaseRecording | list[BaseRecording]] = None,
     pre_frame: int = 30,
     post_frame: int = 30,
     pre_post_omission: int = 1,
@@ -53,24 +55,27 @@ def train_deepinterpolation(
 
     Parameters
     ----------
-    recording : RecordingExtractor
-        The recording extractor to be deepinteprolated
+    recordings : BaseRecording | list[BaseRecording]
+        The recording(s) to be deepinteprolated. If a list is given, the recordings are concatenated
+        and samples at the border of the recordings are omitted.
     model_folder : str | Path
         Path to the folder where the model will be saved
     model_name : str
         Name of the model to be used
-    train_start_s : float
-        Start time of the training in seconds
-    train_end_s : float
-        End time of the training in seconds
-    train_duration_s : float
-        Duration of the training in seconds
-    test_start_s : float
-        Start time of the testing in seconds
-    test_end_s : float
-        End time of the testing in seconds
-    test_duration_s : float
-        Duration of the testing in seconds
+    train_start_s : float or None, default: None
+        Start time of the training in seconds. If None, the training starts at the beginning of the recording
+    train_end_s : float or None, default: None
+        End time of the training in seconds. If None, the training ends at the end of the recording
+    train_duration_s : float, default: None
+        Duration of the training in seconds. If None, the entire [train_start_s, train_end_s] is used for training
+    test_start_s : float or None, default: None
+        Start time of the testing in seconds. If None, the testing starts at the beginning of the recording
+    test_end_s : float or None, default: None
+        End time of the testing in seconds. If None, the testing ends at the end of the recording
+    test_duration_s : float or None, default: None
+        Duration of the testing in seconds, If None, the entire [test_start_s, test_end_s] is used for testing (not recommended)
+    test_recordings : BaseRecording | list[BaseRecording] | None, default: None
+        The recording(s) used for testing. If None, the training recording (or recordings) is used for testing
     desired_shape : tuple
         Shape of the input to the network
     pre_frame : int
@@ -120,19 +125,20 @@ def train_deepinterpolation(
         nb_workers = os.cpu_count()
 
     args = (
-        recording,
+        recordings,
         model_folder,
         model_name,
+        desired_shape,
         train_start_s,
         train_end_s,
         train_duration_s,
         test_start_s,
         test_end_s,
         test_duration_s,
+        test_recordings,
         pre_frame,
         post_frame,
         pre_post_omission,
-        desired_shape,
         existing_model_path,
         verbose,
         nb_gpus,
@@ -159,19 +165,20 @@ def train_deepinterpolation(
 
 
 def train_deepinterpolation_process(
-    recording: BaseRecording,
+    recordings: BaseRecording | list[BaseRecording],
     model_folder: str | Path,
     model_name: str,
+    desired_shape: tuple[int, int],
     train_start_s: float,
     train_end_s: float,
     train_duration_s: float | None,
     test_start_s: float,
     test_end_s: float,
     test_duration_s: float | None,
-    pre_frame: int,
-    post_frame: int,
-    pre_post_omission: int,
-    desired_shape: tuple[int, int],
+    test_recordings: Optional[BaseRecording | list[BaseRecording]] = None,
+    pre_frame: int = 30,
+    post_frame: int = 30,
+    pre_post_omission: int = 1,
     existing_model_path: Optional[str | Path] = None,
     verbose: bool = True,
     nb_gpus: int = 1,
@@ -200,7 +207,9 @@ def train_deepinterpolation_process(
     trained_model_folder.mkdir(exist_ok=True)
 
     # check if roughly zscored
-    fs = recording.sampling_frequency
+    if not isinstance(recordings, list):
+        recordings = [recordings]
+    fs = recordings[0].sampling_frequency
 
     ### Define params
     start_frame_training = int(train_start_s * fs)
@@ -215,6 +224,13 @@ def train_deepinterpolation_process(
         total_samples_testing = int(test_duration_s * fs)
     else:
         total_samples_testing = -1
+
+    if test_recordings is None:
+        test_recordings = recordings
+        if (start_frame_training <= start_frame_test < end_frame_training) or (
+            start_frame_training < end_frame_test <= end_frame_training
+        ):
+            warnings.warn("Training and testing overlap. This is not recommended.")
 
     # Those are parameters used for the network topology
     network_params = dict()
@@ -243,7 +259,7 @@ def train_deepinterpolation_process(
 
     # Training (from core_trainor class)
     training_data_generator = SpikeInterfaceRecordingGenerator(
-        recording,
+        recordings,
         pre_frame=pre_frame,
         post_frame=post_frame,
         pre_post_omission=pre_post_omission,
@@ -253,7 +269,7 @@ def train_deepinterpolation_process(
         total_samples=total_samples_training,
     )
     test_data_generator = SpikeInterfaceRecordingGenerator(
-        recording,
+        test_recordings,
         pre_frame=pre_frame,
         post_frame=post_frame,
         pre_post_omission=pre_post_omission,
