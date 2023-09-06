@@ -35,5 +35,5 @@ dependencies:
     - spikeinterface-gui
     - tridesclous>=1.6.8
     # - phy==2.0b5
-    - mountainsort4>=1.0.0
-    - mountainsort5>=0.3.0
+    # - mountainsort4>=1.0.0 isosplit5 fails on pip install for mac
+    # - mountainsort5>=0.3.0
