@@ -295,10 +295,10 @@ an :code:`engine` that supports parallel processing (such as :code:`joblib` or :
     another_recording = ...
 
     job_list = [
-      {'sorter_name': 'tridesclous', 'recording': recording, 'output_folder': '/folder1','detect_threshold': 5.},
-      {'sorter_name': 'tridesclous', 'recording': another_recording, 'output_folder': '/folder2', 'detect_threshold': 5.},
-      {'sorter_name': 'herdingspikes', 'recording': recording, 'output_folder': '/folder3', 'clustering_bandwidth': 8., 'docker_image': True},
-      {'sorter_name': 'herdingspikes', 'recording': another_recording, 'output_folder': '/folder4', 'clustering_bandwidth': 8., 'docker_image': True},
+      {'sorter_name': 'tridesclous', 'recording': recording, 'output_folder': 'folder1','detect_threshold': 5.},
+      {'sorter_name': 'tridesclous', 'recording': another_recording, 'output_folder': 'folder2', 'detect_threshold': 5.},
+      {'sorter_name': 'herdingspikes', 'recording': recording, 'output_folder': 'folder3', 'clustering_bandwidth': 8., 'docker_image': True},
+      {'sorter_name': 'herdingspikes', 'recording': another_recording, 'output_folder': 'folder4', 'clustering_bandwidth': 8., 'docker_image': True},
     ]
 
     # run in loop
