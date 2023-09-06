@@ -136,7 +136,6 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
             with open(script_name, "w") as f:
                 kwargs_txt = ""
                 for k, v in kwargs.items():
-                    print(k, v)
                     kwargs_txt += "    "
                     if k == "recording":
                         # put None temporally
@@ -155,7 +154,6 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
                 slurm_script = _slurm_script.format(
                     python=sys.executable, recording_dict=recording_dict, kwargs_txt=kwargs_txt
                 )
-                print(slurm_script)
                 f.write(slurm_script)
                 os.fchmod(f.fileno(), mode=stat.S_IRWXU)
 
@@ -165,6 +163,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
 
 _slurm_script = """#! {python}
 from numpy import array
+from spikeinterface import load_extractor
 from spikeinterface.sorters import run_sorter
 
 rec_dict = {recording_dict}
@@ -172,7 +171,7 @@ rec_dict = {recording_dict}
 kwargs = dict(
 {kwargs_txt}
 )
-kwargs['recording'] = load_extactor(rec_dict)
+kwargs['recording'] = load_extractor(rec_dict)
 
 run_sorter(**kwargs)
 """

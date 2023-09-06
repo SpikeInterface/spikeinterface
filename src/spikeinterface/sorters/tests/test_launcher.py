@@ -240,10 +240,10 @@ if __name__ == "__main__":
 
     # test_run_sorter_jobs_loop(job_list)
     # test_run_sorter_jobs_joblib(job_list)
-    test_run_sorter_jobs_processpoolexecutor(job_list)
+    # test_run_sorter_jobs_processpoolexecutor(job_list)
     # test_run_sorter_jobs_multiprocessing(job_list)
     # test_run_sorter_jobs_dask(job_list)
-    # test_run_sorter_jobs_slurm(job_list)
+    test_run_sorter_jobs_slurm(job_list)
 
     # test_run_sorter_by_property()
 
