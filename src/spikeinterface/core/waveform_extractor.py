@@ -1754,7 +1754,7 @@ class BaseWaveformExtractorExtension:
                     if not self.waveform_extractor.is_read_only():
                         self.extension_folder.mkdir()
                     else:
-                        raise Exception(
+                        warn(
                             "WaveformExtractor: cannot save extension in read-only mode. "
                             "Extension will be saved in memory."
                         )
@@ -1770,7 +1770,7 @@ class BaseWaveformExtractorExtension:
                     if not self.waveform_extractor.is_read_only():
                         self.extension_group = zarr_root.create_group(self.extension_name)
                     else:
-                        raise Exception(
+                        warn(
                             "WaveformExtractor: cannot save extension in read-only mode. "
                             "Extension will be saved in memory."
                         )
