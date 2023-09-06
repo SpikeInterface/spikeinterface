@@ -293,7 +293,7 @@ class ZScoreRecording(BasePreprocessor):
             means = means[None, :]
             stds = np.std(random_data, axis=0)
             stds = stds[None, :]
-            gain = 1 / stds
+            gain = 1.0 / stds
             offset = -means / stds
 
         if int_scale is not None:

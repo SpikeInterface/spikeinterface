@@ -80,8 +80,8 @@ def test_zscore():
 
 
 def test_zscore_int():
-    seed = 0
-    rec = generate_recording(seed=seed, mode="lazy")
+    seed = 1
+    rec = generate_recording(seed=seed, mode="legacy")
     rec_int = scale(rec, dtype="int16", gain=100)
     with pytest.raises(AssertionError):
         zscore(rec_int, dtype=None)
