@@ -290,7 +290,7 @@ an :code:`engine` that supports parallel processing (such as :code:`joblib` or :
 
 .. code-block:: python
 
-    # here we run 2 sorters on 2 diffrents recording = 4 jobs
+    # here we run 2 sorters on 2 different recordings = 4 jobs
     recording = ...
     another_recording = ...
 
