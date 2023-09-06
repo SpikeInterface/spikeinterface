@@ -59,19 +59,13 @@ def job_list():
     return get_job_list()
 
 
-
-
-
-
-
-################################
-
-
 def test_run_sorter_jobs_loop(job_list):
     if base_output.is_dir():
         shutil.rmtree(base_output)
     sortings = run_sorter_jobs(job_list, engine="loop", return_output=True)
     print(sortings)
+
+
 
 
 def test_run_sorter_jobs_joblib(job_list):
@@ -80,8 +74,14 @@ def test_run_sorter_jobs_joblib(job_list):
     sortings = run_sorter_jobs(job_list, engine="joblib", engine_kwargs=dict(n_jobs=2, backend="loky"), return_output=True)
     print(sortings)
 
-def test_run_sorter_jobs_multiprocessing(job_list):
-    pass
+def test_run_sorter_jobs_processpoolexecutor(job_list):
+    if base_output.is_dir():
+        shutil.rmtree(base_output)
+    sortings = run_sorter_jobs(job_list, engine="processpoolexecutor", engine_kwargs=dict(max_workers=2), return_output=True)
+    print(sortings)
+
+
+
 
 @pytest.mark.skipif(True, reason="This is tested locally")
 def test_run_sorter_jobs_dask(job_list):
@@ -235,11 +235,12 @@ def test_run_sorters_with_dict():
 
 
 if __name__ == "__main__":
-    setup_module()
+    # setup_module()
     job_list = get_job_list()
 
     # test_run_sorter_jobs_loop(job_list)
     # test_run_sorter_jobs_joblib(job_list)
+    test_run_sorter_jobs_processpoolexecutor(job_list)
     # test_run_sorter_jobs_multiprocessing(job_list)
     # test_run_sorter_jobs_dask(job_list)
     # test_run_sorter_jobs_slurm(job_list)
@@ -247,7 +248,7 @@ if __name__ == "__main__":
     # test_run_sorter_by_property()
 
     # this deprecated
-    test_run_sorters_with_list()
-    test_run_sorters_with_dict()
+    # test_run_sorters_with_list()
+    # test_run_sorters_with_dict()
 
 

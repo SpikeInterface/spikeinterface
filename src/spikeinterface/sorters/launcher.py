@@ -4,7 +4,6 @@ Utils functions to launch several sorter on several recording in parallel or not
 from pathlib import Path
 import shutil
 import numpy as np
-import json
 import tempfile
 import os
 import stat
@@ -12,14 +11,22 @@ import subprocess
 import sys
 import warnings
 
-from spikeinterface.core import load_extractor, aggregate_units
-from spikeinterface.core.core_tools import check_json
+from spikeinterface.core import  aggregate_units
 
 from .sorterlist import sorter_dict
 from .runsorter import run_sorter
 from .basesorter import is_log_ok
 
-_implemented_engine = ("loop", "joblib", "dask", "slurm")
+_default_engine_kwargs = dict(
+    loop=dict(),
+    joblib=dict(n_jobs=-1, backend="loky"),
+    processpoolexecutor=dict(max_workers=2, mp_context=None),
+    dask=dict(client=None),
+    slurm=dict(tmp_script_folder=None, cpus_per_task=1, mem="1G"),
+)
+
+
+_implemented_engine = list(_default_engine_kwargs.keys())
 
 def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=False):
     """
@@ -56,8 +63,15 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
 
     assert engine in _implemented_engine, f"engine must be in {_implemented_engine}"
 
+    engine_kwargs_ = dict()
+    engine_kwargs_.update(_default_engine_kwargs[engine])
+    engine_kwargs_.update(engine_kwargs)
+    engine_kwargs = engine_kwargs_
+    
+
+
     if return_output:
-        assert engine in ("loop", "joblib", "multiprocessing")
+        assert engine in ("loop", "joblib", "processpoolexecutor")
         out = []
     else:
         out = None
@@ -72,17 +86,30 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
     elif engine == "joblib":
         from joblib import Parallel, delayed
 
-        n_jobs = engine_kwargs.get("n_jobs", -1)
-        backend = engine_kwargs.get("backend", "loky")
+        n_jobs = engine_kwargs["n_jobs"]
+        backend = engine_kwargs["backend"]
         sortings = Parallel(n_jobs=n_jobs, backend=backend)(delayed(run_sorter)(**kwargs) for kwargs in job_list)
         if return_output:
             out.extend(sortings)
 
-    elif engine == "multiprocessing":
-        raise NotImplementedError()
+    elif engine == "processpoolexecutor":
+        from concurrent.futures import ProcessPoolExecutor
+
+        max_workers = engine_kwargs["max_workers"]
+        mp_context = engine_kwargs["mp_context"]
+        
+        with ProcessPoolExecutor(max_workers=max_workers, mp_context=mp_context) as executor:
+            futures = []
+            for kwargs in job_list:
+                res = executor.submit(run_sorter, **kwargs)
+                futures.append(res)
+            for futur in futures:
+                sorting = futur.result()
+                if return_output:
+                    out.append(sorting)
 
     elif engine == "dask":
-        client = engine_kwargs.get("client", None)
+        client = engine_kwargs["client"]
         assert client is not None, "For dask engine you have to provide : client = dask.distributed.Client(...)"
 
         tasks = []
@@ -95,16 +122,15 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
 
     elif engine == "slurm":
         # generate python script for slurm
-        tmp_script_folder = engine_kwargs.get("tmp_script_folder", None)
+        tmp_script_folder = engine_kwargs["tmp_script_folder"]
         if tmp_script_folder is None:
             tmp_script_folder = tempfile.mkdtemp(prefix="spikeinterface_slurm_")
         tmp_script_folder = Path(tmp_script_folder)
-        cpus_per_task = engine_kwargs.get("cpus_per_task", 1)
-        mem = engine_kwargs.get("mem", "1G")
+        cpus_per_task = engine_kwargs["cpus_per_task"]
+        mem = engine_kwargs["mem"]
 
         tmp_script_folder.mkdir(exist_ok=True, parents=True)
 
-        # for i, task_args in enumerate(task_args_list):
         for i, kwargs in enumerate(job_list):
             script_name = tmp_script_folder / f"si_script_{i}.py"
             with open(script_name, "w") as f:
@@ -133,7 +159,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
                 f.write(slurm_script)
                 os.fchmod(f.fileno(), mode=stat.S_IRWXU)
 
-            # subprocess.Popen(["sbatch", str(script_name.absolute()), f"-cpus-per-task={cpus_per_task}", f"-mem={mem}"])
+            subprocess.Popen(["sbatch", str(script_name.absolute()), f"-cpus-per-task={cpus_per_task}", f"-mem={mem}"])
 
     return out
 
