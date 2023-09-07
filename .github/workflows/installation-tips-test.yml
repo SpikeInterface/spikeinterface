@@ -28,7 +28,7 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-     - name: Test Conda Environment Creation
-       uses: conda-incubator/setup-miniconda@v2.2.0
-       with:
+    - name: Test Conda Environment Creation
+      uses: conda-incubator/setup-miniconda@v2.2.0
+      with:
         environment-file: ./installations_tips/full_spikeinterface_environment_${{ matrix.label }}.yml
