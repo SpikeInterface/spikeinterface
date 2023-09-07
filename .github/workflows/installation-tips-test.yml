@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 12 * * *"  # Daily at noon UTC
- 
+
 jobs:
   installation-tips-testing:
     name: Build Conda Env on ${{ matrix.os }} OS
