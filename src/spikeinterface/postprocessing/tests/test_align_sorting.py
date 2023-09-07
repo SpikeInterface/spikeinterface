@@ -6,7 +6,7 @@ import pytest
 
 import numpy as np
 
-from spikeinterface import WaveformExtractor, load_extractor, extract_waveforms, NumpySorting
+from spikeinterface import NumpySorting
 from spikeinterface.core import generate_sorting
 
 from spikeinterface.postprocessing import align_sorting
@@ -17,8 +17,8 @@ else:
     cache_folder = Path("cache_folder") / "postprocessing"
 
 
-def test_compute_unit_center_of_mass():
-    sorting = generate_sorting(durations=[10.0])
+def test_align_sorting():
+    sorting = generate_sorting(durations=[10.0], seed=0)
     print(sorting)
 
     unit_ids = sorting.unit_ids
@@ -43,4 +43,4 @@ def test_compute_unit_center_of_mass():
 
 
 if __name__ == "__main__":
-    test_compute_unit_center_of_mass()
+    test_align_sorting()
