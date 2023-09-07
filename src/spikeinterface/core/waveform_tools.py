@@ -258,8 +258,8 @@ def distribute_waveforms_to_buffers(
         inds_by_unit[unit_id] = inds
 
     # and run
-    func = _worker_ditribute_buffers
-    init_func = _init_worker_ditribute_buffers
+    func = _worker_distribute_buffers
+    init_func = _init_worker_distribute_buffers
 
     init_args = (
         recording,
@@ -283,7 +283,7 @@ distribute_waveforms_to_buffers.__doc__ = distribute_waveforms_to_buffers.__doc_
 
 
 # used by ChunkRecordingExecutor
-def _init_worker_ditribute_buffers(
+def _init_worker_distribute_buffers(
     recording, unit_ids, spikes, arrays_info, nbefore, nafter, return_scaled, inds_by_unit, mode, sparsity_mask
 ):
     # create a local dict per worker
@@ -329,7 +329,7 @@ def _init_worker_ditribute_buffers(
 
 
 # used by ChunkRecordingExecutor
-def _worker_ditribute_buffers(segment_index, start_frame, end_frame, worker_ctx):
+def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
     recording = worker_ctx["recording"]
     unit_ids = worker_ctx["unit_ids"]
@@ -480,7 +480,7 @@ def extract_waveforms_to_single_buffer(
     shape = (num_spikes, nsamples, num_chans)
 
     if mode == "memmap":
-        filename = str(folder / f"all_waveforms.npy")
+        filename = str(folder / f"waveforms.npy")
         all_waveforms = np.lib.format.open_memmap(filename, mode="w+", dtype=dtype, shape=shape)
         wf_array_info = filename
     elif mode == "shared_memory":
@@ -497,15 +497,10 @@ def extract_waveforms_to_single_buffer(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    inds_by_unit = {}
-    for unit_ind, unit_id in enumerate(unit_ids):
-        (inds,) = np.nonzero(spikes["unit_index"] == unit_ind)
-        inds_by_unit[unit_id] = inds
-
     if num_spikes > 0:
         # and run
-        func = _worker_ditribute_single_buffer
-        init_func = _init_worker_ditribute_single_buffer
+        func = _worker_distribute_single_buffer
+        init_func = _init_worker_distribute_single_buffer
 
         init_args = (
             recording,
@@ -537,7 +532,7 @@ def extract_waveforms_to_single_buffer(
             return all_waveforms, wf_array_info
 
 
-def _init_worker_ditribute_single_buffer(
+def _init_worker_distribute_single_buffer(
     recording, unit_ids, spikes, wf_array_info, nbefore, nafter, return_scaled, mode, sparsity_mask
 ):
     worker_ctx = {}
@@ -576,7 +571,7 @@ def _init_worker_ditribute_single_buffer(
 
 
 # used by ChunkRecordingExecutor
-def _worker_ditribute_single_buffer(segment_index, start_frame, end_frame, worker_ctx):
+def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
     recording = worker_ctx["recording"]
     unit_ids = worker_ctx["unit_ids"]
