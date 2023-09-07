@@ -406,7 +406,7 @@ def extract_waveforms_to_single_buffer(
     nafter,
     mode="memmap",
     return_scaled=False,
-    folder=None,
+    file_path=None,
     dtype=None,
     sparsity_mask=None,
     copy=False,
@@ -442,8 +442,8 @@ def extract_waveforms_to_single_buffer(
         Mode to use ('memmap' | 'shared_memory')
     return_scaled: bool
         Scale traces before exporting to buffer or not.
-    folder: str or path
-        In case of memmap mode, folder to save npy files
+    file_path: str or path
+        In case of memmap mode, file to save npy file.
     dtype: numpy.dtype
         dtype for waveforms buffer
     sparsity_mask: None or array of bool
@@ -468,9 +468,9 @@ def extract_waveforms_to_single_buffer(
 
     dtype = np.dtype(dtype)
     if mode == "shared_memory":
-        assert folder is None
+        assert file_path is None
     else:
-        folder = Path(folder)
+        file_path = Path(file_path)
 
     num_spikes = spikes.size
     if sparsity_mask is None:
@@ -480,9 +480,8 @@ def extract_waveforms_to_single_buffer(
     shape = (num_spikes, nsamples, num_chans)
 
     if mode == "memmap":
-        filename = str(folder / f"waveforms.npy")
-        all_waveforms = np.lib.format.open_memmap(filename, mode="w+", dtype=dtype, shape=shape)
-        wf_array_info = filename
+        all_waveforms = np.lib.format.open_memmap(file_path, mode="w+", dtype=dtype, shape=shape)
+        wf_array_info = str(file_path)
     elif mode == "shared_memory":
         if num_spikes == 0 or num_chans == 0:
             all_waveforms = np.zeros(shape, dtype=dtype)
@@ -538,7 +537,6 @@ def _init_worker_distribute_single_buffer(
     worker_ctx = {}
     worker_ctx["recording"] = recording
     worker_ctx["wf_array_info"] = wf_array_info
-    worker_ctx["unit_ids"] = unit_ids
     worker_ctx["spikes"] = spikes
     worker_ctx["nbefore"] = nbefore
     worker_ctx["nafter"] = nafter
@@ -574,7 +572,6 @@ def _init_worker_distribute_single_buffer(
 def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, worker_ctx):
     # recover variables of the worker
     recording = worker_ctx["recording"]
-    unit_ids = worker_ctx["unit_ids"]
     segment_slices = worker_ctx["segment_slices"]
     spikes = worker_ctx["spikes"]
     nbefore = worker_ctx["nbefore"]
