@@ -30,7 +30,7 @@ _implemented_engine = list(_default_engine_kwargs.keys())
 
 def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=False):
     """
-    Run several :py:func:`run_sorter()` sequencially or in parralel given a list of job.
+    Run several :py:func:`run_sorter()` sequentially or in parallel given a list of jobs.
 
     For **engine="loop"** this is equivalent to:
 
@@ -39,9 +39,9 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
         for job in job_list:
             run_sorter(**job)
     
-    For some engines, this function is blocking until the results ("loop", "joblib", "multiprocessing", "dask").
-    For some other engine ("slurm") the function return almost immediatly (akak non blocking) and the results
-    must be retrieve by hand when finished with :py:func:`read_sorter_folder()`.
+    For some engines ("loop", "joblib", "multiprocessing", "dask"), this function is blocking until the results .
+    For other engines ("slurm") the function returns almost immediately (aka non-blocking) and the results
+    must be retrieved by hand when finished with :py:func:`read_sorter_folder()`.
 
     Parameters
     ----------
