@@ -92,7 +92,7 @@ def test_waveform_tools():
 
                 mode_kwargs_ = dict(**mode_kwargs)
                 if mode_kwargs["mode"] == "memmap":
-                    mode_kwargs_["folder" ] = wf_folder
+                    mode_kwargs_["folder"] = wf_folder
 
                 wfs_arrays = extract_waveforms_to_buffers(
                     recording,
@@ -118,8 +118,8 @@ def test_waveform_tools():
 
                 mode_kwargs_ = dict(**mode_kwargs)
                 if mode_kwargs["mode"] == "memmap":
-                    mode_kwargs_["file_path" ] = wf_file_path
-    
+                    mode_kwargs_["file_path"] = wf_file_path
+
                 all_waveforms = extract_waveforms_to_single_buffer(
                     recording,
                     spikes,
