@@ -38,7 +38,7 @@ class CorrelogramsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestC
 
 
 def test_make_bins():
-    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5])
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
 
     window_ms = 43.57
     bin_ms = 1.6421
@@ -82,14 +82,14 @@ def test_equal_results_correlograms():
     if HAVE_NUMBA:
         methods.append("numba")
 
-    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5])
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
 
     _test_correlograms(sorting, window_ms=60.0, bin_ms=2.0, methods=methods)
     _test_correlograms(sorting, window_ms=43.57, bin_ms=1.6421, methods=methods)
 
 
 def test_flat_cross_correlogram():
-    sorting = generate_sorting(num_units=2, sampling_frequency=10000.0, durations=[100000.0])
+    sorting = generate_sorting(num_units=2, sampling_frequency=10000.0, durations=[100000.0], seed=0)
 
     methods = ["numpy"]
     if HAVE_NUMBA:
