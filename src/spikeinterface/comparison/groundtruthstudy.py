@@ -22,8 +22,72 @@ from .studytools import (
     collect_run_times,
 )
 
-
 class GroundTruthStudy:
+    """
+    This class is an helper function to run any comparison on several "cases" for several ground truth dataset.
+
+    "cases" can be:
+      * several sorter for comparisons
+      * same sorter with differents parameters
+      * parameters of comparisons
+      * any combination of theses
+    
+      For enough flexibility cases key can be a tuple so that we can varify complexity along several
+      "axis" (paremeters or sorter)
+    
+    Ground truth dataset need recording+sorting. This can be from meraec file or from the internal generator
+    :py:fun:`generate_ground_truth_recording()`
+    
+    This GroundTruthStudy have been refactor in version 0.100 to be more flexible than previous versions.
+    Folders structures are not backward compatible.
+
+
+    
+    """
+    def __init__(self, study_folder=None):
+        # import pandas as pd
+
+        self.study_folder = Path(study_folder)
+
+        # self.computed_names = None
+        # self.recording_names = None
+        # self.cases_names = None
+        
+        self.datasets = {}
+        self.cases = {}
+
+        # self.rec_names = None
+        # self.sorter_names = None
+
+        self.scan_folder()
+
+        # self.comparisons = None
+        # self.exhaustive_gt = None
+
+    @classmethod
+    def create(cls, study_folder, datasets={}, cases={}):
+        pass
+
+    def __repr__(self):
+        t = f"GroundTruthStudy {self.study_folder.stem} \n"
+        t += f"  recordings: {len(self.rec_names)} {self.rec_names}\n"
+        if len(self.sorter_names):
+            t += "  cases: {} {}\n".format(len(self.sorter_names), self.sorter_names)
+
+        return t
+
+    def scan_folder(self):
+        self.rec_names = get_rec_names(self.study_folder)
+        # scan computed names
+        self.computed_names = list(iter_computed_names(self.study_folder))  # list of pair (rec_name, sorter_name)
+        self.sorter_names = np.unique([e for _, e in iter_computed_names(self.study_folder)]).tolist()
+        self._is_scanned = True
+
+
+
+
+
+class OLDGroundTruthStudy:
     def __init__(self, study_folder=None):
         import pandas as pd
 
