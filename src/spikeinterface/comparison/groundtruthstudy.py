@@ -165,6 +165,8 @@ class GroundTruthStudy:
                        recording=recording,
                        output_folder=sorter_folder)
             job.update(params)
+            # the verbose is overwritten and global to all run_sorters
+            job["verbose"] = verbose
             job_list.append(job)
 
         run_sorter_jobs(job_list, engine=engine, engine_kwargs=engine_kwargs, return_output=False)
