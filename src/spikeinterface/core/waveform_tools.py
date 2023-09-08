@@ -417,7 +417,7 @@ def extract_waveforms_to_single_buffer(
     Allocate a single buffer (memmap or or shared memory) and then distribute every waveform into it.
 
     Contrary to extract_waveforms_to_buffers() all waveforms are extracted in the same buffer, so the spike vector is
-    needed to recover waveforms unit by unit. Importantly in case of sparsity, the channel are not aligned across
+    needed to recover waveforms unit by unit. Importantly in case of sparsity, the channels are not aligned across
     units.
 
     Important note: for the "shared_memory" mode wf_array_info contains reference to
