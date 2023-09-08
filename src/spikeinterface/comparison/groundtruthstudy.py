@@ -1,26 +1,32 @@
 from pathlib import Path
 import shutil
+import json
+import pickle
 
 import numpy as np
 
 from spikeinterface.core import load_extractor
-from spikeinterface.extractors import NpzSortingExtractor
-from spikeinterface.sorters import sorter_dict, run_sorters
+from spikeinterface.core.core_tools import SIJsonEncoder
+
+from spikeinterface.sorters import run_sorter_jobs, read_sorter_folder
 
 from spikeinterface import WaveformExtractor
 from spikeinterface.qualitymetrics import compute_quality_metrics
 
 from .paircomparisons import compare_sorter_to_ground_truth
 
-from .studytools import (
-    setup_comparison_study,
-    get_rec_names,
-    get_recordings,
-    iter_working_folder,
-    iter_computed_names,
-    iter_computed_sorting,
-    collect_run_times,
-)
+# from .studytools import (
+#     setup_comparison_study,
+#     get_rec_names,
+#     get_recordings,
+#     iter_working_folder,
+#     iter_computed_names,
+#     iter_computed_sorting,
+#     collect_run_times,
+# )
+
+
+_key_separator = " ## "
 
 class GroundTruthStudy:
     """
@@ -44,10 +50,10 @@ class GroundTruthStudy:
 
     
     """
-    def __init__(self, study_folder=None):
+    def __init__(self, study_folder):
         # import pandas as pd
 
-        self.study_folder = Path(study_folder)
+        self.folder = Path(study_folder)
 
         # self.computed_names = None
         # self.recording_names = None
@@ -66,22 +72,121 @@ class GroundTruthStudy:
 
     @classmethod
     def create(cls, study_folder, datasets={}, cases={}):
-        pass
+        study_folder = Path(study_folder)
+        study_folder.mkdir(exist_ok=False, parents=True)
+
+        (study_folder / "datasets").mkdir()
+        (study_folder / "datasets/recordings").mkdir()
+        (study_folder / "datasets/gt_sortings").mkdir()
+        (study_folder / "sorters").mkdir()
+        (study_folder / "sortings").mkdir()
+
+        for key, (rec, gt_sorting) in datasets.items():
+            assert "/" not in key
+            assert "\\" not in key
+
+            # rec are pickle
+            rec.dump_to_pickle(study_folder / f"datasets/recordings/{key}.pickle")
+
+            # sorting are pickle + saved as NumpyFolderSorting
+            gt_sorting.dump_to_pickle(study_folder / f"datasets/gt_sortings/{key}.pickle")
+            gt_sorting.save(format="numpy_folder", folder=study_folder / f"datasets/gt_sortings/{key}")
+        
+        
+        # (study_folder / "cases.jon").write_text(
+        #     json.dumps(cases, indent=4, cls=SIJsonEncoder),
+        #     encoding="utf8",
+        # )
+        # cases is dump to a pickle file, json is not possible because of tuple key
+        (study_folder / "cases.pickle").write_bytes(pickle.dumps(cases))
+
+        return cls(study_folder)
+
+
+    def scan_folder(self):
+        if not (self.folder / "datasets").exists():
+            raise ValueError(f"This is folder is not a  {self.folder} GroundTruthStudy")
+
+        for rec_file in (self.folder / "datasets/recordings").glob("*.pickle"):
+            key = rec_file.stem
+            rec = load_extractor(rec_file)
+            gt_sorting = load_extractor(self.folder / f"datasets/gt_sortings/{key}")
+            self.datasets[key] = (rec, gt_sorting)
+        
+        with open(self.folder / "cases.pickle", "rb") as f:
+            self.cases = pickle.load(f)
 
     def __repr__(self):
-        t = f"GroundTruthStudy {self.study_folder.stem} \n"
-        t += f"  recordings: {len(self.rec_names)} {self.rec_names}\n"
-        if len(self.sorter_names):
-            t += "  cases: {} {}\n".format(len(self.sorter_names), self.sorter_names)
+        t = f"GroundTruthStudy {self.folder.stem} \n"
+        t += f"  datasets: {len(self.datasets)} {list(self.datasets.keys())}\n"
+        t += f"  cases: {len(self.cases)} {list(self.cases.keys())}\n"
 
         return t
 
-    def scan_folder(self):
-        self.rec_names = get_rec_names(self.study_folder)
-        # scan computed names
-        self.computed_names = list(iter_computed_names(self.study_folder))  # list of pair (rec_name, sorter_name)
-        self.sorter_names = np.unique([e for _, e in iter_computed_names(self.study_folder)]).tolist()
-        self._is_scanned = True
+    def key_to_str(self, key):
+        if isinstance(key, str):
+            return key
+        elif isinstance(key, tuple):
+            return _key_separator.join(key)
+        else:
+            raise ValueError("Keys for cases must str or tuple")
+
+    def run_sorters(self, case_keys=None, engine='loop', engine_kwargs={}, keep=True, verbose=False):
+        """
+        
+        """
+        if case_keys is None:
+            case_keys = self.cases.keys()
+
+        job_list = []
+        for key in case_keys:
+            sorting_folder = self.folder / "sortings" / self.key_to_str(key)
+            sorting_exists = sorting_folder.exists()
+
+            sorter_folder = self.folder / "sorters" / self.key_to_str(key)
+            sorter_folder_exists = sorting_folder.exists()
+
+            if keep:
+                if sorting_exists:
+                    continue
+                if sorter_folder_exists:
+                    # the sorter folder exists but havent been copied to sortings folder
+                    sorting = read_sorter_folder(sorter_folder, raise_error=False)
+                    if sorting is not None:
+                        # save and skip
+                        sorting.save(format="numpy_folder", folder=sorting_folder)
+                        continue
+            
+            params = self.cases[key]["run_sorter_params"].copy()
+            # this ensure that sorter_name is given
+            recording, _ = self.datasets[self.cases[key]["dataset"]]
+            sorter_name = params.pop("sorter_name")
+            job = dict(sorter_name=sorter_name,
+                       recording=recording,
+                       output_folder=sorter_folder)
+            job.update(params)
+            job_list.append(job)
+
+        run_sorter_jobs(job_list, engine=engine, engine_kwargs=engine_kwargs, return_output=False)
+
+        # TODO create a list in laucher for engine blocking and non-blocking
+        if engine not in ("slurm", ):
+            self.copy_sortings(case_keys)
+
+    def copy_sortings(self, case_keys=None):
+        if case_keys is None:
+            case_keys = self.cases.keys()
+        
+        for key in case_keys:
+            sorting_folder = self.folder / "sortings" / self.key_to_str(key)
+            sorter_folder = self.folder / "sorters" / self.key_to_str(key)
+
+            sorting = read_sorter_folder(sorter_folder, raise_error=False)
+            if sorting is not None:
+                sorting.save(format="numpy_folder", folder=sorting_folder)
+
+    def run_comparisons(self):
+        pass
 
 
 

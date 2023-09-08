@@ -25,18 +25,19 @@ else:
 
 study_folder = cache_folder / "test_groundtruthstudy/"
 
+print(study_folder.absolute())
 
 def setup_module():
     if study_folder.is_dir():
         shutil.rmtree(study_folder)
-    create_study(study_folder)
+    create_a_study(study_folder)
 
 
 def simple_preprocess(rec):
     return bandpass_filter(rec)
 
 
-def create_study(study_folder):
+def create_a_study(study_folder):
     rec0, gt_sorting0 = generate_ground_truth_recording(num_channels=4, durations=[30.], seed=42)
     rec1, gt_sorting1 = generate_ground_truth_recording(num_channels=4, durations=[30.], seed=91)
 
@@ -53,7 +54,7 @@ def create_study(study_folder):
             "label": "tridesclous2 without preprocessing and standard params",
             "dataset": "toy_tetrode",
             "run_sorter_params": {
-
+                "sorter_name": "tridesclous2",
             },
             "comparison_params": {
 
@@ -64,7 +65,7 @@ def create_study(study_folder):
             "label": "tridesclous2 with preprocessing standar params",
             "dataset": "toy_probe32_preprocess",
             "run_sorter_params": {
-
+                "sorter_name": "tridesclous2",
             },
             "comparison_params": {
 
@@ -75,7 +76,7 @@ def create_study(study_folder):
             "label": "spykingcircus2 without preprocessing standar params",
             "dataset": "toy_tetrode",
             "run_sorter_params": {
-
+                "sorter_name": "spykingcircus2",
             },
             "comparison_params": {
 
@@ -86,6 +87,13 @@ def create_study(study_folder):
     study = GroundTruthStudy.create(study_folder, datasets=datasets, cases=cases)
     print(study)
 
+
+
+def test_GroundTruthStudy():
+    study = GroundTruthStudy(study_folder)
+    print(study)
+
+    study.run_sorters(verbose=True)
 
 # @pytest.mark.skipif(not HAVE_TDC, reason="Test requires Python package 'tridesclous'")
 # def test_run_study_sorters():
@@ -128,6 +136,9 @@ def create_study(study_folder):
 
 
 if __name__ == "__main__":
-    setup_module()
+    # setup_module()
+    test_GroundTruthStudy() 
+
+
     # test_run_study_sorters()
     # test_extract_sortings()
