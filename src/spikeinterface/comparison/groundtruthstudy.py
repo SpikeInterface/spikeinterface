@@ -105,7 +105,7 @@ class GroundTruthStudy:
 
     def scan_folder(self):
         if not (self.folder / "datasets").exists():
-            raise ValueError(f"This is folder is not a  {self.folder} GroundTruthStudy")
+            raise ValueError(f"This is folder is not a GroundTruthStudy : {self.folder.absolute()}")
 
         for rec_file in (self.folder / "datasets/recordings").glob("*.pickle"):
             key = rec_file.stem

@@ -85,7 +85,7 @@ def create_a_study(study_folder):
     }
 
     study = GroundTruthStudy.create(study_folder, datasets=datasets, cases=cases)
-    print(study)
+    # print(study)
 
 
 
@@ -136,7 +136,7 @@ def test_GroundTruthStudy():
 
 
 if __name__ == "__main__":
-    # setup_module()
+    setup_module()
     test_GroundTruthStudy() 
 
 
