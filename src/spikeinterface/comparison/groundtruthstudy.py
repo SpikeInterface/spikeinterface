@@ -1,11 +1,12 @@
 from pathlib import Path
 import shutil
+import os
 import json
 import pickle
 
 import numpy as np
 
-from spikeinterface.core import load_extractor, extract_waveforms
+from spikeinterface.core import load_extractor, extract_waveforms, load_waveforms
 from spikeinterface.core.core_tools import SIJsonEncoder
 
 from spikeinterface.sorters import run_sorter_jobs, read_sorter_folder
@@ -26,7 +27,16 @@ from .paircomparisons import compare_sorter_to_ground_truth, GroundTruthComparis
 # )
 
 
+# TODO : save comparison in folders
+# TODO : find a way to set level names
+
+
+
+# This is to separate names when the key are tuples when saving folders
 _key_separator = " ## "
+# This would be more funny
+# _key_separator = " (°_°) "
+
 
 class GroundTruthStudy:
     """
@@ -70,6 +80,10 @@ class GroundTruthStudy:
         (study_folder / "datasets/gt_sortings").mkdir()
         (study_folder / "sorters").mkdir()
         (study_folder / "sortings").mkdir()
+        (study_folder / "sortings" / "run_logs").mkdir()
+        (study_folder / "metrics").mkdir()
+
+
 
         for key, (rec, gt_sorting) in datasets.items():
             assert "/" not in key
@@ -111,8 +125,6 @@ class GroundTruthStudy:
         self.sortings = {}
         for key in self.cases:
             sorting_folder = self.folder / "sortings" / self.key_to_str(key)
-            print(sorting_folder)
-            print(sorting_folder.is_dir())
             if sorting_folder.exists():
                 sorting = load_extractor(sorting_folder)
             else:
@@ -160,9 +172,13 @@ class GroundTruthStudy:
                     sorting = read_sorter_folder(sorter_folder, raise_error=False)
                     if sorting is not None:
                         # save and skip
-                        sorting.save(format="numpy_folder", folder=sorting_folder)
+                        self.copy_sortings(case_keys=[key])
                         continue
-            
+
+            if sorting_exists:
+                # TODO : delete sorting + log
+                pass
+
             params = self.cases[key]["run_sorter_params"].copy()
             # this ensure that sorter_name is given
             recording, _ = self.datasets[self.cases[key]["dataset"]]
@@ -181,17 +197,29 @@ class GroundTruthStudy:
         if engine not in ("slurm", ):
             self.copy_sortings(case_keys)
 
-    def copy_sortings(self, case_keys=None):
+    def copy_sortings(self, case_keys=None, force=True):
         if case_keys is None:
             case_keys = self.cases.keys()
         
         for key in case_keys:
             sorting_folder = self.folder / "sortings" / self.key_to_str(key)
             sorter_folder = self.folder / "sorters" / self.key_to_str(key)
+            log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
 
             sorting = read_sorter_folder(sorter_folder, raise_error=False)
             if sorting is not None:
-                sorting.save(format="numpy_folder", folder=sorting_folder)
+                if sorting_folder.exists():
+                    if force:
+                        # TODO delete folder + log
+                        shutil.rmtree(sorting_folder)
+                    else:
+                        continue
+
+                sorting = sorting.save(format="numpy_folder", folder=sorting_folder)
+                self.sortings[key] = sorting
+
+                # copy logs
+                shutil.copyfile(sorter_folder / "spikeinterface_log.json", log_file)
 
     def run_comparisons(self, case_keys=None, comparison_class=GroundTruthComparison, **kwargs):
 
@@ -202,8 +230,28 @@ class GroundTruthStudy:
             dataset_key = self.cases[key]["dataset"]
             _, gt_sorting = self.datasets[dataset_key]
             sorting = self.sortings[key]
+            if sorting is None:
+                self.comparisons[key] = None    
+                continue
             comp = comparison_class(gt_sorting, sorting, **kwargs)
             self.comparisons[key] = comp
+
+    def get_run_times(self, case_keys=None):
+        import pandas as pd
+        if case_keys is None:
+            case_keys = self.cases.keys()
+
+        log_folder = self.folder / "sortings" / "run_logs"
+        
+        run_times = {}
+        for key in case_keys:
+            log_file = log_folder / f"{self.key_to_str(key)}.json"
+            with open(log_file, mode="r") as logfile:
+                log = json.load(logfile)
+                run_time = log.get("run_time", None)
+            run_times[key] = run_time
+
+        return pd.Series(run_times, name="run_time")
 
     def extract_waveforms_gt(self, case_keys=None, **extract_kwargs):
 
@@ -218,6 +266,144 @@ class GroundTruthStudy:
             recording, gt_sorting = self.datasets[dataset_key]
             wf_folder = base_folder / self.key_to_str(key)
             we = extract_waveforms(recording, gt_sorting, folder=wf_folder)
+
+    def get_waveform_extractor(self, key):
+        # some recording are not dumpable to json and the waveforms extactor need it!
+        # so we load it with and put after
+        we = load_waveforms(self.folder / "waveforms" / self.key_to_str(key), with_recording=False)
+        dataset_key = self.cases[key]["dataset"]
+        recording, _ = self.datasets[dataset_key]        
+        we.set_recording(recording)
+        return we
+
+    def get_templates(self, key, mode="mean"):
+        we = self.get_waveform_extractor(key)
+        templates = we.get_all_templates(mode=mode)
+        return templates
+
+    def compute_metrics(self, case_keys=None, metric_names=["snr", "firing_rate"], force=False):
+        if case_keys is None:
+            case_keys = self.cases.keys()
+        
+        for key in case_keys:
+            filename = self.folder / "metrics" / f"{self.key_to_str(key)}.txt"
+            if filename.exists():
+                if force:
+                    os.remove(filename)
+                else:
+                    continue
+
+            we = self.get_waveform_extractor(key)
+            metrics = compute_quality_metrics(we, metric_names=metric_names)
+            metrics.to_csv(filename, sep="\t", index=True)
+
+    def get_metrics(self, key):
+        import pandas  as pd
+        filename = self.folder / "metrics" / f"{self.key_to_str(key)}.txt"
+        if not filename.exists():
+            return
+        metrics = pd.read_csv(filename, sep="\t", index_col=0)
+        dataset_key = self.cases[key]["dataset"]
+        recording, gt_sorting = self.datasets[dataset_key]        
+        metrics.index = gt_sorting.unit_ids
+        return metrics
+            
+    def get_units_snr(self, key):
+        """
+        """
+        return self.get_metrics(key)["snr"]
+
+    def aggregate_performance_by_unit(self, case_keys=None):
+
+        import pandas as pd
+
+        if case_keys is None:
+            case_keys = self.cases.keys()
+
+        perf_by_unit = []
+        for key in case_keys:
+            comp = self.comparisons.get(key, None)
+            assert comp is not None, "You need to do study.run_comparisons() first"
+
+            perf = comp.get_performance(method="by_unit", output="pandas")
+            if isinstance(key, str):
+                cols = ["level0"]
+                perf["level0"] = key
+                
+            elif isinstance(key, tuple):
+                cols = [f'level{i}' for i in range(len(key))]
+                for col, k in zip(cols, key):
+                    perf[col] = k
+              
+            perf = perf.reset_index()
+            perf_by_unit.append(perf)
+
+        
+
+        perf_by_unit = pd.concat(perf_by_unit)
+        perf_by_unit = perf_by_unit.set_index(cols)
+
+        return perf_by_unit
+
+    # def aggregate_count_units(self, well_detected_score=None, redundant_score=None, overmerged_score=None):
+
+    def aggregate_count_units(
+            self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None
+        ):
+
+        import pandas as pd
+
+        if case_keys is None:
+            case_keys = self.cases.keys()
+
+        perf_by_unit = []
+        for key in case_keys:
+            comp = self.comparisons.get(key, None)
+            assert comp is not None, "You need to do study.run_comparisons() first"
+
+
+
+    #     assert self.comparisons is not None, "run_comparisons first"
+
+    #     import pandas as pd
+
+    #     index = pd.MultiIndex.from_tuples(self.computed_names, names=["rec_name", "sorter_name"])
+
+    #     count_units = pd.DataFrame(
+    #         index=index,
+    #         columns=["num_gt", "num_sorter", "num_well_detected", "num_redundant", "num_overmerged"],
+    #         dtype=int,
+    #     )
+
+    #     if self.exhaustive_gt:
+    #         count_units["num_false_positive"] = pd.Series(dtype=int)
+    #         count_units["num_bad"] = pd.Series(dtype=int)
+
+    #     for rec_name, sorter_name, sorting in iter_computed_sorting(self.study_folder):
+    #         gt_sorting = self.get_ground_truth(rec_name)
+    #         comp = self.comparisons[(rec_name, sorter_name)]
+
+    #         count_units.loc[(rec_name, sorter_name), "num_gt"] = len(gt_sorting.get_unit_ids())
+    #         count_units.loc[(rec_name, sorter_name), "num_sorter"] = len(sorting.get_unit_ids())
+    #         count_units.loc[(rec_name, sorter_name), "num_well_detected"] = comp.count_well_detected_units(
+    #             well_detected_score
+    #         )
+    #         if self.exhaustive_gt:
+    #             count_units.loc[(rec_name, sorter_name), "num_overmerged"] = comp.count_overmerged_units(
+    #                 overmerged_score
+    #             )
+    #             count_units.loc[(rec_name, sorter_name), "num_redundant"] = comp.count_redundant_units(redundant_score)
+    #             count_units.loc[(rec_name, sorter_name), "num_false_positive"] = comp.count_false_positive_units(
+    #                 redundant_score
+    #             )
+    #             count_units.loc[(rec_name, sorter_name), "num_bad"] = comp.count_bad_units()
+
+    #     return count_units
+
+
+
+
+
 
 
 

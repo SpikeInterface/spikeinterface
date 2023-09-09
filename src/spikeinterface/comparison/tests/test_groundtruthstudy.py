@@ -71,17 +71,17 @@ def create_a_study(study_folder):
 
             },
         },
-        #
-        ("sc2", "no-preprocess", "tetrode"): {
-            "label": "spykingcircus2 without preprocessing standar params",
-            "dataset": "toy_tetrode",
-            "run_sorter_params": {
-                "sorter_name": "spykingcircus2",
-            },
-            "comparison_params": {
+        # we comment this at the moement because SC2 is quite slow for testing
+        # ("sc2", "no-preprocess", "tetrode"): {
+        #     "label": "spykingcircus2 without preprocessing standar params",
+        #     "dataset": "toy_tetrode",
+        #     "run_sorter_params": {
+        #         "sorter_name": "spykingcircus2",
+        #     },
+        #     "comparison_params": {
 
-            },
-        },
+        #     },
+        # },
     }
 
     study = GroundTruthStudy.create(study_folder, datasets=datasets, cases=cases)
@@ -93,15 +93,29 @@ def test_GroundTruthStudy():
     study = GroundTruthStudy(study_folder)
     print(study)
 
-    # study.run_sorters(verbose=True)
+    study.run_sorters(verbose=True)
 
-    # print(study.sortings)
+    print(study.sortings)
 
-    # print(study.comparisons)
-    # study.run_comparisons()
-    # print(study.comparisons)
+    print(study.comparisons)
+    study.run_comparisons()
+    print(study.comparisons)
 
     study.extract_waveforms_gt(n_jobs=-1)
+
+    study.compute_metrics()
+
+    for key in study.cases:
+        metrics = study.get_metrics(key)
+        print(metrics)
+    
+    study.aggregate_performance_by_unit()
+
+
+#     perf = study.aggregate_performance_by_unit()
+#     count_units = study.aggregate_count_units()
+
+
 
 # @pytest.mark.skipif(not HAVE_TDC, reason="Test requires Python package 'tridesclous'")
 # def test_run_study_sorters():
@@ -144,7 +158,7 @@ def test_GroundTruthStudy():
 
 
 if __name__ == "__main__":
-    # setup_module()
+    setup_module()
     test_GroundTruthStudy() 
 
 
