@@ -93,7 +93,15 @@ def test_GroundTruthStudy():
     study = GroundTruthStudy(study_folder)
     print(study)
 
-    study.run_sorters(verbose=True)
+    # study.run_sorters(verbose=True)
+
+    # print(study.sortings)
+
+    # print(study.comparisons)
+    # study.run_comparisons()
+    # print(study.comparisons)
+
+    study.extract_waveforms_gt(n_jobs=-1)
 
 # @pytest.mark.skipif(not HAVE_TDC, reason="Test requires Python package 'tridesclous'")
 # def test_run_study_sorters():
@@ -136,7 +144,7 @@ def test_GroundTruthStudy():
 
 
 if __name__ == "__main__":
-    setup_module()
+    # setup_module()
     test_GroundTruthStudy() 
 
 

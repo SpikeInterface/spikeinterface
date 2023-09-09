@@ -5,7 +5,7 @@ import pickle
 
 import numpy as np
 
-from spikeinterface.core import load_extractor
+from spikeinterface.core import load_extractor, extract_waveforms
 from spikeinterface.core.core_tools import SIJsonEncoder
 
 from spikeinterface.sorters import run_sorter_jobs, read_sorter_folder
@@ -13,7 +13,7 @@ from spikeinterface.sorters import run_sorter_jobs, read_sorter_folder
 from spikeinterface import WaveformExtractor
 from spikeinterface.qualitymetrics import compute_quality_metrics
 
-from .paircomparisons import compare_sorter_to_ground_truth
+from .paircomparisons import compare_sorter_to_ground_truth, GroundTruthComparison
 
 # from .studytools import (
 #     setup_comparison_study,
@@ -51,24 +51,14 @@ class GroundTruthStudy:
     
     """
     def __init__(self, study_folder):
-        # import pandas as pd
-
         self.folder = Path(study_folder)
 
-        # self.computed_names = None
-        # self.recording_names = None
-        # self.cases_names = None
-        
         self.datasets = {}
         self.cases = {}
-
-        # self.rec_names = None
-        # self.sorter_names = None
+        self.sortings = {}
+        self.comparisons = {}
 
         self.scan_folder()
-
-        # self.comparisons = None
-        # self.exhaustive_gt = None
 
     @classmethod
     def create(cls, study_folder, datasets={}, cases={}):
@@ -116,10 +106,26 @@ class GroundTruthStudy:
         with open(self.folder / "cases.pickle", "rb") as f:
             self.cases = pickle.load(f)
 
+        self.comparisons = {k: None for k in self.cases}
+
+        self.sortings = {}
+        for key in self.cases:
+            sorting_folder = self.folder / "sortings" / self.key_to_str(key)
+            print(sorting_folder)
+            print(sorting_folder.is_dir())
+            if sorting_folder.exists():
+                sorting = load_extractor(sorting_folder)
+            else:
+                sorting = None
+            self.sortings[key] = sorting
+
+
     def __repr__(self):
         t = f"GroundTruthStudy {self.folder.stem} \n"
         t += f"  datasets: {len(self.datasets)} {list(self.datasets.keys())}\n"
         t += f"  cases: {len(self.cases)} {list(self.cases.keys())}\n"
+        num_computed = sum([1 for sorting in self.sortings.values() if sorting is not None])
+        t += f"  computed: {num_computed}\n"
 
         return t
 
@@ -187,10 +193,31 @@ class GroundTruthStudy:
             if sorting is not None:
                 sorting.save(format="numpy_folder", folder=sorting_folder)
 
-    def run_comparisons(self):
-        pass
+    def run_comparisons(self, case_keys=None, comparison_class=GroundTruthComparison, **kwargs):
 
+        if case_keys is None:
+            case_keys = self.cases.keys()
 
+        for key in case_keys:
+            dataset_key = self.cases[key]["dataset"]
+            _, gt_sorting = self.datasets[dataset_key]
+            sorting = self.sortings[key]
+            comp = comparison_class(gt_sorting, sorting, **kwargs)
+            self.comparisons[key] = comp
+
+    def extract_waveforms_gt(self, case_keys=None, **extract_kwargs):
+
+        if case_keys is None:
+            case_keys = self.cases.keys()
+
+        base_folder = self.folder / "waveforms"
+        base_folder.mkdir(exist_ok=True)
+
+        for key in case_keys:
+            dataset_key = self.cases[key]["dataset"]
+            recording, gt_sorting = self.datasets[dataset_key]
+            wf_folder = base_folder / self.key_to_str(key)
+            we = extract_waveforms(recording, gt_sorting, folder=wf_folder)
 
 
 
