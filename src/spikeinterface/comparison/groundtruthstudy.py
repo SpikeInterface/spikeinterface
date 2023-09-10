@@ -71,7 +71,29 @@ class GroundTruthStudy:
         self.scan_folder()
 
     @classmethod
-    def create(cls, study_folder, datasets={}, cases={}):
+    def create(cls, study_folder, datasets={}, cases={}, levels=None):
+
+        # check that cases keys are homogeneous
+        key0 = list(cases.keys())[0]
+        if isinstance(key0, str):
+            assert all(isinstance(key, str) for key in cases.keys()), "Keys for cases are not homogeneous"
+            if levels is None:
+                levels = "level0"
+            else:
+                assert isinstance(levels, str)
+        elif isinstance(key0, tuple):
+            assert all(isinstance(key, tuple) for key in cases.keys()), "Keys for cases are not homogeneous"
+            num_levels = len(key0)
+            assert all(len(key) == num_levels for key in cases.keys()), "Keys for cases are not homogeneous, tuple negth differ"
+            if levels is None:
+                levels = [f"level{i}" for i in range(num_levels)]
+            else:
+                levels = list(levels)
+                assert len(levels) == num_levels
+        else:
+            raise ValueError("Keys for cases must str or tuple")
+
+
         study_folder = Path(study_folder)
         study_folder.mkdir(exist_ok=False, parents=True)
 
@@ -97,6 +119,10 @@ class GroundTruthStudy:
             gt_sorting.save(format="numpy_folder", folder=study_folder / f"datasets/gt_sortings/{key}")
         
         
+        info = {}
+        info["levels"] = levels
+        (study_folder / "info.json").write_text(json.dumps(info, indent=4), encoding="utf8")
+
         # (study_folder / "cases.jon").write_text(
         #     json.dumps(cases, indent=4, cls=SIJsonEncoder),
         #     encoding="utf8",
@@ -110,6 +136,12 @@ class GroundTruthStudy:
     def scan_folder(self):
         if not (self.folder / "datasets").exists():
             raise ValueError(f"This is folder is not a GroundTruthStudy : {self.folder.absolute()}")
+
+        with open(self.folder / "info.json", "r") as f:
+            self.info = json.load(f)
+        if isinstance(self.levels, list):
+            # because tuple caoont be stored in json
+            self.levels = tuple(self.info["levels"])
 
         for rec_file in (self.folder / "datasets/recordings").glob("*.pickle"):
             key = rec_file.stem
@@ -327,12 +359,9 @@ class GroundTruthStudy:
 
             perf = comp.get_performance(method="by_unit", output="pandas")
             if isinstance(key, str):
-                cols = ["level0"]
-                perf["level0"] = key
-                
+                perf[self.levels] = key
             elif isinstance(key, tuple):
-                cols = [f'level{i}' for i in range(len(key))]
-                for col, k in zip(cols, key):
+                for col, k in zip(self.levels, key):
                     perf[col] = k
               
             perf = perf.reset_index()
@@ -341,7 +370,7 @@ class GroundTruthStudy:
         
 
         perf_by_unit = pd.concat(perf_by_unit)
-        perf_by_unit = perf_by_unit.set_index(cols)
+        perf_by_unit = perf_by_unit.set_index(self.levels)
 
         return perf_by_unit
 
@@ -354,18 +383,50 @@ class GroundTruthStudy:
         import pandas as pd
 
         if case_keys is None:
-            case_keys = self.cases.keys()
+            case_keys = list(self.cases.keys())
 
-        perf_by_unit = []
+        if isinstance(case_keys[0], str):
+            index = pd.Index(case_keys, name=self.levels)
+        else:
+            index = pd.MultiIndex.from_tuples(case_keys, names=self.levels)
+
+
+        columns = ["num_gt", "num_sorter", "num_well_detected", "num_redundant", "num_overmerged"]
+        comp = self.comparisons[case_keys[0]]
+        if comp.exhaustive_gt:
+            columns.extend(["num_false_positive", "num_bad"])
+        count_units = pd.DataFrame(index=index, columns=columns, dtype=int)
+
+
         for key in case_keys:
             comp = self.comparisons.get(key, None)
             assert comp is not None, "You need to do study.run_comparisons() first"
 
+            gt_sorting = comp.sorting1
+            sorting = comp.sorting2
+
+            count_units.loc[key, "num_gt"] = len(gt_sorting.get_unit_ids())
+            count_units.loc[key, "num_sorter"] = len(sorting.get_unit_ids())
+            count_units.loc[key, "num_well_detected"] = comp.count_well_detected_units(
+                well_detected_score
+            )
+            if comp.exhaustive_gt:
+                count_units.loc[key, "num_overmerged"] = comp.count_overmerged_units(
+                    overmerged_score
+                )
+                count_units.loc[key, "num_redundant"] = comp.count_redundant_units(redundant_score)
+                count_units.loc[key, "num_false_positive"] = comp.count_false_positive_units(
+                    redundant_score
+                )
+                count_units.loc[key, "num_bad"] = comp.count_bad_units()
+
+        # count_units = pd.concat(count_units)
+        # count_units = count_units.set_index(cols)
+
+        return count_units
 
 
-    #     assert self.comparisons is not None, "run_comparisons first"
-
-    #     import pandas as pd
+    count_units = []
 
     #     index = pd.MultiIndex.from_tuples(self.computed_names, names=["rec_name", "sorter_name"])
 

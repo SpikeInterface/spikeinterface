@@ -84,7 +84,7 @@ def create_a_study(study_folder):
         # },
     }
 
-    study = GroundTruthStudy.create(study_folder, datasets=datasets, cases=cases)
+    study = GroundTruthStudy.create(study_folder, datasets=datasets, cases=cases, levels=["sorter_name", "processing", "probe_type"])
     # print(study)
 
 
@@ -110,6 +110,7 @@ def test_GroundTruthStudy():
         print(metrics)
     
     study.aggregate_performance_by_unit()
+    study.aggregate_count_units()
 
 
 #     perf = study.aggregate_performance_by_unit()
