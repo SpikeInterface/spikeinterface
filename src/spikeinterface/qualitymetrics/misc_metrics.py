@@ -563,7 +563,99 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), **k
     return synchrony_metrics
 
 
-_default_params["synchrony_metrics"] = dict(synchrony_sizes=(0, 2, 4))
+_default_params["synchrony"] = dict(synchrony_sizes=(0, 2, 4))
+
+
+def compute_firing_ranges(waveform_extractor, bin_size_s=5, quantiles=(0.05, 0.95), unit_ids=None):
+    """
+    Compute firing range, the range between the 5th and 95th quantiles of the firing rates distribution
+    computed in non-overlapping time bins.
+
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveform extractor object.
+    bin_size_s : float, default: 5
+        The size of the bin in seconds.
+    quantiles : tuple, default: (0.05, 0.95)
+        The quantiles to compute.
+
+    Returns
+    -------
+    firing_ranges : dict
+        The firing range for each unit.
+    """
+    sampling_frequency = waveform_extractor.sampling_frequency
+    bin_size_samples = int(bin_size_s * sampling_frequency)
+    sorting = waveform_extractor.sorting
+    if unit_ids is None:
+        unit_ids = sorting.unit_ids
+
+    # for each segment, we compute the firing rate histogram and we concatenate them
+    firing_rate_histograms = {unit_id: np.array([], dtype=float) for unit_id in sorting.unit_ids}
+    for segment_index in range(waveform_extractor.get_num_segments()):
+        num_samples = waveform_extractor.get_num_samples(segment_index)
+        edges = np.arange(0, num_samples + 1, bin_size_samples)
+
+        for unit_id in unit_ids:
+            spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+            spike_counts, _ = np.histogram(spike_times, bins=edges)
+            firing_rates = spike_counts / bin_size_s
+            firing_rate_histograms[unit_id] = np.concatentate((firing_rate_histograms[unit_id], firing_rates))
+
+    # finally we compute the percentiles
+    firing_ranges = {}
+    for unit_id in unit_ids:
+        firing_ranges[unit_id] = np.percentile(firing_rate_histograms[unit_id], quantiles[1]) - np.percentile(
+            firing_rate_histograms[unit_id], quantiles[0]
+        )
+
+    return firing_ranges
+
+
+_default_params["firing_range"] = dict(bin_size_s=5, quantiles=(0.05, 0.95))
+
+
+# TODO: docs
+def compute_amplitude_spreads(
+    waveform_extractor, spikes_bin_size=50, amplitude_extension="spike_amplitudes", unit_ids=None
+):
+    """Calculate mean spread of spike amplitudes within defined bins of AP events
+
+    S Musall 2023
+
+    Input:
+    ------
+    amplitudes : numpy.ndarray
+        Array of amplitudes (don't need to be in physical units)
+
+    """
+    sorting = waveform_extractor.sorting
+    spikes = sorting.to_spike_vector()
+    num_spikes = sorting.count_num_spikes_per_unit()
+    if unit_ids is None:
+        unit_ids = sorting.unit_ids
+
+    if waveform_extractor.is_extension(amplitude_extension):
+        sac = waveform_extractor.load_extension(amplitude_extension)
+        amps = sac.get_data(outputs="concatenated")
+    else:
+        warnings.warn("")
+        empty_dict = {unit_id: np.nan for unit_id in unit_ids}
+        return empty_dict
+
+    all_unit_ids = list(sorting.unit_ids)
+    for unit_id in unit_ids:
+        amps_unit = amps[spikes["unit_index"] == all_unit_ids.index(unit_id)]
+        if num_spikes[unit_id] < spikes_bin_size:
+            amp_spread = np.var(amps_unit)
+        else:
+            amp_spread = []
+            for i in range(0, num_spikes[unit_id], spikes_bin_size):
+                amp_spread.append(np.var(amps_unit[i : i + spikes_bin_size]))
+            amp_spread = np.median(amp_spread)
+
+    return amp_spread
 
 
 def compute_amplitude_cutoffs(

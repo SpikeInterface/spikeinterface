@@ -12,6 +12,7 @@ from .misc_metrics import (
     compute_amplitude_medians,
     compute_drift_metrics,
     compute_synchrony_metrics,
+    compute_firing_ranges,
 )
 
 from .pca_metrics import (
@@ -41,5 +42,6 @@ _misc_metric_name_to_func = {
     "amplitude_cutoff": compute_amplitude_cutoffs,
     "amplitude_median": compute_amplitude_medians,
     "synchrony": compute_synchrony_metrics,
+    "firing_range": compute_firing_ranges,
     "drift": compute_drift_metrics,
 }
