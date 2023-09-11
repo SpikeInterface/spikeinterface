@@ -1,5 +1,6 @@
 import unittest
-from platform import python_version
+import platform
+import subprocess
 from packaging import version
 
 import pytest
@@ -16,6 +17,38 @@ from spikeinterface.extractors.tests.common_tests import (
 )
 
 local_folder = get_global_dataset_folder() / "ephy_testing_data"
+
+
+def has_plexon2_dependencies():
+    """
+    Check if required Plexon2 dependencies are installed on different OS.
+    """
+
+    os_type = platform.system()
+
+    if os_type == "Windows":
+        # On Windows, no need for additional dependencies
+        return True
+
+    elif os_type == "Linux":
+        # Check for 'wine' using dpkg
+        try:
+            result_wine = subprocess.run(
+                ["dpkg", "-l", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+            )
+        except subprocess.CalledProcessError:
+            return False
+
+        # Check for 'zugbruecke' using pip
+        try:
+            import zugbruecke
+
+            return True
+        except ImportError:
+            return False
+    else:
+        # Not sure about MacOS
+        raise ValueError(f"Unsupported OS: {os_type}")
 
 
 class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -218,7 +251,7 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 
 @pytest.mark.skipif(
-    version.parse(python_version()) >= version.parse("3.10"),
+    version.parse(platform.python_version()) >= version.parse("3.10"),
     reason="Sonpy only testing with Python < 3.10!",
 )
 class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -291,6 +324,7 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 
 # We mark plexon2 tests as they require additional dependencies (wine)
+@pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
 @pytest.mark.plexon2
 class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2RecordingExtractor
@@ -300,6 +334,7 @@ class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+@pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
 @pytest.mark.plexon2
 class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2EventExtractor
@@ -309,6 +344,7 @@ class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
     ]
 
 
+@pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
 @pytest.mark.plexon2
 class Plexon2SortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2SortingExtractor
