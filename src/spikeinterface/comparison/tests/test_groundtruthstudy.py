@@ -162,6 +162,6 @@ if __name__ == "__main__":
     setup_module()
     test_GroundTruthStudy() 
 
-
     # test_run_study_sorters()
     # test_extract_sortings()
+

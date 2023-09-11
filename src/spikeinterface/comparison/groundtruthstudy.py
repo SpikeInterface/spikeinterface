@@ -139,9 +139,11 @@ class GroundTruthStudy:
 
         with open(self.folder / "info.json", "r") as f:
             self.info = json.load(f)
-        if isinstance(self.levels, list):
-            # because tuple caoont be stored in json
-            self.levels = tuple(self.info["levels"])
+        
+        self.levels = self.info["levels"]
+        # if isinstance(self.levels, list):
+        #     # because tuple caoont be stored in json
+        #     self.levels = tuple(self.info["levels"])
 
         for rec_file in (self.folder / "datasets/recordings").glob("*.pickle"):
             key = rec_file.stem
@@ -371,10 +373,7 @@ class GroundTruthStudy:
 
         perf_by_unit = pd.concat(perf_by_unit)
         perf_by_unit = perf_by_unit.set_index(self.levels)
-
         return perf_by_unit
-
-    # def aggregate_count_units(self, well_detected_score=None, redundant_score=None, overmerged_score=None):
 
     def aggregate_count_units(
             self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None
@@ -420,49 +419,7 @@ class GroundTruthStudy:
                 )
                 count_units.loc[key, "num_bad"] = comp.count_bad_units()
 
-        # count_units = pd.concat(count_units)
-        # count_units = count_units.set_index(cols)
-
         return count_units
-
-
-    count_units = []
-
-    #     index = pd.MultiIndex.from_tuples(self.computed_names, names=["rec_name", "sorter_name"])
-
-    #     count_units = pd.DataFrame(
-    #         index=index,
-    #         columns=["num_gt", "num_sorter", "num_well_detected", "num_redundant", "num_overmerged"],
-    #         dtype=int,
-    #     )
-
-    #     if self.exhaustive_gt:
-    #         count_units["num_false_positive"] = pd.Series(dtype=int)
-    #         count_units["num_bad"] = pd.Series(dtype=int)
-
-    #     for rec_name, sorter_name, sorting in iter_computed_sorting(self.study_folder):
-    #         gt_sorting = self.get_ground_truth(rec_name)
-    #         comp = self.comparisons[(rec_name, sorter_name)]
-
-    #         count_units.loc[(rec_name, sorter_name), "num_gt"] = len(gt_sorting.get_unit_ids())
-    #         count_units.loc[(rec_name, sorter_name), "num_sorter"] = len(sorting.get_unit_ids())
-    #         count_units.loc[(rec_name, sorter_name), "num_well_detected"] = comp.count_well_detected_units(
-    #             well_detected_score
-    #         )
-    #         if self.exhaustive_gt:
-    #             count_units.loc[(rec_name, sorter_name), "num_overmerged"] = comp.count_overmerged_units(
-    #                 overmerged_score
-    #             )
-    #             count_units.loc[(rec_name, sorter_name), "num_redundant"] = comp.count_redundant_units(redundant_score)
-    #             count_units.loc[(rec_name, sorter_name), "num_false_positive"] = comp.count_false_positive_units(
-    #                 redundant_score
-    #             )
-    #             count_units.loc[(rec_name, sorter_name), "num_bad"] = comp.count_bad_units()
-
-    #     return count_units
-
-
-
 
 
 

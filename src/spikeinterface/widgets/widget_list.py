@@ -20,6 +20,7 @@ from .unit_summary import UnitSummaryWidget
 from .unit_templates import UnitTemplatesWidget
 from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
 from .unit_waveforms import UnitWaveformsWidget
+from .gtstudy import StudyRunTimesWidget
 
 
 widget_list = [
@@ -41,6 +42,7 @@ widget_list = [
     UnitTemplatesWidget,
     UnitWaveformDensityMapWidget,
     UnitWaveformsWidget,
+    StudyRunTimesWidget,
 ]
 
 
@@ -88,6 +90,7 @@ plot_unit_summary = UnitSummaryWidget
 plot_unit_templates = UnitTemplatesWidget
 plot_unit_waveforms_density_map = UnitWaveformDensityMapWidget
 plot_unit_waveforms = UnitWaveformsWidget
+plot_study_run_times = StudyRunTimesWidget
 
 
 def plot_timeseries(*args, **kwargs):
