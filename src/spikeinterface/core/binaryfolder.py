@@ -26,7 +26,6 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
     """
 
     extractor_name = "BinaryFolder"
-    has_default_locations = True
     mode = "folder"
     name = "binaryfolder"
 
@@ -48,7 +47,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         folder_metadata = folder_path
         self.load_metadata_from_folder(folder_metadata)
 
-        self._kwargs = dict(folder_path=str(folder_path.absolute()))
+        self._kwargs = dict(folder_path=str(Path(folder_path).absolute()))
         self._bin_kwargs = d["kwargs"]
         if "num_channels" not in self._bin_kwargs:
             assert "num_chan" in self._bin_kwargs, "Cannot find num_channels or num_chan in binary.json"

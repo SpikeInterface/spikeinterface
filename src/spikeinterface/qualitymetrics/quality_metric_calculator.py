@@ -1,5 +1,5 @@
 """Classes and functions for computing multiple quality metrics."""
-
+import warnings
 from copy import deepcopy
 
 import numpy as np
@@ -91,6 +91,14 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
         progress_bar = job_kwargs["progress_bar"]
 
         unit_ids = self.sorting.unit_ids
+        non_empty_unit_ids = self.sorting.get_non_empty_unit_ids()
+        empty_unit_ids = unit_ids[~np.isin(unit_ids, non_empty_unit_ids)]
+        if len(empty_unit_ids) > 0:
+            warnings.warn(
+                f"Units {empty_unit_ids} are empty. Quality metrcs will be set to NaN "
+                f"for these units.\n To remove empty units, use `sorting.remove_empty_units()`."
+            )
+
         import pandas as pd
 
         metrics = pd.DataFrame(index=unit_ids)
@@ -107,17 +115,17 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             func = _misc_metric_name_to_func[metric_name]
 
             params = qm_params[metric_name] if metric_name in qm_params else {}
-            res = func(self.waveform_extractor, **params)
+            res = func(self.waveform_extractor, unit_ids=non_empty_unit_ids, **params)
             # QM with uninstall dependencies might return None
             if res is not None:
                 if isinstance(res, dict):
                     # res is a dict convert to series
-                    metrics[metric_name] = pd.Series(res)
+                    metrics.loc[non_empty_unit_ids, metric_name] = pd.Series(res)
                 else:
                     # res is a namedtuple with several dict
                     # so several columns
                     for i, col in enumerate(res._fields):
-                        metrics[col] = pd.Series(res[i])
+                        metrics.loc[non_empty_unit_ids, col] = pd.Series(res[i])
 
         # metrics based on PCs
         pc_metric_names = [k for k in metric_names if k in _possible_pc_metric_names]
@@ -127,6 +135,7 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
             pc_extension = self.waveform_extractor.load_extension("principal_components")
             pc_metrics = calculate_pc_metrics(
                 pc_extension,
+                unit_ids=non_empty_unit_ids,
                 metric_names=pc_metric_names,
                 sparsity=sparsity,
                 progress_bar=progress_bar,
@@ -135,7 +144,11 @@ class QualityMetricCalculator(BaseWaveformExtractorExtension):
                 seed=seed,
             )
             for col, values in pc_metrics.items():
-                metrics[col] = pd.Series(values)
+                metrics.loc[non_empty_unit_ids, col] = pd.Series(values)
+
+        # add NaN for empty units
+        if len(empty_unit_ids) > 0:
+            metrics.loc[empty_unit_ids] = np.nan
 
         self._extension_data["metrics"] = metrics
 

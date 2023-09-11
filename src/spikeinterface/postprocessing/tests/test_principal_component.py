@@ -64,11 +64,10 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
         pc_file_sparse = pc.extension_folder / "all_pc_sparse.npy"
         pc_sparse.run_for_all_spikes(pc_file_sparse, chunk_size=10000, n_jobs=1)
         all_pc_sparse = np.load(pc_file_sparse)
-        all_spikes = we_copy.sorting.get_all_spike_trains(outputs="unit_id")
-        _, spike_labels = all_spikes[0]
-        for unit_id, sparse_channel_ids in sparsity.unit_id_to_channel_ids.items():
-            # check dimensions
-            pc_unit = all_pc_sparse[spike_labels == unit_id]
+        all_spikes_seg0 = we_copy.sorting.to_spike_vector(concatenated=False)[0]
+        for unit_index, unit_id in enumerate(we.unit_ids):
+            sparse_channel_ids = sparsity.unit_id_to_channel_ids[unit_id]
+            pc_unit = all_pc_sparse[all_spikes_seg0["unit_index"] == unit_index]
             assert np.allclose(pc_unit[:, :, len(sparse_channel_ids) :], 0)
 
     def test_sparse(self):
@@ -198,8 +197,8 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
 if __name__ == "__main__":
     test = PrincipalComponentsExtensionTest()
     test.setUp()
-    # test.test_extension()
-    # test.test_shapes()
-    # test.test_compute_for_all_spikes()
-    # test.test_sparse()
+    test.test_extension()
+    test.test_shapes()
+    test.test_compute_for_all_spikes()
+    test.test_sparse()
     test.test_project_new()

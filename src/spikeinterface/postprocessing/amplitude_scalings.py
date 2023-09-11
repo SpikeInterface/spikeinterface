@@ -18,7 +18,9 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
 
         extremum_channel_inds = get_template_extremum_channel(self.waveform_extractor, outputs="index")
-        self.spikes = self.waveform_extractor.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
+        self.spikes = self.waveform_extractor.sorting.to_spike_vector(
+            extremum_channel_inds=extremum_channel_inds, use_cache=False
+        )
 
     def _set_params(self, sparsity, max_dense_channels, ms_before, ms_after):
         params = dict(sparsity=sparsity, max_dense_channels=max_dense_channels, ms_before=ms_before, ms_after=ms_after)

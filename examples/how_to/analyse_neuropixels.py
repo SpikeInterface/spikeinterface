@@ -82,7 +82,7 @@ rec
 #
 # ```python
 # # %matplotlib widget
-# si.plot_timeseries({'filter':rec1, 'cmr': rec4}, backend='ipywidgets')
+# si.plot_traces({'filter':rec1, 'cmr': rec4}, backend='ipywidgets')
 # ```
 #
 # Note that using this ipywidgets make possible to explore different preprocessing chains without saving the entire file to disk.
@@ -94,9 +94,9 @@ rec
 # here we use a static plot using matplotlib backend
 fig, axs = plt.subplots(ncols=3, figsize=(20, 10))
 
-si.plot_timeseries(rec1, backend='matplotlib',  clim=(-50, 50), ax=axs[0])
-si.plot_timeseries(rec4, backend='matplotlib',  clim=(-50, 50), ax=axs[1])
-si.plot_timeseries(rec, backend='matplotlib',  clim=(-50, 50), ax=axs[2])
+si.plot_traces(rec1, backend='matplotlib',  clim=(-50, 50), ax=axs[0])
+si.plot_traces(rec4, backend='matplotlib',  clim=(-50, 50), ax=axs[1])
+si.plot_traces(rec, backend='matplotlib',  clim=(-50, 50), ax=axs[2])
 for i, label in enumerate(('filter', 'cmr', 'final')):
     axs[i].set_title(label)
 # -
@@ -104,7 +104,7 @@ for i, label in enumerate(('filter', 'cmr', 'final')):
 # plot some channels
 fig, ax = plt.subplots(figsize=(20, 10))
 some_chans = rec.channel_ids[[100, 150, 200, ]]
-si.plot_timeseries({'filter':rec1, 'cmr': rec4}, backend='matplotlib', mode='line', ax=ax, channel_ids=some_chans)
+si.plot_traces({'filter':rec1, 'cmr': rec4}, backend='matplotlib', mode='line', ax=ax, channel_ids=some_chans)
 
 
 # ### Should we save the preprocessed data to a binary file?
@@ -170,13 +170,13 @@ from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
 peaks = detect_peaks(rec,  method='locally_exclusive', noise_levels=noise_levels_int16,
-                     detect_threshold=5, local_radius_um=50., **job_kwargs)
+                     detect_threshold=5, radius_um=50., **job_kwargs)
 peaks
 
 # +
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
-peak_locations = localize_peaks(rec, peaks, method='center_of_mass', local_radius_um=50., **job_kwargs)
+peak_locations = localize_peaks(rec, peaks, method='center_of_mass', radius_um=50., **job_kwargs)
 # -
 
 # ### Check for drift

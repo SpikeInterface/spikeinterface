@@ -48,7 +48,6 @@ class IblStreamingRecordingExtractor(BaseRecording):
     """
 
     extractor_name = "IblStreamingRecording"
-    has_default_locations = True
     mode = "folder"
     installation_mesg = "To use the IblStreamingRecordingSegment, install ONE-api and ibllib: \n\n pip install ONE-api\npip install ibllib\n"
     name = "ibl_streaming_recording"

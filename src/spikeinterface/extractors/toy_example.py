@@ -1,8 +1,14 @@
 import numpy as np
 
 from probeinterface import Probe
-
-from spikeinterface.core import NumpyRecording, NumpySorting, synthesize_random_firings
+from spikeinterface.core import NumpySorting
+from spikeinterface.core.generate import (
+    generate_sorting,
+    generate_channel_locations,
+    generate_unit_locations,
+    generate_templates,
+    generate_ground_truth_recording,
+)
 
 
 def toy_example(
@@ -12,17 +18,26 @@ def toy_example(
     sampling_frequency=30000.0,
     num_segments=2,
     average_peak_amplitude=-100,
-    upsample_factor=13,
-    contact_spacing_um=40,
+    upsample_factor=None,
+    contact_spacing_um=40.0,
     num_columns=1,
     spike_times=None,
     spike_labels=None,
-    score_detection=1,
+    # score_detection=1,
     firing_rate=3.0,
     seed=None,
 ):
     """
-    Creates a toy recording and sorting extractors.
+    Returns a generated dataset with "toy" units and spikes on top on white noise.
+    This is useful to test api, algos, postprocessing and visualization without any downloading.
+
+    This a rewrite (with the lazy approach) of the old spikeinterface.extractor.toy_example() which itself was also
+    a rewrite from the very old spikeextractor.toy_example() (from Jeremy Magland).
+    In this new version, the recording is totally lazy and so it does not use disk space or memory.
+    It internally uses NoiseGeneratorRecording + generate_templates + InjectTemplatesRecording.
+
+    For better control, you should use the  `generate_ground_truth_recording()`, but provides better control over
+    the parameters.
 
     Parameters
     ----------
@@ -40,8 +55,8 @@ def toy_example(
         Spike time in the recording.
     spike_labels: ndarray (or list of multi segment)
         Cluster label for each spike time (needs to specified both together).
-    score_detection: int (between 0 and 1)
-        Generate the sorting based on a subset of spikes compare with the trace generation.
+    # score_detection: int (between 0 and 1)
+    #    Generate the sorting based on a subset of spikes compare with the trace generation.
     firing_rate: float
         The firing rate for the units (in Hz).
     seed: int
@@ -53,7 +68,15 @@ def toy_example(
         The output recording extractor.
     sorting: SortingExtractor
         The output sorting extractor.
+
     """
+    if upsample_factor is not None:
+        raise NotImplementedError(
+            "InjectTemplatesRecording do not support yet upsample_factor but this will be done soon"
+        )
+
+    assert num_channels > 0
+    assert num_units > 0
 
     if isinstance(duration, int):
         duration = float(duration)
@@ -66,263 +89,67 @@ def toy_example(
         assert len(durations) == num_segments
         assert all(isinstance(d, float) for d in durations)
 
+    unit_ids = np.arange(num_units, dtype="int64")
+
+    # generate probe
+    channel_locations = generate_channel_locations(num_channels, num_columns, contact_spacing_um)
+    probe = Probe(ndim=2)
+    probe.set_contacts(positions=channel_locations, shapes="circle", shape_params={"radius": 5})
+    probe.create_auto_shape(probe_type="rect", margin=20.0)
+    probe.set_device_channel_indices(np.arange(num_channels, dtype="int64"))
+
+    # generate templates
+    # this is hard coded now but it use to be like this
+    ms_before = 1.5
+    ms_after = 3.0
+    unit_locations = generate_unit_locations(
+        num_units, channel_locations, margin_um=15.0, minimum_z=5.0, maximum_z=50.0, seed=seed
+    )
+    templates = generate_templates(
+        channel_locations,
+        unit_locations,
+        sampling_frequency,
+        ms_before,
+        ms_after,
+        upsample_factor=upsample_factor,
+        seed=seed,
+        dtype="float32",
+    )
+
+    if average_peak_amplitude is not None:
+        # ajustement au mean amplitude
+        amps = np.min(templates, axis=(1, 2))
+        templates *= average_peak_amplitude / np.mean(amps)
+
+    # construct sorting
     if spike_times is not None:
         assert isinstance(spike_times, list)
         assert isinstance(spike_labels, list)
         assert len(spike_times) == len(spike_labels)
         assert len(spike_times) == num_segments
-
-    assert num_channels > 0
-    assert num_units > 0
-
-    waveforms, geometry = synthesize_random_waveforms(
-        num_units=num_units,
-        num_channels=num_channels,
-        contact_spacing_um=contact_spacing_um,
-        num_columns=num_columns,
-        average_peak_amplitude=average_peak_amplitude,
-        upsample_factor=upsample_factor,
-        seed=seed,
-    )
-
-    unit_ids = np.arange(num_units, dtype="int64")
-
-    traces_list = []
-    times_list = []
-    labels_list = []
-    for segment_index in range(num_segments):
-        if spike_times is None:
-            times, labels = synthesize_random_firings(
-                num_units=num_units,
-                duration=durations[segment_index],
-                sampling_frequency=sampling_frequency,
-                firing_rates=firing_rate,
-                seed=seed,
-            )
-        else:
-            times = spike_times[segment_index]
-            labels = spike_labels[segment_index]
-
-        traces = synthesize_timeseries(
-            times,
-            labels,
-            unit_ids,
-            waveforms,
-            sampling_frequency,
-            durations[segment_index],
-            noise_level=10,
-            waveform_upsample_factor=upsample_factor,
+        sorting = NumpySorting.from_times_labels(spike_times, spike_labels, sampling_frequency, unit_ids=unit_ids)
+    else:
+        sorting = generate_sorting(
+            num_units=num_units,
+            sampling_frequency=sampling_frequency,
+            durations=durations,
+            firing_rates=firing_rate,
+            empty_units=None,
+            refractory_period_ms=4.0,
             seed=seed,
         )
 
-        amp_index = np.sort(np.argsort(np.max(np.abs(traces[times - 10, :]), 1))[: int(score_detection * len(times))])
-        times_list.append(times[amp_index])  # Keep only a certain percentage of detected spike for sorting
-        labels_list.append(labels[amp_index])
-        traces_list.append(traces)
-
-    sorting = NumpySorting.from_times_labels(times_list, labels_list, sampling_frequency)
-
-    recording = NumpyRecording(traces_list, sampling_frequency)
-    recording.annotate(is_filtered=True)
-
-    probe = Probe(ndim=2)
-    probe.set_contacts(positions=geometry, shapes="circle", shape_params={"radius": 5})
-    probe.create_auto_shape(probe_type="rect", margin=20)
-    probe.set_device_channel_indices(np.arange(num_channels, dtype="int64"))
-    recording = recording.set_probe(probe)
+    recording, sorting = generate_ground_truth_recording(
+        durations=durations,
+        sampling_frequency=sampling_frequency,
+        sorting=sorting,
+        probe=probe,
+        templates=templates,
+        ms_before=ms_before,
+        ms_after=ms_after,
+        dtype="float32",
+        seed=seed,
+        noise_kwargs=dict(noise_level=10.0, strategy="on_the_fly"),
+    )
 
     return recording, sorting
-
-
-def synthesize_random_waveforms(
-    num_channels=5,
-    num_units=20,
-    width=500,
-    upsample_factor=13,
-    timeshift_factor=0,
-    average_peak_amplitude=-10,
-    contact_spacing_um=40,
-    num_columns=1,
-    seed=None,
-):
-    if seed is not None:
-        np.random.seed(seed)
-        seeds = np.random.RandomState(seed=seed).randint(0, 2147483647, num_units)
-    else:
-        seeds = np.random.randint(0, 2147483647, num_units)
-
-    avg_durations = [200, 10, 30, 200]
-    avg_amps = [0.5, 10, -1, 0]
-    rand_durations_stdev = [10, 4, 6, 20]
-    rand_amps_stdev = [0.2, 3, 0.5, 0]
-    rand_amp_factor_range = [0.5, 1]
-    geom_spread_coef1 = 1
-    geom_spread_coef2 = 0.1
-
-    geometry = np.zeros((num_channels, 2))
-    if num_columns == 1:
-        geometry[:, 1] = np.arange(num_channels) * contact_spacing_um
-    else:
-        assert num_channels % num_columns == 0, "Invalid num_columns"
-        num_contact_per_column = num_channels // num_columns
-        j = 0
-        for i in range(num_columns):
-            geometry[j : j + num_contact_per_column, 0] = i * contact_spacing_um
-            geometry[j : j + num_contact_per_column, 1] = np.arange(num_contact_per_column) * contact_spacing_um
-            j += num_contact_per_column
-
-    avg_durations = np.array(avg_durations)
-    avg_amps = np.array(avg_amps)
-    rand_durations_stdev = np.array(rand_durations_stdev)
-    rand_amps_stdev = np.array(rand_amps_stdev)
-    rand_amp_factor_range = np.array(rand_amp_factor_range)
-
-    neuron_locations = get_default_neuron_locations(num_channels, num_units, geometry)
-
-    full_width = width * upsample_factor
-
-    ## The waveforms_out
-    WW = np.zeros((num_channels, width * upsample_factor, num_units))
-
-    for i, k in enumerate(range(num_units)):
-        for m in range(num_channels):
-            diff = neuron_locations[k, :] - geometry[m, :]
-            dist = np.sqrt(np.sum(diff**2))
-            durations0 = (
-                np.maximum(
-                    np.ones(avg_durations.shape),
-                    avg_durations + np.random.RandomState(seed=seeds[i]).randn(1, 4) * rand_durations_stdev,
-                )
-                * upsample_factor
-            )
-            amps0 = avg_amps + np.random.RandomState(seed=seeds[i]).randn(1, 4) * rand_amps_stdev
-            waveform0 = synthesize_single_waveform(full_width, durations0, amps0)
-            waveform0 = np.roll(waveform0, int(timeshift_factor * dist * upsample_factor))
-            waveform0 = waveform0 * np.random.RandomState(seed=seeds[i]).uniform(
-                rand_amp_factor_range[0], rand_amp_factor_range[1]
-            )
-            factor = geom_spread_coef1 + dist * geom_spread_coef2
-            WW[m, :, k] = waveform0 / factor
-
-    peaks = np.max(np.abs(WW), axis=(0, 1))
-    WW = WW / np.mean(peaks) * average_peak_amplitude
-
-    return WW, geometry
-
-
-def get_default_neuron_locations(num_channels, num_units, geometry):
-    num_dims = geometry.shape[1]
-    neuron_locations = np.zeros((num_units, num_dims), dtype="float64")
-
-    for k in range(num_units):
-        ind = k / (num_units - 1) * (num_channels - 1) + 1
-        ind0 = int(ind)
-
-        if ind0 == num_channels:
-            ind0 = num_channels - 1
-            p = 1
-        else:
-            p = ind - ind0
-        neuron_locations[k, :] = (1 - p) * geometry[ind0 - 1, :] + p * geometry[ind0, :]
-
-    return neuron_locations
-
-
-def exp_growth(amp1, amp2, dur1, dur2):
-    t = np.arange(0, dur1)
-    Y = np.exp(t / dur2)
-    # Want Y[0]=amp1
-    # Want Y[-1]=amp2
-    Y = Y / (Y[-1] - Y[0]) * (amp2 - amp1)
-    Y = Y - Y[0] + amp1
-    return Y
-
-
-def exp_decay(amp1, amp2, dur1, dur2):
-    Y = exp_growth(amp2, amp1, dur1, dur2)
-    Y = np.flipud(Y)
-    return Y
-
-
-def smooth_it(Y, t):
-    Z = np.zeros(Y.size)
-    for j in range(-t, t + 1):
-        Z = Z + np.roll(Y, j)
-    return Z
-
-
-def synthesize_single_waveform(full_width, durations, amps):
-    durations = np.array(durations).ravel()
-    if np.sum(durations) >= full_width - 2:
-        durations[-1] = full_width - 2 - np.sum(durations[0 : durations.size - 1])
-
-    amps = np.array(amps).ravel()
-
-    timepoints = np.round(np.hstack((0, np.cumsum(durations) - 1))).astype("int")
-
-    t = np.r_[0 : np.sum(durations) + 1]
-
-    Y = np.zeros(len(t))
-    Y[timepoints[0] : timepoints[1] + 1] = exp_growth(0, amps[0], timepoints[1] + 1 - timepoints[0], durations[0] / 4)
-    Y[timepoints[1] : timepoints[2] + 1] = exp_growth(amps[0], amps[1], timepoints[2] + 1 - timepoints[1], durations[1])
-    Y[timepoints[2] : timepoints[3] + 1] = exp_decay(
-        amps[1], amps[2], timepoints[3] + 1 - timepoints[2], durations[2] / 4
-    )
-    Y[timepoints[3] : timepoints[4] + 1] = exp_decay(
-        amps[2], amps[3], timepoints[4] + 1 - timepoints[3], durations[3] / 5
-    )
-    Y = smooth_it(Y, 3)
-    Y = Y - np.linspace(Y[0], Y[-1], len(t))
-    Y = np.hstack((Y, np.zeros(full_width - len(t))))
-    Nmid = int(np.floor(full_width / 2))
-    peakind = np.argmax(np.abs(Y))
-    Y = np.roll(Y, Nmid - peakind)
-
-    return Y
-
-
-def synthesize_timeseries(
-    spike_times,
-    spike_labels,
-    unit_ids,
-    waveforms,
-    sampling_frequency,
-    duration,
-    noise_level=10,
-    waveform_upsample_factor=13,
-    seed=None,
-):
-    num_samples = np.int64(sampling_frequency * duration)
-    waveform_upsample_factor = int(waveform_upsample_factor)
-    W = waveforms
-
-    num_channels, full_width, num_units = W.shape[0], W.shape[1], W.shape[2]
-    width = int(full_width / waveform_upsample_factor)
-    half_width = int(np.ceil((width + 1) / 2 - 1))
-
-    if seed is not None:
-        traces = np.random.RandomState(seed=seed).randn(num_samples, num_channels) * noise_level
-    else:
-        traces = np.random.randn(num_samples, num_channels) * noise_level
-
-    for k0 in unit_ids:
-        waveform0 = waveforms[:, :, k0 - 1]
-        times0 = spike_times[spike_labels == k0]
-
-        for t0 in times0:
-            amp0 = 1
-            frac_offset = int(np.floor((t0 - np.floor(t0)) * waveform_upsample_factor))
-            # note for later this frac_offset is supposed to mimic jitter but
-            # is always 0 : TODO improve this
-            i_start = np.int64(np.floor(t0)) - half_width
-            if (0 <= i_start) and (i_start + width <= num_samples):
-                wf = waveform0[:, frac_offset::waveform_upsample_factor] * amp0
-                traces[i_start : i_start + width, :] += wf.T
-
-    return traces
-
-
-if __name__ == "__main__":
-    rec, sorting = toy_example(num_segments=2)
-    print(rec)
-    print(sorting)

@@ -38,7 +38,7 @@ class CorrelogramsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestC
 
 
 def test_make_bins():
-    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5])
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
 
     window_ms = 43.57
     bin_ms = 1.6421
@@ -82,14 +82,14 @@ def test_equal_results_correlograms():
     if HAVE_NUMBA:
         methods.append("numba")
 
-    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5])
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
 
     _test_correlograms(sorting, window_ms=60.0, bin_ms=2.0, methods=methods)
     _test_correlograms(sorting, window_ms=43.57, bin_ms=1.6421, methods=methods)
 
 
 def test_flat_cross_correlogram():
-    sorting = generate_sorting(num_units=2, sampling_frequency=10000.0, durations=[100000.0])
+    sorting = generate_sorting(num_units=2, sampling_frequency=10000.0, durations=[100000.0], seed=0)
 
     methods = ["numpy"]
     if HAVE_NUMBA:
@@ -128,7 +128,7 @@ def test_auto_equal_cross_correlograms():
     spike_times = np.sort(np.unique(np.random.randint(0, 100000, num_spike)))
     num_spike = spike_times.size
     units_dict = {"1": spike_times, "2": spike_times}
-    sorting = NumpySorting.from_dict([units_dict], sampling_frequency=10000.0)
+    sorting = NumpySorting.from_unit_dict([units_dict], sampling_frequency=10000.0)
 
     for method in methods:
         correlograms, bins = compute_correlograms(sorting, window_ms=10.0, bin_ms=0.1, method=method)
@@ -178,7 +178,7 @@ def test_detect_injected_correlation():
     spike_times2 = np.sort(spike_times2)
 
     units_dict = {"1": spike_times1, "2": spike_times2}
-    sorting = NumpySorting.from_dict([units_dict], sampling_frequency=sampling_frequency)
+    sorting = NumpySorting.from_unit_dict([units_dict], sampling_frequency=sampling_frequency)
 
     for method in methods:
         correlograms, bins = compute_correlograms(sorting, window_ms=10.0, bin_ms=0.1, method=method)
@@ -204,13 +204,13 @@ def test_detect_injected_correlation():
 
 
 if __name__ == "__main__":
-    # ~ test_make_bins()
-    # test_equal_results_correlograms()
-    # ~ test_flat_cross_correlogram()
-    # ~ test_auto_equal_cross_correlograms()
+    test_make_bins()
+    test_equal_results_correlograms()
+    test_flat_cross_correlogram()
+    test_auto_equal_cross_correlograms()
     test_detect_injected_correlation()
 
-    # test = CorrelogramsExtensionTest()
-    # test.setUp()
-    # test.test_compute_correlograms()
-    # test.test_extension()
+    test = CorrelogramsExtensionTest()
+    test.setUp()
+    test.test_compute_correlograms()
+    test.test_extension()

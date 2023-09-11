@@ -161,15 +161,16 @@ class BenchmarkClustering:
         if self.verbose:
             print("Performing the comparison with (sliced) ground truth")
 
-        times1 = self.gt_sorting.get_all_spike_trains()[0]
-        times2 = self.clustering.get_all_spike_trains()[0]
-        matches = make_matching_events(times1[0], times2[0], int(delta * self.sampling_rate / 1000))
+        spikes1 = self.gt_sorting.to_spike_vector(concatenated=False)[0]
+        spikes2 = self.clustering.to_spike_vector(concatenated=False)[0]
+
+        matches = make_matching_events(
+            spikes1["sample_index"], spikes2["sample_index"], int(delta * self.sampling_rate / 1000)
+        )
 
         self.matches = matches
         idx = matches["index1"]
-        self.sliced_gt_sorting = NumpySorting.from_times_labels(
-            times1[0][idx], times1[1][idx], self.sampling_rate, unit_ids=self.gt_sorting.unit_ids
-        )
+        self.sliced_gt_sorting = NumpySorting(spikes1[idx], self.sampling_rate, self.gt_sorting.unit_ids)
 
         self.comp = GroundTruthComparison(self.sliced_gt_sorting, self.clustering, exhaustive_gt=self.exhaustive_gt)
 
@@ -251,10 +252,11 @@ class BenchmarkClustering:
         # scatter and collect gaussian info
         means = {}
         covs = {}
-        labels_ids = sorting.get_all_spike_trains()[0][1]
+        labels = sorting.to_spike_vector(concatenated=False)[0]["unit_index"]
 
         for unit_ind, unit_id in enumerate(sorting.unit_ids):
-            where = np.flatnonzero(labels_ids == unit_id)
+            where = np.flatnonzero(labels == unit_ind)
+
             xk = xs[where]
             yk = ys[where]
 

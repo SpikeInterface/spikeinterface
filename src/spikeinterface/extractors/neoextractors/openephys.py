@@ -61,7 +61,7 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
             all_annotations=all_annotations,
             **neo_kwargs,
         )
-        self._kwargs.update(dict(folder_path=str(folder_path)))
+        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute())))
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path):
@@ -109,7 +109,6 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     mode = "folder"
     NeoRawIOClass = "OpenEphysBinaryRawIO"
     name = "openephys"
-    has_default_locations = True
 
     def __init__(
         self,
@@ -150,8 +149,8 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         else:
             exp_id = exp_ids[block_index]
 
-        # do not load probe for NIDQ stream
-        if "NI-DAQmx" not in stream_name:
+        # do not load probe for NIDQ stream or if load_sync_channel is True
+        if "NI-DAQmx" not in stream_name and not load_sync_channel:
             settings_file = self.neo_reader.folder_structure[record_node]["experiments"][exp_id]["settings_file"]
 
             if Path(settings_file).is_file():
@@ -205,7 +204,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
 
         self._kwargs.update(
             dict(
-                folder_path=str(folder_path),
+                folder_path=str(Path(folder_path).absolute()),
                 load_sync_channel=load_sync_channel,
                 load_sync_timestamps=load_sync_timestamps,
                 experiment_names=experiment_names,

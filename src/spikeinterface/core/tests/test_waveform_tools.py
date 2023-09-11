@@ -63,7 +63,7 @@ def test_waveform_tools():
         wf_folder = cache_folder / f"test_waveform_tools_{j}"
         if wf_folder.is_dir():
             shutil.rmtree(wf_folder)
-        wf_folder.mkdir()
+        wf_folder.mkdir(parents=True)
         # wfs_arrays, wfs_arrays_info = allocate_waveforms_buffers(recording, spikes, unit_ids, nbefore, nafter, mode='memmap', folder=wf_folder, dtype=dtype)
         # distribute_waveforms_to_buffers(recording, spikes, unit_ids, wfs_arrays_info, nbefore, nafter, return_scaled, **job_kwargs)
         wfs_arrays = extract_waveforms_to_buffers(

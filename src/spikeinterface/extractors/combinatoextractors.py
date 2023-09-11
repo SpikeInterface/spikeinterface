@@ -44,7 +44,7 @@ class CombinatoSortingExtractor(BaseSorting):
         folder_path = Path(folder_path)
         assert folder_path.is_dir(), "Folder {} doesn't exist".format(folder_path)
         if sampling_frequency is None:
-            h5_path = str(folder_path) + ".h5"
+            h5_path = str(Path(folder_path).absolute()) + ".h5"
             if Path(h5_path).exists():
                 with h5py.File(h5_path, mode="r") as f:
                     sampling_frequency = f["sr"][0]
@@ -85,7 +85,7 @@ class CombinatoSortingExtractor(BaseSorting):
         self.add_sorting_segment(CombinatoSortingSegment(spiketrains))
         self.set_property("unsorted", np.array([metadata[u]["group_type"] == 0 for u in range(unit_counter)]))
         self.set_property("artifact", np.array([metadata[u]["group_type"] == -1 for u in range(unit_counter)]))
-        self._kwargs = {"folder_path": str(folder_path), "user": user, "det_sign": det_sign}
+        self._kwargs = {"folder_path": str(Path(folder_path).absolute()), "user": user, "det_sign": det_sign}
 
         self.extra_requirements.append("h5py")
 

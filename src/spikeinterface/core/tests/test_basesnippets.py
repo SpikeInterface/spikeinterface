@@ -87,7 +87,7 @@ def test_BaseSnippets():
 
     times0 = snippets.get_frames(segment_index=0)
 
-    seg0_times = sorting.get_all_spike_trains()[0][0]
+    seg0_times = sorting.to_spike_vector(concatenated=False)[0]["sample_index"]
 
     assert np.array_equal(seg0_times, times0)
 
@@ -107,7 +107,7 @@ def test_BaseSnippets():
     snippets3 = load_extractor(cache_folder / "test_BaseSnippets.pkl")
 
     # dump/load dict - relative
-    d = snippets.to_dict(relative_to=cache_folder)
+    d = snippets.to_dict(relative_to=cache_folder, recursive=True)
     snippets2 = BaseExtractor.from_dict(d, base_folder=cache_folder)
     snippets3 = load_extractor(d, base_folder=cache_folder)
 

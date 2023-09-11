@@ -35,7 +35,7 @@ class PositionAndFeaturesClustering:
             "cluster_selection_method": "leaf",
         },
         "cleaning_kwargs": {},
-        "local_radius_um": 100,
+        "radius_um": 100,
         "max_spikes_per_unit": 200,
         "selection_method": "random",
         "ms_before": 1.5,
@@ -69,9 +69,9 @@ class PositionAndFeaturesClustering:
 
         features_list = [position_method, "ptp", "energy"]
         features_params = {
-            position_method: {"local_radius_um": params["local_radius_um"]},
-            "ptp": {"all_channels": False, "local_radius_um": params["local_radius_um"]},
-            "energy": {"local_radius_um": params["local_radius_um"]},
+            position_method: {"radius_um": params["radius_um"]},
+            "ptp": {"all_channels": False, "radius_um": params["radius_um"]},
+            "energy": {"radius_um": params["radius_um"]},
         }
 
         features_data = compute_features_from_peaks(

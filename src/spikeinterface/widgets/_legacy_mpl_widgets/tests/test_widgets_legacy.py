@@ -116,18 +116,6 @@ class TestWidgets(unittest.TestCase):
         fig, axes = plt.subplots(self.num_units, 1)
         sw.plot_isi_distribution(self._sorting, axes=axes)
 
-    def test_plot_drift_over_time(self):
-        from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-
-        peaks = detect_peaks(self._rec, method="locally_exclusive")
-        sw.plot_drift_over_time(self._rec, peaks=peaks, bin_duration_s=1.0, weight_with_amplitudes=True, mode="heatmap")
-        sw.plot_drift_over_time(
-            self._rec, peaks=peaks, bin_duration_s=1.0, weight_with_amplitudes=False, mode="heatmap"
-        )
-        sw.plot_drift_over_time(
-            self._rec, peaks=peaks, weight_with_amplitudes=False, mode="scatter", scatter_plot_kwargs={"color": "r"}
-        )
-
     def test_plot_peak_activity_map(self):
         sw.plot_peak_activity_map(self._rec, with_channel_ids=True)
         sw.plot_peak_activity_map(self._rec, bin_duration_s=1.0)

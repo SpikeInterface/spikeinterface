@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
@@ -32,7 +34,7 @@ class AlphaOmegaRecordingExtractor(NeoBaseRecordingExtractor):
         NeoBaseRecordingExtractor.__init__(
             self, stream_id=stream_id, stream_name=stream_name, all_annotations=all_annotations, **neo_kwargs
         )
-        self._kwargs.update(dict(folder_path=str(folder_path), lsx_files=lsx_files))
+        self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute()), lsx_files=lsx_files))
 
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, lsx_files=None):

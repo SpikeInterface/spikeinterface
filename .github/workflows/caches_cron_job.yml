@@ -33,6 +33,7 @@ jobs:
         with:
           path: ${{ github.workspace }}/test_env
           key: ${{ runner.os }}-venv-${{ steps.dependencies.outputs.hash }}-${{ steps.date.outputs.date }}
+          lookup-only: 'true'   # Avoids downloading the data, saving behavior is not affected.
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-venv.outputs.cache-hit == 'true'}}"
       - name: Create the virtual environment to be cached
@@ -64,6 +65,7 @@ jobs:
         with:
           path: ~/spikeinterface_datasets
           key: ${{ runner.os }}-datasets-${{ steps.repo_hash.outputs.dataset_hash }}
+          lookup-only: 'true'   # Avoids downloading the data, saving behavior is not affected.
       - name: Cache found?
         run: echo "Cache-hit == ${{steps.cache-datasets.outputs.cache-hit == 'true'}}"
       - name: Installing datalad and git-annex
@@ -88,7 +90,7 @@ jobs:
         run: |
           cd $HOME
           pwd
-          du -hs spikeinterface_datasets
+          du -hs spikeinterface_datasets  # Should show the size of ephy_testing_data
           cd spikeinterface_datasets
           pwd
           ls -lh  # Should show ephy_testing_data

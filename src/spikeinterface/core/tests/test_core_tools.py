@@ -7,7 +7,7 @@ import numpy as np
 
 from spikeinterface.core.core_tools import write_binary_recording, write_memory_recording, recursive_path_modifier
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
-from spikeinterface.core.generate import GeneratorRecording
+from spikeinterface.core.generate import NoiseGeneratorRecording
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -24,8 +24,11 @@ def test_write_binary_recording(tmp_path):
     dtype = "float32"
 
     durations = [10.0]
-    recording = GeneratorRecording(
-        durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency
+    recording = NoiseGeneratorRecording(
+        durations=durations,
+        num_channels=num_channels,
+        sampling_frequency=sampling_frequency,
+        strategy="tile_pregenerated",
     )
     file_paths = [tmp_path / "binary01.raw"]
 
@@ -35,7 +38,7 @@ def test_write_binary_recording(tmp_path):
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
-        file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
+        file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype
     )
     assert np.allclose(recorder_binary.get_traces(), recording.get_traces())
 
@@ -48,8 +51,11 @@ def test_write_binary_recording_offset(tmp_path):
     dtype = "float32"
 
     durations = [10.0]
-    recording = GeneratorRecording(
-        durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency
+    recording = NoiseGeneratorRecording(
+        durations=durations,
+        num_channels=num_channels,
+        sampling_frequency=sampling_frequency,
+        strategy="tile_pregenerated",
     )
     file_paths = [tmp_path / "binary01.raw"]
 
@@ -62,7 +68,7 @@ def test_write_binary_recording_offset(tmp_path):
     recorder_binary = BinaryRecordingExtractor(
         file_paths=file_paths,
         sampling_frequency=sampling_frequency,
-        num_chan=num_channels,
+        num_channels=num_channels,
         dtype=dtype,
         file_offset=byte_offset,
     )
@@ -77,11 +83,12 @@ def test_write_binary_recording_parallel(tmp_path):
     num_channels = 2
     dtype = "float32"
     durations = [10.30, 3.5]
-    recording = GeneratorRecording(
+    recording = NoiseGeneratorRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         dtype=dtype,
+        strategy="tile_pregenerated",
     )
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
@@ -91,7 +98,7 @@ def test_write_binary_recording_parallel(tmp_path):
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
-        file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
+        file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype
     )
     for segment_index in range(recording.get_num_segments()):
         binary_traces = recorder_binary.get_traces(segment_index=segment_index)
@@ -107,8 +114,11 @@ def test_write_binary_recording_multiple_segment(tmp_path):
     dtype = "float32"
 
     durations = [10.30, 3.5]
-    recording = GeneratorRecording(
-        durations=durations, num_channels=num_channels, sampling_frequency=sampling_frequency
+    recording = NoiseGeneratorRecording(
+        durations=durations,
+        num_channels=num_channels,
+        sampling_frequency=sampling_frequency,
+        strategy="tile_pregenerated",
     )
     file_paths = [tmp_path / "binary01.raw", tmp_path / "binary02.raw"]
 
@@ -118,7 +128,7 @@ def test_write_binary_recording_multiple_segment(tmp_path):
 
     # Check if written data matches original data
     recorder_binary = BinaryRecordingExtractor(
-        file_paths=file_paths, sampling_frequency=sampling_frequency, num_chan=num_channels, dtype=dtype
+        file_paths=file_paths, sampling_frequency=sampling_frequency, num_channels=num_channels, dtype=dtype
     )
 
     for segment_index in range(recording.get_num_segments()):
@@ -129,7 +139,9 @@ def test_write_binary_recording_multiple_segment(tmp_path):
 
 def test_write_memory_recording():
     # 2 segments
-    recording = GeneratorRecording(num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000)
+    recording = NoiseGeneratorRecording(
+        num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
+    )
     # make dumpable
     recording = recording.save()
 

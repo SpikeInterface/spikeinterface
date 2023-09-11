@@ -4,15 +4,12 @@ base class for sorters implementation.
 import time
 import copy
 from pathlib import Path
-import os
 import datetime
 import json
 import traceback
 import shutil
+import warnings
 
-import numpy as np
-
-from joblib import Parallel, delayed
 
 from spikeinterface.core import load_extractor, BaseRecordingSnippets
 from spikeinterface.core.core_tools import check_json
@@ -120,8 +117,8 @@ class BaseSorter:
         if output_folder is None:
             output_folder = cls.sorter_name + "_output"
 
-        #  .absolute() not anymore
-        output_folder = Path(output_folder)
+        # Resolve path
+        output_folder = Path(output_folder).absolute()
         sorter_output_folder = output_folder / "sorter_output"
 
         if output_folder.is_dir():
@@ -140,10 +137,10 @@ class BaseSorter:
                 )
 
         rec_file = output_folder / "spikeinterface_recording.json"
-        if recording.is_dumpable:
+        if recording.check_if_json_serializable():
             recording.dump_to_json(rec_file, relative_to=output_folder)
         else:
-            d = {"warning": "The recording is not dumpable"}
+            d = {"warning": "The recording is not serializable to json"}
             rec_file.write_text(json.dumps(d, indent=4), encoding="utf8")
 
         return output_folder
@@ -298,10 +295,18 @@ class BaseSorter:
             sorting = cls._get_result_from_folder(output_folder)
 
         # register recording to Sorting object
-        recording = load_extractor(output_folder / "spikeinterface_recording.json", base_folder=output_folder)
-        if recording is not None:
-            # can be None when not dumpable
-            sorting.register_recording(recording)
+        # check if not json serializable
+        with (output_folder / "spikeinterface_recording.json").open("r", encoding="utf8") as f:
+            recording_dict = json.load(f)
+        if "warning" in recording_dict.keys():
+            warnings.warn(
+                "The recording that has been sorted is not JSON serializable: it cannot be registered to the sorting object."
+            )
+        else:
+            recording = load_extractor(output_folder / "spikeinterface_recording.json", base_folder=output_folder)
+            if recording is not None:
+                # can be None when not dumpable
+                sorting.register_recording(recording)
         # set sorting info to Sorting object
         with open(output_folder / "spikeinterface_recording.json", "r") as f:
             rec_dict = json.load(f)

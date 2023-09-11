@@ -181,7 +181,9 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
 
     def save_to_folder(self, save_folder):
         for sorting in self.object_list:
-            assert sorting.check_if_dumpable(), "MultiSortingComparison.save_to_folder() need dumpable sortings"
+            assert (
+                sorting.check_if_json_serializable()
+            ), "MultiSortingComparison.save_to_folder() need json serializable sortings"
 
         save_folder = Path(save_folder)
         save_folder.mkdir(parents=True, exist_ok=True)
@@ -197,7 +199,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             json.dump(kwargs, f)
         sortings = {}
         for name, sorting in zip(self.name_list, self.object_list):
-            sortings[name] = sorting.to_dict()
+            sortings[name] = sorting.to_dict(recursive=True, relative_to=save_folder)
         with (save_folder / "sortings.json").open("w") as f:
             json.dump(sortings, f)
 
@@ -209,7 +211,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         with (folder_path / "sortings.json").open() as f:
             dict_sortings = json.load(f)
         name_list = list(dict_sortings.keys())
-        sorting_list = [load_extractor(v) for v in dict_sortings.values()]
+        sorting_list = [load_extractor(v, base_folder=folder_path) for v in dict_sortings.values()]
         mcmp = MultiSortingComparison(sorting_list=sorting_list, name_list=list(name_list), do_matching=False, **kwargs)
         filename = str(folder_path / "multicomparison.gpickle")
         with open(filename, "rb") as f:
@@ -226,7 +228,6 @@ class AgreementSortingExtractor(BaseSorting):
         self, sampling_frequency, multisortingcomparison, min_agreement_count=1, min_agreement_count_only=False
     ):
         self._msc = multisortingcomparison
-        self.is_dumpable = False
 
         if min_agreement_count_only:
             unit_ids = list(
@@ -243,6 +244,8 @@ class AgreementSortingExtractor(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
+        self._is_json_serializable = False
+
         if len(unit_ids) > 0:
             for k in ("agreement_number", "avg_agreement", "unit_ids"):
                 values = [self._msc._new_units[unit_id][k] for unit_id in unit_ids]
@@ -251,6 +254,13 @@ class AgreementSortingExtractor(BaseSorting):
         for segment_index in range(multisortingcomparison._num_segments):
             sorting_segment = AgreementSortingSegment(multisortingcomparison._spiketrains[segment_index])
             self.add_sorting_segment(sorting_segment)
+
+        self._kwargs = dict(
+            sampling_frequency=sampling_frequency,
+            multisortingcomparison=multisortingcomparison,
+            min_agreement_count=min_agreement_count,
+            min_agreement_count_only=min_agreement_count_only,
+        )
 
 
 class AgreementSortingSegment(BaseSortingSegment):
