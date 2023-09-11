@@ -125,6 +125,31 @@ def generate_sorting(
     refractory_period_ms=3.0,  # in ms
     seed=None,
 ):
+    """
+    Generates sorting object with random firings.
+
+    Parameters
+    ----------
+    num_units : int, default: 5
+        Number of units
+    sampling_frequency : float, default: 30000.0
+        The sampling frequency
+    durations : list, default: [10.325, 3.5]
+        Duration of each segment in s
+    firing_rates : float, default: 3.0
+        The firing rate of each unit (in Hz).
+    empty_units : list, default: None
+        List of units that will have no spikes. (used for testing mainly).
+    refractory_period_ms : float, default: 3.0
+        The refractory period in ms
+    seed : int, default: None
+        The random seed
+
+    Returns
+    -------
+    sorting : NumpySorting
+        The sorting object
+    """
     seed = _ensure_seed(seed)
     num_segments = len(durations)
     unit_ids = np.arange(num_units)
@@ -153,6 +178,59 @@ def generate_sorting(
     spikes = np.concatenate(spikes)
 
     sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
+
+    return sorting
+
+
+def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
+    """
+    Generates sorting object with added synchronous events from an existing sorting objects.
+
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The sorting object
+    sync_event_ratio : float
+        The ratio of added synchronous spikes with respect to the total number of spikes.
+        E.g., 0.5 means that the final sorting will have 1.5 times number of spikes, and all the extra
+        spikes are synchronous (same sample_index), but on different units (not duplicates).
+    seed : int, default: None
+        The random seed
+
+
+    Returns
+    -------
+    sorting : NumpySorting
+        The sorting object
+
+    """
+    rng = np.random.default_rng(seed)
+    spikes = sorting.to_spike_vector()
+    unit_ids = sorting.unit_ids
+
+    # add syncrhonous events
+    num_sync = int(len(spikes) * sync_event_ratio)
+    spikes_duplicated = rng.choice(spikes, size=num_sync, replace=True)
+    # change unit_index
+    new_unit_indices = np.zeros(len(spikes_duplicated))
+    # make sure labels are all unique, keep unit_indices used for each spike
+    units_used_for_spike = {}
+    for i, spike in enumerate(spikes_duplicated):
+        sample_index = spike["sample_index"]
+        if sample_index not in units_used_for_spike:
+            units_used_for_spike[sample_index] = np.array([spike["unit_index"]])
+        units_not_used = unit_ids[~np.in1d(unit_ids, units_used_for_spike[sample_index])]
+
+        if len(units_not_used) == 0:
+            continue
+        new_unit_indices[i] = rng.choice(units_not_used)
+        units_used_for_spike[sample_index] = np.append(units_used_for_spike[sample_index], new_unit_indices[i])
+    spikes_duplicated["unit_index"] = new_unit_indices
+    spikes_all = np.concatenate((spikes, spikes_duplicated))
+    sort_idxs = np.lexsort([spikes_all["sample_index"], spikes_all["segment_index"]])
+    spikes_all = spikes_all[sort_idxs]
+
+    sorting = NumpySorting(spikes=spikes_all, sampling_frequency=sorting.sampling_frequency, unit_ids=unit_ids)
 
     return sorting
 
