@@ -18,6 +18,7 @@ from spikeinterface.core.generate import (
 
 
 from spikeinterface.core.core_tools import convert_bytes_to_str, measure_memory_allocation
+from spikeinterface.core.testing import check_recordings_equal
 
 strategy_list = ["tile_pregenerated", "on_the_fly"]
 
