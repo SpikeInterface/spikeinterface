@@ -20,7 +20,7 @@ class NeuroExplorerRecordingExtractor(NeoBaseRecordingExtractor):
     >>> from spikeinterface.extractors.neoextractors.neuroexplorer import NeuroExplorerRecordingExtractor
     >>> from spikeinterface.core import aggregate_channels
     >>>
-    >>> file_path="/home/heberto/spikeinterface_datasets/ephy_testing_data/neuroexplorer/File_neuroexplorer_1.nex"
+    >>> file_path="/the/path/to/your/nex/file.nex"
     >>>
     >>> streams = NeuroExplorerRecordingExtractor.get_streams(file_path=file_path)
     >>> stream_names = streams[0]
