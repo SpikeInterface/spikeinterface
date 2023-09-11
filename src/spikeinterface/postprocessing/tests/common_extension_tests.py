@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 import shutil
+import platform
 from pathlib import Path
 
 from spikeinterface import extract_waveforms, load_extractor, load_waveforms, compute_sparsity
@@ -78,12 +79,13 @@ class WaveformExtensionCommonTestSuite:
         self.we2 = we2
 
         # make we read-only
-        we_ro_folder = cache_folder / "toy_waveforms_2seg_readonly"
-        if not we_ro_folder.is_dir():
-            shutil.copytree(we2.folder, we_ro_folder)
+        if platform.system() != "Windows":
+            we_ro_folder = cache_folder / "toy_waveforms_2seg_readonly"
+            if not we_ro_folder.is_dir():
+                shutil.copytree(we2.folder, we_ro_folder)
             # change permissions (R+X)
-        we_ro_folder.chmod(0o555)
-        self.we_ro = load_waveforms(we_ro_folder)
+            we_ro_folder.chmod(0o555)
+            self.we_ro = load_waveforms(we_ro_folder)
 
         self.sparsity2 = compute_sparsity(we2, method="radius", radius_um=30)
         we_memory = extract_waveforms(
@@ -108,8 +110,9 @@ class WaveformExtensionCommonTestSuite:
 
     def tearDown(self):
         # allow pytest to delete RO folder
-        we_ro_folder = cache_folder / "toy_waveforms_2seg_readonly"
-        we_ro_folder.chmod(0o777)
+        if platform.system() != "Windows":
+            we_ro_folder = cache_folder / "toy_waveforms_2seg_readonly"
+            we_ro_folder.chmod(0o777)
 
     def _test_extension_folder(self, we, in_memory=False):
         if self.extension_function_kwargs_list is None:
@@ -193,8 +196,9 @@ class WaveformExtensionCommonTestSuite:
                     print(f"{ext_data_name} of type {type(ext_data_mem)} not tested.")
 
         # read-only - Extension is memory only
-        _ = self.extension_class.get_extension_function()(self.we_ro, load_if_exists=False)
-        assert self.extension_class.extension_name in self.we_ro.get_available_extension_names()
-        ext_ro = self.we_ro.load_extension(self.extension_class.extension_name)
-        assert ext_ro.format == "memory"
-        assert ext_ro.extension_folder is None
+        if platform.system() != "Windows":
+            _ = self.extension_class.get_extension_function()(self.we_ro, load_if_exists=False)
+            assert self.extension_class.extension_name in self.we_ro.get_available_extension_names()
+            ext_ro = self.we_ro.load_extension(self.extension_class.extension_name)
+            assert ext_ro.format == "memory"
+            assert ext_ro.extension_folder is None
