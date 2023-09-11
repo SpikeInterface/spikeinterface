@@ -6,7 +6,7 @@ import sys
 from spikeinterface.core import BinaryRecordingExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
 from spikeinterface.core.core_tools import measure_memory_allocation
-from spikeinterface.core.generate import GeneratorRecording
+from spikeinterface.core.generate import NoiseGeneratorRecording
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "core"
@@ -79,7 +79,7 @@ def folder_with_binary_files(tmpdir_factory):
     num_channels = 32
     sampling_frequency = 30_000.0
     dtype = "float32"
-    recording = GeneratorRecording(
+    recording = NoiseGeneratorRecording(
         durations=[1.0],
         sampling_frequency=sampling_frequency,
         num_channels=num_channels,
