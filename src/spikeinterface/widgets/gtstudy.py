@@ -190,3 +190,63 @@ class StudyPerformances(BaseWidget):
                     value_vars=('accuracy','precision', 'recall'))
             df['x'] = df.apply(lambda r: ' '.join([r[col] for col in levels]), axis=1)
             sns.swarmplot(data=df, x='x', y='Score', hue='Metric', dodge=True)
+
+
+
+class StudyPerformancesVsMetrics(BaseWidget):
+    """
+    Plot performances vs a metrics (snr for instance) over case for a study.
+
+
+    Parameters
+    ----------
+    study: GroundTruthStudy
+        A study object.
+    mode: str
+        Which mode in "swarm"
+    case_keys: list or None
+        A selection of cases to plot, if None, then all.
+
+    """
+
+    def __init__(
+        self,
+        study,
+        metric_name="snr",
+        performance_name="accuracy",
+        case_keys=None,
+        backend=None,
+        **backend_kwargs,
+    ):
+        
+        if case_keys is None:
+            case_keys = list(study.cases.keys())
+
+        plot_data = dict(
+            study=study,
+            metric_name=metric_name,
+            performance_name=performance_name,
+            case_keys=case_keys,
+        )
+
+        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
+
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import matplotlib.pyplot as plt
+        from .utils_matplotlib import make_mpl_figure
+        from .utils import get_some_colors
+
+        dp = to_attr(data_plot)
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+
+
+        study = dp.study
+        perfs = study.get_performance_by_unit(case_keys=dp.case_keys)
+
+        for key in dp.case_keys:
+            x = study.get_metrics(key)[dp.metric_name].values
+            y = perfs.xs(key)[dp.performance_name].values
+            label = dp.study.cases[key]["label"]
+            self.ax.scatter(x, y, label=label)
+
+        self.ax.legend()

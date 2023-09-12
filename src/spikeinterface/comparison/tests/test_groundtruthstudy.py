@@ -1,20 +1,11 @@
-import importlib
 import shutil
 import pytest
 from pathlib import Path
 
-# from spikeinterface.extractors import toy_example
 from spikeinterface import generate_ground_truth_recording
 from spikeinterface.preprocessing import bandpass_filter
-from spikeinterface.sorters import installed_sorters
 from spikeinterface.comparison import GroundTruthStudy
 
-# try:
-#     import tridesclous
-
-#     HAVE_TDC = True
-# except ImportError:
-#     HAVE_TDC = False
 
 
 if hasattr(pytest, "global_test_folder"):
@@ -71,7 +62,7 @@ def create_a_study(study_folder):
 
             },
         },
-        # we comment this at the moement because SC2 is quite slow for testing
+        # we comment this at the moement because SC2 is quite slow for testing
         # ("sc2", "no-preprocess", "tetrode"): {
         #     "label": "spykingcircus2 without preprocessing standar params",
         #     "dataset": "toy_tetrode",
@@ -118,6 +109,4 @@ if __name__ == "__main__":
     setup_module()
     test_GroundTruthStudy() 
 
-    # test_run_study_sorters()
-    # test_extract_sortings()
-
+ 
