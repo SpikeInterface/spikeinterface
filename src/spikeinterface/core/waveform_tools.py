@@ -354,7 +354,6 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_ctx
     i0 = np.searchsorted(in_seg_spikes["sample_index"], max(start_frame, nbefore))
     i1 = np.searchsorted(in_seg_spikes["sample_index"], min(end_frame, seg_size - nafter))
 
-
     # slice in absolut in spikes vector
     l0 = i0 + s0
     l1 = i1 + s0
@@ -416,7 +415,7 @@ def extract_waveforms_to_single_buffer(
 
     Note: spikes near borders (nbefore/nafter) are not extracted and 0 are put the output buffer.
     This ensures that spikes.shape[0] == all_waveforms.shape[0].
-    
+
     Important note: for the "shared_memory" mode wf_array_info contains reference to
     the shared memmory buffer, this variable must be reference as long as arrays as used.
     And this variable is also returned.
@@ -481,7 +480,7 @@ def extract_waveforms_to_single_buffer(
 
     if mode == "memmap":
         all_waveforms = np.lib.format.open_memmap(file_path, mode="w+", dtype=dtype, shape=shape)
-        # wf_array_info = str(file_path)
+        # wf_array_info = str(file_path)
         wf_array_info = dict(filename=str(file_path))
     elif mode == "shared_memory":
         if num_spikes == 0 or num_chans == 0:
@@ -591,7 +590,6 @@ def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, work
     # the border of segment are protected by nbefore on left an nafter on the right
     i0 = np.searchsorted(in_seg_spikes["sample_index"], max(start_frame, nbefore))
     i1 = np.searchsorted(in_seg_spikes["sample_index"], min(end_frame, seg_size - nafter))
-
 
     # slice in absolut in spikes vector
     l0 = i0 + s0
