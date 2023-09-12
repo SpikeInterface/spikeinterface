@@ -101,6 +101,8 @@ NEO-based
     .. autofunction:: read_spikegadgets
     .. autofunction:: read_spikeglx
     .. autofunction:: read_tdt
+    .. autofunction:: read_neuroexplorer
+
 
 Non-NEO-based
 ~~~~~~~~~~~~~
