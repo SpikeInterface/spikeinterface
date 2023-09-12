@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from spikeinterface.core.template import Templates
+from spikeinterface.core.sparsity import ChannelSparsity
 
 
 @pytest.fixture
@@ -41,6 +42,14 @@ def test_numpy_like_behavior(dense_templates):
     assert np.array_equal(templates[0, :], templates_array[0, :])
     assert np.array_equal(templates[0, :, :], templates_array[0, :, :])
     assert np.array_equal(templates[3:5, :, 2], templates_array[3:5, :, 2])
+    # Test fancy indexing
+    indices = np.array([0, 1])
+    assert np.array_equal(templates[indices], templates_array[indices])
+    row_indices = np.array([0, 1])
+    col_indices = np.array([2, 3])
+    assert np.array_equal(templates[row_indices, col_indices], templates_array[row_indices, col_indices])
+    mask = templates_array > 0.5
+    assert np.array_equal(templates[mask], templates_array[mask])
 
     # Test unary ufuncs
     assert np.array_equal(np.sqrt(templates), np.sqrt(templates_array))
@@ -50,7 +59,6 @@ def test_numpy_like_behavior(dense_templates):
     # Test binary ufuncs
     other_array = np.random.rand(*templates_array.shape)
     other_template = Templates(templates_array=other_array)
-
     assert np.array_equal(np.add(templates, other_template), np.add(templates_array, other_array))
     assert np.array_equal(np.multiply(templates, other_template), np.multiply(templates_array, other_array))
 

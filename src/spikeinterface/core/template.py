@@ -46,9 +46,10 @@ class Templates:
     # Construct the object from a dictionary
     @classmethod
     def from_dict(cls, data):
+        sparsity = ChannelSparsity.from_dict(data["sparsity"]) if data["sparsity"] is not None else None
         return cls(
             templates_array=np.array(data["templates_array"]),
-            sparsity=ChannelSparsity(data["sparsity"]),  # Assuming you can reconstruct a ChannelSparsity from a string
+            sparsity=sparsity,
         )
 
     def to_json(self):
