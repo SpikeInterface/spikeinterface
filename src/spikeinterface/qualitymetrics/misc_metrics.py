@@ -567,8 +567,7 @@ _default_params["synchrony"] = dict(synchrony_sizes=(0, 2, 4))
 
 
 def compute_firing_ranges(waveform_extractor, bin_size_s=5, quantiles=(0.05, 0.95), unit_ids=None):
-    """
-    Compute firing range, the range between the 5th and 95th quantiles of the firing rates distribution
+    """Calculate firing range, the range between the 5th and 95th quantiles of the firing rates distribution
     computed in non-overlapping time bins.
 
     Parameters
@@ -579,11 +578,17 @@ def compute_firing_ranges(waveform_extractor, bin_size_s=5, quantiles=(0.05, 0.9
         The size of the bin in seconds.
     quantiles : tuple, default: (0.05, 0.95)
         The quantiles to compute.
+    unit_ids : list or None
+        List of unit ids to compute the firing range. If None, all units are used.
 
     Returns
     -------
     firing_ranges : dict
         The firing range for each unit.
+
+    Notes
+    -----
+    Designed by Simon Musall and ported to SpikeInterface by Alessio Buccino.
     """
     sampling_frequency = waveform_extractor.sampling_frequency
     bin_size_samples = int(bin_size_s * sampling_frequency)
@@ -601,7 +606,7 @@ def compute_firing_ranges(waveform_extractor, bin_size_s=5, quantiles=(0.05, 0.9
             spike_times = sorting.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
             spike_counts, _ = np.histogram(spike_times, bins=edges)
             firing_rates = spike_counts / bin_size_s
-            firing_rate_histograms[unit_id] = np.concatentate((firing_rate_histograms[unit_id], firing_rates))
+            firing_rate_histograms[unit_id] = np.concatenate((firing_rate_histograms[unit_id], firing_rates))
 
     # finally we compute the percentiles
     firing_ranges = {}
@@ -616,20 +621,37 @@ def compute_firing_ranges(waveform_extractor, bin_size_s=5, quantiles=(0.05, 0.9
 _default_params["firing_range"] = dict(bin_size_s=5, quantiles=(0.05, 0.95))
 
 
-# TODO: docs
 def compute_amplitude_spreads(
-    waveform_extractor, spikes_bin_size=50, amplitude_extension="spike_amplitudes", unit_ids=None
+    waveform_extractor, num_spikes_per_bin=100, amplitude_extension="spike_amplitudes", unit_ids=None
 ):
-    """Calculate mean spread of spike amplitudes within defined bins of AP events
+    """Calculate spread of spike amplitudes within defined bins of spike events.
+    The spread is the median relative variance (variance divided by the overall amplitude mean)
+    computed over bins of `num_spikes_per_bin` spikes.
 
-    S Musall 2023
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveform extractor object.
+    num_spikes_per_bin : int, default: 50
+        The number of spikes per bin.
+    amplitude_extension : str, default: 'spike_amplitudes'
+        The name of the extension to load the amplitudes from. 'spike_amplitudes' or 'amplitude_scalings'.
+    unit_ids : list or None
+        List of unit ids to compute the amplitude spread. If None, all units are used.
 
-    Input:
-    ------
-    amplitudes : numpy.ndarray
-        Array of amplitudes (don't need to be in physical units)
+    Returns
+    -------
+    amplitude_spreads : dict
+        The amplitude spread for each unit.
 
+    Notes
+    -----
+    Designed by Simon Musall and ported to SpikeInterface by Alessio Buccino.
     """
+    assert amplitude_extension in (
+        "spike_amplitudes",
+        "amplitude_scalings",
+    ), "Invalid amplitude_extension. It can be either 'spike_amplitudes' or 'amplitude_scalings'"
     sorting = waveform_extractor.sorting
     spikes = sorting.to_spike_vector()
     num_spikes = sorting.count_num_spikes_per_unit()
@@ -639,23 +661,31 @@ def compute_amplitude_spreads(
     if waveform_extractor.is_extension(amplitude_extension):
         sac = waveform_extractor.load_extension(amplitude_extension)
         amps = sac.get_data(outputs="concatenated")
+        if amplitude_extension == "spike_amplitudes":
+            amps = np.concatenate(amps)
     else:
         warnings.warn("")
         empty_dict = {unit_id: np.nan for unit_id in unit_ids}
         return empty_dict
 
     all_unit_ids = list(sorting.unit_ids)
+    amplitude_spreads = {}
     for unit_id in unit_ids:
         amps_unit = amps[spikes["unit_index"] == all_unit_ids.index(unit_id)]
-        if num_spikes[unit_id] < spikes_bin_size:
-            amp_spread = np.var(amps_unit)
+        amp_mean = np.abs(np.mean(amps_unit))
+        if num_spikes[unit_id] < num_spikes_per_bin:
+            amp_spread = np.std(amps_unit) / amp_mean
         else:
-            amp_spread = []
-            for i in range(0, num_spikes[unit_id], spikes_bin_size):
-                amp_spread.append(np.var(amps_unit[i : i + spikes_bin_size]))
-            amp_spread = np.median(amp_spread)
+            amp_spreads = []
+            for i in range(0, num_spikes[unit_id], num_spikes_per_bin):
+                amp_spreads.append(np.std(amps_unit[i : i + num_spikes_per_bin]) / amp_mean)
+            amp_spread = np.median(amp_spreads)
+        amplitude_spreads[unit_id] = amp_spread
 
-    return amp_spread
+    return amplitude_spreads
+
+
+_default_params["amplitude_spread"] = dict(num_spikes_per_bin=100, amplitude_extension="spike_amplitudes")
 
 
 def compute_amplitude_cutoffs(
