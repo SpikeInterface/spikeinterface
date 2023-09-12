@@ -109,53 +109,9 @@ def test_GroundTruthStudy():
         metrics = study.get_metrics(key)
         print(metrics)
     
-    study.aggregate_performance_by_unit()
-    study.aggregate_count_units()
+    study.get_performance_by_unit()
+    study.get_count_units()
 
-
-#     perf = study.aggregate_performance_by_unit()
-#     count_units = study.aggregate_count_units()
-
-
-
-# @pytest.mark.skipif(not HAVE_TDC, reason="Test requires Python package 'tridesclous'")
-# def test_run_study_sorters():
-#     study = GroundTruthStudy(study_folder)
-#     sorter_list = [
-#         "tridesclous",
-#     ]
-#     print(
-#         f"\n#################################\nINSTALLED SORTERS\n#################################\n"
-#         f"{installed_sorters()}"
-#     )
-#     study.run_sorters(sorter_list)
-
-
-# @pytest.mark.skipif(not HAVE_TDC, reason="Test requires Python package 'tridesclous'")
-# def test_extract_sortings():
-#     study = GroundTruthStudy(study_folder)
-
-#     study.copy_sortings()
-
-#     for rec_name in study.rec_names:
-#         gt_sorting = study.get_ground_truth(rec_name)
-
-#     for rec_name in study.rec_names:
-#         metrics = study.get_metrics(rec_name=rec_name)
-
-#         snr = study.get_units_snr(rec_name=rec_name)
-
-#     study.copy_sortings()
-
-#     run_times = study.aggregate_run_times()
-
-#     study.run_comparisons(exhaustive_gt=True)
-
-#     perf = study.aggregate_performance_by_unit()
-
-#     count_units = study.aggregate_count_units()
-#     dataframes = study.aggregate_dataframes()
-#     print(dataframes)
 
 
 if __name__ == "__main__":

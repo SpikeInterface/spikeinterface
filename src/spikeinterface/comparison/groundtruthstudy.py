@@ -347,7 +347,7 @@ class GroundTruthStudy:
         """
         return self.get_metrics(key)["snr"]
 
-    def aggregate_performance_by_unit(self, case_keys=None):
+    def get_performance_by_unit(self, case_keys=None):
 
         import pandas as pd
 
@@ -375,7 +375,7 @@ class GroundTruthStudy:
         perf_by_unit = perf_by_unit.set_index(self.levels)
         return perf_by_unit
 
-    def aggregate_count_units(
+    def get_count_units(
             self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None
         ):
 
