@@ -11,6 +11,7 @@ from .misc_metrics import (
     compute_amplitude_cutoffs,
     compute_amplitude_medians,
     compute_drift_metrics,
+    compute_synchrony_metrics,
 )
 
 from .pca_metrics import (
@@ -39,5 +40,6 @@ _misc_metric_name_to_func = {
     "sliding_rp_violation": compute_sliding_rp_violations,
     "amplitude_cutoff": compute_amplitude_cutoffs,
     "amplitude_median": compute_amplitude_medians,
+    "synchrony": compute_synchrony_metrics,
     "drift": compute_drift_metrics,
 }

@@ -28,6 +28,7 @@ from .unitsaggregationsorting import UnitsAggregationSorting, aggregate_units
 from .generate import (
     generate_recording,
     generate_sorting,
+    add_synchrony_to_sorting,
     create_sorting_npz,
     generate_snippets,
     synthesize_random_firings,
