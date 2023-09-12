@@ -15,7 +15,7 @@ class NeuroExplorerRecordingExtractor(NeoBaseRecordingExtractor):
     This is because the NeuroExplorerRawIO class does not support multi-channel recordings
     as in the NeuroExplorer format they might have different sampling rates.
 
-    Consider exctracting all the channels and then concatenating them with the aggregate_channels function.
+    Consider extracting all the channels and then concatenating them with the aggregate_channels function.
 
     >>> from spikeinterface.extractors.neoextractors.neuroexplorer import NeuroExplorerRecordingExtractor
     >>> from spikeinterface.core import aggregate_channels
