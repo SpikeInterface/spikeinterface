@@ -114,7 +114,7 @@ def _generate_recording_legacy(num_channels, sampling_frequency, durations, seed
 def generate_sorting(
     num_units=5,
     sampling_frequency=30000.0,  # in Hz
-    durations=[10.325, 3.5],  #  in s for 2 segments
+    durations=[10.325, 3.5],  # in s for 2 segments
     firing_rates=3.0,
     empty_units=None,
     refractory_period_ms=3.0,  # in ms
@@ -228,6 +228,25 @@ def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
     sorting = NumpySorting(spikes=spikes_all, sampling_frequency=sorting.sampling_frequency, unit_ids=unit_ids)
 
     return sorting
+
+
+class TransformSorting(BaseSorting):
+
+    def __init__(self, sorting, added_spikes=None, removed_spikes=None):
+
+        BaseSorting.__init__(sorting.sampling_frequency, sorting.unit_ids)
+        sorting.to_spike_vector()
+        spikes = sorting.to_spike_vector()
+        self.added_spikes = added_spikes
+        self.removed_spikes = removed_spikes
+
+    @propery
+    def added_spikes
+
+
+    @property
+
+
 
 
 def create_sorting_npz(num_seg, file_path):
