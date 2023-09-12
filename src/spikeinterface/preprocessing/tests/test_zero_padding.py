@@ -257,9 +257,9 @@ def test_trace_padded_recording_retrieve_traces_with_partial_padding(recording, 
     expected_zeros = np.zeros((number_of_paded_frames_at_end, num_channels))
     assert np.allclose(padded_traces_end, expected_zeros)
 
+
 @pytest.mark.parametrize("padding_start, padding_end", [(5000, 5000), (5000, 0), (0, 5000)])
 def test_trace_padded_recording_retrieve_full_recording_with_preprocessing(recording, padding_start, padding_end):
-
     num_samples = recording.get_num_samples()
     num_channels = recording.get_num_channels()
 
@@ -281,13 +281,14 @@ def test_trace_padded_recording_retrieve_full_recording_with_preprocessing(recor
     end_frames = start_frames + step
 
     for start_frame, end_frame in zip(start_frames, end_frames):
-
         padded_trace = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
 
         end_padding_region_first_idx = padding_start + num_samples
 
         if padding_start <= start_frame < end_padding_region_first_idx:
-            original_trace = recording.get_traces(start_frame=start_frame - padding_start, end_frame=end_frame - padding_start)
+            original_trace = recording.get_traces(
+                start_frame=start_frame - padding_start, end_frame=end_frame - padding_start
+            )
             assert np.allclose(padded_trace, original_trace, rtol=0, atol=1e-10)
         else:
             assert np.all(padded_trace == padded_recording.fill_value)
@@ -295,7 +296,6 @@ def test_trace_padded_recording_retrieve_full_recording_with_preprocessing(recor
 
 @pytest.mark.parametrize("padding_start, padding_end", [(5000, 5000), (5000, 0), (0, 5000)])
 def test_trace_padded_recording_retrieve_full_recording_with_preprocessing(recording, padding_start, padding_end):
-
     num_samples = recording.get_num_samples()
     num_channels = recording.get_num_channels()
 
@@ -317,13 +317,14 @@ def test_trace_padded_recording_retrieve_full_recording_with_preprocessing(recor
     end_frames = start_frames + step
 
     for start_frame, end_frame in zip(start_frames, end_frames):
-
         padded_trace = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
 
         end_padding_region_first_idx = padding_start + num_samples
 
         if padding_start <= start_frame < end_padding_region_first_idx:
-            original_trace = recording.get_traces(start_frame=start_frame - padding_start, end_frame=end_frame - padding_start)
+            original_trace = recording.get_traces(
+                start_frame=start_frame - padding_start, end_frame=end_frame - padding_start
+            )
             assert np.allclose(padded_trace, original_trace, rtol=0, atol=1e-10)
         else:
             assert np.all(padded_trace == padded_recording.fill_value)
