@@ -139,21 +139,20 @@ class PeakRetriever(PeakSource):
 # this is not implemented yet this will be done in separted PR
 class SpikeRetriever(PeakSource):
     """
-    This class is usefull to inject a sorting object in the node pipepline mechanisim.
+    This class is useful to inject a sorting object in the node pipepline mechanism.
     It allows to compute some post processing with the same machinery used for sorting components.
-    This is a first step to totaly refactor:
+    This is used by:
       * compute_spike_locations()
       * compute_amplitude_scalings()
       * compute_spike_amplitudes()
       * compute_principal_components()
 
-
-    recording:
-
-    sorting:
-
-    channel_from_template: bool (default True)
-        If True then the channel_index is infered from template and extremum_channel_inds must be provided.
+    recording : BaseRecording
+        The recording object.
+    sorting: BaseSorting
+        The sorting object.
+    channel_from_template: bool, default: True
+        If True, then the channel_index is inferred from the template and `extremum_channel_inds` must be provided.
         If False every spikes compute its own channel index given a radius around the template max channel.
     extremum_channel_inds: dict of int
         The extremum channel index dict given from template.
@@ -174,7 +173,7 @@ class SpikeRetriever(PeakSource):
 
         assert extremum_channel_inds is not None, "SpikeRetriever need the dict extremum_channel_inds"
 
-        self.peaks = sorting_to_peak(sorting, extremum_channel_inds)
+        self.peaks = sorting_to_peaks(sorting, extremum_channel_inds)
 
         if not channel_from_template:
             channel_distance = get_channel_distances(recording)
@@ -223,7 +222,7 @@ class SpikeRetriever(PeakSource):
         return (local_peaks,)
 
 
-def sorting_to_peak(sorting, extremum_channel_inds):
+def sorting_to_peaks(sorting, extremum_channel_inds):
     spikes = sorting.to_spike_vector()
     peaks = np.zeros(spikes.size, dtype=base_peak_dtype)
     peaks["sample_index"] = spikes["sample_index"]

@@ -15,7 +15,7 @@ from spikeinterface.core.node_pipeline import (
     SpikeRetriever,
     PipelineNode,
     ExtractDenseWaveforms,
-    sorting_to_peak,
+    sorting_to_peaks,
 )
 
 
@@ -72,15 +72,14 @@ class WaveformsRootMeanSquare(PipelineNode):
 def test_run_node_pipeline():
     recording, sorting = generate_ground_truth_recording(num_channels=10, num_units=10, durations=[10.0])
 
-    # job_kwargs = dict(chunk_duration="0.5s", n_jobs=2, progress_bar=False)
-    job_kwargs = dict(chunk_duration="0.5s", n_jobs=1, progress_bar=False)
+    job_kwargs = dict(chunk_duration="0.5s", n_jobs=2, progress_bar=False)
 
     spikes = sorting.to_spike_vector()
 
     # create peaks from spikes
     we = extract_waveforms(recording, sorting, mode="memory", **job_kwargs)
     extremum_channel_inds = get_template_extremum_channel(we, peak_sign="neg", outputs="index")
-    peaks = sorting_to_peak(sorting, extremum_channel_inds)
+    peaks = sorting_to_peaks(sorting, extremum_channel_inds)
 
     peak_retriever = PeakRetriever(recording, peaks)
     # channel index is from template
@@ -97,7 +96,7 @@ def test_run_node_pipeline():
         peak_sign="neg",
     )
 
-    # test with 2 diffrents first node
+    # test with 3 differents first nodes
     for loop, peak_source in enumerate((peak_retriever, spike_retriever_T, spike_retriever_S)):
         # one step only : squeeze output
         nodes = [
