@@ -118,7 +118,12 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
 
         """
         original_start_frame = max(start_frame - self.padding_start, 0)
-        original_end_frame = min(end_frame - self.padding_start, self.num_samples_in_original_segment)
+        original_end_frame = end_frame - self.padding_start
+
+        # Capped samples to the length of the original segment
+        original_start_frame = min(original_start_frame, self.num_samples_in_original_segment)
+        original_end_frame = min(original_end_frame, self.num_samples_in_original_segment)
+
         original_traces = self.parent_recording_segment.get_traces(
             start_frame=original_start_frame,
             end_frame=original_end_frame,
