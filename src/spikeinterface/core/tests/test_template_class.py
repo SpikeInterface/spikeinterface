@@ -1,19 +1,28 @@
 from pathlib import Path
 import pickle
+import json
+
 import numpy as np
 import pytest
 
 from spikeinterface.core.template import Templates
 
 
-def test_dense_template_instance():
+@pytest.fixture
+def dense_templates():
     num_units = 2
     num_samples = 4
     num_channels = 3
     templates_shape = (num_units, num_samples, num_channels)
     templates_array = np.arange(num_units * num_samples * num_channels).reshape(templates_shape)
 
-    templates = Templates(templates_array=templates_array)
+    return Templates(templates_array=templates_array)
+
+
+def test_dense_template_instance(dense_templates):
+    templates = dense_templates
+    templates_array = templates.templates_array
+    num_units, num_samples, num_channels = templates_array.shape
 
     assert np.array_equal(templates.templates_array, templates_array)
     assert templates.sparsity is None
@@ -22,14 +31,9 @@ def test_dense_template_instance():
     assert templates.num_channels == num_channels
 
 
-def test_numpy_like_behavior():
-    num_units = 2
-    num_samples = 4
-    num_channels = 3
-    templates_shape = (num_units, num_samples, num_channels)
-    templates_array = np.arange(num_units * num_samples * num_channels).reshape(templates_shape)
-
-    templates = Templates(templates_array=templates_array)
+def test_numpy_like_behavior(dense_templates):
+    templates = dense_templates
+    templates_array = templates.templates_array
 
     # Test that slicing works as in numpy
     assert np.array_equal(templates[:], templates_array[:])
@@ -44,7 +48,7 @@ def test_numpy_like_behavior():
     assert np.array_equal(np.mean(templates, axis=0), np.mean(templates_array, axis=0))
 
     # Test binary ufuncs
-    other_array = np.random.rand(*templates_shape)
+    other_array = np.random.rand(*templates_array.shape)
     other_template = Templates(templates_array=other_array)
 
     assert np.array_equal(np.add(templates, other_template), np.add(templates_array, other_array))
@@ -60,19 +64,29 @@ def test_numpy_like_behavior():
     assert not np.any(np.less(templates, 0))
 
 
-def test_pickle():
-    num_units = 2
-    num_samples = 4
-    num_channels = 3
-    templates_shape = (num_units, num_samples, num_channels)
-    templates_array = np.arange(num_units * num_samples * num_channels).reshape(templates_shape)
-
-    templates = Templates(templates_array=templates_array)
+def test_pickle(dense_templates):
+    templates = dense_templates
 
     # Serialize and deserialize the object
     serialized = pickle.dumps(templates)
-    deserialized = pickle.loads(serialized)
+    deserialized_templates = pickle.loads(serialized)
 
+    assert np.array_equal(templates.templates_array, deserialized_templates.templates_array)
+    assert templates.sparsity == deserialized_templates.sparsity
+    assert templates.num_units == deserialized_templates.num_units
+    assert templates.num_samples == deserialized_templates.num_samples
+    assert templates.num_channels == deserialized_templates.num_channels
+
+
+def test_jsonification(dense_templates):
+    templates = dense_templates
+    # Serialize to JSON string
+    serialized = templates.to_json()
+
+    # Deserialize back to object
+    deserialized = Templates.from_json(serialized)
+
+    # Check if deserialized object matches original
     assert np.array_equal(templates.templates_array, deserialized.templates_array)
     assert templates.sparsity == deserialized.sparsity
     assert templates.num_units == deserialized.num_units
