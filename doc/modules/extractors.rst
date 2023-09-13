@@ -135,7 +135,8 @@ For raw recording formats, we currently support:
 * **Neuralynx** :py:func:`~spikeinterface.extractors.read_neuralynx()`
 * **Open Ephys Legacy** :py:func:`~spikeinterface.extractors.read_openephys()`
 * **Open Ephys Binary** :py:func:`~spikeinterface.extractors.read_openephys()`
-* **Plexon** :py:func:`~spikeinterface.corextractorse.read_plexon()`
+* **Plexon** :py:func:`~spikeinterface.extractors.read_plexon()`
+* **Plexon 2** :py:func:`~spikeinterface.extractors.read_plexon2()`
 * **Shybrid** :py:func:`~spikeinterface.extractors.read_shybrid_recording()`
 * **SpikeGLX** :py:func:`~spikeinterface.extractors.read_spikeglx()`
 * **SpikeGLX IBL compressed** :py:func:`~spikeinterface.extractors.read_cbin_ibl()`
@@ -165,6 +166,7 @@ For sorted data formats, we currently support:
 * **Neuralynx spikes** :py:func:`~spikeinterface.extractors.read_neuralynx_sorting()`
 * **NPZ (created by SpikeInterface)** :py:func:`~spikeinterface.core.read_npz_sorting()`
 * **Plexon spikes** :py:func:`~spikeinterface.extractors.read_plexon_sorting()`
+* **Plexon 2 spikes** :py:func:`~spikeinterface.extractors.read_plexon2_sorting()`
 * **Shybrid**  :py:func:`~spikeinterface.extractors.read_shybrid_sorting()`
 * **Spyking Circus** :py:func:`~spikeinterface.extractors.read_spykingcircus()`
 * **Trideclous** :py:func:`~spikeinterface.extractors.read_tridesclous()`
