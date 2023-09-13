@@ -39,7 +39,7 @@ The SpikeInterface implementation is a partial port of the low-level complexity 
 References
 ----------
 
-.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+.. automodule:: spikeinterface.qualitymetrics.misc_metrics
 
     .. autofunction:: compute_synchrony_metrics
 
