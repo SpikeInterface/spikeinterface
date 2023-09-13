@@ -33,7 +33,8 @@ _sparsity_doc = """
 
 class ChannelSparsity:
     """
-    Handle channel sparsity for a set of units.
+    Handle channel sparsity for a set of units. That is, for every unit,
+    it indicates which channels are used to represent or active the waveform.
 
     Internally, sparsity is stored as a boolean mask.
 
@@ -92,7 +93,7 @@ class ChannelSparsity:
         assert self.mask.shape[0] == self.unit_ids.shape[0]
         assert self.mask.shape[1] == self.channel_ids.shape[0]
 
-        # some precomputed dict
+        # Those are computed at first call
         self._unit_id_to_channel_ids = None
         self._unit_id_to_channel_indices = None
 
@@ -102,7 +103,7 @@ class ChannelSparsity:
 
     def __repr__(self):
         sparsity = 1 - np.mean(self.mask)
-        txt = f"ChannelSparsity - units: {self.num_units} - channels: {self.num_channels} - sparsity (P(x=0)): {sparsity:0.2f}"
+        txt = f"ChannelSparsity - units: {self.num_units} - channels: {self.num_channels} - sparsity, P(x=0): {sparsity:0.2f}"
         return txt
 
     @property
@@ -123,7 +124,28 @@ class ChannelSparsity:
                 self._unit_id_to_channel_indices[unit_id] = channel_inds
         return self._unit_id_to_channel_indices
 
-    def sparsify_waveforms(self, waveforms, unit_index):
+    def sparsify_waveforms(self, waveforms: np.ndarray, unit_index: int) -> np.ndarray:
+        """
+        Sparsify the waveforms according to a unit's channel sparsity.
+
+        The units are indexed by their index in the unit_ids list.
+
+        Given a unit index, this method selects only the active channels for
+        that unit and removes the rest.
+
+        Parameters
+        ----------
+        waveforms : np.array
+            Dense waveforms with shape (num_units, num_samples, num_channels).
+        unit_index : int
+            The index of the unit for which to sparsify the waveform.
+
+        Returns
+        -------
+        sparsified_waveforms : np.array
+            Sparse waveforms with shape (num_units, num_samples, num_active_channels).
+        """
+
         unit_id = self.unit_ids[unit_index]
         non_zero_indices = self.unit_id_to_channel_indices[unit_id]
         num_sparse_channels = len(non_zero_indices)
@@ -133,7 +155,26 @@ class ChannelSparsity:
 
         return sparsified_waveforms
 
-    def densify_waveforms(self, waveforms, unit_index):
+    def densify_waveforms(self, waveforms: np.ndarray, unit_index: int) -> np.ndarray:
+        """
+        Densify sparse waveforms according to a unit's channel sparsity.
+
+        Given a unit index and its sparsified waveform, this method places the waveform back
+        into its original position within a dense array.
+
+        Parameters
+        ----------
+        waveforms : np.array
+            The sparsified waveforms array of shape (num_units, num_samples, num_active_channels).
+        unit_index : int
+            The index of the unit for which to densify the waveform.
+
+        Returns
+        -------
+        densified_waveforms : np.array
+            The densified waveforms array of shape (num_units, num_samples, num_channels).
+
+        """
         unit_id = self.unit_ids[unit_index]
         non_zero_indices = self.unit_id_to_channel_indices[unit_id]
         densified_shape = waveforms.shape[:-1] + (self.num_channels,)
