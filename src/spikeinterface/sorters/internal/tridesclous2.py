@@ -1,3 +1,4 @@
+import shutil
 from .si_based import ComponentsBasedSorter
 
 from spikeinterface.core import (load_extractor, BaseRecording, get_noise_levels,
@@ -277,6 +278,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
 
         if params["save_array"]:
+            
+            np.save(sorter_output_folder / 'noise_levels.npy', noise_levels)
             np.save(sorter_output_folder / 'all_peaks.npy', all_peaks)
             np.save(sorter_output_folder / 'post_split_label.npy', post_split_label)
             np.save(sorter_output_folder / 'split_count.npy', split_count)
@@ -287,6 +290,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         final_spikes["sample_index"] = spikes["sample_index"]
         final_spikes["unit_index"] = spikes["cluster_index"]
         final_spikes["segment_index"] = spikes["segment_index"]
+
 
         sorting = NumpySorting(final_spikes, sampling_frequency, labels_set)
         sorting = sorting.save(folder=sorter_output_folder / "sorting")
