@@ -96,9 +96,13 @@ class ChannelSparsity:
         self._unit_id_to_channel_ids = None
         self._unit_id_to_channel_indices = None
 
+        self.num_channels = self.channel_ids.size
+        self.num_units = self.unit_ids.size
+        self.max_channel_representation = self.mask.sum(axis=1).max()
+
     def __repr__(self):
-        ratio = np.mean(self.mask)
-        txt = f"ChannelSparsity - units: {self.unit_ids.size} - channels: {self.channel_ids.size} - ratio: {ratio:0.2f}"
+        sparsity = 1 - np.mean(self.mask)
+        txt = f"ChannelSparsity - units: {self.num_units} - channels: {self.num_channels} - sparsity (P(x=0)): {sparsity:0.2f}"
         return txt
 
     @property
@@ -118,6 +122,25 @@ class ChannelSparsity:
                 channel_inds = np.flatnonzero(self.mask[unit_ind, :])
                 self._unit_id_to_channel_indices[unit_id] = channel_inds
         return self._unit_id_to_channel_indices
+
+    def sparsify_waveforms(self, waveforms, unit_index):
+        unit_id = self.unit_ids[unit_index]
+        non_zero_indices = self.unit_id_to_channel_indices[unit_id]
+        num_sparse_channels = len(non_zero_indices)
+        sparsified_shape = waveforms.shape[:-1] + (num_sparse_channels,)
+        sparsified_waveforms = np.zeros(sparsified_shape, dtype=waveforms.dtype)
+        sparsified_waveforms[...] = waveforms[..., non_zero_indices]
+
+        return sparsified_waveforms
+
+    def densify_waveforms(self, waveforms, unit_index):
+        unit_id = self.unit_ids[unit_index]
+        non_zero_indices = self.unit_id_to_channel_indices[unit_id]
+        densified_shape = waveforms.shape[:-1] + (self.num_channels,)
+        densified_waveforms = np.zeros(densified_shape, dtype=waveforms.dtype)
+        densified_waveforms[..., non_zero_indices] = waveforms[...]
+
+        return densified_waveforms
 
     @classmethod
     def from_unit_id_to_channel_ids(cls, unit_id_to_channel_ids, unit_ids, channel_ids):
