@@ -6,11 +6,9 @@ from spikeinterface.core import (
     BaseSorting,
     WaveformExtractor,
     NumpySorting,
-    NpzSortingExtractor,
-    InjectTemplatesRecording,
 )
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.core import generate_sorting
+from spikeinterface.core.generate import generate_sorting, InjectTemplatesRecording, _ensure_seed
 
 
 class HybridUnitsRecording(InjectTemplatesRecording):
@@ -60,6 +58,7 @@ class HybridUnitsRecording(InjectTemplatesRecording):
         amplitude_std: float = 0.0,
         refractory_period_ms: float = 2.0,
         injected_sorting_folder: Union[str, Path, None] = None,
+        seed=None,
     ):
         num_samples = [
             parent_recording.get_num_frames(seg_index) for seg_index in range(parent_recording.get_num_segments())
@@ -80,8 +79,8 @@ class HybridUnitsRecording(InjectTemplatesRecording):
                 num_units=len(templates),
                 sampling_frequency=fs,
                 durations=durations,
-                firing_rate=firing_rate,
-                refractory_period=refractory_period_ms,
+                firing_rates=firing_rate,
+                refractory_period_ms=refractory_period_ms,
             )
         # save injected sorting if necessary
         self.injected_sorting = injected_sorting
@@ -90,17 +89,10 @@ class HybridUnitsRecording(InjectTemplatesRecording):
             self.injected_sorting = self.injected_sorting.save(folder=injected_sorting_folder)
 
         if amplitude_factor is None:
-            amplitude_factor = [
-                [
-                    np.random.normal(
-                        loc=1.0,
-                        scale=amplitude_std,
-                        size=len(self.injected_sorting.get_unit_spike_train(unit_id, segment_index=seg_index)),
-                    )
-                    for unit_id in self.injected_sorting.unit_ids
-                ]
-                for seg_index in range(parent_recording.get_num_segments())
-            ]
+            seed = _ensure_seed(seed)
+            rng = np.random.default_rng(seed=seed)
+            num_spikes = self.injected_sorting.to_spike_vector().size
+            amplitude_factor = rng.normal(loc=1.0, scale=amplitude_std, size=num_spikes)
 
         InjectTemplatesRecording.__init__(
             self, self.injected_sorting, templates, nbefore, amplitude_factor, parent_recording, num_samples
@@ -116,6 +108,7 @@ class HybridUnitsRecording(InjectTemplatesRecording):
             amplitude_std=amplitude_std,
             refractory_period_ms=refractory_period_ms,
             injected_sorting_folder=None,
+            seed=seed,
         )
 
 
@@ -241,7 +234,7 @@ def generate_injected_sorting(
 
             injected_spike_trains[segment_index][unit_id] = injected_spike_train
 
-    return NumpySorting.from_dict(injected_spike_trains, sorting.get_sampling_frequency())
+    return NumpySorting.from_unit_dict(injected_spike_trains, sorting.get_sampling_frequency())
 
 
 create_hybrid_units_recording = define_function_from_class(

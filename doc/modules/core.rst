@@ -137,6 +137,7 @@ It interfaces with a spike-sorted output and has the following features:
 * enable selection of sub-units
 * handle time information
 
+
 Here we assume :code:`sorting` is a :py:class:`~spikeinterface.core.BaseSorting` object
 with 10 units:
 
@@ -180,6 +181,12 @@ with 10 units:
     # When running spike sorting in SpikeInterface, the recording is  automatically registered. If
     # times are not set, the samples are divided by the sampling frequency
 
+
+Internally, any sorting object can construct 2 internal caches:
+  1. a list (per segment) of dict (per unit) of numpy.array. This cache is usefull when accessing spiketrains unit
+     per unit across segments.
+  2. a unique numpy.array with structured dtype aka "spikes vector". This is usefull for processing by small chunk of
+     time, like extract amplitudes from a recording.
 
 
 WaveformExtractor
@@ -543,6 +550,10 @@ In order to do this, one can use the :code:`Numpy*` classes, :py:class:`~spikein
 but they are not bound to a file. This makes these objects *not dumpable*, so parallel processing is not supported.
 In order to make them *dumpable*, one can simply :code:`save()` them (see :ref:`save_load`).
 
+Also note the class :py:class:`~spikeinterface.core.SharedMemorySorting` which is very similar to
+Similar to :py:class:`~spikeinterface.core.NumpySorting` but with an unerlying SharedMemory which is usefull for
+parallel computing.
+
 In this example, we create a recording and a sorting object from numpy objects:
 
 .. code-block:: python
@@ -572,6 +583,18 @@ In this example, we create a recording and a sorting object from numpy objects:
 
     sorting_memory = NumpySorting.from_times_labels(times=spike_trains, labels=labels,
                                                     sampling_frequency=sampling_frequency)
+
+
+Any sorting object can be transformed into a :py:class:`~spikeinterface.core.NumpySorting` or
+:py:class:`~spikeinterface.core.SharedMemorySorting` easily like this
+
+.. code-block:: python
+
+    # turn any sortinto into NumpySorting
+    soring_np = sorting.to_numpy_sorting()
+
+    # or to SharedMemorySorting for parrallel computing
+    sorting_shm = sorting.to_shared_memory_sorting()
 
 
 .. _multi_seg:

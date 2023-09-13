@@ -46,7 +46,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
         num_seg = recording.get_num_segments()
 
         if num_seg == 1:
-            if isinstance(list_periods, (list, np.ndarray)) and not np.isscalar(list_periods[0]):
+            if isinstance(list_periods, (list, np.ndarray)) and np.array(list_periods).ndim == 2:
                 # when unique segment accept list instead of of list of list/arrays
                 list_periods = [list_periods]
 

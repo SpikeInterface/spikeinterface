@@ -13,6 +13,9 @@ from spikeinterface.core import (
     NpzSortingExtractor,
     NumpyRecording,
     NumpySorting,
+    SharedMemorySorting,
+    NpzFolderSorting,
+    NumpyFolderSorting,
     create_sorting_npz,
     generate_sorting,
     load_extractor,
@@ -29,6 +32,7 @@ else:
 def test_BaseSorting():
     num_seg = 2
     file_path = cache_folder / "test_BaseSorting.npz"
+    file_path.parent.mkdir(exist_ok=True)
 
     create_sorting_npz(num_seg, file_path)
 
@@ -67,11 +71,20 @@ def test_BaseSorting():
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=True)
     check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=True)
 
-    # cache
-    folder = cache_folder / "simple_sorting"
+    # cache old format : npz_folder
+    folder = cache_folder / "simple_sorting_npz_folder"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
-    sorting.save(folder=folder)
+    sorting.save(folder=folder, format="npz_folder")
     sorting2 = BaseExtractor.load_from_folder(folder)
+    assert isinstance(sorting2, NpzFolderSorting)
+
+    # cache new format : numpy_folder
+    folder = cache_folder / "simple_sorting_numpy_folder"
+    sorting.set_property("test", np.ones(len(sorting.unit_ids)))
+    sorting.save(folder=folder, format="numpy_folder")
+    sorting2 = BaseExtractor.load_from_folder(folder)
+    assert isinstance(sorting2, NumpyFolderSorting)
+
     # but also possible
     sorting3 = BaseExtractor.load(folder)
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=True)
@@ -81,13 +94,18 @@ def test_BaseSorting():
     sorting4 = sorting.save(format="memory")
     check_sortings_equal(sorting, sorting4, check_annotations=True, check_properties=True)
 
-    spikes = sorting.get_all_spike_trains()
+    with pytest.warns(DeprecationWarning):
+        num_spikes = sorting.get_all_spike_trains()
     # print(spikes)
 
     spikes = sorting.to_spike_vector()
     # print(spikes)
+    assert sorting._cached_spike_vector is not None
     spikes = sorting.to_spike_vector(extremum_channel_inds={0: 15, 1: 5, 2: 18})
     # print(spikes)
+
+    num_spikes_per_unit = sorting.count_num_spikes_per_unit()
+    total_spikes = sorting.count_total_num_spikes()
 
     # select units
     keep_units = [0, 1]
@@ -102,6 +120,14 @@ def test_BaseSorting():
     for unit in sorting_clean.get_unit_ids():
         assert unit not in empty_units
 
+    sorting4 = sorting.to_numpy_sorting()
+    sorting5 = sorting.to_multiprocessing(n_jobs=2)
+    # create a clone with the same share mem buffer
+    sorting6 = load_extractor(sorting5.to_dict())
+    assert isinstance(sorting6, SharedMemorySorting)
+    del sorting6
+    del sorting5
+
 
 def test_npy_sorting():
     sfreq = 10
@@ -113,7 +139,7 @@ def test_npy_sorting():
         "0": np.array([0, 1]),
         "1": np.array([], dtype="int64"),
     }
-    sorting = NumpySorting.from_dict(
+    sorting = NumpySorting.from_unit_dict(
         [spike_times_0, spike_times_1],
         sfreq,
     )
@@ -144,14 +170,15 @@ def test_npy_sorting():
 
 
 def test_empty_sorting():
-    sorting = NumpySorting.from_dict({}, 30000)
+    sorting = NumpySorting.from_unit_dict({}, 30000)
 
     assert len(sorting.unit_ids) == 0
 
-    spikes = sorting.get_all_spike_trains()
-    assert len(spikes) == 1
-    assert len(spikes[0][0]) == 0
-    assert len(spikes[0][1]) == 0
+    with pytest.warns(DeprecationWarning):
+        spikes = sorting.get_all_spike_trains()
+        assert len(spikes) == 1
+        assert len(spikes[0][0]) == 0
+        assert len(spikes[0][1]) == 0
 
     spikes = sorting.to_spike_vector()
     assert spikes.shape == (0,)

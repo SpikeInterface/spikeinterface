@@ -87,7 +87,7 @@ def test_BaseSnippets():
 
     times0 = snippets.get_frames(segment_index=0)
 
-    seg0_times = sorting.get_all_spike_trains()[0][0]
+    seg0_times = sorting.to_spike_vector(concatenated=False)[0]["sample_index"]
 
     assert np.array_equal(seg0_times, times0)
 

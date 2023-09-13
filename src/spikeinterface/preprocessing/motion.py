@@ -18,12 +18,12 @@ motion_options_preset = {
             peak_sign="neg",
             detect_threshold=8.0,
             exclude_sweep_ms=0.1,
-            local_radius_um=50,
+            radius_um=50,
         ),
         "select_kwargs": None,
         "localize_peaks_kwargs": dict(
             method="monopolar_triangulation",
-            local_radius_um=75.0,
+            radius_um=75.0,
             max_distance_um=150.0,
             optimizer="minimize_with_log_penality",
             enforce_decrease=True,
@@ -81,12 +81,12 @@ motion_options_preset = {
             peak_sign="neg",
             detect_threshold=8.0,
             exclude_sweep_ms=0.1,
-            local_radius_um=50,
+            radius_um=50,
         ),
         "select_kwargs": None,
         "localize_peaks_kwargs": dict(
             method="center_of_mass",
-            local_radius_um=75.0,
+            radius_um=75.0,
             feature="ptp",
         ),
         "estimate_motion_kwargs": dict(
@@ -109,12 +109,12 @@ motion_options_preset = {
             peak_sign="neg",
             detect_threshold=8.0,
             exclude_sweep_ms=0.1,
-            local_radius_um=50,
+            radius_um=50,
         ),
         "select_kwargs": None,
         "localize_peaks_kwargs": dict(
             method="grid_convolution",
-            local_radius_um=40.0,
+            radius_um=40.0,
             upsampling_um=5.0,
             sigma_um=np.linspace(5.0, 25.0, 5),
             sigma_ms=0.25,
@@ -235,7 +235,7 @@ def correct_motion(
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks, localize_peak_methods
     from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
     from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
-    from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms, run_node_pipeline
+    from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
 
     # get preset params and update if necessary
     params = motion_options_preset[preset]

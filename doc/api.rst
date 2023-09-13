@@ -91,16 +91,20 @@ NEO-based
     .. autofunction:: read_mcsraw
     .. autofunction:: read_neuralynx
     .. autofunction:: read_neuralynx_sorting
+    .. autofunction:: read_neuroexplorer
     .. autofunction:: read_neuroscope
     .. autofunction:: read_nix
     .. autofunction:: read_openephys
     .. autofunction:: read_openephys_event
     .. autofunction:: read_plexon
     .. autofunction:: read_plexon_sorting
+    .. autofunction:: read_plexon2
+    .. autofunction:: read_plexon2_sorting
     .. autofunction:: read_spike2
     .. autofunction:: read_spikegadgets
     .. autofunction:: read_spikeglx
     .. autofunction:: read_tdt
+
 
 Non-NEO-based
 ~~~~~~~~~~~~~
@@ -269,13 +273,14 @@ spikeinterface.widgets
     .. autofunction:: plot_amplitudes
     .. autofunction:: plot_autocorrelograms
     .. autofunction:: plot_crosscorrelograms
+    .. autofunction:: plot_motion
     .. autofunction:: plot_quality_metrics
     .. autofunction:: plot_sorting_summary
     .. autofunction:: plot_spike_locations
     .. autofunction:: plot_spikes_on_traces
     .. autofunction:: plot_template_metrics
     .. autofunction:: plot_template_similarity
-    .. autofunction:: plot_timeseries
+    .. autofunction:: plot_traces
     .. autofunction:: plot_unit_depths
     .. autofunction:: plot_unit_locations
     .. autofunction:: plot_unit_summary

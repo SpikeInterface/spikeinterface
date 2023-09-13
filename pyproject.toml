@@ -18,6 +18,7 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 
+
 dependencies = [
     "numpy",
     "neo>=0.12.0",
@@ -67,6 +68,7 @@ extractors = [
     "ONE-api>=1.19.1",
     "ibllib>=2.21.0",
     "pymatreader>=0.0.32", # For cell explorer matlab files
+    "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
@@ -90,7 +92,7 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
-    "cuda-python; sys_platform != 'darwin'",
+    "cuda-python; platform_system != 'Darwin'",
     "numba",
 ]
 
@@ -99,7 +101,6 @@ widgets = [
     "ipympl",
     "ipywidgets",
     "sortingview>=0.11.15",
-    "figurl-jupyter"
 ]
 
 test_core = [
@@ -129,7 +130,7 @@ test = [
     "datalad==0.16.2",
 
     ## install tridesclous for testing ##
-    "tridesclous>=1.6.7",
+    "tridesclous>=1.6.8",
 
     ## sliding_nn
     "pymde",
@@ -151,9 +152,9 @@ docs = [
     # for notebooks in the gallery
     "MEArec",   # Use as an example
     "datalad==0.16.2",  # Download mearec data, not sure if needed as is installed with conda as well because of git-annex
-    "pandas", # Don't know where this is needed
-    "hdbscan>=0.8.33",   # For sorters, probably spikingcircus
-    "numba", # For sorters, probably spikingcircus
+    "pandas", # in the modules gallery comparison tutorial
+    "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
+    "numba", # For many postprocessing functions
     # for release we need pypi, so this needs to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version
