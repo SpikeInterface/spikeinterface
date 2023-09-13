@@ -799,7 +799,7 @@ def silhouette_score(all_pcs, all_labels, this_unit_id):
     -------
     unit_silhouette_score : float
         Silhouette Score for this unit
-        
+
     References
     ----------
     Based on [Rousseeuw]_
