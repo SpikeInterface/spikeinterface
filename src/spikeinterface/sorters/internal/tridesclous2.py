@@ -39,7 +39,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             "peak_shift_ms": 0.2,
             "radius_um": 100.
         },
-        "job_kwargs": {},
+        "job_kwargs": {"n_jobs":-1},
         "save_array": True,
     }
 
@@ -60,7 +60,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # from spikeinterface.sortingcomponents.clustering import find_cluster_from_peaks
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 
-        from spikeinterface.sortingcomponents.peak_pipeline import run_node_pipeline, ExtractDenseWaveforms, ExtractSparseWaveforms, PeakRetriever
+        # from spikeinterface.sortingcomponents.peak_pipeline import run_node_pipeline, ExtractDenseWaveforms, ExtractSparseWaveforms, PeakRetriever
+        from spikeinterface.core.node_pipeline import run_node_pipeline, ExtractDenseWaveforms, ExtractSparseWaveforms, PeakRetriever
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks, DetectPeakLocallyExclusive
         from spikeinterface.sortingcomponents.peak_selection import select_peaks
         from spikeinterface.sortingcomponents.peak_localization import  LocalizeCenterOfMass, LocalizeGridConvolution
