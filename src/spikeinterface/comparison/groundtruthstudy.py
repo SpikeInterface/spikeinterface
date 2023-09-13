@@ -228,7 +228,12 @@ class GroundTruthStudy:
             sorter_folder = self.folder / "sorters" / self.key_to_str(key)
             log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
 
-            sorting = read_sorter_folder(sorter_folder, raise_error=False)
+            
+            if (sorter_folder / "spikeinterface_log.json").exists():
+                sorting = read_sorter_folder(sorter_folder, raise_error=False)
+            else:
+                sorting = None
+                
             if sorting is not None:
                 if sorting_folder.exists():
                     if force:
