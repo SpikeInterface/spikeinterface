@@ -171,7 +171,7 @@ class SpikeRetriever(PeakSource):
 
         self.channel_from_template = channel_from_template
 
-        assert extremum_channel_inds is not None, "SpikeRetriever need the dict extremum_channel_inds"
+        assert extremum_channel_inds is not None, "SpikeRetriever needs the extremum_channel_inds dictionary"
 
         self.peaks = sorting_to_peaks(sorting, extremum_channel_inds)
 
