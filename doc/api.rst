@@ -91,6 +91,7 @@ NEO-based
     .. autofunction:: read_mcsraw
     .. autofunction:: read_neuralynx
     .. autofunction:: read_neuralynx_sorting
+    .. autofunction:: read_neuroexplorer
     .. autofunction:: read_neuroscope
     .. autofunction:: read_nix
     .. autofunction:: read_openephys
@@ -101,6 +102,7 @@ NEO-based
     .. autofunction:: read_spikegadgets
     .. autofunction:: read_spikeglx
     .. autofunction:: read_tdt
+
 
 Non-NEO-based
 ~~~~~~~~~~~~~
@@ -212,6 +214,7 @@ spikeinterface.sorters
     .. autofunction:: print_sorter_versions
     .. autofunction:: get_sorter_description
     .. autofunction:: run_sorter
+    .. autofunction:: run_sorter_jobs
     .. autofunction:: run_sorters
     .. autofunction:: run_sorter_by_property
 

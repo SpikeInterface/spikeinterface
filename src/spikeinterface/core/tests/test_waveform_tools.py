@@ -59,14 +59,15 @@ def test_waveform_tools():
     ]
     some_modes = [
         {"mode": "memmap"},
+        {"mode": "shared_memory"},
     ]
-    if platform.system() != "Windows":
-        # shared memory on windows is buggy...
-        some_modes.append(
-            {
-                "mode": "shared_memory",
-            }
-        )
+    # if platform.system() != "Windows":
+    #     # shared memory on windows is buggy...
+    #     some_modes.append(
+    #         {
+    #             "mode": "shared_memory",
+    #         }
+    #     )
 
     some_sparsity = [
         dict(sparsity_mask=None),
@@ -87,9 +88,11 @@ def test_waveform_tools():
                     if wf_folder.is_dir():
                         shutil.rmtree(wf_folder)
                     wf_folder.mkdir(parents=True)
-                    mode_kwargs_ = dict(**mode_kwargs, folder=wf_folder)
-                else:
-                    mode_kwargs_ = mode_kwargs
+                    wf_file_path = wf_folder / "waveforms_all_units.npy"
+
+                mode_kwargs_ = dict(**mode_kwargs)
+                if mode_kwargs["mode"] == "memmap":
+                    mode_kwargs_["folder"] = wf_folder
 
                 wfs_arrays = extract_waveforms_to_buffers(
                     recording,
@@ -112,6 +115,10 @@ def test_waveform_tools():
                     list_wfs_dense.append(wfs_arrays)
                 else:
                     list_wfs_sparse.append(wfs_arrays)
+
+                mode_kwargs_ = dict(**mode_kwargs)
+                if mode_kwargs["mode"] == "memmap":
+                    mode_kwargs_["file_path"] = wf_file_path
 
                 all_waveforms = extract_waveforms_to_single_buffer(
                     recording,
