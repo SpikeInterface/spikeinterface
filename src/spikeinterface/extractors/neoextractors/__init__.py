@@ -16,6 +16,7 @@ from .neuroscope import (
     read_neuroscope_sorting,
     read_neuroscope,
 )
+from .neuroexplorer import NeuroExplorerRecordingExtractor, read_neuroexplorer
 from .nix import NixRecordingExtractor, read_nix
 from .openephys import (
     OpenEphysLegacyRecordingExtractor,
@@ -62,6 +63,7 @@ neo_recording_extractors_list = [
     SpikeGadgetsRecordingExtractor,
     SpikeGLXRecordingExtractor,
     TdtRecordingExtractor,
+    NeuroExplorerRecordingExtractor,
 ]
 
 neo_sorting_extractors_list = [

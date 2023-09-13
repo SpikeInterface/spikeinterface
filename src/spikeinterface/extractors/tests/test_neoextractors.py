@@ -142,6 +142,17 @@ class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+class NeuroExplorerRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuroExplorerRecordingExtractor
+    downloads = ["neuroexplorer"]
+    entities = [
+        ("neuroexplorer/File_neuroexplorer_1.nex", {"stream_name": "ContChannel01"}),
+        ("neuroexplorer/File_neuroexplorer_1.nex", {"stream_name": "ContChannel02"}),
+        ("neuroexplorer/File_neuroexplorer_2.nex", {"stream_name": "ContChannel01"}),
+        ("neuroexplorer/File_neuroexplorer_2.nex", {"stream_name": "ContChannel02"}),
+    ]
+
+
 class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroScopeSortingExtractor
     downloads = ["neuroscope"]
