@@ -1,5 +1,5 @@
 import math
-
+import warnings
 import numpy as np
 from typing import Union, Optional, List, Literal
 
@@ -1037,13 +1037,14 @@ class InjectTemplatesRecording(BaseRecording):
         parent_recording: Union[BaseRecording, None] = None,
         num_samples: Optional[List[int]] = None,
         upsample_vector: Union[List[int], None] = None,
-        check_borbers: bool = True,
+        check_borders: bool = False,
     ) -> None:
         templates = np.asarray(templates)
-        if check_borbers:
+        # TODO: this should be external to this class. It is not the responsability of this class to check the templates
+        if check_borders:
             self._check_templates(templates)
-            # lets test this only once so force check_borbers=false for kwargs
-            check_borbers = False
+            # lets test this only once so force check_borders=False for kwargs
+            check_borders = False
         self.templates = templates
 
         channel_ids = parent_recording.channel_ids if parent_recording is not None else list(range(templates.shape[2]))
@@ -1131,7 +1132,7 @@ class InjectTemplatesRecording(BaseRecording):
             "nbefore": nbefore,
             "amplitude_factor": amplitude_factor,
             "upsample_vector": upsample_vector,
-            "check_borbers": check_borbers,
+            "check_borders": check_borders,
         }
         if parent_recording is None:
             self._kwargs["num_samples"] = num_samples
@@ -1144,8 +1145,8 @@ class InjectTemplatesRecording(BaseRecording):
         threshold = 0.01 * max_value
 
         if max(np.max(np.abs(templates[:, 0])), np.max(np.abs(templates[:, -1]))) > threshold:
-            raise Exception(
-                "Warning!\nYour templates do not go to 0 on the edges in InjectTemplatesRecording.__init__\nPlease make your window bigger."
+            warnings.warn(
+                "Warning! Your templates do not go to 0 on the edges in InjectTemplatesRecording. Please make your window bigger."
             )
 
 
