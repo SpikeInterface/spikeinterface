@@ -235,7 +235,7 @@ def correct_motion(
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks, localize_peak_methods
     from spikeinterface.sortingcomponents.motion_estimation import estimate_motion
     from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
-    from spikeinterface.sortingcomponents.peak_pipeline import ExtractDenseWaveforms, run_node_pipeline
+    from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
 
     # get preset params and update if necessary
     params = motion_options_preset[preset]

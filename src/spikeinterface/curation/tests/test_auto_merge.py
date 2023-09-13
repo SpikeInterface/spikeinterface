@@ -21,26 +21,27 @@ set_global_tmp_folder(cache_folder)
 
 
 def test_get_auto_merge_list():
-    rec, sorting = toy_example(num_segments=1, num_units=5, duration=[300.0], firing_rate=20.0, seed=0)
+    rec, sorting = toy_example(num_segments=1, num_units=5, duration=[300.0], firing_rate=20.0, seed=42)
 
     num_unit_splited = 1
     num_split = 2
 
     sorting_with_split, other_ids = inject_some_split_units(
-        sorting, split_ids=sorting.unit_ids[:num_unit_splited], num_split=num_split, output_ids=True
+        sorting, split_ids=sorting.unit_ids[:num_unit_splited], num_split=num_split, output_ids=True, seed=42
     )
 
-    # print(sorting_with_split)
-    # print(sorting_with_split.unit_ids)
+    print(sorting_with_split)
+    print(sorting_with_split.unit_ids)
+    print(other_ids)
 
-    rec = rec.save()
-    sorting_with_split = sorting_with_split.save()
-    wf_folder = cache_folder / "wf_auto_merge"
-    if wf_folder.exists():
-        shutil.rmtree(wf_folder)
-    we = extract_waveforms(rec, sorting_with_split, mode="folder", folder=wf_folder, n_jobs=1)
+    # rec = rec.save()
+    # sorting_with_split = sorting_with_split.save()
+    # wf_folder = cache_folder / "wf_auto_merge"
+    # if wf_folder.exists():
+    #     shutil.rmtree(wf_folder)
+    # we = extract_waveforms(rec, sorting_with_split, mode="folder", folder=wf_folder, n_jobs=1)
 
-    # we = extract_waveforms(rec, sorting_with_split, mode='memory', folder=None, n_jobs=1)
+    we = extract_waveforms(rec, sorting_with_split, mode="memory", folder=None, n_jobs=1)
     # print(we)
 
     potential_merges, outs = get_potential_auto_merge(
@@ -63,6 +64,7 @@ def test_get_auto_merge_list():
         extra_outputs=True,
     )
     # print(potential_merges)
+    # print(num_unit_splited)
 
     assert len(potential_merges) == num_unit_splited
     for true_pair in other_ids.values():
@@ -86,37 +88,37 @@ def test_get_auto_merge_list():
     # m = correlograms.shape[2] // 2
 
     # for unit_id1, unit_id2 in potential_merges[:5]:
-    # unit_ind1 = sorting_with_split.id_to_index(unit_id1)
-    # unit_ind2 = sorting_with_split.id_to_index(unit_id2)
+    #     unit_ind1 = sorting_with_split.id_to_index(unit_id1)
+    #     unit_ind2 = sorting_with_split.id_to_index(unit_id2)
 
-    # bins2 = bins[:-1] + np.mean(np.diff(bins))
-    # fig, axs = plt.subplots(ncols=3)
-    # ax = axs[0]
-    # ax.plot(bins2, correlograms[unit_ind1, unit_ind1, :], color='b')
-    # ax.plot(bins2, correlograms[unit_ind2, unit_ind2, :], color='r')
-    # ax.plot(bins2, correlograms_smoothed[unit_ind1, unit_ind1, :], color='b')
-    # ax.plot(bins2, correlograms_smoothed[unit_ind2, unit_ind2, :], color='r')
+    #     bins2 = bins[:-1] + np.mean(np.diff(bins))
+    #     fig, axs = plt.subplots(ncols=3)
+    #     ax = axs[0]
+    #     ax.plot(bins2, correlograms[unit_ind1, unit_ind1, :], color='b')
+    #     ax.plot(bins2, correlograms[unit_ind2, unit_ind2, :], color='r')
+    #     ax.plot(bins2, correlograms_smoothed[unit_ind1, unit_ind1, :], color='b')
+    #     ax.plot(bins2, correlograms_smoothed[unit_ind2, unit_ind2, :], color='r')
 
-    # ax.set_title(f'{unit_id1} {unit_id2}')
-    # ax = axs[1]
-    # ax.plot(bins2, correlograms_smoothed[unit_ind1, unit_ind2, :], color='g')
+    #     ax.set_title(f'{unit_id1} {unit_id2}')
+    #     ax = axs[1]
+    #     ax.plot(bins2, correlograms_smoothed[unit_ind1, unit_ind2, :], color='g')
 
-    # auto_corr1 = normalize_correlogram(correlograms_smoothed[unit_ind1, unit_ind1, :])
-    # auto_corr2 = normalize_correlogram(correlograms_smoothed[unit_ind2, unit_ind2, :])
-    # cross_corr = normalize_correlogram(correlograms_smoothed[unit_ind1, unit_ind2, :])
+    #     auto_corr1 = normalize_correlogram(correlograms_smoothed[unit_ind1, unit_ind1, :])
+    #     auto_corr2 = normalize_correlogram(correlograms_smoothed[unit_ind2, unit_ind2, :])
+    #     cross_corr = normalize_correlogram(correlograms_smoothed[unit_ind1, unit_ind2, :])
 
-    # ax = axs[2]
-    # ax.plot(bins2, auto_corr1, color='b')
-    # ax.plot(bins2, auto_corr2, color='r')
-    # ax.plot(bins2, cross_corr, color='g')
+    #     ax = axs[2]
+    #     ax.plot(bins2, auto_corr1, color='b')
+    #     ax.plot(bins2, auto_corr2, color='r')
+    #     ax.plot(bins2, cross_corr, color='g')
 
-    # ax.axvline(bins2[m - win_sizes[unit_ind1]], color='b')
-    # ax.axvline(bins2[m + win_sizes[unit_ind1]], color='b')
-    # ax.axvline(bins2[m - win_sizes[unit_ind2]], color='r')
-    # ax.axvline(bins2[m + win_sizes[unit_ind2]], color='r')
+    #     ax.axvline(bins2[m - win_sizes[unit_ind1]], color='b')
+    #     ax.axvline(bins2[m + win_sizes[unit_ind1]], color='b')
+    #     ax.axvline(bins2[m - win_sizes[unit_ind2]], color='r')
+    #     ax.axvline(bins2[m + win_sizes[unit_ind2]], color='r')
 
-    # ax.set_title(f'corr diff {correlogram_diff[unit_ind1, unit_ind2]} - temp diff {templates_diff[unit_ind1, unit_ind2]}')
-    # plt.show()
+    #     ax.set_title(f'corr diff {correlogram_diff[unit_ind1, unit_ind2]} - temp diff {templates_diff[unit_ind1, unit_ind2]}')
+    #     plt.show()
 
 
 if __name__ == "__main__":
