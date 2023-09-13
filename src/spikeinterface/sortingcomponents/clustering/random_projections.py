@@ -191,7 +191,7 @@ class RandomProjectionClustering:
         )
 
         cleaning_matching_params = params["job_kwargs"].copy()
-        for value in ['chunk_size', 'chunk_memory', 'total_memory', 'chunk_duration']:
+        for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
             if value in cleaning_matching_params:
                 cleaning_matching_params.pop(value)
         cleaning_matching_params["chunk_duration"] = "100ms"
