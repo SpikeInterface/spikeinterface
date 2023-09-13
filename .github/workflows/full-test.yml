@@ -133,7 +133,7 @@ jobs:
         run: ./.github/run_tests.sh core
       - name: Test extractors
         if: ${{ steps.modules-changed.outputs.EXTRACTORS_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
-        run: ./.github/run_tests.sh "extractors and not streaming_extractors and not plexon2"
+        run: ./.github/run_tests.sh "extractors and not streaming_extractors"
       - name: Test preprocessing
         if: ${{ steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: ./.github/run_tests.sh preprocessing
@@ -164,6 +164,3 @@ jobs:
       - name: Test internal sorters
         if: ${{ steps.modules-changed.outputs.SORTERS_INTERNAL_CHANGED == 'true' || steps.modules-changed.outputs.SORTINGCOMPONENTS_CHANGED || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: ./.github/run_tests.sh sorters_internal
-      - name: Test plexon2
-        if: ${{ steps.modules-changed.outputs.PLEXON2_CHANGED == 'true' }}
-        run: ./.github/run_tests.sh plexon2

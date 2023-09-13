@@ -323,9 +323,8 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         pass
 
 
-# We mark plexon2 tests as they require additional dependencies (wine)
+# We run plexon2 tests only if we have dependencies (wine)
 @pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
-@pytest.mark.plexon2
 class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2RecordingExtractor
     downloads = ["plexon"]
@@ -335,7 +334,6 @@ class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 
 @pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
-@pytest.mark.plexon2
 class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2EventExtractor
     downloads = ["plexon"]
@@ -345,7 +343,6 @@ class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
 
 
 @pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
-@pytest.mark.plexon2
 class Plexon2SortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2SortingExtractor
     downloads = ["plexon"]
