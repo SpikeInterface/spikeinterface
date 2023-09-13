@@ -53,9 +53,9 @@ This can be changes by switching the silhouette method to either 'full' (the Rou
 References
 ----------
 
-.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.silhouette
+.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.simplified_silhouette_score
 
-.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.silhouette_full
+.. autofunction:: spikeinterface.qualitymetrics.pca_metrics.silhouette_score
 
 
 Literature

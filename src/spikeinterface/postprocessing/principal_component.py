@@ -694,11 +694,10 @@ def compute_principal_components(
         If True and pc scores are already in the waveform extractor folders, pc scores are loaded and not recomputed.
     n_components: int
         Number of components fo PCA - default 5
-    mode: str
+    mode: str, default: 'by_channel_local'
         - 'by_channel_local': a local PCA is fitted for each channel (projection by channel)
         - 'by_channel_global': a global PCA is fitted for all channels (projection by channel)
         - 'concatenated': channels are concatenated and a global PCA is fitted
-        default 'by_channel_local'
     sparsity: ChannelSparsity or None
         The sparsity to apply to waveforms.
         If waveform_extractor is already sparse, the default sparsity will be used - default None
@@ -735,6 +734,7 @@ def compute_principal_components(
     >>> # run for all spikes in the SortingExtractor
     >>> pc.run_for_all_spikes(file_path="all_pca_projections.npy")
     """
+    
     if load_if_exists and waveform_extractor.is_extension(WaveformPrincipalComponent.extension_name):
         pc = waveform_extractor.load_extension(WaveformPrincipalComponent.extension_name)
     else:
