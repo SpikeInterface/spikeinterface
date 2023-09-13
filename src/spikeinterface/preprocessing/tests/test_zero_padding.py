@@ -260,7 +260,9 @@ def test_trace_padded_recording_retrieve_traces_with_partial_padding(recording, 
 
 @pytest.mark.parametrize("preprocessing", ["bandpass_filter", "phase_shift"])
 @pytest.mark.parametrize("padding_start, padding_end", [(5000, 5000), (5000, 0), (0, 5000)])
-def test_trace_padded_recording_retrieve_full_recording_with_preprocessing(recording, padding_start, padding_end, preprocessing):
+def test_trace_padded_recording_retrieve_full_recording_with_preprocessing(
+    recording, padding_start, padding_end, preprocessing
+):
     num_samples = recording.get_num_samples()
     num_channels = recording.get_num_channels()
 
@@ -299,9 +301,6 @@ def test_trace_padded_recording_retrieve_full_recording_with_preprocessing(recor
             assert np.allclose(padded_trace, original_trace, rtol=0, atol=1e-10)
         else:
             assert np.all(padded_trace == padded_recording.fill_value)
-
-
-
 
 
 if __name__ == "__main__":
