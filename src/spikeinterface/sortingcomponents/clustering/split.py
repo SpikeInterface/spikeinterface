@@ -1,15 +1,13 @@
-from pathlib import Path
 from multiprocessing import get_context
-from concurrent.futures import ProcessPoolExecutor
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
 
-from sklearn.decomposition import PCA, TruncatedSVD
+from sklearn.decomposition import TruncatedSVD
 from hdbscan import HDBSCAN
 
 import numpy as np
 
-from spikeinterface.core.job_tools import get_poolexecutor
+from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
 from .tools import aggregate_sparse_features, FeaturesLoader
 from .isocut5 import isocut5
@@ -24,29 +22,43 @@ def split_clusters(
     recursive=False,
     recursive_depth=None,
     returns_split_count=False,
-    n_jobs=1,
-    mp_context="fork",
-    max_threads_per_process=1,
-    progress_bar=True,
+    **job_kwargs,
 ):
     """
     Run recusrsively or not in a multi process pool a local split method.
 
     Parameters
     ----------
-    peak_labels
-
-    features_dict_or_folder
-
-    n_jobs=1
-
+    peak_labels: numpy.array
+        Peak label before split
+    recording: Recording
+        Recording object
+    features_dict_or_folder: dict or folder
+        A dictionary of features precomputed with peak_pipeline or a folder containing npz file for features.
+    method: str
+        The method name
+    method_kwargs: dict
+        The method option
+    recursive: bool Default False
+        Reccursive or not.
+    recursive_depth: None or int
+        If recursive=True, then this is the max split per spikes.
+    returns_split_count: bool
+        Optionally return  the split count vector. Same size as labels.
 
     Returns
     -------
-    new_labels
-
-
+    new_labels: numpy.ndarray
+        The labels of peaks after split.
+    split_count: numpy.ndarray
+        Optionally returned
     """
+
+    job_kwargs = fix_job_kwargs(job_kwargs)
+    n_jobs = job_kwargs["n_jobs"]
+    mp_context = job_kwargs["mp_context"]
+    progress_bar = job_kwargs["progress_bar"]
+    max_threads_per_process = job_kwargs["max_threads_per_process"]
 
     original_labels = peak_labels
     peak_labels = peak_labels.copy()
@@ -113,7 +125,9 @@ def split_clusters(
 global _ctx
 
 
-def split_worker_init(recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_process):
+def split_worker_init(
+    recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_process
+):
     global _ctx
     _ctx = {}
 
@@ -124,11 +138,7 @@ def split_worker_init(recording, features_dict_or_folder, original_labels, metho
     _ctx["method_kwargs"] = method_kwargs
     _ctx["method_class"] = split_methods_dict[method]
     _ctx["max_threads_per_process"] = max_threads_per_process
-
-    if isinstance(features_dict_or_folder, dict):
-        _ctx["features"] = features_dict_or_folder
-    else:
-        _ctx["features"] = FeaturesLoader(features_dict_or_folder)
+    _ctx["features"] = FeaturesLoader.from_dict_or_folder(features_dict_or_folder)
     _ctx["peaks"] = _ctx["features"]["peaks"]
 
 
@@ -143,10 +153,11 @@ def split_function_wrapper(peak_indices):
 
 class HdbscanOnLocalPca:
     # @charlie : this is the equivalent of "herding_split()" in DART
-    #  but simplified, flexible and renamed
+    #  but simplified, flexible and renamed
 
     name = "hdbscan_on_local_pca"
 
+    @staticmethod
     def split(
         peak_indices,
         peaks,
@@ -162,9 +173,9 @@ class HdbscanOnLocalPca:
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
 
-        # can be sparse_tsvd or sparse_wfs
+        # can be sparse_tsvd or sparse_wfs
         sparse_features = features[feature_name]
-        
+
         assert waveforms_sparse_mask is not None
 
         # target channel subset is done intersect local channels + neighbours
@@ -189,13 +200,12 @@ class HdbscanOnLocalPca:
 
         flatten_features = aligned_wfs.reshape(aligned_wfs.shape[0], -1)
 
-        # final_features = PCA(n_pca_features, whiten=True).fit_transform(flatten_features)
-        # final_features = PCA(n_pca_features, whiten=False).fit_transform(flatten_features)
-        #~ final_features = TruncatedSVD(n_pca_features).fit_transform(flatten_features)
+        # final_features = PCA(n_pca_features, whiten=True).fit_transform(flatten_features)
+        # final_features = PCA(n_pca_features, whiten=False).fit_transform(flatten_features)
         final_features = TruncatedSVD(n_pca_features).fit_transform(flatten_features)
 
         if clusterer == "hdbscan":
-            clust = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples)
+            clust = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples, allow_single_cluster=True)
             clust.fit(final_features)
             possible_labels = clust.labels_
         elif clusterer == "isocut5":
@@ -207,6 +217,8 @@ class HdbscanOnLocalPca:
                     possible_labels[mask] = 1
             else:
                 return False, None
+        else:
+            raise ValueError(f"wrong clusterer {clusterer}")
 
         is_split = np.setdiff1d(possible_labels, [-1]).size > 1
 
@@ -215,14 +227,14 @@ class HdbscanOnLocalPca:
         if DEBUG:
             import matplotlib.pyplot as plt
 
-            label_sets = np.setdiff1d(possible_labels, [-1])
-            colors = plt.get_cmap("tab10", len(label_sets))
-            colors = {k: colors(i) for i, k in enumerate(label_sets)}
+            labels_set = np.setdiff1d(possible_labels, [-1])
+            colors = plt.get_cmap("tab10", len(labels_set))
+            colors = {k: colors(i) for i, k in enumerate(labels_set)}
             colors[-1] = "k"
             fix, axs = plt.subplots(nrows=2)
 
             flatten_wfs = aligned_wfs.swapaxes(1, 2).reshape(aligned_wfs.shape[0], -1)
-            
+
             sl = slice(None, None, 10)
             for k in np.unique(possible_labels):
                 mask = possible_labels == k
@@ -231,8 +243,6 @@ class HdbscanOnLocalPca:
 
                 ax = axs[1]
                 ax.plot(flatten_wfs[mask][sl].T, color=colors[k], alpha=0.5)
-                
-                # ax.set_title(f"{dipscore, cutpoint}")
 
             plt.show()
 
@@ -242,7 +252,6 @@ class HdbscanOnLocalPca:
         local_labels[kept] = possible_labels
 
         return is_split, local_labels
-
 
 
 split_methods_list = [
