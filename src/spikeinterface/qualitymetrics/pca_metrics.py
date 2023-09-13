@@ -752,7 +752,7 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
         Simplified Silhouette Score for this unit
 
     References
-    ------------
+    ----------
     Based on simplified silhouette score suggested by [Hruschka]_
     """
 
@@ -801,7 +801,7 @@ def silhouette_score(all_pcs, all_labels, this_unit_id):
         Silhouette Score for this unit
         
     References
-    ------------
+    ----------
     Based on [Rousseeuw]_
     """
 
