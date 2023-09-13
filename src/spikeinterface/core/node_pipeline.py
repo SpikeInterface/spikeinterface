@@ -140,7 +140,7 @@ class PeakRetriever(PeakSource):
 class SpikeRetriever(PeakSource):
     """
     This class is useful to inject a sorting object in the node pipepline mechanism.
-    It allows to compute some post processing with the same machinery used for sorting components.
+    It allows to compute some post-processing steps with the same machinery used for sorting components.
     This is used by:
       * compute_spike_locations()
       * compute_amplitude_scalings()
@@ -153,7 +153,7 @@ class SpikeRetriever(PeakSource):
         The sorting object.
     channel_from_template: bool, default: True
         If True, then the channel_index is inferred from the template and `extremum_channel_inds` must be provided.
-        If False every spikes compute its own channel index given a radius around the template max channel.
+        If False, the max channel is computed for each spike given a radius around the template max channel.
     extremum_channel_inds: dict of int
         The extremum channel index dict given from template.
     radius_um: float (default 50.)
