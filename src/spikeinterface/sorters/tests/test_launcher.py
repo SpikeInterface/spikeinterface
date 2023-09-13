@@ -115,6 +115,7 @@ def test_run_sorter_jobs_dask(job_list):
     print(t1 - t0)
 
 
+@pytest.mark.skip("Slurm launcher need a machine with slurm")
 def test_run_sorter_jobs_slurm(job_list):
     if base_output.is_dir():
         shutil.rmtree(base_output)

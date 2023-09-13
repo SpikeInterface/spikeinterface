@@ -39,9 +39,21 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
         for job in job_list:
             run_sorter(**job)
     
-    For some engines ("loop", "joblib", "multiprocessing", "dask"), this function is blocking until the results .
-    For other engines ("slurm") the function returns almost immediately (aka non-blocking) and the results
-    must be retrieved by hand when finished with :py:func:`read_sorter_folder()`.
+    The following engines block the I/O:
+      * "loop"
+      * "joblib"
+      * "multiprocessing"
+      * "dask"
+    
+    The following engines are *asynchronous*:
+      * "slurm"
+    
+    Where *blocking* means that this function is blocking until the results are returned.
+    This is in opposition to *asynchronous*, where the function returns `None` almost immediately (aka non-blocking), 
+    but the results must be retrieved by hand when jobs are finished. No mechanisim is provided here to be aware
+    when jobs are finish.
+    In this *asynchronous* case, the :py:func:read_sorter_folder() helps to retrieve individual results.
+
 
     Parameters
     ----------
@@ -302,7 +314,7 @@ def run_sorters(
     singularity_images={},
 ):
     """
-    This function is deprecated and will be removed.
+    This function is deprecated and will be removed in version 0.100
     Please use run_sorter_jobs() instead.
     
     Parameters
@@ -346,7 +358,7 @@ def run_sorters(
     """
 
     warnings.warn(
-        "run_sorters()is deprecated please use run_sorter_jobs() instead",
+        "run_sorters()is deprecated please use run_sorter_jobs() instead. This will be removed in 0.100",
         DeprecationWarning,
         stacklevel=2,
     )
