@@ -35,7 +35,7 @@ class StudyRunTimesWidget(BaseWidget):
 
         plot_data = dict(
             study=study,
-            run_times=study.get_run_times(),
+            run_times=study.get_run_times(case_keys),
             case_keys=case_keys,
         )
 
