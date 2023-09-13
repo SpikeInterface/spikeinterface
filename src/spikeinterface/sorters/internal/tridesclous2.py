@@ -109,10 +109,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
         few_wfs = extract_waveform_at_max_channel(recording, few_peaks, **job_kwargs)
 
-
-
-
-
         wfs = few_wfs[:, :, 0]
         tsvd = TruncatedSVD(params["svd"]["n_components"])
         tsvd.fit(wfs)
@@ -243,7 +239,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             **job_kwargs
         )
             
-        sparse_wfs = np.load(features_folder / "sparse_wfs.npy", mmap_mode="r")
+        # sparse_wfs = np.load(features_folder / "sparse_wfs.npy", mmap_mode="r")
 
         
         new_peaks = peaks.copy()
@@ -284,7 +280,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             np.save(sorter_output_folder / 'all_peaks.npy', all_peaks)
             np.save(sorter_output_folder / 'post_split_label.npy', post_split_label)
             np.save(sorter_output_folder / 'split_count.npy', split_count)
-            np.save(sorter_output_folder / 'post_merge_label.npy', post_split_label)
+            np.save(sorter_output_folder / 'post_merge_label.npy', post_merge_label)
             np.save(sorter_output_folder / 'spikes.npy', spikes)
 
         final_spikes = np.zeros(spikes.size, dtype=minimum_spike_dtype)
@@ -318,14 +314,6 @@ def extract_waveform_at_max_channel(rec, peaks,
 
     nbefore = int(ms_before * rec.sampling_frequency / 1000.)
     nafter = int(ms_after * rec.sampling_frequency/ 1000.)
-
-    # wfs_arrays = extract_waveforms_to_buffers(rec, spikes, unit_ids, nbefore, nafter,
-    #                                           mode="shared_memory", return_scaled=False,
-    #                                           sparsity_mask=sparsity_mask, copy=True,
-    #                                           **job_kwargs,
-    #                                           )
-    
-    # all_wfs = np.concatenate([wfs for wfs in wfs_arrays.values()], axis=0)
 
     all_wfs = extract_waveforms_to_single_buffer(rec, spikes, unit_ids, nbefore, nafter,
                                                  mode="shared_memory", return_scaled=False,
