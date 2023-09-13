@@ -177,7 +177,8 @@ class RandomProjectionClustering:
             mode = "folder"
 
         sorting_folder = tmp_folder / "sorting"
-        sorting = NumpySorting.from_times_labels(spikes["sample_index"], spikes["unit_index"], fs)
+        unit_ids = np.arange(len(np.unique(spikes["unit_index"])))
+        sorting = NumpySorting(spikes, fs, unit_ids=unit_ids)
         sorting = sorting.save(folder=sorting_folder)
         we = extract_waveforms(
             recording,
