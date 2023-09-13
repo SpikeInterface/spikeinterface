@@ -80,9 +80,8 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
                 "`sorting.save()` function to make it dumpable"
             )
         init_args = (recording, sorting.to_multiprocessing(n_jobs), extremum_channels_index, peak_shifts, return_scaled)
-        processor = ChunkRecordingExecutor(
-            recording, func, init_func, init_args, handle_returns=True, job_name="extract amplitudes", **job_kwargs
-        )
+        job_kwargs["job_name"] = "extract amplitudes"
+        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, handle_returns=True, **job_kwargs)
         out = processor.run()
         amps, segments = zip(*out)
         amps = np.concatenate(amps)

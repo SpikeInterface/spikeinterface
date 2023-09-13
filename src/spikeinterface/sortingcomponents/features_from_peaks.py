@@ -66,7 +66,8 @@ def compute_features_from_peaks(
         node = Class(recording, parents=[peak_retriever, extract_dense_waveforms], **params)
         nodes.append(node)
 
-    features = run_node_pipeline(recording, nodes, job_kwargs, job_name="features_from_peaks", squeeze_output=False)
+    job_kwargs["job_name"] = "features_from_peaks"
+    features = run_node_pipeline(recording, nodes, job_kwargs, squeeze_output=False)
 
     return features
 

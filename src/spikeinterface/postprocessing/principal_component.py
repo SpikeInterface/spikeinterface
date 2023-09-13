@@ -350,7 +350,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             unit_channels,
             pca_model,
         )
-        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name="extract PCs", **job_kwargs)
+        job_kwargs["job_name"] = "extract PCs"
+        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, **job_kwargs)
         processor.run()
 
     def _fit_by_channel_local(self, n_jobs, progress_bar):

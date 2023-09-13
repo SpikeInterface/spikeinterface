@@ -8,7 +8,6 @@ def run_peak_pipeline(
     peaks,
     nodes,
     job_kwargs,
-    job_name="peak_pipeline",
     gather_mode="memory",
     squeeze_output=True,
     folder=None,
@@ -30,11 +29,11 @@ def run_peak_pipeline(
         else:
             node.parents = [node0] + node.parents
     all_nodes = [node0] + nodes
+    job_kwargs["job_name"] = "peak pipeline"
     outs = run_node_pipeline(
         recording,
         all_nodes,
         job_kwargs,
-        job_name=job_name,
         gather_mode=gather_mode,
         squeeze_output=squeeze_output,
         folder=folder,

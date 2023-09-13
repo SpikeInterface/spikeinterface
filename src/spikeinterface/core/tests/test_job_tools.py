@@ -143,7 +143,6 @@ def test_ChunkRecordingExecutor():
         gather_func=gathering_func2,
         n_jobs=2,
         chunk_duration="200ms",
-        job_name="job_name",
     )
     processor.run()
     num_chunks = len(divide_recording_into_chunks(recording, processor.chunk_size))
@@ -161,7 +160,6 @@ def test_ChunkRecordingExecutor():
         mp_context="spawn",
         n_jobs=2,
         chunk_duration="200ms",
-        job_name="job_name",
     )
     processor.run()
 

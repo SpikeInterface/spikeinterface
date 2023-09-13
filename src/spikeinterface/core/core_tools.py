@@ -308,9 +308,8 @@ def write_binary_recording(
     func = _write_binary_chunk
     init_func = _init_binary_worker
     init_args = (recording, file_path_dict, dtype, byte_offset, cast_unsigned)
-    executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, job_name="write_binary_recording", **job_kwargs
-    )
+    job_kwargs["job_name"] = "write_binary_recording"
+    executor = ChunkRecordingExecutor(recording, func, init_func, init_args, **job_kwargs)
     executor.run()
 
 
@@ -477,9 +476,8 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     else:
         init_args = (recording, arrays, None, None, dtype, cast_unsigned)
 
-    executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_memory_recording", **job_kwargs
-    )
+    job_kwargs["job_name"] = "write_memory_recording"
+    executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose, **job_kwargs)
     executor.run()
 
     return arrays
@@ -705,9 +703,8 @@ def write_traces_to_zarr(
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
     init_args = (recording, zarr_path, storage_options, dataset_paths, dtype, cast_unsigned)
-    executor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, verbose=verbose, job_name="write_zarr_recording", **job_kwargs
-    )
+    job_kwargs["job_name"] = "write_zarr_recording"
+    executor = ChunkRecordingExecutor(recording, func, init_func, init_args, verbose=verbose, **job_kwargs)
     executor.run()
 
 

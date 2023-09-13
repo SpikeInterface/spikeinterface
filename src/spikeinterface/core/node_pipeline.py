@@ -341,7 +341,6 @@ def run_node_pipeline(
     recording,
     nodes,
     job_kwargs,
-    job_name="pipeline",
     mp_context=None,
     gather_mode="memory",
     squeeze_output=True,
@@ -366,13 +365,14 @@ def run_node_pipeline(
 
     init_args = (recording, nodes)
 
+    job_kwargs["job_name"] = "pipeline"
+
     processor = ChunkRecordingExecutor(
         recording,
         _compute_peak_pipeline_chunk,
         _init_peak_pipeline,
         init_args,
         gather_func=gather_func,
-        job_name=job_name,
         **job_kwargs,
     )
 

@@ -96,7 +96,8 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
         ]
 
     job_name = f"localize peaks using {method}"
-    peak_locations = run_node_pipeline(recording, pipeline_nodes, job_kwargs, job_name=job_name, squeeze_output=True)
+    job_kwargs["job_name"] = job_name
+    peak_locations = run_node_pipeline(recording, pipeline_nodes, job_kwargs, squeeze_output=True)
 
     return peak_locations
 

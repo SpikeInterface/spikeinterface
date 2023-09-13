@@ -113,11 +113,11 @@ def detect_peaks(
                 node.parents = [node0] + node.parents
             nodes.append(node)
 
+    job_kwargs["job_name"] = job_name
     outs = run_node_pipeline(
         recording,
         nodes,
         job_kwargs,
-        job_name=job_name,
         gather_mode=gather_mode,
         squeeze_output=squeeze_output,
         folder=folder,

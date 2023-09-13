@@ -272,9 +272,9 @@ def distribute_waveforms_to_buffers(
         mode,
         sparsity_mask,
     )
-    processor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, job_name=f"extract waveforms {mode}", **job_kwargs
-    )
+
+    job_kwargs["job_name"] = f"extract waveforms ({mode})"
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, **job_kwargs)
     processor.run()
 
 

@@ -54,9 +54,8 @@ def find_spikes_from_templates(recording, method="naive", method_kwargs={}, extr
     func = _find_spikes_chunk
     init_func = _init_worker_find_spikes
     init_args = (recording, method, method_kwargs_seralized)
-    processor = ChunkRecordingExecutor(
-        recording, func, init_func, init_args, handle_returns=True, job_name=f"find spikes ({method})", **job_kwargs
-    )
+    job_kwargs["job_name"] = f"find spikes ({method})"
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, handle_returns=True, **job_kwargs)
     spikes = processor.run()
 
     spikes = np.concatenate(spikes)

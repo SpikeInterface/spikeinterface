@@ -46,6 +46,7 @@ job_keys = (
     "mp_context",
     "verbose",
     "max_threads_per_process",
+    "job_name",
 )
 
 
