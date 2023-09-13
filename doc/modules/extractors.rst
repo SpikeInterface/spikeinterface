@@ -129,10 +129,11 @@ For raw recording formats, we currently support:
 * **MCS RAW** :py:func:`~spikeinterface.extractors.read_mcsraw()`
 * **MEArec** :py:func:`~spikeinterface.extractors.read_mearec()`
 * **Mountainsort MDA** :py:func:`~spikeinterface.extractors.read_mda_recording()`
+* **Neuralynx** :py:func:`~spikeinterface.extractors.read_neuralynx()`
 * **Neurodata Without Borders** :py:func:`~spikeinterface.extractors.read_nwb_recording()`
 * **Neuroscope** :py:func:`~spikeinterface.coextractorsre.read_neuroscope_recording()`
+* **Neuroexplorer** :py:func:`~spikeinterface.extractors.read_neuroexplorer()`
 * **NIX** :py:func:`~spikeinterface.extractors.read_nix()`
-* **Neuralynx** :py:func:`~spikeinterface.extractors.read_neuralynx()`
 * **Open Ephys Legacy** :py:func:`~spikeinterface.extractors.read_openephys()`
 * **Open Ephys Binary** :py:func:`~spikeinterface.extractors.read_openephys()`
 * **Plexon** :py:func:`~spikeinterface.extractors.read_plexon()`
