@@ -91,6 +91,7 @@ NEO-based
     .. autofunction:: read_mcsraw
     .. autofunction:: read_neuralynx
     .. autofunction:: read_neuralynx_sorting
+    .. autofunction:: read_neuroexplorer
     .. autofunction:: read_neuroscope
     .. autofunction:: read_nix
     .. autofunction:: read_openephys
@@ -101,7 +102,6 @@ NEO-based
     .. autofunction:: read_spikegadgets
     .. autofunction:: read_spikeglx
     .. autofunction:: read_tdt
-    .. autofunction:: read_neuroexplorer
 
 
 Non-NEO-based
