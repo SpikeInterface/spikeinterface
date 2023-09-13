@@ -34,7 +34,8 @@ _sparsity_doc = """
 class ChannelSparsity:
     """
     Handle channel sparsity for a set of units. That is, for every unit,
-    it indicates which channels are used to represent or active the waveform.
+    it indicates which channels are used to represent the waveform and the rest
+    of the non-represented channels are assumed to be zero.
 
     Internally, sparsity is stored as a boolean mask.
 
