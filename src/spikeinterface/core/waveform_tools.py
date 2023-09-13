@@ -276,7 +276,7 @@ def distribute_waveforms_to_buffers(
     if job_name is None:
         job_kwargs["job_name"] = f"extract waveforms {mode} multi buffer"
     processor = ChunkRecordingExecutor(recording, func, init_func, init_args, **job_kwargs)
-    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
+    processor = ChunkRecordingExecutor(recording, func, init_func, init_args, **job_kwargs)
     processor.run()
 
 
@@ -518,7 +518,7 @@ def extract_waveforms_to_single_buffer(
         if job_name is None:
             job_name = f"extract waveforms {mode} mono buffer"
 
-        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, job_name=job_name, **job_kwargs)
+        processor = ChunkRecordingExecutor(recording, func, init_func, init_args, **job_kwargs)
         processor.run()
 
     if mode == "memmap":
