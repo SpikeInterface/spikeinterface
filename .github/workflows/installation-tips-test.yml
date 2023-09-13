@@ -3,7 +3,7 @@ name: Creates Conda Install for Installation Tips
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 12 * * *"  # Daily at noon UTC
+    - cron: "0 12 * * 0"  # Weekly at noon UTC on Sundays
 
 jobs:
   installation-tips-testing:
