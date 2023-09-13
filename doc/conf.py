@@ -67,8 +67,8 @@ extensions = [
     'numpydoc',
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
-    "sphinx.ext.ipython_directive",
-    "sphinx.ext.ipython_console_highlighting"
+    "IPython.sphinxext.ipython_directive",
+    "IPython.sphinxext.ipython_console_highlighting"
 ]
 
 numpydoc_show_class_members = False
