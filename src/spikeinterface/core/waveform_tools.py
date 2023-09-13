@@ -417,9 +417,11 @@ def extract_waveforms_to_single_buffer(
     This ensures that spikes.shape[0] == all_waveforms.shape[0].
 
     Important note: for the "shared_memory" mode wf_array_info contains reference to
-    the shared memmory buffer, this variable must be reference as long as arrays as used.
-    And this variable is also returned.
-    To avoid this a copy to non shared memmory can be perform at the end.
+    the shared memmory buffer, this variable must be referenced as long as arrays is used.
+    This variable must also unlink() when the array is de-referenced.
+    To avoid this complicated behavior, by default (copy=True) the shared memmory buffer is copied into a standard
+    numpy array.
+
 
     Parameters
     ----------
