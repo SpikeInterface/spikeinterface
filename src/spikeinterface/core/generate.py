@@ -1,5 +1,5 @@
 import math
-
+import warnings
 import numpy as np
 from typing import Union, Optional, List, Literal
 
@@ -120,6 +120,31 @@ def generate_sorting(
     refractory_period_ms=3.0,  # in ms
     seed=None,
 ):
+    """
+    Generates sorting object with random firings.
+
+    Parameters
+    ----------
+    num_units : int, default: 5
+        Number of units
+    sampling_frequency : float, default: 30000.0
+        The sampling frequency
+    durations : list, default: [10.325, 3.5]
+        Duration of each segment in s
+    firing_rates : float, default: 3.0
+        The firing rate of each unit (in Hz).
+    empty_units : list, default: None
+        List of units that will have no spikes. (used for testing mainly).
+    refractory_period_ms : float, default: 3.0
+        The refractory period in ms
+    seed : int, default: None
+        The random seed
+
+    Returns
+    -------
+    sorting : NumpySorting
+        The sorting object
+    """
     seed = _ensure_seed(seed)
     num_segments = len(durations)
     unit_ids = np.arange(num_units)
@@ -148,6 +173,59 @@ def generate_sorting(
     spikes = np.concatenate(spikes)
 
     sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
+
+    return sorting
+
+
+def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
+    """
+    Generates sorting object with added synchronous events from an existing sorting objects.
+
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The sorting object
+    sync_event_ratio : float
+        The ratio of added synchronous spikes with respect to the total number of spikes.
+        E.g., 0.5 means that the final sorting will have 1.5 times number of spikes, and all the extra
+        spikes are synchronous (same sample_index), but on different units (not duplicates).
+    seed : int, default: None
+        The random seed
+
+
+    Returns
+    -------
+    sorting : NumpySorting
+        The sorting object
+
+    """
+    rng = np.random.default_rng(seed)
+    spikes = sorting.to_spike_vector()
+    unit_ids = sorting.unit_ids
+
+    # add syncrhonous events
+    num_sync = int(len(spikes) * sync_event_ratio)
+    spikes_duplicated = rng.choice(spikes, size=num_sync, replace=True)
+    # change unit_index
+    new_unit_indices = np.zeros(len(spikes_duplicated))
+    # make sure labels are all unique, keep unit_indices used for each spike
+    units_used_for_spike = {}
+    for i, spike in enumerate(spikes_duplicated):
+        sample_index = spike["sample_index"]
+        if sample_index not in units_used_for_spike:
+            units_used_for_spike[sample_index] = np.array([spike["unit_index"]])
+        units_not_used = unit_ids[~np.in1d(unit_ids, units_used_for_spike[sample_index])]
+
+        if len(units_not_used) == 0:
+            continue
+        new_unit_indices[i] = rng.choice(units_not_used)
+        units_used_for_spike[sample_index] = np.append(units_used_for_spike[sample_index], new_unit_indices[i])
+    spikes_duplicated["unit_index"] = new_unit_indices
+    spikes_all = np.concatenate((spikes, spikes_duplicated))
+    sort_idxs = np.lexsort([spikes_all["sample_index"], spikes_all["segment_index"]])
+    spikes_all = spikes_all[sort_idxs]
+
+    sorting = NumpySorting(spikes=spikes_all, sampling_frequency=sorting.sampling_frequency, unit_ids=unit_ids)
 
     return sorting
 
@@ -959,13 +1037,14 @@ class InjectTemplatesRecording(BaseRecording):
         parent_recording: Union[BaseRecording, None] = None,
         num_samples: Optional[List[int]] = None,
         upsample_vector: Union[List[int], None] = None,
-        check_borbers: bool = True,
+        check_borders: bool = False,
     ) -> None:
         templates = np.asarray(templates)
-        if check_borbers:
+        # TODO: this should be external to this class. It is not the responsability of this class to check the templates
+        if check_borders:
             self._check_templates(templates)
-            # lets test this only once so force check_borbers=false for kwargs
-            check_borbers = False
+            # lets test this only once so force check_borders=False for kwargs
+            check_borders = False
         self.templates = templates
 
         channel_ids = parent_recording.channel_ids if parent_recording is not None else list(range(templates.shape[2]))
@@ -1053,7 +1132,7 @@ class InjectTemplatesRecording(BaseRecording):
             "nbefore": nbefore,
             "amplitude_factor": amplitude_factor,
             "upsample_vector": upsample_vector,
-            "check_borbers": check_borbers,
+            "check_borders": check_borders,
         }
         if parent_recording is None:
             self._kwargs["num_samples"] = num_samples
@@ -1066,8 +1145,8 @@ class InjectTemplatesRecording(BaseRecording):
         threshold = 0.01 * max_value
 
         if max(np.max(np.abs(templates[:, 0])), np.max(np.abs(templates[:, -1]))) > threshold:
-            raise Exception(
-                "Warning!\nYour templates do not go to 0 on the edges in InjectTemplatesRecording.__init__\nPlease make your window bigger."
+            warnings.warn(
+                "Warning! Your templates do not go to 0 on the edges in InjectTemplatesRecording. Please make your window bigger."
             )
 
 
