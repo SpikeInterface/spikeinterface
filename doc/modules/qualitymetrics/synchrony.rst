@@ -1,3 +1,5 @@
+.. _synchrony:
+
 Synchrony Metrics (:code:`synchrony`)
 =====================================
 
@@ -46,4 +48,4 @@ References
 Literature
 ----------
 
-Based on concepts described in Gruen_
+Based on concepts described in [Gruen]_
