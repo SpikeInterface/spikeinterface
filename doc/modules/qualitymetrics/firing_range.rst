@@ -6,7 +6,7 @@ Calculation
 -----------
 
 The firing range indicates the dispersion of the firing rate of a unit across the recording. It is computed by
-taking the difference between the 95-th and 5th percentiles firing rates computed over short time bins (e.g. 10 s).
+taking the difference between the 95th percentile's firing rate and the 5th percentile's firing rate computed over short time bins (e.g. 10 s).
 
 
 
