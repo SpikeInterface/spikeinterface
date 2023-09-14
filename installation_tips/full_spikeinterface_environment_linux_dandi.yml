@@ -3,13 +3,11 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.9
+  - python=3.10
   - pip>=21.0
   - mamba
-  # numpy 1.22 break numba which break tridesclous
   - numpy<1.22
-  # joblib 1.2 is breaking hdbscan
-  - joblib=1.1
+  - joblib
   - tqdm
   - matplotlib
   - h5py
@@ -31,12 +29,11 @@ dependencies:
   - ipympl
   - pip:
     - ephyviewer
-    - neo>=0.11
-    - elephant>=0.10.0
+    - neo>=0.12
     - probeinterface>=0.2.11
     - MEArec>=1.8
     - spikeinterface[full, widgets]
     - spikeinterface-gui
-    - tridesclous>=1.6.6.1
+    - tridesclous>=1.6.8
     - spyking-circus>=1.1.0
     # - phy==2.0b5
