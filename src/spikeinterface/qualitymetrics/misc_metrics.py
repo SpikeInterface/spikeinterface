@@ -566,8 +566,8 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), **k
 _default_params["synchrony"] = dict(synchrony_sizes=(0, 2, 4))
 
 
-def compute_firing_ranges(waveform_extractor, bin_size_s=5, quantiles=(0.05, 0.95), unit_ids=None):
-    """Calculate firing range, the range between the 5th and 95th quantiles of the firing rates distribution
+def compute_firing_ranges(waveform_extractor, bin_size_s=5, percentiles=(0.05, 0.95), unit_ids=None):
+    """Calculate firing range, the range between the 5th and 95th percentiles of the firing rates distribution
     computed in non-overlapping time bins.
 
     Parameters
@@ -576,8 +576,8 @@ def compute_firing_ranges(waveform_extractor, bin_size_s=5, quantiles=(0.05, 0.9
         The waveform extractor object.
     bin_size_s : float, default: 5
         The size of the bin in seconds.
-    quantiles : tuple, default: (0.05, 0.95)
-        The quantiles to compute.
+    percentiles : tuple, default: (0.05, 0.95)
+        The percentiles to compute.
     unit_ids : list or None
         List of unit ids to compute the firing range. If None, all units are used.
 
@@ -611,14 +611,14 @@ def compute_firing_ranges(waveform_extractor, bin_size_s=5, quantiles=(0.05, 0.9
     # finally we compute the percentiles
     firing_ranges = {}
     for unit_id in unit_ids:
-        firing_ranges[unit_id] = np.percentile(firing_rate_histograms[unit_id], quantiles[1]) - np.percentile(
-            firing_rate_histograms[unit_id], quantiles[0]
+        firing_ranges[unit_id] = np.percentile(firing_rate_histograms[unit_id], percentiles[1]) - np.percentile(
+            firing_rate_histograms[unit_id], percentiles[0]
         )
 
     return firing_ranges
 
 
-_default_params["firing_range"] = dict(bin_size_s=5, quantiles=(0.05, 0.95))
+_default_params["firing_range"] = dict(bin_size_s=5, percentiles=(0.05, 0.95))
 
 
 def compute_amplitude_spreads(
