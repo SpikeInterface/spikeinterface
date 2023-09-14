@@ -186,11 +186,12 @@ def correct_motion(
 
     Parameters for each step are handled as separate dictionaries.
     For more information please check the documentation of the following functions:
-      * :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks'
-      * :py:func:`~spikeinterface.sortingcomponents.peak_selection.select_peaks'
-      * :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks'
-      * :py:func:`~spikeinterface.sortingcomponents.motion_estimation.estimate_motion'
-      * :py:func:`~spikeinterface.sortingcomponents.motion_interpolation.interpolate_motion'
+
+      * :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks`
+      * :py:func:`~spikeinterface.sortingcomponents.peak_selection.select_peaks`
+      * :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks`
+      * :py:func:`~spikeinterface.sortingcomponents.motion_estimation.estimate_motion`
+      * :py:func:`~spikeinterface.sortingcomponents.motion_interpolation.interpolate_motion`
 
 
     Possible presets: {}

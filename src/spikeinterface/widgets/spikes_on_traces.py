@@ -30,11 +30,10 @@ class SpikesOnTracesWidget(BaseWidget):
     sparsity : ChannelSparsity or None
         Optional ChannelSparsity to apply.
         If WaveformExtractor is already sparse, the argument is ignored, default None
-       unit_colors :  dict or None
+    unit_colors :  dict or None
         If given, a dictionary with unit ids as keys and colors as values, default None
         If None, then the get_unit_colors() is internally used. (matplotlib backend)
-    mode : str
-        Three possible modes, default 'auto':
+    mode : str in ('line', 'map', 'auto') default: 'auto'
         * 'line': classical for low channel count
         * 'map': for high channel count use color heat map
         * 'auto': auto switch depending on the channel count ('line' if less than 64 channels, 'map' otherwise)

@@ -1,5 +1,6 @@
 import unittest
-from platform import python_version
+import platform
+import subprocess
 from packaging import version
 
 import pytest
@@ -16,6 +17,38 @@ from spikeinterface.extractors.tests.common_tests import (
 )
 
 local_folder = get_global_dataset_folder() / "ephy_testing_data"
+
+
+def has_plexon2_dependencies():
+    """
+    Check if required Plexon2 dependencies are installed on different OS.
+    """
+
+    os_type = platform.system()
+
+    if os_type == "Windows":
+        # On Windows, no need for additional dependencies
+        return True
+
+    elif os_type == "Linux":
+        # Check for 'wine' using dpkg
+        try:
+            result_wine = subprocess.run(
+                ["dpkg", "-l", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+            )
+        except subprocess.CalledProcessError:
+            return False
+
+        # Check for 'zugbruecke' using pip
+        try:
+            import zugbruecke
+
+            return True
+        except ImportError:
+            return False
+    else:
+        # Not sure about MacOS
+        raise ValueError(f"Unsupported OS: {os_type}")
 
 
 class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -106,6 +139,17 @@ class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [
         "neuroscope/test1/test1.xml",
         ("neuroscope/test2/signal1.dat", {"xml_file_path": local_folder / "neuroscope" / "test2" / "recording.xml"}),
+    ]
+
+
+class NeuroExplorerRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuroExplorerRecordingExtractor
+    downloads = ["neuroexplorer"]
+    entities = [
+        ("neuroexplorer/File_neuroexplorer_1.nex", {"stream_name": "ContChannel01"}),
+        ("neuroexplorer/File_neuroexplorer_1.nex", {"stream_name": "ContChannel02"}),
+        ("neuroexplorer/File_neuroexplorer_2.nex", {"stream_name": "ContChannel01"}),
+        ("neuroexplorer/File_neuroexplorer_2.nex", {"stream_name": "ContChannel02"}),
     ]
 
 
@@ -218,7 +262,7 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 
 @pytest.mark.skipif(
-    version.parse(python_version()) >= version.parse("3.10"),
+    version.parse(platform.python_version()) >= version.parse("3.10"),
     reason="Sonpy only testing with Python < 3.10!",
 )
 class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
@@ -290,6 +334,32 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         pass
 
 
+# We run plexon2 tests only if we have dependencies (wine)
+@pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
+class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = Plexon2RecordingExtractor
+    downloads = ["plexon"]
+    entities = [
+        ("plexon/4chDemoPL2.pl2", {"stream_id": "3"}),
+    ]
+
+
+@pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
+class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
+    ExtractorClass = Plexon2EventExtractor
+    downloads = ["plexon"]
+    entities = [
+        ("plexon/4chDemoPL2.pl2"),
+    ]
+
+
+@pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
+class Plexon2SortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = Plexon2SortingExtractor
+    downloads = ["plexon"]
+    entities = [("plexon/4chDemoPL2.pl2", {"sampling_frequency": 40000})]
+
+
 if __name__ == "__main__":
     # test = MearecSortingTest()
     # test = SpikeGLXRecordingTest()
@@ -304,7 +374,7 @@ if __name__ == "__main__":
     # test = PlexonRecordingTest()
     # test = PlexonSortingTest()
     # test = NeuralynxRecordingTest()
-    test = BlackrockRecordingTest()
+    test = Plexon2RecordingTest()
     # test = MCSRawRecordingTest()
     # test = KiloSortSortingTest()
     # test = Spike2RecordingTest()
