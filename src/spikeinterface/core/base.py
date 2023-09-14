@@ -425,14 +425,15 @@ class BaseExtractor:
         extractor: RecordingExtractor or SortingExtractor
             The loaded extractor object
         """
-        if dictionary["relative_paths"]:
+        # for pickle dump relative_path was not in the dict, this ensure compatibility
+        if dictionary.get("relative_paths", False):
             assert base_folder is not None, "When  relative_paths=True, need to provide base_folder"
             dictionary = _make_paths_absolute(dictionary, base_folder)
         extractor = _load_extractor_from_dict(dictionary)
         folder_metadata = dictionary.get("folder_metadata", None)
         if folder_metadata is not None:
             folder_metadata = Path(folder_metadata)
-            if dictionary["relative_paths"]:
+            if dictionary.get("relative_paths", False):
                 folder_metadata = base_folder / folder_metadata
             extractor.load_metadata_from_folder(folder_metadata)
         return extractor
@@ -622,6 +623,7 @@ class BaseExtractor:
             include_annotations=True,
             include_properties=include_properties,
             folder_metadata=folder_metadata,
+            relative_to=None,
             recursive=False,
         )
         file_path = self._get_file_path(file_path, [".pkl", ".pickle"])

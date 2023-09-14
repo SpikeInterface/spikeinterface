@@ -411,3 +411,14 @@ def get_job_kwargs(params, verbose):
     if not verbose:
         job_kwargs["progress_bar"] = False
     return job_kwargs
+
+
+def is_log_ok(output_folder):
+    # log is OK when run_time is not None
+    if (output_folder / "spikeinterface_log.json").is_file():
+        with open(output_folder / "spikeinterface_log.json", mode="r", encoding="utf8") as logfile:
+            log = json.load(logfile)
+            run_time = log.get("run_time", None)
+            ok = run_time is not None
+            return ok
+    return False

@@ -1,4 +1,4 @@
-from spikeinterface.core import load_extractor
+from spikeinterface.core import load_extractor, NumpyRecording
 
 from spikeinterface.sorters import BaseSorter
 
@@ -14,8 +14,16 @@ class ComponentsBasedSorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, output_folder, params, verbose):
-        # nothing to do here because the spikeinterface_recording.json is here anyway
-        pass
+        # Some recording not json serializable but they can be saved to pickle
+        #   * NoiseGeneratorRecording or InjectTemplatesRecording: we force a pickle because this is light
+        #   * for NumpyRecording (this is a bit crazy because it flush the entire buffer!!)
+        if recording.check_if_dumpable() and not isinstance(recording, NumpyRecording):
+            rec_file = output_folder.parent / "spikeinterface_recording.pickle"
+            recording.dump_to_pickle(rec_file)
+        # TODO (hard) : find a solution for NumpyRecording without any dump
+        # this will need an internal API change I think
+        # because the run_sorter is from the "folder" (because of container mainly and also many other reasons)
+        # and not from the recording itself
 
     @classmethod
     def _get_result_from_folder(cls, output_folder):

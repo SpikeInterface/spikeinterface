@@ -22,10 +22,46 @@ from spikeinterface.core import load_extractor
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.extractors import NpzSortingExtractor
 from spikeinterface.sorters import sorter_dict
-from spikeinterface.sorters.launcher import iter_working_folder, iter_sorting_output
+from spikeinterface.sorters.basesorter import is_log_ok
+
 
 from .comparisontools import _perf_keys
 from .paircomparisons import compare_sorter_to_ground_truth
+
+
+
+
+
+# This is deprecated and will be removed
+def iter_working_folder(working_folder):
+    working_folder = Path(working_folder)
+    for rec_folder in working_folder.iterdir():
+        if not rec_folder.is_dir():
+            continue
+        for output_folder in rec_folder.iterdir():
+            if (output_folder / "spikeinterface_job.json").is_file():
+                with open(output_folder / "spikeinterface_job.json", "r") as f:
+                    job_dict = json.load(f)
+                rec_name = job_dict["rec_name"]
+                sorter_name = job_dict["sorter_name"]
+                yield rec_name, sorter_name, output_folder
+            else:
+                rec_name = rec_folder.name
+                sorter_name = output_folder.name
+                if not output_folder.is_dir():
+                    continue
+                if not is_log_ok(output_folder):
+                    continue
+                yield rec_name, sorter_name, output_folder
+
+# This is deprecated and will be removed
+def iter_sorting_output(working_folder):
+    """Iterator over output_folder to retrieve all triplets of (rec_name, sorter_name, sorting)."""
+    for rec_name, sorter_name, output_folder in iter_working_folder(working_folder):
+        SorterClass = sorter_dict[sorter_name]
+        sorting = SorterClass.get_result_from_folder(output_folder)
+        yield rec_name, sorter_name, sorting
+
 
 
 def setup_comparison_study(study_folder, gt_dict, **job_kwargs):
