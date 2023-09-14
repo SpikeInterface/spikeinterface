@@ -13,7 +13,7 @@ taking the difference between the 95-th and 5th percentiles firing rates compute
 Expectation and use
 -------------------
 
-Very high levels of firing ranges, outside of a physiolocigal range, might indicate noise contamination.
+Very high levels of firing ranges, outside of a physiological range, might indicate noise contamination.
 
 
 Example code
