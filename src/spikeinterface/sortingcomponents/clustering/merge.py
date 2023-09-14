@@ -364,12 +364,11 @@ class WaveformsLda:
         chans1 = np.unique(peaks["channel_index"][inds1])
         target_chans1 = np.flatnonzero(np.all(waveforms_sparse_mask[chans1, :], axis=0))
 
-        if inds0.size <40 or inds1.size <40:
+        if inds0.size < 40 or inds1.size < 40:
             is_merge = False
             merge_value = 0
             final_shift = 0
             return is_merge, label0, label1, final_shift, merge_value
-
 
         target_chans = np.intersect1d(target_chans0, target_chans1)
 
@@ -461,7 +460,7 @@ class WaveformsLda:
         # DEBUG = False
 
         if DEBUG and is_merge:
-        # if DEBUG:
+            # if DEBUG:
             import matplotlib.pyplot as plt
 
             flatten_wfs0 = wfs0.swapaxes(1, 2).reshape(wfs0.shape[0], -1)
@@ -489,7 +488,6 @@ class WaveformsLda:
 
             ax.set_title(f"{dipscore:.4f} {is_merge}")
             plt.show()
-
 
         return is_merge, label0, label1, final_shift, merge_value
 
