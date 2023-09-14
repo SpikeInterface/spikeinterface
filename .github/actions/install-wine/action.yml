@@ -1,0 +1,21 @@
+name: Install packages
+description: This action installs the package and its dependencies for testing
+
+inputs:
+  python-version:
+    description: 'Python version to set up'
+    required: false
+  os:
+    description: 'Operating system to set up'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install wine (needed for Plexon2)
+      run: |
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+        sudo dpkg --add-architecture i386
+        sudo apt-get update -qq
+        sudo apt-get install -yqq --allow-downgrades libc6:i386 libgcc-s1:i386 libstdc++6:i386 wine
+      shell: bash
