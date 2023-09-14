@@ -500,8 +500,7 @@ _default_params["sliding_rp_violation"] = dict(
 
 
 def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), **kwargs):
-    """
-    Compute synchrony metrics. Synchrony metrics represent the rate of occurrences of
+    """Compute synchrony metrics. Synchrony metrics represent the rate of occurrences of
     "synchrony_size" spikes at the exact same sample index.
 
     Parameters
@@ -621,19 +620,29 @@ def compute_firing_ranges(waveform_extractor, bin_size_s=5, percentiles=(0.05, 0
 _default_params["firing_range"] = dict(bin_size_s=5, percentiles=(0.05, 0.95))
 
 
-def compute_amplitude_spreads(
-    waveform_extractor, num_spikes_per_bin=100, amplitude_extension="spike_amplitudes", unit_ids=None
+def compute_amplitude_cv_metrics(
+    waveform_extractor,
+    average_num_spikes_per_bin=50,
+    percentiles=(0.05, 0.95),
+    min_num_bins=10,
+    amplitude_extension="spike_amplitudes",
+    unit_ids=None,
 ):
-    """Calculate spread of spike amplitudes within defined bins of spike events.
-    The spread is the median relative variance (variance divided by the overall amplitude mean)
-    computed over bins of `num_spikes_per_bin` spikes.
+    """Calculate coefficient of variation of spike amplitudes within defined temporal bins.
+    From the distribution of coefficient of variations, both the median and the "range" (the distance between the
+    percentiles defined by `percentiles` parameter) are returned.
 
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    num_spikes_per_bin : int, default: 50
-        The number of spikes per bin.
+    average_num_spikes_per_bin : int, default: 50
+        The average number of spikes per bin. This is used to estimate a temporal bin size using the firing rate
+        of each unit. For example, if a unit has a firing rate of 10 Hz, amd the average number of spikes per bin is
+        100, then the temporal bin size will be 100/10 Hz = 10 s.
+    min_num_bins : int, default: 10
+        The minimum number of bins to compute the median and range. If the number of bins is less than this then
+        the median and range are set to NaN.
     amplitude_extension : str, default: 'spike_amplitudes'
         The name of the extension to load the amplitudes from. 'spike_amplitudes' or 'amplitude_scalings'.
     unit_ids : list or None
@@ -641,18 +650,22 @@ def compute_amplitude_spreads(
 
     Returns
     -------
-    amplitude_spreads : dict
-        The amplitude spread for each unit.
+    amplitude_cv_median : dict
+        The median of the CV
+    amplitude_cv_range : dict
+        The range of the CV, computed as the distance between the percentiles.
 
     Notes
     -----
-    Designed by Simon Musall and ported to SpikeInterface by Alessio Buccino.
+    Designed by Simon Musall and Alessio Buccino.
     """
+    res = namedtuple("amplitude_cv", ["amplitude_cv_median", "amplitude_cv_range"])
     assert amplitude_extension in (
         "spike_amplitudes",
         "amplitude_scalings",
     ), "Invalid amplitude_extension. It can be either 'spike_amplitudes' or 'amplitude_scalings'"
     sorting = waveform_extractor.sorting
+    total_duration = waveform_extractor.get_total_duration()
     spikes = sorting.to_spike_vector()
     num_spikes = sorting.count_num_spikes_per_unit()
     if unit_ids is None:
@@ -668,24 +681,53 @@ def compute_amplitude_spreads(
         empty_dict = {unit_id: np.nan for unit_id in unit_ids}
         return empty_dict
 
+    # precompute segment slice
+    segment_slices = []
+    for segment_index in range(waveform_extractor.get_num_segments()):
+        i0 = np.searchsorted(spikes["segment_index"], segment_index)
+        i1 = np.searchsorted(spikes["segment_index"], segment_index + 1)
+        segment_slices.append(slice(i0, i1))
+
     all_unit_ids = list(sorting.unit_ids)
-    amplitude_spreads = {}
+    amplitude_cv_medians, amplitude_cv_ranges = {}, {}
     for unit_id in unit_ids:
-        amps_unit = amps[spikes["unit_index"] == all_unit_ids.index(unit_id)]
-        amp_mean = np.abs(np.mean(amps_unit))
-        if num_spikes[unit_id] < num_spikes_per_bin:
-            amp_spread = np.std(amps_unit) / amp_mean
+        firing_rate = num_spikes[unit_id] / total_duration
+        temporal_bin_size_samples = int(
+            (average_num_spikes_per_bin / firing_rate) * waveform_extractor.sampling_frequency
+        )
+
+        amp_spreads = []
+        # bins and amplitude means are computed for each segment
+        for segment_index in range(waveform_extractor.get_num_segments()):
+            sample_bin_edges = np.arange(
+                0, waveform_extractor.get_num_samples(segment_index) + 1, temporal_bin_size_samples
+            )
+            spikes_in_segment = spikes[segment_slices[segment_index]]
+            amps_in_segment = amps[segment_slices[segment_index]]
+            unit_mask = spikes_in_segment["unit_index"] == all_unit_ids.index(unit_id)
+            spike_indices_unit = spikes_in_segment["sample_index"][unit_mask]
+            amps_unit = amps_in_segment[unit_mask]
+            amp_mean = np.abs(np.mean(amps_unit))
+            for t0, t1 in zip(sample_bin_edges[:-1], sample_bin_edges[1:]):
+                i0 = np.searchsorted(spike_indices_unit, t0)
+                i1 = np.searchsorted(spike_indices_unit, t1)
+                amp_spreads.append(np.std(amps_unit[i0:i1]) / amp_mean)
+
+        if len(amp_spreads) < min_num_bins:
+            amplitude_cv_medians[unit_id] = np.nan
+            amplitude_cv_ranges[unit_id] = np.nan
         else:
-            amp_spreads = []
-            for i in range(0, num_spikes[unit_id], num_spikes_per_bin):
-                amp_spreads.append(np.std(amps_unit[i : i + num_spikes_per_bin]) / amp_mean)
-            amp_spread = np.median(amp_spreads)
-        amplitude_spreads[unit_id] = amp_spread
+            amplitude_cv_medians[unit_id] = np.median(amp_spreads)
+            amplitude_cv_ranges[unit_id] = np.percentile(amp_spreads, percentiles[1]) - np.percentile(
+                amp_spreads, percentiles[0]
+            )
 
-    return amplitude_spreads
+    return res(amplitude_cv_medians, amplitude_cv_ranges)
 
 
-_default_params["amplitude_spread"] = dict(num_spikes_per_bin=100, amplitude_extension="spike_amplitudes")
+_default_params["amplitude_cv"] = dict(
+    average_num_spikes_per_bin=50, percentiles=(0.05, 0.95), min_num_bins=10, amplitude_extension="spike_amplitudes"
+)
 
 
 def compute_amplitude_cutoffs(

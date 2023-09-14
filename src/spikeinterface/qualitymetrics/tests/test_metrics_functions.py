@@ -33,7 +33,7 @@ from spikeinterface.qualitymetrics import (
     compute_amplitude_medians,
     compute_synchrony_metrics,
     compute_firing_ranges,
-    compute_amplitude_spreads,
+    compute_amplitude_cv_metrics,
 )
 
 
@@ -243,17 +243,22 @@ def test_calculate_amplitude_median(waveform_extractor_simple):
     # assert np.allclose(list(amp_medians_gt.values()), list(amp_medians.values()), rtol=0.05)
 
 
-def test_calculate_amplitude_spread(waveform_extractor_simple):
+def test_calculate_amplitude_cv_metrics(waveform_extractor_simple):
     we = waveform_extractor_simple
     spike_amps = compute_spike_amplitudes(we)
-    amp_spreads = compute_amplitude_spreads(we, num_spikes_per_bin=20)
-    print(amp_spreads)
+    amp_cv_median, amp_cv_range = compute_amplitude_cv_metrics(we, average_num_spikes_per_bin=20)
+    print(amp_cv_median)
+    print(amp_cv_range)
 
     amps_scalings = compute_amplitude_scalings(we)
-    amp_spreads_scalings = compute_amplitude_spreads(
-        we, num_spikes_per_bin=20, amplitude_extension="amplitude_scalings"
+    amp_cv_median_scalings, amp_cv_range_scalings = compute_amplitude_cv_metrics(
+        we,
+        average_num_spikes_per_bin=20,
+        amplitude_extension="amplitude_scalings",
+        min_num_bins=5,
     )
-    print(amp_spreads_scalings)
+    print(amp_cv_median_scalings)
+    print(amp_cv_range_scalings)
 
 
 def test_calculate_snrs(waveform_extractor_simple):
@@ -382,4 +387,4 @@ if __name__ == "__main__":
     # test_calculate_drift_metrics(we)
     # test_synchrony_metrics(we)
     test_calculate_firing_range(we)
-    test_calculate_amplitude_spread(we)
+    test_calculate_amplitude_cv_metrics(we)

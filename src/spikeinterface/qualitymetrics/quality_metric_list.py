@@ -13,7 +13,7 @@ from .misc_metrics import (
     compute_drift_metrics,
     compute_synchrony_metrics,
     compute_firing_ranges,
-    compute_amplitude_spreads,
+    compute_amplitude_cv_metrics,
 )
 
 from .pca_metrics import (
@@ -42,7 +42,7 @@ _misc_metric_name_to_func = {
     "sliding_rp_violation": compute_sliding_rp_violations,
     "amplitude_cutoff": compute_amplitude_cutoffs,
     "amplitude_median": compute_amplitude_medians,
-    "amplitude_spread": compute_amplitude_spreads,
+    "amplitude_cv": compute_amplitude_cv_metrics,
     "synchrony": compute_synchrony_metrics,
     "firing_range": compute_firing_ranges,
     "drift": compute_drift_metrics,
