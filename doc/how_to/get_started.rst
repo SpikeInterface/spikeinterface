@@ -11,7 +11,7 @@ dataset, and we will then perform some pre-processing, run a spike
 sorting algorithm, post-process the spike sorting output, perform
 curation (manual and automatic), and compare spike sorting results.
 
-.. code:: ipython3
+.. code:: ipython
 
     import matplotlib.pyplot as plt
     from pprint import pprint
@@ -19,7 +19,7 @@ curation (manual and automatic), and compare spike sorting results.
 The spikeinterface module by itself import only the spikeinterface.core
 submodule which is not useful for end user
 
-.. code:: ipython3
+.. code:: ipython
 
     import spikeinterface
 
@@ -35,7 +35,7 @@ We need to import one by one different submodules separately
 -  ``comparison`` : comparison of spike sorting output
 -  ``widgets`` : visualization
 
-.. code:: ipython3
+.. code:: ipython
 
     import spikeinterface as si  # import core only
     import spikeinterface.extractors as se
@@ -56,14 +56,14 @@ This is useful for notebooks, but it is a heavier import because
 internally many more dependencies are imported
 (scipy/sklearn/networkx/matplotlib/h5py…)
 
-.. code:: ipython3
+.. code:: ipython
 
     import spikeinterface.full as si
 
 Before getting started, we can set some global arguments for parallel
 processing. For this example, let’s use 4 jobs and time chunks of 1s:
 
-.. code:: ipython3
+.. code:: ipython
 
     global_job_kwargs = dict(n_jobs=4, chunk_duration="1s")
     si.set_global_job_kwargs(**global_job_kwargs)
@@ -75,7 +75,7 @@ Then we can open it. Note that
 `MEArec <https://mearec.readthedocs.io%3E>`__ simulated file contains
 both “recording” and a “sorting” object.
 
-.. code:: ipython3
+.. code:: ipython
 
     local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     recording, sorting_true = se.read_mearec(local_path)
@@ -102,7 +102,7 @@ ground-truth information of the spiking activity of each unit.
 Let’s use the ``spikeinterface.widgets`` module to visualize the traces
 and the raster plots.
 
-.. code:: ipython3
+.. code:: ipython
 
     w_ts = sw.plot_traces(recording, time_range=(0, 5))
     w_rs = sw.plot_rasters(sorting_true, time_range=(0, 5))
@@ -118,7 +118,7 @@ and the raster plots.
 
 This is how you retrieve info from a ``BaseRecording``\ …
 
-.. code:: ipython3
+.. code:: ipython
 
     channel_ids = recording.get_channel_ids()
     fs = recording.get_sampling_frequency()
@@ -143,7 +143,7 @@ This is how you retrieve info from a ``BaseRecording``\ …
 
 …and a ``BaseSorting``
 
-.. code:: ipython3
+.. code:: ipython
 
     num_seg = recording.get_num_segments()
     unit_ids = sorting_true.get_unit_ids()
@@ -173,7 +173,7 @@ any probe in the probeinterface collections can be downloaded and set to
 a ``Recording`` object. In this case, the MEArec dataset already handles
 a ``Probe`` and we don’t need to set it *manually*.
 
-.. code:: ipython3
+.. code:: ipython
 
     probe = recording.get_probe()
     print(probe)
@@ -200,7 +200,7 @@ All these preprocessing steps are “lazy”. The computation is done on
 demand when we call ``recording.get_traces(...)`` or when we save the
 object to disk.
 
-.. code:: ipython3
+.. code:: ipython
 
     recording_cmr = recording
     recording_f = si.bandpass_filter(recording, freq_min=300, freq_max=6000)
@@ -224,7 +224,7 @@ Now you are ready to spike sort using the ``spikeinterface.sorters``
 module! Let’s first check which sorters are implemented and which are
 installed
 
-.. code:: ipython3
+.. code:: ipython
 
     print('Available sorters', ss.available_sorters())
     print('Installed sorters', ss.installed_sorters())
@@ -241,7 +241,7 @@ machine. We can see we have HerdingSpikes and Tridesclous installed.
 Spike sorters come with a set of parameters that users can change. The
 available parameters are dictionaries and can be accessed with:
 
-.. code:: ipython3
+.. code:: ipython
 
     print("Tridesclous params:")
     pprint(ss.get_default_sorter_params('tridesclous'))
@@ -279,7 +279,7 @@ available parameters are dictionaries and can be accessed with:
 Let’s run ``tridesclous`` and change one of the parameter, say, the
 ``detect_threshold``:
 
-.. code:: ipython3
+.. code:: ipython
 
     sorting_TDC = ss.run_sorter(sorter_name="tridesclous", recording=recording_preprocessed, detect_threshold=4)
     print(sorting_TDC)
@@ -292,7 +292,7 @@ Let’s run ``tridesclous`` and change one of the parameter, say, the
 
 Alternatively we can pass full dictionary containing the parameters:
 
-.. code:: ipython3
+.. code:: ipython
 
     other_params = ss.get_default_sorter_params('tridesclous')
     other_params['detect_threshold'] = 6
@@ -310,7 +310,7 @@ Alternatively we can pass full dictionary containing the parameters:
 
 Let’s run ``spykingcircus2`` as well, with default parameters:
 
-.. code:: ipython3
+.. code:: ipython
 
     sorting_SC2 = ss.run_sorter(sorter_name="spykingcircus2", recording=recording_preprocessed)
     print(sorting_SC2)
@@ -341,7 +341,7 @@ If a sorter is not installed locally, we can also avoid to install it
 and run it anyways, using a container (Docker or Singularity). For
 example, let’s run ``Kilosort2`` using Docker:
 
-.. code:: ipython3
+.. code:: ipython
 
     sorting_KS2 = ss.run_sorter(sorter_name="kilosort2", recording=recording_preprocessed,
                                 docker_image=True, verbose=True)
@@ -370,7 +370,7 @@ extracts, their waveforms, and stores them to disk. These waveforms are
 helpful to compute the average waveform, or “template”, for each unit
 and then to compute, for example, quality metrics.
 
-.. code:: ipython3
+.. code:: ipython
 
     we_TDC = si.extract_waveforms(recording_preprocessed, sorting_TDC, 'waveforms_folder', overwrite=True)
     print(we_TDC)
@@ -399,7 +399,7 @@ compute spike amplitudes, PCA projections, unit locations, and more.
 Let’s compute some postprocessing information that will be needed later
 for computing quality metrics, exporting, and visualization:
 
-.. code:: ipython3
+.. code:: ipython
 
     amplitudes = spost.compute_spike_amplitudes(we_TDC)
     unit_locations = spost.compute_unit_locations(we_TDC)
@@ -411,7 +411,7 @@ for computing quality metrics, exporting, and visualization:
 All of this postprocessing functions are saved in the waveforms folder
 as extensions:
 
-.. code:: ipython3
+.. code:: ipython
 
     print(we_TDC.get_available_extension_names())
 
@@ -424,7 +424,7 @@ as extensions:
 Importantly, waveform extractors (and all extensions) can be reloaded at
 later times:
 
-.. code:: ipython3
+.. code:: ipython
 
     we_loaded = si.load_waveforms('waveforms_folder')
     print(we_loaded.get_available_extension_names())
@@ -439,7 +439,7 @@ Once we have computed all these postprocessing information, we can
 compute quality metrics (different quality metrics require different
 extensions - e.g., drift metrics resuire ``spike_locations``):
 
-.. code:: ipython3
+.. code:: ipython
 
     qm_params = sqm.get_default_qm_params()
     pprint(qm_params)
@@ -485,14 +485,14 @@ extensions - e.g., drift metrics resuire ``spike_locations``):
 Since the recording is very short, let’s change some parameters to
 accomodate the duration:
 
-.. code:: ipython3
+.. code:: ipython
 
     qm_params["presence_ratio"]["bin_duration_s"] = 1
     qm_params["amplitude_cutoff"]["num_histogram_bins"] = 5
     qm_params["drift"]["interval_s"] = 2
     qm_params["drift"]["min_spikes_per_interval"] = 2
 
-.. code:: ipython3
+.. code:: ipython
 
     qm = sqm.compute_quality_metrics(we_TDC, qm_params=qm_params)
     display(qm)
@@ -522,7 +522,7 @@ We can export a sorting summary and quality metrics plot using the
 ``sortingview`` backend. This will generate shareble links for web-based
 visualization.
 
-.. code:: ipython3
+.. code:: ipython
 
     w1 = sw.plot_quality_metrics(we_TDC, display=False, backend="sortingview")
 
@@ -530,7 +530,7 @@ visualization.
 https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://901a11ba31ae9ab512a99bdf36a3874173249d87&label=SpikeInterface%20-%20Quality%20Metrics
 
 
-.. code:: ipython3
+.. code:: ipython
 
     w2 = sw.plot_sorting_summary(we_TDC, display=False, curation=True, backend="sortingview")
 
@@ -543,7 +543,7 @@ curation. In the example above, we manually merged two units (0, 4) and
 added accept labels (2, 6, 7). After applying our curation, we can click
 on the “Save as snapshot (sha://)” and copy the URI:
 
-.. code:: ipython3
+.. code:: ipython
 
     uri = "sha1://68cb54a9aaed2303fb82dedbc302c853e818f1b6"
 
@@ -562,7 +562,7 @@ Alternatively, we can export the data locally to Phy.
 `Phy <https://github.com/cortex-lab/phy>`_ is a GUI for manual
 curation of the spike sorting output. To export to phy you can run:
 
-.. code:: ipython3
+.. code:: ipython
 
     sexp.export_to_phy(we_TDC, 'phy_folder_for_TDC', verbose=True)
 
@@ -581,7 +581,7 @@ After curating with Phy, the curated sorting can be reloaded to
 SpikeInterface. In this case, we exclude the units that have been
 labeled as “noise”:
 
-.. code:: ipython3
+.. code:: ipython
 
     sorting_curated_phy = se.read_phy('phy_folder_for_TDC', exclude_cluster_groups=["noise"])
 
@@ -589,7 +589,7 @@ Quality metrics can be also used to automatically curate the spike
 sorting output. For example, you can select sorted units with a SNR
 above a certain threshold:
 
-.. code:: ipython3
+.. code:: ipython
 
     keep_mask = (qm['snr'] > 10) & (qm['isi_violations_ratio'] < 0.01)
     print("Mask:", keep_mask.values)
@@ -615,7 +615,7 @@ outputs. We can either:
 3. compare the output of multiple sorters (Tridesclous, SpykingCircus2,
    Kilosort2)
 
-.. code:: ipython3
+.. code:: ipython
 
     comp_gt = sc.compare_sorter_to_ground_truth(gt_sorting=sorting_true, tested_sorting=sorting_TDC)
     comp_pair = sc.compare_two_sorters(sorting1=sorting_TDC, sorting2=sorting_SC2)
@@ -625,7 +625,7 @@ outputs. We can either:
 When comparing with a ground-truth sorting (1,), you can get the sorting
 performance and plot a confusion matrix
 
-.. code:: ipython3
+.. code:: ipython
 
     print(comp_gt.get_performance())
     w_conf = sw.plot_confusion_matrix(comp_gt)
@@ -659,7 +659,7 @@ performance and plot a confusion matrix
 When comparing two sorters (2.), we can see the matching of units
 between sorters. Units which are not matched has -1 as unit id:
 
-.. code:: ipython3
+.. code:: ipython
 
     comp_pair.hungarian_match_12
 
@@ -683,7 +683,7 @@ between sorters. Units which are not matched has -1 as unit id:
 
 or the reverse:
 
-.. code:: ipython3
+.. code:: ipython
 
     comp_pair.hungarian_match_21
 
@@ -709,7 +709,7 @@ When comparing multiple sorters (3.), you can extract a ``BaseSorting``
 object with units in agreement between sorters. You can also plot a
 graph showing how the units are matched between the sorters.
 
-.. code:: ipython3
+.. code:: ipython
 
     sorting_agreement = comp_multi.get_agreement_sorting(minimum_agreement_count=2)
 

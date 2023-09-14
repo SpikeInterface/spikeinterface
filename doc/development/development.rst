@@ -1,5 +1,5 @@
 Development
-==========
+===========
 
 How to contribute
 -----------------
