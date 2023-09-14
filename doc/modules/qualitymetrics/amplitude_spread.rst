@@ -17,7 +17,7 @@ or amplitude scalings (see :py:func:`~spikeinterface.postprocessing.compute_ampl
 Expectation and use
 -------------------
 
-Very high levels of amplitude_spread ranges, outside of a physiolocigal range, might indicate noise contamination.
+Very high levels of amplitude_spread ranges, outside of a physiological range, might indicate noise contamination.
 
 
 Example code
