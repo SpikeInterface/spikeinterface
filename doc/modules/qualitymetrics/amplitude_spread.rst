@@ -6,9 +6,9 @@ Calculation
 -----------
 
 The amplitude spread is a measure of the amplitude variability.
-It is computed the ratio between the standard deviation and the amplitude mean (aka coefficient of variation).
+It is computed as the ratio between the standard deviation and the amplitude mean (aka the coefficient of variation).
 To obtain a better estimate of this measure, it is first computed separately for several bins of a prefixed number of spikes
-(e.g 100) and then the median of these values is taken.
+(e.g. 100) and then the median of these values is taken.
 
 The computation requires either spike amplitudes (see :py:func:`~spikeinterface.postprocessing.compute_spike_amplitudes()`)
 or amplitude scalings (see :py:func:`~spikeinterface.postprocessing.compute_amplitude_scalings()`) to be pre-computed.
