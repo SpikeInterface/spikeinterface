@@ -11,7 +11,7 @@ import subprocess
 import sys
 import warnings
 
-from spikeinterface.core import  aggregate_units
+from spikeinterface.core import aggregate_units
 
 from .sorterlist import sorter_dict
 from .runsorter import run_sorter
@@ -28,6 +28,7 @@ _default_engine_kwargs = dict(
 
 _implemented_engine = list(_default_engine_kwargs.keys())
 
+
 def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=False):
     """
     Run several :py:func:`run_sorter()` sequentially or in parallel given a list of jobs.
@@ -38,18 +39,18 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
 
         for job in job_list:
             run_sorter(**job)
-    
+
     The following engines block the I/O:
       * "loop"
       * "joblib"
       * "multiprocessing"
       * "dask"
-    
+
     The following engines are *asynchronous*:
       * "slurm"
-    
+
     Where *blocking* means that this function is blocking until the results are returned.
-    This is in opposition to *asynchronous*, where the function returns `None` almost immediately (aka non-blocking), 
+    This is in opposition to *asynchronous*, where the function returns `None` almost immediately (aka non-blocking),
     but the results must be retrieved by hand when jobs are finished. No mechanisim is provided here to be aware
     when jobs are finish.
     In this *asynchronous* case, the :py:func:read_sorter_folder() helps to retrieve individual results.
@@ -61,7 +62,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
         A list a dict that are propagated to run_sorter(...)
     engine: str "loop", "joblib", "dask", "slurm"
         The engine to run the list.
-        * "loop": a simple loop. This engine is 
+        * "loop": a simple loop. This engine is
     engine_kwargs: dict
 
     return_output: bool, dfault False
@@ -79,8 +80,6 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
     engine_kwargs_.update(_default_engine_kwargs[engine])
     engine_kwargs_.update(engine_kwargs)
     engine_kwargs = engine_kwargs_
-    
-
 
     if return_output:
         assert engine in ("loop", "joblib", "processpoolexecutor")
@@ -109,7 +108,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
 
         max_workers = engine_kwargs["max_workers"]
         mp_context = engine_kwargs["mp_context"]
-        
+
         with ProcessPoolExecutor(max_workers=max_workers, mp_context=mp_context) as executor:
             futures = []
             for kwargs in job_list:
@@ -173,6 +172,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
 
     return out
 
+
 _slurm_script = """#! {python}
 from numpy import array
 from spikeinterface import load_extractor
@@ -187,8 +187,6 @@ kwargs['recording'] = load_extractor(rec_dict)
 
 run_sorter(**kwargs)
 """
-
-
 
 
 def run_sorter_by_property(
@@ -258,10 +256,10 @@ def run_sorter_by_property(
     """
     if mode_if_folder_exists is not None:
         warnings.warn(
-        "run_sorter_by_property(): mode_if_folder_exists is not used anymore",
-        DeprecationWarning,
-        stacklevel=2,
-    )        
+            "run_sorter_by_property(): mode_if_folder_exists is not used anymore",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     working_folder = Path(working_folder).absolute()
 
@@ -269,7 +267,7 @@ def run_sorter_by_property(
         f"The 'grouping_property' {grouping_property} is not " f"a recording property!"
     )
     recording_dict = recording.split_by(grouping_property)
-    
+
     job_list = []
     for k, rec in recording_dict.items():
         job = dict(
@@ -279,10 +277,10 @@ def run_sorter_by_property(
             verbose=verbose,
             docker_image=docker_image,
             singularity_image=singularity_image,
-            **sorter_params
+            **sorter_params,
         )
         job_list.append(job)
-    
+
     sorting_list = run_sorter_jobs(job_list, engine=engine, engine_kwargs=engine_kwargs, return_output=True)
 
     unit_groups = []
@@ -296,7 +294,6 @@ def run_sorter_by_property(
     aggregate_sorting.register_recording(recording)
 
     return aggregate_sorting
-
 
 
 # This is deprecated and will be removed
@@ -316,7 +313,7 @@ def run_sorters(
     """
     This function is deprecated and will be removed in version 0.100
     Please use run_sorter_jobs() instead.
-    
+
     Parameters
     ----------
     sorter_list: list of str
@@ -401,7 +398,6 @@ def run_sorters(
                 elif mode_if_folder_exists == "overwrite":
                     shutil.rmtree(str(output_folder))
                 elif mode_if_folder_exists == "keep":
-                    
                     if is_log_ok(output_folder):
                         continue
                     else:
@@ -418,14 +414,13 @@ def run_sorters(
                 verbose=verbose,
                 docker_image=docker_image,
                 singularity_image=singularity_image,
-                **params
+                **params,
             )
             job_list.append(job)
-        
+
     sorting_list = run_sorter_jobs(job_list, engine=engine, engine_kwargs=engine_kwargs, return_output=with_output)
 
     if with_output:
-        keys = [(rec_name, sorter_name) for rec_name in recording_dict for sorter_name in sorter_list ]
+        keys = [(rec_name, sorter_name) for rec_name in recording_dict for sorter_name in sorter_list]
         results = dict(zip(keys, sorting_list))
         return results
-

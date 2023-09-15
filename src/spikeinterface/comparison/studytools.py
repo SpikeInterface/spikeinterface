@@ -29,9 +29,6 @@ from .comparisontools import _perf_keys
 from .paircomparisons import compare_sorter_to_ground_truth
 
 
-
-
-
 # This is deprecated and will be removed
 def iter_working_folder(working_folder):
     working_folder = Path(working_folder)
@@ -54,6 +51,7 @@ def iter_working_folder(working_folder):
                     continue
                 yield rec_name, sorter_name, output_folder
 
+
 # This is deprecated and will be removed
 def iter_sorting_output(working_folder):
     """Iterator over output_folder to retrieve all triplets of (rec_name, sorter_name, sorting)."""
@@ -61,7 +59,6 @@ def iter_sorting_output(working_folder):
         SorterClass = sorter_dict[sorter_name]
         sorting = SorterClass.get_result_from_folder(output_folder)
         yield rec_name, sorter_name, sorting
-
 
 
 def setup_comparison_study(study_folder, gt_dict, **job_kwargs):
