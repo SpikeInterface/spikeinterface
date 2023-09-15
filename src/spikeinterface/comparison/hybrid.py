@@ -8,7 +8,12 @@ from spikeinterface.core import (
     NumpySorting,
 )
 from spikeinterface.core.core_tools import define_function_from_class
-from spikeinterface.core.generate import generate_sorting, InjectTemplatesRecording, _ensure_seed, generate_injected_sorting
+from spikeinterface.core.generate import (
+    generate_sorting,
+    InjectTemplatesRecording,
+    _ensure_seed,
+    generate_injected_sorting,
+)
 
 
 class HybridUnitsRecording(InjectTemplatesRecording):
@@ -197,8 +202,6 @@ class HybridSpikesRecording(InjectTemplatesRecording):
             refractory_period_ms=refractory_period_ms,
             injected_sorting_folder=None,
         )
-
-
 
 
 create_hybrid_units_recording = define_function_from_class(

@@ -235,7 +235,6 @@ def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
     return sorting
 
 
-
 def generate_injected_sorting(
     sorting: BaseSorting,
     num_samples: List[int],
@@ -274,11 +273,8 @@ def generate_injected_sorting(
     return NumpySorting.from_unit_dict(injected_spike_trains, sorting.get_sampling_frequency())
 
 
-
 class TransformedSorting(NumpySorting):
-
     def __init__(self, sorting, added_spikes={}, removed_spikes={}):
-        
         all_unit_ids = list(sorting.unit_ids)
         all_spikes = sorting.to_spike_vector()
         indices = np.arange(len(all_spikes))
@@ -293,17 +289,16 @@ class TransformedSorting(NumpySorting):
             else:
                 unit_index = all_unit_ids.index(unit_id)
 
-            mask = all_spikes['unit_index'] == unit_index
+            mask = all_spikes["unit_index"] == unit_index
 
             for segment_index in range(sorting.get_num_segments()):
-                
-                sub_mask = all_spikes[mask]['segment_index'] == segment_index
-                local_mask = unit_spikes['segment_index'] == segment_index
+                sub_mask = all_spikes[mask]["segment_index"] == segment_index
+                local_mask = unit_spikes["segment_index"] == segment_index
                 indices = all_indices[mask][sub_mask]
                 self.removed[indices] = np.isin(all_spikes[mask][sub_mask], unit_spikes[local_mask])
 
         modified_spikes = all_spikes[~self.removed]
-        
+
         spikes_added = np.zeros(0, dtype=minimum_spike_dtype)
         self.added = np.zeros(len(modified_spikes), dtype=bool)
         for unit_id, unit_spikes in added_spikes.items():
@@ -314,11 +309,11 @@ class TransformedSorting(NumpySorting):
                 unit_index = all_unit_ids.index(unit_id)
 
             for segment_index in range(sorting.get_num_segments()):
-                local_mask = unit_spikes['segment_index'] == segment_index
+                local_mask = unit_spikes["segment_index"] == segment_index
                 indices = np.ones(len(local_mask), dtype=bool)
                 self.added = np.concatenate((self.added, indices))
                 spikes_added = np.concatenate((spikes_added, unit_spikes[local_mask]))
-        
+
         modified_spikes = np.concatenate((modified_spikes, spikes_added))
 
         sort_idxs = np.lexsort([modified_spikes["sample_index"], modified_spikes["segment_index"]])
@@ -329,11 +324,9 @@ class TransformedSorting(NumpySorting):
         NumpySorting.__init__(self, modified_spikes, sorting.sampling_frequency, all_unit_ids)
 
 
-
-
 def create_sorting_npz(num_seg, file_path):
     # create a NPZ sorting file
-    d = {}  
+    d = {}
     d["unit_ids"] = np.array([0, 1, 2], dtype="int64")
     d["num_segment"] = np.array([2], dtype="int64")
     d["sampling_frequency"] = np.array([30000.0], dtype="float64")
