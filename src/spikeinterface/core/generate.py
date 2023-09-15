@@ -230,28 +230,105 @@ def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
     return sorting
 
 
-class TransformSorting(BaseSorting):
 
-    def __init__(self, sorting, added_spikes=None, removed_spikes=None):
+def generate_injected_sorting(
+    sorting: BaseSorting,
+    num_samples: List[int],
+    max_injected_per_unit: int = 1000,
+    injected_rate: float = 0.05,
+    refractory_period_ms: float = 1.5,
+) -> NumpySorting:
+    injected_spike_trains = [{} for seg_index in range(sorting.get_num_segments())]
+    t_r = int(round(refractory_period_ms * sorting.get_sampling_frequency() * 1e-3))
 
-        BaseSorting.__init__(sorting.sampling_frequency, sorting.unit_ids)
-        sorting.to_spike_vector()
-        spikes = sorting.to_spike_vector()
-        self.added_spikes = added_spikes
-        self.removed_spikes = removed_spikes
+    for segment_index in range(sorting.get_num_segments()):
+        for unit_id in sorting.unit_ids:
+            spike_train = sorting.get_unit_spike_train(unit_id, segment_index=segment_index)
+            n_injection = min(max_injected_per_unit, int(round(injected_rate * len(spike_train))))
+            # Inject more, then take out all that violate the refractory period.
+            n = int(n_injection + 10 * np.sqrt(n_injection))
+            injected_spike_train = np.sort(
+                np.random.uniform(low=0, high=num_samples[segment_index], size=n).astype(np.int64)
+            )
 
-    @propery
-    def added_spikes
+            # Remove spikes that are in the refractory period.
+            violations = np.where(np.diff(injected_spike_train) < t_r)[0]
+            injected_spike_train = np.delete(injected_spike_train, violations)
+
+            # Remove spikes that violate the refractory period of the real spikes.
+            # TODO: Need a better & faster way than this.
+            min_diff = np.min(np.abs(injected_spike_train[:, None] - spike_train[None, :]), axis=1)
+            violations = min_diff < t_r
+            injected_spike_train = injected_spike_train[~violations]
+
+            if len(injected_spike_train) > n_injection:
+                injected_spike_train = np.sort(np.random.choice(injected_spike_train, n_injection, replace=False))
+
+            injected_spike_trains[segment_index][unit_id] = injected_spike_train
+
+    return NumpySorting.from_unit_dict(injected_spike_trains, sorting.get_sampling_frequency())
 
 
-    @property
+
+class TransformedSorting(NumpySorting):
+
+    def __init__(self, sorting, added_spikes={}, removed_spikes={}):
+        
+        all_unit_ids = list(sorting.unit_ids)
+        all_spikes = sorting.to_spike_vector()
+        indices = np.arange(len(all_spikes))
+        modified_spikes = np.zeros(0, dtype=minimum_spike_dtype)
+        self.removed = np.zeros(len(all_spikes), dtype=bool)
+        self.sorting = sorting
+        all_indices = np.arange(len(all_spikes), dtype=int)
+
+        for unit_id, unit_spikes in removed_spikes.items():
+            if unit_id not in all_unit_ids:
+                raise Exception("Can not remove spikes from unit {unit_id}: not in the sorting")
+            else:
+                unit_index = all_unit_ids.index(unit_id)
+
+            mask = all_spikes['unit_index'] == unit_index
+
+            for segment_index in range(sorting.get_num_segments()):
+                
+                sub_mask = all_spikes[mask]['segment_index'] == segment_index
+                local_mask = unit_spikes['segment_index'] == segment_index
+                indices = all_indices[mask][sub_mask]
+                self.removed[indices] = np.isin(all_spikes[mask][sub_mask], unit_spikes[local_mask])
+
+        modified_spikes = all_spikes[~self.removed]
+        
+        spikes_added = np.zeros(0, dtype=minimum_spike_dtype)
+        self.added = np.zeros(len(modified_spikes), dtype=bool)
+        for unit_id, unit_spikes in added_spikes.items():
+            if unit_id not in all_unit_ids:
+                all_unit_ids += [unit_id]
+                unit_index = len(all_unit_ids) - 1
+            else:
+                unit_index = all_unit_ids.index(unit_id)
+
+            for segment_index in range(sorting.get_num_segments()):
+                local_mask = unit_spikes['segment_index'] == segment_index
+                indices = np.ones(len(local_mask), dtype=bool)
+                self.added = np.concatenate((self.added, indices))
+                spikes_added = np.concatenate((spikes_added, unit_spikes[local_mask]))
+        
+        modified_spikes = np.concatenate((modified_spikes, spikes_added))
+
+        sort_idxs = np.lexsort([modified_spikes["sample_index"], modified_spikes["segment_index"]])
+        modified_spikes = modified_spikes[sort_idxs]
+        self.added = self.added[sort_idxs]
+        self.removed = self.removed[sort_idxs]
+
+        NumpySorting.__init__(self, modified_spikes, sorting.sampling_frequency, all_unit_ids)
 
 
 
 
 def create_sorting_npz(num_seg, file_path):
     # create a NPZ sorting file
-    d = {}
+    d = {}  
     d["unit_ids"] = np.array([0, 1, 2], dtype="int64")
     d["num_segment"] = np.array([2], dtype="int64")
     d["sampling_frequency"] = np.array([30000.0], dtype="float64")
