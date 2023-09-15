@@ -47,9 +47,9 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
 
     def _select_extension_data(self, unit_ids):
         old_unit_ids = self.waveform_extractor.sorting.unit_ids
-        unit_inds = np.flatnonzero(np.in1d(old_unit_ids, unit_ids))
+        unit_inds = np.flatnonzero(np.isin(old_unit_ids, unit_ids))
 
-        spike_mask = np.in1d(self.spikes["unit_index"], unit_inds)
+        spike_mask = np.isin(self.spikes["unit_index"], unit_inds)
         new_amplitude_scalings = self._extension_data["amplitude_scalings"][spike_mask]
         return dict(amplitude_scalings=new_amplitude_scalings)
 

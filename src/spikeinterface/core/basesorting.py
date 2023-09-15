@@ -346,7 +346,7 @@ class BaseSorting(BaseExtractor):
         """
         from spikeinterface import UnitsSelectionSorting
 
-        new_unit_ids = self.unit_ids[~np.in1d(self.unit_ids, remove_unit_ids)]
+        new_unit_ids = self.unit_ids[~np.isin(self.unit_ids, remove_unit_ids)]
         new_sorting = UnitsSelectionSorting(self, new_unit_ids)
         return new_sorting
 

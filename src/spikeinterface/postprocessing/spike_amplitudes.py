@@ -28,13 +28,13 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         # load filter and save amplitude files
         sorting = self.waveform_extractor.sorting
         spikes = sorting.to_spike_vector(concatenated=False)
-        (keep_unit_indices,) = np.nonzero(np.in1d(sorting.unit_ids, unit_ids))
+        (keep_unit_indices,) = np.nonzero(np.isin(sorting.unit_ids, unit_ids))
 
         new_extension_data = dict()
         for seg_index in range(sorting.get_num_segments()):
             amp_data_name = f"amplitude_segment_{seg_index}"
             amps = self._extension_data[amp_data_name]
-            filtered_idxs = np.in1d(spikes[seg_index]["unit_index"], keep_unit_indices)
+            filtered_idxs = np.isin(spikes[seg_index]["unit_index"], keep_unit_indices)
             new_extension_data[amp_data_name] = amps[filtered_idxs]
         return new_extension_data
 
