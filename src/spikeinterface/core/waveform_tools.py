@@ -350,7 +350,9 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_ctx
     # take only spikes in range [start_frame, end_frame]
     # this is a slice so no copy!!
     # the border of segment are protected by nbefore on left an nafter on the right
-    i0, i1 = np.searchsorted(in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)])
+    i0, i1 = np.searchsorted(
+        in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)]
+    )
 
     # slice in absolut in spikes vector
     l0 = i0 + s0
@@ -587,7 +589,9 @@ def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, work
     # take only spikes in range [start_frame, end_frame]
     # this is a slice so no copy!!
     # the border of segment are protected by nbefore on left an nafter on the right
-    i0, i1 = np.searchsorted(in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)])
+    i0, i1 = np.searchsorted(
+        in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)]
+    )
 
     # slice in absolut in spikes vector
     l0 = i0 + s0
