@@ -17,7 +17,7 @@ from ..core.template_tools import get_template_extremum_channel
 
 dtype_localize_by_method = {
     "center_of_mass": [("x", "float64"), ("y", "float64")],
-    "grid_convolution": [("x", "float64"), ("y", "float64")],
+    "grid_convolution": [("x", "float64"), ("y", "float64"), ("z", "float64")],
     "peak_channel": [("x", "float64"), ("y", "float64")],
     "monopolar_triangulation": [("x", "float64"), ("y", "float64"), ("z", "float64"), ("alpha", "float64")],
 }
@@ -379,6 +379,7 @@ def compute_grid_convolution(
     prototype=None,
     percentile=10,
     sparsity_threshold=0.01,
+    mode='2d'
 ):
     """
     Estimate the positions of the templates from a large grid of fake templates
@@ -437,7 +438,12 @@ def compute_grid_convolution(
 
     weights_sparsity_mask = weights > sparsity_threshold
 
-    unit_location = np.zeros((unit_ids.size, 2), dtype="float64")
+    if mode == '2d':
+        ndim = 2
+    else:
+        ndim = 3
+
+    unit_location = np.zeros((unit_ids.size, ndim), dtype="float64")
     for i, unit_id in enumerate(unit_ids):
         main_chan = peak_channels[unit_id]
         wf = templates[i, :, :]
@@ -451,8 +457,6 @@ def compute_grid_convolution(
         dot_products = np.zeros((weights.shape[0], num_templates), dtype=np.float32)
         for count in range(weights.shape[0]):
             w = weights[count, :, :][channel_mask, :][:, nearest_templates]
-            # w = w / np.sum(w, axis=0)[np.newaxis, None]
-            # w[np.isnan(w)] = 0.
             dot_products[count, :] = np.dot(global_products, w)
 
         dot_products = np.maximum(0, dot_products)
@@ -460,13 +464,17 @@ def compute_grid_convolution(
             thresholds = np.percentile(dot_products, percentile, axis=0)
             dot_products[dot_products < thresholds[np.newaxis, :]] = 0
 
-        found_positions = np.zeros(2, dtype=np.float32)
+        found_positions = np.zeros(ndim, dtype=np.float32)
         scalar_products = np.zeros(num_templates, dtype=np.float32)
         for count in range(weights.shape[0]):
             scalar_products += dot_products[count]
-            found_positions += np.dot(dot_products[count], template_positions[nearest_templates])
+            found_positions[:, :2] += np.dot(dot_products[count], template_positions[nearest_templates])
 
         unit_location[i, :] = found_positions / scalar_products.sum()
+
+        if mode == '3d':
+            best_template = np.argmin(np.linalg.norm(template_positions, unit_location[i, :]), axis=1))
+
 
     return unit_location
 

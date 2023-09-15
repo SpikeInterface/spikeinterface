@@ -336,6 +336,7 @@ class LocalizeGridConvolution(PipelineNode):
         prototype=None,
         percentile=5.0,
         sparsity_threshold=0.01,
+        mode='2d'
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -344,6 +345,7 @@ class LocalizeGridConvolution(PipelineNode):
         self.margin_um = margin_um
         self.upsampling_um = upsampling_um
         self.percentile = 100 - percentile
+        self.mode = mode
         assert 0 <= self.percentile <= 100, "Percentile should be in [0, 100]"
         self.sparsity_threshold = sparsity_threshold
         assert 0 <= self.sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
