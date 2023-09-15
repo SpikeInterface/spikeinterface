@@ -130,7 +130,7 @@ Parameters from all sorters can be retrieved with these functions:
 .. _containerizedsorters:
 
 Running sorters in Docker/Singularity Containers
------------------------------------------------
+------------------------------------------------
 
 One of the biggest bottlenecks for users is installing spike sorting software. To alleviate this,
 we build and maintain containerized versions of several popular spike sorters on the
