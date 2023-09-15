@@ -155,7 +155,7 @@ def interpolate_motion_on_traces(
             **spatial_interpolation_kwargs,
         )
 
-        i0, i1 = np.searchsorted(bin_inds, [bin_ind, bin_ind + 1] side="left")
+        i0, i1 = np.searchsorted(bin_inds, [bin_ind, bin_ind + 1], side="left")
 
         # here we use a simple np.matmul even if dirft_kernel can be super sparse.
         # because the speed for a sparse matmul is not so good when we disable multi threaad (due multi processing
