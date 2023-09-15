@@ -32,9 +32,9 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 
     def _select_extension_data(self, unit_ids):
         old_unit_ids = self.waveform_extractor.sorting.unit_ids
-        unit_inds = np.flatnonzero(isin(old_unit_ids, unit_ids))
+        unit_inds = np.flatnonzero(np.in1d(old_unit_ids, unit_ids))
 
-        spike_mask = isin(self.spikes["unit_index"], unit_inds)
+        spike_mask = np.in1d(self.spikes["unit_index"], unit_inds)
         new_spike_locations = self._extension_data["spike_locations"][spike_mask]
         return dict(spike_locations=new_spike_locations)
 
