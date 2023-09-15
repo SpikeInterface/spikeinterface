@@ -736,6 +736,7 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
     """Calculates the simplified silhouette score for each cluster. The value ranges
     from -1 (bad clustering) to 1 (good clustering). The simplified silhoutte score
     utilizes the centroids for distance calculations rather than pairwise calculations.
+
     Parameters
     ----------
     all_pcs : 2d array
@@ -744,12 +745,14 @@ def simplified_silhouette_score(all_pcs, all_labels, this_unit_id):
         The cluster labels for all spikes. Must have length of number of spikes.
     this_unit_id : int
         The ID for the unit to calculate this metric for.
+
     Returns
     -------
     unit_silhouette_score : float
         Simplified Silhouette Score for this unit
+
     References
-    ------------
+    ----------
     Based on simplified silhouette score suggested by [Hruschka]_
     """
 
@@ -782,6 +785,7 @@ def silhouette_score(all_pcs, all_labels, this_unit_id):
     """Calculates the silhouette score which is a marker of cluster quality ranging from
     -1 (bad clustering) to 1 (good clustering). Distances are all calculated as pairwise
     comparisons of all data points.
+
     Parameters
     ----------
     all_pcs : 2d array
@@ -790,12 +794,14 @@ def silhouette_score(all_pcs, all_labels, this_unit_id):
         The cluster labels for all spikes. Must have length of number of spikes.
     this_unit_id : int
         The ID for the unit to calculate this metric for.
+
     Returns
     -------
     unit_silhouette_score : float
         Silhouette Score for this unit
+
     References
-    ------------
+    ----------
     Based on [Rousseeuw]_
     """
 

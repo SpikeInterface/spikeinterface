@@ -26,6 +26,7 @@ class TracesWidget(BaseWidget):
         List with start time and end time, default None
     mode: str
         Three possible modes, default 'auto':
+
         * 'line': classical for low channel count
         * 'map': for high channel count use color heat map
         * 'auto': auto switch depending on the channel count ('line' if less than 64 channels, 'map' otherwise)
@@ -51,11 +52,6 @@ class TracesWidget(BaseWidget):
         For 'map' mode and sortingview backend, seconds to render in each row, default 0.2
     add_legend : bool
         If True adds legend to figures, default True
-
-    Returns
-    -------
-    W: TracesWidget
-        The output widget
     """
 
     def __init__(
