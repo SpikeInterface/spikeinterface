@@ -34,6 +34,7 @@ jobs:
               echo "DeepInterpolation changed"
               echo "DEEPINTERPOLATION_CHANGED=true" >> $GITHUB_OUTPUT
             fi
+          done
       - name: Install dependencies
         if: ${{ steps.modules-changed.outputs.DEEPINTERPOLATION_CHANGED == 'true' }}
         run: |
