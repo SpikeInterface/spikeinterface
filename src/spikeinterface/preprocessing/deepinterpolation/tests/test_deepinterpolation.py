@@ -24,8 +24,6 @@ if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "deepinterpolation"
 else:
     cache_folder = Path("cache_folder") / "deepinterpolation"
-    if not cache_folder.is_dir():
-        cache_folder.mkdir(parents=True)
 
 
 def recording_and_shape():
@@ -147,6 +145,7 @@ def test_deepinterpolation_inference(recording_and_shape_fixture):
     np.any(np.not_equal(traces_di_last[:-post_frame:], traces_original_last[:-post_frame:]))
 
 
+@pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
 @pytest.mark.dependency(depends=["test_deepinterpolation_training"])
 def test_deepinterpolation_inference_multi_job(recording_and_shape_fixture):
     recording, desired_shape = recording_and_shape_fixture
@@ -172,7 +171,7 @@ def test_deepinterpolation_inference_multi_job(recording_and_shape_fixture):
 
 if __name__ == "__main__":
     recording_shape = recording_and_shape()
-    # test_deepinterpolation_training(recording_shape)
+    test_deepinterpolation_training(recording_shape)
     # test_deepinterpolation_transfer()
     test_deepinterpolation_inference(recording_shape)
     # test_deepinterpolation_inference_multi_job()

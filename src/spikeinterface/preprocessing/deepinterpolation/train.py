@@ -204,7 +204,7 @@ def train_deepinterpolation_process(
     _ = import_tf(use_gpu, disable_tf_logger, memory_gpu=memory_gpu)
 
     trained_model_folder = Path(model_folder)
-    trained_model_folder.mkdir(exist_ok=True)
+    trained_model_folder.mkdir(exist_ok=True, parents=True)
 
     # check if roughly zscored
     if not isinstance(recordings, list):
