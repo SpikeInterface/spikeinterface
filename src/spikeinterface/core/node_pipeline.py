@@ -124,7 +124,7 @@ class PeakRetriever(PeakSource):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        i0, i1 = np.searchsorted(peaks_in_segment["segment_index"], [start_frame, end_frame])
+        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
@@ -194,7 +194,7 @@ class SpikeRetriever(PeakSource):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        i0, i1 = np.searchsorted(peaks_in_segment["segment_index"], [start_frame, end_frame])
+        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
