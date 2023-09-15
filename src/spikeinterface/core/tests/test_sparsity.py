@@ -34,7 +34,7 @@ def test_ChannelSparsity():
 
         for key, v in sparsity.unit_id_to_channel_ids.items():
             assert key in unit_ids
-            assert np.all(np.in1d(v, channel_ids))
+            assert np.all(isin(v, channel_ids))
 
         for key, v in sparsity.unit_id_to_channel_indices.items():
             assert key in unit_ids

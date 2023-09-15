@@ -152,8 +152,8 @@ def calculate_pc_metrics(
             neighbor_unit_ids = unit_ids
         neighbor_channel_indices = we.channel_ids_to_indices(neighbor_channel_ids)
 
-        labels = all_labels[np.in1d(all_labels, neighbor_unit_ids)]
-        pcs = all_pcs[np.in1d(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
+        labels = all_labels[isin(all_labels, neighbor_unit_ids)]
+        pcs = all_pcs[isin(all_labels, neighbor_unit_ids)][:, :, neighbor_channel_indices]
         pcs_flat = pcs.reshape(pcs.shape[0], -1)
 
         func_args = (
@@ -506,7 +506,7 @@ def nearest_neighbors_isolation(
         other_units_ids = [
             unit_id
             for unit_id in other_units_ids
-            if np.sum(np.in1d(sparsity.unit_id_to_channel_indices[unit_id], closest_chans_target_unit))
+            if np.sum(isin(sparsity.unit_id_to_channel_indices[unit_id], closest_chans_target_unit))
             >= (n_channels_target_unit * min_spatial_overlap)
         ]
 
@@ -536,10 +536,10 @@ def nearest_neighbors_isolation(
                 if waveform_extractor.is_sparse():
                     # in this case, waveforms are sparse so we need to do some smart indexing
                     waveforms_target_unit_sampled = waveforms_target_unit_sampled[
-                        :, :, np.in1d(closest_chans_target_unit, common_channel_idxs)
+                        :, :, isin(closest_chans_target_unit, common_channel_idxs)
                     ]
                     waveforms_other_unit_sampled = waveforms_other_unit_sampled[
-                        :, :, np.in1d(closest_chans_other_unit, common_channel_idxs)
+                        :, :, isin(closest_chans_other_unit, common_channel_idxs)
                     ]
                 else:
                     waveforms_target_unit_sampled = waveforms_target_unit_sampled[:, :, common_channel_idxs]

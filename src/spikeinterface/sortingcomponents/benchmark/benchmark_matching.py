@@ -502,7 +502,7 @@ def plot_errors_matching(benchmark, comp, unit_id, nb_spikes=200, metric="cosine
         seg_num = 0  # TODO: make compatible with multiple segments
         idx_1 = np.where(comp.get_labels1(unit_id)[seg_num] == label)
         idx_2 = benchmark.we.get_sampled_indices(unit_id)["spike_index"]
-        intersection = np.where(np.in1d(idx_2, idx_1))[0]
+        intersection = np.where(isin(idx_2, idx_1))[0]
         intersection = np.random.permutation(intersection)[:nb_spikes]
         if len(intersection) == 0:
             print(f"No {label}s found for unit {unit_id}")
@@ -552,7 +552,7 @@ def plot_errors_matching_all_neurons(benchmark, comp, nb_spikes=200, metric="cos
 
         for label in ["TP", "FN"]:
             idx_1 = np.where(comp.get_labels1(unit_id) == label)[0]
-            intersection = np.where(np.in1d(idx_2, idx_1))[0]
+            intersection = np.where(isin(idx_2, idx_1))[0]
             intersection = np.random.permutation(intersection)[:nb_spikes]
             wfs_sliced = wfs[intersection, :, :]
 
