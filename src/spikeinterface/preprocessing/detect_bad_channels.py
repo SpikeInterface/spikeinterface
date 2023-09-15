@@ -17,7 +17,7 @@ def detect_bad_channels(
     n_neighbors=11,
     nyquist_threshold=0.8,
     direction="y",
-    chunk_duration_s=.5,
+    chunk_duration_s=0.5,
     num_random_chunks=100,
     welch_window_ms=10.0,
     highpass_filter_cutoff=300,
