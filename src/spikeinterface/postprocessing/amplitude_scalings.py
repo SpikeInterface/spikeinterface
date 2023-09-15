@@ -99,8 +99,7 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         # precompute segment slice
         segment_slices = []
         for segment_index in range(we.get_num_segments()):
-            i0 = np.searchsorted(self.spikes["segment_index"], segment_index)
-            i1 = np.searchsorted(self.spikes["segment_index"], segment_index + 1)
+            i0, i1 = np.searchsorted(self.spikes["segment_index"], [segment_index, segment_index + 1])
             segment_slices.append(slice(i0, i1))
 
         # and run

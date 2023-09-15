@@ -111,8 +111,7 @@ class PeakRetriever(PeakSource):
         # precompute segment slice
         self.segment_slices = []
         for segment_index in range(recording.get_num_segments()):
-            i0 = np.searchsorted(peaks["segment_index"], segment_index)
-            i1 = np.searchsorted(peaks["segment_index"], segment_index + 1)
+            i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
             self.segment_slices.append(slice(i0, i1))
 
     def get_trace_margin(self):
@@ -125,8 +124,7 @@ class PeakRetriever(PeakSource):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        i0 = np.searchsorted(peaks_in_segment["sample_index"], start_frame)
-        i1 = np.searchsorted(peaks_in_segment["sample_index"], end_frame)
+        i0, i1 = np.searchsorted(peaks_in_segment["segment_index"], [start_frame, end_frame])
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
@@ -183,8 +181,7 @@ class SpikeRetriever(PeakSource):
         # precompute segment slice
         self.segment_slices = []
         for segment_index in range(recording.get_num_segments()):
-            i0 = np.searchsorted(self.peaks["segment_index"], segment_index)
-            i1 = np.searchsorted(self.peaks["segment_index"], segment_index + 1)
+            i0, i1 = np.searchsorted(self.peaks["segment_index"], [segment_index, segment_index + 1])
             self.segment_slices.append(slice(i0, i1))
 
     def get_trace_margin(self):
@@ -197,8 +194,7 @@ class SpikeRetriever(PeakSource):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        i0 = np.searchsorted(peaks_in_segment["sample_index"], start_frame)
-        i1 = np.searchsorted(peaks_in_segment["sample_index"], end_frame)
+        i0, i1 = np.searchsorted(peaks_in_segment["segment_index"], [start_frame, end_frame])
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces

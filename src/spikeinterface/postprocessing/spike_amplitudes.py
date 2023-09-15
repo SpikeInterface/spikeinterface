@@ -218,9 +218,7 @@ def _spike_amplitudes_chunk(segment_index, start_frame, end_frame, worker_ctx):
     d = np.diff(spike_times)
     assert np.all(d >= 0)
 
-    i0 = np.searchsorted(spike_times, start_frame)
-    i1 = np.searchsorted(spike_times, end_frame)
-
+    i0, i1 = np.searchsorted(spike_times, [start_frame, end_frame])
     n_spikes = i1 - i0
     amplitudes = np.zeros(n_spikes, dtype=recording.get_dtype())
 

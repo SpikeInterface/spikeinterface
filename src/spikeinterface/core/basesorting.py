@@ -473,8 +473,7 @@ class BaseSorting(BaseExtractor):
             if not concatenated:
                 spikes_ = []
                 for segment_index in range(self.get_num_segments()):
-                    s0 = np.searchsorted(spikes["segment_index"], segment_index, side="left")
-                    s1 = np.searchsorted(spikes["segment_index"], segment_index + 1, side="left")
+                    s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1], side="left")
                     spikes_.append(spikes[s0:s1])
                 spikes = spikes_
 

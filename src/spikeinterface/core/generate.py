@@ -1109,8 +1109,7 @@ class InjectTemplatesRecording(BaseRecording):
             num_samples = [num_samples]
 
         for segment_index in range(sorting.get_num_segments()):
-            start = np.searchsorted(self.spike_vector["segment_index"], segment_index, side="left")
-            end = np.searchsorted(self.spike_vector["segment_index"], segment_index, side="right")
+            start, end = np.searchsorted(self.spike_vector["segment_index"], [segment_index, segment_index+1], side="left")
             spikes = self.spike_vector[start:end]
             amplitude_vec = amplitude_vector[start:end] if amplitude_vector is not None else None
             upsample_vec = upsample_vector[start:end] if upsample_vector is not None else None
@@ -1208,8 +1207,8 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         else:
             traces = np.zeros([end_frame - start_frame, n_channels], dtype=self.dtype)
 
-        start = np.searchsorted(self.spike_vector["sample_index"], start_frame - self.templates.shape[1], side="left")
-        end = np.searchsorted(self.spike_vector["sample_index"], end_frame + self.templates.shape[1], side="right")
+        start, end = np.searchsorted(self.spike_vector["sample_index"], [start_frame - self.templates.shape[1], 
+                                                                    end_frame + self.templates.shape[1] + 1], side="left")
 
         for i in range(start, end):
             spike = self.spike_vector[i]
