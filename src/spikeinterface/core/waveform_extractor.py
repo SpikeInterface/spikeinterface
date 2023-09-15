@@ -523,20 +523,20 @@ class WaveformExtractor:
         """
         if self.folder is None:
             return extension_name in self._loaded_extensions
+
+        if extension_name in self._loaded_extensions:
+            # extension already loaded in memory
+            return True
         else:
-            # Extensions already loaded in memory
-            if extension_name in self._loaded_extensions:
-                return True
-            else:
-                if self.format == "binary":
-                    return (self.folder / extension_name).is_dir() and (
-                        self.folder / extension_name / "params.json"
-                    ).is_file()
-                elif self.format == "zarr":
-                    return (
-                        extension_name in self._waveforms_root.keys()
-                        and "params" in self._waveforms_root[extension_name].attrs.keys()
-                    )
+            if self.format == "binary":
+                return (self.folder / extension_name).is_dir() and (
+                    self.folder / extension_name / "params.json"
+                ).is_file()
+            elif self.format == "zarr":
+                return (
+                    extension_name in self._waveforms_root.keys()
+                    and "params" in self._waveforms_root[extension_name].attrs.keys()
+                )
 
     def load_extension(self, extension_name):
         """
