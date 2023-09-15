@@ -11,6 +11,15 @@ from spikeinterface.preprocessing.deepinterpolation import train_deepinterpolati
 from spikeinterface.preprocessing.deepinterpolation import train_deepinterpolation, deepinterpolate
 
 
+try:
+    import tensorflow
+    import deepinterpolation
+
+    HAVE_DEEPINTERPOLATION = True
+except ImportError:
+    HAVE_DEEPINTERPOLATION = False
+
+
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "deepinterpolation"
 else:
@@ -37,6 +46,7 @@ def recording_and_shape_fixture():
     return recording_and_shape()
 
 
+@pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
 def test_deepinterpolation_generator_borders(recording_and_shape_fixture):
     """Test that the generator avoids borders in multi-segment and recording lists cases"""
     from spikeinterface.preprocessing.deepinterpolation.generators import SpikeInterfaceRecordingGenerator
@@ -58,6 +68,7 @@ def test_deepinterpolation_generator_borders(recording_and_shape_fixture):
     assert len(gen_multi_list.exclude_intervals) == 2 * len(recording_multi_list) + 2
 
 
+@pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
 def test_deepinterpolation_training(recording_and_shape_fixture):
     recording, desired_shape = recording_and_shape_fixture
 
@@ -82,6 +93,7 @@ def test_deepinterpolation_training(recording_and_shape_fixture):
     print(model_path)
 
 
+@pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
 @pytest.mark.dependency(depends=["test_deepinterpolation_training"])
 def test_deepinterpolation_transfer(recording_and_shape_fixture, tmp_path):
     recording, desired_shape = recording_and_shape_fixture
@@ -109,6 +121,7 @@ def test_deepinterpolation_transfer(recording_and_shape_fixture, tmp_path):
     print(model_path)
 
 
+@pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
 @pytest.mark.dependency(depends=["test_deepinterpolation_training"])
 def test_deepinterpolation_inference(recording_and_shape_fixture):
     recording, desired_shape = recording_and_shape_fixture
