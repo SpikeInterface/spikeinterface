@@ -304,7 +304,7 @@ def detect_bad_channels_ibl(
     n_neighbors : int, optional
         Number of neighbors to compute median fitler, by default 11
     nyquist_threshold : float, optional
-        Threshold on Nyquist frequency to calcureclate HF noise band, by default 0.8
+        Threshold on Nyquist frequency to calculate HF noise band, by default 0.8
     welch_window_ms: float
         Window size for the scipy.signal.welch that will be converted to nperseg, by default 10ms
     Returns
