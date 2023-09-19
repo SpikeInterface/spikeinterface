@@ -239,7 +239,7 @@ There are three options:
 1. **released PyPi version**: if you installed :code:`spikeinterface` with :code:`pip install spikeinterface`,
    the latest released version will be installed in the container.
 
-2. **development :code:`main` version**: if you installed :code:`spikeinterface` from source from the cloned repo
+2. **development** :code:`main` **version**: if you installed :code:`spikeinterface` from source from the cloned repo
    (with :code:`pip install .`) or with :code:`pip install git+https://github.com/SpikeInterface/spikeinterface.git`,
    the current development version from the :code:`main` branch will be installed in the container.
 
@@ -458,7 +458,7 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **Kilosort**  :code:`run_sorter('kilosort')`
 * **Kilosort2** :code:`run_sorter('kilosort2')`
 * **Kilosort2.5** :code:`run_sorter('kilosort2_5')`
-* **Kilosort3** :code:`run_sorter('Kilosort3')`
+* **Kilosort3** :code:`run_sorter('kilosort3')`
 * **PyKilosort** :code:`run_sorter('pykilosort')`
 * **Klusta** :code:`run_sorter('klusta')`
 * **Mountainsort4** :code:`run_sorter('mountainsort4')`
@@ -474,7 +474,7 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 Here a list of internal sorter based on `spikeinterface.sortingcomponents`; they are totally
 experimental for now:
 
-* **Spyking circus2** :code:`run_sorter('spykingcircus2')`
+* **Spyking Circus2** :code:`run_sorter('spykingcircus2')`
 * **Tridesclous2** :code:`run_sorter('tridesclous2')`
 
 In 2023, we expect to add many more sorters to this list.

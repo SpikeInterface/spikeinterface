@@ -223,7 +223,7 @@ Here is a short example that depends on the output of "Motion interpolation":
 
 **Notes**:
   * :code:`spatial_interpolation_method` "kriging" or "iwd" do not play a big role.
-  * :code:`border_mode` is a very important parameter. It controls how to deal with the border because motion causes units on the
+  * :code:`border_mode` is a very important parameter. It controls dealing with the border because motion causes units on the
     border to not be present throughout the entire recording. We highly recommend the :code:`border_mode='remove_channels'`
     because this removes channels on the border that will be impacted by drift. Of course the larger the motion is
     the more channels are removed.
@@ -278,7 +278,7 @@ At the moment, there are five methods implemented:
   * 'naive': a very naive implemenation used as a reference for benchmarks
   * 'tridesclous': the algorithm for template matching implemented in Tridesclous
   * 'circus': the algorithm for template matching implemented in SpyKING-Circus
-  * 'circus-omp': a updated algorithm similar to SpyKING-Circus but with OMP (orthogonal macthing
+  * 'circus-omp': a updated algorithm similar to SpyKING-Circus but with OMP (orthogonal matching
     pursuit)
   * 'wobble' : an algorithm loosely based on YASS that scales template amplitudes and shifts them in time
     to match detected spikes
