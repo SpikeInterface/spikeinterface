@@ -51,9 +51,9 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
 
     Where *blocking* means that this function is blocking until the results are returned.
     This is in opposition to *asynchronous*, where the function returns `None` almost immediately (aka non-blocking),
-    but the results must be retrieved by hand when jobs are finished. No mechanisim is provided here to be aware
+    but the results must be retrieved by hand when jobs are finished. No mechanisim is provided here to be know
     when jobs are finish.
-    In this *asynchronous* case, the :py:func:read_sorter_folder() helps to retrieve individual results.
+    In this *asynchronous* case, the :py:func:`~spikeinterface.sorters.read_sorter_folder()` helps to retrieve individual results.
 
 
     Parameters
@@ -82,7 +82,7 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
     engine_kwargs = engine_kwargs_
 
     if return_output:
-        assert engine in ("loop", "joblib", "processpoolexecutor")
+        assert engine in ("loop", "joblib", "processpoolexecutor"), "Only 'loop', 'joblib', and 'processpoolexecutor' support return_output=True."
         out = []
     else:
         out = None
@@ -355,7 +355,7 @@ def run_sorters(
     """
 
     warnings.warn(
-        "run_sorters()is deprecated please use run_sorter_jobs() instead. This will be removed in 0.100",
+        "run_sorters() is deprecated please use run_sorter_jobs() instead. This will be removed in 0.100",
         DeprecationWarning,
         stacklevel=2,
     )
