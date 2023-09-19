@@ -338,8 +338,7 @@ class NumpySortingSegment(BaseSortingSegment):
         if self.spikes_in_seg is None:
             # the slicing of segment is done only once the first time
             # this fasten the constructor a lot
-            s0 = np.searchsorted(self.spikes["segment_index"], self.segment_index, side="left")
-            s1 = np.searchsorted(self.spikes["segment_index"], self.segment_index + 1, side="left")
+            s0, s1 = np.searchsorted(self.spikes["segment_index"], [self.segment_index, self.segment_index + 1])
             self.spikes_in_seg = self.spikes[s0:s1]
 
         unit_index = self.unit_ids.index(unit_id)
