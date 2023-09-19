@@ -1209,11 +1209,9 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         else:
             traces = np.zeros([end_frame - start_frame, n_channels], dtype=self.dtype)
 
-        start, end = np.searchsorted(
-            self.spike_vector["sample_index"],
-            [start_frame - self.templates.shape[1], end_frame + self.templates.shape[1] + 1],
-            side="left",
-        )
+        start = np.searchsorted(self.spike_vector["sample_index"], start_frame - self.templates.shape[1], side="left")
+        end = np.searchsorted(self.spike_vector["sample_index"], end_frame + self.templates.shape[1], side="right")
+
 
         for i in range(start, end):
             spike = self.spike_vector[i]
