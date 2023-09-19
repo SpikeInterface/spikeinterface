@@ -17,10 +17,7 @@ from spikeinterface.qualitymetrics import compute_quality_metrics
 from .paircomparisons import compare_sorter_to_ground_truth, GroundTruthComparison
 
 
-# TODO : save comparison in folders when COmparison object will be able to serialize
-# TODO ??: make an internal optional binary copy when running several external sorter
-# on the same dataset to avoid multiple save binary ? even when the recording is float32 (ks need int16)
-
+# TODO later : save comparison in folders when comparison object will be able to serialize
 
 
 # This is to separate names when the key are tuples when saving folders

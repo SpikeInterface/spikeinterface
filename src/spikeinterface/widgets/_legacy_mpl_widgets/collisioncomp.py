@@ -1,7 +1,6 @@
 import numpy as np
 
 from .basewidget import BaseWidget
-from spikeinterface.comparison import CollisionGTComparison
 
 
 class ComparisonCollisionPairByPairWidget(BaseWidget):
