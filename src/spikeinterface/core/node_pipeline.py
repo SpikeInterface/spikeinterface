@@ -536,7 +536,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
                 )
                 node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
             else:
-                node_output = (np.zeros(0, dtype=base_peak_dtype), )
+                node_output = (np.zeros(0, dtype=base_peak_dtype),)
         else:
             # TODO later when in master: change the signature of all nodes (or maybe not!)
             traces_chunk, left_margin, right_margin = get_chunk_with_margin(
