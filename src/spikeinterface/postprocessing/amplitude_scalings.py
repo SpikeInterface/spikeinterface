@@ -99,8 +99,7 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         # precompute segment slice
         segment_slices = []
         for segment_index in range(we.get_num_segments()):
-            i0 = np.searchsorted(self.spikes["segment_index"], segment_index)
-            i1 = np.searchsorted(self.spikes["segment_index"], segment_index + 1)
+            i0, i1 = np.searchsorted(self.spikes["segment_index"], [segment_index, segment_index + 1])
             segment_slices.append(slice(i0, i1))
 
         # and run
@@ -317,8 +316,7 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
 
     spikes_in_segment = spikes[segment_slices[segment_index]]
 
-    i0 = np.searchsorted(spikes_in_segment["sample_index"], start_frame)
-    i1 = np.searchsorted(spikes_in_segment["sample_index"], end_frame)
+    i0, i1 = np.searchsorted(spikes_in_segment["sample_index"], [start_frame, end_frame])
 
     if i0 != i1:
         local_spikes = spikes_in_segment[i0:i1]
@@ -335,8 +333,9 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
         # set colliding spikes apart (if needed)
         if handle_collisions:
             # local spikes with margin!
-            i0_margin = np.searchsorted(spikes_in_segment["sample_index"], start_frame - left)
-            i1_margin = np.searchsorted(spikes_in_segment["sample_index"], end_frame + right)
+            i0_margin, i1_margin = np.searchsorted(
+                spikes_in_segment["sample_index"], [start_frame - left, end_frame + right]
+            )
             local_spikes_w_margin = spikes_in_segment[i0_margin:i1_margin]
             collisions_local = find_collisions(
                 local_spikes, local_spikes_w_margin, delta_collision_samples, unit_inds_to_channel_indices
@@ -462,14 +461,11 @@ def find_collisions(spikes, spikes_w_margin, delta_collision_samples, unit_inds_
         spike_index_w_margin = np.where(spikes_w_margin == spike)[0][0]
 
         # find the possible spikes per and post within delta_collision_samples
-        consecutive_window_pre = np.searchsorted(
+        consecutive_window_pre, consecutive_window_post = np.searchsorted(
             spikes_w_margin["sample_index"],
-            spike["sample_index"] - delta_collision_samples,
+            [spike["sample_index"] - delta_collision_samples, spike["sample_index"] + delta_collision_samples],
         )
-        consecutive_window_post = np.searchsorted(
-            spikes_w_margin["sample_index"],
-            spike["sample_index"] + delta_collision_samples,
-        )
+
         # exclude the spike itself (it is included in the collision_spikes by construction)
         pre_possible_consecutive_spike_indices = np.arange(consecutive_window_pre, spike_index_w_margin)
         post_possible_consecutive_spike_indices = np.arange(spike_index_w_margin + 1, consecutive_window_post)
