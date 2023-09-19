@@ -9,6 +9,7 @@ from .autocorrelograms import AutoCorrelogramsWidget
 from .confusion_matrix import ConfusionMatrixWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
 from .motion import MotionWidget
+from .probe_map import ProbeMapWidget
 from .quality_metrics import QualityMetricsWidget
 from .sorting_summary import SortingSummaryWidget
 from .spike_locations import SpikeLocationsWidget
@@ -32,6 +33,7 @@ widget_list = [
     ConfusionMatrixWidget,
     CrossCorrelogramsWidget,
     MotionWidget,
+    ProbeMapWidget,
     QualityMetricsWidget,
     SortingSummaryWidget,
     SpikeLocationsWidget,
@@ -87,6 +89,7 @@ plot_autocorrelograms = AutoCorrelogramsWidget
 plot_confusion_matrix = ConfusionMatrixWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_motion = MotionWidget
+plot_probe_map = ProbeMapWidget
 plot_quality_metrics = QualityMetricsWidget
 plot_sorting_summary = SortingSummaryWidget
 plot_spike_locations = SpikeLocationsWidget
