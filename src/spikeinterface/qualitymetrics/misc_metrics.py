@@ -550,7 +550,7 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), uni
             # some segments/units might have no spikes
             if len(spikes_per_unit) == 0:
                 continue
-            spike_complexity = complexity[np.in1d(unique_spike_index, spikes_per_unit["sample_index"])]
+            spike_complexity = complexity[np.isin(unique_spike_index, spikes_per_unit["sample_index"])]
             for synchrony_size in synchrony_sizes:
                 synchrony_counts[synchrony_size][unit_id] += np.count_nonzero(spike_complexity >= synchrony_size)
 
@@ -1018,16 +1018,14 @@ def compute_drift_metrics(
         spike_vector = sorting.to_spike_vector()
 
         # retrieve spikes in segment
-        i0 = np.searchsorted(spike_vector["segment_index"], segment_index)
-        i1 = np.searchsorted(spike_vector["segment_index"], segment_index + 1)
+        i0, i1 = np.searchsorted(spike_vector["segment_index"], [segment_index, segment_index + 1])
         spikes_in_segment = spike_vector[i0:i1]
         spike_locations_in_segment = spike_locations[i0:i1]
 
         # compute median positions (if less than min_spikes_per_interval, median position is 0)
         median_positions = np.nan * np.zeros((len(unit_ids), num_bin_edges - 1))
         for bin_index, (start_frame, end_frame) in enumerate(zip(bins[:-1], bins[1:])):
-            i0 = np.searchsorted(spikes_in_segment["sample_index"], start_frame)
-            i1 = np.searchsorted(spikes_in_segment["sample_index"], end_frame)
+            i0, i1 = np.searchsorted(spikes_in_segment["sample_index"], [start_frame, end_frame])
             spikes_in_bin = spikes_in_segment[i0:i1]
             spike_locations_in_bin = spike_locations_in_segment[i0:i1][direction]
 
