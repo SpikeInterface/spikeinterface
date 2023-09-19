@@ -503,6 +503,18 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
 
     recording_segment = recording._recording_segments[segment_index]
 
+    if isinstance(nodes[0], PeakSource):
+        if nodes[0].has_peaks(start_frame, end_frame, segment_index):
+            traces_chunk, left_margin, right_margin = get_chunk_with_margin(
+                recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
+        )
+        else:
+            traces_chunk, left_margin, right_margin = None, None, None
+    else:
+        traces_chunk, left_margin, right_margin = get_chunk_with_margin(
+                recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
+            )
+
     # compute the graph
     pipeline_outputs = {}
     for node in nodes:
@@ -516,11 +528,6 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
             # to handle compatibility peak detector is a special case
             # with specific margin
             #  TODO later when in master: change this later
-
-            traces_chunk, left_margin, right_margin = get_chunk_with_margin(
-                recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
-            )
-
             extra_margin = max_margin - node.get_trace_margin()
             if extra_margin:
                 trace_detection = traces_chunk[extra_margin:-extra_margin]
@@ -530,18 +537,9 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
             # set sample index to local
             node_output[0]["sample_index"] += extra_margin
         elif isinstance(node, PeakSource):
-            if node.has_peaks(start_frame, end_frame, segment_index):
-                traces_chunk, left_margin, right_margin = get_chunk_with_margin(
-                    recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
-                )
-                node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
-            else:
-                node_output = (np.zeros(0, dtype=base_peak_dtype), )
+            node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
         else:
             # TODO later when in master: change the signature of all nodes (or maybe not!)
-            traces_chunk, left_margin, right_margin = get_chunk_with_margin(
-                recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
-            )
             node_output = node.compute(traces_chunk, *node_input_args)
         pipeline_outputs[node] = node_output
 
