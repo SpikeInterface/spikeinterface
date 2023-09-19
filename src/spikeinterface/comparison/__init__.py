@@ -32,7 +32,7 @@ from .multicomparisons import (
 from .groundtruthstudy import GroundTruthStudy
 from .collision import CollisionGTComparison, CollisionGTStudy
 from .correlogram import CorrelogramGTComparison, CorrelogramGTStudy
-# from .studytools import aggregate_performances_table
+
 from .hybrid import (
     HybridSpikesRecording,
     HybridUnitsRecording,
