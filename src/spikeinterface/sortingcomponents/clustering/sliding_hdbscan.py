@@ -198,7 +198,7 @@ class SlidingHdbscanClustering:
             for chan_ind in prev_local_chan_inds:
                 if total_count[chan_ind] == 0:
                     continue
-                # ~ inds, = np.nonzero(np.in1d(peaks['channel_index'], closest_channels[chan_ind]) & (peak_labels==0))
+                # ~ inds, = np.nonzero(np.isin(peaks['channel_index'], closest_channels[chan_ind]) & (peak_labels==0))
                 (inds,) = np.nonzero((peaks["channel_index"] == chan_ind) & (peak_labels == 0))
                 if inds.size <= d["min_spike_on_channel"]:
                     chan_amps[chan_ind] = 0.0
@@ -235,12 +235,12 @@ class SlidingHdbscanClustering:
 
                 (wf_chans,) = np.nonzero(sparsity_mask[chan_ind])
                 # TODO: only for debug, remove later
-                assert np.all(np.in1d(local_chan_inds, wf_chans))
+                assert np.all(np.isin(local_chan_inds, wf_chans))
 
                 # none label spikes
                 wfs_chan = wfs_chan[inds, :, :]
                 # only some channels
-                wfs_chan = wfs_chan[:, :, np.in1d(wf_chans, local_chan_inds)]
+                wfs_chan = wfs_chan[:, :, np.isin(wf_chans, local_chan_inds)]
                 wfs.append(wfs_chan)
 
             # put noise to enhance clusters
@@ -517,7 +517,7 @@ def _collect_sparse_waveforms(peaks, wfs_arrays, closest_channels, peak_labels, 
         (wf_chans,) = np.nonzero(sparsity_mask[chan_ind])
         # print('wf_chans', wf_chans)
         # TODO: only for debug, remove later
-        assert np.all(np.in1d(wanted_chans, wf_chans))
+        assert np.all(np.isin(wanted_chans, wf_chans))
         wfs_chan = wfs_arrays[chan_ind]
 
         # TODO: only for debug, remove later
@@ -525,7 +525,7 @@ def _collect_sparse_waveforms(peaks, wfs_arrays, closest_channels, peak_labels, 
 
         wfs_chan = wfs_chan[inds, :, :]
         # only some channels
-        wfs_chan = wfs_chan[:, :, np.in1d(wf_chans, wanted_chans)]
+        wfs_chan = wfs_chan[:, :, np.isin(wf_chans, wanted_chans)]
         wfs.append(wfs_chan)
 
     wfs = np.concatenate(wfs, axis=0)

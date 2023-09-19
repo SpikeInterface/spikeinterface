@@ -243,10 +243,14 @@ class StudyPerformancesVsMetrics(BaseWidget):
         study = dp.study
         perfs = study.get_performance_by_unit(case_keys=dp.case_keys)
 
+        max_metric = 0
         for key in dp.case_keys:
             x = study.get_metrics(key)[dp.metric_name].values
             y = perfs.xs(key)[dp.performance_name].values
             label = dp.study.cases[key]["label"]
             self.ax.scatter(x, y, label=label)
+            max_metric = max(max_metric, np.max(x))
 
         self.ax.legend()
+        self.ax.set_xlim(0, max_metric * 1.05)
+        self.ax.set_ylim(0, 1.05)

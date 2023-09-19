@@ -538,7 +538,7 @@ def do_confusion_matrix(event_counts1, event_counts2, match_12, match_event_coun
     matched_units2 = match_12[match_12 != -1].values
 
     unmatched_units1 = match_12[match_12 == -1].index
-    unmatched_units2 = unit2_ids[~np.in1d(unit2_ids, matched_units2)]
+    unmatched_units2 = unit2_ids[~np.isin(unit2_ids, matched_units2)]
 
     ordered_units1 = np.hstack([matched_units1, unmatched_units1])
     ordered_units2 = np.hstack([matched_units2, unmatched_units2])

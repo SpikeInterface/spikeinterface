@@ -17,10 +17,7 @@ from spikeinterface.qualitymetrics import compute_quality_metrics
 from .paircomparisons import compare_sorter_to_ground_truth, GroundTruthComparison
 
 
-# TODO : save comparison in folders when COmparison object will be able to serialize
-# TODO ??: make an internal optional binary copy when running several external sorter
-# on the same dataset to avoid multiple save binary ? even when the recording is float32 (ks need int16)
-
+# TODO later : save comparison in folders when comparison object will be able to serialize
 
 
 # This is to separate names when the key are tuples when saving folders
@@ -129,9 +126,6 @@ class GroundTruthStudy:
             self.info = json.load(f)
         
         self.levels = self.info["levels"]
-        # if isinstance(self.levels, list):
-        #     # because tuple caoont be stored in json
-        #     self.levels = tuple(self.info["levels"])
 
         for rec_file in (self.folder / "datasets/recordings").glob("*.pickle"):
             key = rec_file.stem
@@ -155,7 +149,7 @@ class GroundTruthStudy:
 
 
     def __repr__(self):
-        t = f"GroundTruthStudy {self.folder.stem} \n"
+        t = f"{self.__class__.__name__} {self.folder.stem} \n"
         t += f"  datasets: {len(self.datasets)} {list(self.datasets.keys())}\n"
         t += f"  cases: {len(self.cases)} {list(self.cases.keys())}\n"
         num_computed = sum([1 for sorting in self.sortings.values() if sorting is not None])
@@ -172,9 +166,6 @@ class GroundTruthStudy:
             raise ValueError("Keys for cases must str or tuple")
 
     def run_sorters(self, case_keys=None, engine='loop', engine_kwargs={}, keep=True, verbose=False):
-        """
-        
-        """
         if case_keys is None:
             case_keys = self.cases.keys()
 
@@ -303,7 +294,7 @@ class GroundTruthStudy:
         we.set_recording(recording)
         return we
 
-    def get_templates(self, key, mode="mean"):
+    def get_templates(self, key, mode="average"):
         we = self.get_waveform_extractor(key)
         templates = we.get_all_templates(mode=mode)
         return templates
