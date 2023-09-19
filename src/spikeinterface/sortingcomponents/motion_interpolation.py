@@ -157,7 +157,7 @@ def interpolate_motion_on_traces(
 
         i0 = np.searchsorted(bin_inds, bin_ind, side="left")
         i1 = np.searchsorted(bin_inds, bin_ind, side="right")
-        
+
         # here we use a simple np.matmul even if dirft_kernel can be super sparse.
         # because the speed for a sparse matmul is not so good when we disable multi threaad (due multi processing
         # in ChunkRecordingExecutor)

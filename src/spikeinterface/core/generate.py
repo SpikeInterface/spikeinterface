@@ -1212,7 +1212,6 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         start = np.searchsorted(self.spike_vector["sample_index"], start_frame - self.templates.shape[1], side="left")
         end = np.searchsorted(self.spike_vector["sample_index"], end_frame + self.templates.shape[1], side="right")
 
-
         for i in range(start, end):
             spike = self.spike_vector[i]
             t = spike["sample_index"]
