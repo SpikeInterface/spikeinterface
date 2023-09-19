@@ -155,7 +155,7 @@ class GroundTruthStudy:
 
 
     def __repr__(self):
-        t = f"GroundTruthStudy {self.folder.stem} \n"
+        t = f"{self.__class__.__name__} {self.folder.stem} \n"
         t += f"  datasets: {len(self.datasets)} {list(self.datasets.keys())}\n"
         t += f"  cases: {len(self.cases)} {list(self.cases.keys())}\n"
         num_computed = sum([1 for sorting in self.sortings.values() if sorting is not None])
@@ -303,7 +303,7 @@ class GroundTruthStudy:
         we.set_recording(recording)
         return we
 
-    def get_templates(self, key, mode="mean"):
+    def get_templates(self, key, mode="average"):
         we = self.get_waveform_extractor(key)
         templates = we.get_all_templates(mode=mode)
         return templates
