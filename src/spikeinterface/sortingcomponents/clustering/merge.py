@@ -157,7 +157,7 @@ def agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full"
 
     merges = []
 
-    graph = nx.from_numpy_matrix(pair_mask | pair_mask.T)
+    graph = nx.from_numpy_array(pair_mask | pair_mask.T)
     # put real nodes names for debugging
     maps = dict(zip(np.arange(labels_set.size), labels_set))
     graph = nx.relabel_nodes(graph, maps)
@@ -196,8 +196,8 @@ def agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full"
                 nx.draw_networkx(sub_graph)
                 plt.show()
 
-    DEBUG = True
-    # DEBUG = False
+    # DEBUG = True
+    DEBUG = False
     if DEBUG:
         import matplotlib.pyplot as plt
 
@@ -457,8 +457,8 @@ class WaveformsLda:
         else:
             final_shift = 0
 
-        DEBUG = True
-        # DEBUG = False
+        # DEBUG = True
+        DEBUG = False
 
         if DEBUG and is_merge:
         # if DEBUG:
@@ -487,7 +487,15 @@ class WaveformsLda:
             ax.plot(bins[:-1], count0, color="C0")
             ax.plot(bins[:-1], count1, color="C1")
 
-            ax.set_title(f"{dipscore:.4f} {is_merge}")
+            if criteria == "diptest":
+                ax.set_title(f"{dipscore:.4f} {is_merge}")
+            elif criteria == "percentile":
+                ax.set_title(f"{l0:.4f} {l1:.4f} {is_merge}")
+                ax.axvline(l0, color="C0")
+                ax.axvline(l1, color="C1")
+
+
+            
             plt.show()
 
 
