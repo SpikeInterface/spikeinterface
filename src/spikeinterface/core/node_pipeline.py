@@ -507,13 +507,13 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
         if nodes[0].has_peaks(start_frame, end_frame, segment_index):
             traces_chunk, left_margin, right_margin = get_chunk_with_margin(
                 recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
-        )
+            )
         else:
             traces_chunk, left_margin, right_margin = None, None, None
     else:
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
-                recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
-            )
+            recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
+        )
 
     # compute the graph
     pipeline_outputs = {}
