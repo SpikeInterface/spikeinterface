@@ -72,7 +72,7 @@ class TestWidgets(unittest.TestCase):
         else:
             cls.we_sparse = cls.we.save(folder=cache_folder / "mearec_test_sparse", sparsity=cls.sparsity_radius)
 
-        cls.skip_backends = ["ipywidgets"]
+        cls.skip_backends = ["ipywidgets", "ephyviewer"]
 
         if ON_GITHUB and not KACHERY_CLOUD_SET:
             cls.skip_backends.append("sortingview")
@@ -344,7 +344,7 @@ if __name__ == "__main__":
     # mytest.test_unit_locations()
     # mytest.test_quality_metrics()
     # mytest.test_template_metrics()
-    mytest.test_amplitudes()
+    # mytest.test_amplitudes()
 
     # plt.ion()
     plt.show()
