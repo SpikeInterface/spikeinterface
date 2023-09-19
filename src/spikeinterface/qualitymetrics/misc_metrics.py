@@ -523,7 +523,7 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), uni
     Based on concepts described in [Gruen]_
     This code was adapted from `Elephant - Electrophysiology Analysis Toolkit <https://github.com/NeuralEnsemble/elephant/blob/master/elephant/spike_train_synchrony.py#L245>`_
     """
-    assert np.all(s > 1 for s in synchrony_sizes), "Synchrony sizes must be greater than 1"
+    assert np.all([s > 1 for s in synchrony_sizes]), "Synchrony sizes must be greater than 1"
     spike_counts = waveform_extractor.sorting.count_num_spikes_per_unit()
     sorting = waveform_extractor.sorting
     spikes = sorting.to_spike_vector(concatenated=False)
@@ -568,7 +568,7 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), uni
     return synchrony_metrics
 
 
-_default_params["synchrony"] = dict(synchrony_sizes=(0, 2, 4))
+_default_params["synchrony"] = dict(synchrony_sizes=(2, 4, 8))
 
 
 def compute_firing_ranges(waveform_extractor, bin_size_s=5, percentiles=(5, 95), unit_ids=None, **kwargs):
