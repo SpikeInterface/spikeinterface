@@ -126,9 +126,6 @@ class GroundTruthStudy:
             self.info = json.load(f)
         
         self.levels = self.info["levels"]
-        # if isinstance(self.levels, list):
-        #     # because tuple caoont be stored in json
-        #     self.levels = tuple(self.info["levels"])
 
         for rec_file in (self.folder / "datasets/recordings").glob("*.pickle"):
             key = rec_file.stem
@@ -169,9 +166,6 @@ class GroundTruthStudy:
             raise ValueError("Keys for cases must str or tuple")
 
     def run_sorters(self, case_keys=None, engine='loop', engine_kwargs={}, keep=True, verbose=False):
-        """
-        
-        """
         if case_keys is None:
             case_keys = self.cases.keys()
 
