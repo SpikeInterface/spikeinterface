@@ -2,6 +2,7 @@ import warnings
 
 from .base import backend_kwargs_desc
 
+from .agreement_matrix import AgreementMatrixWidget
 from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 from .amplitudes import AmplitudesWidget
 from .autocorrelograms import AutoCorrelogramsWidget
@@ -23,6 +24,7 @@ from .unit_waveforms import UnitWaveformsWidget
 
 
 widget_list = [
+    AgreementMatrixWidget,
     AllAmplitudesDistributionsWidget,
     AmplitudesWidget,
     AutoCorrelogramsWidget,
@@ -76,6 +78,7 @@ for wcls in widget_list:
 
 
 # make function for all widgets
+plot_agreement_matrix = AgreementMatrixWidget
 plot_all_amplitudes_distributions = AllAmplitudesDistributionsWidget
 plot_amplitudes = AmplitudesWidget
 plot_autocorrelograms = AutoCorrelogramsWidget

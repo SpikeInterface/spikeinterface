@@ -17,7 +17,7 @@ from .unitprobemap import plot_unit_probe_map, UnitProbeMapWidget
 
 # comparison related
 from .confusionmatrix import plot_confusion_matrix, ConfusionMatrixWidget
-from .agreementmatrix import plot_agreement_matrix, AgreementMatrixWidget
+
 from .multicompgraph import (
     plot_multicomp_graph,
     MultiCompGraphWidget,

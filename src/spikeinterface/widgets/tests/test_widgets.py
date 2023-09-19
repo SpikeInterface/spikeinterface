@@ -324,6 +324,13 @@ class TestWidgets(unittest.TestCase):
                 sw.plot_sorting_summary(self.we, backend=backend, **self.backend_kwargs[backend])
                 sw.plot_sorting_summary(self.we_sparse, backend=backend, **self.backend_kwargs[backend])
 
+    def test_plot_agreement_matrix(self):
+        possible_backends = list(sw.AgreementMatrixWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_agreement_matrix(self.gt_comp)
+
+
 
 if __name__ == "__main__":
     # unittest.main()
@@ -344,7 +351,8 @@ if __name__ == "__main__":
     # mytest.test_unit_locations()
     # mytest.test_quality_metrics()
     # mytest.test_template_metrics()
-    mytest.test_amplitudes()
+    # mytest.test_amplitudes()
+    mytest.test_plot_agreement_matrix()
 
     # plt.ion()
     plt.show()
