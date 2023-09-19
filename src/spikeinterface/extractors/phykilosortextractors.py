@@ -17,6 +17,10 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
     keep_good_only : bool, default: True
         Whether to only keep good units.
+    remove_empty_units : bool, default: True
+        If True, empty units are removed from the sorting extractor.
+    load_all_cluster_properties : bool, default: True
+        If True, all cluster properties are loaded from the tsv/csv files.
     """
 
     extractor_name = "BasePhyKilosortSorting"
@@ -197,18 +201,26 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
         Path to the output Phy folder (containing the params.py).
     exclude_cluster_groups: list or str, optional
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
+    load_all_cluster_properties : bool, default: True
+        If True, all cluster properties are loaded from the tsv/csv files.
 
     Returns
     -------
     extractor : PhySortingExtractor
-        The loaded data.
+        The loaded Sorting object.
     """
 
     extractor_name = "PhySorting"
     name = "phy"
 
-    def __init__(self, folder_path, exclude_cluster_groups=None):
-        BasePhyKilosortSortingExtractor.__init__(self, folder_path, exclude_cluster_groups, keep_good_only=False)
+    def __init__(self, folder_path, exclude_cluster_groups=None, load_all_cluster_properties=True):
+        BasePhyKilosortSortingExtractor.__init__(
+            self,
+            folder_path,
+            exclude_cluster_groups,
+            keep_good_only=False,
+            load_all_cluster_properties=load_all_cluster_properties,
+        )
 
         self._kwargs = {
             "folder_path": str(Path(folder_path).absolute()),
@@ -223,8 +235,6 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     ----------
     folder_path: str or Path
         Path to the output Phy folder (containing the params.py).
-    exclude_cluster_groups: list or str, optional
-        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
     keep_good_only : bool, default: True
         Whether to only keep good units.
         If True, only Kilosort-labeled 'good' units are returned.
@@ -234,7 +244,7 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     Returns
     -------
     extractor : KiloSortSortingExtractor
-        The loaded data.
+        The loaded Sorting object.
     """
 
     extractor_name = "KiloSortSorting"
