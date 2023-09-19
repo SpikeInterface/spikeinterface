@@ -6,6 +6,7 @@ from .agreement_matrix import AgreementMatrixWidget
 from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 from .amplitudes import AmplitudesWidget
 from .autocorrelograms import AutoCorrelogramsWidget
+from .confusion_matrix import ConfusionMatrixWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
 from .motion import MotionWidget
 from .quality_metrics import QualityMetricsWidget
@@ -28,6 +29,7 @@ widget_list = [
     AllAmplitudesDistributionsWidget,
     AmplitudesWidget,
     AutoCorrelogramsWidget,
+    ConfusionMatrixWidget,
     CrossCorrelogramsWidget,
     MotionWidget,
     QualityMetricsWidget,
@@ -82,6 +84,7 @@ plot_agreement_matrix = AgreementMatrixWidget
 plot_all_amplitudes_distributions = AllAmplitudesDistributionsWidget
 plot_amplitudes = AmplitudesWidget
 plot_autocorrelograms = AutoCorrelogramsWidget
+plot_confusion_matrix = ConfusionMatrixWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_motion = MotionWidget
 plot_quality_metrics = QualityMetricsWidget

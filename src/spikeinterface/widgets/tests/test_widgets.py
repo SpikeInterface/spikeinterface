@@ -330,6 +330,12 @@ class TestWidgets(unittest.TestCase):
             if backend not in self.skip_backends:
                 sw.plot_agreement_matrix(self.gt_comp)
 
+    def test_plot_confusion_matrix(self):
+        possible_backends = list(sw.AgreementMatrixWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_confusion_matrix(self.gt_comp)
+
 
 
 if __name__ == "__main__":
@@ -352,7 +358,8 @@ if __name__ == "__main__":
     # mytest.test_quality_metrics()
     # mytest.test_template_metrics()
     # mytest.test_amplitudes()
-    mytest.test_plot_agreement_matrix()
+    # mytest.test_plot_agreement_matrix()
+    mytest.test_plot_confusion_matrix()
 
     # plt.ion()
     plt.show()
