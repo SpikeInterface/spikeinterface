@@ -201,7 +201,7 @@ Implement a new extractor
 SpikeInterface already supports over 30 file formats, but the acquisition system you use might not be among the
 supported formats list (***ref***). Most of the extractord rely on the `NEO <https://github.com/NeuralEnsemble/python-neo>`_
 package to read information from files.
-Therefore, to implement a new extractor to handle the unsupported format, we recommend make a new :code:``neo.rawio ` class.
+Therefore, to implement a new extractor to handle the unsupported format, we recommend make a new :code:`neo.rawio.BaseRawIO` class (see `example <https://github.com/NeuralEnsemble/python-neo/blob/master/neo/rawio/examplerawio.py#L44>`_).
 Once that is done, the new class can be easily wrapped into SpikeInterface as an extension of the
 :py:class:`~spikeinterface.extractors.neoextractors.neobaseextractors.NeoBaseRecordingExtractor`
 (for :py:class:`~spikeinterface.core.BaseRecording` objects) or
