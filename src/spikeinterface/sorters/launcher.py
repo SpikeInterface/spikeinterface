@@ -82,7 +82,11 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
     engine_kwargs = engine_kwargs_
 
     if return_output:
-        assert engine in ("loop", "joblib", "processpoolexecutor"), "Only 'loop', 'joblib', and 'processpoolexecutor' support return_output=True."
+        assert engine in (
+            "loop",
+            "joblib",
+            "processpoolexecutor",
+        ), "Only 'loop', 'joblib', and 'processpoolexecutor' support return_output=True."
         out = []
     else:
         out = None
