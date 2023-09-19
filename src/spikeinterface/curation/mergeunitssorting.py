@@ -60,7 +60,7 @@ class MergeUnitsSorting(BaseSorting):
                 else:
                     # we cannot automatically find new names
                     new_unit_ids = [f"merge{i}" for i in range(num_merge)]
-                    if np.any(np.in1d(new_unit_ids, keep_unit_ids)):
+                    if np.any(np.isin(new_unit_ids, keep_unit_ids)):
                         raise ValueError(
                             "Unable to find 'new_unit_ids' because it is a string and parents "
                             "already contain merges. Pass a list of 'new_unit_ids' as an argument."
@@ -69,7 +69,7 @@ class MergeUnitsSorting(BaseSorting):
                 # dtype int
                 new_unit_ids = list(max(parents_unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
         else:
-            if np.any(np.in1d(new_unit_ids, keep_unit_ids)):
+            if np.any(np.isin(new_unit_ids, keep_unit_ids)):
                 raise ValueError("'new_unit_ids' already exist in the sorting.unit_ids. Provide new ones")
 
         assert len(new_unit_ids) == num_merge, "new_unit_ids must have the same size as units_to_merge"
