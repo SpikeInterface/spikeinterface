@@ -103,8 +103,8 @@ if __name__ == '__main__':
         try:
             func()
             done = '...OK'
-        except:
-            done = '...Fail'
+        except Exception as err:
+            done = f'...Fail, Error: {err}'
         print(label, done)
 
     if platform.system() == "Windows":

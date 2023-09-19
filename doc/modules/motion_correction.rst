@@ -9,7 +9,7 @@ Overview
 
 Mechanical drift, often observed in recordings, is currently a major issue for spike sorting. This is especially striking
 with the new generation of high-density devices used for in-vivo electrophyisology such as the neuropixel electrodes.
-The first sorter that has introduced motion/drift correction as a prepossessing step was Kilosort2.5 (see [Steinmetz2021]_)
+The first sorter that has introduced motion/drift correction as a prepossessing step was Kilosort2.5 (see [Steinmetz2021]_ [SteinmetzDataset]_)
 
 Long story short, the main idea is the same as the one used for non-rigid image registration, for example with calcium
 imaging. However, because with extracellular recording we do not have a proper image to use as a reference, the main idea

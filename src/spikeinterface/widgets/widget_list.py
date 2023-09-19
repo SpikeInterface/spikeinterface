@@ -59,6 +59,12 @@ for wcls in widget_list:
     {backends}
     **backend_kwargs: kwargs
     {backend_kwargs}
+
+
+    Returns
+    -------
+    w : BaseWidget
+        The output widget object.
     """
     # backend_str = f"    {list(wcls.possible_backends.keys())}"
     backend_str = f"    {wcls.get_possible_backends()}"

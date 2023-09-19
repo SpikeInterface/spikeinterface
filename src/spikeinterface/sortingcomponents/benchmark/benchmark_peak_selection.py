@@ -133,7 +133,7 @@ class BenchmarkPeakSelection:
         matches = make_matching_events(times2, spikes1["sample_index"], int(delta * self.sampling_rate / 1000))
         self.good_matches = matches["index1"]
 
-        garbage_matches = ~np.in1d(np.arange(len(times2)), self.good_matches)
+        garbage_matches = ~np.isin(np.arange(len(times2)), self.good_matches)
         garbage_channels = self.peaks["channel_index"][garbage_matches]
         garbage_peaks = times2[garbage_matches]
         nb_garbage = len(garbage_peaks)
@@ -365,7 +365,7 @@ class BenchmarkPeakSelection:
 
             idx = self.waveforms["full_gt"].get_sampled_indices(unit_id)["spike_index"]
             all_spikes = self.waveforms["full_gt"].sorting.get_unit_spike_train(unit_id)
-            mask = np.in1d(self.gt_peaks["sample_index"], all_spikes[idx])
+            mask = np.isin(self.gt_peaks["sample_index"], all_spikes[idx])
             colors = scalarMap.to_rgba(self.gt_peaks["amplitude"][mask])
             ax.scatter(self.gt_positions["x"][mask], self.gt_positions["y"][mask], c=colors, s=1, alpha=0.5)
             x_mean, y_mean = (self.gt_positions["x"][mask].mean(), self.gt_positions["y"][mask].mean())
@@ -391,7 +391,7 @@ class BenchmarkPeakSelection:
 
             idx = self.waveforms["gt"].get_sampled_indices(unit_id)["spike_index"]
             all_spikes = self.waveforms["gt"].sorting.get_unit_spike_train(unit_id)
-            mask = np.in1d(self.sliced_gt_peaks["sample_index"], all_spikes[idx])
+            mask = np.isin(self.sliced_gt_peaks["sample_index"], all_spikes[idx])
             colors = scalarMap.to_rgba(self.sliced_gt_peaks["amplitude"][mask])
             ax.scatter(
                 self.sliced_gt_positions["x"][mask], self.sliced_gt_positions["y"][mask], c=colors, s=1, alpha=0.5
@@ -420,7 +420,7 @@ class BenchmarkPeakSelection:
 
             idx = self.waveforms["garbage"].get_sampled_indices(unit_id)["spike_index"]
             all_spikes = self.waveforms["garbage"].sorting.get_unit_spike_train(unit_id)
-            mask = np.in1d(self.garbage_peaks["sample_index"], all_spikes[idx])
+            mask = np.isin(self.garbage_peaks["sample_index"], all_spikes[idx])
             colors = scalarMap.to_rgba(self.garbage_peaks["amplitude"][mask])
             ax.scatter(self.garbage_positions["x"][mask], self.garbage_positions["y"][mask], c=colors, s=1, alpha=0.5)
             x_mean, y_mean = (self.garbage_positions["x"][mask].mean(), self.garbage_positions["y"][mask].mean())
