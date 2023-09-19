@@ -544,7 +544,7 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), **k
             # some segments/units might have no spikes
             if len(spikes_per_unit) == 0:
                 continue
-            spike_complexity = complexity[np.in1d(unique_spike_index, spikes_per_unit["sample_index"])]
+            spike_complexity = complexity[np.isin(unique_spike_index, spikes_per_unit["sample_index"])]
             for synchrony_size in synchrony_sizes:
                 synchrony_counts[synchrony_size][unit_index] += np.count_nonzero(spike_complexity >= synchrony_size)
 

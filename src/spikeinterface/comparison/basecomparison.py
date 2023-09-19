@@ -262,11 +262,11 @@ class BasePairComparison(BaseComparison):
         indexes = np.arange(scores.shape[1])
         order1 = []
         for r in range(scores.shape[0]):
-            possible = indexes[~np.in1d(indexes, order1)]
+            possible = indexes[~np.isin(indexes, order1)]
             if possible.size > 0:
                 ind = np.argmax(scores.iloc[r, possible].values)
                 order1.append(possible[ind])
-        remain = indexes[~np.in1d(indexes, order1)]
+        remain = indexes[~np.isin(indexes, order1)]
         order1.extend(remain)
         scores = scores.iloc[:, order1]
 
