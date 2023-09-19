@@ -1,6 +1,5 @@
 from .paircomparisons import GroundTruthComparison
 from .groundtruthstudy import GroundTruthStudy
-from .studytools import iter_computed_sorting ## TODO remove this
 from spikeinterface.postprocessing import compute_correlograms
 
 
