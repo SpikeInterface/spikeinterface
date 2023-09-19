@@ -11,6 +11,7 @@ from .crosscorrelograms import CrossCorrelogramsWidget
 from .motion import MotionWidget
 from .probe_map import ProbeMapWidget
 from .quality_metrics import QualityMetricsWidget
+from .rasters import RasterWidget
 from .sorting_summary import SortingSummaryWidget
 from .spike_locations import SpikeLocationsWidget
 from .spikes_on_traces import SpikesOnTracesWidget
@@ -35,6 +36,7 @@ widget_list = [
     MotionWidget,
     ProbeMapWidget,
     QualityMetricsWidget,
+    RasterWidget,
     SortingSummaryWidget,
     SpikeLocationsWidget,
     SpikesOnTracesWidget,
@@ -91,6 +93,7 @@ plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_motion = MotionWidget
 plot_probe_map = ProbeMapWidget
 plot_quality_metrics = QualityMetricsWidget
+plot_rasters = RasterWidget
 plot_sorting_summary = SortingSummaryWidget
 plot_spike_locations = SpikeLocationsWidget
 plot_spikes_on_traces = SpikesOnTracesWidget

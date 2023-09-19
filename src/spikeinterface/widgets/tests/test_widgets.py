@@ -342,6 +342,13 @@ class TestWidgets(unittest.TestCase):
             if backend not in self.skip_backends:
                 sw.plot_probe_map(self.recording, with_channel_ids=True, with_contact_id=True)
 
+    def test_plot_rasters(self):
+        possible_backends = list(sw.RasterWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_rasters(self.sorting)
+
+
 
 if __name__ == "__main__":
     # unittest.main()
@@ -365,7 +372,8 @@ if __name__ == "__main__":
     # mytest.test_amplitudes()
     # mytest.test_plot_agreement_matrix()
     # mytest.test_plot_confusion_matrix()
-    mytest.test_plot_probe_map()
+    # mytest.test_plot_probe_map()
+    mytest.test_plot_rasters()
 
     # plt.ion()
     plt.show()

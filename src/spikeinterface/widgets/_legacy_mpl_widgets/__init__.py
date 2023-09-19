@@ -1,7 +1,3 @@
-# basics
-# from .timeseries import plot_timeseries, TracesWidget
-from .rasters import plot_rasters, RasterWidget
-
 # isi/ccg/acg
 from .isidistribution import plot_isi_distribution, ISIDistributionWidget
 
