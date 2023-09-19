@@ -21,11 +21,11 @@ Example code
 
 .. code-block:: python
 
-    import spikeinterface.qualitymetrics as qm
+    import spikeinterface.qualitymetrics as sqm
 
     # Make recording, sorting and wvf_extractor object for your data.
-    firing_range = qm.compute_firing_ranges(wvf_extractor)
-    # firing_range is a dict containing the units' IDs as keys,
+    firing_range = sqm.compute_firing_ranges(wvf_extractor)
+    # firing_range is a dict containing the unit IDs as keys,
     # and their firing firing_range as values (in Hz).
 
 References
