@@ -536,6 +536,7 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), uni
     for synchrony_size in synchrony_sizes:
         synchrony_counts[synchrony_size] = np.zeros(len(waveform_extractor.unit_ids), dtype=np.int64)
 
+    all_unit_ids = list(sorting.unit_ids)
     for segment_index in range(sorting.get_num_segments()):
         spikes_in_segment = spikes[segment_index]
 
@@ -544,7 +545,7 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), uni
 
         # add counts for this segment
         for unit_id in unit_ids:
-            unit_index = sorting.unit_ids.index(unit_id)
+            unit_index = all_unit_ids.index(unit_id)
             spikes_per_unit = spikes_in_segment[spikes_in_segment["unit_index"] == unit_index]
             # some segments/units might have no spikes
             if len(spikes_per_unit) == 0:
