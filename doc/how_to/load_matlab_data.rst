@@ -57,8 +57,8 @@ Use the following Python script to load the binary data into SpikeInterface:
    recording = si.read_binary(file_path, sampling_frequency=sampling_frequency,
                                         num_channels=num_channels, dtype=dtype)
 
-   # Confirm the data shape
-   assert recording.get_traces().shape == (numSamples, num_channels)
+   # Confirm that the data was loaded correctly by comparing the data shapes and see they match the MATLAB data
+   print(recording.get_num_frames(), recording.get_num_channels())
 
 Follow the steps above to seamlessly import your MATLAB data into SpikeInterface. Once loaded, you can harness the full power of SpikeInterface for data processing, including filtering, spike sorting, and more.
 
