@@ -6,7 +6,7 @@ import platform
 import zarr
 
 
-from spikeinterface.core import generate_recording, generate_sorting, NumpySorting, ChannelSparsity
+from spikeinterface.core import generate_recording, generate_sorting, NumpySorting, ChannelSparsity, generate_ground_truth_recording
 from spikeinterface import WaveformExtractor, BaseRecording, extract_waveforms, load_waveforms
 from spikeinterface.core.waveform_extractor import precompute_sparsity
 
@@ -509,11 +509,46 @@ def test_compute_sparsity():
         )
         print(sparsity)
 
+def test_non_json_object():
+    recording, sorting = generate_ground_truth_recording(
+        durations=[30, 40],
+        sampling_frequency=30000.0,
+        num_channels=32,
+        num_units=5,
+        )
+    
+    # recording is not save to keep it in memory
+    sorting = sorting.save()
+
+    wf_folder = cache_folder / "test_waveform_extractor"
+    if wf_folder.is_dir():
+        shutil.rmtree(wf_folder)
+
+
+    we = extract_waveforms(
+        recording,
+        sorting,
+        wf_folder,
+        mode="folder",
+        sparsity=None,
+        sparse=False,
+        ms_before=1.0,
+        ms_after=1.6,
+        max_spikes_per_unit=50,
+        n_jobs=4,
+        chunk_size=30000,
+        progress_bar=True,
+    )
+
+    # This used to fail because of json
+    we = load_waveforms(wf_folder)
+
 
 if __name__ == "__main__":
-    test_WaveformExtractor()
+    # test_WaveformExtractor()
     # test_extract_waveforms()
-    # test_sparsity()
     # test_portability()
     # test_recordingless()
     # test_compute_sparsity()
+    test_non_json_object()
+

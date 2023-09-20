@@ -50,18 +50,22 @@ def test_check_if_json_serializable():
     test_extractor = generate_recording(seed=0, durations=[2])
 
     # make a list of dumpable objects
-    test_extractor._is_json_serializable = True
+    # test_extractor._is_json_serializable = True
+    test_extractor._serializablility["json"] = True
     extractors_json_serializable = make_nested_extractors(test_extractor)
     for extractor in extractors_json_serializable:
         print(extractor)
-        assert extractor.check_if_json_serializable()
+        # assert extractor.check_if_json_serializable()
+        assert extractor.check_serializablility("json")
 
     # make not dumpable
-    test_extractor._is_json_serializable = False
+    # test_extractor._is_json_serializable = False
+    test_extractor._serializablility["json"] = False
     extractors_not_json_serializable = make_nested_extractors(test_extractor)
     for extractor in extractors_not_json_serializable:
         print(extractor)
-        assert not extractor.check_if_json_serializable()
+        # assert not extractor.check_if_json_serializable()
+        assert not extractor.check_serializablility("json")
 
 
 if __name__ == "__main__":
