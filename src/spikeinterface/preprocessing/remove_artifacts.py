@@ -165,7 +165,9 @@ class RemoveArtifactsRecording(BasePreprocessor):
                 for l in np.unique(labels):
                     assert l in artifacts.keys(), f"Artefacts are provided but label {l} has no value!"
             else:
-                assert "ms_before" is not None and "ms_after" is not None, f"ms_before/after should not be None for mode {mode}"
+                assert (
+                    "ms_before" is not None and "ms_after" is not None
+                ), f"ms_before/after should not be None for mode {mode}"
                 sorting = NumpySorting.from_times_labels(list_triggers, list_labels, recording.get_sampling_frequency())
                 sorting = sorting.save()
                 waveforms_kwargs.update({"ms_before": ms_before, "ms_after": ms_after})
