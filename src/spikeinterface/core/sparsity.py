@@ -103,8 +103,8 @@ class ChannelSparsity:
         self.max_channel_representation = self.mask.sum(axis=1).max()
 
     def __repr__(self):
-        sparsity = 1 - np.mean(self.mask)
-        txt = f"ChannelSparsity - units: {self.num_units} - channels: {self.num_channels} - sparsity, P(x=0): {sparsity:0.2f}"
+        density = np.mean(self.mask)
+        txt = f"ChannelSparsity - units: {self.num_units} - channels: {self.num_channels} - density, P(x=1): {density:0.2f}"
         return txt
 
     @property
@@ -147,6 +147,7 @@ class ChannelSparsity:
             Sparse waveforms with shape (num_units, num_samples, num_active_channels).
         """
 
+        assert self.are_waveforms_dense(waveforms=waveforms), "Waveforms must be dense to sparsify them."
         unit_id = self.unit_ids[unit_index]
         non_zero_indices = self.unit_id_to_channel_indices[unit_id]
         num_sparse_channels = len(non_zero_indices)
@@ -176,13 +177,29 @@ class ChannelSparsity:
             The densified waveforms array of shape (num_units, num_samples, num_channels).
 
         """
+
         unit_id = self.unit_ids[unit_index]
         non_zero_indices = self.unit_id_to_channel_indices[unit_id]
+
+        assert_msg = (
+            "Waveforms must be sparse in this index to densify them. The sparsity for this unit index is "
+            f"{len(non_zero_indices)} but the waveform has sparsity (last dimension) of {waveforms.shape[-1]}."
+        )
+        assert self.are_waveforms_sparse(waveforms=waveforms, unit_index=unit_index), assert_msg
+
         densified_shape = waveforms.shape[:-1] + (self.num_channels,)
         densified_waveforms = np.zeros(densified_shape, dtype=waveforms.dtype)
         densified_waveforms[..., non_zero_indices] = waveforms[...]
 
         return densified_waveforms
+
+    def are_waveforms_dense(self, waveforms: np.ndarray) -> bool:
+        return waveforms.shape[-1] == self.num_channels
+
+    def are_waveforms_sparse(self, waveforms: np.ndarray, unit_index: int) -> bool:
+        unit_id = self.unit_ids[unit_index]
+        non_zero_indices = self.unit_id_to_channel_indices[unit_id]
+        return waveforms.shape[-1] == len(non_zero_indices)
 
     @classmethod
     def from_unit_id_to_channel_ids(cls, unit_id_to_channel_ids, unit_ids, channel_ids):

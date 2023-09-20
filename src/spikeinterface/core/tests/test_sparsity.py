@@ -75,12 +75,15 @@ def test_sparsify_waveforms():
     for unit_index in range(num_units):
         waveforms_dense = rng.random(size=(num_units, num_samples, num_channels))
 
+        # Test are_waveforms_dense
+        assert sparsity.are_waveforms_dense(waveforms_dense)
+
         # Test sparsify
         waveforms_sparse = sparsity.sparsify_waveforms(waveforms_dense, unit_index=unit_index)
         num_sparse_channels = sparsity.mask[unit_index, :].sum()
         assert waveforms_sparse.shape == (num_units, num_samples, num_sparse_channels)
 
-        # Test round-trip (note this is loosy)
+        # Test round-trip (note that this is loosy)
         unit_id = unit_ids[unit_index]
         non_zero_indices = sparsity.unit_id_to_channel_indices[unit_id]
         waveforms_dense2 = sparsity.densify_waveforms(waveforms_sparse, unit_index=unit_index)
@@ -118,6 +121,9 @@ def test_densify_waveforms():
         non_zero_indices = sparsity.unit_id_to_channel_indices[unit_id]
         num_sparse_channels = len(non_zero_indices)
         waveforms_sparse = rng.random(size=(num_units, num_samples, num_sparse_channels))
+
+        # Test are waveforms sparse
+        assert sparsity.are_waveforms_sparse(waveforms_sparse, unit_index=unit_index)
 
         # Test densify
         waveforms_dense = sparsity.densify_waveforms(waveforms_sparse, unit_index=unit_index)
