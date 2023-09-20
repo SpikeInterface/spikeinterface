@@ -517,6 +517,8 @@ def test_non_json_object():
         num_units=5,
         )
     
+
+    print(recording.check_serializablility("pickle"))
     # recording is not save to keep it in memory
     sorting = sorting.save()
 

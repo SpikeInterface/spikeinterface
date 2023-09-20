@@ -64,7 +64,6 @@ class NumpyRecording(BaseRecording):
             assert len(t_starts) == len(traces_list), "t_starts must be a list of same size than traces_list"
             t_starts = [float(t_start) for t_start in t_starts]
 
-        # self._is_json_serializable = False
         self._serializablility["json"] = False
         self._serializablility["pickle"] = False
 
@@ -129,9 +128,9 @@ class NumpySorting(BaseSorting):
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
         self._is_dumpable = True
-        # self._is_json_serializable = False
         self._serializablility["json"] = False
-        self._serializablility["pickle"] = False
+        # theorically this should be False but for simplicity make generators simples we still need this.
+        self._serializablility["pickle"] = True
 
         if spikes.size == 0:
             nseg = 1
@@ -362,7 +361,7 @@ class SharedMemorySorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         self._is_dumpable = True
-        # self._is_json_serializable = False
+
         self._serializablility["json"] = False
         self._serializablility["pickle"] = False
 
@@ -523,7 +522,6 @@ class NumpySnippets(BaseSnippets):
         )
 
         self._is_dumpable = False
-        # self._is_json_serializable = False
         self._serializablility["json"] = False
         self._serializablility["pickle"] = False        
 

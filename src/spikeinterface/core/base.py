@@ -484,11 +484,16 @@ class BaseExtractor:
         for value in kwargs.values():
             # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
             if isinstance(value, BaseExtractor):
-                return value.check_if_dumpable()
-            elif isinstance(value, list) and (len(value) > 0) and isinstance(value[0], BaseExtractor):
-                return all([v.check_if_dumpable() for v in value])
-            elif isinstance(value, dict) and isinstance(value[list(value.keys())[0]], BaseExtractor):
-                return all([v.check_if_dumpable() for k, v in value.items()])
+                if not value.check_if_dumpable():
+                    return False
+            elif isinstance(value, list):
+                for v in value:
+                    if isinstance(v, BaseExtractor) and not v.check_if_dumpable():
+                        return False
+            elif isinstance(value, dict):
+                for v in value.values():
+                    if isinstance(v, BaseExtractor) and not v.check_if_dumpable():
+                        return False
         return self._is_dumpable
 
     def check_serializablility(self, type="json"):
@@ -496,11 +501,16 @@ class BaseExtractor:
         for value in kwargs.values():
             # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
             if isinstance(value, BaseExtractor):
-                return value.check_serializablility(type=type)
-            elif isinstance(value, list) and (len(value) > 0) and isinstance(value[0], BaseExtractor):
-                return all([v.check_serializablility(type=type) for v in value])
-            elif isinstance(value, dict) and isinstance(value[list(value.keys())[0]], BaseExtractor):
-                return all([v.check_serializablility(type=type) for k, v in value.items()])
+                if not value.check_serializablility(type=type):
+                    return False
+            elif isinstance(value, list):
+                for v in value:
+                    if isinstance(v, BaseExtractor) and not v.check_serializablility(type=type):
+                        return False
+            elif isinstance(value, dict):
+                for v in value.values():
+                    if isinstance(v, BaseExtractor) and not v.check_serializablility(type=type):
+                        return False
         return self._serializablility[type]
     
     def check_if_json_serializable(self):
@@ -513,21 +523,11 @@ class BaseExtractor:
             True if the object is json serializable, False otherwise.
         """
         # we keep this for backward compatilibity or not ????
+        # is this needed ??? I think no.
         return self.check_serializablility("json")
 
-        # kwargs = self._kwargs
-        # for value in kwargs.values():
-        #     # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
-        #     if isinstance(value, BaseExtractor):
-        #         return value.check_if_json_serializable()
-        #     elif isinstance(value, list) and (len(value) > 0) and isinstance(value[0], BaseExtractor):
-        #         return all([v.check_if_json_serializable() for v in value])
-        #     elif isinstance(value, dict) and isinstance(value[list(value.keys())[0]], BaseExtractor):
-        #         return all([v.check_if_json_serializable() for k, v in value.items()])
-        # return self._is_json_serializable
-
     def check_if_pickle_serializable(self):
-        # is this needed
+        # is this needed ??? I think no.
         return self.check_serializablility("pickle")
 
     @staticmethod
@@ -596,7 +596,6 @@ class BaseExtractor:
         folder_metadata: str, Path, or None
             Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
-        # assert self.check_if_json_serializable(), "The extractor is not json serializable"
         assert self.check_serializablility("json"), "The extractor is not json serializable"
 
         # Writing paths as relative_to requires recursively expanding the dict
@@ -835,7 +834,6 @@ class BaseExtractor:
 
         # dump provenance
         provenance_file = folder / f"provenance.json"
-        # if self.check_if_json_serializable():
         if self.check_serializablility("json"):
             self.dump(provenance_file)
         else:
