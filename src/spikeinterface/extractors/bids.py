@@ -76,7 +76,7 @@ def _read_probe_group(folder, bids_name, recording_channel_ids):
         contact_ids = channels["contact_id"].values.astype("U")
 
         # extracting information of requested channels
-        keep = np.in1d(channel_ids, recording_channel_ids)
+        keep = np.isin(channel_ids, recording_channel_ids)
         channel_ids = channel_ids[keep]
         contact_ids = contact_ids[keep]
 

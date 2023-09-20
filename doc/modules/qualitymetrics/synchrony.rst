@@ -1,3 +1,5 @@
+.. _synchrony:
+
 Synchrony Metrics (:code:`synchrony`)
 =====================================
 
@@ -39,11 +41,11 @@ The SpikeInterface implementation is a partial port of the low-level complexity 
 References
 ----------
 
-.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+.. automodule:: spikeinterface.qualitymetrics.misc_metrics
 
     .. autofunction:: compute_synchrony_metrics
 
 Literature
 ----------
 
-Based on concepts described in Gruen_
+Based on concepts described in [Gruen]_
