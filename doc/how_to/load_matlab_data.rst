@@ -67,7 +67,7 @@ Common Pitfalls & Tips
 
 1. **Data Shape**: Make sure your MATLAB data matrix's first dimension is samples/time and the second is channels. If your time is in the second dimension, use `time_axis=1` in `si.read_binary()`.
 2. **File Path**: Always double-check the Python file path.
-3. **Data Type Consistency**: Ensure data types between MATLAB and Python are consistent. MATLAB's `double` is equivalent to nUMPY's `float64`.
+3. **Data Type Consistency**: Ensure data types between MATLAB and Python are consistent. MATLAB's `double` is equivalent to Numpy's `float64`.
 4. **Sampling Frequency**: Set the appropriate sampling frequency in Hz for SpikeInterface.
 5. **Transition to Python**: Moving from MATLAB to Python can be challenging. For newcomers to Python, consider reviewing numpy's [Numpy for MATLAB Users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) guide.
 
