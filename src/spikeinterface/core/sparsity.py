@@ -147,7 +147,12 @@ class ChannelSparsity:
             Sparse waveforms with shape (num_units, num_samples, num_active_channels).
         """
 
-        assert self.are_waveforms_dense(waveforms=waveforms), "Waveforms must be dense to sparsify them."
+        assert_msg = (
+            "Waveforms must be dense to sparsify them. "
+            f"Their last dimension {waveforms.shape[-1]} must be equal to the number of channels {self.num_chanenls}"
+        )
+        assert self.are_waveforms_dense(waveforms=waveforms), assert_msg
+
         unit_id = self.unit_ids[unit_index]
         non_zero_indices = self.unit_id_to_channel_indices[unit_id]
         num_sparse_channels = len(non_zero_indices)
