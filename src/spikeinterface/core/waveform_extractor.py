@@ -4,6 +4,7 @@ from pathlib import Path
 import shutil
 from typing import Iterable, Literal, Optional
 import json
+import os
 
 import numpy as np
 from copy import deepcopy
@@ -87,6 +88,7 @@ class WaveformExtractor:
         self._template_cache = {}
         self._params = {}
         self._loaded_extensions = dict()
+        self._is_read_only = False
         self.sparsity = sparsity
 
         self.folder = folder
@@ -103,6 +105,8 @@ class WaveformExtractor:
                 if (self.folder / "params.json").is_file():
                     with open(str(self.folder / "params.json"), "r") as f:
                         self._params = json.load(f)
+            if not os.access(self.folder, os.W_OK):
+                self._is_read_only = True
         else:
             # this is in case of in-memory
             self.format = "memory"
@@ -399,6 +403,9 @@ class WaveformExtractor:
     def dtype(self):
         return self._params["dtype"]
 
+    def is_read_only(self) -> bool:
+        return self._is_read_only
+
     def has_recording(self) -> bool:
         return self._recording is not None
 
@@ -516,6 +523,10 @@ class WaveformExtractor:
         """
         if self.folder is None:
             return extension_name in self._loaded_extensions
+
+        if extension_name in self._loaded_extensions:
+            # extension already loaded in memory
+            return True
         else:
             if self.format == "binary":
                 return (self.folder / extension_name).is_dir() and (
@@ -1740,13 +1751,33 @@ class BaseWaveformExtractorExtension:
             if self.format == "binary":
                 self.extension_folder = self.folder / self.extension_name
                 if not self.extension_folder.is_dir():
-                    self.extension_folder.mkdir()
+                    if self.waveform_extractor.is_read_only():
+                        warn(
+                            "WaveformExtractor: cannot save extension in read-only mode. "
+                            "Extension will be saved in memory."
+                        )
+                        self.format = "memory"
+                        self.extension_folder = None
+                        self.folder = None
+                    else:
+                        self.extension_folder.mkdir()
+
             else:
                 import zarr
 
-                zarr_root = zarr.open(self.folder, mode="r+")
+                mode = "r+" if not self.waveform_extractor.is_read_only() else "r"
+                zarr_root = zarr.open(self.folder, mode=mode)
                 if self.extension_name not in zarr_root.keys():
-                    self.extension_group = zarr_root.create_group(self.extension_name)
+                    if self.waveform_extractor.is_read_only():
+                        warn(
+                            "WaveformExtractor: cannot save extension in read-only mode. "
+                            "Extension will be saved in memory."
+                        )
+                        self.format = "memory"
+                        self.extension_folder = None
+                        self.folder = None
+                    else:
+                        self.extension_group = zarr_root.create_group(self.extension_name)
                 else:
                     self.extension_group = zarr_root[self.extension_name]
         else:
@@ -1863,6 +1894,9 @@ class BaseWaveformExtractorExtension:
         self._save(**kwargs)
 
     def _save(self, **kwargs):
+        # Only save if not read only
+        if self.waveform_extractor.is_read_only():
+            return
         if self.format == "binary":
             import pandas as pd
 
@@ -1900,7 +1934,9 @@ class BaseWaveformExtractorExtension:
                     self.extension_group.create_dataset(name=ext_data_name, data=ext_data, compressor=compressor)
                 elif isinstance(ext_data, pd.DataFrame):
                     ext_data.to_xarray().to_zarr(
-                        store=self.extension_group.store, group=f"{self.extension_group.name}/{ext_data_name}", mode="a"
+                        store=self.extension_group.store,
+                        group=f"{self.extension_group.name}/{ext_data_name}",
+                        mode="a",
                     )
                     self.extension_group[ext_data_name].attrs["dataframe"] = True
                 else:

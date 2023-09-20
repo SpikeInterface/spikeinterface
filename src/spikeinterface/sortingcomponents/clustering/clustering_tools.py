@@ -30,7 +30,7 @@ def _split_waveforms(
     local_labels_with_noise = clustering[0]
     cluster_probability = clustering[2]
     (persistent_clusters,) = np.nonzero(cluster_probability > probability_thr)
-    local_labels_with_noise[~np.in1d(local_labels_with_noise, persistent_clusters)] = -1
+    local_labels_with_noise[~np.isin(local_labels_with_noise, persistent_clusters)] = -1
 
     # remove super small cluster
     labels, count = np.unique(local_labels_with_noise[:valid_size], return_counts=True)
@@ -43,7 +43,7 @@ def _split_waveforms(
     to_remove = labels[(count / valid_size) < minimum_cluster_size_ratio]
     # ~ print('to_remove', to_remove, count / valid_size)
     if to_remove.size > 0:
-        local_labels_with_noise[np.in1d(local_labels_with_noise, to_remove)] = -1
+        local_labels_with_noise[np.isin(local_labels_with_noise, to_remove)] = -1
 
     local_labels_with_noise[valid_size:] = -2
 
@@ -123,7 +123,7 @@ def _split_waveforms_nested(
         active_labels_with_noise = clustering[0]
         cluster_probability = clustering[2]
         (persistent_clusters,) = np.nonzero(clustering[2] > probability_thr)
-        active_labels_with_noise[~np.in1d(active_labels_with_noise, persistent_clusters)] = -1
+        active_labels_with_noise[~np.isin(active_labels_with_noise, persistent_clusters)] = -1
 
         active_labels = active_labels_with_noise[active_ind < valid_size]
         active_labels_set = np.unique(active_labels)
@@ -381,9 +381,9 @@ def auto_clean_clustering(
                 continue
 
             wfs0 = wfs_arrays[label0]
-            wfs0 = wfs0[:, :, np.in1d(channel_inds0, used_chans)]
+            wfs0 = wfs0[:, :, np.isin(channel_inds0, used_chans)]
             wfs1 = wfs_arrays[label1]
-            wfs1 = wfs1[:, :, np.in1d(channel_inds1, used_chans)]
+            wfs1 = wfs1[:, :, np.isin(channel_inds1, used_chans)]
 
             # TODO : remove
             assert wfs0.shape[2] == wfs1.shape[2]
@@ -536,7 +536,6 @@ def remove_duplicates_via_matching(
     waveform_extractor,
     noise_levels,
     peak_labels,
-    sparsify_threshold=1,
     method_kwargs={},
     job_kwargs={},
     tmp_folder=None,
@@ -552,6 +551,10 @@ def remove_duplicates_via_matching(
     from pathlib import Path
 
     job_kwargs = fix_job_kwargs(job_kwargs)
+
+    if waveform_extractor.is_sparse():
+        sparsity = waveform_extractor.sparsity.mask
+
     templates = waveform_extractor.get_all_templates(mode="median").copy()
     nb_templates = len(templates)
     duration = waveform_extractor.nbefore + waveform_extractor.nafter
@@ -559,9 +562,9 @@ def remove_duplicates_via_matching(
     fs = waveform_extractor.recording.get_sampling_frequency()
     num_chans = waveform_extractor.recording.get_num_channels()
 
-    for t in range(nb_templates):
-        is_silent = templates[t].ptp(0) < sparsify_threshold
-        templates[t, :, is_silent] = 0
+    if waveform_extractor.is_sparse():
+        for count, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
+            templates[count][:, ~sparsity[count]] = 0
 
     zdata = templates.reshape(nb_templates, -1)
 
@@ -581,6 +584,7 @@ def remove_duplicates_via_matching(
 
     recording = BinaryRecordingExtractor(tmp_filename, num_channels=num_chans, sampling_frequency=fs, dtype="float32")
     recording.annotate(is_filtered=True)
+    recording = recording.set_probe(waveform_extractor.recording.get_probe())
 
     margin = 2 * max(waveform_extractor.nbefore, waveform_extractor.nafter)
     half_marging = margin // 2
@@ -597,7 +601,6 @@ def remove_duplicates_via_matching(
             "waveform_extractor": waveform_extractor,
             "noise_levels": noise_levels,
             "amplitudes": [0.95, 1.05],
-            "sparsify_threshold": sparsify_threshold,
             "omp_min_sps": 0.1,
             "templates": None,
             "overlaps": None,

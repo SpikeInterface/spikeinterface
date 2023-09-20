@@ -1,5 +1,5 @@
 Development
-==========
+===========
 
 How to contribute
 -----------------
@@ -14,7 +14,7 @@ There are various ways to contribute to SpikeInterface as a user or developer. S
 * Writing unit tests to expand code coverage and use case scenarios.
 * Reporting bugs and issues.
 
-We use a forking workflow <https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow>_ to manage contributions. Here's a summary of the steps involved, with more details available in the provided link:
+We use a forking workflow `<https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow>`_ to manage contributions. Here's a summary of the steps involved, with more details available in the provided link:
 
 * Fork the SpikeInterface repository.
 * Create a new branch (e.g., :code:`git switch -c my-contribution`).
@@ -22,7 +22,7 @@ We use a forking workflow <https://www.atlassian.com/git/tutorials/comparing-wor
 * Open a pull request from the "Pull Requests" tab of your fork to :code:`spikeinterface/main`.
 * By following this process, we can review the code and even make changes as necessary.
 
-While we appreciate all the contributions please be mindful of the cost of reviewing pull requests <https://rgommers.github.io/2019/06/the-cost-of-an-open-source-contribution/>_ .
+While we appreciate all the contributions please be mindful of the cost of reviewing pull requests `<https://rgommers.github.io/2019/06/the-cost-of-an-open-source-contribution/>`_ .
 
 
 How to run tests locally
@@ -201,7 +201,7 @@ Implement a new extractor
 SpikeInterface already supports over 30 file formats, but the acquisition system you use might not be among the
 supported formats list (***ref***). Most of the extractord rely on the `NEO <https://github.com/NeuralEnsemble/python-neo>`_
 package to read information from files.
-Therefore, to implement a new extractor to handle the unsupported format, we recommend make a new `neo.rawio `_ class.
+Therefore, to implement a new extractor to handle the unsupported format, we recommend make a new :code:`neo.rawio.BaseRawIO` class (see `example <https://github.com/NeuralEnsemble/python-neo/blob/master/neo/rawio/examplerawio.py#L44>`_).
 Once that is done, the new class can be easily wrapped into SpikeInterface as an extension of the
 :py:class:`~spikeinterface.extractors.neoextractors.neobaseextractors.NeoBaseRecordingExtractor`
 (for :py:class:`~spikeinterface.core.BaseRecording` objects) or
