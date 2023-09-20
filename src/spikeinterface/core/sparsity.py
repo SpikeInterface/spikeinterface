@@ -149,7 +149,7 @@ class ChannelSparsity:
 
         assert_msg = (
             "Waveforms must be dense to sparsify them. "
-            f"Their last dimension {waveforms.shape[-1]} must be equal to the number of channels {self.num_chanenls}"
+            f"Their last dimension {waveforms.shape[-1]} must be equal to the number of channels {self.num_channels}"
         )
         assert self.are_waveforms_dense(waveforms=waveforms), assert_msg
 
