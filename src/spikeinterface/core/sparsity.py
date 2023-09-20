@@ -100,7 +100,7 @@ class ChannelSparsity:
 
         self.num_channels = self.channel_ids.size
         self.num_units = self.unit_ids.size
-        self.max_active_channels = self.mask.sum(axis=1).max()
+        self.max_num_active_channels = self.mask.sum(axis=1).max()
 
     def __repr__(self):
         density = np.mean(self.mask)
