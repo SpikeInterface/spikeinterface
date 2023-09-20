@@ -1,13 +1,13 @@
 Exporting MATLAB Data to Binary & Loading in SpikeInterface
 ===========================================================
 
-In this tutorial, we'll go through the process of exporting your data from MATLAB in a binary format and then loading it using SpikeInterface in Python. Let's break down the steps.
+In this tutorial, we will walk through the process of exporting data from MATLAB in a binary format and subsequently loading it using SpikeInterface in Python.
 
 Exporting Data from MATLAB
 --------------------------
 
-First, ensure your data is structured correctly. The data matrix should be organized such that the first dimension corresponds to samples/time and the second dimension to channels.
-In the following MATLAB code, we generate random data as an example and then write it to a binary file.
+Begin by ensuring your data structure is correct. Organize your data matrix so that the first dimension corresponds to samples/time and the second to channels.
+Here, we present a MATLAB code that creates a random dataset and writes it to a binary file as an illustration.
 
 .. code-block:: matlab
 
@@ -25,72 +25,76 @@ In the following MATLAB code, we generate random data as an example and then wri
 
 .. note::
 
-   In a real-world scenario, replace the random data generation with your actual data.
+   In your own script, replace the random data generation with your actual dataset.
 
 Loading Data in SpikeInterface
 -----------------------------
 
-This should produce a binary file called `your_data_as_a_binary.bin` in your current MATLAB directory.
-You will need the complete path (i.e. its location on your computer) to load it in Python.
+After executing the above MATLAB code, a binary file named `your_data_as_a_binary.bin` will be created in your MATLAB directory. To load this file in Python, you'll need its full path.
 
-Once you have your data in a binary format, you can seamlessly load it into SpikeInterface using the following script:
+Use the following Python script to load the binary data into SpikeInterface:
 
 .. code-block:: python
 
    import spikeinterface as si
    from pathlib import Path
 
-   # In linux or mac
+   # Define file path
+   # For Linux or macOS:
    file_path = Path("/The/Path/To/Your/Data/your_data_as_a_binary.bin")
-   # or for Windows
+   # For Windows:
    # file_path = Path(r"c:\path\to\your\data\your_data_as_a_binary.bin")
 
-   # Ensure the file exists
-   assert file_path.is_file(), f"Your path {file_path} is not a file, you probably have a typo or got the wrong path."
+   # Confirm file existence
+   assert file_path.is_file(), f"Error: {file_path} is not a valid file. Please check the path."
 
-   # Specify the parameters of your recording
-   sampling_frequency = 30_000.0  # in Hz, adjust as per your MATLAB dataset
-   num_channels = 384  # adjust as per your MATLAB dataset
-   dtype = "float64"  # equivalent of MATLAB double
+   # Define recording parameters
+   sampling_frequency = 30_000.0  # Adjust according to your MATLAB dataset
+   num_channels = 384  # Adjust according to your MATLAB dataset
+   dtype = "float64"  # MATLAB's double corresponds to Python's float64
 
-   # Load the data using SpikeInterface
+   # Load data using SpikeInterface
    recording = si.read_binary(file_path, sampling_frequency=sampling_frequency,
                                         num_channels=num_channels, dtype=dtype)
 
-   # Verify the shape of your data
-   assert recording.get_traces().shape == (num_samples, num_channels)
+   # Confirm the data shape
+   assert recording.get_traces().shape == (numSamples, num_channels)
 
-This should be enough to get you started with loading your MATLAB data into SpikeInterface. You can use all the Spikeinterface machinery to process your data, including filtering, spike sorting, and more.
+Follow the steps above to seamlessly import your MATLAB data into SpikeInterface. Once loaded, you can harness the full power of SpikeInterface for data processing, including filtering, spike sorting, and more.
 
 Common Pitfalls & Tips
 ----------------------
 
-1. **Data Shape**: Always ensure that your MATLAB data matrix's first dimension corresponds to samples/time and the second to channels. If the time happens to be in the second dimension, you can use `time_axis=1` as an argument in `si.read_binary()` to account for this.
-2. **File Path**: Double-check the file path in Python to ensure you are pointing to the right directory.
-3. **Data Type**: When moving data between MATLAB and Python, it's crucial to keep the data type consistent. In our example, we used `double` in MATLAB, which corresponds to `float64` in Python.
-4. **Sampling Frequency**: Ensure you set the correct sampling frequency in Hz when loading data into SpikeInterface.
-5. **Working on Python**: Matlab to python can feel like a big jump. If you are new to Python, we recommend checking out numpy's [Python for MATLAB Users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) guide.
-
+1. **Data Shape**: Make sure your MATLAB data matrix's first dimension is samples/time and the second is channels. If your time is in the second dimension, use `time_axis=1` in `si.read_binary()`.
+2. **File Path**: Always double-check the Python file path.
+3. **Data Type Consistency**: Ensure data types between MATLAB and Python are consistent. MATLAB's `double` is equivalent to nUMPY's `float64`.
+4. **Sampling Frequency**: Set the appropriate sampling frequency in Hz for SpikeInterface.
+5. **Transition to Python**: Moving from MATLAB to Python can be challenging. For newcomers to Python, consider reviewing numpy's [Numpy for MATLAB Users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) guide.
 
 Using gains and offsets for integer data
 ----------------------------------------
 
-A common technique used in raw formats is to store data as integer values, which provides a memory-efficient representation (i.e. lower ram) and use a gain and offset to convert it to float values that represent meaningful physical units.
-In SpikeInterface this is done using the `gain_to_uV` and `offset_to_uV` parameters as the we handle traces in microvolts. Both values can be passed to `read_binary` when loading the data:
+Raw data formats often store data as integer values for memory efficiency. To give these integers meaningful physical units, you can apply a gain and an offset.
+In SpikeInterface, you can use the `gain_to_uV` and `offset_to_uV` parameters, since traces are handled in microvolts (uV). Both parameters can be integrated into the `read_binary` function.
+If your data in MATLAB is stored as `int16`, and you know the gain and offset, you can use the following code to load the data:
 
 .. code-block:: python
 
-   sampling_frequency = 30_000.0  # in Hz, adjust as per your MATLAB dataset
-   num_channels = 384  # adjust as per your MATLAB dataset
-   dtype_int = 'int16'  # adjust as per your MATLAB dataset
-   gain_to_uV = 0.195  # adjust as per your MATLAB dataset
-   offset_to_uV = 0   # adjust as per your MATLAB dataset
+   sampling_frequency = 30_000.0  # Adjust according to your MATLAB dataset
+   num_channels = 384  # Adjust according to your MATLAB dataset
+   dtype_int = 'int16'  # Adjust according to your MATLAB dataset
+   gain_to_uV = 0.195  # Adjust according to your MATLAB dataset
+   offset_to_uV = 0   # Adjust according to your MATLAB dataset
 
    recording = si.read_binary(file_path, sampling_frequency=sampling_frequency,
                               num_channels=num_channels, dtype=dtype_int,
                               gain_to_uV=gain_to_uV, offset_to_uV=offset_to_uV)
 
-   recording.get_traces(start)
+   recording.get_traces(return_scaled=True)  # Return traces in micro volts (uV)
 
 
-This will equip your recording object with capabilities to convert the data to float values in uV using the `get_traces()` method with the `return_scaled` parameter set to True.
+This will equip your recording object with capabilities to convert the data to float values in uV using the `get_traces()` method with the `return_scaled` parameter set to `True`.
+
+.. note::
+
+   The gain and offset parameters are usually format depend and you will need to find out the correct values for your data format. You can load your data without gain and offset but then the traces will be in integer values and not in uV.
