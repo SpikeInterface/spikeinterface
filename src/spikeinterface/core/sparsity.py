@@ -100,7 +100,7 @@ class ChannelSparsity:
 
         self.num_channels = self.channel_ids.size
         self.num_units = self.unit_ids.size
-        self.max_channel_representation = self.mask.sum(axis=1).max()
+        self.max_active_channels = self.mask.sum(axis=1).max()
 
     def __repr__(self):
         density = np.mean(self.mask)
@@ -125,26 +125,28 @@ class ChannelSparsity:
                 self._unit_id_to_channel_indices[unit_id] = channel_inds
         return self._unit_id_to_channel_indices
 
-    def sparsify_waveforms(self, waveforms: np.ndarray, unit_index: int) -> np.ndarray:
+    def sparsify_waveforms(self, waveforms: np.ndarray, unit_id: str) -> np.ndarray:
         """
-        Sparsify the waveforms according to a unit's channel sparsity.
+        Sparsify the waveforms according to a unit_id corresponding sparsity.
 
-        The units are indexed by their index in the unit_ids list.
 
-        Given a unit index, this method selects only the active channels for
+        Given a unit_id, this method selects only the active channels for
         that unit and removes the rest.
 
         Parameters
         ----------
         waveforms : np.array
             Dense waveforms with shape (num_units, num_samples, num_channels).
-        unit_index : int
-            The index of the unit for which to sparsify the waveform.
+        unit_id : str
+            The unit_id for which to sparsify the waveform.
 
         Returns
         -------
         sparsified_waveforms : np.array
             Sparse waveforms with shape (num_units, num_samples, num_active_channels).
+
+        Where num_active_channels is the number of channels that are active for this unit and should be
+        equal to the number of non-zero elements in the mask for this unit.
         """
 
         assert_msg = (
@@ -153,28 +155,27 @@ class ChannelSparsity:
         )
         assert self.are_waveforms_dense(waveforms=waveforms), assert_msg
 
-        unit_id = self.unit_ids[unit_index]
         non_zero_indices = self.unit_id_to_channel_indices[unit_id]
-        num_sparse_channels = len(non_zero_indices)
-        sparsified_shape = waveforms.shape[:-1] + (num_sparse_channels,)
+        num_active_channels = len(non_zero_indices)
+        sparsified_shape = waveforms.shape[:-1] + (num_active_channels,)
         sparsified_waveforms = np.zeros(sparsified_shape, dtype=waveforms.dtype)
-        sparsified_waveforms[...] = waveforms[..., non_zero_indices]
+        sparsified_waveforms = waveforms[..., non_zero_indices]
 
         return sparsified_waveforms
 
-    def densify_waveforms(self, waveforms: np.ndarray, unit_index: int) -> np.ndarray:
+    def densify_waveforms(self, waveforms: np.ndarray, unit_id: str) -> np.ndarray:
         """
-        Densify sparse waveforms according to a unit's channel sparsity.
+        Densify sparse waveforms that were sparisified according to a unit's channel sparsity.
 
-        Given a unit index and its sparsified waveform, this method places the waveform back
-        into its original position within a dense array.
+        Given a unit_id its sparsified waveform, this method places the waveform back
+        into its original form within a dense array.
 
         Parameters
         ----------
         waveforms : np.array
             The sparsified waveforms array of shape (num_units, num_samples, num_active_channels).
-        unit_index : int
-            The index of the unit for which to densify the waveform.
+        unit_id : str
+            The unit_id that was used to sparsify the waveform.
 
         Returns
         -------
@@ -183,14 +184,13 @@ class ChannelSparsity:
 
         """
 
-        unit_id = self.unit_ids[unit_index]
         non_zero_indices = self.unit_id_to_channel_indices[unit_id]
 
         assert_msg = (
-            "Waveforms must be sparse in this index to densify them. The sparsity for this unit index is "
-            f"{len(non_zero_indices)} but the waveform has sparsity (last dimension) of {waveforms.shape[-1]}."
+            "Waveforms do not seem to be be in the sparsity shape of this unit_id. The number of active channels is "
+            f"{len(non_zero_indices)} but the waveform has {waveforms.shape[-1]} active channels."
         )
-        assert self.are_waveforms_sparse(waveforms=waveforms, unit_index=unit_index), assert_msg
+        assert self.are_waveforms_sparse(waveforms=waveforms, unit_id=unit_id), assert_msg
 
         densified_shape = waveforms.shape[:-1] + (self.num_channels,)
         densified_waveforms = np.zeros(densified_shape, dtype=waveforms.dtype)
@@ -201,10 +201,10 @@ class ChannelSparsity:
     def are_waveforms_dense(self, waveforms: np.ndarray) -> bool:
         return waveforms.shape[-1] == self.num_channels
 
-    def are_waveforms_sparse(self, waveforms: np.ndarray, unit_index: int) -> bool:
-        unit_id = self.unit_ids[unit_index]
+    def are_waveforms_sparse(self, waveforms: np.ndarray, unit_id: str) -> bool:
         non_zero_indices = self.unit_id_to_channel_indices[unit_id]
-        return waveforms.shape[-1] == len(non_zero_indices)
+        num_active_channels = len(non_zero_indices)
+        return waveforms.shape[-1] == num_active_channels
 
     @classmethod
     def from_unit_id_to_channel_ids(cls, unit_id_to_channel_ids, unit_ids, channel_ids):
@@ -231,16 +231,16 @@ class ChannelSparsity:
         )
 
     @classmethod
-    def from_dict(cls, d):
+    def from_dict(cls, dictionary: dict):
         unit_id_to_channel_ids_corrected = {}
-        for unit_id in d["unit_ids"]:
-            if unit_id in d["unit_id_to_channel_ids"]:
-                unit_id_to_channel_ids_corrected[unit_id] = d["unit_id_to_channel_ids"][unit_id]
+        for unit_id in dictionary["unit_ids"]:
+            if unit_id in dictionary["unit_id_to_channel_ids"]:
+                unit_id_to_channel_ids_corrected[unit_id] = dictionary["unit_id_to_channel_ids"][unit_id]
             else:
-                unit_id_to_channel_ids_corrected[unit_id] = d["unit_id_to_channel_ids"][str(unit_id)]
-        d["unit_id_to_channel_ids"] = unit_id_to_channel_ids_corrected
+                unit_id_to_channel_ids_corrected[unit_id] = dictionary["unit_id_to_channel_ids"][str(unit_id)]
+        dictionary["unit_id_to_channel_ids"] = unit_id_to_channel_ids_corrected
 
-        return cls.from_unit_id_to_channel_ids(**d)
+        return cls.from_unit_id_to_channel_ids(**dictionary)
 
     ## Some convinient function to compute sparsity from several strategy
     @classmethod
