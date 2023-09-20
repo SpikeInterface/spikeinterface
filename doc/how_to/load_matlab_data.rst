@@ -55,16 +55,42 @@ Once you have your data in a binary format, you can seamlessly load it into Spik
 
    # Load the data using SpikeInterface
    recording = si.read_binary(file_path, sampling_frequency=sampling_frequency,
-                                        num_channels=num_channels, dtype=dtype, gain_to_uV=1, offset_to_uV=0)
+                                        num_channels=num_channels, dtype=dtype)
 
    # Verify the shape of your data
    assert recording.get_traces().shape == (num_samples, num_channels)
 
+This should be enough to get you started with loading your MATLAB data into SpikeInterface. You can use all the Spikeinterface machinery to process your data, including filtering, spike sorting, and more.
+
 Common Pitfalls & Tips
 ----------------------
 
-1. **Data Shape**: Always ensure that your MATLAB data matrix's first dimension corresponds to samples/time and the second to channels.
+1. **Data Shape**: Always ensure that your MATLAB data matrix's first dimension corresponds to samples/time and the second to channels. If the time happens to be in the second dimension, you can use `time_axis=1` as an argument in `si.read_binary()` to account for this.
 2. **File Path**: Double-check the file path in Python to ensure you are pointing to the right directory.
 3. **Data Type**: When moving data between MATLAB and Python, it's crucial to keep the data type consistent. In our example, we used `double` in MATLAB, which corresponds to `float64` in Python.
 4. **Sampling Frequency**: Ensure you set the correct sampling frequency in Hz when loading data into SpikeInterface.
 5. **Working on Python**: Matlab to python can feel like a big jump. If you are new to Python, we recommend checking out numpy's [Python for MATLAB Users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) guide.
+
+
+Using gains and offsets for integer data
+----------------------------------------
+
+A common technique used in raw formats is to store data as integer values, which provides a memory-efficient representation (i.e. lower ram) and use a gain and offset to convert it to float values that represent meaningful physical units.
+In SpikeInterface this is done using the `gain_to_uV` and `offset_to_uV` parameters as the we handle traces in microvolts. Both values can be passed to `read_binary` when loading the data:
+
+.. code-block:: python
+
+   sampling_frequency = 30_000.0  # in Hz, adjust as per your MATLAB dataset
+   num_channels = 384  # adjust as per your MATLAB dataset
+   dtype_int = 'int16'  # adjust as per your MATLAB dataset
+   gain_to_uV = 0.195  # adjust as per your MATLAB dataset
+   offset_to_uV = 0   # adjust as per your MATLAB dataset
+
+   recording = si.read_binary(file_path, sampling_frequency=sampling_frequency,
+                              num_channels=num_channels, dtype=dtype_int,
+                              gain_to_uV=gain_to_uV, offset_to_uV=offset_to_uV)
+
+   recording.get_traces(start)
+
+
+This will equip your recording object with capabilities to convert the data to float values in uV using the `get_traces()` method with the `return_scaled` parameter set to True.
