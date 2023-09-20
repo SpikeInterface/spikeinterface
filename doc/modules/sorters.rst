@@ -239,7 +239,7 @@ There are three options:
 1. **released PyPi version**: if you installed :code:`spikeinterface` with :code:`pip install spikeinterface`,
    the latest released version will be installed in the container.
 
-2. **development :code:`main` version**: if you installed :code:`spikeinterface` from source from the cloned repo
+2. **development** :code:`main` **version**: if you installed :code:`spikeinterface` from source from the cloned repo
    (with :code:`pip install .`) or with :code:`pip install git+https://github.com/SpikeInterface/spikeinterface.git`,
    the current development version from the :code:`main` branch will be installed in the container.
 
@@ -285,27 +285,26 @@ Running several sorters in parallel
 
 The :py:mod:`~spikeinterface.sorters` module also includes tools to run several spike sorting jobs
 sequentially or in parallel. This can be done with the
-:py:func:`~spikeinterface.sorters.run_sorters()` function by specifying
+:py:func:`~spikeinterface.sorters.run_sorter_jobs()` function by specifying
 an :code:`engine` that supports parallel processing (such as :code:`joblib` or :code:`slurm`).
 
 .. code-block:: python
 
-    recordings = {'rec1' : recording, 'rec2': another_recording}
-    sorter_list = ['herdingspikes', 'tridesclous']
-    sorter_params = {
-                    'herdingspikes': {'clustering_bandwidth' : 8},
-                    'tridesclous': {'detect_threshold' : 5.},
-                    }
-    sorting_output = run_sorters(sorter_list, recordings, working_folder='tmp_some_sorters',
-                                 mode_if_folder_exists='overwrite', sorter_params=sorter_params)
+    # here we run 2 sorters on 2 different recordings = 4 jobs
+    recording = ...
+    another_recording = ...
 
-    # the output is a dict with (rec_name, sorter_name) as keys
-    for (rec_name, sorter_name), sorting in sorting_output.items():
-        print(rec_name, sorter_name, ':', sorting.get_unit_ids())
+    job_list = [
+      {'sorter_name': 'tridesclous', 'recording': recording, 'output_folder': 'folder1','detect_threshold': 5.},
+      {'sorter_name': 'tridesclous', 'recording': another_recording, 'output_folder': 'folder2', 'detect_threshold': 5.},
+      {'sorter_name': 'herdingspikes', 'recording': recording, 'output_folder': 'folder3', 'clustering_bandwidth': 8., 'docker_image': True},
+      {'sorter_name': 'herdingspikes', 'recording': another_recording, 'output_folder': 'folder4', 'clustering_bandwidth': 8., 'docker_image': True},
+    ]
 
-After the jobs are run, the :code:`sorting_outputs` is a dictionary with :code:`(rec_name, sorter_name)` as a key (e.g.
-:code:`('rec1', 'tridesclous')` in this example), and the corresponding :py:class:`~spikeinterface.core.BaseSorting`
-as a value.
+    # run in loop
+    sortings = run_sorter_jobs(job_list, engine='loop')
+
+
 
 :py:func:`~spikeinterface.sorters.run_sorters` has several "engines" available to launch the computation:
 
@@ -315,13 +314,11 @@ as a value.
 
 .. code-block:: python
 
-  run_sorters(sorter_list, recordings, engine='loop')
+  run_sorter_jobs(job_list, engine='loop')
 
-  run_sorters(sorter_list, recordings, engine='joblib',
-              engine_kwargs={'n_jobs': 2})
+  run_sorter_jobs(job_list, engine='joblib', engine_kwargs={'n_jobs': 2})
 
-  run_sorters(sorter_list, recordings, engine='slurm',
-              engine_kwargs={'cpus_per_task': 10, 'mem', '5G'})
+  run_sorter_jobs(job_list, engine='slurm', engine_kwargs={'cpus_per_task': 10, 'mem', '5G'})
 
 
 Spike sorting by group
@@ -458,7 +455,7 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **Kilosort**  :code:`run_sorter('kilosort')`
 * **Kilosort2** :code:`run_sorter('kilosort2')`
 * **Kilosort2.5** :code:`run_sorter('kilosort2_5')`
-* **Kilosort3** :code:`run_sorter('Kilosort3')`
+* **Kilosort3** :code:`run_sorter('kilosort3')`
 * **PyKilosort** :code:`run_sorter('pykilosort')`
 * **Klusta** :code:`run_sorter('klusta')`
 * **Mountainsort4** :code:`run_sorter('mountainsort4')`
@@ -474,7 +471,7 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 Here a list of internal sorter based on `spikeinterface.sortingcomponents`; they are totally
 experimental for now:
 
-* **Spyking circus2** :code:`run_sorter('spykingcircus2')`
+* **Spyking Circus2** :code:`run_sorter('spykingcircus2')`
 * **Tridesclous2** :code:`run_sorter('tridesclous2')`
 
 In 2023, we expect to add many more sorters to this list.

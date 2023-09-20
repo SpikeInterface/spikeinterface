@@ -302,7 +302,7 @@ def get_chunk_with_margin(
     return traces_chunk, left_margin, right_margin
 
 
-def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y")):
+def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y"), flip=False):
     """
     Order channels by depth, by first ordering the x-axis, and then the y-axis.
 
@@ -316,6 +316,9 @@ def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y")):
         If str, it needs to be 'x', 'y', 'z'.
         If tuple or list, it sorts the locations in two dimensions using lexsort.
         This approach is recommended since there is less ambiguity, by default ('x', 'y')
+    flip: bool, default: False
+        If flip is False then the order is bottom first (starting from tip of the probe).
+        If flip is True then the order is upper first.
 
     Returns
     -------
@@ -341,6 +344,8 @@ def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y")):
             assert dim < ndim, "Invalid dimensions!"
             locations_to_sort += (locations[:, dim],)
         order_f = np.lexsort(locations_to_sort)
+    if flip:
+        order_f = order_f[::-1]
     order_r = np.argsort(order_f, kind="stable")
 
     return order_f, order_r
