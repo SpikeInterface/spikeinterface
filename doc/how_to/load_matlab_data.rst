@@ -28,7 +28,7 @@ Here, we present a MATLAB code that creates a random dataset and writes it to a 
    In your own script, replace the random data generation with your actual dataset.
 
 Loading Data in SpikeInterface
------------------------------
+------------------------------
 
 After executing the above MATLAB code, a binary file named `your_data_as_a_binary.bin` will be created in your MATLAB directory. To load this file in Python, you'll need its full path.
 
