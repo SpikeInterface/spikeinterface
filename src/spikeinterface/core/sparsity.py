@@ -136,17 +136,16 @@ class ChannelSparsity:
         Parameters
         ----------
         waveforms : np.array
-            Dense waveforms with shape (num_units, num_samples, num_channels).
+            Dense waveforms with shape (num_waveforms, num_samples, num_channels) or a
+            single dense waveform (template) with shape (num_samples, num_channels).
         unit_id : str
             The unit_id for which to sparsify the waveform.
 
         Returns
         -------
         sparsified_waveforms : np.array
-            Sparse waveforms with shape (num_units, num_samples, num_active_channels).
-
-        Where num_active_channels is the number of channels that are active for this unit and should be
-        equal to the number of non-zero elements in the mask for this unit.
+            Sparse waveforms with shape (num_waveforms, num_samples, num_active_channels)
+            or a single sparsified waveform (template) with shape (num_samples, num_active_channels).
         """
 
         assert_msg = (
@@ -170,14 +169,16 @@ class ChannelSparsity:
         Parameters
         ----------
         waveforms : np.array
-            The sparsified waveforms array of shape (num_units, num_samples, num_active_channels).
+            The sparsified waveforms array of shape (num_waveforms, num_samples, num_active_channels) or a single
+            sparse waveform (template) with shape (num_samples, num_active_channels).
         unit_id : str
             The unit_id that was used to sparsify the waveform.
 
         Returns
         -------
         densified_waveforms : np.array
-            The densified waveforms array of shape (num_units, num_samples, num_channels).
+            The densified waveforms array of shape (num_waveforms, num_samples, num_channels) or a single dense
+            waveform (template) with shape (num_samples, num_channels).
 
         """
 
