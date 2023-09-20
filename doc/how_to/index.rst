@@ -7,4 +7,4 @@ How to guides
     get_started
     analyse_neuropixels
     handle_drift
-    load_matalb_data
+    load_matlab_data
