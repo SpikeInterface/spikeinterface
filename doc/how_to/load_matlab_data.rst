@@ -97,4 +97,4 @@ This will equip your recording object with capabilities to convert the data to f
 
 .. note::
 
-   The gain and offset parameters are usually format depend and you will need to find out the correct values for your data format. You can load your data without gain and offset but then the traces will be in integer values and not in uV.
+   The gain and offset parameters are usually format dependent and you will need to find out the correct values for your data format. You can load your data without gain and offset but then the traces will be in integer values and not in uV.
