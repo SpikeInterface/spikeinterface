@@ -64,6 +64,18 @@ class Templates:
             nbefore=data["nbefore"],
         )
 
+    def get_dense_templates(self) -> np.ndarray:
+        if self.sparsity is None:
+            return self.templates_array
+        else:
+            self.sparsity.to_dense(self.templates_array)
+
+    def get_sparse_templates(self) -> np.ndarray:
+        if self.sparsity is None:
+            raise ValueError("Can't return sparse templates without passing a sparsity mask")
+        else:
+            self.sparsity.to_sparse(self.templates_array)
+
     def to_json(self):
         return json.dumps(self.to_dict())
 

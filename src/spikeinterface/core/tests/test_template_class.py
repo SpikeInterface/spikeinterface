@@ -4,31 +4,6 @@ import pickle
 from spikeinterface.core.template import Templates
 
 
-def compare_instances(obj1, obj2):
-    if not isinstance(obj1, Templates) or not isinstance(obj2, Templates):
-        raise ValueError("Both objects must be instances of the Templates class")
-
-    for attr, value1 in obj1.__dict__.items():
-        value2 = getattr(obj2, attr, None)
-
-        # Comparing numpy arrays
-        if isinstance(value1, np.ndarray):
-            if not np.array_equal(value1, value2):
-                print(f"Attribute '{attr}' is not equal!")
-                print(f"Value from obj1:\n{value1}")
-                print(f"Value from obj2:\n{value2}")
-                return False
-        # Comparing other types
-        elif value1 != value2:
-            print(f"Attribute '{attr}' is not equal!")
-            print(f"Value from obj1: {value1}")
-            print(f"Value from obj2: {value2}")
-            return False
-
-    print("All attributes are equal!")
-    return True
-
-
 @pytest.mark.parametrize("template_object", ["dense", "sparse"])
 def generate_template_fixture(template_object):
     num_units = 2
