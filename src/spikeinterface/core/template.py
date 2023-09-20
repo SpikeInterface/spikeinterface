@@ -1,6 +1,6 @@
 import numpy as np
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, astuple
 from .sparsity import ChannelSparsity
 
 
@@ -21,7 +21,7 @@ class Templates:
     nafter: int = field(init=False)
     ms_before: float = field(init=False)
     ms_after: float = field(init=False)
-    sparsity: ChannelSparsity = field(init=False)
+    sparsity: ChannelSparsity = field(init=False, default=None)
 
     def __post_init__(self):
         self.num_units, self.num_samples = self.templates_array.shape[:2]
@@ -66,3 +66,40 @@ class Templates:
 
     def to_json(self):
         return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_json(cls, json_str):
+        return cls.from_dict(json.loads(json_str))
+
+    def __eq__(self, other):
+        """Necessary to compare arrays"""
+        if not isinstance(other, Templates):
+            return False
+
+        # Convert the instances to tuples
+        self_tuple = astuple(self)
+        other_tuple = astuple(other)
+
+        # Compare each field
+        for s_field, o_field in zip(self_tuple, other_tuple):
+            if isinstance(s_field, np.ndarray):
+                if not np.array_equal(s_field, o_field):
+                    return False
+
+            elif isinstance(s_field, ChannelSparsity):
+                if not isinstance(o_field, ChannelSparsity):
+                    return False
+
+                # (maybe ChannelSparsity should have its own __eq__ method)
+                # Compare ChannelSparsity by its mask, unit_ids and channel_ids
+                if not np.array_equal(s_field.mask, o_field.mask):
+                    return False
+                if not np.array_equal(s_field.unit_ids, o_field.unit_ids):
+                    return False
+                if not np.array_equal(s_field.channel_ids, o_field.channel_ids):
+                    return False
+            else:
+                if s_field != o_field:
+                    return False
+
+        return True
