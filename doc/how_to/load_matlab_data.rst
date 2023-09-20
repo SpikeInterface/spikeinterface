@@ -46,7 +46,7 @@ Once you have your data in a binary format, you can seamlessly load it into Spik
    # file_path = Path(r"c:\path\to\your\data\your_data_as_a_binary.bin")
 
    # Ensure the file exists
-   assert file_path.is_file()
+   assert file_path.is_file(), f"Your path {file_path} is not a file, you probably have a typo or got the wrong path."
 
    # Specify the parameters of your recording
    sampling_frequency = 30_000.0  # in Hz, adjust as per your MATLAB dataset
