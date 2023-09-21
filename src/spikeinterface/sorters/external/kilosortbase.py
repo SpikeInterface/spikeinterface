@@ -220,25 +220,23 @@ class KilosortBase:
 
         if isinstance(params["delete_tmp_files"], bool):
             if params["delete_tmp_files"]:
-                tmp_to_remove = ("matlab_files", "temp_wh.dat")
+                tmp_files_to_remove = ("matlab_files", "temp_wh.dat")
             else:
-                tmp_to_remove = ()
+                tmp_files_to_remove = ()
         else:
-            assert isinstance(params["delete_tmp_files"], (tuple, list)), "..."
-       
-       if "temp_wh.dat" in tmp_to_remove: ... 
-            tmp_to_remove = (
-                ("matlab_files", "temp_wh.dat") if params["delete_tmp_files"] is True else params["delete_tmp_files"]
-            )
+            assert isinstance(
+                params["delete_tmp_files"], (tuple, list)
+            ), "`delete_tmp_files` must be a `Bool`, `Tuple` or `List`."
+            tmp_files_to_remove = params["delete_tmp_files"]
 
-            if "temp_wh.dat" in tmp_to_remove:
-                if (temp_wh_file := sorter_output_folder / "temp_wh.dat").exists():
-                    temp_wh_file.unlink()
+        if "temp_wh.dat" in tmp_files_to_remove:
+            if (temp_wh_file := sorter_output_folder / "temp_wh.dat").exists():
+                temp_wh_file.unlink()
 
-            if "matlab_files" in tmp_to_remove:
-                for ext in ["*.m", "*.mat"]:
-                    for temp_file in sorter_output_folder.glob(ext):
-                        temp_file.unlink()
+        if "matlab_files" in tmp_files_to_remove:
+            for ext in ["*.m", "*.mat"]:
+                for temp_file in sorter_output_folder.glob(ext):
+                    temp_file.unlink()
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
