@@ -59,9 +59,6 @@ class KilosortTempWhExtractor(BinaryRecordingExtractor):
         new_channel_ids = channel_ids[channel_indices]
         new_channel_locations = channel_locations[channel_indices]
 
-        # TODO: need to adjust probe?
-        # TODO: check whether this will erroneously re-order
-        # is_filtered = original_recording.is_filtered or ## params was filtering run
         super(KilosortTempWhExtractor, self).__init__(
             temp_wh_path,
             params["sample_rate"],
@@ -122,40 +119,29 @@ class KilosortTempWhExtractor(BinaryRecordingExtractor):
         return params
 
 
-#        original_probe = original_recording.get_probe()
-# self.set_probe(original_probe) TODO: do we need to adjust the probe? what about contact positions?
+"""
+TODO
+- understand the scaling. This is influenced by some scale factors, whiten and this mysterios 20 scale factor (see Phy issues).
+- implement the get_traces() function. This will do the scaling.
+- understand from Zacks comments the question: (does kilosort > 2 store shanks differently? if channel_map.ndim == 2:  # kilosort > 2)
 
-# 1) figure out metadata and casting for WaveForm Extractor
-# 2) check lazyness etc.
+TO CHECK
+- check all metadata required for WaveformExtractor is on the probe. This is easiest
+  checked in the test environment (non saved vs. saved)
+- that the new zero padding places nicely with the WaveformExtractor
+- How this performs in the context of multiple shanks.
+- write a set for channel locations vs. removing channels with `slice_channels`.
+- kilosort outputs channel_map with some channels removed. Ensure this indexing maps 100% to SI indexing.
+TO ASK
+- Here we set the probe onto the new recording, with channels removed. Does the probe
+  need to be adjusted? based on `channel_slide` I guess not.
+- How do we want to handle `get_num_samples` in the context of zero-padding?
+- should is_filtered be `True` if run through KS preprocessing? How would we know?
+- In general, do we store the full channel map in channel contacts or do we
+  only save the new subset? My guess is subset for contact_positions, but full probe
+  for probe. Check against slice_channels.
+"""
 
-# zero padding can just be kept. Check it plays nice with WaveformExtractor...
-
-# TODO: add provenance
-# TODO: what to do about all those zeros?
-
-#    def get_num_samples(self):
-#       """ ignore Kilosort's zero-padding """
-#      return self.original_recording.get_num_samples()
-
-# TODO: check, there must be a probe if sorting was run?
-# change the wiring of the probe
-# TODO: check this carefully, might be completely wrong
-#      if contact_vector is not None:
-
-# if channel_map.ndim == 2:  # kilosort > 2
-#    channel_indices = channel_map.ravel()  # TODO: check multiple shanks
-
-# self.set_channel_locations(new_channel_locations)  # TOOD: check against slice_channels
-
-#             is_filtered=None,  # TODO: need to get from KS provenence?
-
-# In general, do we store the full channel map in channel contacts or do we
-# only save the new subset? My guess is subset for contact_positions, but full probe
-# for probe. Check against slice_channels.
-#             self.set_probe(probe)  # TODO: what does this mean for missing channels?
-
-#         if channel_map.ndim == 2:  # kilosort > 2
-# does kilosort > 2 store shanks differently?             channel_indices = channel_map.ravel()
 from spikeinterface import extractors
 from spikeinterface import postprocessing
 
