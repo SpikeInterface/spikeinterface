@@ -109,7 +109,7 @@ def make_scale_controller(width_cm, height_cm):
 
 class TimeSlider(W.HBox):
 
-    position = traitlets.Tuple(traitlets.Int(), traitlets.Int(), traitlets.Int())
+    value = traitlets.Tuple(traitlets.Int(), traitlets.Int(), traitlets.Int())
     
     def __init__(self, durations, sampling_frequency, time_range=(0, 1.), **kwargs):
         
@@ -123,10 +123,10 @@ class TimeSlider(W.HBox):
         self.frame_range = (start_frame, end_frame)
 
         self.segment_index = 0
-        self.position = (start_frame, end_frame, self.segment_index)
+        self.value = (start_frame, end_frame, self.segment_index)
         
         
-        layout = W.Layout(align_items="center", width="1.5cm", height="100%")
+        layout = W.Layout(align_items="center", width="2cm", hight="1.5cm")
         but_left = W.Button(description='', disabled=False, button_style='', icon='arrow-left', layout=layout)
         but_right = W.Button(description='', disabled=False, button_style='', icon='arrow-right', layout=layout)
         
@@ -176,21 +176,21 @@ class TimeSlider(W.HBox):
                                      layout=W.Layout(align_items="center", width="100%", height="100%"),
                                      **kwargs)
         
-        self.observe(self.position_changed, names=['position'], type="change")
+        self.observe(self.value_changed, names=['value'], type="change")
 
-    def position_changed(self, change=None):
+    def value_changed(self, change=None):
 
-        self.unobserve(self.position_changed, names=['position'], type="change")
+        self.unobserve(self.value_changed, names=['value'], type="change")
 
-        start, stop, seg_index = self.position
+        start, stop, seg_index = self.value
         if seg_index < 0 or seg_index >= self.num_segments:
-            self.position = change['old']
+            self.value = change['old']
             return
         if start < 0 or stop < 0:
-            self.position = change['old']
+            self.value = change['old']
             return
         if start >= self.frame_limits[seg_index] or start > self.frame_limits[seg_index]:
-            self.position = change['old']
+            self.value = change['old']
             return
         
         self.segment_selector.value = seg_index
@@ -198,7 +198,7 @@ class TimeSlider(W.HBox):
         delta_s = (stop - start) / self.sampling_frequency
         self.window_sizer.value = delta_s
 
-        self.observe(self.position_changed, names=['position'], type="change")
+        self.observe(self.value_changed, names=['value'], type="change")
 
     def update_time(self, new_frame=None, new_time=None, update_slider=False, update_label=False):
         if new_frame is None and new_time is None:
@@ -228,6 +228,7 @@ class TimeSlider(W.HBox):
             self.slider.observe(self.slider_moved, names='value', type="change")
         
         self.frame_range = (start_frame, end_frame)
+        self.value = (start_frame, end_frame, self.segment_index)
         
     def time_label_changed(self, change=None):
         try:
@@ -273,8 +274,14 @@ class TimeSlider(W.HBox):
 
 
 class ScaleWidget(W.VBox):
-    def __init__(self, **kwargs):
-        scale_label = W.Label("Scale",
+    value = traitlets.Float()
+
+    def __init__(self, value=1., factor=1.2, **kwargs):
+        
+        assert factor > 1.
+        self.factor = factor
+
+        self.scale_label = W.Label("Scale",
                               layout=W.Layout(layout=W.Layout(width='95%'),
                                               justify_content="center"))
 
@@ -285,7 +292,7 @@ class ScaleWidget(W.VBox):
             tooltip="Increase scale",
             icon="arrow-up",
             # layout=W.Layout(width=f"{0.8 * width_cm}cm", height=f"{0.4 * height_cm}cm"),
-            layout=W.Layout(width='95%'),
+            layout=W.Layout(width='60%', align_self='center'),
         )
 
         self.minus_selector = W.Button(
@@ -295,13 +302,30 @@ class ScaleWidget(W.VBox):
             tooltip="Decrease scale",
             icon="arrow-down",
             # layout=W.Layout(width=f"{0.8 * width_cm}cm", height=f"{0.4 * height_cm}cm"),
-            layout=W.Layout(width='95%'),
+            layout=W.Layout(width='60%', align_self='center'),
         )
 
-        # controller = {"plus": plus_selector, "minus": minus_selector}
-        # widget = W.VBox([scale_label, plus_selector, minus_selector])
+        self.plus_selector.on_click(self.plus_clicked)
+        self.minus_selector.on_click(self.minus_clicked)
 
-
-        super(W.VBox, self).__init__(children=[scale_label, self.plus_selector, self.minus_selector],
+        self.value = 1.
+        super(W.VBox, self).__init__(children=[self.plus_selector, self.scale_label, self.minus_selector],
                                     #  layout=W.Layout(align_items="center", width="100%", height="100%"),
                                      **kwargs)
+
+        self.update_label()
+        self.observe(self.value_changed, names=['value'], type="change")
+        
+    def update_label(self):
+        self.scale_label.value = f"Scale: {self.value:0.2f}"
+
+
+    def plus_clicked(self, change=None):
+        self.value = self.value * self.factor
+
+    def minus_clicked(self, change=None):
+        self.value = self.value / self.factor
+
+
+    def value_changed(self, change=None):
+        self.update_label()

@@ -279,9 +279,9 @@ class TracesWidget(BaseWidget):
         import ipywidgets.widgets as W
         from .utils_ipywidgets import (
             check_ipywidget_backend,
-            make_timeseries_controller,
+            # make_timeseries_controller,
             make_channel_controller,
-            make_scale_controller,
+            # make_scale_controller,
 
             TimeSlider,
             ScaleWidget,
@@ -315,21 +315,22 @@ class TracesWidget(BaseWidget):
 
         
 
-        ts_widget, ts_controller = make_timeseries_controller(
-            t_start,
-            t_stop,
-            data_plot["layer_keys"],
-            rec0.get_num_segments(),
-            data_plot["time_range"],
-            data_plot["mode"],
-            False,
-            width_cm,
-        )
+        # ts_widget, ts_controller = make_timeseries_controller(
+        #     t_start,
+        #     t_stop,
+        #     data_plot["layer_keys"],
+        #     rec0.get_num_segments(),
+        #     data_plot["time_range"],
+        #     data_plot["mode"],
+        #     False,
+        #     width_cm,
+        # )
 
         # some widgets
         self.time_slider = TimeSlider(
             durations=[rec0.get_duration(s) for s in range(rec0.get_num_segments())],
             sampling_frequency=rec0.sampling_frequency,
+            # layout=W.Layout(height="2cm"),
         )
         self.layer_selector = W.Dropdown(description="layer", options=data_plot["layer_keys"],
                                          layout=W.Layout(width="5cm"),)
@@ -338,22 +339,22 @@ class TracesWidget(BaseWidget):
         self.scaler = ScaleWidget()
         left_sidebar = W.VBox(
             children=[self.layer_selector, self.mode_selector, self.scaler],
-            layout=W.Layout(width="5cm"),
+            layout=W.Layout(width="3.5cm"),
         )
 
 
         ch_widget, ch_controller = make_channel_controller(rec0, width_cm=ratios[2] * width_cm, height_cm=height_cm)
 
-        scale_widget, scale_controller = make_scale_controller(width_cm=ratios[0] * width_cm, height_cm=height_cm)
+        # scale_widget, scale_controller = make_scale_controller(width_cm=ratios[0] * width_cm, height_cm=height_cm)
 
-        self.controller = ts_controller
-        self.controller.update(ch_controller)
-        self.controller.update(scale_controller)
+        # self.controller = ts_controller
+        # self.controller.update(ch_controller)
+        # self.controller.update(scale_controller)
 
         self.recordings = data_plot["recordings"]
         self.return_scaled = data_plot["return_scaled"]
         self.list_traces = None
-        self.actual_segment_index = self.controller["segment_index"].value
+        # self.actual_segment_index = self.controller["segment_index"].value
 
         self.rec0 = self.recordings[self.data_plot["layer_keys"][0]]
         self.t_stops = [
@@ -361,11 +362,11 @@ class TracesWidget(BaseWidget):
             for seg_index in range(self.rec0.get_num_segments())
         ]
 
-        for w in self.controller.values():
-            if isinstance(w, widgets.Button):
-                w.on_click(self._update_ipywidget)
-            else:
-                w.observe(self._update_ipywidget)
+        # for w in self.controller.values():
+        #     if isinstance(w, widgets.Button):
+        #         w.on_click(self._update_ipywidget)
+        #     else:
+        #         w.observe(self._update_ipywidget)
 
         self.widget = widgets.AppLayout(
             center=self.figure.canvas,
@@ -379,11 +380,88 @@ class TracesWidget(BaseWidget):
         )
 
         # a first update
-        self._update_ipywidget(None)
+        # self._update_ipywidget(None)
+
+        self._retrieve_traces()
+        self._update_plot()
+
+        # only layer selector and time change generate a new traces retrieve
+        self.time_slider.observe(self._retrieve_traces, names='value', type="change")
+        self.layer_selector.observe(self._retrieve_traces, names='value', type="change")
+        # other widgets only refresh
+        self.scaler.observe(self._update_plot, names='value', type="change")
+        self.mode_selector.observe(self._update_plot, names='value', type="change")
+        
 
         if backend_kwargs["display"]:
             # self.check_backend()
             display(self.widget)
+
+
+
+    def _retrieve_traces(self, change=None):
+        # done when:
+        #  * time or window is changes
+        #  * layer is changed
+
+        # TODO connect with channel selector
+        channel_ids = self.rec0.channel_ids
+
+        # all_channel_ids = self.recordings[list(self.recordings.keys())[0]].channel_ids
+        # if self.data_plot["order"] is not None:
+        #     all_channel_ids = all_channel_ids[self.data_plot["order"]]
+        # channel_ids = all_channel_ids[channel_indices]
+        if self.data_plot["order_channel_by_depth"]:
+            order, _ = order_channels_by_depth(self.rec0, channel_ids)
+        else:
+            order = None
+        
+        start_frame, end_frame, segment_index = self.time_slider.value
+        time_range = np.array([start_frame, end_frame]) / self.rec0.sampling_frequency
+
+        times, list_traces, frame_range, channel_ids = _get_trace_list(
+            self.recordings, channel_ids, time_range, segment_index, order, self.return_scaled
+        )
+        self.list_traces = list_traces
+
+        self._update_plot()
+
+    def _update_plot(self, change=None):
+        # done when:
+        #  * time or window is changed (after _retrive_traces)
+        #  * layer is changed (after _retrive_traces)
+        #  * scale is change
+        #  * mode is change
+
+        data_plot = self.next_data_plot
+
+        # matplotlib next_data_plot dict update at each call
+        data_plot["mode"] = self.mode_selector.value
+        # data_plot["frame_range"] = frame_range
+        # data_plot["time_range"] = time_range
+        data_plot["with_colorbar"] = False
+        # data_plot["recordings"] = recordings
+        # data_plot["layer_keys"] = layer_keys
+        # data_plot["list_traces"] = list_traces_plot
+        # data_plot["times"] = times
+        # data_plot["clims"] = clims
+        # data_plot["channel_ids"] = channel_ids
+
+        list_traces = [traces * self.scaler.value for traces in self.list_traces]
+        data_plot["list_traces"] = list_traces
+
+        backend_kwargs = {}
+        backend_kwargs["ax"] = self.ax
+
+        self.ax.clear()
+        self.plot_matplotlib(data_plot, **backend_kwargs)
+
+        fig = self.ax.figure
+        fig.canvas.draw()
+        fig.canvas.flush_events()
+
+
+
 
     def _update_ipywidget(self, change):
         import ipywidgets.widgets as widgets
