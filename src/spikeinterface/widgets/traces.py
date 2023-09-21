@@ -276,11 +276,16 @@ class TracesWidget(BaseWidget):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
+        import ipywidgets.widgets as W
         from .utils_ipywidgets import (
             check_ipywidget_backend,
             make_timeseries_controller,
             make_channel_controller,
             make_scale_controller,
+
+            TimeSlider,
+            ScaleWidget,
+
         )
 
         check_ipywidget_backend()
@@ -308,6 +313,8 @@ class TracesWidget(BaseWidget):
         t_start = 0.0
         t_stop = rec0.get_num_samples(segment_index=0) / rec0.get_sampling_frequency()
 
+        
+
         ts_widget, ts_controller = make_timeseries_controller(
             t_start,
             t_stop,
@@ -318,6 +325,22 @@ class TracesWidget(BaseWidget):
             False,
             width_cm,
         )
+
+        # some widgets
+        self.time_slider = TimeSlider(
+            durations=[rec0.get_duration(s) for s in range(rec0.get_num_segments())],
+            sampling_frequency=rec0.sampling_frequency,
+        )
+        self.layer_selector = W.Dropdown(description="layer", options=data_plot["layer_keys"],
+                                         layout=W.Layout(width="5cm"),)
+        self.mode_selector = W.Dropdown(options=["line", "map"], description="mode", value=data_plot["mode"],
+                                        layout=W.Layout(width="5cm"),)
+        self.scaler = ScaleWidget()
+        left_sidebar = W.VBox(
+            children=[self.layer_selector, self.mode_selector, self.scaler],
+            layout=W.Layout(width="5cm"),
+        )
+
 
         ch_widget, ch_controller = make_channel_controller(rec0, width_cm=ratios[2] * width_cm, height_cm=height_cm)
 
@@ -346,8 +369,10 @@ class TracesWidget(BaseWidget):
 
         self.widget = widgets.AppLayout(
             center=self.figure.canvas,
-            footer=ts_widget,
-            left_sidebar=scale_widget,
+            # footer=ts_widget,
+            footer=self.time_slider,
+            # left_sidebar=scale_widget,
+            left_sidebar = left_sidebar,
             right_sidebar=ch_widget,
             pane_heights=[0, 6, 1],
             pane_widths=ratios,
