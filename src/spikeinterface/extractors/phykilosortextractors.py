@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, List
+from typing import Optional
 from pathlib import Path
 
 import numpy as np
@@ -37,7 +37,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     def __init__(
         self,
         folder_path: Path | str,
-        exclude_cluster_groups: Optional[List[str] | str] = None,
+        exclude_cluster_groups: Optional[list[str] | str] = None,
         keep_good_only: bool = False,
         remove_empty_units: bool = False,
         load_all_cluster_properties: bool = True,
@@ -219,7 +219,7 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
     def __init__(
         self,
         folder_path: Path | str,
-        exclude_cluster_groups: Optional[List[str] | str] = None,
+        exclude_cluster_groups: Optional[list[str] | str] = None,
         load_all_cluster_properties: bool = True,
     ):
         BasePhyKilosortSortingExtractor.__init__(
