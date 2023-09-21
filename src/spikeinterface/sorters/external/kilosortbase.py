@@ -225,8 +225,8 @@ class KilosortBase:
                 tmp_to_remove = ()
         else:
             assert isinstance(params["delete_tmp_files"], (tuple, list)), "..."
-       
-       if "temp_wh.dat" in tmp_to_remove: ... 
+
+       if "temp_wh.dat" in tmp_to_remove: ...
             tmp_to_remove = (
                 ("matlab_files", "temp_wh.dat") if params["delete_tmp_files"] is True else params["delete_tmp_files"]
             )
