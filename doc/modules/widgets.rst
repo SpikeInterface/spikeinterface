@@ -244,7 +244,7 @@ ephyviewer
 ^^^^^^^^^^
 
 
-The :code:`ephyviewer` backend is only available for :py:func:`~spikeinterface.widgets.plot_traces()` functions.
+The :code:`ephyviewer` backend is currently only available for the :py:func:`~spikeinterface.widgets.plot_traces()` function.
 
 
 .. code-block:: python
