@@ -473,7 +473,7 @@ def compute_grid_convolution(
         unit_location[i, :] = found_positions / scalar_products.sum()
 
         if mode == '3d':
-            best_template = np.argmin(np.linalg.norm(template_positions, unit_location[i, :]), axis=1))
+            best_template = np.argmin(np.linalg.norm(template_positions, unit_location[i, :]), axis=1)
 
 
     return unit_location
