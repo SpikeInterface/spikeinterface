@@ -2,12 +2,16 @@ import warnings
 
 from .base import backend_kwargs_desc
 
+from .agreement_matrix import AgreementMatrixWidget
 from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 from .amplitudes import AmplitudesWidget
 from .autocorrelograms import AutoCorrelogramsWidget
+from .confusion_matrix import ConfusionMatrixWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
 from .motion import MotionWidget
+from .probe_map import ProbeMapWidget
 from .quality_metrics import QualityMetricsWidget
+from .rasters import RasterWidget
 from .sorting_summary import SortingSummaryWidget
 from .spike_locations import SpikeLocationsWidget
 from .spikes_on_traces import SpikesOnTracesWidget
@@ -23,12 +27,16 @@ from .unit_waveforms import UnitWaveformsWidget
 
 
 widget_list = [
+    AgreementMatrixWidget,
     AllAmplitudesDistributionsWidget,
     AmplitudesWidget,
     AutoCorrelogramsWidget,
+    ConfusionMatrixWidget,
     CrossCorrelogramsWidget,
     MotionWidget,
+    ProbeMapWidget,
     QualityMetricsWidget,
+    RasterWidget,
     SortingSummaryWidget,
     SpikeLocationsWidget,
     SpikesOnTracesWidget,
@@ -76,12 +84,16 @@ for wcls in widget_list:
 
 
 # make function for all widgets
+plot_agreement_matrix = AgreementMatrixWidget
 plot_all_amplitudes_distributions = AllAmplitudesDistributionsWidget
 plot_amplitudes = AmplitudesWidget
 plot_autocorrelograms = AutoCorrelogramsWidget
+plot_confusion_matrix = ConfusionMatrixWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_motion = MotionWidget
+plot_probe_map = ProbeMapWidget
 plot_quality_metrics = QualityMetricsWidget
+plot_rasters = RasterWidget
 plot_sorting_summary = SortingSummaryWidget
 plot_spike_locations = SpikeLocationsWidget
 plot_spikes_on_traces = SpikesOnTracesWidget

@@ -324,6 +324,30 @@ class TestWidgets(unittest.TestCase):
                 sw.plot_sorting_summary(self.we, backend=backend, **self.backend_kwargs[backend])
                 sw.plot_sorting_summary(self.we_sparse, backend=backend, **self.backend_kwargs[backend])
 
+    def test_plot_agreement_matrix(self):
+        possible_backends = list(sw.AgreementMatrixWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_agreement_matrix(self.gt_comp)
+
+    def test_plot_confusion_matrix(self):
+        possible_backends = list(sw.AgreementMatrixWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_confusion_matrix(self.gt_comp)
+
+    def test_plot_probe_map(self):
+        possible_backends = list(sw.ProbeMapWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_probe_map(self.recording, with_channel_ids=True, with_contact_id=True)
+
+    def test_plot_rasters(self):
+        possible_backends = list(sw.RasterWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_rasters(self.sorting)
+
 
 if __name__ == "__main__":
     # unittest.main()
@@ -345,6 +369,10 @@ if __name__ == "__main__":
     # mytest.test_quality_metrics()
     # mytest.test_template_metrics()
     # mytest.test_amplitudes()
+    # mytest.test_plot_agreement_matrix()
+    # mytest.test_plot_confusion_matrix()
+    # mytest.test_plot_probe_map()
+    mytest.test_plot_rasters()
 
     # plt.ion()
     plt.show()
