@@ -1,4 +1,4 @@
-from __future__ import __annotations__
+from __future__ import annotations
 
 from typing import Optional, List
 from pathlib import Path
