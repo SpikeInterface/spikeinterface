@@ -8,6 +8,7 @@ import importlib.util
 import runpy
 import numpy as np
 from spikeinterface import WaveformExtractor, extract_waveforms
+from spikeinterface.preprocessing import whiten
 
 
 class KilosortTempWhExtractor(BinaryRecordingExtractor):
@@ -155,88 +156,56 @@ class KilosortTempWhExtractor(BinaryRecordingExtractor):
 
 #         if channel_map.ndim == 2:  # kilosort > 2
 # does kilosort > 2 store shanks differently?             channel_indices = channel_map.ravel()
-
-path_ = Path(r"X:\neuroinformatics\scratch\jziminski\ephys\code\sorter_output")  # sorter_output
-recording_new = KilosortTempWhExtractor(path_)
-
 from spikeinterface import extractors
 from spikeinterface import postprocessing
 
-sorting = extractors.read_kilosort(
-    folder_path=(path_ / "sorter_output").as_posix(),
-    keep_good_only=False,
+path_ = Path(r"X:\neuroinformatics\scratch\jziminski\ephys\code\sorter_output")  # sorter_output
+recording = KilosortTempWhExtractor(path_ / "sorter_output")  # TODO: without this extra is failing
+
+original_recording = load_extractor(path_ / "spikeinterface_recording.json", base_folder=path_)
+
+original_recording = whiten(original_recording, dtype=np.int16, mode="local", int_scale=200)
+
+# Okay this works as a test. Steps are to:
+# 1) run sorting (script below)
+# 2) load the input recording and temp_wh with data above
+# 3) whiten the input recording.
+# 4) correlate loaded temp_wh and pp recording - these should be highly correlated if temp_wh was loaded correctly
+# 5) check all properties and scaling.
+
+# Currently the issues discussed in #1908 are a blocker. Once a decision on this is made
+# this PR can be continued with.
+
+x = recording.get_traces(start_frame=0, end_frame=10000, return_scaled=False)  # TODO: figure scaling
+y = original_recording.get_traces(start_frame=0, end_frame=10000, return_scaled=False)
+
+"""
+Generate Test Data
+
+# Load and Preprocess
+data_path = Path(r"/ceph/neuroinformatics/neuroinformatics/scratch/jziminski/ephys/code/test_run")
+output_path = Path(r"/ceph/neuroinformatics/neuroinformatics/scratch/jziminski/ephys/code/sorter_output")
+
+recording = se.read_spikeglx(data_path)
+
+recording = phase_shift(recording)
+recording = bandpass_filter(
+    recording, freq_min=300, freq_max=6000
+)
+recording = common_reference(
+     recording, operator="median", reference="global"
 )
 
-recording_old = load_extractor(path_ / "spikeinterface_recording.json", base_folder=path_)
-folder_old = Path(r"X:\neuroinformatics\scratch\jziminski\ephys\code\waveform_folder_old")
-waveforms_old = extract_waveforms(
-    recording_old,
-    sorting,
-    folder_old,
-    ms_before=1.5,
-    ms_after=2,
-    max_spikes_per_unit=500,
-    allow_unfiltered=True,
-    load_if_exists=True,
-)  # match kilosort
+Kilosort2_5Sorter.set_kilosort2_5_path("/ceph/neuroinformatics/neuroinformatics/scratch/jziminski/ephys/code/Kilosort-2.5")
 
-folder_new = Path(r"X:\neuroinformatics\scratch\jziminski\ephys\code\waveform_folder_new")
-waveforms_new = extract_waveforms(
-    recording_new,
-    sorting,
-    folder_new,
-    ms_before=1.5,
-    ms_after=2,
-    max_spikes_per_unit=500,
-    allow_unfiltered=True,
-    load_if_exists=True,
-)  # match kilosort
-
-breakpoint()
-
-if False:
-    import matplotlib.pyplot as plt
-
-    plt.plot(kilosort_waveform)
-    plt.show()
-
-    plt.plot(test_waveform)
-    plt.show()
-
-
-# if folder.is_dir():
-#   import shutil
-#   shutil.rmtree(folder)
-
-# run sorting without kilosort preprocessing
-# then, the `temp_wh.dat` should match exactly the original file!
-# I think this is a solid way to test. It is not possible to test against
-#
-
-
-if False:
-    original_recording = load_extractor(path_ / "spikeinterface_recording.json", base_folder=path_)
-    waveforms_old = extract_waveforms(
-        original_recording,
-        sorting,
-        folder,
-        ms_before=1.5,
-        ms_after=2.0,
-        max_spikes_per_unit=500,
-        allow_unfiltered=True,
-        load_if_exists=True,
-    )
-
-    original_recording = load_extractor(path_ / "spikeinterface_recording.json", base_folder=path_)
-
-    # TODO: unit locations don't match kilosort very well, at least in the 1-spike case.
-    # But, this could be due to windowing and should average out over many spikes
-    breakpoint()
-
-    unit_locations_old = postprocessing.compute_unit_locations(waveforms, method="center_of_mass", outputs="by_unit")
-    unit_locations_pandas = pd.DataFrame.from_dict(unit_locations, orient="index", columns=["x", "y"])
-    unit_locations_pandas.to_csv(unit_locations_path)
-
-    utils.message_user(f"Unit locations saved to {unit_locations_path}")
-
-    print(we)
+ss.run_sorter("kilosort2_5",
+              recording,
+              output_folder=output_path,
+              delete_tmp_files=False,
+              delete_recording_dat=False,
+              skip_kilosort_preprocessing=False,
+              do_correction=False,
+              scaleproc=200,
+              n_jobs=1
+              )
+"""
