@@ -71,7 +71,6 @@ recording_extractor_full_list = [
     CompressedBinaryIblExtractor,
     IblStreamingRecordingExtractor,
     MCSH5RecordingExtractor,
-    KilosortTempWhExtractor,
 ]
 recording_extractor_full_list += neo_recording_extractors_list
 
