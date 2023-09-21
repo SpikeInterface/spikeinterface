@@ -1,3 +1,6 @@
+from __future__ import __annotations__
+
+from typing import Optional, List
 from pathlib import Path
 
 import numpy as np
@@ -13,7 +16,7 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     ----------
     folder_path: str or Path
         Path to the output Phy folder (containing the params.py)
-    exclude_cluster_groups: list or str, optional
+    exclude_cluster_groups: list or str, default: None
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
     keep_good_only : bool, default: True
         Whether to only keep good units.
@@ -33,11 +36,11 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
     def __init__(
         self,
-        folder_path,
-        exclude_cluster_groups=None,
-        keep_good_only=False,
-        remove_empty_units=False,
-        load_all_cluster_properties=True,
+        folder_path: Path | str,
+        exclude_cluster_groups: Optional[List[str] | str] = None,
+        keep_good_only: bool = False,
+        remove_empty_units: bool = False,
+        load_all_cluster_properties: bool = True,
     ):
         try:
             import pandas as pd
@@ -199,7 +202,7 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
     ----------
     folder_path: str or Path
         Path to the output Phy folder (containing the params.py).
-    exclude_cluster_groups: list or str, optional
+    exclude_cluster_groups: list or str, default: None
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
     load_all_cluster_properties : bool, default: True
         If True, all cluster properties are loaded from the tsv/csv files.
@@ -213,7 +216,12 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
     extractor_name = "PhySorting"
     name = "phy"
 
-    def __init__(self, folder_path, exclude_cluster_groups=None, load_all_cluster_properties=True):
+    def __init__(
+        self,
+        folder_path: Path | str,
+        exclude_cluster_groups: Optional[List[str] | str] = None,
+        load_all_cluster_properties: bool = True,
+    ):
         BasePhyKilosortSortingExtractor.__init__(
             self,
             folder_path,
@@ -250,7 +258,7 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     extractor_name = "KiloSortSorting"
     name = "kilosort"
 
-    def __init__(self, folder_path, keep_good_only=False, remove_empty_units=True):
+    def __init__(self, folder_path: Path | str, keep_good_only: bool = False, remove_empty_units: bool = True):
         BasePhyKilosortSortingExtractor.__init__(
             self,
             folder_path,
