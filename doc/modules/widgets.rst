@@ -101,7 +101,7 @@ For pip based install, run:
     pip install PySide6 ephyviewer
 
 
-Anaconda user will have a better experience with this:
+Anaconda users will have a better experience with this:
 
 .. code-block:: bash
 
