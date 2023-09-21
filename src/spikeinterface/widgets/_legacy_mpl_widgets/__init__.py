@@ -1,8 +1,3 @@
-# basics
-# from .timeseries import plot_timeseries, TracesWidget
-from .rasters import plot_rasters, RasterWidget
-from .probemap import plot_probe_map, ProbeMapWidget
-
 # isi/ccg/acg
 from .isidistribution import plot_isi_distribution, ISIDistributionWidget
 
@@ -15,9 +10,6 @@ from .principalcomponent import plot_principal_component
 # units on probe
 from .unitprobemap import plot_unit_probe_map, UnitProbeMapWidget
 
-# comparison related
-from .confusionmatrix import plot_confusion_matrix, ConfusionMatrixWidget
-from .agreementmatrix import plot_agreement_matrix, AgreementMatrixWidget
 from .multicompgraph import (
     plot_multicomp_graph,
     MultiCompGraphWidget,
