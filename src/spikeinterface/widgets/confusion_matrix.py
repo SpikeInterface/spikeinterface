@@ -5,7 +5,6 @@ from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
 
-
 class ConfusionMatrixWidget(BaseWidget):
     """
     Plots sorting comparison confusion matrix.
@@ -18,13 +17,10 @@ class ConfusionMatrixWidget(BaseWidget):
         If True counts are displayed as text
     unit_ticks: bool
         If True unit tick labels are displayed
-    
+
     """
 
-    def __init__(
-        self, gt_comparison, count_text=True, unit_ticks=True,
-        backend=None, **backend_kwargs
-    ):
+    def __init__(self, gt_comparison, count_text=True, unit_ticks=True, backend=None, **backend_kwargs):
         plot_data = dict(
             gt_comparison=gt_comparison,
             count_text=count_text,

@@ -4,7 +4,6 @@ from warnings import warn
 from .base import BaseWidget, to_attr, default_backend_kwargs
 
 
-
 class RasterWidget(BaseWidget):
     """
     Plots spike train rasters.
@@ -24,16 +23,13 @@ class RasterWidget(BaseWidget):
     """
 
     def __init__(
-        self, sorting, segment_index=None, unit_ids=None, time_range=None, color="k",
-        backend=None, **backend_kwargs
+        self, sorting, segment_index=None, unit_ids=None, time_range=None, color="k", backend=None, **backend_kwargs
     ):
-
-
         if segment_index is None:
             if sorting.get_num_segments() != 1:
                 raise ValueError("You must provide segment_index=...")
             segment_index = 0
-        
+
         if time_range is None:
             frame_range = [0, sorting.to_spike_vector()[-1]["sample_index"]]
             time_range = [f / sorting.sampling_frequency for f in frame_range]
@@ -86,10 +82,3 @@ class RasterWidget(BaseWidget):
             self.ax.set_yticklabels(units_ids)
             self.ax.set_xlim(*dp.time_range)
             self.ax.set_xlabel("time (s)")
-
-
-
-
-
-
-

@@ -349,7 +349,6 @@ class TestWidgets(unittest.TestCase):
                 sw.plot_rasters(self.sorting)
 
 
-
 if __name__ == "__main__":
     # unittest.main()
 
@@ -371,7 +370,7 @@ if __name__ == "__main__":
     # mytest.test_template_metrics()
     # mytest.test_amplitudes()
     # mytest.test_plot_agreement_matrix()
-    # mytest.test_plot_confusion_matrix()
+    # mytest.test_plot_confusion_matrix()
     # mytest.test_plot_probe_map()
     mytest.test_plot_rasters()
 

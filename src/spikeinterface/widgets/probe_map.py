@@ -5,7 +5,6 @@ from .base import BaseWidget, to_attr, default_backend_kwargs
 from .utils import get_unit_colors
 
 
-
 class ProbeMapWidget(BaseWidget):
     """
     Plot the probe of a recording.
@@ -23,10 +22,8 @@ class ProbeMapWidget(BaseWidget):
     """
 
     def __init__(
-        self, recording, channel_ids=None, with_channel_ids=False,
-        backend=None, **backend_or_plot_probe_kwargs
+        self, recording, channel_ids=None, with_channel_ids=False, backend=None, **backend_or_plot_probe_kwargs
     ):
-        
         # split backend_or_plot_probe_kwargs
         backend_kwargs = dict()
         plot_probe_kwargs = dict()

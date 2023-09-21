@@ -5,7 +5,6 @@ from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
 
-
 class AgreementMatrixWidget(BaseWidget):
     """
     Plots sorting comparison agreement matrix.
@@ -22,12 +21,11 @@ class AgreementMatrixWidget(BaseWidget):
         If True counts are displayed as text
     unit_ticks: bool
         If True unit tick labels are displayed
-    
+
     """
 
     def __init__(
-        self, sorting_comparison, ordered=True, count_text=True, unit_ticks=True,
-        backend=None, **backend_kwargs
+        self, sorting_comparison, ordered=True, count_text=True, unit_ticks=True, backend=None, **backend_kwargs
     ):
         plot_data = dict(
             sorting_comparison=sorting_comparison,
@@ -87,5 +85,3 @@ class AgreementMatrixWidget(BaseWidget):
             N1 - 0.5,
             -0.5,
         )
-
-

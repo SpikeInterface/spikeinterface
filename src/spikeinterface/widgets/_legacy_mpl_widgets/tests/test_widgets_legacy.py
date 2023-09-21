@@ -43,8 +43,6 @@ class TestWidgets(unittest.TestCase):
     def tearDown(self):
         pass
 
-
-
     def test_plot_unit_probe_map(self):
         sw.plot_unit_probe_map(self._we, with_channel_ids=True)
         sw.plot_unit_probe_map(self._we, animated=True)
