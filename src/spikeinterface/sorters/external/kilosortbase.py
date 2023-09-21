@@ -218,7 +218,15 @@ class KilosortBase:
         if params["delete_recording_dat"] and (recording_file := sorter_output_folder / "recording.dat").exists():
             recording_file.unlink()
 
-        if params["delete_tmp_files"]:
+        if isinstance(params["delete_tmp_files"], bool):
+            if params["delete_tmp_files"]:
+                tmp_to_remove = ("matlab_files", "temp_wh.dat")
+            else:
+                tmp_to_remove = ()
+        else:
+            assert isinstance(params["delete_tmp_files"], (tuple, list)), "..."
+       
+       if "temp_wh.dat" in tmp_to_remove: ... 
             tmp_to_remove = (
                 ("matlab_files", "temp_wh.dat") if params["delete_tmp_files"] is True else params["delete_tmp_files"]
             )
