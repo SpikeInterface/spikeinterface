@@ -11,35 +11,35 @@ def check_ipywidget_backend():
     assert "ipympl" in mpl_backend, "To use the 'ipywidgets' backend, you have to set %matplotlib widget"
 
 
-def make_timeseries_controller(t_start, t_stop, layer_keys, num_segments, time_range, mode, all_layers, width_cm):
-    time_slider = W.FloatSlider(
-        orientation="horizontal",
-        description="time:",
-        value=time_range[0],
-        min=t_start,
-        max=t_stop,
-        continuous_update=False,
-        layout=W.Layout(width=f"{width_cm}cm"),
-    )
-    layer_selector = W.Dropdown(description="layer", options=layer_keys)
-    segment_selector = W.Dropdown(description="segment", options=list(range(num_segments)))
-    window_sizer = W.BoundedFloatText(value=np.diff(time_range)[0], step=0.1, min=0.005, description="win (s)")
-    mode_selector = W.Dropdown(options=["line", "map"], description="mode", value=mode)
-    all_layers = W.Checkbox(description="plot all layers", value=all_layers)
+# def make_timeseries_controller(t_start, t_stop, layer_keys, num_segments, time_range, mode, all_layers, width_cm):
+#     time_slider = W.FloatSlider(
+#         orientation="horizontal",
+#         description="time:",
+#         value=time_range[0],
+#         min=t_start,
+#         max=t_stop,
+#         continuous_update=False,
+#         layout=W.Layout(width=f"{width_cm}cm"),
+#     )
+#     layer_selector = W.Dropdown(description="layer", options=layer_keys)
+#     segment_selector = W.Dropdown(description="segment", options=list(range(num_segments)))
+#     window_sizer = W.BoundedFloatText(value=np.diff(time_range)[0], step=0.1, min=0.005, description="win (s)")
+#     mode_selector = W.Dropdown(options=["line", "map"], description="mode", value=mode)
+#     all_layers = W.Checkbox(description="plot all layers", value=all_layers)
 
-    controller = {
-        "layer_key": layer_selector,
-        "segment_index": segment_selector,
-        "window": window_sizer,
-        "t_start": time_slider,
-        "mode": mode_selector,
-        "all_layers": all_layers,
-    }
-    widget = W.VBox(
-        [time_slider, W.HBox([all_layers, layer_selector, segment_selector, window_sizer, mode_selector])]
-    )
+#     controller = {
+#         "layer_key": layer_selector,
+#         "segment_index": segment_selector,
+#         "window": window_sizer,
+#         "t_start": time_slider,
+#         "mode": mode_selector,
+#         "all_layers": all_layers,
+#     }
+#     widget = W.VBox(
+#         [time_slider, W.HBox([all_layers, layer_selector, segment_selector, window_sizer, mode_selector])]
+#     )
 
-    return widget, controller
+#     return widget, controller
 
 
 def make_unit_controller(unit_ids, all_unit_ids, width_cm, height_cm):
@@ -58,52 +58,52 @@ def make_unit_controller(unit_ids, all_unit_ids, width_cm, height_cm):
     return widget, controller
 
 
-def make_channel_controller(recording, width_cm, height_cm):
-    channel_label = W.Label("channel indices:", layout=W.Layout(justify_content="center"))
-    channel_selector = W.IntRangeSlider(
-        value=[0, recording.get_num_channels()],
-        min=0,
-        max=recording.get_num_channels(),
-        step=1,
-        disabled=False,
-        continuous_update=False,
-        orientation="vertical",
-        readout=True,
-        readout_format="d",
-        layout=W.Layout(width=f"{0.8 * width_cm}cm", height=f"{height_cm}cm"),
-    )
+# def make_channel_controller(recording, width_cm, height_cm):
+#     channel_label = W.Label("channel indices:", layout=W.Layout(justify_content="center"))
+#     channel_selector = W.IntRangeSlider(
+#         value=[0, recording.get_num_channels()],
+#         min=0,
+#         max=recording.get_num_channels(),
+#         step=1,
+#         disabled=False,
+#         continuous_update=False,
+#         orientation="vertical",
+#         readout=True,
+#         readout_format="d",
+#         layout=W.Layout(width=f"{0.8 * width_cm}cm", height=f"{height_cm}cm"),
+#     )
 
-    controller = {"channel_inds": channel_selector}
-    widget = W.VBox([channel_label, channel_selector])
+#     controller = {"channel_inds": channel_selector}
+#     widget = W.VBox([channel_label, channel_selector])
 
-    return widget, controller
+#     return widget, controller
 
 
-def make_scale_controller(width_cm, height_cm):
-    scale_label = W.Label("Scale", layout=W.Layout(justify_content="center"))
+# def make_scale_controller(width_cm, height_cm):
+#     scale_label = W.Label("Scale", layout=W.Layout(justify_content="center"))
 
-    plus_selector = W.Button(
-        description="",
-        disabled=False,
-        button_style="",  # 'success', 'info', 'warning', 'danger' or ''
-        tooltip="Increase scale",
-        icon="arrow-up",
-        layout=W.Layout(width=f"{0.8 * width_cm}cm", height=f"{0.4 * height_cm}cm"),
-    )
+#     plus_selector = W.Button(
+#         description="",
+#         disabled=False,
+#         button_style="",  # 'success', 'info', 'warning', 'danger' or ''
+#         tooltip="Increase scale",
+#         icon="arrow-up",
+#         layout=W.Layout(width=f"{0.8 * width_cm}cm", height=f"{0.4 * height_cm}cm"),
+#     )
 
-    minus_selector = W.Button(
-        description="",
-        disabled=False,
-        button_style="",  # 'success', 'info', 'warning', 'danger' or ''
-        tooltip="Decrease scale",
-        icon="arrow-down",
-        layout=W.Layout(width=f"{0.8 * width_cm}cm", height=f"{0.4 * height_cm}cm"),
-    )
+#     minus_selector = W.Button(
+#         description="",
+#         disabled=False,
+#         button_style="",  # 'success', 'info', 'warning', 'danger' or ''
+#         tooltip="Decrease scale",
+#         icon="arrow-down",
+#         layout=W.Layout(width=f"{0.8 * width_cm}cm", height=f"{0.4 * height_cm}cm"),
+#     )
 
-    controller = {"plus": plus_selector, "minus": minus_selector}
-    widget = W.VBox([scale_label, plus_selector, minus_selector])
+#     controller = {"plus": plus_selector, "minus": minus_selector}
+#     widget = W.VBox([scale_label, plus_selector, minus_selector])
 
-    return widget, controller
+#     return widget, controller
 
 
 
@@ -126,7 +126,7 @@ class TimeSlider(W.HBox):
         self.value = (start_frame, end_frame, self.segment_index)
         
         
-        layout = W.Layout(align_items="center", width="2cm", hight="1.5cm")
+        layout = W.Layout(align_items="center", width="2.5cm", height="1.cm")
         but_left = W.Button(description='', disabled=False, button_style='', icon='arrow-left', layout=layout)
         but_right = W.Button(description='', disabled=False, button_style='', icon='arrow-right', layout=layout)
         
@@ -141,7 +141,7 @@ class TimeSlider(W.HBox):
 
         # DatetimePicker is only for ipywidget v8 (which is not working in vscode 2023-03)
         self.time_label = W.Text(value=f'{time_range[0]}',description='',
-                                 disabled=False, layout=W.Layout(width='5.5cm'))
+                                 disabled=False, layout=W.Layout(width='2.5cm'))
         self.time_label.observe(self.time_label_changed, names='value', type="change")
 
 
@@ -270,6 +270,43 @@ class TimeSlider(W.HBox):
         self.slider.observe(self.slider_moved, names='value', type="change")
 
         self.update_time(new_frame=0, update_slider=True, update_label=True)
+
+class ChannelSelector(W.VBox):
+    value = traitlets.List()
+
+    def __init__(self, channel_ids, **kwargs):
+        self.channel_ids = list(channel_ids)
+        self.value = self.channel_ids
+
+        channel_label = W.Label("Channels", layout=W.Layout(justify_content="center"))
+        n = len(channel_ids)
+        self.slider = W.IntRangeSlider(
+            value=[0, n],
+            min=0,
+            max=n,
+            step=1,
+            disabled=False,
+            continuous_update=False,
+            orientation="vertical",
+            readout=True,
+            readout_format="d",
+            # layout=W.Layout(width=f"{0.8 * width_cm}cm", height=f"{height_cm}cm"),
+            layout=W.Layout(height="100%"),
+        )
+
+
+
+        super(W.VBox, self).__init__(children=[channel_label, self.slider],
+                                     layout=W.Layout(align_items="center"),
+                                    #  layout=W.Layout(align_items="center", width="100%", height="100%"),
+                                     **kwargs)
+        self.slider.observe(self.on_slider_changed, names=['value'], type="change")
+        # self.update_label()
+        # self.observe(self.value_changed, names=['value'], type="change")
+    
+    def on_slider_changed(self, change=None):
+        i0, i1 = self.slider.value
+        self.value = self.channel_ids[i0:i1]
 
 
 
