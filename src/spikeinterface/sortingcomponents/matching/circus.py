@@ -5,7 +5,6 @@ import warnings
 
 import scipy.spatial
 
-from tqdm import tqdm
 import scipy
 
 try:
@@ -16,7 +15,8 @@ try:
 except ImportError:
     HAVE_SKLEARN = False
 
-from spikeinterface.core import get_noise_levels, get_random_data_chunks
+
+from spikeinterface.core import get_noise_levels, get_random_data_chunks, compute_sparsity
 from spikeinterface.sortingcomponents.peak_detection import DetectPeakByChannel
 
 (potrs,) = scipy.linalg.get_lapack_funcs(("potrs",), dtype=np.float32)
@@ -131,6 +131,38 @@ def _freq_domain_conv(in1, in2, axes, shape, cache, calc_fast_len=True):
     return ret
 
 
+def compute_overlaps(templates, num_samples, num_channels, sparsities):
+    num_templates = len(templates)
+
+    dense_templates = np.zeros((num_templates, num_samples, num_channels), dtype=np.float32)
+    for i in range(num_templates):
+        dense_templates[i, :, sparsities[i]] = templates[i].T
+
+    size = 2 * num_samples - 1
+
+    all_delays = list(range(0, num_samples + 1))
+
+    overlaps = {}
+
+    for delay in all_delays:
+        source = dense_templates[:, :delay, :].reshape(num_templates, -1)
+        target = dense_templates[:, num_samples - delay :, :].reshape(num_templates, -1)
+
+        overlaps[delay] = scipy.sparse.csr_matrix(source.dot(target.T))
+
+        if delay < num_samples:
+            overlaps[size - delay + 1] = overlaps[delay].T.tocsr()
+
+    new_overlaps = []
+
+    for i in range(num_templates):
+        data = [overlaps[j][i, :].T for j in range(size)]
+        data = scipy.sparse.hstack(data)
+        new_overlaps += [data]
+
+    return new_overlaps
+
+
 class CircusOMPPeeler(BaseTemplateMatchingEngine):
     """
     Orthogonal Matching Pursuit inspired from Spyking Circus sorter
@@ -152,21 +184,18 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         (Minimal, Maximal) amplitudes allowed for every template
     omp_min_sps: float
         Stopping criteria of the OMP algorithm, in percentage of the norm
-    sparsify_threshold: float
-        Templates are sparsified in order to keep only the channels necessary
-        to explain. ptp limit for considering a channel as silent
-    smoothing_factor: float
-        Templates are smoothed via Spline Interpolation
     noise_levels: array
         The noise levels, for every channels. If None, they will be automatically
         computed
     random_chunk_kwargs: dict
         Parameters for computing noise levels, if not provided (sub optimal)
+    sparse_kwargs: dict
+        Parameters to extract a sparsity mask from the waveform_extractor, if not
+        already sparse.
     -----
     """
 
     _default_params = {
-        "sparsify_threshold": 1,
         "amplitudes": [0.6, 2],
         "omp_min_sps": 0.1,
         "waveform_extractor": None,
@@ -175,35 +204,20 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         "norms": None,
         "random_chunk_kwargs": {},
         "noise_levels": None,
-        "smoothing_factor": 0.25,
+        "sparse_kwargs": {"method": "ptp", "threshold": 1},
         "ignored_ids": [],
+        "vicinity": 0,
     }
-
-    @classmethod
-    def _sparsify_template(cls, template, sparsify_threshold):
-        is_silent = template.ptp(0) < sparsify_threshold
-        template[:, is_silent] = 0
-        (active_channels,) = np.where(np.logical_not(is_silent))
-
-        return template, active_channels
-
-    @classmethod
-    def _regularize_template(cls, template, smoothing_factor=0.25):
-        nb_channels = template.shape[1]
-        nb_timesteps = template.shape[0]
-        xaxis = np.arange(nb_timesteps)
-        for i in range(nb_channels):
-            z = scipy.interpolate.UnivariateSpline(xaxis, template[:, i])
-            z.set_smoothing_factor(smoothing_factor)
-            template[:, i] = z(xaxis)
-        return template
 
     @classmethod
     def _prepare_templates(cls, d):
         waveform_extractor = d["waveform_extractor"]
-        num_samples = d["num_samples"]
-        num_channels = d["num_channels"]
         num_templates = len(d["waveform_extractor"].sorting.unit_ids)
+
+        if not waveform_extractor.is_sparse():
+            sparsity = compute_sparsity(waveform_extractor, **d["sparse_kwargs"]).mask
+        else:
+            sparsity = waveform_extractor.sparsity.mask
 
         templates = waveform_extractor.get_all_templates(mode="median").copy()
 
@@ -212,52 +226,10 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d["norms"] = np.zeros(num_templates, dtype=np.float32)
 
         for count, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
-            if d["smoothing_factor"] > 0:
-                template = cls._regularize_template(templates[count], d["smoothing_factor"])
-            else:
-                template = templates[count]
-            template, active_channels = cls._sparsify_template(template, d["sparsify_threshold"])
-            d["sparsities"][count] = active_channels
+            template = templates[count][:, sparsity[count]]
+            (d["sparsities"][count],) = np.nonzero(sparsity[count])
             d["norms"][count] = np.linalg.norm(template)
-            d["templates"][count] = template[:, active_channels] / d["norms"][count]
-
-        return d
-
-    @classmethod
-    def _prepare_overlaps(cls, d):
-        templates = d["templates"]
-        num_samples = d["num_samples"]
-        num_channels = d["num_channels"]
-        num_templates = d["num_templates"]
-        sparsities = d["sparsities"]
-
-        dense_templates = np.zeros((num_templates, num_samples, num_channels), dtype=np.float32)
-        for i in range(num_templates):
-            dense_templates[i, :, sparsities[i]] = templates[i].T
-
-        size = 2 * num_samples - 1
-
-        all_delays = list(range(0, num_samples + 1))
-
-        overlaps = {}
-
-        for delay in all_delays:
-            source = dense_templates[:, :delay, :].reshape(num_templates, -1)
-            target = dense_templates[:, num_samples - delay :, :].reshape(num_templates, -1)
-
-            overlaps[delay] = scipy.sparse.csr_matrix(source.dot(target.T))
-
-            if delay < num_samples:
-                overlaps[size - delay + 1] = overlaps[delay].T.tocsr()
-
-        new_overlaps = []
-
-        for i in range(num_templates):
-            data = [overlaps[j][i, :].T for j in range(size)]
-            data = scipy.sparse.hstack(data)
-            new_overlaps += [data]
-
-        d["overlaps"] = new_overlaps
+            d["templates"][count] = template / d["norms"][count]
 
         return d
 
@@ -276,6 +248,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d["nbefore"] = d["waveform_extractor"].nbefore
         d["nafter"] = d["waveform_extractor"].nafter
         d["sampling_frequency"] = d["waveform_extractor"].recording.get_sampling_frequency()
+        d["vicinity"] *= d["num_samples"]
 
         if d["noise_levels"] is None:
             print("CircusOMPPeeler : noise should be computed outside")
@@ -290,15 +263,12 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d["num_templates"] = len(d["templates"])
 
         if d["overlaps"] is None:
-            d = cls._prepare_overlaps(d)
+            d["overlaps"] = compute_overlaps(d["templates"], d["num_samples"], d["num_channels"], d["sparsities"])
 
         d["ignored_ids"] = np.array(d["ignored_ids"])
 
         omp_min_sps = d["omp_min_sps"]
-        norms = d["norms"]
-        sparsities = d["sparsities"]
-
-        nb_active_channels = np.array([len(sparsities[i]) for i in range(d["num_templates"])])
+        # nb_active_channels = np.array([len(d['sparsities'][count]) for count in range(d['num_templates'])])
         d["stop_criteria"] = omp_min_sps * np.sqrt(d["noise_levels"].sum() * d["num_samples"])
 
         return d
@@ -336,6 +306,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         sparsities = d["sparsities"]
         ignored_ids = d["ignored_ids"]
         stop_criteria = d["stop_criteria"]
+        vicinity = d["vicinity"]
 
         if "cached_fft_kernels" not in d:
             d["cached_fft_kernels"] = {"fshape": 0}
@@ -381,7 +352,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         spikes = np.empty(scalar_products.size, dtype=spike_dtype)
         idx_lookup = np.arange(scalar_products.size).reshape(num_templates, -1)
 
-        M = np.zeros((num_peaks, num_peaks), dtype=np.float32)
+        M = np.zeros((100, 100), dtype=np.float32)
 
         all_selections = np.empty((2, scalar_products.size), dtype=np.int32)
         final_amplitudes = np.zeros(scalar_products.shape, dtype=np.float32)
@@ -393,6 +364,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         cached_overlaps = {}
 
         is_valid = scalar_products > stop_criteria
+        all_amplitudes = np.zeros(0, dtype=np.float32)
+        is_in_vicinity = np.zeros(0, dtype=np.int32)
 
         while np.any(is_valid):
             best_amplitude_ind = scalar_products[is_valid].argmax()
@@ -412,20 +385,39 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
                     M = Z
 
                 M[num_selection, idx] = cached_overlaps[best_cluster_ind][selection[0, idx], myline]
-                scipy.linalg.solve_triangular(
-                    M[:num_selection, :num_selection],
-                    M[num_selection, :num_selection],
-                    trans=0,
-                    lower=1,
-                    overwrite_b=True,
-                    check_finite=False,
-                )
 
-                v = nrm2(M[num_selection, :num_selection]) ** 2
-                Lkk = 1 - v
-                if Lkk <= omp_tol:  # selected atoms are dependent
-                    break
-                M[num_selection, num_selection] = np.sqrt(Lkk)
+                if vicinity == 0:
+                    scipy.linalg.solve_triangular(
+                        M[:num_selection, :num_selection],
+                        M[num_selection, :num_selection],
+                        trans=0,
+                        lower=1,
+                        overwrite_b=True,
+                        check_finite=False,
+                    )
+
+                    v = nrm2(M[num_selection, :num_selection]) ** 2
+                    Lkk = 1 - v
+                    if Lkk <= omp_tol:  # selected atoms are dependent
+                        break
+                    M[num_selection, num_selection] = np.sqrt(Lkk)
+                else:
+                    is_in_vicinity = np.where(np.abs(delta_t) < vicinity)[0]
+
+                    if len(is_in_vicinity) > 0:
+                        L = M[is_in_vicinity, :][:, is_in_vicinity]
+
+                        M[num_selection, is_in_vicinity] = scipy.linalg.solve_triangular(
+                            L, M[num_selection, is_in_vicinity], trans=0, lower=1, overwrite_b=True, check_finite=False
+                        )
+
+                        v = nrm2(M[num_selection, is_in_vicinity]) ** 2
+                        Lkk = 1 - v
+                        if Lkk <= omp_tol:  # selected atoms are dependent
+                            break
+                        M[num_selection, num_selection] = np.sqrt(Lkk)
+                    else:
+                        M[num_selection, num_selection] = 1.0
             else:
                 M[0, 0] = 1
 
@@ -435,9 +427,16 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
             selection = all_selections[:, :num_selection]
             res_sps = full_sps[selection[0], selection[1]]
 
-            all_amplitudes, _ = potrs(M[:num_selection, :num_selection], res_sps, lower=True, overwrite_b=False)
-
-            all_amplitudes /= norms[selection[0]]
+            if True:  # vicinity == 0:
+                all_amplitudes, _ = potrs(M[:num_selection, :num_selection], res_sps, lower=True, overwrite_b=False)
+                all_amplitudes /= norms[selection[0]]
+            else:
+                # This is not working, need to figure out why
+                is_in_vicinity = np.append(is_in_vicinity, num_selection - 1)
+                all_amplitudes = np.append(all_amplitudes, np.float32(1))
+                L = M[is_in_vicinity, :][:, is_in_vicinity]
+                all_amplitudes[is_in_vicinity], _ = potrs(L, res_sps[is_in_vicinity], lower=True, overwrite_b=False)
+                all_amplitudes[is_in_vicinity] /= norms[selection[0][is_in_vicinity]]
 
             diff_amplitudes = all_amplitudes - final_amplitudes[selection[0], selection[1]]
             modified = np.where(np.abs(diff_amplitudes) > omp_tol)[0]
@@ -515,14 +514,12 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         Maximal amplitude allowed for every template
     min_amplitude: float
         Minimal amplitude allowed for every template
-    sparsify_threshold: float
-        Templates are sparsified in order to keep only the channels necessary
-        to explain a given fraction of the total norm
     use_sparse_matrix_threshold: float
         If density of the templates is below a given threshold, sparse matrix
         are used (memory efficient)
-    progress_bar_steps: bool
-        In order to display or not steps from the algorithm
+    sparse_kwargs: dict
+        Parameters to extract a sparsity mask from the waveform_extractor, if not
+        already sparse.
     -----
 
 
@@ -535,68 +532,40 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         "detect_threshold": 5,
         "noise_levels": None,
         "random_chunk_kwargs": {},
-        "sparsify_threshold": 0.99,
         "max_amplitude": 1.5,
         "min_amplitude": 0.5,
         "use_sparse_matrix_threshold": 0.25,
-        "progess_bar_steps": False,
         "waveform_extractor": None,
-        "smoothing_factor": 0.25,
+        "sparse_kwargs": {"method": "ptp", "threshold": 1},
     }
 
     @classmethod
-    def _sparsify_template(cls, template, sparsify_threshold, noise_levels):
-        is_silent = template.std(0) < 0.1 * noise_levels
-
-        template[:, is_silent] = 0
-
-        channel_norms = np.linalg.norm(template, axis=0) ** 2
-        total_norm = np.linalg.norm(template) ** 2
-
-        idx = np.argsort(channel_norms)[::-1]
-        explained_norms = np.cumsum(channel_norms[idx] / total_norm)
-        channel = np.searchsorted(explained_norms, sparsify_threshold)
-        active_channels = np.sort(idx[:channel])
-        template[:, idx[channel:]] = 0
-        return template, active_channels
-
-    @classmethod
-    def _regularize_template(cls, template, smoothing_factor=0.25):
-        nb_channels = template.shape[1]
-        nb_timesteps = template.shape[0]
-        xaxis = np.arange(nb_timesteps)
-        for i in range(nb_channels):
-            z = scipy.interpolate.UnivariateSpline(xaxis, template[:, i])
-            z.set_smoothing_factor(smoothing_factor)
-            template[:, i] = z(xaxis)
-        return template
-
-    @classmethod
     def _prepare_templates(cls, d):
-        parameters = d
-        waveform_extractor = parameters["waveform_extractor"]
-        num_samples = parameters["num_samples"]
-        num_channels = parameters["num_channels"]
-        num_templates = parameters["num_templates"]
-        max_amplitude = parameters["max_amplitude"]
-        min_amplitude = parameters["min_amplitude"]
-        use_sparse_matrix_threshold = parameters["use_sparse_matrix_threshold"]
+        waveform_extractor = d["waveform_extractor"]
+        num_samples = d["num_samples"]
+        num_channels = d["num_channels"]
+        num_templates = d["num_templates"]
+        use_sparse_matrix_threshold = d["use_sparse_matrix_threshold"]
 
-        parameters["norms"] = np.zeros(num_templates, dtype=np.float32)
+        d["norms"] = np.zeros(num_templates, dtype=np.float32)
 
-        all_units = list(parameters["waveform_extractor"].sorting.unit_ids)
+        all_units = list(d["waveform_extractor"].sorting.unit_ids)
+
+        if not waveform_extractor.is_sparse():
+            sparsity = compute_sparsity(waveform_extractor, **d["sparse_kwargs"]).mask
+        else:
+            sparsity = waveform_extractor.sparsity.mask
 
         templates = waveform_extractor.get_all_templates(mode="median").copy()
+        d["sparsities"] = {}
+        d["circus_templates"] = {}
 
         for count, unit_id in enumerate(all_units):
-            if parameters["smoothing_factor"] > 0:
-                templates[count] = cls._regularize_template(templates[count], parameters["smoothing_factor"])
-
-            templates[count], _ = cls._sparsify_template(
-                templates[count], parameters["sparsify_threshold"], parameters["noise_levels"]
-            )
-            parameters["norms"][count] = np.linalg.norm(templates[count])
-            templates[count] /= parameters["norms"][count]
+            (d["sparsities"][count],) = np.nonzero(sparsity[count])
+            templates[count][:, ~sparsity[count]] = 0
+            d["norms"][count] = np.linalg.norm(templates[count])
+            templates[count] /= d["norms"][count]
+            d["circus_templates"][count] = templates[count][:, sparsity[count]]
 
         templates = templates.reshape(num_templates, -1)
 
@@ -604,54 +573,11 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         if nnz <= use_sparse_matrix_threshold:
             templates = scipy.sparse.csr_matrix(templates)
             print(f"Templates are automatically sparsified (sparsity level is {nnz})")
-            parameters["is_dense"] = False
+            d["is_dense"] = False
         else:
-            parameters["is_dense"] = True
+            d["is_dense"] = True
 
-        parameters["templates"] = templates
-
-        return parameters
-
-    @classmethod
-    def _prepare_overlaps(cls, d):
-        templates = d["templates"]
-        num_samples = d["num_samples"]
-        num_channels = d["num_channels"]
-        num_templates = d["num_templates"]
-        is_dense = d["is_dense"]
-
-        if not is_dense:
-            dense_templates = templates.toarray()
-        else:
-            dense_templates = templates
-
-        dense_templates = dense_templates.reshape(num_templates, num_samples, num_channels)
-
-        size = 2 * num_samples - 1
-
-        all_delays = list(range(0, num_samples + 1))
-        if d["progess_bar_steps"]:
-            all_delays = tqdm(all_delays, desc="[1] compute overlaps")
-
-        overlaps = {}
-
-        for delay in all_delays:
-            source = dense_templates[:, :delay, :].reshape(num_templates, -1)
-            target = dense_templates[:, num_samples - delay :, :].reshape(num_templates, -1)
-
-            overlaps[delay] = scipy.sparse.csr_matrix(source.dot(target.T))
-
-            if delay < num_samples:
-                overlaps[size - delay] = overlaps[delay].T.tocsr()
-
-        new_overlaps = []
-
-        for i in range(num_templates):
-            data = [overlaps[j][i, :].T for j in range(size)]
-            data = scipy.sparse.hstack(data)
-            new_overlaps += [data]
-
-        d["overlaps"] = new_overlaps
+        d["templates"] = templates
 
         return d
 
@@ -687,15 +613,13 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         alpha = 0.5
         norms = parameters["norms"]
         all_units = list(waveform_extractor.sorting.unit_ids)
-        if parameters["progess_bar_steps"]:
-            all_units = tqdm(all_units, desc="[2] compute amplitudes")
 
         parameters["amplitudes"] = np.zeros((num_templates, 2), dtype=np.float32)
         noise = templates.dot(noise_snippets) / norms[:, np.newaxis]
 
         all_amps = {}
         for count, unit_id in enumerate(all_units):
-            waveform = waveform_extractor.get_waveforms(unit_id)
+            waveform = waveform_extractor.get_waveforms(unit_id, force_dense=True)
             snippets = waveform.reshape(waveform.shape[0], -1).T
             amps = templates.dot(snippets) / norms[:, np.newaxis]
             good = amps[count, :].flatten()
@@ -708,16 +632,6 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             res = scipy.optimize.differential_evolution(cls._cost_function_mcc, bounds=cost_bounds, args=cost_kwargs)
             parameters["amplitudes"][count] = res.x
 
-            # import pylab as plt
-            # plt.hist(good, 100, alpha=0.5)
-            # plt.hist(bad, 100, alpha=0.5)
-            # plt.hist(noise[count], 100, alpha=0.5)
-            # ymin, ymax = plt.ylim()
-            # plt.plot([res.x[0], res.x[0]], [ymin, ymax], 'k--')
-            # plt.plot([res.x[1], res.x[1]], [ymin, ymax], 'k--')
-            # plt.savefig('test_%d.png' %count)
-            # plt.close()
-
         return d
 
     @classmethod
@@ -727,8 +641,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         default_parameters.update(kwargs)
 
         # assert isinstance(d['waveform_extractor'], WaveformExtractor)
-
-        for v in ["sparsify_threshold", "use_sparse_matrix_threshold"]:
+        for v in ["use_sparse_matrix_threshold"]:
             assert (default_parameters[v] >= 0) and (default_parameters[v] <= 1), f"{v} should be in [0, 1]"
 
         default_parameters["num_channels"] = default_parameters["waveform_extractor"].recording.get_num_channels()
@@ -746,7 +659,13 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         )
 
         default_parameters = cls._prepare_templates(default_parameters)
-        default_parameters = cls._prepare_overlaps(default_parameters)
+
+        default_parameters["overlaps"] = compute_overlaps(
+            default_parameters["circus_templates"],
+            default_parameters["num_samples"],
+            default_parameters["num_channels"],
+            default_parameters["sparsities"],
+        )
 
         default_parameters["exclude_sweep_size"] = int(
             default_parameters["exclude_sweep_ms"] * recording.get_sampling_frequency() / 1000.0
@@ -817,31 +736,31 @@ class CircusPeeler(BaseTemplateMatchingEngine):
         sym_patch = d["sym_patch"]
 
         peak_traces = traces[margin // 2 : -margin // 2, :]
-        peak_sample_ind, peak_chan_ind = DetectPeakByChannel.detect_peaks(
+        peak_sample_index, peak_chan_ind = DetectPeakByChannel.detect_peaks(
             peak_traces, peak_sign, abs_threholds, exclude_sweep_size
         )
 
         if jitter > 0:
-            jittered_peaks = peak_sample_ind[:, np.newaxis] + np.arange(-jitter, jitter)
+            jittered_peaks = peak_sample_index[:, np.newaxis] + np.arange(-jitter, jitter)
             jittered_channels = peak_chan_ind[:, np.newaxis] + np.zeros(2 * jitter)
             mask = (jittered_peaks > 0) & (jittered_peaks < len(peak_traces))
             jittered_peaks = jittered_peaks[mask]
             jittered_channels = jittered_channels[mask]
-            peak_sample_ind, unique_idx = np.unique(jittered_peaks, return_index=True)
+            peak_sample_index, unique_idx = np.unique(jittered_peaks, return_index=True)
             peak_chan_ind = jittered_channels[unique_idx]
         else:
-            peak_sample_ind, unique_idx = np.unique(peak_sample_ind, return_index=True)
+            peak_sample_index, unique_idx = np.unique(peak_sample_index, return_index=True)
             peak_chan_ind = peak_chan_ind[unique_idx]
 
-        num_peaks = len(peak_sample_ind)
+        num_peaks = len(peak_sample_index)
 
         if sym_patch:
-            snippets = extract_patches_2d(traces, patch_sizes)[peak_sample_ind]
-            peak_sample_ind += margin // 2
+            snippets = extract_patches_2d(traces, patch_sizes)[peak_sample_index]
+            peak_sample_index += margin // 2
         else:
-            peak_sample_ind += margin // 2
+            peak_sample_index += margin // 2
             snippet_window = np.arange(-d["nbefore"], d["nafter"])
-            snippets = traces[peak_sample_ind[:, np.newaxis] + snippet_window]
+            snippets = traces[peak_sample_index[:, np.newaxis] + snippet_window]
 
         if num_peaks > 0:
             snippets = snippets.reshape(num_peaks, -1)
@@ -865,10 +784,10 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             best_cluster_ind, peak_index = np.unravel_index(idx_lookup[is_valid][best_amplitude_ind], idx_lookup.shape)
 
             best_amplitude = scalar_products[best_cluster_ind, peak_index]
-            best_peak_sample_ind = peak_sample_ind[peak_index]
+            best_peak_sample_index = peak_sample_index[peak_index]
             best_peak_chan_ind = peak_chan_ind[peak_index]
 
-            peak_data = peak_sample_ind - peak_sample_ind[peak_index]
+            peak_data = peak_sample_index - peak_sample_index[peak_index]
             is_valid_nn = np.searchsorted(peak_data, [-neighbor_window, neighbor_window + 1])
             idx_neighbor = peak_data[is_valid_nn[0] : is_valid_nn[1]] + neighbor_window
 
@@ -880,7 +799,7 @@ class CircusPeeler(BaseTemplateMatchingEngine):
             scalar_products[:, is_valid_nn[0] : is_valid_nn[1]] += to_add
             scalar_products[best_cluster_ind, is_valid_nn[0] : is_valid_nn[1]] = -np.inf
 
-            spikes["sample_index"][num_spikes] = best_peak_sample_ind
+            spikes["sample_index"][num_spikes] = best_peak_sample_index
             spikes["channel_index"][num_spikes] = best_peak_chan_ind
             spikes["cluster_index"][num_spikes] = best_cluster_ind
             spikes["amplitude"][num_spikes] = best_amplitude
