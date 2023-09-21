@@ -94,7 +94,7 @@ ephyviewer
 This backend is Qt based with PyQt5, PyQt6 or PySide6 support. Qt is sometimes tedious to install.
 
 
-For pip based install, run:
+For a pip-based installation, run:
 
 .. code-block:: bash
 
