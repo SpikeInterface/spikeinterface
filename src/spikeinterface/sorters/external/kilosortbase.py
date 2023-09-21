@@ -218,15 +218,21 @@ class KilosortBase:
         if params["delete_recording_dat"] and (recording_file := sorter_output_folder / "recording.dat").exists():
             recording_file.unlink()
 
+        all_temp_files = ("matlab_files", "temp_wh.dat")
+
         if isinstance(params["delete_tmp_files"], bool):
             if params["delete_tmp_files"]:
-                tmp_files_to_remove = ("matlab_files", "temp_wh.dat")
+                tmp_files_to_remove = all_tmp_files
             else:
                 tmp_files_to_remove = ()
         else:
             assert isinstance(
                 params["delete_tmp_files"], (tuple, list)
             ), "`delete_tmp_files` must be a `Bool`, `Tuple` or `List`."
+
+            for name in params["delete_tmp_files"]:
+                assert name in all_tmp_files, f"{name} is not a valid option, must be one of: {all_tmp_files}"
+
             tmp_files_to_remove = params["delete_tmp_files"]
 
         if "temp_wh.dat" in tmp_files_to_remove:
