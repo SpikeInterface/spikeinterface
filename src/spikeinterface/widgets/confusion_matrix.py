@@ -8,7 +8,7 @@ from .utils import get_unit_colors
 
 class ConfusionMatrixWidget(BaseWidget):
     """
-    Plot unit depths
+    Plots sorting comparison confusion matrix.
 
     Parameters
     ----------

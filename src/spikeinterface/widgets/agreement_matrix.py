@@ -8,7 +8,7 @@ from .utils import get_unit_colors
 
 class AgreementMatrixWidget(BaseWidget):
     """
-    Plot unit depths
+    Plots sorting comparison agreement matrix.
 
     Parameters
     ----------
