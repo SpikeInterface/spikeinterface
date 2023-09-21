@@ -74,7 +74,7 @@ class Kilosort2Sorter(KilosortBase, BaseSorter):
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
         "save_rez_to_mat": "Save the full rez internal struc to mat file",
         "delete_tmp_files": "Delete temporary files created during sorting (matlab files and the `temp_wh.dat` file that "
-        "contains kilosort-preprocessed data). Accepts `False` (deletes no files), `True` (deltes all files) "
+        "contains kilosort-preprocessed data). Accepts `False` (deletes no files), `True` (deletes all files) "
         "or a Tuple containing the files to delete. Options are: ('temp_wh.dat', 'matlab_files')",
         "delete_recording_dat": "Whether to delete the 'recording.dat' file after a successful run",
     }
