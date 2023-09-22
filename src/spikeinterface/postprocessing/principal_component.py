@@ -611,8 +611,7 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     seg_size = recording.get_num_samples(segment_index=segment_index)
 
-    i0 = np.searchsorted(spike_times, start_frame)
-    i1 = np.searchsorted(spike_times, end_frame)
+    i0, i1 = np.searchsorted(spike_times, [start_frame, end_frame])
 
     if i0 != i1:
         # protect from spikes on border :  spike_time<0 or spike_time>seg_size

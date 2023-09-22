@@ -177,7 +177,7 @@ def generate_sorting(
         )
 
         if empty_units is not None:
-            keep = ~np.in1d(labels, empty_units)
+            keep = ~np.isin(labels, empty_units)
             times = times[keep]
             labels = labels[keep]
 
@@ -246,7 +246,7 @@ def add_synchrony_to_sorting(sorting, sync_event_ratio=0.3, seed=None):
         sample_index = spike["sample_index"]
         if sample_index not in units_used_for_spike:
             units_used_for_spike[sample_index] = np.array([spike["unit_index"]])
-        units_not_used = unit_ids[~np.in1d(unit_ids, units_used_for_spike[sample_index])]
+        units_not_used = unit_ids[~np.isin(unit_ids, units_used_for_spike[sample_index])]
 
         if len(units_not_used) == 0:
             continue

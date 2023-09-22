@@ -103,7 +103,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
             if same_axis and not np.array_equal(chan_inds, shared_chan_inds):
                 # add more channels if necessary
                 wfs_ = np.zeros((wfs.shape[0], wfs.shape[1], shared_chan_inds.size), dtype=float)
-                mask = np.in1d(shared_chan_inds, chan_inds)
+                mask = np.isin(shared_chan_inds, chan_inds)
                 wfs_[:, :, mask] = wfs
                 wfs_[:, :, ~mask] = np.nan
                 wfs = wfs_
