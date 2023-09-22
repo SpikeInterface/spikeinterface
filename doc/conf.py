@@ -118,11 +118,11 @@ sphinx_gallery_conf = {
     'examples_dirs': ['../examples/modules_gallery'],
     'gallery_dirs': ['modules_gallery', ],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
-                                       '../examples/modules_gallery/extractors/',
+                                       '../examples/modules_gallery/core',
+                                       '../examples/modules_gallery/extractors',
                                        '../examples/modules_gallery/qualitymetrics',
                                        '../examples/modules_gallery/comparison',
                                        '../examples/modules_gallery/widgets',
-                                       '../examples/modules_gallery/core/',
                                        ]),
     'within_subsection_order': FileNameSortKey,
     'ignore_pattern': '/generate_',
