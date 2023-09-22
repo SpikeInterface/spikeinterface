@@ -126,6 +126,7 @@ sphinx_gallery_conf = {
                                        ]),
     'within_subsection_order': FileNameSortKey,
     'ignore_pattern': '/generate_',
+    'nested_sections': False,
 }
 
 intersphinx_mapping = {
