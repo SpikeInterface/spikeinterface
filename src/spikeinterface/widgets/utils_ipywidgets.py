@@ -294,19 +294,51 @@ class ChannelSelector(W.VBox):
             layout=W.Layout(height="100%"),
         )
 
+        # first channel are bottom: need reverse
+        self.selector = W.SelectMultiple(
+            options=self.channel_ids[::-1],
+            value=self.channel_ids[::-1],
+            disabled=False,
+            # layout=W.Layout(width=f"{width_cm}cm", height=f"{height_cm}cm"),
+            layout=W.Layout(height="100%", width="2cm"),
+        )
+        hbox = W.HBox(children=[self.slider, self.selector])
 
-
-        super(W.VBox, self).__init__(children=[channel_label, self.slider],
+        super(W.VBox, self).__init__(children=[channel_label, hbox],
                                      layout=W.Layout(align_items="center"),
                                     #  layout=W.Layout(align_items="center", width="100%", height="100%"),
                                      **kwargs)
         self.slider.observe(self.on_slider_changed, names=['value'], type="change")
-        # self.update_label()
+        self.selector.observe(self.on_selector_changed, names=['value'], type="change")
+
+        # TODO external value change
         # self.observe(self.value_changed, names=['value'], type="change")
     
     def on_slider_changed(self, change=None):
         i0, i1 = self.slider.value
+        
+        self.selector.unobserve(self.on_selector_changed, names=['value'], type="change")
+        self.selector.value = self.channel_ids[i0:i1][::-1]
+        self.selector.observe(self.on_selector_changed, names=['value'], type="change")
+
         self.value = self.channel_ids[i0:i1]
+
+    def on_selector_changed(self, change=None):
+        channel_ids = self.selector.value
+        channel_ids = channel_ids[::-1]
+
+        if len(channel_ids) > 0:
+            self.slider.unobserve(self.on_slider_changed, names=['value'], type="change")
+            i0 = self.channel_ids.index(channel_ids[0])
+            i1 = self.channel_ids.index(channel_ids[-1]) + 1
+            self.slider.value = (i0, i1)
+            self.slider.observe(self.on_slider_changed, names=['value'], type="change")
+
+        self.value = channel_ids
+
+
+
+        
 
 
 
