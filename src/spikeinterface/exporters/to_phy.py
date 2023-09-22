@@ -178,7 +178,11 @@ def export_to_phy(
         templates[unit_ind, :, :][:, : len(chan_inds)] = template
         templates_ind[unit_ind, : len(chan_inds)] = chan_inds
 
-    template_similarity = compute_template_similarity(waveform_extractor, method="cosine_similarity")
+    if waveform_extractor.is_extension("similarity"):
+        tmc = waveform_extractor.load_extension("similarity")
+        template_similarity = tmc.get_data()
+    else:
+        template_similarity = compute_template_similarity(waveform_extractor, method="cosine_similarity")
 
     np.save(str(output_folder / "templates.npy"), templates)
     np.save(str(output_folder / "template_ind.npy"), templates_ind)

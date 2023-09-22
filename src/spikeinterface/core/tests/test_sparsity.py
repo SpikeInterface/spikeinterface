@@ -34,7 +34,7 @@ def test_ChannelSparsity():
 
         for key, v in sparsity.unit_id_to_channel_ids.items():
             assert key in unit_ids
-            assert np.all(np.in1d(v, channel_ids))
+            assert np.all(np.isin(v, channel_ids))
 
         for key, v in sparsity.unit_id_to_channel_indices.items():
             assert key in unit_ids
@@ -53,6 +53,94 @@ def test_ChannelSparsity():
         d2 = json.loads(json.dumps(check_json(d)))
         sparsity4 = ChannelSparsity.from_dict(d2)
         assert np.array_equal(sparsity.mask, sparsity4.mask)
+
+
+def test_sparsify_waveforms():
+    seed = 0
+    rng = np.random.default_rng(seed=seed)
+
+    num_units = 3
+    num_samples = 5
+    num_channels = 4
+
+    is_mask_valid = False
+    while not is_mask_valid:
+        sparsity_mask = rng.integers(0, 1, size=(num_units, num_channels), endpoint=True, dtype="bool")
+        is_mask_valid = np.all(sparsity_mask.sum(axis=1) > 0)
+
+    unit_ids = np.arange(num_units)
+    channel_ids = np.arange(num_channels)
+    sparsity = ChannelSparsity(mask=sparsity_mask, unit_ids=unit_ids, channel_ids=channel_ids)
+
+    for unit_id in unit_ids:
+        waveforms_dense = rng.random(size=(num_units, num_samples, num_channels))
+
+        # Test are_waveforms_dense
+        assert sparsity.are_waveforms_dense(waveforms_dense)
+
+        # Test sparsify
+        waveforms_sparse = sparsity.sparsify_waveforms(waveforms_dense, unit_id=unit_id)
+        non_zero_indices = sparsity.unit_id_to_channel_indices[unit_id]
+        num_active_channels = len(non_zero_indices)
+        assert waveforms_sparse.shape == (num_units, num_samples, num_active_channels)
+
+        # Test round-trip (note that this is loosy)
+        unit_id = unit_ids[unit_id]
+        non_zero_indices = sparsity.unit_id_to_channel_indices[unit_id]
+        waveforms_dense2 = sparsity.densify_waveforms(waveforms_sparse, unit_id=unit_id)
+        assert np.array_equal(waveforms_dense[..., non_zero_indices], waveforms_dense2[..., non_zero_indices])
+
+        # Test sparsify with one waveform (template)
+        template_dense = waveforms_dense.mean(axis=0)
+        template_sparse = sparsity.sparsify_waveforms(template_dense, unit_id=unit_id)
+        assert template_sparse.shape == (num_samples, num_active_channels)
+
+        # Test round trip with template
+        template_dense2 = sparsity.densify_waveforms(template_sparse, unit_id=unit_id)
+        assert np.array_equal(template_dense[..., non_zero_indices], template_dense2[:, non_zero_indices])
+
+
+def test_densify_waveforms():
+    seed = 0
+    rng = np.random.default_rng(seed=seed)
+
+    num_units = 3
+    num_samples = 5
+    num_channels = 4
+
+    is_mask_valid = False
+    while not is_mask_valid:
+        sparsity_mask = rng.integers(0, 1, size=(num_units, num_channels), endpoint=True, dtype="bool")
+        is_mask_valid = np.all(sparsity_mask.sum(axis=1) > 0)
+
+    unit_ids = np.arange(num_units)
+    channel_ids = np.arange(num_channels)
+    sparsity = ChannelSparsity(mask=sparsity_mask, unit_ids=unit_ids, channel_ids=channel_ids)
+
+    for unit_id in unit_ids:
+        non_zero_indices = sparsity.unit_id_to_channel_indices[unit_id]
+        num_active_channels = len(non_zero_indices)
+        waveforms_sparse = rng.random(size=(num_units, num_samples, num_active_channels))
+
+        # Test are waveforms sparse
+        assert sparsity.are_waveforms_sparse(waveforms_sparse, unit_id=unit_id)
+
+        # Test densify
+        waveforms_dense = sparsity.densify_waveforms(waveforms_sparse, unit_id=unit_id)
+        assert waveforms_dense.shape == (num_units, num_samples, num_channels)
+
+        # Test round-trip
+        waveforms_sparse2 = sparsity.sparsify_waveforms(waveforms_dense, unit_id=unit_id)
+        assert np.array_equal(waveforms_sparse, waveforms_sparse2)
+
+        # Test densify with one waveform (template)
+        template_sparse = waveforms_sparse.mean(axis=0)
+        template_dense = sparsity.densify_waveforms(template_sparse, unit_id=unit_id)
+        assert template_dense.shape == (num_samples, num_channels)
+
+        # Test round trip with template
+        template_sparse2 = sparsity.sparsify_waveforms(template_dense, unit_id=unit_id)
+        assert np.array_equal(template_sparse, template_sparse2)
 
 
 if __name__ == "__main__":

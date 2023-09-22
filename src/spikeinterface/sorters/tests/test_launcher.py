@@ -7,6 +7,7 @@ import pytest
 from pathlib import Path
 
 from spikeinterface.core import load_extractor
+
 # from spikeinterface.extractors import toy_example
 from spikeinterface import generate_ground_truth_recording
 from spikeinterface.sorters import run_sorter_jobs, run_sorters, run_sorter_by_property
@@ -17,11 +18,12 @@ if hasattr(pytest, "global_test_folder"):
 else:
     cache_folder = Path("cache_folder") / "sorters"
 
-base_output = cache_folder / 'sorter_output'
+base_output = cache_folder / "sorter_output"
 
 # no need to have many
 num_recordings = 2
 sorters = ["tridesclous2"]
+
 
 def setup_module():
     base_seed = 42
@@ -44,15 +46,17 @@ def get_job_list():
     for i in range(num_recordings):
         for sorter_name in sorters:
             recording = load_extractor(cache_folder / f"toy_rec_{i}")
-            kwargs = dict(sorter_name=sorter_name,
-                        recording=recording,
-                        output_folder=base_output / f"{sorter_name}_rec{i}",
-                        verbose=True,
-                        raise_error=False,
-                        )
+            kwargs = dict(
+                sorter_name=sorter_name,
+                recording=recording,
+                output_folder=base_output / f"{sorter_name}_rec{i}",
+                verbose=True,
+                raise_error=False,
+            )
             jobs.append(kwargs)
-    
+
     return jobs
+
 
 @pytest.fixture(scope="module")
 def job_list():
@@ -66,21 +70,22 @@ def test_run_sorter_jobs_loop(job_list):
     print(sortings)
 
 
-
-
 def test_run_sorter_jobs_joblib(job_list):
     if base_output.is_dir():
         shutil.rmtree(base_output)
-    sortings = run_sorter_jobs(job_list, engine="joblib", engine_kwargs=dict(n_jobs=2, backend="loky"), return_output=True)
+    sortings = run_sorter_jobs(
+        job_list, engine="joblib", engine_kwargs=dict(n_jobs=2, backend="loky"), return_output=True
+    )
     print(sortings)
+
 
 def test_run_sorter_jobs_processpoolexecutor(job_list):
     if base_output.is_dir():
         shutil.rmtree(base_output)
-    sortings = run_sorter_jobs(job_list, engine="processpoolexecutor", engine_kwargs=dict(max_workers=2), return_output=True)
+    sortings = run_sorter_jobs(
+        job_list, engine="processpoolexecutor", engine_kwargs=dict(max_workers=2), return_output=True
+    )
     print(sortings)
-
-
 
 
 @pytest.mark.skipif(True, reason="This is tested locally")
@@ -92,12 +97,13 @@ def test_run_sorter_jobs_dask(job_list):
     from dask.distributed import Client
 
     test_mode = "local"
-    # test_mode = "client_slurm"
+    # test_mode = "client_slurm"
 
     if test_mode == "local":
         client = Client()
     elif test_mode == "client_slurm":
         from dask_jobqueue import SLURMCluster
+
         cluster = SLURMCluster(
             processes=1,
             cores=1,
@@ -133,7 +139,7 @@ def test_run_sorter_jobs_slurm(job_list):
             tmp_script_folder=tmp_script_folder,
             cpus_per_task=32,
             mem="32G",
-            )
+        ),
     )
 
 
@@ -165,12 +171,9 @@ def test_run_sorter_by_property():
     assert all([g in group_names1 for g in sorting1.get_property("group")])
 
 
-
 # run_sorters is deprecated
 # This will test will be removed in next release
 def test_run_sorters_with_list():
-
-
     working_folder = cache_folder / "test_run_sorters_list"
     if working_folder.is_dir():
         shutil.rmtree(working_folder)
@@ -185,12 +188,9 @@ def test_run_sorters_with_list():
     run_sorters(sorter_list, recording_list, working_folder, engine="loop", verbose=False, with_output=False)
 
 
-
-
 # run_sorters is deprecated
 # This will test will be removed in next release
 def test_run_sorters_with_dict():
-
     working_folder = cache_folder / "test_run_sorters_dict"
     if working_folder.is_dir():
         shutil.rmtree(working_folder)
@@ -232,9 +232,6 @@ def test_run_sorters_with_dict():
     )
 
 
-
-
-
 if __name__ == "__main__":
     # setup_module()
     job_list = get_job_list()
@@ -251,5 +248,3 @@ if __name__ == "__main__":
     # this deprecated
     # test_run_sorters_with_list()
     # test_run_sorters_with_dict()
-
-
