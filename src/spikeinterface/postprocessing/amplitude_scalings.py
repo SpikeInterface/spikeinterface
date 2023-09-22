@@ -16,6 +16,7 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
     """
 
     extension_name = "amplitude_scalings"
+    handle_sparsity = True
 
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
@@ -357,7 +358,7 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
                 continue
             unit_index = spike["unit_index"]
             sample_index = spike["sample_index"]
-            sparse_indices = sparsity_mask[unit_index]
+            (sparse_indices,) = np.nonzero(sparsity_mask[unit_index])
             template = all_templates[unit_index][:, sparse_indices]
             template = template[nbefore - cut_out_before : nbefore + cut_out_after]
             sample_centered = sample_index - start_frame
@@ -368,7 +369,7 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
                 template = template[cut_out_before - sample_index :]
             elif sample_index + cut_out_after > end_frame + right:
                 local_waveform = traces_with_margin[cut_out_start:, sparse_indices]
-                template = template[: -(sample_index + cut_out_after - end_frame - right)]
+                template = template[: -(sample_index + cut_out_after - (end_frame + right))]
             else:
                 local_waveform = traces_with_margin[cut_out_start:cut_out_end, sparse_indices]
             assert template.shape == local_waveform.shape
@@ -550,10 +551,11 @@ def fit_collision(
     sample_last_centered = np.max(collision["sample_index"]) - (start_frame - left)
 
     # construct sparsity as union between units' sparsity
-    sparse_indices = np.zeros(sparsity_mask.shape[1], dtype="int")
+    common_sparse_mask = np.zeros(sparsity_mask.shape[1], dtype="int")
     for spike in collision:
-        sparse_indices_i = sparsity_mask[spike["unit_index"]]
-        sparse_indices = np.logical_or(sparse_indices, sparse_indices_i)
+        mask_i = sparsity_mask[spike["unit_index"]]
+        common_sparse_mask = np.logical_or(common_sparse_mask, mask_i)
+    (sparse_indices,) = np.nonzero(common_sparse_mask)
 
     local_waveform_start = max(0, sample_first_centered - cut_out_before)
     local_waveform_end = min(traces_with_margin.shape[0], sample_last_centered + cut_out_after)

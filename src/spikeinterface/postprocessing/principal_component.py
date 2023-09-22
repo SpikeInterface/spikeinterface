@@ -84,9 +84,16 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         Returns
         -------
         proj: np.array
-            The PCA projections (num_waveforms, num_components, num_channels)
+            The PCA projections (num_waveforms, num_components, num_channels).
+            In case sparsity is used, only the projections on sparse channels are returned.
         """
-        return self._extension_data[f"pca_{unit_id}"]
+        projections = self._extension_data[f"pca_{unit_id}"]
+        mode = self._params["mode"]
+        if mode in ("by_channel_local", "by_channel_global"):
+            sparsity = self.get_sparsity()
+            if sparsity is not None:
+                projections = projections[:, :, sparsity.unit_id_to_channel_indices[unit_id]]
+        return projections
 
     def get_pca_model(self):
         """
@@ -211,6 +218,10 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             wfs_flat = new_waveforms.reshape(new_waveforms.shape[0], -1)
             projections = pca_model.transform(wfs_flat)
 
+        # take care of sparsity (not in case of concatenated)
+        if mode in ("by_channel_local", "by_channel_global"):
+            if sparsity is not None:
+                projections = projections[:, :, sparsity.unit_id_to_channel_indices[unit_id]]
         return projections
 
     def get_sparsity(self):
