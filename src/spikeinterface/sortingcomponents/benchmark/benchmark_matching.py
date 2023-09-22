@@ -502,7 +502,7 @@ def plot_errors_matching(benchmark, comp, unit_id, nb_spikes=200, metric="cosine
         seg_num = 0  # TODO: make compatible with multiple segments
         idx_1 = np.where(comp.get_labels1(unit_id)[seg_num] == label)
         idx_2 = benchmark.we.get_sampled_indices(unit_id)["spike_index"]
-        intersection = np.where(np.in1d(idx_2, idx_1))[0]
+        intersection = np.where(np.isin(idx_2, idx_1))[0]
         intersection = np.random.permutation(intersection)[:nb_spikes]
         if len(intersection) == 0:
             print(f"No {label}s found for unit {unit_id}")
@@ -552,7 +552,7 @@ def plot_errors_matching_all_neurons(benchmark, comp, nb_spikes=200, metric="cos
 
         for label in ["TP", "FN"]:
             idx_1 = np.where(comp.get_labels1(unit_id) == label)[0]
-            intersection = np.where(np.in1d(idx_2, idx_1))[0]
+            intersection = np.where(np.isin(idx_2, idx_1))[0]
             intersection = np.random.permutation(intersection)[:nb_spikes]
             wfs_sliced = wfs[intersection, :, :]
 
@@ -600,29 +600,38 @@ def plot_comparison_matching(
             else:
                 ax = axs[j]
             comp1, comp2 = comp_per_method[method1], comp_per_method[method2]
-            for performance, color in zip(performance_names, colors):
-                perf1 = comp1.get_performance()[performance]
-                perf2 = comp2.get_performance()[performance]
-                ax.plot(perf2, perf1, ".", label=performance, color=color)
-            ax.plot([0, 1], [0, 1], "k--", alpha=0.5)
-            ax.set_ylim(ylim)
-            ax.set_xlim(ylim)
-            ax.spines[["right", "top"]].set_visible(False)
-            ax.set_aspect("equal")
+            if i <= j:
+                for performance, color in zip(performance_names, colors):
+                    perf1 = comp1.get_performance()[performance]
+                    perf2 = comp2.get_performance()[performance]
+                    ax.plot(perf2, perf1, ".", label=performance, color=color)
 
-            if j == 0:
-                ax.set_ylabel(f"{method1}")
+                ax.plot([0, 1], [0, 1], "k--", alpha=0.5)
+                ax.set_ylim(ylim)
+                ax.set_xlim(ylim)
+                ax.spines[["right", "top"]].set_visible(False)
+                ax.set_aspect("equal")
+
+                if j == i:
+                    ax.set_ylabel(f"{method1}")
+                else:
+                    ax.set_yticks([])
+                if i == j:
+                    ax.set_xlabel(f"{method2}")
+                else:
+                    ax.set_xticks([])
+                if i == num_methods - 1 and j == num_methods - 1:
+                    patches = []
+                    for color, name in zip(colors, performance_names):
+                        patches.append(mpatches.Patch(color=color, label=name))
+                    ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
             else:
-                ax.set_yticks([])
-            if i == num_methods - 1:
-                ax.set_xlabel(f"{method2}")
-            else:
+                ax.spines["bottom"].set_visible(False)
+                ax.spines["left"].set_visible(False)
+                ax.spines["top"].set_visible(False)
+                ax.spines["right"].set_visible(False)
                 ax.set_xticks([])
-            if i == num_methods - 1 and j == num_methods - 1:
-                patches = []
-                for color, name in zip(colors, performance_names):
-                    patches.append(mpatches.Patch(color=color, label=name))
-                ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
+                ax.set_yticks([])
     plt.tight_layout(h_pad=0, w_pad=0)
     return fig, axs
 
