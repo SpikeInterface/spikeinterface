@@ -48,9 +48,15 @@ def test_generate_sorting_with_spikes_on_borders():
             num_spikes_per_border=num_spikes_on_borders,
             border_size_samples=border_size_samples,
         )
+        # check that segments are correctly sorted
+        all_spikes = sorting.to_spike_vector()
+        np.testing.assert_array_equal(all_spikes["segment_index"], np.sort(all_spikes["segment_index"]))
+
         spikes = sorting.to_spike_vector(concatenated=False)
         # at least num_border spikes at borders for all segments
-        for i, spikes_in_segment in enumerate(spikes):
+        for spikes_in_segment in spikes:
+            # check that sample indices are correctly sorted within segments
+            np.testing.assert_array_equal(spikes_in_segment["sample_index"], np.sort(spikes_in_segment["sample_index"]))
             num_samples = int(segment_duration * 30000)
             assert np.sum(spikes_in_segment["sample_index"] < border_size_samples) >= num_spikes_on_borders
             assert (
