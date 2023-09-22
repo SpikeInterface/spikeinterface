@@ -68,7 +68,6 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         delta_collision_samples = int(delta_collision_ms / 1000 * we.sampling_frequency)
 
         return_scaled = we._params["return_scaled"]
-        unit_ids = we.unit_ids
 
         if ms_before is not None:
             assert (
@@ -82,9 +81,16 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         cut_out_before = int(ms_before / 1000 * we.sampling_frequency) if ms_before is not None else nbefore
         cut_out_after = int(ms_after / 1000 * we.sampling_frequency) if ms_after is not None else nafter
 
-        if we.is_sparse():
+        if we.is_sparse() and self._params["sparsity"] is None:
             sparsity = we.sparsity
-        elif self._params["sparsity"] is not None:
+        elif we.is_sparse() and self._params["sparsity"] is not None:
+            sparsity = self._params["sparsity"]
+            # assert provided sparsity is sparser than the one in the waveform extractor
+            waveform_sparsity = we.sparsity
+            assert np.all(
+                np.sum(waveform_sparsity.mask, 1) - np.sum(sparsity.mask, 1) > 0
+            ), "The provided sparsity needs to be sparser than the one in the waveform extractor!"
+        elif not we.is_sparse() and self._params["sparsity"] is not None:
             sparsity = self._params["sparsity"]
         else:
             if self._params["max_dense_channels"] is not None:
@@ -362,7 +368,7 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
                 template = template[cut_out_before - sample_index :]
             elif sample_index + cut_out_after > end_frame + right:
                 local_waveform = traces_with_margin[cut_out_start:, sparse_indices]
-                template = template[: -(sample_index + cut_out_after - end_frame)]
+                template = template[: -(sample_index + cut_out_after - end_frame - right)]
             else:
                 local_waveform = traces_with_margin[cut_out_start:cut_out_end, sparse_indices]
             assert template.shape == local_waveform.shape
