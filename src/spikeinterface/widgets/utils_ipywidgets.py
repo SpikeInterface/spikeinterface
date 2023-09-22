@@ -338,10 +338,6 @@ class ChannelSelector(W.VBox):
 
 
 
-        
-
-
-
 class ScaleWidget(W.VBox):
     value = traitlets.Float()
 
@@ -398,3 +394,38 @@ class ScaleWidget(W.VBox):
 
     def value_changed(self, change=None):
         self.update_label()
+
+
+class UnitSelector(W.VBox):
+    value = traitlets.List()
+
+    def __init__(self, unit_ids, **kwargs):
+        self.unit_ids = list(unit_ids)
+        self.value = self.unit_ids
+
+        label = W.Label("Units", layout=W.Layout(justify_content="center"))
+
+        self.selector = W.SelectMultiple(
+            options=self.unit_ids,
+            value=self.unit_ids,
+            disabled=False,
+            layout=W.Layout(height="100%", width="2cm"),
+        )
+
+        super(W.VBox, self).__init__(children=[label, self.selector],
+                                     layout=W.Layout(align_items="center"),
+                                     **kwargs)
+        
+        self.selector.observe(self.on_selector_changed, names=['value'], type="change")
+
+        self.observe(self.value_changed, names=['value'], type="change")
+    
+    def on_selector_changed(self, change=None):
+        unit_ids = self.selector.value
+        self.value = unit_ids
+    
+    def value_changed(self, change=None):
+        self.selector.unobserve(self.on_selector_changed, names=['value'], type="change")
+        self.selector.value = change['new']
+        self.selector.observe(self.on_selector_changed, names=['value'], type="change")
+
