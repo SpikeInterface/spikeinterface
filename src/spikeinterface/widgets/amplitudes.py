@@ -147,13 +147,16 @@ class AmplitudesWidget(BaseWidget):
                 else:
                     bins = dp.bins
                 ax_hist = self.axes.flatten()[1]
-                ax_hist.hist(amps, bins=bins, orientation="horizontal", color=dp.unit_colors[unit_id], alpha=0.8)
+                # this is super slow, using plot and np.histogram is really much faster (and nicer!)
+                # ax_hist.hist(amps, bins=bins, orientation="horizontal", color=dp.unit_colors[unit_id], alpha=0.8)
+                count, bins = np.histogram(amps, bins=bins)
+                ax_hist.plot(count, bins[:-1], color=dp.unit_colors[unit_id], alpha=0.8)
 
         if dp.plot_histograms:
             ax_hist = self.axes.flatten()[1]
             ax_hist.set_ylim(scatter_ax.get_ylim())
             ax_hist.axis("off")
-            self.figure.tight_layout()
+            # self.figure.tight_layout()
 
         if dp.plot_legend:
             if hasattr(self, "legend") and self.legend is not None:
@@ -174,7 +177,7 @@ class AmplitudesWidget(BaseWidget):
         # import ipywidgets.widgets as widgets
         import ipywidgets.widgets as W
         from IPython.display import display
-        from .utils_ipywidgets import check_ipywidget_backend, make_unit_controller, UnitSelector
+        from .utils_ipywidgets import check_ipywidget_backend, UnitSelector
 
         check_ipywidget_backend()
 
@@ -200,7 +203,6 @@ class AmplitudesWidget(BaseWidget):
         self.checkbox_histograms = W.Checkbox(
             value=data_plot["plot_histograms"],
             description="hist",
-            # disabled=False,
         )
 
         left_sidebar = W.VBox(
@@ -231,6 +233,7 @@ class AmplitudesWidget(BaseWidget):
         data_plot = self.next_data_plot
         data_plot["unit_ids"] = self.unit_selector.value
         data_plot["plot_histograms"] = self.checkbox_histograms.value
+        data_plot["plot_legend"] = False
 
         backend_kwargs = dict(figure=self.figure, axes=None, ax=None)
         self.plot_matplotlib(data_plot, **backend_kwargs)
@@ -243,6 +246,7 @@ class AmplitudesWidget(BaseWidget):
         data_plot = self.next_data_plot
         data_plot["unit_ids"] = self.unit_selector.value
         data_plot["plot_histograms"] = self.checkbox_histograms.value
+        data_plot["plot_legend"] = False
 
         backend_kwargs = dict(figure=None, axes=self.axes, ax=None)
         self.plot_matplotlib(data_plot, **backend_kwargs)
