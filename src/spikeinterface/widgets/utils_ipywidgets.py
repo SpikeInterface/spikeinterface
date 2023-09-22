@@ -54,7 +54,7 @@ class TimeSlider(W.HBox):
             # description='time:',
             value=start_frame,
             min=0,
-            max=self.frame_limits[self.segment_index],
+            max=self.frame_limits[self.segment_index] - 1,
             readout=False,
             continuous_update=False,
             layout=W.Layout(width=f'70%')
@@ -112,10 +112,13 @@ class TimeSlider(W.HBox):
         else:
             start_frame = new_frame
         delta_s = self.window_sizer.value
-        end_frame = start_frame + int(delta_s * self.sampling_frequency)
-        
+        delta = int(delta_s * self.sampling_frequency)
+
         # clip
+        start_frame = min(self.frame_limits[self.segment_index] - delta, start_frame)
         start_frame = max(0, start_frame)
+        end_frame = start_frame + delta
+        
         end_frame = min(self.frame_limits[self.segment_index], end_frame)
 
         
@@ -170,7 +173,7 @@ class TimeSlider(W.HBox):
 
         self.slider.unobserve(self.slider_moved, names='value', type="change")
         # self.slider.value = 0
-        self.slider.max = self.frame_limits[self.segment_index]
+        self.slider.max = self.frame_limits[self.segment_index] - 1
         self.slider.observe(self.slider_moved, names='value', type="change")
 
         self.update_time(new_frame=0, update_slider=True, update_label=True)
