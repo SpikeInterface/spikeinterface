@@ -19,16 +19,16 @@ import warnings
 #     plt.show()
 
 
-def get_1d_template_metric_names():
-    return deepcopy(list(_1d_metric_name_to_func.keys()))
+def get_single_channel_template_metric_names():
+    return deepcopy(list(_single_channel_metric_name_to_func.keys()))
 
 
-def get_2d_template_metric_names():
-    return deepcopy(list(_2d_metric_name_to_func.keys()))
+def get_multi_channel_template_metric_names():
+    return deepcopy(list(_multi_channel_metric_name_to_func.keys()))
 
 
 def get_template_metric_names():
-    return get_1d_template_metric_names() + get_2d_template_metric_names()
+    return get_single_channel_template_metric_names() + get_multi_channel_template_metric_names()
 
 
 class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
@@ -41,7 +41,7 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
     """
 
     extension_name = "template_metrics"
-    min_channels_for_2d_warning = 10
+    min_channels_for_multi_channel_warning = 10
 
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
@@ -53,12 +53,12 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
         upsampling_factor=10,
         sparsity=None,
         functions_kwargs=None,
-        include_2d_metrics=False,
+        include_multi_channel_metrics=False,
     ):
         if metric_names is None:
-            metric_names = get_1d_template_metric_names()
-        if include_2d_metrics:
-            metric_names += get_2d_template_metric_names()
+            metric_names = get_single_channel_template_metric_names()
+        if include_multi_channel_metrics:
+            metric_names += get_multi_channel_template_metric_names()
         functions_kwargs = functions_kwargs or dict()
         params = dict(
             metric_names=[str(name) for name in metric_names],
@@ -86,8 +86,8 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
         unit_ids = self.waveform_extractor.sorting.unit_ids
         sampling_frequency = self.waveform_extractor.sampling_frequency
 
-        metrics_1d = [m for m in metric_names if m in get_1d_template_metric_names()]
-        metrics_2d = [m for m in metric_names if m in get_2d_template_metric_names()]
+        metrics_single_channel = [m for m in metric_names if m in get_single_channel_template_metric_names()]
+        metrics_multi_channel = [m for m in metric_names if m in get_multi_channel_template_metric_names()]
 
         if sparsity is None:
             extremum_channels_ids = get_template_extremum_channel(
@@ -118,7 +118,7 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
             chan_ind = self.waveform_extractor.channel_ids_to_indices(chan_ids)
             template = template_all_chans[:, chan_ind]
 
-            # compute 1d metrics
+            # compute single_channel metrics
             for i, template_single in enumerate(template.T):
                 if sparsity is None:
                     index = unit_id
@@ -134,7 +134,7 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
 
                 trough_idx, peak_idx = get_trough_and_peak_idx(template_upsampled)
 
-                for metric_name in metrics_1d:
+                for metric_name in metrics_single_channel:
                     func = _metric_name_to_func[metric_name]
                     value = func(
                         template_upsampled,
@@ -145,15 +145,15 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
                     )
                     template_metrics.at[index, metric_name] = value
 
-            # compute metrics 2d
-            for metric_name in metrics_2d:
+            # compute metrics multi_channel
+            for metric_name in metrics_multi_channel:
                 # retrieve template (with sparsity if waveform extractor is sparse)
                 template = self.waveform_extractor.get_template(unit_id=unit_id)
 
-                if template.shape[1] < self.min_channels_for_2d_warning:
+                if template.shape[1] < self.min_channels_for_multi_channel_warning:
                     warnings.warn(
-                        f"With less than {self.min_channels_for_2d_warning} channels, "
-                        "2D metrics might not be reliable."
+                        f"With less than {self.min_channels_for_multi_channel_warning} channels, "
+                        "multi-channel metrics might not be reliable."
                     )
                 if self.waveform_extractor.is_sparse():
                     channel_locations_sparse = channel_locations[self.waveform_extractor.sparsity.mask[unit_index]]
@@ -206,7 +206,7 @@ def compute_template_metrics(
     peak_sign="neg",
     upsampling_factor=10,
     sparsity=None,
-    include_2d_metrics=False,
+    include_multi_channel_metrics=False,
     functions_kwargs=dict(
         recovery_window_ms=0.7,
         peak_relative_threshold=0.2,
@@ -228,7 +228,7 @@ def compute_template_metrics(
         * num_positive_peaks
         * num_negative_peaks
 
-    Optionally, the following 2d metrics can be computed (when include_2d_metrics=True):
+    Optionally, the following multi-channel metrics can be computed (when include_multi_channel_metrics=True):
         * velocity_above
         * velocity_below
         * exp_decay
@@ -250,8 +250,8 @@ def compute_template_metrics(
         Default is sparsity=None and template metric is computed on extremum channel only.
         If given, the dictionary should contain a unit ids as keys and a channel id or a list of channel ids as values.
         For more generating a sparsity dict, see the postprocessing.compute_sparsity() function.
-    include_2d_metrics: bool, default: False
-        Whether to compute 2d metrics
+    include_multi_channel_metrics: bool, default: False
+        Whether to compute multi-channel metrics
     functions_kwargs: dict
         Additional arguments to pass to the metric functions. Including:
             * recovery_window_ms: the window in ms after the peak to compute the recovery_slope, default: 0.7
@@ -272,26 +272,27 @@ def compute_template_metrics(
 
     Notes
     -----
-    If any 2d metric is in the metric_names or include_2d_metrics is True, sparsity must be None, so that one metric
-    value will be computed per unit.
+    If any multi-channel metric is in the metric_names or include_multi_channel_metrics is True, sparsity must be None,
+    so that one metric value will be computed per unit.
     """
     if load_if_exists and waveform_extractor.is_extension(TemplateMetricsCalculator.extension_name):
         tmc = waveform_extractor.load_extension(TemplateMetricsCalculator.extension_name)
     else:
         tmc = TemplateMetricsCalculator(waveform_extractor)
         # For 2D metrics, external sparsity must be None, so that one metric value will be computed per unit.
-        if include_2d_metrics or (
-            metric_names is not None and any([m in get_2d_template_metric_names() for m in metric_names])
+        if include_multi_channel_metrics or (
+            metric_names is not None and any([m in get_multi_channel_template_metric_names() for m in metric_names])
         ):
-            assert (
-                sparsity is None
-            ), "If 2D metrics are computed, sparsity must be None, so that each unit will correspond to 1 row of the output dataframe."
+            assert sparsity is None, (
+                "If multi-channel metrics are computed, sparsity must be None, "
+                "so that each unit will correspond to 1 row of the output dataframe."
+            )
         tmc.set_params(
             metric_names=metric_names,
             peak_sign=peak_sign,
             upsampling_factor=upsampling_factor,
             sparsity=sparsity,
-            include_2d_metrics=include_2d_metrics,
+            include_multi_channel_metrics=include_multi_channel_metrics,
             functions_kwargs=functions_kwargs,
         )
         tmc.run()
@@ -326,7 +327,7 @@ def get_trough_and_peak_idx(template):
 
 
 #########################################################################################
-# 1D metrics
+# Single-channel metrics
 def get_peak_to_valley(template_single, trough_idx=None, peak_idx=None, **kwargs):
     """
     Return the peak to valley duration in seconds of input waveforms.
@@ -565,7 +566,7 @@ def get_num_negative_peaks(template_single, **kwargs):
     return len(neg_peaks[0])
 
 
-_1d_metric_name_to_func = {
+_single_channel_metric_name_to_func = {
     "peak_to_valley": get_peak_to_valley,
     "peak_trough_ratio": get_peak_trough_ratio,
     "half_width": get_half_width,
@@ -577,7 +578,7 @@ _1d_metric_name_to_func = {
 
 
 #########################################################################################
-# 2D metrics
+# Multi-channel metrics
 
 
 def fit_velocity(peak_times, channel_dist):
@@ -802,11 +803,11 @@ def get_spread(template, channel_locations, **kwargs):
     return spread
 
 
-_2d_metric_name_to_func = {
+_multi_channel_metric_name_to_func = {
     "velocity_above": get_velocity_above,
     "velocity_below": get_velocity_below,
     "exp_decay": get_exp_decay,
     "spread": get_spread,
 }
 
-_metric_name_to_func = {**_1d_metric_name_to_func, **_2d_metric_name_to_func}
+_metric_name_to_func = {**_single_channel_metric_name_to_func, **_multi_channel_metric_name_to_func}
