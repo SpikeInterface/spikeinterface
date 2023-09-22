@@ -536,7 +536,6 @@ def remove_duplicates_via_matching(
     waveform_extractor,
     noise_levels,
     peak_labels,
-    sparsify_threshold=1,
     method_kwargs={},
     job_kwargs={},
     tmp_folder=None,
@@ -552,6 +551,10 @@ def remove_duplicates_via_matching(
     from pathlib import Path
 
     job_kwargs = fix_job_kwargs(job_kwargs)
+
+    if waveform_extractor.is_sparse():
+        sparsity = waveform_extractor.sparsity.mask
+
     templates = waveform_extractor.get_all_templates(mode="median").copy()
     nb_templates = len(templates)
     duration = waveform_extractor.nbefore + waveform_extractor.nafter
@@ -559,9 +562,9 @@ def remove_duplicates_via_matching(
     fs = waveform_extractor.recording.get_sampling_frequency()
     num_chans = waveform_extractor.recording.get_num_channels()
 
-    for t in range(nb_templates):
-        is_silent = templates[t].ptp(0) < sparsify_threshold
-        templates[t, :, is_silent] = 0
+    if waveform_extractor.is_sparse():
+        for count, unit_id in enumerate(waveform_extractor.sorting.unit_ids):
+            templates[count][:, ~sparsity[count]] = 0
 
     zdata = templates.reshape(nb_templates, -1)
 
@@ -581,6 +584,7 @@ def remove_duplicates_via_matching(
 
     recording = BinaryRecordingExtractor(tmp_filename, num_channels=num_chans, sampling_frequency=fs, dtype="float32")
     recording.annotate(is_filtered=True)
+    recording = recording.set_probe(waveform_extractor.recording.get_probe())
 
     margin = 2 * max(waveform_extractor.nbefore, waveform_extractor.nafter)
     half_marging = margin // 2
@@ -597,7 +601,6 @@ def remove_duplicates_via_matching(
             "waveform_extractor": waveform_extractor,
             "noise_levels": noise_levels,
             "amplitudes": [0.95, 1.05],
-            "sparsify_threshold": sparsify_threshold,
             "omp_min_sps": 0.1,
             "templates": None,
             "overlaps": None,
