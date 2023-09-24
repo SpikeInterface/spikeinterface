@@ -132,10 +132,11 @@ def test_json_curation():
     assert len(sorting_curated_json_mua.unit_ids) == 6
     assert len(sorting_curated_json_mua1.unit_ids) == 5
 
+
 def test_false_positive_curation():
     # https://spikeinterface.readthedocs.io/en/latest/modules_gallery/core/plot_2_sorting_extractor.html
-    sampling_frequency = 30000.
-    duration = 20.
+    sampling_frequency = 30000.0
+    duration = 20.0
     num_timepoints = int(sampling_frequency * duration)
     num_units = 20
     num_spikes = 1000
@@ -145,35 +146,29 @@ def test_false_positive_curation():
     labels1 = np.random.randint(1, num_units + 1, size=num_spikes)
 
     sorting = se.NumpySorting.from_times_labels([times0, times1], [labels0, labels1], sampling_frequency)
-    print('Sorting: {}'.format(sorting.get_unit_ids()))
+    print("Sorting: {}".format(sorting.get_unit_ids()))
 
     # Test curation JSON:
-    test_json = {
-        "labelsByUnit": {
-            "1": ["accept"],
-            "2": ["artifact"],
-            "12": ["artifact"]
-        },
-        "mergeGroups": [[2,12]]
-    }
+    test_json = {"labelsByUnit": {"1": ["accept"], "2": ["artifact"], "12": ["artifact"]}, "mergeGroups": [[2, 12]]}
 
     json_path = "test_data.json"
-    with open(json_path, 'w') as f:
+    with open(json_path, "w") as f:
         json.dump(test_json, f, indent=4)
 
     sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_path, verbose=True)
     accept_idx = np.where(sorting_curated_json.get_property("accept"))[0]
     sorting_curated_ids = sorting_curated_json.get_unit_ids()
-    print(f'Accepted unit IDs: {sorting_curated_ids[accept_idx]}')
+    print(f"Accepted unit IDs: {sorting_curated_ids[accept_idx]}")
 
-    # Check if unit_id 1 has received the "accept" label. 
-    assert sorting_curated_json.get_unit_property(unit_id=1, key="accept") 
-     # Check if unit_id 10 has received the "accept" label. 
-     # If so, test fails since only unit_id 1 received the "accept" label in test_json.
-    assert not sorting_curated_json.get_unit_property(unit_id=10, key="accept") 
+    # Check if unit_id 1 has received the "accept" label.
+    assert sorting_curated_json.get_unit_property(unit_id=1, key="accept")
+    # Check if unit_id 10 has received the "accept" label.
+    # If so, test fails since only unit_id 1 received the "accept" label in test_json.
+    assert not sorting_curated_json.get_unit_property(unit_id=10, key="accept")
     print(sorting_curated_json.unit_ids)
-    # Merging unit_ids of dtype int creates a new unit id 
+    # Merging unit_ids of dtype int creates a new unit id
     assert 21 in sorting_curated_json.unit_ids
+
 
 if __name__ == "__main__":
     # generate_sortingview_curation_dataset()
