@@ -83,8 +83,9 @@ def apply_sortingview_curation(
                 properties[label] = np.zeros(len(curation_sorting.current_sorting.unit_ids), dtype=bool)
     for u_i, unit_id in enumerate(curation_sorting.current_sorting.unit_ids):
         labels_unit = []
+        unit_id_parts = str(unit_id).split('-')
         for unit_label, labels in labels_dict.items():
-            if unit_label in str(unit_id):
+            if unit_label in unit_id_parts:
                 labels_unit.extend(labels)
         for label in labels_unit:
             properties[label][u_i] = True

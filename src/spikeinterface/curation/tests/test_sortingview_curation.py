@@ -1,8 +1,10 @@
 import pytest
 from pathlib import Path
 import os
-
+import json
+import numpy as np
 import spikeinterface as si
+import spikeinterface.extractors as se
 from spikeinterface.extractors import read_mearec
 from spikeinterface import set_global_tmp_folder
 from spikeinterface.postprocessing import (
@@ -17,9 +19,7 @@ if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "curation"
 else:
     cache_folder = Path("cache_folder") / "curation"
-
 parent_folder = Path(__file__).parent
-
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
 
@@ -111,6 +111,7 @@ def test_json_curation():
     # from curation.json
     json_file = parent_folder / "sv-sorting-curation.json"
     sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_file, verbose=True)
+    print(f"Sorting: {sorting.get_unit_ids()}")
     print(f"From JSON: {sorting_curated_json}")
 
     assert len(sorting_curated_json.unit_ids) == 9
@@ -130,9 +131,47 @@ def test_json_curation():
     assert len(sorting_curated_json_mua.unit_ids) == 6
     assert len(sorting_curated_json_mua1.unit_ids) == 5
 
+def test_false_positive_curation():
+    # https://spikeinterface.readthedocs.io/en/latest/modules_gallery/core/plot_2_sorting_extractor.html
+    sampling_frequency = 30000.
+    duration = 20.
+    num_timepoints = int(sampling_frequency * duration)
+    num_units = 20
+    num_spikes = 1000
+    times0 = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
+    labels0 = np.random.randint(1, num_units + 1, size=num_spikes)
+    times1 = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
+    labels1 = np.random.randint(1, num_units + 1, size=num_spikes)
+
+    sorting = se.NumpySorting.from_times_labels([times0, times1], [labels0, labels1], sampling_frequency)
+    print('Sorting: {}'.format(sorting.get_unit_ids()))
+
+    # Test curation JSON:
+    test_json = {
+        "labelsByUnit": {
+            "1": ["accept"],
+        },
+        "mergeGroups": []
+    }
+
+    json_path = "test_data.json"
+    with open(json_path, 'w') as f:
+        json.dump(test_json, f, indent=4)
+
+    sorting_curated = apply_sortingview_curation(sorting, uri_or_json=json_path, verbose=True)
+    accept_idx = np.where(sorting_curated.get_property("accept"))[0]
+    sorting_curated_ids = sorting_curated.get_unit_ids()
+    print(f'Accepted unit IDs: {sorting_curated_ids[accept_idx]}')
+
+    # Check if unit_id 1 has received the "accept" label. 
+    assert sorting_curated.get_unit_property(unit_id=1, key="accept") 
+     # Check if unit_id "#10" has received the "accept" label. 
+     # If so, test fails since only unit_id 1 received the "accept" label in test_json.
+    assert not sorting_curated.get_unit_property(unit_id=10, key="accept") 
 
 if __name__ == "__main__":
     # generate_sortingview_curation_dataset()
     test_sha1_curation()
     test_gh_curation()
     test_json_curation()
+    test_false_positive_curation()
