@@ -115,6 +115,7 @@ def test_json_curation():
     print(f"From JSON: {sorting_curated_json}")
 
     assert len(sorting_curated_json.unit_ids) == 9
+    print(sorting_curated_json.unit_ids)
     assert "#8-#9" in sorting_curated_json.unit_ids
     assert "accept" in sorting_curated_json.get_property_keys()
     assert "mua" in sorting_curated_json.get_property_keys()
@@ -150,24 +151,29 @@ def test_false_positive_curation():
     test_json = {
         "labelsByUnit": {
             "1": ["accept"],
+            "2": ["artifact"],
+            "12": ["artifact"]
         },
-        "mergeGroups": []
+        "mergeGroups": [[2,12]]
     }
 
     json_path = "test_data.json"
     with open(json_path, 'w') as f:
         json.dump(test_json, f, indent=4)
 
-    sorting_curated = apply_sortingview_curation(sorting, uri_or_json=json_path, verbose=True)
-    accept_idx = np.where(sorting_curated.get_property("accept"))[0]
-    sorting_curated_ids = sorting_curated.get_unit_ids()
+    sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_path, verbose=True)
+    accept_idx = np.where(sorting_curated_json.get_property("accept"))[0]
+    sorting_curated_ids = sorting_curated_json.get_unit_ids()
     print(f'Accepted unit IDs: {sorting_curated_ids[accept_idx]}')
 
     # Check if unit_id 1 has received the "accept" label. 
-    assert sorting_curated.get_unit_property(unit_id=1, key="accept") 
-     # Check if unit_id "#10" has received the "accept" label. 
+    assert sorting_curated_json.get_unit_property(unit_id=1, key="accept") 
+     # Check if unit_id 10 has received the "accept" label. 
      # If so, test fails since only unit_id 1 received the "accept" label in test_json.
-    assert not sorting_curated.get_unit_property(unit_id=10, key="accept") 
+    assert not sorting_curated_json.get_unit_property(unit_id=10, key="accept") 
+    print(sorting_curated_json.unit_ids)
+    # Merging unit_ids of dtype int creates a new unit id 
+    assert 21 in sorting_curated_json.unit_ids
 
 if __name__ == "__main__":
     # generate_sortingview_curation_dataset()
