@@ -1988,6 +1988,9 @@ class BaseWaveformExtractorExtension:
         params = self._set_params(**params)
         self._params = params
 
+        if self.waveform_extractor.is_read_only():
+            return
+
         params_to_save = params.copy()
         if "sparsity" in params and params["sparsity"] is not None:
             assert isinstance(
