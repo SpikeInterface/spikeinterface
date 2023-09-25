@@ -35,6 +35,7 @@ def export_to_phy(
     template_mode: str = "median",
     dtype: Optional[npt.DTypeLike] = None,
     verbose: bool = True,
+    use_relative_path: bool = False,
     **job_kwargs,
 ):
     """
@@ -64,6 +65,8 @@ def export_to_phy(
         Dtype to save binary data
     verbose: bool
         If True, output is verbose
+    use_relative_path : bool, default: False
+        If True saves the `dat_path` as a relative path, else an absolute
     {}
 
     """
@@ -94,7 +97,7 @@ def export_to_phy(
         used_sparsity = sparsity
     else:
         used_sparsity = ChannelSparsity.create_dense(waveform_extractor)
-    # convinient sparsity dict for the 3 cases to retrieve channl_inds
+    # convenient sparsity dict for the 3 cases to retrieve channl_inds
     sparse_dict = used_sparsity.unit_id_to_channel_indices
 
     empty_flag = False
@@ -106,7 +109,7 @@ def export_to_phy(
             empty_flag = True
     unit_ids = non_empty_units
     if empty_flag:
-        warnings.warn("Empty units have been removed when being exported to Phy")
+        warnings.warn("Empty units have been removed while exporting to Phy")
 
     if len(unit_ids) == 0:
         raise Exception("No non-empty units in the sorting result, can't save to Phy.")
@@ -149,7 +152,10 @@ def export_to_phy(
 
     # write params.py
     with (output_folder / "params.py").open("w") as f:
-        f.write(f"dat_path = r'{str(rec_path)}'\n")
+        if use_relative_path:
+            f.write(f"dat_path = r'recording.dat'\n")
+        else:
+            f.write(f"dat_path = r'{str(rec_path)}'\n")
         f.write(f"n_channels_dat = {num_chans}\n")
         f.write(f"dtype = '{dtype_str}'\n")
         f.write(f"offset = 0\n")
