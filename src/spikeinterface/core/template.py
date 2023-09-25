@@ -65,16 +65,52 @@ class Templates:
         )
 
     def get_dense_templates(self) -> np.ndarray:
+        # Assumes and object without a sparsity mask already has dense templates
         if self.sparsity is None:
             return self.templates_array
-        else:
-            self.sparsity.to_dense(self.templates_array)
+
+        dense_waveforms = np.zeros(shape=(self.num_units, self.num_samples, self.num_channels))
+        for unit_index, unit_id in enumerate(self.unit_ids):
+            num_active_channels = self.sparsity.mask[unit_index].sum()
+            waveforms = self.templates_array[unit_index, :, :num_active_channels]
+            dense_waveforms[unit_index, ...] = self.sparsity.densify_waveforms(waveforms=waveforms, unit_id=unit_id)
+
+        return dense_waveforms
 
     def get_sparse_templates(self) -> np.ndarray:
+        # Objects without sparsity mask don't have sparsity and therefore can't return sparse templates
         if self.sparsity is None:
             raise ValueError("Can't return sparse templates without passing a sparsity mask")
-        else:
-            self.sparsity.to_sparse(self.templates_array)
+
+        # Waveforms are already sparse
+        if not self.sparsity.are_waveforms_dense(self.templates_array):
+            return self.templates_array
+
+        max_num_active_channels = self.sparsity.max_num_active_channels
+        sparse_waveforms = np.zeros(shape=(self.num_units, self.num_samples, max_num_active_channels))
+        for unit_index, unit_id in enumerate(self.unit_ids):
+            waveforms = self.templates_array[unit_index, ...]
+            sparse_waveforms[unit_index, ...] = self.sparsity.sparsify_waveforms(waveforms=waveforms, unit_id=unit_id)
+
+        return sparse_waveforms
+
+    def are_templates_sparse(self) -> bool:
+        if self.sparsity is None:
+            return False
+
+        if self.templates_array.shape[-1] == self.num_channels:
+            return False
+
+        unit_is_sparse = True
+        for unit_index, unit_id in enumerate(self.unit_ids):
+            non_zero_indices = self.sparsity.unit_id_to_channel_indices[unit_id]
+            num_active_channels = len(non_zero_indices)
+            waveforms = self.templates_array[unit_index, :, :num_active_channels]
+            unit_is_sparse = self.sparsity.are_waveforms_sparse(waveforms, unit_id=unit_id)
+            if not unit_is_sparse:
+                return False
+
+        return unit_is_sparse
 
     def to_json(self):
         return json.dumps(self.to_dict())
@@ -84,7 +120,11 @@ class Templates:
         return cls.from_dict(json.loads(json_str))
 
     def __eq__(self, other):
-        """Necessary to compare arrays"""
+        """
+        Necessary to compare templates because they naturally compare objects by equality of their fields
+        which is not possible for numpy arrays so we override the __eq__ method to compare each numpy arrays
+        with np.array_equal
+        """
         if not isinstance(other, Templates):
             return False
 
@@ -97,12 +137,11 @@ class Templates:
             if isinstance(s_field, np.ndarray):
                 if not np.array_equal(s_field, o_field):
                     return False
-
+            # Compare ChannelSparsity by its mask, unit_ids and channel_ids. Maybe ChannelSparsity should have its own __eq__ method
             elif isinstance(s_field, ChannelSparsity):
                 if not isinstance(o_field, ChannelSparsity):
                     return False
 
-                # (maybe ChannelSparsity should have its own __eq__ method)
                 # Compare ChannelSparsity by its mask, unit_ids and channel_ids
                 if not np.array_equal(s_field.mask, o_field.mask):
                     return False

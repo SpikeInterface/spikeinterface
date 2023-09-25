@@ -191,7 +191,7 @@ class ChannelSparsity:
         assert self.are_waveforms_sparse(waveforms=waveforms, unit_id=unit_id), assert_msg
 
         densified_shape = waveforms.shape[:-1] + (self.num_channels,)
-        densified_waveforms = np.zeros(densified_shape, dtype=waveforms.dtype)
+        densified_waveforms = np.zeros(shape=densified_shape, dtype=waveforms.dtype)
         densified_waveforms[..., non_zero_indices] = waveforms
 
         return densified_waveforms
@@ -202,6 +202,7 @@ class ChannelSparsity:
     def are_waveforms_sparse(self, waveforms: np.ndarray, unit_id: str) -> bool:
         non_zero_indices = self.unit_id_to_channel_indices[unit_id]
         num_active_channels = len(non_zero_indices)
+
         return waveforms.shape[-1] == num_active_channels
 
     @classmethod
