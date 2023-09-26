@@ -153,7 +153,10 @@ def export_to_phy(
     # write params.py
     with (output_folder / "params.py").open("w") as f:
         if use_relative_path:
-            f.write(f"dat_path = r'recording.dat'\n")
+            if copy_binary:
+                f.write(f"dat_path = r'recording.dat'\n")
+            else:
+                f.write(f"dat_path = r'{str(Path(rec_path).relative_to(output_folder))}'\n")
         else:
             f.write(f"dat_path = r'{str(rec_path)}'\n")
         f.write(f"n_channels_dat = {num_chans}\n")
