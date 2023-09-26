@@ -519,7 +519,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         "norms": None,
         "random_chunk_kwargs": {},
         "noise_levels": None,
-        "rank" : 3,
+        "rank" : 10,
         "sparse_kwargs": {"method": "ptp", "threshold": 1},
         "ignored_ids": [],
         "vicinity": 0,
@@ -537,17 +537,20 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
         templates = waveform_extractor.get_all_templates(mode="median").copy()
 
-        temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
-
         # Keep only the strongest components
         rank = d['rank']
         d['templates'] = {}
         d["norms"] = np.zeros(num_templates, dtype=np.float32)
         d['sparsities'] = {}
-        d["norms"] = np.linalg.norm(templates, axis=(1, 2))
-        for i in range(num_templates):
-            d['sparsities'][i] = np.arange(templates.shape[2])  
-            d['templates'][i] = templates[i] / d["norms"][i]
+        
+        for count in range(num_templates):
+            template = templates[count][:, sparsity[count]]
+            (d["sparsities"][count],) = np.nonzero(sparsity[count])
+            d["norms"][count] = np.linalg.norm(template)
+            templates[count][:, ~sparsity[count]] = 0
+            d["templates"][count] = template / d["norms"][count]
+
+        temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
 
         temporal = temporal[:, :, :rank]
         d["temporal"] = np.flip(temporal, axis=1)
@@ -631,7 +634,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         num_samples = d["nafter"] + d["nbefore"]
         neighbor_window = num_samples - 1
         min_amplitude, max_amplitude = d["amplitudes"]
-        sparsities = d["sparsities"]
         ignored_ids = d["ignored_ids"]
         stop_criteria = d["stop_criteria"]
         vicinity = d["vicinity"]
