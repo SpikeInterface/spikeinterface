@@ -293,7 +293,6 @@ The all mechanism is based on an intrinsic organization into a "study_folder" wi
                 "sorter_name": "tridesclous2",
             },
         },
-        #
         ("tdc2", "toy1"): {
             "label": "tridesclous2 on tetrode1",
             "dataset": "toy1",

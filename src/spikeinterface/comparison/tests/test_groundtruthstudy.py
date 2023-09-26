@@ -16,7 +16,6 @@ else:
 
 study_folder = cache_folder / "test_groundtruthstudy/"
 
-print(study_folder.absolute())
 
 def setup_module():
     if study_folder.is_dir():

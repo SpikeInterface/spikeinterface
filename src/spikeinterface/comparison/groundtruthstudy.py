@@ -28,24 +28,23 @@ _key_separator = " ## "
 
 class GroundTruthStudy:
     """
-    This class is an helper function to run any comparison on several "cases" for several ground truth dataset.
+    This class is an helper function to run any comparison on several "cases" for many ground-truth dataset.
 
-    "cases" can be:
-      * several sorter for comparisons
+    "cases" refer to:
+      * several sorters for comparisons
       * same sorter with differents parameters
       * parameters of comparisons
-      * any combination of theses
+      * any combination of these (and more)
     
-    For enough flexibility cases key can be a tuple so that we can varify complexity along several
-    "levels" or "axis" (paremeters or sorter).
-
-    Generated dataframes will have index with several levels optionaly.
+    For increased flexibility, cases keys can be a tuple so that we can vary complexity along several
+    "levels" or "axis" (paremeters or sorters).
+    In this case, the result dataframes will have `MultiIndex` to handle the different levels.
     
-    Ground truth dataset need recording+sorting. This can be from mearec file or from the internal generator
-    :py:fun:`generate_ground_truth_recording()`
+    A ground-truth dataset is made of a `Recording` and a `Sorting` object. For example, it can be a simulated dataset with MEArec or internally generated (see 
+    :py:fun:`~spikeinterface.core.generate.generate_ground_truth_recording()`).
     
     This GroundTruthStudy have been refactor in version 0.100 to be more flexible than previous versions.
-    Folders structures are not backward compatible at all.
+    Note that the underlying folder structure is not backward compatible!
     """
     def __init__(self, study_folder):
         self.folder = Path(study_folder)
@@ -85,21 +84,21 @@ class GroundTruthStudy:
         study_folder.mkdir(exist_ok=False, parents=True)
 
         (study_folder / "datasets").mkdir()
-        (study_folder / "datasets/recordings").mkdir()
-        (study_folder / "datasets/gt_sortings").mkdir()
+        (study_folder / "datasets" / "recordings").mkdir()
+        (study_folder / "datasets" / "gt_sortings").mkdir()
         (study_folder / "sorters").mkdir()
         (study_folder / "sortings").mkdir()
         (study_folder / "sortings" / "run_logs").mkdir()
         (study_folder / "metrics").mkdir()
 
         for key, (rec, gt_sorting) in datasets.items():
-            assert "/" not in key
-            assert "\\" not in key
+            assert "/" not in key, "'/' cannot be in the key name!"
+            assert "\\" not in key, "'\\' cannot be in the key name!"
 
-            # rec are pickle
+            # recordings are pickled
             rec.dump_to_pickle(study_folder / f"datasets/recordings/{key}.pickle")
 
-            # sorting are pickle + saved as NumpyFolderSorting
+            # sortings are pickled + saved as NumpyFolderSorting
             gt_sorting.dump_to_pickle(study_folder / f"datasets/gt_sortings/{key}.pickle")
             gt_sorting.save(format="numpy_folder", folder=study_folder / f"datasets/gt_sortings/{key}")
         
@@ -108,11 +107,7 @@ class GroundTruthStudy:
         info["levels"] = levels
         (study_folder / "info.json").write_text(json.dumps(info, indent=4), encoding="utf8")
 
-        # (study_folder / "cases.jon").write_text(
-        #     json.dumps(cases, indent=4, cls=SIJsonEncoder),
-        #     encoding="utf8",
-        # )
-        # cases is dump to a pickle file, json is not possible because of tuple key
+        # cases is dumped to a pickle file, json is not possible because of the tuple key
         (study_folder / "cases.pickle").write_bytes(pickle.dumps(cases))
 
         return cls(study_folder)
@@ -127,10 +122,10 @@ class GroundTruthStudy:
         
         self.levels = self.info["levels"]
 
-        for rec_file in (self.folder / "datasets/recordings").glob("*.pickle"):
+        for rec_file in (self.folder / "datasets" / "recordings").glob("*.pickle"):
             key = rec_file.stem
             rec = load_extractor(rec_file)
-            gt_sorting = load_extractor(self.folder / f"datasets/gt_sortings/{key}")
+            gt_sorting = load_extractor(self.folder / f"datasets" / "gt_sortings" / key)
             self.datasets[key] = (rec, gt_sorting)
         
         with open(self.folder / "cases.pickle", "rb") as f:
@@ -304,7 +299,7 @@ class GroundTruthStudy:
             case_keys = self.cases.keys()
         
         for key in case_keys:
-            filename = self.folder / "metrics" / f"{self.key_to_str(key)}.txt"
+            filename = self.folder / "metrics" / f"{self.key_to_str(key)}.csv"
             if filename.exists():
                 if force:
                     os.remove(filename)
