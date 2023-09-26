@@ -6,15 +6,15 @@ import numpy as np
 from joblib import Parallel, delayed
 
 
-def count_matching_events(times1, times2, delta=10):
+def count_matching_events(spikes_frames1, spikes_frames2, delta=10):
     """
     Counts matching events.
 
     Parameters
     ----------
-    times1: list
+    spikes_frames1: list
         List of spike train 1 frames
-    times2: list
+    spikes_frames2: list
         List of spike train 2 frames
     delta: int
         Number of frames for considering matching events
@@ -24,17 +24,32 @@ def count_matching_events(times1, times2, delta=10):
     matching_count: int
         Number of matching events
     """
-    times_concat = np.concatenate((times1, times2))
-    membership = np.concatenate((np.ones(times1.shape) * 1, np.ones(times2.shape) * 2))
-    indices = times_concat.argsort()
-    times_concat_sorted = times_concat[indices]
-    membership_sorted = membership[indices]
-    diffs = times_concat_sorted[1:] - times_concat_sorted[:-1]
-    inds = np.where((diffs <= delta) & (membership_sorted[:-1] != membership_sorted[1:]))[0]
-    if len(inds) == 0:
+
+    # Combine spike times from both trains
+    combined_frames = np.concatenate((spikes_frames1, spikes_frames2))
+
+    # Assign labels: 1 for spikes_frames1 and 2 for spikes_frames2
+    labels = np.concatenate((np.ones(spikes_frames1.shape) * 1, np.ones(spikes_frames2.shape) * 2))
+
+    # Sort combined_frames and rearrange labels accordingly
+    sorted_indices = combined_frames.argsort()
+    sorted_frames = combined_frames[sorted_indices]
+    sorted_labels = labels[sorted_indices]
+
+    frame_differenes = sorted_frames[1:] - sorted_frames[:-1]
+
+    # Identify potential matches: different spike train labels and within allowed time_difference
+    potential_matches = np.where((frame_differenes <= delta) & (sorted_labels[:-1] != sorted_labels[1:]))[0]
+
+    # If no potential matches are found, return 0
+    if len(potential_matches) == 0:
         return 0
-    inds2 = np.where(inds[:-1] + 1 != inds[1:])[0]
-    return len(inds2) + 1
+
+    # Filter out consecutive matches to avoid double-counting
+    unique_matches = np.where(potential_matches[:-1] + 1 != potential_matches[1:])[0]
+
+    # Return the total number of unique matches
+    return len(unique_matches) + 1
 
 
 def compute_agreement_score(num_matches, num1, num2):
