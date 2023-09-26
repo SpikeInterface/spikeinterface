@@ -616,7 +616,7 @@ def remove_duplicates_via_matching(
 
         method_kwargs.update({"ignored_ids": ignore_ids + [i]})
         spikes, computed = find_spikes_from_templates(
-            sub_recording, method="circus-omp-svd", method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
+            sub_recording, method="circus-omp", method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
         )
         method_kwargs.update(
             {

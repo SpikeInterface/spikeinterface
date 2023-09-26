@@ -8,6 +8,5 @@ matching_methods = {
     "tridesclous": TridesclousPeeler,
     "circus": CircusPeeler,
     "circus-omp": CircusOMPPeeler,
-    'circus-omp-svd' : CircusOMPSVDPeeler, 
     "wobble": WobbleMatch,
 }
