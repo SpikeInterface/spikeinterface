@@ -22,6 +22,19 @@ from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 
 
+def drop_invalid_neo_arguments_for_version_0_12_0(neo_kwargs):
+    # Temporary function until neo version 0.13.0 is released
+    from packaging.version import Version
+    from importlib.metadata import version as lib_version
+
+    neo_version = lib_version("neo")
+    # The possibility of ignoring timestamps errors is not present in neo <= 0.12.0
+    if Version(neo_version) <= Version("0.12.0"):
+        neo_kwargs.pop("ignore_timestamps_errors")
+
+    return neo_kwargs
+
+
 class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading data saved by the Open Ephys GUI.
@@ -76,6 +89,7 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     @classmethod
     def map_to_neo_kwargs(cls, folder_path, ignore_timestamps_errors=False):
         neo_kwargs = {"dirname": str(folder_path), "ignore_timestamps_errors": ignore_timestamps_errors}
+        neo_kwargs = drop_invalid_neo_arguments_for_version_0_12_0(neo_kwargs)
         return neo_kwargs
 
 
