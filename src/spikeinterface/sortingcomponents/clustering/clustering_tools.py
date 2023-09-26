@@ -624,9 +624,9 @@ def remove_duplicates_via_matching(
                 "templates": computed["templates"],
                 "norms": computed["norms"],
                 "sparsities": computed["sparsities"],
-                "temporal" : computed["temporal"],
-                "spatial" : computed["spatial"],
-                "singular" : computed["singular"],
+                "temporal": computed["temporal"],
+                "spatial": computed["spatial"],
+                "singular": computed["singular"],
             }
         )
         valid = (spikes["sample_index"] >= half_marging) * (spikes["sample_index"] < duration + half_marging)
