@@ -66,7 +66,8 @@ def export_to_phy(
     verbose: bool
         If True, output is verbose
     use_relative_path : bool, default: False
-        If True saves the `dat_path` as a relative path, else an absolute
+        If True and `copy_binary=True` saves the binary file `dat_path` in the `params.py` relative to `output_folder` (ie `dat_path=r'recording.dat'`). If `copy_binary=False`, then uses a path relative to the `output_folder`
+        If False, uses an absolute path in the `params.py` (ie `dat_path=r'path/to/the/recording.dat'`)
     {}
 
     """
