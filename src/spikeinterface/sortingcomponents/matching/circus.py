@@ -601,6 +601,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         omp_min_sps = d["omp_min_sps"]
         # nb_active_channels = np.array([len(d['sparsities'][count]) for count in range(d['num_templates'])])
         d["stop_criteria"] = omp_min_sps * np.sqrt(d["noise_levels"].sum() * d["num_samples"])
+        #d['stop_criteria'] = omp_min_sps * np.maximum(d['norms'], np.sqrt(d["noise_levels"].sum() * d["num_samples"]))
 
         return d
 
@@ -635,7 +636,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         neighbor_window = num_samples - 1
         min_amplitude, max_amplitude = d["amplitudes"]
         ignored_ids = d["ignored_ids"]
-        stop_criteria = d["stop_criteria"]
+        stop_criteria = d["stop_criteria"]#[:, np.newaxis]
         vicinity = d["vicinity"]
         rank = d['rank']
 
