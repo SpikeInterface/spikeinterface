@@ -45,14 +45,24 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several blocks (experiments), specify the block index you want to load.
     all_annotations: bool  (default False)
         Load exhaustively all annotation from neo.
+    ignore_timestamps_errors: bool (default False)
+        Ignore the discontinuous timestamps errors in neo.
     """
 
     mode = "folder"
     NeoRawIOClass = "OpenEphysRawIO"
     name = "openephyslegacy"
 
-    def __init__(self, folder_path, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
-        neo_kwargs = self.map_to_neo_kwargs(folder_path)
+    def __init__(
+        self,
+        folder_path,
+        stream_id=None,
+        stream_name=None,
+        block_index=None,
+        all_annotations=False,
+        ignore_timestamps_errors=False,
+    ):
+        neo_kwargs = self.map_to_neo_kwargs(folder_path, ignore_timestamps_errors)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -64,8 +74,8 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute())))
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": str(folder_path)}
+    def map_to_neo_kwargs(cls, folder_path, ignore_timestamps_errors=False):
+        neo_kwargs = {"dirname": str(folder_path), "ignore_timestamps_errors": ignore_timestamps_errors}
         return neo_kwargs
 
 
