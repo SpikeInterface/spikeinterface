@@ -602,8 +602,6 @@ def remove_duplicates_via_matching(
             "noise_levels": noise_levels,
             "amplitudes": [0.95, 1.05],
             "omp_min_sps": 0.1,
-            "templates": None,
-            "overlaps": None,
         }
     )
 
@@ -618,7 +616,7 @@ def remove_duplicates_via_matching(
 
         method_kwargs.update({"ignored_ids": ignore_ids + [i]})
         spikes, computed = find_spikes_from_templates(
-            sub_recording, method="circus-omp", method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
+            sub_recording, method="circus-omp-svd", method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
         )
         method_kwargs.update(
             {
@@ -626,6 +624,9 @@ def remove_duplicates_via_matching(
                 "templates": computed["templates"],
                 "norms": computed["norms"],
                 "sparsities": computed["sparsities"],
+                "temporal" : computed["temporal"],
+                "spatial" : computed["spatial"],
+                "singular" : computed["singular"],
             }
         )
         valid = (spikes["sample_index"] >= half_marging) * (spikes["sample_index"] < duration + half_marging)

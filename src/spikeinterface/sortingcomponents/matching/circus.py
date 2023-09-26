@@ -514,9 +514,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         "amplitudes": [0.6, 2],
         "omp_min_sps": 0.1,
         "waveform_extractor": None,
-        "templates": None,
-        "overlaps": None,
-        "norms": None,
         "random_chunk_kwargs": {},
         "noise_levels": None,
         "rank" : 5,
@@ -537,28 +534,34 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
         templates = waveform_extractor.get_all_templates(mode="median").copy()
 
-        # Keep only the strongest components
-        rank = d['rank']
-        d['templates'] = {}
-        d["norms"] = np.zeros(num_templates, dtype=np.float32)
+        #First, we set masked channels to 0
         d['sparsities'] = {}
-        
         for count in range(num_templates):
             template = templates[count][:, sparsity[count]]
             (d["sparsities"][count],) = np.nonzero(sparsity[count])
-            d["norms"][count] = np.linalg.norm(template)
             templates[count][:, ~sparsity[count]] = 0
-            d["templates"][count] = template / d["norms"][count]
 
+        # Then we keep only the strongest components
+        rank = d['rank']
         temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
-
-        temporal = temporal[:, :, :rank]
-        d["temporal"] = np.flip(temporal, axis=1)
+        d["temporal"] = temporal[:, :, :rank]
         d["singular"] = singular[:, :rank]
         d["spatial"] = spatial[:, :rank, :]
         
-        d['temporal'] /= d['norms'][:, np.newaxis, np.newaxis]
+        # We reconstruct the approximated templates
+        templates = np.matmul(d["temporal"] * d["singular"][:, np.newaxis, :], d["spatial"])
+
+        d["temporal"] = np.flip(temporal, axis=1)
+        d['templates'] = {}
+        d["norms"] = np.zeros(num_templates, dtype=np.float32)
         
+        # And get the norms, saving compressed templates for CC matrix
+        for count in range(num_templates):
+            template = templates[count][:, sparsity[count]]
+            d["norms"][count] = np.linalg.norm(template)
+            d["templates"][count] = template / d["norms"][count]    
+        
+        d['temporal'] /= d['norms'][:, np.newaxis, np.newaxis]
         d["spatial"] = np.moveaxis(d['spatial'][:, :rank, :], [0, 1, 2], [1, 0, 2])
         d['temporal'] = np.moveaxis(d['temporal'][:, :, :rank], [0, 1, 2], [1, 2, 0])
         d['singular'] = d['singular'].T[:, :, np.newaxis]
@@ -585,15 +588,15 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
             print("CircusOMPPeeler : noise should be computed outside")
             d["noise_levels"] = get_noise_levels(recording, **d["random_chunk_kwargs"], return_scaled=False)
 
-        if d["templates"] is None:
+        if "templates" not in d:
             d = cls._prepare_templates(d)
         else:
-            for key in ["norms", "sparsities"]:
+            for key in ["norms", "sparsities", 'temporal', 'spatial', 'singular']:
                 assert d[key] is not None, "If templates are provided, %d should also be there" % key
 
         d["num_templates"] = len(d["templates"])
 
-        if d["overlaps"] is None:
+        if "overlaps" not in d:
             d["overlaps"] = compute_overlaps(d["templates"], d["num_samples"], d["num_channels"], d["sparsities"])
 
         d["ignored_ids"] = np.array(d["ignored_ids"])
