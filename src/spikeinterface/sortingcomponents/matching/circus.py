@@ -201,7 +201,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         "waveform_extractor": None,
         "random_chunk_kwargs": {},
         "noise_levels": None,
-        "rank" : 5,
+        "rank": 5,
         "sparse_kwargs": {"method": "ptp", "threshold": 1},
         "ignored_ids": [],
         "vicinity": 0,
@@ -219,37 +219,37 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         templates = waveform_extractor.get_all_templates(mode="median").copy()
 
-        #First, we set masked channels to 0
-        d['sparsities'] = {}
+        # First, we set masked channels to 0
+        d["sparsities"] = {}
         for count in range(num_templates):
             template = templates[count][:, sparsity[count]]
             (d["sparsities"][count],) = np.nonzero(sparsity[count])
             templates[count][:, ~sparsity[count]] = 0
 
         # Then we keep only the strongest components
-        rank = d['rank']
+        rank = d["rank"]
         temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
         d["temporal"] = temporal[:, :, :rank]
         d["singular"] = singular[:, :rank]
         d["spatial"] = spatial[:, :rank, :]
-        
+
         # We reconstruct the approximated templates
         templates = np.matmul(d["temporal"] * d["singular"][:, np.newaxis, :], d["spatial"])
 
         d["temporal"] = np.flip(temporal, axis=1)
-        d['templates'] = {}
+        d["templates"] = {}
         d["norms"] = np.zeros(num_templates, dtype=np.float32)
-        
+
         # And get the norms, saving compressed templates for CC matrix
         for count in range(num_templates):
             template = templates[count][:, sparsity[count]]
             d["norms"][count] = np.linalg.norm(template)
-            d["templates"][count] = template / d["norms"][count]    
-        
-        d['temporal'] /= d['norms'][:, np.newaxis, np.newaxis]
-        d["spatial"] = np.moveaxis(d['spatial'][:, :rank, :], [0, 1, 2], [1, 0, 2])
-        d['temporal'] = np.moveaxis(d['temporal'][:, :, :rank], [0, 1, 2], [1, 2, 0])
-        d['singular'] = d['singular'].T[:, :, np.newaxis]
+            d["templates"][count] = template / d["norms"][count]
+
+        d["temporal"] /= d["norms"][:, np.newaxis, np.newaxis]
+        d["spatial"] = np.moveaxis(d["spatial"][:, :rank, :], [0, 1, 2], [1, 0, 2])
+        d["temporal"] = np.moveaxis(d["temporal"][:, :, :rank], [0, 1, 2], [1, 2, 0])
+        d["singular"] = d["singular"].T[:, :, np.newaxis]
         return d
 
     @classmethod
@@ -276,7 +276,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         if "templates" not in d:
             d = cls._prepare_templates(d)
         else:
-            for key in ["norms", "sparsities", 'temporal', 'spatial', 'singular']:
+            for key in ["norms", "sparsities", "temporal", "spatial", "singular"]:
                 assert d[key] is not None, "If templates are provided, %d should also be there" % key
 
         d["num_templates"] = len(d["templates"])
@@ -287,8 +287,8 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         d["ignored_ids"] = np.array(d["ignored_ids"])
 
         omp_min_sps = d["omp_min_sps"]
-        #d["stop_criteria"] = omp_min_sps * np.sqrt(d["noise_levels"].sum() * d["num_samples"])
-        d['stop_criteria'] = omp_min_sps * np.maximum(d['norms'], np.sqrt(d["noise_levels"].sum() * d["num_samples"]))
+        # d["stop_criteria"] = omp_min_sps * np.sqrt(d["noise_levels"].sum() * d["num_samples"])
+        d["stop_criteria"] = omp_min_sps * np.maximum(d["norms"], np.sqrt(d["noise_levels"].sum() * d["num_samples"]))
 
         return d
 
@@ -325,18 +325,18 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         ignored_ids = d["ignored_ids"]
         stop_criteria = d["stop_criteria"][:, np.newaxis]
         vicinity = d["vicinity"]
-        rank = d['rank']
+        rank = d["rank"]
 
         num_timesteps = len(traces)
 
         num_peaks = num_timesteps - num_samples + 1
         conv_shape = (num_templates, num_peaks)
         scalar_products = np.zeros(conv_shape, dtype=np.float32)
-        
+
         # Filter using overlap-and-add convolution
-        spatially_filtered_data = np.matmul(d['spatial'], traces.T[np.newaxis, :, :])
-        scaled_filtered_data = spatially_filtered_data * d['singular']
-        objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, d['temporal'], axes=2, mode="valid")
+        spatially_filtered_data = np.matmul(d["spatial"], traces.T[np.newaxis, :, :])
+        scaled_filtered_data = spatially_filtered_data * d["singular"]
+        objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, d["temporal"], axes=2, mode="valid")
         scalar_products += np.sum(objective_by_rank, axis=0)
 
         if len(ignored_ids) > 0:
@@ -471,8 +471,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         spikes = spikes[order]
 
         return spikes
-
-
 
 
 class CircusPeeler(BaseTemplateMatchingEngine):
