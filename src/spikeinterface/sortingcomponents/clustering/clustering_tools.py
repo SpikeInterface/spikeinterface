@@ -546,7 +546,6 @@ def remove_duplicates_via_matching(
     from spikeinterface.core import NumpySorting
     from spikeinterface.core import extract_waveforms
     from spikeinterface.core import get_global_tmp_folder
-    from spikeinterface.sortingcomponents.matching.circus import get_scipy_shape
     import string, random, shutil, os
     from pathlib import Path
 
@@ -590,11 +589,6 @@ def remove_duplicates_via_matching(
     half_marging = margin // 2
 
     chunk_size = duration + 3 * margin
-
-    dummy_filter = np.empty((num_chans, duration), dtype=np.float32)
-    dummy_traces = np.empty((num_chans, chunk_size), dtype=np.float32)
-
-    fshape, axes = get_scipy_shape(dummy_filter, dummy_traces, axes=1)
 
     method_kwargs.update(
         {
