@@ -36,6 +36,7 @@ from .main import BaseTemplateMatchingEngine
 #################
 # Circus peeler #
 
+
 def compute_overlaps(templates, num_samples, num_channels, sparsities):
     num_templates = len(templates)
 
