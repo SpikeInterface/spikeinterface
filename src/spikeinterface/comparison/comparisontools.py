@@ -29,27 +29,49 @@ def count_matching_events(spikes_frames1, spikes_frames2, delta=10):
     combined_frames = np.concatenate((spikes_frames1, spikes_frames2))
 
     # Assign labels: 1 for spikes_frames1 and 2 for spikes_frames2
-    labels = np.concatenate((np.ones(spikes_frames1.shape) * 1, np.ones(spikes_frames2.shape) * 2))
+    labels = np.concatenate(
+        (np.ones(spikes_frames1.shape, dtype=int) * 1, np.ones(spikes_frames2.shape, dtype=int) * 2)
+    )
 
     # Sort combined_frames and rearrange labels accordingly
     sorted_indices = combined_frames.argsort()
     sorted_frames = combined_frames[sorted_indices]
     sorted_labels = labels[sorted_indices]
 
-    frame_differenes = sorted_frames[1:] - sorted_frames[:-1]
+    frame_differences = np.diff(sorted_frames)
+    label_change = np.diff(sorted_labels)
 
     # Identify potential matches: different spike train labels and within allowed time_difference
-    potential_matches = np.where((frame_differenes <= delta) & (sorted_labels[:-1] != sorted_labels[1:]))[0]
+    is_within_distance = frame_differences <= delta
+    are_from_different_trains = label_change != 0
+
+    potential_matches = np.nonzero(is_within_distance & are_from_different_trains)[0]
 
     # If no potential matches are found, return 0
     if len(potential_matches) == 0:
         return 0
 
-    # Filter out consecutive matches to avoid double-counting
-    unique_matches = np.where(potential_matches[:-1] + 1 != potential_matches[1:])[0]
+    # This should be filtered but we are not doing it yet.  Here is an attempt:
 
-    # Return the total number of unique matches
-    return len(unique_matches) + 1
+    ######################3
+    # Alessio draft:
+    ###########################
+
+    # removed_spikes_indices = []
+    # counts = 0
+    # for order in np.arange(min(frame_differences[potential_matches]), max(frame_differences[potential_matches]) + 1):
+    #     print(f"Matches of order {order}: {frame_differences[potential_matches] == order}")
+    #     matches_of_order, = np.nonzero(frame_differences[potential_matches] == order)
+    #     for match in matches_of_order:
+    #         if match not in removed_spikes_indices and match + 1 not in removed_spikes_indices:
+    #             removed_spikes_indices.append(match)
+    #             removed_spikes_indices.append(match + 1)
+    #             counts += 1
+    #     print(removed_spikes_indices)
+    # # print(potential_matches_frames)
+    # print(f"Final counts: {counts}")
+
+    return potential_matches.size
 
 
 def compute_agreement_score(num_matches, num1, num2):

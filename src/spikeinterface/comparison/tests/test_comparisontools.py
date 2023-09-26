@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.testing import assert_array_equal
+import pytest
 
 from spikeinterface.extractors import NumpySorting
 from spikeinterface.comparison import (
@@ -14,6 +15,7 @@ from spikeinterface.comparison import (
     do_confusion_matrix,
     do_count_score,
     compute_performance,
+    count_matching_events,
 )
 
 
@@ -22,6 +24,66 @@ def make_sorting(times1, labels1, times2, labels2):
     sorting1 = NumpySorting.from_times_labels([times1], [labels1], sampling_frequency)
     sorting2 = NumpySorting.from_times_labels([times2], [labels2], sampling_frequency)
     return sorting1, sorting2
+
+
+def test_count_matching_events():
+    delta = 10
+    spikes1 = np.array([1, 2, 3, 20, 21, 23, 25])
+    spikes2 = np.array([15, 16, 17, 20, 21])
+
+    # Here the match should be (20, 20) and (21, 21)
+    result = count_matching_events(spikes1, spikes2, delta=delta)
+    result_sym = count_matching_events(spikes2, spikes1, delta=delta)
+    expected_result = 2
+    assert result == expected_result
+    assert result_sym == expected_result
+
+
+def test_another_example():
+    delta = 10  # ?
+    spikes1 = np.array([1, 2, 3, 20, 21, 23, 25])
+    spikes2 = np.array([10, 14, 17, 24, 26, 29])
+
+    # Here the match should be (20, 17), (23, 24), (25, 26)?
+
+    result = count_matching_events(spikes1, spikes2, delta=delta)
+    result_sym = count_matching_events(spikes2, spikes1, delta=delta)
+    expected_result = 3
+
+    assert result == expected_result
+    assert result_sym == expected_result
+
+    spikes1 = np.array([1, 2, 16, 20, 21, 23, 25])
+    spikes2 = np.array([10, 14, 17, 24, 26, 29])
+    # Here the match should be (16, 17), (25, 26), (21, 24)
+
+    expected_result = 3
+    assert result == expected_result
+    assert result_sym == expected_result
+
+
+def test_count_matching_events_farther_apart():
+    delta = 50
+    spikes1 = np.array([1, 50, 80, 150])
+    spikes2 = np.array([15, 70, 140, 160])
+
+    result = count_matching_events(spikes1, spikes2, delta=delta)
+    result_sym = count_matching_events(spikes2, spikes1, delta=delta)
+    expected_result = 3
+
+    assert result == expected_result
+    assert result_sym == expected_result
+
+
+# Parametrize with delta from 5 to 50 in steps of 5
+@pytest.mark.parametrize("delta", list(range(5, 51, 5)))
+def test_count_matching_events_same(delta):
+    spikes1 = np.arange(100)
+    spikes2 = spikes1
+    result = count_matching_events(spikes1, spikes2, delta=delta)
+    expected_result = spikes1.size
+
+    assert result == expected_result
 
 
 def test_make_match_count_matrix():
