@@ -267,24 +267,29 @@ class GroundTruthStudy:
         return pd.Series(run_times, name="run_time")
 
     def extract_waveforms_gt(self, case_keys=None, **extract_kwargs):
-
+        
         if case_keys is None:
             case_keys = self.cases.keys()
 
         base_folder = self.folder / "waveforms"
         base_folder.mkdir(exist_ok=True)
 
-        for key in case_keys:
-            dataset_key = self.cases[key]["dataset"]
+        dataset_keys = [self.cases[key]["dataset"] for key in case_keys]
+        dataset_keys = set(dataset_keys)
+        for dataset_key in dataset_keys:
+            # the waveforms depend on the dataset key
+            wf_folder = base_folder / self.key_to_str(dataset_key)
             recording, gt_sorting = self.datasets[dataset_key]
-            wf_folder = base_folder / self.key_to_str(key)
             we = extract_waveforms(recording, gt_sorting, folder=wf_folder)
 
     def get_waveform_extractor(self, key):
         # some recording are not dumpable to json and the waveforms extactor need it!
         # so we load it with and put after
-        we = load_waveforms(self.folder / "waveforms" / self.key_to_str(key), with_recording=False)
+        # this should be fixed in PR 2027 so remove this after
+        
         dataset_key = self.cases[key]["dataset"]
+        wf_folder = self.folder / "waveforms" / self.key_to_str(dataset_key)
+        we = load_waveforms(wf_folder, with_recording=False)
         recording, _ = self.datasets[dataset_key]        
         we.set_recording(recording)
         return we
@@ -298,21 +303,29 @@ class GroundTruthStudy:
         if case_keys is None:
             case_keys = self.cases.keys()
         
+        done = []
         for key in case_keys:
-            filename = self.folder / "metrics" / f"{self.key_to_str(key)}.csv"
+            dataset_key = self.cases[key]["dataset"]
+            if dataset_key in done:
+                # some case can share the same waveform extractor
+                continue
+            done.append(dataset_key)
+            filename = self.folder / "metrics" / f"{self.key_to_str(dataset_key)}.csv"
             if filename.exists():
                 if force:
                     os.remove(filename)
                 else:
                     continue
-
             we = self.get_waveform_extractor(key)
             metrics = compute_quality_metrics(we, metric_names=metric_names)
             metrics.to_csv(filename, sep="\t", index=True)
 
     def get_metrics(self, key):
         import pandas  as pd
-        filename = self.folder / "metrics" / f"{self.key_to_str(key)}.txt"
+
+        dataset_key = self.cases[key]["dataset"]
+
+        filename = self.folder / "metrics" / f"{self.key_to_str(dataset_key)}.csv"
         if not filename.exists():
             return
         metrics = pd.read_csv(filename, sep="\t", index_col=0)
