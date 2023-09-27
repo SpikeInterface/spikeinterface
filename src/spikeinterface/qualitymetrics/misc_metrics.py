@@ -552,12 +552,13 @@ def compute_synchrony_metrics(waveform_extractor, synchrony_sizes=(2, 4, 8), uni
                 continue
             spike_complexity = complexity[np.isin(unique_spike_index, spikes_per_unit["sample_index"])]
             for synchrony_size in synchrony_sizes:
-                synchrony_counts[synchrony_size][unit_id] += np.count_nonzero(spike_complexity >= synchrony_size)
+                synchrony_counts[synchrony_size][unit_index] += np.count_nonzero(spike_complexity >= synchrony_size)
 
     # add counts for this segment
     synchrony_metrics_dict = {
         f"sync_spike_{synchrony_size}": {
-            unit_id: synchrony_counts[synchrony_size][unit_id] / spike_counts[unit_id] for unit_id in unit_ids
+            unit_id: synchrony_counts[synchrony_size][all_unit_ids.index(unit_id)] / spike_counts[unit_id]
+            for unit_id in unit_ids
         }
         for synchrony_size in synchrony_sizes
     }
