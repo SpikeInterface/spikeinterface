@@ -139,16 +139,17 @@ def test_json_curation():
     assert len(sorting_curated_json_accepted.unit_ids) == 3
     assert len(sorting_curated_json_mua.unit_ids) == 6
     assert len(sorting_curated_json_mua1.unit_ids) == 5
-    
+
     print("Test for json curation passed!\n")
+
 
 def test_false_positive_curation():
     """
     Test curation for false positives.
     """
     # https://spikeinterface.readthedocs.io/en/latest/modules_gallery/core/plot_2_sorting_extractor.html
-    sampling_frequency = 30000.
-    duration = 20.
+    sampling_frequency = 30000.0
+    duration = 20.0
     num_timepoints = int(sampling_frequency * duration)
     num_units = 20
     num_spikes = 1000
@@ -159,17 +160,10 @@ def test_false_positive_curation():
     print('Sorting: {}'.format(sorting.get_unit_ids()))
 
     # Test curation JSON:
-    test_json = {
-        "labelsByUnit": {
-            "1": ["accept"],
-            "2": ["artifact"],
-            "12": ["artifact"]
-        },
-        "mergeGroups": [[2,12]]
-    }
+    test_json = {"labelsByUnit": {"1": ["accept"], "2": ["artifact"], "12": ["artifact"]}, "mergeGroups": [[2, 12]]}
 
     json_path = "test_data.json"
-    with open(json_path, 'w') as f:
+    with open(json_path, "w") as f:
         json.dump(test_json, f, indent=4)
 
     # Apply curation
@@ -282,7 +276,7 @@ def test_label_inheritance_str():
         json.dump(curation_dict, f, indent=4)
 
     # Check label inheritance for merged units
-    merged_id_1 = "a-b"  
+    merged_id_1 = "a-b"
     merged_id_2 = "c-d"
     merged_id_3 = "e-f"
     # Apply curation

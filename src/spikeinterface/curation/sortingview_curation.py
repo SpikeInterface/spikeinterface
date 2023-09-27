@@ -83,15 +83,15 @@ def apply_sortingview_curation(
     # In sortingview, a unit is not required to have all labels.
     # For example, the first 3 units could be labeled as "accept".
     # In this case, the first 3 values of the property "accept" will be True, the rest False
-    
+
     # Initialize the properties dictionary
-    properties = {label: np.zeros(len(curation_sorting.current_sorting.unit_ids), dtype=bool) 
+    properties = {label: np.zeros(len(curation_sorting.current_sorting.unit_ids), dtype=bool)
                 for labels in labels_dict.values() for label in labels}
 
     # Populate the properties dictionary
     for u_i, unit_id in enumerate(curation_sorting.current_sorting.unit_ids):
         labels_unit = set()
-        
+
         # Check for exact match first
         if str(unit_id) in labels_dict:
             labels_unit.update(labels_dict[str(unit_id)])
