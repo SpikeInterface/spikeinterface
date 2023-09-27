@@ -500,8 +500,8 @@ def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colo
         axes[2].plot(benchmark.spatial_bins, depth_error, label=benchmark.title, color=c)
 
     ax0 = ax = axes[0]
-    ax.set_xlabel("time [s]")
-    ax.set_ylabel("error [um]")
+    ax.set_xlabel("Time [s]")
+    ax.set_ylabel("Error [μm]")
     if show_legend:
         ax.legend()
     _simpleaxis(ax)
@@ -514,7 +514,7 @@ def plot_errors_several_benchmarks(benchmarks, axes=None, show_legend=True, colo
 
     ax2 = axes[2]
     ax2.set_yticks([])
-    ax2.set_xlabel("depth [um]")
+    ax2.set_xlabel("Depth [μm]")
     # ax.set_ylabel('error')
     channel_positions = benchmark.recording.get_channel_locations()
     probe_y_min, probe_y_max = channel_positions[:, 1].min(), channel_positions[:, 1].max()
