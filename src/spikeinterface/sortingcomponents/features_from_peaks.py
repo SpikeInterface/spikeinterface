@@ -185,7 +185,7 @@ class RandomProjectionsFeature(PipelineNode):
         parents=None,
         projections=None,
         sigmoid=None,
-        radius_um=None
+        radius_um=None,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -203,12 +203,12 @@ class RandomProjectionsFeature(PipelineNode):
 
     def _sigmoid(self, x):
         L, x0, k, b = self.sigmoid
-        y = L / (1 + np.exp(-k*(x-x0))) + b
+        y = L / (1 + np.exp(-k * (x - x0))) + b
         return y
 
     def compute(self, traces, peaks, waveforms):
         all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
-        
+
         for main_chan in np.unique(peaks["channel_index"]):
             (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
             (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
@@ -221,7 +221,7 @@ class RandomProjectionsFeature(PipelineNode):
             denom = np.sum(wf_ptp, axis=1)
             mask = denom != 0
             all_projections[idx[mask]] = np.dot(wf_ptp[mask], local_projections) / (denom[mask][:, np.newaxis])
-        
+
         return all_projections
 
 
