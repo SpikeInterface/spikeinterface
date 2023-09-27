@@ -73,12 +73,6 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         func = _spike_amplitudes_chunk
         init_func = _init_worker_spike_amplitudes
         n_jobs = ensure_n_jobs(recording, job_kwargs.get("n_jobs", None))
-        if n_jobs != 1:
-            # TODO: avoid dumping sorting and use spike vector and peak pipeline instead
-            assert sorting.check_if_memory_serializable(), (
-                "The sorting object is not dumpable and cannot be processed in parallel. You can use the "
-                "`sorting.save()` function to make it dumpable"
-            )
         init_args = (recording, sorting.to_multiprocessing(n_jobs), extremum_channels_index, peak_shifts, return_scaled)
         processor = ChunkRecordingExecutor(
             recording, func, init_func, init_args, handle_returns=True, job_name="extract amplitudes", **job_kwargs

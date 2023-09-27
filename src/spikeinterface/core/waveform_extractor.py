@@ -290,11 +290,12 @@ class WaveformExtractor:
                 sorting.dump(folder / "sorting.json", relative_to=relative_to)
             elif sorting.check_serializablility("pickle"):
                 # In this case we loose the relative_to!!
+                # TODO later the dump to pickle should dump the dictionary and so relative could be put back
                 sorting.dump(folder / "sorting.pickle")
             else:
                 warn(
-                    "Sorting object is not dumpable, which might result in downstream errors for "
-                    "parallel processing. To make the sorting dumpable, use the `sorting.save()` function."
+                    "Sorting object is not serializable to file, which might result in downstream errors for "
+                    "parallel processing. To make the sorting serializable, use the `sorting = sorting.save()` function."
                 )
 
             # dump some attributes of the recording for the mode with_recording=False at next load
@@ -903,11 +904,11 @@ class WaveformExtractor:
             if self.sorting.check_serializablility("json"):
                 self.sorting.dump(folder / "sorting.json", relative_to=relative_to)
             elif self.sorting.check_serializablility("pickle"):
-                self.sorting.dump(folder / "sorting.pickle", relative_to=relative_to)
+                self.sorting.dump(folder / "sorting.pickle")
             else:
                 warn(
-                    "Sorting object is not dumpable, which might result in downstream errors for "
-                    "parallel processing. To make the sorting dumpable, use the `sorting.save()` function."
+                    "Sorting object is not serializable to file, which might result in downstream errors for "
+                    "parallel processing. To make the sorting serializable, use the `sorting = sorting.save()` function."
                 )
 
             # dump some attributes of the recording for the mode with_recording=False at next load
@@ -960,8 +961,8 @@ class WaveformExtractor:
                 zarr_root.attrs["sorting"] = check_json(sort_dict)
             else:
                 warn(
-                    "Sorting object is not dumpable, which might result in downstream errors for "
-                    "parallel processing. To make the sorting dumpable, use the `sorting.save()` function."
+                    "Sorting object is not json serializable, which might result in downstream errors for "
+                    "parallel processing. To make the sorting serializable, use the `sorting = sorting.save()` function."
                 )
             recording_info = zarr_root.create_group("recording_info")
             recording_info.attrs["recording_attributes"] = check_json(rec_attributes)

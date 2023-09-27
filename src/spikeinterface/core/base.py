@@ -621,7 +621,7 @@ class BaseExtractor:
         folder_metadata: str, Path, or None
             Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
-        assert self.check_if_pickle_serializable(), "The extractor is not dumpable"
+        assert self.check_if_pickle_serializable(), "The extractor is not serializable to file with pickle"
 
         dump_dict = self.to_dict(
             include_annotations=True,
@@ -658,8 +658,8 @@ class BaseExtractor:
                     d = pickle.load(f)
             else:
                 raise ValueError(f"Impossible to load {file_path}")
-            if "warning" in d and "not dumpable" in d["warning"]:
-                print("The extractor was not dumpable")
+            if "warning" in d:
+                print("The extractor was not serializable to file")
                 return None
             extractor = BaseExtractor.from_dict(d, base_folder=base_folder)
             return extractor
@@ -822,7 +822,7 @@ class BaseExtractor:
         if self.check_serializablility("json"):
             self.dump(provenance_file)
         else:
-            provenance_file.write_text(json.dumps({"warning": "the provenace is not dumpable!!!"}), encoding="utf8")
+            provenance_file.write_text(json.dumps({"warning": "the provenace is not json serializable!!!"}), encoding="utf8")
 
         self.save_metadata_to_folder(folder)
 

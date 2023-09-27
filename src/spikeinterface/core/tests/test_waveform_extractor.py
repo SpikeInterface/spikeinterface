@@ -315,7 +315,7 @@ def test_recordingless():
     recording = recording.save(folder=cache_folder / "recording1")
     sorting = sorting.save(folder=cache_folder / "sorting1")
 
-    # recording and sorting are not dumpable
+    # recording and sorting are not serializable
     wf_folder = cache_folder / "wf_recordingless"
 
     # save with relative paths

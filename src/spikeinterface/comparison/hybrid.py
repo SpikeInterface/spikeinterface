@@ -39,7 +39,7 @@ class HybridUnitsRecording(InjectTemplatesRecording):
         The refractory period of the injected spike train (in ms).
     injected_sorting_folder: str | Path | None
         If given, the injected sorting is saved to this folder.
-        It must be specified if injected_sorting is None or not dumpable.
+        It must be specified if injected_sorting is None or not serialisable to file.
 
     Returns
     -------
@@ -138,7 +138,7 @@ class HybridSpikesRecording(InjectTemplatesRecording):
         this refractory period.
     injected_sorting_folder: str | Path | None
         If given, the injected sorting is saved to this folder.
-        It must be specified if injected_sorting is None or not dumpable.
+        It must be specified if injected_sorting is None or not serializable to file.
 
     Returns
     -------

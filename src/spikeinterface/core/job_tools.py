@@ -170,8 +170,8 @@ def ensure_n_jobs(recording, n_jobs=1):
     if not recording.check_if_memory_serializable():
         if n_jobs != 1:
             raise RuntimeError(
-                "Recording is not dumpable and can't be processed in parallel. "
-                "You can use the `recording.save()` function to make it dumpable or set 'n_jobs' to 1."
+                "Recording is not serializable to memory and can't be processed in parallel. "
+                "You can use the `rec = recording.save(folder=...)` function or set 'n_jobs' to 1."
             )
 
     return n_jobs
