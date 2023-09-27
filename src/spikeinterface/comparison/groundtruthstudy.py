@@ -194,10 +194,12 @@ class GroundTruthStudy:
             sorter_name = params.pop("sorter_name")
             job = dict(sorter_name=sorter_name,
                        recording=recording,
-                       output_folder=sorter_folder)
+                       output_folder=sorter_folder,
+                       )
             job.update(params)
             # the verbose is overwritten and global to all run_sorters
             job["verbose"] = verbose
+            job["with_output"] = False
             job_list.append(job)
 
         run_sorter_jobs(job_list, engine=engine, engine_kwargs=engine_kwargs, return_output=False)
@@ -217,7 +219,8 @@ class GroundTruthStudy:
 
             
             if (sorter_folder / "spikeinterface_log.json").exists():
-                sorting = read_sorter_folder(sorter_folder, raise_error=False)
+                sorting = read_sorter_folder(sorter_folder, raise_error=False,
+                                             register_recording=False, sorting_info=False)
             else:
                 sorting = None
                 
@@ -383,12 +386,11 @@ class GroundTruthStudy:
             index = pd.MultiIndex.from_tuples(case_keys, names=self.levels)
 
 
-        columns = ["num_gt", "num_sorter", "num_well_detected", "num_redundant", "num_overmerged"]
+        columns = ["num_gt", "num_sorter", "num_well_detected"]
         comp = self.comparisons[case_keys[0]]
         if comp.exhaustive_gt:
-            columns.extend(["num_false_positive", "num_bad"])
+            columns.extend(["num_false_positive", "num_redundant", "num_overmerged", "num_bad"])
         count_units = pd.DataFrame(index=index, columns=columns, dtype=int)
-
 
         for key in case_keys:
             comp = self.comparisons.get(key, None)
@@ -402,11 +404,12 @@ class GroundTruthStudy:
             count_units.loc[key, "num_well_detected"] = comp.count_well_detected_units(
                 well_detected_score
             )
-            count_units.loc[key, "num_overmerged"] = comp.count_overmerged_units(
-                overmerged_score
-            )
-            count_units.loc[key, "num_redundant"] = comp.count_redundant_units(redundant_score)
+            
             if comp.exhaustive_gt:
+                count_units.loc[key, "num_redundant"] = comp.count_redundant_units(redundant_score)
+                count_units.loc[key, "num_overmerged"] = comp.count_overmerged_units(
+                    overmerged_score
+                )
                 count_units.loc[key, "num_false_positive"] = comp.count_false_positive_units(
                     redundant_score
                 )

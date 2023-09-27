@@ -202,7 +202,7 @@ class BaseSorter:
                 recording = None
             else:
                 recording = load_extractor(json_file, base_folder=output_folder)
-        elif pickle_file.exits():
+        elif pickle_file.exists():
             recording = load_extractor(pickle_file)
 
         return recording
@@ -324,8 +324,12 @@ class BaseSorter:
 
         if sorting_info:
             # set sorting info to Sorting object
-            with open(output_folder / "spikeinterface_recording.json", "r") as f:
-                rec_dict = json.load(f)
+            if (output_folder / "spikeinterface_recording.json").exists():
+                with open(output_folder / "spikeinterface_recording.json", "r") as f:
+                    rec_dict = json.load(f)
+            else:
+                rec_dict = None
+
             with open(output_folder / "spikeinterface_params.json", "r") as f:
                 params_dict = json.load(f)
             with open(output_folder / "spikeinterface_log.json", "r") as f:
