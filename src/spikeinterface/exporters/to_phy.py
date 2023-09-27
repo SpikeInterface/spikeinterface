@@ -156,6 +156,8 @@ def export_to_phy(
         if use_relative_path:
             if copy_binary:
                 f.write(f"dat_path = r'recording.dat'\n")
+            elif rec_path == "None":
+                 f.write(f"dat_path = {rec_path}\n")               
             else:
                 f.write(f"dat_path = r'{str(Path(rec_path).relative_to(output_folder))}'\n")
         else:
