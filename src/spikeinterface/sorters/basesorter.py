@@ -189,10 +189,8 @@ class BaseSorter:
 
     @classmethod
     def load_recording_from_folder(cls, output_folder, with_warnings=False):
-
         json_file = output_folder / "spikeinterface_recording.json"
         pickle_file = output_folder / "spikeinterface_recording.pickle"
-
 
         if json_file.exists():
             with (json_file).open("r", encoding="utf8") as f:
@@ -206,7 +204,7 @@ class BaseSorter:
                 recording = load_extractor(json_file, base_folder=output_folder)
         elif pickle_file.exits():
             recording = load_extractor(pickle_file)
-        
+
         return recording
 
     @classmethod
@@ -320,7 +318,7 @@ class BaseSorter:
 
         if register_recording:
             # register recording to Sorting object
-            recording = cls.load_recording_from_folder( output_folder, with_warnings=False)
+            recording = cls.load_recording_from_folder(output_folder, with_warnings=False)
             if recording is not None:
                 sorting.register_recording(recording)
 

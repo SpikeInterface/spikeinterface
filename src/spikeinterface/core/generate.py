@@ -1433,7 +1433,7 @@ def generate_ground_truth_recording(
     )
     recording.annotate(is_filtered=True)
     recording.set_probe(probe, in_place=True)
-    recording.set_channel_gains(1.)
-    recording.set_channel_offsets(0.)
+    recording.set_channel_gains(1.0)
+    recording.set_channel_offsets(0.0)
 
     return recording, sorting

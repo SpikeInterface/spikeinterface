@@ -629,7 +629,7 @@ def read_sorter_folder(output_folder, register_recording=True, sorting_info=True
     Load a sorting object from a spike sorting output folder.
     The 'output_folder' must contain a valid 'spikeinterface_log.json' file
 
-    
+
     Parameters
     ----------
     output_folder: Pth or str
@@ -657,8 +657,9 @@ def read_sorter_folder(output_folder, register_recording=True, sorting_info=True
 
     sorter_name = log["sorter_name"]
     SorterClass = sorter_dict[sorter_name]
-    sorting = SorterClass.get_result_from_folder(output_folder, register_recording=register_recording, 
-                                                 sorting_info=sorting_info)
+    sorting = SorterClass.get_result_from_folder(
+        output_folder, register_recording=register_recording, sorting_info=sorting_info
+    )
     return sorting
 
 

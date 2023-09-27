@@ -900,7 +900,6 @@ class WaveformExtractor:
                 elif self.recording.check_serializablility("pickle"):
                     self.recording.dump(folder / "recording.pickle")
 
-
             if self.sorting.check_serializablility("json"):
                 self.sorting.dump(folder / "sorting.json", relative_to=relative_to)
             elif self.sorting.check_serializablility("pickle"):

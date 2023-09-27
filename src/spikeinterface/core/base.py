@@ -57,7 +57,7 @@ class BaseExtractor:
         #  * number of units for sorting
         self._properties = {}
 
-        self._serializablility = {'memory': True, 'json': True, 'pickle': True}
+        self._serializablility = {"memory": True, "json": True, "pickle": True}
 
         # extractor specific list of pip extra requirements
         self.extra_requirements = []
@@ -470,7 +470,6 @@ class BaseExtractor:
         clone = BaseExtractor.from_dict(d)
         return clone
 
-
     def check_serializablility(self, type):
         kwargs = self._kwargs
         for value in kwargs.values():
@@ -488,11 +487,8 @@ class BaseExtractor:
                         return False
         return self._serializablility[type]
 
-
     def check_if_dumpable(self):
-        warnings.warn(
-            "check_if_dumpable() is replace by is_memory_serializable()", DeprecationWarning, stacklevel=2
-        )
+        warnings.warn("check_if_dumpable() is replace by is_memory_serializable()", DeprecationWarning, stacklevel=2)
         return self.check_serializablility("memory")
 
     def is_memory_serializable(self):
@@ -506,8 +502,6 @@ class BaseExtractor:
         """
         return self.check_serializablility("memory")
 
-
-    
     def check_if_json_serializable(self):
         """
         Check if the object is json serializable, including nested objects.

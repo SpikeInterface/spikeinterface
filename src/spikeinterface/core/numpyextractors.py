@@ -523,7 +523,7 @@ class NumpySnippets(BaseSnippets):
 
         self._serializablility["memory"] = False
         self._serializablility["json"] = False
-        self._serializablility["pickle"] = False        
+        self._serializablility["pickle"] = False
 
         for snippets, spikesframes in zip(snippets_list, spikesframes_list):
             snp_segment = NumpySnippetsSegment(snippets, spikesframes)
