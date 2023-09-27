@@ -52,9 +52,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         job_kwargs["verbose"] = verbose
         job_kwargs["progress_bar"] = verbose
 
-        recording = load_extractor(
-            sorter_output_folder.parent / "spikeinterface_recording.json", base_folder=sorter_output_folder.parent
-        )
+        recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
+
         sampling_rate = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()
 
