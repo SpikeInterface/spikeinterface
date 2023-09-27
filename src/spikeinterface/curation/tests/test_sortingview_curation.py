@@ -3,6 +3,7 @@ from pathlib import Path
 import os
 import json
 import numpy as np
+
 import spikeinterface as si
 import spikeinterface.extractors as se
 from spikeinterface.extractors import read_mearec
@@ -14,17 +15,18 @@ from spikeinterface.postprocessing import (
     compute_spike_amplitudes,
 )
 from spikeinterface.curation import apply_sortingview_curation
-
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "curation"
 else:
     cache_folder = Path("cache_folder") / "curation"
+
 parent_folder = Path(__file__).parent
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.getenv("KACHERY_CLOUD_PRIVATE_KEY"))
 
 
 set_global_tmp_folder(cache_folder)
+
 
 
 # this needs to be run only once
@@ -50,15 +52,15 @@ def generate_sortingview_curation_dataset():
 
 @pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
 def test_gh_curation():
+    """
+    Test curation using GitHub URI.
+    """
     local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
     _, sorting = read_mearec(local_path)
-
-    # from GH
     # curated link:
     # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://bd53f6b707f8121cadc901562a89b67aec81cc81&label=SpikeInterface%20-%20Sorting%20Summary&s={%22sortingCuration%22:%22gh://alejoe91/spikeinterface/fix-codecov/spikeinterface/curation/tests/sv-sorting-curation.json%22}
     gh_uri = "gh://SpikeInterface/spikeinterface/main/src/spikeinterface/curation/tests/sv-sorting-curation.json"
     sorting_curated_gh = apply_sortingview_curation(sorting, uri_or_json=gh_uri, verbose=True)
-    print(f"From GH: {sorting_curated_gh}")
 
     assert len(sorting_curated_gh.unit_ids) == 9
     assert "#8-#9" in sorting_curated_gh.unit_ids
@@ -75,9 +77,13 @@ def test_gh_curation():
     assert len(sorting_curated_gh_mua.unit_ids) == 6
     assert len(sorting_curated_gh_art_mua.unit_ids) == 5
 
+    print("Test for GH passed!\n")
 
 @pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
 def test_sha1_curation():
+    """
+    Test curation using SHA1 URI.
+    """
     local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
     _, sorting = read_mearec(local_path)
 
@@ -93,7 +99,7 @@ def test_sha1_curation():
     assert "accept" in sorting_curated_sha1.get_property_keys()
     assert "mua" in sorting_curated_sha1.get_property_keys()
     assert "artifact" in sorting_curated_sha1.get_property_keys()
-
+    unit_ids = sorting_curated_sha1.unit_ids
     sorting_curated_sha1_accepted = apply_sortingview_curation(sorting, uri_or_json=sha1_uri, include_labels=["accept"])
     sorting_curated_sha1_mua = apply_sortingview_curation(sorting, uri_or_json=sha1_uri, exclude_labels=["mua"])
     sorting_curated_sha1_art_mua = apply_sortingview_curation(
@@ -103,19 +109,21 @@ def test_sha1_curation():
     assert len(sorting_curated_sha1_mua.unit_ids) == 6
     assert len(sorting_curated_sha1_art_mua.unit_ids) == 5
 
+    print("Test for sha1 curation passed!\n")
 
 def test_json_curation():
+    """
+    Test curation using a JSON file.
+    """
     local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
     _, sorting = read_mearec(local_path)
 
     # from curation.json
     json_file = parent_folder / "sv-sorting-curation.json"
-    sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_file, verbose=True)
     print(f"Sorting: {sorting.get_unit_ids()}")
-    print(f"From JSON: {sorting_curated_json}")
+    sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_file, verbose=True)
 
     assert len(sorting_curated_json.unit_ids) == 9
-    print(sorting_curated_json.unit_ids)
     assert "#8-#9" in sorting_curated_json.unit_ids
     assert "accept" in sorting_curated_json.get_property_keys()
     assert "mua" in sorting_curated_json.get_property_keys()
@@ -131,20 +139,23 @@ def test_json_curation():
     assert len(sorting_curated_json_accepted.unit_ids) == 3
     assert len(sorting_curated_json_mua.unit_ids) == 6
     assert len(sorting_curated_json_mua1.unit_ids) == 5
+    
+    print("Test for json curation passed!\n")
 
 def test_false_positive_curation():
+    """
+    Test curation for false positives.
+    """
     # https://spikeinterface.readthedocs.io/en/latest/modules_gallery/core/plot_2_sorting_extractor.html
     sampling_frequency = 30000.
     duration = 20.
     num_timepoints = int(sampling_frequency * duration)
     num_units = 20
     num_spikes = 1000
-    times0 = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
-    labels0 = np.random.randint(1, num_units + 1, size=num_spikes)
-    times1 = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
-    labels1 = np.random.randint(1, num_units + 1, size=num_spikes)
+    times = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
+    labels = np.random.randint(1, num_units + 1, size=num_spikes)
 
-    sorting = se.NumpySorting.from_times_labels([times0, times1], [labels0, labels1], sampling_frequency)
+    sorting = se.NumpySorting.from_times_labels(times, labels, sampling_frequency)
     print('Sorting: {}'.format(sorting.get_unit_ids()))
 
     # Test curation JSON:
@@ -161,19 +172,153 @@ def test_false_positive_curation():
     with open(json_path, 'w') as f:
         json.dump(test_json, f, indent=4)
 
+    # Apply curation
     sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_path, verbose=True)
-    accept_idx = np.where(sorting_curated_json.get_property("accept"))[0]
-    sorting_curated_ids = sorting_curated_json.get_unit_ids()
-    print(f'Accepted unit IDs: {sorting_curated_ids[accept_idx]}')
+    print('Curated:', sorting_curated_json.get_unit_ids())
 
-    # Check if unit_id 1 has received the "accept" label. 
-    assert sorting_curated_json.get_unit_property(unit_id=1, key="accept") 
-     # Check if unit_id 10 has received the "accept" label. 
-     # If so, test fails since only unit_id 1 received the "accept" label in test_json.
-    assert not sorting_curated_json.get_unit_property(unit_id=10, key="accept") 
-    print(sorting_curated_json.unit_ids)
-    # Merging unit_ids of dtype int creates a new unit id 
+    # Assertions
+    assert sorting_curated_json.get_unit_property(unit_id=1, key="accept")
+    assert not sorting_curated_json.get_unit_property(unit_id=10, key="accept")
     assert 21 in sorting_curated_json.unit_ids
+
+    print("False positive test for integer unit IDs passed!\n")
+
+def test_label_inheritance_int():
+    """
+    Test curation for label inheritance for integer unit IDs.
+    """
+    # Setup
+    sampling_frequency = 30000.
+    duration = 20.
+    num_timepoints = int(sampling_frequency * duration)
+    num_spikes = 1000
+    times = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
+    labels = np.random.randint(1, 8, size=num_spikes)  # 7 units: 1 to 7
+
+    sorting = se.NumpySorting.from_times_labels(times, labels, sampling_frequency)
+
+    # Create a curation JSON with labels and merge groups
+    curation_dict = {
+        "labelsByUnit": {
+            "1": ["mua"],
+            "2": ["mua"],
+            "3": ["reject"],
+            "4": ["noise"],
+            "5": ["accept"],
+            "6": ["accept"],
+            "7": ["accept"]
+        },
+        "mergeGroups": [[1, 2], [3, 4], [5, 6]]
+    }
+
+    json_path = "test_curation_int.json"
+    with open(json_path, 'w') as f:
+        json.dump(curation_dict, f, indent=4)
+
+    # Apply curation
+    sorting_merge = apply_sortingview_curation(sorting, uri_or_json=json_path)
+
+    # Assertions for merged units
+    print(f"Merge only: {sorting_merge.get_unit_ids()}")
+    assert sorting_merge.get_unit_property(unit_id=8, key="mua")  # 8 = merged unit of 1 and 2
+    assert not sorting_merge.get_unit_property(unit_id=8, key="reject")
+    assert not sorting_merge.get_unit_property(unit_id=8, key="noise")
+    assert not sorting_merge.get_unit_property(unit_id=8, key="accept")
+
+    assert not sorting_merge.get_unit_property(unit_id=9, key="mua")  # 9 = merged unit of 3 and 4
+    assert sorting_merge.get_unit_property(unit_id=9, key="reject")
+    assert sorting_merge.get_unit_property(unit_id=9, key="noise")
+    assert not sorting_merge.get_unit_property(unit_id=9, key="accept")
+
+    assert not sorting_merge.get_unit_property(unit_id=10, key="mua")  # 10 = merged unit of 5 and 6
+    assert not sorting_merge.get_unit_property(unit_id=10, key="reject")
+    assert not sorting_merge.get_unit_property(unit_id=10, key="noise")
+    assert sorting_merge.get_unit_property(unit_id=10, key="accept")
+
+    # Assertions for exclude_labels
+    sorting_exclude_noise = apply_sortingview_curation(sorting, uri_or_json=json_path, exclude_labels=["noise"])
+    print(f"Exclude noise: {sorting_exclude_noise.get_unit_ids()}")
+    assert 9 not in sorting_exclude_noise.get_unit_ids()
+
+    # Assertions for include_labels
+    sorting_include_accept = apply_sortingview_curation(sorting, uri_or_json=json_path, include_labels=["accept"])
+    print(f"Include accept: {sorting_include_accept.get_unit_ids()}")
+    assert 8 not in sorting_include_accept.get_unit_ids()
+    assert 9 not in sorting_include_accept.get_unit_ids()
+    assert 10 in sorting_include_accept.get_unit_ids()
+
+    print("Test for integer unit IDs passed!\n")
+
+
+def test_label_inheritance_str():
+    """
+    Test curation for label inheritance for string unit IDs.
+    """
+    sampling_frequency = 30000.
+    duration = 20.
+    num_timepoints = int(sampling_frequency * duration)
+    num_spikes = 1000
+    times = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
+    labels = np.random.choice(['a', 'b', 'c', 'd', 'e', 'f', 'g'], size=num_spikes)
+
+    sorting = se.NumpySorting.from_times_labels(times, labels, sampling_frequency)
+    print(f"Sorting: {sorting.get_unit_ids()}")
+    # Create a curation JSON with labels and merge groups
+    curation_dict = {
+        "labelsByUnit": {
+            "a": ["mua"],
+            "b": ["mua"],
+            "c": ["reject"],
+            "d": ["noise"],
+            "e": ["accept"],
+            "f": ["accept"],
+            "g": ["accept"]
+        },
+        "mergeGroups": [["a", "b"], ["c", "d"], ["e", "f"]]
+    }
+
+    json_path = "test_curation_str.json"
+    with open(json_path, 'w') as f:
+        json.dump(curation_dict, f, indent=4)
+
+    # Check label inheritance for merged units
+    merged_id_1 = "a-b"  
+    merged_id_2 = "c-d"
+    merged_id_3 = "e-f"
+    # Apply curation
+    sorting_merge = apply_sortingview_curation(sorting, uri_or_json=json_path, verbose=True)
+
+    # Assertions for merged units
+    print(f"Merge only: {sorting_merge.get_unit_ids()}")
+    assert sorting_merge.get_unit_property(unit_id="a-b", key="mua")
+    assert not sorting_merge.get_unit_property(unit_id="a-b", key="reject")
+    assert not sorting_merge.get_unit_property(unit_id="a-b", key="noise")
+    assert not sorting_merge.get_unit_property(unit_id="a-b", key="accept")
+
+    assert not sorting_merge.get_unit_property(unit_id="c-d", key="mua")
+    assert sorting_merge.get_unit_property(unit_id="c-d", key="reject")
+    assert sorting_merge.get_unit_property(unit_id="c-d", key="noise")
+    assert not sorting_merge.get_unit_property(unit_id="c-d", key="accept")
+
+    assert not sorting_merge.get_unit_property(unit_id="e-f", key="mua")
+    assert not sorting_merge.get_unit_property(unit_id="e-f", key="reject")
+    assert not sorting_merge.get_unit_property(unit_id="e-f", key="noise")
+    assert sorting_merge.get_unit_property(unit_id="e-f", key="accept")
+
+    # Assertions for exclude_labels
+    sorting_exclude_noise = apply_sortingview_curation(sorting, uri_or_json=json_path, exclude_labels=["noise"])
+    print(f"Exclude noise: {sorting_exclude_noise.get_unit_ids()}")
+    assert "c-d" not in sorting_exclude_noise.get_unit_ids()
+
+    # Assertions for include_labels
+    sorting_include_accept = apply_sortingview_curation(sorting, uri_or_json=json_path, include_labels=["accept"])
+    print(f"Include accept: {sorting_include_accept.get_unit_ids()}")
+    assert "a-b" not in sorting_include_accept.get_unit_ids()
+    assert "c-d" not in sorting_include_accept.get_unit_ids()
+    assert "e-f" in sorting_include_accept.get_unit_ids()
+
+    print("Test for string unit IDs passed!\n")
+
 
 if __name__ == "__main__":
     # generate_sortingview_curation_dataset()
@@ -181,3 +326,5 @@ if __name__ == "__main__":
     test_gh_curation()
     test_json_curation()
     test_false_positive_curation()
+    test_label_inheritance_int()
+    test_label_inheritance_str()
