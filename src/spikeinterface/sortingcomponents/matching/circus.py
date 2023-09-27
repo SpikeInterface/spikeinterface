@@ -128,7 +128,6 @@ def _freq_domain_conv(in1, in2, axes, shape, cache, calc_fast_len=True):
     return ret
 
 
-
 def compute_overlaps(templates, num_samples, num_channels, sparsities):
     num_templates = len(templates)
 
@@ -474,6 +473,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
         spikes = spikes[order]
 
         return spikes
+
 
 class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
     """

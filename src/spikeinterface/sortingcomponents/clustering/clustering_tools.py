@@ -533,13 +533,7 @@ def remove_duplicates(
 
 
 def remove_duplicates_via_matching(
-    waveform_extractor,
-    noise_levels,
-    peak_labels,
-    method_kwargs={},
-    job_kwargs={},
-    tmp_folder=None,
-    method='circus-omp'
+    waveform_extractor, noise_levels, peak_labels, method_kwargs={}, job_kwargs={}, tmp_folder=None, method="circus-omp"
 ):
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface import get_noise_levels
@@ -613,7 +607,7 @@ def remove_duplicates_via_matching(
         spikes, computed = find_spikes_from_templates(
             sub_recording, method=method, method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
         )
-        if method == 'circus-omp-vsd':
+        if method == "circus-omp-vsd":
             method_kwargs.update(
                 {
                     "overlaps": computed["overlaps"],
@@ -627,13 +621,13 @@ def remove_duplicates_via_matching(
                     "sparsity_mask": computed["sparsity_mask"],
                 }
             )
-        elif method == 'circus-omp':
+        elif method == "circus-omp":
             method_kwargs.update(
                 {
                     "overlaps": computed["overlaps"],
                     "templates": computed["templates"],
                     "norms": computed["norms"],
-                    "sparsities": computed["sparsities"]
+                    "sparsities": computed["sparsities"],
                 }
             )
         valid = (spikes["sample_index"] >= half_marging) * (spikes["sample_index"] < duration + half_marging)
