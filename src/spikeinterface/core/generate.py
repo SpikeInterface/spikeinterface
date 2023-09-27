@@ -1056,6 +1056,8 @@ class InjectTemplatesRecording(BaseRecording):
         dtype = parent_recording.dtype if parent_recording is not None else templates.dtype
         BaseRecording.__init__(self, sorting.get_sampling_frequency(), channel_ids, dtype)
 
+        # Important : self._serializablility is not change here because it will depend on the sorting parents itself.
+
         n_units = len(sorting.unit_ids)
         assert len(templates) == n_units
         self.spike_vector = sorting.to_spike_vector()
@@ -1431,5 +1433,7 @@ def generate_ground_truth_recording(
     )
     recording.annotate(is_filtered=True)
     recording.set_probe(probe, in_place=True)
+    recording.set_channel_gains(1.0)
+    recording.set_channel_offsets(0.0)
 
     return recording, sorting
