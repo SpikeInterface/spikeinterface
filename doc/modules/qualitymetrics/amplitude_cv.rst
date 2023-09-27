@@ -46,7 +46,7 @@ Example code
 References
 ----------
 
-.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_amplitude_spreads
+.. autofunction:: spikeinterface.qualitymetrics.misc_metrics.compute_amplitude_cv_metrics
 
 
 Literature
