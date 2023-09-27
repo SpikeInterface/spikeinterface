@@ -533,7 +533,13 @@ def remove_duplicates(
 
 
 def remove_duplicates_via_matching(
-    waveform_extractor, noise_levels, peak_labels, method_kwargs={}, job_kwargs={}, tmp_folder=None, method="circus-omp-svd"
+    waveform_extractor,
+    noise_levels,
+    peak_labels,
+    method_kwargs={},
+    job_kwargs={},
+    tmp_folder=None,
+    method="circus-omp-svd",
 ):
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface import get_noise_levels
