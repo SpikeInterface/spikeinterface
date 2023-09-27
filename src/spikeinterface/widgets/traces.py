@@ -290,7 +290,6 @@ class TracesWidget(BaseWidget):
         check_ipywidget_backend()
 
         self.next_data_plot = data_plot.copy()
-        
 
         self.recordings = data_plot["recordings"]
 
@@ -314,7 +313,7 @@ class TracesWidget(BaseWidget):
         self.time_slider = TimeSlider(
             durations=[rec0.get_duration(s) for s in range(rec0.get_num_segments())],
             sampling_frequency=rec0.sampling_frequency,
-            # layout=W.Layout(height="2cm"),
+            # layout=W.Layout(height="2cm"),
         )
 
         start_frame = int(data_plot["time_range"][0] * rec0.sampling_frequency)
@@ -324,14 +323,17 @@ class TracesWidget(BaseWidget):
 
         _layer_keys = data_plot["layer_keys"]
         if len(_layer_keys) > 1:
-            _layer_keys = ['ALL']  + _layer_keys 
-        self.layer_selector = W.Dropdown(options=_layer_keys,
-                                         layout=W.Layout(width="95%"),
-                                         )
-        self.mode_selector = W.Dropdown(options=["line", "map"], value=data_plot["mode"],
-                                        # layout=W.Layout(width="5cm"),
-                                        layout=W.Layout(width="95%"),
-                                        )
+            _layer_keys = ["ALL"] + _layer_keys
+        self.layer_selector = W.Dropdown(
+            options=_layer_keys,
+            layout=W.Layout(width="95%"),
+        )
+        self.mode_selector = W.Dropdown(
+            options=["line", "map"],
+            value=data_plot["mode"],
+            # layout=W.Layout(width="5cm"),
+            layout=W.Layout(width="95%"),
+        )
         self.scaler = ScaleWidget()
         self.channel_selector = ChannelSelector(self.rec0.channel_ids)
 
@@ -343,9 +345,9 @@ class TracesWidget(BaseWidget):
                 self.mode_selector,
                 self.scaler,
                 # self.channel_selector,
-                ],
+            ],
             layout=W.Layout(width="3.5cm"),
-            align_items='center',
+            align_items="center",
         )
 
         self.return_scaled = data_plot["return_scaled"]
@@ -353,7 +355,7 @@ class TracesWidget(BaseWidget):
         self.widget = widgets.AppLayout(
             center=self.figure.canvas,
             footer=self.time_slider,
-            left_sidebar = left_sidebar,
+            left_sidebar=left_sidebar,
             right_sidebar=self.channel_selector,
             pane_heights=[0, 6, 1],
             pane_widths=ratios,
@@ -365,28 +367,28 @@ class TracesWidget(BaseWidget):
 
         # callbacks:
         # some widgets generate a full retrieve  + refresh
-        self.time_slider.observe(self._retrieve_traces, names='value', type="change")
-        self.layer_selector.observe(self._retrieve_traces, names='value', type="change")
-        self.channel_selector.observe(self._retrieve_traces, names='value', type="change")
+        self.time_slider.observe(self._retrieve_traces, names="value", type="change")
+        self.layer_selector.observe(self._retrieve_traces, names="value", type="change")
+        self.channel_selector.observe(self._retrieve_traces, names="value", type="change")
         # other widgets only refresh
-        self.scaler.observe(self._update_plot, names='value', type="change")
+        self.scaler.observe(self._update_plot, names="value", type="change")
         # map is a special case because needs to check layer also
-        self.mode_selector.observe(self._mode_changed, names='value', type="change")
-        
+        self.mode_selector.observe(self._mode_changed, names="value", type="change")
+
         if backend_kwargs["display"]:
             # self.check_backend()
             display(self.widget)
 
     def _get_layers(self):
         layer = self.layer_selector.value
-        if layer == 'ALL':
+        if layer == "ALL":
             layer_keys = self.data_plot["layer_keys"]
         else:
             layer_keys = [layer]
         if self.mode_selector.value == "map":
             layer_keys = layer_keys[:1]
         return layer_keys
-    
+
     def _mode_changed(self, change=None):
         if self.mode_selector.value == "map" and self.layer_selector.value == "ALL":
             self.layer_selector.value = self.data_plot["layer_keys"][0]
@@ -400,7 +402,7 @@ class TracesWidget(BaseWidget):
             order, _ = order_channels_by_depth(self.rec0, channel_ids)
         else:
             order = None
-        
+
         start_frame, end_frame, segment_index = self.time_slider.value
         time_range = np.array([start_frame, end_frame]) / self.rec0.sampling_frequency
 
@@ -439,9 +441,9 @@ class TracesWidget(BaseWidget):
 
         data_plot["clims"] = clims
         data_plot["channel_ids"] = self._channel_ids
-        
+
         data_plot["layer_keys"] = layer_keys
-        data_plot["colors"] = {k:self.data_plot["colors"][k] for k in layer_keys}
+        data_plot["colors"] = {k: self.data_plot["colors"][k] for k in layer_keys}
 
         list_traces = [traces * self.scaler.value for traces in self._list_traces]
         data_plot["list_traces"] = list_traces
@@ -457,7 +459,6 @@ class TracesWidget(BaseWidget):
         fig = self.ax.figure
         fig.canvas.draw()
         fig.canvas.flush_events()
-
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv

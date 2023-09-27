@@ -277,7 +277,6 @@ class UnitWaveformsWidget(BaseWidget):
         self.unit_selector = UnitSelector(data_plot["unit_ids"])
         self.unit_selector.value = list(data_plot["unit_ids"])[:1]
 
-
         self.same_axis_button = widgets.Checkbox(
             value=False,
             description="same axis",
@@ -309,10 +308,9 @@ class UnitWaveformsWidget(BaseWidget):
         # a first update
         self._update_ipywidget(None)
 
-        self.unit_selector.observe(self._update_ipywidget, names='value', type="change")
+        self.unit_selector.observe(self._update_ipywidget, names="value", type="change")
         for w in self.same_axis_button, self.plot_templates_button, self.hide_axis_button:
-            w.observe(self._update_ipywidget, names='value', type="change")
-
+            w.observe(self._update_ipywidget, names="value", type="change")
 
         if backend_kwargs["display"]:
             display(self.widget)
@@ -340,7 +338,7 @@ class UnitWaveformsWidget(BaseWidget):
         data_plot["plot_templates"] = plot_templates
         if data_plot["plot_waveforms"]:
             data_plot["wfs_by_ids"] = {unit_id: self.we.get_waveforms(unit_id) for unit_id in unit_ids}
-        
+
         # TODO option for plot_legend
 
         backend_kwargs = {}

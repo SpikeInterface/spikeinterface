@@ -222,7 +222,7 @@ class SpikeLocationsWidget(BaseWidget):
         # a first update
         self._update_ipywidget()
 
-        self.unit_selector.observe(self._update_ipywidget, names='value', type="change")
+        self.unit_selector.observe(self._update_ipywidget, names="value", type="change")
 
         if backend_kwargs["display"]:
             display(self.widget)

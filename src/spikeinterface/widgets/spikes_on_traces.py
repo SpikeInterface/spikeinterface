@@ -232,7 +232,7 @@ class SpikesOnTracesWidget(BaseWidget):
                                 handles.append(l[0])
                                 labels.append(unit)
                                 label_set = True
-        # ax.legend(handles, labels)
+        # ax.legend(handles, labels)
 
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
@@ -268,19 +268,18 @@ class SpikesOnTracesWidget(BaseWidget):
         self.unit_selector = UnitSelector(data_plot["unit_ids"])
         self.unit_selector.value = list(data_plot["unit_ids"])[:1]
 
-        self.widget = widgets.AppLayout(center=self._traces_widget.widget,
-                                        left_sidebar=self.unit_selector,
-                                        pane_widths=ratios + [0])
+        self.widget = widgets.AppLayout(
+            center=self._traces_widget.widget, left_sidebar=self.unit_selector, pane_widths=ratios + [0]
+        )
 
         # a first update
         self._update_ipywidget()
 
         # remove callback from traces_widget
-        self.unit_selector.observe(self._update_ipywidget, names='value', type="change")
-        self._traces_widget.time_slider.observe(self._update_ipywidget, names='value', type="change")
-        self._traces_widget.channel_selector.observe(self._update_ipywidget, names='value', type="change")
-        self._traces_widget.scaler.observe(self._update_ipywidget, names='value', type="change")
-
+        self.unit_selector.observe(self._update_ipywidget, names="value", type="change")
+        self._traces_widget.time_slider.observe(self._update_ipywidget, names="value", type="change")
+        self._traces_widget.channel_selector.observe(self._update_ipywidget, names="value", type="change")
+        self._traces_widget.scaler.observe(self._update_ipywidget, names="value", type="change")
 
         if backend_kwargs["display"]:
             display(self.widget)
@@ -305,9 +304,8 @@ class SpikesOnTracesWidget(BaseWidget):
                 time_range=np.array([start_frame, end_frame]) / self.sampling_frequency,
                 mode=mode,
                 with_colorbar=False,
-                )
+            )
         )
-
 
         backend_kwargs = {}
         backend_kwargs["ax"] = self.ax

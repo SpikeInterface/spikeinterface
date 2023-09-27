@@ -38,7 +38,7 @@ backend_kwargs_desc = {
         "width_cm": "Width of the figure in cm (default 10)",
         "height_cm": "Height of the figure in cm (default 6)",
         "display": "If True, widgets are immediately displayed",
-        # "controllers": ""
+        # "controllers": ""
     },
     "ephyviewer": {},
 }

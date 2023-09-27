@@ -149,8 +149,7 @@ class MetricsBaseWidget(BaseWidget):
                 plt.show()
 
         self.unit_selector = UnitSelector(data_plot["sorting"].unit_ids)
-        self.unit_selector.value = [ ]
-
+        self.unit_selector.value = []
 
         self.widget = widgets.AppLayout(
             center=self.figure.canvas,
@@ -161,7 +160,7 @@ class MetricsBaseWidget(BaseWidget):
         # a first update
         self._update_ipywidget(None)
 
-        self.unit_selector.observe(self._update_ipywidget, names='value', type="change")
+        self.unit_selector.observe(self._update_ipywidget, names="value", type="change")
 
         if backend_kwargs["display"]:
             display(self.widget)
@@ -207,7 +206,6 @@ class MetricsBaseWidget(BaseWidget):
 
         self.figure.canvas.draw()
         self.figure.canvas.flush_events()
-
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
         import sortingview.views as vv

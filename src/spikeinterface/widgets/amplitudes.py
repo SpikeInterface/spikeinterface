@@ -174,6 +174,7 @@ class AmplitudesWidget(BaseWidget):
 
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
+
         # import ipywidgets.widgets as widgets
         import ipywidgets.widgets as W
         from IPython.display import display
@@ -210,7 +211,7 @@ class AmplitudesWidget(BaseWidget):
                 self.unit_selector,
                 self.checkbox_histograms,
             ],
-            layout = W.Layout(align_items="center", width="4cm", height="100%"),
+            layout=W.Layout(align_items="center", width="4cm", height="100%"),
         )
 
         self.widget = W.AppLayout(
@@ -222,8 +223,8 @@ class AmplitudesWidget(BaseWidget):
         # a first update
         self._full_update_plot()
 
-        self.unit_selector.observe(self._update_plot, names='value', type="change")
-        self.checkbox_histograms.observe(self._full_update_plot, names='value', type="change")
+        self.unit_selector.observe(self._update_plot, names="value", type="change")
+        self.checkbox_histograms.observe(self._full_update_plot, names="value", type="change")
 
         if backend_kwargs["display"]:
             display(self.widget)
