@@ -57,9 +57,7 @@ class BaseExtractor:
         #  * number of units for sorting
         self._properties = {}
 
-        self._is_dumpable = True
-        # self._is_json_serializable = True
-        self._serializablility = {'json': True, 'pickle': True}
+        self._serializablility = {'memory': True, 'json': True, 'pickle': True}
 
         # extractor specific list of pip extra requirements
         self.extra_requirements = []
@@ -472,31 +470,8 @@ class BaseExtractor:
         clone = BaseExtractor.from_dict(d)
         return clone
 
-    def check_if_dumpable(self):
-        """Check if the object is dumpable, including nested objects.
 
-        Returns
-        -------
-        bool
-            True if the object is dumpable, False otherwise.
-        """
-        kwargs = self._kwargs
-        for value in kwargs.values():
-            # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
-            if isinstance(value, BaseExtractor):
-                if not value.check_if_dumpable():
-                    return False
-            elif isinstance(value, list):
-                for v in value:
-                    if isinstance(v, BaseExtractor) and not v.check_if_dumpable():
-                        return False
-            elif isinstance(value, dict):
-                for v in value.values():
-                    if isinstance(v, BaseExtractor) and not v.check_if_dumpable():
-                        return False
-        return self._is_dumpable
-
-    def check_serializablility(self, type="json"):
+    def check_serializablility(self, type):
         kwargs = self._kwargs
         for value in kwargs.values():
             # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
@@ -512,6 +487,26 @@ class BaseExtractor:
                     if isinstance(v, BaseExtractor) and not v.check_serializablility(type=type):
                         return False
         return self._serializablility[type]
+
+
+    def check_if_dumpable(self):
+        warnings.warn(
+            "check_if_dumpable() is replace by is_memory_serializable()", DeprecationWarning, stacklevel=2
+        )
+        return self.check_serializablility("memory")
+
+    def is_memory_serializable(self):
+        """
+        Check if the object is serializable to memory with pickle, including nested objects.
+
+        Returns
+        -------
+        bool
+            True if the object is json serializable, False otherwise.
+        """
+        return self.check_serializablility("memory")
+
+
     
     def check_if_json_serializable(self):
         """
@@ -636,7 +631,7 @@ class BaseExtractor:
         folder_metadata: str, Path, or None
             Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
-        assert self.check_if_dumpable(), "The extractor is not dumpable"
+        assert self.check_if_pickle_serializable(), "The extractor is not dumpable"
 
         dump_dict = self.to_dict(
             include_annotations=True,
@@ -931,7 +926,7 @@ class BaseExtractor:
 
         zarr_root = zarr.open(zarr_path_init, mode="w", storage_options=storage_options)
 
-        if self.check_if_dumpable():
+        if self.check_if_json_serializable():
             zarr_root.attrs["provenance"] = check_json(self.to_dict())
         else:
             zarr_root.attrs["provenance"] = None

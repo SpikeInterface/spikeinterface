@@ -75,7 +75,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         n_jobs = ensure_n_jobs(recording, job_kwargs.get("n_jobs", None))
         if n_jobs != 1:
             # TODO: avoid dumping sorting and use spike vector and peak pipeline instead
-            assert sorting.check_if_dumpable(), (
+            assert sorting.is_memory_serializable(), (
                 "The sorting object is not dumpable and cannot be processed in parallel. You can use the "
                 "`sorting.save()` function to make it dumpable"
             )

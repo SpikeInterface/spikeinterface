@@ -127,7 +127,7 @@ class NumpySorting(BaseSorting):
         """ """
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self._is_dumpable = True
+        self._serializablility["memory"] = True
         self._serializablility["json"] = False
         # theorically this should be False but for simplicity make generators simples we still need this.
         self._serializablility["pickle"] = True
@@ -360,8 +360,8 @@ class SharedMemorySorting(BaseSorting):
         assert shape[0] > 0, "SharedMemorySorting only supported with no empty sorting"
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        self._is_dumpable = True
 
+        self._serializablility["memory"] = True
         self._serializablility["json"] = False
         self._serializablility["pickle"] = False
 
@@ -521,7 +521,7 @@ class NumpySnippets(BaseSnippets):
             dtype=dtype,
         )
 
-        self._is_dumpable = False
+        self._serializablility["memory"] = False
         self._serializablility["json"] = False
         self._serializablility["pickle"] = False        
 

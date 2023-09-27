@@ -144,8 +144,7 @@ class DummyExtractor(BaseExtractor):
 
         BaseExtractor.__init__(self, main_ids=['1', '2'])
         # this already the case by default
-        self._is_dumpable = True
-        # self._is_json_serializable = True
+        self._serializablility["memory"] = True
         self._serializablility["json"] = True
         self._serializablility["pickle"] = True    
 

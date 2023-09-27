@@ -31,19 +31,19 @@ def make_nested_extractors(extractor):
     )
 
 
-def test_check_if_dumpable():
+def test_is_memory_serializable():
     test_extractor = generate_recording(seed=0, durations=[2])
 
     # make a list of dumpable objects
     extractors_dumpable = make_nested_extractors(test_extractor)
     for extractor in extractors_dumpable:
-        assert extractor.check_if_dumpable()
+        assert extractor.is_memory_serializable()
 
     # make not dumpable
-    test_extractor._is_dumpable = False
+    test_extractor._serializablility["memory"] = False
     extractors_not_dumpable = make_nested_extractors(test_extractor)
     for extractor in extractors_not_dumpable:
-        assert not extractor.check_if_dumpable()
+        assert not extractor.is_memory_serializable()
 
 
 def test_check_if_serializable():
@@ -66,5 +66,5 @@ def test_check_if_serializable():
 
 
 if __name__ == "__main__":
-    test_check_if_dumpable()
+    test_is_memory_serializable()
     test_check_if_serializable()
