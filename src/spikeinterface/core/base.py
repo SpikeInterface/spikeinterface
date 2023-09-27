@@ -822,7 +822,9 @@ class BaseExtractor:
         if self.check_serializablility("json"):
             self.dump(provenance_file)
         else:
-            provenance_file.write_text(json.dumps({"warning": "the provenace is not json serializable!!!"}), encoding="utf8")
+            provenance_file.write_text(
+                json.dumps({"warning": "the provenace is not json serializable!!!"}), encoding="utf8"
+            )
 
         self.save_metadata_to_folder(folder)
 
