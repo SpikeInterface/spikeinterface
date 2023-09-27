@@ -714,8 +714,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
             if num_selection > 0:
                 delta_t = selection[1] - peak_index
-                idx = np.where((delta_t < neighbor_window) & (delta_t >= -num_samples))[0]
-                myline = num_samples + delta_t[idx]
+                idx = np.where((delta_t < num_samples) & (delta_t > -num_samples))[0]
+                myline = neighbor_window + delta_t[idx]
                 myindices = selection[0, idx]
 
                 local_overlaps = overlaps[best_cluster_ind]
@@ -731,7 +731,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
                 table = np.zeros(num_templates, dtype=int)
                 table[overlapping_templates] = np.arange(len(overlapping_templates))
-                M[num_selection, myindices[mask]] = local_overlaps[table[a], b]
+                M[num_selection, idx[mask]] = local_overlaps[table[a], b]
 
                 if vicinity == 0:
                     scipy.linalg.solve_triangular(
@@ -797,8 +797,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
                 overlapping_templates = d["units_overlaps"][tmp_best]
 
                 if not tmp_peak in neighbors.keys():
-                    idx = [max(0, tmp_peak - num_samples), min(num_peaks, tmp_peak + neighbor_window)]
-                    tdx = [num_samples + idx[0] - tmp_peak, num_samples + idx[1] - tmp_peak]
+                    idx = [max(0, tmp_peak - neighbor_window), min(num_peaks, tmp_peak + num_samples)]
+                    tdx = [neighbor_window + idx[0] - tmp_peak, num_samples + idx[1] - tmp_peak - 1]
                     neighbors[tmp_peak] = {"idx": idx, "tdx": tdx}
 
                 idx = neighbors[tmp_peak]["idx"]
