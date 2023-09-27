@@ -15,6 +15,7 @@ from spikeinterface.postprocessing import (
     compute_spike_amplitudes,
 )
 from spikeinterface.curation import apply_sortingview_curation
+
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "curation"
 else:
@@ -26,7 +27,6 @@ KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_CLOUD_CLIENT_ID")) and bool(os.geten
 
 
 set_global_tmp_folder(cache_folder)
-
 
 
 # this needs to be run only once
@@ -79,6 +79,7 @@ def test_gh_curation():
 
     print("Test for GH passed!\n")
 
+
 @pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
 def test_sha1_curation():
     """
@@ -110,6 +111,7 @@ def test_sha1_curation():
     assert len(sorting_curated_sha1_art_mua.unit_ids) == 5
 
     print("Test for sha1 curation passed!\n")
+
 
 def test_json_curation():
     """
@@ -157,7 +159,7 @@ def test_false_positive_curation():
     labels = np.random.randint(1, num_units + 1, size=num_spikes)
 
     sorting = se.NumpySorting.from_times_labels(times, labels, sampling_frequency)
-    print('Sorting: {}'.format(sorting.get_unit_ids()))
+    print("Sorting: {}".format(sorting.get_unit_ids()))
 
     # Test curation JSON:
     test_json = {"labelsByUnit": {"1": ["accept"], "2": ["artifact"], "12": ["artifact"]}, "mergeGroups": [[2, 12]]}
@@ -168,7 +170,7 @@ def test_false_positive_curation():
 
     # Apply curation
     sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_path, verbose=True)
-    print('Curated:', sorting_curated_json.get_unit_ids())
+    print("Curated:", sorting_curated_json.get_unit_ids())
 
     # Assertions
     assert sorting_curated_json.get_unit_property(unit_id=1, key="accept")
@@ -177,13 +179,14 @@ def test_false_positive_curation():
 
     print("False positive test for integer unit IDs passed!\n")
 
+
 def test_label_inheritance_int():
     """
     Test curation for label inheritance for integer unit IDs.
     """
     # Setup
-    sampling_frequency = 30000.
-    duration = 20.
+    sampling_frequency = 30000.0
+    duration = 20.0
     num_timepoints = int(sampling_frequency * duration)
     num_spikes = 1000
     times = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
@@ -200,13 +203,13 @@ def test_label_inheritance_int():
             "4": ["noise"],
             "5": ["accept"],
             "6": ["accept"],
-            "7": ["accept"]
+            "7": ["accept"],
         },
-        "mergeGroups": [[1, 2], [3, 4], [5, 6]]
+        "mergeGroups": [[1, 2], [3, 4], [5, 6]],
     }
 
     json_path = "test_curation_int.json"
-    with open(json_path, 'w') as f:
+    with open(json_path, "w") as f:
         json.dump(curation_dict, f, indent=4)
 
     # Apply curation
@@ -248,12 +251,12 @@ def test_label_inheritance_str():
     """
     Test curation for label inheritance for string unit IDs.
     """
-    sampling_frequency = 30000.
-    duration = 20.
+    sampling_frequency = 30000.0
+    duration = 20.0
     num_timepoints = int(sampling_frequency * duration)
     num_spikes = 1000
     times = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
-    labels = np.random.choice(['a', 'b', 'c', 'd', 'e', 'f', 'g'], size=num_spikes)
+    labels = np.random.choice(["a", "b", "c", "d", "e", "f", "g"], size=num_spikes)
 
     sorting = se.NumpySorting.from_times_labels(times, labels, sampling_frequency)
     print(f"Sorting: {sorting.get_unit_ids()}")
@@ -266,13 +269,13 @@ def test_label_inheritance_str():
             "d": ["noise"],
             "e": ["accept"],
             "f": ["accept"],
-            "g": ["accept"]
+            "g": ["accept"],
         },
-        "mergeGroups": [["a", "b"], ["c", "d"], ["e", "f"]]
+        "mergeGroups": [["a", "b"], ["c", "d"], ["e", "f"]],
     }
 
     json_path = "test_curation_str.json"
-    with open(json_path, 'w') as f:
+    with open(json_path, "w") as f:
         json.dump(curation_dict, f, indent=4)
 
     # Check label inheritance for merged units
