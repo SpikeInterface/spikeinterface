@@ -142,7 +142,6 @@ def test_write_memory_recording():
     recording = NoiseGeneratorRecording(
         num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
     )
-    # make dumpable
     recording = recording.save()
 
     # write with loop

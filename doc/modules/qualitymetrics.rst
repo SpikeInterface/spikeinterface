@@ -25,9 +25,11 @@ For more details about each metric and it's availability and use within SpikeInt
   :glob:
 
   qualitymetrics/amplitude_cutoff
+  qualitymetrics/amplitude_cv
   qualitymetrics/amplitude_median
   qualitymetrics/d_prime
   qualitymetrics/drift
+  qualitymetrics/firing_range
   qualitymetrics/firing_rate
   qualitymetrics/isi_violations
   qualitymetrics/isolation_distance
