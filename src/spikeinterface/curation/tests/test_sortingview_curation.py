@@ -78,7 +78,6 @@ def test_gh_curation():
     assert len(sorting_curated_gh_art_mua.unit_ids) == 5
 
 
-
 @pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
 def test_sha1_curation():
     """
@@ -108,7 +107,6 @@ def test_sha1_curation():
     assert len(sorting_curated_sha1_accepted.unit_ids) == 3
     assert len(sorting_curated_sha1_mua.unit_ids) == 6
     assert len(sorting_curated_sha1_art_mua.unit_ids) == 5
-
 
 
 def test_json_curation():
@@ -243,7 +241,6 @@ def test_label_inheritance_int():
     assert 10 in sorting_include_accept.get_unit_ids()
 
 
-
 def test_label_inheritance_str():
     """
     Test curation for label inheritance for string unit IDs.
@@ -310,7 +307,6 @@ def test_label_inheritance_str():
     assert "a-b" not in sorting_include_accept.get_unit_ids()
     assert "c-d" not in sorting_include_accept.get_unit_ids()
     assert "e-f" in sorting_include_accept.get_unit_ids()
-
 
 
 if __name__ == "__main__":
