@@ -20,7 +20,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
     _default_params = {
-        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 75},
+        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
         "waveforms": {"max_spikes_per_unit": 200, "overwrite": True, "sparse": True, "method": "ptp", "threshold": 1},
         "filtering": {"dtype": "float32"},
         "detection": {"peak_sign": "neg", "detect_threshold": 5},
