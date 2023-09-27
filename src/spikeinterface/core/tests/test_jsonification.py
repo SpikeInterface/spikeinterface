@@ -142,9 +142,11 @@ class DummyExtractor(BaseExtractor):
         self.extractor_list = extractor_list
         self.extractor_dict = extractor_dict
 
+        BaseExtractor.__init__(self, main_ids=["1", "2"])
         # this already the case by default
-        self._is_dumpable = True
-        self._is_json_serializable = True
+        self._serializablility["memory"] = True
+        self._serializablility["json"] = True
+        self._serializablility["pickle"] = True
 
         self._kwargs = {
             "attribute": attribute,
@@ -195,3 +197,8 @@ def test_encoding_numpy_scalars_within_nested_extractors_list(nested_extractor_l
 
 def test_encoding_numpy_scalars_within_nested_extractors_dict(nested_extractor_dict):
     json.dumps(nested_extractor_dict, cls=SIJsonEncoder)
+
+
+if __name__ == "__main__":
+    nested_extractor = nested_extractor()
+    test_encoding_numpy_scalars_within_nested_extractors(nested_extractor_)
