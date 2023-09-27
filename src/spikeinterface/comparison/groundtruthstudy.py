@@ -32,17 +32,18 @@ class GroundTruthStudy:
       * several sorters for comparisons
       * same sorter with differents parameters
       * any combination of these (and more)
-    
+
     For increased flexibility, cases keys can be a tuple so that we can vary complexity along several
     "levels" or "axis" (paremeters or sorters).
     In this case, the result dataframes will have `MultiIndex` to handle the different levels.
-    
-    A ground-truth dataset is made of a `Recording` and a `Sorting` object. For example, it can be a simulated dataset with MEArec or internally generated (see 
+
+    A ground-truth dataset is made of a `Recording` and a `Sorting` object. For example, it can be a simulated dataset with MEArec or internally generated (see
     :py:fun:`~spikeinterface.core.generate.generate_ground_truth_recording()`).
-    
+
     This GroundTruthStudy have been refactor in version 0.100 to be more flexible than previous versions.
     Note that the underlying folder structure is not backward compatible!
     """
+
     def __init__(self, study_folder):
         self.folder = Path(study_folder)
 
@@ -55,7 +56,6 @@ class GroundTruthStudy:
 
     @classmethod
     def create(cls, study_folder, datasets={}, cases={}, levels=None):
-
         # check that cases keys are homogeneous
         key0 = list(cases.keys())[0]
         if isinstance(key0, str):
@@ -67,7 +67,9 @@ class GroundTruthStudy:
         elif isinstance(key0, tuple):
             assert all(isinstance(key, tuple) for key in cases.keys()), "Keys for cases are not homogeneous"
             num_levels = len(key0)
-            assert all(len(key) == num_levels for key in cases.keys()), "Keys for cases are not homogeneous, tuple negth differ"
+            assert all(
+                len(key) == num_levels for key in cases.keys()
+            ), "Keys for cases are not homogeneous, tuple negth differ"
             if levels is None:
                 levels = [f"level{i}" for i in range(num_levels)]
             else:
@@ -75,7 +77,6 @@ class GroundTruthStudy:
                 assert len(levels) == num_levels
         else:
             raise ValueError("Keys for cases must str or tuple")
-
 
         study_folder = Path(study_folder)
         study_folder.mkdir(exist_ok=False, parents=True)
@@ -98,8 +99,7 @@ class GroundTruthStudy:
             # sortings are pickled + saved as NumpyFolderSorting
             gt_sorting.dump_to_pickle(study_folder / f"datasets/gt_sortings/{key}.pickle")
             gt_sorting.save(format="numpy_folder", folder=study_folder / f"datasets/gt_sortings/{key}")
-        
-        
+
         info = {}
         info["levels"] = levels
         (study_folder / "info.json").write_text(json.dumps(info, indent=4), encoding="utf8")
@@ -109,14 +109,13 @@ class GroundTruthStudy:
 
         return cls(study_folder)
 
-
     def scan_folder(self):
         if not (self.folder / "datasets").exists():
             raise ValueError(f"This is folder is not a GroundTruthStudy : {self.folder.absolute()}")
 
         with open(self.folder / "info.json", "r") as f:
             self.info = json.load(f)
-        
+
         self.levels = self.info["levels"]
 
         for rec_file in (self.folder / "datasets" / "recordings").glob("*.pickle"):
@@ -124,7 +123,7 @@ class GroundTruthStudy:
             rec = load_extractor(rec_file)
             gt_sorting = load_extractor(self.folder / f"datasets" / "gt_sortings" / key)
             self.datasets[key] = (rec, gt_sorting)
-        
+
         with open(self.folder / "cases.pickle", "rb") as f:
             self.cases = pickle.load(f)
 
@@ -138,7 +137,6 @@ class GroundTruthStudy:
             else:
                 sorting = None
             self.sortings[key] = sorting
-
 
     def __repr__(self):
         t = f"{self.__class__.__name__} {self.folder.stem} \n"
@@ -157,7 +155,7 @@ class GroundTruthStudy:
         else:
             raise ValueError("Keys for cases must str or tuple")
 
-    def run_sorters(self, case_keys=None, engine='loop', engine_kwargs={}, keep=True, verbose=False):
+    def run_sorters(self, case_keys=None, engine="loop", engine_kwargs={}, keep=True, verbose=False):
         if case_keys is None:
             case_keys = self.cases.keys()
 
@@ -187,15 +185,15 @@ class GroundTruthStudy:
                 if log_file.exists():
                     log_file.unlink()
 
-
             params = self.cases[key]["run_sorter_params"].copy()
             # this ensure that sorter_name is given
             recording, _ = self.datasets[self.cases[key]["dataset"]]
             sorter_name = params.pop("sorter_name")
-            job = dict(sorter_name=sorter_name,
-                       recording=recording,
-                       output_folder=sorter_folder,
-                       )
+            job = dict(
+                sorter_name=sorter_name,
+                recording=recording,
+                output_folder=sorter_folder,
+            )
             job.update(params)
             # the verbose is overwritten and global to all run_sorters
             job["verbose"] = verbose
@@ -205,25 +203,25 @@ class GroundTruthStudy:
         run_sorter_jobs(job_list, engine=engine, engine_kwargs=engine_kwargs, return_output=False)
 
         # TODO later create a list in laucher for engine blocking and non-blocking
-        if engine not in ("slurm", ):
+        if engine not in ("slurm",):
             self.copy_sortings(case_keys)
 
     def copy_sortings(self, case_keys=None, force=True):
         if case_keys is None:
             case_keys = self.cases.keys()
-        
+
         for key in case_keys:
             sorting_folder = self.folder / "sortings" / self.key_to_str(key)
             sorter_folder = self.folder / "sorters" / self.key_to_str(key)
             log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
 
-            
             if (sorter_folder / "spikeinterface_log.json").exists():
-                sorting = read_sorter_folder(sorter_folder, raise_error=False,
-                                             register_recording=False, sorting_info=False)
+                sorting = read_sorter_folder(
+                    sorter_folder, raise_error=False, register_recording=False, sorting_info=False
+                )
             else:
                 sorting = None
-                
+
             if sorting is not None:
                 if sorting_folder.exists():
                     if force:
@@ -241,7 +239,6 @@ class GroundTruthStudy:
                 shutil.copyfile(sorter_folder / "spikeinterface_log.json", log_file)
 
     def run_comparisons(self, case_keys=None, comparison_class=GroundTruthComparison, **kwargs):
-
         if case_keys is None:
             case_keys = self.cases.keys()
 
@@ -250,18 +247,19 @@ class GroundTruthStudy:
             _, gt_sorting = self.datasets[dataset_key]
             sorting = self.sortings[key]
             if sorting is None:
-                self.comparisons[key] = None    
+                self.comparisons[key] = None
                 continue
             comp = comparison_class(gt_sorting, sorting, **kwargs)
             self.comparisons[key] = comp
 
     def get_run_times(self, case_keys=None):
         import pandas as pd
+
         if case_keys is None:
             case_keys = self.cases.keys()
 
         log_folder = self.folder / "sortings" / "run_logs"
-        
+
         run_times = {}
         for key in case_keys:
             log_file = log_folder / f"{self.key_to_str(key)}.json"
@@ -273,7 +271,6 @@ class GroundTruthStudy:
         return pd.Series(run_times, name="run_time")
 
     def extract_waveforms_gt(self, case_keys=None, **extract_kwargs):
-        
         if case_keys is None:
             case_keys = self.cases.keys()
 
@@ -292,11 +289,11 @@ class GroundTruthStudy:
         # some recording are not dumpable to json and the waveforms extactor need it!
         # so we load it with and put after
         # this should be fixed in PR 2027 so remove this after
-        
+
         dataset_key = self.cases[key]["dataset"]
         wf_folder = self.folder / "waveforms" / self.key_to_str(dataset_key)
         we = load_waveforms(wf_folder, with_recording=False)
-        recording, _ = self.datasets[dataset_key]        
+        recording, _ = self.datasets[dataset_key]
         we.set_recording(recording)
         return we
 
@@ -308,7 +305,7 @@ class GroundTruthStudy:
     def compute_metrics(self, case_keys=None, metric_names=["snr", "firing_rate"], force=False):
         if case_keys is None:
             case_keys = self.cases.keys()
-        
+
         done = []
         for key in case_keys:
             dataset_key = self.cases[key]["dataset"]
@@ -327,7 +324,7 @@ class GroundTruthStudy:
             metrics.to_csv(filename, sep="\t", index=True)
 
     def get_metrics(self, key):
-        import pandas  as pd
+        import pandas as pd
 
         dataset_key = self.cases[key]["dataset"]
 
@@ -336,17 +333,15 @@ class GroundTruthStudy:
             return
         metrics = pd.read_csv(filename, sep="\t", index_col=0)
         dataset_key = self.cases[key]["dataset"]
-        recording, gt_sorting = self.datasets[dataset_key]        
+        recording, gt_sorting = self.datasets[dataset_key]
         metrics.index = gt_sorting.unit_ids
         return metrics
 
     def get_units_snr(self, key):
-        """
-        """
+        """ """
         return self.get_metrics(key)["snr"]
 
     def get_performance_by_unit(self, case_keys=None):
-
         import pandas as pd
 
         if case_keys is None:
@@ -363,7 +358,7 @@ class GroundTruthStudy:
             elif isinstance(key, tuple):
                 for col, k in zip(self.levels, key):
                     perf[col] = k
-              
+
             perf = perf.reset_index()
             perf_by_unit.append(perf)
 
@@ -371,10 +366,7 @@ class GroundTruthStudy:
         perf_by_unit = perf_by_unit.set_index(self.levels)
         return perf_by_unit
 
-    def get_count_units(
-            self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None
-        ):
-
+    def get_count_units(self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None):
         import pandas as pd
 
         if case_keys is None:
@@ -384,7 +376,6 @@ class GroundTruthStudy:
             index = pd.Index(case_keys, name=self.levels)
         else:
             index = pd.MultiIndex.from_tuples(case_keys, names=self.levels)
-
 
         columns = ["num_gt", "num_sorter", "num_well_detected"]
         comp = self.comparisons[case_keys[0]]
@@ -401,19 +392,12 @@ class GroundTruthStudy:
 
             count_units.loc[key, "num_gt"] = len(gt_sorting.get_unit_ids())
             count_units.loc[key, "num_sorter"] = len(sorting.get_unit_ids())
-            count_units.loc[key, "num_well_detected"] = comp.count_well_detected_units(
-                well_detected_score
-            )
-            
+            count_units.loc[key, "num_well_detected"] = comp.count_well_detected_units(well_detected_score)
+
             if comp.exhaustive_gt:
                 count_units.loc[key, "num_redundant"] = comp.count_redundant_units(redundant_score)
-                count_units.loc[key, "num_overmerged"] = comp.count_overmerged_units(
-                    overmerged_score
-                )
-                count_units.loc[key, "num_false_positive"] = comp.count_false_positive_units(
-                    redundant_score
-                )
+                count_units.loc[key, "num_overmerged"] = comp.count_overmerged_units(overmerged_score)
+                count_units.loc[key, "num_false_positive"] = comp.count_false_positive_units(redundant_score)
                 count_units.loc[key, "num_bad"] = comp.count_bad_units()
 
         return count_units
-

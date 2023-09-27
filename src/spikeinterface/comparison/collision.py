@@ -5,10 +5,6 @@ from .comparisontools import make_collision_events
 import numpy as np
 
 
-
-
-
-
 class CollisionGTComparison(GroundTruthComparison):
     """
     This class is an extension of GroundTruthComparison by focusing to benchmark spike in collision.
@@ -164,7 +160,6 @@ class CollisionGTComparison(GroundTruthComparison):
         return similarities, recall_scores, pair_names
 
 
-
 class CollisionGTStudy(GroundTruthStudy):
     def run_comparisons(self, case_keys=None, exhaustive_gt=True, collision_lag=2.0, nbins=11, **kwargs):
         _kwargs = dict()
@@ -179,11 +174,12 @@ class CollisionGTStudy(GroundTruthStudy):
     def get_lags(self, key):
         comp = self.comparisons[key]
         fs = comp.sorting1.get_sampling_frequency()
-        lags = comp.bins / fs * 1000.
+        lags = comp.bins / fs * 1000.0
         return lags
 
     def precompute_scores_by_similarities(self, case_keys=None, good_only=False, min_accuracy=0.9):
         import sklearn
+
         if case_keys is None:
             case_keys = self.cases.keys()
 
@@ -197,16 +193,13 @@ class CollisionGTStudy(GroundTruthStudy):
             similarity = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
             comp = self.comparisons[key]
             similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(
-                        similarity, good_only=good_only, min_accuracy=min_accuracy
-                    )            
+                similarity, good_only=good_only, min_accuracy=min_accuracy
+            )
             self.all_similarities[key] = similarities
             self.all_recall_scores[key] = recall_scores
 
-
     def get_mean_over_similarity_range(self, similarity_range, key):
-        idx = (self.all_similarities[key] >= similarity_range[0]) & (
-            self.all_similarities[key] <= similarity_range[1]
-        )
+        idx = (self.all_similarities[key] >= similarity_range[0]) & (self.all_similarities[key] <= similarity_range[1])
         all_similarities = self.all_similarities[key][idx]
         all_recall_scores = self.all_recall_scores[key][idx]
 

@@ -314,7 +314,7 @@ The all mechanism is based on an intrinsic organization into a "study_folder" wi
     study = GroundTruthStudy.create(study_folder, datasets=datasets, cases=cases,
                                     levels=["sorter_name", "dataset"])
 
-    
+
     # all cases in one function
     study.run_sorters()
 

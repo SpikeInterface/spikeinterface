@@ -29,7 +29,6 @@ class StudyRunTimesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        
         if case_keys is None:
             case_keys = list(study.cases.keys())
 
@@ -53,9 +52,8 @@ class StudyRunTimesWidget(BaseWidget):
             label = dp.study.cases[key]["label"]
             rt = dp.run_times.loc[key]
             self.ax.bar(i, rt, width=0.8, label=label)
-        
-        self.ax.legend()
 
+        self.ax.legend()
 
 
 # TODO : plot optionally average on some levels using group by
@@ -80,13 +78,12 @@ class StudyUnitCountsWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        
         if case_keys is None:
             case_keys = list(study.cases.keys())
 
         plot_data = dict(
             study=study,
-            count_units = study.get_count_units(case_keys=case_keys),
+            count_units=study.get_count_units(case_keys=case_keys),
             case_keys=case_keys,
         )
 
@@ -107,8 +104,7 @@ class StudyUnitCountsWidget(BaseWidget):
 
         ncol = len(columns)
 
-        colors = get_some_colors(columns, color_engine="auto", 
-                                 map_name="hot")
+        colors = get_some_colors(columns, color_engine="auto", map_name="hot")
         colors["num_well_detected"] = "green"
 
         xticklabels = []
@@ -118,7 +114,7 @@ class StudyUnitCountsWidget(BaseWidget):
                 y = dp.count_units.loc[key, col]
                 if not "well_detected" in col:
                     y = -y
-                
+
                 if i == 0:
                     label = col.replace("num_", "").replace("_", " ").title()
                 else:
@@ -158,7 +154,6 @@ class StudyPerformances(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        
         if case_keys is None:
             case_keys = list(study.cases.keys())
 
@@ -186,11 +181,15 @@ class StudyPerformances(BaseWidget):
 
         if dp.mode == "swarm":
             levels = perfs.index.names
-            df = pd.melt(perfs.reset_index(), id_vars=levels, var_name='Metric', value_name='Score', 
-                    value_vars=('accuracy','precision', 'recall'))
-            df['x'] = df.apply(lambda r: ' '.join([r[col] for col in levels]), axis=1)
-            sns.swarmplot(data=df, x='x', y='Score', hue='Metric', dodge=True)
-
+            df = pd.melt(
+                perfs.reset_index(),
+                id_vars=levels,
+                var_name="Metric",
+                value_name="Score",
+                value_vars=("accuracy", "precision", "recall"),
+            )
+            df["x"] = df.apply(lambda r: " ".join([r[col] for col in levels]), axis=1)
+            sns.swarmplot(data=df, x="x", y="Score", hue="Metric", dodge=True)
 
 
 class StudyPerformancesVsMetrics(BaseWidget):
@@ -218,7 +217,6 @@ class StudyPerformancesVsMetrics(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-        
         if case_keys is None:
             case_keys = list(study.cases.keys())
 
@@ -238,7 +236,6 @@ class StudyPerformancesVsMetrics(BaseWidget):
 
         dp = to_attr(data_plot)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
-
 
         study = dp.study
         perfs = study.get_performance_by_unit(case_keys=dp.case_keys)

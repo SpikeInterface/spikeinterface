@@ -90,12 +90,11 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
         ), "Only 'loop', 'joblib', and 'processpoolexecutor' support return_output=True."
         out = []
         for kwargs in job_list:
-            kwargs['with_output'] = True
+            kwargs["with_output"] = True
     else:
         out = None
         for kwargs in job_list:
-            kwargs['with_output'] = False
-
+            kwargs["with_output"] = False
 
     if engine == "loop":
         # simple loop in main process

@@ -53,7 +53,7 @@ widget_list = [
     StudyRunTimesWidget,
     StudyUnitCountsWidget,
     StudyPerformances,
-    StudyPerformancesVsMetrics
+    StudyPerformancesVsMetrics,
 ]
 
 
