@@ -39,7 +39,7 @@ class HybridUnitsRecording(InjectTemplatesRecording):
         The refractory period of the injected spike train (in ms).
     injected_sorting_folder: str | Path | None
         If given, the injected sorting is saved to this folder.
-        It must be specified if injected_sorting is None or not dumpable.
+        It must be specified if injected_sorting is None or not serialisable to file.
 
     Returns
     -------
@@ -84,7 +84,8 @@ class HybridUnitsRecording(InjectTemplatesRecording):
             )
         # save injected sorting if necessary
         self.injected_sorting = injected_sorting
-        if not self.injected_sorting.check_if_json_serializable():
+        if not self.injected_sorting.check_serializablility("json"):
+            # TODO later : also use pickle
             assert injected_sorting_folder is not None, "Provide injected_sorting_folder to injected sorting object"
             self.injected_sorting = self.injected_sorting.save(folder=injected_sorting_folder)
 
@@ -137,7 +138,7 @@ class HybridSpikesRecording(InjectTemplatesRecording):
         this refractory period.
     injected_sorting_folder: str | Path | None
         If given, the injected sorting is saved to this folder.
-        It must be specified if injected_sorting is None or not dumpable.
+        It must be specified if injected_sorting is None or not serializable to file.
 
     Returns
     -------
@@ -180,7 +181,8 @@ class HybridSpikesRecording(InjectTemplatesRecording):
             self.injected_sorting = injected_sorting
 
         # save injected sorting if necessary
-        if not self.injected_sorting.check_if_json_serializable():
+        if not self.injected_sorting.check_serializablility("json"):
+            # TODO later : also use pickle
             assert injected_sorting_folder is not None, "Provide injected_sorting_folder to injected sorting object"
             self.injected_sorting = self.injected_sorting.save(folder=injected_sorting_folder)
 

@@ -178,7 +178,7 @@ def test_run_sorters_with_list():
     if working_folder.is_dir():
         shutil.rmtree(working_folder)
 
-    # make dumpable
+    # make serializable
     rec0 = load_extractor(cache_folder / "toy_rec_0")
     rec1 = load_extractor(cache_folder / "toy_rec_1")
 
