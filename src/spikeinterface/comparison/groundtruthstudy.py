@@ -22,8 +22,6 @@ from .paircomparisons import compare_sorter_to_ground_truth, GroundTruthComparis
 
 # This is to separate names when the key are tuples when saving folders
 _key_separator = " ## "
-# This would be more funny
-# _key_separator = " (°_°) "
 
 
 class GroundTruthStudy:
@@ -184,8 +182,12 @@ class GroundTruthStudy:
                         continue
 
             if sorting_exists:
-                # TODO : delete sorting + log
-                pass
+                # delete older sorting + log before running sorters
+                shutil.rmtree(sorting_exists)
+                log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
+                if log_file.exists():
+                    log_file.unlink()
+
 
             params = self.cases[key]["run_sorter_params"].copy()
             # this ensure that sorter_name is given
@@ -201,7 +203,7 @@ class GroundTruthStudy:
 
         run_sorter_jobs(job_list, engine=engine, engine_kwargs=engine_kwargs, return_output=False)
 
-        # TODO create a list in laucher for engine blocking and non-blocking
+        # TODO later create a list in laucher for engine blocking and non-blocking
         if engine not in ("slurm", ):
             self.copy_sortings(case_keys)
 
@@ -223,8 +225,10 @@ class GroundTruthStudy:
             if sorting is not None:
                 if sorting_folder.exists():
                     if force:
-                        # TODO delete folder + log
+                        # delete folder + log
                         shutil.rmtree(sorting_folder)
+                        if log_file.exists():
+                            log_file.unlink()
                     else:
                         continue
 
