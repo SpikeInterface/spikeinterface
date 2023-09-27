@@ -494,7 +494,7 @@ class BaseExtractor:
         Returns
         -------
         bool
-            True if the object is json serializable, False otherwise.
+            True if the object is memory serializable, False otherwise.
         """
         return self.check_serializablility("memory")
 
