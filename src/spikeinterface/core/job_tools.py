@@ -167,7 +167,7 @@ def ensure_n_jobs(recording, n_jobs=1):
         print(f"Python {sys.version} does not support parallel processing")
         n_jobs = 1
 
-    if not recording.is_memory_serializable():
+    if not recording.check_if_memory_serializable():
         if n_jobs != 1:
             raise RuntimeError(
                 "Recording is not dumpable and can't be processed in parallel. "

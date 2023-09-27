@@ -487,11 +487,7 @@ class BaseExtractor:
                         return False
         return self._serializablility[type]
 
-    def check_if_dumpable(self):
-        warnings.warn("check_if_dumpable() is replace by is_memory_serializable()", DeprecationWarning, stacklevel=2)
-        return self.check_serializablility("memory")
-
-    def is_memory_serializable(self):
+    def check_if_memory_serializable(self):
         """
         Check if the object is serializable to memory with pickle, including nested objects.
 
