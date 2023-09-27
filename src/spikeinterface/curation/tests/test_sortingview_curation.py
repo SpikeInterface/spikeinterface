@@ -77,7 +77,6 @@ def test_gh_curation():
     assert len(sorting_curated_gh_mua.unit_ids) == 6
     assert len(sorting_curated_gh_art_mua.unit_ids) == 5
 
-    print("Test for GH passed!\n")
 
 
 @pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
@@ -110,7 +109,6 @@ def test_sha1_curation():
     assert len(sorting_curated_sha1_mua.unit_ids) == 6
     assert len(sorting_curated_sha1_art_mua.unit_ids) == 5
 
-    print("Test for sha1 curation passed!\n")
 
 
 def test_json_curation():
@@ -244,7 +242,6 @@ def test_label_inheritance_int():
     assert 9 not in sorting_include_accept.get_unit_ids()
     assert 10 in sorting_include_accept.get_unit_ids()
 
-    print("Test for integer unit IDs passed!\n")
 
 
 def test_label_inheritance_str():
@@ -314,7 +311,6 @@ def test_label_inheritance_str():
     assert "c-d" not in sorting_include_accept.get_unit_ids()
     assert "e-f" in sorting_include_accept.get_unit_ids()
 
-    print("Test for string unit IDs passed!\n")
 
 
 if __name__ == "__main__":
