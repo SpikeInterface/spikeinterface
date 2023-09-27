@@ -31,7 +31,6 @@ class GroundTruthStudy:
     "cases" refer to:
       * several sorters for comparisons
       * same sorter with differents parameters
-      * parameters of comparisons
       * any combination of these (and more)
     
     For increased flexibility, cases keys can be a tuple so that we can vary complexity along several
@@ -403,11 +402,11 @@ class GroundTruthStudy:
             count_units.loc[key, "num_well_detected"] = comp.count_well_detected_units(
                 well_detected_score
             )
+            count_units.loc[key, "num_overmerged"] = comp.count_overmerged_units(
+                overmerged_score
+            )
+            count_units.loc[key, "num_redundant"] = comp.count_redundant_units(redundant_score)
             if comp.exhaustive_gt:
-                count_units.loc[key, "num_overmerged"] = comp.count_overmerged_units(
-                    overmerged_score
-                )
-                count_units.loc[key, "num_redundant"] = comp.count_redundant_units(redundant_score)
                 count_units.loc[key, "num_false_positive"] = comp.count_false_positive_units(
                     redundant_score
                 )
