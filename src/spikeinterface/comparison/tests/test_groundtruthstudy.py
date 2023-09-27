@@ -7,7 +7,6 @@ from spikeinterface.preprocessing import bandpass_filter
 from spikeinterface.comparison import GroundTruthStudy
 
 
-
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "comparison"
 else:
@@ -16,7 +15,6 @@ else:
 
 study_folder = cache_folder / "test_groundtruthstudy/"
 
-print(study_folder.absolute())
 
 def setup_module():
     if study_folder.is_dir():
@@ -29,8 +27,8 @@ def simple_preprocess(rec):
 
 
 def create_a_study(study_folder):
-    rec0, gt_sorting0 = generate_ground_truth_recording(num_channels=4, durations=[30.], seed=42)
-    rec1, gt_sorting1 = generate_ground_truth_recording(num_channels=4, durations=[30.], seed=91)
+    rec0, gt_sorting0 = generate_ground_truth_recording(num_channels=4, durations=[30.0], seed=42)
+    rec1, gt_sorting1 = generate_ground_truth_recording(num_channels=4, durations=[30.0], seed=91)
 
     datasets = {
         "toy_tetrode": (rec0, gt_sorting0),
@@ -47,9 +45,7 @@ def create_a_study(study_folder):
             "run_sorter_params": {
                 "sorter_name": "tridesclous2",
             },
-            "comparison_params": {
-
-            },
+            "comparison_params": {},
         },
         #
         ("tdc2", "with-preprocess", "probe32"): {
@@ -58,11 +54,9 @@ def create_a_study(study_folder):
             "run_sorter_params": {
                 "sorter_name": "tridesclous2",
             },
-            "comparison_params": {
-
-            },
+            "comparison_params": {},
         },
-        # we comment this at the moement because SC2 is quite slow for testing
+        # we comment this at the moement because SC2 is quite slow for testing
         # ("sc2", "no-preprocess", "tetrode"): {
         #     "label": "spykingcircus2 without preprocessing standar params",
         #     "dataset": "toy_tetrode",
@@ -70,14 +64,14 @@ def create_a_study(study_folder):
         #         "sorter_name": "spykingcircus2",
         #     },
         #     "comparison_params": {
-
         #     },
         # },
     }
 
-    study = GroundTruthStudy.create(study_folder, datasets=datasets, cases=cases, levels=["sorter_name", "processing", "probe_type"])
+    study = GroundTruthStudy.create(
+        study_folder, datasets=datasets, cases=cases, levels=["sorter_name", "processing", "probe_type"]
+    )
     # print(study)
-
 
 
 def test_GroundTruthStudy():
@@ -99,14 +93,11 @@ def test_GroundTruthStudy():
     for key in study.cases:
         metrics = study.get_metrics(key)
         print(metrics)
-    
+
     study.get_performance_by_unit()
     study.get_count_units()
 
 
-
 if __name__ == "__main__":
     setup_module()
-    test_GroundTruthStudy() 
-
- 
+    test_GroundTruthStudy()

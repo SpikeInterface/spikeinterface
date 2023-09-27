@@ -57,8 +57,7 @@ class BaseExtractor:
         #  * number of units for sorting
         self._properties = {}
 
-        self._is_dumpable = True
-        self._is_json_serializable = True
+        self._serializablility = {"memory": True, "json": True, "pickle": True}
 
         # extractor specific list of pip extra requirements
         self.extra_requirements = []
@@ -472,24 +471,33 @@ class BaseExtractor:
         clone = BaseExtractor.from_dict(d)
         return clone
 
-    def check_if_dumpable(self):
-        """Check if the object is dumpable, including nested objects.
-
-        Returns
-        -------
-        bool
-            True if the object is dumpable, False otherwise.
-        """
+    def check_serializablility(self, type):
         kwargs = self._kwargs
         for value in kwargs.values():
             # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
             if isinstance(value, BaseExtractor):
-                return value.check_if_dumpable()
-            elif isinstance(value, list) and (len(value) > 0) and isinstance(value[0], BaseExtractor):
-                return all([v.check_if_dumpable() for v in value])
-            elif isinstance(value, dict) and isinstance(value[list(value.keys())[0]], BaseExtractor):
-                return all([v.check_if_dumpable() for k, v in value.items()])
-        return self._is_dumpable
+                if not value.check_serializablility(type=type):
+                    return False
+            elif isinstance(value, list):
+                for v in value:
+                    if isinstance(v, BaseExtractor) and not v.check_serializablility(type=type):
+                        return False
+            elif isinstance(value, dict):
+                for v in value.values():
+                    if isinstance(v, BaseExtractor) and not v.check_serializablility(type=type):
+                        return False
+        return self._serializablility[type]
+
+    def check_if_memory_serializable(self):
+        """
+        Check if the object is serializable to memory with pickle, including nested objects.
+
+        Returns
+        -------
+        bool
+            True if the object is memory serializable, False otherwise.
+        """
+        return self.check_serializablility("memory")
 
     def check_if_json_serializable(self):
         """
@@ -500,16 +508,13 @@ class BaseExtractor:
         bool
             True if the object is json serializable, False otherwise.
         """
-        kwargs = self._kwargs
-        for value in kwargs.values():
-            # here we check if the value is a BaseExtractor, a list of BaseExtractors, or a dict of BaseExtractors
-            if isinstance(value, BaseExtractor):
-                return value.check_if_json_serializable()
-            elif isinstance(value, list) and (len(value) > 0) and isinstance(value[0], BaseExtractor):
-                return all([v.check_if_json_serializable() for v in value])
-            elif isinstance(value, dict) and isinstance(value[list(value.keys())[0]], BaseExtractor):
-                return all([v.check_if_json_serializable() for k, v in value.items()])
-        return self._is_json_serializable
+        # we keep this for backward compatilibity or not ????
+        # is this needed ??? I think no.
+        return self.check_serializablility("json")
+
+    def check_if_pickle_serializable(self):
+        # is this needed ??? I think no.
+        return self.check_serializablility("pickle")
 
     @staticmethod
     def _get_file_path(file_path: Union[str, Path], extensions: Sequence) -> Path:
@@ -558,7 +563,7 @@ class BaseExtractor:
         if str(file_path).endswith(".json"):
             self.dump_to_json(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
         elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
-            self.dump_to_pickle(file_path, relative_to=relative_to, folder_metadata=folder_metadata)
+            self.dump_to_pickle(file_path, folder_metadata=folder_metadata)
         else:
             raise ValueError("Dump: file must .json or .pkl")
 
@@ -577,7 +582,7 @@ class BaseExtractor:
         folder_metadata: str, Path, or None
             Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
-        assert self.check_if_json_serializable(), "The extractor is not json serializable"
+        assert self.check_serializablility("json"), "The extractor is not json serializable"
 
         # Writing paths as relative_to requires recursively expanding the dict
         if relative_to:
@@ -617,7 +622,7 @@ class BaseExtractor:
         folder_metadata: str, Path, or None
             Folder with files containing additional information (e.g. probe in BaseRecording) and properties.
         """
-        assert self.check_if_dumpable(), "The extractor is not dumpable"
+        assert self.check_if_pickle_serializable(), "The extractor is not serializable to file with pickle"
 
         dump_dict = self.to_dict(
             include_annotations=True,
@@ -655,8 +660,8 @@ class BaseExtractor:
                     d = pickle.load(f)
             else:
                 raise ValueError(f"Impossible to load {file_path}")
-            if "warning" in d and "not dumpable" in d["warning"]:
-                print("The extractor was not dumpable")
+            if "warning" in d:
+                print("The extractor was not serializable to file")
                 return None
             extractor = BaseExtractor.from_dict(d, base_folder=base_folder)
             return extractor
@@ -816,10 +821,12 @@ class BaseExtractor:
 
         # dump provenance
         provenance_file = folder / f"provenance.json"
-        if self.check_if_json_serializable():
+        if self.check_serializablility("json"):
             self.dump(provenance_file)
         else:
-            provenance_file.write_text(json.dumps({"warning": "the provenace is not dumpable!!!"}), encoding="utf8")
+            provenance_file.write_text(
+                json.dumps({"warning": "the provenace is not json serializable!!!"}), encoding="utf8"
+            )
 
         self.save_metadata_to_folder(folder)
 
@@ -913,7 +920,7 @@ class BaseExtractor:
 
         zarr_root = zarr.open(zarr_path_init, mode="w", storage_options=storage_options)
 
-        if self.check_if_dumpable():
+        if self.check_if_json_serializable():
             zarr_root.attrs["provenance"] = check_json(self.to_dict())
         else:
             zarr_root.attrs["provenance"] = None

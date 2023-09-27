@@ -31,39 +31,39 @@ def make_nested_extractors(extractor):
     )
 
 
-def test_check_if_dumpable():
+def test_check_if_memory_serializable():
     test_extractor = generate_recording(seed=0, durations=[2])
 
-    # make a list of dumpable objects
-    extractors_dumpable = make_nested_extractors(test_extractor)
-    for extractor in extractors_dumpable:
-        assert extractor.check_if_dumpable()
+    # make a list of memory serializable objects
+    extractors_mem_serializable = make_nested_extractors(test_extractor)
+    for extractor in extractors_mem_serializable:
+        assert extractor.check_if_memory_serializable()
 
-    # make not dumpable
-    test_extractor._is_dumpable = False
-    extractors_not_dumpable = make_nested_extractors(test_extractor)
-    for extractor in extractors_not_dumpable:
-        assert not extractor.check_if_dumpable()
+    # make not not memory serilizable
+    test_extractor._serializablility["memory"] = False
+    extractors_not_mem_serializable = make_nested_extractors(test_extractor)
+    for extractor in extractors_not_mem_serializable:
+        assert not extractor.check_if_memory_serializable()
 
 
-def test_check_if_json_serializable():
+def test_check_if_serializable():
     test_extractor = generate_recording(seed=0, durations=[2])
 
-    # make a list of dumpable objects
-    test_extractor._is_json_serializable = True
+    # make a list of json serializable objects
+    test_extractor._serializablility["json"] = True
     extractors_json_serializable = make_nested_extractors(test_extractor)
     for extractor in extractors_json_serializable:
         print(extractor)
-        assert extractor.check_if_json_serializable()
+        assert extractor.check_serializablility("json")
 
-    # make not dumpable
-    test_extractor._is_json_serializable = False
+    # make of not json serializable objects
+    test_extractor._serializablility["json"] = False
     extractors_not_json_serializable = make_nested_extractors(test_extractor)
     for extractor in extractors_not_json_serializable:
         print(extractor)
-        assert not extractor.check_if_json_serializable()
+        assert not extractor.check_serializablility("json")
 
 
 if __name__ == "__main__":
-    test_check_if_dumpable()
-    test_check_if_json_serializable()
+    test_check_if_memory_serializable()
+    test_check_if_serializable()

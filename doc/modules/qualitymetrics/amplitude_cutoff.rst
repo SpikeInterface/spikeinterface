@@ -21,12 +21,12 @@ Example code
 
 .. code-block:: python
 
-	import spikeinterface.qualitymetrics as qm
+	import spikeinterface.qualitymetrics as sqm
 
 	# It is also recommended to run `compute_spike_amplitudes(wvf_extractor)`
 	# in order to use amplitudes from all spikes
-	fraction_missing = qm.compute_amplitude_cutoffs(wvf_extractor, peak_sign="neg")
-	# fraction_missing is a dict containing the units' IDs as keys,
+	fraction_missing = sqm.compute_amplitude_cutoffs(wvf_extractor, peak_sign="neg")
+	# fraction_missing is a dict containing the unit IDs as keys,
 	# and their estimated fraction of missing spikes as values.
 
 Reference

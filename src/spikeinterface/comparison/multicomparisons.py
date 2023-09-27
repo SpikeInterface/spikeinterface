@@ -189,8 +189,8 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
             stacklevel=2,
         )
         for sorting in self.object_list:
-            assert (
-                sorting.check_if_json_serializable()
+            assert sorting.check_serializablility(
+                "json"
             ), "MultiSortingComparison.save_to_folder() need json serializable sortings"
 
         save_folder = Path(save_folder)
@@ -259,7 +259,8 @@ class AgreementSortingExtractor(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
-        self._is_json_serializable = False
+        self._serializablility["json"] = False
+        self._serializablility["pickle"] = True
 
         if len(unit_ids) > 0:
             for k in ("agreement_number", "avg_agreement", "unit_ids"):
