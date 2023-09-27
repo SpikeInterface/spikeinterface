@@ -3,7 +3,6 @@ from .si_based import ComponentsBasedSorter
 import os
 import shutil
 import numpy as np
-import os
 
 from spikeinterface.core import NumpySorting, load_extractor, BaseRecording, get_noise_levels, extract_waveforms
 from spikeinterface.core.job_tools import fix_job_kwargs
@@ -21,18 +20,17 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
     _default_params = {
-        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
-        "waveforms": {"max_spikes_per_unit": 200, "overwrite": True},
+        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 75},
+        "waveforms": {"max_spikes_per_unit": 200, "overwrite": True, "sparse": True, "method": "ptp", "threshold": 1},
         "filtering": {"dtype": "float32"},
         "detection": {"peak_sign": "neg", "detect_threshold": 5},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
         "localization": {},
         "clustering": {},
         "matching": {},
-        "registration": {},
         "apply_preprocessing": True,
-        "shared_memory": False,
-        "job_kwargs": {},
+        "shared_memory": True,
+        "job_kwargs": {"n_jobs": -1},
     }
 
     @classmethod
@@ -62,8 +60,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## First, we are filtering the data
         filtering_params = params["filtering"].copy()
         if params["apply_preprocessing"]:
-            # if recording.is_filtered == True:
-            #    print('Looks like the recording is already filtered, check preprocessing!')
             recording_f = bandpass_filter(recording, **filtering_params)
             recording_f = common_reference(recording_f)
         else:
@@ -102,8 +98,11 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## We launch a clustering (using hdbscan) relying on positions and features extracted on
         ## the fly from the snippets
         clustering_params = params["clustering"].copy()
-        clustering_params.update(params["waveforms"])
-        clustering_params.update(params["general"])
+        clustering_params["waveforms_kwargs"] = params["waveforms"]
+
+        for k in ["ms_before", "ms_after"]:
+            clustering_params["waveforms_kwargs"][k] = params["general"][k]
+
         clustering_params.update(dict(shared_memory=params["shared_memory"]))
         clustering_params["job_kwargs"] = job_kwargs
         clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
@@ -125,6 +124,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         waveforms_params = params["waveforms"].copy()
         waveforms_params.update(job_kwargs)
 
+        for k in ["ms_before", "ms_after"]:
+            waveforms_params[k] = params["general"][k]
+
         if params["shared_memory"]:
             mode = "memory"
             waveforms_folder = None
@@ -142,6 +144,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         matching_params.update({"noise_levels": noise_levels})
 
         matching_job_params = job_kwargs.copy()
+        for value in ["chunk_size", "chunk_memory", "total_memory", "chunk_duration"]:
+            if value in matching_job_params:
+                matching_job_params.pop(value)
+
         matching_job_params["chunk_duration"] = "100ms"
 
         spikes = find_spikes_from_templates(

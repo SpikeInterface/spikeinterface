@@ -14,6 +14,9 @@ Since version 0.95.0, the :py:mod:`spikeinterface.widgets` module supports multi
 * | :code:`sortingview`: web-based and interactive rendering using the `sortingview <https://github.com/magland/sortingview>`_
   | and `FIGURL <https://github.com/flatironinstitute/figurl>`_ packages.
 
+Version 0.100.0, also come with this new backend:
+* | :code:`ephyviewer`: interactive Qt based using the `ephyviewer <https://ephyviewer.readthedocs.io/en/latest/>`_ package
+
 
 Installing backends
 -------------------
@@ -83,6 +86,28 @@ the following command (you will be prompted a link):
 
 Finally, if you wish to set up another cloud provider, follow the instruction from the
 `kachery-cloud <https://github.com/flatironinstitute/kachery-cloud>`_ package ("Using your own storage bucket").
+
+
+ephyviewer
+^^^^^^^^^^
+
+This backend is Qt based with PyQt5, PyQt6 or PySide6 support. Qt is sometimes tedious to install.
+
+
+For a pip-based installation, run:
+
+.. code-block:: bash
+
+    pip install PySide6 ephyviewer
+
+
+Anaconda users will have a better experience with this:
+
+.. code-block:: bash
+
+    conda install pyqt=5
+    pip install ephyviewer
+
 
 
 Usage
@@ -215,6 +240,21 @@ For example, here is how to combine the timeseries and sorting summary generated
     print(url)
 
 
+ephyviewer
+^^^^^^^^^^
+
+
+The :code:`ephyviewer` backend is currently only available for the :py:func:`~spikeinterface.widgets.plot_traces()` function.
+
+
+.. code-block:: python
+
+    plot_traces(recording, backend="ephyviewer", mode="line", show_channel_ids=True)
+
+
+.. image:: ../images/plot_traces_ephyviewer.png
+
+
 
 Available plotting functions
 ----------------------------
@@ -229,7 +269,7 @@ Available plotting functions
 * :py:func:`~spikeinterface.widgets.plot_spikes_on_traces` (backends: :code:`matplotlib`, :code:`ipywidgets`)
 * :py:func:`~spikeinterface.widgets.plot_template_metrics` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_template_similarity` (backends: ::code:`matplotlib`, :code:`sortingview`)
-* :py:func:`~spikeinterface.widgets.plot_timeseries` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
+* :py:func:`~spikeinterface.widgets.plot_traces` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`, :code:`ephyviewer`)
 * :py:func:`~spikeinterface.widgets.plot_unit_depths` (backends: :code:`matplotlib`)
 * :py:func:`~spikeinterface.widgets.plot_unit_locations` (backends: :code:`matplotlib`, :code:`ipywidgets`, :code:`sortingview`)
 * :py:func:`~spikeinterface.widgets.plot_unit_summary` (backends: :code:`matplotlib`)
