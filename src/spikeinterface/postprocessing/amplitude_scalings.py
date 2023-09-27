@@ -431,7 +431,7 @@ def _are_unit_indices_overlapping(sparsity_mask, i, j):
     bool
         True if the unit indices i and j are overlapping, False otherwise
     """
-    if np.sum(np.logical_and(sparsity_mask[i], sparsity_mask[j])) > 0:
+    if np.any(sparsity_mask[i] & sparsity_mask[j]):
         return True
     else:
         return False
