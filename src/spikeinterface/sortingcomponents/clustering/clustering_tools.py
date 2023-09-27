@@ -617,10 +617,12 @@ def remove_duplicates_via_matching(
                 "overlaps": computed["overlaps"],
                 "templates": computed["templates"],
                 "norms": computed["norms"],
-                "sparsities": computed["sparsities"],
                 "temporal": computed["temporal"],
                 "spatial": computed["spatial"],
                 "singular": computed["singular"],
+                "units_overlaps": computed["units_overlaps"],
+                "unit_overlaps_indices": computed["unit_overlaps_indices"],
+                "sparsity_mask": computed["sparsity_mask"],
             }
         )
         valid = (spikes["sample_index"] >= half_marging) * (spikes["sample_index"] < duration + half_marging)
