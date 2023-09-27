@@ -152,7 +152,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         matching_job_params["chunk_duration"] = "100ms"
 
         spikes = find_spikes_from_templates(
-            recording_f, method="circus-omp", method_kwargs=matching_params, **matching_job_params
+            recording_f, method="circus-omp-svd", method_kwargs=matching_params, **matching_job_params
         )
 
         if verbose:
