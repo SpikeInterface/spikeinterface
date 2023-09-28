@@ -40,7 +40,6 @@ class CellExplorerSortingExtractor(BaseSorting):
         sampling_frequency: float | None = None,
         session_info_file_path: str | Path | None = None,
         spikes_matfile_path: str | Path | None = None,
-        session_info_matfile_path: str | Path | None = None,
     ):
         try:
             from pymatreader import read_mat
@@ -66,11 +65,6 @@ class CellExplorerSortingExtractor(BaseSorting):
                     DeprecationWarning,
                 )
             file_path = spikes_matfile_path if file_path is None else file_path
-
-        if session_info_matfile_path is not None:
-            raise ValueError(
-                "The session_info_matfile_path argument is no longer supported in. Use session_info_file_path instead."
-            )
 
         self.spikes_cellinfo_path = Path(file_path)
         self.session_path = self.spikes_cellinfo_path.parent
