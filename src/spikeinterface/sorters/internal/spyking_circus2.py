@@ -20,7 +20,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     sorter_name = "spykingcircus2"
 
     _default_params = {
-        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 75},
+        "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
         "waveforms": {"max_spikes_per_unit": 200, "overwrite": True, "sparse": True, "method": "ptp", "threshold": 1},
         "filtering": {"dtype": "float32"},
         "detection": {"peak_sign": "neg", "detect_threshold": 5},
@@ -151,7 +151,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         matching_job_params["chunk_duration"] = "100ms"
 
         spikes = find_spikes_from_templates(
-            recording_f, method="circus-omp", method_kwargs=matching_params, **matching_job_params
+            recording_f, method="circus-omp-svd", method_kwargs=matching_params, **matching_job_params
         )
 
         if verbose:
