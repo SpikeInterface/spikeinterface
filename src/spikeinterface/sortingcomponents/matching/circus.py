@@ -128,6 +128,7 @@ def _freq_domain_conv(in1, in2, axes, shape, cache, calc_fast_len=True):
     return ret
 
 
+
 def compute_overlaps(templates, num_samples, num_channels, sparsities):
     num_templates = len(templates)
 
@@ -474,7 +475,6 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         return spikes
 
-
 class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
     """
     Orthogonal Matching Pursuit inspired from Spyking Circus sorter
@@ -632,6 +632,12 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         d["num_templates"] = len(d["templates"])
         d["ignored_ids"] = np.array(d["ignored_ids"])
 
+        d["unit_overlaps_tables"] = {}
+        for i in range(d["num_templates"]):
+            d["unit_overlaps_tables"][i] = np.zeros(d["num_templates"], dtype=int)
+            d["unit_overlaps_tables"][i][d["unit_overlaps_indices"][i]] = np.arange(len(d["unit_overlaps_indices"][i]))
+
+
         omp_min_sps = d["omp_min_sps"]
         # d["stop_criteria"] = omp_min_sps * np.sqrt(d["noise_levels"].sum() * d["num_samples"])
         d["stop_criteria"] = omp_min_sps * np.maximum(d["norms"], np.sqrt(d["noise_levels"].sum() * d["num_samples"]))
@@ -720,6 +726,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
                 local_overlaps = overlaps[best_cluster_ind]
                 overlapping_templates = d["unit_overlaps_indices"][best_cluster_ind]
+                table = d["unit_overlaps_tables"][best_cluster_ind]
 
                 if num_selection == M.shape[0]:
                     Z = np.zeros((2 * num_selection, 2 * num_selection), dtype=np.float32)
@@ -728,9 +735,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
 
                 mask = np.isin(myindices, overlapping_templates)
                 a, b = myindices[mask], myline[mask]
-
-                table = np.zeros(num_templates, dtype=int)
-                table[overlapping_templates] = np.arange(len(overlapping_templates))
                 M[num_selection, idx[mask]] = local_overlaps[table[a], b]
 
                 if vicinity == 0:
