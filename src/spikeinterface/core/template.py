@@ -64,7 +64,9 @@ class Templates:
             self.num_channels = self.templates_array.shape[2]
         else:
             self.num_channels = self.sparsity_mask.shape[1]
-        self.nafter = self.num_samples - self.nbefore - 1
+
+        # Time and frames domain information
+        self.nafter = self.num_samples - self.nbefore
         self.ms_before = self.nbefore / self.sampling_frequency * 1000
         self.ms_after = self.nafter / self.sampling_frequency * 1000
 
@@ -110,8 +112,8 @@ class Templates:
         if self.sparsity is None:
             return self.templates_array
 
-        dense_shape = (self.num_units, self.num_samples, self.num_channels)
-        dense_waveforms = np.zeros(dense=dense_shape, dtype=self.templates_array.dtype)
+        densified_shape = (self.num_units, self.num_samples, self.num_channels)
+        dense_waveforms = np.zeros(dense=densified_shape, dtype=self.templates_array.dtype)
 
         for unit_index, unit_id in enumerate(self.unit_ids):
             waveforms = self.templates_array[unit_index, ...]
@@ -125,8 +127,8 @@ class Templates:
             raise ValueError("Can't return sparse templates without passing a sparsity mask")
 
         max_num_active_channels = self.sparsity.max_num_active_channels
-        sparse_shape = (self.num_units, self.num_samples, max_num_active_channels)
-        sparse_waveforms = np.zeros(shape=sparse_shape, dtype=self.templates_array.dtype)
+        sparisfied_shape = (self.num_units, self.num_samples, max_num_active_channels)
+        sparse_waveforms = np.zeros(shape=sparisfied_shape, dtype=self.templates_array.dtype)
         for unit_index, unit_id in enumerate(self.unit_ids):
             waveforms = self.templates_array[unit_index, ...]
             sparse_waveforms[unit_index, ...] = self.sparsity.sparsify_waveforms(waveforms=waveforms, unit_id=unit_id)

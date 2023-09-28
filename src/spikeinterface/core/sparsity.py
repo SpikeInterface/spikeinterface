@@ -208,9 +208,8 @@ class ChannelSparsity:
 
         # If any channel is non-zero outside of the active channels, then the waveforms are not sparse
         excess_zeros = waveforms[..., num_active_channels:].sum()
-        are_sparse = excess_zeros == 0
 
-        return are_sparse
+        return int(excess_zeros) == 0
 
     @classmethod
     def from_unit_id_to_channel_ids(cls, unit_id_to_channel_ids, unit_ids, channel_ids):
