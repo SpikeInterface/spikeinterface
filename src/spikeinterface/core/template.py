@@ -6,6 +6,41 @@ from .sparsity import ChannelSparsity
 
 @dataclass(kw_only=True)
 class Templates:
+    """
+    A class to represent spike templates, which can be either dense or sparse.
+
+    Attributes
+    ----------
+    templates_array : np.ndarray
+        Array containing the templates data.
+    sampling_frequency : float
+        Sampling frequency of the templates.
+    nbefore : int
+        Number of samples before the spike peak.
+    sparsity_mask : np.ndarray, optional
+        Binary array indicating the sparsity pattern of the templates.
+        If `None`, the templates are considered dense.
+    channel_ids : np.ndarray, optional
+        Array of channel IDs. If `None`, defaults to an array of increasing integers.
+    unit_ids : np.ndarray, optional
+        Array of unit IDs. If `None`, defaults to an array of increasing integers.
+    num_units : int
+        Number of units in the templates. Automatically determined from `templates_array`.
+    num_samples : int
+        Number of samples per template. Automatically determined from `templates_array`.
+    num_channels : int
+        Number of channels in the templates. Automatically determined from `templates_array` or `sparsity_mask`.
+    nafter : int
+        Number of samples after the spike peak. Calculated as `num_samples - nbefore - 1`.
+    ms_before : float
+        Milliseconds before the spike peak. Calculated from `nbefore` and `sampling_frequency`.
+    ms_after : float
+        Milliseconds after the spike peak. Calculated from `nafter` and `sampling_frequency`.
+    sparsity : ChannelSparsity, optional
+        Object representing the sparsity pattern of the templates. Calculated from `sparsity_mask`.
+        If `None`, the templates are considered dense.
+    """
+
     templates_array: np.ndarray
     sampling_frequency: float
     nbefore: int
