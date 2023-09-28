@@ -30,7 +30,7 @@ Here, we present a MATLAB code that creates a random dataset and writes it to a 
 Loading Data in SpikeInterface
 ------------------------------
 
-After executing the above MATLAB code, a binary file named `your_data_as_a_binary.bin` will be created in your MATLAB directory. To load this file in Python, you'll need its full path.
+After executing the above MATLAB code, a binary file named :code:`your_data_as_a_binary.bin` will be created in your MATLAB directory. To load this file in Python, you'll need its full path.
 
 Use the following Python script to load the binary data into SpikeInterface:
 
@@ -55,7 +55,7 @@ Use the following Python script to load the binary data into SpikeInterface:
 
    # Load data using SpikeInterface
    recording = si.read_binary(file_path, sampling_frequency=sampling_frequency,
-                                        num_channels=num_channels, dtype=dtype)
+                              num_channels=num_channels, dtype=dtype)
 
    # Confirm that the data was loaded correctly by comparing the data shapes and see they match the MATLAB data
    print(recording.get_num_frames(), recording.get_num_channels())
@@ -65,18 +65,18 @@ Follow the steps above to seamlessly import your MATLAB data into SpikeInterface
 Common Pitfalls & Tips
 ----------------------
 
-1. **Data Shape**: Make sure your MATLAB data matrix's first dimension is samples/time and the second is channels. If your time is in the second dimension, use `time_axis=1` in `si.read_binary()`.
+1. **Data Shape**: Make sure your MATLAB data matrix's first dimension is samples/time and the second is channels. If your time is in the second dimension, use :code:`time_axis=1` in :code:`si.read_binary()`.
 2. **File Path**: Always double-check the Python file path.
 3. **Data Type Consistency**: Ensure data types between MATLAB and Python are consistent. MATLAB's `double` is equivalent to Numpy's `float64`.
 4. **Sampling Frequency**: Set the appropriate sampling frequency in Hz for SpikeInterface.
-5. **Transition to Python**: Moving from MATLAB to Python can be challenging. For newcomers to Python, consider reviewing numpy's [Numpy for MATLAB Users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) guide.
+5. **Transition to Python**: Moving from MATLAB to Python can be challenging. For newcomers to Python, consider reviewing numpy's `Numpy for MATLAB Users <https://numpy.org/doc/stable/user/numpy-for-matlab-users.html>`_ guide.
 
 Using gains and offsets for integer data
 ----------------------------------------
 
 Raw data formats often store data as integer values for memory efficiency. To give these integers meaningful physical units, you can apply a gain and an offset.
-In SpikeInterface, you can use the `gain_to_uV` and `offset_to_uV` parameters, since traces are handled in microvolts (uV). Both parameters can be integrated into the `read_binary` function.
-If your data in MATLAB is stored as `int16`, and you know the gain and offset, you can use the following code to load the data:
+In SpikeInterface, you can use the :code:`gain_to_uV` and :code:`offset_to_uV` parameters, since traces are handled in microvolts (uV). Both parameters can be integrated into the :code:`read_binary` function.
+If your data in MATLAB is stored as :code:`int16`, and you know the gain and offset, you can use the following code to load the data:
 
 .. code-block:: python
 
@@ -90,7 +90,8 @@ If your data in MATLAB is stored as `int16`, and you know the gain and offset, y
                               num_channels=num_channels, dtype=dtype_int,
                               gain_to_uV=gain_to_uV, offset_to_uV=offset_to_uV)
 
-   recording.get_traces(return_scaled=True)  # Return traces in micro volts (uV)
+   recording.get_traces()  # Return traces in original units [type: int]
+   recording.get_traces(return_scaled=True)  # Return traces in micro volts (uV) [type: float]
 
 
 This will equip your recording object with capabilities to convert the data to float values in uV using the :code:`get_traces()` method with the :code:`return_scaled` parameter set to :code:`True`.
