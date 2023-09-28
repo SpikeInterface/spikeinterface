@@ -1,6 +1,11 @@
 import numpy as np
+from typing import Union
 
-from .basewidget import BaseWidget
+# from probeinterface import ProbeGroup
+
+from .base import BaseWidget, to_attr
+# from .utils import get_unit_colors
+from ..core.waveform_extractor import WaveformExtractor
 
 
 class UnitProbeMapWidget(BaseWidget):
@@ -21,7 +26,6 @@ class UnitProbeMapWidget(BaseWidget):
     with_channel_ids: bool False default
         add channel ids text on the probe
     """
-
     def __init__(
         self,
         waveform_extractor,
@@ -30,14 +34,10 @@ class UnitProbeMapWidget(BaseWidget):
         animated=None,
         with_channel_ids=False,
         colorbar=True,
-        ncols=5,
-        axes=None,
+        backend=None,
+        **backend_kwargs,
     ):
-        from matplotlib.animation import FuncAnimation
-        from matplotlib import pyplot as plt
-        from probeinterface.plotting import plot_probe
 
-        self.waveform_extractor = waveform_extractor
         if unit_ids is None:
             unit_ids = waveform_extractor.sorting.unit_ids
         self.unit_ids = unit_ids
@@ -45,44 +45,50 @@ class UnitProbeMapWidget(BaseWidget):
             channel_ids = waveform_extractor.recording.channel_ids
         self.channel_ids = channel_ids
 
-        self.animated = animated
-        self.with_channel_ids = with_channel_ids
-        self.colorbar = colorbar
 
-        probes = waveform_extractor.recording.get_probes()
-        assert len(probes) == 1, (
-            "Unit probe map is only available for a single probe. If you have a probe group, "
-            "consider splitting the recording from different probes"
+        data_plot = dict(
+            waveform_extractor=waveform_extractor,
+            unit_ids=unit_ids,
+            channel_ids=channel_ids,
+            animated=animated,
+            with_channel_ids=with_channel_ids,
+            colorbar=colorbar,
         )
 
-        # layout
-        n = len(unit_ids)
-        if n < ncols:
-            ncols = n
-        nrows = int(np.ceil(n / ncols))
-        if axes is None:
-            fig, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=True, sharey=True)
-        BaseWidget.__init__(self, None, None, axes)
+        BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
 
-    def plot(self):
-        we = self.waveform_extractor
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import matplotlib.pyplot as plt
+        from .utils_matplotlib import make_mpl_figure
+        from probeinterface.plotting import plot_probe
+
+        dp = to_attr(data_plot)
+        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
+
+        # self.make_mpl_figure(**backend_kwargs)
+        if backend_kwargs.get("axes", None) is None:
+            backend_kwargs["num_axes"] = len(dp.unit_ids)
+
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+
+
+        we = dp.waveform_extractor
         probe = we.get_probe()
 
         probe_shape_kwargs = dict(facecolor="w", edgecolor="k", lw=0.5, alpha=1.0)
 
         all_poly_contact = []
-        for i, unit_id in enumerate(self.unit_ids):
+        for i, unit_id in enumerate(dp.unit_ids):
             ax = self.axes.flatten()[i]
             template = we.get_template(unit_id)
             # static
-            if self.animated:
+            if dp.animated:
                 contacts_values = np.zeros(template.shape[1])
             else:
                 contacts_values = np.max(np.abs(template), axis=0)
             text_on_contact = None
-            if self.with_channel_ids:
-                text_on_contact = self.channel_ids
-            from probeinterface.plotting import plot_probe
+            if dp.with_channel_ids:
+                text_on_contact = dp.channel_ids
 
             poly_contact, poly_contour = plot_probe(
                 probe,
@@ -96,7 +102,7 @@ class UnitProbeMapWidget(BaseWidget):
             if poly_contour is not None:
                 poly_contour.set_zorder(1)
 
-            if self.colorbar:
+            if dp.colorbar:
                 self.figure.colorbar(poly_contact, ax=ax)
 
             poly_contact.set_clim(0, np.max(np.abs(template)))
@@ -104,7 +110,7 @@ class UnitProbeMapWidget(BaseWidget):
 
             ax.set_title(str(unit_id))
 
-        if self.animated:
+        if dp.animated:
             num_frames = template.shape[0]
 
             def animate_func(frame):
@@ -118,12 +124,3 @@ class UnitProbeMapWidget(BaseWidget):
             from matplotlib.animation import FuncAnimation
 
             self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames, interval=20, blit=True)
-
-
-def plot_unit_probe_map(*args, **kwargs):
-    W = UnitProbeMapWidget(*args, **kwargs)
-    W.plot()
-    return W
-
-
-plot_unit_probe_map.__doc__ = UnitProbeMapWidget.__doc__

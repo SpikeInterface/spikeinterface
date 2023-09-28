@@ -348,6 +348,13 @@ class TestWidgets(unittest.TestCase):
             if backend not in self.skip_backends:
                 sw.plot_rasters(self.sorting)
 
+    def test_plot_unit_probe_map(self):
+        possible_backends = list(sw.UnitProbeMapWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_unit_probe_map(self.we)
+                
+
 
 if __name__ == "__main__":
     # unittest.main()
@@ -372,7 +379,8 @@ if __name__ == "__main__":
     # mytest.test_plot_agreement_matrix()
     # mytest.test_plot_confusion_matrix()
     # mytest.test_plot_probe_map()
-    mytest.test_plot_rasters()
+    # mytest.test_plot_rasters()
+    mytest.test_plot_unit_probe_map()
 
     # plt.ion()
     plt.show()
