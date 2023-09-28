@@ -128,7 +128,6 @@ def _freq_domain_conv(in1, in2, axes, shape, cache, calc_fast_len=True):
     return ret
 
 
-
 def compute_overlaps(templates, num_samples, num_channels, sparsities):
     num_templates = len(templates)
 
@@ -475,6 +474,7 @@ class CircusOMPPeeler(BaseTemplateMatchingEngine):
 
         return spikes
 
+
 class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
     """
     Orthogonal Matching Pursuit inspired from Spyking Circus sorter
@@ -636,7 +636,6 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         for i in range(d["num_templates"]):
             d["unit_overlaps_tables"][i] = np.zeros(d["num_templates"], dtype=int)
             d["unit_overlaps_tables"][i][d["unit_overlaps_indices"][i]] = np.arange(len(d["unit_overlaps_indices"][i]))
-
 
         omp_min_sps = d["omp_min_sps"]
         # d["stop_criteria"] = omp_min_sps * np.sqrt(d["noise_levels"].sum() * d["num_samples"])
