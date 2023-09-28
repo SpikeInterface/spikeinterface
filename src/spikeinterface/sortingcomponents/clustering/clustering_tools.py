@@ -539,6 +539,7 @@ def remove_duplicates_via_matching(
     method_kwargs={},
     job_kwargs={},
     tmp_folder=None,
+    method="circus-omp-svd",
 ):
     from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
     from spikeinterface import get_noise_levels
@@ -546,7 +547,6 @@ def remove_duplicates_via_matching(
     from spikeinterface.core import NumpySorting
     from spikeinterface.core import extract_waveforms
     from spikeinterface.core import get_global_tmp_folder
-    from spikeinterface.sortingcomponents.matching.circus import get_scipy_shape
     import string, random, shutil, os
     from pathlib import Path
 
@@ -591,19 +591,12 @@ def remove_duplicates_via_matching(
 
     chunk_size = duration + 3 * margin
 
-    dummy_filter = np.empty((num_chans, duration), dtype=np.float32)
-    dummy_traces = np.empty((num_chans, chunk_size), dtype=np.float32)
-
-    fshape, axes = get_scipy_shape(dummy_filter, dummy_traces, axes=1)
-
     method_kwargs.update(
         {
             "waveform_extractor": waveform_extractor,
             "noise_levels": noise_levels,
             "amplitudes": [0.95, 1.05],
             "omp_min_sps": 0.1,
-            "templates": None,
-            "overlaps": None,
         }
     )
 
@@ -618,16 +611,31 @@ def remove_duplicates_via_matching(
 
         method_kwargs.update({"ignored_ids": ignore_ids + [i]})
         spikes, computed = find_spikes_from_templates(
-            sub_recording, method="circus-omp", method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
+            sub_recording, method=method, method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
         )
-        method_kwargs.update(
-            {
-                "overlaps": computed["overlaps"],
-                "templates": computed["templates"],
-                "norms": computed["norms"],
-                "sparsities": computed["sparsities"],
-            }
-        )
+        if method == "circus-omp-svd":
+            method_kwargs.update(
+                {
+                    "overlaps": computed["overlaps"],
+                    "templates": computed["templates"],
+                    "norms": computed["norms"],
+                    "temporal": computed["temporal"],
+                    "spatial": computed["spatial"],
+                    "singular": computed["singular"],
+                    "units_overlaps": computed["units_overlaps"],
+                    "unit_overlaps_indices": computed["unit_overlaps_indices"],
+                    "sparsity_mask": computed["sparsity_mask"],
+                }
+            )
+        elif method == "circus-omp":
+            method_kwargs.update(
+                {
+                    "overlaps": computed["overlaps"],
+                    "templates": computed["templates"],
+                    "norms": computed["norms"],
+                    "sparsities": computed["sparsities"],
+                }
+            )
         valid = (spikes["sample_index"] >= half_marging) * (spikes["sample_index"] < duration + half_marging)
         if np.sum(valid) > 0:
             if np.sum(valid) == 1:
