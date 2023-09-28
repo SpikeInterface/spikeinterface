@@ -68,23 +68,8 @@ class CellExplorerSortingExtractor(BaseSorting):
             file_path = spikes_matfile_path if file_path is None else file_path
 
         if session_info_matfile_path is not None:
-            # Raise an error if the warning period has expired
-            deprecation_issued = datetime.datetime(2023, 4, 1)
-            deprecation_deadline = deprecation_issued + datetime.timedelta(days=180)
-            if datetime.datetime.now() > deprecation_deadline:
-                raise ValueError(
-                    "The session_info_matfile_path argument is no longer supported in. Use session_info_file_path instead."
-                )
-
-            # Otherwise, issue a DeprecationWarning
-            else:
-                warnings.warn(
-                    "The session_info_matfile_path argument is deprecated and will be removed in six months. "
-                    "Use session_info_file_path instead.",
-                    DeprecationWarning,
-                )
-            session_info_file_path = (
-                session_info_matfile_path if session_info_file_path is None else session_info_file_path
+            raise ValueError(
+                "The session_info_matfile_path argument is no longer supported in. Use session_info_file_path instead."
             )
 
         self.spikes_cellinfo_path = Path(file_path)
