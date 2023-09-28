@@ -77,7 +77,7 @@ def apply_sortingview_curation(
                 # in this case, the CurationSorting takes care of finding a new unused int
                 curation_sorting.merge(merge_group, new_unit_id=None)
                 new_unit_id = curation_sorting.max_used_id  # merged unit id
-                labels_dict[str(new_unit_id)] = labels_to_inherit
+            labels_dict[str(new_unit_id)] = labels_to_inherit
 
     # STEP 2: gather and apply sortingview curation labels
     # In sortingview, a unit is not required to have all labels.
@@ -92,19 +92,12 @@ def apply_sortingview_curation(
     }
 
     # Populate the properties dictionary
-    for u_i, unit_id in enumerate(curation_sorting.current_sorting.unit_ids):
-        labels_unit = set()
-
+    for unit_index, unit_id in enumerate(curation_sorting.current_sorting.unit_ids):
+        unit_id_str = str(unit_id)
         # Check for exact match first
-        if str(unit_id) in labels_dict:
-            labels_unit.update(labels_dict[str(unit_id)])
-        # If no exact match, check if unit_label is a substring of unit_id (for string unit ID merged unit)
-        else:
-            for unit_label, labels in labels_dict.items():
-                if isinstance(unit_id, str) and unit_label in unit_id:
-                    labels_unit.update(labels)
-        for label in labels_unit:
-            properties[label][u_i] = True
+        if unit_id_str in labels_dict:
+            for label in labels_dict[unit_id_str]:
+                properties[label][unit_index] = True
 
     for prop_name, prop_values in properties.items():
         curation_sorting.current_sorting.set_property(prop_name, prop_values)

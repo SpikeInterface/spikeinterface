@@ -138,8 +138,6 @@ def test_json_curation():
     assert len(sorting_curated_json_mua.unit_ids) == 6
     assert len(sorting_curated_json_mua1.unit_ids) == 5
 
-    print("Test for json curation passed!\n")
-
 
 def test_false_positive_curation():
     """
@@ -157,23 +155,14 @@ def test_false_positive_curation():
     sorting = se.NumpySorting.from_times_labels(times, labels, sampling_frequency)
     print("Sorting: {}".format(sorting.get_unit_ids()))
 
-    # Test curation JSON:
-    test_json = {"labelsByUnit": {"1": ["accept"], "2": ["artifact"], "12": ["artifact"]}, "mergeGroups": [[2, 12]]}
-
-    json_path = "test_data.json"
-    with open(json_path, "w") as f:
-        json.dump(test_json, f, indent=4)
-
-    # Apply curation
-    sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_path, verbose=True)
+    json_file = parent_folder / "sv-sorting-curation-false-positive.json"
+    sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_file, verbose=True)
     print("Curated:", sorting_curated_json.get_unit_ids())
 
     # Assertions
     assert sorting_curated_json.get_unit_property(unit_id=1, key="accept")
     assert not sorting_curated_json.get_unit_property(unit_id=10, key="accept")
     assert 21 in sorting_curated_json.unit_ids
-
-    print("False positive test for integer unit IDs passed!\n")
 
 
 def test_label_inheritance_int():
@@ -190,26 +179,8 @@ def test_label_inheritance_int():
 
     sorting = se.NumpySorting.from_times_labels(times, labels, sampling_frequency)
 
-    # Create a curation JSON with labels and merge groups
-    curation_dict = {
-        "labelsByUnit": {
-            "1": ["mua"],
-            "2": ["mua"],
-            "3": ["reject"],
-            "4": ["noise"],
-            "5": ["accept"],
-            "6": ["accept"],
-            "7": ["accept"],
-        },
-        "mergeGroups": [[1, 2], [3, 4], [5, 6]],
-    }
-
-    json_path = "test_curation_int.json"
-    with open(json_path, "w") as f:
-        json.dump(curation_dict, f, indent=4)
-
-    # Apply curation
-    sorting_merge = apply_sortingview_curation(sorting, uri_or_json=json_path)
+    json_file = parent_folder / "sv-sorting-curation-int.json"
+    sorting_merge = apply_sortingview_curation(sorting, uri_or_json=json_file)
 
     # Assertions for merged units
     print(f"Merge only: {sorting_merge.get_unit_ids()}")
@@ -229,12 +200,12 @@ def test_label_inheritance_int():
     assert sorting_merge.get_unit_property(unit_id=10, key="accept")
 
     # Assertions for exclude_labels
-    sorting_exclude_noise = apply_sortingview_curation(sorting, uri_or_json=json_path, exclude_labels=["noise"])
+    sorting_exclude_noise = apply_sortingview_curation(sorting, uri_or_json=json_file, exclude_labels=["noise"])
     print(f"Exclude noise: {sorting_exclude_noise.get_unit_ids()}")
     assert 9 not in sorting_exclude_noise.get_unit_ids()
 
     # Assertions for include_labels
-    sorting_include_accept = apply_sortingview_curation(sorting, uri_or_json=json_path, include_labels=["accept"])
+    sorting_include_accept = apply_sortingview_curation(sorting, uri_or_json=json_file, include_labels=["accept"])
     print(f"Include accept: {sorting_include_accept.get_unit_ids()}")
     assert 8 not in sorting_include_accept.get_unit_ids()
     assert 9 not in sorting_include_accept.get_unit_ids()
@@ -254,30 +225,10 @@ def test_label_inheritance_str():
 
     sorting = se.NumpySorting.from_times_labels(times, labels, sampling_frequency)
     print(f"Sorting: {sorting.get_unit_ids()}")
-    # Create a curation JSON with labels and merge groups
-    curation_dict = {
-        "labelsByUnit": {
-            "a": ["mua"],
-            "b": ["mua"],
-            "c": ["reject"],
-            "d": ["noise"],
-            "e": ["accept"],
-            "f": ["accept"],
-            "g": ["accept"],
-        },
-        "mergeGroups": [["a", "b"], ["c", "d"], ["e", "f"]],
-    }
 
-    json_path = "test_curation_str.json"
-    with open(json_path, "w") as f:
-        json.dump(curation_dict, f, indent=4)
-
-    # Check label inheritance for merged units
-    merged_id_1 = "a-b"
-    merged_id_2 = "c-d"
-    merged_id_3 = "e-f"
     # Apply curation
-    sorting_merge = apply_sortingview_curation(sorting, uri_or_json=json_path, verbose=True)
+    json_file = parent_folder / "sv-sorting-curation-str.json"
+    sorting_merge = apply_sortingview_curation(sorting, uri_or_json=json_file, verbose=True)
 
     # Assertions for merged units
     print(f"Merge only: {sorting_merge.get_unit_ids()}")
@@ -297,12 +248,12 @@ def test_label_inheritance_str():
     assert sorting_merge.get_unit_property(unit_id="e-f", key="accept")
 
     # Assertions for exclude_labels
-    sorting_exclude_noise = apply_sortingview_curation(sorting, uri_or_json=json_path, exclude_labels=["noise"])
+    sorting_exclude_noise = apply_sortingview_curation(sorting, uri_or_json=json_file, exclude_labels=["noise"])
     print(f"Exclude noise: {sorting_exclude_noise.get_unit_ids()}")
     assert "c-d" not in sorting_exclude_noise.get_unit_ids()
 
     # Assertions for include_labels
-    sorting_include_accept = apply_sortingview_curation(sorting, uri_or_json=json_path, include_labels=["accept"])
+    sorting_include_accept = apply_sortingview_curation(sorting, uri_or_json=json_file, include_labels=["accept"])
     print(f"Include accept: {sorting_include_accept.get_unit_ids()}")
     assert "a-b" not in sorting_include_accept.get_unit_ids()
     assert "c-d" not in sorting_include_accept.get_unit_ids()
