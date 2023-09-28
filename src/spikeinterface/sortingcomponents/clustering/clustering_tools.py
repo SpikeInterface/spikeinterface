@@ -613,7 +613,7 @@ def remove_duplicates_via_matching(
         spikes, computed = find_spikes_from_templates(
             sub_recording, method=method, method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
         )
-        if method == "circus-omp-vsd":
+        if method == "circus-omp-svd":
             method_kwargs.update(
                 {
                     "overlaps": computed["overlaps"],
