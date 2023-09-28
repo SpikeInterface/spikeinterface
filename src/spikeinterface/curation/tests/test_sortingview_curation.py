@@ -259,6 +259,7 @@ def test_label_inheritance_str():
     assert "c-d" not in sorting_include_accept.get_unit_ids()
     assert "e-f" in sorting_include_accept.get_unit_ids()
 
+
 if __name__ == "__main__":
     # generate_sortingview_curation_dataset()
     test_sha1_curation()
