@@ -23,6 +23,7 @@ def generate_test_template(template_type):
             mask=sparsity_mask, unit_ids=np.arange(num_units), channel_ids=np.arange(num_channels)
         )
 
+        # Create sparse templates
         sparse_templates_array = np.zeros(shape=(num_units, num_samples, sparsity.max_num_active_channels))
         for unit_index in range(num_units):
             template = templates_array[unit_index, ...]
@@ -35,6 +36,7 @@ def generate_test_template(template_type):
             sampling_frequency=sampling_frequency,
             nbefore=nbefore,
         )
+
     elif template_type == "sparse_with_dense_templates":  # sparse with dense templates
         sparsity_mask = np.array([[True, False, True], [False, True, False]])
 
@@ -46,7 +48,7 @@ def generate_test_template(template_type):
         )
 
 
-@pytest.mark.parametrize("template_type", ["dense", "sparse", "sparse_with_dense_templates"])
+@pytest.mark.parametrize("template_type", ["dense", "sparse"])
 def test_pickle_serialization(template_type, tmp_path):
     template = generate_test_template(template_type)
 
@@ -62,7 +64,7 @@ def test_pickle_serialization(template_type, tmp_path):
     assert template == template_reloaded
 
 
-@pytest.mark.parametrize("template_type", ["dense", "sparse", "sparse_with_dense_templates"])
+@pytest.mark.parametrize("template_type", ["dense", "sparse"])
 def test_json_serialization(template_type):
     template = generate_test_template(template_type)
 
@@ -72,14 +74,14 @@ def test_json_serialization(template_type):
     assert template == template_reloaded_from_json
 
 
-@pytest.mark.parametrize("template_type", ["dense", "sparse", "sparse_with_dense_templates"])
+@pytest.mark.parametrize("template_type", ["dense", "sparse"])
 def test_get_dense_templates(template_type):
     template = generate_test_template(template_type)
     dense_templates = template.get_dense_templates()
     assert dense_templates.shape == (template.num_units, template.num_samples, template.num_channels)
 
 
-@pytest.mark.parametrize("template_type", ["dense", "sparse", "sparse_with_dense_templates"])
+@pytest.mark.parametrize("template_type", ["dense", "sparse"])
 def test_get_sparse_templates(template_type):
     template = generate_test_template(template_type)
 
@@ -94,11 +96,8 @@ def test_get_sparse_templates(template_type):
             template.sparsity.max_num_active_channels,
         )
         assert template.are_templates_sparse()
-    elif template_type == "sparse_with_dense_templates":
-        sparse_templates = template.get_sparse_templates()
-        assert sparse_templates.shape == (
-            template.num_units,
-            template.num_samples,
-            template.sparsity.max_num_active_channels,
-        )
-        assert not template.are_templates_sparse()
+
+
+def test_initialization_fail_with_dense_templates():
+    with pytest.raises(ValueError, match="Sparsity mask passed but the templates are not sparse"):
+        template = generate_test_template(template_type="sparse_with_dense_templates")
