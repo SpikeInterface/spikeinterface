@@ -113,7 +113,7 @@ class Templates:
             return self.templates_array
 
         densified_shape = (self.num_units, self.num_samples, self.num_channels)
-        dense_waveforms = np.zeros(dense=densified_shape, dtype=self.templates_array.dtype)
+        dense_waveforms = np.zeros(shape=densified_shape, dtype=self.templates_array.dtype)
 
         for unit_index, unit_id in enumerate(self.unit_ids):
             waveforms = self.templates_array[unit_index, ...]
