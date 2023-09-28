@@ -1,16 +1,17 @@
-import numpy as np
 from .paircomparisons import GroundTruthComparison
+from .groundtruthstudy import GroundTruthStudy
 from spikeinterface.postprocessing import compute_correlograms
+
+
+import numpy as np
 
 
 class CorrelogramGTComparison(GroundTruthComparison):
     """
     This class is an extension of GroundTruthComparison by focusing
-    to benchmark correlation reconstruction
+    to benchmark correlation reconstruction.
 
-
-    collision_lag: float
-        Collision lag in ms.
+    This class needs maintenance and need a bit of refactoring.
 
     """
 
@@ -105,6 +106,62 @@ class CorrelogramGTComparison(GroundTruthComparison):
 
         order = np.argsort(similarities)
         similarities = similarities[order]
-        errors = errors[order, :]
+        errors = errors[order]
 
         return similarities, errors
+
+
+class CorrelogramGTStudy(GroundTruthStudy):
+    def run_comparisons(
+        self, case_keys=None, exhaustive_gt=True, window_ms=100.0, bin_ms=1.0, well_detected_score=0.8, **kwargs
+    ):
+        _kwargs = dict()
+        _kwargs.update(kwargs)
+        _kwargs["exhaustive_gt"] = exhaustive_gt
+        _kwargs["window_ms"] = window_ms
+        _kwargs["bin_ms"] = bin_ms
+        _kwargs["well_detected_score"] = well_detected_score
+        GroundTruthStudy.run_comparisons(self, case_keys=None, comparison_class=CorrelogramGTComparison, **_kwargs)
+        self.exhaustive_gt = exhaustive_gt
+
+    @property
+    def time_bins(self):
+        for key, value in self.comparisons.items():
+            return value.time_bins
+
+    def precompute_scores_by_similarities(self, case_keys=None, good_only=True):
+        import sklearn.metrics
+
+        if case_keys is None:
+            case_keys = self.cases.keys()
+
+        self.all_similarities = {}
+        self.all_errors = {}
+
+        for key in case_keys:
+            templates = self.get_templates(key)
+            flat_templates = templates.reshape(templates.shape[0], -1)
+            similarity = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+            comp = self.comparisons[key]
+            similarities, errors = comp.compute_correlogram_by_similarity(similarity)
+
+            self.all_similarities[key] = similarities
+            self.all_errors[key] = errors
+
+    def get_error_profile_over_similarity_bins(self, similarity_bins, key):
+        all_similarities = self.all_similarities[key]
+        all_errors = self.all_errors[key]
+
+        order = np.argsort(all_similarities)
+        all_similarities = all_similarities[order]
+        all_errors = all_errors[order, :]
+
+        result = {}
+
+        for i in range(similarity_bins.size - 1):
+            cmin, cmax = similarity_bins[i], similarity_bins[i + 1]
+            amin, amax = np.searchsorted(all_similarities, [cmin, cmax])
+            mean_errors = np.nanmean(all_errors[amin:amax], axis=0)
+            result[(cmin, cmax)] = mean_errors
+
+        return result

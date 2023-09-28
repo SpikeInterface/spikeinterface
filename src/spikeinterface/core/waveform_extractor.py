@@ -159,11 +159,20 @@ class WaveformExtractor:
             else:
                 rec_attributes["probegroup"] = None
         else:
-            try:
-                recording = load_extractor(folder / "recording.json", base_folder=folder)
-                rec_attributes = None
-            except:
+            recording = None
+            if (folder / "recording.json").exists():
+                try:
+                    recording = load_extractor(folder / "recording.json", base_folder=folder)
+                except:
+                    pass
+            elif (folder / "recording.pickle").exists():
+                try:
+                    recording = load_extractor(folder / "recording.pickle")
+                except:
+                    pass
+            if recording is None:
                 raise Exception("The recording could not be loaded. You can use the `with_recording=False` argument")
+            rec_attributes = None
 
         if sorting is None:
             sorting = load_extractor(folder / "sorting.json", base_folder=folder)
@@ -271,14 +280,22 @@ class WaveformExtractor:
             else:
                 relative_to = None
 
-            if recording.check_if_json_serializable():
+            if recording.check_serializablility("json"):
                 recording.dump(folder / "recording.json", relative_to=relative_to)
-            if sorting.check_if_json_serializable():
+            elif recording.check_serializablility("pickle"):
+                # In this case we loose the relative_to!!
+                recording.dump(folder / "recording.pickle")
+
+            if sorting.check_serializablility("json"):
                 sorting.dump(folder / "sorting.json", relative_to=relative_to)
+            elif sorting.check_serializablility("pickle"):
+                # In this case we loose the relative_to!!
+                # TODO later the dump to pickle should dump the dictionary and so relative could be put back
+                sorting.dump(folder / "sorting.pickle")
             else:
                 warn(
-                    "Sorting object is not dumpable, which might result in downstream errors for "
-                    "parallel processing. To make the sorting dumpable, use the `sorting.save()` function."
+                    "Sorting object is not serializable to file, which might result in downstream errors for "
+                    "parallel processing. To make the sorting serializable, use the `sorting = sorting.save()` function."
                 )
 
             # dump some attributes of the recording for the mode with_recording=False at next load
@@ -879,14 +896,19 @@ class WaveformExtractor:
             (folder / "params.json").write_text(json.dumps(check_json(self._params), indent=4), encoding="utf8")
 
             if self.has_recording():
-                if self.recording.check_if_json_serializable():
+                if self.recording.check_serializablility("json"):
                     self.recording.dump(folder / "recording.json", relative_to=relative_to)
-            if self.sorting.check_if_json_serializable():
+                elif self.recording.check_serializablility("pickle"):
+                    self.recording.dump(folder / "recording.pickle")
+
+            if self.sorting.check_serializablility("json"):
                 self.sorting.dump(folder / "sorting.json", relative_to=relative_to)
+            elif self.sorting.check_serializablility("pickle"):
+                self.sorting.dump(folder / "sorting.pickle")
             else:
                 warn(
-                    "Sorting object is not dumpable, which might result in downstream errors for "
-                    "parallel processing. To make the sorting dumpable, use the `sorting.save()` function."
+                    "Sorting object is not serializable to file, which might result in downstream errors for "
+                    "parallel processing. To make the sorting serializable, use the `sorting = sorting.save()` function."
                 )
 
             # dump some attributes of the recording for the mode with_recording=False at next load
@@ -931,16 +953,16 @@ class WaveformExtractor:
             # write metadata
             zarr_root.attrs["params"] = check_json(self._params)
             if self.has_recording():
-                if self.recording.check_if_json_serializable():
+                if self.recording.check_serializablility("json"):
                     rec_dict = self.recording.to_dict(relative_to=relative_to, recursive=True)
                     zarr_root.attrs["recording"] = check_json(rec_dict)
-            if self.sorting.check_if_json_serializable():
+            if self.sorting.check_serializablility("json"):
                 sort_dict = self.sorting.to_dict(relative_to=relative_to, recursive=True)
                 zarr_root.attrs["sorting"] = check_json(sort_dict)
             else:
                 warn(
-                    "Sorting object is not dumpable, which might result in downstream errors for "
-                    "parallel processing. To make the sorting dumpable, use the `sorting.save()` function."
+                    "Sorting object is not json serializable, which might result in downstream errors for "
+                    "parallel processing. To make the sorting serializable, use the `sorting = sorting.save()` function."
                 )
             recording_info = zarr_root.create_group("recording_info")
             recording_info.attrs["recording_attributes"] = check_json(rec_attributes)
