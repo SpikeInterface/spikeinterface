@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import pickle
+import warnings
 
 import numpy as np
 
@@ -180,9 +181,16 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
         return sorting
 
     def save_to_folder(self, save_folder):
+        warnings.warn(
+            "save_to_folder() is deprecated. "
+            "You should save and load the multi sorting comparison object using pickle."
+            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb')))))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         for sorting in self.object_list:
-            assert (
-                sorting.check_if_json_serializable()
+            assert sorting.check_serializablility(
+                "json"
             ), "MultiSortingComparison.save_to_folder() need json serializable sortings"
 
         save_folder = Path(save_folder)
@@ -205,6 +213,13 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
 
     @staticmethod
     def load_from_folder(folder_path):
+        warnings.warn(
+            "load_from_folder() is deprecated. "
+            "You should save and load the multi sorting comparison object using pickle."
+            "\n>>> pickle.dump(mcmp, open('mcmp.pkl', 'wb')))))\n>>> mcmp_loaded = pickle.load(open('mcmp.pkl', 'rb'))",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         folder_path = Path(folder_path)
         with (folder_path / "kwargs.json").open() as f:
             kwargs = json.load(f)
@@ -244,7 +259,8 @@ class AgreementSortingExtractor(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
 
-        self._is_json_serializable = False
+        self._serializablility["json"] = False
+        self._serializablility["pickle"] = True
 
         if len(unit_ids) > 0:
             for k in ("agreement_number", "avg_agreement", "unit_ids"):

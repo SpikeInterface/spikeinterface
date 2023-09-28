@@ -1,6 +1,8 @@
 import numpy as np
+from warnings import warn
 
-from .basewidget import BaseWidget
+from .base import BaseWidget, to_attr
+from .utils import get_unit_colors
 
 
 class ConfusionMatrixWidget(BaseWidget):
@@ -15,40 +17,35 @@ class ConfusionMatrixWidget(BaseWidget):
         If True counts are displayed as text
     unit_ticks: bool
         If True unit tick labels are displayed
-    figure: matplotlib figure
-        The figure to be used. If not given a figure is created
-    ax: matplotlib axis
-        The axis to be used. If not given an axis is created
 
-    Returns
-    -------
-    W: ConfusionMatrixWidget
-        The output widget
     """
 
-    def __init__(self, gt_comparison, count_text=True, unit_ticks=True, figure=None, ax=None):
-        from matplotlib import pyplot as plt
+    def __init__(self, gt_comparison, count_text=True, unit_ticks=True, backend=None, **backend_kwargs):
+        plot_data = dict(
+            gt_comparison=gt_comparison,
+            count_text=count_text,
+            unit_ticks=unit_ticks,
+        )
+        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
-        BaseWidget.__init__(self, figure, ax)
-        self._gtcomp = gt_comparison
-        self._count_text = count_text
-        self._unit_ticks = unit_ticks
-        self.name = "ConfusionMatrix"
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import matplotlib.pyplot as plt
+        from .utils_matplotlib import make_mpl_figure
 
-    def plot(self):
-        self._do_plot()
+        dp = to_attr(data_plot)
 
-    def _do_plot(self):
-        # a dataframe
-        confusion_matrix = self._gtcomp.get_confusion_matrix()
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
+        comp = dp.gt_comparison
+
+        confusion_matrix = comp.get_confusion_matrix()
         N1 = confusion_matrix.shape[0] - 1
         N2 = confusion_matrix.shape[1] - 1
 
         # Using matshow here just because it sets the ticks up nicely. imshow is faster.
         self.ax.matshow(confusion_matrix.values, cmap="Greens")
 
-        if self._count_text:
+        if dp.count_text:
             for (i, j), z in np.ndenumerate(confusion_matrix.values):
                 if z != 0:
                     if z > np.max(confusion_matrix.values) / 2.0:
@@ -65,27 +62,18 @@ class ConfusionMatrixWidget(BaseWidget):
         self.ax.xaxis.tick_bottom()
 
         # Labels for major ticks
-        if self._unit_ticks:
+        if dp.unit_ticks:
             self.ax.set_yticklabels(confusion_matrix.index, fontsize=12)
             self.ax.set_xticklabels(confusion_matrix.columns, fontsize=12)
         else:
             self.ax.set_xticklabels(np.append([""] * N2, "FN"), fontsize=10)
             self.ax.set_yticklabels(np.append([""] * N1, "FP"), fontsize=10)
 
-        self.ax.set_xlabel(self._gtcomp.name_list[1], fontsize=20)
-        self.ax.set_ylabel(self._gtcomp.name_list[0], fontsize=20)
+        self.ax.set_xlabel(comp.name_list[1], fontsize=20)
+        self.ax.set_ylabel(comp.name_list[0], fontsize=20)
 
         self.ax.set_xlim(-0.5, N2 + 0.5)
         self.ax.set_ylim(
             N1 + 0.5,
             -0.5,
         )
-
-
-def plot_confusion_matrix(*args, **kwargs):
-    W = ConfusionMatrixWidget(*args, **kwargs)
-    W.plot()
-    return W
-
-
-plot_confusion_matrix.__doc__ = ConfusionMatrixWidget.__doc__
