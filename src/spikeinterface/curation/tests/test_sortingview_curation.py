@@ -91,7 +91,7 @@ def test_sha1_curation():
     # https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://bd53f6b707f8121cadc901562a89b67aec81cc81&label=SpikeInterface%20-%20Sorting%20Summary&s={%22sortingCuration%22:%22sha1://1182ba19671fcc7d3f8e0501b0f8c07fb9736c22%22}
     sha1_uri = "sha1://1182ba19671fcc7d3f8e0501b0f8c07fb9736c22"
     sorting_curated_sha1 = apply_sortingview_curation(sorting, uri_or_json=sha1_uri, verbose=True)
-    print(f"From SHA: {sorting_curated_sha1}")
+    # print(f"From SHA: {sorting_curated_sha1}")
 
     assert len(sorting_curated_sha1.unit_ids) == 9
     assert "#8-#9" in sorting_curated_sha1.unit_ids
@@ -118,7 +118,7 @@ def test_json_curation():
 
     # from curation.json
     json_file = parent_folder / "sv-sorting-curation.json"
-    print(f"Sorting: {sorting.get_unit_ids()}")
+    # print(f"Sorting: {sorting.get_unit_ids()}")
     sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_file, verbose=True)
 
     assert len(sorting_curated_json.unit_ids) == 9
@@ -153,11 +153,11 @@ def test_false_positive_curation():
     labels = np.random.randint(1, num_units + 1, size=num_spikes)
 
     sorting = se.NumpySorting.from_times_labels(times, labels, sampling_frequency)
-    print("Sorting: {}".format(sorting.get_unit_ids()))
+    # print("Sorting: {}".format(sorting.get_unit_ids()))
 
     json_file = parent_folder / "sv-sorting-curation-false-positive.json"
     sorting_curated_json = apply_sortingview_curation(sorting, uri_or_json=json_file, verbose=True)
-    print("Curated:", sorting_curated_json.get_unit_ids())
+    # print("Curated:", sorting_curated_json.get_unit_ids())
 
     # Assertions
     assert sorting_curated_json.get_unit_property(unit_id=1, key="accept")
@@ -183,7 +183,7 @@ def test_label_inheritance_int():
     sorting_merge = apply_sortingview_curation(sorting, uri_or_json=json_file)
 
     # Assertions for merged units
-    print(f"Merge only: {sorting_merge.get_unit_ids()}")
+    # print(f"Merge only: {sorting_merge.get_unit_ids()}")
     assert sorting_merge.get_unit_property(unit_id=8, key="mua")  # 8 = merged unit of 1 and 2
     assert not sorting_merge.get_unit_property(unit_id=8, key="reject")
     assert not sorting_merge.get_unit_property(unit_id=8, key="noise")
@@ -201,12 +201,12 @@ def test_label_inheritance_int():
 
     # Assertions for exclude_labels
     sorting_exclude_noise = apply_sortingview_curation(sorting, uri_or_json=json_file, exclude_labels=["noise"])
-    print(f"Exclude noise: {sorting_exclude_noise.get_unit_ids()}")
+    # print(f"Exclude noise: {sorting_exclude_noise.get_unit_ids()}")
     assert 9 not in sorting_exclude_noise.get_unit_ids()
 
     # Assertions for include_labels
     sorting_include_accept = apply_sortingview_curation(sorting, uri_or_json=json_file, include_labels=["accept"])
-    print(f"Include accept: {sorting_include_accept.get_unit_ids()}")
+    # print(f"Include accept: {sorting_include_accept.get_unit_ids()}")
     assert 8 not in sorting_include_accept.get_unit_ids()
     assert 9 not in sorting_include_accept.get_unit_ids()
     assert 10 in sorting_include_accept.get_unit_ids()
@@ -224,14 +224,14 @@ def test_label_inheritance_str():
     labels = np.random.choice(["a", "b", "c", "d", "e", "f", "g"], size=num_spikes)
 
     sorting = se.NumpySorting.from_times_labels(times, labels, sampling_frequency)
-    print(f"Sorting: {sorting.get_unit_ids()}")
+    # print(f"Sorting: {sorting.get_unit_ids()}")
 
     # Apply curation
     json_file = parent_folder / "sv-sorting-curation-str.json"
     sorting_merge = apply_sortingview_curation(sorting, uri_or_json=json_file, verbose=True)
 
     # Assertions for merged units
-    print(f"Merge only: {sorting_merge.get_unit_ids()}")
+    # print(f"Merge only: {sorting_merge.get_unit_ids()}")
     assert sorting_merge.get_unit_property(unit_id="a-b", key="mua")
     assert not sorting_merge.get_unit_property(unit_id="a-b", key="reject")
     assert not sorting_merge.get_unit_property(unit_id="a-b", key="noise")
@@ -249,16 +249,15 @@ def test_label_inheritance_str():
 
     # Assertions for exclude_labels
     sorting_exclude_noise = apply_sortingview_curation(sorting, uri_or_json=json_file, exclude_labels=["noise"])
-    print(f"Exclude noise: {sorting_exclude_noise.get_unit_ids()}")
+    # print(f"Exclude noise: {sorting_exclude_noise.get_unit_ids()}")
     assert "c-d" not in sorting_exclude_noise.get_unit_ids()
 
     # Assertions for include_labels
     sorting_include_accept = apply_sortingview_curation(sorting, uri_or_json=json_file, include_labels=["accept"])
-    print(f"Include accept: {sorting_include_accept.get_unit_ids()}")
+    # print(f"Include accept: {sorting_include_accept.get_unit_ids()}")
     assert "a-b" not in sorting_include_accept.get_unit_ids()
     assert "c-d" not in sorting_include_accept.get_unit_ids()
     assert "e-f" in sorting_include_accept.get_unit_ids()
-
 
 if __name__ == "__main__":
     # generate_sortingview_curation_dataset()
