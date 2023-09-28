@@ -811,14 +811,30 @@ class WaveformExtractor:
                 sparsity = ChannelSparsity(mask, unit_ids, self.channel_ids)
             else:
                 sparsity = None
-            we = WaveformExtractor.create(self.recording, sorting, folder=None, mode="memory", sparsity=sparsity)
-            we.set_params(**self._params)
+            if self.has_recording():
+                we = WaveformExtractor.create(self.recording, sorting, folder=None, mode="memory", sparsity=sparsity)
+            else:
+                we = WaveformExtractor(
+                    recording=None,
+                    sorting=sorting,
+                    folder=None,
+                    sparsity=sparsity,
+                    rec_attributes=self._rec_attributes,
+                    allow_unfiltered=True,
+                )
+            we._params = self._params
             # copy memory objects
             if self.has_waveforms():
                 we._memory_objects = {"wfs_arrays": {}, "sampled_indices": {}}
                 for unit_id in unit_ids:
-                    we._memory_objects["wfs_arrays"][unit_id] = self._memory_objects["wfs_arrays"][unit_id]
-                    we._memory_objects["sampled_indices"][unit_id] = self._memory_objects["sampled_indices"][unit_id]
+                    if self.format == "memory":
+                        we._memory_objects["wfs_arrays"][unit_id] = self._memory_objects["wfs_arrays"][unit_id]
+                        we._memory_objects["sampled_indices"][unit_id] = self._memory_objects["sampled_indices"][
+                            unit_id
+                        ]
+                    else:
+                        we._memory_objects["wfs_arrays"][unit_id] = self.get_waveforms(unit_id)
+                        we._memory_objects["sampled_indices"][unit_id] = self.get_sampled_indices(unit_id)
 
         # finally select extensions data
         for ext_name in self.get_available_extension_names():
