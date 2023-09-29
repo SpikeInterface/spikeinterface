@@ -148,9 +148,7 @@ class PyKilosortSorter(BaseSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
-        recording = load_extractor(
-            sorter_output_folder.parent / "spikeinterface_recording.json", base_folder=sorter_output_folder.parent
-        )
+        recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
         if not recording.binary_compatible_with(time_axis=0, file_paths_lenght=1):
             # saved by setup recording

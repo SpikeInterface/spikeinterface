@@ -66,7 +66,8 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
     engine_kwargs: dict
 
     return_output: bool, dfault False
-        Return a sorting or None.
+        Return a sortings or None.
+        This also overwrite kwargs in  in run_sorter(with_sorting=True/False)
 
     Returns
     -------
@@ -88,8 +89,12 @@ def run_sorter_jobs(job_list, engine="loop", engine_kwargs={}, return_output=Fal
             "processpoolexecutor",
         ), "Only 'loop', 'joblib', and 'processpoolexecutor' support return_output=True."
         out = []
+        for kwargs in job_list:
+            kwargs["with_output"] = True
     else:
         out = None
+        for kwargs in job_list:
+            kwargs["with_output"] = False
 
     if engine == "loop":
         # simple loop in main process

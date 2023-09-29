@@ -261,7 +261,8 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
             we_sparse, metric_names=metric_names, sparsity=None, seed=0, n_jobs=2
         )
         for metric_name in metrics.columns:
-            assert np.allclose(metrics[metric_name], metrics_par[metric_name])
+            # NaNs are skipped
+            assert np.allclose(metrics[metric_name].dropna(), metrics_par[metric_name].dropna())
 
     def test_recordingless(self):
         we = self.we_long
@@ -305,7 +306,7 @@ if __name__ == "__main__":
     test.setUp()
     # test.test_drift_metrics()
     # test.test_extension()
-    # test.test_nn_metrics()
+    test.test_nn_metrics()
     # test.test_peak_sign()
     # test.test_empty_units()
-    test.test_recordingless()
+    # test.test_recordingless()
