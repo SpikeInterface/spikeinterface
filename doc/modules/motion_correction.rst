@@ -107,7 +107,7 @@ Optionally any parameter from the preset can be overwritten:
     rec_corrected = correct_motion(recording=rec, preset="nonrigid_accurate",
                                    detect_kwargs=dict(
                                        detect_threshold=10.),
-                                   estimate_motion_kwargs=dic(
+                                   estimate_motion_kwargs=dict(
                                        histogram_depth_smooth_um=8.,
                                        time_horizon_s=120.,
                                    ),
