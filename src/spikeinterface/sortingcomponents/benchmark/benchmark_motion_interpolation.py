@@ -193,11 +193,15 @@ class BenchmarkMotionInterpolationMearec(BenchmarkBase):
             recording = self.recordings[case["recording"]]
             output_folder = self.folder / f"tmp_sortings_{label}"
             if output_folder.exists() and skip_already_done:
-                print('already done')
+                print("already done")
                 sorting = read_sorter_folder(output_folder)
             else:
                 sorting = run_sorter(
-                    sorter_name, recording, output_folder, **sorter_params, delete_output_folder=self.delete_output_folder
+                    sorter_name,
+                    recording,
+                    output_folder,
+                    **sorter_params,
+                    delete_output_folder=self.delete_output_folder,
                 )
             self.sortings[label] = sorting
 
