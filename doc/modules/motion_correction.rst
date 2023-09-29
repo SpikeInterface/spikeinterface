@@ -163,8 +163,8 @@ The high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
                                     max_distance_um=150.0, **job_kwargs)
 
     # Step 2: motion inference
-    motion, temporal_bins, spatial_bins = estimate_motion(recording=rec, 
-                                                          peaks=peaks, 
+    motion, temporal_bins, spatial_bins = estimate_motion(recording=rec,
+                                                          peaks=peaks,
                                                           peak_locations=peak_locations,
                                                           method="decentralized",
                                                           direction="y",
@@ -175,8 +175,8 @@ The high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
 
     # Step 3: motion interpolation
     # this step is lazy
-    rec_corrected = interpolate_motion(recording=rec, motion=motion, 
-                                       temporal_bins=temporal_bins, 
+    rec_corrected = interpolate_motion(recording=rec, motion=motion,
+                                       temporal_bins=temporal_bins,
                                        spatial_bins=spatial_bins,
                                        border_mode="remove_channels",
                                        spatial_interpolation_method="kriging",

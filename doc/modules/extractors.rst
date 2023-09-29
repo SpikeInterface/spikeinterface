@@ -6,7 +6,7 @@ Overview
 
 The :py:mod:`~spikeinterface.extractors` module allows you to load :py:class:`~spikeinterface.core.BaseRecording`,
 :py:class:`~spikeinterface.core.BaseSorting`, and :py:class:`~spikeinterface.core.BaseEvent` objects from
-a large variety of acquisition systems and spike sorting outputs. 
+a large variety of acquisition systems and spike sorting outputs.
 
 Most of the :code:`Recording` classes are implemented by wrapping the
 `NEO rawio implementation <https://github.com/NeuralEnsemble/python-neo/tree/master/neo/rawio>`_.
