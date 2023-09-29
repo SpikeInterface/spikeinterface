@@ -123,6 +123,9 @@ def generate_sorting(
     firing_rates=3.0,
     empty_units=None,
     refractory_period_ms=3.0,  # in ms
+    add_spikes_on_borders=False,
+    num_spikes_per_border=3,
+    border_size_samples=20,
     seed=None,
 ):
     """
@@ -142,6 +145,12 @@ def generate_sorting(
         List of units that will have no spikes. (used for testing mainly).
     refractory_period_ms : float, default: 3.0
         The refractory period in ms
+    add_spikes_on_borders : bool, default: False
+        If True, spikes will be added close to the borders of the segments.
+    num_spikes_per_border : int, default: 3
+        The number of spikes to add close to the borders of the segments.
+    border_size_samples : int, default: 20
+        The size of the border in samples to add border spikes.
     seed : int, default: None
         The random seed
 
@@ -151,11 +160,13 @@ def generate_sorting(
         The sorting object
     """
     seed = _ensure_seed(seed)
+    rng = np.random.default_rng(seed)
     num_segments = len(durations)
     unit_ids = np.arange(num_units)
 
     spikes = []
     for segment_index in range(num_segments):
+        num_samples = int(sampling_frequency * durations[segment_index])
         times, labels = synthesize_random_firings(
             num_units=num_units,
             sampling_frequency=sampling_frequency,
@@ -175,7 +186,23 @@ def generate_sorting(
         spikes_in_seg["unit_index"] = labels
         spikes_in_seg["segment_index"] = segment_index
         spikes.append(spikes_in_seg)
+
+        if add_spikes_on_borders:
+            spikes_on_borders = np.zeros(2 * num_spikes_per_border, dtype=minimum_spike_dtype)
+            spikes_on_borders["segment_index"] = segment_index
+            spikes_on_borders["unit_index"] = rng.choice(num_units, size=2 * num_spikes_per_border, replace=True)
+            # at start
+            spikes_on_borders["sample_index"][:num_spikes_per_border] = rng.integers(
+                0, border_size_samples, num_spikes_per_border
+            )
+            # at end
+            spikes_on_borders["sample_index"][num_spikes_per_border:] = rng.integers(
+                num_samples - border_size_samples, num_samples, num_spikes_per_border
+            )
+            spikes.append(spikes_on_borders)
+
     spikes = np.concatenate(spikes)
+    spikes = spikes[np.lexsort((spikes["sample_index"], spikes["segment_index"]))]
 
     sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
 
@@ -596,6 +623,7 @@ class NoiseGeneratorRecording(BaseRecording):
         dtype = np.dtype(dtype).name  # Cast to string for serialization
         if dtype not in ("float32", "float64"):
             raise ValueError(f"'dtype' must be 'float32' or 'float64' but is {dtype}")
+        assert strategy in ("tile_pregenerated", "on_the_fly"), "'strategy' must be 'tile_pregenerated' or 'on_the_fly'"
 
         BaseRecording.__init__(self, sampling_frequency=sampling_frequency, channel_ids=channel_ids, dtype=dtype)
 
@@ -1056,6 +1084,8 @@ class InjectTemplatesRecording(BaseRecording):
         dtype = parent_recording.dtype if parent_recording is not None else templates.dtype
         BaseRecording.__init__(self, sorting.get_sampling_frequency(), channel_ids, dtype)
 
+        # Important : self._serializablility is not change here because it will depend on the sorting parents itself.
+
         n_units = len(sorting.unit_ids)
         assert len(templates) == n_units
         self.spike_vector = sorting.to_spike_vector()
@@ -1431,5 +1461,7 @@ def generate_ground_truth_recording(
     )
     recording.annotate(is_filtered=True)
     recording.set_probe(probe, in_place=True)
+    recording.set_channel_gains(1.0)
+    recording.set_channel_offsets(0.0)
 
     return recording, sorting
