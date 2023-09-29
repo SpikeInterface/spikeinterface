@@ -180,7 +180,7 @@ class GroundTruthStudy:
 
             if sorting_exists:
                 # delete older sorting + log before running sorters
-                shutil.rmtree(sorting_exists)
+                shutil.rmtree(sorter_folder)
                 log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
                 if log_file.exists():
                     log_file.unlink()
