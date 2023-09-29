@@ -524,6 +524,30 @@ class TracesWidget(BaseWidget):
 
         self.url = handle_display_and_url(self, self.view, **backend_kwargs)
 
+    def plot_ephyviewer(self, data_plot, **backend_kwargs):
+        import ephyviewer
+        from ..preprocessing import depth_order
+
+        dp = to_attr(data_plot)
+
+        app = ephyviewer.mkQApp()
+        win = ephyviewer.MainViewer(debug=False, show_auto_scale=True)
+
+        for k, rec in dp.recordings.items():
+            if dp.order_channel_by_depth:
+                rec = depth_order(rec, flip=True)
+
+            sig_source = ephyviewer.SpikeInterfaceRecordingSource(recording=rec)
+            view = ephyviewer.TraceViewer(source=sig_source, name=k)
+            view.params["scale_mode"] = "by_channel"
+            if dp.show_channel_ids:
+                view.params["display_labels"] = True
+            view.auto_scale()
+            win.add_view(view)
+
+        win.show()
+        app.exec()
+
 
 def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=None, return_scaled=False):
     # function also used in ipywidgets plotter
