@@ -220,7 +220,7 @@ class MdaSortingExtractor(BaseSorting):
             times = sorting.get_unit_spike_train(unit_id=unit_id)
             times_list.append(times)
             # unit id may not be numeric
-            if unit_id.dtype.kind in 'biufc':
+            if unit_id.dtype.kind in "biufc":
                 labels_list.append(np.ones(times.shape) * unit_id)
             else:
                 labels_list.append(np.ones(times.shape) * unit_id_i)

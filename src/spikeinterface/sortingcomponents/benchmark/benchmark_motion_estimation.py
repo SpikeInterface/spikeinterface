@@ -584,13 +584,13 @@ def plot_motions_several_benchmarks(benchmarks):
     _simpleaxis(ax)
 
 
-def plot_speed_several_benchmarks(benchmarks, detailed=True,  ax=None, colors=None):
+def plot_speed_several_benchmarks(benchmarks, detailed=True, ax=None, colors=None):
     if ax is None:
         fig, ax = plt.subplots(figsize=(5, 5))
 
     for count, benchmark in enumerate(benchmarks):
         color = colors[count] if colors is not None else None
-        
+
         if detailed:
             bottom = 0
             i = 0
@@ -606,8 +606,6 @@ def plot_speed_several_benchmarks(benchmarks, detailed=True,  ax=None, colors=No
         else:
             total_run_time = np.sum([value for key, value in benchmark.run_times.items()])
             ax.bar([count], [total_run_time], color=color, edgecolor="black")
-                                    
-
 
     # ax.legend()
     ax.set_ylabel("speed (s)")
