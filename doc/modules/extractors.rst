@@ -6,18 +6,19 @@ Overview
 
 The :py:mod:`~spikeinterface.extractors` module allows you to load :py:class:`~spikeinterface.core.BaseRecording`,
 :py:class:`~spikeinterface.core.BaseSorting`, and :py:class:`~spikeinterface.core.BaseEvent` objects from
-a large variety of acquisition systems and spike sorting outputs.
+a large variety of acquisition systems and spike sorting outputs. 
 
 Most of the :code:`Recording` classes are implemented by wrapping the
 `NEO rawio implementation <https://github.com/NeuralEnsemble/python-neo/tree/master/neo/rawio>`_.
 
 Most of the :code:`Sorting` classes are instead directly implemented in SpikeInterface.
 
-
 Although SpikeInterface is object-oriented (class-based), each object can also be loaded with a convenient
 :code:`read_XXXXX()` function.
 
+.. code-block:: python
 
+    import spikeinterface.extractors as se
 
 
 Read one Recording
@@ -27,24 +28,36 @@ Every format can be read with a simple function:
 
 .. code-block:: python
 
-    recording_oe = read_openephys("open-ephys-folder")
+    recording_oe = read_openephys(folder_path="open-ephys-folder")
 
-    recording_spikeglx = read_spikeglx("spikeglx-folder")
+    recording_spikeglx = read_spikeglx(folder_path="spikeglx-folder")
 
-    recording_blackrock = read_blackrock("blackrock-folder")
+    recording_blackrock = read_blackrock(folder_path="blackrock-folder")
 
-    recording_mearec = read_mearec("mearec_file.h5")
+    recording_mearec = read_mearec(file_path="mearec_file.h5")
 
 
 Importantly, some formats directly handle the probe information:
 
 .. code-block:: python
 
-    recording_spikeglx = read_spikeglx("spikeglx-folder")
+    recording_spikeglx = read_spikeglx(folder_path="spikeglx-folder")
     print(recording_spikeglx.get_probe())
 
-    recording_mearec = read_mearec("mearec_file.h5")
+    recording_mearec = read_mearec(file_path="mearec_file.h5")
     print(recording_mearec.get_probe())
+
+
+Although most recordings are loaded with the :py:mod:`~spikeinterface.extractors`
+a few file formats are loaded from the :py:mod:`~spikeinterface.core` module
+
+.. code-block:: python
+
+    import spikeinterface as si
+
+    recording_binary = si.read_binary(file_path='binary.bin')
+
+    recording_zarr = si.read_zarr(file_path='zarr_file.zarr')
 
 
 Read one Sorting
@@ -52,7 +65,7 @@ Read one Sorting
 
 .. code-block:: python
 
-    sorting_KS = read_kilosort("kilosort-folder")
+    sorting_KS = read_kilosort(folder_path="kilosort-folder")
 
 
 Read one Event
@@ -60,7 +73,7 @@ Read one Event
 
 .. code-block:: python
 
-    events_OE = read_openephys_event("open-ephys-folder")
+    events_OE = read_openephys_event(folder_path="open-ephys-folder")
 
 
 For a comprehensive list of compatible technologies, see :ref:`compatible_formats`.
@@ -77,7 +90,7 @@ The actual reading will be done on demand using the :py:meth:`~spikeinterface.co
 .. code-block:: python
 
     # opening a 40GB SpikeGLX dataset is fast
-    recording_spikeglx = read_spikeglx("spikeglx-folder")
+    recording_spikeglx = read_spikeglx(folder_path="spikeglx-folder")
 
     # this really does load the full 40GB into memory : not recommended!!!!!
     traces = recording_spikeglx.get_traces(start_frame=None, end_frame=None, return_scaled=False)
