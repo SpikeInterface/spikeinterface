@@ -35,6 +35,7 @@ def export_to_phy(
     template_mode: str = "median",
     dtype: Optional[npt.DTypeLike] = None,
     verbose: bool = True,
+    use_relative_path: bool = False,
     **job_kwargs,
 ):
     """
@@ -64,6 +65,9 @@ def export_to_phy(
         Dtype to save binary data
     verbose: bool
         If True, output is verbose
+    use_relative_path : bool, default: False
+        If True and `copy_binary=True` saves the binary file `dat_path` in the `params.py` relative to `output_folder` (ie `dat_path=r'recording.dat'`). If `copy_binary=False`, then uses a path relative to the `output_folder`
+        If False, uses an absolute path in the `params.py` (ie `dat_path=r'path/to/the/recording.dat'`)
     {}
 
     """
@@ -81,7 +85,7 @@ def export_to_phy(
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     # check sparsity
-    if (num_chans > 64) and (sparsity is None or not waveform_extractor.is_sparse()):
+    if (num_chans > 64) and (sparsity is None and not waveform_extractor.is_sparse()):
         warnings.warn(
             "Exporting to Phy with many channels and without sparsity might result in a heavy and less "
             "informative visualization. You can use use a sparse WaveformExtractor or you can use the 'sparsity' "
@@ -94,7 +98,7 @@ def export_to_phy(
         used_sparsity = sparsity
     else:
         used_sparsity = ChannelSparsity.create_dense(waveform_extractor)
-    # convinient sparsity dict for the 3 cases to retrieve channl_inds
+    # convenient sparsity dict for the 3 cases to retrieve channl_inds
     sparse_dict = used_sparsity.unit_id_to_channel_indices
 
     empty_flag = False
@@ -106,7 +110,7 @@ def export_to_phy(
             empty_flag = True
     unit_ids = non_empty_units
     if empty_flag:
-        warnings.warn("Empty units have been removed when being exported to Phy")
+        warnings.warn("Empty units have been removed while exporting to Phy")
 
     if len(unit_ids) == 0:
         raise Exception("No non-empty units in the sorting result, can't save to Phy.")
@@ -149,7 +153,15 @@ def export_to_phy(
 
     # write params.py
     with (output_folder / "params.py").open("w") as f:
-        f.write(f"dat_path = r'{str(rec_path)}'\n")
+        if use_relative_path:
+            if copy_binary:
+                f.write(f"dat_path = r'recording.dat'\n")
+            elif rec_path == "None":
+                f.write(f"dat_path = {rec_path}\n")
+            else:
+                f.write(f"dat_path = r'{str(Path(rec_path).relative_to(output_folder))}'\n")
+        else:
+            f.write(f"dat_path = r'{str(rec_path)}'\n")
         f.write(f"n_channels_dat = {num_chans}\n")
         f.write(f"dtype = '{dtype_str}'\n")
         f.write(f"offset = 0\n")
@@ -178,7 +190,11 @@ def export_to_phy(
         templates[unit_ind, :, :][:, : len(chan_inds)] = template
         templates_ind[unit_ind, : len(chan_inds)] = chan_inds
 
-    template_similarity = compute_template_similarity(waveform_extractor, method="cosine_similarity")
+    if waveform_extractor.is_extension("similarity"):
+        tmc = waveform_extractor.load_extension("similarity")
+        template_similarity = tmc.get_data()
+    else:
+        template_similarity = compute_template_similarity(waveform_extractor, method="cosine_similarity")
 
     np.save(str(output_folder / "templates.npy"), templates)
     np.save(str(output_folder / "template_ind.npy"), templates_ind)

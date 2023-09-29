@@ -64,7 +64,8 @@ class NumpyRecording(BaseRecording):
             assert len(t_starts) == len(traces_list), "t_starts must be a list of same size than traces_list"
             t_starts = [float(t_start) for t_start in t_starts]
 
-        self._is_json_serializable = False
+        self._serializablility["json"] = False
+        self._serializablility["pickle"] = False
 
         for i, traces in enumerate(traces_list):
             if t_starts is None:
@@ -126,8 +127,10 @@ class NumpySorting(BaseSorting):
         """ """
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        self._is_dumpable = True
-        self._is_json_serializable = False
+        self._serializablility["memory"] = True
+        self._serializablility["json"] = False
+        # theorically this should be False but for simplicity make generators simples we still need this.
+        self._serializablility["pickle"] = True
 
         if spikes.size == 0:
             nseg = 1
@@ -338,8 +341,7 @@ class NumpySortingSegment(BaseSortingSegment):
         if self.spikes_in_seg is None:
             # the slicing of segment is done only once the first time
             # this fasten the constructor a lot
-            s0 = np.searchsorted(self.spikes["segment_index"], self.segment_index, side="left")
-            s1 = np.searchsorted(self.spikes["segment_index"], self.segment_index + 1, side="left")
+            s0, s1 = np.searchsorted(self.spikes["segment_index"], [self.segment_index, self.segment_index + 1])
             self.spikes_in_seg = self.spikes[s0:s1]
 
         unit_index = self.unit_ids.index(unit_id)
@@ -358,8 +360,10 @@ class SharedMemorySorting(BaseSorting):
         assert shape[0] > 0, "SharedMemorySorting only supported with no empty sorting"
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
-        self._is_dumpable = True
-        self._is_json_serializable = False
+
+        self._serializablility["memory"] = True
+        self._serializablility["json"] = False
+        self._serializablility["pickle"] = False
 
         self.shm = SharedMemory(shm_name, create=False)
         self.shm_spikes = np.ndarray(shape=shape, dtype=dtype, buffer=self.shm.buf)
@@ -517,8 +521,9 @@ class NumpySnippets(BaseSnippets):
             dtype=dtype,
         )
 
-        self._is_dumpable = False
-        self._is_json_serializable = False
+        self._serializablility["memory"] = False
+        self._serializablility["json"] = False
+        self._serializablility["pickle"] = False
 
         for snippets, spikesframes in zip(snippets_list, spikesframes_list):
             snp_segment = NumpySnippetsSegment(snippets, spikesframes)

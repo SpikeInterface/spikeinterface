@@ -2,7 +2,8 @@
 import numpy as np
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, split_job_kwargs, fix_job_kwargs
 
-from .peak_pipeline import (
+
+from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
     find_parent_of_type,
     PeakRetriever,

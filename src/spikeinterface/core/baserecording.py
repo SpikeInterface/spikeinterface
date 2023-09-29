@@ -1,18 +1,22 @@
-from typing import Iterable, List, Union
-from pathlib import Path
 import warnings
+from pathlib import Path
+from typing import Iterable, List, Union
+from warnings import warn
 
 import numpy as np
-
-from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
+from probeinterface import Probe, ProbeGroup, read_probeinterface, select_axes, write_probeinterface
 
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
-from .core_tools import write_binary_recording, write_memory_recording, write_traces_to_zarr, check_json
+from .core_tools import (
+    check_json,
+    convert_bytes_to_str,
+    convert_seconds_to_str,
+    write_binary_recording,
+    write_memory_recording,
+    write_traces_to_zarr,
+)
 from .job_tools import split_job_kwargs
-from .core_tools import convert_bytes_to_str, convert_seconds_to_str
-
-from warnings import warn
 
 
 class BaseRecording(BaseRecordingSnippets):
@@ -416,6 +420,19 @@ class BaseRecording(BaseRecordingSnippets):
                 "Use use this carefully!"
             )
 
+    def sample_index_to_time(self, sample_ind, segment_index=None):
+        """
+        Transform sample index into time in seconds
+        """
+        segment_index = self._check_segment_index(segment_index)
+        rs = self._recording_segments[segment_index]
+        return rs.sample_index_to_time(sample_ind)
+
+    def time_to_sample_index(self, time_s, segment_index=None):
+        segment_index = self._check_segment_index(segment_index)
+        rs = self._recording_segments[segment_index]
+        return rs.time_to_sample_index(time_s)
+
     def _save(self, format="binary", **save_kwargs):
         """
         This function replaces the old CacheRecordingExtractor, but enables more engines
@@ -575,7 +592,7 @@ class BaseRecording(BaseRecordingSnippets):
     def _remove_channels(self, remove_channel_ids):
         from .channelslice import ChannelSliceRecording
 
-        new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, remove_channel_ids)]
+        new_channel_ids = self.channel_ids[~np.isin(self.channel_ids, remove_channel_ids)]
         sub_recording = ChannelSliceRecording(self, new_channel_ids)
         return sub_recording
 

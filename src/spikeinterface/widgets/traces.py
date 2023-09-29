@@ -26,6 +26,7 @@ class TracesWidget(BaseWidget):
         List with start time and end time, default None
     mode: str
         Three possible modes, default 'auto':
+
         * 'line': classical for low channel count
         * 'map': for high channel count use color heat map
         * 'auto': auto switch depending on the channel count ('line' if less than 64 channels, 'map' otherwise)
@@ -51,11 +52,6 @@ class TracesWidget(BaseWidget):
         For 'map' mode and sortingview backend, seconds to render in each row, default 0.2
     add_legend : bool
         If True adds legend to figures, default True
-
-    Returns
-    -------
-    W: TracesWidget
-        The output widget
     """
 
     def __init__(
@@ -527,6 +523,30 @@ class TracesWidget(BaseWidget):
         backend_kwargs["display"] = False
 
         self.url = handle_display_and_url(self, self.view, **backend_kwargs)
+
+    def plot_ephyviewer(self, data_plot, **backend_kwargs):
+        import ephyviewer
+        from ..preprocessing import depth_order
+
+        dp = to_attr(data_plot)
+
+        app = ephyviewer.mkQApp()
+        win = ephyviewer.MainViewer(debug=False, show_auto_scale=True)
+
+        for k, rec in dp.recordings.items():
+            if dp.order_channel_by_depth:
+                rec = depth_order(rec, flip=True)
+
+            sig_source = ephyviewer.SpikeInterfaceRecordingSource(recording=rec)
+            view = ephyviewer.TraceViewer(source=sig_source, name=k)
+            view.params["scale_mode"] = "by_channel"
+            if dp.show_channel_ids:
+                view.params["display_labels"] = True
+            view.auto_scale()
+            win.add_view(view)
+
+        win.show()
+        app.exec()
 
 
 def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=None, return_scaled=False):

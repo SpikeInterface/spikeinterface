@@ -1,11 +1,13 @@
 import numpy as np
+from warnings import warn
 
-from .basewidget import BaseWidget
+from .base import BaseWidget, to_attr
+from .utils import get_unit_colors
 
 
 class AgreementMatrixWidget(BaseWidget):
     """
-    Plots sorting comparison confusion matrix.
+    Plots sorting comparison agreement matrix.
 
     Parameters
     ----------
@@ -19,31 +21,34 @@ class AgreementMatrixWidget(BaseWidget):
         If True counts are displayed as text
     unit_ticks: bool
         If True unit tick labels are displayed
-    figure: matplotlib figure
-        The figure to be used. If not given a figure is created
-    ax: matplotlib axis
-        The axis to be used. If not given an axis is created
+
     """
 
-    def __init__(self, sorting_comparison, ordered=True, count_text=True, unit_ticks=True, figure=None, ax=None):
-        from matplotlib import pyplot as plt
+    def __init__(
+        self, sorting_comparison, ordered=True, count_text=True, unit_ticks=True, backend=None, **backend_kwargs
+    ):
+        plot_data = dict(
+            sorting_comparison=sorting_comparison,
+            ordered=ordered,
+            count_text=count_text,
+            unit_ticks=unit_ticks,
+        )
+        BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
-        BaseWidget.__init__(self, figure, ax)
-        self._sc = sorting_comparison
-        self._ordered = ordered
-        self._count_text = count_text
-        self._unit_ticks = unit_ticks
-        self.name = "ConfusionMatrix"
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import matplotlib.pyplot as plt
+        from .utils_matplotlib import make_mpl_figure
 
-    def plot(self):
-        self._do_plot()
+        dp = to_attr(data_plot)
 
-    def _do_plot(self):
-        # a dataframe
-        if self._ordered:
-            scores = self._sc.get_ordered_agreement_scores()
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
+
+        comp = dp.sorting_comparison
+
+        if dp.ordered:
+            scores = comp.get_ordered_agreement_scores()
         else:
-            scores = self._sc.agreement_scores
+            scores = comp.agreement_scores
 
         N1 = scores.shape[0]
         N2 = scores.shape[1]
@@ -54,9 +59,9 @@ class AgreementMatrixWidget(BaseWidget):
         # Using matshow here just because it sets the ticks up nicely. imshow is faster.
         self.ax.matshow(scores.values, cmap="Greens")
 
-        if self._count_text:
+        if dp.count_text:
             for i, u1 in enumerate(unit_ids1):
-                u2 = self._sc.best_match_12[u1]
+                u2 = comp.best_match_12[u1]
                 if u2 != -1:
                     j = np.where(unit_ids2 == u2)[0][0]
 
@@ -68,24 +73,15 @@ class AgreementMatrixWidget(BaseWidget):
         self.ax.xaxis.tick_bottom()
 
         # Labels for major ticks
-        if self._unit_ticks:
+        if dp.unit_ticks:
             self.ax.set_yticklabels(scores.index, fontsize=12)
             self.ax.set_xticklabels(scores.columns, fontsize=12)
 
-        self.ax.set_xlabel(self._sc.name_list[1], fontsize=20)
-        self.ax.set_ylabel(self._sc.name_list[0], fontsize=20)
+        self.ax.set_xlabel(comp.name_list[1], fontsize=20)
+        self.ax.set_ylabel(comp.name_list[0], fontsize=20)
 
         self.ax.set_xlim(-0.5, N2 - 0.5)
         self.ax.set_ylim(
             N1 - 0.5,
             -0.5,
         )
-
-
-def plot_agreement_matrix(*args, **kwargs):
-    W = AgreementMatrixWidget(*args, **kwargs)
-    W.plot()
-    return W
-
-
-plot_agreement_matrix.__doc__ = AgreementMatrixWidget.__doc__

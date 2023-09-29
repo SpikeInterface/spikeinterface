@@ -13,11 +13,16 @@ from spikeinterface.core.job_tools import (
 from spikeinterface.core.recording_tools import get_noise_levels, get_channel_distances
 
 from spikeinterface.core.baserecording import BaseRecording
-from spikeinterface.sortingcomponents.peak_pipeline import PeakDetector, WaveformsNode, ExtractSparseWaveforms
+from spikeinterface.core.node_pipeline import (
+    PeakDetector,
+    WaveformsNode,
+    ExtractSparseWaveforms,
+    run_node_pipeline,
+    base_peak_dtype,
+)
 
 from ..core import get_chunk_with_margin
 
-from .peak_pipeline import PeakDetector, run_node_pipeline, base_peak_dtype
 from .tools import make_multi_method_doc
 
 try:
@@ -60,10 +65,9 @@ def detect_peaks(
         This avoid reading the recording multiple times.
     gather_mode: str
         How to gather the results:
-
         * "memory": results are returned as in-memory numpy arrays
-
         * "npy": results are stored to .npy files in `folder`
+
     folder: str or Path
         If gather_mode is "npy", the folder where the files are created.
     names: list
@@ -76,9 +80,11 @@ def detect_peaks(
     -------
     peaks: array
         Detected peaks.
+
     Notes
     -----
     This peak detection ported from tridesclous into spikeinterface.
+
     """
 
     assert method in detect_peak_methods

@@ -278,12 +278,24 @@ class BaseSorting(BaseExtractor):
             Dictionary with unit_ids as key and number of spikes as values
         """
         num_spikes = {}
-        for unit_id in self.unit_ids:
-            n = 0
-            for segment_index in range(self.get_num_segments()):
-                st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
-                n += st.size
-            num_spikes[unit_id] = n
+
+        if self._cached_spike_trains is not None:
+            for unit_id in self.unit_ids:
+                n = 0
+                for segment_index in range(self.get_num_segments()):
+                    st = self.get_unit_spike_train(unit_id=unit_id, segment_index=segment_index)
+                    n += st.size
+                num_spikes[unit_id] = n
+        else:
+            spike_vector = self.to_spike_vector()
+            unit_indices, counts = np.unique(spike_vector["unit_index"], return_counts=True)
+            for unit_index, unit_id in enumerate(self.unit_ids):
+                if unit_index in unit_indices:
+                    idx = np.argmax(unit_indices == unit_index)
+                    num_spikes[unit_id] = counts[idx]
+                else:  # This unit has no spikes, hence it's not in the counts array.
+                    num_spikes[unit_id] = 0
+
         return num_spikes
 
     def count_total_num_spikes(self):
@@ -334,7 +346,7 @@ class BaseSorting(BaseExtractor):
         """
         from spikeinterface import UnitsSelectionSorting
 
-        new_unit_ids = self.unit_ids[~np.in1d(self.unit_ids, remove_unit_ids)]
+        new_unit_ids = self.unit_ids[~np.isin(self.unit_ids, remove_unit_ids)]
         new_sorting = UnitsSelectionSorting(self, new_unit_ids)
         return new_sorting
 
@@ -461,8 +473,7 @@ class BaseSorting(BaseExtractor):
             if not concatenated:
                 spikes_ = []
                 for segment_index in range(self.get_num_segments()):
-                    s0 = np.searchsorted(spikes["segment_index"], segment_index, side="left")
-                    s1 = np.searchsorted(spikes["segment_index"], segment_index + 1, side="left")
+                    s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1], side="left")
                     spikes_.append(spikes[s0:s1])
                 spikes = spikes_
 

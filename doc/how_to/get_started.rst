@@ -11,7 +11,7 @@ dataset, and we will then perform some pre-processing, run a spike
 sorting algorithm, post-process the spike sorting output, perform
 curation (manual and automatic), and compare spike sorting results.
 
-.. code:: ipython3
+.. code:: ipython
 
     import matplotlib.pyplot as plt
     from pprint import pprint
@@ -19,7 +19,7 @@ curation (manual and automatic), and compare spike sorting results.
 The spikeinterface module by itself import only the spikeinterface.core
 submodule which is not useful for end user
 
-.. code:: ipython3
+.. code:: ipython
 
     import spikeinterface
 
@@ -35,7 +35,7 @@ We need to import one by one different submodules separately
 -  ``comparison`` : comparison of spike sorting output
 -  ``widgets`` : visualization
 
-.. code:: ipython3
+.. code:: ipython
 
     import spikeinterface as si  # import core only
     import spikeinterface.extractors as se
@@ -56,14 +56,14 @@ This is useful for notebooks, but it is a heavier import because
 internally many more dependencies are imported
 (scipy/sklearn/networkx/matplotlib/h5py…)
 
-.. code:: ipython3
+.. code:: ipython
 
     import spikeinterface.full as si
 
 Before getting started, we can set some global arguments for parallel
 processing. For this example, let’s use 4 jobs and time chunks of 1s:
 
-.. code:: ipython3
+.. code:: ipython
 
     global_job_kwargs = dict(n_jobs=4, chunk_duration="1s")
     si.set_global_job_kwargs(**global_job_kwargs)
@@ -75,7 +75,7 @@ Then we can open it. Note that
 `MEArec <https://mearec.readthedocs.io%3E>`__ simulated file contains
 both “recording” and a “sorting” object.
 
-.. code:: ipython3
+.. code:: ipython
 
     local_path = si.download_dataset(remote_path='mearec/mearec_test_10s.h5')
     recording, sorting_true = se.read_mearec(local_path)
@@ -102,7 +102,7 @@ ground-truth information of the spiking activity of each unit.
 Let’s use the ``spikeinterface.widgets`` module to visualize the traces
 and the raster plots.
 
-.. code:: ipython3
+.. code:: ipython
 
     w_ts = sw.plot_traces(recording, time_range=(0, 5))
     w_rs = sw.plot_rasters(sorting_true, time_range=(0, 5))
@@ -118,7 +118,7 @@ and the raster plots.
 
 This is how you retrieve info from a ``BaseRecording``\ …
 
-.. code:: ipython3
+.. code:: ipython
 
     channel_ids = recording.get_channel_ids()
     fs = recording.get_sampling_frequency()
@@ -143,7 +143,7 @@ This is how you retrieve info from a ``BaseRecording``\ …
 
 …and a ``BaseSorting``
 
-.. code:: ipython3
+.. code:: ipython
 
     num_seg = recording.get_num_segments()
     unit_ids = sorting_true.get_unit_ids()
@@ -173,7 +173,7 @@ any probe in the probeinterface collections can be downloaded and set to
 a ``Recording`` object. In this case, the MEArec dataset already handles
 a ``Probe`` and we don’t need to set it *manually*.
 
-.. code:: ipython3
+.. code:: ipython
 
     probe = recording.get_probe()
     print(probe)
@@ -200,7 +200,7 @@ All these preprocessing steps are “lazy”. The computation is done on
 demand when we call ``recording.get_traces(...)`` or when we save the
 object to disk.
 
-.. code:: ipython3
+.. code:: ipython
 
     recording_cmr = recording
     recording_f = si.bandpass_filter(recording, freq_min=300, freq_max=6000)
@@ -224,7 +224,7 @@ Now you are ready to spike sort using the ``spikeinterface.sorters``
 module! Let’s first check which sorters are implemented and which are
 installed
 
-.. code:: ipython3
+.. code:: ipython
 
     print('Available sorters', ss.available_sorters())
     print('Installed sorters', ss.installed_sorters())
@@ -241,7 +241,7 @@ machine. We can see we have HerdingSpikes and Tridesclous installed.
 Spike sorters come with a set of parameters that users can change. The
 available parameters are dictionaries and can be accessed with:
 
-.. code:: ipython3
+.. code:: ipython
 
     print("Tridesclous params:")
     pprint(ss.get_default_sorter_params('tridesclous'))
@@ -279,7 +279,7 @@ available parameters are dictionaries and can be accessed with:
 Let’s run ``tridesclous`` and change one of the parameter, say, the
 ``detect_threshold``:
 
-.. code:: ipython3
+.. code:: ipython
 
     sorting_TDC = ss.run_sorter(sorter_name="tridesclous", recording=recording_preprocessed, detect_threshold=4)
     print(sorting_TDC)
@@ -292,7 +292,7 @@ Let’s run ``tridesclous`` and change one of the parameter, say, the
 
 Alternatively we can pass full dictionary containing the parameters:
 
-.. code:: ipython3
+.. code:: ipython
 
     other_params = ss.get_default_sorter_params('tridesclous')
     other_params['detect_threshold'] = 6
@@ -310,7 +310,7 @@ Alternatively we can pass full dictionary containing the parameters:
 
 Let’s run ``spykingcircus2`` as well, with default parameters:
 
-.. code:: ipython3
+.. code:: ipython
 
     sorting_SC2 = ss.run_sorter(sorter_name="spykingcircus2", recording=recording_preprocessed)
     print(sorting_SC2)
@@ -341,7 +341,7 @@ If a sorter is not installed locally, we can also avoid to install it
 and run it anyways, using a container (Docker or Singularity). For
 example, let’s run ``Kilosort2`` using Docker:
 
-.. code:: ipython3
+.. code:: ipython
 
     sorting_KS2 = ss.run_sorter(sorter_name="kilosort2", recording=recording_preprocessed,
                                 docker_image=True, verbose=True)
@@ -370,7 +370,7 @@ extracts, their waveforms, and stores them to disk. These waveforms are
 helpful to compute the average waveform, or “template”, for each unit
 and then to compute, for example, quality metrics.
 
-.. code:: ipython3
+.. code:: ipython
 
     we_TDC = si.extract_waveforms(recording_preprocessed, sorting_TDC, 'waveforms_folder', overwrite=True)
     print(we_TDC)
@@ -399,7 +399,7 @@ compute spike amplitudes, PCA projections, unit locations, and more.
 Let’s compute some postprocessing information that will be needed later
 for computing quality metrics, exporting, and visualization:
 
-.. code:: ipython3
+.. code:: ipython
 
     amplitudes = spost.compute_spike_amplitudes(we_TDC)
     unit_locations = spost.compute_unit_locations(we_TDC)
@@ -411,7 +411,7 @@ for computing quality metrics, exporting, and visualization:
 All of this postprocessing functions are saved in the waveforms folder
 as extensions:
 
-.. code:: ipython3
+.. code:: ipython
 
     print(we_TDC.get_available_extension_names())
 
@@ -424,7 +424,7 @@ as extensions:
 Importantly, waveform extractors (and all extensions) can be reloaded at
 later times:
 
-.. code:: ipython3
+.. code:: ipython
 
     we_loaded = si.load_waveforms('waveforms_folder')
     print(we_loaded.get_available_extension_names())
@@ -439,7 +439,7 @@ Once we have computed all these postprocessing information, we can
 compute quality metrics (different quality metrics require different
 extensions - e.g., drift metrics resuire ``spike_locations``):
 
-.. code:: ipython3
+.. code:: ipython
 
     qm_params = sqm.get_default_qm_params()
     pprint(qm_params)
@@ -485,230 +485,31 @@ extensions - e.g., drift metrics resuire ``spike_locations``):
 Since the recording is very short, let’s change some parameters to
 accomodate the duration:
 
-.. code:: ipython3
+.. code:: ipython
 
     qm_params["presence_ratio"]["bin_duration_s"] = 1
     qm_params["amplitude_cutoff"]["num_histogram_bins"] = 5
     qm_params["drift"]["interval_s"] = 2
     qm_params["drift"]["min_spikes_per_interval"] = 2
 
-.. code:: ipython3
+.. code:: ipython
 
     qm = sqm.compute_quality_metrics(we_TDC, qm_params=qm_params)
     display(qm)
 
+.. parsed-literal::
 
-
-.. raw:: html
-
-    <div>
-    <style scoped>
-        .dataframe tbody tr th:only-of-type {
-            vertical-align: middle;
-        }
-
-        .dataframe tbody tr th {
-            vertical-align: top;
-        }
-
-        .dataframe thead th {
-            text-align: right;
-        }
-    </style>
-    <table border="1" class="dataframe">
-      <thead>
-        <tr style="text-align: right;">
-          <th></th>
-          <th>num_spikes</th>
-          <th>firing_rate</th>
-          <th>presence_ratio</th>
-          <th>snr</th>
-          <th>isi_violations_ratio</th>
-          <th>isi_violations_count</th>
-          <th>rp_contamination</th>
-          <th>rp_violations</th>
-          <th>sliding_rp_violation</th>
-          <th>amplitude_cutoff</th>
-          <th>amplitude_median</th>
-          <th>drift_ptp</th>
-          <th>drift_std</th>
-          <th>drift_mad</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>0</th>
-          <td>30</td>
-          <td>3.0</td>
-          <td>0.9</td>
-          <td>27.258799</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>NaN</td>
-          <td>0.200717</td>
-          <td>307.199036</td>
-          <td>1.313088</td>
-          <td>0.492143</td>
-          <td>0.476104</td>
-        </tr>
-        <tr>
-          <th>1</th>
-          <td>51</td>
-          <td>5.1</td>
-          <td>1.0</td>
-          <td>24.213808</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>NaN</td>
-          <td>0.500000</td>
-          <td>274.444977</td>
-          <td>0.934371</td>
-          <td>0.325045</td>
-          <td>0.216362</td>
-        </tr>
-        <tr>
-          <th>2</th>
-          <td>53</td>
-          <td>5.3</td>
-          <td>0.9</td>
-          <td>24.229277</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>NaN</td>
-          <td>0.500000</td>
-          <td>270.204590</td>
-          <td>0.901922</td>
-          <td>0.392344</td>
-          <td>0.372247</td>
-        </tr>
-        <tr>
-          <th>3</th>
-          <td>50</td>
-          <td>5.0</td>
-          <td>1.0</td>
-          <td>27.080778</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>NaN</td>
-          <td>0.500000</td>
-          <td>312.545715</td>
-          <td>0.598991</td>
-          <td>0.225554</td>
-          <td>0.185147</td>
-        </tr>
-        <tr>
-          <th>4</th>
-          <td>36</td>
-          <td>3.6</td>
-          <td>1.0</td>
-          <td>9.544292</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>NaN</td>
-          <td>0.207231</td>
-          <td>107.953278</td>
-          <td>1.913661</td>
-          <td>0.659317</td>
-          <td>0.507955</td>
-        </tr>
-        <tr>
-          <th>5</th>
-          <td>42</td>
-          <td>4.2</td>
-          <td>1.0</td>
-          <td>13.283191</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>NaN</td>
-          <td>0.204838</td>
-          <td>151.833191</td>
-          <td>0.671453</td>
-          <td>0.231825</td>
-          <td>0.156004</td>
-        </tr>
-        <tr>
-          <th>6</th>
-          <td>48</td>
-          <td>4.8</td>
-          <td>1.0</td>
-          <td>8.319447</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>NaN</td>
-          <td>0.500000</td>
-          <td>91.358444</td>
-          <td>2.391275</td>
-          <td>0.885580</td>
-          <td>0.772367</td>
-        </tr>
-        <tr>
-          <th>7</th>
-          <td>193</td>
-          <td>19.3</td>
-          <td>1.0</td>
-          <td>8.690839</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.155</td>
-          <td>0.500000</td>
-          <td>103.491577</td>
-          <td>0.710640</td>
-          <td>0.300565</td>
-          <td>0.316645</td>
-        </tr>
-        <tr>
-          <th>8</th>
-          <td>129</td>
-          <td>12.9</td>
-          <td>1.0</td>
-          <td>11.167040</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.310</td>
-          <td>0.500000</td>
-          <td>128.252319</td>
-          <td>0.985251</td>
-          <td>0.375529</td>
-          <td>0.301622</td>
-        </tr>
-        <tr>
-          <th>9</th>
-          <td>110</td>
-          <td>11.0</td>
-          <td>1.0</td>
-          <td>8.377251</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.0</td>
-          <td>0</td>
-          <td>0.270</td>
-          <td>0.203415</td>
-          <td>98.207291</td>
-          <td>1.386857</td>
-          <td>0.526532</td>
-          <td>0.410644</td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
+    id	num_spikes	firing_rate	presence_ratio	        snr	isi_violations_ratio	isi_violations_count	rp_contamination	rp_violations	sliding_rp_violation	amplitude_cutoff	amplitude_median	drift_ptp	drift_std	drift_mad
+     0	        30	        3.0	           0.9	  27.258799	                 0.0	                   0	             0.0	            0	                 NaN	        0.200717	      307.199036	 1.313088	 0.492143	 0.476104
+     1	        51	        5.1	           1.0	  24.213808	                 0.0	                   0	             0.0	            0	                 NaN	        0.500000	      274.444977	 0.934371	 0.325045	 0.216362
+     2	        53	        5.3	           0.9	  24.229277	                 0.0	                   0	             0.0	            0	                 NaN	        0.500000	      270.204590	 0.901922	 0.392344	 0.372247
+     3	        50	        5.0	           1.0	  27.080778	                 0.0	                   0	             0.0	            0	                 NaN	        0.500000	      312.545715	 0.598991	 0.225554	 0.185147
+     4	        36	        3.6	           1.0	  9.544292	                 0.0	                   0	             0.0	            0	                 NaN	        0.207231	      107.953278	 1.913661	 0.659317	 0.507955
+     5	        42	        4.2	           1.0	  13.283191	                 0.0	                   0	             0.0	            0	                 NaN	        0.204838	      151.833191	 0.671453	 0.231825	 0.156004
+     6	        48	        4.8	           1.0	  8.319447	                 0.0	                   0	             0.0	            0	                 NaN	        0.500000	       91.358444	 2.391275	 0.885580	 0.772367
+     7	        193	       19.3	           1.0	  8.690839	                 0.0	                   0	             0.0	            0	               0.155	        0.500000	      103.491577	 0.710640	 0.300565 	 0.316645
+     8	        129	       12.9	           1.0	  11.167040	                 0.0	                   0	             0.0	            0	               0.310	        0.500000	      128.252319	 0.985251	 0.375529	 0.301622
+     9	        110	       11.0	           1.0	  8.377251	                 0.0	                   0	             0.0	            0	               0.270	        0.203415	       98.207291	 1.386857	 0.526532	 0.410644
 
 
 Quality metrics are also extensions (and become part of the waveform
@@ -721,7 +522,7 @@ We can export a sorting summary and quality metrics plot using the
 ``sortingview`` backend. This will generate shareble links for web-based
 visualization.
 
-.. code:: ipython3
+.. code:: ipython
 
     w1 = sw.plot_quality_metrics(we_TDC, display=False, backend="sortingview")
 
@@ -729,7 +530,7 @@ visualization.
 https://figurl.org/f?v=gs://figurl/spikesortingview-10&d=sha1://901a11ba31ae9ab512a99bdf36a3874173249d87&label=SpikeInterface%20-%20Quality%20Metrics
 
 
-.. code:: ipython3
+.. code:: ipython
 
     w2 = sw.plot_sorting_summary(we_TDC, display=False, curation=True, backend="sortingview")
 
@@ -742,7 +543,7 @@ curation. In the example above, we manually merged two units (0, 4) and
 added accept labels (2, 6, 7). After applying our curation, we can click
 on the “Save as snapshot (sha://)” and copy the URI:
 
-.. code:: ipython3
+.. code:: ipython
 
     uri = "sha1://68cb54a9aaed2303fb82dedbc302c853e818f1b6"
 
@@ -761,7 +562,7 @@ Alternatively, we can export the data locally to Phy.
 `Phy <https://github.com/cortex-lab/phy>`_ is a GUI for manual
 curation of the spike sorting output. To export to phy you can run:
 
-.. code:: ipython3
+.. code:: ipython
 
     sexp.export_to_phy(we_TDC, 'phy_folder_for_TDC', verbose=True)
 
@@ -780,7 +581,7 @@ After curating with Phy, the curated sorting can be reloaded to
 SpikeInterface. In this case, we exclude the units that have been
 labeled as “noise”:
 
-.. code:: ipython3
+.. code:: ipython
 
     sorting_curated_phy = se.read_phy('phy_folder_for_TDC', exclude_cluster_groups=["noise"])
 
@@ -788,7 +589,7 @@ Quality metrics can be also used to automatically curate the spike
 sorting output. For example, you can select sorted units with a SNR
 above a certain threshold:
 
-.. code:: ipython3
+.. code:: ipython
 
     keep_mask = (qm['snr'] > 10) & (qm['isi_violations_ratio'] < 0.01)
     print("Mask:", keep_mask.values)
@@ -814,7 +615,7 @@ outputs. We can either:
 3. compare the output of multiple sorters (Tridesclous, SpykingCircus2,
    Kilosort2)
 
-.. code:: ipython3
+.. code:: ipython
 
     comp_gt = sc.compare_sorter_to_ground_truth(gt_sorting=sorting_true, tested_sorting=sorting_TDC)
     comp_pair = sc.compare_two_sorters(sorting1=sorting_TDC, sorting2=sorting_SC2)
@@ -824,7 +625,7 @@ outputs. We can either:
 When comparing with a ground-truth sorting (1,), you can get the sorting
 performance and plot a confusion matrix
 
-.. code:: ipython3
+.. code:: ipython
 
     print(comp_gt.get_performance())
     w_conf = sw.plot_confusion_matrix(comp_gt)
@@ -858,7 +659,7 @@ performance and plot a confusion matrix
 When comparing two sorters (2.), we can see the matching of units
 between sorters. Units which are not matched has -1 as unit id:
 
-.. code:: ipython3
+.. code:: ipython
 
     comp_pair.hungarian_match_12
 
@@ -882,7 +683,7 @@ between sorters. Units which are not matched has -1 as unit id:
 
 or the reverse:
 
-.. code:: ipython3
+.. code:: ipython
 
     comp_pair.hungarian_match_21
 
@@ -908,7 +709,7 @@ When comparing multiple sorters (3.), you can extract a ``BaseSorting``
 object with units in agreement between sorters. You can also plot a
 graph showing how the units are matched between the sorters.
 
-.. code:: ipython3
+.. code:: ipython
 
     sorting_agreement = comp_multi.get_agreement_sorting(minimum_agreement_count=2)
 

@@ -1,6 +1,6 @@
 from .naive import NaiveMatching
 from .tdc import TridesclousPeeler
-from .circus import CircusPeeler, CircusOMPPeeler
+from .circus import CircusPeeler, CircusOMPPeeler, CircusOMPSVDPeeler
 from .wobble import WobbleMatch
 
 matching_methods = {
@@ -8,5 +8,6 @@ matching_methods = {
     "tridesclous": TridesclousPeeler,
     "circus": CircusPeeler,
     "circus-omp": CircusOMPPeeler,
+    "circus-omp-svd": CircusOMPSVDPeeler,
     "wobble": WobbleMatch,
 }

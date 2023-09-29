@@ -624,10 +624,20 @@ _common_run_doc = (
 )
 
 
-def read_sorter_folder(output_folder, raise_error=True):
+def read_sorter_folder(output_folder, register_recording=True, sorting_info=True, raise_error=True):
     """
     Load a sorting object from a spike sorting output folder.
     The 'output_folder' must contain a valid 'spikeinterface_log.json' file
+
+
+    Parameters
+    ----------
+    output_folder: Pth or str
+        The sorter folder
+    register_recording: bool, default: True
+        Attach recording (when json or pickle) to the sorting
+    sorting_info: bool, default: True
+        Attach sorting info to the sorting.
     """
     output_folder = Path(output_folder)
     log_file = output_folder / "spikeinterface_log.json"
@@ -647,7 +657,9 @@ def read_sorter_folder(output_folder, raise_error=True):
 
     sorter_name = log["sorter_name"]
     SorterClass = sorter_dict[sorter_name]
-    sorting = SorterClass.get_result_from_folder(output_folder)
+    sorting = SorterClass.get_result_from_folder(
+        output_folder, register_recording=register_recording, sorting_info=sorting_info
+    )
     return sorting
 
 
