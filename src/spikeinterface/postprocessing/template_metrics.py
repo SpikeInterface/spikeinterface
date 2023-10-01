@@ -4,12 +4,13 @@ https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spik
 22/04/2020
 """
 import numpy as np
+import warnings
+from typing import Optional
 from copy import deepcopy
 
-from ..core import WaveformExtractor
+from ..core import WaveformExtractor, ChannelSparsity
 from ..core.template_tools import get_template_extremum_channel
 from ..core.waveform_extractor import BaseWaveformExtractorExtension
-import warnings
 
 
 global DEBUG
@@ -211,16 +212,17 @@ _default_function_kwargs = dict(
 )
 
 
+# TODO: add typing
 def compute_template_metrics(
     waveform_extractor,
-    load_if_exists=False,
-    metric_names=None,
-    peak_sign="neg",
-    upsampling_factor=10,
-    sparsity=None,
-    include_multi_channel_metrics=False,
-    metrics_kwargs=None,
-    debug_plots=False,
+    load_if_exists: bool = False,
+    metric_names: Optional[list[str]] = None,
+    peak_sign: Optional[str] = "neg",
+    upsampling_factor: int = 10,
+    sparsity: Optional[ChannelSparsity] = None,
+    include_multi_channel_metrics: bool = False,
+    metrics_kwargs: dict = None,
+    debug_plots: bool = False,
 ):
     """
     Compute template metrics including:
@@ -247,13 +249,13 @@ def compute_template_metrics(
     metric_names : list, optional
         List of metrics to compute (see si.postprocessing.get_template_metric_names()), by default None
     peak_sign : {"neg", "pos"}, default: "neg"
-        The peak sign
+        Whether to use the positive ("pos") or negative ("neg") peaks to estimate extremum channels.
     upsampling_factor : int, default: 10
         The upsampling factor to upsample the templates
-    sparsity: dict or None, default: None
-        Default is sparsity=None and template metric is computed on extremum channel only.
-        If given, the dictionary should contain a unit ids as keys and a channel id or a list of channel ids as values.
-        For more generating a sparsity dict, see the postprocessing.compute_sparsity() function.
+    sparsity: ChannelSparsity or None, default: None
+        If None, template metrics are computed on the extremum channel only.
+        If sparsity is given, template metrics are computed on all sparse channels of each unit.
+        For more on generating a ChannelSparsity, see the `~spikeinterface.compute_sparsity()` function.
     include_multi_channel_metrics: bool, default: False
         Whether to compute multi-channel metrics
     metrics_kwargs: dict
@@ -261,7 +263,7 @@ def compute_template_metrics(
             * recovery_window_ms: the window in ms after the peak to compute the recovery_slope, default: 0.7
             * peak_relative_threshold: the relative threshold to detect positive and negative peaks, default: 0.2
             * peak_width_ms: the width in samples to detect peaks, default: 0.2
-            * depth_direction: the direction to compute velocity above and below, default: "y"
+            * depth_direction: the direction to compute velocity above and below, default: "y" (see notes)
             * min_channels_for_velocity: the minimum number of channels above or below to compute velocity, default: 5
             * min_r2_velocity: the minimum r2 to accept the velocity fit, default: 0.7
             * exp_peak_function: the function to use to compute the peak amplitude for the exp decay, default: "ptp"
@@ -284,7 +286,7 @@ def compute_template_metrics(
     -----
     If any multi-channel metric is in the metric_names or include_multi_channel_metrics is True, sparsity must be None,
     so that one metric value will be computed per unit.
-    For multi-channel metrocs, 3D channel locations are not supported. By default, the depth direction is "y".
+    For multi-channel metrics, 3D channel locations are not supported. By default, the depth direction is "y".
     """
     if debug_plots:
         global DEBUG
@@ -359,6 +361,8 @@ def get_peak_to_valley(template_single, sampling_frequency, trough_idx=None, pea
     ----------
     template_single: numpy.ndarray
         The 1D template waveform
+    sampling_frequency : float
+        The sampling frequency of the template
     trough_idx: int, default: None
         The index of the trough
     peak_idx: int, default: None
@@ -383,6 +387,8 @@ def get_peak_trough_ratio(template_single, sampling_frequency=None, trough_idx=N
     ----------
     template_single: numpy.ndarray
         The 1D template waveform
+    sampling_frequency : float
+        The sampling frequency of the template
     trough_idx: int, default: None
         The index of the trough
     peak_idx: int, default: None
@@ -407,6 +413,8 @@ def get_half_width(template_single, sampling_frequency, trough_idx=None, peak_id
     ----------
     template_single: numpy.ndarray
         The 1D template waveform
+    sampling_frequency : float
+        The sampling frequency of the template
     trough_idx: int, default: None
         The index of the trough
     peak_idx: int, default: None
@@ -458,6 +466,8 @@ def get_repolarization_slope(template_single, sampling_frequency, trough_idx=Non
     ----------
     template_single: numpy.ndarray
         The 1D template waveform
+    sampling_frequency : float
+        The sampling frequency of the template
     trough_idx: int, default: None
         The index of the trough
     """
@@ -499,6 +509,8 @@ def get_recovery_slope(template_single, sampling_frequency, peak_idx=None, **kwa
     ----------
     template_single: numpy.ndarray
         The 1D template waveform
+    sampling_frequency : float
+        The sampling frequency of the template
     peak_idx: int, default: None
         The index of the peak
     **kwargs: Required kwargs:
@@ -530,6 +542,8 @@ def get_num_positive_peaks(template_single, sampling_frequency, **kwargs):
     ----------
     template_single: numpy.ndarray
         The 1D template waveform
+    sampling_frequency : float
+        The sampling frequency of the template
     **kwargs: Required kwargs:
         - peak_relative_threshold: the relative threshold to detect positive and negative peaks
         - peak_width_ms: the width in samples to detect peaks
@@ -556,6 +570,8 @@ def get_num_negative_peaks(template_single, sampling_frequency, **kwargs):
     ----------
     template_single: numpy.ndarray
         The 1D template waveform
+    sampling_frequency : float
+        The sampling frequency of the template
     **kwargs: Required kwargs:
         - peak_relative_threshold: the relative threshold to detect positive and negative peaks
         - peak_width_ms: the width in samples to detect peaks
@@ -590,6 +606,9 @@ _single_channel_metric_name_to_func = {
 
 
 def transform_column_range(template, channel_locations, column_range, depth_direction="y"):
+    """
+    Transform template anch channel locations based on column range.
+    """
     column_dim = 0 if depth_direction == "y" else 1
     if column_range is None:
         template_column_range = template
@@ -603,12 +622,18 @@ def transform_column_range(template, channel_locations, column_range, depth_dire
 
 
 def sort_template_and_locations(template, channel_locations, depth_direction="y"):
+    """
+    Sort template and locations.
+    """
     depth_dim = 1 if depth_direction == "y" else 0
     sort_indices = np.argsort(channel_locations[:, depth_dim])
     return template[:, sort_indices], channel_locations[sort_indices, :]
 
 
 def fit_velocity(peak_times, channel_dist):
+    """
+    Fit velocity from peak times and channel distances using ribust Theilsen estimator.
+    """
     # from scipy.stats import linregress
     # slope, intercept, _, _, _ = linregress(peak_times, channel_dist)
 
@@ -632,6 +657,8 @@ def get_velocity_above(template, channel_locations, sampling_frequency, **kwargs
         The template waveform (num_samples, num_channels)
     channel_locations: numpy.ndarray
         The channel locations (num_channels, 2)
+    sampling_frequency : float
+        The sampling frequency of the template
     **kwargs: Required kwargs:
         - depth_direction: the direction to compute velocity above and below ("x", "y", or "z")
         - min_channels_for_velocity: the minimum number of channels above or below to compute velocity
@@ -707,6 +734,8 @@ def get_velocity_below(template, channel_locations, sampling_frequency, **kwargs
         The template waveform (num_samples, num_channels)
     channel_locations: numpy.ndarray
         The channel locations (num_channels, 2)
+    sampling_frequency : float
+        The sampling frequency of the template
     **kwargs: Required kwargs:
         - depth_direction: the direction to compute velocity above and below ("x", "y", or "z")
         - min_channels_for_velocity: the minimum number of channels above or below to compute velocity
@@ -781,6 +810,8 @@ def get_exp_decay(template, channel_locations, sampling_frequency=None, **kwargs
         The template waveform (num_samples, num_channels)
     channel_locations: numpy.ndarray
         The channel locations (num_channels, 2)
+    sampling_frequency : float
+        The sampling frequency of the template
     **kwargs: Required kwargs:
         - exp_peak_function: the function to use to compute the peak amplitude for the exp decay ("ptp" or "min")
         - min_r2_exp_decay: the minimum r2 to accept the exp decay fit
@@ -856,6 +887,8 @@ def get_spread(template, channel_locations, sampling_frequency, **kwargs):
         The template waveform (num_samples, num_channels)
     channel_locations: numpy.ndarray
         The channel locations (num_channels, 2)
+    sampling_frequency : float
+        The sampling frequency of the template
     **kwargs: Required kwargs:
         - depth_direction: the direction to compute velocity above and below ("x", "y", or "z")
         - spread_threshold: the threshold to compute the spread
