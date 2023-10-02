@@ -31,7 +31,7 @@ The input of the :py:func:`~spikeinterface.exporters.export_to_phy` is a :code:`
     we = extract_waveforms(recording=recording, sorting=sorting, folder='waveforms', sparse=True)
 
     # some computations are done before to control all options
-    compute_spike_amplitudes(waveform_extractor = we)
+    compute_spike_amplitudes(waveform_extractor=we)
     compute_principal_components(waveform_extractor=we, n_components=3, mode='by_channel_global')
 
     # the export process is fast because everything is pre-computed

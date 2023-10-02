@@ -184,7 +184,7 @@ Here is an example with non-rigid motion estimation:
 .. code-block:: python
 
     from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-    peaks = detect_peaks(recording=ecording, ...) # as in above example
+    peaks = detect_peaks(recording=recording, ...) # as in above example
 
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks
     peak_locations = localize_peaks(recording=recording, peaks=peaks, ...) # as above

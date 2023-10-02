@@ -48,16 +48,6 @@ Importantly, some formats directly handle the probe information:
     print(recording_mearec.get_probe())
 
 
-Although most recordings are loaded with the :py:mod:`~spikeinterface.extractors`
-a few file formats are loaded from the :py:mod:`~spikeinterface.core` module
-
-.. code-block:: python
-
-    import spikeinterface as si
-
-    recording_binary = si.read_binary(file_path='binary.bin')
-
-    recording_zarr = si.read_zarr(file_path='zarr_file.zarr')
 
 
 Read one Sorting
