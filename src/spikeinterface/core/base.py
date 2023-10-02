@@ -47,7 +47,8 @@ class BaseExtractor:
         # 'main_ids' will either be channel_ids or units_ids
         # They is used for properties
         self._main_ids = np.array(main_ids)
-        assert self._main_ids.dtype.kind in "uiSU", "Main IDs can only be integers (signed/unsigned) or strings"
+        if len(self._main_ids) > 0:
+            assert self._main_ids.dtype.kind in "uiSU", "Main IDs can only be integers (signed/unsigned) or strings"
 
         # dict at object level
         self._annotations = {}
