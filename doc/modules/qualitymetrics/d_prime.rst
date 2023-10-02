@@ -34,7 +34,7 @@ Example code
 
     import spikeinterface.qualitymetrics as sqm
 
-    d_prime = sqm.lda_metrics(all_pcs, all_labels, 0)
+    d_prime = sqm.lda_metrics(all_pcs=all_pcs, all_labels=all_labels, this_unit_id=0)
 
 
 Reference

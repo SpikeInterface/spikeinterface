@@ -27,7 +27,7 @@ Example code
 
     # Make recording, sorting and wvf_extractor object for your data.
 
-    presence_ratio = sqm.compute_presence_ratios(wvf_extractor)
+    presence_ratio = sqm.compute_presence_ratios(waveform_extractor=wvf_extractor)
     # presence_ratio is a dict containing the unit IDs as keys
     # and their presence ratio (between 0 and 1) as values.
 
