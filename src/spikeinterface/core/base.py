@@ -616,7 +616,7 @@ class BaseExtractor:
         Parameters
         ----------
         file_path: str
-            Path of the json file
+            Path of the pickle file
         include_properties: bool
             If True, all properties are dumped
         folder_metadata: str, Path, or None
