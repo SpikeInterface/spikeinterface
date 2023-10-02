@@ -661,7 +661,7 @@ def remove_duplicates_via_matching(
     labels = np.unique(new_labels)
     labels = labels[labels >= 0]
 
-    del recording, sub_recording
+    del recording, sub_recording, method_kwargs
     os.remove(tmp_filename)
 
     return labels, new_labels
