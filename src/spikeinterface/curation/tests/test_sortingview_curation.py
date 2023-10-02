@@ -174,8 +174,9 @@ def test_label_inheritance_int():
     duration = 20.0
     num_timepoints = int(sampling_frequency * duration)
     num_spikes = 1000
+    num_units = 7
     times = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
-    labels = np.random.randint(1, 8, size=num_spikes)  # 7 units: 1 to 7
+    labels = np.random.randint(1, 1 + num_units, size=num_spikes)  # 7 units: 1 to 7
 
     sorting = se.NumpySorting.from_times_labels(times, labels, sampling_frequency)
 
