@@ -592,6 +592,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatchingEngine):
         d["spatial"] = np.moveaxis(d["spatial"], [0, 1, 2], [1, 0, 2])
         d["temporal"] = np.moveaxis(d["temporal"], [0, 1, 2], [1, 2, 0])
         d["singular"] = d["singular"].T[:, :, np.newaxis]
+
         return d
 
     @classmethod

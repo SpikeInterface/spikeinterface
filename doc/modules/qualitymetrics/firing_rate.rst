@@ -40,7 +40,7 @@ With SpikeInterface:
     import spikeinterface.qualitymetrics as sqm
 
     # Make recording, sorting and wvf_extractor object for your data.
-    firing_rate = sqm.compute_firing_rates(wvf_extractor)
+    firing_rate = sqm.compute_firing_rates(waveform_extractor=wvf_extractor)
     # firing_rate is a dict containing the unit IDs as keys,
     # and their firing rates across segments as values (in Hz).
 
