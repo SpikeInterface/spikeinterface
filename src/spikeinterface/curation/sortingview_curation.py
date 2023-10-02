@@ -94,7 +94,6 @@ def apply_sortingview_curation(
     # Populate the properties dictionary
     for unit_index, unit_id in enumerate(curation_sorting.current_sorting.unit_ids):
         unit_id_str = str(unit_id)
-        # Check for exact match first
         if unit_id_str in labels_dict:
             for label in labels_dict[unit_id_str]:
                 properties[label][unit_index] = True
