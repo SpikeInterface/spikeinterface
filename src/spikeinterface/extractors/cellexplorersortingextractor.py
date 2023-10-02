@@ -118,7 +118,7 @@ class CellExplorerSortingExtractor(BaseSorting):
         spike_times = spikes_data["times"]
 
         # CellExplorer reports spike times in units seconds; SpikeExtractors uses time units of sampling frames
-        unit_ids = unit_ids[:].tolist()
+        unit_ids = unit_ids[:].astype(int).tolist()
         spiketrains_dict = {unit_id: spike_times[index] for index, unit_id in enumerate(unit_ids)}
         for unit_id in unit_ids:
             spiketrains_dict[unit_id] = (sampling_frequency * spiketrains_dict[unit_id]).round().astype(np.int64)
