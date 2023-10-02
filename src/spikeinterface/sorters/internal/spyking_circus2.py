@@ -118,8 +118,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if clustering_folder.exists():
             shutil.rmtree(clustering_folder)
 
-        sorting = sorting.save(folder=clustering_folder)
-
         ## We get the templates our of such a clustering
         waveforms_params = params["waveforms"].copy()
         waveforms_params.update(job_kwargs)
@@ -131,6 +129,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             mode = "memory"
             waveforms_folder = None
         else:
+            sorting = sorting.save(folder=clustering_folder)
             mode = "folder"
             waveforms_folder = sorter_output_folder / "waveforms"
 

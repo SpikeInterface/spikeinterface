@@ -574,6 +574,8 @@ def remove_duplicates_via_matching(
     if tmp_folder is None:
         tmp_folder = get_global_tmp_folder()
 
+    tmp_folder.mkdir(parents=True, exist_ok=True)
+
     tmp_filename = tmp_folder / "tmp.raw"
 
     f = open(tmp_filename, "wb")
@@ -583,8 +585,8 @@ def remove_duplicates_via_matching(
     f.close()
 
     recording = BinaryRecordingExtractor(tmp_filename, num_channels=num_chans, sampling_frequency=fs, dtype="float32")
-    recording.annotate(is_filtered=True)
     recording = recording.set_probe(waveform_extractor.recording.get_probe())
+    recording.annotate(is_filtered=True)
 
     margin = 2 * max(waveform_extractor.nbefore, waveform_extractor.nafter)
     half_marging = margin // 2
@@ -608,7 +610,6 @@ def remove_duplicates_via_matching(
         t_stop = padding + (i + 1) * duration
 
         sub_recording = recording.frame_slice(t_start - half_marging, t_stop + half_marging)
-
         method_kwargs.update({"ignored_ids": ignore_ids + [i]})
         spikes, computed = find_spikes_from_templates(
             sub_recording, method=method, method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
@@ -660,7 +661,7 @@ def remove_duplicates_via_matching(
     labels = np.unique(new_labels)
     labels = labels[labels >= 0]
 
-    del recording, sub_recording
+    del recording, sub_recording, method_kwargs
     os.remove(tmp_filename)
 
     return labels, new_labels

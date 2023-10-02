@@ -24,21 +24,21 @@ The merging and splitting operations are handled by the :py:class:`~spikeinterfa
 
     from spikeinterface.curation import CurationSorting
 
-    sorting = run_sorter('kilosort2', recording)
+    sorting = run_sorter(sorter_name='kilosort2', recording=recording)
 
-    cs = CurationSorting(sorting)
+    cs = CurationSorting(parent_sorting=sorting)
 
     # make a first merge
-    cs.merge(['#1', '#5', '#15'])
+    cs.merge(units_to_merge=['#1', '#5', '#15'])
 
     # make a second merge
-    cs.merge(['#11', '#21'])
+    cs.merge(units_to_merge=['#11', '#21'])
 
     # make a split
     split_index = ... # some criteria on spikes
-    cs.split('#20', split_index)
+    cs.split(split_unit_id='#20', indices_list=split_index)
 
-    # here the final clean sorting
+    # here is the final clean sorting
     clean_sorting = cs.sorting
 
 
@@ -60,12 +60,12 @@ merges. Therefore, it has many parameters and options.
 
     from spikeinterface.curation import MergeUnitsSorting, get_potential_auto_merge
 
-    sorting = run_sorter('kilosort', recording)
+    sorting = run_sorter(sorter_name='kilosort', recording=recording)
 
-    we = extract_waveforms(recording, sorting, folder='wf_folder')
+    we = extract_waveforms(recording=recording, sorting=sorting, folder='wf_folder')
 
     # merges is a list of lists, with unit_ids to be merged.
-    merges = get_potential_auto_merge(we, minimum_spikes=1000,  maximum_distance_um=150.,
+    merges = get_potential_auto_merge(waveform_extractor=we, minimum_spikes=1000,  maximum_distance_um=150.,
                                       peak_sign="neg", bin_ms=0.25, window_ms=100.,
                                       corr_diff_thresh=0.16, template_diff_thresh=0.25,
                                       censored_period_ms=0., refractory_period_ms=1.0,
@@ -73,7 +73,7 @@ merges. Therefore, it has many parameters and options.
                                       firing_contamination_balance=1.5)
 
     # here we apply the merges
-    clean_sorting = MergeUnitsSorting(sorting, merges)
+    clean_sorting = MergeUnitsSorting(parent_sorting=sorting, units_to_merge=merges)
 
 
 Manual curation with sorting view
@@ -98,24 +98,24 @@ The manual curation (including merges and labels) can be applied to a SpikeInter
     from spikeinterface.widgets import plot_sorting_summary
 
     # run a sorter and export waveforms
-    sorting = run_sorter('kilosort2', recording)
-    we = extract_waveforms(recording, sorting, folder='wf_folder')
+    sorting = run_sorter(sorter_name'kilosort2', recording=recording)
+    we = extract_waveforms(recording=recording, sorting=sorting, folder='wf_folder')
 
     # some postprocessing is required
-    _ = compute_spike_amplitudes(we)
-    _ = compute_unit_locations(we)
-    _ = compute_template_similarity(we)
-    _ = compute_correlograms(we)
+    _ = compute_spike_amplitudes(waveform_extractor=we)
+    _ = compute_unit_locations(waveform_extractor=we)
+    _ = compute_template_similarity(waveform_extractor=we)
+    _ = compute_correlograms(waveform_extractor=we)
 
     # This loads the data to the cloud for web-based plotting and sharing
-    plot_sorting_summary(we, curation=True, backend='sortingview')
+    plot_sorting_summary(waveform_extractor=we, curation=True, backend='sortingview')
     # we open the printed link URL in a browswe
     # - make manual merges and labeling
     # - from the curation box, click on "Save as snapshot (sha1://)"
 
     # copy the uri
     sha_uri = "sha1://59feb326204cf61356f1a2eb31f04d8e0177c4f1"
-    clean_sorting = apply_sortingview_curation(sorting, uri_or_json=sha_uri)
+    clean_sorting = apply_sortingview_curation(sorting=sorting, uri_or_json=sha_uri)
 
 Note that you can also "Export as JSON" and pass the json file as :code:`uri_or_json` parameter.
 

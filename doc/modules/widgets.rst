@@ -148,7 +148,7 @@ The :code:`plot_*(..., backend="matplotlib")` functions come with the following 
 .. code-block:: python
 
     # matplotlib backend
-    w = plot_traces(recording, backend="matplotlib")
+    w = plot_traces(recording=recording, backend="matplotlib")
 
 **Output:**
 
@@ -173,7 +173,7 @@ Each function has the following additional arguments:
 
     # ipywidgets backend also supports multiple "layers" for plot_traces
     rec_dict = dict(filt=recording, cmr=common_reference(recording))
-    w = sw.plot_traces(rec_dict, backend="ipywidgets")
+    w = sw.plot_traces(recording=rec_dict, backend="ipywidgets")
 
 **Output:**
 
@@ -196,8 +196,8 @@ The functions have the following additional arguments:
 .. code-block:: python
 
     # sortingview backend
-    w_ts = sw.plot_traces(recording, backend="ipywidgets")
-    w_ss = sw.plot_sorting_summary(recording, backend="sortingview")
+    w_ts = sw.plot_traces(recording=recording, backend="ipywidgets")
+    w_ss = sw.plot_sorting_summary(recording=recording, backend="sortingview")
 
 
 **Output:**
@@ -249,7 +249,7 @@ The :code:`ephyviewer` backend is currently only available for the :py:func:`~sp
 
 .. code-block:: python
 
-    plot_traces(recording, backend="ephyviewer", mode="line", show_channel_ids=True)
+    plot_traces(recording=recording, backend="ephyviewer", mode="line", show_channel_ids=True)
 
 
 .. image:: ../images/plot_traces_ephyviewer.png
