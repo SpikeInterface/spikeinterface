@@ -67,9 +67,7 @@ class WhitenRecording(BasePreprocessor):
             if M is not None:
                 M = np.asarray(M)
         else:
-            W, M = compute_whitening_matrix(
-                recording, mode, random_chunk_kwargs, apply_mean, radius_um=radius_um
-            )
+            W, M = compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, radius_um=radius_um)
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
 
@@ -177,9 +175,9 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
     # where the data is on a scale less than 1.
     eps = 1e-8 # the default
     if data.dtype.kind == "f":
-        median_data_sqr = np.median(data ** 2) # use the square because cov (and hence S) scales as the square
+        median_data_sqr = np.median(data**2)  # use the square because cov (and hence S) scales as the square
         if median_data_sqr < 1 and median_data_sqr > 0:
-            eps = max(1e-16, median_data_sqr * 1e-3) # use a small fraction of the median of the squared data
+            eps = max(1e-16, median_data_sqr * 1e-3)  # use a small fraction of the median of the squared data
 
     if mode == "global":
         U, S, Ut = np.linalg.svd(cov, full_matrices=True)
