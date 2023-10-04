@@ -1405,6 +1405,7 @@ def generate_ground_truth_recording(
         assert sorting.sampling_frequency == sampling_frequency
     num_spikes = sorting.to_spike_vector().size
 
+
     if probe is None:
         probe = generate_linear_probe(num_elec=num_channels)
         probe.set_device_channel_indices(np.arange(num_channels))
