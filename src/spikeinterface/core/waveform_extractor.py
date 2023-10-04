@@ -175,7 +175,12 @@ class WaveformExtractor:
             rec_attributes = None
 
         if sorting is None:
-            sorting = load_extractor(folder / "sorting.json", base_folder=folder)
+            if (folder / "sorting.json").exists():
+                sorting = load_extractor(folder / "sorting.json", base_folder=folder)
+            elif (folder / "sorting.pickle").exists():
+                sorting = load_extractor(folder / "sorting.pickle")
+            else:
+                raise FileNotFoundError("load_waveforms() impossible to find the sorting object (json or pickle)")
 
         # the sparsity is the sparsity of the saved/cached waveforms arrays
         sparsity_file = folder / "sparsity.json"
