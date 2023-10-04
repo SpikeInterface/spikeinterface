@@ -171,11 +171,11 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
     # Typically we can assume that data is in units of
     # microvolts, but this is not always the case. When data
     # is float type and scaled down to very small values, then the
-    # default eps=1e-6 can be too large, resulting in incorrect
+    # default eps=1e-8 can be too large, resulting in incorrect
     # whitening. We therefore check to see if the data is float
     # type and we estimate a more reasonable eps in the case
     # where the data is on a scale less than 1.
-    eps = 1e-6 # the default
+    eps = 1e-8 # the default
     if data.dtype.kind == "f":
         median_data_sqr = np.median(data ** 2) # use the square because cov (and hence S) scales as the square
         if median_data_sqr < 1 and median_data_sqr > 0:
