@@ -234,7 +234,6 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         time_pad,
         sparsity,
     ):
-
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.triggers = np.asarray(triggers, dtype="int64")
@@ -251,8 +250,6 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         self.sparsity = sparsity
 
     def get_traces(self, start_frame, end_frame, channel_indices):
-
-        
         if self.mode in ["average", "median"]:
             traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
         else:
@@ -285,6 +282,7 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                         traces[trig - pad[0] :, :] = 0
         elif self.mode in ["linear", "cubic"]:
             import scipy.interpolate
+
             for trig in triggers:
                 if pad is None:
                     pre_data_end_idx = trig - 1
