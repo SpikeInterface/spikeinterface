@@ -598,14 +598,17 @@ def remove_duplicates_via_matching(
             "waveform_extractor": waveform_extractor,
             "noise_levels": noise_levels,
             "amplitudes": [0.95, 1.05],
-            "omp_min_sps": 0.1,
+            "omp_min_sps": 0.05,
         }
     )
+
+    spikes_per_units, counts = np.unique(waveform_extractor.sorting.to_spike_vector()['unit_index'], return_counts=True)
+    indices = np.argsort(counts)
 
     ignore_ids = []
     similar_templates = [[], []]
 
-    for i in range(nb_templates):
+    for i in np.arange(nb_templates)[indices]:
         t_start = padding + i * duration
         t_stop = padding + (i + 1) * duration
 
