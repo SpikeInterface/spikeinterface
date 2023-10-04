@@ -91,7 +91,7 @@ def run_sorter(
     sorter_name: str,
     recording: BaseRecording,
     output_folder: Optional[str] = None,
-    remove_existing_folder: bool = True,
+    remove_existing_folder: bool = False,
     delete_output_folder: bool = False,
     verbose: bool = False,
     raise_error: bool = True,

@@ -1458,13 +1458,13 @@ def extract_waveforms(
     folder=None,
     mode="folder",
     precompute_template=("average",),
-    ms_before=3.0,
-    ms_after=4.0,
+    ms_before=1.0,
+    ms_after=2.0,
     max_spikes_per_unit=500,
     overwrite=False,
     return_scaled=True,
     dtype=None,
-    sparse=False,
+    sparse=True,
     sparsity=None,
     num_spikes_for_sparsity=100,
     allow_unfiltered=False,
@@ -1508,7 +1508,7 @@ def extract_waveforms(
         If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV.
     dtype: dtype or None
         Dtype of the output waveforms. If None, the recording dtype is maintained.
-    sparse: bool (default False)
+    sparse: bool (default True)
         If True, before extracting all waveforms the `precompute_sparsity()` function is run using
         a few spikes to get an estimate of dense templates to create a ChannelSparsity object.
         Then, the waveforms will be sparse at extraction time, which saves a lot of memory.
