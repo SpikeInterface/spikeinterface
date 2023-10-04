@@ -1726,6 +1726,7 @@ def precompute_sparsity(
             max_spikes_per_unit=num_spikes_for_sparsity,
             return_scaled=False,
             allow_unfiltered=allow_unfiltered,
+            sparse=False,
             **job_kwargs,
         )
         local_sparsity = compute_sparsity(local_we, **sparse_kwargs)
