@@ -182,7 +182,6 @@ class WaveformExtractor:
             else:
                 raise FileNotFoundError("load_waveforms() impossible to find the sorting object (json or pickle)")
 
-
         # the sparsity is the sparsity of the saved/cached waveforms arrays
         sparsity_file = folder / "sparsity.json"
         if sparsity_file.is_file():
