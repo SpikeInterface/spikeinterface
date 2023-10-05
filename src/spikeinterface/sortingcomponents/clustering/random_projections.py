@@ -224,6 +224,7 @@ class RandomProjectionClustering:
 
         del we, sorting
         import gc
+
         gc.collect()
 
         if params["tmp_folder"] is None:
