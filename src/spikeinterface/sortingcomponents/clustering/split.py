@@ -154,13 +154,12 @@ def split_function_wrapper(peak_indices):
     return is_split, local_labels, peak_indices
 
 
-
 class LocalFeatureClustering:
     """
     This method is a refactorized mix  between:
        * old tridesclous code
        * "herding_split()" in DART/spikepsvae by Charlie Windolf
-    
+
     The idea simple :
      * agregate features (svd or even waveforms) with sparse channel.
      * run a local feature reduction (pca or  svd)
@@ -183,7 +182,6 @@ class LocalFeatureClustering:
         min_samples=25,
         n_pca_features=2,
         minimum_common_channels=2,
-
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
 
@@ -218,8 +216,12 @@ class LocalFeatureClustering:
         final_features = TruncatedSVD(n_pca_features).fit_transform(flatten_features)
 
         if clusterer == "hdbscan":
-            clust = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples, allow_single_cluster=True,
-                                cluster_selection_method="leaf")
+            clust = HDBSCAN(
+                min_cluster_size=min_cluster_size,
+                min_samples=min_samples,
+                allow_single_cluster=True,
+                cluster_selection_method="leaf",
+            )
             clust.fit(final_features)
             possible_labels = clust.labels_
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
@@ -236,9 +238,7 @@ class LocalFeatureClustering:
         else:
             raise ValueError(f"wrong clusterer {clusterer}")
 
-        
-
-        # DEBUG = True
+        # DEBUG = True
         DEBUG = False
         if DEBUG:
             import matplotlib.pyplot as plt
@@ -259,7 +259,7 @@ class LocalFeatureClustering:
 
                 ax = axs[1]
                 ax.plot(flatten_wfs[mask][sl].T, color=colors[k], alpha=0.5)
-            
+
             axs[0].set_title(f"{clusterer} {is_split}")
 
             plt.show()
