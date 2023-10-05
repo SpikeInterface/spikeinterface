@@ -71,10 +71,10 @@ class FilterRecording(BasePreprocessor):
     ):
         import scipy.signal
 
-        assert filter_mode in ("sos", "ba")
+        assert filter_mode in ("sos", "ba"), "'filter' mode must be 'sos' or 'ba'"
         fs = recording.get_sampling_frequency()
         if coeff is None:
-            assert btype in ("bandpass", "highpass")
+            assert btype in ("bandpass", "highpass"), "'bytpe' must be 'bandpass' or 'highpass'"
             # coefficient
             # self.coeff is 'sos' or 'ab' style
             filter_coeff = scipy.signal.iirfilter(
@@ -258,7 +258,7 @@ class NotchFilterRecording(BasePreprocessor):
         if dtype.kind == "u":
             raise TypeError(
                 "The notch filter only supports signed types. Use the 'dtype' argument"
-                "to specify a signed type (e.g. 'int16', 'float32'"
+                "to specify a signed type (e.g. 'int16', 'float32')"
             )
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
