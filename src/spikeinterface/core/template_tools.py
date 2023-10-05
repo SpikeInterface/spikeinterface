@@ -6,7 +6,9 @@ from .sparsity import compute_sparsity, _sparsity_doc
 from .recording_tools import get_channel_distances, get_noise_levels
 
 
-def get_template_amplitudes(waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "extremum"):
+def get_template_amplitudes(
+    waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "extremum"
+):
     """
     Get amplitude per channel for each unit.
 
@@ -58,7 +60,10 @@ def get_template_amplitudes(waveform_extractor, peak_sign: "neg" | "pos" | "both
 
 
 def get_template_extremum_channel(
-    waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "extremum", outputs: "id" | "index" = "id"
+    waveform_extractor,
+    peak_sign: "neg" | "pos" | "both" = "neg",
+    mode: "extremum" | "at_index" = "extremum",
+    outputs: "id" | "index" = "id",
 ):
     """
     Compute the channel with the extremum peak for each unit.
@@ -204,7 +209,9 @@ def get_template_extremum_channel_peak_shift(waveform_extractor, peak_sign: "neg
     return shifts
 
 
-def get_template_extremum_amplitude(waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "at_index"):
+def get_template_extremum_amplitude(
+    waveform_extractor, peak_sign: "neg" | "pos" | "both" = "neg", mode: "extremum" | "at_index" = "at_index"
+):
     """
     Computes amplitudes on the best channel.
 

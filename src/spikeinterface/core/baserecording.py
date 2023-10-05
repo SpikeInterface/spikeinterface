@@ -305,7 +305,8 @@ class BaseRecording(BaseRecordingSnippets):
 
             if not self.has_scaled():
                 raise ValueError(
-                    "This recording does not support return_scaled=True (need gain_to_uV and offset_" "to_uV properties)"
+                    "This recording does not support return_scaled=True (need gain_to_uV and offset_"
+                    "to_uV properties)"
                 )
             else:
                 gains = self.get_property("gain_to_uV")
