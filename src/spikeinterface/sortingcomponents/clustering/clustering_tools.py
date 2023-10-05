@@ -610,7 +610,7 @@ def remove_duplicates_via_matching(
     ignore_ids = []
     similar_templates = [[], []]
 
-    for i in np.arange(nb_templates)[indices]:
+    for i in indices:
         t_start = padding + i * duration
         t_stop = padding + (i + 1) * duration
 
