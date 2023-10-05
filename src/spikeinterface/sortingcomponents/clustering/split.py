@@ -13,6 +13,9 @@ from .tools import aggregate_sparse_features, FeaturesLoader
 from .isocut5 import isocut5
 
 
+# important all DEBUG and matplotlib are left in the code intentionally
+
+
 def split_clusters(
     peak_labels,
     recording,
@@ -25,7 +28,7 @@ def split_clusters(
     **job_kwargs,
 ):
     """
-    Run recusrsively or not in a multi process pool a local split method.
+    Run recusrsively (or not) in a multi process pool a local split method.
 
     Parameters
     ----------
@@ -151,11 +154,19 @@ def split_function_wrapper(peak_indices):
     return is_split, local_labels, peak_indices
 
 
-class HdbscanOnLocalPca:
-    # @charlie : this is the equivalent of "herding_split()" in DART
-    #  but simplified, flexible and renamed
+class LocalFeatureClustering:
+    """
+    This method is a refactorized mix  between:
+       * old tridesclous code
+       * "herding_split()" in DART/spikepsvae by Charlie Windolf
 
-    name = "hdbscan_on_local_pca"
+    The idea simple :
+     * agregate features (svd or even waveforms) with sparse channel.
+     * run a local feature reduction (pca or  svd)
+     * try a new split (hdscan or isocut5)
+    """
+
+    name = "local_feature_clustering"
 
     @staticmethod
     def split(
@@ -170,6 +181,7 @@ class HdbscanOnLocalPca:
         min_cluster_size=25,
         min_samples=25,
         n_pca_features=2,
+        minimum_common_channels=2,
     ):
         local_labels = np.zeros(peak_indices.size, dtype=np.int64)
 
@@ -183,8 +195,7 @@ class HdbscanOnLocalPca:
         target_channels = np.flatnonzero(np.all(neighbours_mask[local_chans, :], axis=0))
 
         # TODO fix this a better way, this when cluster have too few overlapping channels
-        minimum_channels = 2
-        if target_channels.size < minimum_channels:
+        if target_channels.size < minimum_common_channels:
             return False, None
 
         aligned_wfs, dont_have_channels = aggregate_sparse_features(
@@ -205,8 +216,12 @@ class HdbscanOnLocalPca:
         final_features = TruncatedSVD(n_pca_features).fit_transform(flatten_features)
 
         if clusterer == "hdbscan":
-            clust = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples, allow_single_cluster=True,
-                                cluster_selection_method="leaf")
+            clust = HDBSCAN(
+                min_cluster_size=min_cluster_size,
+                min_samples=min_samples,
+                allow_single_cluster=True,
+                cluster_selection_method="leaf",
+            )
             clust.fit(final_features)
             possible_labels = clust.labels_
             is_split = np.setdiff1d(possible_labels, [-1]).size > 1
@@ -223,9 +238,7 @@ class HdbscanOnLocalPca:
         else:
             raise ValueError(f"wrong clusterer {clusterer}")
 
-        
-
-        # DEBUG = True
+        # DEBUG = True
         DEBUG = False
         if DEBUG:
             import matplotlib.pyplot as plt
@@ -246,7 +259,7 @@ class HdbscanOnLocalPca:
 
                 ax = axs[1]
                 ax.plot(flatten_wfs[mask][sl].T, color=colors[k], alpha=0.5)
-            
+
             axs[0].set_title(f"{clusterer} {is_split}")
 
             plt.show()
@@ -260,6 +273,6 @@ class HdbscanOnLocalPca:
 
 
 split_methods_list = [
-    HdbscanOnLocalPca,
+    LocalFeatureClustering,
 ]
 split_methods_dict = {e.name: e for e in split_methods_list}

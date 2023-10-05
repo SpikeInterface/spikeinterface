@@ -83,7 +83,7 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
     for chan in np.unique(local_peaks["channel_index"]):
         sparse_chans = np.flatnonzero(sparse_mask[chan, :])
         peak_inds = np.flatnonzero(local_peaks["channel_index"] == chan)
-        if np.all(np.in1d(target_channels, sparse_chans)):
+        if np.all(np.isin(target_channels, sparse_chans)):
             # peaks feature channel have all target_channels
             source_chans = np.flatnonzero(np.in1d(sparse_chans, target_channels))
             aligned_features[peak_inds, :, :] = sparse_feature[peak_indices[peak_inds], :, :][:, :, source_chans]

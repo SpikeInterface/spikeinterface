@@ -6,7 +6,7 @@ import numpy as np
 
 from spikeinterface.core import NumpySorting, load_extractor, BaseRecording, get_noise_levels, extract_waveforms
 from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore
+from spikeinterface.preprocessing import common_reference, zscore, whiten, highpass_filter
 
 try:
     import hdbscan
@@ -22,7 +22,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     _default_params = {
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
         "waveforms": {"max_spikes_per_unit": 200, "overwrite": True, "sparse": True, "method": "ptp", "threshold": 1},
-        "filtering": {"dtype": "float32"},
+        "filtering": {"freq_min": 150, "dtype": "float32"},
         "detection": {"peak_sign": "neg", "detect_threshold": 5},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
         "localization": {},
@@ -60,11 +60,12 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## First, we are filtering the data
         filtering_params = params["filtering"].copy()
         if params["apply_preprocessing"]:
-            recording_f = bandpass_filter(recording, **filtering_params)
+            recording_f = highpass_filter(recording, **filtering_params)
             recording_f = common_reference(recording_f)
         else:
             recording_f = recording
 
+        # recording_f = whiten(recording_f, dtype="float32")
         recording_f = zscore(recording_f, dtype="float32")
 
         ## Then, we are detecting peaks with a locally_exclusive method
@@ -98,10 +99,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## We launch a clustering (using hdbscan) relying on positions and features extracted on
         ## the fly from the snippets
         clustering_params = params["clustering"].copy()
-        clustering_params["waveforms_kwargs"] = params["waveforms"]
+        clustering_params["waveforms"] = params["waveforms"].copy()
 
         for k in ["ms_before", "ms_after"]:
-            clustering_params["waveforms_kwargs"][k] = params["general"][k]
+            clustering_params["waveforms"][k] = params["general"][k]
 
         clustering_params.update(dict(shared_memory=params["shared_memory"]))
         clustering_params["job_kwargs"] = job_kwargs

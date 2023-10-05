@@ -434,7 +434,7 @@ def function_wrapper(args):
             return _func(segment_index, start_frame, end_frame, _worker_ctx)
 
 
-# Here some utils
+# Here some utils copy/paste from DART (Charlie Windolf)
 
 
 class MockFuture:

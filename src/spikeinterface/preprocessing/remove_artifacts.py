@@ -107,8 +107,6 @@ class RemoveArtifactsRecording(BasePreprocessor):
         time_jitter=0,
         waveforms_kwargs={"allow_unfiltered": True, "mode": "memory"},
     ):
-        import scipy.interpolate
-
         available_modes = ("zeros", "linear", "cubic", "average", "median")
         num_seg = recording.get_num_segments()
 
@@ -236,8 +234,6 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
         time_pad,
         sparsity,
     ):
-        import scipy.interpolate
-
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
 
         self.triggers = np.asarray(triggers, dtype="int64")
@@ -285,6 +281,8 @@ class RemoveArtifactsRecordingSegment(BasePreprocessorSegment):
                     elif trig + pad[1] >= end_frame - start_frame:
                         traces[trig - pad[0] :, :] = 0
         elif self.mode in ["linear", "cubic"]:
+            import scipy.interpolate
+
             for trig in triggers:
                 if pad is None:
                     pre_data_end_idx = trig - 1

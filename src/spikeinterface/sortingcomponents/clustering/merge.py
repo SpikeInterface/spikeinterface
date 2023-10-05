@@ -80,45 +80,46 @@ def merge_clusters(
         method_kwargs=method_kwargs,
         **job_kwargs,
     )
-    
-    
+
     DEBUG = False
     if DEBUG:
         import matplotlib.pyplot as plt
+
         fig, ax = plt.subplots()
         ax.matshow(pair_values)
-        
-        pair_values[~pair_mask]  = 20
-        
+
+        pair_values[~pair_mask] = 20
+
         import hdbscan
+
         fig, ax = plt.subplots()
-        clusterer = hdbscan.HDBSCAN(metric='precomputed', min_cluster_size=2, allow_single_cluster=True)
+        clusterer = hdbscan.HDBSCAN(metric="precomputed", min_cluster_size=2, allow_single_cluster=True)
         clusterer.fit(pair_values)
         print(clusterer.labels_)
-        clusterer.single_linkage_tree_.plot(cmap='viridis', colorbar=True)
-        #~ fig, ax = plt.subplots()
-        #~ clusterer.minimum_spanning_tree_.plot(edge_cmap='viridis',
-                                          #~ edge_alpha=0.6,
-                                          #~ node_size=80,
-                                          #~ edge_linewidth=2)
-        
+        clusterer.single_linkage_tree_.plot(cmap="viridis", colorbar=True)
+        # ~ fig, ax = plt.subplots()
+        # ~ clusterer.minimum_spanning_tree_.plot(edge_cmap='viridis',
+        # ~ edge_alpha=0.6,
+        # ~ node_size=80,
+        # ~ edge_linewidth=2)
+
         graph = clusterer.single_linkage_tree_.to_networkx()
 
         import scipy.cluster
+
         fig, ax = plt.subplots()
         scipy.cluster.hierarchy.dendrogram(clusterer.single_linkage_tree_.to_numpy(), ax=ax)
-        
+
         import networkx as nx
+
         fig = plt.figure()
         nx.draw_networkx(graph)
         plt.show()
 
         plt.show()
-    
-    
-    
+
     merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="partial")
-    # merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full")
+    # merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full")
 
     group_shifts = resolve_final_shifts(labels_set, merges, pair_mask, pair_shift)
 
@@ -223,7 +224,7 @@ def agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full"
             else:
                 raise ValueError
 
-            # DEBUG = True
+            # DEBUG = True
             DEBUG = False
             if DEBUG:
                 import matplotlib.pyplot as plt
@@ -232,7 +233,7 @@ def agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full"
                 nx.draw_networkx(sub_graph)
                 plt.show()
 
-    # DEBUG = True
+    # DEBUG = True
     DEBUG = False
     if DEBUG:
         import matplotlib.pyplot as plt
@@ -368,8 +369,20 @@ def find_pair_function_wrapper(label0, label1):
     return is_merge, label0, label1, shift, merge_value
 
 
-class WaveformsLda:
-    name = "waveforms_lda"
+class ProjectDistribution:
+    """
+    This method is a refactorized mix  between:
+       * old tridesclous code
+       * some ideas by Charlie Windolf in spikespvae
+
+    The idea is :
+      * project the waveform (or features) samples on a 1d axis (using  LDA for instance).
+      * check that it is the same or not distribution (diptest, distrib_overlap, ...)
+
+
+    """
+
+    name = "project_distribution"
 
     @staticmethod
     def merge(
@@ -401,12 +414,11 @@ class WaveformsLda:
         chans1 = np.unique(peaks["channel_index"][inds1])
         target_chans1 = np.flatnonzero(np.all(waveforms_sparse_mask[chans1, :], axis=0))
 
-        if inds0.size <40 or inds1.size <40:
+        if inds0.size < 40 or inds1.size < 40:
             is_merge = False
             merge_value = 0
             final_shift = 0
             return is_merge, label0, label1, final_shift, merge_value
-
 
         target_chans = np.intersect1d(target_chans0, target_chans1)
 
@@ -489,20 +501,19 @@ class WaveformsLda:
         elif criteria == "distrib_overlap":
             lim0 = min(np.min(feat0), np.min(feat1))
             lim1 = max(np.max(feat0), np.max(feat1))
-            bin_size = (lim1 - lim0) / 200.
+            bin_size = (lim1 - lim0) / 200.0
             bins = np.arange(lim0, lim1, bin_size)
-            
+
             pdf0, _ = np.histogram(feat0, bins=bins, density=True)
             pdf1, _ = np.histogram(feat1, bins=bins, density=True)
             pdf0 *= bin_size
-            pdf1 *= bin_size 
+            pdf1 *= bin_size
             overlap = np.sum(np.minimum(pdf0, pdf1))
-            
+
             is_merge = overlap >= threshold_overlap
-            
+
             merge_value = 1 - overlap
-            
-            
+
         else:
             raise ValueError(f"bad criteria {criteria}")
 
@@ -511,13 +522,13 @@ class WaveformsLda:
         else:
             final_shift = 0
 
-        # DEBUG = True
+        # DEBUG = True
         DEBUG = False
 
         if DEBUG and is_merge:
-        # if DEBUG and not is_merge:
-        # if DEBUG and (overlap > 0.05 and overlap <0.25):
-        # if label0 == 49 and label1== 65:
+            # if DEBUG and not is_merge:
+            # if DEBUG and (overlap > 0.05 and overlap <0.25):
+            # if label0 == 49 and label1== 65:
             import matplotlib.pyplot as plt
 
             flatten_wfs0 = wfs0.swapaxes(1, 2).reshape(wfs0.shape[0], -1)
@@ -540,7 +551,6 @@ class WaveformsLda:
             count1, _ = np.histogram(feat1, bins=bins, density=True)
             pdf0 = count0 * bin_size
             pdf1 = count1 * bin_size
-            
 
             ax = axs[1]
             ax.plot(bins[:-1], pdf0, color="C0")
@@ -553,17 +563,19 @@ class WaveformsLda:
                 ax.axvline(l0, color="C0")
                 ax.axvline(l1, color="C1")
             elif criteria == "distrib_overlap":
-                print(lim0, lim1, )
+                print(
+                    lim0,
+                    lim1,
+                )
                 ax.set_title(f"{overlap:.4f} {is_merge}")
-                ax.plot(bins[:-1], np.minimum(pdf0, pdf1), ls='--', color='k')
+                ax.plot(bins[:-1], np.minimum(pdf0, pdf1), ls="--", color="k")
 
             plt.show()
-
 
         return is_merge, label0, label1, final_shift, merge_value
 
 
 find_pair_method_list = [
-    WaveformsLda,
+    ProjectDistribution,
 ]
 find_pair_method_dict = {e.name: e for e in find_pair_method_list}

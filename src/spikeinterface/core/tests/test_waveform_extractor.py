@@ -346,6 +346,8 @@ def test_recordingless():
 
     # delete original recording and rely on rec_attributes
     if platform.system() != "Windows":
+        # this avoid reference on the folder
+        del we, recording
         shutil.rmtree(cache_folder / "recording1")
         we_loaded = WaveformExtractor.load(wf_folder, with_recording=False)
         assert not we_loaded.has_recording()
@@ -554,6 +556,6 @@ if __name__ == "__main__":
     # test_WaveformExtractor()
     # test_extract_waveforms()
     # test_portability()
-    # test_recordingless()
+    test_recordingless()
     # test_compute_sparsity()
-    test_non_json_object()
+    # test_non_json_object()

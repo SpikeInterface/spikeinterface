@@ -514,19 +514,19 @@ if __name__ == '__main__':
                 res_output = container_client.run_command(cmd)
                 cmd = f"cp -r {si_dev_path_unix} {si_source_folder}"
                 res_output = container_client.run_command(cmd)
-                cmd = f"pip install {si_source_folder}/spikeinterface[full]"
+                cmd = f"pip install --user {si_source_folder}/spikeinterface[full]"
             else:
                 si_source = "remote repository"
-                cmd = "pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]"
+                cmd = "pip install --user --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]"
             if verbose:
                 print(f"Installing dev spikeinterface from {si_source}")
             res_output = container_client.run_command(cmd)
-            cmd = "pip install --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip"
+            cmd = "pip install --user --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip"
             res_output = container_client.run_command(cmd)
         else:
             if verbose:
                 print(f"Installing spikeinterface=={si_version} in {container_image}")
-            cmd = f"pip install --upgrade --no-input spikeinterface[full]=={si_version}"
+            cmd = f"pip install --user --upgrade --no-input spikeinterface[full]=={si_version}"
             res_output = container_client.run_command(cmd)
     else:
         # TODO version checking
@@ -540,7 +540,7 @@ if __name__ == '__main__':
     if extra_requirements:
         if verbose:
             print(f"Installing extra requirements: {extra_requirements}")
-        cmd = f"pip install --upgrade --no-input {' '.join(extra_requirements)}"
+        cmd = f"pip install --user --upgrade --no-input {' '.join(extra_requirements)}"
         res_output = container_client.run_command(cmd)
 
     # run sorter on folder
