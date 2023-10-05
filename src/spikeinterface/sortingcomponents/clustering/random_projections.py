@@ -181,24 +181,26 @@ class RandomProjectionClustering:
         else:
             tmp_folder = Path(params["tmp_folder"])
 
+        tmp_folder.mkdir(parents=True, exist_ok=True)
+
+        sorting_folder = tmp_folder / "sorting"
+        unit_ids = np.arange(len(np.unique(spikes["unit_index"])))
+        sorting = NumpySorting(spikes, fs, unit_ids=unit_ids)
+
         if params["shared_memory"]:
             waveform_folder = None
             mode = "memory"
         else:
             waveform_folder = tmp_folder / "waveforms"
             mode = "folder"
+            sorting = sorting.save(folder=sorting_folder)
 
-        sorting_folder = tmp_folder / "sorting"
-        unit_ids = np.arange(len(np.unique(spikes["unit_index"])))
-        sorting = NumpySorting(spikes, fs, unit_ids=unit_ids)
-        sorting = sorting.save(folder=sorting_folder)
         we = extract_waveforms(
             recording,
             sorting,
             waveform_folder,
-            ms_before=params["ms_before"],
-            ms_after=params["ms_after"],
             **params["job_kwargs"],
+            **params["waveforms"],
             return_scaled=False,
             mode=mode,
         )
@@ -219,12 +221,14 @@ class RandomProjectionClustering:
             we, noise_levels, peak_labels, job_kwargs=cleaning_matching_params, **cleaning_params
         )
 
+        del we, sorting
+
         if params["tmp_folder"] is None:
             shutil.rmtree(tmp_folder)
         else:
             if not params["shared_memory"]:
                 shutil.rmtree(tmp_folder / "waveforms")
-            shutil.rmtree(tmp_folder / "sorting")
+                shutil.rmtree(tmp_folder / "sorting")
 
         if verbose:
             print("We kept %d non-duplicated clusters..." % len(labels))

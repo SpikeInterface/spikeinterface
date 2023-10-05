@@ -22,8 +22,8 @@ In this code example, we build a preprocessing chain with two steps:
     import spikeinterface.preprocessing import bandpass_filter, common_reference
 
     # recording is a RecordingExtractor object
-    recording_f = bandpass_filter(recording, freq_min=300, freq_max=6000)
-    recording_cmr = common_reference(recording_f, operator="median")
+    recording_f = bandpass_filter(recording=recording, freq_min=300, freq_max=6000)
+    recording_cmr = common_reference(recording=recording_f, operator="median")
 
 These two preprocessors will not compute anything at instantiation, but the computation will be "on-demand"
 ("on-the-fly") when getting traces.
@@ -38,7 +38,7 @@ save the object:
 .. code-block:: python
 
     # here the spykingcircus2 sorter engine directly uses the lazy "recording_cmr" object
-    sorting = run_sorter(recording_cmr, 'spykingcircus2')
+    sorting = run_sorter(recording=recording_cmr, sorter_name='spykingcircus2')
 
 Most of the external sorters, however, will need a binary file as input, so we can optionally save the processed
 recording with the efficient SpikeInterface :code:`save()` function:
@@ -64,12 +64,13 @@ dtype (unless specified otherwise):
 
 .. code-block:: python
 
+    import spikeinterface.extractors as se
     # spikeGLX is int16
-    rec_int16 = read_spikeglx("my_folder")
+    rec_int16 = se.read_spikeglx(folder_path"my_folder")
     # by default the int16 is kept
-    rec_f = bandpass_filter(rec_int16, freq_min=300, freq_max=6000)
+    rec_f = bandpass_filter(recording=rec_int16, freq_min=300, freq_max=6000)
     # we can force a float32 casting
-    rec_f2 = bandpass_filter(rec_int16, freq_min=300, freq_max=6000, dtype='float32')
+    rec_f2 = bandpass_filter(recording=rec_int16, freq_min=300, freq_max=6000, dtype='float32')
 
 Some scaling pre-processors, such as :code:`whiten()` or :code:`zscore()`, will force the output to :code:`float32`.
 
@@ -82,6 +83,8 @@ We have many preprocessing functions that can be flexibly added to a pipeline.
 The full list of preprocessing functions can be found here: :ref:`api_preprocessing`
 
 Here is a full list of possible preprocessing steps, grouped by type of processing:
+
+For all examples :code:`rec` is a :code:`RecordingExtractor`.
 
 
 filter() / bandpass_filter() / notch_filter() / highpass_filter()
@@ -98,7 +101,7 @@ Important aspects of filtering functions:
 
 .. code-block:: python
 
-    rec_f = bandpass_filter(rec, freq_min=300, freq_max=6000)
+    rec_f = bandpass_filter(recording=rec, freq_min=300, freq_max=6000)
 
 
 * :py:func:`~spikeinterface.preprocessing.filter()`
@@ -119,7 +122,7 @@ There are various options when combining :code:`operator` and :code:`reference` 
 
 .. code-block:: python
 
-    rec_cmr = common_reference(rec, operator="median", reference="global")
+    rec_cmr = common_reference(recording=rec, operator="median", reference="global")
 
 * :py:func:`~spikeinterface.preprocessing.common_reference()`
 
@@ -144,8 +147,8 @@ difference on artifact removal.
 
 .. code-block:: python
 
-    rec_shift = phase_shift(rec)
-    rec_cmr = common_reference(rec_shift, operator="median", reference="global")
+    rec_shift = phase_shift(recording=rec)
+    rec_cmr = common_reference(recording=rec_shift, operator="median", reference="global")
 
 
 
@@ -168,7 +171,7 @@ centered with unitary variance on each channel.
 
 .. code-block:: python
 
-    rec_normed = zscore(rec)
+    rec_normed = zscore(recording=rec)
 
 * :py:func:`~spikeinterface.preprocessing.normalize_by_quantile()`
 * :py:func:`~spikeinterface.preprocessing.scale()`
@@ -186,7 +189,7 @@ The whitened traces are then the dot product between the traces and the :code:`W
 
 .. code-block:: python
 
-    rec_w = whiten(rec)
+    rec_w = whiten(recording=rec)
 
 
 * :py:func:`~spikeinterface.preprocessing.whiten()`
@@ -199,7 +202,7 @@ The :code:`blank_staturation()` function is similar, but it automatically estima
 
 .. code-block:: python
 
-    rec_w = clip(rec, a_min=-250., a_max=260)
+    rec_w = clip(recording=rec, a_min=-250., a_max=260)
 
 * :py:func:`~spikeinterface.preprocessing.clip()`
 * :py:func:`~spikeinterface.preprocessing.blank_staturation()`
@@ -234,11 +237,11 @@ interpolated with the :code:`interpolate_bad_channels()` function (channels labe
 .. code-block:: python
 
     # detect
-    bad_channel_ids, channel_labels = detect_bad_channels(rec)
+    bad_channel_ids, channel_labels = detect_bad_channels(recording=rec)
     # Case 1 : remove then
-    rec_clean = recording.remove_channels(bad_channel_ids)
+    rec_clean = recording.remove_channels(remove_channel_ids=bad_channel_ids)
     # Case 2 : interpolate then
-    rec_clean = interpolate_bad_channels(rec, bad_channel_ids)
+    rec_clean = interpolate_bad_channels(recording=rec, bad_channel_ids=bad_channel_ids)
 
 
 * :py:func:`~spikeinterface.preprocessing.detect_bad_channels()`
@@ -257,13 +260,13 @@ remove_artifacts()
 Given an external list of trigger times,  :code:`remove_artifacts()` function can remove artifacts with several
 strategies:
 
-* replace with zeros (blank)
-* make a linear or cubic interpolation
-* remove the median or average template (with optional time jitter and amplitude scaling correction)
+* replace with zeros (blank) :code:`'zeros'`
+* make a linear (:code:`'linear'`) or cubic (:code:`'cubic'`) interpolation
+* remove the median (:code:`'median'`) or average (:code:`'avereage'`) template (with optional time jitter and amplitude scaling correction)
 
 .. code-block:: python
 
-    rec_clean = remove_artifacts(rec, list_triggers)
+    rec_clean = remove_artifacts(recording=rec, list_triggers=[100, 200, 300], mode='zeros')
 
 
 * :py:func:`~spikeinterface.preprocessing.remove_artifacts()`
@@ -276,7 +279,7 @@ Similarly to :code:`numpy.astype()`, the :code:`astype()` casts the traces to th
 
 .. code-block:: python
 
-    rec_int16 = astype(rec_float, "int16")
+    rec_int16 = astype(recording=rec_float, dtype="int16")
 
 
 For recordings whose traces are unsigned (e.g. Maxwell Biosystems), the :code:`unsigned_to_signed()` function makes them
@@ -286,7 +289,7 @@ is subtracted, and the traces are finally cast to :code:`int16`:
 
 .. code-block:: python
 
-    rec_int16 = unsigned_to_signed(rec_uint16)
+    rec_int16 = unsigned_to_signed(recording=rec_uint16)
 
 * :py:func:`~spikeinterface.preprocessing.astype()`
 * :py:func:`~spikeinterface.preprocessing.unsigned_to_signed()`
@@ -300,7 +303,7 @@ required.
 
 .. code-block:: python
 
-    rec_with_more_channels = zero_channel_pad(rec, 128)
+    rec_with_more_channels = zero_channel_pad(parent_recording=rec, num_channels=128)
 
 * :py:func:`~spikeinterface.preprocessing.zero_channel_pad()`
 
@@ -331,7 +334,7 @@ How to implement "IBL destriping" or "SpikeGLX CatGT" in SpikeInterface
 SpikeGLX has a built-in function called `CatGT <https://billkarsh.github.io/SpikeGLX/help/dmx_vs_gbl/dmx_vs_gbl/>`_
 to apply some preprocessing on the traces to remove noise and artifacts.
 IBL also has a standardized pipeline for preprocessed traces a bit similar to CatGT which is called "destriping" [IBL_spikesorting]_.
-In these both cases, the traces are entiely read, processed and written back to a file.
+In both these cases, the traces are entirely read, processed and written back to a file.
 
 SpikeInterface can reproduce similar results without the need to write back to a file by building a *lazy*
 preprocessing chain. Optionally, the result can still be written to a binary (or a zarr) file.
@@ -341,12 +344,12 @@ Here is a recipe to mimic the **IBL destriping**:
 
 .. code-block:: python
 
-    rec = read_spikeglx('my_spikeglx_folder')
-    rec = highpass_filter(rec, n_channel_pad=60)
-    rec = phase_shift(rec)
-    bad_channel_ids = detect_bad_channels(rec)
-    rec = interpolate_bad_channels(rec, bad_channel_ids)
-    rec = highpass_spatial_filter(rec)
+    rec = read_spikeglx(folder_path='my_spikeglx_folder')
+    rec = highpass_filter(recording=rec, n_channel_pad=60)
+    rec = phase_shift(recording=rec)
+    bad_channel_ids = detect_bad_channels(recording=rec)
+    rec = interpolate_bad_channels(recording=rec, bad_channel_ids=bad_channel_ids)
+    rec = highpass_spatial_filter(recording=rec)
     # optional
     rec.save(folder='clean_traces', n_jobs=10, chunk_duration='1s', progres_bar=True)
 
@@ -356,16 +359,15 @@ Here is a recipe to mimic the **SpikeGLX CatGT**:
 
 .. code-block:: python
 
-    rec = read_spikeglx('my_spikeglx_folder')
-    rec = phase_shift(rec)
-    rec = common_reference(rec, operator="median", reference="global")
+    rec = read_spikeglx(folder_path='my_spikeglx_folder')
+    rec = phase_shift(recording=rec)
+    rec = common_reference(recording=rec, operator="median", reference="global")
     # optional
     rec.save(folder='clean_traces', n_jobs=10, chunk_duration='1s', progres_bar=True)
 
 
 Of course, these pipelines can be enhanced and customized using other available steps in the
 :py:mod:`spikeinterface.preprocessing` module!
-
 
 
 

@@ -23,6 +23,16 @@ Expectation and use
 Isolation distance can be interpreted as a measure of distance from the cluster to the nearest other cluster.
 A well isolated unit should have a large isolation distance.
 
+Example code
+------------
+
+.. code-block:: python
+
+    import spikeinterface.qualitymetrics as sqm
+
+    iso_distance, _ = sqm.isolation_distance(all_pcs=all_pcs, all_labels=all_labels, this_unit_id=0)
+
+
 References
 ----------
 
