@@ -99,10 +99,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## We launch a clustering (using hdbscan) relying on positions and features extracted on
         ## the fly from the snippets
         clustering_params = params["clustering"].copy()
-        clustering_params["waveforms_kwargs"] = params["waveforms"]
+        clustering_params["waveforms"] = params["waveforms"].copy()
 
         for k in ["ms_before", "ms_after"]:
-            clustering_params["waveforms_kwargs"][k] = params["general"][k]
+            clustering_params["waveforms"][k] = params["general"][k]
 
         clustering_params.update(dict(shared_memory=params["shared_memory"]))
         clustering_params["job_kwargs"] = job_kwargs

@@ -199,9 +199,8 @@ class RandomProjectionClustering:
             recording,
             sorting,
             waveform_folder,
-            ms_before=params["ms_before"],
-            ms_after=params["ms_after"],
             **params["job_kwargs"],
+            **params['waveforms'],
             return_scaled=False,
             mode=mode,
         )
