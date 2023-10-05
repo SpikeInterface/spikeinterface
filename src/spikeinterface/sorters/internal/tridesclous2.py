@@ -21,13 +21,13 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "apply_preprocessing": True,
         "waveforms" : {"ms_before": 0.5, "ms_after": 1.5, },
         "filtering": {"freq_min": 300, "freq_max": 8000.0},
-        "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 0.8, "radius_um": 150.},
-        "hdbscan_kwargs": {
-            "min_cluster_size": 25,
-            "allow_single_cluster": True,
-            "core_dist_n_jobs": -1,
-            "cluster_selection_method": "leaf",
-        },
+        "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.},
+        #~ "hdbscan_kwargs": {
+            #~ "min_cluster_size": 25,
+            #~ "allow_single_cluster": True,
+            #~ "core_dist_n_jobs": -1,
+            #~ "cluster_selection_method": "leaf",
+        #~ },
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
         "svd": {"n_components": 6},
         "clustering": {
