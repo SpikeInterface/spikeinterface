@@ -44,7 +44,7 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
 
     def _do_plot(self):
         from matplotlib import pyplot as plt
-        
+
         fig = self.figure
 
         for ax in fig.axes:
