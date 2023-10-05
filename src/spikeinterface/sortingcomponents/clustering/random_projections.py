@@ -200,7 +200,7 @@ class RandomProjectionClustering:
             sorting,
             waveform_folder,
             **params["job_kwargs"],
-            **params['waveforms'],
+            **params["waveforms"],
             return_scaled=False,
             mode=mode,
         )
