@@ -94,6 +94,7 @@ def aggregate_sparse_features(peaks, peak_indices, sparse_feature, sparse_mask, 
     return aligned_features, dont_have_channels
 
 
+
 def compute_template_from_sparse(
     peaks, labels, labels_set, sparse_waveforms, sparse_mask, total_channels, peak_shifts=None
 ):
