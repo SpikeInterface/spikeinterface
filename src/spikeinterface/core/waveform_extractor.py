@@ -1507,7 +1507,7 @@ def extract_waveforms(
         If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV.
     dtype: dtype or None
         Dtype of the output waveforms. If None, the recording dtype is maintained.
-    sparse: bool (default True)
+    sparse: bool, default: True
         If True, before extracting all waveforms the `precompute_sparsity()` function is run using
         a few spikes to get an estimate of dense templates to create a ChannelSparsity object.
         Then, the waveforms will be sparse at extraction time, which saves a lot of memory.
