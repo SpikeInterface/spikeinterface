@@ -80,9 +80,45 @@ def merge_clusters(
         method_kwargs=method_kwargs,
         **job_kwargs,
     )
+    
+    
+    DEBUG = False
+    if DEBUG:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax.matshow(pair_values)
+        
+        pair_values[~pair_mask]  = 20
+        
+        import hdbscan
+        fig, ax = plt.subplots()
+        clusterer = hdbscan.HDBSCAN(metric='precomputed', min_cluster_size=2, allow_single_cluster=True)
+        clusterer.fit(pair_values)
+        print(clusterer.labels_)
+        clusterer.single_linkage_tree_.plot(cmap='viridis', colorbar=True)
+        #~ fig, ax = plt.subplots()
+        #~ clusterer.minimum_spanning_tree_.plot(edge_cmap='viridis',
+                                          #~ edge_alpha=0.6,
+                                          #~ node_size=80,
+                                          #~ edge_linewidth=2)
+        
+        graph = clusterer.single_linkage_tree_.to_networkx()
 
-    # merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="partial")
-    merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full")
+        import scipy.cluster
+        fig, ax = plt.subplots()
+        scipy.cluster.hierarchy.dendrogram(clusterer.single_linkage_tree_.to_numpy(), ax=ax)
+        
+        import networkx as nx
+        fig = plt.figure()
+        nx.draw_networkx(graph)
+        plt.show()
+
+        plt.show()
+    
+    
+    
+    merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="partial")
+    # merges = agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full")
 
     group_shifts = resolve_final_shifts(labels_set, merges, pair_mask, pair_shift)
 
@@ -187,7 +223,7 @@ def agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full"
             else:
                 raise ValueError
 
-            # DEBUG = True
+            # DEBUG = True
             DEBUG = False
             if DEBUG:
                 import matplotlib.pyplot as plt
@@ -196,7 +232,7 @@ def agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full"
                 nx.draw_networkx(sub_graph)
                 plt.show()
 
-    # DEBUG = True
+    # DEBUG = True
     DEBUG = False
     if DEBUG:
         import matplotlib.pyplot as plt
@@ -348,6 +384,7 @@ class WaveformsLda:
         criteria="diptest",
         threshold_diptest=0.5,
         threshold_percentile=80.0,
+        threshold_overlap=0.4,
         num_shift=2,
     ):
         if num_shift > 0:
@@ -449,6 +486,23 @@ class WaveformsLda:
             l1 = np.percentile(feat1, 100.0 - threshold_percentile)
             is_merge = l0 >= l1
             merge_value = l0 - l1
+        elif criteria == "distrib_overlap":
+            lim0 = min(np.min(feat0), np.min(feat1))
+            lim1 = max(np.max(feat0), np.max(feat1))
+            bin_size = (lim1 - lim0) / 200.
+            bins = np.arange(lim0, lim1, bin_size)
+            
+            pdf0, _ = np.histogram(feat0, bins=bins, density=True)
+            pdf1, _ = np.histogram(feat1, bins=bins, density=True)
+            pdf0 *= bin_size
+            pdf1 *= bin_size 
+            overlap = np.sum(np.minimum(pdf0, pdf1))
+            
+            is_merge = overlap >= threshold_overlap
+            
+            merge_value = 1 - overlap
+            
+            
         else:
             raise ValueError(f"bad criteria {criteria}")
 
@@ -457,11 +511,13 @@ class WaveformsLda:
         else:
             final_shift = 0
 
-        # DEBUG = True
+        # DEBUG = True
         DEBUG = False
 
         if DEBUG and is_merge:
-        # if DEBUG:
+        # if DEBUG and not is_merge:
+        # if DEBUG and (overlap > 0.05 and overlap <0.25):
+        # if label0 == 49 and label1== 65:
             import matplotlib.pyplot as plt
 
             flatten_wfs0 = wfs0.swapaxes(1, 2).reshape(wfs0.shape[0], -1)
@@ -479,13 +535,16 @@ class WaveformsLda:
             ax.legend()
 
             bins = np.linspace(np.percentile(feat, 1), np.percentile(feat, 99), 100)
-
-            count0, _ = np.histogram(feat0, bins=bins)
-            count1, _ = np.histogram(feat1, bins=bins)
+            bin_size = bins[1] - bins[0]
+            count0, _ = np.histogram(feat0, bins=bins, density=True)
+            count1, _ = np.histogram(feat1, bins=bins, density=True)
+            pdf0 = count0 * bin_size
+            pdf1 = count1 * bin_size
+            
 
             ax = axs[1]
-            ax.plot(bins[:-1], count0, color="C0")
-            ax.plot(bins[:-1], count1, color="C1")
+            ax.plot(bins[:-1], pdf0, color="C0")
+            ax.plot(bins[:-1], pdf1, color="C1")
 
             if criteria == "diptest":
                 ax.set_title(f"{dipscore:.4f} {is_merge}")
@@ -493,9 +552,11 @@ class WaveformsLda:
                 ax.set_title(f"{l0:.4f} {l1:.4f} {is_merge}")
                 ax.axvline(l0, color="C0")
                 ax.axvline(l1, color="C1")
+            elif criteria == "distrib_overlap":
+                print(lim0, lim1, )
+                ax.set_title(f"{overlap:.4f} {is_merge}")
+                ax.plot(bins[:-1], np.minimum(pdf0, pdf1), ls='--', color='k')
 
-
-            
             plt.show()
 
 

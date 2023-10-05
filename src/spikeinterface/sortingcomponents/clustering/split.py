@@ -205,9 +205,11 @@ class HdbscanOnLocalPca:
         final_features = TruncatedSVD(n_pca_features).fit_transform(flatten_features)
 
         if clusterer == "hdbscan":
-            clust = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples, allow_single_cluster=True)
+            clust = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples, allow_single_cluster=True,
+                                cluster_selection_method="leaf")
             clust.fit(final_features)
             possible_labels = clust.labels_
+            is_split = np.setdiff1d(possible_labels, [-1]).size > 1
         elif clusterer == "isocut5":
             dipscore, cutpoint = isocut5(final_features[:, 0])
             possible_labels = np.zeros(final_features.shape[0])
@@ -215,14 +217,15 @@ class HdbscanOnLocalPca:
                 mask = final_features[:, 0] > cutpoint
                 if np.sum(mask) > min_cluster_size and np.sum(~mask):
                     possible_labels[mask] = 1
+                is_split = np.setdiff1d(possible_labels, [-1]).size > 1
             else:
-                return False, None
+                is_split = False
         else:
             raise ValueError(f"wrong clusterer {clusterer}")
 
-        is_split = np.setdiff1d(possible_labels, [-1]).size > 1
+        
 
-        # DEBUG = True
+        # DEBUG = True
         DEBUG = False
         if DEBUG:
             import matplotlib.pyplot as plt
@@ -243,6 +246,8 @@ class HdbscanOnLocalPca:
 
                 ax = axs[1]
                 ax.plot(flatten_wfs[mask][sl].T, color=colors[k], alpha=0.5)
+            
+            axs[0].set_title(f"{clusterer} {is_split}")
 
             plt.show()
 
