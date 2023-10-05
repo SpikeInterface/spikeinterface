@@ -65,7 +65,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         else:
             recording_f = recording
 
-        #recording_f = whiten(recording_f, dtype="float32")
+        # recording_f = whiten(recording_f, dtype="float32")
         recording_f = zscore(recording_f, dtype="float32")
 
         ## Then, we are detecting peaks with a locally_exclusive method

@@ -602,7 +602,7 @@ def remove_duplicates_via_matching(
         }
     )
 
-    spikes_per_units, counts = np.unique(waveform_extractor.sorting.to_spike_vector()['unit_index'], return_counts=True)
+    spikes_per_units, counts = np.unique(waveform_extractor.sorting.to_spike_vector()["unit_index"], return_counts=True)
     indices = np.argsort(counts)
 
     ignore_ids = []
