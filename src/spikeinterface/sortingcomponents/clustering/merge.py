@@ -368,8 +368,19 @@ def find_pair_function_wrapper(label0, label1):
     return is_merge, label0, label1, shift, merge_value
 
 
-class WaveformsLda:
-    name = "waveforms_lda"
+class ProjectDistribution:
+    """
+    This method is a refactorized mix  between:
+       * old tridesclous code
+       * some ideas by Charlie Windolf in spikespvae
+
+    The idea is :
+      * project the waveform (or features) samples on a 1d axis (using  LDA for instance).
+      * check that it is the same or not distribution (diptest, distrib_overlap, ...)
+    
+
+    """
+    name = "project_distribution"
 
     @staticmethod
     def merge(
@@ -564,6 +575,6 @@ class WaveformsLda:
 
 
 find_pair_method_list = [
-    WaveformsLda,
+    ProjectDistribution,
 ]
 find_pair_method_dict = {e.name: e for e in find_pair_method_list}
