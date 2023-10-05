@@ -593,7 +593,9 @@ def remove_duplicates_via_matching(
 
     chunk_size = duration + 3 * margin
 
-    method_kwargs.update(
+    local_params = method_kwargs.copy()
+
+    local_params.update(
         {
             "waveform_extractor": waveform_extractor,
             "noise_levels": noise_levels,
@@ -613,12 +615,12 @@ def remove_duplicates_via_matching(
         t_stop = padding + (i + 1) * duration
 
         sub_recording = recording.frame_slice(t_start - half_marging, t_stop + half_marging)
-        method_kwargs.update({"ignored_ids": ignore_ids + [i]})
+        local_params.update({"ignored_ids": ignore_ids + [i]})
         spikes, computed = find_spikes_from_templates(
-            sub_recording, method=method, method_kwargs=method_kwargs, extra_outputs=True, **job_kwargs
+            sub_recording, method=method, method_kwargs=local_params, extra_outputs=True, **job_kwargs
         )
         if method == "circus-omp-svd":
-            method_kwargs.update(
+            local_params.update(
                 {
                     "overlaps": computed["overlaps"],
                     "templates": computed["templates"],
@@ -632,7 +634,7 @@ def remove_duplicates_via_matching(
                 }
             )
         elif method == "circus-omp":
-            method_kwargs.update(
+            local_params.update(
                 {
                     "overlaps": computed["overlaps"],
                     "templates": computed["templates"],
@@ -664,7 +666,7 @@ def remove_duplicates_via_matching(
     labels = np.unique(new_labels)
     labels = labels[labels >= 0]
 
-    del recording, sub_recording, method_kwargs, waveform_extractor
+    del recording, sub_recording, local_params, waveform_extractor
     os.remove(tmp_filename)
 
     return labels, new_labels
