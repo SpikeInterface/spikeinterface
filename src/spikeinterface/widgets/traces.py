@@ -557,11 +557,6 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_s
             return_scaled=return_scaled,
         )
 
-        # if order is not None:
-        #     traces = traces[:, order]
         list_traces.append(traces)
-
-    # if order is not None:
-    #     channel_ids = np.array(channel_ids)[order]
 
     return times, list_traces, frame_range, channel_ids
