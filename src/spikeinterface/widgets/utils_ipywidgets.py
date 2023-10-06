@@ -235,7 +235,7 @@ class ChannelSelector(W.VBox):
         self.slider.observe(self.on_slider_changed, names=["value"], type="change")
         self.selector.observe(self.on_selector_changed, names=["value"], type="change")
 
-        self.observe(self.value_changed, names=['value'], type="change")
+        self.observe(self.value_changed, names=["value"], type="change")
 
     def on_slider_changed(self, change=None):
         i0, i1 = self.slider.value
@@ -258,7 +258,7 @@ class ChannelSelector(W.VBox):
             self.slider.observe(self.on_slider_changed, names=["value"], type="change")
 
         self.value = channel_ids
-    
+
     def value_changed(self, change=None):
         self.selector.unobserve(self.on_selector_changed, names=["value"], type="change")
         self.selector.value = change["new"]
@@ -270,7 +270,6 @@ class ChannelSelector(W.VBox):
         i1 = self.channel_ids.index(channel_ids[-1]) + 1
         self.slider.value = (i0, i1)
         self.slider.observe(self.on_slider_changed, names=["value"], type="change")
-
 
 
 class ScaleWidget(W.VBox):

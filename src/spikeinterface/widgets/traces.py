@@ -95,6 +95,7 @@ class TracesWidget(BaseWidget):
 
         if order_channel_by_depth and channel_locations is not None:
             from ..preprocessing import depth_order
+
             rec0 = depth_order(rec0)
             recordings = {k: depth_order(rec) for k, rec in recordings.items()}
 
@@ -107,14 +108,12 @@ class TracesWidget(BaseWidget):
         if channel_ids is None:
             channel_ids = rec0.channel_ids
 
-
         layer_keys = list(recordings.keys())
 
         if segment_index is None:
             if rec0.get_num_segments() != 1:
                 raise ValueError("You must provide segment_index=...")
             segment_index = 0
-
 
         fs = rec0.get_sampling_frequency()
         if time_range is None:
