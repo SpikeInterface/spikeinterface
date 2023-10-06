@@ -238,7 +238,11 @@ class TestWidgets(unittest.TestCase):
                 unit_ids = self.we_dense.unit_ids[:4]
                 sw.plot_amplitudes(self.we_dense, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend])
                 sw.plot_amplitudes(
-                    self.we_dense, unit_ids=unit_ids, plot_histograms=True, backend=backend, **self.backend_kwargs[backend]
+                    self.we_dense,
+                    unit_ids=unit_ids,
+                    plot_histograms=True,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
                 )
                 sw.plot_amplitudes(
                     self.we_sparse,
@@ -264,7 +268,9 @@ class TestWidgets(unittest.TestCase):
         possible_backends = list(sw.UnitLocationsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_unit_locations(self.we_dense, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_unit_locations(
+                    self.we_dense, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
+                )
                 sw.plot_unit_locations(
                     self.we_sparse, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
                 )
@@ -273,7 +279,9 @@ class TestWidgets(unittest.TestCase):
         possible_backends = list(sw.SpikeLocationsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_spike_locations(self.we_dense, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend])
+                sw.plot_spike_locations(
+                    self.we_dense, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
+                )
                 sw.plot_spike_locations(
                     self.we_sparse, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
                 )
