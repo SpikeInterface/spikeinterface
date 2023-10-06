@@ -211,9 +211,9 @@ def detect_bad_channels(
 
         if bad_channel_ids.size > recording.get_num_channels() / 3:
             warnings.warn(
-                "Over 1/3 of channels are detected as bad. In the precense of a high"
+                "Over 1/3 of channels are detected as bad. In the presence of a high"
                 "number of dead / noisy channels, bad channel detection may fail "
-                "(erroneously label good channels as dead)."
+                "(good channels may be erroneously labeled as dead)."
             )
 
     elif method == "neighborhood_r2":

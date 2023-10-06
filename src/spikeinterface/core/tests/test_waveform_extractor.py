@@ -559,3 +559,4 @@ if __name__ == "__main__":
     test_recordingless()
     # test_compute_sparsity()
     # test_non_json_object()
+    test_empty_sorting()
