@@ -8,6 +8,7 @@ from .amplitudes import AmplitudesWidget
 from .autocorrelograms import AutoCorrelogramsWidget
 from .confusion_matrix import ConfusionMatrixWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
+from .isi_distribution import ISIDistributionWidget
 from .motion import MotionWidget
 from .probe_map import ProbeMapWidget
 from .quality_metrics import QualityMetricsWidget
@@ -35,6 +36,7 @@ widget_list = [
     AutoCorrelogramsWidget,
     ConfusionMatrixWidget,
     CrossCorrelogramsWidget,
+    ISIDistributionWidget,
     MotionWidget,
     ProbeMapWidget,
     QualityMetricsWidget,
@@ -97,6 +99,7 @@ plot_amplitudes = AmplitudesWidget
 plot_autocorrelograms = AutoCorrelogramsWidget
 plot_confusion_matrix = ConfusionMatrixWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
+plot_isi_distribution = ISIDistributionWidget
 plot_motion = MotionWidget
 plot_probe_map = ProbeMapWidget
 plot_quality_metrics = QualityMetricsWidget

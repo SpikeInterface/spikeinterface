@@ -1,11 +1,7 @@
-# isi/ccg/acg
-from .isidistribution import plot_isi_distribution, ISIDistributionWidget
 
 # peak activity
 from .activity import plot_peak_activity_map, PeakActivityMapWidget
 
-# waveform/PC related
-from .principalcomponent import plot_principal_component
 
 from .multicompgraph import (
     plot_multicomp_graph,

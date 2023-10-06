@@ -58,9 +58,6 @@ class TestWidgets(unittest.TestCase):
     # def test_amplitudes_distribution(self):
     #     sw.plot_amplitudes_distribution(self._we)
 
-    def test_principal_component(self):
-        sw.plot_principal_component(self._we)
-
     # def test_plot_unit_localization(self):
     #     sw.plot_unit_localization(self._we, with_channel_ids=True)
     #     sw.plot_unit_localization(self._we, method='monopolar_triangulation')
@@ -73,10 +70,10 @@ class TestWidgets(unittest.TestCase):
     #     unit_ids = self._sorting.unit_ids[:4]
     #     sw.plot_crosscorrelograms(self._sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0)
 
-    def test_isi_distribution(self):
-        sw.plot_isi_distribution(self._sorting, bin_ms=5.0, window_ms=500.0)
-        fig, axes = plt.subplots(self.num_units, 1)
-        sw.plot_isi_distribution(self._sorting, axes=axes)
+    # def test_isi_distribution(self):
+    #     sw.plot_isi_distribution(self._sorting, bin_ms=5.0, window_ms=500.0)
+    #     fig, axes = plt.subplots(self.num_units, 1)
+    #     sw.plot_isi_distribution(self._sorting, axes=axes)
 
     def test_plot_peak_activity_map(self):
         sw.plot_peak_activity_map(self._rec, with_channel_ids=True)
