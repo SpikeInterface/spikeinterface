@@ -114,7 +114,7 @@ plot_unit_waveforms = UnitWaveformsWidget
 plot_study_run_times = StudyRunTimesWidget
 plot_study_unit_counts = StudyUnitCountsWidget
 plot_study_performances = StudyPerformances
-plot_stufy_performances_vs_metrics = StudyPerformancesVsMetrics
+plot_study_performances_vs_metrics = StudyPerformancesVsMetrics
 
 
 def plot_timeseries(*args, **kwargs):

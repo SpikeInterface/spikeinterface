@@ -165,7 +165,7 @@ class GroundTruthStudy:
             sorting_exists = sorting_folder.exists()
 
             sorter_folder = self.folder / "sorters" / self.key_to_str(key)
-            sorter_folder_exists = sorting_folder.exists()
+            sorter_folder_exists = sorter_folder.exists()
 
             if keep:
                 if sorting_exists:
@@ -184,6 +184,9 @@ class GroundTruthStudy:
                 log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
                 if log_file.exists():
                     log_file.unlink()
+
+            if sorter_folder_exists:
+                shutil.rmtree(sorter_folder)
 
             params = self.cases[key]["run_sorter_params"].copy()
             # this ensure that sorter_name is given
