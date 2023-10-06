@@ -184,9 +184,9 @@ class GroundTruthStudy:
                 log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
                 if log_file.exists():
                     log_file.unlink()
-            
+
             if sorter_folder_exists:
-                 shutil.rmtree(sorter_folder)
+                shutil.rmtree(sorter_folder)
 
             params = self.cases[key]["run_sorter_params"].copy()
             # this ensure that sorter_name is given
