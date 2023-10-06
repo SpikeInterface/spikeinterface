@@ -114,7 +114,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         ## We get the labels for our peaks
         mask = peak_labels > -1
-        sorting = NumpySorting.from_times_labels(selected_peaks["sample_index"][mask], peak_labels[mask], sampling_rate)
+        sorting = NumpySorting.from_times_labels(selected_peaks["sample_index"][mask], peak_labels[mask].astype(int), sampling_rate)
         clustering_folder = sorter_output_folder / "clustering"
         if clustering_folder.exists():
             shutil.rmtree(clustering_folder)
