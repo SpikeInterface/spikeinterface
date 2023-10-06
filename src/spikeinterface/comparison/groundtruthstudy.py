@@ -165,7 +165,7 @@ class GroundTruthStudy:
             sorting_exists = sorting_folder.exists()
 
             sorter_folder = self.folder / "sorters" / self.key_to_str(key)
-            sorter_folder_exists = sorting_folder.exists()
+            sorter_folder_exists = sorter_folder.exists()
 
             if keep:
                 if sorting_exists:
