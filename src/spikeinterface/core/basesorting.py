@@ -170,7 +170,7 @@ class BaseSorting(BaseExtractor):
         if check_spike_frames:
             if has_exceeding_spikes(recording, self):
                 warnings.warn(
-                    "Some spikes are exceeding the recording's duration! "
+                    "Some spikes exceed the recording's duration! "
                     "Removing these excess spikes with `spikeinterface.curation.remove_excess_spikes()` "
                     "Might be necessary for further postprocessing."
                 )

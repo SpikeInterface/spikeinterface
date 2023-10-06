@@ -26,13 +26,42 @@ strategy_list = ["tile_pregenerated", "on_the_fly"]
 
 
 def test_generate_recording():
-    # TODO even this is extenssivly tested in all other function
+    # TODO even this is extensively tested in all other functions
     pass
 
 
 def test_generate_sorting():
-    # TODO even this is extenssivly tested in all other function
+    # TODO even this is extensively tested in all other functions
     pass
+
+
+def test_generate_sorting_with_spikes_on_borders():
+    num_spikes_on_borders = 10
+    border_size_samples = 10
+    segment_duration = 10
+    for nseg in [1, 2, 3]:
+        sorting = generate_sorting(
+            durations=[segment_duration] * nseg,
+            sampling_frequency=30000,
+            num_units=10,
+            add_spikes_on_borders=True,
+            num_spikes_per_border=num_spikes_on_borders,
+            border_size_samples=border_size_samples,
+        )
+        # check that segments are correctly sorted
+        all_spikes = sorting.to_spike_vector()
+        np.testing.assert_array_equal(all_spikes["segment_index"], np.sort(all_spikes["segment_index"]))
+
+        spikes = sorting.to_spike_vector(concatenated=False)
+        # at least num_border spikes at borders for all segments
+        for spikes_in_segment in spikes:
+            # check that sample indices are correctly sorted within segments
+            np.testing.assert_array_equal(spikes_in_segment["sample_index"], np.sort(spikes_in_segment["sample_index"]))
+            num_samples = int(segment_duration * 30000)
+            assert np.sum(spikes_in_segment["sample_index"] < border_size_samples) >= num_spikes_on_borders
+            assert (
+                np.sum(spikes_in_segment["sample_index"] >= num_samples - border_size_samples) >= num_spikes_on_borders
+            )
 
 
 def measure_memory_allocation(measure_in_process: bool = True) -> float:
@@ -399,7 +428,7 @@ def test_generate_ground_truth_recording():
 if __name__ == "__main__":
     strategy = "tile_pregenerated"
     # strategy = "on_the_fly"
-    test_noise_generator_memory()
+    # test_noise_generator_memory()
     # test_noise_generator_under_giga()
     # test_noise_generator_correct_shape(strategy)
     # test_noise_generator_consistency_across_calls(strategy, 0, 5)
@@ -410,3 +439,4 @@ if __name__ == "__main__":
     # test_generate_templates()
     # test_inject_templates()
     # test_generate_ground_truth_recording()
+    test_generate_sorting_with_spikes_on_borders()

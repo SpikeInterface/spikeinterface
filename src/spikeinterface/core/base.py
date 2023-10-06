@@ -45,8 +45,12 @@ class BaseExtractor:
         self._kwargs = {}
 
         # 'main_ids' will either be channel_ids or units_ids
-        # They is used for properties
+        # They are used for properties
         self._main_ids = np.array(main_ids)
+        if len(self._main_ids) > 0:
+            assert (
+                self._main_ids.dtype.kind in "uiSU"
+            ), f"Main IDs can only be integers (signed/unsigned) or strings, not {self._main_ids.dtype}"
 
         # dict at object level
         self._annotations = {}
@@ -616,7 +620,7 @@ class BaseExtractor:
         Parameters
         ----------
         file_path: str
-            Path of the json file
+            Path of the pickle file
         include_properties: bool
             If True, all properties are dumped
         folder_metadata: str, Path, or None
@@ -984,7 +988,7 @@ def _load_extractor_from_dict(dic) -> BaseExtractor:
     class_name = None
 
     if "kwargs" not in dic:
-        raise Exception(f"This dict cannot be load into extractor {dic}")
+        raise Exception(f"This dict cannot be loaded into extractor {dic}")
 
     # Create new kwargs to avoid modifying the original dict["kwargs"]
     new_kwargs = dict()
@@ -1005,7 +1009,7 @@ def _load_extractor_from_dict(dic) -> BaseExtractor:
     assert extractor_class is not None and class_name is not None, "Could not load spikeinterface class"
     if not _check_same_version(class_name, dic["version"]):
         warnings.warn(
-            f"Versions are not the same. This might lead compatibility errors. "
+            f"Versions are not the same. This might lead to compatibility errors. "
             f"Using {class_name.split('.')[0]}=={dic['version']} is recommended"
         )
 
