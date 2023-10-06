@@ -29,11 +29,12 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "waveforms": {
             "ms_before": 0.5,
             "ms_after": 1.5,
+            "radius_um": 120.0,
         },
         "filtering": {"freq_min": 300.0, "freq_max": 12000.0},
         "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
-        "features": {"radius_um": 120},
+        "features": {},
         "svd": {"n_components": 6},
         "clustering": {
             "split_radius_um": 40.0,
@@ -155,13 +156,14 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         #                             upsampling_um=5.0,
         #                             )
 
+        radius_um = params["waveforms"]["radius_um"]
         node3 = ExtractSparseWaveforms(
             recording,
             parents=[node0],
             return_output=True,
-            ms_beforems_before,
+            ms_before=ms_before,
             ms_after=ms_after,
-            radius_um=radius,
+            radius_um=radius_um,
         )
 
         model_folder_path = sorter_output_folder / "tsvd_model"
