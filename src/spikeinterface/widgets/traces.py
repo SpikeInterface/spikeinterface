@@ -138,9 +138,10 @@ class TracesWidget(BaseWidget):
 
         # colors is a nested dict by layer and channels
         # lets first create black for all channels and layer
+        # all color are generated for ipywidgets
         colors = {}
         for k in layer_keys:
-            colors[k] = {chan_id: "k" for chan_id in channel_ids}
+            colors[k] = {chan_id: "k" for chan_id in rec0.channel_ids}
 
         if color_groups:
             channel_groups = rec0.get_channel_groups(channel_ids=channel_ids)
@@ -149,7 +150,7 @@ class TracesWidget(BaseWidget):
             group_colors = get_some_colors(groups, color_engine="auto")
 
             channel_colors = {}
-            for i, chan_id in enumerate(channel_ids):
+            for i, chan_id in enumerate(rec0.channel_ids):
                 group = channel_groups[i]
                 channel_colors[chan_id] = group_colors[group]
 
@@ -159,12 +160,12 @@ class TracesWidget(BaseWidget):
         elif color is not None:
             # old behavior one color for all channel
             # if multi layer then black for all
-            colors[layer_keys[0]] = {chan_id: color for chan_id in channel_ids}
+            colors[layer_keys[0]] = {chan_id: color for chan_id in rec0.channel_ids}
         elif color is None and len(recordings) > 1:
             # several layer
             layer_colors = get_some_colors(layer_keys)
             for k in layer_keys:
-                colors[k] = {chan_id: layer_colors[k] for chan_id in channel_ids}
+                colors[k] = {chan_id: layer_colors[k] for chan_id in rec0.channel_ids}
         else:
             # color is None unique layer : all channels black
             pass
@@ -336,6 +337,7 @@ class TracesWidget(BaseWidget):
         )
         self.scaler = ScaleWidget()
         self.channel_selector = ChannelSelector(self.rec0.channel_ids)
+        self.channel_selector.value = data_plot["channel_ids"]
 
         left_sidebar = W.VBox(
             children=[
