@@ -20,9 +20,11 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
     _default_params = {
         "apply_preprocessing": True,
         "waveforms" : {"ms_before": 0.5, "ms_after": 1.5, },
-        "filtering": {"freq_min": 300., "freq_max": 8000.0},
-        "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.},
+        "filtering": {"freq_min": 300., "freq_max": 12000.0},
+        "detection": {"peak_sign": "neg", "detect_threshold": 5, 
+                      "exclude_sweep_ms": 1.5, "radius_um": 150.},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
+        "features": {"radius_um": 120},
         "svd": {"n_components": 6},
         "clustering": {
             "split_radius_um": 40.,
@@ -35,7 +37,10 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         },
         "matching": {
             "peak_shift_ms": 0.2,
-            "radius_um": 100.
+            # "radius_um": 100.
+            "num_peeler_loop": 3,
+            "num_template_try": 3,
+
         },
         "job_kwargs": {"n_jobs":-1},
         "save_array": True,
@@ -143,9 +148,10 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         #                             upsampling_um=5.0,
         #                             )
 
+        radius = params["features"]["radius_um"]
         node3 = ExtractSparseWaveforms(recording, parents=[node0], return_output=True,
-                                    ms_before=0.5,
-                                    ms_after=1.5,
+                                    ms_before=ms_before,
+                                    ms_after=ms_after,
                                     radius_um=100.0,
         )
 
