@@ -51,7 +51,9 @@ class TestWidgets(unittest.TestCase):
         if (cache_folder / "mearec_test_dense").is_dir():
             cls.we_dense = load_waveforms(cache_folder / "mearec_test_dense")
         else:
-            cls.we_dense = extract_waveforms(cls.recording, cls.sorting, cache_folder / "mearec_test_dense", sparse=False)
+            cls.we_dense = extract_waveforms(
+                cls.recording, cls.sorting, cache_folder / "mearec_test_dense", sparse=False
+            )
             metric_names = ["snr", "isi_violation", "num_spikes"]
             _ = compute_spike_amplitudes(cls.we_dense)
             _ = compute_unit_locations(cls.we_dense)
@@ -366,7 +368,7 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_summary()
     # mytest.test_plot_all_amplitudes_distributions()
     # mytest.test_plot_traces()
-    # mytest.test_plot_unit_waveforms()
+    # mytest.test_plot_unit_waveforms()
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_depths()
