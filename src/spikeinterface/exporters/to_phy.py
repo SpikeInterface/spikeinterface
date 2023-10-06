@@ -94,6 +94,7 @@ def export_to_phy(
 
     if waveform_extractor.is_sparse():
         used_sparsity = waveform_extractor.sparsity
+        assert sparsity is None
     elif sparsity is not None:
         used_sparsity = sparsity
     else:

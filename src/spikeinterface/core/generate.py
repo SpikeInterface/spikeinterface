@@ -1101,11 +1101,11 @@ class InjectTemplatesRecording(BaseRecording):
             # handle also upsampling and jitter
             upsample_factor = templates.shape[3]
         elif templates.ndim == 5:
-            # handle also dirft
+            # handle also drift
             raise NotImplementedError("Drift will be implented soon...")
             # upsample_factor = templates.shape[3]
         else:
-            raise ValueError("templates have wring dim should 3 or 4")
+            raise ValueError("templates have wrong dim should 3 or 4")
 
         if upsample_factor is not None:
             assert upsample_vector is not None

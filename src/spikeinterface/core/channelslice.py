@@ -35,7 +35,7 @@ class ChannelSliceRecording(BaseRecording):
         ), "ChannelSliceRecording: renamed channel_ids must be the same size"
         assert (
             self._channel_ids.size == np.unique(self._channel_ids).size
-        ), "ChannelSliceRecording : channel_ids not unique"
+        ), "ChannelSliceRecording : channel_ids are not unique"
 
         sampling_frequency = parent_recording.get_sampling_frequency()
 
@@ -123,7 +123,7 @@ class ChannelSliceSnippets(BaseSnippets):
         ), "ChannelSliceSnippets: renamed channel_ids must be the same size"
         assert (
             self._channel_ids.size == np.unique(self._channel_ids).size
-        ), "ChannelSliceSnippets : channel_ids not unique"
+        ), "ChannelSliceSnippets : channel_ids are not unique"
 
         sampling_frequency = parent_snippets.get_sampling_frequency()
 
