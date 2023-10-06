@@ -1,10 +1,8 @@
 from typing import List, Union
-from pathlib import Path
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 import numpy as np
 from warnings import warn
-from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
 # snippets segments?
 
