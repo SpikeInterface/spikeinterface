@@ -166,8 +166,8 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
     cov = cov / data.shape[0]
 
     # Here we determine eps used below to avoid division by zero.
-    # Typically we can assume that data is in units of
-    # mV, but this is not always the case. When data
+    # Typically we can assume that data is either unscaled integers or in units of
+    # uV, but this is not always the case. When data
     # is float type and scaled down to very small values, then the
     # default eps=1e-8 can be too large, resulting in incorrect
     # whitening. We therefore check to see if the data is float
