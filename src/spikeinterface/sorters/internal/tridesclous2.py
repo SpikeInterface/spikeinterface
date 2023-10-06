@@ -243,7 +243,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 # threshold_percentile=80.,
                 criteria="distrib_overlap",
                 threshold_overlap=0.3,
-                min_cluster_size=min_cluster_size+1,
+                min_cluster_size=min_cluster_size + 1,
                 # num_shift=0
                 num_shift=5,
             ),
