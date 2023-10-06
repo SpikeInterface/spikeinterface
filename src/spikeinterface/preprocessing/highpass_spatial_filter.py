@@ -212,7 +212,7 @@ class HighPassSpatialFilterSegment(BasePreprocessorSegment):
             traces = traces * self.taper[np.newaxis, :]
 
         # apply actual HP filter
-        import scipy
+        import scipy.signal
 
         traces = scipy.signal.sosfiltfilt(self.sos_filter, traces, axis=1)
 

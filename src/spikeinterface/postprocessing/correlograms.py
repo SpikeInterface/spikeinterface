@@ -137,8 +137,8 @@ def compute_crosscorrelogram_from_spiketrain(spike_times1, spike_times2, window_
 def compute_correlograms(
     waveform_or_sorting_extractor,
     load_if_exists=False,
-    window_ms: float = 100.0,
-    bin_ms: float = 5.0,
+    window_ms: float = 50.0,
+    bin_ms: float = 1.0,
     method: str = "auto",
 ):
     """Compute auto and cross correlograms.

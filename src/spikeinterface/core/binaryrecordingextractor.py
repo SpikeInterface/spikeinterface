@@ -91,7 +91,7 @@ class BinaryRecordingExtractor(BaseRecording):
             file_path_list = [Path(file_paths)]
 
         if t_starts is not None:
-            assert len(t_starts) == len(file_path_list), "t_starts must be a list of same size than file_paths"
+            assert len(t_starts) == len(file_path_list), "t_starts must be a list of the same size as file_paths"
             t_starts = [float(t_start) for t_start in t_starts]
 
         dtype = np.dtype(dtype)
