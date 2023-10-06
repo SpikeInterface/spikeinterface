@@ -88,7 +88,7 @@ class TracesWidget(BaseWidget):
         else:
             raise ValueError("plot_traces recording must be recording or dict or list")
 
-        if rec0.has_channel_locations():
+        if rec0.has_channel_location():
             channel_locations = rec0.get_channel_locations()
         else:
             channel_locations = None
