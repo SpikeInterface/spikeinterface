@@ -654,6 +654,7 @@ class NoiseGeneratorRecording(BaseRecording):
             "num_channels": num_channels,
             "durations": durations,
             "sampling_frequency": sampling_frequency,
+            "noise_level": noise_level,
             "dtype": dtype,
             "seed": seed,
             "strategy": strategy,
@@ -876,13 +877,13 @@ def generate_single_fake_waveform(
 
 
 default_unit_params_range = dict(
-    alpha=(5_000.0, 15_000.0),
+    alpha=(6_000.0, 9_000.0),
     depolarization_ms=(0.09, 0.14),
     repolarization_ms=(0.5, 0.8),
     recovery_ms=(1.0, 1.5),
     positive_amplitude=(0.05, 0.15),
     smooth_ms=(0.03, 0.07),
-    decay_power=(1.2, 1.8),
+    decay_power=(1.4, 1.8),
 )
 
 
