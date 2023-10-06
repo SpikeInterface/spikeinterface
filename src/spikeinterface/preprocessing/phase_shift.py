@@ -42,7 +42,9 @@ class PhaseShiftRecording(BasePreprocessor):
             assert "inter_sample_shift" in recording.get_property_keys(), "'inter_sample_shift' is not a property!"
             sample_shifts = recording.get_property("inter_sample_shift")
         else:
-            assert len(inter_sample_shift) == recording.get_num_channels(), "sample "
+            assert (
+                len(inter_sample_shift) == recording.get_num_channels()
+            ), "the 'inter_sample_shift' must be same size at the num_channels "
             sample_shifts = np.asarray(inter_sample_shift)
 
         margin = int(margin_ms * recording.get_sampling_frequency() / 1000.0)
