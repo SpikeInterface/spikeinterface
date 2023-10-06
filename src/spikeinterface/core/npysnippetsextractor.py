@@ -27,6 +27,9 @@ class NpySnippetsExtractor(BaseSnippets):
         num_segments = len(file_paths)
         data = np.load(file_paths[0], mmap_mode="r")
 
+        if channel_ids is None:
+            channel_ids = np.arange(data["snippet"].shape[2])
+
         BaseSnippets.__init__(
             self,
             sampling_frequency,
@@ -84,7 +87,7 @@ class NpySnippetsExtractor(BaseSnippets):
             arr = np.empty(n, dtype=snippets_t, order="F")
             arr["frame"] = snippets.get_frames(segment_index=i)
             arr["snippet"] = snippets.get_snippets(segment_index=i).astype(dtype, copy=False)
-
+            file_paths[i].parent.mkdir(parents=True, exist_ok=True)
             np.save(file_paths[i], arr)
 
 
