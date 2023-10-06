@@ -196,6 +196,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         original_labels = peaks["channel_index"]
 
+        min_cluster_size = 50
+
         post_split_label, split_count = split_clusters(
             original_labels,
             recording,
@@ -208,8 +210,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 # feature_name="sparse_wfs",
                 neighbours_mask=neighbours_mask,
                 waveforms_sparse_mask=sparse_mask,
-                min_size_split=50,
-                min_cluster_size=50,
+                min_size_split=min_cluster_size,
+                min_cluster_size=min_cluster_size,
                 min_samples=50,
                 n_pca_features=3,
             ),
@@ -240,9 +242,10 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 # criteria="percentile",
                 # threshold_percentile=80.,
                 criteria="distrib_overlap",
-                threshold_overlap=0.4,
+                threshold_overlap=0.3,
+                min_cluster_size=min_cluster_size+1,
                 # num_shift=0
-                num_shift=2,
+                num_shift=5,
             ),
             **job_kwargs,
         )
