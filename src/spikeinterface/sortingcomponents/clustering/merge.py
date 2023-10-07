@@ -398,6 +398,7 @@ class ProjectDistribution:
         threshold_diptest=0.5,
         threshold_percentile=80.0,
         threshold_overlap=0.4,
+        min_cluster_size=50,
         num_shift=2,
     ):
         if num_shift > 0:
@@ -414,7 +415,7 @@ class ProjectDistribution:
         chans1 = np.unique(peaks["channel_index"][inds1])
         target_chans1 = np.flatnonzero(np.all(waveforms_sparse_mask[chans1, :], axis=0))
 
-        if inds0.size < 40 or inds1.size < 40:
+        if inds0.size < min_cluster_size or inds1.size < min_cluster_size:
             is_merge = False
             merge_value = 0
             final_shift = 0
@@ -525,7 +526,9 @@ class ProjectDistribution:
         # DEBUG = True
         DEBUG = False
 
-        if DEBUG and is_merge:
+        # if DEBUG and is_merge:
+        # if DEBUG and (overlap > 0.1 and overlap <0.3):
+        if DEBUG:
             # if DEBUG and not is_merge:
             # if DEBUG and (overlap > 0.05 and overlap <0.25):
             # if label0 == 49 and label1== 65:
