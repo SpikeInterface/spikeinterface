@@ -20,7 +20,7 @@ from spikeinterface.core import NumpySorting
 from spikeinterface.core import extract_waveforms
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
 from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
-from spikeinterface.core.node_pipeline import run_node_pipeline, ExtractDenseWaveforms, PeakRetriever
+from spikeinterface.core.node_pipeline import run_node_pipeline, ExtractDenseWaveforms, ExtractSparseWaveforms, PeakRetriever
 
 
 class RandomProjectionClustering:
@@ -90,8 +90,9 @@ class RandomProjectionClustering:
         tmp_folder.mkdir(parents=True, exist_ok=True)
 
         node0 = PeakRetriever(recording, peaks)
-        node1 = ExtractDenseWaveforms(
-            recording, parents=[node0], return_output=False, ms_before=params["ms_before"], ms_after=params["ms_after"]
+        node1 = ExtractSparseWaveforms(
+            recording, parents=[node0], return_output=False, ms_before=params["ms_before"], ms_after=params["ms_after"],
+            radius_um=params['radius_um']
         )
 
         node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
@@ -129,6 +130,8 @@ class RandomProjectionClustering:
             return_output=True,
             projections=projections,
             radius_um=params["radius_um"],
+            sigmoid=None,
+            sparse=True
         )
 
         pipeline_nodes = [node0, node1, node2, node3]
@@ -141,6 +144,18 @@ class RandomProjectionClustering:
 
         clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
         peak_labels = clustering[0]
+
+        # peak_labels = -1 * np.ones(len(peaks), dtype=int)
+        # nb_clusters = 0
+        # for c in np.unique(peaks['channel_index']):
+        #     mask = peaks['channel_index'] == c
+        #     clustering = hdbscan.hdbscan(hdbscan_data[mask], **d['hdbscan_kwargs'])
+        #     local_labels = clustering[0]
+        #     valid_clusters = local_labels > -1
+        #     if np.sum(valid_clusters) > 0:
+        #         local_labels[valid_clusters] += nb_clusters
+        #         peak_labels[mask] = local_labels
+        #         nb_clusters += len(np.unique(local_labels[valid_clusters]))
 
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
