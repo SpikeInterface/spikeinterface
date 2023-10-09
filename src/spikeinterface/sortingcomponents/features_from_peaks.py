@@ -186,7 +186,7 @@ class RandomProjectionsFeature(PipelineNode):
         projections=None,
         sigmoid=None,
         radius_um=None,
-        sparse=True
+        sparse=True,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -216,7 +216,7 @@ class RandomProjectionsFeature(PipelineNode):
             (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
             local_projections = self.projections[chan_inds, :]
             if self.sparse:
-                wf_ptp = np.ptp(waveforms[idx][:, :, :len(chan_inds)], axis=1)
+                wf_ptp = np.ptp(waveforms[idx][:, :, : len(chan_inds)], axis=1)
             else:
                 wf_ptp = np.ptp(waveforms[idx][:, :, chan_inds], axis=1)
 

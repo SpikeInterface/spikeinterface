@@ -88,7 +88,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         selection_params["n_peaks"] = params["selection"]["n_peaks_per_channel"] * num_channels
         selection_params["n_peaks"] = max(selection_params["min_n_peaks"], selection_params["n_peaks"])
 
-        
         selection_params.update({"noise_levels": noise_levels})
         selected_peaks = select_peaks(
             peaks, method="smart_sampling_amplitudes", select_per_channel=False, **selection_params

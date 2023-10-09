@@ -20,7 +20,12 @@ from spikeinterface.core import NumpySorting
 from spikeinterface.core import extract_waveforms
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
 from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
-from spikeinterface.core.node_pipeline import run_node_pipeline, ExtractDenseWaveforms, ExtractSparseWaveforms, PeakRetriever
+from spikeinterface.core.node_pipeline import (
+    run_node_pipeline,
+    ExtractDenseWaveforms,
+    ExtractSparseWaveforms,
+    PeakRetriever,
+)
 
 
 class RandomProjectionClustering:
@@ -43,7 +48,7 @@ class RandomProjectionClustering:
         "ms_before": 1,
         "ms_after": 1,
         "random_seed": 42,
-        "noise_levels" : None,
+        "noise_levels": None,
         "smoothing_kwargs": {"window_length_ms": 0.25},
         "shared_memory": True,
         "tmp_folder": None,
@@ -86,13 +91,16 @@ class RandomProjectionClustering:
         else:
             tmp_folder = Path(params["tmp_folder"]).absolute()
 
-
         tmp_folder.mkdir(parents=True, exist_ok=True)
 
         node0 = PeakRetriever(recording, peaks)
         node1 = ExtractSparseWaveforms(
-            recording, parents=[node0], return_output=False, ms_before=params["ms_before"], ms_after=params["ms_after"],
-            radius_um=params['radius_um']
+            recording,
+            parents=[node0],
+            return_output=False,
+            ms_before=params["ms_before"],
+            ms_after=params["ms_after"],
+            radius_um=params["radius_um"],
         )
 
         node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
@@ -131,7 +139,7 @@ class RandomProjectionClustering:
             projections=projections,
             radius_um=params["radius_um"],
             sigmoid=None,
-            sparse=True
+            sparse=True,
         )
 
         pipeline_nodes = [node0, node1, node2, node3]
