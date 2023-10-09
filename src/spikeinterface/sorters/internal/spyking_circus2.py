@@ -67,6 +67,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         # recording_f = whiten(recording_f, dtype="float32")
         recording_f = zscore(recording_f, dtype="float32")
+        noise_levels = np.ones(num_channels, dtype=np.float32)
 
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
@@ -87,7 +88,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         selection_params["n_peaks"] = params["selection"]["n_peaks_per_channel"] * num_channels
         selection_params["n_peaks"] = max(selection_params["min_n_peaks"], selection_params["n_peaks"])
 
-        noise_levels = np.ones(num_channels, dtype=np.float32)
+        
         selection_params.update({"noise_levels": noise_levels})
         selected_peaks = select_peaks(
             peaks, method="smart_sampling_amplitudes", select_per_channel=False, **selection_params
@@ -107,6 +108,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params.update(dict(shared_memory=params["shared_memory"]))
         clustering_params["job_kwargs"] = job_kwargs
         clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
+        clustering_params.update({"noise_levels": noise_levels})
 
         labels, peak_labels = find_cluster_from_peaks(
             recording_f, selected_peaks, method="random_projections", method_kwargs=clustering_params

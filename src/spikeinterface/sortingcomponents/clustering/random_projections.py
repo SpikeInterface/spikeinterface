@@ -43,7 +43,8 @@ class RandomProjectionClustering:
         "ms_before": 1,
         "ms_after": 1,
         "random_seed": 42,
-        "smoothing_kwargs": {"window_length_ms": 1},
+        "noise_levels" : None,
+        "smoothing_kwargs": {"window_length_ms": 0.25},
         "shared_memory": True,
         "tmp_folder": None,
         "job_kwargs": {"n_jobs": os.cpu_count(), "chunk_memory": "100M", "verbose": True, "progress_bar": True},
@@ -72,7 +73,10 @@ class RandomProjectionClustering:
         num_samples = nbefore + nafter
         num_chans = recording.get_num_channels()
 
-        noise_levels = get_noise_levels(recording, return_scaled=False)
+        if d["noise_levels"] is None:
+            noise_levels = get_noise_levels(recording, return_scaled=False)
+        else:
+            noise_levels = d["noise_levels"]
 
         np.random.seed(d["random_seed"])
 
@@ -82,7 +86,9 @@ class RandomProjectionClustering:
         else:
             tmp_folder = Path(params["tmp_folder"]).absolute()
 
-        ### Then we extract the SVD features
+
+        tmp_folder.mkdir(parents=True, exist_ok=True)
+
         node0 = PeakRetriever(recording, peaks)
         node1 = ExtractDenseWaveforms(
             recording, parents=[node0], return_output=False, ms_before=params["ms_before"], ms_after=params["ms_after"]
@@ -173,15 +179,6 @@ class RandomProjectionClustering:
 
         if verbose:
             print("We found %d raw clusters, starting to clean with matching..." % (len(labels)))
-
-        # create a tmp folder
-        if params["tmp_folder"] is None:
-            name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-            tmp_folder = get_global_tmp_folder() / name
-        else:
-            tmp_folder = Path(params["tmp_folder"])
-
-        tmp_folder.mkdir(parents=True, exist_ok=True)
 
         sorting_folder = tmp_folder / "sorting"
         unit_ids = np.arange(len(np.unique(spikes["unit_index"])))
