@@ -258,7 +258,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         minimum_cluster_size = 25
         labels_set, count = np.unique(post_merge_label, return_counts=True)
         to_remove = labels_set[count < minimum_cluster_size]
-        print(to_remove)
+
         mask = np.isin(post_merge_label, to_remove)
         post_merge_label[mask] = -1
 
