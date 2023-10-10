@@ -308,8 +308,16 @@ def find_merge_pairs(
         max_workers=n_jobs,
         initializer=find_pair_worker_init,
         mp_context=get_context(mp_context),
-        initargs=(recording, features_dict_or_folder, peak_labels, labels_set, templates,
-                  method, method_kwargs, max_threads_per_process),
+        initargs=(
+            recording,
+            features_dict_or_folder,
+            peak_labels,
+            labels_set,
+            templates,
+            method,
+            method_kwargs,
+            max_threads_per_process,
+        ),
     ) as pool:
         jobs = []
         for ind0, ind1 in zip(indices0, indices1):
@@ -339,8 +347,14 @@ def find_merge_pairs(
 
 
 def find_pair_worker_init(
-    recording, features_dict_or_folder, original_labels, 
-    labels_set, templates, method, method_kwargs, max_threads_per_process
+    recording,
+    features_dict_or_folder,
+    original_labels,
+    labels_set,
+    templates,
+    method,
+    method_kwargs,
+    max_threads_per_process,
 ):
     global _ctx
     _ctx = {}
@@ -368,8 +382,14 @@ def find_pair_function_wrapper(label0, label1):
     global _ctx
     with threadpool_limits(limits=_ctx["max_threads_per_process"]):
         is_merge, label0, label1, shift, merge_value = _ctx["method_class"].merge(
-            label0, label1, _ctx["labels_set"], _ctx["templates"], 
-            _ctx["original_labels"], _ctx["peaks"], _ctx["features"], **_ctx["method_kwargs"]
+            label0,
+            label1,
+            _ctx["labels_set"],
+            _ctx["templates"],
+            _ctx["original_labels"],
+            _ctx["peaks"],
+            _ctx["features"],
+            **_ctx["method_kwargs"],
         )
 
     return is_merge, label0, label1, shift, merge_value
@@ -610,7 +630,6 @@ class NormalizedTemplateDiff:
         min_cluster_size=50,
         num_shift=5,
     ):
-
         assert waveforms_sparse_mask is not None
 
         (inds0,) = np.nonzero(original_labels == label0)
@@ -636,7 +655,6 @@ class NormalizedTemplateDiff:
         ind1 = list(labels_set).index(label1)
         template1 = templates[ind1, :, target_chans]
 
-
         num_samples = template0.shape[0]
         # norm = np.mean(np.abs(template0)) + np.mean(np.abs(template1))
         norm = np.mean(np.abs(template0) + np.abs(template1))
@@ -656,11 +674,10 @@ class NormalizedTemplateDiff:
             final_shift = 0
             merge_value = np.nan
 
-
         # DEBUG = False
         DEBUG = True
         if DEBUG and normed_diff < 0.2:
-        # if DEBUG:
+            # if DEBUG:
 
             import matplotlib.pyplot as plt
 
@@ -672,16 +689,13 @@ class NormalizedTemplateDiff:
             ax.plot(m0, color="C0", label=f"{label0} {inds0.size}")
             ax.plot(m1, color="C1", label=f"{label1} {inds1.size}")
 
-            ax.set_title(f"union{union_chans.size} intersect{target_chans.size} \n {normed_diff:.3f} {final_shift} {is_merge}")
+            ax.set_title(
+                f"union{union_chans.size} intersect{target_chans.size} \n {normed_diff:.3f} {final_shift} {is_merge}"
+            )
             ax.legend()
             plt.show()
 
-
-
-
-
         return is_merge, label0, label1, final_shift, merge_value
-
 
 
 find_pair_method_list = [

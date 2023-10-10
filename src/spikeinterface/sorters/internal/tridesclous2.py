@@ -245,7 +245,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 threshold_diff=0.2,
                 min_cluster_size=min_cluster_size + 1,
                 num_shift=5,
-                ),
+            ),
             **job_kwargs,
         )
 
@@ -265,7 +265,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # final label sets
         labels_set = np.unique(post_merge_label)
         labels_set = labels_set[labels_set >= 0]
-
 
         mask = post_merge_label >= 0
         sorting_temp = NumpySorting.from_times_labels(
