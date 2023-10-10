@@ -20,7 +20,12 @@ from spikeinterface.core import NumpySorting
 from spikeinterface.core import extract_waveforms
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
 from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
-from spikeinterface.core.node_pipeline import run_node_pipeline, ExtractDenseWaveforms, PeakRetriever
+from spikeinterface.core.node_pipeline import (
+    run_node_pipeline,
+    ExtractDenseWaveforms,
+    ExtractSparseWaveforms,
+    PeakRetriever,
+)
 
 
 class RandomProjectionClustering:
@@ -43,7 +48,8 @@ class RandomProjectionClustering:
         "ms_before": 1,
         "ms_after": 1,
         "random_seed": 42,
-        "smoothing_kwargs": {"window_length_ms": 1},
+        "noise_levels": None,
+        "smoothing_kwargs": {"window_length_ms": 0.25},
         "shared_memory": True,
         "tmp_folder": None,
         "job_kwargs": {"n_jobs": os.cpu_count(), "chunk_memory": "100M", "verbose": True, "progress_bar": True},
@@ -72,7 +78,10 @@ class RandomProjectionClustering:
         num_samples = nbefore + nafter
         num_chans = recording.get_num_channels()
 
-        noise_levels = get_noise_levels(recording, return_scaled=False)
+        if d["noise_levels"] is None:
+            noise_levels = get_noise_levels(recording, return_scaled=False)
+        else:
+            noise_levels = d["noise_levels"]
 
         np.random.seed(d["random_seed"])
 
@@ -82,10 +91,16 @@ class RandomProjectionClustering:
         else:
             tmp_folder = Path(params["tmp_folder"]).absolute()
 
-        ### Then we extract the SVD features
+        tmp_folder.mkdir(parents=True, exist_ok=True)
+
         node0 = PeakRetriever(recording, peaks)
-        node1 = ExtractDenseWaveforms(
-            recording, parents=[node0], return_output=False, ms_before=params["ms_before"], ms_after=params["ms_after"]
+        node1 = ExtractSparseWaveforms(
+            recording,
+            parents=[node0],
+            return_output=False,
+            ms_before=params["ms_before"],
+            ms_after=params["ms_after"],
+            radius_um=params["radius_um"],
         )
 
         node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
@@ -123,6 +138,8 @@ class RandomProjectionClustering:
             return_output=True,
             projections=projections,
             radius_um=params["radius_um"],
+            sigmoid=None,
+            sparse=True,
         )
 
         pipeline_nodes = [node0, node1, node2, node3]
@@ -135,6 +152,18 @@ class RandomProjectionClustering:
 
         clustering = hdbscan.hdbscan(hdbscan_data, **d["hdbscan_kwargs"])
         peak_labels = clustering[0]
+
+        # peak_labels = -1 * np.ones(len(peaks), dtype=int)
+        # nb_clusters = 0
+        # for c in np.unique(peaks['channel_index']):
+        #     mask = peaks['channel_index'] == c
+        #     clustering = hdbscan.hdbscan(hdbscan_data[mask], **d['hdbscan_kwargs'])
+        #     local_labels = clustering[0]
+        #     valid_clusters = local_labels > -1
+        #     if np.sum(valid_clusters) > 0:
+        #         local_labels[valid_clusters] += nb_clusters
+        #         peak_labels[mask] = local_labels
+        #         nb_clusters += len(np.unique(local_labels[valid_clusters]))
 
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
@@ -173,15 +202,6 @@ class RandomProjectionClustering:
 
         if verbose:
             print("We found %d raw clusters, starting to clean with matching..." % (len(labels)))
-
-        # create a tmp folder
-        if params["tmp_folder"] is None:
-            name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-            tmp_folder = get_global_tmp_folder() / name
-        else:
-            tmp_folder = Path(params["tmp_folder"])
-
-        tmp_folder.mkdir(parents=True, exist_ok=True)
 
         sorting_folder = tmp_folder / "sorting"
         unit_ids = np.arange(len(np.unique(spikes["unit_index"])))
