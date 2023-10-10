@@ -576,6 +576,85 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
 
         return peak_sample_ind, peak_chan_ind
 
+class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
+    """Detect peaks using the 'locally exclusive' method."""
+
+    name = "locally_exclusive_mf"
+    engine = "numba"
+    preferred_mp_context = None
+    params_doc = (
+        DetectPeakByChannel.params_doc
+        + """
+    radius_um: float
+        The radius to use to select neighbour channels for locally exclusive detection.
+    """
+    )
+
+    @classmethod
+    def check_params(
+        cls,
+        recording,
+        prototype,
+        peak_sign="neg",
+        detect_threshold=5,
+        exclude_sweep_ms=0.1,
+        radius_um=50,
+        noise_levels=None,
+        random_chunk_kwargs={},
+    ):
+        if not HAVE_NUMBA:
+            raise ModuleNotFoundError('"locally_exclusive" needs numba which is not installed')
+
+        assert peak_sign in ("both", "neg", "pos")
+
+        if noise_levels is None:
+            noise_levels = get_noise_levels(recording, return_scaled=False, **random_chunk_kwargs)
+        abs_threholds = noise_levels * detect_threshold
+        exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
+        channel_distance = get_channel_distances(recording)
+        neighbours_mask = channel_distance < radius_um
+        prototype = prototype[::-1] / np.linalg.norm(prototype)
+        return (peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask, prototype)
+
+
+    @classmethod
+    def get_method_margin(cls, *args):
+        exclude_sweep_size = args[2]
+        return exclude_sweep_size
+
+    @classmethod
+    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask, prototype):
+        assert HAVE_NUMBA, "You need to install numba"
+        import scipy.signal
+        traces = scipy.signal.oaconvolve(traces, prototype[::-1, np.newaxis], axes=0, mode="same")
+
+        traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
+
+        if peak_sign in ("pos", "both"):
+            peak_mask = traces_center > abs_threholds[None, :]
+            peak_mask = _numba_detect_peak_pos(
+                traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
+            )
+
+        if peak_sign in ("neg", "both"):
+            if peak_sign == "both":
+                peak_mask_pos = peak_mask.copy()
+
+            peak_mask = traces_center < -abs_threholds[None, :]
+            peak_mask = _numba_detect_peak_neg(
+                traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
+            )
+
+            if peak_sign == "both":
+                peak_mask = peak_mask | peak_mask_pos
+
+        # Find peaks and correct for time shift
+        peak_sample_ind, peak_chan_ind = np.nonzero(peak_mask)
+        peak_sample_ind += exclude_sweep_size
+
+        return peak_sample_ind, peak_chan_ind
+
+
 
 class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
     """Detect peaks using the 'locally exclusive' method with pytorch."""
@@ -1078,6 +1157,7 @@ _methods_list = [
     DetectPeakLocallyExclusiveOpenCL,
     DetectPeakByChannelTorch,
     DetectPeakLocallyExclusiveTorch,
+    DetectPeakLocallyExclusiveMatchedFiltering
 ]
 detect_peak_methods = {m.name: m for m in _methods_list}
 method_doc = make_multi_method_doc(_methods_list)
