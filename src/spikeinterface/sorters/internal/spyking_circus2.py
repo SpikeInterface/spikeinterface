@@ -7,6 +7,7 @@ import numpy as np
 from spikeinterface.core import NumpySorting, load_extractor, BaseRecording, get_noise_levels, extract_waveforms
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.preprocessing import common_reference, zscore, whiten, highpass_filter
+from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
 
 try:
     import hdbscan
@@ -56,6 +57,8 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         sampling_rate = recording.get_sampling_frequency()
         num_channels = recording.get_num_channels()
+        ms_before = params["general"]["ms_before"]
+        ms_after = params["general"]["ms_after"]
 
         ## First, we are filtering the data
         filtering_params = params["filtering"].copy()
@@ -71,12 +74,25 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
         detection_params.update(job_kwargs)
+        if "exclude_sweep_ms" not in detection_params:
+            detection_params["exclude_sweep_ms"] = max(ms_before, ms_after)
+
+        peaks = detect_peaks(recording_f, **detection_params)
+
+        few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
+        few_wfs = extract_waveform_at_max_channel(recording_f, few_peaks, ms_before, ms_after, **job_kwargs)
+
+        nbefore = int(sampling_rate * ms_before / 1000)
+        prototype = few_wfs[:,:,0] / (few_wfs[:, nbefore, 0])[:, np.newaxis]
+        prototype = np.median(prototype, 0)
+
         if "radius_um" not in detection_params:
             detection_params["radius_um"] = params["general"]["radius_um"]
-        if "exclude_sweep_ms" not in detection_params:
-            detection_params["exclude_sweep_ms"] = max(params["general"]["ms_before"], params["general"]["ms_after"])
+        
 
-        peaks = detect_peaks(recording_f, method="locally_exclusive", **detection_params)
+        detection_params["prototype"] = prototype
+        peaks = detect_peaks(recording_f, "locally_exclusive_mf", **detection_params)
+
 
         if verbose:
             print("We found %d peaks in total" % len(peaks))
@@ -169,3 +185,38 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         sorting = sorting.save(folder=sorting_folder)
 
         return sorting
+
+def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, **job_kwargs):
+    """
+    Helper function to extractor waveforms at max channel from a peak list
+
+
+    """
+    n = rec.get_num_channels()
+    unit_ids = np.arange(n, dtype="int64")
+    sparsity_mask = np.eye(n, dtype="bool")
+
+    spikes = np.zeros(
+        peaks.size, dtype=[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
+    )
+    spikes["sample_index"] = peaks["sample_index"]
+    spikes["unit_index"] = peaks["channel_index"]
+    spikes["segment_index"] = peaks["segment_index"]
+
+    nbefore = int(ms_before * rec.sampling_frequency / 1000.0)
+    nafter = int(ms_after * rec.sampling_frequency / 1000.0)
+
+    all_wfs = extract_waveforms_to_single_buffer(
+        rec,
+        spikes,
+        unit_ids,
+        nbefore,
+        nafter,
+        mode="shared_memory",
+        return_scaled=False,
+        sparsity_mask=sparsity_mask,
+        copy=True,
+        **job_kwargs,
+    )
+
+    return all_wfs
