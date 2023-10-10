@@ -614,6 +614,8 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         channel_distance = get_channel_distances(recording)
         neighbours_mask = channel_distance < radius_um
         prototype = prototype[::-1] / np.linalg.norm(prototype)
+        if peak_sign == 'neg':
+            prototype *= -1
         return (peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask, prototype)
 
 
@@ -626,7 +628,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
     def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask, prototype):
         assert HAVE_NUMBA, "You need to install numba"
         import scipy.signal
-        traces = scipy.signal.oaconvolve(traces, prototype[::-1, np.newaxis], axes=0, mode="same")
+        traces = scipy.signal.oaconvolve(traces, prototype[:, np.newaxis], axes=0, mode="same")
 
         traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
 

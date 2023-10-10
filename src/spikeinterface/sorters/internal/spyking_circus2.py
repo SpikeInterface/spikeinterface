@@ -83,16 +83,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         few_wfs = extract_waveform_at_max_channel(recording_f, few_peaks, ms_before, ms_after, **job_kwargs)
 
         nbefore = int(sampling_rate * ms_before / 1000)
-        prototype = few_wfs[:,:,0] / (few_wfs[:, nbefore, 0])[:, np.newaxis]
+        prototype = few_wfs[:, :, 0]
         prototype = np.median(prototype, 0)
 
         if "radius_um" not in detection_params:
             detection_params["radius_um"] = params["general"]["radius_um"]
         
-
         detection_params["prototype"] = prototype
         peaks = detect_peaks(recording_f, "locally_exclusive_mf", **detection_params)
-
 
         if verbose:
             print("We found %d peaks in total" % len(peaks))
