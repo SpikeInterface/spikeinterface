@@ -31,7 +31,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matching": {},
         "apply_preprocessing": True,
         "shared_memory": True,
-        "job_kwargs": {"n_jobs": -1},
+        "job_kwargs": {"n_jobs": -1, "chunk_memory" : "10M"},
     }
 
     @classmethod
@@ -77,8 +77,14 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         if "exclude_sweep_ms" not in detection_params:
             detection_params["exclude_sweep_ms"] = max(ms_before, ms_after)
 
-        peaks = detect_peaks(recording_f, **detection_params)
+        '''
+        if "radius_um" not in detection_params:
+            detection_params["radius_um"] = params["general"]["radius_um"]
+        
+        peaks = detect_peaks(recording_f, method='locally_exclusive', **detection_params)
+        '''
 
+        peaks = detect_peaks(recording_f, **detection_params)
         few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
         few_wfs = extract_waveform_at_max_channel(recording_f, few_peaks, ms_before, ms_after, **job_kwargs)
 
@@ -88,10 +94,9 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
         if "radius_um" not in detection_params:
             detection_params["radius_um"] = params["general"]["radius_um"]
-        
         detection_params["prototype"] = prototype
         peaks = detect_peaks(recording_f, "locally_exclusive_mf", **detection_params)
-
+        
         if verbose:
             print("We found %d peaks in total" % len(peaks))
 

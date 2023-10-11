@@ -599,6 +599,8 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
+        sigma_um=50,
+        rank=5,
         noise_levels=None,
         random_chunk_kwargs={},
     ):
@@ -613,11 +615,34 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         exclude_sweep_size = int(exclude_sweep_ms * recording.get_sampling_frequency() / 1000.0)
         channel_distance = get_channel_distances(recording)
         neighbours_mask = channel_distance < radius_um
-        prototype = prototype[::-1] / np.linalg.norm(prototype)
+
         if peak_sign == 'neg':
             prototype *= -1
-        return (peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask, prototype)
 
+        import sklearn.metrics
+        contact_locations = recording.get_channel_locations()
+        nb_templates = len(contact_locations)
+
+        dist = sklearn.metrics.pairwise_distances(contact_locations, contact_locations)
+        templates = np.zeros((nb_templates, len(prototype), len(contact_locations)), dtype=np.float32)
+        weights = np.exp(-(dist**2) / (2 * (sigma_um**2)))
+        for count, w in enumerate(weights):
+            templates[count] = w * prototype[:, np.newaxis]
+
+        temporal, singular, spatial = np.linalg.svd(templates, full_matrices=False)
+        temporal = temporal[:, :, :rank]
+        singular = singular[:, :rank]
+        spatial = spatial[:, :rank, :]
+        templates = np.matmul(temporal * singular[:, np.newaxis, :], spatial)
+        norms = np.linalg.norm(templates, axis=(1, 2))
+        temporal /= norms[:, np.newaxis, np.newaxis]
+        temporal = np.flip(temporal, axis=1)
+        spatial = np.moveaxis(spatial, [0, 1, 2], [1, 0, 2])
+        temporal = np.moveaxis(temporal, [0, 1, 2], [1, 2, 0])
+        singular = singular.T[:, :, np.newaxis]
+        del templates
+
+        return (peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular)
 
     @classmethod
     def get_method_margin(cls, *args):
@@ -625,25 +650,31 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         return exclude_sweep_size
 
     @classmethod
-    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask, prototype):
+    def detect_peaks(cls, traces, peak_sign, abs_threholds, exclude_sweep_size, neighbours_mask, temporal, spatial, singular):
         assert HAVE_NUMBA, "You need to install numba"
         import scipy.signal
-        traces = scipy.signal.oaconvolve(traces, prototype[:, np.newaxis], axes=0, mode="same")
 
-        traces_center = traces[exclude_sweep_size:-exclude_sweep_size, :]
+        num_timesteps, num_channels = traces.shape
+        scalar_products = np.zeros((num_channels, num_timesteps), dtype=np.float32)
+        spatially_filtered_data = np.matmul(spatial, traces.T[np.newaxis, :, :])
+        scaled_filtered_data = spatially_filtered_data * singular
+        objective_by_rank = scipy.signal.oaconvolve(scaled_filtered_data, temporal, axes=2, mode="same")
+        scalar_products += np.sum(objective_by_rank, axis=0)
+
+        traces = scalar_products
+        traces_center = traces[:, exclude_sweep_size:-exclude_sweep_size]
 
         if peak_sign in ("pos", "both"):
-            peak_mask = traces_center > abs_threholds[None, :]
-            peak_mask = _numba_detect_peak_pos(
+            peak_mask = traces_center > abs_threholds[:, None]
+            peak_mask = _numba_detect_peak_pos_transposed(
                 traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
             )
 
         if peak_sign in ("neg", "both"):
             if peak_sign == "both":
                 peak_mask_pos = peak_mask.copy()
-
-            peak_mask = traces_center < -abs_threholds[None, :]
-            peak_mask = _numba_detect_peak_neg(
+            peak_mask = traces_center < -abs_threholds[:, None]
+            peak_mask = _numba_detect_peak_neg_transposed(
                 traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
             )
 
@@ -651,7 +682,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
                 peak_mask = peak_mask | peak_mask_pos
 
         # Find peaks and correct for time shift
-        peak_sample_ind, peak_chan_ind = np.nonzero(peak_mask)
+        peak_chan_ind, peak_sample_ind = np.nonzero(peak_mask)
         peak_sample_ind += exclude_sweep_size
 
         return peak_sample_ind, peak_chan_ind
@@ -774,6 +805,56 @@ if HAVE_NUMBA:
                         if not peak_mask[s, chan_ind]:
                             break
                     if not peak_mask[s, chan_ind]:
+                        break
+        return peak_mask
+
+    @numba.jit(nopython=True, parallel=False)
+    def _numba_detect_peak_pos_transposed(
+        traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
+    ):
+        num_chans = traces_center.shape[0]
+        for chan_ind in range(num_chans):
+            for s in range(peak_mask.shape[1]):
+                if not peak_mask[chan_ind, s]:
+                    continue
+                for neighbour in range(num_chans):
+                    if not neighbours_mask[chan_ind, neighbour]:
+                        continue
+                    for i in range(exclude_sweep_size):
+                        if chan_ind != neighbour:
+                            peak_mask[chan_ind, s] &= traces_center[chan_ind, s] >= traces_center[neighbour, s]
+                        peak_mask[chan_ind, s] &= traces_center[chan_ind, s] > traces[neighbour, s + i]
+                        peak_mask[chan_ind, s] &= (
+                            traces_center[chan_ind, s] >= traces[neighbour, exclude_sweep_size + s + i + 1]
+                        )
+                        if not peak_mask[chan_ind, s]:
+                            break
+                    if not peak_mask[chan_ind, s]:
+                        break
+        return peak_mask
+
+    @numba.jit(nopython=True, parallel=False)
+    def _numba_detect_peak_neg_transposed(
+        traces, traces_center, peak_mask, exclude_sweep_size, abs_threholds, peak_sign, neighbours_mask
+    ):
+        num_chans = traces_center.shape[0]
+        for chan_ind in range(num_chans):
+            for s in range(peak_mask.shape[1]):
+                if not peak_mask[chan_ind, s]:
+                    continue
+                for neighbour in range(num_chans):
+                    if not neighbours_mask[chan_ind, neighbour]:
+                        continue
+                    for i in range(exclude_sweep_size):
+                        if chan_ind != neighbour:
+                            peak_mask[chan_ind, s] &= traces_center[chan_ind, s] <= traces_center[neighbour, s]
+                        peak_mask[chan_ind, s] &= traces_center[chan_ind, s] < traces[neighbour, s + i]
+                        peak_mask[chan_ind, s] &= (
+                            traces_center[chan_ind, s] <= traces[neighbour, exclude_sweep_size + s + i + 1]
+                        )
+                        if not peak_mask[chan_ind, s]:
+                            break
+                    if not peak_mask[chan_ind, s]:
                         break
         return peak_mask
 
