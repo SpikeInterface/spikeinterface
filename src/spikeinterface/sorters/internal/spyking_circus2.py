@@ -31,6 +31,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "matching": {},
         "apply_preprocessing": True,
         "shared_memory": True,
+        "matched_filtering" : False,
         "job_kwargs": {"n_jobs": -1, "chunk_memory" : "10M"},
     }
 
@@ -76,26 +77,20 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         detection_params.update(job_kwargs)
         if "exclude_sweep_ms" not in detection_params:
             detection_params["exclude_sweep_ms"] = max(ms_before, ms_after)
-
-        '''
         if "radius_um" not in detection_params:
-            detection_params["radius_um"] = params["general"]["radius_um"]
+                detection_params["radius_um"] = params["general"]["radius_um"]            
         
         peaks = detect_peaks(recording_f, method='locally_exclusive', **detection_params)
-        '''
+        
+        if params["matched_filtering"]:
+            few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
+            few_wfs = extract_waveform_at_max_channel(recording_f, few_peaks, ms_before, ms_after, **job_kwargs)
 
-        peaks = detect_peaks(recording_f, **detection_params)
-        few_peaks = select_peaks(peaks, method="uniform", n_peaks=5000)
-        few_wfs = extract_waveform_at_max_channel(recording_f, few_peaks, ms_before, ms_after, **job_kwargs)
-
-        nbefore = int(sampling_rate * ms_before / 1000)
-        prototype = few_wfs[:, :, 0]
-        prototype = np.median(prototype, 0)
-
-        if "radius_um" not in detection_params:
-            detection_params["radius_um"] = params["general"]["radius_um"]
-        detection_params["prototype"] = prototype
-        peaks = detect_peaks(recording_f, "locally_exclusive_mf", **detection_params)
+            nbefore = int(sampling_rate * ms_before / 1000)
+            prototype = few_wfs[:, :, 0]
+            prototype = np.median(prototype, 0)
+            detection_params["prototype"] = prototype
+            peaks = detect_peaks(recording_f, "locally_exclusive_mf", **detection_params)
         
         if verbose:
             print("We found %d peaks in total" % len(peaks))
