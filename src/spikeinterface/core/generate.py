@@ -881,9 +881,10 @@ default_unit_params_range = dict(
     depolarization_ms=(0.09, 0.14),
     repolarization_ms=(0.5, 0.8),
     recovery_ms=(1.0, 1.5),
-    positive_amplitude=(0.05, 0.15),
+    positive_amplitude=(0.1, 0.25),
     smooth_ms=(0.03, 0.07),
     decay_power=(1.4, 1.8),
+    propagation_speed=(250., 350.),  # ms  / um
 )
 
 
@@ -938,6 +939,7 @@ def generate_templates(
             * 'positive_amplitude': the positive amplitude in a.u. (default range: (0.05-0.15)) (negative is always -1)
             * 'smooth_ms': the gaussian smooth in ms (default range: (0.03-0.07))
             * 'decay_power': the decay power (default range: (1.2-1.8))
+            * 'propagation_speed': mimic a propagation delay with a kind of a "speed" (default range: (250., 350.)).
         Values contains vector with same size of num_units.
         If the key is not in dict then it is generated using unit_params_range
     unit_params_range: dict of tuple
@@ -985,12 +987,17 @@ def generate_templates(
             assert unit_params[k].size == num_units
             params[k] = unit_params[k]
         else:
-            v = rng.random(num_units)
+            
             if k in unit_params_range:
-                lim0, lim1 = unit_params_range[k]
+                lims = unit_params_range[k]
             else:
-                lim0, lim1 = default_unit_params_range[k]
-            params[k] = v * (lim1 - lim0) + lim0
+                lims = default_unit_params_range[k]
+            if lims is not None:
+                lim0, lim1 = lims
+                v = rng.random(num_units)
+                params[k] = v * (lim1 - lim0) + lim0
+            else:
+                params[k] = [None] * num_units
 
     for u in range(num_units):
         wf = generate_single_fake_waveform(
@@ -1006,17 +1013,46 @@ def generate_templates(
             dtype=dtype,
         )
 
+        
+        ## Add a spatial decay depend on distance from unit to each channel
         alpha = params["alpha"][u]
         # the espilon avoid enormous factors
         eps = 1.0
         # naive formula for spatial decay
         pow = params["decay_power"][u]
         channel_factors = alpha / (distances[u, :] + eps) ** pow
+        wfs = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
+
+        # This mimic a propagation delay for distant channel
+        propagation_speed = params["propagation_speed"][u]
+        if propagation_speed is not None:
+            # the speed is um/ms
+            dist = distances[u, :].copy()
+            dist -= np.min(dist)
+            delay_s = dist / propagation_speed / 1000.
+            sample_shifts = delay_s * fs
+
+            # apply the delay with fft transform to get sub sample shift
+            n = wfs.shape[0]
+            wfs_f = np.fft.rfft(wfs, axis=0)
+            if n % 2 == 0:
+                # n is even sig_f[-1] is nyquist and so pi
+                omega = np.linspace(0, np.pi, wfs_f.shape[0])
+            else:
+                # n is odd sig_f[-1] is exactly nyquist!! we need (n-1) / n factor!!
+                omega = np.linspace(0, np.pi * (n - 1) / n, wfs_f.shape[0])
+            # broadcast omega and sample_shifts depend the axis
+            shifts = omega[:, np.newaxis] * sample_shifts[np.newaxis, :]
+            wfs = np.fft.irfft(wfs_f * np.exp(-1j * shifts), n=n, axis=0)
+
         if upsample_factor is not None:
             for f in range(upsample_factor):
-                templates[u, :, :, f] = wf[f::upsample_factor, np.newaxis] * channel_factors[np.newaxis, :]
+                templates[u, :, :, f] = wfs[f::upsample_factor]
         else:
-            templates[u, :, :] = wf[:, np.newaxis] * channel_factors[np.newaxis, :]
+            templates[u, :, :] = wfs
+
+
+
 
     return templates
 
