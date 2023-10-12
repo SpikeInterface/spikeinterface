@@ -162,10 +162,6 @@ class SpikesOnTracesWidget(BaseWidget):
         max_y = np.max(traces_widget.data_plot["channel_locations"][:, 1])
 
         n = len(traces_widget.data_plot["channel_ids"])
-        order = traces_widget.data_plot["order"]
-
-        if order is None:
-            order = np.arange(n)
 
         if ax.get_legend() is not None:
             ax.get_legend().remove()
@@ -221,7 +217,7 @@ class SpikesOnTracesWidget(BaseWidget):
                     # discontinuity
                     times[:, -1] = np.nan
                     times_r = times.reshape(times.shape[0] * times.shape[1])
-                    waveforms = traces[waveform_idxs]  # [:, :, order]
+                    waveforms = traces[waveform_idxs]
                     waveforms_r = waveforms.reshape((waveforms.shape[0] * waveforms.shape[1], waveforms.shape[2]))
 
                     for i, chan_id in enumerate(traces_widget.data_plot["channel_ids"]):
