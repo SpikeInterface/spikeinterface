@@ -39,6 +39,6 @@ runs:
         wget https://downloads.kitenet.net/git-annex/linux/current/git-annex-standalone-amd64.tar.gz
         mkdir /home/runner/work/installation
         mv git-annex-standalone-amd64.tar.gz /home/runner/work/installation/git-annex-standalone-amd64.tar.gz
-        tar xvzf /home/runner/work/installation/installationgit-annex-standalone-amd64.tar.gz
+        tar xvzf /home/runner/work/installation/git-annex-standalone-amd64.tar.gz
         echo "$/home/runner/work/installation/git-annex.linux" >> $GITHUB_PATH
       shell: bash
