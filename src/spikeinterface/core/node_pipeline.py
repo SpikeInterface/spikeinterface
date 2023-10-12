@@ -40,6 +40,14 @@ base_peak_dtype = [
     ("segment_index", "int64"),
 ]
 
+spike_peak_dtype = [
+    ("sample_index", "int64"),
+    ("unit_index", "int64"),
+    ("channel_index", "int64"),
+    ("amplitude", "float64"),
+    ("segment_index", "int64"),
+]
+
 
 class PipelineNode:
     def __init__(
@@ -226,6 +234,8 @@ def sorting_to_peaks(sorting, extremum_channel_inds):
     peaks["channel_index"] = extremum_channel_inds_[spikes["unit_index"]]
     peaks["amplitude"] = 0.0
     peaks["segment_index"] = spikes["segment_index"]
+    peaks["unit_index"] = spikes["unit_index"]
+
     return peaks
 
 

@@ -1769,6 +1769,7 @@ class BaseWaveformExtractorExtension:
     # must be set in inherited in subclass
     extension_name = None
     handle_sparsity = False
+    is_pipeline_node = False
 
     def __init__(self, waveform_extractor):
         self.waveform_extractor = waveform_extractor
@@ -1910,6 +1911,10 @@ class BaseWaveformExtractorExtension:
                 self._extension_data[ext_data_name] = ext_data
 
     def run(self, **kwargs):
+        if self.is_pipeline_node and not self.waveform_extractor.has_recording():
+            self.waveform_extractor.delete_extension(self.extension_name)
+            raise ValueError(f"{self.extension_name} extension cannot run with a WaveformExtractor in recordless mode.")
+
         self._run(**kwargs)
         self._save(**kwargs)
 
@@ -2032,6 +2037,10 @@ class BaseWaveformExtractorExtension:
     def _set_params(self, **params):
         # must be implemented in subclass
         # must return a cleaned version of params dict
+        raise NotImplementedError
+
+    def _get_pipeline_nodes(self):
+        # must be implemented in subclasses if is_node_pipeline
         raise NotImplementedError
 
     @staticmethod

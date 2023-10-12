@@ -2,9 +2,9 @@ import numpy as np
 
 from spikeinterface.core import ChannelSparsity, get_chunk_with_margin
 from spikeinterface.core.job_tools import ChunkRecordingExecutor, _shared_job_kwargs_doc, ensure_n_jobs, fix_job_kwargs
-
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_template_extremum_channel_peak_shift
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
+from ..core.node_pipeline import PipelineNode, SpikeRetriever, PeakSource, find_parent_of_type, run_node_pipeline
 
 
 # DEBUG = True
@@ -410,6 +410,70 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
         collisions_global = {}
 
     return (scalings, collisions_global)
+
+
+class AmplitudesScalingsNode(PipelineNode):
+    def __init__(
+        self,
+        recording,
+        name="spike_amplitudes",
+        return_output=True,
+        parents=None,
+        peak_shifts=None,
+        return_scaled=False,
+    ):
+        peak_node = find_parent_of_type(parents, PeakSource)
+        if peak_node is None:
+            raise TypeError(f"SpikeAmplitudesNode should have a single PeakSource in its parents")
+        if peak_shifts is not None:
+            assert isinstance(peak_node, SpikeRetriever)
+        PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
+
+        # make peak shift an array
+        if peak_shifts and isinstance(peak_shifts, dict):
+            peak_shifts = np.array(list(peak_shifts.values()), dtype="int64")
+
+        # retrieve gains and offsets
+        if return_scaled and recording.has_scaled():
+            self.gains = recording.get_channel_gains()
+            self.offsets = recording.get_channel_offsets()
+        else:
+            self.gains, self.offsets = None, None
+
+        self.peak_shifts = peak_shifts
+        self._kwargs.update(dict(peak_shifts=peak_shifts, return_scaled=return_scaled))
+        self._dtype = recording.get_dtype()
+
+    def get_dtype(self):
+        return self._dtype
+
+    def get_trace_margin(self):
+        if self.peak_shifts is None:
+            return 0
+        else:
+            return np.max(np.abs(self.peak_shifts.values()))
+
+    def compute(self, traces, peaks):
+        sample_inds = peaks["sample_index"]
+        chan_inds = peaks["channel_index"]
+        labels = peaks["unit_index"]
+        margin = self.get_trace_margin()
+
+        # add margin
+        sample_inds += margin
+
+        # apply shifts per spike
+        if self.peak_shifts:
+            sample_inds += self.peak_shifts[labels]
+
+        # get amplitudes
+        amplitudes = traces[sample_inds, chan_inds]
+
+        # handle return scaled
+        if self.gains is not None:
+            amplitudes = amplitudes.astype("float32") * self.gains[chan_inds] + self.offsets[chan_inds]
+
+        return amplitudes
 
 
 ### Collision handling ###
