@@ -286,7 +286,7 @@ class GroundTruthStudy:
             # the waveforms depend on the dataset key
             wf_folder = base_folder / self.key_to_str(dataset_key)
             recording, gt_sorting = self.datasets[dataset_key]
-            we = extract_waveforms(recording, gt_sorting, folder=wf_folder)
+            we = extract_waveforms(recording, gt_sorting, folder=wf_folder, **extract_kwargs)
 
     def get_waveform_extractor(self, key):
         # some recording are not dumpable to json and the waveforms extactor need it!
