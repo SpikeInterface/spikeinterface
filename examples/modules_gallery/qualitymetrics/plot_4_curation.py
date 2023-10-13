@@ -61,4 +61,4 @@ print(keep_unit_ids)
 
 curated_sorting = sorting.select_units(keep_unit_ids)
 print(curated_sorting)
-se.NpzSortingExtractor.write_sorting(curated_sorting, 'curated_sorting.pnz')
+se.NpzSortingExtractor.write_sorting(curated_sorting, 'curated_sorting.npz')
