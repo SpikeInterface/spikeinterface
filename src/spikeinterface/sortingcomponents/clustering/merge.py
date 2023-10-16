@@ -649,8 +649,6 @@ class NormalizedTemplateDiff:
         target_chans = np.intersect1d(target_chans0, target_chans1)
         union_chans = np.union1d(target_chans0, target_chans1)
 
-        
-
         ind0 = list(labels_set).index(label0)
         template0 = templates[ind0][:, target_chans]
 
