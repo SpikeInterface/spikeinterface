@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from typing import Optional
 from pathlib import Path
 
 import numpy as np
@@ -13,10 +16,14 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
     ----------
     folder_path: str or Path
         Path to the output Phy folder (containing the params.py)
-    exclude_cluster_groups: list or str, optional
+    exclude_cluster_groups: list or str, default: None
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
     keep_good_only : bool, default: True
         Whether to only keep good units.
+    remove_empty_units : bool, default: True
+        If True, empty units are removed from the sorting extractor.
+    load_all_cluster_properties : bool, default: True
+        If True, all cluster properties are loaded from the tsv/csv files.
     """
 
     extractor_name = "BasePhyKilosortSorting"
@@ -29,11 +36,11 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
 
     def __init__(
         self,
-        folder_path,
-        exclude_cluster_groups=None,
-        keep_good_only=False,
-        remove_empty_units=False,
-        load_all_cluster_properties=True,
+        folder_path: Path | str,
+        exclude_cluster_groups: Optional[list[str] | str] = None,
+        keep_good_only: bool = False,
+        remove_empty_units: bool = False,
+        load_all_cluster_properties: bool = True,
     ):
         try:
             import pandas as pd
@@ -195,20 +202,33 @@ class PhySortingExtractor(BasePhyKilosortSortingExtractor):
     ----------
     folder_path: str or Path
         Path to the output Phy folder (containing the params.py).
-    exclude_cluster_groups: list or str, optional
+    exclude_cluster_groups: list or str, default: None
         Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
+    load_all_cluster_properties : bool, default: True
+        If True, all cluster properties are loaded from the tsv/csv files.
 
     Returns
     -------
     extractor : PhySortingExtractor
-        The loaded data.
+        The loaded Sorting object.
     """
 
     extractor_name = "PhySorting"
     name = "phy"
 
-    def __init__(self, folder_path, exclude_cluster_groups=None):
-        BasePhyKilosortSortingExtractor.__init__(self, folder_path, exclude_cluster_groups, keep_good_only=False)
+    def __init__(
+        self,
+        folder_path: Path | str,
+        exclude_cluster_groups: Optional[list[str] | str] = None,
+        load_all_cluster_properties: bool = True,
+    ):
+        BasePhyKilosortSortingExtractor.__init__(
+            self,
+            folder_path,
+            exclude_cluster_groups,
+            keep_good_only=False,
+            load_all_cluster_properties=load_all_cluster_properties,
+        )
 
         self._kwargs = {
             "folder_path": str(Path(folder_path).absolute()),
@@ -223,8 +243,6 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     ----------
     folder_path: str or Path
         Path to the output Phy folder (containing the params.py).
-    exclude_cluster_groups: list or str, optional
-        Cluster groups to exclude (e.g. "noise" or ["noise", "mua"]).
     keep_good_only : bool, default: True
         Whether to only keep good units.
         If True, only Kilosort-labeled 'good' units are returned.
@@ -234,13 +252,13 @@ class KiloSortSortingExtractor(BasePhyKilosortSortingExtractor):
     Returns
     -------
     extractor : KiloSortSortingExtractor
-        The loaded data.
+        The loaded Sorting object.
     """
 
     extractor_name = "KiloSortSorting"
     name = "kilosort"
 
-    def __init__(self, folder_path, keep_good_only=False, remove_empty_units=True):
+    def __init__(self, folder_path: Path | str, keep_good_only: bool = False, remove_empty_units: bool = True):
         BasePhyKilosortSortingExtractor.__init__(
             self,
             folder_path,

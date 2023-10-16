@@ -111,8 +111,7 @@ class PeakRetriever(PeakSource):
         # precompute segment slice
         self.segment_slices = []
         for segment_index in range(recording.get_num_segments()):
-            i0 = np.searchsorted(peaks["segment_index"], segment_index)
-            i1 = np.searchsorted(peaks["segment_index"], segment_index + 1)
+            i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
             self.segment_slices.append(slice(i0, i1))
 
     def get_trace_margin(self):
@@ -125,8 +124,7 @@ class PeakRetriever(PeakSource):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        i0 = np.searchsorted(peaks_in_segment["sample_index"], start_frame)
-        i1 = np.searchsorted(peaks_in_segment["sample_index"], end_frame)
+        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
@@ -183,8 +181,7 @@ class SpikeRetriever(PeakSource):
         # precompute segment slice
         self.segment_slices = []
         for segment_index in range(recording.get_num_segments()):
-            i0 = np.searchsorted(self.peaks["segment_index"], segment_index)
-            i1 = np.searchsorted(self.peaks["segment_index"], segment_index + 1)
+            i0, i1 = np.searchsorted(self.peaks["segment_index"], [segment_index, segment_index + 1])
             self.segment_slices.append(slice(i0, i1))
 
     def get_trace_margin(self):
@@ -197,8 +194,7 @@ class SpikeRetriever(PeakSource):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        i0 = np.searchsorted(peaks_in_segment["sample_index"], start_frame)
-        i1 = np.searchsorted(peaks_in_segment["sample_index"], end_frame)
+        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
@@ -436,6 +432,7 @@ def run_node_pipeline(
     job_name="pipeline",
     mp_context=None,
     gather_mode="memory",
+    gather_kwargs={},
     squeeze_output=True,
     folder=None,
     names=None,
@@ -452,7 +449,7 @@ def run_node_pipeline(
     if gather_mode == "memory":
         gather_func = GatherToMemory()
     elif gather_mode == "npy":
-        gather_func = GatherToNpy(folder, names)
+        gather_func = GatherToNpy(folder, names, **gather_kwargs)
     else:
         raise ValueError(f"wrong gather_mode : {gather_mode}")
 
@@ -597,9 +594,9 @@ class GatherToNpy:
       * create the npy v1.0 header at the end with the correct shape and dtype
     """
 
-    def __init__(self, folder, names, npy_header_size=1024):
+    def __init__(self, folder, names, npy_header_size=1024, exist_ok=False):
         self.folder = Path(folder)
-        self.folder.mkdir(parents=True, exist_ok=False)
+        self.folder.mkdir(parents=True, exist_ok=exist_ok)
         assert names is not None
         self.names = names
         self.npy_header_size = npy_header_size

@@ -524,7 +524,7 @@ class BenchmarkClustering:
             template_real = template_real.reshape(template_real.size, 1).T
 
             if metric == "cosine":
-                dist = sklearn.metrics.pairwise.cosine_similarity(template, template_real, metric).flatten().tolist()
+                dist = sklearn.metrics.pairwise.cosine_similarity(template, template_real).flatten().tolist()
             else:
                 dist = sklearn.metrics.pairwise_distances(template, template_real, metric).flatten().tolist()
             res += dist

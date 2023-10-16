@@ -4,6 +4,7 @@ from pathlib import Path
 import shutil
 from typing import Iterable, Literal, Optional
 import json
+import os
 
 import numpy as np
 from copy import deepcopy
@@ -87,6 +88,7 @@ class WaveformExtractor:
         self._template_cache = {}
         self._params = {}
         self._loaded_extensions = dict()
+        self._is_read_only = False
         self.sparsity = sparsity
 
         self.folder = folder
@@ -103,6 +105,8 @@ class WaveformExtractor:
                 if (self.folder / "params.json").is_file():
                     with open(str(self.folder / "params.json"), "r") as f:
                         self._params = json.load(f)
+            if not os.access(self.folder, os.W_OK):
+                self._is_read_only = True
         else:
             # this is in case of in-memory
             self.format = "memory"
@@ -155,14 +159,28 @@ class WaveformExtractor:
             else:
                 rec_attributes["probegroup"] = None
         else:
-            try:
-                recording = load_extractor(folder / "recording.json", base_folder=folder)
-                rec_attributes = None
-            except:
+            recording = None
+            if (folder / "recording.json").exists():
+                try:
+                    recording = load_extractor(folder / "recording.json", base_folder=folder)
+                except:
+                    pass
+            elif (folder / "recording.pickle").exists():
+                try:
+                    recording = load_extractor(folder / "recording.pickle")
+                except:
+                    pass
+            if recording is None:
                 raise Exception("The recording could not be loaded. You can use the `with_recording=False` argument")
+            rec_attributes = None
 
         if sorting is None:
-            sorting = load_extractor(folder / "sorting.json", base_folder=folder)
+            if (folder / "sorting.json").exists():
+                sorting = load_extractor(folder / "sorting.json", base_folder=folder)
+            elif (folder / "sorting.pickle").exists():
+                sorting = load_extractor(folder / "sorting.pickle")
+            else:
+                raise FileNotFoundError("load_waveforms() impossible to find the sorting object (json or pickle)")
 
         # the sparsity is the sparsity of the saved/cached waveforms arrays
         sparsity_file = folder / "sparsity.json"
@@ -267,14 +285,22 @@ class WaveformExtractor:
             else:
                 relative_to = None
 
-            if recording.check_if_json_serializable():
+            if recording.check_serializablility("json"):
                 recording.dump(folder / "recording.json", relative_to=relative_to)
-            if sorting.check_if_json_serializable():
+            elif recording.check_serializablility("pickle"):
+                # In this case we loose the relative_to!!
+                recording.dump(folder / "recording.pickle")
+
+            if sorting.check_serializablility("json"):
                 sorting.dump(folder / "sorting.json", relative_to=relative_to)
+            elif sorting.check_serializablility("pickle"):
+                # In this case we loose the relative_to!!
+                # TODO later the dump to pickle should dump the dictionary and so relative could be put back
+                sorting.dump(folder / "sorting.pickle")
             else:
                 warn(
-                    "Sorting object is not dumpable, which might result in downstream errors for "
-                    "parallel processing. To make the sorting dumpable, use the `sorting.save()` function."
+                    "Sorting object is not serializable to file, which might result in downstream errors for "
+                    "parallel processing. To make the sorting serializable, use the `sorting = sorting.save()` function."
                 )
 
             # dump some attributes of the recording for the mode with_recording=False at next load
@@ -399,6 +425,9 @@ class WaveformExtractor:
     def dtype(self):
         return self._params["dtype"]
 
+    def is_read_only(self) -> bool:
+        return self._is_read_only
+
     def has_recording(self) -> bool:
         return self._recording is not None
 
@@ -516,6 +545,10 @@ class WaveformExtractor:
         """
         if self.folder is None:
             return extension_name in self._loaded_extensions
+
+        if extension_name in self._loaded_extensions:
+            # extension already loaded in memory
+            return True
         else:
             if self.format == "binary":
                 return (self.folder / extension_name).is_dir() and (
@@ -800,14 +833,30 @@ class WaveformExtractor:
                 sparsity = ChannelSparsity(mask, unit_ids, self.channel_ids)
             else:
                 sparsity = None
-            we = WaveformExtractor.create(self.recording, sorting, folder=None, mode="memory", sparsity=sparsity)
-            we.set_params(**self._params)
+            if self.has_recording():
+                we = WaveformExtractor.create(self.recording, sorting, folder=None, mode="memory", sparsity=sparsity)
+            else:
+                we = WaveformExtractor(
+                    recording=None,
+                    sorting=sorting,
+                    folder=None,
+                    sparsity=sparsity,
+                    rec_attributes=self._rec_attributes,
+                    allow_unfiltered=True,
+                )
+            we._params = self._params
             # copy memory objects
             if self.has_waveforms():
                 we._memory_objects = {"wfs_arrays": {}, "sampled_indices": {}}
                 for unit_id in unit_ids:
-                    we._memory_objects["wfs_arrays"][unit_id] = self._memory_objects["wfs_arrays"][unit_id]
-                    we._memory_objects["sampled_indices"][unit_id] = self._memory_objects["sampled_indices"][unit_id]
+                    if self.format == "memory":
+                        we._memory_objects["wfs_arrays"][unit_id] = self._memory_objects["wfs_arrays"][unit_id]
+                        we._memory_objects["sampled_indices"][unit_id] = self._memory_objects["sampled_indices"][
+                            unit_id
+                        ]
+                    else:
+                        we._memory_objects["wfs_arrays"][unit_id] = self.get_waveforms(unit_id)
+                        we._memory_objects["sampled_indices"][unit_id] = self.get_sampled_indices(unit_id)
 
         # finally select extensions data
         for ext_name in self.get_available_extension_names():
@@ -868,14 +917,19 @@ class WaveformExtractor:
             (folder / "params.json").write_text(json.dumps(check_json(self._params), indent=4), encoding="utf8")
 
             if self.has_recording():
-                if self.recording.check_if_json_serializable():
+                if self.recording.check_serializablility("json"):
                     self.recording.dump(folder / "recording.json", relative_to=relative_to)
-            if self.sorting.check_if_json_serializable():
+                elif self.recording.check_serializablility("pickle"):
+                    self.recording.dump(folder / "recording.pickle")
+
+            if self.sorting.check_serializablility("json"):
                 self.sorting.dump(folder / "sorting.json", relative_to=relative_to)
+            elif self.sorting.check_serializablility("pickle"):
+                self.sorting.dump(folder / "sorting.pickle")
             else:
                 warn(
-                    "Sorting object is not dumpable, which might result in downstream errors for "
-                    "parallel processing. To make the sorting dumpable, use the `sorting.save()` function."
+                    "Sorting object is not serializable to file, which might result in downstream errors for "
+                    "parallel processing. To make the sorting serializable, use the `sorting = sorting.save()` function."
                 )
 
             # dump some attributes of the recording for the mode with_recording=False at next load
@@ -920,16 +974,16 @@ class WaveformExtractor:
             # write metadata
             zarr_root.attrs["params"] = check_json(self._params)
             if self.has_recording():
-                if self.recording.check_if_json_serializable():
+                if self.recording.check_serializablility("json"):
                     rec_dict = self.recording.to_dict(relative_to=relative_to, recursive=True)
                     zarr_root.attrs["recording"] = check_json(rec_dict)
-            if self.sorting.check_if_json_serializable():
+            if self.sorting.check_serializablility("json"):
                 sort_dict = self.sorting.to_dict(relative_to=relative_to, recursive=True)
                 zarr_root.attrs["sorting"] = check_json(sort_dict)
             else:
                 warn(
-                    "Sorting object is not dumpable, which might result in downstream errors for "
-                    "parallel processing. To make the sorting dumpable, use the `sorting.save()` function."
+                    "Sorting object is not json serializable, which might result in downstream errors for "
+                    "parallel processing. To make the sorting serializable, use the `sorting = sorting.save()` function."
                 )
             recording_info = zarr_root.create_group("recording_info")
             recording_info.attrs["recording_attributes"] = check_json(rec_attributes)
@@ -1419,13 +1473,13 @@ def extract_waveforms(
     folder=None,
     mode="folder",
     precompute_template=("average",),
-    ms_before=3.0,
-    ms_after=4.0,
+    ms_before=1.0,
+    ms_after=2.0,
     max_spikes_per_unit=500,
     overwrite=False,
     return_scaled=True,
     dtype=None,
-    sparse=False,
+    sparse=True,
     sparsity=None,
     num_spikes_for_sparsity=100,
     allow_unfiltered=False,
@@ -1469,7 +1523,7 @@ def extract_waveforms(
         If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV.
     dtype: dtype or None
         Dtype of the output waveforms. If None, the recording dtype is maintained.
-    sparse: bool (default False)
+    sparse: bool, default: True
         If True, before extracting all waveforms the `precompute_sparsity()` function is run using
         a few spikes to get an estimate of dense templates to create a ChannelSparsity object.
         Then, the waveforms will be sparse at extraction time, which saves a lot of memory.
@@ -1688,6 +1742,7 @@ def precompute_sparsity(
             max_spikes_per_unit=num_spikes_for_sparsity,
             return_scaled=False,
             allow_unfiltered=allow_unfiltered,
+            sparse=False,
             **job_kwargs,
         )
         local_sparsity = compute_sparsity(local_we, **sparse_kwargs)
@@ -1740,13 +1795,33 @@ class BaseWaveformExtractorExtension:
             if self.format == "binary":
                 self.extension_folder = self.folder / self.extension_name
                 if not self.extension_folder.is_dir():
-                    self.extension_folder.mkdir()
+                    if self.waveform_extractor.is_read_only():
+                        warn(
+                            "WaveformExtractor: cannot save extension in read-only mode. "
+                            "Extension will be saved in memory."
+                        )
+                        self.format = "memory"
+                        self.extension_folder = None
+                        self.folder = None
+                    else:
+                        self.extension_folder.mkdir()
+
             else:
                 import zarr
 
-                zarr_root = zarr.open(self.folder, mode="r+")
+                mode = "r+" if not self.waveform_extractor.is_read_only() else "r"
+                zarr_root = zarr.open(self.folder, mode=mode)
                 if self.extension_name not in zarr_root.keys():
-                    self.extension_group = zarr_root.create_group(self.extension_name)
+                    if self.waveform_extractor.is_read_only():
+                        warn(
+                            "WaveformExtractor: cannot save extension in read-only mode. "
+                            "Extension will be saved in memory."
+                        )
+                        self.format = "memory"
+                        self.extension_folder = None
+                        self.folder = None
+                    else:
+                        self.extension_group = zarr_root.create_group(self.extension_name)
                 else:
                     self.extension_group = zarr_root[self.extension_name]
         else:
@@ -1863,6 +1938,9 @@ class BaseWaveformExtractorExtension:
         self._save(**kwargs)
 
     def _save(self, **kwargs):
+        # Only save if not read only
+        if self.waveform_extractor.is_read_only():
+            return
         if self.format == "binary":
             import pandas as pd
 
@@ -1900,7 +1978,9 @@ class BaseWaveformExtractorExtension:
                     self.extension_group.create_dataset(name=ext_data_name, data=ext_data, compressor=compressor)
                 elif isinstance(ext_data, pd.DataFrame):
                     ext_data.to_xarray().to_zarr(
-                        store=self.extension_group.store, group=f"{self.extension_group.name}/{ext_data_name}", mode="a"
+                        store=self.extension_group.store,
+                        group=f"{self.extension_group.name}/{ext_data_name}",
+                        mode="a",
                     )
                     self.extension_group[ext_data_name].attrs["dataframe"] = True
                 else:
@@ -1951,6 +2031,9 @@ class BaseWaveformExtractorExtension:
         """
         params = self._set_params(**params)
         self._params = params
+
+        if self.waveform_extractor.is_read_only():
+            return
 
         params_to_save = params.copy()
         if "sparsity" in params and params["sparsity"] is not None:

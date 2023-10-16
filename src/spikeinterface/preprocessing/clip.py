@@ -97,7 +97,7 @@ class BlankSaturationRecording(BasePreprocessor):
         chunk_size=500,
         seed=0,
     ):
-        assert direction in ("upper", "lower", "both")
+        assert direction in ("upper", "lower", "both"), "'direction' must be 'upper', 'lower', or 'both'"
 
         if fill_value is None or quantile_threshold is not None:
             random_data = get_random_data_chunks(

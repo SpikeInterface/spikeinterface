@@ -1,7 +1,6 @@
 import numpy as np
 
 from .basewidget import BaseWidget
-from spikeinterface.comparison.collisioncomparison import CollisionGTComparison
 
 
 class ComparisonCollisionPairByPairWidget(BaseWidget):
@@ -44,6 +43,8 @@ class ComparisonCollisionPairByPairWidget(BaseWidget):
         self._do_plot()
 
     def _do_plot(self):
+        from matplotlib import pyplot as plt
+
         fig = self.figure
 
         for ax in fig.axes:
@@ -178,6 +179,8 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
     def _do_plot(self):
         import sklearn
+        import matplotlib.pyplot as plt
+        import matplotlib
 
         # compute similarity
         # take index of template (respect unit_ids order)
