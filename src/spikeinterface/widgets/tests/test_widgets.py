@@ -376,7 +376,7 @@ class TestWidgets(unittest.TestCase):
         possible_backends = list(sw.UnitProbeMapWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
-                sw.plot_unit_probe_map(self.we)
+                sw.plot_unit_probe_map(self.we_dense)
                 
 
 
