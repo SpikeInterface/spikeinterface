@@ -72,7 +72,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
                 new_extension_data[k] = v
         return new_extension_data
 
-    def get_projections(self, unit_id):
+    def get_projections(self, unit_id, sparse=False):
         """
         Returns the computed projections for the sampled waveforms of a unit id.
 
@@ -80,13 +80,22 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         ----------
         unit_id : int or str
             The unit id to return PCA projections for
+        sparse: bool, default False
+            If True, and sparsity is not None, only projections on sparse channels are returned.
 
         Returns
         -------
-        proj: np.array
-            The PCA projections (num_waveforms, num_components, num_channels)
+        projections: np.array
+            The PCA projections (num_waveforms, num_components, num_channels).
+            In case sparsity is used, only the projections on sparse channels are returned.
         """
-        return self._extension_data[f"pca_{unit_id}"]
+        projections = self._extension_data[f"pca_{unit_id}"]
+        mode = self._params["mode"]
+        if mode in ("by_channel_local", "by_channel_global") and sparse:
+            sparsity = self.get_sparsity()
+            if sparsity is not None:
+                projections = projections[:, :, sparsity.unit_id_to_channel_indices[unit_id]]
+        return projections
 
     def get_pca_model(self):
         """
@@ -134,7 +143,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         all_labels = []  #  can be unit_id or unit_index
         all_projections = []
         for unit_index, unit_id in enumerate(unit_ids):
-            proj = self.get_projections(unit_id)
+            proj = self.get_projections(unit_id, sparse=False)
             if channel_ids is not None:
                 chan_inds = self.waveform_extractor.channel_ids_to_indices(channel_ids)
                 proj = proj[:, :, chan_inds]
@@ -151,7 +160,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         return all_labels, all_projections
 
-    def project_new(self, new_waveforms, unit_id=None):
+    def project_new(self, new_waveforms, unit_id=None, sparse=False):
         """
         Projects new waveforms or traces snippets on the PC components.
 
@@ -161,6 +170,8 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             Array with new waveforms to project with shape (num_waveforms, num_samples, num_channels)
         unit_id: int or str
             In case PCA is sparse and mode is by_channel_local, the unit_id of 'new_waveforms'
+        sparse: bool, default: False
+            If True, and sparsity is not None, only projections on sparse channels are returned.
 
         Returns
         -------
@@ -211,6 +222,10 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
             wfs_flat = new_waveforms.reshape(new_waveforms.shape[0], -1)
             projections = pca_model.transform(wfs_flat)
 
+        # take care of sparsity (not in case of concatenated)
+        if mode in ("by_channel_local", "by_channel_global") and sparse:
+            if sparsity is not None:
+                projections = projections[:, :, sparsity.unit_id_to_channel_indices[unit_id]]
         return projections
 
     def get_sparsity(self):
@@ -600,8 +615,7 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
     seg_size = recording.get_num_samples(segment_index=segment_index)
 
-    i0 = np.searchsorted(spike_times, start_frame)
-    i1 = np.searchsorted(spike_times, end_frame)
+    i0, i1 = np.searchsorted(spike_times, [start_frame, end_frame])
 
     if i0 != i1:
         # protect from spikes on border :  spike_time<0 or spike_time>seg_size
@@ -694,11 +708,10 @@ def compute_principal_components(
         If True and pc scores are already in the waveform extractor folders, pc scores are loaded and not recomputed.
     n_components: int
         Number of components fo PCA - default 5
-    mode: str
+    mode: str, default: 'by_channel_local'
         - 'by_channel_local': a local PCA is fitted for each channel (projection by channel)
         - 'by_channel_global': a global PCA is fitted for all channels (projection by channel)
         - 'concatenated': channels are concatenated and a global PCA is fitted
-        default 'by_channel_local'
     sparsity: ChannelSparsity or None
         The sparsity to apply to waveforms.
         If waveform_extractor is already sparse, the default sparsity will be used - default None
@@ -735,6 +748,7 @@ def compute_principal_components(
     >>> # run for all spikes in the SortingExtractor
     >>> pc.run_for_all_spikes(file_path="all_pca_projections.npy")
     """
+
     if load_if_exists and waveform_extractor.is_extension(WaveformPrincipalComponent.extension_name):
         pc = waveform_extractor.load_extension(WaveformPrincipalComponent.extension_name)
     else:

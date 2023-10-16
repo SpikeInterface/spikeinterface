@@ -1,4 +1,4 @@
-.. code:: ipython3
+.. code:: ipython
 
     %matplotlib inline
     %load_ext autoreload
@@ -42,7 +42,7 @@ Neuropixels 1 and a Neuropixels 2 probe.
 Here we will use *dataset1* with *neuropixel1*. This dataset is the
 *“hello world”* for drift correction in the spike sorting community!
 
-.. code:: ipython3
+.. code:: ipython
 
     from pathlib import Path
     import matplotlib.pyplot as plt
@@ -52,12 +52,12 @@ Here we will use *dataset1* with *neuropixel1*. This dataset is the
 
     import spikeinterface.full as si
 
-.. code:: ipython3
+.. code:: ipython
 
     base_folder = Path('/mnt/data/sam/DataSpikeSorting/imposed_motion_nick')
     dataset_folder = base_folder / 'dataset1/NP1'
 
-.. code:: ipython3
+.. code:: ipython
 
     # read the file
     raw_rec = si.read_spikeglx(dataset_folder)
@@ -77,7 +77,7 @@ We preprocess the recording with bandpass filter and a common median
 reference. Note, that it is better to not whiten the recording before
 motion estimation to get a better estimate of peak locations!
 
-.. code:: ipython3
+.. code:: ipython
 
     def preprocess_chain(rec):
         rec = si.bandpass_filter(rec, freq_min=300., freq_max=6000.)
@@ -85,7 +85,7 @@ motion estimation to get a better estimate of peak locations!
         return rec
     rec = preprocess_chain(raw_rec)
 
-.. code:: ipython3
+.. code:: ipython
 
     job_kwargs = dict(n_jobs=40, chunk_duration='1s', progress_bar=True)
 
@@ -101,7 +101,7 @@ parameters for each step.
 Here we also save the motion correction results into a folder to be able
 to load them later.
 
-.. code:: ipython3
+.. code:: ipython
 
     # internally, we can explore a preset like this
     # every parameter can be overwritten at runtime
@@ -143,13 +143,13 @@ to load them later.
 
 
 
-.. code:: ipython3
+.. code:: ipython
 
     # lets try theses 3 presets
     some_presets = ('rigid_fast',  'kilosort_like', 'nonrigid_accurate')
     # some_presets = ('nonrigid_accurate',  )
 
-.. code:: ipython3
+.. code:: ipython
 
     # compute motion with 3 presets
     for preset in some_presets:
@@ -195,7 +195,7 @@ A few comments on the figures:
     (2000-3000um) experience some drift, but the lower part (0-1000um) is
     relatively stable. The method defined by this preset is able to capture this.
 
-.. code:: ipython3
+.. code:: ipython
 
     for preset in some_presets:
         # load
@@ -243,7 +243,7 @@ locations (:py:func:`correct_motion_on_peaks()`)
 Case 1 is used before running a spike sorter and the case 2 is used here
 to display the results.
 
-.. code:: ipython3
+.. code:: ipython
 
     from spikeinterface.sortingcomponents.motion_interpolation import correct_motion_on_peaks
 
@@ -303,7 +303,7 @@ run times
 Presets and related methods have differents accuracies but also
 computation speeds. It is good to have this in mind!
 
-.. code:: ipython3
+.. code:: ipython
 
     run_times = []
     for preset in some_presets:

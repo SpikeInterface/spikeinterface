@@ -36,7 +36,7 @@ def test_ensure_n_jobs():
     n_jobs = ensure_n_jobs(recording, n_jobs=1)
     assert n_jobs == 1
 
-    # dumpable
+    # check serializable
     n_jobs = ensure_n_jobs(recording.save(), n_jobs=-1)
     assert n_jobs > 1
 
@@ -45,7 +45,7 @@ def test_ensure_chunk_size():
     recording = generate_recording(num_channels=2)
     dtype = recording.get_dtype()
     assert dtype == "float32"
-    # make dumpable
+    # make serializable
     recording = recording.save()
 
     chunk_size = ensure_chunk_size(recording, total_memory="512M", chunk_size=None, chunk_memory=None, n_jobs=2)
@@ -90,7 +90,7 @@ def init_func(arg1, arg2, arg3):
 
 def test_ChunkRecordingExecutor():
     recording = generate_recording(num_channels=2)
-    # make dumpable
+    # make serializable
     recording = recording.save()
 
     init_args = "a", 120, "yep"

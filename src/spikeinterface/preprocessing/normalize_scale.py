@@ -68,7 +68,7 @@ class NormalizeByQuantileRecording(BasePreprocessor):
         dtype="float32",
         **random_chunk_kwargs,
     ):
-        assert mode in ("pool_channel", "by_channel")
+        assert mode in ("pool_channel", "by_channel"), "'mode' must be 'pool_channel' or 'by_channel'"
 
         random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
 
@@ -260,7 +260,7 @@ class ZScoreRecording(BasePreprocessor):
         dtype="float32",
         **random_chunk_kwargs,
     ):
-        assert mode in ("median+mad", "mean+std")
+        assert mode in ("median+mad", "mean+std"), "'mode' must be 'median+mad' or 'mean+std'"
 
         # fix dtype
         dtype_ = fix_dtype(recording, dtype)
@@ -293,7 +293,7 @@ class ZScoreRecording(BasePreprocessor):
             means = means[None, :]
             stds = np.std(random_data, axis=0)
             stds = stds[None, :]
-            gain = 1 / stds
+            gain = 1.0 / stds
             offset = -means / stds
 
         if int_scale is not None:

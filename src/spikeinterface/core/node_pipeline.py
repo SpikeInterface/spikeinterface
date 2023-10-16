@@ -111,8 +111,7 @@ class PeakRetriever(PeakSource):
         # precompute segment slice
         self.segment_slices = []
         for segment_index in range(recording.get_num_segments()):
-            i0 = np.searchsorted(peaks["segment_index"], segment_index)
-            i1 = np.searchsorted(peaks["segment_index"], segment_index + 1)
+            i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
             self.segment_slices.append(slice(i0, i1))
 
     def get_trace_margin(self):
@@ -125,8 +124,7 @@ class PeakRetriever(PeakSource):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        i0 = np.searchsorted(peaks_in_segment["sample_index"], start_frame)
-        i1 = np.searchsorted(peaks_in_segment["sample_index"], end_frame)
+        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
@@ -139,22 +137,21 @@ class PeakRetriever(PeakSource):
 # this is not implemented yet this will be done in separted PR
 class SpikeRetriever(PeakSource):
     """
-    This class is usefull to inject a sorting object in the node pipepline mechanisim.
-    It allows to compute some post processing with the same machinery used for sorting components.
-    This is a first step to totaly refactor:
+    This class is useful to inject a sorting object in the node pipepline mechanism.
+    It allows to compute some post-processing steps with the same machinery used for sorting components.
+    This is used by:
       * compute_spike_locations()
       * compute_amplitude_scalings()
       * compute_spike_amplitudes()
       * compute_principal_components()
 
-
-    recording:
-
-    sorting:
-
-    channel_from_template: bool (default True)
-        If True then the channel_index is infered from template and extremum_channel_inds must be provided.
-        If False every spikes compute its own channel index given a radius around the template max channel.
+    recording : BaseRecording
+        The recording object.
+    sorting: BaseSorting
+        The sorting object.
+    channel_from_template: bool, default: True
+        If True, then the channel_index is inferred from the template and `extremum_channel_inds` must be provided.
+        If False, the max channel is computed for each spike given a radius around the template max channel.
     extremum_channel_inds: dict of int
         The extremum channel index dict given from template.
     radius_um: float (default 50.)
@@ -172,9 +169,9 @@ class SpikeRetriever(PeakSource):
 
         self.channel_from_template = channel_from_template
 
-        assert extremum_channel_inds is not None, "SpikeRetriever need the dict extremum_channel_inds"
+        assert extremum_channel_inds is not None, "SpikeRetriever needs the extremum_channel_inds dictionary"
 
-        self.peaks = sorting_to_peak(sorting, extremum_channel_inds)
+        self.peaks = sorting_to_peaks(sorting, extremum_channel_inds)
 
         if not channel_from_template:
             channel_distance = get_channel_distances(recording)
@@ -184,8 +181,7 @@ class SpikeRetriever(PeakSource):
         # precompute segment slice
         self.segment_slices = []
         for segment_index in range(recording.get_num_segments()):
-            i0 = np.searchsorted(self.peaks["segment_index"], segment_index)
-            i1 = np.searchsorted(self.peaks["segment_index"], segment_index + 1)
+            i0, i1 = np.searchsorted(self.peaks["segment_index"], [segment_index, segment_index + 1])
             self.segment_slices.append(slice(i0, i1))
 
     def get_trace_margin(self):
@@ -198,8 +194,7 @@ class SpikeRetriever(PeakSource):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        i0 = np.searchsorted(peaks_in_segment["sample_index"], start_frame)
-        i1 = np.searchsorted(peaks_in_segment["sample_index"], end_frame)
+        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
@@ -223,7 +218,7 @@ class SpikeRetriever(PeakSource):
         return (local_peaks,)
 
 
-def sorting_to_peak(sorting, extremum_channel_inds):
+def sorting_to_peaks(sorting, extremum_channel_inds):
     spikes = sorting.to_spike_vector()
     peaks = np.zeros(spikes.size, dtype=base_peak_dtype)
     peaks["sample_index"] = spikes["sample_index"]
@@ -437,6 +432,7 @@ def run_node_pipeline(
     job_name="pipeline",
     mp_context=None,
     gather_mode="memory",
+    gather_kwargs={},
     squeeze_output=True,
     folder=None,
     names=None,
@@ -453,7 +449,7 @@ def run_node_pipeline(
     if gather_mode == "memory":
         gather_func = GatherToMemory()
     elif gather_mode == "npy":
-        gather_func = GatherToNpy(folder, names)
+        gather_func = GatherToNpy(folder, names, **gather_kwargs)
     else:
         raise ValueError(f"wrong gather_mode : {gather_mode}")
 
@@ -598,9 +594,9 @@ class GatherToNpy:
       * create the npy v1.0 header at the end with the correct shape and dtype
     """
 
-    def __init__(self, folder, names, npy_header_size=1024):
+    def __init__(self, folder, names, npy_header_size=1024, exist_ok=False):
         self.folder = Path(folder)
-        self.folder.mkdir(parents=True, exist_ok=False)
+        self.folder.mkdir(parents=True, exist_ok=exist_ok)
         assert names is not None
         self.names = names
         self.npy_header_size = npy_header_size

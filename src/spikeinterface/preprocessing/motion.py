@@ -186,11 +186,12 @@ def correct_motion(
 
     Parameters for each step are handled as separate dictionaries.
     For more information please check the documentation of the following functions:
-      * :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks'
-      * :py:func:`~spikeinterface.sortingcomponents.peak_selection.select_peaks'
-      * :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks'
-      * :py:func:`~spikeinterface.sortingcomponents.motion_estimation.estimate_motion'
-      * :py:func:`~spikeinterface.sortingcomponents.motion_interpolation.interpolate_motion'
+
+      * :py:func:`~spikeinterface.sortingcomponents.peak_detection.detect_peaks`
+      * :py:func:`~spikeinterface.sortingcomponents.peak_selection.select_peaks`
+      * :py:func:`~spikeinterface.sortingcomponents.peak_localization.localize_peaks`
+      * :py:func:`~spikeinterface.sortingcomponents.motion_estimation.estimate_motion`
+      * :py:func:`~spikeinterface.sortingcomponents.motion_interpolation.interpolate_motion`
 
 
     Possible presets: {}
@@ -332,7 +333,7 @@ def correct_motion(
         )
         (folder / "parameters.json").write_text(json.dumps(parameters, indent=4, cls=SIJsonEncoder), encoding="utf8")
         (folder / "run_times.json").write_text(json.dumps(run_times, indent=4), encoding="utf8")
-        if recording.check_if_json_serializable():
+        if recording.check_serializablility("json"):
             recording.dump_to_json(folder / "recording.json")
 
         np.save(folder / "peaks.npy", peaks)

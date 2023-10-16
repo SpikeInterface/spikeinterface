@@ -15,7 +15,7 @@ from spikeinterface.core.node_pipeline import (
     SpikeRetriever,
     PipelineNode,
     ExtractDenseWaveforms,
-    sorting_to_peak,
+    sorting_to_peaks,
 )
 
 
@@ -80,7 +80,7 @@ def test_run_node_pipeline():
     # create peaks from spikes
     we = extract_waveforms(recording, sorting, mode="memory", **job_kwargs)
     extremum_channel_inds = get_template_extremum_channel(we, peak_sign="neg", outputs="index")
-    peaks = sorting_to_peak(sorting, extremum_channel_inds)
+    peaks = sorting_to_peaks(sorting, extremum_channel_inds)
 
     peak_retriever = PeakRetriever(recording, peaks)
     # channel index is from template
@@ -97,8 +97,8 @@ def test_run_node_pipeline():
         peak_sign="neg",
     )
 
-    # test with 2 diffrents first node
-    for peak_source in (peak_retriever, spike_retriever_T, spike_retriever_S):
+    # test with 3 differents first nodes
+    for loop, peak_source in enumerate((peak_retriever, spike_retriever_T, spike_retriever_S)):
         # one step only : squeeze output
         nodes = [
             peak_source,
@@ -144,7 +144,7 @@ def test_run_node_pipeline():
         assert waveforms_rms.shape[1] == num_channels
 
         # gather npy mode
-        folder = cache_folder / "pipeline_folder"
+        folder = cache_folder / f"pipeline_folder_{loop}"
         if folder.is_dir():
             shutil.rmtree(folder)
         output = run_node_pipeline(

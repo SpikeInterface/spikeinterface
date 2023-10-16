@@ -59,15 +59,17 @@ With SpikeInterface, users can:
 - post-process sorted datasets.
 - compare and benchmark spike sorting outputs.
 - compute quality metrics to validate and curate spike sorting outputs.
-- visualize recordings and spike sorting outputs in several ways (matplotlib, sortingview, in jupyter)
-- export report and export to phy
-- offer a powerful Qt-based viewer in separate package [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui)
-- have some powerful sorting components to build your own sorter.
+- visualize recordings and spike sorting outputs in several ways (matplotlib, sortingview, jupyter, ephyviewer)
+- export a report and/or export to phy
+- offer a powerful Qt-based viewer in a separate package [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui)
+- have powerful sorting components to build your own sorter.
 
 
 ## Documentation
 
-Detailed documentation for spikeinterface can be found [here](https://spikeinterface.readthedocs.io/en/latest).
+Detailed documentation of the latest PyPI release of SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/0.98.2).
+
+Detailed documentation of the development version of SpikeInterface can be found [here](https://spikeinterface.readthedocs.io/en/latest).
 
 Several tutorials to get started can be found in [spiketutorials](https://github.com/SpikeInterface/spiketutorials).
 
@@ -77,9 +79,9 @@ and sorting components.
 You can also have a look at the [spikeinterface-gui](https://github.com/SpikeInterface/spikeinterface-gui).
 
 
-## How to install spikeinteface
+## How to install spikeinterface
 
-You can install the new `spikeinterface` version with pip:
+You can install the latest version of `spikeinterface` version with pip:
 
 ```bash
 pip install spikeinterface[full]
@@ -94,7 +96,7 @@ To install all interactive widget backends, you can use:
 ```
 
 
-To get the latest updates, you can install `spikeinterface` from sources:
+To get the latest updates, you can install `spikeinterface` from source:
 
 ```bash
 git clone https://github.com/SpikeInterface/spikeinterface.git

@@ -83,7 +83,7 @@ class CommonReferenceRecording(BasePreprocessor):
                 ref_channel_ids = np.asarray(ref_channel_ids)
                 assert np.all(
                     [ch in recording.get_channel_ids() for ch in ref_channel_ids]
-                ), "Some wrong 'ref_channel_ids'!"
+                ), "Some 'ref_channel_ids' are wrong!"
         elif reference == "local":
             assert groups is None, "With 'local' CAR, the group option should not be used."
             closest_inds, dist = get_closest_channels(recording)

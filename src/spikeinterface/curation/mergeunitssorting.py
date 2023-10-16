@@ -12,7 +12,7 @@ class MergeUnitsSorting(BaseSorting):
     ----------
     parent_sorting: Recording
         The sorting object
-    units_to_merge: list of lists
+    units_to_merge: list/tuple of lists/tuples
         A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
         but it can also have more (merge multiple units at once).
     new_unit_ids: None or list
@@ -24,6 +24,7 @@ class MergeUnitsSorting(BaseSorting):
          Default: 'keep'
     delta_time_ms: float or None
         Number of ms to consider for duplicated spikes. None won't check for duplications
+
     Returns
     -------
     sorting: Sorting
@@ -33,7 +34,7 @@ class MergeUnitsSorting(BaseSorting):
     def __init__(self, parent_sorting, units_to_merge, new_unit_ids=None, properties_policy="keep", delta_time_ms=0.4):
         self._parent_sorting = parent_sorting
 
-        if not isinstance(units_to_merge[0], list):
+        if not isinstance(units_to_merge[0], (list, tuple)):
             # keep backward compatibility : the previous behavior was only one merge
             units_to_merge = [units_to_merge]
 
@@ -59,7 +60,7 @@ class MergeUnitsSorting(BaseSorting):
                 else:
                     # we cannot automatically find new names
                     new_unit_ids = [f"merge{i}" for i in range(num_merge)]
-                    if np.any(np.in1d(new_unit_ids, keep_unit_ids)):
+                    if np.any(np.isin(new_unit_ids, keep_unit_ids)):
                         raise ValueError(
                             "Unable to find 'new_unit_ids' because it is a string and parents "
                             "already contain merges. Pass a list of 'new_unit_ids' as an argument."
@@ -68,7 +69,7 @@ class MergeUnitsSorting(BaseSorting):
                 # dtype int
                 new_unit_ids = list(max(parents_unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
         else:
-            if np.any(np.in1d(new_unit_ids, keep_unit_ids)):
+            if np.any(np.isin(new_unit_ids, keep_unit_ids)):
                 raise ValueError("'new_unit_ids' already exist in the sorting.unit_ids. Provide new ones")
 
         assert len(new_unit_ids) == num_merge, "new_unit_ids must have the same size as units_to_merge"

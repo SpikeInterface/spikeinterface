@@ -2,8 +2,8 @@ import pytest
 import shutil
 from pathlib import Path
 import numpy as np
-from spikeinterface import extract_waveforms, load_waveforms
-from spikeinterface.core import NumpySorting, synthetize_spike_train_bad_isi
+from spikeinterface import extract_waveforms
+from spikeinterface.core import NumpySorting, synthetize_spike_train_bad_isi, add_synchrony_to_sorting
 from spikeinterface.extractors.toy_example import toy_example
 from spikeinterface.qualitymetrics.utils import create_ground_truth_pc_distributions
 
@@ -12,6 +12,7 @@ from spikeinterface.postprocessing import (
     compute_principal_components,
     compute_spike_locations,
     compute_spike_amplitudes,
+    compute_amplitude_scalings,
 )
 
 from spikeinterface.qualitymetrics import (
@@ -30,6 +31,9 @@ from spikeinterface.qualitymetrics import (
     compute_sliding_rp_violations,
     compute_drift_metrics,
     compute_amplitude_medians,
+    compute_synchrony_metrics,
+    compute_firing_ranges,
+    compute_amplitude_cv_metrics,
 )
 
 
@@ -65,30 +69,70 @@ def _simulated_data():
     return {"duration": max_time, "times": spike_times, "labels": spike_clusters}
 
 
-def setup_module():
-    for folder_name in ("toy_rec", "toy_sorting", "toy_waveforms"):
-        if (cache_folder / folder_name).is_dir():
-            shutil.rmtree(cache_folder / folder_name)
-
-    recording, sorting = toy_example(num_segments=2, num_units=10)
-    recording = recording.save(folder=cache_folder / "toy_rec")
-    sorting = sorting.save(folder=cache_folder / "toy_sorting")
-
+def _waveform_extractor_simple():
+    recording, sorting = toy_example(duration=50, seed=10)
+    recording = recording.save(folder=cache_folder / "rec1")
+    sorting = sorting.save(folder=cache_folder / "sort1")
+    folder = cache_folder / "waveform_folder1"
     we = extract_waveforms(
         recording,
         sorting,
-        cache_folder / "toy_waveforms",
+        folder,
         ms_before=3.0,
         ms_after=4.0,
-        max_spikes_per_unit=500,
+        max_spikes_per_unit=1000,
         n_jobs=1,
         chunk_size=30000,
+        overwrite=True,
     )
-    pca = compute_principal_components(we, n_components=5, mode="by_channel_local")
+    _ = compute_principal_components(we, n_components=5, mode="by_channel_local")
+    return we
 
 
-def test_calculate_pc_metrics():
-    we = load_waveforms(cache_folder / "toy_waveforms")
+def _waveform_extractor_violations(data):
+    recording, sorting = toy_example(
+        duration=[data["duration"]],
+        spike_times=[data["times"]],
+        spike_labels=[data["labels"]],
+        num_segments=1,
+        num_units=4,
+        # score_detection=score_detection,
+        seed=10,
+    )
+    recording = recording.save(folder=cache_folder / "rec2")
+    sorting = sorting.save(folder=cache_folder / "sort2")
+    folder = cache_folder / "waveform_folder2"
+    we = extract_waveforms(
+        recording,
+        sorting,
+        folder,
+        ms_before=3.0,
+        ms_after=4.0,
+        max_spikes_per_unit=1000,
+        n_jobs=1,
+        chunk_size=30000,
+        overwrite=True,
+    )
+    return we
+
+
+@pytest.fixture(scope="module")
+def simulated_data():
+    return _simulated_data()
+
+
+@pytest.fixture(scope="module")
+def waveform_extractor_violations(simulated_data):
+    return _waveform_extractor_violations(simulated_data)
+
+
+@pytest.fixture(scope="module")
+def waveform_extractor_simple():
+    return _waveform_extractor_simple()
+
+
+def test_calculate_pc_metrics(waveform_extractor_simple):
+    we = waveform_extractor_simple
     print(we)
     pca = we.load_extension("principal_components")
     print(pca)
@@ -159,39 +203,8 @@ def test_simplified_silhouette_score_metrics():
     assert sim_sil_score1 < sim_sil_score2
 
 
-@pytest.fixture
-def simulated_data():
-    return _simulated_data()
-
-
-def setup_dataset(spike_data, score_detection=1):
-    # def setup_dataset(spike_data):
-    recording, sorting = toy_example(
-        duration=[spike_data["duration"]],
-        spike_times=[spike_data["times"]],
-        spike_labels=[spike_data["labels"]],
-        num_segments=1,
-        num_units=4,
-        # score_detection=score_detection,
-        seed=10,
-    )
-    folder = cache_folder / "waveform_folder2"
-    we = extract_waveforms(
-        recording,
-        sorting,
-        folder,
-        ms_before=3.0,
-        ms_after=4.0,
-        max_spikes_per_unit=1000,
-        n_jobs=1,
-        chunk_size=30000,
-        overwrite=True,
-    )
-    return we
-
-
-def test_calculate_firing_rate_num_spikes(simulated_data):
-    we = setup_dataset(simulated_data)
+def test_calculate_firing_rate_num_spikes(waveform_extractor_simple):
+    we = waveform_extractor_simple
     firing_rates = compute_firing_rates(we)
     num_spikes = compute_num_spikes(we)
 
@@ -202,8 +215,18 @@ def test_calculate_firing_rate_num_spikes(simulated_data):
     # np.testing.assert_array_equal(list(num_spikes_gt.values()), list(num_spikes.values()))
 
 
-def test_calculate_amplitude_cutoff(simulated_data):
-    we = setup_dataset(simulated_data)
+def test_calculate_firing_range(waveform_extractor_simple):
+    we = waveform_extractor_simple
+    firing_ranges = compute_firing_ranges(we)
+    print(firing_ranges)
+
+    with pytest.warns(UserWarning) as w:
+        firing_ranges_nan = compute_firing_ranges(we, bin_size_s=we.get_total_duration() + 1)
+        assert np.all([np.isnan(f) for f in firing_ranges_nan.values()])
+
+
+def test_calculate_amplitude_cutoff(waveform_extractor_simple):
+    we = waveform_extractor_simple
     spike_amps = compute_spike_amplitudes(we)
     amp_cuts = compute_amplitude_cutoffs(we, num_histogram_bins=10)
     print(amp_cuts)
@@ -213,19 +236,37 @@ def test_calculate_amplitude_cutoff(simulated_data):
     # assert np.allclose(list(amp_cuts_gt.values()), list(amp_cuts.values()), rtol=0.05)
 
 
-def test_calculate_amplitude_median(simulated_data):
-    we = setup_dataset(simulated_data)
+def test_calculate_amplitude_median(waveform_extractor_simple):
+    we = waveform_extractor_simple
     spike_amps = compute_spike_amplitudes(we)
     amp_medians = compute_amplitude_medians(we)
-    print(amp_medians)
+    print(spike_amps, amp_medians)
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
     # amp_medians_gt = {0: 130.77323354628675, 1: 130.7461997791725, 2: 130.7461997791725}
     # assert np.allclose(list(amp_medians_gt.values()), list(amp_medians.values()), rtol=0.05)
 
 
-def test_calculate_snrs(simulated_data):
-    we = setup_dataset(simulated_data)
+def test_calculate_amplitude_cv_metrics(waveform_extractor_simple):
+    we = waveform_extractor_simple
+    spike_amps = compute_spike_amplitudes(we)
+    amp_cv_median, amp_cv_range = compute_amplitude_cv_metrics(we, average_num_spikes_per_bin=20)
+    print(amp_cv_median)
+    print(amp_cv_range)
+
+    amps_scalings = compute_amplitude_scalings(we)
+    amp_cv_median_scalings, amp_cv_range_scalings = compute_amplitude_cv_metrics(
+        we,
+        average_num_spikes_per_bin=20,
+        amplitude_extension="amplitude_scalings",
+        min_num_bins=5,
+    )
+    print(amp_cv_median_scalings)
+    print(amp_cv_range_scalings)
+
+
+def test_calculate_snrs(waveform_extractor_simple):
+    we = waveform_extractor_simple
     snrs = compute_snrs(we)
     print(snrs)
 
@@ -234,8 +275,8 @@ def test_calculate_snrs(simulated_data):
     # assert np.allclose(list(snrs_gt.values()), list(snrs.values()), rtol=0.05)
 
 
-def test_calculate_presence_ratio(simulated_data):
-    we = setup_dataset(simulated_data)
+def test_calculate_presence_ratio(waveform_extractor_simple):
+    we = waveform_extractor_simple
     ratios = compute_presence_ratios(we, bin_duration_s=10)
     print(ratios)
 
@@ -244,8 +285,8 @@ def test_calculate_presence_ratio(simulated_data):
     # np.testing.assert_array_equal(list(ratios_gt.values()), list(ratios.values()))
 
 
-def test_calculate_isi_violations(simulated_data):
-    we = setup_dataset(simulated_data)
+def test_calculate_isi_violations(waveform_extractor_violations):
+    we = waveform_extractor_violations
     isi_viol, counts = compute_isi_violations(we, isi_threshold_ms=1, min_isi_ms=0.0)
     print(isi_viol)
 
@@ -256,8 +297,8 @@ def test_calculate_isi_violations(simulated_data):
     # np.testing.assert_array_equal(list(counts_gt.values()), list(counts.values()))
 
 
-def test_calculate_sliding_rp_violations(simulated_data):
-    we = setup_dataset(simulated_data)
+def test_calculate_sliding_rp_violations(waveform_extractor_violations):
+    we = waveform_extractor_violations
     contaminations = compute_sliding_rp_violations(we, bin_size_ms=0.25, window_size_s=1)
     print(contaminations)
 
@@ -266,13 +307,13 @@ def test_calculate_sliding_rp_violations(simulated_data):
     # assert np.allclose(list(contaminations_gt.values()), list(contaminations.values()), rtol=0.05)
 
 
-def test_calculate_rp_violations(simulated_data):
-    counts_gt = {0: 2, 1: 4, 2: 10}
-    we = setup_dataset(simulated_data)
+def test_calculate_rp_violations(waveform_extractor_violations):
+    we = waveform_extractor_violations
     rp_contamination, counts = compute_refrac_period_violations(we, refractory_period_ms=1, censored_period_ms=0.0)
-    print(rp_contamination)
+    print(rp_contamination, counts)
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
+    # counts_gt = {0: 2, 1: 4, 2: 10}
     # rp_contamination_gt = {0: 0.10534956502609294, 1: 1.0, 2: 1.0}
     # assert np.allclose(list(rp_contamination_gt.values()), list(rp_contamination.values()), rtol=0.05)
     # np.testing.assert_array_equal(list(counts_gt.values()), list(counts.values()))
@@ -286,9 +327,44 @@ def test_calculate_rp_violations(simulated_data):
     assert np.isnan(rp_contamination[1])
 
 
+def test_synchrony_metrics(waveform_extractor_simple):
+    we = waveform_extractor_simple
+    sorting = we.sorting
+    synchrony_sizes = (2, 3, 4)
+    synchrony_metrics = compute_synchrony_metrics(we, synchrony_sizes=synchrony_sizes)
+    print(synchrony_metrics)
+
+    # check returns
+    for size in synchrony_sizes:
+        assert f"sync_spike_{size}" in synchrony_metrics._fields
+
+    # here we test that increasing added synchrony is captured by syncrhony metrics
+    added_synchrony_levels = (0.2, 0.5, 0.8)
+    previous_waveform_extractor = we
+    for sync_level in added_synchrony_levels:
+        sorting_sync = add_synchrony_to_sorting(sorting, sync_event_ratio=sync_level)
+        waveform_extractor_sync = extract_waveforms(previous_waveform_extractor.recording, sorting_sync, mode="memory")
+        previous_synchrony_metrics = compute_synchrony_metrics(
+            previous_waveform_extractor, synchrony_sizes=synchrony_sizes
+        )
+        current_synchrony_metrics = compute_synchrony_metrics(waveform_extractor_sync, synchrony_sizes=synchrony_sizes)
+        print(current_synchrony_metrics)
+        # check that all values increased
+        for i, col in enumerate(previous_synchrony_metrics._fields):
+            assert np.all(
+                v_prev < v_curr
+                for (v_prev, v_curr) in zip(
+                    previous_synchrony_metrics[i].values(), current_synchrony_metrics[i].values()
+                )
+            )
+
+        # set new previous waveform extractor
+        previous_waveform_extractor = waveform_extractor_sync
+
+
 @pytest.mark.sortingcomponents
-def test_calculate_drift_metrics(simulated_data):
-    we = setup_dataset(simulated_data)
+def test_calculate_drift_metrics(waveform_extractor_simple):
+    we = waveform_extractor_simple
     spike_locs = compute_spike_locations(we)
     drifts_ptps, drifts_stds, drift_mads = compute_drift_metrics(we, interval_s=10, min_spikes_per_interval=10)
 
@@ -304,11 +380,15 @@ def test_calculate_drift_metrics(simulated_data):
 
 
 if __name__ == "__main__":
-    setup_module()
     sim_data = _simulated_data()
-    test_calculate_amplitude_cutoff(sim_data)
-    test_calculate_presence_ratio(sim_data)
-    test_calculate_amplitude_median(sim_data)
-    test_calculate_isi_violations(sim_data)
-    test_calculate_sliding_rp_violations(sim_data)
-    test_calculate_drift_metrics(sim_data)
+    we = _waveform_extractor_simple()
+    # we_violations = _waveform_extractor_violations(sim_data)
+    # test_calculate_amplitude_cutoff(we)
+    # test_calculate_presence_ratio(we)
+    # test_calculate_amplitude_median(we)
+    # test_calculate_isi_violations(we)
+    # test_calculate_sliding_rp_violations(we)
+    # test_calculate_drift_metrics(we)
+    # test_synchrony_metrics(we)
+    test_calculate_firing_range(we)
+    # test_calculate_amplitude_cv_metrics(we)

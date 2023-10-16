@@ -216,10 +216,14 @@ class MdaSortingExtractor(BaseSorting):
         times_list = []
         labels_list = []
         primary_channels_list = []
-        for unit_id in unit_ids:
+        for unit_index, unit_id in enumerate(unit_ids):
             times = sorting.get_unit_spike_train(unit_id=unit_id)
             times_list.append(times)
-            labels_list.append(np.ones(times.shape) * unit_id)
+            # unit id may not be numeric
+            if unit_id.dtype.kind in "iu":
+                labels_list.append(np.ones(times.shape, dtype=unit_id.dtype) * unit_id)
+            else:
+                labels_list.append(np.ones(times.shape, dtype=int) * unit_index)
             if write_primary_channels:
                 if "max_channel" in sorting.get_unit_property_names(unit_id):
                     primary_channels_list.append([sorting.get_unit_property(unit_id, "max_channel")] * times.shape[0])

@@ -68,6 +68,7 @@ extractors = [
     "ONE-api>=1.19.1",
     "ibllib>=2.21.0",
     "pymatreader>=0.0.32", # For cell explorer matlab files
+    "zugbruecke>=0.2; sys_platform!='win32'", # For plexon2
 ]
 
 streaming_extractors = [
@@ -91,7 +92,7 @@ full = [
     "networkx",
     "distinctipy",
     "matplotlib",
-    "cuda-python; sys_platform != 'darwin'",
+    "cuda-python; platform_system != 'Darwin'",
     "numba",
 ]
 
@@ -147,13 +148,14 @@ docs = [
     "sphinx_rtd_theme==1.0.0",
     "sphinx-gallery",
     "numpydoc",
+    "ipython",
 
     # for notebooks in the gallery
     "MEArec",   # Use as an example
     "datalad==0.16.2",  # Download mearec data, not sure if needed as is installed with conda as well because of git-annex
-    "pandas", # Don't know where this is needed
-    "hdbscan>=0.8.33",   # For sorters, probably spikingcircus
-    "numba", # For sorters, probably spikingcircus
+    "pandas", # in the modules gallery comparison tutorial
+    "hdbscan>=0.8.33",   # For sorters spykingcircus2 + tridesclous
+    "numba", # For many postprocessing functions
     # for release we need pypi, so this needs to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",  # We always build from the latest version
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",  # We always build from the latest version

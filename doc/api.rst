@@ -19,6 +19,8 @@ spikeinterface.core
     .. autofunction:: extract_waveforms
     .. autofunction:: load_waveforms
     .. autofunction:: compute_sparsity
+    .. autoclass:: ChannelSparsity
+        :members:
     .. autoclass:: BinaryRecordingExtractor
     .. autoclass:: ZarrRecordingExtractor
     .. autoclass:: BinaryFolderRecording
@@ -48,10 +50,6 @@ spikeinterface.core
     .. autofunction:: get_template_extremum_channel
     .. autofunction:: get_template_extremum_channel_peak_shift
     .. autofunction:: get_template_extremum_amplitude
-
-..
-    .. autofunction:: read_binary
-    .. autofunction:: read_zarr
     .. autofunction:: append_recordings
     .. autofunction:: concatenate_recordings
     .. autofunction:: split_recording
@@ -59,6 +57,8 @@ spikeinterface.core
     .. autofunction:: append_sortings
     .. autofunction:: split_sorting
     .. autofunction:: select_segment_sorting
+    .. autofunction:: read_binary
+    .. autofunction:: read_zarr
 
 Low-level
 ~~~~~~~~~
@@ -67,7 +67,6 @@ Low-level
     :noindex:
 
     .. autoclass:: BaseWaveformExtractorExtension
-    .. autoclass:: ChannelSparsity
     .. autoclass:: ChunkRecordingExecutor
 
 spikeinterface.extractors
@@ -83,6 +82,7 @@ NEO-based
     .. autofunction:: read_alphaomega_event
     .. autofunction:: read_axona
     .. autofunction:: read_biocam
+    .. autofunction:: read_binary
     .. autofunction:: read_blackrock
     .. autofunction:: read_ced
     .. autofunction:: read_intan
@@ -91,16 +91,21 @@ NEO-based
     .. autofunction:: read_mcsraw
     .. autofunction:: read_neuralynx
     .. autofunction:: read_neuralynx_sorting
+    .. autofunction:: read_neuroexplorer
     .. autofunction:: read_neuroscope
     .. autofunction:: read_nix
     .. autofunction:: read_openephys
     .. autofunction:: read_openephys_event
     .. autofunction:: read_plexon
     .. autofunction:: read_plexon_sorting
+    .. autofunction:: read_plexon2
+    .. autofunction:: read_plexon2_sorting
     .. autofunction:: read_spike2
     .. autofunction:: read_spikegadgets
     .. autofunction:: read_spikeglx
     .. autofunction:: read_tdt
+    .. autofunction:: read_zarr
+
 
 Non-NEO-based
 ~~~~~~~~~~~~~
@@ -212,8 +217,10 @@ spikeinterface.sorters
     .. autofunction:: print_sorter_versions
     .. autofunction:: get_sorter_description
     .. autofunction:: run_sorter
+    .. autofunction:: run_sorter_jobs
     .. autofunction:: run_sorters
     .. autofunction:: run_sorter_by_property
+    .. autofunction:: read_sorter_folder
 
 Low level
 ~~~~~~~~~
