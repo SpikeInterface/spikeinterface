@@ -65,4 +65,5 @@ print(keep_unit_ids)
 
 curated_sorting = sorting.select_units(keep_unit_ids)
 print(curated_sorting)
+
 se.NpzSortingExtractor.write_sorting(sorting=curated_sorting, save_path='curated_sorting.npz')
