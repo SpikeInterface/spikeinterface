@@ -57,7 +57,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         "NT": "Batch size (if None it is automatically computed)",
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
         "delete_tmp_files": "Delete temporary files created during sorting (matlab files and the `temp_wh.dat` file that "
-        "contains kilosort-preprocessed data). Accepts `False` (deletes no files), `True` (deltes all files) "
+        "contains kilosort-preprocessed data). Accepts `False` (deletes no files), `True` (deletes all files) "
         "or a Tuple containing the files to delete. Options are: ('temp_wh.dat', 'matlab_files')",
         "delete_recording_dat": "Whether to delete the 'recording.dat' file after a successful run",
     }
