@@ -4,6 +4,7 @@ from typing import Union
 # from probeinterface import ProbeGroup
 
 from .base import BaseWidget, to_attr
+
 # from .utils import get_unit_colors
 from ..core.waveform_extractor import WaveformExtractor
 
@@ -26,6 +27,7 @@ class UnitProbeMapWidget(BaseWidget):
     with_channel_ids: bool False default
         add channel ids text on the probe
     """
+
     def __init__(
         self,
         waveform_extractor,
@@ -37,14 +39,12 @@ class UnitProbeMapWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-
         if unit_ids is None:
             unit_ids = waveform_extractor.sorting.unit_ids
         self.unit_ids = unit_ids
         if channel_ids is None:
             channel_ids = waveform_extractor.recording.channel_ids
         self.channel_ids = channel_ids
-
 
         data_plot = dict(
             waveform_extractor=waveform_extractor,
@@ -70,7 +70,6 @@ class UnitProbeMapWidget(BaseWidget):
             backend_kwargs["num_axes"] = len(dp.unit_ids)
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
-
 
         we = dp.waveform_extractor
         probe = we.get_probe()

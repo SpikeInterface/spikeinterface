@@ -1,4 +1,3 @@
-
 # peak activity
 from .activity import plot_peak_activity_map, PeakActivityMapWidget
 

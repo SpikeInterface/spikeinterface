@@ -245,7 +245,6 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
 
-
     def test_amplitudes(self):
         possible_backends = list(sw.AmplitudesWidget.get_possible_backends())
         for backend in possible_backends:
@@ -377,7 +376,6 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_unit_probe_map(self.we_dense)
-                
 
 
 if __name__ == "__main__":
