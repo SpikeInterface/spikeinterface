@@ -186,6 +186,7 @@ class RandomProjectionsFeature(PipelineNode):
         projections=None,
         sigmoid=None,
         radius_um=None,
+        sparse=True,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
@@ -195,7 +196,8 @@ class RandomProjectionsFeature(PipelineNode):
         self.channel_distance = get_channel_distances(recording)
         self.neighbours_mask = self.channel_distance < radius_um
         self.radius_um = radius_um
-        self._kwargs.update(dict(projections=projections, sigmoid=sigmoid, radius_um=radius_um))
+        self.sparse = sparse
+        self._kwargs.update(dict(projections=projections, sigmoid=sigmoid, radius_um=radius_um, sparse=sparse))
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
@@ -213,7 +215,10 @@ class RandomProjectionsFeature(PipelineNode):
             (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
             (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
             local_projections = self.projections[chan_inds, :]
-            wf_ptp = np.ptp(waveforms[idx][:, :, chan_inds], axis=1)
+            if self.sparse:
+                wf_ptp = np.ptp(waveforms[idx][:, :, : len(chan_inds)], axis=1)
+            else:
+                wf_ptp = np.ptp(waveforms[idx][:, :, chan_inds], axis=1)
 
             if self.sigmoid is not None:
                 wf_ptp *= self._sigmoid(wf_ptp)

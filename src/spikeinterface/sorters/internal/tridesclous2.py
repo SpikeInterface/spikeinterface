@@ -29,10 +29,12 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "waveforms": {
             "ms_before": 0.5,
             "ms_after": 1.5,
+            "radius_um": 120.0,
         },
-        "filtering": {"freq_min": 300.0, "freq_max": 8000.0},
+        "filtering": {"freq_min": 300.0, "freq_max": 12000.0},
         "detection": {"peak_sign": "neg", "detect_threshold": 5, "exclude_sweep_ms": 1.5, "radius_um": 150.0},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
+        "features": {},
         "svd": {"n_components": 6},
         "clustering": {
             "split_radius_um": 40.0,
@@ -154,13 +156,14 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         #                             upsampling_um=5.0,
         #                             )
 
+        radius_um = params["waveforms"]["radius_um"]
         node3 = ExtractSparseWaveforms(
             recording,
             parents=[node0],
             return_output=True,
-            ms_before=0.5,
-            ms_after=1.5,
-            radius_um=100.0,
+            ms_before=ms_before,
+            ms_after=ms_after,
+            radius_um=radius_um,
         )
 
         model_folder_path = sorter_output_folder / "tsvd_model"
@@ -193,6 +196,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
         original_labels = peaks["channel_index"]
 
+        min_cluster_size = 50
+
         post_split_label, split_count = split_clusters(
             original_labels,
             recording,
@@ -205,8 +210,8 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
                 # feature_name="sparse_wfs",
                 neighbours_mask=neighbours_mask,
                 waveforms_sparse_mask=sparse_mask,
-                min_size_split=50,
-                min_cluster_size=50,
+                min_size_split=min_cluster_size,
+                min_cluster_size=min_cluster_size,
                 min_samples=50,
                 n_pca_features=3,
             ),
@@ -224,22 +229,22 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             recording,
             features_folder,
             radius_um=merge_radius_um,
-            method="project_distribution",
+            # method="project_distribution",
+            # method_kwargs=dict(
+            #     waveforms_sparse_mask=sparse_mask,
+            #     feature_name="sparse_wfs",
+            #     projection="centroid",
+            #     criteria="distrib_overlap",
+            #     threshold_overlap=0.3,
+            #     min_cluster_size=min_cluster_size + 1,
+            #     num_shift=5,
+            # ),
+            method="normalized_template_diff",
             method_kwargs=dict(
-                # neighbours_mask=neighbours_mask,
                 waveforms_sparse_mask=sparse_mask,
-                # feature_name="sparse_tsvd",
-                feature_name="sparse_wfs",
-                # projection='lda',
-                projection="centroid",
-                # criteria='diptest',
-                # threshold_diptest=0.5,
-                # criteria="percentile",
-                # threshold_percentile=80.,
-                criteria="distrib_overlap",
-                threshold_overlap=0.4,
-                # num_shift=0
-                num_shift=2,
+                threshold_diff=0.2,
+                min_cluster_size=min_cluster_size + 1,
+                num_shift=5,
             ),
             **job_kwargs,
         )
@@ -249,10 +254,19 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         new_peaks = peaks.copy()
         new_peaks["sample_index"] -= peak_shifts
 
+        # clean very small cluster before peeler
+        minimum_cluster_size = 25
+        labels_set, count = np.unique(post_merge_label, return_counts=True)
+        to_remove = labels_set[count < minimum_cluster_size]
+
+        mask = np.isin(post_merge_label, to_remove)
+        post_merge_label[mask] = -1
+
+        # final label sets
         labels_set = np.unique(post_merge_label)
         labels_set = labels_set[labels_set >= 0]
-        mask = post_merge_label >= 0
 
+        mask = post_merge_label >= 0
         sorting_temp = NumpySorting.from_times_labels(
             new_peaks["sample_index"][mask],
             post_merge_label[mask],

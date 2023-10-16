@@ -192,6 +192,7 @@ class LocalFeatureClustering:
 
         # target channel subset is done intersect local channels + neighbours
         local_chans = np.unique(peaks["channel_index"][peak_indices])
+
         target_channels = np.flatnonzero(np.all(neighbours_mask[local_chans, :], axis=0))
 
         # TODO fix this a better way, this when cluster have too few overlapping channels
@@ -204,6 +205,7 @@ class LocalFeatureClustering:
 
         local_labels[dont_have_channels] = -2
         kept = np.flatnonzero(~dont_have_channels)
+
         if kept.size < min_size_split:
             return False, None
 
