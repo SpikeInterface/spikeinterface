@@ -8,7 +8,7 @@ import warnings
 from .numpyextractors import NumpyRecording, NumpySorting
 from .basesorting import minimum_spike_dtype
 
-from probeinterface import Probe, generate_linear_probe
+from probeinterface import Probe, generate_linear_probe, generate_multi_columns_probe
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
 from .snippets_tools import snippets_from_sorting
@@ -93,7 +93,6 @@ def generate_recording(
             probe = probe.to_3d()
         probe.set_device_channel_indices(np.arange(num_channels))
         recording.set_probe(probe, in_place=True)
-        probe = generate_linear_probe(num_elec=num_channels)
 
     return recording
 
@@ -1358,6 +1357,13 @@ def generate_ground_truth_recording(
     num_units=10,
     sorting=None,
     probe=None,
+    generate_probe_kwargs=dict(
+        num_columns=2,
+        xpitch=20,
+        ypitch=20,
+        contact_shapes="circle",
+        contact_shape_params={"radius": 6},
+    ),
     templates=None,
     ms_before=1.0,
     ms_after=3.0,
@@ -1386,7 +1392,9 @@ def generate_ground_truth_recording(
     sorting: Sorting or None
         An external sorting object. If not provide, one is genrated.
     probe: Probe or None
-        An external Probe object. If not provided of linear probe is generated.
+        An external Probe object. If not provided of probe is generated using generate_probe_kwargs.
+    generate_probe_kwargs: dict
+        A dict to constuct the Probe using :pyp:func:`probeinterface.generate_multi_columns_probe()`.
     templates: np.array or None
         The templates of units.
         If None they are generated.
@@ -1443,8 +1451,28 @@ def generate_ground_truth_recording(
     num_spikes = sorting.to_spike_vector().size
 
     if probe is None:
-        probe = generate_linear_probe(num_elec=num_channels)
+        # probe = generate_linear_probe(num_elec=num_channels)
+        # probe.set_device_channel_indices(np.arange(num_channels))
+
+        prb_kwargs = generate_probe_kwargs.copy()
+        if 'num_contact_per_column' in prb_kwargs:
+            assert (prb_kwargs['num_contact_per_column'] * prb_kwargs['num_columns']) == num_channels, \
+                "generate_multi_columns_probe : num_channels do not match num_contact_per_column x num_columns"
+        elif 'num_contact_per_column' not in prb_kwargs and 'num_columns' in prb_kwargs:
+            n = num_channels // prb_kwargs['num_columns']
+            num_contact_per_column = [n] * prb_kwargs['num_columns']
+            mid = prb_kwargs['num_columns'] // 2
+            num_contact_per_column[mid] += num_channels % prb_kwargs['num_columns']
+            prb_kwargs['num_contact_per_column'] = num_contact_per_column
+        else:
+            raise ValueError("num_columns should be provided in dict generate_probe_kwargs")
+
+        print(prb_kwargs)
+        probe = generate_multi_columns_probe(**prb_kwargs)
         probe.set_device_channel_indices(np.arange(num_channels))
+        print(probe)
+
+
     else:
         num_channels = probe.get_contact_count()
 
