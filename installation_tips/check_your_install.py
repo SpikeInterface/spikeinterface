@@ -71,6 +71,8 @@ def _clean():
             shutil.rmtree(folder)
 
 parser = argparse.ArgumentParser()
+# add ci flag so that gui will not be used in ci
+# end user can ignore
 parser.add_argument('--ci', action='store_false')
 
 if __name__ == '__main__':
@@ -86,10 +88,10 @@ if __name__ == '__main__':
         ('Run tridesclous', run_tridesclous),
         ]
     
+    # backwards logic because default is True for end-user
     if args.ci:
         steps.insert(3, ('Open spikeinterface-gui', open_sigui) )
     
-
     steps.append(('Export to phy', export_to_phy)),
         # phy is removed from the env because it force a pip install PyQt5
         # which break the conda env
