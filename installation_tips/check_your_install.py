@@ -87,16 +87,16 @@ if __name__ == '__main__':
         ('Import spikeinterface.full', check_import_si_full),
         ('Run tridesclous', run_tridesclous),
         ]
-    
+
     # backwards logic because default is True for end-user
     if args.ci:
         steps.insert(3, ('Open spikeinterface-gui', open_sigui) )
-    
+
     steps.append(('Export to phy', export_to_phy)),
         # phy is removed from the env because it force a pip install PyQt5
         # which break the conda env
         # ('Open phy', open_phy),
-    
+
     if platform.system() == "Windows":
         pass
         # steps.insert(3, ('Run spykingcircus', run_spykingcircus))
