@@ -61,7 +61,7 @@ def split_clusters(
     n_jobs = job_kwargs["n_jobs"]
     mp_context = job_kwargs.get("mp_context", None)
     progress_bar = job_kwargs["progress_bar"]
-    max_threads_per_process = job_kwargs["max_threads_per_process"]
+    max_threads_per_process = job_kwargs.get("max_threads_per_process", None)
 
     original_labels = peak_labels
     peak_labels = peak_labels.copy()
