@@ -57,37 +57,47 @@ def apply_sortingview_curation(
     unit_ids_dtype = sorting.unit_ids.dtype
 
     # STEP 1: merge groups
+    labels_dict = sortingview_curation_dict["labelsByUnit"]
     if "mergeGroups" in sortingview_curation_dict and not skip_merge:
         merge_groups = sortingview_curation_dict["mergeGroups"]
-        for mg in merge_groups:
+        for merge_group in merge_groups:
+            # Store labels of units that are about to be merged
+            labels_to_inherit = []
+            for unit in merge_group:
+                labels_to_inherit.extend(labels_dict.get(str(unit), []))
+            labels_to_inherit = list(set(labels_to_inherit))  # Remove duplicates
+
             if verbose:
-                print(f"Merging {mg}")
+                print(f"Merging {merge_group}")
             if unit_ids_dtype.kind in ("U", "S"):
                 # if unit dtype is str, set new id as "{unit1}-{unit2}"
-                new_unit_id = "-".join(mg)
+                new_unit_id = "-".join(merge_group)
+                curation_sorting.merge(merge_group, new_unit_id=new_unit_id)
             else:
                 # in this case, the CurationSorting takes care of finding a new unused int
-                new_unit_id = None
-            curation_sorting.merge(mg, new_unit_id=new_unit_id)
+                curation_sorting.merge(merge_group, new_unit_id=None)
+                new_unit_id = curation_sorting.max_used_id  # merged unit id
+            labels_dict[str(new_unit_id)] = labels_to_inherit
 
     # STEP 2: gather and apply sortingview curation labels
-
     # In sortingview, a unit is not required to have all labels.
     # For example, the first 3 units could be labeled as "accept".
     # In this case, the first 3 values of the property "accept" will be True, the rest False
-    labels_dict = sortingview_curation_dict["labelsByUnit"]
-    properties = {}
-    for _, labels in labels_dict.items():
-        for label in labels:
-            if label not in properties:
-                properties[label] = np.zeros(len(curation_sorting.current_sorting.unit_ids), dtype=bool)
-    for u_i, unit_id in enumerate(curation_sorting.current_sorting.unit_ids):
-        labels_unit = []
-        for unit_label, labels in labels_dict.items():
-            if unit_label in str(unit_id):
-                labels_unit.extend(labels)
-        for label in labels_unit:
-            properties[label][u_i] = True
+
+    # Initialize the properties dictionary
+    properties = {
+        label: np.zeros(len(curation_sorting.current_sorting.unit_ids), dtype=bool)
+        for labels in labels_dict.values()
+        for label in labels
+    }
+
+    # Populate the properties dictionary
+    for unit_index, unit_id in enumerate(curation_sorting.current_sorting.unit_ids):
+        unit_id_str = str(unit_id)
+        if unit_id_str in labels_dict:
+            for label in labels_dict[unit_id_str]:
+                properties[label][unit_index] = True
+
     for prop_name, prop_values in properties.items():
         curation_sorting.current_sorting.set_property(prop_name, prop_values)
 
@@ -103,5 +113,4 @@ def apply_sortingview_curation(
                 units_to_remove.extend(unit_ids[curation_sorting.current_sorting.get_property(exclude_label) == True])
         units_to_remove = np.unique(units_to_remove)
         curation_sorting.remove_units(units_to_remove)
-
     return curation_sorting.current_sorting

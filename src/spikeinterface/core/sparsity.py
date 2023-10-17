@@ -102,7 +102,11 @@ class ChannelSparsity:
 
         self.num_channels = self.channel_ids.size
         self.num_units = self.unit_ids.size
-        self.max_num_active_channels = self.mask.sum(axis=1).max()
+        if self.mask.shape[0]:
+            self.max_num_active_channels = self.mask.sum(axis=1).max()
+        else:
+            # empty sorting without units
+            self.max_num_active_channels = 0
 
     def __repr__(self):
         density = np.mean(self.mask)

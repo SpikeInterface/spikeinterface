@@ -54,7 +54,7 @@ Use the following Python script to load the binary data into SpikeInterface:
    dtype = "float64"  # MATLAB's double corresponds to Python's float64
 
    # Load data using SpikeInterface
-   recording = si.read_binary(file_path, sampling_frequency=sampling_frequency,
+   recording = si.read_binary(file_paths=file_path, sampling_frequency=sampling_frequency,
                               num_channels=num_channels, dtype=dtype)
 
    # Confirm that the data was loaded correctly by comparing the data shapes and see they match the MATLAB data
@@ -86,7 +86,7 @@ If your data in MATLAB is stored as :code:`int16`, and you know the gain and off
    gain_to_uV = 0.195  # Adjust according to your MATLAB dataset
    offset_to_uV = 0   # Adjust according to your MATLAB dataset
 
-   recording = si.read_binary(file_path, sampling_frequency=sampling_frequency,
+   recording = si.read_binary(file_paths=file_path, sampling_frequency=sampling_frequency,
                               num_channels=num_channels, dtype=dtype_int,
                               gain_to_uV=gain_to_uV, offset_to_uV=offset_to_uV)
 

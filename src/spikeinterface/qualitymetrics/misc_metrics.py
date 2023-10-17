@@ -602,6 +602,15 @@ def compute_firing_ranges(waveform_extractor, bin_size_s=5, percentiles=(5, 95),
     if unit_ids is None:
         unit_ids = sorting.unit_ids
 
+    if all(
+        [
+            waveform_extractor.get_num_samples(segment_index) < bin_size_samples
+            for segment_index in range(waveform_extractor.get_num_segments())
+        ]
+    ):
+        warnings.warn(f"Bin size of {bin_size_s}s is larger than each segment duration. Firing ranges are set to NaN.")
+        return {unit_id: np.nan for unit_id in unit_ids}
+
     # for each segment, we compute the firing rate histogram and we concatenate them
     firing_rate_histograms = {unit_id: np.array([], dtype=float) for unit_id in sorting.unit_ids}
     for segment_index in range(waveform_extractor.get_num_segments()):

@@ -233,15 +233,15 @@ def test_run_sorters_with_dict():
 
 
 if __name__ == "__main__":
-    # setup_module()
+    setup_module()
     job_list = get_job_list()
 
-    # test_run_sorter_jobs_loop(job_list)
+    test_run_sorter_jobs_loop(job_list)
     # test_run_sorter_jobs_joblib(job_list)
     # test_run_sorter_jobs_processpoolexecutor(job_list)
     # test_run_sorter_jobs_multiprocessing(job_list)
     # test_run_sorter_jobs_dask(job_list)
-    test_run_sorter_jobs_slurm(job_list)
+    # test_run_sorter_jobs_slurm(job_list)
 
     # test_run_sorter_by_property()
 

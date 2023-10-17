@@ -147,13 +147,16 @@ class AmplitudesWidget(BaseWidget):
                 else:
                     bins = dp.bins
                 ax_hist = self.axes.flatten()[1]
-                ax_hist.hist(amps, bins=bins, orientation="horizontal", color=dp.unit_colors[unit_id], alpha=0.8)
+                # this is super slow, using plot and np.histogram is really much faster (and nicer!)
+                # ax_hist.hist(amps, bins=bins, orientation="horizontal", color=dp.unit_colors[unit_id], alpha=0.8)
+                count, bins = np.histogram(amps, bins=bins)
+                ax_hist.plot(count, bins[:-1], color=dp.unit_colors[unit_id], alpha=0.8)
 
         if dp.plot_histograms:
             ax_hist = self.axes.flatten()[1]
             ax_hist.set_ylim(scatter_ax.get_ylim())
             ax_hist.axis("off")
-            self.figure.tight_layout()
+            # self.figure.tight_layout()
 
         if dp.plot_legend:
             if hasattr(self, "legend") and self.legend is not None:
@@ -171,9 +174,11 @@ class AmplitudesWidget(BaseWidget):
 
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
-        import ipywidgets.widgets as widgets
+
+        # import ipywidgets.widgets as widgets
+        import ipywidgets.widgets as W
         from IPython.display import display
-        from .utils_ipywidgets import check_ipywidget_backend, make_unit_controller
+        from .utils_ipywidgets import check_ipywidget_backend, UnitSelector
 
         check_ipywidget_backend()
 
@@ -188,60 +193,63 @@ class AmplitudesWidget(BaseWidget):
         ratios = [0.15, 0.85]
 
         with plt.ioff():
-            output = widgets.Output()
+            output = W.Output()
             with output:
                 self.figure = plt.figure(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
-        data_plot["unit_ids"] = data_plot["unit_ids"][:1]
-        unit_widget, unit_controller = make_unit_controller(
-            data_plot["unit_ids"], we.unit_ids, ratios[0] * width_cm, height_cm
-        )
+        self.unit_selector = UnitSelector(we.unit_ids)
+        self.unit_selector.value = list(we.unit_ids)[:1]
 
-        plot_histograms = widgets.Checkbox(
+        self.checkbox_histograms = W.Checkbox(
             value=data_plot["plot_histograms"],
-            description="plot histograms",
-            disabled=False,
+            description="hist",
         )
 
-        footer = plot_histograms
+        left_sidebar = W.VBox(
+            children=[
+                self.unit_selector,
+                self.checkbox_histograms,
+            ],
+            layout=W.Layout(align_items="center", width="4cm", height="100%"),
+        )
 
-        self.controller = {"plot_histograms": plot_histograms}
-        self.controller.update(unit_controller)
-
-        for w in self.controller.values():
-            w.observe(self._update_ipywidget)
-
-        self.widget = widgets.AppLayout(
+        self.widget = W.AppLayout(
             center=self.figure.canvas,
-            left_sidebar=unit_widget,
+            left_sidebar=left_sidebar,
             pane_widths=ratios + [0],
-            footer=footer,
         )
 
         # a first update
-        self._update_ipywidget(None)
+        self._full_update_plot()
+
+        self.unit_selector.observe(self._update_plot, names="value", type="change")
+        self.checkbox_histograms.observe(self._full_update_plot, names="value", type="change")
 
         if backend_kwargs["display"]:
             display(self.widget)
 
-    def _update_ipywidget(self, change):
+    def _full_update_plot(self, change=None):
         self.figure.clear()
-
-        unit_ids = self.controller["unit_ids"].value
-        plot_histograms = self.controller["plot_histograms"].value
-
-        # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
-        data_plot["unit_ids"] = unit_ids
-        data_plot["plot_histograms"] = plot_histograms
+        data_plot["unit_ids"] = self.unit_selector.value
+        data_plot["plot_histograms"] = self.checkbox_histograms.value
+        data_plot["plot_legend"] = False
 
-        backend_kwargs = {}
-        # backend_kwargs["figure"] = self.fig
-        backend_kwargs["figure"] = self.figure
-        backend_kwargs["axes"] = None
-        backend_kwargs["ax"] = None
+        backend_kwargs = dict(figure=self.figure, axes=None, ax=None)
+        self.plot_matplotlib(data_plot, **backend_kwargs)
+        self._update_plot()
 
+    def _update_plot(self, change=None):
+        for ax in self.axes.flatten():
+            ax.clear()
+
+        data_plot = self.next_data_plot
+        data_plot["unit_ids"] = self.unit_selector.value
+        data_plot["plot_histograms"] = self.checkbox_histograms.value
+        data_plot["plot_legend"] = False
+
+        backend_kwargs = dict(figure=None, axes=self.axes, ax=None)
         self.plot_matplotlib(data_plot, **backend_kwargs)
 
         self.figure.canvas.draw()
