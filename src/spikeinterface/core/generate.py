@@ -1467,11 +1467,8 @@ def generate_ground_truth_recording(
         else:
             raise ValueError("num_columns should be provided in dict generate_probe_kwargs")
 
-        print(prb_kwargs)
         probe = generate_multi_columns_probe(**prb_kwargs)
         probe.set_device_channel_indices(np.arange(num_channels))
-        print(probe)
-
 
     else:
         num_channels = probe.get_contact_count()
