@@ -78,7 +78,7 @@ def export_to_phy(
     ), "waveform_extractor must be a WaveformExtractor object"
     sorting = waveform_extractor.sorting
 
-    assert waveform_extractor.get_num_segments() == 1, "Export to phy only works with one segment"
+    assert waveform_extractor.get_num_segments() == 1, f"Export to phy only works with one segment, your extractor has {waveform_extractor.get_num_segments()} segments"
     num_chans = waveform_extractor.get_num_channels()
     fs = waveform_extractor.sampling_frequency
 
