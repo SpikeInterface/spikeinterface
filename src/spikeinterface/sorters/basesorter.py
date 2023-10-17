@@ -103,7 +103,7 @@ class BaseSorter:
             )
 
         if not isinstance(recording, BaseRecordingSnippets):
-            raise ValueError("recording must be a Recording or Snippets!!")
+            raise ValueError("recording must be a Recording or a Snippets!!")
 
         if cls.requires_locations:
             locations = recording.get_channel_locations()
@@ -133,7 +133,7 @@ class BaseSorter:
         if recording.get_num_segments() > 1:
             if not cls.handle_multi_segment:
                 raise ValueError(
-                    f"This sorter {cls.sorter_name} do not handle multi segment, use si.concatenate_recordings(...)"
+                    f"This sorter {cls.sorter_name} does not handle multi-segment recordings, use si.concatenate_recordings(...)"
                 )
 
         rec_file = output_folder / "spikeinterface_recording.json"
@@ -299,7 +299,7 @@ class BaseSorter:
         # check errors in log file
         log_file = output_folder / "spikeinterface_log.json"
         if not log_file.is_file():
-            raise SpikeSortingError("get result error: the folder does not contain the `spikeinterface_log.json` file")
+            raise SpikeSortingError("Get result error: the folder does not contain the `spikeinterface_log.json` file")
 
         with log_file.open("r", encoding="utf8") as f:
             log = json.load(f)
