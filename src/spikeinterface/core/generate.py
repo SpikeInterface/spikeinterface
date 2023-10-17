@@ -121,7 +121,7 @@ def generate_sorting(
     durations=[10.325, 3.5],  #  in s for 2 segments
     firing_rates=3.0,
     empty_units=None,
-    refractory_period_ms=3.0,  # in ms
+    refractory_period_ms=4.0,  # in ms
     add_spikes_on_borders=False,
     num_spikes_per_border=3,
     border_size_samples=20,
@@ -142,7 +142,7 @@ def generate_sorting(
         The firing rate of each unit (in Hz).
     empty_units : list, default: None
         List of units that will have no spikes. (used for testing mainly).
-    refractory_period_ms : float, default: 3.0
+    refractory_period_ms : float, default: 4.0
         The refractory period in ms
     add_spikes_on_borders : bool, default: False
         If True, spikes will be added close to the borders of the segments.
@@ -1369,7 +1369,7 @@ def generate_ground_truth_recording(
     ms_after=3.0,
     upsample_factor=None,
     upsample_vector=None,
-    generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=1.5),
+    generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=4.),
     noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
     generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0),
     generate_templates_kwargs=dict(),
