@@ -27,7 +27,7 @@ class FrameSliceRecording(BaseRecording):
     def __init__(self, parent_recording, start_frame=None, end_frame=None):
         channel_ids = parent_recording.get_channel_ids()
 
-        assert parent_recording.get_num_segments() == 1, "FrameSliceRecording work only with one segment"
+        assert parent_recording.get_num_segments() == 1, "FrameSliceRecording only works with one segment"
 
         parent_size = parent_recording.get_num_samples(0)
         if start_frame is None:

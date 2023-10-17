@@ -167,11 +167,11 @@ def ensure_n_jobs(recording, n_jobs=1):
         print(f"Python {sys.version} does not support parallel processing")
         n_jobs = 1
 
-    if not recording.check_if_dumpable():
+    if not recording.check_if_memory_serializable():
         if n_jobs != 1:
             raise RuntimeError(
-                "Recording is not dumpable and can't be processed in parallel. "
-                "You can use the `recording.save()` function to make it dumpable or set 'n_jobs' to 1."
+                "Recording is not serializable to memory and can't be processed in parallel. "
+                "You can use the `rec = recording.save(folder=...)` function or set 'n_jobs' to 1."
             )
 
     return n_jobs
@@ -380,10 +380,6 @@ class ChunkRecordingExecutor:
                     self.gather_func(res)
         else:
             n_jobs = min(self.n_jobs, len(all_chunks))
-            ######## Do you want to limit the number of threads per process?
-            ######## It has to be done to speed up numpy a lot if multicores
-            ######## Otherwise, np.dot will be slow. How to do that, up to you
-            ######## This is just a suggestion, but here it adds a dependency
 
             # parallel
             with ProcessPoolExecutor(
@@ -436,3 +432,59 @@ def function_wrapper(args):
     else:
         with threadpool_limits(limits=max_threads_per_process):
             return _func(segment_index, start_frame, end_frame, _worker_ctx)
+
+
+# Here some utils copy/paste from DART (Charlie Windolf)
+
+
+class MockFuture:
+    """A non-concurrent class for mocking the concurrent.futures API."""
+
+    def __init__(self, f, *args):
+        self.f = f
+        self.args = args
+
+    def result(self):
+        return self.f(*self.args)
+
+
+class MockPoolExecutor:
+    """A non-concurrent class for mocking the concurrent.futures API."""
+
+    def __init__(
+        self,
+        max_workers=None,
+        mp_context=None,
+        initializer=None,
+        initargs=None,
+        context=None,
+    ):
+        if initializer is not None:
+            initializer(*initargs)
+        self.map = map
+        self.imap = map
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return
+
+    def submit(self, f, *args):
+        return MockFuture(f, *args)
+
+
+class MockQueue:
+    """Another helper class for turning off concurrency when debugging."""
+
+    def __init__(self):
+        self.q = []
+        self.put = self.q.append
+        self.get = lambda: self.q.pop(0)
+
+
+def get_poolexecutor(n_jobs):
+    if n_jobs == 1:
+        return MockPoolExecutor
+    else:
+        return ProcessPoolExecutor

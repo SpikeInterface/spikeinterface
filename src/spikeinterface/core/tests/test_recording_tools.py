@@ -138,11 +138,13 @@ def test_order_channels_by_depth():
     order_1d, order_r1d = order_channels_by_depth(rec, dimensions="y")
     order_2d, order_r2d = order_channels_by_depth(rec, dimensions=("x", "y"))
     locations_rev = locations_copy[order_1d][order_r1d]
+    order_2d_fliped, order_r2d_fliped = order_channels_by_depth(rec, dimensions=("x", "y"), flip=True)
 
     assert np.array_equal(locations[:, 1], locations_copy[order_1d][:, 1])
     assert np.array_equal(locations_copy[order_1d][:, 1], locations_copy[order_2d][:, 1])
     assert np.array_equal(locations, locations_copy[order_2d])
     assert np.array_equal(locations_copy, locations_copy[order_2d][order_r2d])
+    assert np.array_equal(order_2d[::-1], order_2d_fliped)
 
 
 if __name__ == "__main__":

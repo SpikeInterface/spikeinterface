@@ -6,13 +6,6 @@ from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 from spikeinterface.core.core_tools import define_function_from_class
 
-try:
-    import mtscomp
-
-    HAVE_MTSCOMP = True
-except:
-    HAVE_MTSCOMP = False
-
 
 class CompressedBinaryIblExtractor(BaseRecording):
     """Load IBL data as an extractor object.
@@ -42,7 +35,6 @@ class CompressedBinaryIblExtractor(BaseRecording):
     """
 
     extractor_name = "CompressedBinaryIbl"
-    installed = HAVE_MTSCOMP
     mode = "folder"
     installation_mesg = "To use the CompressedBinaryIblExtractor, install mtscomp: \n\n pip install mtscomp\n\n"
     name = "cbin_ibl"
@@ -51,7 +43,10 @@ class CompressedBinaryIblExtractor(BaseRecording):
         # this work only for future neo
         from neo.rawio.spikeglxrawio import read_meta_file, extract_stream_info
 
-        assert HAVE_MTSCOMP
+        try:
+            import mtscomp
+        except:
+            raise ImportError(self.installation_mesg)
         folder_path = Path(folder_path)
 
         # check bands
