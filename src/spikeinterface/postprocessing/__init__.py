@@ -10,7 +10,6 @@ from .template_tools import (
 from .template_metrics import (
     TemplateMetricsCalculator,
     compute_template_metrics,
-    calculate_template_metrics,
     get_template_metric_names,
 )
 

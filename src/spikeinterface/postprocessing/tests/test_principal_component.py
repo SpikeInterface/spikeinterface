@@ -86,14 +86,18 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
                 pc.set_params(n_components=5, mode=mode, sparsity=sparsity)
                 pc.run()
                 for i, unit_id in enumerate(unit_ids):
-                    proj = pc.get_projections(unit_id)
-                    assert proj.shape[1:] == (5, 4)
+                    proj_sparse = pc.get_projections(unit_id, sparse=True)
+                    assert proj_sparse.shape[1:] == (5, len(sparsity.unit_id_to_channel_ids[unit_id]))
+                    proj_dense = pc.get_projections(unit_id, sparse=False)
+                    assert proj_dense.shape[1:] == (5, num_channels)
 
                 # test project_new
                 unit_id = 3
                 new_wfs = we.get_waveforms(unit_id)
-                new_proj = pc.project_new(new_wfs, unit_id=unit_id)
-                assert new_proj.shape == (new_wfs.shape[0], 5, 4)
+                new_proj_sparse = pc.project_new(new_wfs, unit_id=unit_id, sparse=True)
+                assert new_proj_sparse.shape == (new_wfs.shape[0], 5, len(sparsity.unit_id_to_channel_ids[unit_id]))
+                new_proj_dense = pc.project_new(new_wfs, unit_id=unit_id, sparse=False)
+                assert new_proj_dense.shape == (new_wfs.shape[0], 5, num_channels)
 
                 if DEBUG:
                     import matplotlib.pyplot as plt
@@ -197,8 +201,8 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
 if __name__ == "__main__":
     test = PrincipalComponentsExtensionTest()
     test.setUp()
-    test.test_extension()
-    test.test_shapes()
-    test.test_compute_for_all_spikes()
+    # test.test_extension()
+    # test.test_shapes()
+    # test.test_compute_for_all_spikes()
     test.test_sparse()
-    test.test_project_new()
+    # test.test_project_new()

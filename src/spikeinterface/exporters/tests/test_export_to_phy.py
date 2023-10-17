@@ -78,7 +78,7 @@ def test_export_to_phy_by_property():
     recording = recording.save(folder=rec_folder)
     sorting = sorting.save(folder=sort_folder)
 
-    waveform_extractor = extract_waveforms(recording, sorting, waveform_folder)
+    waveform_extractor = extract_waveforms(recording, sorting, waveform_folder, sparse=False)
     sparsity_group = compute_sparsity(waveform_extractor, method="by_property", by_property="group")
     export_to_phy(
         waveform_extractor,
@@ -96,7 +96,7 @@ def test_export_to_phy_by_property():
 
     # Remove one channel
     recording_rm = recording.channel_slice([0, 2, 3, 4, 5, 6, 7])
-    waveform_extractor_rm = extract_waveforms(recording_rm, sorting, waveform_folder_rm)
+    waveform_extractor_rm = extract_waveforms(recording_rm, sorting, waveform_folder_rm, sparse=False)
     sparsity_group = compute_sparsity(waveform_extractor_rm, method="by_property", by_property="group")
 
     export_to_phy(
@@ -130,7 +130,7 @@ def test_export_to_phy_by_sparsity():
         if f.is_dir():
             shutil.rmtree(f)
 
-    waveform_extractor = extract_waveforms(recording, sorting, waveform_folder)
+    waveform_extractor = extract_waveforms(recording, sorting, waveform_folder, sparse=False)
     sparsity_radius = compute_sparsity(waveform_extractor, method="radius", radius_um=50.0)
     export_to_phy(
         waveform_extractor,

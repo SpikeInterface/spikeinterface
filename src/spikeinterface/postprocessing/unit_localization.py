@@ -96,7 +96,7 @@ WaveformExtractor.register_extension(UnitLocationsCalculator)
 
 
 def compute_unit_locations(
-    waveform_extractor, load_if_exists=False, method="center_of_mass", outputs="numpy", **method_kwargs
+    waveform_extractor, load_if_exists=False, method="monopolar_triangulation", outputs="numpy", **method_kwargs
 ):
     """
     Localize units in 2D or 3D with several methods given the template.
