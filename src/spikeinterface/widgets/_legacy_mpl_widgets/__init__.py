@@ -1,6 +1,3 @@
-# peak activity
-from .activity import plot_peak_activity_map, PeakActivityMapWidget
-
 
 from .multicompgraph import (
     plot_multicomp_graph,

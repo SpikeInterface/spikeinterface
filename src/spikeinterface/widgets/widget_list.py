@@ -10,6 +10,7 @@ from .confusion_matrix import ConfusionMatrixWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
 from .isi_distribution import ISIDistributionWidget
 from .motion import MotionWidget
+from .peak_activity import PeakActivityMapWidget
 from .probe_map import ProbeMapWidget
 from .quality_metrics import QualityMetricsWidget
 from .rasters import RasterWidget
@@ -39,6 +40,7 @@ widget_list = [
     CrossCorrelogramsWidget,
     ISIDistributionWidget,
     MotionWidget,
+    PeakActivityMapWidget,
     ProbeMapWidget,
     QualityMetricsWidget,
     RasterWidget,
@@ -103,6 +105,7 @@ plot_confusion_matrix = ConfusionMatrixWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_isi_distribution = ISIDistributionWidget
 plot_motion = MotionWidget
+plot_peak_activity = PeakActivityMapWidget
 plot_probe_map = ProbeMapWidget
 plot_quality_metrics = QualityMetricsWidget
 plot_rasters = RasterWidget
