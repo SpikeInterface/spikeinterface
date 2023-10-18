@@ -21,6 +21,7 @@ from .template_similarity import TemplateSimilarityWidget
 from .traces import TracesWidget
 from .unit_depths import UnitDepthsWidget
 from .unit_locations import UnitLocationsWidget
+from .unit_presence import UnitPresenceWidget
 from .unit_probe_map import UnitProbeMapWidget
 from .unit_summary import UnitSummaryWidget
 from .unit_templates import UnitTemplatesWidget
@@ -49,6 +50,7 @@ widget_list = [
     TracesWidget,
     UnitDepthsWidget,
     UnitLocationsWidget,
+    UnitPresenceWidget,
     UnitProbeMapWidget,
     UnitSummaryWidget,
     UnitTemplatesWidget,
@@ -112,6 +114,7 @@ plot_template_similarity = TemplateSimilarityWidget
 plot_traces = TracesWidget
 plot_unit_depths = UnitDepthsWidget
 plot_unit_locations = UnitLocationsWidget
+plot_unit_presence = UnitPresenceWidget
 plot_unit_probe_map = UnitProbeMapWidget
 plot_unit_summary = UnitSummaryWidget
 plot_unit_templates = UnitTemplatesWidget

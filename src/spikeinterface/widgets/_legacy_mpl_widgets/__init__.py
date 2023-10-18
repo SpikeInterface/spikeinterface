@@ -36,9 +36,6 @@ from .gtcomparison import (
 )
 
 
-# unit presence
-from .presence import plot_presence, PresenceWidget
-
 # correlogram comparison
 from .correlogramcomp import (
     StudyComparisonCorrelogramBySimilarityWidget,

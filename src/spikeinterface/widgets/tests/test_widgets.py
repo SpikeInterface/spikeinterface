@@ -376,6 +376,12 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_unit_probe_map(self.we_dense)
+    
+    def test_plot_unit_presence(self):
+        possible_backends = list(sw.UnitPresenceWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_unit_presence(self.sorting)
 
 
 if __name__ == "__main__":
@@ -395,15 +401,16 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_summary()
     # mytest.test_crosscorrelogram()
-    mytest.test_isi_distribution()
+    # mytest.test_isi_distribution()
     # mytest.test_unit_locations()
     # mytest.test_quality_metrics()
-    mytest.test_template_metrics()
+    # mytest.test_template_metrics()
     # mytest.test_amplitudes()
     # mytest.test_plot_agreement_matrix()
     # mytest.test_plot_confusion_matrix()
     # mytest.test_plot_probe_map()
     # mytest.test_plot_rasters()
     # mytest.test_plot_unit_probe_map()
+    mytest.test_plot_unit_presence()
 
     plt.show()
