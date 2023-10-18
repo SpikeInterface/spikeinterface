@@ -9,12 +9,6 @@ from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
 
-try:
-    from lxml import etree as et
-
-    HAVE_LXML = True
-except ImportError:
-    HAVE_LXML = False
 
 PathType = Union[str, Path]
 OptionalPathType = Optional[PathType]
@@ -108,8 +102,6 @@ class NeuroScopeSortingExtractor(BaseSorting):
     """
 
     extractor_name = "NeuroscopeSortingExtractor"
-    installed = HAVE_LXML
-    installation_mesg = "Please install lxml to use this extractor!"
     name = "neuroscope"
 
     def __init__(
@@ -121,7 +113,7 @@ class NeuroScopeSortingExtractor(BaseSorting):
         exclude_shanks: Optional[list] = None,
         xml_file_path: OptionalPathType = None,
     ):
-        assert self.installed, self.installation_mesg
+        from lxml import etree as et
 
         assert not (
             folder_path is None and resfile_path is None and clufile_path is None
