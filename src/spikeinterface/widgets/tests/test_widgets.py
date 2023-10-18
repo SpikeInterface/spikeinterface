@@ -231,6 +231,20 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
 
+    def test_isi_distribution(self):
+        possible_backends = list(sw.ISIDistributionWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                unit_ids = self.sorting.unit_ids[:4]
+                sw.plot_isi_distribution(
+                    self.sorting,
+                    unit_ids=unit_ids,
+                    window_ms=25.0,
+                    bin_ms=2.0,
+                    backend=backend,
+                    **self.backend_kwargs[backend],
+                )
+
     def test_amplitudes(self):
         possible_backends = list(sw.AmplitudesWidget.get_possible_backends())
         for backend in possible_backends:
@@ -357,6 +371,12 @@ class TestWidgets(unittest.TestCase):
             if backend not in self.skip_backends:
                 sw.plot_rasters(self.sorting)
 
+    def test_plot_unit_probe_map(self):
+        possible_backends = list(sw.UnitProbeMapWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_unit_probe_map(self.we_dense)
+
 
 if __name__ == "__main__":
     # unittest.main()
@@ -374,6 +394,8 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_depths()
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_summary()
+    # mytest.test_crosscorrelogram()
+    mytest.test_isi_distribution()
     # mytest.test_unit_locations()
     # mytest.test_quality_metrics()
     mytest.test_template_metrics()
@@ -382,6 +404,6 @@ if __name__ == "__main__":
     # mytest.test_plot_confusion_matrix()
     # mytest.test_plot_probe_map()
     # mytest.test_plot_rasters()
+    # mytest.test_plot_unit_probe_map()
 
-    # plt.ion()
     plt.show()
