@@ -22,16 +22,6 @@ from .collisioncomp import (
 
 from .sortingperformance import plot_sorting_performance
 
-# ground truth comparions (=comparison over sorter)
-from .gtcomparison import (
-    plot_gt_performances,
-    plot_gt_performances_averages,
-    ComparisonPerformancesWidget,
-    ComparisonPerformancesAveragesWidget,
-    plot_gt_performances_by_template_similarity,
-    ComparisonPerformancesByTemplateSimilarity,
-)
-
 
 # correlogram comparison
 from .correlogramcomp import (
