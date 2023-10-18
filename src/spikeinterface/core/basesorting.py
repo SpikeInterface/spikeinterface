@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 from typing import List, Optional, Union
 
@@ -268,7 +270,7 @@ class BaseSorting(BaseExtractor):
         )
         return self.count_num_spikes_per_unit()
 
-    def count_num_spikes_per_unit(self):
+    def count_num_spikes_per_unit(self) -> dict:
         """
         For each unit : get number of spikes  across segments.
 

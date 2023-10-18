@@ -3,6 +3,7 @@ Some functions internally use by SortingComparison.
 """
 
 import numpy as np
+import numba
 from joblib import Parallel, delayed
 
 
@@ -109,50 +110,101 @@ def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, ev
     return matching_event_counts
 
 
-def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1):
-    """
-    Make the match_event_count matrix.
-    Basically it counts the matching events for all given pairs of spike trains from
-    sorting1 and sorting2.
+@numba.jit(nopython=True, nogil=True)
+def compute_matching_matrix(
+    frames_spike_train1,
+    frames_spike_train2,
+    unit_indices1,
+    unit_indices2,
+    num_units_sorting1,
+    num_units_sorting2,
+    delta_frames,
+):
+    matching_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.int64)
 
-    Parameters
-    ----------
-    sorting1: SortingExtractor
-        The first sorting extractor
-    sorting2: SortingExtractor
-        The second sorting extractor
-    delta_frames: int
-        Number of frames to consider spikes coincident
-    n_jobs: int
-        Number of jobs to run in parallel
+    # Used for Jeremy Magldan condition where no unit can be matched twice.
+    previous_frame1_match = -np.ones_like(matching_matrix, dtype=np.int64)
+    previous_frame2_match = -np.ones_like(matching_matrix, dtype=np.int64)
 
-    Returns
-    -------
-    match_event_count: array (int64)
-        Matrix of match count spike
-    """
+    lower_search_limit_in_second_train = 0
+
+    for index1 in range(len(frames_spike_train1)):
+        # Keeps track of which frame in the second spike train should be used as a search start
+        index2 = lower_search_limit_in_second_train
+        frame1 = frames_spike_train1[index1]
+
+        # Determine next_frame1 if current frame is not the last frame
+        not_in_the_last_loop = index1 < len(frames_spike_train1) - 1
+        if not_in_the_last_loop:
+            next_frame1 = frames_spike_train1[index1 + 1]
+
+        while index2 < len(frames_spike_train2):
+            frame2 = frames_spike_train2[index2]
+            not_a_match = abs(frame1 - frame2) > delta_frames
+            if not_a_match:
+                break
+
+            # Map the match to a matrix
+            row, column = unit_indices1[index1], unit_indices2[index2]
+
+            # Jeremy Magland condition, the same unit can't match twice
+            if frame1 != previous_frame1_match[row, column] and frame2 != previous_frame2_match[row, column]:
+                previous_frame1_match[row, column] = frame1
+                previous_frame2_match[row, column] = frame2
+
+                matching_matrix[row, column] += 1
+
+            index2 += 1
+
+            # Advance the minimal index 2 if not in the last loop iteration
+            if not_in_the_last_loop:
+                not_a_match_with_next = abs(next_frame1 - frame2) > delta_frames
+                if not_a_match_with_next:
+                    lower_search_limit_in_second_train = index2
+
+    return matching_matrix
+
+
+def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=None):
+    num_units_sorting1 = sorting1.get_num_units()
+    num_units_sorting2 = sorting2.get_num_units()
+
+    unit1_ids = sorting1.get_unit_ids()
+    unit2_ids = sorting2.get_unit_ids()
+    spike_trains1 = [sorting1.get_unit_spike_train(unit_id) for unit_id in unit1_ids]
+    spike_trains2 = [sorting2.get_unit_spike_train(unit_id) for unit_id in unit2_ids]
+
+    sample_frames1 = np.concatenate(spike_trains1)
+    sample_frames2 = np.concatenate(spike_trains2)
+
+    # Directly creating unit indices without intermediate lists
+    unit_indices1 = np.concatenate([np.full(len(train), unit) for unit, train in enumerate(spike_trains1)])
+    unit_indices2 = np.concatenate([np.full(len(train), unit) for unit, train in enumerate(spike_trains2)])
+
+    # Sort the sample_frames and unit_indices arrays
+    sort_indices1 = np.argsort(sample_frames1)
+    sample_frames1 = sample_frames1[sort_indices1]
+    unit_indices1 = unit_indices1[sort_indices1]
+
+    sort_indices2 = np.argsort(sample_frames2)
+    sample_frames2 = sample_frames2[sort_indices2]
+    unit_indices2 = unit_indices2[sort_indices2]
+
+    full_matrix = compute_matching_matrix(
+        sample_frames1,
+        sample_frames2,
+        unit_indices1,
+        unit_indices2,
+        num_units_sorting1,
+        num_units_sorting2,
+        delta_frames,
+    )
+
     import pandas as pd
 
-    unit1_ids = np.array(sorting1.get_unit_ids())
-    unit2_ids = np.array(sorting2.get_unit_ids())
+    df = pd.DataFrame(full_matrix, index=unit1_ids, columns=unit2_ids)
 
-    match_event_counts = np.zeros((len(unit1_ids), len(unit2_ids)), dtype="int64")
-
-    # preload all spiketrains 2 into a list
-    for segment_index in range(sorting1.get_num_segments()):
-        s2_spiketrains = [sorting2.get_unit_spike_train(u2, segment_index=segment_index) for u2 in unit2_ids]
-
-        match_event_count_segment = Parallel(n_jobs=n_jobs)(
-            delayed(count_match_spikes)(
-                sorting1.get_unit_spike_train(u1, segment_index=segment_index), s2_spiketrains, delta_frames
-            )
-            for i1, u1 in enumerate(unit1_ids)
-        )
-        match_event_counts += np.array(match_event_count_segment)
-
-    match_event_counts_df = pd.DataFrame(np.array(match_event_counts), index=unit1_ids, columns=unit2_ids)
-
-    return match_event_counts_df
+    return df
 
 
 def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
