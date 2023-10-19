@@ -3,6 +3,8 @@ Functions based on
 https://github.com/AllenInstitute/ecephys_spike_sorting/blob/master/ecephys_spike_sorting/modules/mean_waveforms/waveform_metrics.py
 22/04/2020
 """
+from __future__ import annotations
+
 import numpy as np
 import warnings
 from typing import Optional

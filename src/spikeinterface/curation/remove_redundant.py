@@ -1,9 +1,13 @@
+from __future__ import annotations
 import numpy as np
 
 from spikeinterface import WaveformExtractor
 
 from ..core.template_tools import get_template_extremum_channel_peak_shift, get_template_amplitudes
 from ..postprocessing import align_sorting
+
+
+_remove_strategies = ("minimum_shift", "highest_amplitude", "max_spikes")
 
 
 def remove_redundant_units(
@@ -42,7 +46,7 @@ def remove_redundant_units(
     duplicate_threshold : float, optional
         Final threshold on the portion of coincident events over the number of spikes above which the
         unit is removed, by default 0.8
-    remove_strategy: str
+    remove_strategy: 'minimum_shift' | 'highest_amplitude' | 'max_spikes', default: 'minimum_shift'
         Which strategy to remove one of the two duplicated units:
 
             * 'minimum_shift': keep the unit with best peak alignment (minimum shift)
@@ -50,7 +54,7 @@ def remove_redundant_units(
             * 'highest_amplitude': keep the unit with the best amplitude on unshifted max.
             * 'max_spikes': keep the unit with more spikes
 
-    peak_sign: str  ('neg', 'pos', 'both')
+    peak_sign: 'neg' |'pos' | 'both', default: 'neg'
         Used when remove_strategy='highest_amplitude'
     extra_outputs: bool
         If True, will return the redundant pairs.
@@ -93,7 +97,7 @@ def remove_redundant_units(
         peak_values = {unit_id: np.max(np.abs(values)) for unit_id, values in peak_values.items()}
 
     if remove_strategy == "minimum_shift":
-        assert align, "remove_strategy with minimum_shift need align=True"
+        assert align, "remove_strategy with minimum_shift needs align=True"
         for u1, u2 in redundant_unit_pairs:
             if np.abs(unit_peak_shifts[u1]) > np.abs(unit_peak_shifts[u2]):
                 remove_unit_ids.append(u1)
@@ -125,7 +129,7 @@ def remove_redundant_units(
         # this will be implemented in a futur PR by the first who need it!
         raise NotImplementedError()
     else:
-        raise ValueError(f"remove_strategy : {remove_strategy} is not implemented!")
+        raise ValueError(f"remove_strategy : {remove_strategy} is not implemented! Options are {_remove_strategies}")
 
     sorting_clean = sorting.remove_units(remove_unit_ids)
 

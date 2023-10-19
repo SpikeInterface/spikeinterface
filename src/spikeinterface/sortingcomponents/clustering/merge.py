@@ -298,8 +298,8 @@ def find_merge_pairs(
     indices0, indices1 = np.nonzero(pair_mask)
 
     n_jobs = job_kwargs["n_jobs"]
-    mp_context = job_kwargs["mp_context"]
-    max_threads_per_process = job_kwargs["max_threads_per_process"]
+    mp_context = job_kwargs.get("mp_context", None)
+    max_threads_per_process = job_kwargs.get("max_threads_per_process", 1)
     progress_bar = job_kwargs["progress_bar"]
 
     Executor = get_poolexecutor(n_jobs)

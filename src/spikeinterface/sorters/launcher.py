@@ -374,7 +374,7 @@ def run_sorters(
     mode_if_folder_exists in ("raise", "keep", "overwrite")
 
     if mode_if_folder_exists == "raise" and working_folder.is_dir():
-        raise Exception("working_folder already exists, please remove it")
+        raise Exception(f"working_folder {working_folder} already exists, please remove it")
 
     assert engine in _implemented_engine, f"engine must be in {_implemented_engine}"
 
@@ -390,7 +390,7 @@ def run_sorters(
     elif isinstance(recording_dict_or_list, dict):
         recording_dict = recording_dict_or_list
     else:
-        raise ValueError("bad recording dict")
+        raise ValueError("Wrong format for recording_dict_or_list")
 
     dtype_rec_name = np.dtype(type(list(recording_dict.keys())[0]))
     assert dtype_rec_name.kind in ("i", "u", "S", "U"), "Dict keys can only be integers or strings!"
