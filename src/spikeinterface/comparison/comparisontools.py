@@ -167,27 +167,48 @@ def compute_matching_matrix(
 def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=None):
     num_units_sorting1 = sorting1.get_num_units()
     num_units_sorting2 = sorting2.get_num_units()
-
+    num_segments_sorting1 = sorting1.get_num_segments()
+    num_segments_sorting2 = sorting2.get_num_segments()
     unit1_ids = sorting1.get_unit_ids()
     unit2_ids = sorting2.get_unit_ids()
-    spike_trains1 = [sorting1.get_unit_spike_train(unit_id) for unit_id in unit1_ids]
-    spike_trains2 = [sorting2.get_unit_spike_train(unit_id) for unit_id in unit2_ids]
 
-    sample_frames1 = np.concatenate(spike_trains1)
-    sample_frames2 = np.concatenate(spike_trains2)
+    sample_frames1_accumulator = []
+    unit_indices1_accumulator = []
 
-    # Directly creating unit indices without intermediate lists
-    unit_indices1 = np.concatenate([np.full(len(train), unit) for unit, train in enumerate(spike_trains1)])
-    unit_indices2 = np.concatenate([np.full(len(train), unit) for unit, train in enumerate(spike_trains2)])
+    sample_frames2_accumulator = []
+    unit_indices2_accumulator = []
+
+    for segment_index in range(num_segments_sorting1):
+        spike_trains1 = [sorting1.get_unit_spike_train(unit_id, segment_index) for unit_id in unit1_ids]
+        sample_frames1 = np.concatenate(spike_trains1)
+        unit_indices1 = np.concatenate([np.full(len(train), unit) for unit, train in enumerate(spike_trains1)])
+
+        sample_frames1_accumulator.append(sample_frames1)
+        unit_indices1_accumulator.append(unit_indices1)
+
+    for segment_index in range(num_segments_sorting2):
+        spike_trains2 = [sorting2.get_unit_spike_train(unit_id, segment_index) for unit_id in unit2_ids]
+        sample_frames2 = np.concatenate(spike_trains2)
+        unit_indices2 = np.concatenate([np.full(len(train), unit) for unit, train in enumerate(spike_trains2)])
+
+        sample_frames2_accumulator.append(sample_frames2)
+        unit_indices2_accumulator.append(unit_indices2)
+
+    # Concatenate accumulated data
+    sample_frames1_all = np.concatenate(sample_frames1_accumulator)
+    unit_indices1_all = np.concatenate(unit_indices1_accumulator)
+
+    sample_frames2_all = np.concatenate(sample_frames2_accumulator)
+    unit_indices2_all = np.concatenate(unit_indices2_accumulator)
 
     # Sort the sample_frames and unit_indices arrays
-    sort_indices1 = np.argsort(sample_frames1)
-    sample_frames1 = sample_frames1[sort_indices1]
-    unit_indices1 = unit_indices1[sort_indices1]
+    sort_indices1 = np.argsort(sample_frames1_all)
+    sample_frames1_sorted = sample_frames1_all[sort_indices1]
+    unit_indices1_sorted = unit_indices1_all[sort_indices1]
 
-    sort_indices2 = np.argsort(sample_frames2)
-    sample_frames2 = sample_frames2[sort_indices2]
-    unit_indices2 = unit_indices2[sort_indices2]
+    sort_indices2 = np.argsort(sample_frames2_all)
+    sample_frames2_sorted = sample_frames2_all[sort_indices2]
+    unit_indices2_sorted = unit_indices2_all[sort_indices2]
 
     import numba
 
@@ -198,10 +219,10 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=None):
         optimized_compute_matching_matrix = compute_matching_matrix
 
     full_matrix = optimized_compute_matching_matrix(
-        sample_frames1,
-        sample_frames2,
-        unit_indices1,
-        unit_indices2,
+        sample_frames1_sorted,
+        sample_frames2_sorted,
+        unit_indices1_sorted,
+        unit_indices2_sorted,
         num_units_sorting1,
         num_units_sorting2,
         delta_frames,
