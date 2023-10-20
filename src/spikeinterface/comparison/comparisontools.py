@@ -109,59 +109,73 @@ def count_match_spikes(times1, all_times2, delta_frames):  # , event_counts1, ev
     return matching_event_counts
 
 
-@numba.jit(nopython=True, nogil=True)
-def compute_matching_matrix(
-    frames_spike_train1,
-    frames_spike_train2,
-    unit_indices1,
-    unit_indices2,
-    num_units_sorting1,
-    num_units_sorting2,
-    delta_frames,
-):
-    matching_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.int64)
+def get_optimized_compute_matching_matrix():
+    # Cache for compiled function
+    if hasattr(get_optimized_compute_matching_matrix, "_cached_function"):
+        return get_optimized_compute_matching_matrix._cached_function
 
-    # Used for Jeremy Magldan condition where no unit can be matched twice.
-    previous_frame1_match = -np.ones_like(matching_matrix, dtype=np.int64)
-    previous_frame2_match = -np.ones_like(matching_matrix, dtype=np.int64)
+    # Dynamic import of numba
+    import numba
 
-    lower_search_limit_in_second_train = 0
+    # Nested function
+    @numba.jit(nopython=True, nogil=True)
+    def compute_matching_matrix_inner(
+        frames_spike_train1,
+        frames_spike_train2,
+        unit_indices1,
+        unit_indices2,
+        num_units_sorting1,
+        num_units_sorting2,
+        delta_frames,
+    ):
+        matching_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.int64)
 
-    for index1 in range(len(frames_spike_train1)):
-        # Keeps track of which frame in the second spike train should be used as a search start
-        index2 = lower_search_limit_in_second_train
-        frame1 = frames_spike_train1[index1]
+        # Used for Jeremy Magldan condition where no unit can be matched twice.
+        previous_frame1_match = -np.ones_like(matching_matrix, dtype=np.int64)
+        previous_frame2_match = -np.ones_like(matching_matrix, dtype=np.int64)
 
-        # Determine next_frame1 if current frame is not the last frame
-        not_in_the_last_loop = index1 < len(frames_spike_train1) - 1
-        if not_in_the_last_loop:
-            next_frame1 = frames_spike_train1[index1 + 1]
+        lower_search_limit_in_second_train = 0
 
-        while index2 < len(frames_spike_train2):
-            frame2 = frames_spike_train2[index2]
-            not_a_match = abs(frame1 - frame2) > delta_frames
-            if not_a_match:
-                break
+        for index1 in range(len(frames_spike_train1)):
+            # Keeps track of which frame in the second spike train should be used as a search start
+            index2 = lower_search_limit_in_second_train
+            frame1 = frames_spike_train1[index1]
 
-            # Map the match to a matrix
-            row, column = unit_indices1[index1], unit_indices2[index2]
-
-            # Jeremy Magland condition, the same unit can't match twice
-            if frame1 != previous_frame1_match[row, column] and frame2 != previous_frame2_match[row, column]:
-                previous_frame1_match[row, column] = frame1
-                previous_frame2_match[row, column] = frame2
-
-                matching_matrix[row, column] += 1
-
-            index2 += 1
-
-            # Advance the minimal index 2 if not in the last loop iteration
+            # Determine next_frame1 if current frame is not the last frame
+            not_in_the_last_loop = index1 < len(frames_spike_train1) - 1
             if not_in_the_last_loop:
-                not_a_match_with_next = abs(next_frame1 - frame2) > delta_frames
-                if not_a_match_with_next:
-                    lower_search_limit_in_second_train = index2
+                next_frame1 = frames_spike_train1[index1 + 1]
 
-    return matching_matrix
+            while index2 < len(frames_spike_train2):
+                frame2 = frames_spike_train2[index2]
+                not_a_match = abs(frame1 - frame2) > delta_frames
+                if not_a_match:
+                    break
+
+                # Map the match to a matrix
+                row, column = unit_indices1[index1], unit_indices2[index2]
+
+                # Jeremy Magland condition, the same unit can't match twice
+                if frame1 != previous_frame1_match[row, column] and frame2 != previous_frame2_match[row, column]:
+                    previous_frame1_match[row, column] = frame1
+                    previous_frame2_match[row, column] = frame2
+
+                    matching_matrix[row, column] += 1
+
+                index2 += 1
+
+                # Advance the minimal index 2 if not in the last loop iteration
+                if not_in_the_last_loop:
+                    not_a_match_with_next = abs(next_frame1 - frame2) > delta_frames
+                    if not_a_match_with_next:
+                        lower_search_limit_in_second_train = index2
+
+        return matching_matrix
+
+    # Cache the compiled function
+    get_optimized_compute_matching_matrix._cached_function = compute_matching_matrix_inner
+
+    return compute_matching_matrix_inner
 
 
 def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=None):
@@ -208,13 +222,7 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=None):
     sample_frames2_sorted = sample_frames2_all[sort_indices2]
     unit_indices2_sorted = unit_indices2_all[sort_indices2]
 
-    import numba
-
-    # Check if compute_matching_matrix is already jitted
-    if not isinstance(compute_matching_matrix, numba.core.registry.CPUDispatcher):
-        optimized_compute_matching_matrix = numba.jit(nopython=True, nogil=True)(compute_matching_matrix)
-    else:
-        optimized_compute_matching_matrix = compute_matching_matrix
+    optimized_compute_matching_matrix = get_optimized_compute_matching_matrix()
 
     full_matrix = optimized_compute_matching_matrix(
         sample_frames1_sorted,
