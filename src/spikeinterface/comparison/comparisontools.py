@@ -3,7 +3,7 @@ Some functions internally use by SortingComparison.
 """
 
 import numpy as np
-import numba
+import itertools
 
 
 def count_matching_events(times1, times2, delta=10):
@@ -180,21 +180,19 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=None):
 
     for segment_index in range(num_segments_sorting1):
         spike_trains1 = [sorting1.get_unit_spike_train(unit_id, segment_index) for unit_id in unit1_ids]
-        sample_frames1 = np.concatenate(spike_trains1)
-        unit_indices1 = np.concatenate([np.full(len(train), unit) for unit, train in enumerate(spike_trains1)])
+        sample_frames1_accumulator.extend(spike_trains1)
 
-        sample_frames1_accumulator.append(sample_frames1)
-        unit_indices1_accumulator.append(unit_indices1)
+        unit_indices1 = [np.full(len(train), unit) for unit, train in enumerate(spike_trains1)]
+        unit_indices1_accumulator.extend(unit_indices1)
 
     for segment_index in range(num_segments_sorting2):
         spike_trains2 = [sorting2.get_unit_spike_train(unit_id, segment_index) for unit_id in unit2_ids]
-        sample_frames2 = np.concatenate(spike_trains2)
-        unit_indices2 = np.concatenate([np.full(len(train), unit) for unit, train in enumerate(spike_trains2)])
+        sample_frames2_accumulator.extend(spike_trains2)
 
-        sample_frames2_accumulator.append(sample_frames2)
-        unit_indices2_accumulator.append(unit_indices2)
+        unit_indices2 = [np.full(len(train), unit) for unit, train in enumerate(spike_trains2)]
+        unit_indices2_accumulator.extend(unit_indices2)
 
-    # Concatenate accumulated data
+    # Concatenate accumulated data only once
     sample_frames1_all = np.concatenate(sample_frames1_accumulator)
     unit_indices1_all = np.concatenate(unit_indices1_accumulator)
 
