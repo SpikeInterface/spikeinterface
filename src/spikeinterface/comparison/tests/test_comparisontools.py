@@ -60,7 +60,7 @@ def test_make_match_count_matrix_sorting_with_itself_simple():
 
 def test_make_match_count_matrix_sorting_with_itself_longer():
     seed = 2
-    sorting = generate_sorting(num_units=10, sampling_frequency=30000, durations=[10], seed=seed)
+    sorting = generate_sorting(num_units=10, sampling_frequency=30000, durations=[5, 5], seed=seed)
 
     delta_frame_milliseconds = 0.1  # Short so that we only matches between a unit and itself
     delta_frames_seconds = delta_frame_milliseconds / 1000
@@ -89,7 +89,7 @@ def test_make_match_count_matrix_with_mismatched_sortings():
     assert_array_equal(match_event_count.to_numpy(), expected_result)
 
 
-def test_no_double_matching():
+def test_make_match_count_matrix_no_double_matching():
     # Jeremy Magland condition: no double matching
     frames_spike_train1 = [100, 105, 120, 1000]
     unit_indices1 = [0, 1, 0, 0]
@@ -119,11 +119,11 @@ def test_no_double_matching():
     assert_array_equal(result.to_numpy(), expected_result)
 
 
-def test_repeated_matching_but_no_double_counting():
+def test_make_match_count_matrix_repeated_matching_but_no_double_counting():
     # Challenging condition, this was failing with the previous approach that used np.where and np.diff
-    frames_spike_train1 = [100, 105, 110]
+    frames_spike_train1 = [100, 105, 110]  # Will fail with [100, 105, 110, 120]
     frames_spike_train2 = [100, 105, 110]
-    unit_indices1 = [0, 0, 0]
+    unit_indices1 = [0, 0, 0]  # Will fail with [0, 0, 0, 0]
     unit_indices2 = [0, 0, 0]
     delta_frames = 20  # long enough, so all frames in both sortings are within each other reach
 

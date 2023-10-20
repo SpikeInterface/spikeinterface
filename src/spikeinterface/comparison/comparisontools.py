@@ -4,7 +4,6 @@ Some functions internally use by SortingComparison.
 
 import numpy as np
 import numba
-from joblib import Parallel, delayed
 
 
 def count_matching_events(times1, times2, delta=10):
@@ -190,7 +189,15 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=None):
     sample_frames2 = sample_frames2[sort_indices2]
     unit_indices2 = unit_indices2[sort_indices2]
 
-    full_matrix = compute_matching_matrix(
+    import numba
+
+    # Check if compute_matching_matrix is already jitted
+    if not isinstance(compute_matching_matrix, numba.core.registry.CPUDispatcher):
+        optimized_compute_matching_matrix = numba.jit(nopython=True, nogil=True)(compute_matching_matrix)
+    else:
+        optimized_compute_matching_matrix = compute_matching_matrix
+
+    full_matrix = optimized_compute_matching_matrix(
         sample_frames1,
         sample_frames2,
         unit_indices1,
