@@ -824,7 +824,7 @@ def compute_pairwise_displacement(
     from scipy import sparse
     from scipy import linalg
 
-    assert conv_engine in ("torch", "numpy"), f"conv_engine must be 'torch' or 'numpy'"
+    assert conv_engine in ("torch", "numpy"), f"'conv_engine' must be 'torch' or 'numpy'"
     size = motion_hist.shape[0]
     pairwise_displacement = np.zeros((size, size), dtype="float32")
 
@@ -1380,7 +1380,7 @@ def normxcorr1d(
         conv1d = scipy_conv1d
         npx = np
     else:
-        raise ValueError(f"Unknown conv_engine {conv_engine}. conv_engine must be 'torch' or 'numpy'")
+        raise ValueError(f"Unknown conv_engine {conv_engine}. 'conv_engine' must be 'torch' or 'numpy'")
 
     x = npx.atleast_2d(x)
     num_templates, length = template.shape
@@ -1461,7 +1461,7 @@ def scipy_conv1d(input, weights, padding="valid"):
         input = np.pad(input, [*[(0, 0)] * (input.ndim - 1), (padding, padding)])
         length_out = length - (kernel_size - 1) + 2 * padding
     else:
-        raise ValueError(f"Unknown padding {padding}, padding must be 'same', 'valid' or an integer")
+        raise ValueError(f"Unknown 'padding' value of {padding}, 'padding' must be 'same', 'valid' or an integer")
 
     output = np.zeros((n, c_out, length_out), dtype=input.dtype)
     for m in range(n):

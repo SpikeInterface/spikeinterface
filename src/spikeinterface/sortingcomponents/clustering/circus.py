@@ -64,7 +64,7 @@ class CircusClustering:
         elif params["waveform_mode"] == "shared_memory":
             assert tmp_folder is None, "tmp_folder must be None for shared_memory"
         else:
-            raise ValueError("waveform_mode must be 'memmap' or 'shared_memory'")
+            raise ValueError("'waveform_mode' must be 'memmap' or 'shared_memory'")
 
         return params2
 
