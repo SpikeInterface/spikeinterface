@@ -224,7 +224,7 @@ class MetricsBaseWidget(BaseWidget):
 
         metrics_sv = []
         for col in metric_names:
-            dtype = metrics.iloc[0][col].dtype
+            dtype = np.array(metrics.iloc[0][col]).dtype
             metric = vv.UnitMetricsGraphMetric(key=col, label=col, dtype=dtype.str)
             metrics_sv.append(metric)
 

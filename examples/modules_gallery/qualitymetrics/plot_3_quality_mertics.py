@@ -30,7 +30,7 @@ print(sorting)
 # because it contains a reference to the "Recording" and the "Sorting" objects:
 
 folder = 'waveforms_mearec'
-we = si.extract_waveforms(recording, sorting, folder,
+we = si.extract_waveforms(recording, sorting, folder, sparse=False,
                           ms_before=1, ms_after=2., max_spikes_per_unit=500,
                           n_jobs=1, chunk_durations='1s')
 print(we)
