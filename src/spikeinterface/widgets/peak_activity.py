@@ -36,7 +36,8 @@ class PeakActivityMapWidget(BaseWidget):
 
     """
 
-    def __init__(self,
+    def __init__(
+        self,
         recording,
         peaks,
         bin_duration_s=None,
@@ -47,7 +48,6 @@ class PeakActivityMapWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-
         data_plot = dict(
             recording=recording,
             peaks=peaks,
@@ -60,7 +60,6 @@ class PeakActivityMapWidget(BaseWidget):
 
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
 
-
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
@@ -70,7 +69,6 @@ class PeakActivityMapWidget(BaseWidget):
 
         # self.make_mpl_figure(**backend_kwargs)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
-
 
         rec = dp.recording
         peaks = dp.peaks
@@ -86,7 +84,9 @@ class PeakActivityMapWidget(BaseWidget):
         probe = probes[0]
 
         if dp.bin_duration_s is None:
-            self._plot_one_bin(rec, probe, peaks, duration, dp.with_channel_ids, dp.with_contact_color, dp.with_interpolated_map)
+            self._plot_one_bin(
+                rec, probe, peaks, duration, dp.with_channel_ids, dp.with_contact_color, dp.with_interpolated_map
+            )
         else:
             bin_size = int(dp.bin_duration_s * fs)
             num_frames = int(duration / dp.bin_duration_s)
@@ -94,13 +94,20 @@ class PeakActivityMapWidget(BaseWidget):
             def animate_func(i):
                 i0, i1 = np.searchsorted(peaks["sample_index"], [bin_size * i, bin_size * (i + 1)])
                 local_peaks = peaks[i0:i1]
-                artists = self._plot_one_bin(rec, probe, local_peaks, dp.with_channel_ids, dp.bin_duration_s, dp.with_contact_color, dp.with_interpolated_map)
+                artists = self._plot_one_bin(
+                    rec,
+                    probe,
+                    local_peaks,
+                    dp.with_channel_ids,
+                    dp.bin_duration_s,
+                    dp.with_contact_color,
+                    dp.with_interpolated_map,
+                )
                 return artists
 
             from matplotlib.animation import FuncAnimation
 
             self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames, interval=100, blit=True)
-
 
     def _plot_one_bin(self, rec, probe, peaks, duration, with_channel_ids, with_contact_color, with_interpolated_map):
         rates = np.zeros(rec.get_num_channels(), dtype="float64")
@@ -135,6 +142,3 @@ class PeakActivityMapWidget(BaseWidget):
             artists = artists + (im,)
 
         return artists
-
-
-

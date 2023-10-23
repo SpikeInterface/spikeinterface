@@ -85,6 +85,7 @@ class TestWidgets(unittest.TestCase):
         cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
 
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+
         cls.peaks = detect_peaks(cls.recording, method="locally_exclusive")
 
     def test_plot_traces(self):
@@ -379,22 +380,18 @@ class TestWidgets(unittest.TestCase):
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_unit_probe_map(self.we_dense)
-    
+
     def test_plot_unit_presence(self):
         possible_backends = list(sw.UnitPresenceWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_unit_presence(self.sorting)
-    
+
     def test_plot_peak_activity(self):
         possible_backends = list(sw.PeakActivityMapWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_peak_activity(self.recording, self.peaks)
-
-
-
-    
 
 
 if __name__ == "__main__":
