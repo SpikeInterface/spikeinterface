@@ -61,7 +61,9 @@ class WaveformThresholder(WaveformsNode):
             return_output=return_output,
             parents=parents,
         )
-        assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
+        assert feature in ["ptp", "mean", "energy", "peak_voltage"], (
+            f"{feature} is not a valid feature" " must be one of 'ptp', 'mean', 'energy'," " or 'peak_voltage'"
+        )
 
         self.threshold = threshold
         self.feature = feature

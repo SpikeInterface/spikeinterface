@@ -61,12 +61,15 @@ class TridesclousPeeler(BaseTemplateMatchingEngine):
 
     @classmethod
     def initialize_and_check_kwargs(cls, recording, kwargs):
-        assert HAVE_NUMBA, "TridesclousPeeler need numba to be installed"
+        assert HAVE_NUMBA, "TridesclousPeeler needs numba to be installed"
 
         d = cls.default_params.copy()
         d.update(kwargs)
 
-        assert isinstance(d["waveform_extractor"], WaveformExtractor)
+        assert isinstance(d["waveform_extractor"], WaveformExtractor), (
+            f"The waveform_extractor supplied is of type {type(d['waveform_extractor'])} "
+            f"and must be a WaveformExtractor"
+        )
 
         we = d["waveform_extractor"]
         unit_ids = we.unit_ids
