@@ -305,7 +305,8 @@ class BaseRecording(BaseRecordingSnippets):
 
             if not self.has_scaled():
                 raise ValueError(
-                    "This recording do not support return_scaled=True (need gain_to_uV and offset_" "to_uV properties)"
+                    "This recording does not support return_scaled=True (need gain_to_uV and offset_"
+                    "to_uV properties)"
                 )
             else:
                 gains = self.get_property("gain_to_uV")
@@ -416,8 +417,8 @@ class BaseRecording(BaseRecordingSnippets):
         if with_warning:
             warn(
                 "Setting times with Recording.set_times() is not recommended because "
-                "times are not always propagated to across preprocessing"
-                "Use use this carefully!"
+                "times are not always propagated across preprocessing"
+                "Use this carefully!"
             )
 
     def sample_index_to_time(self, sample_ind, segment_index=None):

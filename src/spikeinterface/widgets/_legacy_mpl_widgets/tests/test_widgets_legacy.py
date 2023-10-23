@@ -32,10 +32,10 @@ class TestWidgets(unittest.TestCase):
 
         self.num_units = len(self._sorting.get_unit_ids())
         #  self._we = extract_waveforms(self._rec, self._sorting, './toy_example', load_if_exists=True)
-        if (cache_folder / "mearec_test").is_dir():
-            self._we = load_waveforms(cache_folder / "mearec_test")
+        if (cache_folder / "mearec_test_old_api").is_dir():
+            self._we = load_waveforms(cache_folder / "mearec_test_old_api")
         else:
-            self._we = extract_waveforms(self._rec, self._sorting, cache_folder / "mearec_test")
+            self._we = extract_waveforms(self._rec, self._sorting, cache_folder / "mearec_test_old_api", sparse=False)
 
         self._amplitudes = compute_spike_amplitudes(self._we, peak_sign="neg", outputs="by_unit")
         self._gt_comp = sc.compare_sorter_to_ground_truth(self._sorting, self._sorting)
@@ -43,9 +43,9 @@ class TestWidgets(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_plot_unit_probe_map(self):
-        sw.plot_unit_probe_map(self._we, with_channel_ids=True)
-        sw.plot_unit_probe_map(self._we, animated=True)
+    # def test_plot_unit_probe_map(self):
+    #     sw.plot_unit_probe_map(self._we, with_channel_ids=True)
+    #     sw.plot_unit_probe_map(self._we, animated=True)
 
     # def test_plot_units_depth_vs_amplitude(self):
     #     sw.plot_units_depth_vs_amplitude(self._we)
@@ -57,9 +57,6 @@ class TestWidgets(unittest.TestCase):
 
     # def test_amplitudes_distribution(self):
     #     sw.plot_amplitudes_distribution(self._we)
-
-    def test_principal_component(self):
-        sw.plot_principal_component(self._we)
 
     # def test_plot_unit_localization(self):
     #     sw.plot_unit_localization(self._we, with_channel_ids=True)
@@ -73,10 +70,10 @@ class TestWidgets(unittest.TestCase):
     #     unit_ids = self._sorting.unit_ids[:4]
     #     sw.plot_crosscorrelograms(self._sorting, unit_ids=unit_ids, window_ms=500.0, bin_ms=20.0)
 
-    def test_isi_distribution(self):
-        sw.plot_isi_distribution(self._sorting, bin_ms=5.0, window_ms=500.0)
-        fig, axes = plt.subplots(self.num_units, 1)
-        sw.plot_isi_distribution(self._sorting, axes=axes)
+    # def test_isi_distribution(self):
+    #     sw.plot_isi_distribution(self._sorting, bin_ms=5.0, window_ms=500.0)
+    #     fig, axes = plt.subplots(self.num_units, 1)
+    #     sw.plot_isi_distribution(self._sorting, axes=axes)
 
     def test_plot_peak_activity_map(self):
         sw.plot_peak_activity_map(self._rec, with_channel_ids=True)

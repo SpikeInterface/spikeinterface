@@ -29,7 +29,7 @@ class BenchmarkClustering:
     def __init__(self, recording, gt_sorting, method, exhaustive_gt=True, tmp_folder=None, job_kwargs={}, verbose=True):
         self.method = method
 
-        assert method in clustering_methods, "Clustering method should be in %s" % clustering_methods.keys()
+        assert method in clustering_methods, f"Clustering method should be in {clustering_methods.keys()}"
 
         self.verbose = verbose
         self.recording = recording
@@ -524,7 +524,7 @@ class BenchmarkClustering:
             template_real = template_real.reshape(template_real.size, 1).T
 
             if metric == "cosine":
-                dist = sklearn.metrics.pairwise.cosine_similarity(template, template_real, metric).flatten().tolist()
+                dist = sklearn.metrics.pairwise.cosine_similarity(template, template_real).flatten().tolist()
             else:
                 dist = sklearn.metrics.pairwise_distances(template, template_real, metric).flatten().tolist()
             res += dist

@@ -148,24 +148,24 @@ class CurationSorting:
             edges = None
         self._add_new_stage(new_sorting, edges)
 
-    def redo_avaiable(self):
+    def redo_available(self):
         # useful function for a gui
         return self._sorting_stages_i < len(self._sorting_stages)
 
-    def undo_avaiable(self):
+    def undo_available(self):
         # useful function for a gui
         return self._sorting_stages_i > 0
 
     def undo(self):
-        if self.undo_avaiable():
+        if self.undo_available():
             self._sorting_stages_i -= 1
 
     def redo(self):
-        if self.redo_avaiable():
+        if self.redo_available():
             self._sorting_stages_i += 1
 
     def draw_graph(self, **kwargs):
-        assert self._make_graph, "to make a graph make_graph=True"
+        assert self._make_graph, "to make a graph use make_graph=True"
         graph = self.graph
         ids = [c.unit_id for c in graph.nodes]
         pos = {n: (n.stage_id, -ids.index(n.unit_id)) for n in graph.nodes}
@@ -174,7 +174,7 @@ class CurationSorting:
 
     @property
     def graph(self):
-        assert self._make_graph, "to have a graph make_graph=True"
+        assert self._make_graph, "to have a graph use make_graph=True"
         return self._graphs[self._sorting_stages_i]
 
     @property
