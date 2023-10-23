@@ -883,7 +883,7 @@ default_unit_params_range = dict(
     positive_amplitude=(0.1, 0.25),
     smooth_ms=(0.03, 0.07),
     decay_power=(1.4, 1.8),
-    propagation_speed=(250., 350.),  # ms  / um
+    propagation_speed=(250.0, 350.0),  # ms  / um
 )
 
 
@@ -986,7 +986,6 @@ def generate_templates(
             assert unit_params[k].size == num_units
             params[k] = unit_params[k]
         else:
-            
             if k in unit_params_range:
                 lims = unit_params_range[k]
             else:
@@ -1012,7 +1011,6 @@ def generate_templates(
             dtype=dtype,
         )
 
-        
         ## Add a spatial decay depend on distance from unit to each channel
         alpha = params["alpha"][u]
         # the espilon avoid enormous factors
@@ -1028,7 +1026,7 @@ def generate_templates(
             # the speed is um/ms
             dist = distances[u, :].copy()
             dist -= np.min(dist)
-            delay_s = dist / propagation_speed / 1000.
+            delay_s = dist / propagation_speed / 1000.0
             sample_shifts = delay_s * fs
 
             # apply the delay with fft transform to get sub sample shift
@@ -1049,9 +1047,6 @@ def generate_templates(
                 templates[u, :, :, f] = wfs[f::upsample_factor]
         else:
             templates[u, :, :] = wfs
-
-
-
 
     return templates
 
@@ -1369,7 +1364,7 @@ def generate_ground_truth_recording(
     ms_after=3.0,
     upsample_factor=None,
     upsample_vector=None,
-    generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=4.),
+    generate_sorting_kwargs=dict(firing_rates=15, refractory_period_ms=4.0),
     noise_kwargs=dict(noise_level=5.0, strategy="on_the_fly"),
     generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=5.0, maximum_z=50.0),
     generate_templates_kwargs=dict(),
@@ -1455,15 +1450,18 @@ def generate_ground_truth_recording(
         # probe.set_device_channel_indices(np.arange(num_channels))
 
         prb_kwargs = generate_probe_kwargs.copy()
-        if 'num_contact_per_column' in prb_kwargs:
-            assert (prb_kwargs['num_contact_per_column'] * prb_kwargs['num_columns']) == num_channels, \
+        if "num_contact_per_column" in prb_kwargs:
+            assert (
+                prb_kwargs["num_contact_per_column"] * prb_kwargs["num_columns"]
+            ) == num_channels, (
                 "generate_multi_columns_probe : num_channels do not match num_contact_per_column x num_columns"
-        elif 'num_contact_per_column' not in prb_kwargs and 'num_columns' in prb_kwargs:
-            n = num_channels // prb_kwargs['num_columns']
-            num_contact_per_column = [n] * prb_kwargs['num_columns']
-            mid = prb_kwargs['num_columns'] // 2
-            num_contact_per_column[mid] += num_channels % prb_kwargs['num_columns']
-            prb_kwargs['num_contact_per_column'] = num_contact_per_column
+            )
+        elif "num_contact_per_column" not in prb_kwargs and "num_columns" in prb_kwargs:
+            n = num_channels // prb_kwargs["num_columns"]
+            num_contact_per_column = [n] * prb_kwargs["num_columns"]
+            mid = prb_kwargs["num_columns"] // 2
+            num_contact_per_column[mid] += num_channels % prb_kwargs["num_columns"]
+            prb_kwargs["num_contact_per_column"] = num_contact_per_column
         else:
             raise ValueError("num_columns should be provided in dict generate_probe_kwargs")
 
