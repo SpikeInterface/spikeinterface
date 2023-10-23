@@ -462,7 +462,7 @@ class IterativeTemplateRegistration:
 
     See https://www.science.org/doi/abs/10.1126/science.abf4588?cookieSet=1
 
-    Ported by Alessio Buccino in SpikeInterface
+    Ported by Alessio Buccino into SpikeInterface
     """
 
     name = "iterative_template"
@@ -824,7 +824,7 @@ def compute_pairwise_displacement(
     from scipy import sparse
     from scipy import linalg
 
-    assert conv_engine in ("torch", "numpy")
+    assert conv_engine in ("torch", "numpy"), f"'conv_engine' must be 'torch' or 'numpy'"
     size = motion_hist.shape[0]
     pairwise_displacement = np.zeros((size, size), dtype="float32")
 
@@ -890,7 +890,7 @@ def compute_pairwise_displacement(
         try:
             import skimage.registration
         except ImportError:
-            raise ImportError("To use 'phase_cross_correlation' method install scikit-image")
+            raise ImportError("To use the 'phase_cross_correlation' method install scikit-image")
 
         errors = np.zeros((size, size), dtype="float32")
         loop = range(size)
@@ -906,7 +906,10 @@ def compute_pairwise_displacement(
         correlation = 1 - errors
 
     else:
-        raise ValueError(f"method does not exist for compute_pairwise_displacement {method}")
+        raise ValueError(
+            f"method {method} does not exist for compute_pairwise_displacement. Current possible methods are"
+            f" 'conv' or 'phase_cross_correlation'"
+        )
 
     if weight_scale == "linear":
         # between 0 and 1
@@ -923,6 +926,9 @@ def compute_pairwise_displacement(
         pairwise_displacement_weight *= horizon_matrix
 
     return pairwise_displacement, pairwise_displacement_weight
+
+
+_possible_convergence_method = ("lsmr", "gradient_descent", "lsqr_robust")
 
 
 def compute_global_displacement(
@@ -1166,7 +1172,10 @@ def compute_global_displacement(
 
         displacement = displacement.reshape(B, T).T
     else:
-        raise ValueError(f"Method {convergence_method} doesn't exist for compute_global_displacement")
+        raise ValueError(
+            f"Method {convergence_method} doesn't exist for compute_global_displacement"
+            f" possible values for 'convergence_method' are {_possible_convergence_method}"
+        )
 
     return np.squeeze(displacement)
 
@@ -1371,7 +1380,7 @@ def normxcorr1d(
         conv1d = scipy_conv1d
         npx = np
     else:
-        raise ValueError(f"Unknown conv_engine {conv_engine}")
+        raise ValueError(f"Unknown conv_engine {conv_engine}. 'conv_engine' must be 'torch' or 'numpy'")
 
     x = npx.atleast_2d(x)
     num_templates, length = template.shape
@@ -1452,7 +1461,7 @@ def scipy_conv1d(input, weights, padding="valid"):
         input = np.pad(input, [*[(0, 0)] * (input.ndim - 1), (padding, padding)])
         length_out = length - (kernel_size - 1) + 2 * padding
     else:
-        raise ValueError(f"Unknown padding {padding}")
+        raise ValueError(f"Unknown 'padding' value of {padding}, 'padding' must be 'same', 'valid' or an integer")
 
     output = np.zeros((n, c_out, length_out), dtype=input.dtype)
     for m in range(n):

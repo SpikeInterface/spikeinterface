@@ -177,7 +177,7 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
             params.update(method_kwargs)
 
             assert params["n_peaks"] is not None, "n_peaks should be defined!"
-            assert params["peaks_locations"] is not None, "peaks_locations should be d96efined!"
+            assert params["peaks_locations"] is not None, "peaks_locations should be defined!"
 
             nb_spikes = len(params["peaks_locations"]["x"])
 
@@ -252,8 +252,19 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
                 selected_indices = [rng.permutation(my_selection)[: params["n_peaks"]]]
 
     else:
-        raise NotImplementedError(f"No method {method} for peaks selection")
+        raise NotImplementedError(
+            f"The 'method' {method} does not exist for peaks selection." f" possible methods are {_possible_methods}"
+        )
 
     selected_indices = np.concatenate(selected_indices)
     selected_indices = selected_indices[np.argsort(peaks[selected_indices]["sample_index"])]
     return selected_indices
+
+
+_possible_methods = (
+    "uniform",
+    "uniform_locations",
+    "smart_sampling_amplitudes",
+    "smart_sampling_locations",
+    "smart_sampling_locations_and_time",
+)

@@ -59,9 +59,9 @@ def split_clusters(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
     n_jobs = job_kwargs["n_jobs"]
-    mp_context = job_kwargs["mp_context"]
+    mp_context = job_kwargs.get("mp_context", None)
     progress_bar = job_kwargs["progress_bar"]
-    max_threads_per_process = job_kwargs["max_threads_per_process"]
+    max_threads_per_process = job_kwargs.get("max_threads_per_process", 1)
 
     original_labels = peak_labels
     peak_labels = peak_labels.copy()
@@ -72,7 +72,7 @@ def split_clusters(
     with Executor(
         max_workers=n_jobs,
         initializer=split_worker_init,
-        mp_context=get_context(mp_context),
+        mp_context=get_context(method=mp_context),
         initargs=(recording, features_dict_or_folder, original_labels, method, method_kwargs, max_threads_per_process),
     ) as pool:
         labels_set = np.setdiff1d(peak_labels, [-1])
