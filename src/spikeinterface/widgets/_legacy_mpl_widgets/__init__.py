@@ -1,4 +1,3 @@
-
 from .multicompgraph import (
     plot_multicomp_graph,
     MultiCompGraphWidget,
@@ -7,4 +6,3 @@ from .multicompgraph import (
     plot_multicomp_agreement_by_sorter,
     MultiCompAgreementBySorterWidget,
 )
-

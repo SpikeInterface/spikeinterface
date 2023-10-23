@@ -1,6 +1,3 @@
-
-
-
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -30,7 +27,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         If good only, the minimum accuracy every cell should have, individually, to be
         considered in a putative pair
     unit_ids: list
-        List of considered units    
+        List of considered units
     """
 
     def __init__(
@@ -48,11 +45,9 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         min_accuracy=0.9,
         show_legend=False,
         ylim=(0, 1),
-
         backend=None,
         **backend_kwargs,
     ):
-        
         if unit_ids is None:
             unit_ids = comp.sorting1.get_unit_ids()
 
@@ -176,8 +171,6 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
             ax.set_ylabel("collision recall")
 
 
-
-
 class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
     """
     Plots CollisionGTComparison pair by pair orderer by cosine_similarity for all
@@ -213,11 +206,9 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
         good_only=False,
         min_accuracy=0.9,
         cmap="winter",
-
         backend=None,
         **backend_kwargs,
     ):
-
         if case_keys is None:
             case_keys = list(study.cases.keys())
 
@@ -252,19 +243,20 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
 
         study = dp.study
 
-
         my_cmap = plt.get_cmap(dp.cmap)
         cNorm = matplotlib.colors.Normalize(vmin=dp.similarity_bins.min(), vmax=dp.similarity_bins.max())
         scalarMap = plt.cm.ScalarMappable(norm=cNorm, cmap=my_cmap)
-        study.precompute_scores_by_similarities(case_keys=dp.case_keys, good_only=dp.good_only, min_accuracy=dp.min_accuracy, )
-        
+        study.precompute_scores_by_similarities(
+            case_keys=dp.case_keys,
+            good_only=dp.good_only,
+            min_accuracy=dp.min_accuracy,
+        )
 
         for count, key in enumerate(dp.case_keys):
-
             lags = study.get_lags(key)
 
             curves = study.get_lag_profile_over_similarity_bins(dp.similarity_bins, key)
-            
+
             # plot by similarity bins
             ax = self.axes.flatten()[count]
             ax.spines["top"].set_visible(False)
@@ -293,4 +285,3 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
 
             if dp.ylim is not None:
                 ax.set_ylim(dp.ylim)
-            
