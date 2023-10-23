@@ -20,7 +20,6 @@ from .collisioncomp import (
     plot_study_comparison_collision_by_similarity_ranges,
 )
 
-from .sortingperformance import plot_sorting_performance
 
 
 # correlogram comparison
