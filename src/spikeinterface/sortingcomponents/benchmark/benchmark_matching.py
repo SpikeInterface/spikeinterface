@@ -471,7 +471,7 @@ class BenchmarkMatching:
         ax = axs[1, 0]
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        
+
         for k in ("accuracy", "recall", "precision"):
             x = comp.get_performance()[k]
             y = self.metrics["snr"]
