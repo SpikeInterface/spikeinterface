@@ -1394,7 +1394,7 @@ def generate_ground_truth_recording(
     probe: Probe or None
         An external Probe object. If not provided a probe is generated using generate_probe_kwargs.
     generate_probe_kwargs: dict
-        A dict to constuct the Probe using :pyp:func:`probeinterface.generate_multi_columns_probe()`.
+        A dict to constuct the Probe using :py:func:`probeinterface.generate_multi_columns_probe()`.
     templates: np.array or None
         The templates of units.
         If None they are generated.
