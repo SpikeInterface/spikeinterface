@@ -298,8 +298,8 @@ def find_merge_pairs(
     indices0, indices1 = np.nonzero(pair_mask)
 
     n_jobs = job_kwargs["n_jobs"]
-    mp_context = job_kwargs["mp_context"]
-    max_threads_per_process = job_kwargs["max_threads_per_process"]
+    mp_context = job_kwargs.get("mp_context", None)
+    max_threads_per_process = job_kwargs.get("max_threads_per_process", 1)
     progress_bar = job_kwargs["progress_bar"]
 
     Executor = get_poolexecutor(n_jobs)
@@ -650,10 +650,10 @@ class NormalizedTemplateDiff:
         union_chans = np.union1d(target_chans0, target_chans1)
 
         ind0 = list(labels_set).index(label0)
-        template0 = templates[ind0, :, target_chans]
+        template0 = templates[ind0][:, target_chans]
 
         ind1 = list(labels_set).index(label1)
-        template1 = templates[ind1, :, target_chans]
+        template1 = templates[ind1][:, target_chans]
 
         num_samples = template0.shape[0]
         # norm = np.mean(np.abs(template0)) + np.mean(np.abs(template1))

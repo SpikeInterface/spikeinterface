@@ -54,7 +54,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         "skip_kilosort_preprocessing": False,
         "scaleproc": None,
         "save_rez_to_mat": False,
-        "delete_tmp_files": True,
+        "delete_tmp_files": ("matlab_files",),
         "delete_recording_dat": False,
     }
 
@@ -80,7 +80,9 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         "skip_kilosort_preprocessing": "Can optionaly skip the internal kilosort preprocessing",
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
         "save_rez_to_mat": "Save the full rez internal struc to mat file",
-        "delete_tmp_files": "Whether to delete all temporary files after a successful run",
+        "delete_tmp_files": "Delete temporary files created during sorting (matlab files and the `temp_wh.dat` file that "
+        "contains kilosort-preprocessed data). Accepts `False` (deletes no files), `True` (deletes all files) "
+        "or a Tuple containing the files to delete. Options are: ('temp_wh.dat', 'matlab_files')",
         "delete_recording_dat": "Whether to delete the 'recording.dat' file after a successful run",
     }
 
