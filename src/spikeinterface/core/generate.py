@@ -301,54 +301,87 @@ def generate_injected_sorting(
 
 
 class TransformedSorting(NumpySorting):
-    def __init__(self, sorting, added_spikes={}, removed_spikes={}):
-        all_unit_ids = list(sorting.unit_ids)
-        all_spikes = sorting.to_spike_vector()
+    
+    def __init__(self, sorting):
+        self.parent_sorting = sorting
+        self.parent_unit_ids = list(sorting.unit_ids)
+        self.parent_spike_vector = sorting.to_spike_vector()
         indices = np.arange(len(all_spikes))
         modified_spikes = np.zeros(0, dtype=minimum_spike_dtype)
         self.removed = np.zeros(len(all_spikes), dtype=bool)
-        self.sorting = sorting
-        all_indices = np.arange(len(all_spikes), dtype=int)
+        self.spikes_added = np.zeros(0, dtype=minimum_spike_dtype)
+        self._removed_units = []
+        
+        # self.sorting = sorting
+        # all_indices = np.arange(len(all_spikes), dtype=int)
 
-        for unit_id, unit_spikes in removed_spikes.items():
-            if unit_id not in all_unit_ids:
-                raise Exception("Can not remove spikes from unit {unit_id}: not in the sorting")
-            else:
-                unit_index = all_unit_ids.index(unit_id)
+        # for unit_id, unit_spikes in removed_spikes.items():
+        #     if unit_id not in all_unit_ids:
+        #         raise Exception("Can not remove spikes from unit {unit_id}: not in the sorting")
+        #     else:
+        #         unit_index = all_unit_ids.index(unit_id)
 
-            mask = all_spikes["unit_index"] == unit_index
+        #     mask = all_spikes["unit_index"] == unit_index
 
-            for segment_index in range(sorting.get_num_segments()):
-                sub_mask = all_spikes[mask]["segment_index"] == segment_index
-                local_mask = unit_spikes["segment_index"] == segment_index
-                indices = all_indices[mask][sub_mask]
-                self.removed[indices] = np.isin(all_spikes[mask][sub_mask], unit_spikes[local_mask])
+        #     for segment_index in range(sorting.get_num_segments()):
+        #         sub_mask = all_spikes[mask]["segment_index"] == segment_index
+        #         local_mask = unit_spikes["segment_index"] == segment_index
+        #         indices = all_indices[mask][sub_mask]
+        #         self.removed[indices] = np.isin(all_spikes[mask][sub_mask], unit_spikes[local_mask])
 
-        modified_spikes = all_spikes[~self.removed]
+        # modified_spikes = all_spikes[~self.removed]
 
-        spikes_added = np.zeros(0, dtype=minimum_spike_dtype)
-        self.added = np.zeros(len(modified_spikes), dtype=bool)
-        for unit_id, unit_spikes in added_spikes.items():
-            if unit_id not in all_unit_ids:
-                all_unit_ids += [unit_id]
-                unit_index = len(all_unit_ids) - 1
-            else:
-                unit_index = all_unit_ids.index(unit_id)
+        # 
+        # self.added = np.zeros(len(modified_spikes), dtype=bool)
+        # for unit_id, unit_spikes in added_spikes.items():
+        #     if unit_id not in all_unit_ids:
+        #         all_unit_ids += [unit_id]
+        #         unit_index = len(all_unit_ids) - 1
+        #     else:
+        #         unit_index = all_unit_ids.index(unit_id)
 
-            for segment_index in range(sorting.get_num_segments()):
-                local_mask = unit_spikes["segment_index"] == segment_index
-                indices = np.ones(len(local_mask), dtype=bool)
-                self.added = np.concatenate((self.added, indices))
-                spikes_added = np.concatenate((spikes_added, unit_spikes[local_mask]))
+        #     for segment_index in range(sorting.get_num_segments()):
+        #         local_mask = unit_spikes["segment_index"] == segment_index
+        #         indices = np.ones(len(local_mask), dtype=bool)
+        #         self.added = np.concatenate((self.added, indices))
+        #         spikes_added = np.concatenate((spikes_added, unit_spikes[local_mask]))
 
-        modified_spikes = np.concatenate((modified_spikes, spikes_added))
+        # modified_spikes = np.concatenate((modified_spikes, spikes_added))
 
-        sort_idxs = np.lexsort([modified_spikes["sample_index"], modified_spikes["segment_index"]])
-        modified_spikes = modified_spikes[sort_idxs]
-        self.added = self.added[sort_idxs]
-        self.removed = self.removed[sort_idxs]
+        # sort_idxs = np.lexsort([modified_spikes["sample_index"], modified_spikes["segment_index"]])
+        # modified_spikes = modified_spikes[sort_idxs]
+        # self.added = self.added[sort_idxs]
+        # self.removed = self.removed[sort_idxs]
 
-        NumpySorting.__init__(self, modified_spikes, sorting.sampling_frequency, all_unit_ids)
+        # 
+
+
+    def add_spikes(self, spike_vector):
+        all_units = np.unique(spike_vector['unit_index'])
+        assert not np.all(np.isin(all_units, self.parent_unit_ids) == True), "add_spikes can not add units"
+        self.added_spikes = spike_vector
+
+    def remove_spikes(self, spike_indices):
+        self.removed_spikes = np.zeros(len(all_spikes), dtype=bool)
+        self.removed[indices] = np.isin(all_spikes[mask][sub_mask], unit_spikes[local_mask])
+
+    def add_units(self, unit_ids, spike_vector):
+        pass
+
+    def remove_units(self, unit_ids):
+        for unit_id in unit_ids:
+            if unit_id in self.all_unit_ids:
+                unit_index = self.all_unit_ids.index(unit_id)
+                self._remove_units += [unit_index]
+
+    @property
+    def to_spike_vector():
+        # mask = np.in1d(self.parent_spike_vector[''])
+        # for unit_id in unit_ids:
+        #     
+        #         unit_index = self.all_unit_ids.index(unit_id)
+        #         mask = self.parent_spike_vector['unit_index'] == unit_index
+        #         self.removed[mask] = True
 
 
 def create_sorting_npz(num_seg, file_path):
