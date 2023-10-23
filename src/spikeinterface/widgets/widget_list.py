@@ -29,7 +29,7 @@ from .unit_templates import UnitTemplatesWidget
 from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
 from .unit_waveforms import UnitWaveformsWidget
 from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformances, StudyPerformancesVsMetrics
-
+from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
 
 widget_list = [
     AgreementMatrixWidget,
@@ -37,6 +37,7 @@ widget_list = [
     AmplitudesWidget,
     AutoCorrelogramsWidget,
     ConfusionMatrixWidget,
+    ComparisonCollisionBySimilarityWidget,
     CrossCorrelogramsWidget,
     ISIDistributionWidget,
     MotionWidget,
@@ -62,6 +63,7 @@ widget_list = [
     StudyUnitCountsWidget,
     StudyPerformances,
     StudyPerformancesVsMetrics,
+    StudyComparisonCollisionBySimilarityWidget,
 ]
 
 
@@ -102,6 +104,7 @@ plot_all_amplitudes_distributions = AllAmplitudesDistributionsWidget
 plot_amplitudes = AmplitudesWidget
 plot_autocorrelograms = AutoCorrelogramsWidget
 plot_confusion_matrix = ConfusionMatrixWidget
+plot_comparison_collision_by_similarity = ComparisonCollisionBySimilarityWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_isi_distribution = ISIDistributionWidget
 plot_motion = MotionWidget
@@ -127,6 +130,7 @@ plot_study_run_times = StudyRunTimesWidget
 plot_study_unit_counts = StudyUnitCountsWidget
 plot_study_performances = StudyPerformances
 plot_study_performances_vs_metrics = StudyPerformancesVsMetrics
+plot_study_comparison_collision_by_similarity = StudyComparisonCollisionBySimilarityWidget
 
 
 def plot_timeseries(*args, **kwargs):
