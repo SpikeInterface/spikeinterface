@@ -1392,7 +1392,7 @@ def generate_ground_truth_recording(
     sorting: Sorting or None
         An external sorting object. If not provide, one is genrated.
     probe: Probe or None
-        An external Probe object. If not provided of probe is generated using generate_probe_kwargs.
+        An external Probe object. If not provided a probe is generated using generate_probe_kwargs.
     generate_probe_kwargs: dict
         A dict to constuct the Probe using :pyp:func:`probeinterface.generate_multi_columns_probe()`.
     templates: np.array or None
