@@ -27,13 +27,16 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         self.spikes = self.waveform_extractor.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
 
     def _set_params(
-        self, ms_before=0.5, ms_after=0.5,
+        self,
+        ms_before=0.5,
+        ms_after=0.5,
         spike_retriver_kwargs=dict(
             channel_from_template=False,
             radius_um=50,
             peaks_sign="neg",
         ),
-        method="center_of_mass", method_kwargs={}
+        method="center_of_mass",
+        method_kwargs={},
     ):
         params = dict(
             ms_before=ms_before, ms_after=ms_after, spike_retriver_kwargs=spike_retriver_kwargs, method=method
@@ -67,10 +70,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         spike_retriver_kwargs = params.pop("spike_retriver_kwargs")
 
         spike_retriever = SpikeRetriever(
-            we.recording,
-            we.sorting,
-            extremum_channel_inds=extremum_channel_inds,
-            **spike_retriver_kwargs
+            we.recording, we.sorting, extremum_channel_inds=extremum_channel_inds, **spike_retriver_kwargs
         )
         spike_locations = _run_localization_from_peak_source(we.recording, spike_retriever, **params, **job_kwargs)
 
@@ -118,6 +118,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 
 WaveformExtractor.register_extension(SpikeLocationsCalculator)
 
+
 def compute_spike_locations(
     waveform_extractor,
     load_if_exists=False,
@@ -128,7 +129,6 @@ def compute_spike_locations(
         radius_um=50,
         peaks_sign="neg",
     ),
-    
     method="center_of_mass",
     method_kwargs={},
     outputs="concatenated",
