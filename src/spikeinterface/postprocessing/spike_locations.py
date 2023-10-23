@@ -27,13 +27,18 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         self.spikes = self.waveform_extractor.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
 
     def _set_params(
-        self, ms_before=0.5, ms_after=0.5, channel_from_template=True, method="center_of_mass", method_kwargs={}
+        self, ms_before=0.5, ms_after=0.5,
+        spike_retriver_kwargs=dict(
+            channel_from_template=False,
+            radius_um=50,
+            peaks_sign="neg",
+        ),
+        method="center_of_mass", method_kwargs={}
     ):
         params = dict(
-            ms_before=ms_before, ms_after=ms_after, channel_from_template=channel_from_template, method=method
+            ms_before=ms_before, ms_after=ms_after, spike_retriver_kwargs=spike_retriver_kwargs, method=method
         )
         params.update(**method_kwargs)
-        print(params)
         return params
 
     def _select_extension_data(self, unit_ids):
@@ -59,16 +64,13 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         extremum_channel_inds = get_template_extremum_channel(we, peak_sign="neg", outputs="index")
 
         params = self._params.copy()
-        channel_from_template = params.pop("channel_from_template")
+        spike_retriver_kwargs = params.pop("spike_retriver_kwargs")
 
-        # @alessio @pierre: where do we expose the parameters of radius for the retriever (this is not the same as the one for locatization it is smaller) ???
         spike_retriever = SpikeRetriever(
             we.recording,
             we.sorting,
-            channel_from_template=channel_from_template,
             extremum_channel_inds=extremum_channel_inds,
-            radius_um=50,
-            peak_sign=self._params.get("peaks_sign", "neg"),
+            **spike_retriver_kwargs
         )
         spike_locations = _run_localization_from_peak_source(we.recording, spike_retriever, **params, **job_kwargs)
 
@@ -116,16 +118,17 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 
 WaveformExtractor.register_extension(SpikeLocationsCalculator)
 
-# @alessio @pierre: channel_from_template=True is the old behavior but this is not accurate
-# what do we put by default ?
-
-
 def compute_spike_locations(
     waveform_extractor,
     load_if_exists=False,
     ms_before=0.5,
     ms_after=0.5,
-    channel_from_template=True,
+    spike_retriver_kwargs=dict(
+        channel_from_template=False,
+        radius_um=50,
+        peaks_sign="neg",
+    ),
+    
     method="center_of_mass",
     method_kwargs={},
     outputs="concatenated",
@@ -144,10 +147,17 @@ def compute_spike_locations(
         The left window, before a peak, in milliseconds.
     ms_after : float
         The right window, after a peak, in milliseconds.
-    channel_from_template: bool, default True
-        For each spike is the maximum channel computed from template or re estimated at every spikes.
-        channel_from_template = True is old behavior but less acurate
-        channel_from_template = False is slower but more accurate
+    spike_retriver_kwargs: dict
+        A dict that contains the behavior for getting the maximum channel for each spike.
+        This contain dict contains:
+            * channel_from_template: bool, default True
+                For each spike is the maximum channel computed from template or re estimated at every spikes.
+                channel_from_template = True is old behavior but less acurate
+                channel_from_template = False is slower but more accurate
+            * radius_um: float, default 50
+                In case channel_from_template=False, this is the radius to get the true peak.
+            * peaks_sign="neg"
+                In case channel_from_template=False, this is the peak sign.
     method : str
         'center_of_mass' / 'monopolar_triangulation' / 'grid_convolution'
     method_kwargs : dict
@@ -170,7 +180,7 @@ def compute_spike_locations(
         slc.set_params(
             ms_before=ms_before,
             ms_after=ms_after,
-            channel_from_template=channel_from_template,
+            spike_retriver_kwargs=spike_retriver_kwargs,
             method=method,
             method_kwargs=method_kwargs,
         )
