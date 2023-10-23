@@ -210,9 +210,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         # invert recording
         rec_inv = scale(rec, gain=-1.0)
 
-        we_inv = WaveformExtractor.create(rec_inv, sort, self.cache_folder / "toy_waveforms_inv")
-        we_inv.set_params(ms_before=3.0, ms_after=4.0, max_spikes_per_unit=None)
-        we_inv.run_extract_waveforms(n_jobs=1, chunk_size=30000)
+        we_inv = extract_waveforms(rec_inv, sort, self.cache_folder / "toy_waveforms_inv")
 
         # compute amplitudes
         _ = compute_spike_amplitudes(we, peak_sign="neg")
