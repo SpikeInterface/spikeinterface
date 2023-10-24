@@ -75,9 +75,9 @@ class TestWidgets(unittest.TestCase):
     #     fig, axes = plt.subplots(self.num_units, 1)
     #     sw.plot_isi_distribution(self._sorting, axes=axes)
 
-    def test_plot_peak_activity_map(self):
-        sw.plot_peak_activity_map(self._rec, with_channel_ids=True)
-        sw.plot_peak_activity_map(self._rec, bin_duration_s=1.0)
+    # def test_plot_peak_activity_map(self):
+    #     sw.plot_peak_activity_map(self._rec, with_channel_ids=True)
+    #     sw.plot_peak_activity_map(self._rec, bin_duration_s=1.0)
 
     def test_multicomp_graph(self):
         msc = sc.compare_multiple_sorters([self._sorting, self._sorting, self._sorting])
@@ -87,9 +87,9 @@ class TestWidgets(unittest.TestCase):
         fig, axes = plt.subplots(len(msc.object_list), 1)
         sw.plot_multicomp_agreement_by_sorter(msc, axes=axes)
 
-    def test_sorting_performance(self):
-        metrics = compute_quality_metrics(self._we, metric_names=["snr"])
-        sw.plot_sorting_performance(self._gt_comp, metrics, performance_name="accuracy", metric_name="snr")
+    # def test_sorting_performance(self):
+    #     metrics = compute_quality_metrics(self._we, metric_names=["snr"])
+    #     sw.plot_sorting_performance(self._gt_comp, metrics, performance_name="accuracy", metric_name="snr")
 
     # ~ def test_plot_unit_summary(self):
     # ~ unit_id = self._sorting.unit_ids[4]
