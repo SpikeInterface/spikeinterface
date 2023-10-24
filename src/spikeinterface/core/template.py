@@ -4,7 +4,7 @@ from dataclasses import dataclass, field, astuple
 from .sparsity import ChannelSparsity
 
 
-@dataclass(kw_only=True)
+@dataclass
 class Templates:
     """
     A class to represent spike templates, which can be either dense or sparse.
@@ -18,7 +18,7 @@ class Templates:
     nbefore : int
         Number of samples before the spike peak.
     sparsity_mask : np.ndarray, optional
-        Binary array indicating the sparsity pattern of the templates.
+        Boolean array indicating the sparsity pattern of the templates.
         If `None`, the templates are considered dense.
     channel_ids : np.ndarray, optional
         Array of channel IDs. If `None`, defaults to an array of increasing integers.
@@ -48,6 +48,8 @@ class Templates:
     sparsity_mask: np.ndarray = None
     channel_ids: np.ndarray = None
     unit_ids: np.ndarray = None
+
+    check_template_array_and_sparsity_mask_are_consistentency: bool = True
 
     num_units: int = field(init=False)
     num_samples: int = field(init=False)
@@ -83,29 +85,9 @@ class Templates:
             )
 
             # Test that the templates are sparse if a sparsity mask is passed
-            if not self._are_passed_templates_sparse():
-                raise ValueError("Sparsity mask passed but the templates are not sparse")
-
-    def to_dict(self):
-        return {
-            "templates_array": self.templates_array.tolist(),
-            "sparsity_mask": None if self.sparsity_mask is None else self.sparsity_mask.tolist(),
-            "channel_ids": self.channel_ids.tolist(),
-            "unit_ids": self.unit_ids.tolist(),
-            "sampling_frequency": self.sampling_frequency,
-            "nbefore": self.nbefore,
-        }
-
-    @classmethod
-    def from_dict(cls, data):
-        return cls(
-            templates_array=np.array(data["templates_array"]),
-            sparsity_mask=None if data["sparsity_mask"] is None else np.array(data["sparsity_mask"]),
-            channel_ids=np.array(data["channel_ids"]),
-            unit_ids=np.array(data["unit_ids"]),
-            sampling_frequency=data["sampling_frequency"],
-            nbefore=data["nbefore"],
-        )
+            if self.check_template_array_and_sparsity_mask_are_consistentency:
+                if not self._are_passed_templates_sparse():
+                    raise ValueError("Sparsity mask passed but the templates are not sparse")
 
     def get_dense_templates(self) -> np.ndarray:
         # Assumes and object without a sparsity mask already has dense templates
@@ -120,20 +102,6 @@ class Templates:
             dense_waveforms[unit_index, ...] = self.sparsity.densify_waveforms(waveforms=waveforms, unit_id=unit_id)
 
         return dense_waveforms
-
-    def get_sparse_templates(self) -> np.ndarray:
-        # Objects without sparsity mask don't have sparsity and therefore can't return sparse templates
-        if self.sparsity is None:
-            raise ValueError("Can't return sparse templates without passing a sparsity mask")
-
-        max_num_active_channels = self.sparsity.max_num_active_channels
-        sparisfied_shape = (self.num_units, self.num_samples, max_num_active_channels)
-        sparse_waveforms = np.zeros(shape=sparisfied_shape, dtype=self.templates_array.dtype)
-        for unit_index, unit_id in enumerate(self.unit_ids):
-            waveforms = self.templates_array[unit_index, ...]
-            sparse_waveforms[unit_index, ...] = self.sparsity.sparsify_waveforms(waveforms=waveforms, unit_id=unit_id)
-
-        return sparse_waveforms
 
     def are_templates_sparse(self) -> bool:
         return self.sparsity is not None
@@ -151,8 +119,31 @@ class Templates:
 
         return are_templates_sparse
 
+    def to_dict(self):
+        return {
+            "templates_array": self.templates_array,
+            "sparsity_mask": None if self.sparsity_mask is None else self.sparsity_mask,
+            "channel_ids": self.channel_ids,
+            "unit_ids": self.unit_ids,
+            "sampling_frequency": self.sampling_frequency,
+            "nbefore": self.nbefore,
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            templates_array=np.asarray(data["templates_array"]),
+            sparsity_mask=None if data["sparsity_mask"] is None else np.asarray(data["sparsity_mask"]),
+            channel_ids=np.asarray(data["channel_ids"]),
+            unit_ids=np.asarray(data["unit_ids"]),
+            sampling_frequency=data["sampling_frequency"],
+            nbefore=data["nbefore"],
+        )
+
     def to_json(self):
-        return json.dumps(self.to_dict())
+        from spikeinterface.core.core_tools import SIJsonEncoder
+
+        return json.dumps(self.to_dict(), cls=SIJsonEncoder)
 
     @classmethod
     def from_json(cls, json_str):
