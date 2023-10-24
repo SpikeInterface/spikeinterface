@@ -64,13 +64,13 @@ class CircusClustering:
         elif params["waveform_mode"] == "shared_memory":
             assert tmp_folder is None, "tmp_folder must be None for shared_memory"
         else:
-            raise ValueError("shared_memory")
+            raise ValueError("'waveform_mode' must be 'memmap' or 'shared_memory'")
 
         return params2
 
     @classmethod
     def main_function(cls, recording, peaks, params):
-        assert HAVE_HDBSCAN, "twisted clustering need hdbscan to be installed"
+        assert HAVE_HDBSCAN, "twisted clustering needs hdbscan to be installed"
 
         params = cls._check_params(recording, peaks, params)
         d = params
@@ -110,7 +110,7 @@ class CircusClustering:
         if params["waveform_mode"] == "shared_memory":
             wf_folder = None
         else:
-            assert params["tmp_folder"] is not None
+            assert params["tmp_folder"] is not None, "tmp_folder must be supplied"
             wf_folder = params["tmp_folder"] / "sparse_snippets"
             wf_folder.mkdir()
 
@@ -225,13 +225,13 @@ class CircusClustering:
         if params["waveform_mode"] == "shared_memory":
             wf_folder = None
         else:
-            assert params["tmp_folder"] is not None
+            assert params["tmp_folder"] is not None, "tmp_folder must be supplied"
             wf_folder = params["tmp_folder"] / "dense_snippets"
             wf_folder.mkdir()
 
         cleaning_method = params["cleaning_method"]
 
-        print("We found %d raw clusters, starting to clean with %s..." % (len(labels), cleaning_method))
+        print(f"We found {len(labels)} raw clusters, starting to clean with {cleaning_method}...")
 
         if cleaning_method == "cosine":
             wfs_arrays = extract_waveforms_to_buffers(
@@ -288,6 +288,6 @@ class CircusClustering:
             labels, peak_labels = remove_duplicates_via_matching(we, peak_labels, job_kwargs=params["job_kwargs"])
             shutil.rmtree(tmp_folder)
 
-        print("We kept %d non-duplicated clusters..." % len(labels))
+        print(f"We kept {len(labels)} non-duplicated clusters...")
 
         return labels, peak_labels

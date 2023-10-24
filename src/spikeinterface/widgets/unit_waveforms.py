@@ -250,7 +250,7 @@ class UnitWaveformsWidget(BaseWidget):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
-        from .utils_ipywidgets import check_ipywidget_backend, make_unit_controller
+        from .utils_ipywidgets import check_ipywidget_backend, UnitSelector
 
         check_ipywidget_backend()
 
@@ -274,44 +274,32 @@ class UnitWaveformsWidget(BaseWidget):
                 self.fig_probe, self.ax_probe = plt.subplots(figsize=((ratios[2] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
-        data_plot["unit_ids"] = data_plot["unit_ids"][:1]
-        unit_widget, unit_controller = make_unit_controller(
-            data_plot["unit_ids"], we.unit_ids, ratios[0] * width_cm, height_cm
-        )
+        self.unit_selector = UnitSelector(data_plot["unit_ids"])
+        self.unit_selector.value = list(data_plot["unit_ids"])[:1]
 
-        same_axis_button = widgets.Checkbox(
+        self.same_axis_button = widgets.Checkbox(
             value=False,
             description="same axis",
             disabled=False,
         )
 
-        plot_templates_button = widgets.Checkbox(
+        self.plot_templates_button = widgets.Checkbox(
             value=True,
             description="plot templates",
             disabled=False,
         )
 
-        hide_axis_button = widgets.Checkbox(
+        self.hide_axis_button = widgets.Checkbox(
             value=True,
             description="hide axis",
             disabled=False,
         )
 
-        footer = widgets.HBox([same_axis_button, plot_templates_button, hide_axis_button])
-
-        self.controller = {
-            "same_axis": same_axis_button,
-            "plot_templates": plot_templates_button,
-            "hide_axis": hide_axis_button,
-        }
-        self.controller.update(unit_controller)
-
-        for w in self.controller.values():
-            w.observe(self._update_ipywidget)
+        footer = widgets.HBox([self.same_axis_button, self.plot_templates_button, self.hide_axis_button])
 
         self.widget = widgets.AppLayout(
             center=self.fig_wf.canvas,
-            left_sidebar=unit_widget,
+            left_sidebar=self.unit_selector,
             right_sidebar=self.fig_probe.canvas,
             pane_widths=ratios,
             footer=footer,
@@ -320,6 +308,10 @@ class UnitWaveformsWidget(BaseWidget):
         # a first update
         self._update_ipywidget(None)
 
+        self.unit_selector.observe(self._update_ipywidget, names="value", type="change")
+        for w in self.same_axis_button, self.plot_templates_button, self.hide_axis_button:
+            w.observe(self._update_ipywidget, names="value", type="change")
+
         if backend_kwargs["display"]:
             display(self.widget)
 
@@ -327,10 +319,15 @@ class UnitWaveformsWidget(BaseWidget):
         self.fig_wf.clear()
         self.ax_probe.clear()
 
-        unit_ids = self.controller["unit_ids"].value
-        same_axis = self.controller["same_axis"].value
-        plot_templates = self.controller["plot_templates"].value
-        hide_axis = self.controller["hide_axis"].value
+        # unit_ids = self.controller["unit_ids"].value
+        unit_ids = self.unit_selector.value
+        # same_axis = self.controller["same_axis"].value
+        # plot_templates = self.controller["plot_templates"].value
+        # hide_axis = self.controller["hide_axis"].value
+
+        same_axis = self.same_axis_button.value
+        plot_templates = self.plot_templates_button.value
+        hide_axis = self.hide_axis_button.value
 
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
@@ -341,6 +338,8 @@ class UnitWaveformsWidget(BaseWidget):
         data_plot["plot_templates"] = plot_templates
         if data_plot["plot_waveforms"]:
             data_plot["wfs_by_ids"] = {unit_id: self.we.get_waveforms(unit_id) for unit_id in unit_ids}
+
+        # TODO option for plot_legend
 
         backend_kwargs = {}
 
@@ -369,6 +368,7 @@ class UnitWaveformsWidget(BaseWidget):
         self.ax_probe.axis("off")
         self.ax_probe.axis("equal")
 
+        # TODO this could be done with probeinterface plotting plotting tools!!
         for unit in unit_ids:
             channel_inds = data_plot["sparsity"].unit_id_to_channel_indices[unit]
             self.ax_probe.plot(

@@ -220,6 +220,10 @@ def test_calculate_firing_range(waveform_extractor_simple):
     firing_ranges = compute_firing_ranges(we)
     print(firing_ranges)
 
+    with pytest.warns(UserWarning) as w:
+        firing_ranges_nan = compute_firing_ranges(we, bin_size_s=we.get_total_duration() + 1)
+        assert np.all([np.isnan(f) for f in firing_ranges_nan.values()])
+
 
 def test_calculate_amplitude_cutoff(waveform_extractor_simple):
     we = waveform_extractor_simple
@@ -378,7 +382,7 @@ def test_calculate_drift_metrics(waveform_extractor_simple):
 if __name__ == "__main__":
     sim_data = _simulated_data()
     we = _waveform_extractor_simple()
-    we_violations = _waveform_extractor_violations(sim_data)
+    # we_violations = _waveform_extractor_violations(sim_data)
     # test_calculate_amplitude_cutoff(we)
     # test_calculate_presence_ratio(we)
     # test_calculate_amplitude_median(we)
@@ -387,4 +391,4 @@ if __name__ == "__main__":
     # test_calculate_drift_metrics(we)
     # test_synchrony_metrics(we)
     test_calculate_firing_range(we)
-    test_calculate_amplitude_cv_metrics(we)
+    # test_calculate_amplitude_cv_metrics(we)

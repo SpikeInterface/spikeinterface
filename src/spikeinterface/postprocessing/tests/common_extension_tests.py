@@ -6,7 +6,7 @@ import platform
 from pathlib import Path
 
 from spikeinterface import extract_waveforms, load_extractor, load_waveforms, compute_sparsity
-from spikeinterface.extractors import toy_example
+from spikeinterface.core.generate import generate_ground_truth_recording
 
 if hasattr(pytest, "global_test_folder"):
     cache_folder = pytest.global_test_folder / "postprocessing"
@@ -27,7 +27,18 @@ class WaveformExtensionCommonTestSuite:
         self.cache_folder = cache_folder
 
         # 1-segment
-        recording, sorting = toy_example(num_segments=1, num_units=10, num_channels=12)
+        recording, sorting = generate_ground_truth_recording(
+            durations=[10],
+            sampling_frequency=30000,
+            num_channels=12,
+            num_units=10,
+            dtype="float32",
+            seed=91,
+            generate_sorting_kwargs=dict(add_spikes_on_borders=True),
+            noise_kwargs=dict(noise_level=10.0, strategy="tile_pregenerated"),
+        )
+
+        # add gains and offsets and save
         gain = 0.1
         recording.set_channel_gains(gain)
         recording.set_channel_offsets(0)
@@ -43,9 +54,8 @@ class WaveformExtensionCommonTestSuite:
             recording,
             sorting,
             cache_folder / "toy_waveforms_1seg",
-            ms_before=3.0,
-            ms_after=4.0,
             max_spikes_per_unit=500,
+            sparse=False,
             n_jobs=1,
             chunk_size=30000,
             overwrite=True,
@@ -54,7 +64,16 @@ class WaveformExtensionCommonTestSuite:
         self.sparsity1 = compute_sparsity(we1, method="radius", radius_um=50)
 
         # 2-segments
-        recording, sorting = toy_example(num_segments=2, num_units=10)
+        recording, sorting = generate_ground_truth_recording(
+            durations=[10, 5],
+            sampling_frequency=30000,
+            num_channels=12,
+            num_units=10,
+            dtype="float32",
+            seed=91,
+            generate_sorting_kwargs=dict(add_spikes_on_borders=True),
+            noise_kwargs=dict(noise_level=10.0, strategy="tile_pregenerated"),
+        )
         recording.set_channel_gains(gain)
         recording.set_channel_offsets(0)
         if (cache_folder / "toy_rec_2seg").is_dir():
@@ -69,9 +88,8 @@ class WaveformExtensionCommonTestSuite:
             recording,
             sorting,
             cache_folder / "toy_waveforms_2seg",
-            ms_before=3.0,
-            ms_after=4.0,
             max_spikes_per_unit=500,
+            sparse=False,
             n_jobs=1,
             chunk_size=30000,
             overwrite=True,
@@ -92,8 +110,7 @@ class WaveformExtensionCommonTestSuite:
             recording,
             sorting,
             mode="memory",
-            ms_before=3.0,
-            ms_after=4.0,
+            sparse=False,
             max_spikes_per_unit=500,
             n_jobs=1,
             chunk_size=30000,

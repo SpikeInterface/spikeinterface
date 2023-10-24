@@ -37,7 +37,7 @@ Example code
     # Make recording, sorting and wvf_extractor object for your data.
 	# It is required to run `compute_spike_amplitudes(wvf_extractor)` or
 	# `compute_amplitude_scalings(wvf_extractor)` (if missing, values will be NaN)
-    amplitude_cv_median, amplitude_cv_range = sqm.compute_amplitude_cv_metrics(wvf_extractor)
+    amplitude_cv_median, amplitude_cv_range = sqm.compute_amplitude_cv_metrics(waveform_extractor=wvf_extractor)
     # amplitude_cv_median and  amplitude_cv_range are dicts containing the unit ids as keys,
     # and their amplitude_cv metrics as values.
 

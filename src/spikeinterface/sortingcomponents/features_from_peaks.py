@@ -34,8 +34,12 @@ def compute_features_from_peaks(
     feature_list: List of features to be computed.
             - amplitude
             - ptp
-            - com
+            - center_of_mass
             - energy
+            - std_ptp
+            - ptp_lag
+            - random_projections_ptp
+            - random_projections_energy
     ms_before: float
         The duration in ms before the peak for extracting the features (default 1 ms)
     ms_after: float
@@ -61,6 +65,9 @@ def compute_features_from_peaks(
         extract_dense_waveforms,
     ]
     for feature_name in feature_list:
+        assert (
+            feature_name in _features_class.keys()
+        ), f"Feature {feature_name} in 'feature_list' is not possible. Possible features are {list(_features_class.keys())}"
         Class = _features_class[feature_name]
         params = feature_params.get(feature_name, {}).copy()
         node = Class(recording, parents=[peak_retriever, extract_dense_waveforms], **params)
@@ -184,41 +191,49 @@ class RandomProjectionsFeature(PipelineNode):
         return_output=True,
         parents=None,
         projections=None,
-        radius_um=150.0,
-        min_values=None,
+        sigmoid=None,
+        radius_um=None,
+        sparse=True,
     ):
         PipelineNode.__init__(self, recording, return_output=return_output, parents=parents)
 
         self.projections = projections
-        self.radius_um = radius_um
-        self.min_values = min_values
-
+        self.sigmoid = sigmoid
         self.contact_locations = recording.get_channel_locations()
         self.channel_distance = get_channel_distances(recording)
         self.neighbours_mask = self.channel_distance < radius_um
-
-        self._kwargs.update(dict(projections=projections, radius_um=radius_um, min_values=min_values))
-
+        self.radius_um = radius_um
+        self.sparse = sparse
+        self._kwargs.update(dict(projections=projections, sigmoid=sigmoid, radius_um=radius_um, sparse=sparse))
         self._dtype = recording.get_dtype()
 
     def get_dtype(self):
         return self._dtype
 
+    def _sigmoid(self, x):
+        L, x0, k, b = self.sigmoid
+        y = L / (1 + np.exp(-k * (x - x0))) + b
+        return y
+
     def compute(self, traces, peaks, waveforms):
         all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
+
         for main_chan in np.unique(peaks["channel_index"]):
             (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
             (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
             local_projections = self.projections[chan_inds, :]
-            wf_ptp = (waveforms[idx][:, :, chan_inds]).ptp(axis=1)
+            if self.sparse:
+                wf_ptp = np.ptp(waveforms[idx][:, :, : len(chan_inds)], axis=1)
+            else:
+                wf_ptp = np.ptp(waveforms[idx][:, :, chan_inds], axis=1)
 
-            if self.min_values is not None:
-                wf_ptp = (wf_ptp / self.min_values[chan_inds]) ** 4
+            if self.sigmoid is not None:
+                wf_ptp *= self._sigmoid(wf_ptp)
 
             denom = np.sum(wf_ptp, axis=1)
             mask = denom != 0
-
             all_projections[idx[mask]] = np.dot(wf_ptp[mask], local_projections) / (denom[mask][:, np.newaxis])
+
         return all_projections
 
 

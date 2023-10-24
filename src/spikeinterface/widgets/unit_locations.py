@@ -167,7 +167,7 @@ class UnitLocationsWidget(BaseWidget):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
-        from .utils_ipywidgets import check_ipywidget_backend, make_unit_controller
+        from .utils_ipywidgets import check_ipywidget_backend, UnitSelector
 
         check_ipywidget_backend()
 
@@ -186,42 +186,35 @@ class UnitLocationsWidget(BaseWidget):
                 fig, self.ax = plt.subplots(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
 
-        data_plot["unit_ids"] = data_plot["unit_ids"][:1]
-        unit_widget, unit_controller = make_unit_controller(
-            data_plot["unit_ids"], list(data_plot["unit_colors"].keys()), ratios[0] * width_cm, height_cm
-        )
-
-        self.controller = unit_controller
-
-        for w in self.controller.values():
-            w.observe(self._update_ipywidget)
+        self.unit_selector = UnitSelector(data_plot["unit_ids"])
+        self.unit_selector.value = list(data_plot["unit_ids"])[:1]
 
         self.widget = widgets.AppLayout(
             center=fig.canvas,
-            left_sidebar=unit_widget,
+            left_sidebar=self.unit_selector,
             pane_widths=ratios + [0],
         )
 
         # a first update
-        self._update_ipywidget(None)
+        self._update_ipywidget()
+
+        self.unit_selector.observe(self._update_ipywidget, names="value", type="change")
 
         if backend_kwargs["display"]:
             display(self.widget)
 
-    def _update_ipywidget(self, change):
+    def _update_ipywidget(self, change=None):
         self.ax.clear()
-
-        unit_ids = self.controller["unit_ids"].value
 
         # matplotlib next_data_plot dict update at each call
         data_plot = self.next_data_plot
-        data_plot["unit_ids"] = unit_ids
+        data_plot["unit_ids"] = self.unit_selector.value
         data_plot["plot_all_units"] = True
+        # TODO later add an option checkbox for legend
         data_plot["plot_legend"] = True
         data_plot["hide_axis"] = True
 
-        backend_kwargs = {}
-        backend_kwargs["ax"] = self.ax
+        backend_kwargs = dict(ax=self.ax)
 
         self.plot_matplotlib(data_plot, **backend_kwargs)
         fig = self.ax.get_figure()

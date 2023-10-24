@@ -44,8 +44,7 @@ With SpikeInterface:
     import spikeinterface.qualitymetrics as sqm
 
     # Make recording, sorting and wvf_extractor object for your data.
-
-    SNRs = sqm.compute_snrs(wvf_extractor)
+    SNRs = sqm.compute_snrs(waveform_extractor=wvf_extractor)
     # SNRs is a dict containing the unit IDs as keys and their SNRs as values.
 
 Links to original implementations

@@ -183,7 +183,10 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 probe = None
 
             if probe is not None:
-                self = self.set_probe(probe, in_place=True)
+                if probe.shank_ids is not None:
+                    self.set_probe(probe, in_place=True, group_mode="by_shank")
+                else:
+                    self.set_probe(probe, in_place=True)
                 probe_name = probe.annotations["probe_name"]
                 # load num_channels_per_adc depending on probe type
                 if "2.0" in probe_name:
