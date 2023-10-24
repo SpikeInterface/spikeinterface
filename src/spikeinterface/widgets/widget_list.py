@@ -10,6 +10,8 @@ from .confusion_matrix import ConfusionMatrixWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
 from .isi_distribution import ISIDistributionWidget
 from .motion import MotionWidget
+from .multicomparison_agreement import MultiCompGlobalAgreementWidget, MultiCompAgreementBySorterWidget
+from .multicomparison_graph import MultiCompGraphWidget
 from .peak_activity import PeakActivityMapWidget
 from .probe_map import ProbeMapWidget
 from .quality_metrics import QualityMetricsWidget
@@ -41,6 +43,9 @@ widget_list = [
     CrossCorrelogramsWidget,
     ISIDistributionWidget,
     MotionWidget,
+    MultiCompGlobalAgreementWidget,
+    MultiCompAgreementBySorterWidget,
+    MultiCompGraphWidget,
     PeakActivityMapWidget,
     ProbeMapWidget,
     QualityMetricsWidget,
@@ -108,6 +113,9 @@ plot_comparison_collision_by_similarity = ComparisonCollisionBySimilarityWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
 plot_isi_distribution = ISIDistributionWidget
 plot_motion = MotionWidget
+plot_multicomparison_agreement = MultiCompGlobalAgreementWidget
+plot_multicomparison_agreement_by_sorter = MultiCompAgreementBySorterWidget
+plot_multicomparison_graph = MultiCompGraphWidget
 plot_peak_activity = PeakActivityMapWidget
 plot_probe_map = ProbeMapWidget
 plot_quality_metrics = QualityMetricsWidget
