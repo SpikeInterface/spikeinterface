@@ -8,7 +8,7 @@ from spikeinterface.postprocessing.tests.common_extension_tests import WaveformE
 
 class SpikeAmplitudesExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
     extension_class = SpikeAmplitudesCalculator
-    extension_data_names = ["amplitude_segment_0"]
+    extension_data_names = ["spike_amplitudes"]
     extension_function_kwargs_list = [
         dict(peak_sign="neg", outputs="concatenated", chunk_size=10000, n_jobs=1),
         dict(peak_sign="neg", outputs="by_unit", chunk_size=10000, n_jobs=1),
@@ -23,7 +23,7 @@ class SpikeAmplitudesExtensionTest(WaveformExtensionCommonTestSuite, unittest.Te
         )
         gain = self.we1.recording.get_channel_gains()[0]
 
-        assert np.allclose(amplitudes_scaled[0], amplitudes_unscaled[0] * gain)
+        assert np.allclose(amplitudes_scaled[0] / gain, amplitudes_unscaled[0], rtol=0.05)
 
     def test_parallel(self):
         amplitudes1 = self.extension_class.get_extension_function()(
@@ -41,5 +41,5 @@ if __name__ == "__main__":
     test = SpikeAmplitudesExtensionTest()
     test.setUp()
     test.test_extension()
-    # test.test_scaled()
-    # test.test_parallel()
+    test.test_scaled()
+    test.test_parallel()

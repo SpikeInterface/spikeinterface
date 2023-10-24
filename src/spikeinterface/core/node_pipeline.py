@@ -39,6 +39,13 @@ base_peak_dtype = [
     ("amplitude", "float64"),
     ("segment_index", "int64"),
 ]
+spike_peak_dtype = [
+    ("sample_index", "int64"),
+    ("channel_index", "int64"),
+    ("amplitude", "float64"),
+    ("segment_index", "int64"),
+    ("unit_index", "int64"),
+]
 
 
 class PipelineNode:
@@ -220,8 +227,9 @@ class SpikeRetriever(PeakSource):
 
 def sorting_to_peaks(sorting, extremum_channel_inds):
     spikes = sorting.to_spike_vector()
-    peaks = np.zeros(spikes.size, dtype=base_peak_dtype)
+    peaks = np.zeros(spikes.size, dtype=spike_peak_dtype)
     peaks["sample_index"] = spikes["sample_index"]
+    peaks["unit_index"] = spikes["unit_index"]
     extremum_channel_inds_ = np.array([extremum_channel_inds[unit_id] for unit_id in sorting.unit_ids])
     peaks["channel_index"] = extremum_channel_inds_[spikes["unit_index"]]
     peaks["amplitude"] = 0.0
