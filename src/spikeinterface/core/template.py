@@ -9,7 +9,7 @@ class Templates:
     """
     A class to represent spike templates, which can be either dense or sparse.
 
-    Attributes
+    It is constructed with the following parameters:
     ----------
     templates_array : np.ndarray
         Array containing the templates data.
@@ -17,13 +17,21 @@ class Templates:
         Sampling frequency of the templates.
     nbefore : int
         Number of samples before the spike peak.
-    sparsity_mask : np.ndarray, optional
+    sparsity_mask : np.ndarray, optional (default=None)
         Boolean array indicating the sparsity pattern of the templates.
         If `None`, the templates are considered dense.
-    channel_ids : np.ndarray, optional
+    channel_ids : np.ndarray, optional (default=None)
         Array of channel IDs. If `None`, defaults to an array of increasing integers.
-    unit_ids : np.ndarray, optional
+    unit_ids : np.ndarray, optional (default=None)
         Array of unit IDs. If `None`, defaults to an array of increasing integers.
+    check_for_consistent_sparsity : bool, optional (default=True)
+        When passing a sparsity_mask, this checks that the templates array is also sparse and that it matches the
+        structure fo the sparsity_masl.
+
+    The following attributes are avaialble after construction:
+
+    Attributes
+    ----------
     num_units : int
         Number of units in the templates. Automatically determined from `templates_array`.
     num_samples : int
@@ -49,7 +57,7 @@ class Templates:
     channel_ids: np.ndarray = None
     unit_ids: np.ndarray = None
 
-    check_template_array_and_sparsity_mask_are_consistentency: bool = True
+    check_for_consistent_sparsity: bool = True
 
     num_units: int = field(init=False)
     num_samples: int = field(init=False)
@@ -85,7 +93,7 @@ class Templates:
             )
 
             # Test that the templates are sparse if a sparsity mask is passed
-            if self.check_template_array_and_sparsity_mask_are_consistentency:
+            if self.check_for_consistent_sparsity:
                 if not self._are_passed_templates_sparse():
                     raise ValueError("Sparsity mask passed but the templates are not sparse")
 
