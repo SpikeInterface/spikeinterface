@@ -6,12 +6,9 @@ from spikeinterface.core import NumpySorting
 from spikeinterface.qualitymetrics import compute_quality_metrics
 from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_ground_truth
 from spikeinterface.widgets import (
-    plot_sorting_performance,
     plot_agreement_matrix,
     plot_comparison_collision_by_similarity,
-    plot_unit_templates,
     plot_unit_waveforms,
-    plot_gt_performances,
 )
 
 import time
@@ -474,13 +471,12 @@ class BenchmarkMatching:
         ax = axs[1, 0]
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        plot_sorting_performance(comp, self.metrics, performance_name="accuracy", metric_name="snr", ax=ax, color="r")
-        plot_sorting_performance(comp, self.metrics, performance_name="recall", metric_name="snr", ax=ax, color="g")
-        plot_sorting_performance(comp, self.metrics, performance_name="precision", metric_name="snr", ax=ax, color="b")
-        ax.legend(["accuracy", "recall", "precision"])
 
-        ax = axs[1, 1]
-        plot_gt_performances(comp, ax=ax)
+        for k in ("accuracy", "recall", "precision"):
+            x = comp.get_performance()[k]
+            y = self.metrics["snr"]
+            ax.scatter(x, y, markersize=10, marker=".", label=k)
+        ax.legend()
 
         ax = axs[0, 1]
         if self.exhaustive_gt:

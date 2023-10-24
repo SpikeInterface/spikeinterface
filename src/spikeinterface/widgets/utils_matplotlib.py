@@ -50,7 +50,7 @@ def make_mpl_figure(figure=None, ax=None, axes=None, ncols=None, num_axes=None, 
                 if num_axes < ncols:
                     ncols = num_axes
                 nrows = int(np.ceil(num_axes / ncols))
-                figure, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
+                figure, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize, squeeze=False)
                 ax = None
                 # remove extra axes
                 if ncols * nrows > num_axes:
