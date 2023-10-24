@@ -1,6 +1,6 @@
 import numpy as np
 
-from spikeinterface.core.node_pipeline import run_node_pipeline, ExtractSparseWaveforms, PeakRetriever
+from spikeinterface.core.node_pipeline import run_node_pipeline, ExtractSparseWaveforms, PeakRetriever, PeakSource
 
 
 def make_multi_method_doc(methods, ident="    "):
@@ -18,7 +18,11 @@ def make_multi_method_doc(methods, ident="    "):
     return doc
 
 
-def get_prototype_spike(recording, peaks, job_kwargs, nb_peaks=1000, ms_before=0.5, ms_after=0.5):
+def get_prototype_spike(recording, peaks_or_retriever, job_kwargs, nb_peaks=1000, ms_before=0.5, ms_after=0.5):
+    if isinstance(peaks_or_retriever, PeakSource):
+        peaks = peaks_or_retriever.peaks
+    else:
+        peaks = peaks_or_retriever
     nb_peaks = min(len(peaks), nb_peaks)
     idx = np.sort(np.random.choice(len(peaks), nb_peaks, replace=False))
     peak_retriever = PeakRetriever(recording, peaks[idx])

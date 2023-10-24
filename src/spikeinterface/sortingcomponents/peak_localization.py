@@ -52,53 +52,58 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
         Array with estimated location for each spike.
         The dtype depends on the method. ('x', 'y') or ('x', 'y', 'z', 'alpha').
     """
+    _, job_kwargs = split_job_kwargs(kwargs)
     assert (
         method in possible_localization_methods
     ), f"Method {method} is not supported. Choose from {possible_localization_methods}"
-
-    method_kwargs, job_kwargs = split_job_kwargs(kwargs)
-
     peak_retriever = PeakRetriever(recording, peaks)
-    if method == "center_of_mass":
-        extract_dense_waveforms = ExtractDenseWaveforms(
-            recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
-        )
-        pipeline_nodes = [
-            peak_retriever,
-            extract_dense_waveforms,
-            LocalizeCenterOfMass(recording, parents=[peak_retriever, extract_dense_waveforms], **method_kwargs),
-        ]
-    elif method == "monopolar_triangulation":
-        extract_dense_waveforms = ExtractDenseWaveforms(
-            recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
-        )
-        pipeline_nodes = [
-            peak_retriever,
-            extract_dense_waveforms,
-            LocalizeMonopolarTriangulation(
-                recording, parents=[peak_retriever, extract_dense_waveforms], **method_kwargs
-            ),
-        ]
-    elif method == "peak_channel":
-        pipeline_nodes = [peak_retriever, LocalizePeakChannel(recording, parents=[peak_retriever], **method_kwargs)]
-    elif method == "grid_convolution":
-        if "prototype" not in method_kwargs:
-            method_kwargs["prototype"] = get_prototype_spike(
-                recording, peaks, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
-            )
-        extract_dense_waveforms = ExtractDenseWaveforms(
-            recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
-        )
-        pipeline_nodes = [
-            peak_retriever,
-            extract_dense_waveforms,
-            LocalizeGridConvolution(recording, parents=[peak_retriever, extract_dense_waveforms], **method_kwargs),
-        ]
 
+    pipeline_nodes = get_localization_pipeline_nodes(recording, peak_retriever, method, ms_before, ms_after, **kwargs)
     job_name = f"localize peaks using {method}"
     peak_locations = run_node_pipeline(recording, pipeline_nodes, job_kwargs, job_name=job_name, squeeze_output=True)
 
     return peak_locations
+
+
+def get_localization_pipeline_nodes(
+    recording, retriever, method="center_of_mass", ms_before=0.5, ms_after=0.5, **kwargs
+):
+    method_kwargs, job_kwargs = split_job_kwargs(kwargs)
+
+    if method == "center_of_mass":
+        extract_dense_waveforms = ExtractDenseWaveforms(
+            recording, parents=[retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
+        )
+        pipeline_nodes = [
+            retriever,
+            extract_dense_waveforms,
+            LocalizeCenterOfMass(recording, parents=[retriever, extract_dense_waveforms], **method_kwargs),
+        ]
+    elif method == "monopolar_triangulation":
+        extract_dense_waveforms = ExtractDenseWaveforms(
+            recording, parents=[retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
+        )
+        pipeline_nodes = [
+            retriever,
+            extract_dense_waveforms,
+            LocalizeMonopolarTriangulation(recording, parents=[retriever, extract_dense_waveforms], **method_kwargs),
+        ]
+    elif method == "peak_channel":
+        pipeline_nodes = [retriever, LocalizePeakChannel(recording, parents=[retriever], **method_kwargs)]
+    elif method == "grid_convolution":
+        if "prototype" not in method_kwargs:
+            method_kwargs["prototype"] = get_prototype_spike(
+                recording, retriever, ms_before=ms_before, ms_after=ms_after, job_kwargs=job_kwargs
+            )
+        extract_dense_waveforms = ExtractDenseWaveforms(
+            recording, parents=[retriever], ms_before=ms_before, ms_after=ms_after, return_output=False
+        )
+        pipeline_nodes = [
+            retriever,
+            extract_dense_waveforms,
+            LocalizeGridConvolution(recording, parents=[retriever, extract_dense_waveforms], **method_kwargs),
+        ]
+    return pipeline_nodes
 
 
 class LocalizeBase(PipelineNode):

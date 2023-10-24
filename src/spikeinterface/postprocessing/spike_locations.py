@@ -1,10 +1,14 @@
 import numpy as np
 
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
-
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_template_extremum_channel_peak_shift
-
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
+from spikeinterface.core.node_pipeline import (
+    SpikeRetriever,
+    ExtractDenseWaveforms,
+    run_node_pipeline,
+    find_parent_of_type,
+)
 
 
 class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
@@ -18,6 +22,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
     """
 
     extension_name = "spike_locations"
+    pipeline_compatible = True
 
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
@@ -44,13 +49,15 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         uses the`sortingcomponents.peak_localization.localize_peaks()` function to triangulate
         spike locations.
         """
-        from spikeinterface.sortingcomponents.peak_localization import localize_peaks
-
         job_kwargs = fix_job_kwargs(job_kwargs)
 
-        we = self.waveform_extractor
-
-        spike_locations = localize_peaks(we.recording, self.spikes, **self._params, **job_kwargs)
+        # build pipeline nodes
+        nodes = self.get_pipeline_nodes()
+        # and run
+        recording = self.waveform_extractor.recording
+        spike_locations = run_node_pipeline(
+            recording, nodes, job_kwargs=job_kwargs, job_name="spike locations", gather_mode="memory"
+        )
         self._extension_data["spike_locations"] = spike_locations
 
     def get_data(self, outputs="concatenated"):
@@ -87,6 +94,32 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
                     mask = spikes["unit_index"] == unit_ind
                     locations_by_unit[segment_index][unit_id] = locations[mask]
             return locations_by_unit
+
+    def get_pipeline_nodes(self):
+        from spikeinterface.sortingcomponents.peak_localization import get_localization_pipeline_nodes
+
+        method = self._params["method"]
+        ms_before = self._params["ms_before"]
+        ms_after = self._params["ms_after"]
+        method_kwargs = self._params.copy()
+        del method_kwargs["method"], method_kwargs["ms_before"], method_kwargs["ms_after"]
+        we = self.waveform_extractor
+        recording = we.recording
+        sorting = we.sorting
+        all_templates = we.get_all_templates()
+        peak_sign = "neg" if np.abs(np.min(all_templates)) > np.max(all_templates) else "pos"
+        extremum_channels_indices = get_template_extremum_channel(we, peak_sign=peak_sign, outputs="index")
+
+        retriever = SpikeRetriever(
+            recording,
+            sorting,
+            channel_from_template=True,
+            extremum_channel_inds=extremum_channels_indices,
+        )
+        nodes = get_localization_pipeline_nodes(
+            recording, retriever, method=method, ms_before=ms_before, ms_after=ms_after, **method_kwargs
+        )
+        return nodes
 
     @staticmethod
     def get_extension_function():
