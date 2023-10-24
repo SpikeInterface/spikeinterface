@@ -1,5 +1,11 @@
 import numpy as np
-from .basewidget import BaseWidget
+from typing import Union
+
+from probeinterface import ProbeGroup
+
+from .base import BaseWidget, to_attr
+from .utils import get_unit_colors
+from ..core.waveform_extractor import WaveformExtractor
 
 
 class PeakActivityMapWidget(BaseWidget):
@@ -17,8 +23,6 @@ class PeakActivityMapWidget(BaseWidget):
         to avoid multiple computation.
     detect_peaks_kwargs: None or dict
         If peaks is None here the kwargs for detect_peak function.
-    weight_with_amplitudes: bool False by default
-        Peak are weighted by amplitude
     bin_duration_s: None or float
         If None then static image
         If not None then it is an animation per bin.
@@ -28,55 +32,46 @@ class PeakActivityMapWidget(BaseWidget):
         Plot rates with interpolated map
     with_channel_ids: bool False default
         Add channel ids text on the probe
-    figure: matplotlib figure
-        The figure to be used. If not given a figure is created
-    ax: matplotlib axis
-        The axis to be used. If not given an axis is created
 
-    Returns
-    -------
-    W: ProbeMapWidget
-        The output widget
+
     """
 
     def __init__(
         self,
         recording,
-        peaks=None,
-        detect_peaks_kwargs={},
-        weight_with_amplitudes=True,
+        peaks,
         bin_duration_s=None,
         with_contact_color=True,
         with_interpolated_map=True,
         with_channel_ids=False,
         with_color_bar=True,
-        figure=None,
-        ax=None,
+        backend=None,
+        **backend_kwargs,
     ):
-        import matplotlib.pylab as plt
-        from matplotlib.animation import FuncAnimation
-        from probeinterface.plotting import plot_probe
+        data_plot = dict(
+            recording=recording,
+            peaks=peaks,
+            bin_duration_s=bin_duration_s,
+            with_contact_color=with_contact_color,
+            with_interpolated_map=with_interpolated_map,
+            with_channel_ids=with_channel_ids,
+            with_color_bar=with_color_bar,
+        )
 
-        BaseWidget.__init__(self, figure, ax)
+        BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
 
-        assert recording.get_num_segments() == 1, "Handle only one segment"
+    def plot_matplotlib(self, data_plot, **backend_kwargs):
+        import matplotlib.pyplot as plt
+        from .utils_matplotlib import make_mpl_figure
 
-        self.recording = recording
-        self.peaks = peaks
-        self.detect_peaks_kwargs = detect_peaks_kwargs
-        self.weight_with_amplitudes = weight_with_amplitudes
-        self.bin_duration_s = bin_duration_s
-        self.with_contact_color = with_contact_color
-        self.with_interpolated_map = with_interpolated_map
-        self.with_channel_ids = with_channel_ids
+        dp = to_attr(data_plot)
+        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
-    def plot(self):
-        rec = self.recording
-        peaks = self.peaks
-        if peaks is None:
-            from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+        # self.make_mpl_figure(**backend_kwargs)
+        self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
-            peaks = detect_peaks(rec, **self.detect_peaks_kwargs)
+        rec = dp.recording
+        peaks = dp.peaks
 
         fs = rec.get_sampling_frequency()
         duration = rec.get_total_duration()
@@ -88,24 +83,33 @@ class PeakActivityMapWidget(BaseWidget):
         )
         probe = probes[0]
 
-        if self.bin_duration_s is None:
-            self._plot_one_bin(rec, probe, peaks, duration)
+        if dp.bin_duration_s is None:
+            self._plot_one_bin(
+                rec, probe, peaks, duration, dp.with_channel_ids, dp.with_contact_color, dp.with_interpolated_map
+            )
         else:
-            bin_size = int(self.bin_duration_s * fs)
-            num_frames = int(duration / self.bin_duration_s)
+            bin_size = int(dp.bin_duration_s * fs)
+            num_frames = int(duration / dp.bin_duration_s)
 
             def animate_func(i):
                 i0, i1 = np.searchsorted(peaks["sample_index"], [bin_size * i, bin_size * (i + 1)])
                 local_peaks = peaks[i0:i1]
-                artists = self._plot_one_bin(rec, probe, local_peaks, self.bin_duration_s)
+                artists = self._plot_one_bin(
+                    rec,
+                    probe,
+                    local_peaks,
+                    dp.with_channel_ids,
+                    dp.bin_duration_s,
+                    dp.with_contact_color,
+                    dp.with_interpolated_map,
+                )
                 return artists
 
             from matplotlib.animation import FuncAnimation
 
             self.animation = FuncAnimation(self.figure, animate_func, frames=num_frames, interval=100, blit=True)
 
-    def _plot_one_bin(self, rec, probe, peaks, duration):
-        # TODO: @alessio weight_with_amplitudes is not implemented yet
+    def _plot_one_bin(self, rec, probe, peaks, duration, with_channel_ids, with_contact_color, with_interpolated_map):
         rates = np.zeros(rec.get_num_channels(), dtype="float64")
         for chan_ind, chan_id in enumerate(rec.channel_ids):
             mask = peaks["channel_index"] == chan_ind
@@ -113,9 +117,9 @@ class PeakActivityMapWidget(BaseWidget):
             rates[chan_ind] = num_spike / duration
 
         artists = ()
-        if self.with_contact_color:
+        if with_contact_color:
             text_on_contact = None
-            if self.with_channel_ids:
+            if with_channel_ids:
                 text_on_contact = self.recording.channel_ids
 
             from probeinterface.plotting import plot_probe
@@ -130,7 +134,7 @@ class PeakActivityMapWidget(BaseWidget):
             )
             artists = artists + (poly, poly_contour)
 
-        if self.with_interpolated_map:
+        if with_interpolated_map:
             image, xlims, ylims = probe.to_image(
                 rates, pixel_size=0.5, num_pixel=None, method="linear", xlims=None, ylims=None
             )
@@ -138,12 +142,3 @@ class PeakActivityMapWidget(BaseWidget):
             artists = artists + (im,)
 
         return artists
-
-
-def plot_peak_activity_map(*args, **kwargs):
-    W = PeakActivityMapWidget(*args, **kwargs)
-    W.plot()
-    return W
-
-
-plot_peak_activity_map.__doc__ = PeakActivityMapWidget.__doc__

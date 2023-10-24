@@ -29,7 +29,7 @@ class BenchmarkClustering:
     def __init__(self, recording, gt_sorting, method, exhaustive_gt=True, tmp_folder=None, job_kwargs={}, verbose=True):
         self.method = method
 
-        assert method in clustering_methods, "Clustering method should be in %s" % clustering_methods.keys()
+        assert method in clustering_methods, f"Clustering method should be in {clustering_methods.keys()}"
 
         self.verbose = verbose
         self.recording = recording

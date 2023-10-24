@@ -84,6 +84,10 @@ class TestWidgets(unittest.TestCase):
 
         cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
 
+        from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+
+        cls.peaks = detect_peaks(cls.recording, method="locally_exclusive")
+
     def test_plot_traces(self):
         possible_backends = list(sw.TracesWidget.get_possible_backends())
         for backend in possible_backends:
@@ -377,6 +381,18 @@ class TestWidgets(unittest.TestCase):
             if backend not in self.skip_backends:
                 sw.plot_unit_probe_map(self.we_dense)
 
+    def test_plot_unit_presence(self):
+        possible_backends = list(sw.UnitPresenceWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_unit_presence(self.sorting)
+
+    def test_plot_peak_activity(self):
+        possible_backends = list(sw.PeakActivityMapWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_peak_activity(self.recording, self.peaks)
+
 
 if __name__ == "__main__":
     # unittest.main()
@@ -395,15 +411,17 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_summary()
     # mytest.test_crosscorrelogram()
-    mytest.test_isi_distribution()
+    # mytest.test_isi_distribution()
     # mytest.test_unit_locations()
     # mytest.test_quality_metrics()
-    mytest.test_template_metrics()
+    # mytest.test_template_metrics()
     # mytest.test_amplitudes()
     # mytest.test_plot_agreement_matrix()
     # mytest.test_plot_confusion_matrix()
     # mytest.test_plot_probe_map()
     # mytest.test_plot_rasters()
     # mytest.test_plot_unit_probe_map()
+    # mytest.test_plot_unit_presence()
+    mytest.test_plot_peak_activity()
 
     plt.show()
