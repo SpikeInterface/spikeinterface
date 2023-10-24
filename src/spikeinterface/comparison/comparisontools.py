@@ -3,7 +3,6 @@ Some functions internally use by SortingComparison.
 """
 
 import numpy as np
-import itertools
 
 
 def count_matching_events(times1, times2, delta=10):
@@ -275,9 +274,9 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=None):
     sample_frames2_sorted = sample_frames2_all[sort_indices2]
     unit_indices2_sorted = unit_indices2_all[sort_indices2]
 
-    optimized_compute_matching_matrix = get_optimized_compute_matching_matrix()
+    compute_matching_matrix = get_optimized_compute_matching_matrix()
 
-    full_matrix = optimized_compute_matching_matrix(
+    full_matrix = compute_matching_matrix(
         sample_frames1_sorted,
         sample_frames2_sorted,
         unit_indices1_sorted,
@@ -289,9 +288,9 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=None):
 
     import pandas as pd
 
-    df = pd.DataFrame(full_matrix, index=unit1_ids, columns=unit2_ids)
+    match_event_counts_df = pd.DataFrame(full_matrix, index=unit1_ids, columns=unit2_ids)
 
-    return df
+    return match_event_counts_df
 
 
 def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
