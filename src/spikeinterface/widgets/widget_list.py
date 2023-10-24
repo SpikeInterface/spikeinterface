@@ -10,8 +10,7 @@ from .confusion_matrix import ConfusionMatrixWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
 from .isi_distribution import ISIDistributionWidget
 from .motion import MotionWidget
-from .multicomparison_agreement import MultiCompGlobalAgreementWidget, MultiCompAgreementBySorterWidget
-from .multicomparison_graph import MultiCompGraphWidget
+from .multicomparison import MultiCompGraphWidget, MultiCompGlobalAgreementWidget, MultiCompAgreementBySorterWidget
 from .peak_activity import PeakActivityMapWidget
 from .probe_map import ProbeMapWidget
 from .quality_metrics import QualityMetricsWidget
