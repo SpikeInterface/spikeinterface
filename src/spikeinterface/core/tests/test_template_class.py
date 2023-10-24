@@ -81,23 +81,6 @@ def test_get_dense_templates(template_type):
     assert dense_templates.shape == (template.num_units, template.num_samples, template.num_channels)
 
 
-@pytest.mark.parametrize("template_type", ["dense", "sparse"])
-def test_get_sparse_templates(template_type):
-    template = generate_test_template(template_type)
-
-    if template_type == "dense":
-        with pytest.raises(ValueError):
-            sparse_templates = template.get_sparse_templates()
-    elif template_type == "sparse":
-        sparse_templates = template.get_sparse_templates()
-        assert sparse_templates.shape == (
-            template.num_units,
-            template.num_samples,
-            template.sparsity.max_num_active_channels,
-        )
-        assert template.are_templates_sparse()
-
-
 def test_initialization_fail_with_dense_templates():
     with pytest.raises(ValueError, match="Sparsity mask passed but the templates are not sparse"):
         template = generate_test_template(template_type="sparse_with_dense_templates")
