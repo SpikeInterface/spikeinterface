@@ -883,7 +883,7 @@ default_unit_params_range = dict(
     positive_amplitude=(0.1, 0.25),
     smooth_ms=(0.03, 0.07),
     decay_power=(1.4, 1.8),
-    propagation_speed=(250.0, 350.0),  # ms  / um
+    propagation_speed=(250.0, 350.0),  # um  / ms
 )
 
 
