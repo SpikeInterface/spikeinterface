@@ -9,7 +9,7 @@ class Templates:
     """
     A class to represent spike templates, which can be either dense or sparse.
 
-    It is constructed with the following parameters:
+    Parameters
     ----------
     templates_array : np.ndarray
         Array containing the templates data.
