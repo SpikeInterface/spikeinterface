@@ -38,13 +38,16 @@ backend_kwargs_desc = {
         "width_cm": "Width of the figure in cm (default 10)",
         "height_cm": "Height of the figure in cm (default 6)",
         "display": "If True, widgets are immediately displayed",
+        # "controllers": ""
     },
+    "ephyviewer": {},
 }
 
 default_backend_kwargs = {
     "matplotlib": {"figure": None, "ax": None, "axes": None, "ncols": 5, "figsize": None, "figtitle": None},
     "sortingview": {"generate_url": True, "display": True, "figlabel": None, "height": None},
-    "ipywidgets": {"width_cm": 25, "height_cm": 10, "display": True},
+    "ipywidgets": {"width_cm": 25, "height_cm": 10, "display": True, "controllers": None},
+    "ephyviewer": {},
 }
 
 

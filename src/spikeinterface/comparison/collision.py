@@ -1,13 +1,15 @@
-import numpy as np
-
 from .paircomparisons import GroundTruthComparison
+from .groundtruthstudy import GroundTruthStudy
 from .comparisontools import make_collision_events
+
+import numpy as np
 
 
 class CollisionGTComparison(GroundTruthComparison):
     """
-    This class is an extension of GroundTruthComparison by focusing
-    to benchmark spike in collision
+    This class is an extension of GroundTruthComparison by focusing to benchmark spike in collision.
+
+    This class needs maintenance and need a bit of refactoring.
 
 
     collision_lag: float
@@ -156,3 +158,73 @@ class CollisionGTComparison(GroundTruthComparison):
         pair_names = pair_names[order]
 
         return similarities, recall_scores, pair_names
+
+
+class CollisionGTStudy(GroundTruthStudy):
+    def run_comparisons(self, case_keys=None, exhaustive_gt=True, collision_lag=2.0, nbins=11, **kwargs):
+        _kwargs = dict()
+        _kwargs.update(kwargs)
+        _kwargs["exhaustive_gt"] = exhaustive_gt
+        _kwargs["collision_lag"] = collision_lag
+        _kwargs["nbins"] = nbins
+        GroundTruthStudy.run_comparisons(self, case_keys=None, comparison_class=CollisionGTComparison, **_kwargs)
+        self.exhaustive_gt = exhaustive_gt
+        self.collision_lag = collision_lag
+
+    def get_lags(self, key):
+        comp = self.comparisons[key]
+        fs = comp.sorting1.get_sampling_frequency()
+        lags = comp.bins / fs * 1000.0
+        return lags
+
+    def precompute_scores_by_similarities(self, case_keys=None, good_only=False, min_accuracy=0.9):
+        import sklearn
+
+        if case_keys is None:
+            case_keys = self.cases.keys()
+
+        self.all_similarities = {}
+        self.all_recall_scores = {}
+        self.good_only = good_only
+
+        for key in case_keys:
+            templates = self.get_templates(key)
+            flat_templates = templates.reshape(templates.shape[0], -1)
+            similarity = sklearn.metrics.pairwise.cosine_similarity(flat_templates)
+            comp = self.comparisons[key]
+            similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(
+                similarity, good_only=good_only, min_accuracy=min_accuracy
+            )
+            self.all_similarities[key] = similarities
+            self.all_recall_scores[key] = recall_scores
+
+    def get_mean_over_similarity_range(self, similarity_range, key):
+        idx = (self.all_similarities[key] >= similarity_range[0]) & (self.all_similarities[key] <= similarity_range[1])
+        all_similarities = self.all_similarities[key][idx]
+        all_recall_scores = self.all_recall_scores[key][idx]
+
+        order = np.argsort(all_similarities)
+        all_similarities = all_similarities[order]
+        all_recall_scores = all_recall_scores[order, :]
+
+        mean_recall_scores = np.nanmean(all_recall_scores, axis=0)
+
+        return mean_recall_scores
+
+    def get_lag_profile_over_similarity_bins(self, similarity_bins, key):
+        all_similarities = self.all_similarities[key]
+        all_recall_scores = self.all_recall_scores[key]
+
+        order = np.argsort(all_similarities)
+        all_similarities = all_similarities[order]
+        all_recall_scores = all_recall_scores[order, :]
+
+        result = {}
+
+        for i in range(similarity_bins.size - 1):
+            cmin, cmax = similarity_bins[i], similarity_bins[i + 1]
+            amin, amax = np.searchsorted(all_similarities, [cmin, cmax])
+            mean_recall_scores = np.nanmean(all_recall_scores[amin:amax], axis=0)
+            result[(cmin, cmax)] = mean_recall_scores
+
+        return result

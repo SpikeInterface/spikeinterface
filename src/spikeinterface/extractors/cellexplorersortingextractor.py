@@ -40,7 +40,6 @@ class CellExplorerSortingExtractor(BaseSorting):
         sampling_frequency: float | None = None,
         session_info_file_path: str | Path | None = None,
         spikes_matfile_path: str | Path | None = None,
-        session_info_matfile_path: str | Path | None = None,
     ):
         try:
             from pymatreader import read_mat
@@ -66,26 +65,6 @@ class CellExplorerSortingExtractor(BaseSorting):
                     DeprecationWarning,
                 )
             file_path = spikes_matfile_path if file_path is None else file_path
-
-        if session_info_matfile_path is not None:
-            # Raise an error if the warning period has expired
-            deprecation_issued = datetime.datetime(2023, 4, 1)
-            deprecation_deadline = deprecation_issued + datetime.timedelta(days=180)
-            if datetime.datetime.now() > deprecation_deadline:
-                raise ValueError(
-                    "The session_info_matfile_path argument is no longer supported in. Use session_info_file_path instead."
-                )
-
-            # Otherwise, issue a DeprecationWarning
-            else:
-                warnings.warn(
-                    "The session_info_matfile_path argument is deprecated and will be removed in six months. "
-                    "Use session_info_file_path instead.",
-                    DeprecationWarning,
-                )
-            session_info_file_path = (
-                session_info_matfile_path if session_info_file_path is None else session_info_file_path
-            )
 
         self.spikes_cellinfo_path = Path(file_path)
         self.session_path = self.spikes_cellinfo_path.parent
@@ -139,7 +118,7 @@ class CellExplorerSortingExtractor(BaseSorting):
         spike_times = spikes_data["times"]
 
         # CellExplorer reports spike times in units seconds; SpikeExtractors uses time units of sampling frames
-        unit_ids = unit_ids[:].tolist()
+        unit_ids = [str(unit_id) for unit_id in unit_ids]
         spiketrains_dict = {unit_id: spike_times[index] for index, unit_id in enumerate(unit_ids)}
         for unit_id in unit_ids:
             spiketrains_dict[unit_id] = (sampling_frequency * spiketrains_dict[unit_id]).round().astype(np.int64)

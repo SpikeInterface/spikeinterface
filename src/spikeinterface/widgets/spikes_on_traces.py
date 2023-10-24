@@ -30,11 +30,10 @@ class SpikesOnTracesWidget(BaseWidget):
     sparsity : ChannelSparsity or None
         Optional ChannelSparsity to apply.
         If WaveformExtractor is already sparse, the argument is ignored, default None
-       unit_colors :  dict or None
+    unit_colors :  dict or None
         If given, a dictionary with unit ids as keys and colors as values, default None
         If None, then the get_unit_colors() is internally used. (matplotlib backend)
-    mode : str
-        Three possible modes, default 'auto':
+    mode : str in ('line', 'map', 'auto') default: 'auto'
         * 'line': classical for low channel count
         * 'map': for high channel count use color heat map
         * 'auto': auto switch depending on the channel count ('line' if less than 64 channels, 'map' otherwise)
@@ -150,23 +149,19 @@ class SpikesOnTracesWidget(BaseWidget):
         sorting = we.sorting
 
         # first plot time series
-        ts_widget = TracesWidget(recording, **dp.options, backend="matplotlib", **backend_kwargs)
-        self.ax = ts_widget.ax
-        self.axes = ts_widget.axes
-        self.figure = ts_widget.figure
+        traces_widget = TracesWidget(recording, **dp.options, backend="matplotlib", **backend_kwargs)
+        self.ax = traces_widget.ax
+        self.axes = traces_widget.axes
+        self.figure = traces_widget.figure
 
         ax = self.ax
 
-        frame_range = ts_widget.data_plot["frame_range"]
-        segment_index = ts_widget.data_plot["segment_index"]
-        min_y = np.min(ts_widget.data_plot["channel_locations"][:, 1])
-        max_y = np.max(ts_widget.data_plot["channel_locations"][:, 1])
+        frame_range = traces_widget.data_plot["frame_range"]
+        segment_index = traces_widget.data_plot["segment_index"]
+        min_y = np.min(traces_widget.data_plot["channel_locations"][:, 1])
+        max_y = np.max(traces_widget.data_plot["channel_locations"][:, 1])
 
-        n = len(ts_widget.data_plot["channel_ids"])
-        order = ts_widget.data_plot["order"]
-
-        if order is None:
-            order = np.arange(n)
+        n = len(traces_widget.data_plot["channel_ids"])
 
         if ax.get_legend() is not None:
             ax.get_legend().remove()
@@ -211,21 +206,21 @@ class SpikesOnTracesWidget(BaseWidget):
                 # construct waveforms
                 label_set = False
                 if len(spike_frames_to_plot) > 0:
-                    vspacing = ts_widget.data_plot["vspacing"]
-                    traces = ts_widget.data_plot["list_traces"][0]
+                    vspacing = traces_widget.data_plot["vspacing"]
+                    traces = traces_widget.data_plot["list_traces"][0]
 
                     waveform_idxs = spike_frames_to_plot[:, None] + np.arange(-we.nbefore, we.nafter) - frame_range[0]
-                    waveform_idxs = np.clip(waveform_idxs, 0, len(ts_widget.data_plot["times"]) - 1)
+                    waveform_idxs = np.clip(waveform_idxs, 0, len(traces_widget.data_plot["times"]) - 1)
 
-                    times = ts_widget.data_plot["times"][waveform_idxs]
+                    times = traces_widget.data_plot["times"][waveform_idxs]
 
                     # discontinuity
                     times[:, -1] = np.nan
                     times_r = times.reshape(times.shape[0] * times.shape[1])
-                    waveforms = traces[waveform_idxs]  # [:, :, order]
+                    waveforms = traces[waveform_idxs]
                     waveforms_r = waveforms.reshape((waveforms.shape[0] * waveforms.shape[1], waveforms.shape[2]))
 
-                    for i, chan_id in enumerate(ts_widget.data_plot["channel_ids"]):
+                    for i, chan_id in enumerate(traces_widget.data_plot["channel_ids"]):
                         offset = vspacing * i
                         if chan_id in chan_ids:
                             l = ax.plot(times_r, offset + waveforms_r[:, i], color=dp.unit_colors[unit])
@@ -233,13 +228,13 @@ class SpikesOnTracesWidget(BaseWidget):
                                 handles.append(l[0])
                                 labels.append(unit)
                                 label_set = True
-        ax.legend(handles, labels)
+        # ax.legend(handles, labels)
 
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
-        from .utils_ipywidgets import check_ipywidget_backend, make_unit_controller
+        from .utils_ipywidgets import check_ipywidget_backend, UnitSelector
 
         check_ipywidget_backend()
 
@@ -257,37 +252,56 @@ class SpikesOnTracesWidget(BaseWidget):
         width_cm = backend_kwargs["width_cm"]
 
         # plot timeseries
-        ts_widget = TracesWidget(we.recording, **dp.options, backend="ipywidgets", **backend_kwargs_ts)
-        self.ax = ts_widget.ax
-        self.axes = ts_widget.axes
-        self.figure = ts_widget.figure
+        self._traces_widget = TracesWidget(we.recording, **dp.options, backend="ipywidgets", **backend_kwargs_ts)
+        self.ax = self._traces_widget.ax
+        self.axes = self._traces_widget.axes
+        self.figure = self._traces_widget.figure
 
-        unit_widget, unit_controller = make_unit_controller(
-            data_plot["unit_ids"], we.unit_ids, ratios[0] * width_cm, height_cm
+        self.sampling_frequency = self._traces_widget.rec0.sampling_frequency
+
+        self.time_slider = self._traces_widget.time_slider
+
+        self.unit_selector = UnitSelector(data_plot["unit_ids"])
+        self.unit_selector.value = list(data_plot["unit_ids"])[:1]
+
+        self.widget = widgets.AppLayout(
+            center=self._traces_widget.widget, left_sidebar=self.unit_selector, pane_widths=ratios + [0]
         )
 
-        self.controller = dict()
-        self.controller.update(ts_widget.controller)
-        self.controller.update(unit_controller)
-
-        for w in self.controller.values():
-            w.observe(self._update_ipywidget)
-
-        self.widget = widgets.AppLayout(center=ts_widget.widget, left_sidebar=unit_widget, pane_widths=ratios + [0])
-
         # a first update
-        self._update_ipywidget(None)
+        self._update_ipywidget()
+
+        # remove callback from traces_widget
+        self.unit_selector.observe(self._update_ipywidget, names="value", type="change")
+        self._traces_widget.time_slider.observe(self._update_ipywidget, names="value", type="change")
+        self._traces_widget.channel_selector.observe(self._update_ipywidget, names="value", type="change")
+        self._traces_widget.scaler.observe(self._update_ipywidget, names="value", type="change")
 
         if backend_kwargs["display"]:
             display(self.widget)
 
-    def _update_ipywidget(self, change):
+    def _update_ipywidget(self, change=None):
         self.ax.clear()
 
-        unit_ids = self.controller["unit_ids"].value
+        # TODO later: this is still a bit buggy because it make double refresh one from _traces_widget and one internal
+
+        unit_ids = self.unit_selector.value
+        start_frame, end_frame, segment_index = self._traces_widget.time_slider.value
+        channel_ids = self._traces_widget.channel_selector.value
+        mode = self._traces_widget.mode_selector.value
 
         data_plot = self.next_data_plot
         data_plot["unit_ids"] = unit_ids
+        data_plot["options"].update(
+            dict(
+                channel_ids=channel_ids,
+                segment_index=segment_index,
+                # frame_range=(start_frame, end_frame),
+                time_range=np.array([start_frame, end_frame]) / self.sampling_frequency,
+                mode=mode,
+                with_colorbar=False,
+            )
+        )
 
         backend_kwargs = {}
         backend_kwargs["ax"] = self.ax

@@ -210,9 +210,7 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
         # invert recording
         rec_inv = scale(rec, gain=-1.0)
 
-        we_inv = WaveformExtractor.create(rec_inv, sort, self.cache_folder / "toy_waveforms_inv")
-        we_inv.set_params(ms_before=3.0, ms_after=4.0, max_spikes_per_unit=None)
-        we_inv.run_extract_waveforms(n_jobs=1, chunk_size=30000)
+        we_inv = extract_waveforms(rec_inv, sort, self.cache_folder / "toy_waveforms_inv")
 
         # compute amplitudes
         _ = compute_spike_amplitudes(we, peak_sign="neg")
@@ -261,7 +259,8 @@ class QualityMetricsExtensionTest(WaveformExtensionCommonTestSuite, unittest.Tes
             we_sparse, metric_names=metric_names, sparsity=None, seed=0, n_jobs=2
         )
         for metric_name in metrics.columns:
-            assert np.allclose(metrics[metric_name], metrics_par[metric_name])
+            # NaNs are skipped
+            assert np.allclose(metrics[metric_name].dropna(), metrics_par[metric_name].dropna())
 
     def test_recordingless(self):
         we = self.we_long
@@ -305,7 +304,7 @@ if __name__ == "__main__":
     test.setUp()
     # test.test_drift_metrics()
     # test.test_extension()
-    # test.test_nn_metrics()
+    test.test_nn_metrics()
     # test.test_peak_sign()
     # test.test_empty_units()
-    test.test_recordingless()
+    # test.test_recordingless()

@@ -128,7 +128,7 @@ class MetricsBaseWidget(BaseWidget):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
-        from .utils_ipywidgets import check_ipywidget_backend, make_unit_controller
+        from .utils_ipywidgets import check_ipywidget_backend, UnitSelector
 
         check_ipywidget_backend()
 
@@ -147,26 +147,20 @@ class MetricsBaseWidget(BaseWidget):
             with output:
                 self.figure = plt.figure(figsize=((ratios[1] * width_cm) * cm, height_cm * cm))
                 plt.show()
-        if data_plot["unit_ids"] is None:
-            data_plot["unit_ids"] = []
 
-        unit_widget, unit_controller = make_unit_controller(
-            data_plot["unit_ids"], list(data_plot["unit_colors"].keys()), ratios[0] * width_cm, height_cm
-        )
-
-        self.controller = unit_controller
-
-        for w in self.controller.values():
-            w.observe(self._update_ipywidget)
+        self.unit_selector = UnitSelector(data_plot["sorting"].unit_ids)
+        self.unit_selector.value = []
 
         self.widget = widgets.AppLayout(
             center=self.figure.canvas,
-            left_sidebar=unit_widget,
+            left_sidebar=self.unit_selector,
             pane_widths=ratios + [0],
         )
 
         # a first update
         self._update_ipywidget(None)
+
+        self.unit_selector.observe(self._update_ipywidget, names="value", type="change")
 
         if backend_kwargs["display"]:
             display(self.widget)
@@ -174,7 +168,7 @@ class MetricsBaseWidget(BaseWidget):
     def _update_ipywidget(self, change):
         from matplotlib.lines import Line2D
 
-        unit_ids = self.controller["unit_ids"].value
+        unit_ids = self.unit_selector.value
 
         unit_colors = self.data_plot["unit_colors"]
         # matplotlib next_data_plot dict update at each call
@@ -198,6 +192,7 @@ class MetricsBaseWidget(BaseWidget):
             self.plot_matplotlib(self.data_plot, **backend_kwargs)
 
         if len(unit_ids) > 0:
+            # TODO later make option to control legend or not
             for l in self.figure.legends:
                 l.remove()
             handles = [
@@ -229,7 +224,7 @@ class MetricsBaseWidget(BaseWidget):
 
         metrics_sv = []
         for col in metric_names:
-            dtype = metrics.iloc[0][col].dtype
+            dtype = np.array(metrics.iloc[0][col]).dtype
             metric = vv.UnitMetricsGraphMetric(key=col, label=col, dtype=dtype.str)
             metrics_sv.append(metric)
 

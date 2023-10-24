@@ -49,7 +49,7 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
 
         self.bad_channel_ids = bad_channel_ids
         self._bad_channel_idxs = recording.ids_to_indices(self.bad_channel_ids)
-        self._good_channel_idxs = ~np.in1d(np.arange(recording.get_num_channels()), self._bad_channel_idxs)
+        self._good_channel_idxs = ~np.isin(np.arange(recording.get_num_channels()), self._bad_channel_idxs)
         self._bad_channel_idxs.setflags(write=False)
 
         if sigma_um is None:

@@ -6,7 +6,13 @@ import platform
 import zarr
 
 
-from spikeinterface.core import generate_recording, generate_sorting, NumpySorting, ChannelSparsity
+from spikeinterface.core import (
+    generate_recording,
+    generate_sorting,
+    NumpySorting,
+    ChannelSparsity,
+    generate_ground_truth_recording,
+)
 from spikeinterface import WaveformExtractor, BaseRecording, extract_waveforms, load_waveforms
 from spikeinterface.core.waveform_extractor import precompute_sparsity
 
@@ -309,7 +315,7 @@ def test_recordingless():
     recording = recording.save(folder=cache_folder / "recording1")
     sorting = sorting.save(folder=cache_folder / "sorting1")
 
-    # recording and sorting are not dumpable
+    # recording and sorting are not serializable
     wf_folder = cache_folder / "wf_recordingless"
 
     # save with relative paths
@@ -340,6 +346,8 @@ def test_recordingless():
 
     # delete original recording and rely on rec_attributes
     if platform.system() != "Windows":
+        # this avoid reference on the folder
+        del we, recording
         shutil.rmtree(cache_folder / "recording1")
         we_loaded = WaveformExtractor.load(wf_folder, with_recording=False)
         assert not we_loaded.has_recording()
@@ -380,14 +388,17 @@ def test_unfiltered_extraction():
             shutil.rmtree(wf_folder)
         we = WaveformExtractor.create(recording, sorting, wf_folder, mode=mode, allow_unfiltered=True)
 
-        we.set_params(ms_before=3.0, ms_after=4.0, max_spikes_per_unit=500)
-
+        ms_before = 2.0
+        ms_after = 3.0
+        max_spikes_per_unit = 500
+        num_samples = int((ms_before + ms_after) * sampling_frequency / 1000.0)
+        we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes_per_unit)
         we.run_extract_waveforms(n_jobs=1, chunk_size=30000)
         we.run_extract_waveforms(n_jobs=4, chunk_size=30000, progress_bar=True)
 
         wfs = we.get_waveforms(0)
-        assert wfs.shape[0] <= 500
-        assert wfs.shape[1:] == (210, num_channels)
+        assert wfs.shape[0] <= max_spikes_per_unit
+        assert wfs.shape[1:] == (num_samples, num_channels)
 
         wfs, sampled_index = we.get_waveforms(0, with_index=True)
 
@@ -398,18 +409,18 @@ def test_unfiltered_extraction():
         wfs = we.get_waveforms(0)
 
         template = we.get_template(0)
-        assert template.shape == (210, 2)
+        assert template.shape == (num_samples, 2)
         templates = we.get_all_templates()
-        assert templates.shape == (num_units, 210, num_channels)
+        assert templates.shape == (num_units, num_samples, num_channels)
 
         wf_std = we.get_template(0, mode="std")
-        assert wf_std.shape == (210, num_channels)
+        assert wf_std.shape == (num_samples, num_channels)
         wfs_std = we.get_all_templates(mode="std")
-        assert wfs_std.shape == (num_units, 210, num_channels)
+        assert wfs_std.shape == (num_units, num_samples, num_channels)
 
         wf_segment = we.get_template_segment(unit_id=0, segment_index=0)
-        assert wf_segment.shape == (210, num_channels)
-        assert wf_segment.shape == (210, num_channels)
+        assert wf_segment.shape == (num_samples, num_channels)
+        assert wf_segment.shape == (num_samples, num_channels)
 
 
 def test_portability():
@@ -510,10 +521,45 @@ def test_compute_sparsity():
         print(sparsity)
 
 
+def test_non_json_object():
+    recording, sorting = generate_ground_truth_recording(
+        durations=[30, 40],
+        sampling_frequency=30000.0,
+        num_channels=32,
+        num_units=5,
+    )
+
+    # recording is not save to keep it in memory
+    sorting = sorting.save()
+
+    wf_folder = cache_folder / "test_waveform_extractor"
+    if wf_folder.is_dir():
+        shutil.rmtree(wf_folder)
+
+    we = extract_waveforms(
+        recording,
+        sorting,
+        wf_folder,
+        mode="folder",
+        sparsity=None,
+        sparse=False,
+        ms_before=1.0,
+        ms_after=1.6,
+        max_spikes_per_unit=50,
+        n_jobs=4,
+        chunk_size=30000,
+        progress_bar=True,
+    )
+
+    # This used to fail because of json
+    we = load_waveforms(wf_folder)
+
+
 if __name__ == "__main__":
-    test_WaveformExtractor()
+    # test_WaveformExtractor()
     # test_extract_waveforms()
-    # test_sparsity()
     # test_portability()
-    # test_recordingless()
+    test_recordingless()
     # test_compute_sparsity()
+    # test_non_json_object()
+    test_empty_sorting()

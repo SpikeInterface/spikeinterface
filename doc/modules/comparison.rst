@@ -248,21 +248,19 @@ An **over-merged** unit has a relatively high agreement (>= 0.2 by default) for 
 We also have a high level class to compare many sorters against ground truth:
 :py:func:`~spiekinterface.comparison.GroundTruthStudy()`
 
-A study is a systematic performance comparison of several ground truth recordings with several sorters.
+A study is a systematic performance comparison of several ground truth recordings with several sorters or several cases
+like the different parameter sets.
 
-The study class proposes high-level tool functions to run many ground truth comparisons with many sorters
+The study class proposes high-level tool functions to run many ground truth comparisons with many "cases"
 on many recordings and then collect and aggregate results in an easy way.
 
 The all mechanism is based on an intrinsic organization into a "study_folder" with several subfolder:
 
-  * raw_files : contain a copy of recordings in binary format
-  * sorter_folders : contains outputs of sorters
-  * ground_truth : contains a copy of sorting ground truth in npz format
-  * sortings: contains light copy of all sorting in npz format
-  * tables: some tables in csv format
-
-In order to run and rerun the computation all gt_sorting and recordings are copied to a fast and universal format:
-binary (for recordings) and npz (for sortings).
+  * datasets: contains ground truth datasets
+  * sorters : contains outputs of sorters
+  * sortings: contains light copy of all sorting
+  * metrics: contains metrics
+  * ...
 
 
 .. code-block:: python
@@ -274,28 +272,51 @@ binary (for recordings) and npz (for sortings).
     import spikeinterface.widgets as sw
     from spikeinterface.comparison import GroundTruthStudy
 
-    # Setup study folder
-    rec0, gt_sorting0 = se.toy_example(num_channels=4, duration=10, seed=10, num_segments=1)
-    rec1, gt_sorting1 = se.toy_example(num_channels=4, duration=10, seed=0, num_segments=1)
-    gt_dict = {
-        'rec0': (rec0, gt_sorting0),
-        'rec1': (rec1, gt_sorting1),
+
+    # generate 2 simulated datasets (could be also mearec files)
+    rec0, gt_sorting0 = generate_ground_truth_recording(num_channels=4, durations=[30.], seed=42)
+    rec1, gt_sorting1 = generate_ground_truth_recording(num_channels=4, durations=[30.], seed=91)
+
+    datasets = {
+        "toy0": (rec0, gt_sorting0),
+        "toy1": (rec1, gt_sorting1),
     }
-    study_folder = 'a_study_folder'
-    study = GroundTruthStudy.create(study_folder, gt_dict)
 
-    # all sorters for all recordings in one function.
-    sorter_list = ['herdingspikes', 'tridesclous', ]
-    study.run_sorters(sorter_list, mode_if_folder_exists="keep")
+    # define some "cases" here we want to tests tridesclous2 on 2 datasets and spykingcircus on one dataset
+    # so it is a two level study (sorter_name, dataset)
+    # this could be more complicated like (sorter_name, dataset, params)
+    cases = {
+        ("tdc2", "toy0"): {
+            "label": "tridesclous2 on tetrode0",
+            "dataset": "toy0",
+            "run_sorter_params": {
+                "sorter_name": "tridesclous2",
+            },
+        },
+        ("tdc2", "toy1"): {
+            "label": "tridesclous2 on tetrode1",
+            "dataset": "toy1",
+            "run_sorter_params": {
+                "sorter_name": "tridesclous2",
+            },
+        },
 
-    # You can re-run **run_study_sorters** as many times as you want.
-    # By default **mode='keep'** so only uncomputed sorters are re-run.
-    # For instance, just remove the "sorter_folders/rec1/herdingspikes" to re-run
-    # only one sorter on one recording.
-    #
-    # Then we copy the spike sorting outputs into a separate subfolder.
-    # This allow us to remove the "large" sorter_folders.
-    study.copy_sortings()
+        ("sc", "toy0"): {
+            "label": "spykingcircus2 on tetrode0",
+            "dataset": "toy0",
+            "run_sorter_params": {
+                "sorter_name": "spykingcircus",
+                "docker_image": True
+            },
+        },
+    }
+    # this initilize a folder
+    study = GroundTruthStudy.create(study_folder, datasets=datasets, cases=cases,
+                                    levels=["sorter_name", "dataset"])
+
+
+    # all cases in one function
+    study.run_sorters()
 
     # Collect comparisons
     #  
@@ -306,11 +327,11 @@ binary (for recordings) and npz (for sortings).
     # Note: use exhaustive_gt=True when you know exactly how many
     # units in ground truth (for synthetic datasets)
 
+    # run all comparisons and loop over the results
     study.run_comparisons(exhaustive_gt=True)
-
-    for (rec_name, sorter_name), comp in study.comparisons.items():
+    for key, comp in study.comparisons.items():
         print('*' * 10)
-        print(rec_name, sorter_name)
+        print(key)
         # raw counting of tp/fp/...
         print(comp.count_score)
         # summary
@@ -323,26 +344,27 @@ binary (for recordings) and npz (for sortings).
 
     # Collect synthetic dataframes and display
     # As shown previously, the performance is returned as a pandas dataframe.
-    # The :py:func:`~spikeinterface.comparison.aggregate_performances_table()` function,
+    # The :py:func:`~spikeinterface.comparison.get_performance_by_unit()` function,
     # gathers all the outputs in the study folder and merges them in a single dataframe.
+    # Same idea for :py:func:`~spikeinterface.comparison.get_count_units()`
 
-    dataframes = study.aggregate_dataframes()
+    # this is a dataframe
+    perfs = study.get_performance_by_unit()
 
-    # Pandas dataframes can be nicely displayed as tables in the notebook.
-    print(dataframes.keys())
+    # this is a dataframe
+    unit_counts = study.get_count_units()
 
     # we can also access run times
-    print(dataframes['run_times'])
+    run_times = study.get_run_times()
+    print(run_times)
 
     # Easy plot with seaborn
-    run_times = dataframes['run_times']
     fig1, ax1 = plt.subplots()
     sns.barplot(data=run_times, x='rec_name', y='run_time', hue='sorter_name', ax=ax1)
     ax1.set_title('Run times')
 
     ##############################################################################
 
-    perfs = dataframes['perf_by_unit']
     fig2, ax2 = plt.subplots()
     sns.swarmplot(data=perfs, x='sorter_name', y='recall', hue='rec_name', ax=ax2)
     ax2.set_title('Recall')

@@ -91,7 +91,7 @@ def run_sorter(
     sorter_name: str,
     recording: BaseRecording,
     output_folder: Optional[str] = None,
-    remove_existing_folder: bool = True,
+    remove_existing_folder: bool = False,
     delete_output_folder: bool = False,
     verbose: bool = False,
     raise_error: bool = True,
@@ -514,19 +514,19 @@ if __name__ == '__main__':
                 res_output = container_client.run_command(cmd)
                 cmd = f"cp -r {si_dev_path_unix} {si_source_folder}"
                 res_output = container_client.run_command(cmd)
-                cmd = f"pip install {si_source_folder}/spikeinterface[full]"
+                cmd = f"pip install --user {si_source_folder}/spikeinterface[full]"
             else:
                 si_source = "remote repository"
-                cmd = "pip install --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]"
+                cmd = "pip install --user --upgrade --no-input git+https://github.com/SpikeInterface/spikeinterface.git#egg=spikeinterface[full]"
             if verbose:
                 print(f"Installing dev spikeinterface from {si_source}")
             res_output = container_client.run_command(cmd)
-            cmd = "pip install --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip"
+            cmd = "pip install --user --upgrade --no-input https://github.com/NeuralEnsemble/python-neo/archive/master.zip"
             res_output = container_client.run_command(cmd)
         else:
             if verbose:
                 print(f"Installing spikeinterface=={si_version} in {container_image}")
-            cmd = f"pip install --upgrade --no-input spikeinterface[full]=={si_version}"
+            cmd = f"pip install --user --upgrade --no-input spikeinterface[full]=={si_version}"
             res_output = container_client.run_command(cmd)
     else:
         # TODO version checking
@@ -540,7 +540,7 @@ if __name__ == '__main__':
     if extra_requirements:
         if verbose:
             print(f"Installing extra requirements: {extra_requirements}")
-        cmd = f"pip install --upgrade --no-input {' '.join(extra_requirements)}"
+        cmd = f"pip install --user --upgrade --no-input {' '.join(extra_requirements)}"
         res_output = container_client.run_command(cmd)
 
     # run sorter on folder
@@ -624,10 +624,20 @@ _common_run_doc = (
 )
 
 
-def read_sorter_folder(output_folder, raise_error=True):
+def read_sorter_folder(output_folder, register_recording=True, sorting_info=True, raise_error=True):
     """
     Load a sorting object from a spike sorting output folder.
     The 'output_folder' must contain a valid 'spikeinterface_log.json' file
+
+
+    Parameters
+    ----------
+    output_folder: Pth or str
+        The sorter folder
+    register_recording: bool, default: True
+        Attach recording (when json or pickle) to the sorting
+    sorting_info: bool, default: True
+        Attach sorting info to the sorting.
     """
     output_folder = Path(output_folder)
     log_file = output_folder / "spikeinterface_log.json"
@@ -647,7 +657,9 @@ def read_sorter_folder(output_folder, raise_error=True):
 
     sorter_name = log["sorter_name"]
     SorterClass = sorter_dict[sorter_name]
-    sorting = SorterClass.get_result_from_folder(output_folder)
+    sorting = SorterClass.get_result_from_folder(
+        output_folder, register_recording=register_recording, sorting_info=sorting_info
+    )
     return sorting
 
 

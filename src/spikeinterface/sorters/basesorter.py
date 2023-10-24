@@ -103,7 +103,7 @@ class BaseSorter:
             )
 
         if not isinstance(recording, BaseRecordingSnippets):
-            raise ValueError("recording must be a Recording or Snippets!!")
+            raise ValueError("recording must be a Recording or a Snippets!!")
 
         if cls.requires_locations:
             locations = recording.get_channel_locations()
@@ -133,12 +133,14 @@ class BaseSorter:
         if recording.get_num_segments() > 1:
             if not cls.handle_multi_segment:
                 raise ValueError(
-                    f"This sorter {cls.sorter_name} do not handle multi segment, use si.concatenate_recordings(...)"
+                    f"This sorter {cls.sorter_name} does not handle multi-segment recordings, use si.concatenate_recordings(...)"
                 )
 
         rec_file = output_folder / "spikeinterface_recording.json"
-        if recording.check_if_json_serializable():
-            recording.dump_to_json(rec_file, relative_to=output_folder)
+        if recording.check_serializablility("json"):
+            recording.dump(rec_file, relative_to=output_folder)
+        elif recording.check_serializablility("pickle"):
+            recording.dump(output_folder / "spikeinterface_recording.pickle")
         else:
             d = {"warning": "The recording is not serializable to json"}
             rec_file.write_text(json.dumps(d, indent=4), encoding="utf8")
@@ -184,6 +186,26 @@ class BaseSorter:
         cls._dump_params(recording, output_folder, params, verbose)
 
         return params
+
+    @classmethod
+    def load_recording_from_folder(cls, output_folder, with_warnings=False):
+        json_file = output_folder / "spikeinterface_recording.json"
+        pickle_file = output_folder / "spikeinterface_recording.pickle"
+
+        if json_file.exists():
+            with (json_file).open("r", encoding="utf8") as f:
+                recording_dict = json.load(f)
+            if "warning" in recording_dict.keys() and with_warnings:
+                warnings.warn(
+                    "The recording that has been sorted is not JSON serializable: it cannot be registered to the sorting object."
+                )
+                recording = None
+            else:
+                recording = load_extractor(json_file, base_folder=output_folder)
+        elif pickle_file.exists():
+            recording = load_extractor(pickle_file)
+
+        return recording
 
     @classmethod
     def _dump_params(cls, recording, output_folder, sorter_params, verbose):
@@ -271,13 +293,13 @@ class BaseSorter:
         return run_time
 
     @classmethod
-    def get_result_from_folder(cls, output_folder):
+    def get_result_from_folder(cls, output_folder, register_recording=True, sorting_info=True):
         output_folder = Path(output_folder)
         sorter_output_folder = output_folder / "sorter_output"
         # check errors in log file
         log_file = output_folder / "spikeinterface_log.json"
         if not log_file.is_file():
-            raise SpikeSortingError("get result error: the folder does not contain the `spikeinterface_log.json` file")
+            raise SpikeSortingError("Get result error: the folder does not contain the `spikeinterface_log.json` file")
 
         with log_file.open("r", encoding="utf8") as f:
             log = json.load(f)
@@ -294,27 +316,25 @@ class BaseSorter:
             # back-compatibility
             sorting = cls._get_result_from_folder(output_folder)
 
-        # register recording to Sorting object
-        # check if not json serializable
-        with (output_folder / "spikeinterface_recording.json").open("r", encoding="utf8") as f:
-            recording_dict = json.load(f)
-        if "warning" in recording_dict.keys():
-            warnings.warn(
-                "The recording that has been sorted is not JSON serializable: it cannot be registered to the sorting object."
-            )
-        else:
-            recording = load_extractor(output_folder / "spikeinterface_recording.json", base_folder=output_folder)
+        if register_recording:
+            # register recording to Sorting object
+            recording = cls.load_recording_from_folder(output_folder, with_warnings=False)
             if recording is not None:
-                # can be None when not dumpable
                 sorting.register_recording(recording)
-        # set sorting info to Sorting object
-        with open(output_folder / "spikeinterface_recording.json", "r") as f:
-            rec_dict = json.load(f)
-        with open(output_folder / "spikeinterface_params.json", "r") as f:
-            params_dict = json.load(f)
-        with open(output_folder / "spikeinterface_log.json", "r") as f:
-            log_dict = json.load(f)
-        sorting.set_sorting_info(rec_dict, params_dict, log_dict)
+
+        if sorting_info:
+            # set sorting info to Sorting object
+            if (output_folder / "spikeinterface_recording.json").exists():
+                with open(output_folder / "spikeinterface_recording.json", "r") as f:
+                    rec_dict = json.load(f)
+            else:
+                rec_dict = None
+
+            with open(output_folder / "spikeinterface_params.json", "r") as f:
+                params_dict = json.load(f)
+            with open(output_folder / "spikeinterface_log.json", "r") as f:
+                log_dict = json.load(f)
+            sorting.set_sorting_info(rec_dict, params_dict, log_dict)
 
         return sorting
 
@@ -411,3 +431,14 @@ def get_job_kwargs(params, verbose):
     if not verbose:
         job_kwargs["progress_bar"] = False
     return job_kwargs
+
+
+def is_log_ok(output_folder):
+    # log is OK when run_time is not None
+    if (output_folder / "spikeinterface_log.json").is_file():
+        with open(output_folder / "spikeinterface_log.json", mode="r", encoding="utf8") as logfile:
+            log = json.load(logfile)
+            run_time = log.get("run_time", None)
+            ok = run_time is not None
+            return ok
+    return False

@@ -65,10 +65,9 @@ def detect_peaks(
         This avoid reading the recording multiple times.
     gather_mode: str
         How to gather the results:
-
         * "memory": results are returned as in-memory numpy arrays
-
         * "npy": results are stored to .npy files in `folder`
+
     folder: str or Path
         If gather_mode is "npy", the folder where the files are created.
     names: list
@@ -81,9 +80,11 @@ def detect_peaks(
     -------
     peaks: array
         Detected peaks.
+
     Notes
     -----
     This peak detection ported from tridesclous into spikeinterface.
+
     """
 
     assert method in detect_peak_methods

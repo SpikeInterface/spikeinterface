@@ -26,6 +26,7 @@ class TracesWidget(BaseWidget):
         List with start time and end time, default None
     mode: str
         Three possible modes, default 'auto':
+
         * 'line': classical for low channel count
         * 'map': for high channel count use color heat map
         * 'auto': auto switch depending on the channel count ('line' if less than 64 channels, 'map' otherwise)
@@ -51,11 +52,6 @@ class TracesWidget(BaseWidget):
         For 'map' mode and sortingview backend, seconds to render in each row, default 0.2
     add_legend : bool
         If True adds legend to figures, default True
-
-    Returns
-    -------
-    W: TracesWidget
-        The output widget
     """
 
     def __init__(
@@ -92,26 +88,32 @@ class TracesWidget(BaseWidget):
         else:
             raise ValueError("plot_traces recording must be recording or dict or list")
 
+        if rec0.has_channel_location():
+            channel_locations = rec0.get_channel_locations()
+        else:
+            channel_locations = None
+
+        if order_channel_by_depth and channel_locations is not None:
+            from ..preprocessing import depth_order
+
+            rec0 = depth_order(rec0)
+            recordings = {k: depth_order(rec) for k, rec in recordings.items()}
+
+            if channel_ids is not None:
+                # ensure that channel_ids are in the good order
+                channel_ids_ = list(rec0.channel_ids)
+                order = np.argsort([channel_ids_.index(c) for c in channel_ids])
+                channel_ids = list(np.array(channel_ids)[order])
+
+        if channel_ids is None:
+            channel_ids = rec0.channel_ids
+
         layer_keys = list(recordings.keys())
 
         if segment_index is None:
             if rec0.get_num_segments() != 1:
                 raise ValueError("You must provide segment_index=...")
             segment_index = 0
-
-        if channel_ids is None:
-            channel_ids = rec0.channel_ids
-
-        if "location" in rec0.get_property_keys():
-            channel_locations = rec0.get_channel_locations()
-        else:
-            channel_locations = None
-
-        if order_channel_by_depth:
-            if channel_locations is not None:
-                order, _ = order_channels_by_depth(rec0, channel_ids)
-        else:
-            order = None
 
         fs = rec0.get_sampling_frequency()
         if time_range is None:
@@ -128,7 +130,7 @@ class TracesWidget(BaseWidget):
         cmap = cmap
 
         times, list_traces, frame_range, channel_ids = _get_trace_list(
-            recordings, channel_ids, time_range, segment_index, order, return_scaled
+            recordings, channel_ids, time_range, segment_index, return_scaled=return_scaled
         )
 
         # stat for auto scaling done on the first layer
@@ -142,9 +144,10 @@ class TracesWidget(BaseWidget):
 
         # colors is a nested dict by layer and channels
         # lets first create black for all channels and layer
+        # all color are generated for ipywidgets
         colors = {}
         for k in layer_keys:
-            colors[k] = {chan_id: "k" for chan_id in channel_ids}
+            colors[k] = {chan_id: "k" for chan_id in rec0.channel_ids}
 
         if color_groups:
             channel_groups = rec0.get_channel_groups(channel_ids=channel_ids)
@@ -153,7 +156,7 @@ class TracesWidget(BaseWidget):
             group_colors = get_some_colors(groups, color_engine="auto")
 
             channel_colors = {}
-            for i, chan_id in enumerate(channel_ids):
+            for i, chan_id in enumerate(rec0.channel_ids):
                 group = channel_groups[i]
                 channel_colors[chan_id] = group_colors[group]
 
@@ -163,12 +166,12 @@ class TracesWidget(BaseWidget):
         elif color is not None:
             # old behavior one color for all channel
             # if multi layer then black for all
-            colors[layer_keys[0]] = {chan_id: color for chan_id in channel_ids}
+            colors[layer_keys[0]] = {chan_id: color for chan_id in rec0.channel_ids}
         elif color is None and len(recordings) > 1:
             # several layer
             layer_colors = get_some_colors(layer_keys)
             for k in layer_keys:
-                colors[k] = {chan_id: layer_colors[k] for chan_id in channel_ids}
+                colors[k] = {chan_id: layer_colors[k] for chan_id in rec0.channel_ids}
         else:
             # color is None unique layer : all channels black
             pass
@@ -205,7 +208,6 @@ class TracesWidget(BaseWidget):
             show_channel_ids=show_channel_ids,
             add_legend=add_legend,
             order_channel_by_depth=order_channel_by_depth,
-            order=order,
             tile_size=tile_size,
             num_timepoints_per_row=int(seconds_per_row * fs),
             return_scaled=return_scaled,
@@ -280,22 +282,26 @@ class TracesWidget(BaseWidget):
         import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
+        import ipywidgets.widgets as W
         from .utils_ipywidgets import (
             check_ipywidget_backend,
-            make_timeseries_controller,
-            make_channel_controller,
-            make_scale_controller,
+            # make_timeseries_controller,
+            # make_channel_controller,
+            # make_scale_controller,
+            TimeSlider,
+            ChannelSelector,
+            ScaleWidget,
         )
 
         check_ipywidget_backend()
 
         self.next_data_plot = data_plot.copy()
-        self.next_data_plot["add_legend"] = False
 
-        recordings = data_plot["recordings"]
+        self.recordings = data_plot["recordings"]
 
         # first layer
-        rec0 = recordings[data_plot["layer_keys"][0]]
+        # rec0 = recordings[data_plot["layer_keys"][0]]
+        rec0 = self.rec0 = self.recordings[self.data_plot["layer_keys"][0]]
 
         cm = 1 / 2.54
 
@@ -309,182 +315,153 @@ class TracesWidget(BaseWidget):
                 self.figure, self.ax = plt.subplots(figsize=(0.9 * ratios[1] * width_cm * cm, height_cm * cm))
                 plt.show()
 
-        t_start = 0.0
-        t_stop = rec0.get_num_samples(segment_index=0) / rec0.get_sampling_frequency()
-
-        ts_widget, ts_controller = make_timeseries_controller(
-            t_start,
-            t_stop,
-            data_plot["layer_keys"],
-            rec0.get_num_segments(),
-            data_plot["time_range"],
-            data_plot["mode"],
-            False,
-            width_cm,
+        # some widgets
+        self.time_slider = TimeSlider(
+            durations=[rec0.get_duration(s) for s in range(rec0.get_num_segments())],
+            sampling_frequency=rec0.sampling_frequency,
+            # layout=W.Layout(height="2cm"),
         )
 
-        ch_widget, ch_controller = make_channel_controller(rec0, width_cm=ratios[2] * width_cm, height_cm=height_cm)
+        start_frame = int(data_plot["time_range"][0] * rec0.sampling_frequency)
+        end_frame = int(data_plot["time_range"][1] * rec0.sampling_frequency)
 
-        scale_widget, scale_controller = make_scale_controller(width_cm=ratios[0] * width_cm, height_cm=height_cm)
+        self.time_slider.value = start_frame, end_frame, data_plot["segment_index"]
 
-        self.controller = ts_controller
-        self.controller.update(ch_controller)
-        self.controller.update(scale_controller)
+        _layer_keys = data_plot["layer_keys"]
+        if len(_layer_keys) > 1:
+            _layer_keys = ["ALL"] + _layer_keys
+        self.layer_selector = W.Dropdown(
+            options=_layer_keys,
+            layout=W.Layout(width="95%"),
+        )
+        self.mode_selector = W.Dropdown(
+            options=["line", "map"],
+            value=data_plot["mode"],
+            # layout=W.Layout(width="5cm"),
+            layout=W.Layout(width="95%"),
+        )
+        self.scaler = ScaleWidget()
+        self.channel_selector = ChannelSelector(self.rec0.channel_ids)
+        self.channel_selector.value = list(data_plot["channel_ids"])
 
-        self.recordings = data_plot["recordings"]
+        left_sidebar = W.VBox(
+            children=[
+                W.Label(value="layer"),
+                self.layer_selector,
+                W.Label(value="mode"),
+                self.mode_selector,
+                self.scaler,
+                # self.channel_selector,
+            ],
+            layout=W.Layout(width="3.5cm"),
+            align_items="center",
+        )
+
         self.return_scaled = data_plot["return_scaled"]
-        self.list_traces = None
-        self.actual_segment_index = self.controller["segment_index"].value
-
-        self.rec0 = self.recordings[self.data_plot["layer_keys"][0]]
-        self.t_stops = [
-            self.rec0.get_num_samples(segment_index=seg_index) / self.rec0.get_sampling_frequency()
-            for seg_index in range(self.rec0.get_num_segments())
-        ]
-
-        for w in self.controller.values():
-            if isinstance(w, widgets.Button):
-                w.on_click(self._update_ipywidget)
-            else:
-                w.observe(self._update_ipywidget)
 
         self.widget = widgets.AppLayout(
             center=self.figure.canvas,
-            footer=ts_widget,
-            left_sidebar=scale_widget,
-            right_sidebar=ch_widget,
+            footer=self.time_slider,
+            left_sidebar=left_sidebar,
+            right_sidebar=self.channel_selector,
             pane_heights=[0, 6, 1],
             pane_widths=ratios,
         )
 
         # a first update
-        self._update_ipywidget(None)
+        self._retrieve_traces()
+        self._update_plot()
+
+        # callbacks:
+        # some widgets generate a full retrieve  + refresh
+        self.time_slider.observe(self._retrieve_traces, names="value", type="change")
+        self.layer_selector.observe(self._retrieve_traces, names="value", type="change")
+        self.channel_selector.observe(self._retrieve_traces, names="value", type="change")
+        # other widgets only refresh
+        self.scaler.observe(self._update_plot, names="value", type="change")
+        # map is a special case because needs to check layer also
+        self.mode_selector.observe(self._mode_changed, names="value", type="change")
 
         if backend_kwargs["display"]:
             # self.check_backend()
             display(self.widget)
 
-    def _update_ipywidget(self, change):
-        import ipywidgets.widgets as widgets
-
-        # if changing the layer_key, no need to retrieve and process traces
-        retrieve_traces = True
-        scale_up = False
-        scale_down = False
-        if change is not None:
-            for cname, c in self.controller.items():
-                if isinstance(change, dict):
-                    if change["owner"] is c and cname == "layer_key":
-                        retrieve_traces = False
-                elif isinstance(change, widgets.Button):
-                    if change is c and cname == "plus":
-                        scale_up = True
-                    if change is c and cname == "minus":
-                        scale_down = True
-
-        t_start = self.controller["t_start"].value
-        window = self.controller["window"].value
-        layer_key = self.controller["layer_key"].value
-        segment_index = self.controller["segment_index"].value
-        mode = self.controller["mode"].value
-        chan_start, chan_stop = self.controller["channel_inds"].value
-
-        if mode == "line":
-            self.controller["all_layers"].layout.visibility = "visible"
-            all_layers = self.controller["all_layers"].value
-        elif mode == "map":
-            self.controller["all_layers"].layout.visibility = "hidden"
-            all_layers = False
-
-        if all_layers:
-            self.controller["layer_key"].layout.visibility = "hidden"
+    def _get_layers(self):
+        layer = self.layer_selector.value
+        if layer == "ALL":
+            layer_keys = self.data_plot["layer_keys"]
         else:
-            self.controller["layer_key"].layout.visibility = "visible"
+            layer_keys = [layer]
+        if self.mode_selector.value == "map":
+            layer_keys = layer_keys[:1]
+        return layer_keys
 
-        if chan_start == chan_stop:
-            chan_stop += 1
-        channel_indices = np.arange(chan_start, chan_stop)
+    def _mode_changed(self, change=None):
+        if self.mode_selector.value == "map" and self.layer_selector.value == "ALL":
+            self.layer_selector.value = self.data_plot["layer_keys"][0]
+        else:
+            self._update_plot()
 
-        t_stop = self.t_stops[segment_index]
-        if self.actual_segment_index != segment_index:
-            # change time_slider limits
-            self.controller["t_start"].max = t_stop
-            self.actual_segment_index = segment_index
+    def _retrieve_traces(self, change=None):
+        channel_ids = np.array(self.channel_selector.value)
 
-        # protect limits
-        if t_start >= t_stop - window:
-            t_start = t_stop - window
+        # if self.data_plot["order_channel_by_depth"]:
+        #     order, _ = order_channels_by_depth(self.rec0, channel_ids)
+        # else:
+        #     order = None
 
-        time_range = np.array([t_start, t_start + window])
+        start_frame, end_frame, segment_index = self.time_slider.value
+        time_range = np.array([start_frame, end_frame]) / self.rec0.sampling_frequency
+
+        self._selected_recordings = {k: self.recordings[k] for k in self._get_layers()}
+        times, list_traces, frame_range, channel_ids = _get_trace_list(
+            self._selected_recordings, channel_ids, time_range, segment_index, return_scaled=self.return_scaled
+        )
+
+        self._channel_ids = channel_ids
+        self._list_traces = list_traces
+        self._times = times
+        self._time_range = time_range
+        self._frame_range = (start_frame, end_frame)
+        self._segment_index = segment_index
+
+        self._update_plot()
+
+    def _update_plot(self, change=None):
         data_plot = self.next_data_plot
 
-        if retrieve_traces:
-            all_channel_ids = self.recordings[list(self.recordings.keys())[0]].channel_ids
-            if self.data_plot["order"] is not None:
-                all_channel_ids = all_channel_ids[self.data_plot["order"]]
-            channel_ids = all_channel_ids[channel_indices]
-            if self.data_plot["order_channel_by_depth"]:
-                order, _ = order_channels_by_depth(self.rec0, channel_ids)
-            else:
-                order = None
-            times, list_traces, frame_range, channel_ids = _get_trace_list(
-                self.recordings, channel_ids, time_range, segment_index, order, self.return_scaled
-            )
-            self.list_traces = list_traces
-        else:
-            times = data_plot["times"]
-            list_traces = data_plot["list_traces"]
-            frame_range = data_plot["frame_range"]
-            channel_ids = data_plot["channel_ids"]
+        # matplotlib next_data_plot dict update at each call
+        mode = self.mode_selector.value
+        layer_keys = self._get_layers()
 
-        if all_layers:
-            layer_keys = self.data_plot["layer_keys"]
-            recordings = self.recordings
-            list_traces_plot = self.list_traces
-        else:
-            layer_keys = [layer_key]
-            recordings = {layer_key: self.recordings[layer_key]}
-            list_traces_plot = [self.list_traces[list(self.recordings.keys()).index(layer_key)]]
-
-        if scale_up:
-            if mode == "line":
-                data_plot["vspacing"] *= 0.8
-            elif mode == "map":
-                data_plot["clims"] = {
-                    layer: (1.2 * val[0], 1.2 * val[1]) for layer, val in self.data_plot["clims"].items()
-                }
-        if scale_down:
-            if mode == "line":
-                data_plot["vspacing"] *= 1.2
-            elif mode == "map":
-                data_plot["clims"] = {
-                    layer: (0.8 * val[0], 0.8 * val[1]) for layer, val in self.data_plot["clims"].items()
-                }
-
-        self.next_data_plot["vspacing"] = data_plot["vspacing"]
-        self.next_data_plot["clims"] = data_plot["clims"]
+        data_plot["mode"] = mode
+        data_plot["frame_range"] = self._frame_range
+        data_plot["time_range"] = self._time_range
+        data_plot["with_colorbar"] = False
+        data_plot["recordings"] = self._selected_recordings
+        data_plot["add_legend"] = False
 
         if mode == "line":
             clims = None
         elif mode == "map":
-            clims = {layer_key: self.data_plot["clims"][layer_key]}
+            clims = {k: self.data_plot["clims"][k] for k in layer_keys}
 
-        # matplotlib next_data_plot dict update at each call
-        data_plot["mode"] = mode
-        data_plot["frame_range"] = frame_range
-        data_plot["time_range"] = time_range
-        data_plot["with_colorbar"] = False
-        data_plot["recordings"] = recordings
-        data_plot["layer_keys"] = layer_keys
-        data_plot["list_traces"] = list_traces_plot
-        data_plot["times"] = times
         data_plot["clims"] = clims
-        data_plot["channel_ids"] = channel_ids
+        data_plot["channel_ids"] = self._channel_ids
+
+        data_plot["layer_keys"] = layer_keys
+        data_plot["colors"] = {k: self.data_plot["colors"][k] for k in layer_keys}
+
+        list_traces = [traces * self.scaler.value for traces in self._list_traces]
+        data_plot["list_traces"] = list_traces
+        data_plot["times"] = self._times
 
         backend_kwargs = {}
         backend_kwargs["ax"] = self.ax
 
+        self.ax.clear()
         self.plot_matplotlib(data_plot, **backend_kwargs)
+        self.ax.set_title("")
 
         fig = self.ax.figure
         fig.canvas.draw()
@@ -528,8 +505,32 @@ class TracesWidget(BaseWidget):
 
         self.url = handle_display_and_url(self, self.view, **backend_kwargs)
 
+    def plot_ephyviewer(self, data_plot, **backend_kwargs):
+        import ephyviewer
+        from ..preprocessing import depth_order
 
-def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=None, return_scaled=False):
+        dp = to_attr(data_plot)
+
+        app = ephyviewer.mkQApp()
+        win = ephyviewer.MainViewer(debug=False, show_auto_scale=True)
+
+        for k, rec in dp.recordings.items():
+            if dp.order_channel_by_depth:
+                rec = depth_order(rec, flip=True)
+
+            sig_source = ephyviewer.SpikeInterfaceRecordingSource(recording=rec)
+            view = ephyviewer.TraceViewer(source=sig_source, name=k)
+            view.params["scale_mode"] = "by_channel"
+            if dp.show_channel_ids:
+                view.params["display_labels"] = True
+            view.auto_scale()
+            win.add_view(view)
+
+        win.show()
+        app.exec()
+
+
+def _get_trace_list(recordings, channel_ids, time_range, segment_index, return_scaled=False):
     # function also used in ipywidgets plotter
     k0 = list(recordings.keys())[0]
     rec0 = recordings[k0]
@@ -556,11 +557,6 @@ def _get_trace_list(recordings, channel_ids, time_range, segment_index, order=No
             return_scaled=return_scaled,
         )
 
-        if order is not None:
-            traces = traces[:, order]
         list_traces.append(traces)
-
-    if order is not None:
-        channel_ids = np.array(channel_ids)[order]
 
     return times, list_traces, frame_range, channel_ids

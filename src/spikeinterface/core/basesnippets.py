@@ -1,10 +1,8 @@
 from typing import List, Union
-from pathlib import Path
 from .base import BaseSegment
 from .baserecordingsnippets import BaseRecordingSnippets
 import numpy as np
 from warnings import warn
-from probeinterface import Probe, ProbeGroup, write_probeinterface, read_probeinterface, select_axes
 
 # snippets segments?
 
@@ -139,7 +137,7 @@ class BaseSnippets(BaseRecordingSnippets):
     def _remove_channels(self, remove_channel_ids):
         from .channelslice import ChannelSliceSnippets
 
-        new_channel_ids = self.channel_ids[~np.in1d(self.channel_ids, remove_channel_ids)]
+        new_channel_ids = self.channel_ids[~np.isin(self.channel_ids, remove_channel_ids)]
         sub_recording = ChannelSliceSnippets(self, new_channel_ids)
         return sub_recording
 

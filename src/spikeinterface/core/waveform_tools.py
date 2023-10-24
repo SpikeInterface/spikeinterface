@@ -345,15 +345,15 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_ctx
 
     # take only spikes with the correct segment_index
     # this is a slice so no copy!!
-    s0 = np.searchsorted(spikes["segment_index"], segment_index)
-    s1 = np.searchsorted(spikes["segment_index"], segment_index + 1)
+    s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])
     in_seg_spikes = spikes[s0:s1]
 
     # take only spikes in range [start_frame, end_frame]
     # this is a slice so no copy!!
     # the border of segment are protected by nbefore on left an nafter on the right
-    i0 = np.searchsorted(in_seg_spikes["sample_index"], max(start_frame, nbefore))
-    i1 = np.searchsorted(in_seg_spikes["sample_index"], min(end_frame, seg_size - nafter))
+    i0, i1 = np.searchsorted(
+        in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)]
+    )
 
     # slice in absolut in spikes vector
     l0 = i0 + s0
@@ -563,8 +563,7 @@ def _init_worker_distribute_single_buffer(
     # prepare segment slices
     segment_slices = []
     for segment_index in range(recording.get_num_segments()):
-        s0 = np.searchsorted(spikes["segment_index"], segment_index)
-        s1 = np.searchsorted(spikes["segment_index"], segment_index + 1)
+        s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])
         segment_slices.append((s0, s1))
     worker_ctx["segment_slices"] = segment_slices
 
@@ -591,8 +590,9 @@ def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, work
     # take only spikes in range [start_frame, end_frame]
     # this is a slice so no copy!!
     # the border of segment are protected by nbefore on left an nafter on the right
-    i0 = np.searchsorted(in_seg_spikes["sample_index"], max(start_frame, nbefore))
-    i1 = np.searchsorted(in_seg_spikes["sample_index"], min(end_frame, seg_size - nafter))
+    i0, i1 = np.searchsorted(
+        in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)]
+    )
 
     # slice in absolut in spikes vector
     l0 = i0 + s0
@@ -686,8 +686,7 @@ def has_exceeding_spikes(recording, sorting):
     """
     spike_vector = sorting.to_spike_vector()
     for segment_index in range(recording.get_num_segments()):
-        start_seg_ind = np.searchsorted(spike_vector["segment_index"], segment_index)
-        end_seg_ind = np.searchsorted(spike_vector["segment_index"], segment_index + 1)
+        start_seg_ind, end_seg_ind = np.searchsorted(spike_vector["segment_index"], [segment_index, segment_index + 1])
         spike_vector_seg = spike_vector[start_seg_ind:end_seg_ind]
         if len(spike_vector_seg) > 0:
             if spike_vector_seg["sample_index"][-1] > recording.get_num_samples(segment_index=segment_index) - 1:

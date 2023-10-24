@@ -36,7 +36,7 @@ class FrameSliceSorting(BaseSorting):
     def __init__(self, parent_sorting, start_frame=None, end_frame=None, check_spike_frames=True):
         unit_ids = parent_sorting.get_unit_ids()
 
-        assert parent_sorting.get_num_segments() == 1, "FrameSliceSorting work only with one segment"
+        assert parent_sorting.get_num_segments() == 1, "FrameSliceSorting only works with one segment"
 
         if start_frame is None:
             start_frame = 0
@@ -49,10 +49,10 @@ class FrameSliceSorting(BaseSorting):
                 end_frame = parent_n_samples
             assert (
                 end_frame <= parent_n_samples
-            ), "`end_frame` should be smaller than the sortings total number of samples."
+            ), "`end_frame` should be smaller than the sortings' total number of samples."
             assert (
                 start_frame <= parent_n_samples
-            ), "`start_frame` should be smaller than the sortings total number of samples."
+            ), "`start_frame` should be smaller than the sortings' total number of samples."
             if check_spike_frames and has_exceeding_spikes(parent_sorting._recording, parent_sorting):
                 raise ValueError(
                     "The sorting object has spikes exceeding the recording duration. You have to remove those spikes "
@@ -67,7 +67,7 @@ class FrameSliceSorting(BaseSorting):
                 end_frame = max_spike_time + 1
 
         assert start_frame < end_frame, (
-            "`start_frame` should be greater than `end_frame`. "
+            "`start_frame` should be less than `end_frame`. "
             "This may be due to start_frame >= max_spike_time, if the end frame "
             "was not specified explicitly."
         )

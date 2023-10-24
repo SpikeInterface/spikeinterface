@@ -174,8 +174,7 @@ class ProxyConcatenateRecordingSegment(BaseRecordingSegment):
             # Return (0 * num_channels) array of correct dtype
             return self.parent_segments[0].get_traces(0, 0, channel_indices)
 
-        i0 = np.searchsorted(self.cumsum_length, start_frame, side="right") - 1
-        i1 = np.searchsorted(self.cumsum_length, end_frame, side="right") - 1
+        i0, i1 = np.searchsorted(self.cumsum_length, [start_frame, end_frame], side="right") - 1
 
         # several case:
         #  * come from one segment (i0 == i1)
@@ -469,8 +468,7 @@ class ProxyConcatenateSortingSegment(BaseSortingSegment):
         if end_frame is None:
             end_frame = self.get_num_samples()
 
-        i0 = np.searchsorted(self.cumsum_length, start_frame, side="right") - 1
-        i1 = np.searchsorted(self.cumsum_length, end_frame, side="right") - 1
+        i0, i1 = np.searchsorted(self.cumsum_length, [start_frame, end_frame], side="right") - 1
 
         # several case:
         #  * come from one segment (i0 == i1)

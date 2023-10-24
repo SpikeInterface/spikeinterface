@@ -2,11 +2,10 @@ from pathlib import Path
 import platform
 import os
 import shutil
-
+import argparse
 
 def check_import_si():
     import spikeinterface as si
-
 
 def check_import_si_full():
     import spikeinterface.full as si
@@ -24,7 +23,6 @@ def _run_one_sorter_and_exctract_wf(sorter_name):
     sorting = si.run_sorter(sorter_name, rec, output_folder=f'{sorter_name}_output', verbose=False)
     si.extract_waveforms(rec, sorting, f'{sorter_name}_waveforms',
                          n_jobs=1, total_memory="10M", max_spikes_per_unit=500, return_scaled=False)
-
 
 def run_tridesclous():
     _run_one_sorter_and_exctract_wf('tridesclous')
@@ -49,7 +47,6 @@ def open_sigui():
     win.show()
     app.exec_()
 
-
 def export_to_phy():
     import spikeinterface.full as si
     we = si.WaveformExtractor.load_from_folder("tridesclous_waveforms")
@@ -73,8 +70,14 @@ def _clean():
         if Path(folder).exists():
             shutil.rmtree(folder)
 
+parser = argparse.ArgumentParser()
+# add ci flag so that gui will not be used in ci
+# end user can ignore
+parser.add_argument('--ci', action='store_false')
 
 if __name__ == '__main__':
+
+    args = parser.parse_args()
 
     _clean()
     _create_recording()
@@ -83,12 +86,16 @@ if __name__ == '__main__':
         ('Import spikeinterface', check_import_si),
         ('Import spikeinterface.full', check_import_si_full),
         ('Run tridesclous', run_tridesclous),
-        ('Open spikeinterface-gui', open_sigui),
-        ('Export to phy', export_to_phy),
+        ]
+
+    # backwards logic because default is True for end-user
+    if args.ci:
+        steps.insert(3, ('Open spikeinterface-gui', open_sigui) )
+
+    steps.append(('Export to phy', export_to_phy)),
         # phy is removed from the env because it force a pip install PyQt5
         # which break the conda env
         # ('Open phy', open_phy),
-    ]
 
     if platform.system() == "Windows":
         pass
@@ -103,8 +110,8 @@ if __name__ == '__main__':
         try:
             func()
             done = '...OK'
-        except:
-            done = '...Fail'
+        except Exception as err:
+            done = f'...Fail, Error: {err}'
         print(label, done)
 
     if platform.system() == "Windows":

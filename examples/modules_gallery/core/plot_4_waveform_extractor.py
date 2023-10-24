@@ -49,7 +49,8 @@ plot_probe(probe)
 
 ###############################################################################
 # A :py:class:`~spikeinterface.core.WaveformExtractor` object can be created with the
-# :py:func:`~spikeinterface.core.extract_waveforms` function:
+# :py:func:`~spikeinterface.core.extract_waveforms` function (this defaults to a sparse
+# representation of the waveforms):
 
 folder = 'waveform_folder'
 we = extract_waveforms(
@@ -87,6 +88,7 @@ we = extract_waveforms(
     recording,
     sorting,
     folder,
+    sparse=False,
     ms_before=3.,
     ms_after=4.,
     max_spikes_per_unit=500,
@@ -149,7 +151,7 @@ Sparse Waveform Extractor
 #
 # Option 1) Save a dense waveform extractor to sparse:
 #
-# In this case, from an existing waveform extractor, we can first estimate a
+# In this case, from an existing (dense) waveform extractor, we can first estimate a
 # sparsity (which channels each unit is defined on) and then save to a new
 # folder in sparse mode:
 
@@ -173,7 +175,7 @@ print(f"Sparse waveforms shape for unit {we.sorting.unit_ids[0]}: {wf_sparse.sha
 
 
 ###############################################################################
-# Option 2) Directly extract sparse waveforms:
+# Option 2) Directly extract sparse waveforms (current spikeinterface default):
 #
 # We can also directly extract sparse waveforms. To do so, dense waveforms are
 # extracted first using a small number of spikes (:code:`'num_spikes_for_sparsity'`)
