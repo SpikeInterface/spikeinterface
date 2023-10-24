@@ -89,7 +89,7 @@ def get_default_sorter_params(sorter_name_or_class):
     elif sorter_name_or_class in sorter_full_list:
         SorterClass = sorter_name_or_class
     else:
-        raise (ValueError("Unknown sorter"))
+        raise (ValueError(f"Unknown sorter {sorter_name_or_class} has been given"))
 
     return SorterClass.default_params()
 
@@ -113,7 +113,7 @@ def get_sorter_params_description(sorter_name_or_class):
     elif sorter_name_or_class in sorter_full_list:
         SorterClass = sorter_name_or_class
     else:
-        raise (ValueError("Unknown sorter"))
+        raise (ValueError(f"Unknown sorter {sorter_name_or_class} has been given"))
 
     return SorterClass.params_description()
 
@@ -137,6 +137,6 @@ def get_sorter_description(sorter_name_or_class):
     elif sorter_name_or_class in sorter_full_list:
         SorterClass = sorter_name_or_class
     else:
-        raise (ValueError("Unknown sorter"))
+        raise (ValueError(f"Unknown sorter {sorter_name_or_class} has been given"))
 
     return SorterClass.sorter_description

@@ -16,6 +16,7 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
     """
 
     extension_name = "amplitude_scalings"
+    handle_sparsity = True
 
     def __init__(self, waveform_extractor):
         BaseWaveformExtractorExtension.__init__(self, waveform_extractor)
@@ -68,7 +69,6 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         delta_collision_samples = int(delta_collision_ms / 1000 * we.sampling_frequency)
 
         return_scaled = we._params["return_scaled"]
-        unit_ids = we.unit_ids
 
         if ms_before is not None:
             assert (
@@ -82,18 +82,22 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         cut_out_before = int(ms_before / 1000 * we.sampling_frequency) if ms_before is not None else nbefore
         cut_out_after = int(ms_after / 1000 * we.sampling_frequency) if ms_after is not None else nafter
 
-        if we.is_sparse():
+        if we.is_sparse() and self._params["sparsity"] is None:
             sparsity = we.sparsity
-        elif self._params["sparsity"] is not None:
+        elif we.is_sparse() and self._params["sparsity"] is not None:
+            sparsity = self._params["sparsity"]
+            # assert provided sparsity is sparser than the one in the waveform extractor
+            waveform_sparsity = we.sparsity
+            assert np.all(
+                np.sum(waveform_sparsity.mask, 1) - np.sum(sparsity.mask, 1) > 0
+            ), "The provided sparsity needs to be sparser than the one in the waveform extractor!"
+        elif not we.is_sparse() and self._params["sparsity"] is not None:
             sparsity = self._params["sparsity"]
         else:
             if self._params["max_dense_channels"] is not None:
                 assert recording.get_num_channels() <= self._params["max_dense_channels"], ""
             sparsity = ChannelSparsity.create_dense(we)
-        sparsity_inds = sparsity.unit_id_to_channel_indices
-
-        # easier to use in chunk function as spikes use unit_index instead o id
-        unit_inds_to_channel_indices = {unit_ind: sparsity_inds[unit_id] for unit_ind, unit_id in enumerate(unit_ids)}
+        sparsity_mask = sparsity.mask
         all_templates = we.get_all_templates()
 
         # precompute segment slice
@@ -112,7 +116,7 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
             self.spikes,
             all_templates,
             segment_slices,
-            unit_inds_to_channel_indices,
+            sparsity_mask,
             nbefore,
             nafter,
             cut_out_before,
@@ -261,7 +265,7 @@ def _init_worker_amplitude_scalings(
     spikes,
     all_templates,
     segment_slices,
-    unit_inds_to_channel_indices,
+    sparsity_mask,
     nbefore,
     nafter,
     cut_out_before,
@@ -281,7 +285,7 @@ def _init_worker_amplitude_scalings(
     worker_ctx["cut_out_before"] = cut_out_before
     worker_ctx["cut_out_after"] = cut_out_after
     worker_ctx["return_scaled"] = return_scaled
-    worker_ctx["unit_inds_to_channel_indices"] = unit_inds_to_channel_indices
+    worker_ctx["sparsity_mask"] = sparsity_mask
     worker_ctx["handle_collisions"] = handle_collisions
     worker_ctx["delta_collision_samples"] = delta_collision_samples
 
@@ -305,7 +309,7 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
     recording = worker_ctx["recording"]
     all_templates = worker_ctx["all_templates"]
     segment_slices = worker_ctx["segment_slices"]
-    unit_inds_to_channel_indices = worker_ctx["unit_inds_to_channel_indices"]
+    sparsity_mask = worker_ctx["sparsity_mask"]
     nbefore = worker_ctx["nbefore"]
     cut_out_before = worker_ctx["cut_out_before"]
     cut_out_after = worker_ctx["cut_out_after"]
@@ -338,7 +342,7 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
             )
             local_spikes_w_margin = spikes_in_segment[i0_margin:i1_margin]
             collisions_local = find_collisions(
-                local_spikes, local_spikes_w_margin, delta_collision_samples, unit_inds_to_channel_indices
+                local_spikes, local_spikes_w_margin, delta_collision_samples, sparsity_mask
             )
         else:
             collisions_local = {}
@@ -353,7 +357,7 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
                 continue
             unit_index = spike["unit_index"]
             sample_index = spike["sample_index"]
-            sparse_indices = unit_inds_to_channel_indices[unit_index]
+            (sparse_indices,) = np.nonzero(sparsity_mask[unit_index])
             template = all_templates[unit_index][:, sparse_indices]
             template = template[nbefore - cut_out_before : nbefore + cut_out_after]
             sample_centered = sample_index - start_frame
@@ -364,7 +368,7 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
                 template = template[cut_out_before - sample_index :]
             elif sample_index + cut_out_after > end_frame + right:
                 local_waveform = traces_with_margin[cut_out_start:, sparse_indices]
-                template = template[: -(sample_index + cut_out_after - end_frame)]
+                template = template[: -(sample_index + cut_out_after - (end_frame + right))]
             else:
                 local_waveform = traces_with_margin[cut_out_start:cut_out_end, sparse_indices]
             assert template.shape == local_waveform.shape
@@ -392,7 +396,7 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
                     right,
                     nbefore,
                     all_templates,
-                    unit_inds_to_channel_indices,
+                    sparsity_mask,
                     cut_out_before,
                     cut_out_after,
                 )
@@ -409,14 +413,14 @@ def _amplitude_scalings_chunk(segment_index, start_frame, end_frame, worker_ctx)
 
 
 ### Collision handling ###
-def _are_unit_indices_overlapping(unit_inds_to_channel_indices, i, j):
+def _are_unit_indices_overlapping(sparsity_mask, i, j):
     """
     Returns True if the unit indices i and j are overlapping, False otherwise
 
     Parameters
     ----------
-    unit_inds_to_channel_indices: dict
-        A dictionary mapping unit indices to channel indices
+    sparsity_mask: boolean mask
+        The sparsity mask
     i: int
         The first unit index
     j: int
@@ -427,13 +431,13 @@ def _are_unit_indices_overlapping(unit_inds_to_channel_indices, i, j):
     bool
         True if the unit indices i and j are overlapping, False otherwise
     """
-    if len(np.intersect1d(unit_inds_to_channel_indices[i], unit_inds_to_channel_indices[j])) > 0:
+    if np.any(sparsity_mask[i] & sparsity_mask[j]):
         return True
     else:
         return False
 
 
-def find_collisions(spikes, spikes_w_margin, delta_collision_samples, unit_inds_to_channel_indices):
+def find_collisions(spikes, spikes_w_margin, delta_collision_samples, sparsity_mask):
     """
     Finds the collisions between spikes.
 
@@ -445,8 +449,8 @@ def find_collisions(spikes, spikes_w_margin, delta_collision_samples, unit_inds_
         An array of spikes within the added margin
     delta_collision_samples: int
         The maximum number of samples between two spikes to consider them as overlapping
-    unit_inds_to_channel_indices: dict
-        A dictionary mapping unit indices to channel indices
+    sparsity_mask: boolean mask
+        The sparsity mask
 
     Returns
     -------
@@ -476,7 +480,7 @@ def find_collisions(spikes, spikes_w_margin, delta_collision_samples, unit_inds_
         # find the overlapping spikes in space as well
         for possible_overlapping_spike_index in possible_overlapping_spike_indices:
             if _are_unit_indices_overlapping(
-                unit_inds_to_channel_indices,
+                sparsity_mask,
                 spike["unit_index"],
                 spikes_w_margin[possible_overlapping_spike_index]["unit_index"],
             ):
@@ -497,7 +501,7 @@ def fit_collision(
     right,
     nbefore,
     all_templates,
-    unit_inds_to_channel_indices,
+    sparsity_mask,
     cut_out_before,
     cut_out_after,
 ):
@@ -524,8 +528,8 @@ def fit_collision(
         The number of samples before the spike to consider for the fit.
     all_templates: np.ndarray
         A numpy array of shape (n_units, n_samples, n_channels) containing the templates.
-    unit_inds_to_channel_indices: dict
-        A dictionary mapping unit indices to channel indices.
+    sparsity_mask: boolean mask
+        The sparsity mask
     cut_out_before: int
         The number of samples to cut out before the spike.
     cut_out_after: int
@@ -543,14 +547,16 @@ def fit_collision(
     sample_last_centered = np.max(collision["sample_index"]) - (start_frame - left)
 
     # construct sparsity as union between units' sparsity
-    sparse_indices = np.array([], dtype="int")
+    common_sparse_mask = np.zeros(sparsity_mask.shape[1], dtype="int")
     for spike in collision:
-        sparse_indices_i = unit_inds_to_channel_indices[spike["unit_index"]]
-        sparse_indices = np.union1d(sparse_indices, sparse_indices_i)
+        mask_i = sparsity_mask[spike["unit_index"]]
+        common_sparse_mask = np.logical_or(common_sparse_mask, mask_i)
+    (sparse_indices,) = np.nonzero(common_sparse_mask)
 
     local_waveform_start = max(0, sample_first_centered - cut_out_before)
     local_waveform_end = min(traces_with_margin.shape[0], sample_last_centered + cut_out_after)
     local_waveform = traces_with_margin[local_waveform_start:local_waveform_end, sparse_indices]
+    num_samples_local_waveform = local_waveform.shape[0]
 
     y = local_waveform.T.flatten()
     X = np.zeros((len(y), len(collision)))
@@ -563,8 +569,10 @@ def fit_collision(
         # deal with borders
         if sample_centered - cut_out_before < 0:
             full_template[: sample_centered + cut_out_after] = template_cut[cut_out_before - sample_centered :]
-        elif sample_centered + cut_out_after > end_frame + right:
-            full_template[sample_centered - cut_out_before :] = template_cut[: -cut_out_after - (end_frame + right)]
+        elif sample_centered + cut_out_after > num_samples_local_waveform:
+            full_template[sample_centered - cut_out_before :] = template_cut[
+                : -(cut_out_after + sample_centered - num_samples_local_waveform)
+            ]
         else:
             full_template[sample_centered - cut_out_before : sample_centered + cut_out_after] = template_cut
         X[:, i] = full_template.T.flatten()

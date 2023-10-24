@@ -31,7 +31,7 @@ With SpikeInterface:
 
     # Make recording, sorting and wvf_extractor object for your data.
 
-    contamination = sqm.compute_sliding_rp_violations(wvf_extractor, bin_size_ms=0.25)
+    contamination = sqm.compute_sliding_rp_violations(waveform_extractor=wvf_extractor, bin_size_ms=0.25)
 
 References
 ----------

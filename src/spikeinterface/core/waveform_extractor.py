@@ -175,7 +175,12 @@ class WaveformExtractor:
             rec_attributes = None
 
         if sorting is None:
-            sorting = load_extractor(folder / "sorting.json", base_folder=folder)
+            if (folder / "sorting.json").exists():
+                sorting = load_extractor(folder / "sorting.json", base_folder=folder)
+            elif (folder / "sorting.pickle").exists():
+                sorting = load_extractor(folder / "sorting.pickle")
+            else:
+                raise FileNotFoundError("load_waveforms() impossible to find the sorting object (json or pickle)")
 
         # the sparsity is the sparsity of the saved/cached waveforms arrays
         sparsity_file = folder / "sparsity.json"
@@ -828,14 +833,30 @@ class WaveformExtractor:
                 sparsity = ChannelSparsity(mask, unit_ids, self.channel_ids)
             else:
                 sparsity = None
-            we = WaveformExtractor.create(self.recording, sorting, folder=None, mode="memory", sparsity=sparsity)
-            we.set_params(**self._params)
+            if self.has_recording():
+                we = WaveformExtractor.create(self.recording, sorting, folder=None, mode="memory", sparsity=sparsity)
+            else:
+                we = WaveformExtractor(
+                    recording=None,
+                    sorting=sorting,
+                    folder=None,
+                    sparsity=sparsity,
+                    rec_attributes=self._rec_attributes,
+                    allow_unfiltered=True,
+                )
+            we._params = self._params
             # copy memory objects
             if self.has_waveforms():
                 we._memory_objects = {"wfs_arrays": {}, "sampled_indices": {}}
                 for unit_id in unit_ids:
-                    we._memory_objects["wfs_arrays"][unit_id] = self._memory_objects["wfs_arrays"][unit_id]
-                    we._memory_objects["sampled_indices"][unit_id] = self._memory_objects["sampled_indices"][unit_id]
+                    if self.format == "memory":
+                        we._memory_objects["wfs_arrays"][unit_id] = self._memory_objects["wfs_arrays"][unit_id]
+                        we._memory_objects["sampled_indices"][unit_id] = self._memory_objects["sampled_indices"][
+                            unit_id
+                        ]
+                    else:
+                        we._memory_objects["wfs_arrays"][unit_id] = self.get_waveforms(unit_id)
+                        we._memory_objects["sampled_indices"][unit_id] = self.get_sampled_indices(unit_id)
 
         # finally select extensions data
         for ext_name in self.get_available_extension_names():
@@ -1452,13 +1473,13 @@ def extract_waveforms(
     folder=None,
     mode="folder",
     precompute_template=("average",),
-    ms_before=3.0,
-    ms_after=4.0,
+    ms_before=1.0,
+    ms_after=2.0,
     max_spikes_per_unit=500,
     overwrite=False,
     return_scaled=True,
     dtype=None,
-    sparse=False,
+    sparse=True,
     sparsity=None,
     num_spikes_for_sparsity=100,
     allow_unfiltered=False,
@@ -1502,7 +1523,7 @@ def extract_waveforms(
         If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV.
     dtype: dtype or None
         Dtype of the output waveforms. If None, the recording dtype is maintained.
-    sparse: bool (default False)
+    sparse: bool, default: True
         If True, before extracting all waveforms the `precompute_sparsity()` function is run using
         a few spikes to get an estimate of dense templates to create a ChannelSparsity object.
         Then, the waveforms will be sparse at extraction time, which saves a lot of memory.
@@ -1721,6 +1742,7 @@ def precompute_sparsity(
             max_spikes_per_unit=num_spikes_for_sparsity,
             return_scaled=False,
             allow_unfiltered=allow_unfiltered,
+            sparse=False,
             **job_kwargs,
         )
         local_sparsity = compute_sparsity(local_we, **sparse_kwargs)
@@ -2009,6 +2031,9 @@ class BaseWaveformExtractorExtension:
         """
         params = self._set_params(**params)
         self._params = params
+
+        if self.waveform_extractor.is_read_only():
+            return
 
         params_to_save = params.copy()
         if "sparsity" in params and params["sparsity"] is not None:

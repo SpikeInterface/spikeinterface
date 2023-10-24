@@ -215,15 +215,34 @@ class KilosortBase:
             raise Exception(f"{cls.sorter_name} returned a non-zero exit code")
 
         # Clean-up temporary files
-        if params["delete_tmp_files"]:
-            for temp_file in sorter_output_folder.glob("*.m"):
-                temp_file.unlink()
-            for temp_file in sorter_output_folder.glob("*.mat"):
-                temp_file.unlink()
-            if (sorter_output_folder / "temp_wh.dat").exists():
-                (sorter_output_folder / "temp_wh.dat").unlink()
         if params["delete_recording_dat"] and (recording_file := sorter_output_folder / "recording.dat").exists():
             recording_file.unlink()
+
+        all_tmp_files = ("matlab_files", "temp_wh.dat")
+
+        if isinstance(params["delete_tmp_files"], bool):
+            if params["delete_tmp_files"]:
+                tmp_files_to_remove = all_tmp_files
+            else:
+                tmp_files_to_remove = ()
+        else:
+            assert isinstance(
+                params["delete_tmp_files"], (tuple, list)
+            ), "`delete_tmp_files` must be a `Bool`, `Tuple` or `List`."
+
+            for name in params["delete_tmp_files"]:
+                assert name in all_tmp_files, f"{name} is not a valid option, must be one of: {all_tmp_files}"
+
+            tmp_files_to_remove = params["delete_tmp_files"]
+
+        if "temp_wh.dat" in tmp_files_to_remove:
+            if (temp_wh_file := sorter_output_folder / "temp_wh.dat").exists():
+                temp_wh_file.unlink()
+
+        if "matlab_files" in tmp_files_to_remove:
+            for ext in ["*.m", "*.mat"]:
+                for temp_file in sorter_output_folder.glob(ext):
+                    temp_file.unlink()
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
