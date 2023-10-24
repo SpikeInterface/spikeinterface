@@ -186,8 +186,8 @@ class ChannelSparsity:
 
         if not self.are_waveforms_sparse(waveforms=waveforms, unit_id=unit_id):
             error_message = (
-                "Waveforms do not seem to be be in the sparsity shape of this unit_id. The number of active channels is "
-                f"{num_active_channels} but the waveform has non zero values outsies of those active channels: \n"
+                "Waveforms do not seem to be in the sparsity shape for this unit_id. The number of active channels is "
+                f"{num_active_channels}, but the waveform has non-zero values outsies of those active channels: \n"
                 f"{waveforms[..., num_active_channels:]}"
             )
             raise ValueError(error_message)
