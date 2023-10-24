@@ -28,7 +28,7 @@ class Templates:
         When passing a sparsity_mask, this checks that the templates array is also sparse and that it matches the
         structure fo the sparsity_masl.
 
-    The following attributes are avaialble after construction:
+    The following attributes are available after construction:
 
     Attributes
     ----------
