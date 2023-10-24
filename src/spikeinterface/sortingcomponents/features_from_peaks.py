@@ -92,7 +92,7 @@ class AmplitudeFeature(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         if self.all_channels:
             if self.peak_sign == "neg":
                 amplitudes = np.min(waveforms, axis=1)
@@ -126,7 +126,7 @@ class PeakToPeakFeature(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         if self.all_channels:
             all_ptps = np.ptp(waveforms, axis=1)
         else:
@@ -164,7 +164,7 @@ class PeakToPeakLagsFeature(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         if self.all_channels:
             all_maxs = np.argmax(waveforms, axis=1)
             all_mins = np.argmin(waveforms, axis=1)
@@ -215,7 +215,7 @@ class RandomProjectionsFeature(PipelineNode):
         y = L / (1 + np.exp(-k * (x - x0))) + b
         return y
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
 
         for main_chan in np.unique(peaks["channel_index"]):
@@ -263,7 +263,7 @@ class RandomProjectionsEnergyFeature(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         all_projections = np.zeros((peaks.size, self.projections.shape[1]), dtype=self._dtype)
         for main_chan in np.unique(peaks["channel_index"]):
             (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
@@ -296,7 +296,7 @@ class StdPeakToPeakFeature(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         all_ptps = np.zeros(peaks.size)
         for main_chan in np.unique(peaks["channel_index"]):
             (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
@@ -321,7 +321,7 @@ class GlobalPeakToPeakFeature(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         all_ptps = np.zeros(peaks.size)
         for main_chan in np.unique(peaks["channel_index"]):
             (idx,) = np.nonzero(peaks["channel_index"] == main_chan)
@@ -346,7 +346,7 @@ class KurtosisPeakToPeakFeature(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         all_ptps = np.zeros(peaks.size)
         import scipy
 
@@ -371,7 +371,7 @@ class EnergyFeature(PipelineNode):
     def get_dtype(self):
         return np.dtype("float32")
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         energy = np.zeros(peaks.size, dtype="float32")
         for main_chan in np.unique(peaks["channel_index"]):
             (idx,) = np.nonzero(peaks["channel_index"] == main_chan)

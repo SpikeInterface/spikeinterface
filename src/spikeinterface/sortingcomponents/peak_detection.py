@@ -185,7 +185,9 @@ class IterativePeakDetector(PeakDetector):
         pipeline_margin = (node.get_trace_margin() for node in internal_pipeline if hasattr(node, "get_trace_margin"))
         return max(pipeline_margin)
 
-    def compute(self, traces_chunk, start_frame, end_frame, segment_index, max_margin) -> Tuple[np.ndarray, np.ndarray]:
+    def compute(
+        self, traces_chunk, start_frame, end_frame, segment_index, left_margin, right_margin
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Perform the iterative peak detection, waveform extraction, and denoising.
 
@@ -199,8 +201,10 @@ class IterativePeakDetector(PeakDetector):
             The ending frame for the chunk.
         segment_index : int
             The segment index.
-        max_margin : int
-            The maximum margin for the traces.
+        left_margin : int
+            The left margin for the traces.
+        right_margin : int
+            The right margin for the traces.
 
         Returns
         -------
@@ -229,7 +233,8 @@ class IterativePeakDetector(PeakDetector):
                 start_frame=start_frame,
                 end_frame=end_frame,
                 segment_index=segment_index,
-                max_margin=max_margin,
+                left_margin=left_margin,
+                right_margin=right_margin,
             )
 
             local_peaks = self.add_iteration_to_peaks_dtype(local_peaks=local_peaks, iteration=iteration)
@@ -339,7 +344,7 @@ class PeakDetectorWrapper(PeakDetector):
     def get_trace_margin(self):
         return self.get_method_margin(*self.args)
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin):
         peak_sample_ind, peak_chan_ind = self.detect_peaks(traces, *self.args)
         if peak_sample_ind.size == 0 or peak_chan_ind.size == 0:
             return (np.zeros(0, dtype=base_peak_dtype),)

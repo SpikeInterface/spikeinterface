@@ -77,7 +77,7 @@ class WaveformThresholder(WaveformsNode):
             dict(feature=feature, threshold=threshold, operator=operator, noise_levels=self.noise_levels)
         )
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         if self.feature == "ptp":
             wf_data = waveforms.ptp(axis=1) / self.noise_levels
         elif self.feature == "mean":

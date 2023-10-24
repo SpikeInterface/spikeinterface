@@ -34,7 +34,7 @@ class AmplitudeExtractionNode(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks):
         amps = np.zeros(peaks.size, dtype=self._dtype)
         amps["abs_amplitude"] = np.abs(peaks["amplitude"])
         return amps
@@ -51,7 +51,7 @@ class WaveformDenoiser(PipelineNode):
     def get_dtype(self):
         return np.dtype("float32")
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         kernel = np.array([0.1, 0.8, 0.1])
         denoised_waveforms = np.apply_along_axis(lambda m: np.convolve(m, kernel, mode="same"), axis=1, arr=waveforms)
         return denoised_waveforms
@@ -64,7 +64,7 @@ class WaveformsRootMeanSquare(PipelineNode):
     def get_dtype(self):
         return np.dtype("float32")
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         rms_by_channels = np.sum(waveforms**2, axis=1)
         return rms_by_channels
 

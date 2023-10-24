@@ -106,10 +106,6 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
                         amplitudes_by_unit[segment_index][unit_id] = amps
                 return amplitudes_by_unit
 
-    @staticmethod
-    def get_extension_function():
-        return compute_spike_amplitudes
-
     def get_pipeline_nodes(self):
         we = self.waveform_extractor
         recording = we.recording
@@ -139,6 +135,10 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         )
         nodes = [spike_retriever_node, spike_amplitudes_node]
         return nodes
+
+    @staticmethod
+    def get_extension_function():
+        return compute_spike_amplitudes
 
 
 WaveformExtractor.register_extension(SpikeAmplitudesCalculator)
@@ -232,7 +232,7 @@ class SpikeAmplitudeNode(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks):
         sample_indices = peaks["sample_index"].copy()
         labels = peaks["unit_index"]
 

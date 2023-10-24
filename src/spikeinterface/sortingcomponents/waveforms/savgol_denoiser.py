@@ -52,7 +52,7 @@ class SavGolDenoiser(WaveformsNode):
 
         self._kwargs.update(dict(order=order, window_length_ms=window_length_ms))
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         # Denoise
         denoised_waveforms = scipy.signal.savgol_filter(waveforms, self.window_length, self.order, axis=1)
 

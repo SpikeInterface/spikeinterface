@@ -131,7 +131,7 @@ class LocalizePeakChannel(PipelineNode):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
         for index, main_chan in enumerate(peaks["channel_index"]):
@@ -177,7 +177,7 @@ class LocalizeCenterOfMass(LocalizeBase):
     def get_dtype(self):
         return self._dtype
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
         for main_chan in np.unique(peaks["channel_index"]):
@@ -264,7 +264,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
 
         self._dtype = np.dtype(dtype_localize_by_method["monopolar_triangulation"])
 
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
         for i, peak in enumerate(peaks):
@@ -388,7 +388,7 @@ class LocalizeGridConvolution(PipelineNode):
         return self._dtype
 
     @np.errstate(divide="ignore", invalid="ignore")
-    def compute(self, traces, peaks, waveforms):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks, waveforms):
         peak_locations = np.zeros(peaks.size, dtype=self._dtype)
 
         for main_chan in np.unique(peaks["channel_index"]):

@@ -87,7 +87,7 @@ class PipelineNode:
     def get_dtype(self):
         raise NotImplementedError
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin, *args):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, *args):
         raise NotImplementedError
 
 
@@ -127,7 +127,7 @@ class PeakRetriever(PeakSource):
     def get_dtype(self):
         return base_peak_dtype
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
@@ -136,7 +136,7 @@ class PeakRetriever(PeakSource):
 
         # make sample index local to traces
         local_peaks = local_peaks.copy()
-        local_peaks["sample_index"] -= start_frame - max_margin
+        local_peaks["sample_index"] -= start_frame - left_margin
 
         return (local_peaks,)
 
@@ -161,16 +161,26 @@ class SpikeRetriever(PeakSource):
         If False, the max channel is computed for each spike given a radius around the template max channel.
     extremum_channel_inds: dict of int
         The extremum channel index dict given from template.
-    radius_um: float (default 50.)
+    radius_um: float, default: 50.
         The radius to find the real max channel.
         Used only when channel_from_template=False
-    peak_sign: str (default "neg")
+    peak_sign: str, default: "neg"
         Peak sign to find the max channel.
         Used only when channel_from_template=False
+    include_spikes_in_margin: bool, default False
+        If True, spikes in the margin are also retrieved. Useful for nodes that need to account for border spikes.
+
     """
 
     def __init__(
-        self, recording, sorting, channel_from_template=True, extremum_channel_inds=None, radius_um=50, peak_sign="neg"
+        self,
+        recording,
+        sorting,
+        channel_from_template=True,
+        extremum_channel_inds=None,
+        radius_um=50,
+        peak_sign="neg",
+        include_spikes_in_margin=False,
     ):
         PipelineNode.__init__(self, recording, return_output=False)
 
@@ -191,22 +201,32 @@ class SpikeRetriever(PeakSource):
             i0, i1 = np.searchsorted(self.peaks["segment_index"], [segment_index, segment_index + 1])
             self.segment_slices.append(slice(i0, i1))
 
+        self.include_spikes_in_margin = include_spikes_in_margin
+
     def get_trace_margin(self):
         return 0
 
     def get_dtype(self):
         return base_peak_dtype
 
-    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        if self.include_spikes_in_margin:
+            sf = start_frame - left_margin
+            ef = end_frame + right_margin
+        else:
+            sf = start_frame
+            ef = end_frame
+
+        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [sf, ef])
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
         local_peaks = local_peaks.copy()
-        local_peaks["sample_index"] -= start_frame - max_margin
+        # TODO: is this correct for the first chunk????
+        local_peaks["sample_index"] -= start_frame - left_margin
 
         if not self.channel_from_template:
             # handle channel spike per spike
@@ -321,7 +341,7 @@ class ExtractDenseWaveforms(WaveformsNode):
     def get_trace_margin(self):
         return max(self.nbefore, self.nafter)
 
-    def compute(self, traces, peaks):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks):
         waveforms = traces[peaks["sample_index"][:, None] + np.arange(-self.nbefore, self.nafter)]
         return waveforms
 
@@ -380,7 +400,7 @@ class ExtractSparseWaveforms(WaveformsNode):
     def get_trace_margin(self):
         return max(self.nbefore, self.nafter)
 
-    def compute(self, traces, peaks):
+    def compute(self, traces, start_frame, end_frame, segment_index, left_margin, right_margin, peaks):
         sparse_wfs = np.zeros((peaks.shape[0], self.nbefore + self.nafter, self.max_num_chans), dtype=traces.dtype)
 
         for i, peak in enumerate(peaks):
@@ -498,6 +518,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
     traces_chunk, left_margin, right_margin = get_chunk_with_margin(
         recording_segment, start_frame, end_frame, None, max_margin, add_zeros=True
     )
+    num_samples_chunk = traces_chunk.shape[0]
 
     # compute the graph
     pipeline_outputs = {}
@@ -512,19 +533,21 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
             # to handle compatibility peak detector is a special case
             # with specific margin
             #  TODO later when in master: change this later
-            extra_margin = max_margin - node.get_trace_margin()
-            if extra_margin:
-                trace_detection = traces_chunk[extra_margin:-extra_margin]
-            else:
-                trace_detection = traces_chunk
-            node_output = node.compute(trace_detection, start_frame, end_frame, segment_index, max_margin)
+            extra_margin_left = left_margin - node.get_trace_margin()
+            extra_margin_right = right_margin - node.get_trace_margin()
+            trace_detection = traces_chunk[extra_margin_left : num_samples_chunk - extra_margin_right]
+            node_output = node.compute(
+                trace_detection, start_frame, end_frame, segment_index, left_margin, right_margin
+            )
             # set sample index to local
-            node_output[0]["sample_index"] += extra_margin
+            node_output[0]["sample_index"] += extra_margin_left
         elif isinstance(node, PeakSource):
-            node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
+            node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, left_margin, right_margin)
         else:
             # TODO later when in master: change the signature of all nodes (or maybe not!)
-            node_output = node.compute(traces_chunk, *node_input_args)
+            node_output = node.compute(
+                traces_chunk, start_frame, end_frame, segment_index, left_margin, right_margin, *node_input_args
+            )
         pipeline_outputs[node] = node_output
 
     # propagate the output
