@@ -44,14 +44,14 @@ print(peaks.dtype.fields.keys())
 
 ##############################################################################
 # This "peaks" vector can be used in several widgets, for instance
-# plot_peak_activity_map()
+# plot_peak_activity()
 
-si.plot_peak_activity_map(rec_filtred, peaks=peaks)
+si.plot_peak_activity(rec_filtred, peaks=peaks)
 
 ##############################################################################
 # can be also animated with bin_duration_s=1.
 
-si.plot_peak_activity_map(rec_filtred, bin_duration_s=1.)
+si.plot_peak_activity(rec_filtred, bin_duration_s=1.)
 
 
 plt.show()
