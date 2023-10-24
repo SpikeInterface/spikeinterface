@@ -1,4 +1,5 @@
 from .external.combinato import CombinatoSorter
+from .external.dartsort import DartsortSorter
 from .external.hdsort import HDSortSorter
 from .external.herdingspikes import HerdingspikesSorter
 from .external.ironclust import IronClustSorter
@@ -23,6 +24,7 @@ from .internal.tridesclous2 import Tridesclous2Sorter
 sorter_full_list = [
     # external
     CombinatoSorter,
+    DartsortSorter,
     HDSortSorter,
     HerdingspikesSorter,
     IronClustSorter,
