@@ -31,7 +31,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         ms_before=0.5,
         ms_after=0.5,
         spike_retriver_kwargs=dict(
-            channel_from_template=False,
+            channel_from_template=True,
             radius_um=50,
             peaks_sign="neg",
         ),
@@ -125,7 +125,7 @@ def compute_spike_locations(
     ms_before=0.5,
     ms_after=0.5,
     spike_retriver_kwargs=dict(
-        channel_from_template=False,
+        channel_from_template=True,
         radius_um=50,
         peaks_sign="neg",
     ),

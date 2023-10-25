@@ -215,7 +215,7 @@ class SpikeRetriever(PeakSource):
 
         # handle amplitude
         for i, peak in enumerate(local_peaks):
-            local_peaks["amplitude"][i] = traces[local_peaks["sample_index"], local_peaks[i]["channel_index"]]
+            local_peaks["amplitude"][i] = traces[peak["sample_index"], peak["channel_index"]]
 
         return (local_peaks,)
 
