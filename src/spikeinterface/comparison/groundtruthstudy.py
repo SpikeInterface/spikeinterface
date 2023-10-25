@@ -88,6 +88,7 @@ class GroundTruthStudy:
         (study_folder / "sortings").mkdir()
         (study_folder / "sortings" / "run_logs").mkdir()
         (study_folder / "metrics").mkdir()
+        (study_folder / "comparisons").mkdir()
 
         for key, (rec, gt_sorting) in datasets.items():
             assert "/" not in key, "'/' cannot be in the key name!"
@@ -127,16 +128,18 @@ class GroundTruthStudy:
         with open(self.folder / "cases.pickle", "rb") as f:
             self.cases = pickle.load(f)
 
+        
+        self.sortings = {k: None for k in self.cases}
         self.comparisons = {k: None for k in self.cases}
-
-        self.sortings = {}
         for key in self.cases:
             sorting_folder = self.folder / "sortings" / self.key_to_str(key)
             if sorting_folder.exists():
-                sorting = load_extractor(sorting_folder)
-            else:
-                sorting = None
-            self.sortings[key] = sorting
+                self.sortings[key] = load_extractor(sorting_folder)
+
+            comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + '.pickle')
+            if comparison_file.exists():
+                with open(comparison_file, mode='rb') as f :
+                    self.comparisons[key] = pickle.load(f)
 
     def __repr__(self):
         t = f"{self.__class__.__name__} {self.folder.stem} \n"
@@ -154,6 +157,16 @@ class GroundTruthStudy:
             return _key_separator.join(key)
         else:
             raise ValueError("Keys for cases must str or tuple")
+
+    def remove_sorting(self, key):
+        sorting_folder = self.folder / "sortings" / self.key_to_str(key)
+        log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
+        comparison_file = self.folder / "comparisons" / self.key_to_str(key)
+        if sorting_folder.exists():
+            shutil.rmtree(sorting_folder)
+        for f in (log_file, comparison_file):
+            if f.exists():
+                f.unlink()
 
     def run_sorters(self, case_keys=None, engine="loop", engine_kwargs={}, keep=True, verbose=False):
         if case_keys is None:
@@ -177,13 +190,8 @@ class GroundTruthStudy:
                         # save and skip
                         self.copy_sortings(case_keys=[key])
                         continue
-
-            if sorting_exists:
-                # delete older sorting + log before running sorters
-                shutil.rmtree(sorting_folder)
-                log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
-                if log_file.exists():
-                    log_file.unlink()
+            
+            self.remove_sorting(key)
 
             if sorter_folder_exists:
                 shutil.rmtree(sorter_folder)
@@ -228,10 +236,7 @@ class GroundTruthStudy:
             if sorting is not None:
                 if sorting_folder.exists():
                     if force:
-                        # delete folder + log
-                        shutil.rmtree(sorting_folder)
-                        if log_file.exists():
-                            log_file.unlink()
+                        self.remove_sorting(key)
                     else:
                         continue
 
@@ -254,6 +259,10 @@ class GroundTruthStudy:
                 continue
             comp = comparison_class(gt_sorting, sorting, **kwargs)
             self.comparisons[key] = comp
+
+            comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + '.pickle')
+            with open(comparison_file, mode='wb') as f:
+                pickle.dump(comp, f)
 
     def get_run_times(self, case_keys=None):
         import pandas as pd
@@ -297,7 +306,7 @@ class GroundTruthStudy:
         return we
 
     def get_templates(self, key, mode="average"):
-        we = self.get_waveform_extractor(key)
+        we = self.get_waveform_extractor(case_key=key)
         templates = we.get_all_templates(mode=mode)
         return templates
 
