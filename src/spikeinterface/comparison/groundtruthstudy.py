@@ -289,18 +289,11 @@ class GroundTruthStudy:
             we = extract_waveforms(recording, gt_sorting, folder=wf_folder, **extract_kwargs)
 
     def get_waveform_extractor(self, case_key=None, dataset_key=None):
-        # some recording are not dumpable to json and the waveforms extactor need it!
-        # so we load it with and put after
-        # this should be fixed in PR 2027 so remove this after
-
         if case_key is not None:
             dataset_key = self.cases[case_key]["dataset"]
         
         wf_folder = self.folder / "waveforms" / self.key_to_str(dataset_key)
         we = load_waveforms(wf_folder, with_recording=True)
-        # we = load_waveforms(wf_folder, with_recording=False)
-        # recording, _ = self.datasets[dataset_key]
-        # we.set_recording(recording)
         return we
 
     def get_templates(self, key, mode="average"):
@@ -369,7 +362,7 @@ class GroundTruthStudy:
             perf_by_unit.append(perf)
 
         perf_by_unit = pd.concat(perf_by_unit)
-        perf_by_unit = perf_by_unit.set_index(self.levels)
+        perf_by_unit = perf_by_unit.set_index(self.levels).sort_index()
         return perf_by_unit
 
     def get_count_units(self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None):
