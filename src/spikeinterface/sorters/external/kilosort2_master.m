@@ -64,7 +64,7 @@ function kilosort2_master(fpath, kilosortPath)
             rez.ops.Nbatch = Nbatch;
             rez.ops.NTbuff = NTbuff;
 
-            tic;  % tocs are coming TODO
+            tic;  % tocs are supplied in other parts of KS code
 
         else
             % preprocess data to create temp_wh.dat
