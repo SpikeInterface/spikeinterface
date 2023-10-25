@@ -1,7 +1,4 @@
-import warnings
-
 import numpy as np
-
 
 try:
     import numba

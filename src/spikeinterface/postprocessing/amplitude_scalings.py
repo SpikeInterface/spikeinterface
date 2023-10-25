@@ -386,6 +386,14 @@ class AmplitudeScalingNode(PipelineNode):
             # X = template.flatten()[:, np.newaxis]
             # reg = LinearRegression(positive=True, fit_intercept=True).fit(X, y)
             # scalings[spike_index] = reg.coef_[0]
+
+            # closed form: W = (X' * X)^-1 X' y
+            # y = local_waveform.flatten()[:, None]
+            # X = np.ones((len(y), 2))
+            # X[:, 0] = template.flatten()
+            # W = np.linalg.inv(X.T @ X) @ X.T @ y
+            # scalings[spike_index] = W[0, 0]
+
             linregress_res = linregress(template.flatten(), local_waveform.flatten())
             scalings[spike_index] = linregress_res[0]
 

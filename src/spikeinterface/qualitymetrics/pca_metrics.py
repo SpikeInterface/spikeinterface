@@ -21,7 +21,7 @@ from ..core import get_random_data_chunks, compute_sparsity, WaveformExtractor
 from ..core.job_tools import tqdm_joblib
 from ..core.template_tools import get_template_extremum_channel
 
-from ..postprocessing import WaveformPrincipalComponent
+from ..postprocessing import PrincipalComponentsCalculator
 import warnings
 
 from .misc_metrics import compute_num_spikes, compute_firing_rates
@@ -29,7 +29,7 @@ from .misc_metrics import compute_num_spikes, compute_firing_rates
 from ..core import get_random_data_chunks, load_waveforms, compute_sparsity, WaveformExtractor
 from ..core.job_tools import tqdm_joblib
 from ..core.template_tools import get_template_extremum_channel
-from ..postprocessing import WaveformPrincipalComponent
+from ..postprocessing import PrincipalComponentsCalculator
 
 
 _possible_pc_metric_names = [
@@ -70,7 +70,7 @@ def calculate_pc_metrics(
 
     Parameters
     ----------
-    pca : WaveformPrincipalComponent
+    pca : PrincipalComponentsCalculator
         Waveform object with principal components computed.
     metric_names : list of str, optional
         The list of PC metrics to compute.
@@ -100,7 +100,7 @@ def calculate_pc_metrics(
     if qm_params is None:
         qm_params = _default_params
 
-    assert isinstance(pca, WaveformPrincipalComponent)
+    assert isinstance(pca, PrincipalComponentsCalculator)
     we = pca.waveform_extractor
     extremum_channels = get_template_extremum_channel(we)
 

@@ -109,7 +109,7 @@ Currently, the following methods are implemented:
     see also [here](https://openreview.net/forum?id=ohfi44BZPC4)
   * 'monopolar_triangulation' with optimizer='minimize_with_log_penality'
 
-These methods are the same as implemented in :py:mod:`spikeinterface.postprocessing.unit_localization`
+These methods are the same as implemented in :py:mod:`spikeinterface.postprocessing.unit_locations`
 
 
 

@@ -368,8 +368,8 @@ class WaveformExtractor:
         import spikeinterface as si
         si.WaveformExtractor.extensions == []
 
-        from spikeinterface.postprocessing import WaveformPrincipalComponent
-        si.WaveformExtractor.extensions == [WaveformPrincipalComponent, ...]
+        from spikeinterface.postprocessing import PrincipalComponentsCalculator
+        si.WaveformExtractor.extensions == [PrincipalComponentsCalculator, ...]
 
         """
         assert issubclass(extension_class, BaseWaveformExtractorExtension)

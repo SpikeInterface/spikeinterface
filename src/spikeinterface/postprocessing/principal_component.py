@@ -13,7 +13,7 @@ from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWavefo
 _possible_modes = ["by_channel_local", "by_channel_global", "concatenated"]
 
 
-class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
+class PrincipalComponentsCalculator(BaseWaveformExtractorExtension):
     """
     Class to extract principal components from a WaveformExtractor object.
     """
@@ -26,7 +26,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
     @classmethod
     def create(cls, waveform_extractor):
-        pc = WaveformPrincipalComponent(waveform_extractor)
+        pc = PrincipalComponentsCalculator(waveform_extractor)
         return pc
 
     def __repr__(self):
@@ -678,11 +678,11 @@ def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafte
     return worker_ctx
 
 
-WaveformPrincipalComponent.run_for_all_spikes.__doc__ = WaveformPrincipalComponent.run_for_all_spikes.__doc__.format(
-    _shared_job_kwargs_doc
+PrincipalComponentsCalculator.run_for_all_spikes.__doc__ = (
+    PrincipalComponentsCalculator.run_for_all_spikes.__doc__.format(_shared_job_kwargs_doc)
 )
 
-WaveformExtractor.register_extension(WaveformPrincipalComponent)
+WaveformExtractor.register_extension(PrincipalComponentsCalculator)
 
 
 def compute_principal_components(
@@ -730,7 +730,7 @@ def compute_principal_components(
 
     Returns
     -------
-    pc: WaveformPrincipalComponent
+    pc: PrincipalComponentsCalculator
         The waveform principal component object
 
     Examples
@@ -749,10 +749,10 @@ def compute_principal_components(
     >>> pc.run_for_all_spikes(file_path="all_pca_projections.npy")
     """
 
-    if load_if_exists and waveform_extractor.is_extension(WaveformPrincipalComponent.extension_name):
-        pc = waveform_extractor.load_extension(WaveformPrincipalComponent.extension_name)
+    if load_if_exists and waveform_extractor.is_extension(PrincipalComponentsCalculator.extension_name):
+        pc = waveform_extractor.load_extension(PrincipalComponentsCalculator.extension_name)
     else:
-        pc = WaveformPrincipalComponent.create(waveform_extractor)
+        pc = PrincipalComponentsCalculator.create(waveform_extractor)
         pc.set_params(
             n_components=n_components, mode=mode, whiten=whiten, dtype=dtype, sparsity=sparsity, tmp_folder=tmp_folder
         )

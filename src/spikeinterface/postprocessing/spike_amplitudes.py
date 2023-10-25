@@ -45,7 +45,7 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
         amps = run_node_pipeline(
             recording, nodes, job_kwargs=job_kwargs, job_name="spike amplitudes", gather_mode="memory"
         )
-        self._extension_data[f"spike_amplitudes"] = amps
+        self._extension_data[self.extension_name] = amps
 
     def get_data(self, outputs="concatenated"):
         """

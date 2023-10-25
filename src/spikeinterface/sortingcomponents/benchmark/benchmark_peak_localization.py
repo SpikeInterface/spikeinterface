@@ -12,7 +12,7 @@ from spikeinterface.widgets import (
     plot_unit_waveforms,
 )
 from spikeinterface.postprocessing import compute_spike_locations
-from spikeinterface.postprocessing.unit_localization import compute_center_of_mass, compute_monopolar_triangulation
+from spikeinterface.postprocessing.unit_locations import compute_center_of_mass, compute_monopolar_triangulation
 from spikeinterface.core import get_noise_levels
 from spikeinterface.sortingcomponents.benchmark.benchmark_tools import BenchmarkBase, _simpleaxis
 

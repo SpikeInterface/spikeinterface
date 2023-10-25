@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 
 from spikeinterface import compute_sparsity
-from spikeinterface.postprocessing import WaveformPrincipalComponent, compute_principal_components
+from spikeinterface.postprocessing import PrincipalComponentsCalculator, compute_principal_components
 from spikeinterface.postprocessing.tests.common_extension_tests import WaveformExtensionCommonTestSuite
 
 if hasattr(pytest, "global_test_folder"):
@@ -18,7 +18,7 @@ DEBUG = False
 
 
 class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittest.TestCase):
-    extension_class = WaveformPrincipalComponent
+    extension_class = PrincipalComponentsCalculator
     extension_data_names = ["pca_0", "pca_1"]
     extension_function_kwargs_list = [
         dict(mode="by_channel_local"),

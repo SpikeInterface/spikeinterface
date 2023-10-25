@@ -54,6 +54,23 @@ class TemplateMetricsCalculator(BaseWaveformExtractorExtension):
         metrics_kwargs=None,
         include_multi_channel_metrics=False,
     ):
+        # For 2D metrics, external sparsity must be None, so that one metric value will be computed per unit.
+        if include_multi_channel_metrics or (
+            metric_names is not None and any([m in get_multi_channel_template_metric_names() for m in metric_names])
+        ):
+            assert sparsity is None, (
+                "If multi-channel metrics are computed, sparsity must be None, "
+                "so that each unit will correspond to 1 row of the output dataframe."
+            )
+            assert (
+                self.waveform_extractor.get_channel_locations().shape[1] == 2
+            ), "If multi-channel metrics are computed, channel locations must be 2D."
+        default_kwargs = _default_function_kwargs.copy()
+        if metrics_kwargs is None:
+            metrics_kwargs = default_kwargs
+        else:
+            default_kwargs.update(metrics_kwargs)
+            metrics_kwargs = default_kwargs
         if metric_names is None:
             metric_names = get_single_channel_template_metric_names()
         if include_multi_channel_metrics:
@@ -291,23 +308,6 @@ def compute_template_metrics(
         tmc = waveform_extractor.load_extension(TemplateMetricsCalculator.extension_name)
     else:
         tmc = TemplateMetricsCalculator(waveform_extractor)
-        # For 2D metrics, external sparsity must be None, so that one metric value will be computed per unit.
-        if include_multi_channel_metrics or (
-            metric_names is not None and any([m in get_multi_channel_template_metric_names() for m in metric_names])
-        ):
-            assert sparsity is None, (
-                "If multi-channel metrics are computed, sparsity must be None, "
-                "so that each unit will correspond to 1 row of the output dataframe."
-            )
-            assert (
-                waveform_extractor.get_channel_locations().shape[1] == 2
-            ), "If multi-channel metrics are computed, channel locations must be 2D."
-        default_kwargs = _default_function_kwargs.copy()
-        if metrics_kwargs is None:
-            metrics_kwargs = default_kwargs
-        else:
-            default_kwargs.update(metrics_kwargs)
-            metrics_kwargs = default_kwargs
         tmc.set_params(
             metric_names=metric_names,
             peak_sign=peak_sign,

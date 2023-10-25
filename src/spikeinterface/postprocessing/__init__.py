@@ -1,11 +1,4 @@
-# This is kept in 0.97.0 and then will be removed
-from .template_tools import (
-    get_template_amplitudes,
-    get_template_extremum_channel,
-    get_template_extremum_channel_peak_shift,
-    get_template_extremum_amplitude,
-    get_template_channel_sparsity,
-)
+from .compute_postprocessing import compute_postprocessing, get_default_postprocessing_params, get_postprocessing_list
 
 from .template_metrics import (
     TemplateMetricsCalculator,
@@ -20,7 +13,7 @@ from .template_similarity import (
 )
 
 from .principal_component import (
-    WaveformPrincipalComponent,
+    PrincipalComponentsCalculator,
     compute_principal_components,
 )
 
@@ -46,7 +39,7 @@ from .isi import (
 
 from .spike_locations import compute_spike_locations, SpikeLocationsCalculator
 
-from .unit_localization import (
+from .unit_locations import (
     compute_unit_locations,
     UnitLocationsCalculator,
     compute_center_of_mass,
