@@ -142,17 +142,17 @@ class AgreementMatrixWidget(BaseWidget):
                     self.ax.text(j, i, "{:0.2f}".format(scores.at[u1, u2]), ha="center", va="center", color="white")
 
         # Major ticks
-        self.ax.set_xticks(np.arange(0, N2))
-        self.ax.set_yticks(np.arange(0, N1))
         self.ax.xaxis.tick_bottom()
 
         # Labels for major ticks
         if dp.unit_ticks:
-            self.ax.set_yticklabels(scores.index, fontsize=12)
-            self.ax.set_xticklabels(scores.columns, fontsize=12)
+            self.ax.set_xticks(np.arange(0, N2))
+            self.ax.set_yticks(np.arange(0, N1))
+            self.ax.set_yticklabels(scores.index)
+            self.ax.set_xticklabels(scores.columns)
 
-        self.ax.set_xlabel(comp.name_list[1], fontsize=20)
-        self.ax.set_ylabel(comp.name_list[0], fontsize=20)
+        self.ax.set_xlabel(comp.name_list[1])
+        self.ax.set_ylabel(comp.name_list[0])
 
         self.ax.set_xlim(-0.5, N2 - 0.5)
         self.ax.set_ylim(

@@ -190,7 +190,7 @@ class StudyPerformances(BaseWidget):
                     ax.plot(val, label=label)
                 ax.set_title(performance_name)
                 if count == 0:
-                    ax.legend()
+                    ax.legend(loc='upper right')
 
         elif dp.mode == "snr":
 
@@ -203,13 +203,13 @@ class StudyPerformances(BaseWidget):
                     x = study.get_metrics(key).loc[:, metric_name].values
                     y = perfs.xs(key).loc[:, performance_name].values
                     label = study.cases[key]["label"]
-                    ax.scatter(x, y, label=label)
+                    ax.scatter(x, y, s=10, label=label)
                     max_metric = max(max_metric, np.max(x))
                 ax.set_title(performance_name)
                 ax.set_xlim(0, max_metric * 1.05)
                 ax.set_ylim(0, 1.05)
                 if count == 0:
-                    ax.legend()
+                    ax.legend(loc='lower right')
 
 
         elif dp.mode == "swarm":
@@ -245,7 +245,7 @@ class StudyAgreementMatrix(BaseWidget):
     def __init__(
         self,
         study,
-        ordered=True, count_text=True,
+        ordered=True,
         case_keys=None,
         backend=None,
         **backend_kwargs,
@@ -257,7 +257,6 @@ class StudyAgreementMatrix(BaseWidget):
             study=study,
             case_keys=case_keys,
             ordered=ordered,
-            count_text=count_text,
         )
 
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
@@ -276,9 +275,22 @@ class StudyAgreementMatrix(BaseWidget):
         for count, key in enumerate(dp.case_keys):
             ax = self.axes.flatten()[count]
             comp = study.comparisons[key]
-            AgreementMatrixWidget(comp, ordered=dp.ordered, count_text=dp.count_text, backend='matplotlib', ax=ax)
+            unit_ticks = len(comp.sorting1.unit_ids) <= 16
+            count_text = len(comp.sorting1.unit_ids) <= 16
+
+
+            AgreementMatrixWidget(comp, ordered=dp.ordered, count_text=count_text, unit_ticks=unit_ticks, backend='matplotlib', ax=ax)
             label = study.cases[key]["label"]
-            ax.set_title(label)
+            ax.set_xlabel(label)
+
+            if count > 0:
+                ax.set_ylabel(None)
+                ax.set_yticks([])
+            ax.set_xticks([])
+                
+        # ax0 = self.axes.flatten()[0]
+        # for ax in self.axes.flatten()[1:]:
+        #     ax.sharey(ax0)
 
 
 class StudySummary(BaseWidget):
