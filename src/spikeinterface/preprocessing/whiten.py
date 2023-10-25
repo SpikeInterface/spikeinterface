@@ -29,6 +29,10 @@ class WhitenRecording(BasePreprocessor):
         Apply a scaling factor to fit the integer range.
         This is used when the dtype is an integer, so that the output is scaled.
         For example, a value of `int_scale=200` will scale the traces value to a standard deviation of 200.
+    eps : float, default 1e-8
+        Small epsilon to regularize SVD.
+        If None, eps is estimated from the data. If the data is float type and scaled down to very small values,
+        then the eps is automatically set to a small fraction of the median of the squared data.
     W : 2d np.array
         Pre-computed whitening matrix, by default None
     M : 1d np.array or None
@@ -52,6 +56,7 @@ class WhitenRecording(BasePreprocessor):
         mode="global",
         radius_um=100.0,
         int_scale=None,
+        eps=1e-8,
         W=None,
         M=None,
         **random_chunk_kwargs,
@@ -67,7 +72,9 @@ class WhitenRecording(BasePreprocessor):
             if M is not None:
                 M = np.asarray(M)
         else:
-            W, M = compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, radius_um=radius_um)
+            W, M = compute_whitening_matrix(
+                recording, mode, random_chunk_kwargs, apply_mean, radius_um=radius_um, eps=eps
+            )
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
 
@@ -120,7 +127,7 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
 whiten = define_function_from_class(source_class=WhitenRecording, name="whiten")
 
 
-def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, radius_um=None):
+def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, radius_um=None, eps=1e-8):
     """
     Compute whitening matrix
 
@@ -173,8 +180,7 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
     # whitening. We therefore check to see if the data is float
     # type and we estimate a more reasonable eps in the case
     # where the data is on a scale less than 1.
-    eps = 1e-8  # the default
-    if data.dtype.kind == "f":
+    if data.dtype.kind == "f" or eps is None:
         median_data_sqr = np.median(data**2)  # use the square because cov (and hence S) scales as the square
         if median_data_sqr < 1 and median_data_sqr > 0:
             eps = max(1e-16, median_data_sqr * 1e-3)  # use a small fraction of the median of the squared data
