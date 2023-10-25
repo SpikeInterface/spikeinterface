@@ -33,7 +33,7 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         spike_retriver_kwargs=dict(
             channel_from_template=True,
             radius_um=50,
-            peaks_sign="neg",
+            peak_sign="neg",
         ),
         method="center_of_mass",
         method_kwargs={},
@@ -127,7 +127,7 @@ def compute_spike_locations(
     spike_retriver_kwargs=dict(
         channel_from_template=True,
         radius_um=50,
-        peaks_sign="neg",
+        peak_sign="neg",
     ),
     method="center_of_mass",
     method_kwargs={},
@@ -156,7 +156,7 @@ def compute_spike_locations(
                 channel_from_template = False is slower but more accurate
             * radius_um: float, default 50
                 In case channel_from_template=False, this is the radius to get the true peak.
-            * peaks_sign="neg"
+            * peak_sign="neg"
                 In case channel_from_template=False, this is the peak sign.
     method : str
         'center_of_mass' / 'monopolar_triangulation' / 'grid_convolution'
