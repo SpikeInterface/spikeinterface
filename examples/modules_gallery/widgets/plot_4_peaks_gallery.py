@@ -48,6 +48,8 @@ print(peaks.dtype.fields.keys())
 
 si.plot_peak_activity(recording=rec_filtred, peaks=peaks)
 
+plt.show()
+
 ##############################################################################
 # can be also animated with bin_duration_s=1.
 
