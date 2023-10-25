@@ -120,7 +120,7 @@ class PeakActivityMapWidget(BaseWidget):
         if with_contact_color:
             text_on_contact = None
             if with_channel_ids:
-                text_on_contact = self.recording.channel_ids
+                text_on_contact = rec.channel_ids
 
             from probeinterface.plotting import plot_probe
 
