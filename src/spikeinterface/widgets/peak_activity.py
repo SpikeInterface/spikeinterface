@@ -95,13 +95,13 @@ class PeakActivityMapWidget(BaseWidget):
                 i0, i1 = np.searchsorted(peaks["sample_index"], [bin_size * i, bin_size * (i + 1)])
                 local_peaks = peaks[i0:i1]
                 artists = self._plot_one_bin(
-                    rec,
-                    probe,
-                    local_peaks,
-                    dp.with_channel_ids,
-                    dp.bin_duration_s,
-                    dp.with_contact_color,
-                    dp.with_interpolated_map,
+                    rec=rec,
+                    probe=probe,
+                    peaks=local_peaks,
+                    duration=dp.bin_duration_s,
+                    with_channel_ids=dp.with_channel_ids,
+                    with_contact_color=dp.with_contact_color,
+                    with_interpolated_map=dp.with_interpolated_map,
                 )
                 return artists
 
@@ -120,7 +120,7 @@ class PeakActivityMapWidget(BaseWidget):
         if with_contact_color:
             text_on_contact = None
             if with_channel_ids:
-                text_on_contact = self.recording.channel_ids
+                text_on_contact = rec.channel_ids
 
             from probeinterface.plotting import plot_probe
 
