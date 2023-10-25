@@ -674,8 +674,8 @@ class NormalizedTemplateDiff:
             final_shift = 0
             merge_value = np.nan
 
-        # DEBUG = False
-        DEBUG = True
+        DEBUG = False
+        # DEBUG = True
         if DEBUG and normed_diff < 0.2:
             # if DEBUG:
 
@@ -683,8 +683,8 @@ class NormalizedTemplateDiff:
 
             fig, ax = plt.subplots()
 
-            m0 = template0.flatten()
-            m1 = template1.flatten()
+            m0 = template0.T.flatten()
+            m1 = template1.T.flatten()
 
             ax.plot(m0, color="C0", label=f"{label0} {inds0.size}")
             ax.plot(m1, color="C1", label=f"{label1} {inds1.size}")
