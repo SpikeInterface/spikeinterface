@@ -87,13 +87,13 @@ class AgreementMatrixWidget(BaseWidget):
     ----------
     sorting_comparison: GroundTruthComparison or SymmetricSortingComparison
         The sorting comparison object.
-        Symetric or not.
-    ordered: bool
+        Can optionally be symmetric if given a SymmetricSortingComparison
+    ordered: bool, default: True
         Order units with best agreement scores.
-        This enable to see agreement on a diagonal.
-    count_text: bool
+        If True, agreement scores can be seen along a diagonal
+    count_text: bool, default: True
         If True counts are displayed as text
-    unit_ticks: bool
+    unit_ticks: bool, default: True
         If True unit tick labels are displayed
 
     """
