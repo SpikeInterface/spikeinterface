@@ -274,7 +274,7 @@ def correct_motion(
         method_class = localize_peak_methods[method]
         node2 = method_class(recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs)
         pipeline_nodes = [node0, node1, node2]
-        job_kwargs["job_name"] = ("detect and localize",)
+        job_kwargs["job_name"] = "detect and localize"
 
         t0 = time.perf_counter()
         peaks, peak_locations = run_node_pipeline(
