@@ -84,6 +84,10 @@ class TestWidgets(unittest.TestCase):
 
         cls.gt_comp = sc.compare_sorter_to_ground_truth(cls.sorting, cls.sorting)
 
+        from spikeinterface.sortingcomponents.peak_detection import detect_peaks
+
+        cls.peaks = detect_peaks(cls.recording, method="locally_exclusive")
+
     def test_plot_traces(self):
         possible_backends = list(sw.TracesWidget.get_possible_backends())
         for backend in possible_backends:
@@ -203,7 +207,7 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
 
-    def test_autocorrelograms(self):
+    def test_plot_autocorrelograms(self):
         possible_backends = list(sw.AutoCorrelogramsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
@@ -217,7 +221,7 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
 
-    def test_crosscorrelogram(self):
+    def test_plot_crosscorrelogram(self):
         possible_backends = list(sw.CrossCorrelogramsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
@@ -231,7 +235,7 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
 
-    def test_isi_distribution(self):
+    def test_plot_isi_distribution(self):
         possible_backends = list(sw.ISIDistributionWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
@@ -245,7 +249,7 @@ class TestWidgets(unittest.TestCase):
                     **self.backend_kwargs[backend],
                 )
 
-    def test_amplitudes(self):
+    def test_plot_amplitudes(self):
         possible_backends = list(sw.AmplitudesWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
@@ -279,7 +283,7 @@ class TestWidgets(unittest.TestCase):
                     self.we_sparse, unit_ids=unit_ids, backend=backend, **self.backend_kwargs[backend]
                 )
 
-    def test_unit_locations(self):
+    def test_plot_unit_locations(self):
         possible_backends = list(sw.UnitLocationsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
@@ -290,7 +294,7 @@ class TestWidgets(unittest.TestCase):
                     self.we_sparse, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
                 )
 
-    def test_spike_locations(self):
+    def test_plot_spike_locations(self):
         possible_backends = list(sw.SpikeLocationsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
@@ -301,21 +305,21 @@ class TestWidgets(unittest.TestCase):
                     self.we_sparse, with_channel_ids=True, backend=backend, **self.backend_kwargs[backend]
                 )
 
-    def test_similarity(self):
+    def test_plot_similarity(self):
         possible_backends = list(sw.TemplateSimilarityWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_template_similarity(self.we_dense, backend=backend, **self.backend_kwargs[backend])
                 sw.plot_template_similarity(self.we_sparse, backend=backend, **self.backend_kwargs[backend])
 
-    def test_quality_metrics(self):
+    def test_plot_quality_metrics(self):
         possible_backends = list(sw.QualityMetricsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
                 sw.plot_quality_metrics(self.we_dense, backend=backend, **self.backend_kwargs[backend])
                 sw.plot_quality_metrics(self.we_sparse, backend=backend, **self.backend_kwargs[backend])
 
-    def test_template_metrics(self):
+    def test_plot_template_metrics(self):
         possible_backends = list(sw.TemplateMetricsWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
@@ -340,7 +344,7 @@ class TestWidgets(unittest.TestCase):
                     self.we_sparse, self.we_sparse.sorting.unit_ids[0], backend=backend, **self.backend_kwargs[backend]
                 )
 
-    def test_sorting_summary(self):
+    def test_plot_sorting_summary(self):
         possible_backends = list(sw.SortingSummaryWidget.get_possible_backends())
         for backend in possible_backends:
             if backend not in self.skip_backends:
@@ -377,6 +381,35 @@ class TestWidgets(unittest.TestCase):
             if backend not in self.skip_backends:
                 sw.plot_unit_probe_map(self.we_dense)
 
+    def test_plot_unit_presence(self):
+        possible_backends = list(sw.UnitPresenceWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_unit_presence(self.sorting)
+
+    def test_plot_peak_activity(self):
+        possible_backends = list(sw.PeakActivityMapWidget.get_possible_backends())
+        for backend in possible_backends:
+            if backend not in self.skip_backends:
+                sw.plot_peak_activity(self.recording, self.peaks)
+
+    def test_plot_multicomparison(self):
+        mcmp = sc.compare_multiple_sorters([self.sorting, self.sorting, self.sorting])
+        possible_backends_graph = list(sw.MultiCompGraphWidget.get_possible_backends())
+        for backend in possible_backends_graph:
+            sw.plot_multicomparison_graph(
+                mcmp, edge_cmap="viridis", node_cmap="rainbow", draw_labels=False, backend=backend
+            )
+        possible_backends_glob = list(sw.MultiCompGlobalAgreementWidget.get_possible_backends())
+        for backend in possible_backends_glob:
+            sw.plot_multicomparison_agreement(mcmp, backend=backend)
+        possible_backends_by_sorter = list(sw.MultiCompAgreementBySorterWidget.get_possible_backends())
+        for backend in possible_backends_by_sorter:
+            sw.plot_multicomparison_agreement_by_sorter(mcmp)
+            if backend == "matplotlib":
+                _, axes = plt.subplots(len(mcmp.object_list), 1)
+                sw.plot_multicomparison_agreement_by_sorter(mcmp, axes=axes)
+
 
 if __name__ == "__main__":
     # unittest.main()
@@ -395,15 +428,17 @@ if __name__ == "__main__":
     # mytest.test_plot_unit_templates()
     # mytest.test_plot_unit_summary()
     # mytest.test_crosscorrelogram()
-    mytest.test_isi_distribution()
+    # mytest.test_isi_distribution()
     # mytest.test_unit_locations()
     # mytest.test_quality_metrics()
-    mytest.test_template_metrics()
+    # mytest.test_template_metrics()
     # mytest.test_amplitudes()
     # mytest.test_plot_agreement_matrix()
     # mytest.test_plot_confusion_matrix()
     # mytest.test_plot_probe_map()
     # mytest.test_plot_rasters()
     # mytest.test_plot_unit_probe_map()
+    # mytest.test_plot_unit_presence()
+    mytest.test_plot_multicomparison()
 
     plt.show()
