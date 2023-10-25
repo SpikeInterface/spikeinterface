@@ -105,7 +105,7 @@ def test_run_node_pipeline():
             AmplitudeExtractionNode(recording, parents=[peak_source], param0=6.6),
         ]
         step_one = run_node_pipeline(recording, nodes, job_kwargs, squeeze_output=True)
-        if loop ==0:
+        if loop == 0:
             assert np.allclose(np.abs(peaks["amplitude"]), step_one["abs_amplitude"])
 
         # 3 nodes two have outputs
