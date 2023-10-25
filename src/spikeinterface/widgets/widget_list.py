@@ -2,11 +2,10 @@ import warnings
 
 from .base import backend_kwargs_desc
 
-from .agreement_matrix import AgreementMatrixWidget
+
 from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 from .amplitudes import AmplitudesWidget
 from .autocorrelograms import AutoCorrelogramsWidget
-from .confusion_matrix import ConfusionMatrixWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
 from .isi_distribution import ISIDistributionWidget
 from .motion import MotionWidget
@@ -29,6 +28,7 @@ from .unit_summary import UnitSummaryWidget
 from .unit_templates import UnitTemplatesWidget
 from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
 from .unit_waveforms import UnitWaveformsWidget
+from .comparison import AgreementMatrixWidget, ConfusionMatrixWidget
 from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformances, StudyPerformancesVsMetrics
 from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
 
