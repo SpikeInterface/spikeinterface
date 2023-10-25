@@ -330,7 +330,7 @@ class LocalizeGridConvolution(PipelineNode):
         parents=["extract_waveforms"],
         radius_um=40.0,
         upsampling_um=5.0,
-        sigma_um=np.linspace(5.0, 25.0, 5),
+        sigma_um=np.linspace(10.0, 50.0, 5),
         sigma_ms=0.25,
         margin_um=50.0,
         prototype=None,
@@ -437,19 +437,14 @@ class LocalizeGridConvolution(PipelineNode):
             peak_locations["x"][idx] = found_positions[:, 0]
             peak_locations["y"][idx] = found_positions[:, 1]
 
-            
-
             if self.mode == '3d':
                 d = sklearn.metrics.pairwise_distances(self.template_positions, np.nan_to_num(found_positions[:, :2]))
                 best_templates = np.argmin(d, axis=0)
-                depth_ums = np.linspace(0, 100, 10)
-                dot_products = np.zeros((depth_ums.shape[0], len(best_templates)), dtype=np.float32)
                 for i, t in enumerate(best_templates):
-
-                    for count in range(len(depth_ums)):
-                        w = self.weights[count, :, :][channel_mask, :][:, t]
-                        print(w.shape)
-                        dot_products[count, :] = np.dot(global_products, w)
+                    w = self.weights[:, :, t]
+                    dot_products = np.dot(w[:, channel_mask], global_products[i])/np.sum(w, axis=1)
+                    found_positions[i, 2] = (dot_products * self.sigma_um).sum() / dot_products.sum()
+                peak_locations["z"][idx] = found_positions[:, 2]
 
         return peak_locations
 

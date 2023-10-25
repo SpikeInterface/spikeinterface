@@ -373,7 +373,7 @@ def compute_grid_convolution(
     peak_sign="neg",
     radius_um=40.0,
     upsampling_um=5,
-    sigma_um=np.linspace(5.0, 25.0, 5),
+    sigma_um=np.linspace(10.0, 50.0, 5),
     sigma_ms=0.25,
     margin_um=50,
     prototype=None,
@@ -421,16 +421,17 @@ def compute_grid_convolution(
     assert 0 <= percentile <= 100, "Percentile should be in [0, 100]"
     assert 0 <= sparsity_threshold <= 1, "sparsity_threshold should be in [0, 1]"
 
+    
     time_axis = np.arange(-nbefore, nafter) * 1000 / fs
     if prototype is None:
         prototype = np.exp(-(time_axis**2) / (2 * (sigma_ms**2)))
-
     prototype = prototype[:, np.newaxis]
 
     template_positions, weights, nearest_template_mask = get_grid_convolution_templates_and_weights(
         contact_locations, radius_um, upsampling_um, sigma_um, margin_um
     )
 
+    #print(template_positions.shape)
     templates = waveform_extractor.get_all_templates(mode="average")
 
     peak_channels = get_template_extremum_channel(waveform_extractor, peak_sign, outputs="index")
@@ -468,13 +469,15 @@ def compute_grid_convolution(
         scalar_products = np.zeros(num_templates, dtype=np.float32)
         for count in range(weights.shape[0]):
             scalar_products += dot_products[count]
-            found_positions[:, :2] += np.dot(dot_products[count], template_positions[nearest_templates])
+            found_positions[:2] += np.dot(dot_products[count], template_positions[nearest_templates])
 
         unit_location[i, :] = found_positions / scalar_products.sum()
 
         if mode == '3d':
-            best_template = np.argmin(np.linalg.norm(template_positions, unit_location[i, :]), axis=1)
-
+            best_template = np.argmin(np.linalg.norm(template_positions - unit_location[i, :2], axis=1))
+            w = weights[:, :, best_template]
+            dot_products = np.dot(w[:, channel_mask], global_products)/np.sum(w, axis=1)
+            unit_location[i, 2] = (dot_products * sigma_um).sum() / dot_products.sum()
 
     return unit_location
 
