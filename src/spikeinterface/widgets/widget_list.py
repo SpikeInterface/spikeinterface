@@ -29,7 +29,7 @@ from .unit_templates import UnitTemplatesWidget
 from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
 from .unit_waveforms import UnitWaveformsWidget
 from .comparison import AgreementMatrixWidget, ConfusionMatrixWidget
-from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformances
+from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformances, StudyAgreementMatrix, StudySummary
 from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
 
 widget_list = [
@@ -66,6 +66,8 @@ widget_list = [
     StudyRunTimesWidget,
     StudyUnitCountsWidget,
     StudyPerformances,
+    StudyAgreementMatrix,
+    StudySummary,
     StudyComparisonCollisionBySimilarityWidget,
 ]
 
@@ -135,6 +137,8 @@ plot_unit_waveforms = UnitWaveformsWidget
 plot_study_run_times = StudyRunTimesWidget
 plot_study_unit_counts = StudyUnitCountsWidget
 plot_study_performances = StudyPerformances
+plot_study_agreement_matrix = StudyAgreementMatrix
+plot_study_summary = StudySummary
 plot_study_comparison_collision_by_similarity = StudyComparisonCollisionBySimilarityWidget
 
 
