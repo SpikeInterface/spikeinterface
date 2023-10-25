@@ -429,6 +429,7 @@ def run_node_pipeline(
     recording,
     nodes,
     job_kwargs,
+    job_name="pipeline",  # I think we shoul get rid of this and use the job_kwargs to pass this argument
     mp_context=None,
     gather_mode="memory",
     gather_kwargs={},
@@ -453,15 +454,14 @@ def run_node_pipeline(
         raise ValueError(f"wrong gather_mode : {gather_mode}")
 
     init_args = (recording, nodes)
-
-    job_kwargs["job_name"] = "pipeline"
-
+    job_name = job_kwargs.pop("job_name", job_name)
     processor = ChunkRecordingExecutor(
         recording,
         _compute_peak_pipeline_chunk,
         _init_peak_pipeline,
         init_args,
         gather_func=gather_func,
+        job_name=job_name,  # But you can still pass them like this
         **job_kwargs,
     )
 

@@ -125,13 +125,13 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
             handle_collisions,
             delta_collision_samples,
         )
-        job_kwargs["job_name"] = f"extract amplitude scalings"
         processor = ChunkRecordingExecutor(
             recording,
             func,
             init_func,
             init_args,
             handle_returns=True,
+            job_name="extract amplitude scalings",  # With ChunkRecordingExecutor, you can still do this
             **job_kwargs,
         )
         out = processor.run()

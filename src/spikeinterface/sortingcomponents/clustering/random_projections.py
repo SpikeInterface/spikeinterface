@@ -144,6 +144,7 @@ class RandomProjectionClustering:
 
         pipeline_nodes = [node0, node1, node2, node3]
 
+        # As well as with the run_node_pipeline function you can pass job_name
         hdbscan_data = run_node_pipeline(
             recording, pipeline_nodes, params["job_kwargs"], job_name="extracting features"
         )
