@@ -288,16 +288,19 @@ class GroundTruthStudy:
             recording, gt_sorting = self.datasets[dataset_key]
             we = extract_waveforms(recording, gt_sorting, folder=wf_folder, **extract_kwargs)
 
-    def get_waveform_extractor(self, key):
+    def get_waveform_extractor(self, case_key=None, dataset_key=None):
         # some recording are not dumpable to json and the waveforms extactor need it!
         # so we load it with and put after
         # this should be fixed in PR 2027 so remove this after
 
-        dataset_key = self.cases[key]["dataset"]
+        if case_key is not None:
+            dataset_key = self.cases[case_key]["dataset"]
+        
         wf_folder = self.folder / "waveforms" / self.key_to_str(dataset_key)
-        we = load_waveforms(wf_folder, with_recording=False)
-        recording, _ = self.datasets[dataset_key]
-        we.set_recording(recording)
+        we = load_waveforms(wf_folder, with_recording=True)
+        # we = load_waveforms(wf_folder, with_recording=False)
+        # recording, _ = self.datasets[dataset_key]
+        # we.set_recording(recording)
         return we
 
     def get_templates(self, key, mode="average"):
