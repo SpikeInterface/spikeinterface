@@ -190,10 +190,9 @@ class StudyPerformances(BaseWidget):
                     ax.plot(val, label=label)
                 ax.set_title(performance_name)
                 if count == 0:
-                    ax.legend(loc='upper right')
+                    ax.legend(loc="upper right")
 
         elif dp.mode == "snr":
-
             metric_name = dp.mode
             for count, performance_name in enumerate(dp.performance_names):
                 ax = self.axes.flatten()[count]
@@ -209,8 +208,7 @@ class StudyPerformances(BaseWidget):
                 ax.set_xlim(0, max_metric * 1.05)
                 ax.set_ylim(0, 1.05)
                 if count == 0:
-                    ax.legend(loc='lower right')
-
+                    ax.legend(loc="lower right")
 
         elif dp.mode == "swarm":
             levels = perfs.index.names
@@ -223,7 +221,7 @@ class StudyPerformances(BaseWidget):
             )
             df["x"] = df.apply(lambda r: " ".join([r[col] for col in levels]), axis=1)
             sns.swarmplot(data=df, x="x", y="Score", hue="Metric", dodge=True)
-            
+
 
 class StudyAgreementMatrix(BaseWidget):
     """
@@ -278,8 +276,9 @@ class StudyAgreementMatrix(BaseWidget):
             unit_ticks = len(comp.sorting1.unit_ids) <= 16
             count_text = len(comp.sorting1.unit_ids) <= 16
 
-
-            AgreementMatrixWidget(comp, ordered=dp.ordered, count_text=count_text, unit_ticks=unit_ticks, backend='matplotlib', ax=ax)
+            AgreementMatrixWidget(
+                comp, ordered=dp.ordered, count_text=count_text, unit_ticks=unit_ticks, backend="matplotlib", ax=ax
+            )
             label = study.cases[key]["label"]
             ax.set_xlabel(label)
 
@@ -287,7 +286,7 @@ class StudyAgreementMatrix(BaseWidget):
                 ax.set_ylabel(None)
                 ax.set_yticks([])
             ax.set_xticks([])
-                
+
         # ax0 = self.axes.flatten()[0]
         # for ax in self.axes.flatten()[1:]:
         #     ax.sharey(ax0)
@@ -333,7 +332,6 @@ class StudySummary(BaseWidget):
 
         study = data_plot["study"]
         case_keys = data_plot["case_keys"]
-
 
         StudyPerformances(study=study, case_keys=case_keys, mode="ordered", backend="matplotlib", **backend_kwargs)
         StudyPerformances(study=study, case_keys=case_keys, mode="snr", backend="matplotlib", **backend_kwargs)

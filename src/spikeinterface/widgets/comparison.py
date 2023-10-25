@@ -77,8 +77,6 @@ class ConfusionMatrixWidget(BaseWidget):
         )
 
 
-
-
 class AgreementMatrixWidget(BaseWidget):
     """
     Plots sorting comparison agreement matrix.

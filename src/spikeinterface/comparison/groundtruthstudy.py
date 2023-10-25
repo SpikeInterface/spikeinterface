@@ -128,7 +128,6 @@ class GroundTruthStudy:
         with open(self.folder / "cases.pickle", "rb") as f:
             self.cases = pickle.load(f)
 
-        
         self.sortings = {k: None for k in self.cases}
         self.comparisons = {k: None for k in self.cases}
         for key in self.cases:
@@ -136,9 +135,9 @@ class GroundTruthStudy:
             if sorting_folder.exists():
                 self.sortings[key] = load_extractor(sorting_folder)
 
-            comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + '.pickle')
+            comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
             if comparison_file.exists():
-                with open(comparison_file, mode='rb') as f :
+                with open(comparison_file, mode="rb") as f:
                     self.comparisons[key] = pickle.load(f)
 
     def __repr__(self):
@@ -190,7 +189,7 @@ class GroundTruthStudy:
                         # save and skip
                         self.copy_sortings(case_keys=[key])
                         continue
-            
+
             self.remove_sorting(key)
 
             if sorter_folder_exists:
@@ -260,8 +259,8 @@ class GroundTruthStudy:
             comp = comparison_class(gt_sorting, sorting, **kwargs)
             self.comparisons[key] = comp
 
-            comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + '.pickle')
-            with open(comparison_file, mode='wb') as f:
+            comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
+            with open(comparison_file, mode="wb") as f:
                 pickle.dump(comp, f)
 
     def get_run_times(self, case_keys=None):
@@ -300,7 +299,7 @@ class GroundTruthStudy:
     def get_waveform_extractor(self, case_key=None, dataset_key=None):
         if case_key is not None:
             dataset_key = self.cases[case_key]["dataset"]
-        
+
         wf_folder = self.folder / "waveforms" / self.key_to_str(dataset_key)
         we = load_waveforms(wf_folder, with_recording=True)
         return we
