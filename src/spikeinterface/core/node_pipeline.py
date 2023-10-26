@@ -213,7 +213,9 @@ class SpikeRetriever(PeakSource):
                 elif self.peak_sign == "both":
                     local_peaks[i]["channel_index"] = chans[np.argmax(np.abs(sparse_wfs))]
 
-        # TODO: "amplitude" ???
+        # handle amplitude
+        for i, peak in enumerate(local_peaks):
+            local_peaks["amplitude"][i] = traces[peak["sample_index"], peak["channel_index"]]
 
         return (local_peaks,)
 
