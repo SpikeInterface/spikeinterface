@@ -259,12 +259,12 @@ class BaseRecordingSnippets(BaseExtractor):
         ----------
         locations : np.array
             Array with channel locations (num_channels, ndim) [ndim can be 2 or 3]
-        shape : str, optional
-            Electrode shapes, by default "circle"
-        shape_params : dict, optional
-            Shape parameters, by default {"radius": 1}
-        axes : str, optional
-            If ndim is 3, indicates the axes that define the plane of the electrodes, by default "xy"
+        shape : str, default: "circle"
+            Electrode shapes
+        shape_params : dict, default: {"radius": 1}
+            Shape parameters
+        axes : str, default: "xy"
+            If ndim is 3, indicates the axes that define the plane of the electrodes
 
         Returns
         -------
@@ -293,12 +293,12 @@ class BaseRecordingSnippets(BaseExtractor):
         ----------
         locations : np.array
             Array with channel locations (num_channels, ndim) [ndim can be 2 or 3]
-        shape : str, optional
-            Electrode shapes, by default "circle"
-        shape_params : dict, optional
-            Shape parameters, by default {"radius": 1}
-        axes : str, optional
-            If ndim is 3, indicates the axes that define the plane of the electrodes, by default "xy"
+        shape : str, default: default: "circle"
+            Electrode shapes
+        shape_params : dict, default: {"radius": 1}
+            Shape parameters
+        axes : str, default: "xy"
+            If ndim is 3, indicates the axes that define the plane of the electrodes
         """
         probe = self.create_dummy_probe_from_locations(locations, shape=shape, shape_params=shape_params, axes=axes)
         self.set_probe(probe, in_place=True)
@@ -386,8 +386,8 @@ class BaseRecordingSnippets(BaseExtractor):
 
         Parameters
         ----------
-        axes : str, optional
-            The axes to keep, by default "xy"
+        axes : str, default: "xy"
+            The axes to keep
 
         Returns
         -------
@@ -412,8 +412,8 @@ class BaseRecordingSnippets(BaseExtractor):
         ----------
         channel_ids : np.array or list
             The list of channels to keep
-        renamed_channel_ids : np.array or list, optional
-            A list of renamed channels, by default None
+        renamed_channel_ids : np.array or list, default: None
+            A list of renamed channels
 
         Returns
         -------
@@ -479,10 +479,10 @@ class BaseRecordingSnippets(BaseExtractor):
 
         Parameters
         ----------
-        property : str, optional
-            The property to use to split the object, by default 'group'
-        outputs : str, optional
-            'dict' or 'list', by default 'dict'
+        property : str, default: 'group'
+            The property to use to split the object, default: 'group'
+        outputs : "dict" | "list", default: "dict"
+            Whether to return a dict or a list
 
         Returns
         -------

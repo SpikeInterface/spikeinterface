@@ -13,15 +13,15 @@ class MultiCompGraphWidget(BaseWidget):
     ----------
     multi_comparison: BaseMultiComparison
         The multi comparison object
-    draw_labels: bool
+    draw_labels: bool, default: False
         If True unit labels are shown
-    node_cmap: matplotlib colormap
-        The colormap to be used for the nodes (default 'viridis')
-    edge_cmap: matplotlib colormap
-        The colormap to be used for the edges (default 'hot')
-    alpha_edges: float
+    node_cmap: matplotlib colormap, default: 'viridis'
+        The colormap to be used for the nodes
+    edge_cmap: matplotlib colormap, default: 'hot'
+        The colormap to be used for the edges
+    alpha_edges: float, default: 0.5
         Alpha value for edges
-    colorbar: bool
+    colorbar: bool, default: False
         If True a colorbar for the edges is plotted
     """
 
@@ -199,13 +199,12 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
         The multi comparison object
     plot_type: str
         'pie' or 'bar'
-    cmap: matplotlib colormap
-        The colormap to be used for the nodes (default 'Reds')
-    axes: list of matplotlib axes
-        The axes to be used for the individual plots. If not given the required axes are created. If provided, the ax
-        and figure parameters are ignored.
+    cmap: matplotlib colormap, default: 'Reds'
+        The colormap to be used for the nodes
+    fontsize: int, default: 9
+        The text fontsize
     show_legend: bool
-        Show the legend in the last axes (default True).
+        Show the legend in the last axes
 
     Returns
     -------

@@ -354,15 +354,15 @@ def run_sorter_container(
     sorter_name: str
     recording: BaseRecording
     mode: str
-    container_image: str, optional
-    output_folder: str, optional
-    remove_existing_folder: bool, optional
-    delete_output_folder: bool, optional
-    verbose: bool, optional
-    raise_error: bool, optional
-    with_output: bool, optional
-    delete_container_files: bool, optional
-    extra_requirements: list, optional
+    container_image: str, default: None
+    output_folder: str, default: None
+    remove_existing_folder: bool, default: None
+    delete_output_folder: bool, default: None
+    verbose: bool, default: None
+    raise_error: bool, default: None
+    with_output: bool, default: None
+    delete_container_files: bool, default: None
+    extra_requirements: list, default: None
     sorter_params:
 
     """

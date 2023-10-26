@@ -43,13 +43,13 @@ def generate_recording(
     num_channels : int, default 2
         The number of channels in the recording.
     sampling_frequency : float, default 30000. (in Hz)
-        The sampling frequency of the recording, by default 30000.
+        The sampling frequency of the recording, default: 30000.
     durations: List[float], default [5.0, 2.5]
-        The duration in seconds of each segment in the recording, by default [5.0, 2.5].
+        The duration in seconds of each segment in the recording, default: [5.0, 2.5].
         Note that the number of segments is determined by the length of this list.
     set_probe: bool, default True
     ndim : int, default 2
-        The number of dimensions of the probe, by default 2. Set to 3 to make 3 dimensional probes.
+        The number of dimensions of the probe, default: 2. Set to 3 to make 3 dimensional probes.
     seed : Optional[int]
         A seed for the np.ramdom.default_rng function
     mode: str ["lazy", "legacy"] Default "lazy".
@@ -344,7 +344,7 @@ def synthesize_random_firings(
         If float, all units will have the same firing rate.
     add_shift_shuffle: bool, default False
         Optionaly add a small shuffle on half spike to autocorrelogram
-    seed: int, optional
+    seed: int, default: None
         seed for the generator
 
     Returns
@@ -546,8 +546,8 @@ def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, viol
         Firing rate for 'true' spikes.
     num_violations : int
         Number of contaminating spikes.
-    violation_delta : float, optional
-        Temporal offset of contaminating spikes (in seconds), by default 1e-5.
+    violation_delta : float, default: 1e-5
+        Temporal offset of contaminating spikes (in seconds)
 
     Returns
     -------
@@ -588,9 +588,9 @@ class NoiseGeneratorRecording(BaseRecording):
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
     noise_level: float, default 1:
         Std of the white noise
-    dtype : Optional[Union[np.dtype, str]], default='float32'
+    dtype : Optional[Union[np.dtype, str]], default: 'float32'
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
-    seed : Optional[int], default=None
+    seed : Optional[int], default: None
         The seed for np.random.default_rng.
     strategy : "tile_pregenerated" or "on_the_fly"
         The strategy of generating noise chunk:
@@ -763,8 +763,9 @@ def generate_recording_by_size(
         The size in gigabytes (GiB) of the recording.
     num_channels: int
         Number of channels.
-    seed : int, optional
-        The seed for np.random.default_rng, by default None
+    seed : int, default: None
+        The seed for np.random.default_rng
+
     Returns
     -------
     GeneratorRecording

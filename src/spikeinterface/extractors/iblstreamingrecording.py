@@ -32,7 +32,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
     load_sync_channels : bool, default: false
         Load or not the last channel (sync).
         If not then the probe is loaded.
-    cache_folder : str, optional
+    cache_folder : str or None, default: None
         The location to temporarily store chunks of data during streaming.
         The default uses the folder designated by ONE.alyx._par.CACHE_DIR / "cache", which is typically the designated
         'Downloads' folder on your operating system. As long as `remove_cached` is set to True, the only files that will

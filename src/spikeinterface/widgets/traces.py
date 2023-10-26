@@ -16,41 +16,40 @@ class TracesWidget(BaseWidget):
     recording: RecordingExtractor, dict, or list
         The recording extractor object. If dict (or list) then it is a multi-layer display to compare, for example,
         different processing steps
-    segment_index: None or int
-        The segment index (required for multi-segment recordings), default None
-    channel_ids: list
-        The channel ids to display, default None
-    order_channel_by_depth: bool
-        Reorder channel by depth, default False
-    time_range: list
-        List with start time and end time, default None
-    mode: str
+    segment_index: None or int, default: None
+        The segment index (required for multi-segment recordings)
+    channel_ids: list or None, default: None
+        The channel ids to display
+    order_channel_by_depth: bool, default: False
+        Reorder channel by depth
+    time_range: list, tuple or None, default: None
+        List with start time and end time
+    mode: str, default: 'auto'
         Three possible modes, default 'auto':
 
         * 'line': classical for low channel count
         * 'map': for high channel count use color heat map
         * 'auto': auto switch depending on the channel count ('line' if less than 64 channels, 'map' otherwise)
-    return_scaled: bool
-        If True and the recording has scaled traces, it plots the scaled traces, default False
-    cmap: str
-        matplotlib colormap used in mode 'map', default 'RdBu'
-    show_channel_ids: bool
-        Set yticks with channel ids, default False
-    color_groups: bool
-        If True groups are plotted with different colors, default False
-    color: str
-        The color used to draw the traces, default None
-    clim: None, tuple or dict
+    return_scaled: bool, default: False
+        If True and the recording has scaled traces, it plots the scaled traces
+    cmap: str, default: 'RdBu_r'
+        matplotlib colormap used in mode 'map'
+    show_channel_ids: bool, default: False
+        Set yticks with channel ids
+    color_groups: bool, default: False
+        If True groups are plotted with different colors
+    color: str or None, default: None
+        The color used to draw the traces
+    clim: None, tuple or dict, default: None
         When mode is 'map', this argument controls color limits.
         If dict, keys should be the same as recording keys
-        Default None
-    with_colorbar: bool
-        When mode is 'map', a colorbar is added, by default True
-    tile_size: int
-        For sortingview backend, the size of each tile in the rendered image, default 1500
-    seconds_per_row: float
-        For 'map' mode and sortingview backend, seconds to render in each row, default 0.2
-    add_legend : bool
+    with_colorbar: bool, default: True
+        When mode is 'map', a colorbar is added
+    tile_size: int, default: 1500
+        For sortingview backend, the size of each tile in the rendered image
+    seconds_per_row: float, default: 0.2
+        For 'map' mode and sortingview backend, seconds to render in each row
+    add_legend : bool, default: True
         If True adds legend to figures, default True
     """
 

@@ -136,7 +136,7 @@ class StudyPerformances(BaseWidget):
     mode: "ordered" | "snr" | "swarm", default: "ordered"
         Which plot mode to use:
 
-        * "ordered": plot performance metrics vs unit indices ordered by decreasing accuracy (default)
+        * "ordered": plot performance metrics vs unit indices ordered by decreasing accuracy
         * "snr": plot performance metrics vs snr
         * "swarm": plot performance metrics as a swarm plot (see seaborn.swarmplot for details)
     performance_names: list or tuple, default: ('accuracy', 'precision', 'recall')

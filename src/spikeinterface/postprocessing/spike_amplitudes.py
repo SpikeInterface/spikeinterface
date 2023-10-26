@@ -93,8 +93,8 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
 
         Parameters
         ----------
-        outputs : str, optional
-            'concatenated' or 'by_unit', by default 'concatenated'
+        outputs : 'concatenated' | 'by_unit', default: "concatenated"
+            The output format
 
         Returns
         -------

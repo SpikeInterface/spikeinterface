@@ -13,12 +13,12 @@ class UnitPresenceWidget(BaseWidget):
         The sorting extractor object
     segment_index: None or int
         The segment index.
-    time_range: list
+    time_range: list or None, default None
         List with start time and end time
-    bin_duration_s: float, default 0.5
-        Bin size (in seconds) for the heat map time axis.
-    smooth_sigma: float or None
-
+    bin_duration_s: float, default: 0.5
+        Bin size (in seconds) for the heat map time axis
+    smooth_sigma: float, default: 4.5
+        Sigma for the Gaussian kernel (in number of bins)
     """
 
     def __init__(

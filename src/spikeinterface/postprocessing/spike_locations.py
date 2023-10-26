@@ -82,8 +82,8 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 
         Parameters
         ----------
-        outputs : str, optional
-            'concatenated' or 'by_unit', by default 'concatenated'
+        outputs : 'concatenated' | 'by_unit', default: "concatenated"
+            The output format
 
         Returns
         -------
@@ -140,30 +140,30 @@ def compute_spike_locations(
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
-        A waveform extractor object.
+        A waveform extractor object
     load_if_exists : bool, default: False
-        Whether to load precomputed spike locations, if they already exist.
-    ms_before : float
-        The left window, before a peak, in milliseconds.
-    ms_after : float
-        The right window, after a peak, in milliseconds.
+        Whether to load precomputed spike locations, if they already exist
+    ms_before : float, default: 0.5
+        The left window, before a peak, in milliseconds
+    ms_after : float, default: 0.5
+        The right window, after a peak, in milliseconds
     spike_retriver_kwargs: dict
-        A dictionary to control the behavior for getting the maximum channel for each spike.
+        A dictionary to control the behavior for getting the maximum channel for each spike
         This dictionary contains:
             * channel_from_template: bool, default True
-                For each spike is the maximum channel computed from template or re estimated at every spikes.
+                For each spike is the maximum channel computed from template or re estimated at every spikes
                 channel_from_template = True is old behavior but less acurate
                 channel_from_template = False is slower but more accurate
             * radius_um: float, default 50
-                In case channel_from_template=False, this is the radius to get the true peak.
+                In case channel_from_template=False, this is the radius to get the true peak
             * peak_sign="neg"
                 In case channel_from_template=False, this is the peak sign.
-    method : str
-        'center_of_mass' / 'monopolar_triangulation' / 'grid_convolution'
-    method_kwargs : dict
+    method : 'center_of_mass' | 'monopolar_triangulation' | 'grid_convolution', default: 'center_of_mass'
+        The localization method to use
+    method_kwargs : dict, default: {}
         Other kwargs depending on the method.
-    outputs : str
-        'concatenated' (default) / 'by_unit'
+    outputs : 'concatenated' | 'by_unit', default: 'concatenated'
+        The output format
     {}
 
     Returns

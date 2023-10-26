@@ -122,9 +122,9 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
 
         Parameters
         ----------
-        channel_ids : list, optional
+        channel_ids : list, default: None
             List of channel ids on which projections are computed
-        unit_ids : list, optional
+        unit_ids : list, default: None
             List of unit ids to return projections for
         outputs: str
             * 'id': 'all_labels' contain unit ids

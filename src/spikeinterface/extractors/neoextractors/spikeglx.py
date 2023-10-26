@@ -33,10 +33,10 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     load_sync_channel: bool default False
         Whether or not to load the last channel in the stream, which is typically used for synchronization.
         If True, then the probe is not loaded.
-    stream_id: str, optional
+    stream_id: str, default: None
         If there are several streams, specify the stream id you want to load.
         For example, 'imec0.ap' 'nidq' or 'imec0.lf'.
-    stream_name: str, optional
+    stream_name: str, default: None
         If there are several streams, specify the stream name you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.

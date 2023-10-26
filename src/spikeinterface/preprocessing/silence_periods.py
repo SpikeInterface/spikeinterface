@@ -21,10 +21,10 @@ class SilencedPeriodsRecording(BasePreprocessor):
     list_periods: list of lists/arrays
         One list per segment of tuples (start_frame, end_frame) to silence
 
-    mode: str
+    mode: "zeros" | "noise, default "zeros"
         Determines what periods are replaced by. Can be one of the following:
 
-        - 'zeros' (default): Artifacts are replaced by zeros.
+        - 'zeros': Artifacts are replaced by zeros.
 
         - 'noise': The periods are filled with a gaussion noise that has the
                    same variance that the one in the recordings, on a per channel

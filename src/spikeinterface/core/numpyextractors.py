@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 from spikeinterface.core import (
     BaseRecording,
@@ -14,7 +16,7 @@ from .core_tools import make_shared_array
 
 from multiprocessing.shared_memory import SharedMemory
 
-from typing import List, Union
+from typing import Union
 
 
 class NumpyRecording(BaseRecording):
@@ -547,19 +549,17 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
     def get_snippets(
         self,
         indices,
-        channel_indices: Union[List, None] = None,
+        channel_indices: Union[list, None] = None,
     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
 
         Parameters
         ----------
-        indexes: (Union[int, None], optional)
-            start sample index, or zero if None. Defaults to None.
-        end_frame: (Union[int, None], optional)
-            end_sample, or number of samples if None. Defaults to None.
-        channel_indices: (Union[List, None], optional)
-            Indices of channels to return, or all channels if None. Defaults to None.
+        indices: list[int]
+            Indices of the snippets to return
+        channel_indices: Union[list, None], default: None
+            Indices of channels to return, or all channels if None
 
         Returns
         -------
@@ -579,9 +579,9 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
 
         Parameters
         ----------
-        start_frame: (Union[int, None], optional)
+        start_frame: Union[int, None], default: None
             start sample index, or zero if None. Defaults to None.
-        end_frame: (Union[int, None], optional)
+        end_frame: Union[int, None], default: None
             end_sample, or number of samples if None. Defaults to None.
 
         Returns

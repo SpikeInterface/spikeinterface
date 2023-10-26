@@ -30,15 +30,15 @@ class DirectionalDerivativeRecording(BasePreprocessor):
         ----------
         recording : BaseRecording
             recording to zero-pad
-        direction : str
+        direction : str, default 'y'
             Gradients will be taken along this dimension.
-        order : int
+        order : int, default 1
             np.gradient will be applied this many times.
-        edge_order : int
+        edge_order : int, default 1
             Order of gradient accuracy at edges; see np.gradient for details.
-        dtype : optional numpy dtype
-            If unset, parent dtype is preserved, but the derivative can
-            overflow or lose accuracy, so "float32" by default.
+        dtype : numpy dtype, default "float32"
+            If None, parent dtype is preserved, but the derivative can
+            overflow or lose accuracy
         """
         parent_channel_locations = recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)

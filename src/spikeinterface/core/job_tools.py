@@ -270,32 +270,32 @@ class ChunkRecordingExecutor:
         Arguments for init_func
     verbose: bool
         If True, output is verbose
-    progress_bar: bool
-        If True, a progress bar is printed to monitor the progress of the process
-    handle_returns: bool
+    job_name: str, default: ''
+        Job name
+    handle_returns: bool, default: False
         If True, the function can return values
-    gather_func: None or callable
+    gather_func: None or callable, default: None
         Optional function that is called in the main thread and retrieves the results of each worker.
         This function can be used instead of `handle_returns` to implement custom storage on-the-fly.
-    n_jobs: int
-        Number of jobs to be used (default 1). Use -1 to use as many jobs as number of cores
-    total_memory: str
+    n_jobs: int, default: 1
+        Number of jobs to be used. Use -1 to use as many jobs as number of cores
+    total_memory: str, default: None
         Total memory (RAM) to use (e.g. "1G", "500M")
-    chunk_memory: str
+    chunk_memory: str, default: None
         Memory per chunk (RAM) to use (e.g. "1G", "500M")
-    chunk_size: int or None
+    chunk_size: int or None, default: None
         Size of each chunk in number of samples. If 'total_memory' or 'chunk_memory' are used, it is ignored.
     chunk_duration : str or float or None
         Chunk duration in s if float or with units if str (e.g. '1s', '500ms')
-    mp_context : str or None
-        "fork" (default) or "spawn". If None, the context is taken by the recording.get_preferred_mp_context().
+    mp_context : str or None, default: None
+        "fork" or "spawn". If None, the context is taken by the recording.get_preferred_mp_context().
         "fork" is only available on UNIX systems.
-    job_name: str
-        Job name
-    max_threads_per_process: int or None
+    max_threads_per_process: int or None, default: None
         Limit the number of thread per process using threadpoolctl modules.
         This used only when n_jobs>1
         If None, no limits.
+    progress_bar: bool, default: False
+        If True, a progress bar is printed to monitor the progress of the process
 
 
     Returns

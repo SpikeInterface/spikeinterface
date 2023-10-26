@@ -33,7 +33,7 @@ class WhitenRecording(BasePreprocessor):
         Small epsilon to regularize SVD.
         If None, eps is defaulted to 1e-8. If the data is float type and scaled down to very small values,
         then the eps is automatically set to a small fraction (1e-3) of the median of the squared data.
-    W : 2d np.array, default: None
+    W : 2d np.array or None, default: None
         Pre-computed whitening matrix
     M : 1d np.array or None, default: None
         Pre-computed means.
@@ -145,9 +145,9 @@ def compute_whitening_matrix(recording, mode, random_chunk_kwargs, apply_mean, r
         Keyword arguments for  get_random_data_chunks()
     apply_mean : bool
         If True, the mean is removed prior to computing the covariance
-    radius_um : float, default: None
+    radius_um : float or None, default: None
         Used for mode = 'local' to get the neighborhood
-    eps : float, default: None
+    eps : float or None, default: None
         Small epsilon to regularize SVD. If None, the default is set to 1e-8, but if the data is float type and scaled
         down to very small values, eps is automatically set to a small fraction (1e-3) of the median of the squared data.
 

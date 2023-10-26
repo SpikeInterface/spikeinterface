@@ -25,7 +25,7 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
     ----------
     nwbfile : NWBFile
         The NWBFile object from which to extract the ElectricalSeries.
-    electrical_series_name : str, optional
+    electrical_series_name : str, default: None
         The name of the ElectricalSeries to extract. If not specified, it will return the first found ElectricalSeries
         if there's only one; otherwise, it raises an error.
 
@@ -80,9 +80,9 @@ def read_nwbfile(
     ----------
     file_path : Path, str
         The path to the NWB file.
-    stream_mode : "fsspec" or "ros3", optional
+    stream_mode : "fsspec" or "ros3" or None, default: None
         The streaming mode to use. Default assumes the file is on the local disk.
-    stream_cache_path : str, optional
+    stream_cache_path : str or None, default: None
         The path to the cache storage. Default is None.
 
     Returns
@@ -144,16 +144,16 @@ class NwbRecordingExtractor(BaseRecording):
     ----------
     file_path: str or Path
         Path to NWB file or s3 url.
-    electrical_series_name: str, optional
+    electrical_series_name: str or None, default: None
         The name of the ElectricalSeries. Used if multiple ElectricalSeries are present.
     load_time_vector: bool, default: False
         If True, the time vector is loaded to the recording object.
     samples_for_rate_estimation: int, default: 100000
         The number of timestamp samples to use to estimate the rate.
         Used if 'rate' is not specified in the ElectricalSeries.
-    stream_mode: str, optional
+    stream_mode: str or None, default: None
         Specify the stream mode: "fsspec" or "ros3".
-    stream_cache_path: str or Path, optional
+    stream_cache_path: str or Path or None, default: None
         Local path for caching. Default: cwd/cache.
 
     Returns
@@ -424,16 +424,16 @@ class NwbSortingExtractor(BaseSorting):
     ----------
     file_path: str or Path
         Path to NWB file.
-    electrical_series_name: str, optional
+    electrical_series_name: str or None, default: None
         The name of the ElectricalSeries (if multiple ElectricalSeries are present).
-    sampling_frequency: float, optional
+    sampling_frequency: float or None, default: None
         The sampling frequency in Hz (required if no ElectricalSeries is available).
     samples_for_rate_estimation: int, default: 100000
         The number of timestamp samples to use to estimate the rate.
         Used if 'rate' is not specified in the ElectricalSeries.
-    stream_mode: str, optional
+    stream_mode: str or None, default: None
         Specify the stream mode: "fsspec" or "ros3".
-    stream_cache_path: str or Path, optional
+    stream_cache_path: str or Path or None, default: None
         Local path for caching. Default: cwd/cache.
 
     Returns
@@ -590,7 +590,7 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
         If True, the recording object is loaded.
     load_sorting : bool, default: False
         If True, the recording object is loaded.
-    electrical_series_name: str, optional
+    electrical_series_name: str or None, default: None
         The name of the ElectricalSeries (if multiple ElectricalSeries are present)
 
     Returns

@@ -25,11 +25,11 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     file_path: str
         The file path to the binary container usually a .dat, .lfp, .eeg extension.
-    xml_file_path: str, optional
+    xml_file_path: str, default: None
         The path to the xml file. If None, the xml file is assumed to have the same name as the binary file.
-    stream_id: str, optional
+    stream_id: str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
+    stream_name: str, default: None
         If there are several streams, specify the stream name you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
@@ -97,7 +97,7 @@ class NeuroScopeSortingExtractor(BaseSorting):
     exclude_shanks : list
         Optional. List of indices to ignore. The set of all possible indices is chosen by default, extracted as the
         final integer of all the .res.%i and .clu.%i pairs.
-    xml_file_path : PathType, optional
+    xml_file_path : PathType, default: None
         Path to the .xml file referenced by this sorting.
     """
 

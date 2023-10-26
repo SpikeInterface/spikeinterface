@@ -145,9 +145,8 @@ class ZeroChannelPaddedRecording(BaseRecording):
             recording to zero-pad
         num_channels : int
             Total number of channels in the zero-channel-padded recording
-        channel_mapping : Union[list, None], optional
-            Mapping from the channel index in the original recording to the zero-channel-padded recording,
-            by default None.
+        channel_mapping : Union[list, None], default: None
+            Mapping from the channel index in the original recording to the zero-channel-padded recording.
             If None, sorts the channel indices in ascending y channel location and puts them at the
             beginning of the zero-channel-padded recording.
         """

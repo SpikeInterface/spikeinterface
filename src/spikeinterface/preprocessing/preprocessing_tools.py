@@ -27,20 +27,20 @@ def get_spatial_interpolation_kernel(
         The recording extractor to be transformed
     target_location: array shape (n, 2)
         Scale for the output distribution
-    method: 'kriging' or 'idw' or 'nearest'
+    method: 'kriging' | 'idw' | 'nearest', default: 'kriging'
         Choice of the method
             'kriging' : the same one used in kilosort
             'idw' : inverse  distance weithed
             'nearest' : use nereast channel
-    sigma_um : float or list (default 20.)
+    sigma_um : float or list, default: 20.0
         Used in the 'kriging' formula. When list, it needs to have 2 elements (for the x and y directions).
-    p: int (default 1)
+    p: int, default: 1
         Used in the 'kriging' formula
-    sparse_thresh: None or float (default None)
+    sparse_thresh: None or float, default: None
         If not None for 'kriging' force small value to be zeros to get a sparse matrix.
-    num_closest: int (default 3)
+    num_closest: int, default: 3
         Used for 'idw'
-    force_extrapolate: bool (false by default)
+    force_extrapolate: bool, default: False
         How to handle when target location are outside source location.
         When False :  no extrapolation all target location outside are set to zero.
         When True : extrapolation done with the formula of the method.

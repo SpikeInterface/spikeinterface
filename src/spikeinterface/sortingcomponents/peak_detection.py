@@ -159,9 +159,9 @@ class IterativePeakDetector(PeakDetector):
             The waveform extraction node to use.
         waveform_denoising_node
             The waveform denoising node to use.
-        num_iterations : int, optional, default=2
+        num_iterations : int, optional, default: 2
             The number of iterations to run the algorithm.
-        return_output : bool, optional, default=True
+        return_output : bool, optional, default: True
         """
         PeakDetector.__init__(self, recording, return_output=return_output)
         self.peak_detector_node = peak_detector_node

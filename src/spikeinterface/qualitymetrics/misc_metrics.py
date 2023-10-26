@@ -251,7 +251,7 @@ def compute_isi_violations(waveform_extractor, isi_threshold_ms=1.5, min_isi_ms=
         The waveform extractor object
     isi_threshold_ms : float, default: 1.5
         Threshold for classifying adjacent spikes as an ISI violation, in ms.
-        This is the biophysical refractory period (default=1.5).
+        This is the biophysical refractory period
     min_isi_ms : float, default: 0
         Minimum possible inter-spike interval, in ms.
         This is the artificial refractory period enforced
@@ -422,19 +422,19 @@ def compute_sliding_rp_violations(
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    min_spikes : int, default 0
+    min_spikes : int, default: 0
         Contamination  is set to np.nan if the unit has less than this many
         spikes across all segments.
-    bin_size_ms : float
-        The size of binning for the autocorrelogram in ms, by default 0.25
-    window_size_s : float
-        Window in seconds to compute correlogram, by default 1
-    exclude_ref_period_below_ms : float
-        Refractory periods below this value are excluded, by default 0.5
-    max_ref_period_ms : float
-        Maximum refractory period to test in ms, by default 10 ms
-    contamination_values : 1d array or None
-        The contamination values to test, by default np.arange(0.5, 35, 0.5) %
+    bin_size_ms : float, default: 0.25
+        The size of binning for the autocorrelogram in ms
+    window_size_s : float, default: 1
+        Window in seconds to compute correlogram
+    exclude_ref_period_below_ms : float, default: 0.5
+        Refractory periods below this value are excluded
+    max_ref_period_ms : float, default: 10
+        Maximum refractory period to test in ms
+    contamination_values : 1d array or None, default: None
+        The contamination values to test, If None, it is set to np.arange(0.5, 35, 0.5)
     unit_ids : list or None
         List of unit ids to compute the sliding RP violations. If None, all units are used.
 
@@ -935,23 +935,23 @@ def compute_drift_metrics(
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    interval_s : int, optional
-        Interval length is seconds for computing spike depth, by default 60
-    min_spikes_per_interval : int, optional
-        Minimum number of spikes for computing depth in an interval, by default 100
-    direction : str, optional
-        The direction along which drift metrics are estimated, by default 'y'
-    min_fraction_valid_intervals : float, optional
+    interval_s : int, default: 60
+        Interval length is seconds for computing spike depth
+    min_spikes_per_interval : int, default: 100
+        Minimum number of spikes for computing depth in an interval
+    direction : str, default: 'y'
+        The direction along which drift metrics are estimated
+    min_fraction_valid_intervals : float, default: 0.5
         The fraction of valid (not NaN) position estimates to estimate drifts.
         E.g., if 0.5 at least 50% of estimated positions in the intervals need to be valid,
-        otherwise drift metrics are set to None, by default 0.5
-    min_num_bins : int, optional
+        otherwise drift metrics are set to None
+    min_num_bins : int, default: 2
         Minimum number of bins required to return a valid metric value. In case there are
         less bins, the metric values are set to NaN.
-    return_positions : bool, optional
-        If True, median positions are returned (for debugging), by default False
-    unit_ids : list or None
-        List of unit ids to compute the drift metrics. If None, all units are used.
+    return_positions : bool, default: False
+        If True, median positions are returned (for debugging)
+    unit_ids : list or None, default: None
+        List of unit ids to compute the drift metrics. If None, all units are used
 
     Returns
     -------
@@ -1128,7 +1128,7 @@ def isi_violations(spike_trains, total_duration_s, isi_threshold_s=0.0015, min_i
         The total duration of the recording (in seconds)
     isi_threshold_s : float, default: 0.0015
         Threshold for classifying adjacent spikes as an ISI violation, in seconds.
-        This is the biophysical refractory period (default=1.5).
+        This is the biophysical refractory period
     min_isi_s : float, default: 0
         Minimum possible inter-spike interval, in seconds.
         This is the artificial refractory period enforced
@@ -1249,16 +1249,16 @@ def slidingRP_violations(
         The acquisition sampling rate
     bin_size_ms : float
         The size (in ms) of binning for the autocorrelogram.
-    window_size_s : float
-        Window in seconds to compute correlogram, by default 2
-    exclude_ref_period_below_ms : float
-        Refractory periods below this value are excluded, by default 0.5
-    max_ref_period_ms : float
-        Maximum refractory period to test in ms, by default 10 ms
-    contamination_values : 1d array or None
-        The contamination values to test, by default np.arange(0.5, 35, 0.5) / 100
-    return_conf_matrix : bool
-        If True, the confidence matrix (n_contaminations, n_ref_periods) is returned, by default False
+    window_size_s : float, default: 1
+        Window in seconds to compute correlogram
+    exclude_ref_period_below_ms : float, default: 0.5
+        Refractory periods below this value are excluded
+    max_ref_period_ms : float, default: 10
+        Maximum refractory period to test in ms
+    contamination_values : 1d array or None, default: None
+        The contamination values to test, if None it is set to np.arange(0.5, 35, 0.5) / 100
+    return_conf_matrix : bool, default: False
+        If True, the confidence matrix (n_contaminations, n_ref_periods) is returned
 
     Code adapted from:
     https://github.com/SteinmetzLab/slidingRefractory/blob/master/python/slidingRP/metrics.py#L166
