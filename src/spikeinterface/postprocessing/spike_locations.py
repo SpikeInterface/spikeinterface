@@ -148,8 +148,8 @@ def compute_spike_locations(
     ms_after : float
         The right window, after a peak, in milliseconds.
     spike_retriver_kwargs: dict
-        A dict that contains the behavior for getting the maximum channel for each spike.
-        This contain dict contains:
+        A dictionary to control the behavior for getting the maximum channel for each spike.
+        This dictionary contains:
             * channel_from_template: bool, default True
                 For each spike is the maximum channel computed from template or re estimated at every spikes.
                 channel_from_template = True is old behavior but less acurate
