@@ -23,12 +23,12 @@ Example code
 
 .. code-block:: python
 
-    import spikeinterface.qualitymetrics as qm
+    import spikeinterface.qualitymetrics as sqm
 
     # Make recording, sorting and wvf_extractor object for your data.
 
-    presence_ratio = qm.compute_presence_ratios(wvf_extractor)
-    # presence_ratio is a dict containing the units' IDs as keys
+    presence_ratio = sqm.compute_presence_ratios(waveform_extractor=wvf_extractor)
+    # presence_ratio is a dict containing the unit IDs as keys
     # and their presence ratio (between 0 and 1) as values.
 
 Links to original implementations

@@ -1,0 +1,39 @@
+name: Creates Conda Install for Installation Tips
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 12 * * 0"  # Weekly at noon UTC on Sundays
+
+jobs:
+  installation-tips-testing:
+    name: Build Conda Env on ${{ matrix.os }} OS
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux_dandi
+          - os: macos-latest
+            label: mac
+          - os: windows-latest
+            label: windows
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: Test Conda Environment Creation
+      uses: conda-incubator/setup-miniconda@v2.2.0
+      with:
+        environment-file: ./installation_tips/full_spikeinterface_environment_${{ matrix.label }}.yml
+        activate-environment: si_env
+    - name: Check Installation Tips
+      run: python ./installation_tips/check_your_install.py --ci # ci flag turns off gui
+    - name: Windows cleanup
+      if: ${{ matrix.label == 'windows' }}
+      run: python .installation_tips/cleanup_for_windows.py

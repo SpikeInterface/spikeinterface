@@ -21,11 +21,10 @@ class SplitUnitSorting(BaseSorting):
         be the same length as the spike train (for each segment)
     new_unit_ids: int
         Unit ids of the new units to be created.
-    properties_policy: str
+    properties_policy: 'keep' | 'remove', default: 'keep'
         Policy used to propagate properties. If 'keep' the properties will be passed to the new units
          (if the units_to_merge have the same value). If 'remove' the new units will have an empty
          value for all the properties of the new unit.
-         Default: 'keep'
     Returns
     -------
     sorting: Sorting
@@ -48,19 +47,19 @@ class SplitUnitSorting(BaseSorting):
             new_unit_ids = np.array([u + new_unit_ids for u in range(tot_splits)], dtype=parents_unit_ids.dtype)
         else:
             new_unit_ids = np.array(new_unit_ids, dtype=parents_unit_ids.dtype)
-            assert len(np.unique(new_unit_ids)) == len(new_unit_ids), "Each element in new_unit_ids should be unique"
-            assert len(new_unit_ids) <= tot_splits, "indices_list have more ids indices than the length of new_unit_ids"
+            assert len(np.unique(new_unit_ids)) == len(new_unit_ids), "Each element in new_unit_ids must be unique"
+            assert len(new_unit_ids) <= tot_splits, "indices_list has more id indices than the length of new_unit_ids"
 
         assert parent_sorting.get_num_segments() == len(
             indices_list
         ), "The length of indices_list must be the same as parent_sorting.get_num_segments"
-        assert split_unit_id in parents_unit_ids, "Unit to split should be in parent sorting"
+        assert split_unit_id in parents_unit_ids, "Unit to split must be in parent sorting"
         assert properties_policy == "keep" or properties_policy == "remove", (
             "properties_policy must be " "keep" " or " "remove" ""
         )
         assert not any(
             np.isin(new_unit_ids, unchanged_units)
-        ), "new_unit_ids should be new units or one could be equal to split_unit_id"
+        ), "new_unit_ids should be new unit ids or no more than one unit id can be found in split_unit_id"
 
         sampling_frequency = parent_sorting.get_sampling_frequency()
         units_ids = np.concatenate([unchanged_units, new_unit_ids])

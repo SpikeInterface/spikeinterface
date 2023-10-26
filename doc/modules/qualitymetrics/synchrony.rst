@@ -1,3 +1,5 @@
+.. _synchrony:
+
 Synchrony Metrics (:code:`synchrony`)
 =====================================
 
@@ -25,9 +27,9 @@ Example code
 
 .. code-block:: python
 
-    import spikeinterface.qualitymetrics as qm
+    import spikeinterface.qualitymetrics as sqm
     # Make recording, sorting and wvf_extractor object for your data.
-    synchrony = qm.compute_synchrony_metrics(wvf_extractor, synchrony_sizes=(2, 4, 8))
+    synchrony = sqm.compute_synchrony_metrics(waveform_extractor=wvf_extractor, synchrony_sizes=(2, 4, 8))
     # synchrony is a tuple of dicts with the synchrony metrics for each unit
 
 
@@ -39,11 +41,11 @@ The SpikeInterface implementation is a partial port of the low-level complexity 
 References
 ----------
 
-.. automodule:: spikeinterface.toolkit.qualitymetrics.misc_metrics
+.. automodule:: spikeinterface.qualitymetrics.misc_metrics
 
     .. autofunction:: compute_synchrony_metrics
 
 Literature
 ----------
 
-Based on concepts described in Gruen_
+Based on concepts described in [Gruen]_

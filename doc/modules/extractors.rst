@@ -13,11 +13,12 @@ Most of the :code:`Recording` classes are implemented by wrapping the
 
 Most of the :code:`Sorting` classes are instead directly implemented in SpikeInterface.
 
-
 Although SpikeInterface is object-oriented (class-based), each object can also be loaded with a convenient
 :code:`read_XXXXX()` function.
 
+.. code-block:: python
 
+    import spikeinterface.extractors as se
 
 
 Read one Recording
@@ -27,24 +28,26 @@ Every format can be read with a simple function:
 
 .. code-block:: python
 
-    recording_oe = read_openephys("open-ephys-folder")
+    recording_oe = read_openephys(folder_path="open-ephys-folder")
 
-    recording_spikeglx = read_spikeglx("spikeglx-folder")
+    recording_spikeglx = read_spikeglx(folder_path="spikeglx-folder")
 
-    recording_blackrock = read_blackrock("blackrock-folder")
+    recording_blackrock = read_blackrock(folder_path="blackrock-folder")
 
-    recording_mearec = read_mearec("mearec_file.h5")
+    recording_mearec = read_mearec(file_path="mearec_file.h5")
 
 
 Importantly, some formats directly handle the probe information:
 
 .. code-block:: python
 
-    recording_spikeglx = read_spikeglx("spikeglx-folder")
+    recording_spikeglx = read_spikeglx(folder_path="spikeglx-folder")
     print(recording_spikeglx.get_probe())
 
-    recording_mearec = read_mearec("mearec_file.h5")
+    recording_mearec = read_mearec(file_path="mearec_file.h5")
     print(recording_mearec.get_probe())
+
+
 
 
 Read one Sorting
@@ -52,7 +55,7 @@ Read one Sorting
 
 .. code-block:: python
 
-    sorting_KS = read_kilosort("kilosort-folder")
+    sorting_KS = read_kilosort(folder_path="kilosort-folder")
 
 
 Read one Event
@@ -60,7 +63,7 @@ Read one Event
 
 .. code-block:: python
 
-    events_OE = read_openephys_event("open-ephys-folder")
+    events_OE = read_openephys_event(folder_path="open-ephys-folder")
 
 
 For a comprehensive list of compatible technologies, see :ref:`compatible_formats`.
@@ -77,7 +80,7 @@ The actual reading will be done on demand using the :py:meth:`~spikeinterface.co
 .. code-block:: python
 
     # opening a 40GB SpikeGLX dataset is fast
-    recording_spikeglx = read_spikeglx("spikeglx-folder")
+    recording_spikeglx = read_spikeglx(folder_path="spikeglx-folder")
 
     # this really does load the full 40GB into memory : not recommended!!!!!
     traces = recording_spikeglx.get_traces(start_frame=None, end_frame=None, return_scaled=False)
@@ -129,13 +132,15 @@ For raw recording formats, we currently support:
 * **MCS RAW** :py:func:`~spikeinterface.extractors.read_mcsraw()`
 * **MEArec** :py:func:`~spikeinterface.extractors.read_mearec()`
 * **Mountainsort MDA** :py:func:`~spikeinterface.extractors.read_mda_recording()`
+* **Neuralynx** :py:func:`~spikeinterface.extractors.read_neuralynx()`
 * **Neurodata Without Borders** :py:func:`~spikeinterface.extractors.read_nwb_recording()`
 * **Neuroscope** :py:func:`~spikeinterface.coextractorsre.read_neuroscope_recording()`
+* **Neuroexplorer** :py:func:`~spikeinterface.extractors.read_neuroexplorer()`
 * **NIX** :py:func:`~spikeinterface.extractors.read_nix()`
-* **Neuralynx** :py:func:`~spikeinterface.extractors.read_neuralynx()`
 * **Open Ephys Legacy** :py:func:`~spikeinterface.extractors.read_openephys()`
 * **Open Ephys Binary** :py:func:`~spikeinterface.extractors.read_openephys()`
-* **Plexon** :py:func:`~spikeinterface.corextractorse.read_plexon()`
+* **Plexon** :py:func:`~spikeinterface.extractors.read_plexon()`
+* **Plexon 2** :py:func:`~spikeinterface.extractors.read_plexon2()`
 * **Shybrid** :py:func:`~spikeinterface.extractors.read_shybrid_recording()`
 * **SpikeGLX** :py:func:`~spikeinterface.extractors.read_spikeglx()`
 * **SpikeGLX IBL compressed** :py:func:`~spikeinterface.extractors.read_cbin_ibl()`
@@ -165,6 +170,7 @@ For sorted data formats, we currently support:
 * **Neuralynx spikes** :py:func:`~spikeinterface.extractors.read_neuralynx_sorting()`
 * **NPZ (created by SpikeInterface)** :py:func:`~spikeinterface.core.read_npz_sorting()`
 * **Plexon spikes** :py:func:`~spikeinterface.extractors.read_plexon_sorting()`
+* **Plexon 2 spikes** :py:func:`~spikeinterface.extractors.read_plexon2_sorting()`
 * **Shybrid**  :py:func:`~spikeinterface.extractors.read_shybrid_sorting()`
 * **Spyking Circus** :py:func:`~spikeinterface.extractors.read_spykingcircus()`
 * **Trideclous** :py:func:`~spikeinterface.extractors.read_tridesclous()`

@@ -35,7 +35,7 @@ def find_spikes_from_templates(recording, method="naive", method_kwargs={}, extr
     """
     from .method_list import matching_methods
 
-    assert method in matching_methods, "The method %s is not a valid one" % method
+    assert method in matching_methods, f"The 'method' {method} is not valid. Use a method from {matching_methods}"
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 

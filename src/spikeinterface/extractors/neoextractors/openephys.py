@@ -22,6 +22,19 @@ from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
 
 
+def drop_invalid_neo_arguments_for_version_0_12_0(neo_kwargs):
+    # Temporary function until neo version 0.13.0 is released
+    from packaging.version import Version
+    from importlib.metadata import version as lib_version
+
+    neo_version = lib_version("neo")
+    # The possibility of ignoring timestamps errors is not present in neo <= 0.12.0
+    if Version(neo_version) <= Version("0.12.0"):
+        neo_kwargs.pop("ignore_timestamps_errors")
+
+    return neo_kwargs
+
+
 class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     """
     Class for reading data saved by the Open Ephys GUI.
@@ -45,14 +58,24 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several blocks (experiments), specify the block index you want to load.
     all_annotations: bool  (default False)
         Load exhaustively all annotation from neo.
+    ignore_timestamps_errors: bool (default False)
+        Ignore the discontinuous timestamps errors in neo.
     """
 
     mode = "folder"
     NeoRawIOClass = "OpenEphysRawIO"
     name = "openephyslegacy"
 
-    def __init__(self, folder_path, stream_id=None, stream_name=None, block_index=None, all_annotations=False):
-        neo_kwargs = self.map_to_neo_kwargs(folder_path)
+    def __init__(
+        self,
+        folder_path,
+        stream_id=None,
+        stream_name=None,
+        block_index=None,
+        all_annotations=False,
+        ignore_timestamps_errors=False,
+    ):
+        neo_kwargs = self.map_to_neo_kwargs(folder_path, ignore_timestamps_errors)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -64,8 +87,9 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
         self._kwargs.update(dict(folder_path=str(Path(folder_path).absolute())))
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": str(folder_path)}
+    def map_to_neo_kwargs(cls, folder_path, ignore_timestamps_errors=False):
+        neo_kwargs = {"dirname": str(folder_path), "ignore_timestamps_errors": ignore_timestamps_errors}
+        neo_kwargs = drop_invalid_neo_arguments_for_version_0_12_0(neo_kwargs)
         return neo_kwargs
 
 
@@ -159,7 +183,10 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 probe = None
 
             if probe is not None:
-                self = self.set_probe(probe, in_place=True)
+                if probe.shank_ids is not None:
+                    self.set_probe(probe, in_place=True, group_mode="by_shank")
+                else:
+                    self.set_probe(probe, in_place=True)
                 probe_name = probe.annotations["probe_name"]
                 # load num_channels_per_adc depending on probe type
                 if "2.0" in probe_name:

@@ -46,5 +46,6 @@ jobs:
       - name: Run test singularity containers with GPU
         env:
           REPO_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          SPIKEINTERFACE_DEV_PATH: ${{ github.workspace }}
         run: |
           pytest -vv --capture=tee-sys -rA src/spikeinterface/sorters/external/tests/test_singularity_containers_gpu.py

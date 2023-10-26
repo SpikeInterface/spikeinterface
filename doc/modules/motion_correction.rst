@@ -9,7 +9,7 @@ Overview
 
 Mechanical drift, often observed in recordings, is currently a major issue for spike sorting. This is especially striking
 with the new generation of high-density devices used for in-vivo electrophyisology such as the neuropixel electrodes.
-The first sorter that has introduced motion/drift correction as a prepossessing step was Kilosort2.5 (see [Steinmetz2021]_)
+The first sorter that has introduced motion/drift correction as a prepossessing step was Kilosort2.5 (see [Steinmetz2021]_ [SteinmetzDataset]_)
 
 Long story short, the main idea is the same as the one used for non-rigid image registration, for example with calcium
 imaging. However, because with extracellular recording we do not have a proper image to use as a reference, the main idea
@@ -77,12 +77,12 @@ We currently have 3 presets:
 .. code-block:: python
 
   # read and preprocess
-  rec = read_spikeglx('/my/Neuropixel/recording')
-  rec = bandpass_filter(rec)
-  rec = common_reference(rec)
+  rec = read_spikeglx(folder_path='/my/Neuropixel/recording')
+  rec = bandpass_filter(recording=rec)
+  rec = common_reference(recording=rec)
 
   # then correction is one line of code
-  rec_corrected = correct_motion(rec, preset="nonrigid_accurate")
+  rec_corrected = correct_motion(recording=rec, preset="nonrigid_accurate")
 
 The process is quite long due the two first steps (activity profile + motion inference)
 But the return :code:`rec_corrected` is a lazy recording object that will interpolate traces on the
@@ -94,20 +94,20 @@ If you want to user other presets, this is as easy as:
 .. code-block:: python
 
   # mimic kilosort motion
-  rec_corrected = correct_motion(rec, preset="kilosort_like")
+  rec_corrected = correct_motion(recording=rec, preset="kilosort_like")
 
   # super but less accurate and rigid
-  rec_corrected = correct_motion(rec, preset="rigid_fast")
+  rec_corrected = correct_motion(recording=rec, preset="rigid_fast")
 
 
 Optionally any parameter from the preset can be overwritten:
 
 .. code-block:: python
 
-    rec_corrected = correct_motion(rec, preset="nonrigid_accurate",
+    rec_corrected = correct_motion(recording=rec, preset="nonrigid_accurate",
                                    detect_kwargs=dict(
                                        detect_threshold=10.),
-                                   estimate_motion_kwargs=dic(
+                                   estimate_motion_kwargs=dict(
                                        histogram_depth_smooth_um=8.,
                                        time_horizon_s=120.,
                                    ),
@@ -123,7 +123,7 @@ and checking. The folder will contain the motion vector itself of course but als
 .. code-block:: python
 
     motion_folder = '/somewhere/to/save/the/motion'
-    rec_corrected = correct_motion(rec, preset="nonrigid_accurate", folder=motion_folder)
+    rec_corrected = correct_motion(recording=rec, preset="nonrigid_accurate", folder=motion_folder)
 
     # and then
     motion_info = load_motion_info(motion_folder)
@@ -156,14 +156,16 @@ The high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
 
     job_kwargs = dict(chunk_duration="1s", n_jobs=20, progress_bar=True)
     # Step 1 : activity profile
-    peaks = detect_peaks(rec, method="locally_exclusive", detect_threshold=8.0, **job_kwargs)
+    peaks = detect_peaks(recording=rec, method="locally_exclusive", detect_threshold=8.0, **job_kwargs)
     # (optional) sub-select some peaks to speed up the localization
-    peaks = select_peaks(peaks, ...)
-    peak_locations = localize_peaks(rec, peaks, method="monopolar_triangulation",radius_um=75.0,
+    peaks = select_peaks(peaks=peaks, ...)
+    peak_locations = localize_peaks(recording=rec, peaks=peaks, method="monopolar_triangulation",radius_um=75.0,
                                     max_distance_um=150.0, **job_kwargs)
 
     # Step 2: motion inference
-    motion, temporal_bins, spatial_bins = estimate_motion(rec, peaks, peak_locations,
+    motion, temporal_bins, spatial_bins = estimate_motion(recording=rec,
+                                                          peaks=peaks,
+                                                          peak_locations=peak_locations,
                                                           method="decentralized",
                                                           direction="y",
                                                           bin_duration_s=2.0,
@@ -173,7 +175,9 @@ The high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
 
     # Step 3: motion interpolation
     # this step is lazy
-    rec_corrected = interpolate_motion(rec, motion, temporal_bins, spatial_bins,
+    rec_corrected = interpolate_motion(recording=rec, motion=motion,
+                                       temporal_bins=temporal_bins,
+                                       spatial_bins=spatial_bins,
                                        border_mode="remove_channels",
                                        spatial_interpolation_method="kriging",
                                        sigma_um=30.)
@@ -196,20 +200,20 @@ different preprocessing chains: one for motion correction and one for spike sort
 
 .. code-block:: python
 
-    raw_rec = read_spikeglx(...)
+    raw_rec = read_spikeglx(folder_path='/spikeglx_folder')
 
     # preprocessing 1 : bandpass (this is smoother) + cmr
-    rec1 = si.bandpass_filter(raw_rec, freq_min=300., freq_max=5000.)
-    rec1 = si.common_reference(rec1, reference='global', operator='median')
+    rec1 = si.bandpass_filter(recording=raw_rec, freq_min=300., freq_max=5000.)
+    rec1 = si.common_reference(recording=rec1, reference='global', operator='median')
 
     # here the corrected recording is done on the preprocessing 1
     # rec_corrected1 will not be used for sorting!
     motion_folder = '/my/folder'
-    rec_corrected1 = correct_motion(rec1, preset="nonrigid_accurate", folder=motion_folder)
+    rec_corrected1 = correct_motion(recording=rec1, preset="nonrigid_accurate", folder=motion_folder)
 
     # preprocessing 2 : highpass + cmr
-    rec2 = si.highpass_filter(raw_rec, freq_min=300.)
-    rec2 = si.common_reference(rec2, reference='global', operator='median')
+    rec2 = si.highpass_filter(recording=raw_rec, freq_min=300.)
+    rec2 = si.common_reference(recording=rec2, reference='global', operator='median')
 
     # we use another preprocessing for the final interpolation
     motion_info = load_motion_info(motion_folder)
@@ -220,7 +224,7 @@ different preprocessing chains: one for motion correction and one for spike sort
                       spatial_bins=motion_info['spatial_bins'],
                       **motion_info['parameters']['interpolate_motion_kwargs'])
 
-    sorting = run_sorter("montainsort5", rec_corrected2)
+    sorting = run_sorter(sorter_name="montainsort5", recording=rec_corrected2)
 
 
 References

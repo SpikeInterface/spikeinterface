@@ -170,7 +170,7 @@ class BaseSorting(BaseExtractor):
         if check_spike_frames:
             if has_exceeding_spikes(recording, self):
                 warnings.warn(
-                    "Some spikes are exceeding the recording's duration! "
+                    "Some spikes exceed the recording's duration! "
                     "Removing these excess spikes with `spikeinterface.curation.remove_excess_spikes()` "
                     "Might be necessary for further postprocessing."
                 )
@@ -346,7 +346,7 @@ class BaseSorting(BaseExtractor):
         """
         from spikeinterface import UnitsSelectionSorting
 
-        new_unit_ids = self.unit_ids[~np.in1d(self.unit_ids, remove_unit_ids)]
+        new_unit_ids = self.unit_ids[~np.isin(self.unit_ids, remove_unit_ids)]
         new_sorting = UnitsSelectionSorting(self, new_unit_ids)
         return new_sorting
 
@@ -473,8 +473,7 @@ class BaseSorting(BaseExtractor):
             if not concatenated:
                 spikes_ = []
                 for segment_index in range(self.get_num_segments()):
-                    s0 = np.searchsorted(spikes["segment_index"], segment_index, side="left")
-                    s1 = np.searchsorted(spikes["segment_index"], segment_index + 1, side="left")
+                    s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1], side="left")
                     spikes_.append(spikes[s0:s1])
                 spikes = spikes_
 

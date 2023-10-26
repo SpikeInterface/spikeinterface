@@ -84,7 +84,7 @@ class PipelineNode:
         raise NotImplementedError
 
 
-# nodes graph must have either a PeakSource (PeakDetector or PeakRetriever or SpikeRetriever)
+# nodes graph must have a PeakSource (PeakDetector or PeakRetriever or SpikeRetriever)
 # as first element they play the same role in pipeline : give some peaks (and eventually more)
 
 
@@ -111,8 +111,7 @@ class PeakRetriever(PeakSource):
         # precompute segment slice
         self.segment_slices = []
         for segment_index in range(recording.get_num_segments()):
-            i0 = np.searchsorted(peaks["segment_index"], segment_index)
-            i1 = np.searchsorted(peaks["segment_index"], segment_index + 1)
+            i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
             self.segment_slices.append(slice(i0, i1))
 
     def get_trace_margin(self):
@@ -125,8 +124,7 @@ class PeakRetriever(PeakSource):
         # get local peaks
         sl = self.segment_slices[segment_index]
         peaks_in_segment = self.peaks[sl]
-        i0 = np.searchsorted(peaks_in_segment["sample_index"], start_frame)
-        i1 = np.searchsorted(peaks_in_segment["sample_index"], end_frame)
+        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         local_peaks = peaks_in_segment[i0:i1]
 
         # make sample index local to traces
@@ -138,7 +136,97 @@ class PeakRetriever(PeakSource):
 
 # this is not implemented yet this will be done in separted PR
 class SpikeRetriever(PeakSource):
-    pass
+    """
+    This class is useful to inject a sorting object in the node pipepline mechanism.
+    It allows to compute some post-processing steps with the same machinery used for sorting components.
+    This is used by:
+      * compute_spike_locations()
+      * compute_amplitude_scalings()
+      * compute_spike_amplitudes()
+      * compute_principal_components()
+
+    recording : BaseRecording
+        The recording object.
+    sorting: BaseSorting
+        The sorting object.
+    channel_from_template: bool, default: True
+        If True, then the channel_index is inferred from the template and `extremum_channel_inds` must be provided.
+        If False, the max channel is computed for each spike given a radius around the template max channel.
+    extremum_channel_inds: dict of int
+        The extremum channel index dict given from template.
+    radius_um: float (default 50.)
+        The radius to find the real max channel.
+        Used only when channel_from_template=False
+    peak_sign: str (default "neg")
+        Peak sign to find the max channel.
+        Used only when channel_from_template=False
+    """
+
+    def __init__(
+        self, recording, sorting, channel_from_template=True, extremum_channel_inds=None, radius_um=50, peak_sign="neg"
+    ):
+        PipelineNode.__init__(self, recording, return_output=False)
+
+        self.channel_from_template = channel_from_template
+
+        assert extremum_channel_inds is not None, "SpikeRetriever needs the extremum_channel_inds dictionary"
+
+        self.peaks = sorting_to_peaks(sorting, extremum_channel_inds)
+
+        if not channel_from_template:
+            channel_distance = get_channel_distances(recording)
+            self.neighbours_mask = channel_distance < radius_um
+            self.peak_sign = peak_sign
+
+        # precompute segment slice
+        self.segment_slices = []
+        for segment_index in range(recording.get_num_segments()):
+            i0, i1 = np.searchsorted(self.peaks["segment_index"], [segment_index, segment_index + 1])
+            self.segment_slices.append(slice(i0, i1))
+
+    def get_trace_margin(self):
+        return 0
+
+    def get_dtype(self):
+        return base_peak_dtype
+
+    def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
+        # get local peaks
+        sl = self.segment_slices[segment_index]
+        peaks_in_segment = self.peaks[sl]
+        i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
+        local_peaks = peaks_in_segment[i0:i1]
+
+        # make sample index local to traces
+        local_peaks = local_peaks.copy()
+        local_peaks["sample_index"] -= start_frame - max_margin
+
+        if not self.channel_from_template:
+            # handle channel spike per spike
+            for i, peak in enumerate(local_peaks):
+                chans = np.flatnonzero(self.neighbours_mask[peak["channel_index"]])
+                sparse_wfs = traces[peak["sample_index"], chans]
+                if self.peak_sign == "neg":
+                    local_peaks[i]["channel_index"] = chans[np.argmin(sparse_wfs)]
+                elif self.peak_sign == "pos":
+                    local_peaks[i]["channel_index"] = chans[np.argmax(sparse_wfs)]
+                elif self.peak_sign == "both":
+                    local_peaks[i]["channel_index"] = chans[np.argmax(np.abs(sparse_wfs))]
+
+        # TODO: "amplitude" ???
+
+        return (local_peaks,)
+
+
+def sorting_to_peaks(sorting, extremum_channel_inds):
+    spikes = sorting.to_spike_vector()
+    peaks = np.zeros(spikes.size, dtype=base_peak_dtype)
+    peaks["sample_index"] = spikes["sample_index"]
+    extremum_channel_inds_ = np.array([extremum_channel_inds[unit_id] for unit_id in sorting.unit_ids])
+    peaks["channel_index"] = extremum_channel_inds_[spikes["unit_index"]]
+    peaks["amplitude"] = 0.0
+    peaks["segment_index"] = spikes["segment_index"]
+    return peaks
 
 
 class WaveformsNode(PipelineNode):
@@ -344,6 +432,7 @@ def run_node_pipeline(
     job_name="pipeline",
     mp_context=None,
     gather_mode="memory",
+    gather_kwargs={},
     squeeze_output=True,
     folder=None,
     names=None,
@@ -360,7 +449,7 @@ def run_node_pipeline(
     if gather_mode == "memory":
         gather_func = GatherToMemory()
     elif gather_mode == "npy":
-        gather_func = GatherToNpy(folder, names)
+        gather_func = GatherToNpy(folder, names, **gather_kwargs)
     else:
         raise ValueError(f"wrong gather_mode : {gather_mode}")
 
@@ -423,7 +512,7 @@ def _compute_peak_pipeline_chunk(segment_index, start_frame, end_frame, worker_c
             node_output = node.compute(trace_detection, start_frame, end_frame, segment_index, max_margin)
             # set sample index to local
             node_output[0]["sample_index"] += extra_margin
-        elif isinstance(node, PeakRetriever):
+        elif isinstance(node, PeakSource):
             node_output = node.compute(traces_chunk, start_frame, end_frame, segment_index, max_margin)
         else:
             # TODO later when in master: change the signature of all nodes (or maybe not!)
@@ -505,9 +594,9 @@ class GatherToNpy:
       * create the npy v1.0 header at the end with the correct shape and dtype
     """
 
-    def __init__(self, folder, names, npy_header_size=1024):
+    def __init__(self, folder, names, npy_header_size=1024, exist_ok=False):
         self.folder = Path(folder)
-        self.folder.mkdir(parents=True, exist_ok=False)
+        self.folder.mkdir(parents=True, exist_ok=exist_ok)
         assert names is not None
         self.names = names
         self.npy_header_size = npy_header_size

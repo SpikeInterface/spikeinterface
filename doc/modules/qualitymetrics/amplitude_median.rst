@@ -20,12 +20,12 @@ Example code
 
 .. code-block:: python
 
-	import spikeinterface.qualitymetrics as qm
+	import spikeinterface.qualitymetrics as sqm
 
 	# It is also recommended to run `compute_spike_amplitudes(wvf_extractor)`
 	# in order to use amplitude values from all spikes.
-	amplitude_medians = qm.compute_amplitude_medians(wvf_extractor)
-	# amplitude_medians is a dict containing the units' IDs as keys,
+	amplitude_medians = sqm.compute_amplitude_medians(waveform_extractor=wvf_extractor)
+	# amplitude_medians is a dict containing the unit IDs as keys,
 	# and their estimated amplitude medians as values.
 
 Reference

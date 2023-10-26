@@ -75,6 +75,10 @@ jobs:
               echo "Extractors changed"
               echo "EXTRACTORS_CHANGED=true" >> $GITHUB_OUTPUT
             fi
+            if [[ $file == *"plexon2"* ]]; then
+              echo "Plexon2 changed"
+              echo "PLEXON2_CHANGED=true" >> $GITHUB_OUTPUT
+            fi
             if [[ $file == *"/preprocessing/"* ]]; then
               echo "Preprocessing changed"
               echo "PREPROCESSING_CHANGED=true" >> $GITHUB_OUTPUT
@@ -122,6 +126,9 @@ jobs:
           done
       - name: Set execute permissions on run_tests.sh
         run: chmod +x .github/run_tests.sh
+      - name: Install Wine (Plexon2)
+        if: ${{ steps.modules-changed.outputs.PLEXON2_CHANGED == 'true' }}
+        uses: ./.github/actions/install-wine
       - name: Test core
         run: ./.github/run_tests.sh core
       - name: Test extractors
@@ -129,7 +136,7 @@ jobs:
         run: ./.github/run_tests.sh "extractors and not streaming_extractors"
       - name: Test preprocessing
         if: ${{ steps.modules-changed.outputs.PREPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
-        run: ./.github/run_tests.sh preprocessing
+        run: ./.github/run_tests.sh "preprocessing and not deepinterpolation"
       - name: Test postprocessing
         if: ${{ steps.modules-changed.outputs.POSTPROCESSING_CHANGED == 'true' || steps.modules-changed.outputs.CORE_CHANGED == 'true' }}
         run: ./.github/run_tests.sh postprocessing

@@ -9,8 +9,7 @@ from spikeinterface.core import extract_waveforms, precompute_sparsity, Waveform
 
 from spikeinterface.extractors import read_mearec
 from spikeinterface.preprocessing import bandpass_filter, zscore, common_reference, scale, highpass_filter, whiten
-from spikeinterface.sorters import run_sorter
-from spikeinterface.widgets import plot_unit_waveforms, plot_gt_performances
+from spikeinterface.sorters import run_sorter, read_sorter_folder
 
 from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.sortingcomponents.motion_interpolation import InterpolateMotionRecording
@@ -184,7 +183,7 @@ class BenchmarkMotionInterpolationMearec(BenchmarkBase):
             we.run_extract_waveforms(seed=22051977, **self.job_kwargs)
             self.waveforms[key] = we
 
-    def run_sorters(self):
+    def run_sorters(self, skip_already_done=True):
         for case in self.sorter_cases:
             label = case["label"]
             print("run sorter", label)
@@ -192,9 +191,17 @@ class BenchmarkMotionInterpolationMearec(BenchmarkBase):
             sorter_params = case["sorter_params"]
             recording = self.recordings[case["recording"]]
             output_folder = self.folder / f"tmp_sortings_{label}"
-            sorting = run_sorter(
-                sorter_name, recording, output_folder, **sorter_params, delete_output_folder=self.delete_output_folder
-            )
+            if output_folder.exists() and skip_already_done:
+                print("already done")
+                sorting = read_sorter_folder(output_folder)
+            else:
+                sorting = run_sorter(
+                    sorter_name,
+                    recording,
+                    output_folder,
+                    **sorter_params,
+                    delete_output_folder=self.delete_output_folder,
+                )
             self.sortings[label] = sorting
 
     def compute_distances_to_static(self, force=False):
