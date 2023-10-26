@@ -205,6 +205,7 @@ if HAVE_NUMBA:
     def _compute_isi_histograms_numba(ISIs, spike_trains, spike_clusters, bins):
         n_units = ISIs.shape[0]
 
-        for i in range(n_units):
+        units_loop = numba.prange(n_units) if n_units > 300 else range(n_units)
+        for i in units_loop:
             spike_train = spike_trains[spike_clusters == i]
             ISIs[i] += np.histogram(np.diff(spike_train), bins=bins)[0]
