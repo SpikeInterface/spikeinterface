@@ -240,8 +240,6 @@ class StudyAgreementMatrix(BaseWidget):
     ordered: bool
         Order units with best agreement scores.
         This enable to see agreement on a diagonal.
-    count_text: bool
-        If True counts are displayed as text
     """
 
     def __init__(
