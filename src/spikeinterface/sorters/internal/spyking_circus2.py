@@ -22,7 +22,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     _default_params = {
         "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
-        "waveforms": {"max_spikes_per_unit": 200, "overwrite": True, "sparse": True, "method": "ptp", "threshold": 1},
+        "waveforms": {"max_spikes_per_unit": 200, "overwrite": True, "sparse": True, "method": "ptp", "threshold": 0.5},
         "filtering": {"freq_min": 150, "dtype": "float32"},
         "detection": {"peak_sign": "neg", "detect_threshold": 5},
         "selection": {"n_peaks_per_channel": 5000, "min_n_peaks": 20000},
@@ -121,6 +121,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         clustering_params["job_kwargs"] = job_kwargs
         clustering_params["tmp_folder"] = sorter_output_folder / "clustering"
         clustering_params.update({"noise_levels": noise_levels})
+
 
         labels, peak_labels = find_cluster_from_peaks(
             recording_f, selected_peaks, method="random_projections", method_kwargs=clustering_params

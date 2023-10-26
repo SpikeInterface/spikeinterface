@@ -587,6 +587,12 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         + """
     radius_um: float
         The radius to use to select neighbour channels for locally exclusive detection.
+    prototype: array
+        The canonical waveform of action potentials
+    rank : int (default 5)
+        The rank for SVD convolution of spatiotemporal templates with the traces
+    sigma_um: float (default 25)
+        The spead, in um, of the decaying kernel for matched filters
     """
     )
 
@@ -599,7 +605,7 @@ class DetectPeakLocallyExclusiveMatchedFiltering(PeakDetectorWrapper):
         detect_threshold=5,
         exclude_sweep_ms=0.1,
         radius_um=50,
-        sigma_um=50,
+        sigma_um=25,
         rank=5,
         noise_levels=None,
         random_chunk_kwargs={},

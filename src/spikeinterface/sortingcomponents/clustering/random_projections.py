@@ -19,7 +19,7 @@ from .clustering_tools import remove_duplicates, remove_duplicates_via_matching,
 from spikeinterface.core import NumpySorting
 from spikeinterface.core import extract_waveforms
 from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
-from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature
+from spikeinterface.sortingcomponents.features_from_peaks import RandomProjectionsFeature, PeakToPeakMapsFeature
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
     ExtractDenseWaveforms,
@@ -104,10 +104,13 @@ class RandomProjectionClustering:
         )
 
         node2 = SavGolDenoiser(recording, parents=[node0, node1], return_output=False, **params["smoothing_kwargs"])
+        node3 = PeakToPeakMapsFeature(recording, parents=[node0, node2], sparse=True, radius_um=params['radius_um'])
 
-        projections = np.random.randn(num_chans, d["nb_projections"])
-        projections -= projections.mean(0)
-        projections /= projections.std(0)
+        ## First we get the ptp maps on a per channel basis
+        pipeline_nodes = [node0, node1, node2, node3]
+        ptp_maps = run_node_pipeline(
+            recording, pipeline_nodes, params["job_kwargs"], job_name="extracting ptp maps"
+        )
 
         nbefore = int(params["ms_before"] * fs / 1000)
         nafter = int(params["ms_after"] * fs / 1000)
@@ -119,18 +122,22 @@ class RandomProjectionClustering:
         x = scipy.signal.savgol_filter(x, node2.window_length, node2.order, axis=1)
 
         ptps = np.ptp(x, axis=1)
-        a, b = np.histogram(ptps.flatten(), np.linspace(0, 100, 1000))
-        ydata = np.cumsum(a) / a.sum()
-        xdata = b[1:]
+        mean_ptps = ptps.mean()
+        std_ptps = ptps.std()
 
-        from scipy.optimize import curve_fit
-
-        def sigmoid(x, L, x0, k, b):
-            y = L / (1 + np.exp(-k * (x - x0))) + b
-            return y
-
-        p0 = [max(ydata), np.median(xdata), 1, min(ydata)]  # this is an mandatory initial guess
-        popt, pcov = curve_fit(sigmoid, xdata, ydata, p0)
+        contact_locations = recording.get_channel_locations()
+        channel_distance = get_channel_distances(recording)
+        neighbours_mask = channel_distance < params['radius_um']
+        max_num_chans = np.max(np.sum(neighbours_mask, axis=1))
+        ptp_maps = np.sum(ptp_maps.reshape(len(ptp_maps)//num_chans, num_chans, max_num_chans), axis=0)
+        for main_channel in range(num_chans):
+            n_peaks = np.sum(peaks['channel_index'] == main_channel)
+            ptp_maps[main_channel] /= n_peaks
+        valid_channels = np.abs(ptp_maps - mean_ptps) > 3*std_ptps
+        
+        projections = np.random.randn(num_chans, d["nb_projections"])
+        projections -= projections.mean(0)
+        projections /= projections.std(0)
 
         node3 = RandomProjectionsFeature(
             recording,
@@ -138,7 +145,7 @@ class RandomProjectionClustering:
             return_output=True,
             projections=projections,
             radius_um=params["radius_um"],
-            sigmoid=None,
+            valid_channels=valid_channels,
             sparse=True,
         )
 
