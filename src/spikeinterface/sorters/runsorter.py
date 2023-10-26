@@ -57,28 +57,27 @@ _common_param_doc = """
         Path to output folder
     remove_existing_folder: bool
         If True and output_folder exists yet then delete.
-    delete_output_folder: bool
-        If True, output folder is deleted (default False)
-    verbose: bool
+    delete_output_folder: bool, default: False
+        If True, output folder is deleted
+    verbose: bool, default: False
         If True, output is verbose
-    raise_error: bool
-        If True, an error is raised if spike sorting fails (default).
+    raise_error: bool, default: True
+        If True, an error is raised if spike sorting fails
         If False, the process continues and the error is logged in the log file.
-    docker_image: bool or str
+    docker_image: bool or str, default: False
         If True, pull the default docker container for the sorter and run the sorter in that container using docker.
         Use a str to specify a non-default container. If that container is not local it will be pulled from docker hub.
-        If False, the sorter is run locally.
-    singularity_image: bool or str
+        If False, the sorter is run locally
+    singularity_image: bool or str, default: False
         If True, pull the default docker container for the sorter and run the sorter in that container using
         singularity. Use a str to specify a non-default container. If that container is not local it will be pulled
-        from Docker Hub.
-        If False, the sorter is run locally.
-    delete_container_files: bool
-        If True, the container temporary files are deleted after the sorting is done (default False).
-    with_output: bool
-        If True, the output Sorting is returned as a Sorting (default True).
+        from Docker Hub. If False, the sorter is run locally
+    delete_container_files: bool, default: True
+        If True, the container temporary files are deleted after the sorting is done
+    with_output: bool, default: True
+        If True, the output Sorting is returned as a Sorting
     **sorter_params: keyword args
-        Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
+        Spike sorter specific arguments (they can be retrieved with `get_default_sorter_params(sorter_name_or_class)`)
 
     Returns
     -------

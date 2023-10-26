@@ -160,7 +160,7 @@ def compute_spike_locations(
                 In case channel_from_template=False, this is the peak sign.
     method : 'center_of_mass' | 'monopolar_triangulation' | 'grid_convolution', default: 'center_of_mass'
         The localization method to use
-    method_kwargs : dict, default: {}
+    method_kwargs : dict, default: dict()
         Other kwargs depending on the method.
     outputs : 'concatenated' | 'by_unit', default: 'concatenated'
         The output format
