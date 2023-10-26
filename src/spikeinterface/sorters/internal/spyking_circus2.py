@@ -69,17 +69,16 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         else:
             recording_f = recording
 
-        # recording_f = whiten(recording_f, dtype="float32")
         recording_f = zscore(recording_f, dtype="float32")
         noise_levels = np.ones(num_channels, dtype=np.float32)
-
+        
         ## Then, we are detecting peaks with a locally_exclusive method
         detection_params = params["detection"].copy()
         detection_params.update(job_kwargs)
         if "exclude_sweep_ms" not in detection_params:
             detection_params["exclude_sweep_ms"] = max(ms_before, ms_after)
         if "radius_um" not in detection_params:
-                detection_params["radius_um"] = params["general"]["radius_um"]            
+            detection_params["radius_um"] = params["general"]["radius_um"]            
         
         peaks = detect_peaks(recording_f, method='locally_exclusive', **detection_params)
         
