@@ -38,7 +38,6 @@ from .correlograms import (
 
 from .isi import (
     ISIHistogramsCalculator,
-    compute_isi_histograms_from_spiketrain,
     compute_isi_histograms,
     compute_isi_histograms_numpy,
     compute_isi_histograms_numba,
