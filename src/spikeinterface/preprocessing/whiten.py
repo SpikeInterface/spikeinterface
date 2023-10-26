@@ -31,7 +31,7 @@ class WhitenRecording(BasePreprocessor):
         For example, a value of `int_scale=200` will scale the traces value to a standard deviation of 200.
     eps : float or None, default: None
         Small epsilon to regularize SVD.
-        If None, eps is default to 1e-8. If the data is float type and scaled down to very small values,
+        If None, eps is defaulted to 1e-8. If the data is float type and scaled down to very small values,
         then the eps is automatically set to a small fraction (1e-3) of the median of the squared data.
     W : 2d np.array, default: None
         Pre-computed whitening matrix
