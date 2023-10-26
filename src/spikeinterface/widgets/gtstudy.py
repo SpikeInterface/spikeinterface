@@ -305,7 +305,7 @@ class StudySummary(BaseWidget):
     ----------
     study: GroundTruthStudy
         A study object.
-    case_keys: list or None
+    case_keys: list or None, default: None
         A selection of cases to plot, if None, then all.
     """
 
