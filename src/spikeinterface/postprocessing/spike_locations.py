@@ -5,6 +5,7 @@ from spikeinterface.core.job_tools import _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.core.template_tools import get_template_extremum_channel, get_template_extremum_channel_peak_shift
 
 from spikeinterface.core.waveform_extractor import WaveformExtractor, BaseWaveformExtractorExtension
+from spikeinterface.core.node_pipeline import SpikeRetriever
 
 
 class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
@@ -25,8 +26,21 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         extremum_channel_inds = get_template_extremum_channel(self.waveform_extractor, outputs="index")
         self.spikes = self.waveform_extractor.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
 
-    def _set_params(self, ms_before=0.5, ms_after=0.5, method="center_of_mass", method_kwargs={}):
-        params = dict(ms_before=ms_before, ms_after=ms_after, method=method)
+    def _set_params(
+        self,
+        ms_before=0.5,
+        ms_after=0.5,
+        spike_retriver_kwargs=dict(
+            channel_from_template=True,
+            radius_um=50,
+            peak_sign="neg",
+        ),
+        method="center_of_mass",
+        method_kwargs={},
+    ):
+        params = dict(
+            ms_before=ms_before, ms_after=ms_after, spike_retriver_kwargs=spike_retriver_kwargs, method=method
+        )
         params.update(**method_kwargs)
         return params
 
@@ -44,13 +58,22 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
         uses the`sortingcomponents.peak_localization.localize_peaks()` function to triangulate
         spike locations.
         """
-        from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+        from spikeinterface.sortingcomponents.peak_localization import _run_localization_from_peak_source
 
         job_kwargs = fix_job_kwargs(job_kwargs)
 
         we = self.waveform_extractor
 
-        spike_locations = localize_peaks(we.recording, self.spikes, **self._params, **job_kwargs)
+        extremum_channel_inds = get_template_extremum_channel(we, peak_sign="neg", outputs="index")
+
+        params = self._params.copy()
+        spike_retriver_kwargs = params.pop("spike_retriver_kwargs")
+
+        spike_retriever = SpikeRetriever(
+            we.recording, we.sorting, extremum_channel_inds=extremum_channel_inds, **spike_retriver_kwargs
+        )
+        spike_locations = _run_localization_from_peak_source(we.recording, spike_retriever, **params, **job_kwargs)
+
         self._extension_data["spike_locations"] = spike_locations
 
     def get_data(self, outputs="concatenated"):
@@ -101,6 +124,11 @@ def compute_spike_locations(
     load_if_exists=False,
     ms_before=0.5,
     ms_after=0.5,
+    spike_retriver_kwargs=dict(
+        channel_from_template=True,
+        radius_um=50,
+        peak_sign="neg",
+    ),
     method="center_of_mass",
     method_kwargs={},
     outputs="concatenated",
@@ -119,6 +147,17 @@ def compute_spike_locations(
         The left window, before a peak, in milliseconds.
     ms_after : float
         The right window, after a peak, in milliseconds.
+    spike_retriver_kwargs: dict
+        A dictionary to control the behavior for getting the maximum channel for each spike.
+        This dictionary contains:
+            * channel_from_template: bool, default True
+                For each spike is the maximum channel computed from template or re estimated at every spikes.
+                channel_from_template = True is old behavior but less acurate
+                channel_from_template = False is slower but more accurate
+            * radius_um: float, default 50
+                In case channel_from_template=False, this is the radius to get the true peak.
+            * peak_sign="neg"
+                In case channel_from_template=False, this is the peak sign.
     method : str
         'center_of_mass' / 'monopolar_triangulation' / 'grid_convolution'
     method_kwargs : dict
@@ -138,7 +177,13 @@ def compute_spike_locations(
         slc = waveform_extractor.load_extension(SpikeLocationsCalculator.extension_name)
     else:
         slc = SpikeLocationsCalculator(waveform_extractor)
-        slc.set_params(ms_before=ms_before, ms_after=ms_after, method=method, method_kwargs=method_kwargs)
+        slc.set_params(
+            ms_before=ms_before,
+            ms_after=ms_after,
+            spike_retriver_kwargs=spike_retriver_kwargs,
+            method=method,
+            method_kwargs=method_kwargs,
+        )
         slc.run(**job_kwargs)
 
     locs = slc.get_data(outputs=outputs)
