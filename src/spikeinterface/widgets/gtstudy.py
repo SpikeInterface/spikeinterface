@@ -135,7 +135,7 @@ class StudyPerformances(BaseWidget):
         A study object.
     mode: str
         Which mode in "ordered", "snr", "swarm"
-    performance_names: list
+    performance_names: list or tuple, default: ('accuracy', 'precision', 'recall')
         Which performances to plot ("accuracy", "precision", "recall")
     case_keys: list or None
         A selection of cases to plot, if None, then all.
