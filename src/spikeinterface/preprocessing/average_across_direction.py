@@ -27,7 +27,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
         direction : str, default 'y'
             Channels living at unique positions along this direction
             will be averaged.
-        dtype : numpy dtype, default float32
+        dtype : numpy dtype or None,  default: float32
             If None, parent dtype is preserved, but the average will
             lose accuracy
         """
