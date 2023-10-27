@@ -27,7 +27,7 @@ class AmplitudesWidget(BaseWidget):
     plot_histogram : bool, default: False
         If True, an histogram of the amplitudes is plotted on the right axis
         (matplotlib backend)
-    bins : int, default: None
+    bins : int or None, default: None
         If plot_histogram is True, the number of bins for the amplitude histogram.
         If None this is automatically adjusted
     plot_legend : bool, default: True
