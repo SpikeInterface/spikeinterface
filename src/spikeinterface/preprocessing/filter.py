@@ -33,14 +33,14 @@ class FilterRecording(BasePreprocessor):
     band: float or list, default: [300.0, 6000.0]
         If float, cutoff frequency in Hz for 'highpass' filter type
         If list. band (low, high) in Hz for 'bandpass' filter type
-    btype: 'bandpass' | 'highpass', default: 'bandpass'
-        Type of the filter ('bandpass', 'highpass')
+    btype: "bandpass" | "highpass", default: "bandpass"
+        Type of the filter
     margin_ms: float, default: 5.0
         Margin in ms on border to avoid border effect
-    filter_mode: 'sos' | 'ba', default 'sos'
+    filter_mode: "sos" | "ba", default: "sos"
         Filter form of the filter coefficients:
-        - second-order sections ('sos')
-        - numerator/denominator: ('ba')
+        - second-order sections ("sos")
+        - numerator/denominator: ("ba")
     coef: array or None, default: None
         Filter coefficients in the filter_mode form.
     dtype: dtype or None, default: None

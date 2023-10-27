@@ -82,13 +82,13 @@ class SpikeLocationsCalculator(BaseWaveformExtractorExtension):
 
         Parameters
         ----------
-        outputs : 'concatenated' | 'by_unit', default: "concatenated"
+        outputs : "concatenated" | "by_unit", default: "concatenated"
             The output format
 
         Returns
         -------
         spike_locations : np.array or dict
-            The spike locations as a structured array (outputs='concatenated') or
+            The spike locations as a structured array (outputs="concatenated") or
             as a dict with units as key and spike locations as values.
         """
         we = self.waveform_extractor
@@ -150,19 +150,19 @@ def compute_spike_locations(
     spike_retriver_kwargs: dict
         A dictionary to control the behavior for getting the maximum channel for each spike
         This dictionary contains:
-            * channel_from_template: bool, default True
+            * channel_from_template: bool, default: True
                 For each spike is the maximum channel computed from template or re estimated at every spikes
                 channel_from_template = True is old behavior but less acurate
                 channel_from_template = False is slower but more accurate
-            * radius_um: float, default 50
+            * radius_um: float, default: 50
                 In case channel_from_template=False, this is the radius to get the true peak
-            * peak_sign="neg"
+            * peak_sign, default: "neg"
                 In case channel_from_template=False, this is the peak sign.
-    method : 'center_of_mass' | 'monopolar_triangulation' | 'grid_convolution', default: 'center_of_mass'
+    method : "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
         The localization method to use
     method_kwargs : dict, default: dict()
         Other kwargs depending on the method.
-    outputs : 'concatenated' | 'by_unit', default: 'concatenated'
+    outputs : "concatenated" | "by_unit", default: "concatenated"
         The output format
     {}
 
@@ -170,8 +170,8 @@ def compute_spike_locations(
     -------
     spike_locations: np.array or list of dict
         The spike locations.
-            - If 'concatenated' all locations for all spikes and all units are concatenated
-            - If 'by_unit', locations are returned as a list (for segments) of dictionaries (for units)
+            - If "concatenated" all locations for all spikes and all units are concatenated
+            - If "by_unit", locations are returned as a list (for segments) of dictionaries (for units)
     """
     if load_if_exists and waveform_extractor.is_extension(SpikeLocationsCalculator.extension_name):
         slc = waveform_extractor.load_extension(SpikeLocationsCalculator.extension_name)

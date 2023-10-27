@@ -179,7 +179,7 @@ class CenterRecording(BasePreprocessor):
     ----------
     recording: RecordingExtractor
         The recording extractor to be centered
-    mode: 'median' | 'mean', default: 'median'
+    mode: "median" | "mean", default: "median"
         The method used to center the traces
     dtype: str or np.dtype, default: "float32"
         The dtype of the output traces

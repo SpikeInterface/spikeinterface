@@ -64,9 +64,9 @@ class BlankSaturationRecording(BasePreprocessor):
     quantile_threshold: float or None, default: None
         Tha value in [0, 1] used if abs_threshold is None to automatically set the
         abs_threshold given the data. Must be provided if abs_threshold is None
-    direction: 'upper' | 'lower' | 'both', default: 'upper'
-        Only values higher than the detection threshold are set to fill_value ('higher'),
-        or only values lower than the detection threshold ('lower'), or both ('both')
+    direction: "upper" | "lower" | "both", default: "upper"
+        Only values higher than the detection threshold are set to fill_value ("higher"),
+        or only values lower than the detection threshold ("lower"), or both ("both")
     fill_value: float or None, default: None
         The value to write instead of the saturating signal. If None, then the value is
         automatically computed as the median signal value

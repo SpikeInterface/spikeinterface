@@ -308,10 +308,10 @@ def read_neuroscope(
     exclude_shanks: list
         Optional. List of indices to ignore. The set of all possible indices is chosen by default, extracted as the
         final integer of all the .res. % i and .clu. % i pairs.
-    load_recording: bool
-        If True, the recording is loaded (default True)
-    load_sorting: bool
-        If True, the sorting is loaded (default False)
+    load_recording: bool, default: True
+        If True, the recording is loaded
+    load_sorting: bool, default: False
+        If True, the sorting is loaded
     """
     outputs = ()
     # TODO add checks for recording and sorting existence

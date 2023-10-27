@@ -57,7 +57,7 @@ def compute_noise_levels(waveform_extractor, load_if_exists=False, **params):
     ----------
     waveform_extractor: WaveformExtractor
         A waveform extractor object
-    load_if_exists: bool, default False
+    load_if_exists: bool, default: False
         If True, the noise levels are loaded if they already exist
     **params: dict with additional parameters
 

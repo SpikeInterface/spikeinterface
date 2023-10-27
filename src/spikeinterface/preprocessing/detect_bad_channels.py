@@ -74,8 +74,8 @@ def detect_bad_channels(
     nyquist_threshold (coeherence+psd) : float, default: 0.8
         Frequency with respect to Nyquist (Fn=1) above which the mean of the PSD is calculated and compared
         with psd_hf_threshold
-    direction (coeherence+psd): str, default: 'y'
-        'x', 'y', 'z', the depth dimension
+    direction (coeherence+psd): "x" | "y" | "z", default: "y"
+        The depth dimension
     highpass_filter_cutoff : float, default: 300
         If the recording is not filtered, the cutoff frequency of the highpass filter
     chunk_duration_s : float, default: 0.5

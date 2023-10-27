@@ -35,7 +35,7 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
         prior to filtering. If None and n_channel_pad is set,
         n_channel_taper will be set to the number of padded channels.
         Otherwise, the passed value will be used
-    direction : str, default: 'y'
+    direction : "x" | "y" | "z", default: "y"
         The direction in which the spatial filter is applied
     apply_agc : bool, default: True
         It True, Automatic Gain Control is applied

@@ -1229,7 +1229,7 @@ class WaveformExtractor:
         ----------
         unit_ids: list or None
             Unit ids to retrieve waveforms for
-        mode: 'average' | 'median' | 'std', default: 'average'
+        mode: "average" | "median" | "std", default: "average"
             The mode to compute the templates
 
         Returns
@@ -1256,7 +1256,7 @@ class WaveformExtractor:
         ----------
         unit_id: int or str
             Unit id to retrieve waveforms for
-        mode: 'average' | 'median' | 'std', default: 'average'
+        mode: "average" | "median" | "std", default: "average"
             The mode to compute the template
         sparsity: ChannelSparsity, default: None
             Sparsity to apply to the waveforms (if WaveformExtractor is not sparse)
@@ -1314,7 +1314,7 @@ class WaveformExtractor:
             Unit id to retrieve waveforms for
         segment_index: int
             The segment index to retrieve template from
-        mode: 'average' | 'median' | 'std', default: 'average'
+        mode: "average" | "median" | "std", default: "average"
             The mode to compute the template
         sparsity: ChannelSparsity, default: None
             Sparsity to apply to the waveforms (if WaveformExtractor is not sparse).
@@ -1504,11 +1504,11 @@ def extract_waveforms(
         The sorting object
     folder: str or Path or None, default: None
         The folder where waveforms are cached
-    mode: "folder" | "memory, default: 'folder'
-        The mode to store waveforms. If 'folder', waveforms are stored on disk in the specified folder.
+    mode: "folder" | "memory, default: "folder"
+        The mode to store waveforms. If "folder", waveforms are stored on disk in the specified folder.
         The "folder" argument must be specified in case of mode "folder".
         If "memory" is used, the waveforms are stored in RAM. Use this option carefully!
-    precompute_template: None or list, default: ['average']
+    precompute_template: None or list, default: ["average"]
         Precompute average/std/median for template. If None, no templates are precomputed
     ms_before: float, default: 1.0
         Time in ms to cut before spike peak
@@ -1518,7 +1518,7 @@ def extract_waveforms(
         Number of spikes per unit to extract waveforms from
         Use None to extract waveforms for all spikes
     overwrite: bool, default: False
-        If True and 'folder' exists, the folder is removed and waveforms are recomputed
+        If True and "folder" exists, the folder is removed and waveforms are recomputed
         Otherwise an error is raised.
     return_scaled: bool, default: True
         If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV

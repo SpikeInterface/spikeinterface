@@ -225,23 +225,23 @@ class InterpolateMotionRecording(BasePreprocessor):
         Temporal bins in second.
     spatial_bins: None or np.array
         Bins for non-rigid motion. If None, rigid motion is used
-    direction: int (0, 1, 2)
-        Dimension along which channel_locations are shifted (0 - x, 1 - y, 2 - z), by default 1
-    spatial_interpolation_method: str
-        'kriging' or 'idw' or 'nearest'.
+    direction: 0 | 1 | 2, default: 1
+        Dimension along which channel_locations are shifted (0 - x, 1 - y, 2 - z)
+    spatial_interpolation_method: "kriging" | "idw" | "nearest", default: "kriging"
+        The spatial interpolation method used to interpolate the channel locations.
         See `spikeinterface.preprocessing.get_spatial_interpolation_kernel()` for more details.
         Choice of the method:
 
             * 'kriging' : the same one used in kilosort
             * 'idw' : inverse  distance weighted
             * 'nearest' : use nereast channel
-    sigma_um: float (default 20.)
+    sigma_um: float, default: 20.0
         Used in the 'kriging' formula
-    p: int (default 1)
+    p: int, default: 1
         Used in the 'kriging' formula
-    num_closest: int (default 3)
+    num_closest: int, default: 3
         Number of closest channels used by 'idw' method for interpolation.
-    border_mode: str
+    border_mode: "remove_channels" | "force_extrapolate" | "force_zeros", default: "remove_channels"
         Control how channels are handled on border:
 
         * 'remove_channels': remove channels on the border, the recording has less channels

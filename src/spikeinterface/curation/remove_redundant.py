@@ -46,16 +46,16 @@ def remove_redundant_units(
     duplicate_threshold : float, default: 0.8
         Final threshold on the portion of coincident events over the number of spikes above which the
         unit is removed
-    remove_strategy: 'minimum_shift' | 'highest_amplitude' | 'max_spikes', default: 'minimum_shift'
+    remove_strategy: "minimum_shift" | "highest_amplitude" | "max_spikes", default: "minimum_shift"
         Which strategy to remove one of the two duplicated units:
 
-            * 'minimum_shift': keep the unit with best peak alignment (minimum shift)
-                             If shifts are equal then the 'highest_amplitude' is used
-            * 'highest_amplitude': keep the unit with the best amplitude on unshifted max.
-            * 'max_spikes': keep the unit with more spikes
+            * "minimum_shift": keep the unit with best peak alignment (minimum shift)
+                             If shifts are equal then the "highest_amplitude" is used
+            * "highest_amplitude": keep the unit with the best amplitude on unshifted max.
+            * "max_spikes": keep the unit with more spikes
 
-    peak_sign: 'neg' |'pos' | 'both', default: 'neg'
-        Used when remove_strategy='highest_amplitude'
+    peak_sign: "neg" | "pos" | "both", default: "neg"
+        Used when remove_strategy="highest_amplitude"
     extra_outputs: bool, default: False
         If True, will return the redundant pairs.
 

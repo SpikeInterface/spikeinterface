@@ -147,8 +147,8 @@ def allocate_waveforms_buffers(
         N samples before spike
     nafter: int
         N samples after spike
-    mode: str
-        Mode to use ('memmap' | 'shared_memory')
+    mode: "memmap" | "shared_memory", default: "memmap"
+        Mode to use
     folder: str or path
         In case of memmap mode, folder to save npy files
     dtype: numpy.dtype
@@ -242,8 +242,8 @@ def distribute_waveforms_to_buffers(
         N samples after spike
     return_scaled: bool
         Scale traces before exporting to buffer or not.
-    mode: str
-        Mode to use ('memmap' | 'shared_memory')
+    mode: "memmap" | "shared_memory", default: "memmap"
+        Mode to use
     sparsity_mask: None or array of bool
         If not None shape must be must be (len(unit_ids), len(channel_ids)
 

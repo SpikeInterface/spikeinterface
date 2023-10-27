@@ -30,10 +30,10 @@ class DirectionalDerivativeRecording(BasePreprocessor):
         ----------
         recording : BaseRecording
             recording to zero-pad
-        direction : str, default 'y'
-            Gradients will be taken along this dimension.
+        direction : "x" | "y" | "z", default: "y"
+            Gradients will be taken along this dimension
         order : int, default: 1
-            np.gradient will be applied this many times.
+            np.gradient will be applied this many times
         edge_order : int, default: 1
             Order of gradient accuracy at edges; see np.gradient for details.
         dtype : numpy dtype or None, default: "float32"

@@ -21,7 +21,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
     list_periods: list of lists/arrays
         One list per segment of tuples (start_frame, end_frame) to silence
 
-    mode: "zeros" | "noise, default "zeros"
+    mode: "zeros" | "noise, default: "zeros"
         Determines what periods are replaced by. Can be one of the following:
 
         - 'zeros': Artifacts are replaced by zeros.

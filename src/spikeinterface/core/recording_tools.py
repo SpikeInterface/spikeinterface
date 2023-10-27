@@ -315,10 +315,10 @@ def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y"), 
         The input recording
     channel_ids : list/array or None
         If given, a subset of channels to order locations for
-    dimensions : str, tuple, or list
+    dimensions : str, tuple, or list, default: ('x', 'y')
         If str, it needs to be 'x', 'y', 'z'.
         If tuple or list, it sorts the locations in two dimensions using lexsort.
-        This approach is recommended since there is less ambiguity, default: ('x', 'y')
+        This approach is recommended since there is less ambiguity
     flip: bool, default: False
         If flip is False then the order is bottom first (starting from tip of the probe).
         If flip is True then the order is upper first.

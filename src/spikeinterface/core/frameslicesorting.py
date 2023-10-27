@@ -20,11 +20,11 @@ class FrameSliceSorting(BaseSorting):
     Parameters
     ----------
     parent_sorting: BaseSorting
-    start_frame: None or int, default None
+    start_frame: None or int, default: None
         Earliest included frame in the parent sorting(/recording).
         Spike times(/traces) are re-referenced to start_frame in the
         sliced objects. Set to 0 if None.
-    end_frame: None or int, default None
+    end_frame: None or int, default: None
         Latest frame in the parent sorting(/recording). As for usual
         python slicing, the end frame is excluded (such that the max
         spike frame in the sliced sorting is `end_frame - start_frame - 1`)

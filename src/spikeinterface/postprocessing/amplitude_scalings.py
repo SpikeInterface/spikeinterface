@@ -153,13 +153,13 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         Get computed spike amplitudes.
         Parameters
         ----------
-        outputs : 'concatenated' | 'by_unit', default: "concatenated"
+        outputs : "concatenated" | "by_unit", default: "concatenated"
             The output format
 
         Returns
         -------
         spike_amplitudes : np.array or dict
-            The spike amplitudes as an array (outputs='concatenated') or
+            The spike amplitudes as an array (outputs="concatenated") or
             as a dict with units as key and spike amplitudes as values.
         """
         we = self.waveform_extractor
@@ -227,10 +227,8 @@ def compute_amplitude_scalings(
         The maximum time difference in ms before and after a spike to gather colliding spikes.
     load_if_exists : bool, default: False
         Whether to load precomputed spike amplitudes, if they already exist.
-    outputs: str, default: 'concatenated'
-        How the output should be returned:
-            - 'concatenated'
-            - 'by_unit'
+    outputs: "concatenated" | "by_unit", default: "concatenated"
+        How the output should be returned
     {}
 
     Returns

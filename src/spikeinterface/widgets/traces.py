@@ -24,16 +24,16 @@ class TracesWidget(BaseWidget):
         Reorder channel by depth
     time_range: list, tuple or None, default: None
         List with start time and end time
-    mode: 'line' | 'map' | 'auto', default: 'auto'
-        Three possible modes, default 'auto':
+    mode: "line" | "map" | "auto", default: "auto"
+        Three possible modes
 
-        * 'line': classical for low channel count
-        * 'map': for high channel count use color heat map
-        * 'auto': auto switch depending on the channel count ('line' if less than 64 channels, 'map' otherwise)
+        * "line": classical for low channel count
+        * "map": for high channel count use color heat map
+        * "auto": auto switch depending on the channel count ("line" if less than 64 channels, "map" otherwise)
     return_scaled: bool, default: False
         If True and the recording has scaled traces, it plots the scaled traces
-    cmap: matplotlib colormap, default: 'RdBu_r'
-        matplotlib colormap used in mode 'map'
+    cmap: matplotlib colormap, default: "RdBu_r"
+        matplotlib colormap used in mode "map"
     show_channel_ids: bool, default: False
         Set yticks with channel ids
     color_groups: bool, default: False
@@ -41,16 +41,16 @@ class TracesWidget(BaseWidget):
     color: str or None, default: None
         The color used to draw the traces
     clim: None, tuple or dict, default: None
-        When mode is 'map', this argument controls color limits.
+        When mode is "map", this argument controls color limits.
         If dict, keys should be the same as recording keys
     with_colorbar: bool, default: True
-        When mode is 'map', a colorbar is added
+        When mode is "map", a colorbar is added
     tile_size: int, default: 1500
         For sortingview backend, the size of each tile in the rendered image
     seconds_per_row: float, default: 0.2
-        For 'map' mode and sortingview backend, seconds to render in each row
+        For "map" mode and sortingview backend, seconds to render in each row
     add_legend : bool, default: True
-        If True adds legend to figures, default True
+        If True adds legend to figures, default: True
     """
 
     def __init__(

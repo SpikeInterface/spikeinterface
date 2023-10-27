@@ -15,15 +15,15 @@ class SavGolDenoiser(WaveformsNode):
     Parameters
     ----------
     recording: BaseRecording
-        The recording extractor object.
-    return_output: bool, optional
-        Whether to return output from this node (default True).
-    parents: list of PipelineNodes, optional
-        The parent nodes of this node (default None).
-    order: int, optional
-        the order of the filter (default 3)
-    window_length_ms: float, optional
-        the temporal duration of the filter in ms (default 0.25)
+        The recording extractor object
+    return_output: bool, default: True
+        Whether to return output from this node
+    parents: list of PipelineNodes, default: None
+        The parent nodes of this node
+    order: int, default: 3
+        the order of the filter
+    window_length_ms: float, default: 0.25
+        the temporal duration of the filter in ms
     """
 
     def __init__(

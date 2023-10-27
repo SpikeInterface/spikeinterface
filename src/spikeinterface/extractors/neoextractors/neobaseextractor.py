@@ -404,8 +404,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         ----------
         stream_id : str, default: None
             The ID of the stream from which to infer the sampling frequency. If not provided,
-            the function will look for a common sampling frequency across all streams.
-            (default is None)
+            the function will look for a common sampling frequency across all streams
 
         Returns
         -------

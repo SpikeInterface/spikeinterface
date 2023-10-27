@@ -69,13 +69,13 @@ class UnitLocationsCalculator(BaseWaveformExtractorExtension):
 
         Parameters
         ----------
-        outputs : 'numpy' | 'by_unit', default: "numpy"
+        outputs : "numpy" | "by_unit", default: "numpy"
             The output format
 
         Returns
         -------
         unit_locations : np.array or dict
-            The unit locations as a Nd array (outputs='numpy') or
+            The unit locations as a Nd array (outputs="numpy") or
             as a dict with units as key and locations as values.
         """
         if outputs == "numpy":
@@ -107,9 +107,9 @@ def compute_unit_locations(
         A waveform extractor object
     load_if_exists : bool, default: False
         Whether to load precomputed unit locations, if they already exist
-    method: 'center_of_mass' | 'monopolar_triangulation' | 'grid_convolution', default: 'center_of_mass'
+    method: "center_of_mass" | "monopolar_triangulation" | "grid_convolution", default: "center_of_mass"
         The method to use for localization
-    outputs: 'numpy' | 'by_unit', default: 'numpy'
+    outputs: "numpy" | "by_unit", default: "numpy"
         The output format
     method_kwargs:
         Other kwargs depending on the method
@@ -247,7 +247,7 @@ def compute_monopolar_triangulation(
     ----------
     waveform_extractor:WaveformExtractor
         A waveform extractor object
-    method: 'least_square' | 'minimize_with_log_penality', default: 'least_square'
+    method: "least_square" | "minimize_with_log_penality", default: "least_square"
        The optimizer to use
     radius_um: float, default: 75
         For channel sparsity
@@ -257,11 +257,11 @@ def compute_monopolar_triangulation(
         Return or not the alpha value
     enforce_decrease : bool, default: False
         Enforce spatial decreasingness for PTP vectors
-    feature: 'ptp', 'energy', 'peak_voltage', default: 'ptp'
+    feature: "ptp" | "energy" | "peak_voltage", default: "ptp"
         The available features to consider for estimating the position via
-        monopolar triangulation are peak-to-peak amplitudes ('ptp', default),
-        energy ('energy', as L2 norm) or voltages at the center of the waveform
-        ('peak_voltage')
+        monopolar triangulation are peak-to-peak amplitudes ("ptp", default),
+        energy ("energy", as L2 norm) or voltages at the center of the waveform
+        ("peak_voltage")
 
     Returns
     -------
@@ -323,12 +323,12 @@ def compute_center_of_mass(waveform_extractor, peak_sign="neg", radius_um=75, fe
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor
-    peak_sign: str
-        Sign of the template to compute best channels ('neg', 'pos', 'both')
+    peak_sign: "neg" | "pos" | "both", default: "neg"
+        Sign of the template to compute best channels
     radius_um: float
         Radius to consider in order to estimate the COM
-    feature: str ['ptp', 'mean', 'energy', 'peak_voltage']
-        Feature to consider for computation. Default is 'ptp'
+    feature: "ptp" | "mean" | "energy" | "peak_voltage", default: "ptp"
+        Feature to consider for computation
 
     Returns
     -------
@@ -387,8 +387,8 @@ def compute_grid_convolution(
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor
-    peak_sign: str, default: 'neg'
-        Sign of the template to compute best channels ('neg', 'pos', 'both')
+    peak_sign: "neg" | "pos" | "both", default: "neg"
+        Sign of the template to compute best channels
     radius_um: float, default: 40.0
         Radius to consider for the fake templates
     upsampling_um: float, default: 5

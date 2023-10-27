@@ -13,7 +13,7 @@ class UnitPresenceWidget(BaseWidget):
         The sorting extractor object
     segment_index: None or int
         The segment index.
-    time_range: list or None, default None
+    time_range: list or None, default: None
         List with start time and end time
     bin_duration_s: float, default: 0.5
         Bin size (in seconds) for the heat map time axis
@@ -25,7 +25,6 @@ class UnitPresenceWidget(BaseWidget):
         self,
         sorting,
         segment_index=None,
-        unit_ids=None,
         time_range=None,
         bin_duration_s=0.05,
         smooth_sigma=4.5,

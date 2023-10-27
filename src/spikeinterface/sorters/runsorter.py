@@ -228,8 +228,8 @@ class ContainerClient:
         """
         Parameters
         ----------
-        mode: str
-            "docker" or "singularity" strings
+        mode: "docker" | "singularity"
+            The container mode
         container_image: str
             container image name and tag
         volumes: dict
@@ -351,18 +351,30 @@ def run_sorter_container(
     Parameters
     ----------
     sorter_name: str
+        The sorter name
     recording: BaseRecording
+        The recording extractor to be spike sorted
     mode: str
+        The container mode: "docker" or "singularity"
     container_image: str, default: None
+        The container image name and tag. If None, the default container image is used
     output_folder: str, default: None
-    remove_existing_folder: bool, default: None
-    delete_output_folder: bool, default: None
-    verbose: bool, default: None
-    raise_error: bool, default: None
-    with_output: bool, default: None
-    delete_container_files: bool, default: None
+        Path to output folder
+    remove_existing_folder: bool, default: True
+        If True and output_folder exists yet then delete
+    delete_output_folder: bool, default: False
+        If True, output folder is deleted
+    verbose: bool, default: False
+        If True, output is verbose
+    raise_error: bool, default: True
+        If True, an error is raised if spike sorting fails
+    with_output: bool, default: True
+        If True, the output Sorting is returned as a Sorting
+    delete_container_files: bool, default: True
+        If True, the container temporary files are deleted after the sorting is done
     extra_requirements: list, default: None
-    sorter_params:
+        List of extra requirements to install in the container
+    **sorter_params: keyword args for the sorter
 
     """
 

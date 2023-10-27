@@ -13,7 +13,7 @@ class TemplateSimilarityWidget(BaseWidget):
     waveform_extractor : WaveformExtractor
         The object to compute/get template similarity from
     unit_ids : list or None, default: None
-        List of unit ids default None
+        List of unit ids default: None
     display_diagonal_values : bool, default: False
         If False, the diagonal is displayed as zeros.
         If True, the similarity values (all 1s) are displayed

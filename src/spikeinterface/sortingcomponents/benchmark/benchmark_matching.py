@@ -129,8 +129,8 @@ class BenchmarkMatching:
             Random seed. (Default: 0)
         we_kwargs: dict
             A dictionary of keyword arguments for the WaveformExtractor.
-        template_mode: {'mean' | 'median' | 'std'}
-            The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
+        template_mode: "mean" | "median" | "std", default: "median"
+            The mode to use to extract templates from the WaveformExtractor
 
         Returns
         -------
@@ -161,8 +161,8 @@ class BenchmarkMatching:
         ----------
         we: WaveformExtractor
             The new WaveformExtractor.
-        template_mode: {'mean' | 'median' | 'std'}
-            The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
+        template_mode: "mean" | "median" | "std", default: "median"
+            The mode to use to extract templates from the WaveformExtractor
 
         Returns
         -------
@@ -194,7 +194,7 @@ class BenchmarkMatching:
             Random seed. (Default: 0)
         we_kwargs: dict
             A dictionary of keyword arguments for the WaveformExtractor.
-        template_mode: {'mean' | 'median' | 'std'}
+        template_mode: "mean" | "median" | "std", default: "median"
             The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
 
         Returns
@@ -267,7 +267,7 @@ class BenchmarkMatching:
             Random seed. (Default: 0)
         we_kwargs: dict
             A dictionary of keyword arguments for the WaveformExtractor.
-        template_mode: {'mean' | 'median' | 'std'}
+        template_mode: "mean" | "median" | "std", default: "median"
             The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
 
         Returns
@@ -341,7 +341,7 @@ class BenchmarkMatching:
             The number of replicates to run for each parameter value. (Default: 1)
         we_kwargs: dict
             A dictionary of keyword arguments for the WaveformExtractor.
-        template_mode: {'mean' | 'median' | 'std'}
+        template_mode: "mean" | "median" | "std", default: "median"
             The mode to use to extract templates from the WaveformExtractor. (Default: 'median')
         **kwargs
             Keyword arguments for the run_matching method.

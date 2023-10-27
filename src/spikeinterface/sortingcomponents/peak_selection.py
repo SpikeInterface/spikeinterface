@@ -30,8 +30,8 @@ def select_peaks(peaks, method="uniform", seed=None, return_indices=False, **met
     method_kwargs: dict of kwargs method
         Keyword arguments for the chosen method:
             'uniform':
-                * select_per_channel: bool
-                    If True, the selection is done on a per channel basis (False by default)
+                * select_per_channel: bool, default: False
+                    If True, the selection is done on a per channel basis
                 * n_peaks: int
                     If select_per_channel is True, this is the number of peaks per channels,
                     otherwise this is the total number of peaks
@@ -41,8 +41,8 @@ def select_peaks(peaks, method="uniform", seed=None, return_indices=False, **met
                 * n_peaks: int
                     If select_per_channel is True, this is the number of peaks per channels,
                     otherwise this is the total number of peaks
-                * select_per_channel: bool
-                    If True, the selection is done on a per channel basis (False by default)
+                * select_per_channel: bool, default: False
+                    If True, the selection is done on a per channel basis
             'smart_sampling_locations':
                 * n_peaks: int
                     Total number of peaks to select

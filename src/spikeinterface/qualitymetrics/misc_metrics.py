@@ -939,7 +939,7 @@ def compute_drift_metrics(
         Interval length is seconds for computing spike depth
     min_spikes_per_interval : int, default: 100
         Minimum number of spikes for computing depth in an interval
-    direction : str, default: 'y'
+    direction : "x" | "y" | "z", default: "y"
         The direction along which drift metrics are estimated
     min_fraction_valid_intervals : float, default: 0.5
         The fraction of valid (not NaN) position estimates to estimate drifts.
@@ -1094,7 +1094,7 @@ def presence_ratio(spike_train, total_length, bin_edges=None, num_bin_edges=None
     num_bin_edges : int, default: 101
         The number of bins edges to use to compute the presence ratio.
         (mutually exclusive with bin_edges).
-    bin_n_spikes_thres: int, default 0
+    bin_n_spikes_thres: int, default: 0
         Minimum number of spikes within a bin to consider the unit active
 
     Returns

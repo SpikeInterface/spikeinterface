@@ -143,7 +143,7 @@ def check_equal_template_with_distribution_overlap(
     template0 , template1=None or numpy array
         The average of each cluster.
         If None, then computed.
-    num_shift: int default 2
+    num_shift: int default: 2
         number of shift on each side to perform.
     quantile_limit: float in [0 1]
         The quantile overlap limit.

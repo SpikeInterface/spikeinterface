@@ -24,7 +24,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
         ----------
         parent_recording : BaseRecording
             recording to zero-pad
-        direction : str, default 'y'
+        direction : "x" | "y" | "z", default: "y"
             Channels living at unique positions along this direction
             will be averaged.
         dtype : numpy dtype or None,  default: float32
