@@ -35,10 +35,10 @@ class RandomProjectionClustering:
 
     _default_params = {
         "hdbscan_kwargs": {
-            "min_cluster_size": 20,
+            "min_cluster_size": 10,
             "allow_single_cluster": True,
             "core_dist_n_jobs": os.cpu_count(),
-            "cluster_selection_method": "leaf",
+            "cluster_selection_method": "eom",
         },
         "cleaning_kwargs": {},
         "waveforms": {"ms_before": 2, "ms_after": 2, "max_spikes_per_unit": 100},
@@ -171,6 +171,7 @@ class RandomProjectionClustering:
         #         local_labels[valid_clusters] += nb_clusters
         #         peak_labels[mask] = local_labels
         #         nb_clusters += len(np.unique(local_labels[valid_clusters]))
+
 
         labels = np.unique(peak_labels)
         labels = labels[labels >= 0]
