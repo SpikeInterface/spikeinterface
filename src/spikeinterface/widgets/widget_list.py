@@ -2,13 +2,15 @@ import warnings
 
 from .base import backend_kwargs_desc
 
-from .agreement_matrix import AgreementMatrixWidget
+
 from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 from .amplitudes import AmplitudesWidget
 from .autocorrelograms import AutoCorrelogramsWidget
-from .confusion_matrix import ConfusionMatrixWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
+from .isi_distribution import ISIDistributionWidget
 from .motion import MotionWidget
+from .multicomparison import MultiCompGraphWidget, MultiCompGlobalAgreementWidget, MultiCompAgreementBySorterWidget
+from .peak_activity import PeakActivityMapWidget
 from .probe_map import ProbeMapWidget
 from .quality_metrics import QualityMetricsWidget
 from .rasters import RasterWidget
@@ -20,12 +22,15 @@ from .template_similarity import TemplateSimilarityWidget
 from .traces import TracesWidget
 from .unit_depths import UnitDepthsWidget
 from .unit_locations import UnitLocationsWidget
+from .unit_presence import UnitPresenceWidget
+from .unit_probe_map import UnitProbeMapWidget
 from .unit_summary import UnitSummaryWidget
 from .unit_templates import UnitTemplatesWidget
 from .unit_waveforms_density_map import UnitWaveformDensityMapWidget
 from .unit_waveforms import UnitWaveformsWidget
-from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformances, StudyPerformancesVsMetrics
-
+from .comparison import AgreementMatrixWidget, ConfusionMatrixWidget
+from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformances, StudyAgreementMatrix, StudySummary
+from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
 
 widget_list = [
     AgreementMatrixWidget,
@@ -33,8 +38,14 @@ widget_list = [
     AmplitudesWidget,
     AutoCorrelogramsWidget,
     ConfusionMatrixWidget,
+    ComparisonCollisionBySimilarityWidget,
     CrossCorrelogramsWidget,
+    ISIDistributionWidget,
     MotionWidget,
+    MultiCompGlobalAgreementWidget,
+    MultiCompAgreementBySorterWidget,
+    MultiCompGraphWidget,
+    PeakActivityMapWidget,
     ProbeMapWidget,
     QualityMetricsWidget,
     RasterWidget,
@@ -46,6 +57,8 @@ widget_list = [
     TracesWidget,
     UnitDepthsWidget,
     UnitLocationsWidget,
+    UnitPresenceWidget,
+    UnitProbeMapWidget,
     UnitSummaryWidget,
     UnitTemplatesWidget,
     UnitWaveformDensityMapWidget,
@@ -53,7 +66,9 @@ widget_list = [
     StudyRunTimesWidget,
     StudyUnitCountsWidget,
     StudyPerformances,
-    StudyPerformancesVsMetrics,
+    StudyAgreementMatrix,
+    StudySummary,
+    StudyComparisonCollisionBySimilarityWidget,
 ]
 
 
@@ -94,8 +109,14 @@ plot_all_amplitudes_distributions = AllAmplitudesDistributionsWidget
 plot_amplitudes = AmplitudesWidget
 plot_autocorrelograms = AutoCorrelogramsWidget
 plot_confusion_matrix = ConfusionMatrixWidget
+plot_comparison_collision_by_similarity = ComparisonCollisionBySimilarityWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
+plot_isi_distribution = ISIDistributionWidget
 plot_motion = MotionWidget
+plot_multicomparison_agreement = MultiCompGlobalAgreementWidget
+plot_multicomparison_agreement_by_sorter = MultiCompAgreementBySorterWidget
+plot_multicomparison_graph = MultiCompGraphWidget
+plot_peak_activity = PeakActivityMapWidget
 plot_probe_map = ProbeMapWidget
 plot_quality_metrics = QualityMetricsWidget
 plot_rasters = RasterWidget
@@ -107,6 +128,8 @@ plot_template_similarity = TemplateSimilarityWidget
 plot_traces = TracesWidget
 plot_unit_depths = UnitDepthsWidget
 plot_unit_locations = UnitLocationsWidget
+plot_unit_presence = UnitPresenceWidget
+plot_unit_probe_map = UnitProbeMapWidget
 plot_unit_summary = UnitSummaryWidget
 plot_unit_templates = UnitTemplatesWidget
 plot_unit_waveforms_density_map = UnitWaveformDensityMapWidget
@@ -114,7 +137,9 @@ plot_unit_waveforms = UnitWaveformsWidget
 plot_study_run_times = StudyRunTimesWidget
 plot_study_unit_counts = StudyUnitCountsWidget
 plot_study_performances = StudyPerformances
-plot_study_performances_vs_metrics = StudyPerformancesVsMetrics
+plot_study_agreement_matrix = StudyAgreementMatrix
+plot_study_summary = StudySummary
+plot_study_comparison_collision_by_similarity = StudyComparisonCollisionBySimilarityWidget
 
 
 def plot_timeseries(*args, **kwargs):

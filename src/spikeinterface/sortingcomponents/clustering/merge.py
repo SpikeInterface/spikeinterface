@@ -20,6 +20,9 @@ from .isocut5 import isocut5
 from .tools import aggregate_sparse_features, FeaturesLoader, compute_template_from_sparse
 
 
+DEBUG = False
+
+
 def merge_clusters(
     peaks,
     peak_labels,
@@ -81,7 +84,6 @@ def merge_clusters(
         **job_kwargs,
     )
 
-    DEBUG = False
     if DEBUG:
         import matplotlib.pyplot as plt
 
@@ -224,8 +226,6 @@ def agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full"
             else:
                 raise ValueError
 
-            # DEBUG = True
-            DEBUG = False
             if DEBUG:
                 import matplotlib.pyplot as plt
 
@@ -233,8 +233,6 @@ def agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full"
                 nx.draw_networkx(sub_graph)
                 plt.show()
 
-    # DEBUG = True
-    DEBUG = False
     if DEBUG:
         import matplotlib.pyplot as plt
 
@@ -298,8 +296,8 @@ def find_merge_pairs(
     indices0, indices1 = np.nonzero(pair_mask)
 
     n_jobs = job_kwargs["n_jobs"]
-    mp_context = job_kwargs["mp_context"]
-    max_threads_per_process = job_kwargs["max_threads_per_process"]
+    mp_context = job_kwargs.get("mp_context", None)
+    max_threads_per_process = job_kwargs.get("max_threads_per_process", 1)
     progress_bar = job_kwargs["progress_bar"]
 
     Executor = get_poolexecutor(n_jobs)
@@ -551,15 +549,7 @@ class ProjectDistribution:
         else:
             final_shift = 0
 
-        # DEBUG = True
-        DEBUG = False
-
-        # if DEBUG and is_merge:
-        # if DEBUG and (overlap > 0.1 and overlap <0.3):
         if DEBUG:
-            # if DEBUG and not is_merge:
-            # if DEBUG and (overlap > 0.05 and overlap <0.25):
-            # if label0 == 49 and label1== 65:
             import matplotlib.pyplot as plt
 
             flatten_wfs0 = wfs0.swapaxes(1, 2).reshape(wfs0.shape[0], -1)
@@ -650,10 +640,10 @@ class NormalizedTemplateDiff:
         union_chans = np.union1d(target_chans0, target_chans1)
 
         ind0 = list(labels_set).index(label0)
-        template0 = templates[ind0, :, target_chans]
+        template0 = templates[ind0][:, target_chans]
 
         ind1 = list(labels_set).index(label1)
-        template1 = templates[ind1, :, target_chans]
+        template1 = templates[ind1][:, target_chans]
 
         num_samples = template0.shape[0]
         # norm = np.mean(np.abs(template0)) + np.mean(np.abs(template1))
@@ -674,8 +664,6 @@ class NormalizedTemplateDiff:
             final_shift = 0
             merge_value = np.nan
 
-        # DEBUG = False
-        DEBUG = True
         if DEBUG and normed_diff < 0.2:
             # if DEBUG:
 

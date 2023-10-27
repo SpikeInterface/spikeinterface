@@ -2,7 +2,7 @@
 Peaks Widgets Gallery
 =====================
 
-Some widgets are useful before sorting and works with "peaks" given by detect_peaks()
+Some widgets are useful before sorting and works with the "peaks" given by the detect_peaks()
 function.
 
 They are useful to check drift before running sorters.
@@ -21,14 +21,14 @@ rec, sorting = si.read_mearec(local_path)
 
 
 ##############################################################################
-# Lets filter and detect peak on it
+# Let's filter and detect peaks on it
 
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
-rec_filtred = si.bandpass_filter(rec, freq_min=300., freq_max=6000., margin_ms=5.0)
+rec_filtred = si.bandpass_filter(recording=rec, freq_min=300., freq_max=6000., margin_ms=5.0)
 print(rec_filtred)
 peaks = detect_peaks(
-        rec_filtred, method='locally_exclusive',
+        recording=rec_filtred, method='locally_exclusive',
         peak_sign='neg', detect_threshold=6, exclude_sweep_ms=0.3,
         radius_um=100,
         noise_levels=None,
@@ -44,14 +44,16 @@ print(peaks.dtype.fields.keys())
 
 ##############################################################################
 # This "peaks" vector can be used in several widgets, for instance
-# plot_peak_activity_map()
+# plot_peak_activity()
 
-si.plot_peak_activity_map(rec_filtred, peaks=peaks)
+si.plot_peak_activity(recording=rec_filtred, peaks=peaks)
+
+plt.show()
 
 ##############################################################################
 # can be also animated with bin_duration_s=1.
 
-si.plot_peak_activity_map(rec_filtred, bin_duration_s=1.)
+si.plot_peak_activity(recording=rec_filtred, peaks=peaks, bin_duration_s=1.)
 
 
 plt.show()

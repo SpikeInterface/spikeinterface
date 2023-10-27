@@ -44,7 +44,7 @@ class NaiveMatching(BaseTemplateMatchingEngine):
         d = cls.default_params.copy()
         d.update(kwargs)
 
-        assert d["waveform_extractor"] is not None
+        assert d["waveform_extractor"] is not None, "'waveform_extractor' must be supplied"
 
         we = d["waveform_extractor"]
 
