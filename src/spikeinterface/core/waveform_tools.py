@@ -436,7 +436,7 @@ def extract_waveforms_to_single_buffer(
         N samples before spike
     nafter: int
         N samples after spike
-    mode: "memmap" | "shared_memory", default "memmap"
+    mode: "memmap" | "shared_memory", default: "memmap"
         The mode to use for the buffer
     return_scaled: bool, default False
         Scale traces before exporting to buffer or not
