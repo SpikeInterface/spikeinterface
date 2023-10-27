@@ -269,8 +269,8 @@ class BaseExtractor:
             If True, only the main annotations/properties are copied.
         ids: list
             List of ids to copy the metadata to. If None, all ids are copied.
-        skip_properties: list
-            List of properties to skip. Default is None.
+        skip_properties: list, default: None
+            List of properties to skip
         """
 
         if ids is None:

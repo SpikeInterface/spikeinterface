@@ -331,7 +331,7 @@ def read_openephys(folder_path, **kwargs):
 
 def read_openephys_event(folder_path, block_index=None):
     """
-    Read Open Ephys events from 'binary' format.
+    Read Open Ephys events from "binary" format.
 
     Parameters
     ----------

@@ -339,7 +339,7 @@ def run_sorters(
             * "raise" : raise error if subfolder exists
             * "overwrite" : delete and force recompute
             * "keep" : do not compute again if f=subfolder exists and log is OK
-    engine: "loop" | "joblib" | "dask', default: "loop"
+    engine: "loop" | "joblib" | "dask", default: "loop"
         Which engine to use to run sorter.
     engine_kwargs: dict
         This contains kwargs specific to the launcher engine:

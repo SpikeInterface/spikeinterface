@@ -226,10 +226,10 @@ class DecentralizedRegistration:
     error_sigma: float, default: 0.2
         In case weight_scale="exp" this controls the sigma of the exponential.
     conv_engine: "numpy" or "torch" or None, default: None
-        In case of pairwise_displacement_method="conv', what library to use to compute
+        In case of pairwise_displacement_method="conv", what library to use to compute
         the underlying correlation
     torch_device=None
-        In case of conv_engine='torch', you can control which device (cpu or gpu)
+        In case of conv_engine="torch", you can control which device (cpu or gpu)
     batch_size: int
         Size of batch for the convolution. Increasing this will speed things up dramatically
         on GPUs and sometimes on CPU as well.
@@ -241,10 +241,10 @@ class DecentralizedRegistration:
         When not None the parwise discplament matrix is computed in a small time horizon.
         In short only pair of bins close in time.
         So the pariwaise matrix is super sparse and have values only the diagonal.
-    convergence_method: 'lsmr', 'lsqr_robust', 'gradient_descent'
+    convergence_method: "lsmr" | "lsqr_robust" | "gradient_descent", default: "lsqr_robust"
         Which method to use to compute the global displacement vector from the pairwise matrix.
     robust_regression_sigma: float
-        Use for convergence_method='lsqr_robust' for iterative selection of the regression.
+        Use for convergence_method="lsqr_robust" for iterative selection of the regression.
     temporal_prior : bool, default: True
         Ensures continuity across time, unless there is evidence in the recording for jumps.
     spatial_prior : bool, default: False
@@ -259,7 +259,7 @@ class DecentralizedRegistration:
          - "time" : the displacement at a given time (in seconds) is subtracted
          - "mode_search" : an attempt is made to guess the mode. needs work.
     lsqr_robust_n_iter: int
-        Number of iteration for convergence_method='lsqr_robust'.
+        Number of iteration for convergence_method="lsqr_robust".
     """
 
     @classmethod

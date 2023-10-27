@@ -53,8 +53,8 @@ def detect_peaks(
 ):
     """Peak detection based on threshold crossing in term of k x MAD.
 
-    In 'by_channel' : peak are detected in each channel independently
-    In 'locally_exclusive' : a single best peak is taken from a set of neighboring channels
+    In "by_channel" : peak are detected in each channel independently
+    In "locally_exclusive" : a single best peak is taken from a set of neighboring channels
 
     Parameters
     ----------
@@ -357,7 +357,7 @@ class PeakDetectorWrapper(PeakDetector):
 
 
 class DetectPeakByChannel(PeakDetectorWrapper):
-    """Detect peaks using the 'by channel' method."""
+    """Detect peaks using the "by channel" method."""
 
     name = "by_channel"
     engine = "numpy"
@@ -439,7 +439,7 @@ class DetectPeakByChannel(PeakDetectorWrapper):
 
 
 class DetectPeakByChannelTorch(PeakDetectorWrapper):
-    """Detect peaks using the 'by channel' method with pytorch."""
+    """Detect peaks using the "by channel" method with pytorch."""
 
     name = "by_channel_torch"
     engine = "torch"
@@ -505,7 +505,7 @@ class DetectPeakByChannelTorch(PeakDetectorWrapper):
 
 
 class DetectPeakLocallyExclusive(PeakDetectorWrapper):
-    """Detect peaks using the 'locally exclusive' method."""
+    """Detect peaks using the "locally exclusive" method."""
 
     name = "locally_exclusive"
     engine = "numba"
@@ -581,7 +581,7 @@ class DetectPeakLocallyExclusive(PeakDetectorWrapper):
 
 
 class DetectPeakLocallyExclusiveTorch(PeakDetectorWrapper):
-    """Detect peaks using the 'locally exclusive' method with pytorch."""
+    """Detect peaks using the "locally exclusive" method with pytorch."""
 
     name = "locally_exclusive_torch"
     engine = "torch"

@@ -6,7 +6,7 @@ default_backend_ = "matplotlib"
 
 def get_default_plotter_backend():
     """Return the default backend for spikeinterface widgets.
-    The default backend is 'matplotlib' at init.
+    The default backend is "matplotlib" at init.
     It can be be globally set with `set_default_plotter_backend(backend)`
     """
 
@@ -123,7 +123,7 @@ class to_attr(object):
         Helper function that transform a dict into
         an object where attributes are the keys of the dict
 
-        d = {'a': 1, 'b': 'yep'}
+        d = {"a": 1, "b": "yep"}
         o = to_attr(d)
         print(o.a, o.b)
         """
