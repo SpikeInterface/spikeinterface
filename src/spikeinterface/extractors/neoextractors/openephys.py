@@ -1,5 +1,4 @@
 """
-
 There are two extractors for data saved by the Open Ephys GUI
 
   * OpenEphysLegacyRecordingExtractor: reads the original "Open Ephys" data format
@@ -7,7 +6,6 @@ There are two extractors for data saved by the Open Ephys GUI
 
 See https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html
 for more info.
-
 """
 
 from pathlib import Path
@@ -23,10 +21,10 @@ from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_s
 
 
 def drop_invalid_neo_arguments_for_version_0_12_0(neo_kwargs):
-    # Temporary function until neo version 0.13.0 is released
     from packaging.version import Version
     from importlib.metadata import version as lib_version
 
+    # Temporary function until neo version 0.13.0 is released
     neo_version = lib_version("neo")
     # The possibility of ignoring timestamps errors is not present in neo <= 0.12.0
     if Version(neo_version) <= Version("0.12.0"):
@@ -187,9 +185,17 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     self.set_probe(probe, in_place=True, group_mode="by_shank")
                 else:
                     self.set_probe(probe, in_place=True)
-                probe_name = probe.annotations["probe_name"]
+
+                # this try-except handles a breaking change in probeinterface after v0.2.18
+                # in the new version, the Neuropixels model name is stored in the "model_name" attribute,
+                # rather than in the "probe_name" annotation
+                try:
+                    model_name = probe.model_name
+                except Exception as e:
+                    model_name = probe.annotations["probe_name"]
+
                 # load num_channels_per_adc depending on probe type
-                if "2.0" in probe_name:
+                if "2.0" in model_name:
                     num_channels_per_adc = 16
                     num_cycles_in_adc = 16
                     total_channels = 384

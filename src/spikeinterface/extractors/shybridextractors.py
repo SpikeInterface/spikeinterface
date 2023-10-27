@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from probeinterface import read_prb, write_prb
+import probeinterface as pi
 
 from spikeinterface.core import BinaryRecordingExtractor, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import write_binary_recording, define_function_from_class
@@ -69,7 +69,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         )
 
         # load probe file
-        probegroup = read_prb(params["probe"])
+        probegroup = pi.read_prb(params["probe"])
         self.set_probegroup(probegroup, in_place=True)
         self._kwargs = {"file_path": str(Path(file_path).absolute())}
         self.extra_requirements.extend(["hybridizer", "pyyaml"])
@@ -119,7 +119,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         # write probe file
         probe_fn = (save_path / probe_name).absolute()
         probegroup = recording.get_probegroup()
-        write_prb(probe_fn, probegroup, total_nb_channels=recording.get_num_channels())
+        pi.write_prb(probe_fn, probegroup, total_nb_channels=recording.get_num_channels())
 
         # create parameters file
         parameters = dict(
