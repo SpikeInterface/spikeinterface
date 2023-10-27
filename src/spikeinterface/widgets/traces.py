@@ -24,7 +24,7 @@ class TracesWidget(BaseWidget):
         Reorder channel by depth
     time_range: list, tuple or None, default: None
         List with start time and end time
-    mode: str, default: 'auto'
+    mode: 'line' | 'map' | 'auto', default: 'auto'
         Three possible modes, default 'auto':
 
         * 'line': classical for low channel count
