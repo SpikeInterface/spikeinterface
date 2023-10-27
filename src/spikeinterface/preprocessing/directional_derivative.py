@@ -36,7 +36,7 @@ class DirectionalDerivativeRecording(BasePreprocessor):
             np.gradient will be applied this many times.
         edge_order : int, default: 1
             Order of gradient accuracy at edges; see np.gradient for details.
-        dtype : numpy dtype, default "float32"
+        dtype : numpy dtype or None, default: "float32"
             If None, parent dtype is preserved, but the derivative can
             overflow or lose accuracy
         """
