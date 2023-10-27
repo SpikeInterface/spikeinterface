@@ -3,7 +3,6 @@ from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
 
 from sklearn.decomposition import TruncatedSVD
-from hdbscan import HDBSCAN
 
 import numpy as np
 
@@ -218,6 +217,8 @@ class LocalFeatureClustering:
         final_features = TruncatedSVD(n_pca_features).fit_transform(flatten_features)
 
         if clusterer == "hdbscan":
+            from hdbscan import HDBSCAN
+
             clust = HDBSCAN(
                 min_cluster_size=min_cluster_size,
                 min_samples=min_samples,
