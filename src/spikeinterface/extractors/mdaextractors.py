@@ -91,7 +91,7 @@ class MdaRecordingExtractor(BaseRecording):
             File name of raw file. Defaults to 'raw.mda'.
         params_fname: str, default: 'params.json'
             File name of params file. Defaults to 'params.json'.
-        geom_fname: str, default 'geom.csv'
+        geom_fname: str, default: 'geom.csv'
             File name of geom file. Defaults to 'geom.csv'.
         dtype: dtype or None, default None
             Data type to be used. If None dtype is same as recording traces.
