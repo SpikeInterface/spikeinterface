@@ -17,7 +17,7 @@ class TemplateSimilarityWidget(BaseWidget):
     display_diagonal_values : bool, default: False
         If False, the diagonal is displayed as zeros.
         If True, the similarity values (all 1s) are displayed
-    cmap : str, default: 'viridis'
+    cmap : matplotlib colormap, default: 'viridis'
         The matplotlib colormap
     show_unit_ticks : bool, default: False
         If True, ticks display unit ids
