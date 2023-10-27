@@ -84,8 +84,8 @@ def compute_isi_histograms(
         The window in ms
     bin_ms : float, default: 1
         The bin size in ms
-    method : str, default: "auto"
-        "auto" | "numpy" | "numba". If "auto" and numba is installed, numba is used
+    method : "auto" | "numpy" | "numba", default: "auto"
+        . If "auto" and numba is installed, numba is used, otherwise numpy is used
 
     Returns
     -------
