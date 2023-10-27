@@ -32,7 +32,7 @@ class TracesWidget(BaseWidget):
         * 'auto': auto switch depending on the channel count ('line' if less than 64 channels, 'map' otherwise)
     return_scaled: bool, default: False
         If True and the recording has scaled traces, it plots the scaled traces
-    cmap: str, default: 'RdBu_r'
+    cmap: matplotlib colormap, default: 'RdBu_r'
         matplotlib colormap used in mode 'map'
     show_channel_ids: bool, default: False
         Set yticks with channel ids
