@@ -56,7 +56,7 @@ def extract_waveforms_to_buffers(
         N samples after spike
     mode: "memmap" | "shared_memory", default: "memmap"
         The mode to use for the buffer
-    return_scaled: bool, default False
+    return_scaled: bool, default: False
         Scale traces before exporting to buffer or not
     folder: str or path or None, default: None
         In case of memmap mode, folder to save npy files
