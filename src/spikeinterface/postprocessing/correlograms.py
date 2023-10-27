@@ -153,8 +153,8 @@ def compute_correlograms(
         The window in ms
     bin_ms : float, default: 5
         The bin size in ms
-    method : str, default: "auto"
-        "auto" | "numpy" | "numba". If _auto" and numba is installed, numba is used
+    method : "auto" | "numpy" | "numba", default: "auto"
+         If "auto" and numba is installed, numba is used, otherwise numpy is used
 
     Returns
     -------
