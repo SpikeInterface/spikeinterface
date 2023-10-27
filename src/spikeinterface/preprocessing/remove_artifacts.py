@@ -68,7 +68,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
         If provided (when mode is 'median' or 'average') then it must be a dict with
         keys that are the labels of the artifacts, and values the artifacts themselves,
         on all channels (and thus bypassing ms_before and ms_after)
-    sparsity: dict, default: None
+    sparsity: dict or None, default: None
         If provided (when mode is 'median' or 'average') then it must be a dict with
         keys that are the labels of the artifacts, and values that are boolean mask of
         the channels where the artifacts should be considered (for subtraction/scaling)
