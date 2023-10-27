@@ -23,7 +23,7 @@ class UnitWaveformsWidget(BaseWidget):
     plot_templates : bool, default: True
         If True, templates are plotted over the waveforms
     sparsity : ChannelSparsity or None, default: None
-        Optional ChannelSparsity to apply.
+        Optional ChannelSparsity to apply
         If WaveformExtractor is already sparse, the argument is ignored
     set_title : bool, default: True
         Create a plot title with the unit number if True
