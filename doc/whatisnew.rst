@@ -35,8 +35,12 @@ Release notes
 Version 0.99.0
 ==============
 
-
-
+* Refactored :code:`core.generate` module to create high-quality lazy ground-truth data
+* Added DeepInterpolation training, transfer, and inference to preprocessing
+* Added new quality_metrics (syncrhrony, firing_range, amplitude_cv)
+* Added new template metrics (num positive/negative peaks + multi-channel metrics: velocities, spread, exp. decay)
+* Ported all widgets to "new" API and dismantled legacy widgets
+* Extensive clean-up of docstrings, code style, and documentation
 
 
 Version 0.98.2

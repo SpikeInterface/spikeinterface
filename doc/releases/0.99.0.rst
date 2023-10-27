@@ -7,10 +7,12 @@ SpikeInterface 0.99.0 release notes
 
 Main changes:
 
-* Refactor generate.py
-* Widgets
-* Docs
-* New qualitymetrics and template metrics
+* Refactored :code:`core.generate` module to create high-quality lazy ground-truth data
+* Added DeepInterpolation training, transfer, and inference to preprocessing
+* Added new quality_metrics (syncrhrony, firing_range, amplitude_cv)
+* Added new template metrics (num positive/negative peaks + multi-channel metrics: velocities, spread, exp. decay)
+* Ported all widgets to "new" API and dismantled legacy widgets
+* Extensive clean-up of docstrings, code style, and documentation
 
 
 core:
@@ -48,6 +50,7 @@ extractors:
 
 preprocessing:
 
+* Deepinterpolation revived: training, transfer, and inference with more flexibility (#1804)
 * Patch silence_periods for mono-segment recordings (#1946)
 * Fix zero_channel_pad case when selected frames are outside of original data region (#1979: TBM)
 * Improve detect_bad_channels defaults and fixes (#2003)
@@ -100,14 +103,12 @@ exporters:
 * Fix bug in export_to_phy with sparsity (#1904)
 * Allow relative path for export_to_phy (#2041)
 
-
 widgets:
 
 * Port legacy widgets to new API (#2016, #2068, #2115, #2124)
 * For connoisseur only: add a simple "ephyviewer" backend plot_traces() (#2024)
 * Improve ipywidgets backend (#2035, #2079, #2091)
 * Improved GTStudy and related widgets (#2128)
-
 
 sortingcomponents:
 
