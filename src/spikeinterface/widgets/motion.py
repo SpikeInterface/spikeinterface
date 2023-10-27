@@ -23,7 +23,7 @@ class MotionWidget(BaseWidget):
         If True, the color of the scatter points is the amplitude of the peaks
     scatter_decimate : int, default: None
         If > 1, the scatter points are decimated
-    amplitude_cmap : str, default: 'inferno'
+    amplitude_cmap : str, default: "inferno"
         The colormap to use for the amplitude
     amplitude_clim : tuple or None, default: None
         The min and max amplitude to display, if None (min and max of the amplitudes)

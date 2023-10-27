@@ -139,7 +139,7 @@ class StudyPerformances(BaseWidget):
         * "ordered": plot performance metrics vs unit indices ordered by decreasing accuracy
         * "snr": plot performance metrics vs snr
         * "swarm": plot performance metrics as a swarm plot (see seaborn.swarmplot for details)
-    performance_names: list or tuple, default: ('accuracy', 'precision', 'recall')
+    performance_names: list or tuple, default: ("accuracy", "precision", "recall")
         Which performances to plot ("accuracy", "precision", "recall")
     case_keys: list or None
         A selection of cases to plot, if None, then all.

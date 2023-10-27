@@ -184,9 +184,9 @@ def compute_snrs(
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    peak_sign : {'neg', 'pos', 'both'}
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the template to compute best channels.
-    peak_mode: {'extremum', 'at_index'}
+    peak_mode: "extremum" | "at_index", default: "extremum"
         How to compute the amplitude.
         Extremum takes the maxima/minima
         At_index takes the value at t=waveform_extractor.nbefore
@@ -659,8 +659,8 @@ def compute_amplitude_cv_metrics(
     min_num_bins : int, default: 10
         The minimum number of bins to compute the median and range. If the number of bins is less than this then
         the median and range are set to NaN.
-    amplitude_extension : str, default: 'spike_amplitudes'
-        The name of the extension to load the amplitudes from. 'spike_amplitudes' or 'amplitude_scalings'.
+    amplitude_extension : str, default: "spike_amplitudes"
+        The name of the extension to load the amplitudes from. "spike_amplitudes" or "amplitude_scalings".
     unit_ids : list or None
         List of unit ids to compute the amplitude spread. If None, all units are used.
 
@@ -760,7 +760,7 @@ def compute_amplitude_cutoffs(
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    peak_sign : {'neg', 'pos', 'both'}
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the peaks.
     num_histogram_bins : int, default: 100
         The number of bins to use to compute the amplitude histogram.
@@ -856,7 +856,7 @@ def compute_amplitude_medians(waveform_extractor, peak_sign="neg", unit_ids=None
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    peak_sign : {'neg', 'pos', 'both'}
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the peaks.
     unit_ids : list or None
         List of unit ids to compute the amplitude medians. If None, all units are used.
@@ -929,7 +929,7 @@ def compute_drift_metrics(
     * drift_std: standard deviation of the drift signal
     * drift_mad: median absolute deviation of the drift signal
 
-    Requires 'spike_locations' extension. If this is not present, metrics are set to NaN.
+    Requires "spike_locations" extension. If this is not present, metrics are set to NaN.
 
     Parameters
     ----------
@@ -1179,7 +1179,7 @@ def amplitude_cutoff(amplitudes, num_histogram_bins=500, histogram_smoothing_val
     ----------
     amplitudes : ndarray_like
         The amplitudes (in uV) of the spikes for one unit.
-    peak_sign : {'neg', 'pos', 'both'}
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         The sign of the template to compute best channels.
     num_histogram_bins : int, default: 500
         The number of bins to use to compute the amplitude histogram.

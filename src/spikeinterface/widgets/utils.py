@@ -24,11 +24,11 @@ def get_some_colors(keys, color_engine="auto", map_name="gist_ncar", format="RGB
 
     Parameters
     ----------
-    color_engine : str 'auto' / 'matplotlib' / 'colorsys' / 'distinctipy'
+    color_engine : "auto" | "matplotlib" | "colorsys" | "distinctipy", default: "auto"
         The engine to generate colors
     map_name : str
         Used for matplotlib
-    format: str, default: 'RGBA'
+    format: str, default: "RGBA"
         The output formats
     shuffle : bool or None, default: None
         Shuffle or not the colors.

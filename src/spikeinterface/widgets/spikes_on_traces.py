@@ -33,14 +33,14 @@ class SpikesOnTracesWidget(BaseWidget):
     unit_colors : dict or None, default: None
         If given, a dictionary with unit ids as keys and colors as values
         If None, then the get_unit_colors() is internally used. (matplotlib backend)
-    mode : str in ('line', 'map', 'auto') default: 'auto'
-        * 'line': classical for low channel count
-        * 'map': for high channel count use color heat map
-        * 'auto': auto switch depending on the channel count ('line' if less than 64 channels, 'map' otherwise)
+    mode : "line" | "map" | "auto", default: "auto"
+        * "line": classical for low channel count
+        * "map": for high channel count use color heat map
+        * "auto": auto switch depending on the channel count ("line" if less than 64 channels, "map" otherwise)
     return_scaled : bool, default: False
         If True and the recording has scaled traces, it plots the scaled traces
-    cmap : str, default: 'RdBu'
-        matplotlib colormap used in mode 'map'
+    cmap : str, default: "RdBu"
+        matplotlib colormap used in mode "map"
     show_channel_ids : bool, default: False
         Set yticks with channel ids
     color_groups : bool, default: False
@@ -48,15 +48,14 @@ class SpikesOnTracesWidget(BaseWidget):
     color : str or None, default: None
         The color used to draw the traces
     clim : None, tuple or dict, default: None
-        When mode is 'map', this argument controls color limits.
+        When mode is "map", this argument controls color limits.
         If dict, keys should be the same as recording keys
-        Default None
     with_colorbar : bool, default: True
-        When mode is 'map', a colorbar is added
+        When mode is "map", a colorbar is added
     tile_size : int, default: 512
         For sortingview backend, the size of each tile in the rendered image
     seconds_per_row : float, default: 0.2
-        For 'map' mode and sortingview backend, seconds to render in each row
+        For "map" mode and sortingview backend, seconds to render in each row
     """
 
     def __init__(

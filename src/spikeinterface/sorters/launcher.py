@@ -334,18 +334,18 @@ def run_sorters(
         The working directory.
     sorter_params: dict of dict with sorter_name as key
         This allow to overwrite default params for sorter.
-    mode_if_folder_exists: {'raise', 'overwrite', 'keep'}
+    mode_if_folder_exists: "raise" | "overwrite" | "keep", default: "raise"
         The mode when the subfolder of recording/sorter already exists.
-            * 'raise' : raise error if subfolder exists
-            * 'overwrite' : delete and force recompute
-            * 'keep' : do not compute again if f=subfolder exists and log is OK
-    engine: {'loop', 'joblib', 'dask'}
+            * "raise" : raise error if subfolder exists
+            * "overwrite" : delete and force recompute
+            * "keep" : do not compute again if f=subfolder exists and log is OK
+    engine: "loop" | "joblib" | "dask', default: "loop"
         Which engine to use to run sorter.
     engine_kwargs: dict
         This contains kwargs specific to the launcher engine:
-            * 'loop' : no kwargs
-            * 'joblib' : {'n_jobs' : } number of processes
-            * 'dask' : {'client':} the dask client for submitting task
+            * "loop" : no kwargs
+            * "joblib" : {"n_jobs" : } number of processes
+            * "dask" : {"client":} the dask client for submitting task
     verbose: bool
         Controls sorter verboseness.
     with_output: bool

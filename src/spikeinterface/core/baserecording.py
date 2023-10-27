@@ -771,15 +771,14 @@ class BaseRecordingSegment(BaseSegment):
         Parameters
         ----------
         start_frame: Union[int, None], default: None
-            start sample index, or zero if None. Defaults to None.
+            start sample index, or zero if None
         end_frame: Union[int, None], default: None
-            end_sample, or number of samples if None. Defaults to None.
+            end_sample, or number of samples if None
         channel_indices: Union[List, None], default: None
-            Indices of channels to return, or all channels if None. Defaults to None.
+            Indices of channels to return, or all channels if None
         order: list or None, default: None
             The memory order of the returned array.
-            Use Order.C for C order, Order.F for Fortran order, or Order.K to keep the order of the underlying data.
-            Defaults to Order.K.
+            Use Order.C for C order, Order.F for Fortran order, or Order.K to keep the order of the underlying data
 
         Returns
         -------

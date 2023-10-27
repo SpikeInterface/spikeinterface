@@ -52,7 +52,7 @@ def generate_recording(
         The number of dimensions of the probe, default: 2. Set to 3 to make 3 dimensional probes.
     seed : Optional[int]
         A seed for the np.ramdom.default_rng function
-    mode: str ["lazy", "legacy"] Default "lazy".
+    mode: str ["lazy", "legacy"], default: "lazy".
         "legacy": generate a NumpyRecording with white noise.
                 This mode is kept for backward compatibility and will be deprecated version 0.100.0.
         "lazy": return a NoiseGeneratorRecording instance.

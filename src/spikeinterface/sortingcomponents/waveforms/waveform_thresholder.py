@@ -16,8 +16,8 @@ class WaveformThresholder(WaveformsNode):
 
     This node allows you to perform adaptive masking by setting channels to 0
     that have a given feature below a certain threshold. The available features
-    to consider are peak-to-peak amplitude ('ptp'), mean amplitude ('mean'),
-    energy ('energy'), and peak voltage ('peak_voltage').
+    to consider are peak-to-peak amplitude ("ptp"), mean amplitude ("mean"),
+    energy ("energy"), and peak voltage ("peak_voltage").
 
     Parameters
     ----------

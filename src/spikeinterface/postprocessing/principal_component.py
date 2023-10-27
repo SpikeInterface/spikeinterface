@@ -127,13 +127,13 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         unit_ids : list, default: None
             List of unit ids to return projections for
         outputs: str
-            * 'id': 'all_labels' contain unit ids
-            * 'index': 'all_labels' contain unit indices
+            * "id": "all_labels" contain unit ids
+            * "index": "all_labels" contain unit indices
 
         Returns
         -------
         all_labels: np.array
-            Array with labels (ids or indices based on 'outputs') of returned PCA projections
+            Array with labels (ids or indices based on "outputs") of returned PCA projections
         all_projections: np.array
             The PCA projections (num_all_waveforms, num_components, num_channels)
         """
@@ -169,7 +169,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         new_waveforms: np.array
             Array with new waveforms to project with shape (num_waveforms, num_samples, num_channels)
         unit_id: int or str
-            In case PCA is sparse and mode is by_channel_local, the unit_id of 'new_waveforms'
+            In case PCA is sparse and mode is by_channel_local, the unit_id of "new_waveforms"
         sparse: bool, default: False
             If True, and sparsity is not None, only projections on sparse channels are returned.
 
@@ -186,7 +186,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         wfs0 = self.waveform_extractor.get_waveforms(unit_id=self.waveform_extractor.sorting.unit_ids[0])
         assert (
             wfs0.shape[1] == new_waveforms.shape[1]
-        ), "Mismatch in number of samples between waveforms used to fit the pca model and 'new_waveforms"
+        ), "Mismatch in number of samples between waveforms used to fit the pca model and 'new_waveforms'"
         num_channels = len(self.waveform_extractor.channel_ids)
 
         # check waveform shapes
@@ -200,7 +200,7 @@ class WaveformPrincipalComponent(BaseWaveformExtractorExtension):
         else:
             assert (
                 wfs0.shape[2] == new_waveforms.shape[2]
-            ), "Mismatch in number of channels between waveforms used to fit the pca model and 'new_waveforms"
+            ), "Mismatch in number of channels between waveforms used to fit the pca model and 'new_waveforms'"
             channel_inds = np.arange(num_channels, dtype=int)
 
         # get channel ids and pca models

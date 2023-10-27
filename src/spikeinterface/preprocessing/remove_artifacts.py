@@ -9,10 +9,10 @@ from spikeinterface.core import NumpySorting, extract_waveforms
 class RemoveArtifactsRecording(BasePreprocessor):
     """
     Removes stimulation artifacts from recording extractor traces. By default,
-    artifact periods are zeroed-out (mode = 'zeros'). This is only recommended
+    artifact periods are zeroed-out (mode = "zeros"). This is only recommended
     for traces that are centered around zero (e.g. through a prior highpass
     filter); if this is not the case, linear and cubic interpolation modes are
-    also available, controlled by the 'mode' input argument.
+    also available, controlled by the "mode" input argument.
     Note that several artifacts can be removed at once (potentially with
     distinct duration each), if labels are specified
 
@@ -31,29 +31,29 @@ class RemoveArtifactsRecording(BasePreprocessor):
     list_labels: list of lists/arrays or None
         One list per segment of labels with the stimulation labels for the given
         artefacs. labels should be strings, for JSON serialization.
-        Required for 'median' and 'average' modes.
+        Required for "median" and "average" modes.
     mode: "zeros", "linear", "cubic", "average", "median", default: "zeros"
         Determines what artifacts are replaced by. Can be one of the following:
 
-        - 'zeros': Artifacts are replaced by zeros.
+        - "zeros": Artifacts are replaced by zeros.
 
-        - 'median': The median over all artifacts is computed and subtracted for
+        - "median": The median over all artifacts is computed and subtracted for
             each occurence of an artifact
 
-        - 'average': The mean over all artifacts is computed and subtracted for each
+        - "average": The mean over all artifacts is computed and subtracted for each
             occurence of an artifact
 
-        - 'linear': Replacement are obtained through Linear interpolation between
+        - "linear": Replacement are obtained through Linear interpolation between
            the trace before and after the artifact.
            If the trace starts or ends with an artifact period, the gap is filled
            with the closest available value before or after the artifact.
 
-        - 'cubic': Cubic spline interpolation between the trace before and after
+        - "cubic": Cubic spline interpolation between the trace before and after
            the artifact, referenced to evenly spaced fit points before and after
            the artifact. This is an option thatcan be helpful if there are
            significant LFP effects around the time of the artifact, but visual
            inspection of fit behaviour with your chosen settings is recommended.
-           The spacing of fit points is controlled by 'fit_sample_spacing', with
+           The spacing of fit points is controlled by "fit_sample_spacing", with
            greater spacing between points leading to a fit that is less sensitive
            to high frequency fluctuations but at the cost of a less smooth
            continuation of the trace.
@@ -61,27 +61,27 @@ class RemoveArtifactsRecording(BasePreprocessor):
            the closest available value before or after the artifact.
     fit_sample_spacing: float, default: 1.0
         Determines the spacing (in ms) of reference points for the cubic spline
-        fit if mode = 'cubic'. Default = 1ms. Note: The actual fit samples are
+        fit if mode = "cubic". Note: The actual fit samples are
         the median of the 5 data points around the time of each sample point to
         avoid excessive influence from hyper-local fluctuations.
     artifacts: dict or None, default: None
-        If provided (when mode is 'median' or 'average') then it must be a dict with
+        If provided (when mode is "median" or "average") then it must be a dict with
         keys that are the labels of the artifacts, and values the artifacts themselves,
         on all channels (and thus bypassing ms_before and ms_after)
     sparsity: dict or None, default: None
-        If provided (when mode is 'median' or 'average') then it must be a dict with
+        If provided (when mode is "median" or "average") then it must be a dict with
         keys that are the labels of the artifacts, and values that are boolean mask of
         the channels where the artifacts should be considered (for subtraction/scaling)
     scale_amplitude: False, default: False
-        If true, then for mode 'median' or 'average' the amplitude of the template
+        If true, then for mode "median" or "average" the amplitude of the template
         will be scaled in amplitude at each time occurence to minimize residuals
     time_jitter: float, default: 0
-        If non 0, then for mode 'median' or 'average', a time jitter in ms
+        If non 0, then for mode "median" or "average", a time jitter in ms
         can be allowed to minimize the residuals
     waveforms_kwargs: dict or None, default: None
         The arguments passed to the WaveformExtractor object when extracting the
-        artifacts, for mode 'median' or 'average'.
-        By default, the global job kwargs are used, in addition to {'allow_unfiltered' : True, 'mode':'memory'}.
+        artifacts, for mode "median" or "average".
+        By default, the global job kwargs are used, in addition to {"allow_unfiltered" : True, "mode":"memory"}.
         To estimate sparse artifact
 
     Returns

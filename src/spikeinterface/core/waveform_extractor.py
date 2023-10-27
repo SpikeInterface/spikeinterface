@@ -41,9 +41,8 @@ class WaveformExtractor:
     rec_attributes: None or dict
         When recording is None then a minimal dict with some attributes
         is needed.
-    allow_unfiltered: bool
+    allow_unfiltered: bool, default: False
         If true, will accept unfiltered recording.
-        False by default.
     Returns
     -------
     we: WaveformExtractor
@@ -650,9 +649,8 @@ class WaveformExtractor:
         rec_attributes: None or dict
             When recording is None then a minimal dict with some attributes
             is needed.
-        allow_unfiltered: bool
+        allow_unfiltered: bool, default: False
             If true, will accept unfiltered recording.
-            False by default.
         """
 
         if recording is None:  # Recordless mode.
@@ -1531,7 +1529,7 @@ def extract_waveforms(
         When True, you must some provide kwargs handle `precompute_sparsity()` to control the kind of
         sparsity you want to apply (by radius, by best channels, ...)
     sparsity: ChannelSparsity or None, default: None
-        The sparsity used to compute waveforms. If this is given, `sparse` is ignored. Default None.
+        The sparsity used to compute waveforms. If this is given, `sparse` is ignored
     num_spikes_for_sparsity: int, default: 100
         The number of spikes to use to estimate sparsity (if sparse=True).
     allow_unfiltered: bool, default: False
@@ -1697,9 +1695,8 @@ def precompute_sparsity(
         Time in ms to cut before spike peak
     ms_after: float
         Time in ms to cut after spike peak
-    allow_unfiltered: bool
-        If true, will accept an allow_unfiltered recording.
-        False by default.
+    allow_unfiltered: bool, default: False
+        If true, will accept an allow_unfiltered recording
 
 
     kwargs for sparsity strategy:

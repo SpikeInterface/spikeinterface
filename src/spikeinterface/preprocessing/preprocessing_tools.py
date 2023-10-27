@@ -125,8 +125,7 @@ def get_kriging_kernel_distance(locations_1, locations_2, sigma_um, p, distance_
         In case sigma_um is list then this mimics the Kilosort2.5 behavior, which uses two separate sigmas for each dimension.
         In the later case the metric is always a "cityblock"
     p : float
-        Weight parameter on the exponential function. Default
-        in IBL kriging interpolation is 1.3.
+        Weight parameter on the exponential function
 
     Results
     ----------

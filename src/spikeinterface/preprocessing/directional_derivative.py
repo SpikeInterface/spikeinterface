@@ -18,8 +18,8 @@ class DirectionalDerivativeRecording(BasePreprocessor):
     ):
         """Take derivative of any `order` along `direction`
 
-        np.gradient is applied independently along each colum (direction='y')
-        or row (direction='x'). Accounts for channel spacings and boundary
+        np.gradient is applied independently along each colum (direction="y")
+        or row (direction="x"). Accounts for channel spacings and boundary
         issues using np.gradient -- see that function's documentation for
         more information about `edge_order`.
 

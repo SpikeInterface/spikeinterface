@@ -233,7 +233,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         Tell if the ground true is "exhaustive" or not. In other world if the
         GT have all possible units. It allows more performance measurement.
         For instance, MEArec simulated dataset have exhaustive_gt=True
-    match_mode: "hungarian" | "best", default: 'hungarian
+    match_mode: "hungarian" | "best", default: "hungarian"
         The method to match units
     n_jobs: int, default: -1
         Number of cores to use in parallel. Uses all available if -1
@@ -379,21 +379,21 @@ class GroundTruthComparison(BasePairSorterComparison):
     def get_performance(self, method="by_unit", output="pandas"):
         """
         Get performance rate with several method:
-          * 'raw_count' : just render the raw count table
-          * 'by_unit' : render perf as rate unit by unit of the GT
-          * 'pooled_with_average' : compute rate unit by unit and average
+          * "raw_count" : just render the raw count table
+          * "by_unit" : render perf as rate unit by unit of the GT
+          * "pooled_with_average" : compute rate unit by unit and average
 
         Parameters
         ----------
-        method: str
-            'by_unit',  or 'pooled_with_average'
-        output: str
-            'pandas' or 'dict'
+        method: "by_unit" | "pooled_with_average", default: "by_unit"
+            The method to compute performance
+        output: "pandas" | "dict", default: "pandas"
+            The output format
 
         Returns
         -------
         perf: pandas dataframe/series (or dict)
-            dataframe/series (based on 'output') with performance entries
+            dataframe/series (based on "output") with performance entries
         """
         import pandas as pd
 
@@ -583,7 +583,7 @@ class GroundTruthComparison(BasePairSorterComparison):
         Parameters
         ----------
         overmerged_score: float, default: None
-            Tested units with 2 or more agreement scores above 'overmerged_score'
+            Tested units with 2 or more agreement scores above "overmerged_score"
             are counted as "overmerged".
         """
         assert self.exhaustive_gt, "overmerged_units list is valid only if exhaustive_gt=True"

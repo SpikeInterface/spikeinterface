@@ -160,8 +160,8 @@ def compute_spike_amplitudes(
     -------
     amplitudes: np.array or list of dict
         The spike amplitudes.
-            - If 'concatenated' all amplitudes for all spikes and all units are concatenated
-            - If 'by_unit', amplitudes are returned as a list (for segments) of dictionaries (for units)
+            - If "concatenated" all amplitudes for all spikes and all units are concatenated
+            - If "by_unit", amplitudes are returned as a list (for segments) of dictionaries (for units)
     """
     if load_if_exists and waveform_extractor.is_extension(SpikeAmplitudesCalculator.extension_name):
         sac = waveform_extractor.load_extension(SpikeAmplitudesCalculator.extension_name)

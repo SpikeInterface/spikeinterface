@@ -171,10 +171,11 @@ class NumpySorting(BaseSorting):
         Parameters
         ----------
         times_list: list of array (or array)
-            An array of spike times (in frames).
+            An array of spike times (in frames)
         labels_list: list of array (or array)
-            An array of spike labels corresponding to the given times.
-        unit_ids: (None by default) the explicit list of unit_ids that should be extracted from labels_list
+            An array of spike labels corresponding to the given times
+        unit_ids: list or None, default: None
+            The explicit list of unit_ids that should be extracted from labels_list
             If None, then it will be np.unique(labels_list)
         """
 
@@ -580,10 +581,9 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         Parameters
         ----------
         start_frame: Union[int, None], default: None
-            start sample index, or zero if None. Defaults to None.
+            start sample index, or zero if None
         end_frame: Union[int, None], default: None
-            end_sample, or number of samples if None. Defaults to None.
-
+            end_sample, or number of samples if None
         Returns
         -------
         snippets: slice

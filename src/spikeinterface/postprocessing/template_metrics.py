@@ -278,8 +278,8 @@ def compute_template_metrics(
     -------
     template_metrics : pd.DataFrame
         Dataframe with the computed template metrics.
-        If 'sparsity' is None, the index is the unit_id.
-        If 'sparsity' is given, the index is a multi-index (unit_id, channel_id)
+        If "sparsity" is None, the index is the unit_id.
+        If "sparsity" is given, the index is a multi-index (unit_id, channel_id)
 
     Notes
     -----

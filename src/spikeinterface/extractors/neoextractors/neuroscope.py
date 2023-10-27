@@ -67,11 +67,11 @@ class NeuroScopeSortingExtractor(BaseSorting):
     """
     Extracts spiking information from an arbitrary number of .res.%i and .clu.%i files in the general folder path.
 
-    The .res is a text file with a sorted list of spiketimes from all units displayed in sample (integer '%i') units.
+    The .res is a text file with a sorted list of spiketimes from all units displayed in sample (integer "%i") units.
     The .clu file is a file with one more row than the .res with the first row corresponding to the total number of
     unique ids in the file (and may exclude 0 & 1 from this count)
     with the rest of the rows indicating which unit id the corresponding entry in the .res file refers to.
-    The group id is loaded as unit property 'group'.
+    The group id is loaded as unit property "group".
 
     In the original Neuroscope format:
         Unit ID 0 is the cluster of unsorted spikes (noise).
@@ -92,8 +92,8 @@ class NeuroScopeSortingExtractor(BaseSorting):
     clufile_path : PathType
         Optional. Path to a particular .clu text file. If given, only the single .clu file
         (and the respective .res file) are loaded
-    keep_mua_units : bool
-        Optional. Whether or not to return sorted spikes from multi-unit activity. Defaults to True.
+    keep_mua_units : bool, default: True
+        Optional. Whether or not to return sorted spikes from multi-unit activity
     exclude_shanks : list
         Optional. List of indices to ignore. The set of all possible indices is chosen by default, extracted as the
         final integer of all the .res.%i and .clu.%i pairs.
@@ -303,8 +303,9 @@ def read_neuroscope(
     file_path: str
         The xml file.
     stream_id: str or None
-    keep_mua_units: bool
-        Optional. Whether or not to return sorted spikes from multi-unit activity. Defaults to True.
+        The stream id to load. If None, the first stream is loaded
+    keep_mua_units: bool, default: False
+        Optional. Whether or not to return sorted spikes from multi-unit activity
     exclude_shanks: list
         Optional. List of indices to ignore. The set of all possible indices is chosen by default, extracted as the
         final integer of all the .res. % i and .clu. % i pairs.

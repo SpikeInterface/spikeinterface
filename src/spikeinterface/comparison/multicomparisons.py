@@ -26,7 +26,7 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
     sorting_list: list
         List of sorting extractor objects to be compared
     name_list: list, default: None
-        List of spike sorter names. If not given, sorters are named as 'sorter0', 'sorter1', 'sorter2', etc.
+        List of spike sorter names. If not given, sorters are named as "sorter0", "sorter1", "sorter2", etc.
     delta_time: float, default: 0.4
         Number of ms to consider coincident spikes
     match_score: float, default: 0.5
@@ -156,15 +156,15 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
 
     def get_agreement_sorting(self, minimum_agreement_count=1, minimum_agreement_count_only=False):
         """
-        Returns AgreementSortingExtractor with units with a 'minimum_matching' agreement.
+        Returns AgreementSortingExtractor with units with a "minimum_matching" agreement.
 
         Parameters
         ----------
         minimum_agreement_count: int
             Minimum number of matches among sorters to include a unit.
         minimum_agreement_count_only: bool
-            If True, only units with agreement == 'minimum_matching' are included.
-            If False, units with an agreement >= 'minimum_matching' are included
+            If True, only units with agreement == "minimum_matching" are included.
+            If False, units with an agreement >= "minimum_matching" are included
 
         Returns
         -------
@@ -310,7 +310,7 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
     waveform_list: list
         List of waveform extractor objects to be compared
     name_list: list, default: None
-        List of session names. If not given, sorters are named as 'sess0', 'sess1', 'sess2', etc.
+        List of session names. If not given, sorters are named as "sess0", "sess1", "sess2", etc.
     match_score: float, default: 0.8
         Minimum agreement score to match units
     chance_score: float, default: 0.3

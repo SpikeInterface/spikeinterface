@@ -407,7 +407,7 @@ def nearest_neighbors_isolation(
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    peak_sign: str, default: 'neg'
+    peak_sign: "neg" | "pos" | "both", default: "neg"
         The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor
         is not sparse already.
     min_spatial_overlap : float, default: 100
@@ -611,7 +611,7 @@ def nearest_neighbors_noise_overlap(
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
         The radius, in um, that channels need to be within the peak channel to be included.
-    peak_sign: str, default: 'neg'
+    peak_sign: "neg" | "pos" | "both", default: "neg"
         The peak_sign used to compute sparsity and neighbor units. Used if waveform_extractor
         is not sparse already.
     seed : int, default: 0

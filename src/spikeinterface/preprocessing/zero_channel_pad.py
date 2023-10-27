@@ -17,12 +17,12 @@ class TracePaddedRecording(BasePreprocessor):
     ----------
     parent_recording_segment : BaseRecording
         The parent recording segment from which the traces are to be retrieved.
-    padding_start : int
-        The amount of padding to add to the left of the traces. Default is 0. It has to be non-negative
-    padding_end : int
-        The amount of padding to add to the right of the traces. Default is 0. It has to be non-negative
-    fill_value: float
-        The value to pad with. Default is 0.
+    padding_start : int, default: 0
+        The amount of padding to add to the left of the traces. It has to be non-negative
+    padding_end : int, default: 0
+        The amount of padding to add to the right of the traces. It has to be non-negative
+    fill_value: float, default: 0
+        The value to pad with
     """
 
     def __init__(

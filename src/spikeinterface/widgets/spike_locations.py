@@ -27,11 +27,11 @@ class SpikeLocationsWidget(BaseWidget):
         For sortingview backend, if True the unit selector is not displayed
     plot_all_units : bool, default: True
         If True, all units are plotted. The unselected ones (not in unit_ids),
-        are plotted in grey. Default True (matplotlib backend)
+        are plotted in grey (matplotlib backend)
     plot_legend : bool, default: False
-        If True, the legend is plotted. Default False (matplotlib backend)
+        If True, the legend is plotted (matplotlib backend)
     hide_axis : bool, default: False
-        If True, the axis is set to off. Default False (matplotlib backend)
+        If True, the axis is set to off (matplotlib backend)
     """
 
     # possible_backends = {}

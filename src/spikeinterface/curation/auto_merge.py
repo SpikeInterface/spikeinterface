@@ -98,8 +98,8 @@ def get_potential_auto_merge(
     steps: None or list of str, default: None
         which steps to run (gives flexibility to running just some steps)
         If None all steps are done.
-        Pontential steps: 'min_spikes', 'remove_contaminated', 'unit_positions', 'correlogram', 'template_similarity',
-        'check_increase_score'. Please check steps explanations above!
+        Pontential steps: "min_spikes", "remove_contaminated", "unit_positions", "correlogram", "template_similarity",
+        "check_increase_score". Please check steps explanations above!
 
     Returns
     -------
@@ -311,7 +311,7 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     import scipy.signal
 
     # OLD implementation : smooth correlogram by low pass filter
-    # b, a = scipy.signal.butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype='low')
+    # b, a = scipy.signal.butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype="low")
     # correlograms_smoothed = scipy.signal.filtfilt(b, a, correlograms, axis=2)
 
     # new implementation smooth by convolution with a Gaussian kernel

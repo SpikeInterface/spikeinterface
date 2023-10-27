@@ -21,12 +21,12 @@ class MdaRecordingExtractor(BaseRecording):
     ----------
     folder_path : str or Path
         Path to the MDA folder.
-    raw_fname: str
-        File name of raw file. Defaults to 'raw.mda'.
-    params_fname: str
-        File name of params file. Defaults to 'params.json'.
-    geom_fname: str
-        File name of geom file. Defaults to 'geom.csv'.
+    raw_fname: str, default: "raw.mda"
+        File name of raw file
+    params_fname: str, default: "params.json"
+        File name of params file
+    geom_fname: str, default: "geom.csv"
+        File name of geom file
 
     Returns
     -------
@@ -87,12 +87,12 @@ class MdaRecordingExtractor(BaseRecording):
         params: dictionary
             Dictionary with optional parameters to save metadata.
             Sampling frequency is appended to this dictionary.
-        raw_fname: str
-            File name of raw file. Defaults to 'raw.mda'.
-        params_fname: str, default: 'params.json'
-            File name of params file. Defaults to 'params.json'.
-        geom_fname: str, default: 'geom.csv'
-            File name of geom file. Defaults to 'geom.csv'.
+        raw_fname: str, default: "raw.mda"
+            File name of raw file
+        params_fname: str, default: "params.json"
+            File name of params file
+        geom_fname: str, default: "geom.csv"
+            File name of geom file
         dtype: dtype or None, default: None
             Data type to be used. If None dtype is same as recording traces.
         **job_kwargs:

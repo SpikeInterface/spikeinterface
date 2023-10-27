@@ -54,20 +54,20 @@ def export_to_phy(
     sparsity: ChannelSparsity or None, default: None
         The sparsity object
     copy_binary: bool, default: True
-        If True, the recording is copied and saved in the phy 'output_folder'
+        If True, the recording is copied and saved in the phy "output_folder"
     remove_if_exists: bool, default: False
-        If True and 'output_folder' exists, it is removed and overwritten
+        If True and "output_folder" exists, it is removed and overwritten
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Used by compute_spike_amplitudes
-    template_mode: str, default: 'median'
-        Parameter 'mode' to be given to WaveformExtractor.get_template()
+    template_mode: str, default: "median"
+        Parameter "mode" to be given to WaveformExtractor.get_template()
     dtype: dtype or None, default: None
         Dtype to save binary data
     verbose: bool, default: True
         If True, output is verbose
     use_relative_path : bool, default: False
-        If True and `copy_binary=True` saves the binary file `dat_path` in the `params.py` relative to `output_folder` (ie `dat_path=r'recording.dat'`). If `copy_binary=False`, then uses a path relative to the `output_folder`
-        If False, uses an absolute path in the `params.py` (ie `dat_path=r'path/to/the/recording.dat'`)
+        If True and `copy_binary=True` saves the binary file `dat_path` in the `params.py` relative to `output_folder` (ie `dat_path=r"recording.dat"`). If `copy_binary=False`, then uses a path relative to the `output_folder`
+        If False, uses an absolute path in the `params.py` (ie `dat_path=r"path/to/the/recording.dat"`)
     {}
 
     """

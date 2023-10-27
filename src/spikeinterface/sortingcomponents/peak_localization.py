@@ -102,7 +102,7 @@ def localize_peaks(recording, peaks, method="center_of_mass", ms_before=0.5, ms_
     -------
     peak_locations: ndarray
         Array with estimated location for each spike.
-        The dtype depends on the method. ('x', 'y') or ('x', 'y', 'z', 'alpha').
+        The dtype depends on the method. ("x", "y") or ("x", "y", "z", "alpha").
     """
     peak_retriever = PeakRetriever(recording, peaks)
     peak_locations = _run_localization_from_peak_source(
@@ -165,8 +165,8 @@ class LocalizeCenterOfMass(LocalizeBase):
     params_doc = """
     radius_um: float
         Radius in um for channel sparsity.
-    feature: str ['ptp', 'mean', 'energy', 'peak_voltage']
-        Feature to consider for computation. Default is 'ptp'
+    feature: "ptp" | "mean" | "energy" | "peak_voltage", default: "ptp"
+        Feature to consider for computation
     """
 
     def __init__(self, recording, return_output=True, parents=["extract_waveforms"], radius_um=75.0, feature="ptp"):
@@ -232,7 +232,7 @@ class LocalizeMonopolarTriangulation(PipelineNode):
     feature: "ptp", "energy", "peak_voltage", default: "ptp"
         The available features to consider for estimating the position via
         monopolar triangulation are peak-to-peak amplitudes (ptp, default),
-        energy ('energy', as L2 norm) or voltages at the center of the waveform
+        energy ("energy", as L2 norm) or voltages at the center of the waveform
         (peak_voltage)
     """
 

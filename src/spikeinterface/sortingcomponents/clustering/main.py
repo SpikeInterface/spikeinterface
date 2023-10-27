@@ -15,7 +15,7 @@ def find_cluster_from_peaks(recording, peaks, method="stupid", method_kwargs={},
     peaks: WaveformExtractor
         The waveform extractor
     method: str
-        Which method to use ('stupid' | 'XXXX')
+        Which method to use ("stupid" | "XXXX")
     method_kwargs: dict, default: dict()
         Keyword arguments for the chosen method
     extra_outputs: bool, default: False

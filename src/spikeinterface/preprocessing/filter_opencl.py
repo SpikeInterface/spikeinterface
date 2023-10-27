@@ -18,7 +18,7 @@ class FilterOpenCLRecording(BasePreprocessor):
     """
     Simple implementation of FilterRecording in OpenCL.
 
-    Only filter_mode='sos' is supported.
+    Only filter_mode="sos" is supported.
 
     Author : Samuel Garcia
     This kernel is ported from "tridesclous"
@@ -29,9 +29,9 @@ class FilterOpenCLRecording(BasePreprocessor):
         The recording extractor to be re-referenced
 
     N: order
-    filter_mode: 'sos' only
+    filter_mode: "sos" only
 
-    ftypestr: 'butter' / 'cheby1' / ... all possible of scipy.signal.iirdesign
+    ftypestr: "butter" / "cheby1" / ... all possible of scipy.signal.iirdesign
 
     margin: margin in second on border to avoid border effect
 

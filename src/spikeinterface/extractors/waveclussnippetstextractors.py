@@ -121,9 +121,9 @@ class WaveClustSnippetsSegment(BaseSnippetsSegment):
         Parameters
         ----------
         start_frame: Union[int, None], default: None
-            start sample index, or zero if None. Defaults to None.
+            start sample index, or zero if Non
         end_frame: Union[int, None], default: None
-            end_sample, or number of samples if None. Defaults to None.
+            end_sample, or number of samples if None
 
         Returns
         -------

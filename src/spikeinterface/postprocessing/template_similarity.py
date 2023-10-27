@@ -90,8 +90,8 @@ def compute_template_similarity(
         A waveform extractor object
     load_if_exists : bool, default: False
         Whether to load precomputed similarity, if is already exists.
-    method: str
-        Method name ('cosine_similarity')
+    method: str, default: "cosine_similarity"
+        The method to compute the similarity
     waveform_extractor_other: WaveformExtractor, default: None
         A second waveform extractor object
 

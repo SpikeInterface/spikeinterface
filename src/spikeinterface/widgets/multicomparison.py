@@ -15,9 +15,9 @@ class MultiCompGraphWidget(BaseWidget):
         The multi comparison object
     draw_labels: bool, default: False
         If True unit labels are shown
-    node_cmap: matplotlib colormap, default: 'viridis'
+    node_cmap: matplotlib colormap, default: "viridis"
         The colormap to be used for the nodes
-    edge_cmap: matplotlib colormap, default: 'hot'
+    edge_cmap: matplotlib colormap, default: "hot"
         The colormap to be used for the edges
     alpha_edges: float, default: 0.5
         Alpha value for edges
@@ -119,9 +119,9 @@ class MultiCompGlobalAgreementWidget(BaseWidget):
     ----------
     multi_comparison: BaseMultiComparison
         The multi comparison object
-    plot_type: str
-        'pie' or 'bar'
-    cmap: matplotlib colormap, default: 'YlOrRd'
+    plot_type: "pie" | "bar", default: "pie"
+        The plot type
+    cmap: matplotlib colormap, default: "YlOrRd"
         The colormap to be used for the nodes
     fontsize: int, default: 9
         The text fontsize
@@ -197,9 +197,9 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
     ----------
     multi_comparison: BaseMultiComparison
         The multi comparison object
-    plot_type: str
-        'pie' or 'bar'
-    cmap: matplotlib colormap, default: 'Reds'
+    plot_type: "pie" | "bar", default: "pie
+        The plot type
+    cmap: matplotlib colormap, default: "Reds"
         The colormap to be used for the nodes
     fontsize: int, default: 9
         The text fontsize

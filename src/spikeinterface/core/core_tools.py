@@ -263,9 +263,8 @@ def write_binary_recording(
         The recording extractor object to be saved in .dat format
     file_path: str or list[str]
         The path to the file.
-    dtype: dtype, default: None
-        Type of the saved data. Default float32.
-    add_file_extension: bool, default: True
+    dtype: dtype or None, default: None
+        Type of the saved data
         If True, file the ".raw" file extension is added if the file name is not a "raw", "bin", or "dat"
     byte_offset: int, default: 0
         Offset in bytes to for the binary file (e.g. to write a header)

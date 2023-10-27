@@ -118,7 +118,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     experiment_names: str, list, or None, default: None
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
-        E.g. 'experiment_names="experiment2"', 'experiment_names=["experiment1", "experiment2"]'
+        E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
     stream_id: str, default: None
         If there are several streams, specify the stream id you want to load
     stream_name: str, default: None
@@ -281,7 +281,7 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
 
 def read_openephys(folder_path, **kwargs):
     """
-    Read 'legacy' or 'binary' Open Ephys formats
+    Read "legacy" or "binary" Open Ephys formats
 
     Parameters
     ----------
@@ -307,7 +307,7 @@ def read_openephys(folder_path, **kwargs):
     experiment_names: str, list, or None, default: None
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
-        E.g. 'experiment_names="experiment2"', 'experiment_names=["experiment1", "experiment2"]'
+        E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
         For open ephsy binary format only
     ignore_timestamps_errors: bool, default: False
         Ignore the discontinuous timestamps errors in neo

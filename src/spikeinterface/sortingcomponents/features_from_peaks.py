@@ -31,7 +31,7 @@ def compute_features_from_peaks(
         The recording extractor object
     peaks: array
         Peaks array, as returned by detect_peaks() in "compact_numpy" way
-    feature_list: list, default: ['ptp']
+    feature_list: list, default: ["ptp"]
         List of features to be computed. Possible features are:
             - amplitude
             - ptp

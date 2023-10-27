@@ -43,8 +43,8 @@ class NormalizeByQuantileRecording(BasePreprocessor):
         Lower quantile used for measuring the scale
     q1: float, default: 0.99
         Upper quantile used for measuring the
-    mode: 'by_channel' or 'pool_channel', default: 'by_channel'
-        If 'by_channel' each channel is rescaled independently.
+    mode: "by_channel" | "pool_channel", default: "by_channel"
+        If "by_channel" each channel is rescaled independently.
     dtype: str or np.dtype, default: "float32"
         The dtype of the output traces
     **random_chunk_kwargs: Keyword arguments for `spikeinterface.core.get_random_data_chunk()` function
@@ -123,8 +123,8 @@ class ScaleRecording(BasePreprocessor):
         Scalar for the traces of the recording extractor or array with scalars for each channel
     offset: float or array
         Offset for the traces of the recording extractor or array with offsets for each channel
-    dtype: str or np.dtype
-        The dtype of the output traces. Default "float32"
+    dtype: str or np.dtype, default: "float32"
+        The dtype of the output traces
 
     Returns
     -------

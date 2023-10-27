@@ -50,12 +50,8 @@ def detect_bad_channels(
     ----------
     recording : BaseRecording
         The recording for which bad channels are detected
-    method : str, default: 'coherence+psd'
-        The method to be used:
-
-        * coeherence+psd (developed by IBL)
-        * mad
-        * std
+    method : "coeherence+psd" | "std" | "mad" | "neighborhood_r2", default: "coeherence+psd"
+        The method to be used for bad channel detection
     std_mad_threshold : float, default: 5
         The standard deviation/mad multiplier threshold
     psd_hf_threshold (coeherence+psd) : float, default: 0.02

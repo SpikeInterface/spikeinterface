@@ -140,8 +140,8 @@ class BinaryRecordingExtractor(BaseRecording):
             The recording extractor object to be saved in .dat format
         file_paths: str
             The path to the file.
-        dtype: dtype
-            Type of the saved data. Default float32.
+        dtype: dtype, default: None
+            Type of the saved data
         {}
         """
         write_binary_recording(recording, file_paths=file_paths, dtype=dtype, **job_kwargs)

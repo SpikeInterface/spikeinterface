@@ -26,9 +26,9 @@ def remove_redundant_units(
 
     When a redundant pair is found, there are several strategies to choose which unit is the best:
 
-       * 'minimum_shift'
-       * 'highest_amplitude'
-       * 'max_spikes'
+       * "minimum_shift"
+       * "highest_amplitude"
+       * "max_spikes"
 
 
     Parameters

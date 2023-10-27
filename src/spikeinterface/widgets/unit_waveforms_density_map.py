@@ -23,7 +23,7 @@ class UnitWaveformDensityMapWidget(BaseWidget):
         If WaveformExtractor is already sparse, the argument is ignored
     use_max_channel : bool, default: False
         Use only the max channel
-    peak_sign : 'pos' or 'neg' or 'both', default: 'neg'
+    peak_sign : "neg" | "pos" | "both", default: "neg"
         Used to detect max channel only when use_max_channel=True
     unit_colors : None or dict, default: None
         A dict key is unit_id and value is any color format handled by matplotlib.

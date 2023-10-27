@@ -235,8 +235,8 @@ def compute_amplitude_scalings(
     -------
     amplitude_scalings: np.array or list of dict
         The amplitude scalings.
-            - If 'concatenated' all amplitudes for all spikes and all units are concatenated
-            - If 'by_unit', amplitudes are returned as a list (for segments) of dictionaries (for units)
+            - If "concatenated" all amplitudes for all spikes and all units are concatenated
+            - If "by_unit", amplitudes are returned as a list (for segments) of dictionaries (for units)
     """
     if load_if_exists and waveform_extractor.is_extension(AmplitudeScalingsCalculator.extension_name):
         sac = waveform_extractor.load_extension(AmplitudeScalingsCalculator.extension_name)
