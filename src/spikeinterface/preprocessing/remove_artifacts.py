@@ -64,7 +64,7 @@ class RemoveArtifactsRecording(BasePreprocessor):
         fit if mode = 'cubic'. Default = 1ms. Note: The actual fit samples are
         the median of the 5 data points around the time of each sample point to
         avoid excessive influence from hyper-local fluctuations.
-    artifacts: dict, default: None
+    artifacts: dict or None, default: None
         If provided (when mode is 'median' or 'average') then it must be a dict with
         keys that are the labels of the artifacts, and values the artifacts themselves,
         on all channels (and thus bypassing ms_before and ms_after)
