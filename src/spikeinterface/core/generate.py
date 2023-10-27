@@ -543,7 +543,7 @@ def synthetize_spike_train_bad_isi(duration, baseline_rate, num_violations, viol
     duration : float
         Length of simulated recording (in seconds).
     baseline_rate : float
-        Firing rate for 'true' spikes.
+        Firing rate for "true" spikes.
     num_violations : int
         Number of contaminating spikes.
     violation_delta : float, default: 1e-5
@@ -588,7 +588,7 @@ class NoiseGeneratorRecording(BaseRecording):
         The durations of each segment in seconds. Note that the length of this list is the number of segments.
     noise_level: float, default: 1
         Std of the white noise
-    dtype : Optional[Union[np.dtype, str]], default: 'float32'
+    dtype : Optional[Union[np.dtype, str]], default: "float32"
         The dtype of the recording. Note that only np.float32 and np.float64 are supported.
     seed : Optional[int], default: None
         The seed for np.random.default_rng.
@@ -932,14 +932,14 @@ def generate_templates(
         An optional dict containing parameters per units.
         Keys are parameter names:
 
-            * 'alpha': amplitude of the action potential in a.u. (default range: (6'000-9'000))
-            * 'depolarization_ms': the depolarization interval in ms (default range: (0.09-0.14))
-            * 'repolarization_ms': the repolarization interval in ms (default range: (0.5-0.8))
-            * 'recovery_ms': the recovery interval in ms (default range: (1.0-1.5))
-            * 'positive_amplitude': the positive amplitude in a.u. (default range: (0.05-0.15)) (negative is always -1)
-            * 'smooth_ms': the gaussian smooth in ms (default range: (0.03-0.07))
-            * 'decay_power': the decay power (default range: (1.2-1.8))
-            * 'propagation_speed': mimic a propagation delay with a kind of a "speed" (default range: (250., 350.)).
+            * "alpha": amplitude of the action potential in a.u. (default range: (6'000-9'000))
+            * "depolarization_ms": the depolarization interval in ms (default range: (0.09-0.14))
+            * "repolarization_ms": the repolarization interval in ms (default range: (0.5-0.8))
+            * "recovery_ms": the recovery interval in ms (default range: (1.0-1.5))
+            * "positive_amplitude": the positive amplitude in a.u. (default range: (0.05-0.15)) (negative is always -1)
+            * "smooth_ms": the gaussian smooth in ms (default range: (0.03-0.07))
+            * "decay_power": the decay power (default range: (1.2-1.8))
+            * "propagation_speed": mimic a propagation delay with a kind of a "speed" (default range: (250., 350.)).
         Values contains vector with same size of num_units.
         If the key is not in dict then it is generated using unit_params_range
     unit_params_range: dict of tuple

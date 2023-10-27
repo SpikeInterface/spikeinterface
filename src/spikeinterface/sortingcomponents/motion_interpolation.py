@@ -103,9 +103,10 @@ def interpolate_motion_on_traces(
         Dimension of shift in channel_locations.
     channel_inds: None or list
         If not None, interpolate only a subset of channels.
-    spatial_interpolation_method: str in ('idw', 'kriging')
-        * idw : Inverse Distance Weighing
-        * kriging : kilosort2.5 like
+    spatial_interpolation_method: "idw" | "kriging", default: "kriging"
+        The spatial interpolation method used to interpolate the channel locations:
+            * idw : Inverse Distance Weighing
+            * kriging : kilosort2.5 like
     spatial_interpolation_kwargs:
         * specific option for the interpolation method
 
@@ -232,21 +233,21 @@ class InterpolateMotionRecording(BasePreprocessor):
         See `spikeinterface.preprocessing.get_spatial_interpolation_kernel()` for more details.
         Choice of the method:
 
-            * 'kriging' : the same one used in kilosort
-            * 'idw' : inverse  distance weighted
-            * 'nearest' : use nereast channel
+            * "kriging" : the same one used in kilosort
+            * "idw" : inverse  distance weighted
+            * "nearest" : use neareast channel
     sigma_um: float, default: 20.0
-        Used in the 'kriging' formula
+        Used in the "kriging" formula
     p: int, default: 1
-        Used in the 'kriging' formula
+        Used in the "kriging" formula
     num_closest: int, default: 3
-        Number of closest channels used by 'idw' method for interpolation.
+        Number of closest channels used by "idw" method for interpolation.
     border_mode: "remove_channels" | "force_extrapolate" | "force_zeros", default: "remove_channels"
         Control how channels are handled on border:
 
-        * 'remove_channels': remove channels on the border, the recording has less channels
-        * 'force_extrapolate': keep all channel and force extrapolation (can lead to strange signal)
-        * 'force_zeros': keep all channel but set zeros when outside (force_extrapolate=False)
+        * "remove_channels": remove channels on the border, the recording has less channels
+        * "force_extrapolate": keep all channel and force extrapolation (can lead to strange signal)
+        * "force_zeros": keep all channel but set zeros when outside (force_extrapolate=False)
 
     Returns
     -------

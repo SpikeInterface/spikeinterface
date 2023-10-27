@@ -337,9 +337,9 @@ class BaseRecording(BaseRecordingSnippets):
         dict
             A dictionary containing the following key-value pairs:
 
-            - 'sampling_frequency': The sampling frequency of the RecordingSegment.
-            - 't_start': The start time of the RecordingSegment.
-            - 'time_vector': The time vector of the RecordingSegment.
+            - "sampling_frequency": The sampling frequency of the RecordingSegment.
+            - "t_start": The start time of the RecordingSegment.
+            - "time_vector": The time vector of the RecordingSegment.
 
         Notes
         -----
@@ -437,7 +437,7 @@ class BaseRecording(BaseRecordingSnippets):
     def _save(self, format="binary", **save_kwargs):
         """
         This function replaces the old CacheRecordingExtractor, but enables more engines
-        for caching a results. At the moment only 'binary' with memmap is supported.
+        for caching a results. At the moment only "binary" with memmap is supported.
         We plan to add other engines, such as zarr and NWB.
         """
 
@@ -712,9 +712,9 @@ class BaseRecordingSegment(BaseSegment):
         dict
             A dictionary containing the following key-value pairs:
 
-            - 'sampling_frequency': The sampling frequency of the RecordingSegment.
-            - 't_start': The start time of the RecordingSegment.
-            - 'time_vector': The time vector of the RecordingSegment.
+            - "sampling_frequency": The sampling frequency of the RecordingSegment.
+            - "t_start": The start time of the RecordingSegment.
+            - "time_vector": The time vector of the RecordingSegment.
 
         Notes
         -----

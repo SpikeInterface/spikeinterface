@@ -138,7 +138,7 @@ def get_noise_levels(
 ):
     """
     Estimate noise for each channel using MAD methods.
-    You can use standard deviation with `method='std'`
+    You can use standard deviation with `method="std"`
 
     Internally it samples some chunk across segment.
     And then, it use MAD estimator (more robust than STD)
@@ -150,8 +150,8 @@ def get_noise_levels(
         The recording extractor to get noise levels
     return_scaled: bool
         If True, returned noise levels are scaled to uV
-    method: str
-        'mad' or 'std'
+    method: "mad" | "std", default: "mad"
+        The method to use to estimate noise levels
     force_recompute: bool
         If True, noise levels are recomputed even if they are already stored in the recording extractor
     random_chunk_kwargs: dict

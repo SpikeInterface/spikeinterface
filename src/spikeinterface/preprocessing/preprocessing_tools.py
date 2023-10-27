@@ -31,7 +31,7 @@ def get_spatial_interpolation_kernel(
         Choice of the method
             "kriging" : the same one used in kilosort
             "idw" : inverse  distance weithed
-            "nearest" : use nereast channel
+            "nearest" : use neareast channel
     sigma_um : float or list, default: 20.0
         Used in the "kriging" formula. When list, it needs to have 2 elements (for the x and y directions).
     p: int, default: 1

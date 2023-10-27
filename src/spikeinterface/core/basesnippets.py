@@ -153,7 +153,7 @@ class BaseSnippets(BaseRecordingSnippets):
 
     def _save(self, format="npy", **save_kwargs):
         """
-        At the moment only 'npy' and 'memory' avaiable:
+        At the moment only "npy" and "memory" avaiable:
         """
 
         if format == "npy":

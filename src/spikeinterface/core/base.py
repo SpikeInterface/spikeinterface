@@ -44,7 +44,7 @@ class BaseExtractor:
         # store init kwargs for nested serialisation
         self._kwargs = {}
 
-        # 'main_ids' will either be channel_ids or units_ids
+        # "main_ids" will either be channel_ids or units_ids
         # They are used for properties
         self._main_ids = np.array(main_ids)
         if len(self._main_ids) > 0:
@@ -90,7 +90,7 @@ class BaseExtractor:
           * data
           * properties
 
-        'prefer_slice' is an efficient option that tries to make a slice object
+        "prefer_slice" is an efficient option that tries to make a slice object
         when indices are consecutive.
 
         """
@@ -174,7 +174,7 @@ class BaseExtractor:
         ids : list/np.array, default: None
             List of subset of ids to set the values, default: None
         missing_value : object, default: None
-            In case the property is set on a subset of values ('ids' not None),
+            In case the property is set on a subset of values ("ids" not None),
             it specifies the how the missing values should be filled.
             The missing_value has to be specified for types int and unsigned int.
         """
@@ -741,7 +741,7 @@ class BaseExtractor:
                     folder (use set_global_tmp_folder() to change this folder) where the object is saved.
               If folder and name are not given, the object is saved in the global temporary folder with
               a random string
-            * dump_ext: 'json' or 'pkl', default 'json' (if format is "folder")
+            * dump_ext: "json" or "pkl", default "json" (if format is "folder")
             * verbose: if True output is verbose
             * **save_kwargs: additional kwargs format-dependent and job kwargs for recording
             {}
@@ -781,7 +781,7 @@ class BaseExtractor:
 
         This replaces the use of the old CacheRecordingExtractor and CacheSortingExtractor.
 
-        There are 2 option for the 'folder' argument:
+        There are 2 option for the "folder" argument:
           * explicit folder: `extractor.save(folder="/path-for-saving/")`
           * explicit sub-folder, implicit base-folder : `extractor.save(name="extarctor_name")`
           * generated: `extractor.save()`
@@ -796,10 +796,10 @@ class BaseExtractor:
         ----------
         name: None str or Path
             Name of the subfolder in get_global_tmp_folder()
-            If 'name' is given, 'folder' must be None.
+            If "name" is given, "folder" must be None.
         folder: None str or Path
             Name of the folder.
-            If 'folder' is given, 'name' must be None.
+            If "folder" is given, "name" must be None.
 
         Returns
         -------
@@ -868,9 +868,9 @@ class BaseExtractor:
         ----------
         name: str or None, default: None
             Name of the subfolder in get_global_tmp_folder()
-            If 'name' is given, 'folder' must be None.
+            If "name" is given, "folder" must be None.
         folder: str, Path, or None, default: None
-            The folder used to save the zarr output. If the folder does not have a '.zarr' suffix,
+            The folder used to save the zarr output. If the folder does not have a ".zarr" suffix,
             it will be automatically appended.
         storage_options: dict or None, default: None
             Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.

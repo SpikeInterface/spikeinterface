@@ -220,8 +220,8 @@ class BaseSorting(BaseExtractor):
         This function replaces the old CachesortingExtractor, but enables more engines
         for caching a results.
 
-        Since v0.98.0 'numpy_folder' is used by defult.
-        From v0.96.0 to 0.97.0 'npz_folder' was the default.
+        Since v0.98.0 "numpy_folder" is used by defult.
+        From v0.96.0 to 0.97.0 "npz_folder" was the default.
 
         """
         if format == "numpy_folder":
@@ -435,7 +435,7 @@ class BaseSorting(BaseExtractor):
             With concatenated=True the output is one numpy "spike vector" with spikes from all segments.
             With concatenated=False the output is a list "spike vector" by segment.
         extremum_channel_inds: None or dict, default: None
-            If a dictionnary of unit_id to channel_ind is given then an extra field 'channel_index'.
+            If a dictionnary of unit_id to channel_ind is given then an extra field "channel_index".
             This can be convinient for computing spikes postion after sorter.
             This dict can be computed with `get_template_extremum_channel(we, outputs="index")`
         use_cache: bool, default: True
@@ -445,8 +445,8 @@ class BaseSorting(BaseExtractor):
         Returns
         -------
         spikes: np.array
-            Structured numpy array ('sample_index', 'unit_index', 'segment_index') with all spikes
-            Or ('sample_index', 'unit_index', 'segment_index', 'channel_index') if extremum_channel_inds
+            Structured numpy array ("sample_index", "unit_index", "segment_index") with all spikes
+            Or ("sample_index", "unit_index", "segment_index", "channel_index") if extremum_channel_inds
             is given
 
         """

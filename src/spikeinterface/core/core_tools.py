@@ -266,7 +266,7 @@ def write_binary_recording(
     dtype: dtype, default: None
         Type of the saved data. Default float32.
     add_file_extension: bool, default: True
-        If True, file the '.raw' file extension is added if the file name is not a 'raw', 'bin', or 'dat'
+        If True, file the ".raw" file extension is added if the file name is not a "raw", "bin", or "dat"
     byte_offset: int, default: 0
         Offset in bytes to for the binary file (e.g. to write a header)
     auto_cast_uint: bool, default: True
@@ -510,7 +510,7 @@ def write_to_h5_dataset_format(
     recording: RecordingExtractor
         The recording extractor object to be saved in .dat format
     dataset_path: str
-        Path to dataset in h5 file (e.g. '/dataset')
+        Path to dataset in h5 file (e.g. "/dataset")
     segment_index: int
         index of segment
     save_path: str, default: None
@@ -527,9 +527,9 @@ def write_to_h5_dataset_format(
         Type of the saved data
     chunk_size: None or int, default: None
         Number of chunks to save the file in. This avoid to much memory consumption for big files.
-        If None and 'chunk_memory' is given, the file is saved in chunks of 'chunk_memory' MB
-    chunk_memory: None or str, default: '500M'
-        Chunk size in bytes must endswith 'k', 'M' or 'G'
+        If None and "chunk_memory" is given, the file is saved in chunks of "chunk_memory" MB
+    chunk_memory: None or str, default: "500M"
+        Chunk size in bytes must endswith "k", "M" or "G"
     verbose: bool, default: False
         If True, output is verbose (when chunks are used)
     auto_cast_uint: bool, default: True

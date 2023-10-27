@@ -61,7 +61,7 @@ class WaveformExtractor:
 
     >>> # Retrieve
     >>> waveforms = we.get_waveforms(unit_id)
-    >>> template = we.get_template(unit_id, mode='median')
+    >>> template = we.get_template(unit_id, mode="median")
 
     >>> # Load  from folder (in another session)
     >>> we = WaveformExtractor.load(folder)
@@ -1068,7 +1068,7 @@ class WaveformExtractor:
         wfs: np.array
             The returned waveform (num_spikes, num_samples, num_channels)
         indices: np.array
-            If 'with_index' is True, the spike indices corresponding to the waveforms extracted
+            If "with_index" is True, the spike indices corresponding to the waveforms extracted
         """
         assert unit_id in self.sorting.unit_ids, "'unit_id' is invalid"
         assert self.has_waveforms(), "Waveforms have been deleted!"

@@ -7,29 +7,29 @@ from .recording_tools import get_channel_distances, get_noise_levels
 
 _sparsity_doc = """
     method: str
-        * "best_channels": N best channels with the largest amplitude. Use the 'num_channels' argument to specify the
+        * "best_channels": N best channels with the largest amplitude. Use the "num_channels" argument to specify the
                          number of channels.
-        * "radius": radius around the best channel. Use the 'radius_um' argument to specify the radius in um
-        * "snr": threshold based on template signal-to-noise ratio. Use the 'threshold' argument
+        * "radius": radius around the best channel. Use the "radius_um" argument to specify the radius in um
+        * "snr": threshold based on template signal-to-noise ratio. Use the "threshold" argument
                  to specify the SNR threshold (in units of noise levels)
-        * "ptp": threshold based on the peak-to-peak values on every channels. Use the 'threshold' argument
+        * "ptp": threshold based on the peak-to-peak values on every channels. Use the "threshold" argument
                 to specify the ptp threshold (in units of noise levels)
         * "energy": threshold based on the expected energy that should be present on the channels,
-                    given their noise levels. Use the 'threshold' argument to specify the SNR threshold
+                    given their noise levels. Use the "threshold" argument to specify the SNR threshold
                     (in units of noise levels)
-        * "by_property": sparsity is given by a property of the recording and sorting(e.g. 'group').
-                         Use the 'by_property' argument to specify the property name.
+        * "by_property": sparsity is given by a property of the recording and sorting(e.g. "group").
+                         Use the "by_property" argument to specify the property name.
 
     peak_sign: str
-        Sign of the template to compute best channels ('neg', 'pos', 'both')
+        Sign of the template to compute best channels ("neg", "pos", "both")
     num_channels: int
-        Number of channels for 'best_channels' method
+        Number of channels for "best_channels" method
     radius_um: float
-        Radius in um for 'radius' method
+        Radius in um for "radius" method
     threshold: float
-        Threshold in SNR 'threshold' method
+        Threshold in SNR "threshold" method
     by_property: object
-        Property name for 'by_property' method
+        Property name for "by_property" method
 """
 
 
@@ -71,19 +71,19 @@ class ChannelSparsity:
 
     Using the N best channels (largest template amplitude):
 
-    >>> sparsity = ChannelSparsity.from_best_channels(we, num_channels, peak_sign='neg')
+    >>> sparsity = ChannelSparsity.from_best_channels(we, num_channels, peak_sign="neg")
 
     Using a neighborhood by radius:
 
-    >>> sparsity = ChannelSparsity.from_radius(we, radius_um, peak_sign='neg')
+    >>> sparsity = ChannelSparsity.from_radius(we, radius_um, peak_sign="neg")
 
     Using a SNR threshold:
-    >>> sparsity = ChannelSparsity.from_snr(we, threshold, peak_sign='neg')
+    >>> sparsity = ChannelSparsity.from_snr(we, threshold, peak_sign="neg")
 
     Using a template energy threshold:
     >>> sparsity = ChannelSparsity.from_energy(we, threshold)
 
-    Using a recording/sorting property (e.g. 'group'):
+    Using a recording/sorting property (e.g. "group"):
 
     >>> sparsity = ChannelSparsity.from_property(we, by_property="group")
 
@@ -251,7 +251,7 @@ class ChannelSparsity:
     def from_best_channels(cls, we, num_channels, peak_sign="neg"):
         """
         Construct sparsity from N best channels with the largest amplitude.
-        Use the 'num_channels' argument to specify the number of channels.
+        Use the "num_channels" argument to specify the number of channels.
         """
         from .template_tools import get_template_amplitudes
 
@@ -267,7 +267,7 @@ class ChannelSparsity:
     def from_radius(cls, we, radius_um, peak_sign="neg"):
         """
         Construct sparsity from a radius around the best channel.
-        Use the 'radius_um' argument to specify the radius in um
+        Use the "radius_um" argument to specify the radius in um
         """
         from .template_tools import get_template_extremum_channel
 
@@ -285,7 +285,7 @@ class ChannelSparsity:
     def from_snr(cls, we, threshold, peak_sign="neg"):
         """
         Construct sparsity from a thresholds based on template signal-to-noise ratio.
-        Use the 'threshold' argument to specify the SNR threshold.
+        Use the "threshold" argument to specify the SNR threshold.
         """
         from .template_tools import get_template_amplitudes
 
@@ -302,7 +302,7 @@ class ChannelSparsity:
     def from_ptp(cls, we, threshold):
         """
         Construct sparsity from a thresholds based on template peak-to-peak values.
-        Use the 'threshold' argument to specify the SNR threshold.
+        Use the "threshold" argument to specify the SNR threshold.
         """
 
         mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype="bool")
@@ -317,7 +317,7 @@ class ChannelSparsity:
     def from_energy(cls, we, threshold):
         """
         Construct sparsity from a threshold based on per channel energy ratio.
-        Use the 'threshold' argument to specify the SNR threshold.
+        Use the "threshold" argument to specify the SNR threshold.
         """
         mask = np.zeros((we.unit_ids.size, we.channel_ids.size), dtype="bool")
         noise = np.sqrt(we.nsamples) * get_noise_levels(we.recording, return_scaled=we.return_scaled)
@@ -331,8 +331,8 @@ class ChannelSparsity:
     @classmethod
     def from_property(cls, we, by_property):
         """
-        Construct sparsity witha property of the recording and sorting(e.g. 'group').
-        Use the 'by_property' argument to specify the property name.
+        Construct sparsity witha property of the recording and sorting(e.g. "group").
+        Use the "by_property" argument to specify the property name.
         """
         # check consistency
         assert by_property in we.recording.get_property_keys(), f"Property {by_property} is not a recording property"
