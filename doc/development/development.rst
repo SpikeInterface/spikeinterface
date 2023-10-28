@@ -202,10 +202,10 @@ This allows users to quickly understand the type of data that should be input in
         great_data: dict
             A dictionary of the processed data
         """
-            
 
-Note that in this example we demonstrate two other docstring conventions followed by SpikeInterface. First, that all string arguments should be presented 
-with double quotes. This is the same stylistic convention followed by Black and enforced by the pre-commit for the repo. Second, when a parameter is a 
+
+Note that in this example we demonstrate two other docstring conventions followed by SpikeInterface. First, that all string arguments should be presented
+with double quotes. This is the same stylistic convention followed by Black and enforced by the pre-commit for the repo. Second, when a parameter is a
 string with a limited number of values (e.g. :code:`mean` and :code:`median`), rather than give the type a value of :code:`str`, please list the possible strings
 so that the user knows what the options are.
 
