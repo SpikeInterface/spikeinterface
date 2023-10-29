@@ -78,9 +78,9 @@ Installing Datalad
 ------------------
 
 In order to get datalad for your OS please see the `datalad instruction <https://www.datalad.org>`_.
-For more information on datalad visit the `datalad handbook <https://handbook.datalad.org/en/latest/>`_. 
+For more information on datalad visit the `datalad handbook <https://handbook.datalad.org/en/latest/>`_.
 Note, this will also require having git-annex. The instruction links above provide information on also
-downloading git-annex for your particular OS. 
+downloading git-annex for your particular OS.
 
 Stylistic conventions
 ---------------------
