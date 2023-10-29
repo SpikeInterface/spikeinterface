@@ -120,9 +120,16 @@ The following steps are common to all operating systems:
 Stylistic conventions
 ---------------------
 
+SpikeInterface maintains a consistent coding style across the project. This helps to ensure readability and 
+maintainability of the code, making it easier for contributors to collaborate. To facilitate code style
+for the developer we use the follwing tools and conventions:
 
-SpikeInterface maintains a consistent coding style across the project, leveraging the Black Python code formatter.
-This helps to ensure readability and maintainability of the code, making it easier for contributors to collaborate.
+
+Install Black and pre-commit
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We use the python formatter Black, with defaults set in the :code:`pyproject.toml`. This allows for 
+easy local formatting of code.
 
 To install Black, you can use pip, the Python package installer. Run the following command in your terminal:
 
@@ -133,7 +140,7 @@ To install Black, you can use pip, the Python package installer. Run the followi
 This will install Black into your current Python environment.
 
 In addition to Black, we use pre-commit to manage a suite of code formatting.
-Pre-commit helps to automate the process of running these tools before every commit,
+Pre-commit helps to automate the process of running these tools (including Black) before every commit,
 ensuring that all code is checked for style.
 
 You can install pre-commit using pip as well:
@@ -168,10 +175,13 @@ To ignore a block of code you must flank the code with two comments:
     code here
     # fmt: on
 
-As described in the `black documentation <https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html#code-style>`_,
+As described in the `black documentation <https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html#code-style>`_.
 
 
-For docstrings, SpikeInterface generally follows `numpy docstring standard <https://numpydoc.readthedocs.io/en/latest/format.html#numpydoc-docstring-guide>`_.
+Docstring Conventions
+^^^^^^^^^^^^^^^^^^^^^
+
+For docstrings, SpikeInterface generally follows the `numpy docstring standard <https://numpydoc.readthedocs.io/en/latest/format.html#numpydoc-docstring-guide>`_.
 This includes providing a one line summary of a function, and the standard NumPy sections including :code:`Parameters`, :code:`Returns`, etc. The format used
 for providing parameters, however is a little different. The project prefers the format:
 
@@ -209,7 +219,9 @@ with double quotes. This is the same stylistic convention followed by Black and 
 string with a limited number of values (e.g. :code:`mean` and :code:`median`), rather than give the type a value of :code:`str`, please list the possible strings
 so that the user knows what the options are.
 
-The following are some additional styling conventions that we follow in SpikeInterface:
+
+Miscelleaneous Stylistic Conventions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 #. Avoid using abreviations in variable names (e.g., use :code:`recording` instead of :code:`rec`). It is especially important to avoid single letter variables.
 #. Use index as singular and indices for plural following the NumPy convention. Avoid idx or indexes. Plus, id and ids are reserved for identifiers (i.e. channel_ids)
