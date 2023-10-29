@@ -77,45 +77,10 @@ The extractor tests require datalad for some of the tests. Here are instructions
 Installing Datalad
 ------------------
 
-First install the datalad-installer package using pip:
-
-.. code-block:: shell
-
-    pip install datalad-installer
-
-The following instructions depend on the operating system you are using:
-
-Linux
-^^^^^
-.. code-block:: shell
-
-    datalad-installer --sudo ok git-annex --method datalad/packages
-
-Mac OS
-^^^^^^
-.. code-block:: shell
-
-    datalad-installer --sudo ok git-annex --method brew
-
-Windows
-^^^^^^^
-
-.. code-block:: shell
-
-    datalad-installer --sudo ok git-annex --method datalad/git-annex:release
-
-
-The following steps are common to all operating systems:
-
-.. code-block:: shell
-
-    pip install datalad
-
-(Optional) Configure Git to use git-annex for large files for efficiency:
-
-.. code-block:: shell
-
-    git config --global filter.annex.process "git-annex filter-process"
+In order to get datalad for your OS please see the `datalad instruction <https://www.datalad.org>`_.
+For more information on datalad visit the `datalad handbook <https://handbook.datalad.org/en/latest/>`_. 
+Note, this will also require having git-annex. The instruction links above provide information on also
+downloading git-annex for your particular OS. 
 
 Stylistic conventions
 ---------------------
