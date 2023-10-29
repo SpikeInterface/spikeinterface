@@ -120,7 +120,7 @@ The following steps are common to all operating systems:
 Stylistic conventions
 ---------------------
 
-SpikeInterface maintains a consistent coding style across the project. This helps to ensure readability and 
+SpikeInterface maintains a consistent coding style across the project. This helps to ensure readability and
 maintainability of the code, making it easier for contributors to collaborate. To facilitate code style
 for the developer we use the follwing tools and conventions:
 
@@ -128,7 +128,7 @@ for the developer we use the follwing tools and conventions:
 Install Black and pre-commit
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We use the python formatter Black, with defaults set in the :code:`pyproject.toml`. This allows for 
+We use the python formatter Black, with defaults set in the :code:`pyproject.toml`. This allows for
 easy local formatting of code.
 
 To install Black, you can use pip, the Python package installer. Run the following command in your terminal:
