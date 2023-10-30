@@ -88,6 +88,7 @@ class GroundTruthStudy:
         (study_folder / "sortings").mkdir()
         (study_folder / "sortings" / "run_logs").mkdir()
         (study_folder / "metrics").mkdir()
+        (study_folder / "comparisons").mkdir()
 
         for key, (rec, gt_sorting) in datasets.items():
             assert "/" not in key, "'/' cannot be in the key name!"
@@ -127,16 +128,17 @@ class GroundTruthStudy:
         with open(self.folder / "cases.pickle", "rb") as f:
             self.cases = pickle.load(f)
 
+        self.sortings = {k: None for k in self.cases}
         self.comparisons = {k: None for k in self.cases}
-
-        self.sortings = {}
         for key in self.cases:
             sorting_folder = self.folder / "sortings" / self.key_to_str(key)
             if sorting_folder.exists():
-                sorting = load_extractor(sorting_folder)
-            else:
-                sorting = None
-            self.sortings[key] = sorting
+                self.sortings[key] = load_extractor(sorting_folder)
+
+            comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
+            if comparison_file.exists():
+                with open(comparison_file, mode="rb") as f:
+                    self.comparisons[key] = pickle.load(f)
 
     def __repr__(self):
         t = f"{self.__class__.__name__} {self.folder.stem} \n"
@@ -154,6 +156,16 @@ class GroundTruthStudy:
             return _key_separator.join(key)
         else:
             raise ValueError("Keys for cases must str or tuple")
+
+    def remove_sorting(self, key):
+        sorting_folder = self.folder / "sortings" / self.key_to_str(key)
+        log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
+        comparison_file = self.folder / "comparisons" / self.key_to_str(key)
+        if sorting_folder.exists():
+            shutil.rmtree(sorting_folder)
+        for f in (log_file, comparison_file):
+            if f.exists():
+                f.unlink()
 
     def run_sorters(self, case_keys=None, engine="loop", engine_kwargs={}, keep=True, verbose=False):
         if case_keys is None:
@@ -178,12 +190,7 @@ class GroundTruthStudy:
                         self.copy_sortings(case_keys=[key])
                         continue
 
-            if sorting_exists:
-                # delete older sorting + log before running sorters
-                shutil.rmtree(sorting_folder)
-                log_file = self.folder / "sortings" / "run_logs" / f"{self.key_to_str(key)}.json"
-                if log_file.exists():
-                    log_file.unlink()
+            self.remove_sorting(key)
 
             if sorter_folder_exists:
                 shutil.rmtree(sorter_folder)
@@ -228,10 +235,7 @@ class GroundTruthStudy:
             if sorting is not None:
                 if sorting_folder.exists():
                     if force:
-                        # delete folder + log
-                        shutil.rmtree(sorting_folder)
-                        if log_file.exists():
-                            log_file.unlink()
+                        self.remove_sorting(key)
                     else:
                         continue
 
@@ -254,6 +258,10 @@ class GroundTruthStudy:
                 continue
             comp = comparison_class(gt_sorting, sorting, **kwargs)
             self.comparisons[key] = comp
+
+            comparison_file = self.folder / "comparisons" / (self.key_to_str(key) + ".pickle")
+            with open(comparison_file, mode="wb") as f:
+                pickle.dump(comp, f)
 
     def get_run_times(self, case_keys=None):
         import pandas as pd
@@ -288,20 +296,16 @@ class GroundTruthStudy:
             recording, gt_sorting = self.datasets[dataset_key]
             we = extract_waveforms(recording, gt_sorting, folder=wf_folder, **extract_kwargs)
 
-    def get_waveform_extractor(self, key):
-        # some recording are not dumpable to json and the waveforms extactor need it!
-        # so we load it with and put after
-        # this should be fixed in PR 2027 so remove this after
+    def get_waveform_extractor(self, case_key=None, dataset_key=None):
+        if case_key is not None:
+            dataset_key = self.cases[case_key]["dataset"]
 
-        dataset_key = self.cases[key]["dataset"]
         wf_folder = self.folder / "waveforms" / self.key_to_str(dataset_key)
-        we = load_waveforms(wf_folder, with_recording=False)
-        recording, _ = self.datasets[dataset_key]
-        we.set_recording(recording)
+        we = load_waveforms(wf_folder, with_recording=True)
         return we
 
     def get_templates(self, key, mode="average"):
-        we = self.get_waveform_extractor(key)
+        we = self.get_waveform_extractor(case_key=key)
         templates = we.get_all_templates(mode=mode)
         return templates
 
@@ -366,7 +370,7 @@ class GroundTruthStudy:
             perf_by_unit.append(perf)
 
         perf_by_unit = pd.concat(perf_by_unit)
-        perf_by_unit = perf_by_unit.set_index(self.levels)
+        perf_by_unit = perf_by_unit.set_index(self.levels).sort_index()
         return perf_by_unit
 
     def get_count_units(self, case_keys=None, well_detected_score=None, redundant_score=None, overmerged_score=None):
