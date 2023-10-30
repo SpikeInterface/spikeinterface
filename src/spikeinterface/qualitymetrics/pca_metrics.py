@@ -1,6 +1,5 @@
 """Cluster quality metrics computed from principal components."""
 
-from cmath import nan
 from copy import deepcopy
 
 import numpy as np
@@ -16,7 +15,6 @@ try:
 except:
     pass
 
-import spikeinterface as si
 from ..core import get_random_data_chunks, compute_sparsity, WaveformExtractor
 from ..core.job_tools import tqdm_joblib
 from ..core.template_tools import get_template_extremum_channel

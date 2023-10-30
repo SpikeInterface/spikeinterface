@@ -103,6 +103,13 @@ widgets = [
     "sortingview>=0.11.15",
 ]
 
+qualitymetrics = [
+    "scikit-learn",
+    "scipy",
+    "pandas",
+    "numba",
+]
+
 test_core = [
     "pytest",
     "zarr",
