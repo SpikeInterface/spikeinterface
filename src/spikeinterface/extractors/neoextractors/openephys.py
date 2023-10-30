@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 import warnings
 
-import probeinterface as pi
+import probeinterface
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor, NeoBaseEventExtractor
 
@@ -176,7 +176,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             settings_file = self.neo_reader.folder_structure[record_node]["experiments"][exp_id]["settings_file"]
 
             if Path(settings_file).is_file():
-                probe = pi.read_openephys(settings_file=settings_file, stream_name=stream_name, raise_error=False)
+                probe = probeinterface.read_openephys(
+                    settings_file=settings_file, stream_name=stream_name, raise_error=False
+                )
             else:
                 probe = None
 
@@ -208,7 +210,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 sample_shifts = get_neuropixels_sample_shifts(total_channels, num_channels_per_adc, num_cycles_in_adc)
                 if self.get_num_channels() != total_channels:
                     # need slice because not all channel are saved
-                    chans = pi.get_saved_channel_indices_from_openephys_settings(settings_file, oe_stream)
+                    chans = probeinterface.get_saved_channel_indices_from_openephys_settings(settings_file, oe_stream)
                     # lets clip to 384 because this contains also the synchro channel
                     chans = chans[chans < total_channels]
                     sample_shifts = sample_shifts[chans]
