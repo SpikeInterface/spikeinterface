@@ -258,11 +258,50 @@ def test_trace_padded_recording_retrieve_traces_with_partial_padding(recording, 
     assert np.allclose(padded_traces_end, expected_zeros)
 
 
+@pytest.mark.parametrize("padding_start, padding_end", [(5, 5), (0, 5), (5, 0), (0, 0)])
+def test_trace_padded_recording_retrieve_only_start_padding(recording, padding_start, padding_end):
+    num_samples = recording.get_num_samples()
+    num_channels = recording.get_num_channels()
+
+    padded_recording = TracePaddedRecording(
+        parent_recording=recording,
+        padding_start=padding_start,
+        padding_end=padding_end,
+    )
+
+    # Retrieve the padding at the start and test it
+    padded_traces_start = padded_recording.get_traces(start_frame=0, end_frame=padding_start)
+    expected_traces = np.zeros((padding_start, num_channels))
+    assert np.allclose(padded_traces_start, expected_traces)
+
+
+@pytest.mark.parametrize("padding_start, padding_end", [(5, 5), (0, 5), (5, 0), (0, 0)])
+def test_trace_padded_recording_retrieve_only_end_padding(recording, padding_start, padding_end):
+    num_samples = recording.get_num_samples()
+    num_channels = recording.get_num_channels()
+
+    padded_recording = TracePaddedRecording(
+        parent_recording=recording,
+        padding_start=padding_start,
+        padding_end=padding_end,
+    )
+
+    # Retrieve the padding at the end and test it
+    start_frame = padding_start + num_samples
+    end_frame = padding_start + num_samples + padding_end
+    padded_traces_end = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    expected_traces = np.zeros((padding_end, num_channels))
+    assert np.allclose(padded_traces_end, expected_traces)
+
+
 @pytest.mark.parametrize("preprocessing", ["bandpass_filter", "phase_shift"])
-@pytest.mark.parametrize("padding_start, padding_end", [(5000, 5000), (5000, 0), (0, 5000)])
-def test_trace_padded_recording_retrieve_full_recording_with_preprocessing(
+@pytest.mark.parametrize("padding_start, padding_end", [(5, 5), (0, 5), (5, 0), (0, 0)])
+def test_trace_padded_recording_retrieve_only_end_padding_with_preprocessing(
     recording, padding_start, padding_end, preprocessing
 ):
+    """This is a tmeporary test to check that this works when the recording is called out of bonds. It should be removed
+    when more general test are added in that direction"""
+
     num_samples = recording.get_num_samples()
     num_channels = recording.get_num_channels()
 
@@ -280,27 +319,12 @@ def test_trace_padded_recording_retrieve_full_recording_with_preprocessing(
         padding_end=padding_end,
     )
 
-    # Cycle through the whole recording, using get_traces() to pull chunks of
-    # size `step`. This emulates the processing of writing to a binary file.
-    # Data that lie within the padding region should be fill value only, while
-    # data from original trace should match exactly. Note that the step
-    # size must be chosen to retreieve data that is purely padding or original data
-    step = 1000
-    start_frames = np.arange(padded_recording.get_num_samples(), step=step)
-    end_frames = start_frames + step
-
-    for start_frame, end_frame in zip(start_frames, end_frames):
-        padded_trace = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
-
-        end_padding_region_first_idx = padding_start + num_samples
-
-        if padding_start <= start_frame < end_padding_region_first_idx:
-            original_trace = recording.get_traces(
-                start_frame=start_frame - padding_start, end_frame=end_frame - padding_start
-            )
-            assert np.allclose(padded_trace, original_trace, rtol=0, atol=1e-10)
-        else:
-            assert np.all(padded_trace == padded_recording.fill_value)
+    # Retrieve the padding at the end and test it
+    start_frame = padding_start + num_samples
+    end_frame = padding_start + num_samples + padding_end
+    padded_traces_end = padded_recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    expected_traces = np.zeros((padding_end, num_channels))
+    assert np.allclose(padded_traces_end, expected_traces)
 
 
 if __name__ == "__main__":
