@@ -94,6 +94,13 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         # Else, we start with the full padded traces and allocate the original traces in the middle
         output_traces = np.full(shape=(trace_size, num_channels), fill_value=self.fill_value, dtype=self.dtype)
 
+        # If start and end frame are outside of the original data region (e.g. for Kilosort), return only paddding
+        if (
+            start_frame > self.num_samples_in_original_segment + self.padding_start
+            and end_frame > self.num_samples_in_original_segment + self.padding_start
+        ):
+            return output_traces
+
         # After the padding, the original traces are placed in the middle until the end of the original traces
         if end_frame >= self.padding_start:
             original_traces = self.get_original_traces_shifted(
@@ -119,11 +126,12 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         """
         original_start_frame = max(start_frame - self.padding_start, 0)
         original_end_frame = min(end_frame - self.padding_start, self.num_samples_in_original_segment)
+
         original_traces = self.parent_recording_segment.get_traces(
             start_frame=original_start_frame,
             end_frame=original_end_frame,
             channel_indices=channel_indices,
-        )
+        )  # BREAKPOINT HERE!!
 
         return original_traces
 
