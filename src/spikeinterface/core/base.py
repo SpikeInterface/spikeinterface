@@ -343,7 +343,7 @@ class BaseExtractor:
         kwargs = self._kwargs
 
         if relative_to and not recursive:
-            raise ValueError("`relative_to` is only posible when `recursive=True`")
+            raise ValueError("`relative_to` is only possible when `recursive=True`")
 
         if recursive:
             to_dict_kwargs = dict(

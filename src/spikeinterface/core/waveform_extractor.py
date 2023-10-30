@@ -167,7 +167,7 @@ class WaveformExtractor:
                     pass
             elif (folder / "recording.pickle").exists():
                 try:
-                    recording = load_extractor(folder / "recording.pickle")
+                    recording = load_extractor(folder / "recording.pickle", base_folder=folder)
                 except:
                     pass
             if recording is None:
@@ -178,7 +178,7 @@ class WaveformExtractor:
             if (folder / "sorting.json").exists():
                 sorting = load_extractor(folder / "sorting.json", base_folder=folder)
             elif (folder / "sorting.pickle").exists():
-                sorting = load_extractor(folder / "sorting.pickle")
+                sorting = load_extractor(folder / "sorting.pickle", base_folder=folder)
             else:
                 raise FileNotFoundError("load_waveforms() impossible to find the sorting object (json or pickle)")
 
@@ -288,15 +288,12 @@ class WaveformExtractor:
             if recording.check_serializablility("json"):
                 recording.dump(folder / "recording.json", relative_to=relative_to)
             elif recording.check_serializablility("pickle"):
-                # In this case we loose the relative_to!!
-                recording.dump(folder / "recording.pickle")
+                recording.dump(folder / "recording.pickle", relative_to=relative_to)
 
             if sorting.check_serializablility("json"):
                 sorting.dump(folder / "sorting.json", relative_to=relative_to)
             elif sorting.check_serializablility("pickle"):
-                # In this case we loose the relative_to!!
-                # TODO later the dump to pickle should dump the dictionary and so relative could be put back
-                sorting.dump(folder / "sorting.pickle")
+                sorting.dump(folder / "sorting.pickle", relative_to=relative_to)
             else:
                 warn(
                     "Sorting object is not serializable to file, which might result in downstream errors for "
@@ -920,12 +917,12 @@ class WaveformExtractor:
                 if self.recording.check_serializablility("json"):
                     self.recording.dump(folder / "recording.json", relative_to=relative_to)
                 elif self.recording.check_serializablility("pickle"):
-                    self.recording.dump(folder / "recording.pickle")
+                    self.recording.dump(folder / "recording.pickle", relative_to=relative_to)
 
             if self.sorting.check_serializablility("json"):
                 self.sorting.dump(folder / "sorting.json", relative_to=relative_to)
             elif self.sorting.check_serializablility("pickle"):
-                self.sorting.dump(folder / "sorting.pickle")
+                self.sorting.dump(folder / "sorting.pickle", relative_to=relative_to)
             else:
                 warn(
                     "Sorting object is not serializable to file, which might result in downstream errors for "
