@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import probeinterface as pi
+import probeinterface
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts
@@ -89,7 +89,7 @@ class CompressedBinaryIblExtractor(BaseRecording):
         self.set_channel_offsets(offsets)
 
         if not load_sync_channel:
-            probe = pi.read_spikeglx(meta_file)
+            probe = probeinterface.read_spikeglx(meta_file)
 
             if probe.shank_ids is not None:
                 self.set_probe(probe, in_place=True, group_mode="by_shank")

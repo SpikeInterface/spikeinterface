@@ -1,7 +1,7 @@
 import numpy as np
 from pathlib import Path
 
-import probeinterface as pi
+import probeinterface
 
 from spikeinterface import BaseEvent, BaseEventSegment
 from spikeinterface.core.core_tools import define_function_from_class
@@ -68,7 +68,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         well_name = self.stream_id
         # rec_name auto set by neo
         rec_name = self.neo_reader.rec_name
-        probe = pi.read_maxwell(file_path, well_name=well_name, rec_name=rec_name)
+        probe = probeinterface.read_maxwell(file_path, well_name=well_name, rec_name=rec_name)
         self.set_probe(probe, in_place=True)
         self.set_property("electrode", self.get_property("contact_vector")["electrode"])
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), rec_name=rec_name))

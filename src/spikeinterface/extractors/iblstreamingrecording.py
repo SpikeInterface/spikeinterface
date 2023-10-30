@@ -4,7 +4,7 @@ from contextlib import redirect_stderr
 from pathlib import Path
 
 import numpy as np
-import probeinterface as pi
+import probeinterface
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from spikeinterface.core.core_tools import define_function_from_class
@@ -165,7 +165,7 @@ class IblStreamingRecordingExtractor(BaseRecording):
 
         # set probe
         if not load_sync_channel:
-            probe = pi.read_spikeglx(meta_file)
+            probe = probeinterface.read_spikeglx(meta_file)
 
             if probe.shank_ids is not None:
                 self.set_probe(probe, in_place=True, group_mode="by_shank")
