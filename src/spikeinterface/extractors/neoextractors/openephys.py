@@ -186,12 +186,11 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 else:
                     self.set_probe(probe, in_place=True)
 
-                # this try-except handles a breaking change in probeinterface after v0.2.18
-                # in the new version, the Neuropixels model name is stored in the "model_name" attribute,
+                # this handles a breaking change in probeinterface after v0.2.18
+                # in the new version, the Neuropixels model name is stored in the "model_name" annotation,
                 # rather than in the "probe_name" annotation
-                try:
-                    model_name = probe.model_name
-                except Exception as e:
+                model_name = probe.annotations.get("model_name", None)
+                if model_name is None:
                     model_name = probe.annotations["probe_name"]
 
                 # load num_channels_per_adc depending on probe type
