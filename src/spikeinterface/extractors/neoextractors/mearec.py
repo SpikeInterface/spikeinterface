@@ -3,7 +3,7 @@ from typing import Union
 
 import numpy as np
 
-import probeinterface as pi
+import probeinterface
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor
 
@@ -48,7 +48,7 @@ class MEArecRecordingExtractor(NeoBaseRecordingExtractor):
 
         self.extra_requirements.append("mearec")
 
-        probe = pi.read_mearec(file_path)
+        probe = probeinterface.read_mearec(file_path)
         probe.annotations["mearec_name"] = str(probe.annotations["mearec_name"])
         self.set_probe(probe, in_place=True)
         self.annotate(is_filtered=True)
