@@ -94,7 +94,7 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
         if start_frame > self.padding_start and end_frame < end_of_original_traces:
             return self.get_original_traces_shifted(start_frame, end_frame, channel_indices)
 
-        # We start wit the full padded traces and fill in the original traces if necessary
+        # We start with the full padded traces and fill in the original traces if necessary
         output_traces = np.full(shape=(trace_size, num_channels), fill_value=self.fill_value, dtype=self.dtype)
 
         # If start frame is larger than the end of the original traces, we return the padded traces as they are
