@@ -240,7 +240,9 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=None):
 
     num_segments_sorting1 = sorting1.get_num_segments()
     num_segments_sorting2 = sorting2.get_num_segments()
-    assert num_segments_sorting1 == num_segments_sorting2, "make_match_count_matrix : sorting1 and sorting must have the same segment number"
+    assert (
+        num_segments_sorting1 == num_segments_sorting2
+    ), "make_match_count_matrix : sorting1 and sorting must have the same segment number"
 
     # Segments should be matched one by one
     for segment_index in range(num_segments_sorting1):
