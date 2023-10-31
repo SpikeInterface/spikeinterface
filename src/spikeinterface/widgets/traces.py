@@ -85,7 +85,7 @@ class TracesWidget(BaseWidget):
             rec0 = recordings[0]
         else:
             raise ValueError(
-                "plot_traces 'recording' must be recording or dict or list, recording type "
+                "plot_traces 'recording' must be recording or dict or list, recording "
                 f"is currently of type {type(recording)}"
             )
 
@@ -183,7 +183,9 @@ class TracesWidget(BaseWidget):
             if isinstance(clim, tuple):
                 clims = {layer_key: clim for layer_key in layer_keys}
             elif isinstance(clim, dict):
-                assert all(layer_key in clim for layer_key in layer_keys), ""
+                assert all(
+                    layer_key in clim for layer_key in layer_keys
+                ), f"all recordings must be a key in `clim` if `clim` is a dict. Provide keys {layer_keys} in clim"
                 clims = clim
             else:
                 raise TypeError(f"'clim' can be None, tuple, or dict! Unsupported type {type(clim)}")
@@ -475,7 +477,7 @@ class TracesWidget(BaseWidget):
         try:
             import pyvips
         except ImportError:
-            raise ImportError("To use plot_traces in sortingview you need the pyvips package.")
+            raise ImportError("To use `plot_traces()` in sortingview you need the pyvips package.")
 
         dp = to_attr(data_plot)
 
@@ -488,9 +490,7 @@ class TracesWidget(BaseWidget):
 
         tiled_layers = []
         for layer_key, traces in zip(dp.layer_keys, dp.list_traces):
-            assert (
-                traces.shape[1] != 1
-            ), f'mode="map" only works with multichannel data, you currently have {traces.shape[1]} channels'
+            assert traces.shape[1] != 1, 'mode="map" only works with multichannel data'
             img = array_to_image(
                 traces,
                 clim=dp.clims[layer_key],
