@@ -313,7 +313,7 @@ class BaseRecordingSnippets(BaseExtractor):
             Electrode shapes
         shape_params : dict, default: {"radius": 1}
             Shape parameters
-        axes : str, default: "xy"
+        axes : "xy" | "yz" | "xz", default: "xy"
             If ndim is 3, indicates the axes that define the plane of the electrodes
         """
         probe = self.create_dummy_probe_from_locations(locations, shape=shape, shape_params=shape_params, axes=axes)
