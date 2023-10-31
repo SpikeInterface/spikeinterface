@@ -1367,7 +1367,9 @@ if HAVE_NUMBA:
             nb_rp_violations[i] += n_v
 
 
-def SD_test(wvf_extractor: WaveformExtractor, censored_period_ms: float=4.0, correct_for_drift: bool=True, **kwargs):
+def SD_test(
+    wvf_extractor: WaveformExtractor, censored_period_ms: float = 4.0, correct_for_drift: bool = True, **kwargs
+):
     """
     Computes the SD (Standard Deviation) of each unit spikes amplitude, and compare it to that of noise.
 
@@ -1389,7 +1391,7 @@ def SD_test(wvf_extractor: WaveformExtractor, censored_period_ms: float=4.0, cor
         The number of spikes, across all segments, for each unit ID.
     """
 
-    spikes_amplitude = compute_spike_amplitudes(wvf_extractor, outputs='by_unit', return_scaled=True, **kwargs)
+    spikes_amplitude = compute_spike_amplitudes(wvf_extractor, outputs="by_unit", return_scaled=True, **kwargs)
     noise_levels = get_noise_levels(wvf_extractor.recording, return_scaled=True, method="std")
     best_channels = get_template_extremum_channel(wvf_extractor, outputs="index", **kwargs)
 
