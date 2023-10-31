@@ -114,6 +114,7 @@ def get_optimized_compute_matching_matrix():
     which uses numba. I tested using the numba dispatcher programatically to avoids this
     but the performance improvements were lost. Think you can do better? Don't forget to measure performance against
     the current implementation!
+    TODO: unify numba decorator across all modules
     """
 
     if hasattr(get_optimized_compute_matching_matrix, "_cached_function"):
