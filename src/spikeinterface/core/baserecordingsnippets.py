@@ -112,9 +112,9 @@ class BaseRecordingSnippets(BaseExtractor):
         ----------
         probe_or_probegroup: Probe, list of Probe, or ProbeGroup
             The probe(s) to be attached to the recording
-        group_mode: "by_probe" | "by_shank", default: "by_probe
+        group_mode: "by_probe" | "by_shank", default: "by_probe"
             "by_probe" or "by_shank". Adds grouping property to the recording based on the probes ("by_probe")
-            or  shanks ("by_shanks")
+            or  shanks ("by_shank")
         in_place: bool
             False by default.
             Useful internally when extractor do self.set_probegroup(probe)
