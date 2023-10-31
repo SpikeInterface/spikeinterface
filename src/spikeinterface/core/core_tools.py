@@ -522,7 +522,7 @@ def write_to_h5_dataset_format(
         If 1, the traces shape (nb_channel, nb_sample) is kept in the file.
     single_axis: bool, default: False
         If True, a single-channel recording is saved as a one dimensional array
-    dtype: dtype, default None
+    dtype: dtype, default: None
         Type of the saved data
     chunk_size: None or int, default: None
         Number of chunks to save the file in. This avoid to much memory consumption for big files.
