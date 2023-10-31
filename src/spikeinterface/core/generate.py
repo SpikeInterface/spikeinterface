@@ -172,7 +172,7 @@ def generate_sorting(
             duration=durations[segment_index],
             refractory_period_ms=refractory_period_ms,
             firing_rates=firing_rates,
-            seed=seed,
+            seed=seed + segment_index,
         )
 
         if empty_units is not None:
