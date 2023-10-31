@@ -13,8 +13,8 @@ import math
 import numpy as np
 import warnings
 
-from ..postprocessing import correlogram_for_one_segment
-from ..core import get_noise_levels
+from ..postprocessing import compute_spike_amplitudes, correlogram_for_one_segment
+from ..core import WaveformExtractor, get_noise_levels
 from ..core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
@@ -1365,3 +1365,43 @@ if HAVE_NUMBA:
             spike_train = spike_trains[spike_clusters == i]
             n_v = _compute_nb_violations_numba(spike_train, t_r)
             nb_rp_violations[i] += n_v
+
+
+def SD_test(wvf_extractor: WaveformExtractor, censored_period_ms: float=4.0, correct_for_drift: bool=True, **kwargs):
+    """
+    Computes the SD (Standard Deviation) of each unit spikes amplitude, and compare it to that of noise.
+
+    Parameters
+    ----------
+    waveform_extractor : WaveformExtractor
+        The waveform extractor object.
+    censored_period_ms : float
+        The censored period in milliseconds. This is to remove any potential bursts that could affect the SD.
+    correct_for_drift: bool
+        If True, will subtract the amplitudes sequentiially to significantly reduce the impact of drift.
+    **kwargs:
+        Keyword arguments for computing spike amplitudes and extremum channel.
+    TODO: possibly remove spikes when computing noise?
+
+    Returns
+    -------
+    num_spikes : dict
+        The number of spikes, across all segments, for each unit ID.
+    """
+
+    spikes_amplitude = compute_spike_amplitudes(wvf_extractor, outputs='by_unit', return_scaled=True, **kwargs)
+    noise_levels = get_noise_levels(wvf_extractor.recording, return_scaled=True, method="std")
+    best_channels = get_template_extremum_channel(wvf_extractor, outputs="index", **kwargs)
+
+    SD_test = {}
+    for unit_id, spk_amp in spikes_amplitude.items():
+        # TODO: censored period.
+
+        if correct_for_drift:
+            unit_std = np.std(np.diff(spk_amp)) / np.sqrt(2)
+        else:
+            unit_std = np.std(spk_amp)
+
+        SD_test[unit_id] = unit_std / noise_levels[best_channels[unit_id]]
+
+    return SD_test
