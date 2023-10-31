@@ -80,6 +80,7 @@ class Mountainsort5Sorter(BaseSorter):
     def is_installed(cls):
         try:
             import mountainsort5
+
             HAVE_MS5 = True
         except ImportError:
             HAVE_MS5 = False
