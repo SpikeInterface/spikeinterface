@@ -196,7 +196,7 @@ def ensure_chunk_size(
     chunk_size: int or None
         size for one chunk per job
     chunk_memory: str or None
-        must endswith "k", "M" or "G"
+        must end with "k", "M" or "G"
     total_memory: str or None
         must endswith "k", "M" or "G"
     chunk_duration: None or float or str
