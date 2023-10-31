@@ -136,9 +136,9 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int, optional
+        segment_index : int or None, default: None
             The segment index to retrieve the number of samples for.
-            For multi-segment objects, it is required, by default None
+            For multi-segment objects, it is required, default: None
             With single segment recording returns the number of samples in the segment
 
         Returns
@@ -171,9 +171,9 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int, optional
+        segment_index : int or None, default: None
             The sample index to retrieve the duration for.
-            For multi-segment objects, it is required, by default None
+            For multi-segment objects, it is required, default: None
             With single segment recording returns the duration of the single segment
 
         Returns
@@ -204,9 +204,9 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int, optional
+        segment_index : int or None, default: None
             The index of the segment for which the memory size should be calculated.
-            For multi-segment objects, it is required, by default None
+            For multi-segment objects, it is required, default: None
             With single segment recording returns the memory size of the single segment
 
         Returns
@@ -249,22 +249,22 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : Union[int, None], optional
-            The segment index to get traces from. If recording is multi-segment, it is required, by default None
-        start_frame : Union[int, None], optional
-            The start frame. If None, 0 is used, by default None
-        end_frame : Union[int, None], optional
-            The end frame. If None, the number of samples in the segment is used, by default None
-        channel_ids : Union[Iterable, None], optional
-            The channel ids. If None, all channels are used, by default None
-        order : Union[str, None], optional
-            The order of the traces ("C" | "F"). If None, traces are returned as they are, by default None
-        return_scaled : bool, optional
+        segment_index : Union[int, None], default: None
+            The segment index to get traces from. If recording is multi-segment, it is required, default: None
+        start_frame : Union[int, None], default: None
+            The start frame. If None, 0 is used, default: None
+        end_frame : Union[int, None], default: None
+            The end frame. If None, the number of samples in the segment is used, default: None
+        channel_ids : Union[Iterable, None], default: None
+            The channel ids. If None, all channels are used, default: None
+        order : Union[str, None], default: None
+            The order of the traces ("C" | "F"). If None, traces are returned as they are, default: None
+        return_scaled : bool, default: None
             If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
-            traces are scaled to uV, by default False
-        cast_unsigned : bool, optional
+            traces are scaled to uV, default: False
+        cast_unsigned : bool, default: None
             If True and the traces are unsigned, they are cast to integer and centered
-            (an offset of (2**nbits) is subtracted), by default False
+            (an offset of (2**nbits) is subtracted), default: False
 
         Returns
         -------
@@ -337,9 +337,9 @@ class BaseRecording(BaseRecordingSnippets):
         dict
             A dictionary containing the following key-value pairs:
 
-            - 'sampling_frequency': The sampling frequency of the RecordingSegment.
-            - 't_start': The start time of the RecordingSegment.
-            - 'time_vector': The time vector of the RecordingSegment.
+            - "sampling_frequency": The sampling frequency of the RecordingSegment.
+            - "t_start": The start time of the RecordingSegment.
+            - "time_vector": The time vector of the RecordingSegment.
 
         Notes
         -----
@@ -362,8 +362,8 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int, optional
-            The segment index (required for multi-segment), by default None
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
 
         Returns
         -------
@@ -380,8 +380,8 @@ class BaseRecording(BaseRecordingSnippets):
 
         Parameters
         ----------
-        segment_index : int, optional
-            The segment index (required for multi-segment), by default None
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
 
         Returns
         -------
@@ -400,10 +400,10 @@ class BaseRecording(BaseRecordingSnippets):
         ----------
         times : 1d np.array
             The time vector
-        segment_index : int, optional
-            The segment index (required for multi-segment), by default None
-        with_warning : bool, optional
-            If True, a warning is printed, by default True
+        segment_index : int or None, default: None
+            The segment index (required for multi-segment)
+        with_warning : bool, default: True
+            If True, a warning is printed
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self._recording_segments[segment_index]
@@ -437,7 +437,7 @@ class BaseRecording(BaseRecordingSnippets):
     def _save(self, format="binary", **save_kwargs):
         """
         This function replaces the old CacheRecordingExtractor, but enables more engines
-        for caching a results. At the moment only 'binary' with memmap is supported.
+        for caching a results. At the moment only "binary" with memmap is supported.
         We plan to add other engines, such as zarr and NWB.
         """
 
@@ -712,9 +712,9 @@ class BaseRecordingSegment(BaseSegment):
         dict
             A dictionary containing the following key-value pairs:
 
-            - 'sampling_frequency': The sampling frequency of the RecordingSegment.
-            - 't_start': The start time of the RecordingSegment.
-            - 'time_vector': The time vector of the RecordingSegment.
+            - "sampling_frequency": The sampling frequency of the RecordingSegment.
+            - "t_start": The start time of the RecordingSegment.
+            - "time_vector": The time vector of the RecordingSegment.
 
         Notes
         -----
@@ -770,16 +770,15 @@ class BaseRecordingSegment(BaseSegment):
 
         Parameters
         ----------
-        start_frame: (Union[int, None], optional)
-            start sample index, or zero if None. Defaults to None.
-        end_frame: (Union[int, None], optional)
-            end_sample, or number of samples if None. Defaults to None.
-        channel_indices: (Union[List, None], optional)
-            Indices of channels to return, or all channels if None. Defaults to None.
-        order: (Order, optional)
+        start_frame: Union[int, None], default: None
+            start sample index, or zero if None
+        end_frame: Union[int, None], default: None
+            end_sample, or number of samples if None
+        channel_indices: Union[List, None], default: None
+            Indices of channels to return, or all channels if None
+        order: list or None, default: None
             The memory order of the returned array.
-            Use Order.C for C order, Order.F for Fortran order, or Order.K to keep the order of the underlying data.
-            Defaults to Order.K.
+            Use Order.C for C order, Order.F for Fortran order, or Order.K to keep the order of the underlying data
 
         Returns
         -------

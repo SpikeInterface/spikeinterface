@@ -690,7 +690,7 @@ def do_confusion_matrix(event_counts1, event_counts2, match_12, match_event_coun
 def do_count_score(event_counts1, event_counts2, match_12, match_event_count):
     """
     For each ground truth units count how many:
-    'tp', 'fn', 'cl', 'fp', 'num_gt', 'num_tested', 'tested_id'
+    "tp", "fn", "cl", "fp", "num_gt", "num_tested", "tested_id"
 
     Parameters
     ----------
@@ -754,8 +754,8 @@ def compute_performance(count_score):
 
     Note :
       * we don't have TN because it do not make sens here.
-      * 'accuracy' = 'tp_rate' because TN=0
-      * 'recall' = 'sensitivity'
+      * "accuracy" = "tp_rate" because TN=0
+      * "recall" = "sensitivity"
     """
     import pandas as pd
 
@@ -794,7 +794,7 @@ def make_matching_events(times1, times2, delta):
 
     Returns
     -------
-    matching_event: numpy array dtype = ['index1', 'index2', 'delta']
+    matching_event: numpy array dtype = ["index1", "index2", "delta"]
         1d of collision
     """
     times_concat = np.concatenate((times1, times2))
@@ -851,8 +851,8 @@ def make_collision_events(sorting, delta):
     -------
     collision_events: numpy array
             dtype =  [('index1', 'int64'), ('unit_id1', 'int64'),
-                ('index2', 'int64'), ('unit_id2', 'int64'),
-                ('delta', 'int64')]
+                      ('index2', 'int64'), ('unit_id2', 'int64'),
+                      ('delta', 'int64')]
         1d of all collision
     """
     unit_ids = np.array(sorting.get_unit_ids())

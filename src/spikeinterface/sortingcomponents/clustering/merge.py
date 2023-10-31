@@ -7,7 +7,6 @@ from tqdm.auto import tqdm
 import scipy.spatial
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from hdbscan import HDBSCAN
 
 import numpy as np
 import networkx as nx
@@ -18,6 +17,9 @@ from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 from .isocut5 import isocut5
 
 from .tools import aggregate_sparse_features, FeaturesLoader, compute_template_from_sparse
+
+
+DEBUG = False
 
 
 def merge_clusters(
@@ -81,7 +83,6 @@ def merge_clusters(
         **job_kwargs,
     )
 
-    DEBUG = False
     if DEBUG:
         import matplotlib.pyplot as plt
 
@@ -224,8 +225,6 @@ def agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full"
             else:
                 raise ValueError
 
-            # DEBUG = True
-            DEBUG = False
             if DEBUG:
                 import matplotlib.pyplot as plt
 
@@ -233,8 +232,6 @@ def agglomerate_pairs(labels_set, pair_mask, pair_values, connection_mode="full"
                 nx.draw_networkx(sub_graph)
                 plt.show()
 
-    # DEBUG = True
-    DEBUG = False
     if DEBUG:
         import matplotlib.pyplot as plt
 
@@ -551,15 +548,7 @@ class ProjectDistribution:
         else:
             final_shift = 0
 
-        # DEBUG = True
-        DEBUG = False
-
-        # if DEBUG and is_merge:
-        # if DEBUG and (overlap > 0.1 and overlap <0.3):
         if DEBUG:
-            # if DEBUG and not is_merge:
-            # if DEBUG and (overlap > 0.05 and overlap <0.25):
-            # if label0 == 49 and label1== 65:
             import matplotlib.pyplot as plt
 
             flatten_wfs0 = wfs0.swapaxes(1, 2).reshape(wfs0.shape[0], -1)
@@ -674,8 +663,6 @@ class NormalizedTemplateDiff:
             final_shift = 0
             merge_value = np.nan
 
-        # DEBUG = False
-        DEBUG = True
         if DEBUG and normed_diff < 0.2:
             # if DEBUG:
 
