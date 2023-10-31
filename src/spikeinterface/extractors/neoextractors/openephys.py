@@ -1,5 +1,4 @@
 """
-
 There are two extractors for data saved by the Open Ephys GUI
 
   * OpenEphysLegacyRecordingExtractor: reads the original "Open Ephys" data format
@@ -7,7 +6,6 @@ There are two extractors for data saved by the Open Ephys GUI
 
 See https://open-ephys.github.io/gui-docs/User-Manual/Recording-data/index.html
 for more info.
-
 """
 
 from pathlib import Path
@@ -15,7 +13,7 @@ from pathlib import Path
 import numpy as np
 import warnings
 
-import probeinterface as pi
+import probeinterface
 
 from .neobaseextractor import NeoBaseRecordingExtractor, NeoBaseSortingExtractor, NeoBaseEventExtractor
 
@@ -23,10 +21,10 @@ from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_s
 
 
 def drop_invalid_neo_arguments_for_version_0_12_0(neo_kwargs):
-    # Temporary function until neo version 0.13.0 is released
     from packaging.version import Version
     from importlib.metadata import version as lib_version
 
+    # Temporary function until neo version 0.13.0 is released
     neo_version = lib_version("neo")
     # The possibility of ignoring timestamps errors is not present in neo <= 0.12.0
     if Version(neo_version) <= Version("0.12.0"):
@@ -49,17 +47,17 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     Parameters
     ----------
     folder_path: str
-        The folder path to load the recordings from.
-    stream_id: str, optional
-        If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
-        If there are several streams, specify the stream name you want to load.
-    block_index: int, optional
-        If there are several blocks (experiments), specify the block index you want to load.
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
-    ignore_timestamps_errors: bool (default False)
-        Ignore the discontinuous timestamps errors in neo.
+        The folder path to load the recordings from
+    stream_id: str, default: None
+        If there are several streams, specify the stream id you want to load
+    stream_name: str, default: None
+        If there are several streams, specify the stream name you want to load
+    block_index: int, default: None
+        If there are several blocks (experiments), specify the block index you want to load
+    all_annotations: bool, default: False
+        Load exhaustively all annotation from neo
+    ignore_timestamps_errors: bool, default: False
+        Ignore the discontinuous timestamps errors in neo
     """
 
     mode = "folder"
@@ -107,26 +105,26 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     Parameters
     ----------
     folder_path: str
-        The folder path to the root folder (containing the record node folders).
-    load_sync_channel : bool
-        If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
+        The folder path to the root folder (containing the record node folders)
+    load_sync_channel : bool, default: False
+        If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded
         If True, the SYNC channel is loaded and can be accessed in the analog signals.
-    load_sync_timestamps : bool
+    load_sync_timestamps : bool, default: False
         If True, the synchronized_timestamps are loaded and set as times to the recording.
         If False (default), only the t_start and sampling rate are set, and timestamps are assumed
-        to be uniform and linearly increasing.
-    experiment_names: str, list, or None
+        to be uniform and linearly increasing
+    experiment_names: str, list, or None, default: None
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
-        E.g. 'experiment_names="experiment2"', 'experiment_names=["experiment1", "experiment2"]'
-    stream_id: str, optional
-        If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
-        If there are several streams, specify the stream name you want to load.
-    block_index: int, optional
-        If there are several blocks (experiments), specify the block index you want to load.
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
+        E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
+    stream_id: str, default: None
+        If there are several streams, specify the stream id you want to load
+    stream_name: str, default: None
+        If there are several streams, specify the stream name you want to load
+    block_index: int, default: None
+        If there are several blocks (experiments), specify the block index you want to load
+    all_annotations: bool, default: False
+        Load exhaustively all annotation from neo
 
     """
 
@@ -178,7 +176,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             settings_file = self.neo_reader.folder_structure[record_node]["experiments"][exp_id]["settings_file"]
 
             if Path(settings_file).is_file():
-                probe = pi.read_openephys(settings_file=settings_file, stream_name=stream_name, raise_error=False)
+                probe = probeinterface.read_openephys(
+                    settings_file=settings_file, stream_name=stream_name, raise_error=False
+                )
             else:
                 probe = None
 
@@ -187,9 +187,16 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     self.set_probe(probe, in_place=True, group_mode="by_shank")
                 else:
                     self.set_probe(probe, in_place=True)
-                probe_name = probe.annotations["probe_name"]
+
+                # this handles a breaking change in probeinterface after v0.2.18
+                # in the new version, the Neuropixels model name is stored in the "model_name" annotation,
+                # rather than in the "probe_name" annotation
+                model_name = probe.annotations.get("model_name", None)
+                if model_name is None:
+                    model_name = probe.annotations["probe_name"]
+
                 # load num_channels_per_adc depending on probe type
-                if "2.0" in probe_name:
+                if "2.0" in model_name:
                     num_channels_per_adc = 16
                     num_cycles_in_adc = 16
                     total_channels = 384
@@ -203,7 +210,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 sample_shifts = get_neuropixels_sample_shifts(total_channels, num_channels_per_adc, num_cycles_in_adc)
                 if self.get_num_channels() != total_channels:
                     # need slice because not all channel are saved
-                    chans = pi.get_saved_channel_indices_from_openephys_settings(settings_file, oe_stream)
+                    chans = probeinterface.get_saved_channel_indices_from_openephys_settings(settings_file, oe_stream)
                     # lets clip to 384 because this contains also the synchro channel
                     chans = chans[chans < total_channels]
                     sample_shifts = sample_shifts[chans]
@@ -281,20 +288,38 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
 
 def read_openephys(folder_path, **kwargs):
     """
-    Read 'legacy' or 'binary' Open Ephys formats
+    Read "legacy" or "binary" Open Ephys formats
 
     Parameters
     ----------
     folder_path: str or Path
         Path to openephys folder
-    stream_id: str, optional
-        If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
-        If there are several streams, specify the stream name you want to load.
-    block_index: int, optional
-        If there are several blocks (experiments), specify the block index you want to load.
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
+    stream_id: str, default: None
+        If there are several streams, specify the stream id you want to load
+    stream_name: str, default: None
+        If there are several streams, specify the stream name you want to load
+    block_index: int, default: None
+        If there are several blocks (experiments), specify the block index you want to load
+    all_annotations: bool, default: False
+        Load exhaustively all annotation from neo
+    load_sync_channel : bool, default: False
+        If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
+        If True, the SYNC channel is loaded and can be accessed in the analog signals.
+        For open ephsy binary format only
+    load_sync_timestamps : bool, default: False
+        If True, the synchronized_timestamps are loaded and set as times to the recording.
+        If False (default), only the t_start and sampling rate are set, and timestamps are assumed
+        to be uniform and linearly increasing.
+        For open ephsy binary format only
+    experiment_names: str, list, or None, default: None
+        If multiple experiments are available, this argument allows users to select one
+        or more experiments. If None, all experiements are loaded as blocks.
+        E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
+        For open ephsy binary format only
+    ignore_timestamps_errors: bool, default: False
+        Ignore the discontinuous timestamps errors in neo
+        For open ephsy legacy format only
+
 
     Returns
     -------
@@ -313,13 +338,13 @@ def read_openephys(folder_path, **kwargs):
 
 def read_openephys_event(folder_path, block_index=None):
     """
-    Read Open Ephys events from 'binary' format.
+    Read Open Ephys events from "binary" format.
 
     Parameters
     ----------
     folder_path: str or Path
         Path to openephys folder
-    block_index: int, optional
+    block_index: int, default: None
         If there are several blocks (experiments), specify the block index you want to load.
 
     Returns

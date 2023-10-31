@@ -23,12 +23,13 @@ class PhaseShiftRecording(BasePreprocessor):
     ----------
     recording: Recording
         The recording. It need to have  "inter_sample_shift" in properties.
-    margin_ms: float (default 40)
-        margin in ms for computation
+    margin_ms: float, default: 40.0
+        Margin in ms for computation.
         40ms ensure a very small error when doing chunk processing
-    inter_sample_shift: None or numpy array
-        If "inter_sample_shift" is not in recording.properties
-        we can externaly provide one.
+    inter_sample_shift: None or numpy array, default: None
+        If "inter_sample_shift" is not in recording properties,
+        we can externally provide one.
+
     Returns
     -------
     filter_recording: PhaseShiftRecording

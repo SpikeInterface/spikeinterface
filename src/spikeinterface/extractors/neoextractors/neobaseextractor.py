@@ -167,15 +167,15 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         Parameters
         ----------
-        stream_id : Optional[str], default=None
+        stream_id : Optional[str], default: None
             The ID of the stream to extract from the data.
-        stream_name : Optional[str], default=None
+        stream_name : Optional[str], default: None
             The name of the stream to extract from the data.
-        block_index : Optional[int], default=None
+        block_index : Optional[int], default: None
             The index of the block to extract from the data.
-        all_annotations : bool, default=False
+        all_annotations : bool, default: False
             If True, include all annotations in the extracted data.
-        use_names_as_ids : Optional[bool], default=None
+        use_names_as_ids : Optional[bool], default: None
             If True, use channel names as IDs. Otherwise, use default IDs.
         neo_kwargs : Dict[str, Any]
             Additional keyword arguments to pass to the NeoBaseExtractor for initialization.
@@ -402,10 +402,9 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
         Parameters
         ----------
-        stream_id : str, optional
+        stream_id : str, default: None
             The ID of the stream from which to infer the sampling frequency. If not provided,
-            the function will look for a common sampling frequency across all streams.
-            (default is None)
+            the function will look for a common sampling frequency across all streams
 
         Returns
         -------
@@ -491,7 +490,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         ----------
         segment_index : int
             The index of the segment in which to look for the stream.
-        stream_id : str, optional
+        stream_id : str, default: None
             The ID of the stream from which to infer t_start. If not provided,
             the function will look for streams with a matching sampling frequency.
 

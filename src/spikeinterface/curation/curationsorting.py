@@ -14,10 +14,10 @@ class CurationSorting:
     ----------
     parent_sorting: Recording
         The recording object
-    properties_policy: str
-        Policy used to propagate properties after split and merge operation. If 'keep' the properties will be
-        passed to the new units (if the original units have the same value). If 'remove' the new units will have
-        an empty value for all the properties. Default: 'keep'
+    properties_policy: "keep" | "remove", default: "keep"
+        Policy used to propagate properties after split and merge operation. If "keep" the properties will be
+        passed to the new units (if the original units have the same value). If "remove" the new units will have
+        an empty value for all the properties
     make_graph: bool
         True to keep a Networkx graph instance with the curation history
     Returns

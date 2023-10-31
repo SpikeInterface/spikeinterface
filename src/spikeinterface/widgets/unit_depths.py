@@ -16,12 +16,12 @@ class UnitDepthsWidget(BaseWidget):
     ----------
     waveform_extractor : WaveformExtractor
         The input waveform extractor
-    unit_colors :  dict or None
-        If given, a dictionary with unit ids as keys and colors as values, default None
-    depth_axis : int
-        The dimension of unit_locations that is depth, default 1
-    peak_sign: str (neg/pos/both)
-        Sign of peak for amplitudes, default 'neg'
+    unit_colors :  dict or None, default: None
+        If given, a dictionary with unit ids as keys and colors as values
+    depth_axis : int, default: 1
+        The dimension of unit_locations that is depth
+    peak_sign: "neg" | "pos" | "both", default: "neg"
+        Sign of peak for amplitudes
     """
 
     def __init__(
