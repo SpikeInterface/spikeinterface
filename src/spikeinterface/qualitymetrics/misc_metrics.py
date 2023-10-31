@@ -19,6 +19,7 @@ from ..core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
 )
+from ..curation.curation_tools import _find_duplicated_spikes_keep_first_iterative
 
 try:
     import numba
@@ -1367,7 +1368,7 @@ if HAVE_NUMBA:
             nb_rp_violations[i] += n_v
 
 
-def SD_test(
+def compute_SD_test(
     wvf_extractor: WaveformExtractor, censored_period_ms: float = 4.0, correct_for_drift: bool = True, **kwargs
 ):
     """
@@ -1390,6 +1391,7 @@ def SD_test(
     num_spikes : dict
         The number of spikes, across all segments, for each unit ID.
     """
+    censored_period = int(round(censored_period_ms * 1e-3 * wvf_extractor.sampling_frequency))
 
     spikes_amplitude = compute_spike_amplitudes(wvf_extractor, outputs="by_unit", return_scaled=True, **kwargs)
     noise_levels = get_noise_levels(wvf_extractor.recording, return_scaled=True, method="std")
@@ -1397,7 +1399,9 @@ def SD_test(
 
     SD_test = {}
     for unit_id, spk_amp in spikes_amplitude.items():
-        # TODO: censored period.
+        spike_train = wvf_extractor.sorting.get_unit_spike_train(unit_id).astype(np.int64)
+        censored_indices = _find_duplicated_spikes_keep_first_iterative(spike_train, censored_period)
+        spk_amp = np.delete(spk_amp, censored_indices)
 
         if correct_for_drift:
             unit_std = np.std(np.diff(spk_amp)) / np.sqrt(2)

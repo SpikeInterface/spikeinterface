@@ -34,6 +34,7 @@ from spikeinterface.qualitymetrics import (
     compute_synchrony_metrics,
     compute_firing_ranges,
     compute_amplitude_cv_metrics,
+    compute_SD_test,
 )
 
 
@@ -379,6 +380,13 @@ def test_calculate_drift_metrics(waveform_extractor_simple):
     # assert np.allclose(list(drift_mads_gt.values()), list(drift_mads.values()), rtol=0.05)
 
 
+def test_calculate_SD_test(waveform_extractor_simple):
+    SD_test = compute_SD_test(waveform_extractor_simple)
+
+    print(SD_test)
+    assert False
+
+
 if __name__ == "__main__":
     sim_data = _simulated_data()
     we = _waveform_extractor_simple()
@@ -390,5 +398,6 @@ if __name__ == "__main__":
     # test_calculate_sliding_rp_violations(we)
     # test_calculate_drift_metrics(we)
     # test_synchrony_metrics(we)
-    test_calculate_firing_range(we)
+    # test_calculate_firing_range(we)
     # test_calculate_amplitude_cv_metrics(we)
+    test_calculate_SD_test(we)
