@@ -198,7 +198,7 @@ def ensure_chunk_size(
     chunk_memory: str or None
         must end with "k", "M" or "G"
     total_memory: str or None
-        must endswith "k", "M" or "G"
+        must end with "k", "M" or "G"
     chunk_duration: None or float or str
         Units are second if float.
         If str then the str must contain units(e.g. "1s", "500ms")
