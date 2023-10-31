@@ -22,7 +22,7 @@ def apply_sortingview_curation(
     exclude_labels : list, default: None
         Optional list of labels to exclude (e.g. ["reject", "noise"]).
         Mutually exclusive with include_labels
-    include_labels : list, default:
+    include_labels : list, default: None
         Optional list of labels to include (e.g. ["accept"]).
         Mutually exclusive with exclude_labels,  by default None
     skip_merge : bool, default: False
