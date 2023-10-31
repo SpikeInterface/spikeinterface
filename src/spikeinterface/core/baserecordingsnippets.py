@@ -402,7 +402,7 @@ class BaseRecordingSnippets(BaseExtractor):
 
         Parameters
         ----------
-        axes : str, default: "xy"
+        axes : "xy" | "yz" |"xz", default: "xy"
             The axes to keep
 
         Returns
