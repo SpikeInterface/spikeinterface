@@ -41,25 +41,25 @@ def toy_example(
 
     Parameters
     ----------
-    duration: float (or list if multi segment)
-        Duration in seconds (default 10).
-    num_channels: int
-        Number of channels (default 4).
-    num_units: int
-        Number of units (default 10).
-    sampling_frequency: float
-        Sampling frequency (default 30000).
-    num_segments: int
-        Number of segments (default 2).
-    spike_times: ndarray (or list of multi segment)
-        Spike time in the recording.
-    spike_labels: ndarray (or list of multi segment)
+    duration: float or list[float], default: 10
+        Duration in seconds. If a list is provided, it will be the duration of each segment.
+    num_channels: int, default: 4
+        Number of channels
+    num_units: int, default: 10
+        Number of units
+    sampling_frequency: float, default: 30000
+        Sampling frequency
+    num_segments: int, default: 2
+        Number of segments.
+    spike_times: np.array or list[nparray] or None, default: None
+        Spike time in the recording
+    spike_labels: np.array or list[nparray] or None, default: None
         Cluster label for each spike time (needs to specified both together).
     # score_detection: int (between 0 and 1)
-    #    Generate the sorting based on a subset of spikes compare with the trace generation.
-    firing_rate: float
-        The firing rate for the units (in Hz).
-    seed: int
+    #    Generate the sorting based on a subset of spikes compare with the trace generation
+    firing_rate: float, default: 3.0
+        The firing rate for the units (in Hz)
+    seed: int or None, default: None
         Seed for random initialization.
 
     Returns

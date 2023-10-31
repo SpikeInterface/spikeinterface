@@ -26,25 +26,25 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
     ----------
     recording : BaseRecording
         The parent recording
-    n_channel_pad : int
+    n_channel_pad : int, default: 60
         Number of channels to pad prior to filtering.
         Channels are padded with mirroring.
-        If None, no padding is applied, by default 60
-    n_channel_taper : int
+        If None, no padding is applied
+    n_channel_taper : int, default: 0
         Number of channels to perform cosine tapering on
         prior to filtering. If None and n_channel_pad is set,
         n_channel_taper will be set to the number of padded channels.
-        Otherwise, the passed value will be used, by default None
-    direction : str
-        The direction in which the spatial filter is applied, by default "y"
-    apply_agc : bool
-        It True, Automatic Gain Control is applied, by default True
-    agc_window_length_s : float
-        Window in seconds to compute Hanning window for AGC, by default 0.01
-    highpass_butter_order : int
-        Order of spatial butterworth filter, by default 3
-    highpass_butter_wn : float
-        Critical frequency (with respect to Nyquist) of spatial butterworth filter, by default 0.01
+        Otherwise, the passed value will be used
+    direction : "x" | "y" | "z", default: "y"
+        The direction in which the spatial filter is applied
+    apply_agc : bool, default: True
+        It True, Automatic Gain Control is applied
+    agc_window_length_s : float, default: 0.1
+        Window in seconds to compute Hanning window for AGC
+    highpass_butter_order : int, default: 3
+        Order of spatial butterworth filter
+    highpass_butter_wn : float, default: 0.01
+        Critical frequency (with respect to Nyquist) of spatial butterworth filter
 
     Returns
     -------

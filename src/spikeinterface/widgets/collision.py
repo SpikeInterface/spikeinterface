@@ -13,13 +13,13 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         The collision ground truth comparison object
     templates: array
         template of units
-    mode: 'heatmap' or 'lines'
-        to see collision curves for every pairs ('heatmap') or as lines averaged over pairs.
+    mode: "heatmap" or "lines"
+        to see collision curves for every pairs ("heatmap") or as lines averaged over pairs.
     similarity_bins: array
-        if mode is 'lines', the bins used to average the pairs
+        if mode is "lines", the bins used to average the pairs
     cmap: string
-        colormap used to show averages if mode is 'lines'
-    metric: 'cosine_similarity'
+        colormap used to show averages if mode is "lines"
+    metric: "cosine_similarity"
         metric for ordering
     good_only: True
         keep only the pairs with a non zero accuracy (found templates)
@@ -182,12 +182,12 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
         The collision study object.
     case_keys: list or None
         A selection of cases to plot, if None, then all.
-    metric: 'cosine_similarity'
+    metric: "cosine_similarity"
         metric for ordering
     similarity_bins: array
-        if mode is 'lines', the bins used to average the pairs
+        if mode is "lines", the bins used to average the pairs
     cmap: string
-        colormap used to show averages if mode is 'lines'
+        colormap used to show averages if mode is "lines"
     good_only: False
         keep only the pairs with a non zero accuracy (found templates)
     min_accuracy: float

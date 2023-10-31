@@ -12,17 +12,17 @@ class TemplateSimilarityWidget(BaseWidget):
     ----------
     waveform_extractor : WaveformExtractor
         The object to compute/get template similarity from
-    unit_ids : list
-        List of unit ids default None
-    display_diagonal_values : bool
+    unit_ids : list or None, default: None
+        List of unit ids default: None
+    display_diagonal_values : bool, default: False
         If False, the diagonal is displayed as zeros.
-        If True, the similarity values (all 1s) are displayed, default False
-    cmap : str
-        The matplotlib colormap. Default 'viridis'.
-    show_unit_ticks : bool
-        If True, ticks display unit ids, default False.
-    show_colorbar : bool
-        If True, color bar is displayed, default True.
+        If True, the similarity values (all 1s) are displayed
+    cmap : matplotlib colormap, default: "viridis"
+        The matplotlib colormap
+    show_unit_ticks : bool, default: False
+        If True, ticks display unit ids
+    show_colorbar : bool, default: True
+        If True, color bar is displayed
     """
 
     def __init__(

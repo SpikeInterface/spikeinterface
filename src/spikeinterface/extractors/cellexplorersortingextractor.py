@@ -24,9 +24,9 @@ class CellExplorerSortingExtractor(BaseSorting):
     ----------
     file_path: str | Path
         Path to `.mat` file containing spikes. Usually named `session_id.spikes.cellinfo.mat`
-    sampling_frequency: float | None, optional
+    sampling_frequency: float | None, default: None
         The sampling frequency of the data. If None, it will be extracted from the files.
-    session_info_file_path: str | Path | None, optional
+    session_info_file_path: str | Path | None, default: None
         Path to the `sessionInfo.mat` file. If None, it will be inferred from the file_path.
     """
 

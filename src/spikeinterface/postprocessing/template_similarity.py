@@ -90,9 +90,9 @@ def compute_template_similarity(
         A waveform extractor object
     load_if_exists : bool, default: False
         Whether to load precomputed similarity, if is already exists.
-    method: str
-        Method name ('cosine_similarity')
-    waveform_extractor_other: WaveformExtractor, optional
+    method: str, default: "cosine_similarity"
+        The method to compute the similarity
+    waveform_extractor_other: WaveformExtractor, default: None
         A second waveform extractor object
 
     Returns
@@ -143,7 +143,7 @@ def check_equal_template_with_distribution_overlap(
     template0 , template1=None or numpy array
         The average of each cluster.
         If None, then computed.
-    num_shift: int default 2
+    num_shift: int default: 2
         number of shift on each side to perform.
     quantile_limit: float in [0 1]
         The quantile overlap limit.

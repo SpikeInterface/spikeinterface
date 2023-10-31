@@ -153,12 +153,13 @@ class AmplitudeScalingsCalculator(BaseWaveformExtractorExtension):
         Get computed spike amplitudes.
         Parameters
         ----------
-        outputs : str, optional
-            'concatenated' or 'by_unit', by default 'concatenated'
+        outputs : "concatenated" | "by_unit", default: "concatenated"
+            The output format
+
         Returns
         -------
         spike_amplitudes : np.array or dict
-            The spike amplitudes as an array (outputs='concatenated') or
+            The spike amplitudes as an array (outputs="concatenated") or
             as a dict with units as key and spike amplitudes as values.
         """
         we = self.waveform_extractor
@@ -206,16 +207,16 @@ def compute_amplitude_scalings(
     ----------
     waveform_extractor: WaveformExtractor
         The waveform extractor object
-    sparsity: ChannelSparsity, default: None
+    sparsity: ChannelSparsity or None, default: None
         If waveforms are not sparse, sparsity is required if the number of channels is greater than
         `max_dense_channels`. If the waveform extractor is sparse, its sparsity is automatically used.
     max_dense_channels: int, default: 16
         Maximum number of channels to allow running without sparsity. To compute amplitude scaling using
         dense waveforms, set this to None, sparsity to None, and pass dense waveforms as input.
-    ms_before : float, default: None
+    ms_before : float or None, default: None
         The cut out to apply before the spike peak to extract local waveforms.
         If None, the WaveformExtractor ms_before is used.
-    ms_after : float, default: None
+    ms_after : float or None, default: None
         The cut out to apply after the spike peak to extract local waveforms.
         If None, the WaveformExtractor ms_after is used.
     handle_collisions: bool, default: True
@@ -226,18 +227,16 @@ def compute_amplitude_scalings(
         The maximum time difference in ms before and after a spike to gather colliding spikes.
     load_if_exists : bool, default: False
         Whether to load precomputed spike amplitudes, if they already exist.
-    outputs: str, default: 'concatenated'
-        How the output should be returned:
-            - 'concatenated'
-            - 'by_unit'
+    outputs: "concatenated" | "by_unit", default: "concatenated"
+        How the output should be returned
     {}
 
     Returns
     -------
     amplitude_scalings: np.array or list of dict
         The amplitude scalings.
-            - If 'concatenated' all amplitudes for all spikes and all units are concatenated
-            - If 'by_unit', amplitudes are returned as a list (for segments) of dictionaries (for units)
+            - If "concatenated" all amplitudes for all spikes and all units are concatenated
+            - If "by_unit", amplitudes are returned as a list (for segments) of dictionaries (for units)
     """
     if load_if_exists and waveform_extractor.is_extension(AmplitudeScalingsCalculator.extension_name):
         sac = waveform_extractor.load_extension(AmplitudeScalingsCalculator.extension_name)
@@ -591,9 +590,9 @@ def fit_collision(
 #     ----------
 #     we : WaveformExtractor
 #         The WaveformExtractor object.
-#     sparsity : ChannelSparsity, default=None
+#     sparsity : ChannelSparsity, default: None
 #         The ChannelSparsity. If None, only main channels are plotted.
-#     num_collisions : int, default=None
+#     num_collisions : int, default: None
 #         Number of collisions to plot. If None, all collisions are plotted.
 #     """
 #     assert we.is_extension("amplitude_scalings"), "Could not find amplitude scalings extension!"

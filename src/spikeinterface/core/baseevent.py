@@ -80,14 +80,14 @@ class BaseEvent(BaseExtractor):
 
         Parameters
         ----------
-        channel_id : int or str, optional
-            The event channel id, by default None
-        segment_index : int, optional
-            The segment index, required for multi-segment objects, by default None
-        start_time : float, optional
-            The start time in seconds, by default None
-        end_time : float, optional
-            The end time in seconds, by default None
+        channel_id : int or str, default: None
+            The event channel id
+        segment_index : int or None, default: None
+            The segment index, required for multi-segment objects
+        start_time : float, default: None
+            The start time in seconds
+        end_time : float, default: None
+            The end time in seconds
 
         Returns
         -------
@@ -110,14 +110,14 @@ class BaseEvent(BaseExtractor):
 
         Parameters
         ----------
-        channel_id : int or str, optional
-            The event channel id, by default None
-        segment_index : int, optional
-            The segment index, required for multi-segment objects, by default None
-        start_time : float, optional
-            The start time in seconds, by default None
-        end_time : float, optional
-            The end time in seconds, by default None
+        channel_id : int or str, default: None
+            The event channel id
+        segment_index : int or None, default: None
+            The segment index, required for multi-segment objects
+        start_time : float, default: None
+            The start time in seconds
+        end_time : float, default: None
+            The end time in seconds
 
         Returns
         -------

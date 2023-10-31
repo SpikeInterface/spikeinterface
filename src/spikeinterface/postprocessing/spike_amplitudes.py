@@ -93,13 +93,13 @@ class SpikeAmplitudesCalculator(BaseWaveformExtractorExtension):
 
         Parameters
         ----------
-        outputs : str, optional
-            'concatenated' or 'by_unit', by default 'concatenated'
+        outputs : "concatenated" | "by_unit", default: "concatenated"
+            The output format
 
         Returns
         -------
         spike_amplitudes : np.array or dict
-            The spike amplitudes as an array (outputs='concatenated') or
+            The spike amplitudes as an array (outputs="concatenated") or
             as a dict with units as key and spike amplitudes as values.
         """
         we = self.waveform_extractor
@@ -148,25 +148,20 @@ def compute_spike_amplitudes(
         The waveform extractor object
     load_if_exists : bool, default: False
         Whether to load precomputed spike amplitudes, if they already exist.
-    peak_sign: str
-        The sign to compute maximum channel:
-            - 'neg'
-            - 'pos'
-            - 'both'
+    peak_sign: "neg" | "pos" | "both", default: "neg
+        The sign to compute maximum channel
     return_scaled: bool
         If True and recording has gain_to_uV/offset_to_uV properties, amplitudes are converted to uV.
-    outputs: str
-        How the output should be returned:
-            - 'concatenated'
-            - 'by_unit'
+    outputs: "concatenated" | "by_unit", default: "concatenated"
+        How the output should be returned
     {}
 
     Returns
     -------
     amplitudes: np.array or list of dict
         The spike amplitudes.
-            - If 'concatenated' all amplitudes for all spikes and all units are concatenated
-            - If 'by_unit', amplitudes are returned as a list (for segments) of dictionaries (for units)
+            - If "concatenated" all amplitudes for all spikes and all units are concatenated
+            - If "by_unit", amplitudes are returned as a list (for segments) of dictionaries (for units)
     """
     if load_if_exists and waveform_extractor.is_extension(SpikeAmplitudesCalculator.extension_name):
         sac = waveform_extractor.load_extension(SpikeAmplitudesCalculator.extension_name)

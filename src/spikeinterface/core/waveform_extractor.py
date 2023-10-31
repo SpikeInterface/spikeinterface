@@ -41,9 +41,8 @@ class WaveformExtractor:
     rec_attributes: None or dict
         When recording is None then a minimal dict with some attributes
         is needed.
-    allow_unfiltered: bool
+    allow_unfiltered: bool, default: False
         If true, will accept unfiltered recording.
-        False by default.
     Returns
     -------
     we: WaveformExtractor
@@ -61,7 +60,7 @@ class WaveformExtractor:
 
     >>> # Retrieve
     >>> waveforms = we.get_waveforms(unit_id)
-    >>> template = we.get_template(unit_id, mode='median')
+    >>> template = we.get_template(unit_id, mode="median")
 
     >>> # Load  from folder (in another session)
     >>> we = WaveformExtractor.load(folder)
@@ -650,9 +649,8 @@ class WaveformExtractor:
         rec_attributes: None or dict
             When recording is None then a minimal dict with some attributes
             is needed.
-        allow_unfiltered: bool
+        allow_unfiltered: bool, default: False
             If true, will accept unfiltered recording.
-            False by default.
         """
 
         if recording is None:  # Recordless mode.
@@ -875,15 +873,15 @@ class WaveformExtractor:
         ----------
         folder : str or Path
             The output waveform folder
-        format : str, optional
-            "binary", "zarr", by default "binary"
+        format : "binary" | "zarr", default: "binary"
+            The backend to use for saving the waveforms
         overwrite : bool
-            If True and folder exists, it is deleted, by default False
-        use_relative_path : bool, optional
+            If True and folder exists, it is deleted, default: False
+        use_relative_path : bool, default: False
             If True, the recording and sorting paths are relative to the waveforms folder.
             This allows portability of the waveform folder provided that the relative paths are the same,
-            but forces all the data files to be in the same drive, by default False
-        sparsity : ChannelSparsity, optional
+            but forces all the data files to be in the same drive
+        sparsity : ChannelSparsity, default: None
             If given and WaveformExtractor is not sparse, it makes the returned WaveformExtractor sparse
         """
         folder = Path(folder)
@@ -1050,17 +1048,17 @@ class WaveformExtractor:
         ----------
         unit_id: int or str
             Unit id to retrieve waveforms for
-        with_index: bool
-            If True, spike indices of extracted waveforms are returned (default False)
-        cache: bool
-            If True, waveforms are cached to the self._waveforms dictionary (default False)
-        lazy: bool
+        with_index: bool, default: False
+            If True, spike indices of extracted waveforms are returned
+        cache: bool, default: False
+            If True, waveforms are cached to the self._waveforms dictionary
+        lazy: bool, default: True
             If True, waveforms are loaded as memmap objects (when format="binary") or Zarr datasets
             (when format="zarr").
-            If False, waveforms are loaded as np.array objects (default True)
-        sparsity: ChannelSparsity, optional
+            If False, waveforms are loaded as np.array objects
+        sparsity: ChannelSparsity, default: None
             Sparsity to apply to the waveforms (if WaveformExtractor is not sparse)
-        force_dense: bool (False)
+        force_dense: bool, default: False
             Return dense waveforms even if the waveform extractor is sparse
 
         Returns
@@ -1068,7 +1066,7 @@ class WaveformExtractor:
         wfs: np.array
             The returned waveform (num_spikes, num_samples, num_channels)
         indices: np.array
-            If 'with_index' is True, the spike indices corresponding to the waveforms extracted
+            If "with_index" is True, the spike indices corresponding to the waveforms extracted
         """
         assert unit_id in self.sorting.unit_ids, "'unit_id' is invalid"
         assert self.has_waveforms(), "Waveforms have been deleted!"
@@ -1164,7 +1162,7 @@ class WaveformExtractor:
             The segment index to retrieve waveforms from
         unit_id: int or str
             Unit id to retrieve waveforms for
-        sparsity: ChannelSparsity, optional
+        sparsity: ChannelSparsity, default: None
             Sparsity to apply to the waveforms (if WaveformExtractor is not sparse)
 
         Returns
@@ -1229,8 +1227,8 @@ class WaveformExtractor:
         ----------
         unit_ids: list or None
             Unit ids to retrieve waveforms for
-        mode: str
-            'average' (default) or 'median' , 'std'
+        mode: "average" | "median" | "std", default: "average"
+            The mode to compute the templates
 
         Returns
         -------
@@ -1256,9 +1254,9 @@ class WaveformExtractor:
         ----------
         unit_id: int or str
             Unit id to retrieve waveforms for
-        mode: str
-            'average' (default), 'median' , 'std'(standard deviation)
-        sparsity: ChannelSparsity, optional
+        mode: "average" | "median" | "std", default: "average"
+            The mode to compute the template
+        sparsity: ChannelSparsity, default: None
             Sparsity to apply to the waveforms (if WaveformExtractor is not sparse)
         force_dense: bool (False)
             Return a dense template even if the waveform extractor is sparse
@@ -1314,9 +1312,9 @@ class WaveformExtractor:
             Unit id to retrieve waveforms for
         segment_index: int
             The segment index to retrieve template from
-        mode: str
-            'average'  (default), 'median', 'std'(standard deviation)
-        sparsity: ChannelSparsity, optional
+        mode: "average" | "median" | "std", default: "average"
+            The mode to compute the template
+        sparsity: ChannelSparsity, default: None
             Sparsity to apply to the waveforms (if WaveformExtractor is not sparse).
 
         Returns
@@ -1504,53 +1502,52 @@ def extract_waveforms(
         The recording object
     sorting: Sorting
         The sorting object
-    folder: str or Path or None
+    folder: str or Path or None, default: None
         The folder where waveforms are cached
-    mode: str
-        "folder" (default) or "memory". The "folder" argument must be specified in case of mode "folder".
+    mode: "folder" | "memory, default: "folder"
+        The mode to store waveforms. If "folder", waveforms are stored on disk in the specified folder.
+        The "folder" argument must be specified in case of mode "folder".
         If "memory" is used, the waveforms are stored in RAM. Use this option carefully!
-    precompute_template: None or list
-        Precompute average/std/median for template. If None not precompute.
-    ms_before: float
+    precompute_template: None or list, default: ["average"]
+        Precompute average/std/median for template. If None, no templates are precomputed
+    ms_before: float, default: 1.0
         Time in ms to cut before spike peak
-    ms_after: float
+    ms_after: float, default: 2.0
         Time in ms to cut after spike peak
-    max_spikes_per_unit: int or None
-        Number of spikes per unit to extract waveforms from (default 500).
+    max_spikes_per_unit: int or None, default: 500
+        Number of spikes per unit to extract waveforms from
         Use None to extract waveforms for all spikes
-    overwrite: bool
-        If True and 'folder' exists, the folder is removed and waveforms are recomputed.
+    overwrite: bool, default: False
+        If True and "folder" exists, the folder is removed and waveforms are recomputed
         Otherwise an error is raised.
-    return_scaled: bool
-        If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV.
-    dtype: dtype or None
-        Dtype of the output waveforms. If None, the recording dtype is maintained.
+    return_scaled: bool, default: True
+        If True and recording has gain_to_uV/offset_to_uV properties, waveforms are converted to uV
+    dtype: dtype or None, default: None
+        Dtype of the output waveforms. If None, the recording dtype is maintained
     sparse: bool, default: True
         If True, before extracting all waveforms the `precompute_sparsity()` function is run using
         a few spikes to get an estimate of dense templates to create a ChannelSparsity object.
         Then, the waveforms will be sparse at extraction time, which saves a lot of memory.
         When True, you must some provide kwargs handle `precompute_sparsity()` to control the kind of
         sparsity you want to apply (by radius, by best channels, ...).
-    sparsity: ChannelSparsity or None
+    sparsity: ChannelSparsity or None, default: None
         The sparsity used to compute waveforms. If this is given, `sparse` is ignored. Default None.
     sparsity_temp_folder: str or Path or None, default: None
         If sparse is True, this is the temporary folder where the dense waveforms are temporarily saved.
         If None, dense waveforms are extracted in memory in batches (which can be controlled by the `unit_batch_size`
         parameter. With a large number of units (e.g., > 400), it is advisable to use a temporary folder.
-    num_spikes_for_sparsity: int (default 100)
+    num_spikes_for_sparsity: int, default: 100
         The number of spikes to use to estimate sparsity (if sparse=True).
-    unit_batch_size: int, default 200
+    unit_batch_size: int, default: 200
         The number of units to process at once when extracting dense waveforms (if sparse=True and sparsity_temp_folder
         is None).
     allow_unfiltered: bool
         If true, will accept an allow_unfiltered recording.
-        False by default.
-    use_relative_path: bool
+    use_relative_path: bool, default: False
         If True, the recording and sorting paths are relative to the waveforms folder.
         This allows portability of the waveform folder provided that the relative paths are the same,
         but forces all the data files to be in the same drive.
-        Default is False.
-    seed: int or None
+    seed: int or None, default: None
         Random seed for spike selection
 
     sparsity kwargs:
@@ -1665,11 +1662,11 @@ def load_waveforms(folder, with_recording: bool = True, sorting: Optional[BaseSo
     ----------
     folder : str or Path
         The folder / zarr folder where the waveform extractor is stored
-    with_recording : bool, optional
-        If True, the recording is loaded, by default True.
+    with_recording : bool, default: True
+        If True, the recording is loaded.
         If False, the WaveformExtractor object in recordingless mode.
-    sorting : BaseSorting, optional
-        If passed, the sorting object associated to the waveform extractor, by default None
+    sorting : BaseSorting, default: None
+        If passed, the sorting object associated to the waveform extractor
 
     Returns
     -------
@@ -1701,14 +1698,14 @@ def precompute_sparsity(
         The recording object
     sorting: Sorting
         The sorting object
-    num_spikes_for_sparsity: int, default 100
+    num_spikes_for_sparsity: int, default: 100
         How many spikes per unit
-    unit_batch_size: int or None, default 200
+    unit_batch_size: int or None, default: 200
         How many units are extracted at once to estimate sparsity.
         If None then they are extracted all at one (but uses a lot of memory)
-    ms_before: float, default 2.0
+    ms_before: float, default: 2.0
         Time in ms to cut before spike peak
-    ms_after: float, default 3.0
+    ms_after: float, default: 3.0
         Time in ms to cut after spike peak
     temp_folder: str or Path or None, default: None
         If provided, dense waveforms are saved to this temporary folder

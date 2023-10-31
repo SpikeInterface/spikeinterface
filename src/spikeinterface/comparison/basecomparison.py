@@ -223,7 +223,7 @@ class BasePairComparison(BaseComparison):
     It handles the matching procedurs.
 
     Agreement scores must be computed in inherited classes by overriding the
-    '_do_agreement(self)' function
+    "_do_agreement(self)" function
     """
 
     def __init__(self, object1, object2, name1, name2, match_score=0.5, chance_score=0.1, verbose=False):
