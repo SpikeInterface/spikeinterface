@@ -45,7 +45,7 @@ class BaseExtractor:
         # store init kwargs for nested serialisation
         self._kwargs = {}
 
-        # 'main_ids' will either be channel_ids or units_ids
+        # "main_ids" will either be channel_ids or units_ids
         # They are used for properties
         self._main_ids = np.array(main_ids)
         if len(self._main_ids) > 0:
@@ -91,7 +91,7 @@ class BaseExtractor:
           * data
           * properties
 
-        'prefer_slice' is an efficient option that tries to make a slice object
+        "prefer_slice" is an efficient option that tries to make a slice object
         when indices are consecutive.
 
         """
@@ -172,11 +172,11 @@ class BaseExtractor:
             The property name
         values : np.array
             Array of values for the property
-        ids : list/np.array, optional
-            List of subset of ids to set the values, by default None
-        missing_value : object, optional
-            In case the property is set on a subset of values ('ids' not None),
-            it specifies the how the missing values should be filled, by default None.
+        ids : list/np.array, default: None
+            List of subset of ids to set the values, default: None
+        missing_value : object, default: None
+            In case the property is set on a subset of values ("ids" not None),
+            it specifies the how the missing values should be filled.
             The missing_value has to be specified for types int and unsigned int.
         """
 
@@ -270,8 +270,8 @@ class BaseExtractor:
             If True, only the main annotations/properties are copied.
         ids: list
             List of ids to copy the metadata to. If None, all ids are copied.
-        skip_properties: list
-            List of properties to skip. Default is None.
+        skip_properties: list, default: None
+            List of properties to skip
         """
 
         if ids is None:
@@ -321,18 +321,18 @@ class BaseExtractor:
 
         Parameters
         ----------
-        include_annotations: bool
-            If True, all annotations are added to the dict, by default False
-        include_properties: bool
-            If True, all properties are added to the dict, by default False
-        relative_to: str, Path, or None
-            If not None, files and folders are serialized relative to this path, by default None
+        include_annotations: bool, default: False
+            If True, all annotations are added to the dict
+        include_properties: bool, default: False
+            If True, all properties are added to the dict
+        relative_to: str, Path, or None, default: None
+            If not None, files and folders are serialized relative to this path
             Used in waveform extractor to maintain relative paths to binary files even if the
             containing folder / diretory is moved
         folder_metadata: str, Path, or None
             Folder with numpy `npy` files containing additional information (e.g. probe in BaseRecording) and properties.
-        recursive: bool
-            If True, all dicitionaries in the kwargs are expanded with `to_dict` as well, by default False.
+        recursive: bool, default: False
+            If True, all dicitionaries in the kwargs are expanded with `to_dict` as well
 
         Returns
         -------
@@ -760,7 +760,7 @@ class BaseExtractor:
                     folder (use set_global_tmp_folder() to change this folder) where the object is saved.
               If folder and name are not given, the object is saved in the global temporary folder with
               a random string
-            * dump_ext: 'json' or 'pkl', default 'json' (if format is "folder")
+            * dump_ext: "json" or "pkl", default "json" (if format is "folder")
             * verbose: if True output is verbose
             * **save_kwargs: additional kwargs format-dependent and job kwargs for recording
             {}
@@ -800,7 +800,7 @@ class BaseExtractor:
 
         This replaces the use of the old CacheRecordingExtractor and CacheSortingExtractor.
 
-        There are 2 option for the 'folder' argument:
+        There are 2 option for the "folder" argument:
           * explicit folder: `extractor.save(folder="/path-for-saving/")`
           * explicit sub-folder, implicit base-folder : `extractor.save(name="extarctor_name")`
           * generated: `extractor.save()`
@@ -815,10 +815,10 @@ class BaseExtractor:
         ----------
         name: None str or Path
             Name of the subfolder in get_global_tmp_folder()
-            If 'name' is given, 'folder' must be None.
+            If "name" is given, "folder" must be None.
         folder: None str or Path
             Name of the folder.
-            If 'folder' is given, 'name' must be None.
+            If "folder" is given, "name" must be None.
 
         Returns
         -------
@@ -885,21 +885,22 @@ class BaseExtractor:
 
         Parameters
         ----------
-        name: str or None
+        name: str or None, default: None
             Name of the subfolder in get_global_tmp_folder()
-            If 'name' is given, 'folder' must be None.
-        folder: str, Path, or None
-            The folder used to save the zarr output. If the folder does not have a '.zarr' suffix,
+            If "name" is given, "folder" must be None.
+        folder: str, Path, or None, default: None
+            The folder used to save the zarr output. If the folder does not have a ".zarr" suffix,
             it will be automatically appended.
-        storage_options: dict or None
+        storage_options: dict or None, default: None
             Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
             For cloud storage locations, this should not be None (in case of default values, use an empty dict)
-        channel_chunk_size: int or None
-            Channels per chunk. Default None (chunking in time only)
-        verbose: bool
-            If True (default), the output is verbose.
-        zarr_path: str, Path, or None
-            (Deprecated) Name of the zarr folder (.zarr).
+        channel_chunk_size: int or None, default: None
+            Channels per chunk
+        verbose: bool, default: True
+            If True, the output is verbose
+        zarr_path: str, Path, or None, default: None
+            (Deprecated) Name of the zarr folder (.zarr)
+        **save_kwargs: Keyword arguments for saving.
 
         Returns
         -------

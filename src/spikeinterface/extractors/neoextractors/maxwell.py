@@ -20,15 +20,15 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     file_path: str
         The file path to the maxwell h5 file.
-    stream_id: str, optional
+    stream_id: str, default: None
         If there are several streams, specify the stream id you want to load.
         For MaxTwo when there are several wells at the same time you
         need to specify stream_id='well000' or 'well0001', etc.
-    stream_name: str, optional
+    stream_name: str, default: None
         If there are several streams, specify the stream name you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
-    rec_name: str, optional
+    rec_name: str, default: None
         When the file contains several recordings you need to specify the one
         you want to extract. (rec_name='rec0000').
     install_maxwell_plugin: bool, default: False

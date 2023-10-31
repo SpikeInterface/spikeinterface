@@ -47,17 +47,17 @@ class OpenEphysLegacyRecordingExtractor(NeoBaseRecordingExtractor):
     Parameters
     ----------
     folder_path: str
-        The folder path to load the recordings from.
-    stream_id: str, optional
-        If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
-        If there are several streams, specify the stream name you want to load.
-    block_index: int, optional
-        If there are several blocks (experiments), specify the block index you want to load.
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
-    ignore_timestamps_errors: bool (default False)
-        Ignore the discontinuous timestamps errors in neo.
+        The folder path to load the recordings from
+    stream_id: str, default: None
+        If there are several streams, specify the stream id you want to load
+    stream_name: str, default: None
+        If there are several streams, specify the stream name you want to load
+    block_index: int, default: None
+        If there are several blocks (experiments), specify the block index you want to load
+    all_annotations: bool, default: False
+        Load exhaustively all annotation from neo
+    ignore_timestamps_errors: bool, default: False
+        Ignore the discontinuous timestamps errors in neo
     """
 
     mode = "folder"
@@ -105,26 +105,26 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
     Parameters
     ----------
     folder_path: str
-        The folder path to the root folder (containing the record node folders).
-    load_sync_channel : bool
-        If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
+        The folder path to the root folder (containing the record node folders)
+    load_sync_channel : bool, default: False
+        If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded
         If True, the SYNC channel is loaded and can be accessed in the analog signals.
-    load_sync_timestamps : bool
+    load_sync_timestamps : bool, default: False
         If True, the synchronized_timestamps are loaded and set as times to the recording.
         If False (default), only the t_start and sampling rate are set, and timestamps are assumed
-        to be uniform and linearly increasing.
-    experiment_names: str, list, or None
+        to be uniform and linearly increasing
+    experiment_names: str, list, or None, default: None
         If multiple experiments are available, this argument allows users to select one
         or more experiments. If None, all experiements are loaded as blocks.
-        E.g. 'experiment_names="experiment2"', 'experiment_names=["experiment1", "experiment2"]'
-    stream_id: str, optional
-        If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
-        If there are several streams, specify the stream name you want to load.
-    block_index: int, optional
-        If there are several blocks (experiments), specify the block index you want to load.
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
+        E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
+    stream_id: str, default: None
+        If there are several streams, specify the stream id you want to load
+    stream_name: str, default: None
+        If there are several streams, specify the stream name you want to load
+    block_index: int, default: None
+        If there are several blocks (experiments), specify the block index you want to load
+    all_annotations: bool, default: False
+        Load exhaustively all annotation from neo
 
     """
 
@@ -288,20 +288,38 @@ class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
 
 def read_openephys(folder_path, **kwargs):
     """
-    Read 'legacy' or 'binary' Open Ephys formats
+    Read "legacy" or "binary" Open Ephys formats
 
     Parameters
     ----------
     folder_path: str or Path
         Path to openephys folder
-    stream_id: str, optional
-        If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
-        If there are several streams, specify the stream name you want to load.
-    block_index: int, optional
-        If there are several blocks (experiments), specify the block index you want to load.
-    all_annotations: bool  (default False)
-        Load exhaustively all annotation from neo.
+    stream_id: str, default: None
+        If there are several streams, specify the stream id you want to load
+    stream_name: str, default: None
+        If there are several streams, specify the stream name you want to load
+    block_index: int, default: None
+        If there are several blocks (experiments), specify the block index you want to load
+    all_annotations: bool, default: False
+        Load exhaustively all annotation from neo
+    load_sync_channel : bool, default: False
+        If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
+        If True, the SYNC channel is loaded and can be accessed in the analog signals.
+        For open ephsy binary format only
+    load_sync_timestamps : bool, default: False
+        If True, the synchronized_timestamps are loaded and set as times to the recording.
+        If False (default), only the t_start and sampling rate are set, and timestamps are assumed
+        to be uniform and linearly increasing.
+        For open ephsy binary format only
+    experiment_names: str, list, or None, default: None
+        If multiple experiments are available, this argument allows users to select one
+        or more experiments. If None, all experiements are loaded as blocks.
+        E.g. `experiment_names="experiment2"`, `experiment_names=["experiment1", "experiment2"]`
+        For open ephsy binary format only
+    ignore_timestamps_errors: bool, default: False
+        Ignore the discontinuous timestamps errors in neo
+        For open ephsy legacy format only
+
 
     Returns
     -------
@@ -320,13 +338,13 @@ def read_openephys(folder_path, **kwargs):
 
 def read_openephys_event(folder_path, block_index=None):
     """
-    Read Open Ephys events from 'binary' format.
+    Read Open Ephys events from "binary" format.
 
     Parameters
     ----------
     folder_path: str or Path
         Path to openephys folder
-    block_index: int, optional
+    block_index: int, default: None
         If there are several blocks (experiments), specify the block index you want to load.
 
     Returns

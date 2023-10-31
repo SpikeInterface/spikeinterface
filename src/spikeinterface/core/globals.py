@@ -1,7 +1,7 @@
 """
-'global_tmp_folder' is a variable that is generated or can be set manually.
+"global_tmp_folder" is a variable that is generated or can be set manually.
 
-It is useful when we do extractor.save(name='name').
+It is useful when we do extractor.save(name="name").
 """
 
 import tempfile

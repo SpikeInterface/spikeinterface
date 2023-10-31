@@ -1,12 +1,3 @@
-# This is kept in 0.97.0 and then will be removed
-from .template_tools import (
-    get_template_amplitudes,
-    get_template_extremum_channel,
-    get_template_extremum_channel_peak_shift,
-    get_template_extremum_amplitude,
-    get_template_channel_sparsity,
-)
-
 from .template_metrics import (
     TemplateMetricsCalculator,
     compute_template_metrics,

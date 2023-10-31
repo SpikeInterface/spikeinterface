@@ -19,18 +19,24 @@ class SortingSummaryWidget(BaseWidget):
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
-        The waveform extractor object.
-    sparsity : ChannelSparsity or None
-        Optional ChannelSparsity to apply, default None
+        The waveform extractor object
+    unit_ids : list or None, default: None
+        List of unit ids
+    sparsity : ChannelSparsity or None, default: None
+        Optional ChannelSparsity to apply
         If WaveformExtractor is already sparse, the argument is ignored
-    max_amplitudes_per_unit : int or None
-        Maximum number of spikes per unit for plotting amplitudes,
-        by default None (all spikes)
-    curation : bool
-        If True, manual curation is enabled, by default False
+    max_amplitudes_per_unit : int or None, default: None
+        Maximum number of spikes per unit for plotting amplitudes.
+        If None, all spikes are plotted
+    curation : bool, default: False
+        If True, manual curation is enabled
         (sortingview backend)
-    unit_table_properties : list or None
-        List of properties to be added to the unit table, by default None
+    unit_table_properties : list or None, default: None
+        List of properties to be added to the unit table
+    label_choices : list or None, default: None
+        List of labels to be added to the curation table
+    unit_table_properties : list or None, default: None
+        List of properties to be added to the unit table
         (sortingview backend)
     """
 

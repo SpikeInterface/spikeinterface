@@ -19,9 +19,9 @@ class BlackrockRecordingExtractor(NeoBaseRecordingExtractor):
     ----------
     file_path: str
         The file path to load the recordings from.
-    stream_id: str, optional
+    stream_id: str, default: None
         If there are several streams, specify the stream id you want to load.
-    stream_name: str, optional
+    stream_name: str, default: None
         If there are several streams, specify the stream name you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
@@ -74,14 +74,14 @@ class BlackrockSortingExtractor(NeoBaseSortingExtractor):
     Parameters
     ----------
     file_path: str
-        The file path to load the recordings from.
-    sampling_frequency: float, None by default.
+        The file path to load the recordings from
+    sampling_frequency: float, default: None
         The sampling frequency for the sorting extractor. When the signal data is available (.ncs) those files will be
         used to extract the frequency automatically. Otherwise, the sampling frequency needs to be specified for
-        this extractor to be initialized.
-    stream_id: str, optional
+        this extractor to be initialized
+    stream_id: str, default: None
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
-    stream_name: str, optional
+    stream_name: str, default: None
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
     """
 

@@ -25,22 +25,22 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
     ----------
     sorting_list: list
         List of sorting extractor objects to be compared
-    name_list: list
-        List of spike sorter names. If not given, sorters are named as 'sorter0', 'sorter1', 'sorter2', etc.
-    delta_time: float
-        Number of ms to consider coincident spikes (default 0.4 ms)
-    match_score: float
-        Minimum agreement score to match units (default 0.5)
-    chance_score: float
-        Minimum agreement score to for a possible match (default 0.1)
-    n_jobs: int
+    name_list: list, default: None
+        List of spike sorter names. If not given, sorters are named as "sorter0", "sorter1", "sorter2", etc.
+    delta_time: float, default: 0.4
+        Number of ms to consider coincident spikes
+    match_score: float, default: 0.5
+        Minimum agreement score to match units
+    chance_score: float, default: 0.1
+        Minimum agreement score to for a possible match
+    n_jobs: int, default: -1
        Number of cores to use in parallel. Uses all available if -1
-    spiketrain_mode: str
+    spiketrain_mode: "union" | "intersection", default: "union"
         Mode to extract agreement spike trains:
-            - 'union': spike trains are the union between the spike trains of the best matching two sorters
-            - 'intersection': spike trains are the intersection between the spike trains of the
+            - "union": spike trains are the union between the spike trains of the best matching two sorters
+            - "intersection": spike trains are the intersection between the spike trains of the
                best matching two sorters
-    verbose: bool
+    verbose: bool, default: False
         if True, output is verbose
 
     Returns
@@ -156,15 +156,15 @@ class MultiSortingComparison(BaseMultiComparison, MixinSpikeTrainComparison):
 
     def get_agreement_sorting(self, minimum_agreement_count=1, minimum_agreement_count_only=False):
         """
-        Returns AgreementSortingExtractor with units with a 'minimum_matching' agreement.
+        Returns AgreementSortingExtractor with units with a "minimum_matching" agreement.
 
         Parameters
         ----------
         minimum_agreement_count: int
             Minimum number of matches among sorters to include a unit.
         minimum_agreement_count_only: bool
-            If True, only units with agreement == 'minimum_matching' are included.
-            If False, units with an agreement >= 'minimum_matching' are included
+            If True, only units with agreement == "minimum_matching" are included.
+            If False, units with an agreement >= "minimum_matching" are included
 
         Returns
         -------
@@ -309,13 +309,13 @@ class MultiTemplateComparison(BaseMultiComparison, MixinTemplateComparison):
     ----------
     waveform_list: list
         List of waveform extractor objects to be compared
-    name_list: list
-        List of session names. If not given, sorters are named as 'sess0', 'sess1', 'sess2', etc.
-    match_score: float
-        Minimum agreement score to match units (default 0.5)
-    chance_score: float
-        Minimum agreement score to for a possible match (default 0.1)
-    verbose: bool
+    name_list: list, default: None
+        List of session names. If not given, sorters are named as "sess0", "sess1", "sess2", etc.
+    match_score: float, default: 0.8
+        Minimum agreement score to match units
+    chance_score: float, default: 0.3
+        Minimum agreement score to for a possible match
+    verbose: bool, default: False
         if True, output is verbose
 
     Returns

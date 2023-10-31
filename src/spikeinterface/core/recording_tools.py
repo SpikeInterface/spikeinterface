@@ -23,16 +23,19 @@ def get_random_data_chunks(
     ----------
     recording: BaseRecording
         The recording to get random chunks from
-    return_scaled: bool
+    return_scaled: bool, default: False
         If True, returned chunks are scaled to uV
-    num_chunks_per_segment: int
+    num_chunks_per_segment: int, default: 20
         Number of chunks per segment
-    chunk_size: int
+    chunk_size: int, default: 10000
         Size of a chunk in number of frames
-    concatenated: bool (default True)
-        If True chunk are concatenated along time axis.
-    seed: int
+    concatenated: bool, default: True
+        If True chunk are concatenated along time axis
+    seed: int, default: 0
         Random seed
+    margin_frames: int, default: 0
+        Margin in number of frames to avoid edge effects
+
     Returns
     -------
     chunk_list: np.array
@@ -98,7 +101,7 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
         The recording extractor to get closest channels
     channel_ids: list
         List of channels ids to compute there near neighborhood
-    num_channels: int, optional
+    num_channels: int, default: None
         Maximum number of neighborhood channels to return
 
     Returns
@@ -135,7 +138,7 @@ def get_noise_levels(
 ):
     """
     Estimate noise for each channel using MAD methods.
-    You can use standard deviation with `method='std'`
+    You can use standard deviation with `method="std"`
 
     Internally it samples some chunk across segment.
     And then, it use MAD estimator (more robust than STD)
@@ -147,8 +150,8 @@ def get_noise_levels(
         The recording extractor to get noise levels
     return_scaled: bool
         If True, returned noise levels are scaled to uV
-    method: str
-        'mad' or 'std'
+    method: "mad" | "std", default: "mad"
+        The method to use to estimate noise levels
     force_recompute: bool
         If True, noise levels are recomputed even if they are already stored in the recording extractor
     random_chunk_kwargs: dict
@@ -312,10 +315,10 @@ def order_channels_by_depth(recording, channel_ids=None, dimensions=("x", "y"), 
         The input recording
     channel_ids : list/array or None
         If given, a subset of channels to order locations for
-    dimensions : str, tuple, or list
+    dimensions : str, tuple, or list, default: ('x', 'y')
         If str, it needs to be 'x', 'y', 'z'.
         If tuple or list, it sorts the locations in two dimensions using lexsort.
-        This approach is recommended since there is less ambiguity, by default ('x', 'y')
+        This approach is recommended since there is less ambiguity
     flip: bool, default: False
         If flip is False then the order is bottom first (starting from tip of the probe).
         If flip is True then the order is upper first.

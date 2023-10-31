@@ -22,21 +22,21 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
 
     Based on :py:class:`neo.rawio.SpikeGLXRawIO`
 
-    Contrary to older verion this reader is folder based.
-    So if the folder contain several streams ('imec0.ap' 'nidq' 'imec0.lf')
-    then it has to be specified with 'stream_id'.
+    Contrary to older verions, this reader is folder-based.
+    If the folder contains several streams (e.g., "imec0.ap", "nidq" ,"imec0.lf"),
+    then the stream has to be specified with "stream_id" or "stream_name".
 
     Parameters
     ----------
     folder_path: str
         The folder path to load the recordings from.
-    load_sync_channel: bool default False
+    load_sync_channel: bool default: False
         Whether or not to load the last channel in the stream, which is typically used for synchronization.
         If True, then the probe is not loaded.
-    stream_id: str, optional
+    stream_id: str or None, default: None
         If there are several streams, specify the stream id you want to load.
-        For example, 'imec0.ap' 'nidq' or 'imec0.lf'.
-    stream_name: str, optional
+        For example, "imec0.ap", "nidq", or "imec0.lf".
+    stream_name: str or None, default: None
         If there are several streams, specify the stream name you want to load.
     all_annotations: bool, default: False
         Load exhaustively all annotations from neo.
