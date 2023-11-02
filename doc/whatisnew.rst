@@ -39,6 +39,7 @@ Version 0.99.0
 * Added DeepInterpolation training, transfer, and inference to preprocessing
 * Added new quality_metrics (syncrhrony, firing_range, amplitude_cv)
 * Added new template metrics (num positive/negative peaks + multi-channel metrics: velocities, spread, exp. decay)
+* Important improvements to internal sorters (especially Spyking Circus 2)
 * Ported all widgets to "new" API and dismantled legacy widgets
 * Extensive clean-up of docstrings, code style, and documentation
 

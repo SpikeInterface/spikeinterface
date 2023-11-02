@@ -11,6 +11,7 @@ Main changes:
 * Added DeepInterpolation training, transfer, and inference to preprocessing
 * Added new quality_metrics (syncrhrony, firing_range, amplitude_cv)
 * Added new template metrics (num positive/negative peaks + multi-channel metrics: velocities, spread, exp. decay)
+* Important improvements to internal sorters (especially Spyking Circus 2)
 * Ported all widgets to "new" API and dismantled legacy widgets
 * Extensive clean-up of docstrings, code style, and documentation
 
@@ -31,8 +32,8 @@ core:
 * Check that main_ids are str or int (#2061)
 * Change some default parameters for better user experience (#2071)
 * Fix NoiseGeneratorRecording : "noise_level" in kwargs (#2084)
-* Add sparsity_temp_folder option to extract_waveforms (#2133: TBM)
-* Re-add relative_to to dump_to_pickle (#2129: TBM)
+* Add sparsity_temp_folder option to extract_waveforms (#2133)
+* Re-add relative_to to dump_to_pickle (#2129)
 
 
 extractors:
@@ -45,14 +46,14 @@ extractors:
 * CellExplorer: fix tests and deprecation (#2048)
 * Patch with scipy for remove_artefacts when mode is linear/cubic (#2072)
 * Fix grouping of OpenEphys NPIX  extractors (#2102)
-* Fix open ephys probe loading and unify probeinterface import syntax (#2136: TBM)
+* Fix open ephys probe loading and unify probeinterface import syntax (#2136)
 
 
 preprocessing:
 
 * Deepinterpolation revived: training, transfer, and inference with more flexibility (#1804)
 * Patch silence_periods for mono-segment recordings (#1946)
-* Fix zero_channel_pad case when selected frames are outside of original data region (#1979: TBM)
+* Fix zero_channel_pad case when selected frames are outside of original data region (#1979)
 * Improve detect_bad_channels defaults and fixes (#2003)
 * Add an option to flip the order by depth (#2005)
 * Update a test expression to remove two logical short circuits in remove_artifacts (#2025)
@@ -69,6 +70,7 @@ sorters:
 * Refactor sorter launcher. Deprecated run_sorters() and add run_sorter_jobs() (#1968)
 * Fixes Apptainer bug (#2053)
 * Use versioned kilosort options as default in skip_preprocessed_data (#2108)
+* Mountainsort5 version check fix (#2150)
 
 postprocessing:
 
@@ -78,6 +80,7 @@ postprocessing:
 * Refactor ISI calculation numpy and numba (#1958)
 * Extend and refactor waveform metrics, including multi-channel metrics (#1993)
 * Use default cutouts for peak-sign test (#2121)
+* Remove postprocessing template_tools (#2145)
 
 qualitymetrics:
 
@@ -102,6 +105,7 @@ exporters:
 
 * Fix bug in export_to_phy with sparsity (#1904)
 * Allow relative path for export_to_phy (#2041)
+* Change phy exporter to not save template_ind in the case of dense waveform_extractor (#2148)
 
 widgets:
 
@@ -109,6 +113,7 @@ widgets:
 * For connoisseur only: add a simple "ephyviewer" backend plot_traces() (#2024)
 * Improve ipywidgets backend (#2035, #2079, #2091)
 * Improved GTStudy and related widgets (#2128)
+* Add assert error in the case of unichannel data for sortingview backend + minor clarifications (#2149)
 
 sortingcomponents:
 
@@ -122,7 +127,8 @@ docs:
 * Add "how to" section on how to load matlab data (#2018, #2047)
 * Add link to latest pypi version docs in readme (#2060)
 * Improve assert messages (#2078, #2109, #2119)
-* Unify 'defaults' and use of quotations across docsrtings (#2134: TBM)
+* Unify 'defaults' and use of quotations across docstrings (#2134)
+* Add Docstring section to development docs (#2138)
 
 
 ci / packaging / tests:
@@ -134,4 +140,4 @@ ci / packaging / tests:
 * Add SPIKEINTERFACE_DEV_PATH to aws gpu tests (#2088)
 * Fix git-annex installation (#2097)
 * Add actual test for check_your_install (#2112)
-* Add quality_metrics specific module requirements to pyproject.toml (#2135: TBM)
+* Add quality_metrics specific module requirements to pyproject.toml (#2135)
