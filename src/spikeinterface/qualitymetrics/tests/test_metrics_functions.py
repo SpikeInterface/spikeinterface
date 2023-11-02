@@ -383,9 +383,8 @@ def test_calculate_drift_metrics(waveform_extractor_simple):
 def test_calculate_sd_ratio(waveform_extractor_simple):
     sd_ratio = compute_sd_ratio(waveform_extractor_simple)
 
-    assert len(sd_ratio) == waveform_extractor_simple.get_num_segments()
-    assert np.all(list(sd_ratio[0].keys()) == waveform_extractor_simple.unit_ids)
-    assert np.allclose(np.array(list(sd_ratio[0].values())), 1, atol=0.5, rtol=0)
+    assert np.all(list(sd_ratio.keys()) == waveform_extractor_simple.unit_ids)
+    assert np.allclose(np.array(list(sd_ratio.values())), 1, atol=0.5, rtol=0)
 
 
 if __name__ == "__main__":

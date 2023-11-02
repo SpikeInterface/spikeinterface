@@ -1404,25 +1404,23 @@ def compute_sd_ratio(
     noise_levels = get_noise_levels(wvf_extractor.recording, return_scaled=True, method="std")
     best_channels = get_template_extremum_channel(wvf_extractor, outputs="index", **kwargs)
 
-    sd_ratio = []
-    for segment_index in range(len(spikes_amplitude)):
-        sd_ratio.append({})
+    sd_ratio = {}
+    for unit_id in unit_ids:
+        spk_amp = []
 
-        for unit_id, spk_amp in spikes_amplitude[segment_index].items():
-            if unit_id not in unit_ids:
-                continue
-
+        for segment_index in range(wvf_extractor.get_num_segments()):
             spike_train = wvf_extractor.sorting.get_unit_spike_train(unit_id, segment_index=segment_index).astype(
                 np.int64
             )
             censored_indices = _find_duplicated_spikes_keep_first_iterative(spike_train, censored_period)
-            spk_amp = np.delete(spk_amp, censored_indices)
+            spk_amp.append(np.delete(spikes_amplitude[segment_index][unit_id], censored_indices))
+        spk_amp = np.concatenate([spk_amp[i] for i in range(len(spk_amp))])
 
-            if correct_for_drift:
-                unit_std = np.std(np.diff(spk_amp)) / np.sqrt(2)
-            else:
-                unit_std = np.std(spk_amp)
+        if correct_for_drift:
+            unit_std = np.std(np.diff(spk_amp)) / np.sqrt(2)
+        else:
+            unit_std = np.std(spk_amp)
 
-            sd_ratio[segment_index][unit_id] = unit_std / noise_levels[best_channels[unit_id]]
+        sd_ratio[unit_id] = unit_std / noise_levels[best_channels[unit_id]]
 
     return sd_ratio
