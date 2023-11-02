@@ -1417,7 +1417,9 @@ def compute_sd_ratio(
         )
         return {unit_id: np.nan for unit_id in unit_ids}
 
-    noise_levels = get_noise_levels(wvf_extractor.recording, return_scaled=amplitudes_ext._params['return_scaled'], method="std")
+    noise_levels = get_noise_levels(
+        wvf_extractor.recording, return_scaled=amplitudes_ext._params["return_scaled"], method="std"
+    )
     best_channels = get_template_extremum_channel(wvf_extractor, outputs="index", **kwargs)
 
     sd_ratio = {}
