@@ -1406,6 +1406,13 @@ def compute_sd_ratio(
     if unit_ids is None:
         unit_ids = wvf_extractor.unit_ids
 
+    if not wvf_extractor.has_recording():
+        warnings.warn(
+            "The `sd_ratio` metric cannot work with a recordless WaveformExtractor object"
+            "SD ratio metric will be set to NaN"
+        )
+        return {unit_id: np.nan for unit_id in unit_ids}
+
     if wvf_extractor.is_extension("spike_amplitudes"):
         amplitudes_ext = wvf_extractor.load_extension("spike_amplitudes")
         spike_amplitudes = amplitudes_ext.get_data(outputs="by_unit")
