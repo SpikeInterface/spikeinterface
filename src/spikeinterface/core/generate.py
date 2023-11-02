@@ -346,7 +346,7 @@ def synthesize_random_firings(
         The firing rate of each unit (in Hz).
         If float, all units will have the same firing rate.
     add_shift_shuffle: bool, default: False
-        Optionaly add a small shuffle on half of the spikes to make the autocorrelogram less flat.
+        Optionally add a small shuffle on half of the spikes to make the autocorrelogram less flat.
     seed: int, default: None
         seed for the generator
 
