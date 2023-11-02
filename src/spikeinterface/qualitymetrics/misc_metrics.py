@@ -1383,7 +1383,8 @@ def compute_SD_test(
         If True, will subtract the amplitudes sequentiially to significantly reduce the impact of drift.
     **kwargs:
         Keyword arguments for computing spike amplitudes and extremum channel.
-    TODO: possibly remove spikes when computing noise?
+    TODO: Possibly remove spikes when computing noise?
+    TODO: Take jitter into account.
 
     Returns
     -------

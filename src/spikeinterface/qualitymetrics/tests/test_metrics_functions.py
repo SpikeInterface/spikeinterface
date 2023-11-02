@@ -71,7 +71,7 @@ def _simulated_data():
 
 
 def _waveform_extractor_simple():
-    recording, sorting = toy_example(duration=50, seed=10)
+    recording, sorting = toy_example(duration=80, seed=10)
     recording = recording.save(folder=cache_folder / "rec1")
     sorting = sorting.save(folder=cache_folder / "sort1")
     folder = cache_folder / "waveform_folder1"
