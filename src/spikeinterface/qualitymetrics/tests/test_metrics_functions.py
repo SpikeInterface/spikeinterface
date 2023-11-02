@@ -34,7 +34,7 @@ from spikeinterface.qualitymetrics import (
     compute_synchrony_metrics,
     compute_firing_ranges,
     compute_amplitude_cv_metrics,
-    compute_SD_test,
+    compute_sd_ratio,
 )
 
 
@@ -380,12 +380,12 @@ def test_calculate_drift_metrics(waveform_extractor_simple):
     # assert np.allclose(list(drift_mads_gt.values()), list(drift_mads.values()), rtol=0.05)
 
 
-def test_calculate_SD_test(waveform_extractor_simple):
-    SD_test = compute_SD_test(waveform_extractor_simple)
+def test_calculate_sd_ratio(waveform_extractor_simple):
+    sd_ratio = compute_sd_ratio(waveform_extractor_simple)
 
-    assert len(SD_test) == waveform_extractor_simple.get_num_segments()
-    assert np.all(list(SD_test[0].keys()) == waveform_extractor_simple.unit_ids)
-    assert np.allclose(np.array(list(SD_test[0].values())), 1, atol=0.5, rtol=0)
+    assert len(sd_ratio) == waveform_extractor_simple.get_num_segments()
+    assert np.all(list(sd_ratio[0].keys()) == waveform_extractor_simple.unit_ids)
+    assert np.allclose(np.array(list(sd_ratio[0].values())), 1, atol=0.5, rtol=0)
 
 
 if __name__ == "__main__":
@@ -401,4 +401,4 @@ if __name__ == "__main__":
     # test_synchrony_metrics(we)
     # test_calculate_firing_range(we)
     # test_calculate_amplitude_cv_metrics(we)
-    test_calculate_SD_test(we)
+    test_calculate_sd_ratio(we)

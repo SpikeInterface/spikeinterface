@@ -1367,8 +1367,8 @@ if HAVE_NUMBA:
             nb_rp_violations[i] += n_v
 
 
-def compute_SD_test(
-    wvf_extractor: WaveformExtractor, censored_period_ms: float = 4.0, correct_for_drift: bool = True, **kwargs
+def compute_sd_ratio(
+    wvf_extractor: WaveformExtractor, censored_period_ms: float = 4.0, correct_for_drift: bool = True, unit_ids=None, **kwargs
 ):
     """
     Computes the SD (Standard Deviation) of each unit spikes amplitude, and compare it to that of noise.
@@ -1381,6 +1381,8 @@ def compute_SD_test(
         The censored period in milliseconds. This is to remove any potential bursts that could affect the SD.
     correct_for_drift: bool
         If True, will subtract the amplitudes sequentiially to significantly reduce the impact of drift.
+    unit_ids : list or None
+        The list of unit ids to compute this metric. If None, all units are used.
     **kwargs:
         Keyword arguments for computing spike amplitudes and extremum channel.
     TODO: Possibly remove spikes when computing noise?
@@ -1395,16 +1397,21 @@ def compute_SD_test(
     from ..curation.curation_tools import _find_duplicated_spikes_keep_first_iterative
 
     censored_period = int(round(censored_period_ms * 1e-3 * wvf_extractor.sampling_frequency))
+    if unit_ids is None:
+        unit_ids = wvf_extractor.unit_ids
 
     spikes_amplitude = compute_spike_amplitudes(wvf_extractor, outputs="by_unit", return_scaled=True, **kwargs)
     noise_levels = get_noise_levels(wvf_extractor.recording, return_scaled=True, method="std")
     best_channels = get_template_extremum_channel(wvf_extractor, outputs="index", **kwargs)
 
-    SD_test = []
+    sd_ratio = []
     for segment_index in range(len(spikes_amplitude)):
-        SD_test.append({})
+        sd_ratio.append({})
 
         for unit_id, spk_amp in spikes_amplitude[segment_index].items():
+            if unit_id not in unit_ids:
+                continue
+
             spike_train = wvf_extractor.sorting.get_unit_spike_train(unit_id, segment_index=segment_index).astype(
                 np.int64
             )
@@ -1416,6 +1423,6 @@ def compute_SD_test(
             else:
                 unit_std = np.std(spk_amp)
 
-            SD_test[segment_index][unit_id] = unit_std / noise_levels[best_channels[unit_id]]
+            sd_ratio[segment_index][unit_id] = unit_std / noise_levels[best_channels[unit_id]]
 
-    return SD_test
+    return sd_ratio

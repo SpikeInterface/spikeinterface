@@ -1,4 +1,4 @@
-Standard Deviation (SD) test (:code:`SD_test`)
+Standard Deviation (SD) ratio (:code:`sd_ratio`)
 ==============================================
 
 Calculation
@@ -18,7 +18,7 @@ Also to remove the effect of bursts (which can have lower amplitudes), you can s
 Expectation and use
 -------------------
 
-For a unit representing a single neuron, this test should return a value close to one. However for unit that are contaminated, the value can be significantly higher.
+For a unit representing a single neuron, this metric should return a value close to one. However for unit that are contaminated, the value can be significantly higher.
 
 
 Example code
@@ -28,7 +28,7 @@ Example code
 
 	import spikeinterface.qualitymetrics as sqm
 
-	SD_test = sqm.SD_test(wvf_extractor, censored_period_ms=4.0)
+	sd_ratio = sqm.compute_sd_ratio(wvf_extractor, censored_period_ms=4.0)
 
 
 Literature

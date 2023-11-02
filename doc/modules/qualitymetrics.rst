@@ -40,7 +40,7 @@ For more details about each metric and it's availability and use within SpikeInt
   qualitymetrics/snr
   qualitymetrics/noise_cutoff
   qualitymetrics/silhouette_score
-  qualitymetrics/sd_test
+  qualitymetrics/sd_ratio
   qualitymetrics/synchrony
 
 
