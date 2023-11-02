@@ -12,7 +12,7 @@ from spikeinterface.core import (
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
 from spikeinterface.core.job_tools import fix_job_kwargs
 
-from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore
+from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore, whiten
 from spikeinterface.core.basesorting import minimum_spike_dtype
 
 import numpy as np
@@ -91,6 +91,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             # TODO what is the best about zscore>common_reference or the reverse
             recording = common_reference(recording)
             recording = zscore(recording, dtype="float32")
+            # recording = whiten(recording, dtype="float32")
             noise_levels = np.ones(num_chans, dtype="float32")
         else:
             recording = recording_raw
@@ -289,16 +290,28 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             **job_kwargs,
         )
 
+        # matching_params = params["matching"].copy()
+        # matching_params["waveform_extractor"] = we
+        # matching_params["noise_levels"] = noise_levels
+        # matching_params["peak_sign"] = params["detection"]["peak_sign"]
+        # matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
+        # matching_params["radius_um"] = params["detection"]["radius_um"]
+
+        # spikes = find_spikes_from_templates(
+        #     recording, method="tridesclous", method_kwargs=matching_params, **job_kwargs
+        # )
+
         matching_params = params["matching"].copy()
         matching_params["waveform_extractor"] = we
         matching_params["noise_levels"] = noise_levels
-        matching_params["peak_sign"] = params["detection"]["peak_sign"]
-        matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
-        matching_params["radius_um"] = params["detection"]["radius_um"]
+        # matching_params["peak_sign"] = params["detection"]["peak_sign"]
+        # matching_params["detect_threshold"] = params["detection"]["detect_threshold"]
+        # matching_params["radius_um"] = params["detection"]["radius_um"]
 
         spikes = find_spikes_from_templates(
-            recording, method="tridesclous", method_kwargs=matching_params, **job_kwargs
+            recording, method="circus-omp-svd", method_kwargs=matching_params, **job_kwargs
         )
+
 
         if params["save_array"]:
             np.save(sorter_output_folder / "noise_levels.npy", noise_levels)
