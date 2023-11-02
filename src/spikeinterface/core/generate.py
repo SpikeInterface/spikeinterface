@@ -146,6 +146,8 @@ def generate_sorting(
         The refractory period in ms
     add_spikes_on_borders : bool, default: False
         If True, spikes will be added close to the borders of the segments.
+        This is for testing some post-processing functions when they have
+        to deal with border spikes.
     num_spikes_per_border : int, default: 3
         The number of spikes to add close to the borders of the segments.
     border_size_samples : int, default: 20
@@ -186,6 +188,7 @@ def generate_sorting(
         spikes_in_seg["segment_index"] = segment_index
         spikes.append(spikes_in_seg)
 
+        #
         if add_spikes_on_borders:
             spikes_on_borders = np.zeros(2 * num_spikes_per_border, dtype=minimum_spike_dtype)
             spikes_on_borders["segment_index"] = segment_index
@@ -343,7 +346,7 @@ def synthesize_random_firings(
         The firing rate of each unit (in Hz).
         If float, all units will have the same firing rate.
     add_shift_shuffle: bool, default: False
-        Optionaly add a small shuffle on half spike to autocorrelogram
+        Optionaly add a small shuffle on half of the spikes to make the autocorrelogram less flat.
     seed: int, default: None
         seed for the generator
 
@@ -382,8 +385,8 @@ def synthesize_random_firings(
         spike_times = rng.integers(0, segment_size, n)
         spike_times = np.sort(spike_times)
 
+        # make less flat autocorrelogram shape by jittering half of the spikes
         if add_shift_shuffle:
-            ## make an interesting autocorrelogram shape
             # this replace the previous rand_distr2()
             some = rng.choice(spike_times.size, spike_times.size // 2, replace=False)
             x = rng.random(some.size)
@@ -391,7 +394,7 @@ def synthesize_random_firings(
             b = refractory_sample * 20
             shift = a + (b - a) * x**2
             spike_times[some] += shift
-            times0 = times0[(0 <= times0) & (times0 < N)]
+            times0 = times0[(0 <= times0) & (times0 < segment_size)]
 
         (violations,) = np.nonzero(np.diff(spike_times) < refractory_sample)
         spike_times = np.delete(spike_times, violations)
