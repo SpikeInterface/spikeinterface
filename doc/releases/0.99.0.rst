@@ -9,7 +9,7 @@ Main changes:
 
 * Refactored :code:`core.generate` module to create high-quality lazy ground-truth data
 * Added DeepInterpolation training, transfer, and inference to preprocessing
-* Added new quality_metrics (syncrhrony, firing_range, amplitude_cv)
+* Added new quality_metrics (synchrony, firing_range, amplitude_cv)
 * Added new template metrics (num positive/negative peaks + multi-channel metrics: velocities, spread, exp. decay)
 * Important improvements to internal sorters (especially Spyking Circus 2)
 * Ported all widgets to "new" API and dismantled legacy widgets
