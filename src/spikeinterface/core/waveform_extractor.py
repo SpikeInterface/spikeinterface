@@ -276,7 +276,7 @@ class WaveformExtractor:
                 if remove_if_exists:
                     shutil.rmtree(folder)
                 else:
-                    raise FileExistsError("Folder already exists")
+                    raise FileExistsError(f"Folder {folder} already exists")
             folder.mkdir(parents=True)
 
             if use_relative_path:

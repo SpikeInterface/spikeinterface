@@ -94,13 +94,16 @@ def export_to_phy(
             "argument to enforce sparsity (see compute_sparsity())"
         )
 
+    save_sparse = True
     if waveform_extractor.is_sparse():
         used_sparsity = waveform_extractor.sparsity
-        assert sparsity is None
+        if sparsity is not None:
+            warnings.warn("If the waveform_extractor is sparse the 'sparsity' argument is ignored")
     elif sparsity is not None:
         used_sparsity = sparsity
     else:
         used_sparsity = ChannelSparsity.create_dense(waveform_extractor)
+        save_sparse = False
     # convenient sparsity dict for the 3 cases to retrieve channl_inds
     sparse_dict = used_sparsity.unit_id_to_channel_indices
 
@@ -200,7 +203,8 @@ def export_to_phy(
         template_similarity = compute_template_similarity(waveform_extractor, method="cosine_similarity")
 
     np.save(str(output_folder / "templates.npy"), templates)
-    np.save(str(output_folder / "template_ind.npy"), templates_ind)
+    if save_sparse:
+        np.save(str(output_folder / "template_ind.npy"), templates_ind)
     np.save(str(output_folder / "similar_templates.npy"), template_similarity)
 
     channel_maps = np.arange(num_chans, dtype="int32")
