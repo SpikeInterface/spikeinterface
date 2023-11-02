@@ -1368,7 +1368,11 @@ if HAVE_NUMBA:
 
 
 def compute_sd_ratio(
-    wvf_extractor: WaveformExtractor, censored_period_ms: float = 4.0, correct_for_drift: bool = True, unit_ids=None, **kwargs
+    wvf_extractor: WaveformExtractor,
+    censored_period_ms: float = 4.0,
+    correct_for_drift: bool = True,
+    unit_ids=None,
+    **kwargs,
 ):
     """
     Computes the SD (Standard Deviation) of each unit spikes amplitude, and compare it to that of noise.
