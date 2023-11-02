@@ -229,6 +229,7 @@ def test_calculate_firing_range(waveform_extractor_simple):
 
 def test_calculate_amplitude_cutoff(waveform_extractor_simple):
     we = waveform_extractor_simple
+    spike_amps = we.load_extension("spike_amplitudes").get_data()
     amp_cuts = compute_amplitude_cutoffs(we, num_histogram_bins=10)
     print(amp_cuts)
 
@@ -239,6 +240,7 @@ def test_calculate_amplitude_cutoff(waveform_extractor_simple):
 
 def test_calculate_amplitude_median(waveform_extractor_simple):
     we = waveform_extractor_simple
+    spike_amps = we.load_extension("spike_amplitudes").get_data()
     amp_medians = compute_amplitude_medians(we)
     print(spike_amps, amp_medians)
 
