@@ -366,27 +366,24 @@ class BaseExtractor:
                     new_kwargs[name] = transform_extractors_to_dict(value)
 
             kwargs = new_kwargs
-        class_name = str(type(self)).replace("<class '", "").replace("'>", "")
-        module = class_name.split(".")[0]
-        imported_module = importlib.import_module(module)
 
-        try:
-            version = imported_module.__version__
-        except AttributeError:
-            version = "unknown"
+        module_import_path = self.__class__.__module__
+        class_name_no_path = self.__class__.__name__
+        class_name = f"{module_import_path}.{class_name_no_path}"  # e.g. 'spikeinterface.core.generate.AClass'
+        module = class_name.split(".")[0]
+
+        imported_module = importlib.import_module(module)
+        spike_interface_version = getattr(imported_module, "__version__", "unknown")
 
         dump_dict = {
             "class": class_name,
             "module": module,
             "kwargs": kwargs,
-            "version": version,
+            "version": spike_interface_version,
             "relative_paths": (relative_to is not None),
         }
 
-        try:
-            dump_dict["version"] = imported_module.__version__
-        except AttributeError:
-            dump_dict["version"] = "unknown"
+        dump_dict["version"] = spike_interface_version
 
         if include_annotations:
             dump_dict["annotations"] = self._annotations
@@ -805,7 +802,7 @@ class BaseExtractor:
           * explicit sub-folder, implicit base-folder : `extractor.save(name="extarctor_name")`
           * generated: `extractor.save()`
 
-        The second option saves to subfolder "extarctor_name" in
+        The second option saves to subfolder "extractor_name" in
         "get_global_tmp_folder()". You can set the global tmp folder with:
         "set_global_tmp_folder("path-to-global-folder")"
 
