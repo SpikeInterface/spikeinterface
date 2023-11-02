@@ -36,4 +36,4 @@ jobs:
       run: python ./installation_tips/check_your_install.py --ci # ci flag turns off gui
     - name: Windows cleanup
       if: ${{ matrix.label == 'windows' }}
-      run: python .installation_tips/cleanup_for_windows.py
+      run: python ./installation_tips/cleanup_for_windows.py
