@@ -20,11 +20,11 @@ class Templates:
     sparsity_mask : np.ndarray or None, default: None
         Boolean array indicating the sparsity pattern of the templates.
         If `None`, the templates are considered dense.
-    channel_ids : np.ndarray, optional (default=None)
+    channel_ids : np.ndarray, optional default: None
         Array of channel IDs. If `None`, defaults to an array of increasing integers.
-    unit_ids : np.ndarray, optional (default=None)
+    unit_ids : np.ndarray, optional default: None
         Array of unit IDs. If `None`, defaults to an array of increasing integers.
-    check_for_consistent_sparsity : bool, optional (default=True)
+    check_for_consistent_sparsity : bool, optional default: None
         When passing a sparsity_mask, this checks that the templates array is also sparse and that it matches the
         structure fo the sparsity_masl.
 
