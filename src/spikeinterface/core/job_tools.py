@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import platform
 import os
+import warnings
 
 import joblib
 import sys
@@ -30,9 +31,9 @@ _shared_job_kwargs_doc = """**job_kwargs: keyword arguments for parallel process
                 Number of jobs to use. With -1 the number of jobs is the same as number of cores
             * progress_bar: bool
                 If True, a progress bar is printed
-            * mp_context: str or None
-                Context for multiprocessing. It can be None (default), "fork" or "spawn".
-                Note that "fork" is only available on UNIX systems
+            * mp_context: "fork" | "spawn" | None, default: None
+                Context for multiprocessing. It can be None, "fork" or "spawn".
+                Note that "fork" is only safely available on LINUX systems
     """
 
 
@@ -287,9 +288,9 @@ class ChunkRecordingExecutor:
         Size of each chunk in number of samples. If "total_memory" or "chunk_memory" are used, it is ignored.
     chunk_duration : str or float or None
         Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
-    mp_context : str or None, default: None
+    mp_context : "fork" | "spawn" | None, default: None
         "fork" or "spawn". If None, the context is taken by the recording.get_preferred_mp_context().
-        "fork" is only available on UNIX systems.
+        "fork" is only safely available on LINUX systems.
     max_threads_per_process: int or None, default: None
         Limit the number of thread per process using threadpoolctl modules.
         This used only when n_jobs>1
@@ -332,6 +333,8 @@ class ChunkRecordingExecutor:
             mp_context = recording.get_preferred_mp_context()
         if mp_context is not None and platform.system() == "Windows":
             assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
+        elif mp_context is not None and platform.system() == "Darwin":
+            warnings.warn('As of Python 3.8 "fork" is no longer considered safe on MacOS')
 
         self.mp_context = mp_context
 
