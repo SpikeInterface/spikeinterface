@@ -4,9 +4,9 @@ Standard Deviation (SD) ratio (:code:`sd_ratio`)
 Calculation
 -----------
 
-All spikes from the same neuron should have the same shape. This means that at the peak of the spike, the standard deviation of the voltage should be the same as that of noise. If spikes from multiple neurons are grouped in a single unit, chances are the standard deviation of spikes amplitude is going to increase.
+All spikes from the same neuron should have the same shape. This means that at the peak of the spike, the standard deviation of the voltage should be the same as that of noise. If spikes from multiple neurons are grouped into a single unit, the standard deviation of spike amplitudes would likely be increased.
 
-This metric, first described [Pouzat]_ then adapted by Wyngaard, Llobet & Barbour (paper in writing), returns the ratio between both standard deviations:
+This metric, first described [Pouzat]_ then adapted by Wyngaard, Llobet & Barbour (in preparation), returns the ratio between both standard deviations:
 
 .. math::
 	S = \frac{\sigma_{\mathrm{unit}}}{\sigma_{\mathrm{noise}}}
@@ -18,7 +18,7 @@ Also to remove the effect of bursts (which can have lower amplitudes), you can s
 Expectation and use
 -------------------
 
-For a unit representing a single neuron, this metric should return a value close to one. However for unit that are contaminated, the value can be significantly higher.
+For a unit representing a single neuron, this metric should return a value close to one. However for units that are contaminated, the value can be significantly higher.
 
 
 Example code
@@ -35,4 +35,4 @@ Literature
 ----------
 
 Introduced by [Pouzat]_ (2002).
-Expanded by Wyngaard, Llobet and Barbour (in writing).
+Expanded by Wyngaard, Llobet and Barbour (in preparation).

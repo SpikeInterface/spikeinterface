@@ -1375,17 +1375,19 @@ def compute_sd_ratio(
     **kwargs,
 ):
     """
-    Computes the SD (Standard Deviation) of each unit spikes amplitude, and compare it to that of noise.
+    Computes the SD (Standard Deviation) of each unit's spike amplitudes, and compare it to the SD of noise.
+    In this case, noise refers to the global voltage trace on the same channel as the best channel of the unit.
+    (ideally (not implemented yet), the noise would be computed outside of spikes from the unit itself).
 
     Parameters
     ----------
     waveform_extractor : WaveformExtractor
         The waveform extractor object.
-    censored_period_ms : float
+    censored_period_ms : float, default: 4.0
         The censored period in milliseconds. This is to remove any potential bursts that could affect the SD.
-    correct_for_drift: bool
+    correct_for_drift: bool, default: True
         If True, will subtract the amplitudes sequentiially to significantly reduce the impact of drift.
-    unit_ids : list or None
+    unit_ids : list or None, default: None
         The list of unit ids to compute this metric. If None, all units are used.
     **kwargs:
         Keyword arguments for computing spike amplitudes and extremum channel.
@@ -1404,8 +1406,18 @@ def compute_sd_ratio(
     if unit_ids is None:
         unit_ids = wvf_extractor.unit_ids
 
-    spikes_amplitude = compute_spike_amplitudes(wvf_extractor, outputs="by_unit", return_scaled=True, **kwargs)
-    noise_levels = get_noise_levels(wvf_extractor.recording, return_scaled=True, method="std")
+    if wvf_extractor.is_extension("spike_amplitudes"):
+        amplitudes_ext = wvf_extractor.load_extension("spike_amplitudes")
+        spike_amplitudes = amplitudes_ext.get_data(outputs="by_unit")
+    else:
+        warnings.warn(
+            "The `sd_ratio` metric require the `spike_amplitudes` waveform extension. "
+            "Use the `postprocessing.compute_spike_amplitudes()` functions. "
+            "SD ratio metric will be set to NaN"
+        )
+        return {unit_id: np.nan for unit_id in unit_ids}
+
+    noise_levels = get_noise_levels(wvf_extractor.recording, return_scaled=amplitudes_ext._params['return_scaled'], method="std")
     best_channels = get_template_extremum_channel(wvf_extractor, outputs="index", **kwargs)
 
     sd_ratio = {}
@@ -1417,7 +1429,7 @@ def compute_sd_ratio(
                 np.int64
             )
             censored_indices = _find_duplicated_spikes_keep_first_iterative(spike_train, censored_period)
-            spk_amp.append(np.delete(spikes_amplitude[segment_index][unit_id], censored_indices))
+            spk_amp.append(np.delete(spike_amplitudes[segment_index][unit_id], censored_indices))
         spk_amp = np.concatenate([spk_amp[i] for i in range(len(spk_amp))])
 
         if correct_for_drift:

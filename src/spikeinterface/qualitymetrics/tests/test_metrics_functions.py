@@ -87,6 +87,7 @@ def _waveform_extractor_simple():
         overwrite=True,
     )
     _ = compute_principal_components(we, n_components=5, mode="by_channel_local")
+    _ = compute_spike_amplitudes(we, return_scaled=True)
     return we
 
 
@@ -228,7 +229,6 @@ def test_calculate_firing_range(waveform_extractor_simple):
 
 def test_calculate_amplitude_cutoff(waveform_extractor_simple):
     we = waveform_extractor_simple
-    spike_amps = compute_spike_amplitudes(we)
     amp_cuts = compute_amplitude_cutoffs(we, num_histogram_bins=10)
     print(amp_cuts)
 
@@ -239,7 +239,6 @@ def test_calculate_amplitude_cutoff(waveform_extractor_simple):
 
 def test_calculate_amplitude_median(waveform_extractor_simple):
     we = waveform_extractor_simple
-    spike_amps = compute_spike_amplitudes(we)
     amp_medians = compute_amplitude_medians(we)
     print(spike_amps, amp_medians)
 
@@ -250,7 +249,6 @@ def test_calculate_amplitude_median(waveform_extractor_simple):
 
 def test_calculate_amplitude_cv_metrics(waveform_extractor_simple):
     we = waveform_extractor_simple
-    spike_amps = compute_spike_amplitudes(we)
     amp_cv_median, amp_cv_range = compute_amplitude_cv_metrics(we, average_num_spikes_per_bin=20)
     print(amp_cv_median)
     print(amp_cv_range)
