@@ -17,7 +17,7 @@ class Templates:
         Sampling frequency of the templates.
     nbefore : int
         Number of samples before the spike peak.
-    sparsity_mask : np.ndarray, optional (default=None)
+    sparsity_mask : np.ndarray or None, default: None
         Boolean array indicating the sparsity pattern of the templates.
         If `None`, the templates are considered dense.
     channel_ids : np.ndarray, optional (default=None)
