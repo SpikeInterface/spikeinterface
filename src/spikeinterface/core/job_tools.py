@@ -335,8 +335,6 @@ class ChunkRecordingExecutor:
             assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
         elif mp_context == "fork" and platform.system() == "Darwin":
             warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
-        elif mp_context == "fork":
-            warnings.warn('Use of "fork" will be deprecated in Python. Consider "spawn" in the future')
 
         self.mp_context = mp_context
 
