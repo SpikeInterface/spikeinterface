@@ -16,47 +16,47 @@ class UnitWaveformsWidget(BaseWidget):
     ----------
     waveform_extractor : WaveformExtractor
         The input waveform extractor
-    channel_ids:  list
-        The channel ids to display, default None
-    unit_ids : list
-        List of unit ids, default None
-    plot_templates : bool
-        If True, templates are plotted over the waveforms, default True
-    sparsity : ChannelSparsity or None
-        Optional ChannelSparsity to apply, default None
+    channel_ids: list or None, default: None
+        The channel ids to display
+    unit_ids : list or None, default: None
+        List of unit ids
+    plot_templates : bool, default: True
+        If True, templates are plotted over the waveforms
+    sparsity : ChannelSparsity or None, default: None
+        Optional ChannelSparsity to apply
         If WaveformExtractor is already sparse, the argument is ignored
-    set_title : bool
-        Create a plot title with the unit number if True, default True
-    plot_channels : bool
-        Plot channel locations below traces, default False
-    unit_selected_waveforms : None or dict
+    set_title : bool, default: True
+        Create a plot title with the unit number if True
+    plot_channels : bool, default: False
+        Plot channel locations below traces
+    unit_selected_waveforms : None or dict, default: None
         A dict key is unit_id and value is the subset of waveforms indices that should be
-        be displayed (matplotlib backend), default None
-    max_spikes_per_unit : int or None
+        be displayed (matplotlib backend)
+    max_spikes_per_unit : int or None, default: 50
         If given and unit_selected_waveforms is None, only max_spikes_per_unit random units are
-        displayed per waveform, default 50 (matplotlib backend)
-    axis_equal : bool
-        Equal aspect ratio for x and y axis, to visualize the array geometry to scale, default False
-    lw_waveforms : float
-        Line width for the waveforms, default 1 (matplotlib backend)
-    lw_templates : float
-        Line width for the templates, default 2 (matplotlib backend)
-    unit_colors : None or dict
-        A dict key is unit_id and value is any color format handled by matplotlib, default None
+        displayed per waveform, (matplotlib backend)
+    axis_equal : bool, default: False
+        Equal aspect ratio for x and y axis, to visualize the array geometry to scale
+    lw_waveforms : float, default: 1
+        Line width for the waveforms, (matplotlib backend)
+    lw_templates : float, default: 2
+        Line width for the templates, (matplotlib backend)
+    unit_colors : None or dict, default: None
+        A dict key is unit_id and value is any color format handled by matplotlib.
         If None, then the get_unit_colors() is internally used. (matplotlib backend)
-    alpha_waveforms : float
-        Alpha value for waveforms, default 0.5 (matplotlib backend)
-    alpha_templates : float
-        Alpha value for templates, default 1 (matplotlib backend)
-    hide_unit_selector : bool
-        For sortingview backend, if True the unit selector is not displayed, default False
-    same_axis : bool
-        If True, waveforms and templates are displayed on the same axis, default False (matplotlib backend)
-    x_offset_units : bool
+    alpha_waveforms : float, default: 0.5
+        Alpha value for waveforms (matplotlib backend)
+    alpha_templates : float, default: 1
+        Alpha value for templates, (matplotlib backend)
+    hide_unit_selector : bool, default: False
+        For sortingview backend, if True the unit selector is not displayed
+    same_axis : bool, default: False
+        If True, waveforms and templates are displayed on the same axis (matplotlib backend)
+    x_offset_units : bool, default: False
         In case same_axis is True, this parameter allow to x-offset the waveforms for different units
-        (recommended for a few units), default False (matlotlib backend)
-    plot_legend : bool
-        Display legend, default True
+        (recommended for a few units) (matlotlib backend)
+    plot_legend : bool, default: True
+        Display legend (matplotlib backend)
     """
 
     def __init__(

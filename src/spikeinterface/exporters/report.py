@@ -30,16 +30,16 @@ def export_report(
         If WaveformExtractor is provide then the compute is faster otherwise
     output_folder: str
         The output folder where the report files are saved
-    remove_if_exists: bool
+    remove_if_exists: bool, default: False
         If True and the output folder exists, it is removed
-    format: str
-        'png' (default) or 'pdf' or any format handled by matplotlib
-    peak_sign: 'neg' or 'pos'
+    format: str, default: "png"
+        The output figure format (any format handled by matplotlib)
+    peak_sign: "neg" or "pos", default: "neg"
         used to compute amplitudes and metrics
-    show_figures: bool
-        If True, figures are shown. If False (default), figures are closed after saving.
-    force_computation:  bool default False
-        Force or not some heavy computaion before exporting.
+    show_figures: bool, default: False
+        If True, figures are shown. If False, figures are closed after saving
+    force_computation:  bool, default: False
+        Force or not some heavy computaion before exporting
     {}
     """
     import pandas as pd

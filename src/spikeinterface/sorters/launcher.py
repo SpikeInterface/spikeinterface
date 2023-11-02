@@ -212,13 +212,13 @@ def run_sorter_by_property(
     **sorter_params,
 ):
     """
-    Generic function to run a sorter on a recording after splitting by a 'grouping_property' (e.g. 'group').
+    Generic function to run a sorter on a recording after splitting by a "grouping_property" (e.g. "group").
 
     Internally, the function works as follows:
-        * the recording is split based on the provided 'grouping_property' (using the 'split_by' function)
-        * the 'run_sorters' function is run on the split recordings
-        * sorting outputs are aggregated using the 'aggregate_units' function
-        * the 'grouping_property' is added as a property to the SortingExtractor
+        * the recording is split based on the provided "grouping_property" (using the "split_by" function)
+        * the "run_sorters" function is run on the split recordings
+        * sorting outputs are aggregated using the "aggregate_units" function
+        * the "grouping_property" is added as a property to the SortingExtractor
 
     Parameters
     ----------
@@ -230,23 +230,23 @@ def run_sorter_by_property(
         Property to split by before sorting
     working_folder: str
         The working directory.
-    mode_if_folder_exists: None
+    mode_if_folder_exists: bool or None, default: None
         Must be None. This is deprecated.
         If not None then a warning is raise.
         Will be removed in next release.
-    engine: {'loop', 'joblib', 'dask'}
+    engine: "loop" | "joblib" | "dask", default: "loop"
         Which engine to use to run sorter.
     engine_kwargs: dict
         This contains kwargs specific to the launcher engine:
-            * 'loop' : no kwargs
-            * 'joblib' : {'n_jobs' : } number of processes
-            * 'dask' : {'client':} the dask client for submitting task
-    verbose: bool
-        default True
-    docker_image: None or str
-        If str run the sorter inside a container (docker) using the docker package.
+            * "loop" : no kwargs
+            * "joblib" : {"n_jobs" : } number of processes
+            * "dask" : {"client":} the dask client for submitting task
+    verbose: bool, default: False
+        Controls sorter verboseness
+    docker_image: None or str, default: None
+        If str run the sorter inside a container (docker) using the docker package
     **sorter_params: keyword args
-        Spike sorter specific arguments (they can be retrieved with 'get_default_params(sorter_name_or_class)'
+        Spike sorter specific arguments (they can be retrieved with `get_default_sorter_params(sorter_name_or_class)`)
 
     Returns
     -------
@@ -255,7 +255,7 @@ def run_sorter_by_property(
 
     Examples
     --------
-    This example shows how to run spike sorting split by group using the 'joblib' backend with 4 jobs for parallel
+    This example shows how to run spike sorting split by group using the "joblib" backend with 4 jobs for parallel
     processing.
 
     >>> sorting = si.run_sorter_by_property("tridesclous", recording, grouping_property="group",
@@ -334,18 +334,18 @@ def run_sorters(
         The working directory.
     sorter_params: dict of dict with sorter_name as key
         This allow to overwrite default params for sorter.
-    mode_if_folder_exists: {'raise', 'overwrite', 'keep'}
+    mode_if_folder_exists: "raise" | "overwrite" | "keep", default: "raise"
         The mode when the subfolder of recording/sorter already exists.
-            * 'raise' : raise error if subfolder exists
-            * 'overwrite' : delete and force recompute
-            * 'keep' : do not compute again if f=subfolder exists and log is OK
-    engine: {'loop', 'joblib', 'dask'}
+            * "raise" : raise error if subfolder exists
+            * "overwrite" : delete and force recompute
+            * "keep" : do not compute again if f=subfolder exists and log is OK
+    engine: "loop" | "joblib" | "dask", default: "loop"
         Which engine to use to run sorter.
     engine_kwargs: dict
         This contains kwargs specific to the launcher engine:
-            * 'loop' : no kwargs
-            * 'joblib' : {'n_jobs' : } number of processes
-            * 'dask' : {'client':} the dask client for submitting task
+            * "loop" : no kwargs
+            * "joblib" : {"n_jobs" : } number of processes
+            * "dask" : {"client":} the dask client for submitting task
     verbose: bool
         Controls sorter verboseness.
     with_output: bool

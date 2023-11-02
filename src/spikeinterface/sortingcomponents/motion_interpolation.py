@@ -103,9 +103,10 @@ def interpolate_motion_on_traces(
         Dimension of shift in channel_locations.
     channel_inds: None or list
         If not None, interpolate only a subset of channels.
-    spatial_interpolation_method: str in ('idw', 'kriging')
-        * idw : Inverse Distance Weighing
-        * kriging : kilosort2.5 like
+    spatial_interpolation_method: "idw" | "kriging", default: "kriging"
+        The spatial interpolation method used to interpolate the channel locations:
+            * idw : Inverse Distance Weighing
+            * kriging : kilosort2.5 like
     spatial_interpolation_kwargs:
         * specific option for the interpolation method
 
@@ -225,28 +226,28 @@ class InterpolateMotionRecording(BasePreprocessor):
         Temporal bins in second.
     spatial_bins: None or np.array
         Bins for non-rigid motion. If None, rigid motion is used
-    direction: int (0, 1, 2)
-        Dimension along which channel_locations are shifted (0 - x, 1 - y, 2 - z), by default 1
-    spatial_interpolation_method: str
-        'kriging' or 'idw' or 'nearest'.
+    direction: 0 | 1 | 2, default: 1
+        Dimension along which channel_locations are shifted (0 - x, 1 - y, 2 - z)
+    spatial_interpolation_method: "kriging" | "idw" | "nearest", default: "kriging"
+        The spatial interpolation method used to interpolate the channel locations.
         See `spikeinterface.preprocessing.get_spatial_interpolation_kernel()` for more details.
         Choice of the method:
 
-            * 'kriging' : the same one used in kilosort
-            * 'idw' : inverse  distance weighted
-            * 'nearest' : use nereast channel
-    sigma_um: float (default 20.)
-        Used in the 'kriging' formula
-    p: int (default 1)
-        Used in the 'kriging' formula
-    num_closest: int (default 3)
-        Number of closest channels used by 'idw' method for interpolation.
-    border_mode: str
+            * "kriging" : the same one used in kilosort
+            * "idw" : inverse  distance weighted
+            * "nearest" : use neareast channel
+    sigma_um: float, default: 20.0
+        Used in the "kriging" formula
+    p: int, default: 1
+        Used in the "kriging" formula
+    num_closest: int, default: 3
+        Number of closest channels used by "idw" method for interpolation.
+    border_mode: "remove_channels" | "force_extrapolate" | "force_zeros", default: "remove_channels"
         Control how channels are handled on border:
 
-        * 'remove_channels': remove channels on the border, the recording has less channels
-        * 'force_extrapolate': keep all channel and force extrapolation (can lead to strange signal)
-        * 'force_zeros': keep all channel but set zeros when outside (force_extrapolate=False)
+        * "remove_channels": remove channels on the border, the recording has less channels
+        * "force_extrapolate": keep all channel and force extrapolation (can lead to strange signal)
+        * "force_zeros": keep all channel but set zeros when outside (force_extrapolate=False)
 
     Returns
     -------

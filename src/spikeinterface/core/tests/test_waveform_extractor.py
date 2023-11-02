@@ -297,6 +297,48 @@ def test_extract_waveforms():
     )
     assert we4.sparsity is not None
 
+    # test with sparsity estimation
+    folder5 = cache_folder / "test_extract_waveforms_compute_sparsity_tmp_folder"
+    sparsity_temp_folder = cache_folder / "tmp_sparsity"
+    if folder5.is_dir():
+        shutil.rmtree(folder5)
+
+    we5 = extract_waveforms(
+        recording,
+        sorting,
+        folder5,
+        max_spikes_per_unit=100,
+        return_scaled=True,
+        sparse=True,
+        sparsity_temp_folder=sparsity_temp_folder,
+        method="radius",
+        radius_um=50.0,
+        n_jobs=2,
+        chunk_duration="500ms",
+    )
+    assert we5.sparsity is not None
+    # tmp folder is cleaned up
+    assert not sparsity_temp_folder.is_dir()
+
+    # should raise an error if sparsity_temp_folder is not empty
+    with pytest.raises(AssertionError):
+        if folder5.is_dir():
+            shutil.rmtree(folder5)
+        sparsity_temp_folder.mkdir()
+        we5 = extract_waveforms(
+            recording,
+            sorting,
+            folder5,
+            max_spikes_per_unit=100,
+            return_scaled=True,
+            sparse=True,
+            sparsity_temp_folder=sparsity_temp_folder,
+            method="radius",
+            radius_um=50.0,
+            n_jobs=2,
+            chunk_duration="500ms",
+        )
+
 
 def test_recordingless():
     durations = [30, 40]
