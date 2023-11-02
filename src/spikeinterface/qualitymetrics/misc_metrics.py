@@ -19,7 +19,6 @@ from ..core.template_tools import (
     get_template_extremum_channel,
     get_template_extremum_amplitude,
 )
-from ..curation.curation_tools import _find_duplicated_spikes_keep_first_iterative
 
 try:
     import numba
@@ -1391,23 +1390,28 @@ def compute_SD_test(
     num_spikes : dict
         The number of spikes, across all segments, for each unit ID.
     """
+
+    from ..curation.curation_tools import _find_duplicated_spikes_keep_first_iterative
     censored_period = int(round(censored_period_ms * 1e-3 * wvf_extractor.sampling_frequency))
 
     spikes_amplitude = compute_spike_amplitudes(wvf_extractor, outputs="by_unit", return_scaled=True, **kwargs)
     noise_levels = get_noise_levels(wvf_extractor.recording, return_scaled=True, method="std")
     best_channels = get_template_extremum_channel(wvf_extractor, outputs="index", **kwargs)
 
-    SD_test = {}
-    for unit_id, spk_amp in spikes_amplitude.items():
-        spike_train = wvf_extractor.sorting.get_unit_spike_train(unit_id).astype(np.int64)
-        censored_indices = _find_duplicated_spikes_keep_first_iterative(spike_train, censored_period)
-        spk_amp = np.delete(spk_amp, censored_indices)
+    SD_test = []
+    for segment_index in range(len(spikes_amplitude)):
+        SD_test.append({})
 
-        if correct_for_drift:
-            unit_std = np.std(np.diff(spk_amp)) / np.sqrt(2)
-        else:
-            unit_std = np.std(spk_amp)
+        for unit_id, spk_amp in spikes_amplitude[segment_index].items():
+            spike_train = wvf_extractor.sorting.get_unit_spike_train(unit_id, segment_index=segment_index).astype(np.int64)
+            censored_indices = _find_duplicated_spikes_keep_first_iterative(spike_train, censored_period)
+            spk_amp = np.delete(spk_amp, censored_indices)
 
-        SD_test[unit_id] = unit_std / noise_levels[best_channels[unit_id]]
+            if correct_for_drift:
+                unit_std = np.std(np.diff(spk_amp)) / np.sqrt(2)
+            else:
+                unit_std = np.std(spk_amp)
+
+            SD_test[segment_index][unit_id] = unit_std / noise_levels[best_channels[unit_id]]
 
     return SD_test

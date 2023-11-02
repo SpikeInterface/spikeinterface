@@ -383,8 +383,9 @@ def test_calculate_drift_metrics(waveform_extractor_simple):
 def test_calculate_SD_test(waveform_extractor_simple):
     SD_test = compute_SD_test(waveform_extractor_simple)
 
-    print(SD_test)
-    assert False
+    assert len(SD_test) == waveform_extractor_simple.get_num_segments()
+    assert np.all(list(SD_test[0].keys()) == waveform_extractor_simple.unit_ids)
+    assert np.allclose(np.array(list(SD_test[0].values())), 1, atol=0.5, rtol=0)
 
 
 if __name__ == "__main__":
