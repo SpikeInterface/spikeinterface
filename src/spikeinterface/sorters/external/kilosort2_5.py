@@ -80,7 +80,7 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         "AUCsplit": "Threshold on the area under the curve (AUC) criterion for performing a split in the final step",
         "keep_good_only": "If True only 'good' units are returned",
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
-        "skip_kilosort_preprocessing": "Can optionaly skip the internal kilosort preprocessing",
+        "skip_kilosort_preprocessing": "Can optionally skip the internal kilosort preprocessing",
         "scaleproc": "int16 scaling of whitened data, if None set to 200.",
         "save_rez_to_mat": "Save the full rez internal struc to mat file",
         "delete_tmp_files": "Delete temporary files created during sorting (matlab files and the `temp_wh.dat` file that "

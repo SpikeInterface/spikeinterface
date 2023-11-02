@@ -103,23 +103,24 @@ class TemporalPCBaseNode(WaveformsNode):
         Parameters
         ----------
         recording : BaseRecording
-            The recording object.
+            The recording object
         n_components : int
-            The number of components to use for the PCA model.
+            The number of components to use for the PCA model
         model_folder_path : str, Path
-            The path to the folder containing the pca model and the training metadata.
+            The path to the folder containing the pca model and the training metadata
         detect_peaks_params : dict
-            The parameters for peak detection.
+            The parameters for peak detection
         peak_selection_params : dict
-            The parameters for peak selection.
-        whiten : bool, optional
-            Whether to whiten the data, by default True.
-        radius_um : float, optional
-            The radius (in micrometers) to use for definint sparsity, by default None.
-        ms_before : float, optional
-            The number of milliseconds to include before the peak of the spike, by default 1.
-        ms_after : float, optional
-            The number of milliseconds to include after the peak of the spike, by default 1.
+            The parameters for peak selection
+        ms_before : float, default: 1
+            The number of milliseconds to include before the peak of the spike
+        ms_after : float, default: 1
+            The number of milliseconds to include after the peak of the spike
+        whiten : bool, default: True
+            Whether to whiten the data
+        radius_um : float or None, default: None
+            The radius (in micrometers) to use for definint sparsity. If None, no sparsity is used
+
 
         {}
 
@@ -186,12 +187,12 @@ class TemporalPCAProjection(TemporalPCBaseNode):
     Parameters
     ----------
     recording : BaseRecording
-        The recording object.
+        The recording object
     parents: list
-        The parent nodes of this node. This should contain a mechanism to extract waveforms.
+        The parent nodes of this node. This should contain a mechanism to extract waveforms
     model_folder_path : str, Path
-        The path to the folder containing the pca model and the training metadata.
-    return_output: bool, optional, true by default
+        The path to the folder containing the pca model and the training metadata
+    return_output: bool, default: True
         use false to suppress the output of this node in the pipeline
 
     """
@@ -242,12 +243,12 @@ class TemporalPCADenoising(TemporalPCBaseNode):
     Parameters
     ----------
     recording : BaseRecording
-        The recording object.
+        The recording object
     parents: list
-        The parent nodes of this node. This should contain a mechanism to extract waveforms.
+        The parent nodes of this node. This should contain a mechanism to extract waveforms
     model_folder_path : str, Path
-        The path to the folder containing the pca model and the training metadata.
-    return_output: bool, optional, true by default
+        The path to the folder containing the pca model and the training metadata
+    return_output: bool, default: True
         use false to suppress the output of this node in the pipeline
 
     """

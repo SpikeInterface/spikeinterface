@@ -169,7 +169,7 @@ def get_default_zarr_compressor(clevel=5):
 
     Parameters
     ----------
-    clevel : int, optional
+    clevel : int, default: 5
         Compression level (higher -> more compressed).
         Minimum 1, maximum 9. By default 5
 

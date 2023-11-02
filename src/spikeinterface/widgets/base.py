@@ -6,7 +6,7 @@ default_backend_ = "matplotlib"
 
 def get_default_plotter_backend():
     """Return the default backend for spikeinterface widgets.
-    The default backend is 'matplotlib' at init.
+    The default backend is "matplotlib" at init.
     It can be be globally set with `set_default_plotter_backend(backend)`
     """
 
@@ -21,23 +21,23 @@ def set_default_plotter_backend(backend):
 
 backend_kwargs_desc = {
     "matplotlib": {
-        "figure": "Matplotlib figure. When None, it is created. Default None",
-        "ax": "Single matplotlib axis. When None, it is created. Default None",
-        "axes": "Multiple matplotlib axes. When None, they is created. Default None",
-        "ncols": "Number of columns to create in subplots.  Default 5",
-        "figsize": "Size of matplotlib figure. Default None",
-        "figtitle": "The figure title. Default None",
+        "figure": "Matplotlib figure. When None, it is created, default: None",
+        "ax": "Single matplotlib axis. When None, it is created, default: None",
+        "axes": "Multiple matplotlib axes. When None, they is created, default: None",
+        "ncols": "Number of columns to create in subplots, default: 5",
+        "figsize": "Size of matplotlib figure, default: None",
+        "figtitle": "The figure title, default: None",
     },
     "sortingview": {
-        "generate_url": "If True, the figurl URL is generated and printed. Default True",
-        "display": "If True and in jupyter notebook/lab, the widget is displayed in the cell. Default True.",
-        "figlabel": "The figurl figure label. Default None",
-        "height": "The height of the sortingview View in jupyter. Default None",
+        "generate_url": "If True, the figurl URL is generated and printed, default: True",
+        "display": "If True and in jupyter notebook/lab, the widget is displayed in the cell, default: True.",
+        "figlabel": "The figurl figure label, default: None",
+        "height": "The height of the sortingview View in jupyter, default: None",
     },
     "ipywidgets": {
-        "width_cm": "Width of the figure in cm (default 10)",
-        "height_cm": "Height of the figure in cm (default 6)",
-        "display": "If True, widgets are immediately displayed",
+        "width_cm": "Width of the figure in cm, default: 10",
+        "height_cm": "Height of the figure in cm, default 6",
+        "display": "If True, widgets are immediately displayed, default: True",
         # "controllers": ""
     },
     "ephyviewer": {},
@@ -123,7 +123,7 @@ class to_attr(object):
         Helper function that transform a dict into
         an object where attributes are the keys of the dict
 
-        d = {'a': 1, 'b': 'yep'}
+        d = {"a": 1, "b": "yep"}
         o = to_attr(d)
         print(o.a, o.b)
         """

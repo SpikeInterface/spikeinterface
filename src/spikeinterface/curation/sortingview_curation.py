@@ -19,16 +19,16 @@ def apply_sortingview_curation(
         The sorting object to be curated
     uri_or_json : str or Path
         The URI curation link from SortingView or the path to the curation json file
-    exclude_labels : list, optional
+    exclude_labels : list, default: None
         Optional list of labels to exclude (e.g. ["reject", "noise"]).
-        Mutually exclusive with include_labels, by default None
-    include_labels : list, optional
+        Mutually exclusive with include_labels
+    include_labels : list, default: None
         Optional list of labels to include (e.g. ["accept"]).
         Mutually exclusive with exclude_labels,  by default None
-    skip_merge : bool, optional
-        If True, merges are not applied (only labels), by default False
-    verbose : bool, optional
-        If True, output is verbose, by default False
+    skip_merge : bool, default: False
+        If True, merges are not applied (only labels)
+    verbose : bool, default: False
+        If True, output is verbose
 
     Returns
     -------

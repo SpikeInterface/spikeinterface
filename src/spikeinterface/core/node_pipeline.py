@@ -55,10 +55,10 @@ class PipelineNode:
         ----------
         recording : BaseRecording
             The recording object.
-        parents : Optional[List[PipelineNode]], optional
-            Pass parents nodes to perform a previous computation, by default None
-        return_output : bool or tuple of bool
-            Whether or not the output of the node is returned by the pipeline, by default False
+        parents : Optional[List[PipelineNode]], default: None
+            Pass parents nodes to perform a previous computation
+        return_output : bool or tuple of bool, default: True
+            Whether or not the output of the node is returned by the pipeline.
             When a Node have several toutputs then this can be a tuple of bool.
 
 
@@ -154,10 +154,10 @@ class SpikeRetriever(PeakSource):
         If False, the max channel is computed for each spike given a radius around the template max channel.
     extremum_channel_inds: dict of int
         The extremum channel index dict given from template.
-    radius_um: float (default 50.)
+    radius_um: float, default: 50
         The radius to find the real max channel.
         Used only when channel_from_template=False
-    peak_sign: str (default "neg")
+    peak_sign: str, default: "neg"
         Peak sign to find the max channel.
         Used only when channel_from_template=False
     """
@@ -256,14 +256,14 @@ class WaveformsNode(PipelineNode):
         ----------
         recording : BaseRecording
             The recording object.
-        parents : Optional[List[PipelineNode]], optional
-            Pass parents nodes to perform a previous computation, by default None
-        return_output : bool, optional
-            Whether or not the output of the node is returned by the pipeline, by default False
-        ms_before : float, optional
-            The number of milliseconds to include before the peak of the spike, by default 1.
-        ms_after : float, optional
-            The number of milliseconds to include after the peak of the spike, by default 1.
+        ms_before : float
+            The number of milliseconds to include before the peak of the spike
+        ms_after : float
+            The number of milliseconds to include after the peak of the spike
+        parents : Optional[List[PipelineNode]], default: None
+            Pass parents nodes to perform a previous computation
+        return_output : bool, default: False
+            Whether or not the output of the node is returned by the pipeline
         """
 
         PipelineNode.__init__(self, recording=recording, parents=parents, return_output=return_output)
@@ -291,14 +291,15 @@ class ExtractDenseWaveforms(WaveformsNode):
         ----------
         recording : BaseRecording
             The recording object.
-        parents : Optional[List[PipelineNode]], optional
-            Pass parents nodes to perform a previous computation, by default None
-        return_output : bool, optional
-            Whether or not the output of the node is returned by the pipeline, by default False
-        ms_before : float, optional
-            The number of milliseconds to include before the peak of the spike, by default 1.
-        ms_after : float, optional
-            The number of milliseconds to include after the peak of the spike, by default 1.
+        ms_before : float
+            The number of milliseconds to include before the peak of the spike
+        ms_after : float
+            The number of milliseconds to include after the peak of the spike
+        parents : Optional[List[PipelineNode]], default: None
+            Pass parents nodes to perform a previous computation
+        return_output : bool, default: False
+            Whether or not the output of the node is returned by the pipeline
+
         """
 
         WaveformsNode.__init__(
@@ -344,17 +345,15 @@ class ExtractSparseWaveforms(WaveformsNode):
         Parameters
         ----------
         recording : BaseRecording
-            The recording object.
-        parents : Optional[List[PipelineNode]], optional
-            Pass parents nodes to perform a previous computation, by default None
-        return_output : bool, optional
-            Whether or not the output of the node is returned by the pipeline, by default False
-        ms_before : float, optional
-            The number of milliseconds to include before the peak of the spike, by default 1.
-        ms_after : float, optional
-            The number of milliseconds to include after the peak of the spike, by default 1.
-
-
+            The recording object
+        ms_before : float
+            The number of milliseconds to include before the peak of the spike
+        ms_after : float
+            The number of milliseconds to include after the peak of the spike
+        parents : Optional[List[PipelineNode]], default: None
+            Pass parents nodes to perform a previous computation
+        return_output : bool, default: False
+            Whether or not the output of the node is returned by the pipeline
         """
         WaveformsNode.__init__(
             self,

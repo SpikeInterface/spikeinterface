@@ -26,9 +26,9 @@ def remove_redundant_units(
 
     When a redundant pair is found, there are several strategies to choose which unit is the best:
 
-       * 'minimum_shift'
-       * 'highest_amplitude'
-       * 'max_spikes'
+       * "minimum_shift"
+       * "highest_amplitude"
+       * "max_spikes"
 
 
     Parameters
@@ -37,26 +37,26 @@ def remove_redundant_units(
         If WaveformExtractor, the spike trains can be optionally realigned using the peak shift in the
         template to improve the matching procedure.
         If BaseSorting, the spike trains are not aligned.
-    align : bool, optional
-        If True, spike trains are aligned (if a WaveformExtractor is used), by default False
-    delta_time : float, optional
-        The time in ms to consider matching spikes, by default 0.4
-    agreement_threshold : float, optional
-        Threshold on the agreement scores to flag possible redundant/duplicate units, by default 0.2
-    duplicate_threshold : float, optional
+    align : bool, default: False
+        If True, spike trains are aligned (if a WaveformExtractor is used)
+    delta_time : float, default: 0.4
+        The time in ms to consider matching spikes
+    agreement_threshold : float, default: 0.2
+        Threshold on the agreement scores to flag possible redundant/duplicate units
+    duplicate_threshold : float, default: 0.8
         Final threshold on the portion of coincident events over the number of spikes above which the
-        unit is removed, by default 0.8
-    remove_strategy: 'minimum_shift' | 'highest_amplitude' | 'max_spikes', default: 'minimum_shift'
+        unit is removed
+    remove_strategy: "minimum_shift" | "highest_amplitude" | "max_spikes", default: "minimum_shift"
         Which strategy to remove one of the two duplicated units:
 
-            * 'minimum_shift': keep the unit with best peak alignment (minimum shift)
-                             If shifts are equal then the 'highest_amplitude' is used
-            * 'highest_amplitude': keep the unit with the best amplitude on unshifted max.
-            * 'max_spikes': keep the unit with more spikes
+            * "minimum_shift": keep the unit with best peak alignment (minimum shift)
+                             If shifts are equal then the "highest_amplitude" is used
+            * "highest_amplitude": keep the unit with the best amplitude on unshifted max.
+            * "max_spikes": keep the unit with more spikes
 
-    peak_sign: 'neg' |'pos' | 'both', default: 'neg'
-        Used when remove_strategy='highest_amplitude'
-    extra_outputs: bool
+    peak_sign: "neg" | "pos" | "both", default: "neg"
+        Used when remove_strategy="highest_amplitude"
+    extra_outputs: bool, default: False
         If True, will return the redundant pairs.
 
     Returns
@@ -147,13 +147,13 @@ def find_redundant_units(sorting, delta_time: float = 0.4, agreement_threshold=0
     ----------
     sorting : BaseSorting
         The input sorting object
-    delta_time : float, optional
-        The time in ms to consider matching spikes, by default 0.4
-    agreement_threshold : float, optional
-        Threshold on the agreement scores to flag possible redundant/duplicate units, by default 0.2
-    duplicate_threshold : float, optional
+    delta_time : float, default: 0.4
+        The time in ms to consider matching spikes
+    agreement_threshold : float, default: 0.2
+        Threshold on the agreement scores to flag possible redundant/duplicate units
+    duplicate_threshold : float, default: 0.8
         Final threshold on the portion of coincident events over the number of spikes above which the
-        unit is flagged as duplicate/redundant, by default 0.8
+        unit is flagged as duplicate/redundant
 
     Returns
     -------

@@ -87,9 +87,9 @@ class Mountainsort5Sorter(BaseSorter):
 
         if HAVE_MS5:
             vv = parse(mountainsort5.__version__)
-            if vv < parse("0.3") or vv >= parse("0.4"):
+            if vv < parse("0.3"):
                 print(
-                    f"WARNING: This version of SpikeInterface expects Mountainsort5 version 0.3.x. "
+                    f"WARNING: This version of SpikeInterface expects Mountainsort5 version 0.3.x or newer. "
                     f"You have version {mountainsort5.__version__}"
                 )
                 HAVE_MS5 = False

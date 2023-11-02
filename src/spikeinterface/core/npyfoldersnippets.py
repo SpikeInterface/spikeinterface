@@ -13,7 +13,7 @@ class NpyFolderSnippets(NpySnippetsExtractor):
     NpyFolderSnippets is an internal format used in spikeinterface.
     It is a NpySnippetsExtractor + metadata contained in a folder.
 
-    It is created with the function: `snippets.save(format='npy', folder='/myfolder')`
+    It is created with the function: `snippets.save(format="npy", folder="/myfolder")`
 
     Parameters
     ----------

@@ -54,18 +54,18 @@ def extract_waveforms_to_buffers(
         N samples before spike
     nafter: int
         N samples after spike
-    mode: str
-        Mode to use ('memmap' | 'shared_memory')
-    return_scaled: bool
-        Scale traces before exporting to buffer or not.
-    folder: str or path
+    mode: "memmap" | "shared_memory", default: "memmap"
+        The mode to use for the buffer
+    return_scaled: bool, default: False
+        Scale traces before exporting to buffer or not
+    folder: str or path or None, default: None
         In case of memmap mode, folder to save npy files
-    dtype: numpy.dtype
+    dtype: numpy.dtype, default: None
         dtype for waveforms buffer
-    sparsity_mask: None or array of bool
+    sparsity_mask: None or array of bool, default: None
         If not None shape must be must be (len(unit_ids), len(channel_ids))
-    copy: bool
-        If True (default), the output shared memory object is copied to a numpy standard array.
+    copy: bool, default: False
+        If True, the output shared memory object is copied to a numpy standard array.
         If copy=False then arrays_info is also return. Please keep in mind that arrays_info
         need to be referenced as long as waveforms_by_units will be used otherwise it will be very hard to debug.
         Also when copy=False the SharedMemory will need to be unlink manually
@@ -147,8 +147,8 @@ def allocate_waveforms_buffers(
         N samples before spike
     nafter: int
         N samples after spike
-    mode: str
-        Mode to use ('memmap' | 'shared_memory')
+    mode: "memmap" | "shared_memory", default: "memmap"
+        Mode to use
     folder: str or path
         In case of memmap mode, folder to save npy files
     dtype: numpy.dtype
@@ -242,8 +242,8 @@ def distribute_waveforms_to_buffers(
         N samples after spike
     return_scaled: bool
         Scale traces before exporting to buffer or not.
-    mode: str
-        Mode to use ('memmap' | 'shared_memory')
+    mode: "memmap" | "shared_memory", default: "memmap"
+        Mode to use
     sparsity_mask: None or array of bool
         If not None shape must be must be (len(unit_ids), len(channel_ids)
 
@@ -419,7 +419,7 @@ def extract_waveforms_to_single_buffer(
     Important note: for the "shared_memory" mode wf_array_info contains reference to
     the shared memmory buffer, this variable must be referenced as long as arrays is used.
     This variable must also unlink() when the array is de-referenced.
-    To avoid this complicated behavior, by default (copy=True) the shared memmory buffer is copied into a standard
+    To avoid this complicated behavior, default: (copy=True) the shared memmory buffer is copied into a standard
     numpy array.
 
 
@@ -436,18 +436,18 @@ def extract_waveforms_to_single_buffer(
         N samples before spike
     nafter: int
         N samples after spike
-    mode: str
-        Mode to use ('memmap' | 'shared_memory')
-    return_scaled: bool
-        Scale traces before exporting to buffer or not.
-    file_path: str or path
-        In case of memmap mode, file to save npy file.
-    dtype: numpy.dtype
+    mode: "memmap" | "shared_memory", default: "memmap"
+        The mode to use for the buffer
+    return_scaled: bool, default: False
+        Scale traces before exporting to buffer or not
+    file_path: str or path or None, default: None
+        In case of memmap mode, file to save npy file
+    dtype: numpy.dtype, default: None
         dtype for waveforms buffer
-    sparsity_mask: None or array of bool
+    sparsity_mask: None or array of bool, default: None
         If not None shape must be must be (len(unit_ids), len(channel_ids))
-    copy: bool
-        If True (default), the output shared memory object is copied to a numpy standard array and no reference
+    copy: bool, default: False
+        If True, the output shared memory object is copied to a numpy standard array and no reference
         to the internal shared memory object is kept.
         If copy=False then the shared memory object is also returned. Please keep in mind that the shared memory object
         need to be referenced as long as all_waveforms will be used otherwise it might produce segmentation

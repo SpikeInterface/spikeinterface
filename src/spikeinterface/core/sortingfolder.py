@@ -19,7 +19,7 @@ class NumpyFolderSorting(BaseSorting):
       * a "numpysorting_info.json" containing sampling_frequency, unit_ids and num_segments
       * a metadata folder for units properties.
 
-    It is created with the function: `sorting.save(folder='/myfolder', format="numpy_folder")`
+    It is created with the function: `sorting.save(folder="/myfolder", format="numpy_folder")`
 
     """
 
@@ -80,7 +80,7 @@ class NpzFolderSorting(NpzSortingExtractor):
       * "npz.json" which the json description of NpzSortingExtractor
       * a metadata folder for units properties.
 
-    It is created with the function: `sorting.save(folder='/myfolder', format="npz_folder")`
+    It is created with the function: `sorting.save(folder="/myfolder", format="npz_folder")`
 
     Parameters
     ----------

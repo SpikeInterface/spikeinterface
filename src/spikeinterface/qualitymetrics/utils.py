@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.stats import norm, multivariate_normal
+from scipy.stats import multivariate_normal
 
 
 def create_ground_truth_pc_distributions(center_locations, total_points):
