@@ -172,10 +172,10 @@ def read_binary_recording(file, num_channels, dtype, time_axis=0, offset=0):
         Number of channels
     dtype: dtype
         dtype of the file
-    time_axis: 0 (default) or 1
+    time_axis: 0 or 1, default: 0
         If 0 then traces are transposed to ensure (nb_sample, nb_channel) in the file.
         If 1, the traces shape (nb_channel, nb_sample) is kept in the file.
-    offset: int
+    offset: int, default: 0
         number of offset bytes
 
     """
@@ -243,7 +243,7 @@ def _write_binary_chunk(segment_index, start_frame, end_frame, worker_ctx):
 
 def write_binary_recording(
     recording,
-    file_paths=None,
+    file_paths,
     dtype=None,
     add_file_extension=True,
     byte_offset=0,
@@ -261,19 +261,17 @@ def write_binary_recording(
     ----------
     recording: RecordingExtractor
         The recording extractor object to be saved in .dat format
-    file_path: str
+    file_path: str or list[str]
         The path to the file.
-    dtype: dtype
-        Type of the saved data. Default float32.
-    add_file_extension: bool
-        If True (default), file the '.raw' file extension is added if the file name is not a 'raw', 'bin', or 'dat'
-    byte_offset: int
-        Offset in bytes (default 0) to for the binary file (e.g. to write a header)
-    auto_cast_uint: bool
-        If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
+    dtype: dtype or None, default: None
+        Type of the saved data
+        If True, file the ".raw" file extension is added if the file name is not a "raw", "bin", or "dat"
+    byte_offset: int, default: 0
+        Offset in bytes to for the binary file (e.g. to write a header)
+    auto_cast_uint: bool, default: True
+        If True, unsigned integers are automatically cast to int if the specified dtype is signed
     {}
     """
-    assert file_paths is not None, "Provide 'file_path'"
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     file_path_list = [file_paths] if not isinstance(file_paths, list) else file_paths
@@ -430,12 +428,12 @@ def write_memory_recording(recording, dtype=None, verbose=False, auto_cast_uint=
     ----------
     recording: RecordingExtractor
         The recording extractor object to be saved in .dat format
-    dtype: dtype
-        Type of the saved data. Default float32.
-    verbose: bool
+    dtype: dtype, default: None
+        Type of the saved data
+    verbose: bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint: bool
-        If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
+    auto_cast_uint: bool, default: True
+        If True, unsigned integers are automatically cast to int if the specified dtype is signed
     {}
 
     Returns
@@ -511,33 +509,33 @@ def write_to_h5_dataset_format(
     recording: RecordingExtractor
         The recording extractor object to be saved in .dat format
     dataset_path: str
-        Path to dataset in h5 file (e.g. '/dataset')
+        Path to dataset in h5 file (e.g. "/dataset")
     segment_index: int
         index of segment
-    save_path: str
+    save_path: str, default: None
         The path to the file.
-    file_handle: file handle
+    file_handle: file handle, default: None
         The file handle to dump data. This can be used to append data to an header. In case file_handle is given,
         the file is NOT closed after writing the binary data.
-    time_axis: 0 (default) or 1
+    time_axis: 0 or 1, default: 0
         If 0 then traces are transposed to ensure (nb_sample, nb_channel) in the file.
         If 1, the traces shape (nb_channel, nb_sample) is kept in the file.
-    single_axis: bool, default False
-        If True, a single-channel recording is saved as a one dimensional array.
-    dtype: dtype
-        Type of the saved data. Default float32.
-    chunk_size: None or int
+    single_axis: bool, default: False
+        If True, a single-channel recording is saved as a one dimensional array
+    dtype: dtype, default: None
+        Type of the saved data
+    chunk_size: None or int, default: None
         Number of chunks to save the file in. This avoid to much memory consumption for big files.
-        If None and 'chunk_memory' is given, the file is saved in chunks of 'chunk_memory' MB (default 500MB)
-    chunk_memory: None or str
-        Chunk size in bytes must endswith 'k', 'M' or 'G' (default '500M')
-    verbose: bool
+        If None and "chunk_memory" is given, the file is saved in chunks of "chunk_memory" MB
+    chunk_memory: None or str, default: "500M"
+        Chunk size in bytes must endswith "k", "M" or "G"
+    verbose: bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint: bool
-        If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
-    return_scaled : bool, optional
+    auto_cast_uint: bool, default: True
+        If True, unsigned integers are automatically cast to int if the specified dtype is signed
+    return_scaled : bool, default: False
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
-        traces are dumped to uV, by default False
+        traces are dumped to uV
     """
     import h5py
 
@@ -655,18 +653,18 @@ def write_traces_to_zarr(
         Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
     dataset_paths: list
         List of paths to traces datasets in the zarr group
-    channel_chunk_size: int or None
-        Channels per chunk. Default None (chunking in time only)
-    dtype: dtype
-        Type of the saved data. Default float32.
-    compressor: zarr compressor or None
+    channel_chunk_size: int or None, default: None (chunking in time only)
+        Channels per chunk
+    dtype: dtype, default: None
+        Type of the saved data
+    compressor: zarr compressor or None, default: None
         Zarr compressor
-    filters: list
+    filters: list, default: None
         List of zarr filters
-    verbose: bool
+    verbose: bool, default: False
         If True, output is verbose (when chunks are used)
-    auto_cast_uint: bool
-        If True (default), unsigned integers are automatically cast to int if the specified dtype is signed
+    auto_cast_uint: bool, default: True
+        If True, unsigned integers are automatically cast to int if the specified dtype is signed
     {}
     """
     assert dataset_paths is not None, "Provide 'file_path'"
@@ -804,10 +802,10 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
         Extractor dictionary
     func : function
         Function to apply to the path. It must take a path as input and return a path
-    target : str, optional
-        String to match to dictionary key, by default 'path'
-    copy : bool, optional
-        If True the original dictionary is deep copied, by default True (at first call)
+    target : str, default: "path"
+        String to match to dictionary key
+    copy : bool, default: True (at first call)
+        If True the original dictionary is deep copied
 
     Returns
     -------
@@ -870,7 +868,7 @@ def convert_seconds_to_str(seconds: float, long_notation: bool = True) -> str:
     ----------
     seconds : float
         The duration in seconds.
-    long_notation : bool, optional, default: True
+    long_notation : bool, default: True
         Whether to display the time with additional units (such as milliseconds, minutes,
         hours, or days). If set to True, the function will display a more detailed
         representation of the duration, including other units alongside the primary

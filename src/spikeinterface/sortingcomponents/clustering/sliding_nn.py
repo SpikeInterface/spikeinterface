@@ -47,30 +47,8 @@ from spikeinterface.core.waveform_tools import extract_waveforms_to_buffers
 
 
 class SlidingNNClustering:
-
-    """_summary_
-
-    TODO:
-        - 2D and higher d
-
-    Args:
-        recording (_type_): _description_
-        peaks (_type_): _description_
-        time_window_s (_type_, optional): window for sampling nearest neighbors. Defaults to 60*5.
-        margin_ms (int, optional): margin for chunking. Defaults to 100.
-        ms_before (int, optional): time prior to peak. Defaults to 1.
-        ms_after (int, optional): time after peak. Defaults to 1.
-        n_channel_neighbors (int, optional): number of neighbors per channel. Defaults to 8.
-        n_neighbors (int, optional): number of neighbors for graph construction. Defaults to 5.
-        embedding_dim (int, optional): Number of embedding dimensions. Defaults to number of channels in recording.
-        knn_verbose (bool, optional):  whether to make knn computation verbose. Defaults to True.
-        low_memory (bool, optional): memory usage for nearest neighbor computation. Defaults to False.
-        n_jobs (int, optional): number of jobs to perform computations over. Defaults to -1.
-        suppress_tqdm (bool, optional): Whether to display tqdm progress bar. Defaults to False.
-    Returns:
-        nn_idx (array, # spikes x # 2*n_neighbors): Graph of nearest neighbor indices
-        nn_dist (array, # spikes x # 2*n_neighbors): Distances between nearest neighbor points
-
+    """
+    Sliding window nearest neighbor clustering.
     """
 
     _default_params = {
@@ -413,20 +391,7 @@ if HAVE_NUMBA:
 
 # HACK: this function only exists because I couldn't get the spikeinterface one to work...
 def retrieve_padded_trace(recording, start_frame, end_frame, margin_frames, channel_ids=None):
-    """Grabs a chunk of recording trace, with padding
-    NOTE: I tried using the built in spikeinterface function for this but
-    recieved an error.
-
-    Args:
-        recording (_type_): _description_
-        start_frame (_type_): _description_
-        end_frame (_type_): _description_
-        margin_frames (_type_): _description_
-        channel_ids (_type_, optional): _description_. Defaults to None.
-
-    Returns:
-        _type_: _description_
-    """
+    """Grabs a chunk of recording trace, with padding"""
     n_frames = recording.get_num_frames()
     # get the padding
     _pre = np.max([0, start_frame - margin_frames])
@@ -452,23 +417,7 @@ def get_chunk_spike_waveforms(
     n_channel_neighbors=5,
     margin_frames=3000,
 ):
-    """Grabs the spike waveforms for a chunk of a recording
-    Args:
-        recording (_type_): _description_
-        start_frame (_type_): _description_
-        end_frame (_type_): _description_
-        peaks (_type_): _description_
-        channel_neighbors (_type_): _description_
-        spike_pre_frames (int, optional): _description_. Defaults to 30.
-        spike_post_frames (int, optional): _description_. Defaults to 30.
-        n_channel_neighbors (int, optional): _description_. Defaults to 5.
-        margin_frames (int, optional): _description_. Defaults to 3000.
-
-    Returns:
-        all_spikes: spike waveforms
-        all_chan_idx: channel indices of nearest neighbors
-        peaks_in_chunk_idx: index of spikes in this chunk
-    """
+    """Grabs the spike waveforms for a chunk of a recording."""
     # grab the trace
     traces = retrieve_padded_trace(recording, start_frame, end_frame, margin_frames, channel_ids=None)
 
@@ -577,22 +526,7 @@ def get_spike_nearest_neighbors(
 
 
 def merge_nn_dicts(peaks, n_neighbors, peaks_in_chunk_idx_list, knn_indices_list, knn_distances_list):
-    """merge together peaks_in_chunk_idx_list and knn_indices_list
-    to build final graph
-
-    Args:
-        peaks (_type_): array of peaks
-        n_neighbors (_type_): number of neighbors
-        peaks_in_chunk_idx_list (_type_): list of spike index
-        knn_indices_list (_type_): indices of connections
-        knn_distances_list (_type_): distances
-
-    Raises:
-        ValueError: _description_
-
-    Returns:
-        _type_: _description_
-    """
+    """Merge together peaks_in_chunk_idx_list and knn_indices_list to build final graph."""
 
     nn_index_array = np.zeros((len(peaks), n_neighbors * 2), dtype=int) - 1
     nn_distance_array = np.zeros((len(peaks), n_neighbors * 2), dtype=float)

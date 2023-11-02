@@ -81,14 +81,14 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         Parameters
         ----------
         recording: RecordingExtractor
-            The recording extractor to be converted and saved.
+            The recording extractor to be converted and saved
         save_path: str
-            Full path to desired target folder.
+            Full path to desired target folder
         initial_sorting_fn: str
             Full path to the initial sorting csv file (can also be generated
-            using write_sorting static method from the SHYBRIDSortingExtractor).
-        dtype: dtype
-            Type of the saved data. Default float32.
+            using write_sorting static method from the SHYBRIDSortingExtractor)
+        dtype: dtype, default: float32
+            Type of the saved data
         **write_binary_kwargs: keyword arguments for write_to_binary_dat_format() function
         """
         try:

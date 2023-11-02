@@ -13,26 +13,25 @@ class SpikeLocationsWidget(BaseWidget):
     ----------
     waveform_extractor : WaveformExtractor
         The object to compute/get spike locations from
-    unit_ids : list
-        List of unit ids, default None
-    segment_index : int or None
-        The segment index (or None if mono-segment), default None
-    max_spikes_per_unit : int
+    unit_ids : list or None, default: None
+        List of unit ids
+    segment_index : int or None, default: None
+        The segment index (or None if mono-segment)
+    max_spikes_per_unit : int or None, default: 500
         Number of max spikes per unit to display. Use None for all spikes.
-        Default 500.
-    with_channel_ids : bool
-        Add channel ids text on the probe, default False
-    unit_colors :  dict or None
-        If given, a dictionary with unit ids as keys and colors as values, default None
-    hide_unit_selector : bool
-        For sortingview backend, if True the unit selector is not displayed, default False
-    plot_all_units : bool
+    with_channel_ids : bool, default: False
+        Add channel ids text on the probe
+    unit_colors :  dict or None, default: None
+        If given, a dictionary with unit ids as keys and colors as values
+    hide_unit_selector : bool, default: False
+        For sortingview backend, if True the unit selector is not displayed
+    plot_all_units : bool, default: True
         If True, all units are plotted. The unselected ones (not in unit_ids),
-        are plotted in grey. Default True (matplotlib backend)
-    plot_legend : bool
-        If True, the legend is plotted. Default False (matplotlib backend)
-    hide_axis : bool
-        If True, the axis is set to off. Default False (matplotlib backend)
+        are plotted in grey (matplotlib backend)
+    plot_legend : bool, default: False
+        If True, the legend is plotted (matplotlib backend)
+    hide_axis : bool, default: False
+        If True, the axis is set to off (matplotlib backend)
     """
 
     # possible_backends = {}

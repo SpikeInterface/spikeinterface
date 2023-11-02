@@ -3,7 +3,6 @@ from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
 
 from sklearn.decomposition import TruncatedSVD
-from hdbscan import HDBSCAN
 
 import numpy as np
 
@@ -37,17 +36,17 @@ def split_clusters(
     recording: Recording
         Recording object
     features_dict_or_folder: dict or folder
-        A dictionary of features precomputed with peak_pipeline or a folder containing npz file for features.
-    method: str
+        A dictionary of features precomputed with peak_pipeline or a folder containing npz file for features
+    method: str, default: "hdbscan_on_local_pca"
         The method name
-    method_kwargs: dict
+    method_kwargs: dict, default: dict()
         The method option
-    recursive: bool Default False
-        Reccursive or not.
-    recursive_depth: None or int
-        If recursive=True, then this is the max split per spikes.
-    returns_split_count: bool
-        Optionally return  the split count vector. Same size as labels.
+    recursive: bool, default: False
+        Recursive or not
+    recursive_depth: None or int, default: None
+        If recursive=True, then this is the max split per spikes
+    returns_split_count: bool, default: False
+        Optionally return  the split count vector. Same size as labels
 
     Returns
     -------
@@ -218,6 +217,8 @@ class LocalFeatureClustering:
         final_features = TruncatedSVD(n_pca_features).fit_transform(flatten_features)
 
         if clusterer == "hdbscan":
+            from hdbscan import HDBSCAN
+
             clust = HDBSCAN(
                 min_cluster_size=min_cluster_size,
                 min_samples=min_samples,

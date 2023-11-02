@@ -15,6 +15,7 @@ from spikeinterface.comparison import (
     do_count_score,
     compute_performance,
 )
+from spikeinterface.core.generate import generate_sorting
 
 
 def make_sorting(times1, labels1, times2, labels2):
@@ -27,23 +28,111 @@ def make_sorting(times1, labels1, times2, labels2):
 def test_make_match_count_matrix():
     delta_frames = 10
 
-    # simple match
     sorting1, sorting2 = make_sorting(
         [100, 200, 300, 400],
         [0, 0, 1, 0],
-        [
-            101,
-            201,
-            301,
-        ],
+        [101, 201, 301],
         [0, 0, 5],
     )
 
-    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=1)
-    # ~ print(match_event_count)
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames)
 
     assert match_event_count.shape[0] == len(sorting1.get_unit_ids())
     assert match_event_count.shape[1] == len(sorting2.get_unit_ids())
+
+
+def test_make_match_count_matrix_sorting_with_itself_simple():
+    delta_frames = 10
+
+    # simple sorting with itself
+    sorting1, sorting2 = make_sorting(
+        [100, 200, 300, 400],
+        [0, 0, 1, 0],
+        [100, 200, 300, 400],
+        [0, 0, 1, 0],
+    )
+
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames)
+
+    expected_result = [[3, 0], [0, 1]]
+    assert_array_equal(match_event_count.to_numpy(), expected_result)
+
+
+def test_make_match_count_matrix_sorting_with_itself_longer():
+    seed = 2
+    sorting = generate_sorting(num_units=10, sampling_frequency=30000, durations=[5, 5], seed=seed)
+
+    delta_frame_milliseconds = 0.1  # Short so that we only matches between a unit and itself
+    delta_frames_seconds = delta_frame_milliseconds / 1000
+    delta_frames = delta_frames_seconds * sorting.get_sampling_frequency()
+    match_event_count = make_match_count_matrix(sorting, sorting, delta_frames)
+
+    match_event_count_as_array = match_event_count.to_numpy()
+    matches_with_itself = np.diag(match_event_count_as_array)
+
+    # The number of matches with itself should be equal to the number of spikes in each unit
+    spikes_per_unit_dict = sorting.count_num_spikes_per_unit()
+    expected_result = np.array([spikes_per_unit_dict[u] for u in spikes_per_unit_dict.keys()])
+    assert_array_equal(matches_with_itself, expected_result)
+
+
+def test_make_match_count_matrix_with_mismatched_sortings():
+    delta_frames = 10
+
+    sorting1, sorting2 = make_sorting(
+        [100, 200, 300, 400], [0, 0, 1, 0], [500, 600, 700, 800], [0, 0, 1, 0]  # Completely different spike times
+    )
+
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames)
+
+    expected_result = [[0, 0], [0, 0]]  # No matches between sorting1 and sorting2
+    assert_array_equal(match_event_count.to_numpy(), expected_result)
+
+
+def test_make_match_count_matrix_no_double_matching():
+    # Jeremy Magland condition: no double matching
+    frames_spike_train1 = [100, 105, 120, 1000]
+    unit_indices1 = [0, 1, 0, 0]
+    frames_spike_train2 = [101, 150, 1000]
+    unit_indices2 = [0, 1, 0]
+    delta_frames = 100
+
+    # Here the key is that the first frame in the first sorting (120) should not match anything in the second sorting
+    # Because the matching candidates in the second sorting are already matched to the first two frames
+    # in the first sorting
+
+    # In detail:
+    # The first frame in sorting 1 (100) from unit 0 should match:
+    # * The first frame in sorting 2 (101) from unit 0
+    # * The second frame in sorting 2 (150) from unit 1
+    # The second frame in sorting 1 (105) from unit 1 should match:
+    # * The first frame in sorting 2 (101) from unit 0
+    # * The second frame in sorting 2 (150) from unit 1
+    # The third frame in sorting 1 (120) from unit 0 should not match anything
+    # The final frame in sorting 1 (1000) from unit 0 should only match the final frame in sorting 2 (1000) from unit 0
+
+    sorting1, sorting2 = make_sorting(frames_spike_train1, unit_indices1, frames_spike_train2, unit_indices2)
+
+    result = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames)
+
+    expected_result = np.array([[2, 1], [1, 1]])  # Only one match is expected despite potential repeats
+    assert_array_equal(result.to_numpy(), expected_result)
+
+
+def test_make_match_count_matrix_repeated_matching_but_no_double_counting():
+    # Challenging condition, this was failing with the previous approach that used np.where and np.diff
+    frames_spike_train1 = [100, 105, 110]  # Will fail with [100, 105, 110, 120]
+    frames_spike_train2 = [100, 105, 110]
+    unit_indices1 = [0, 0, 0]  # Will fail with [0, 0, 0, 0]
+    unit_indices2 = [0, 0, 0]
+    delta_frames = 20  # long enough, so all frames in both sortings are within each other reach
+
+    sorting1, sorting2 = make_sorting(frames_spike_train1, unit_indices1, frames_spike_train2, unit_indices2)
+
+    result = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames)
+
+    expected_result = np.array([[3]])
+    assert_array_equal(result.to_numpy(), expected_result)
 
 
 def test_make_agreement_scores():

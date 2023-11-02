@@ -10,10 +10,10 @@ _common_filter_docs = """**filter_kwargs: keyword arguments for parallel process
 
             * filter_order: order
                 The order of the filter
-            * filter_mode: 'sos or 'ba'
-                'sos' is bi quadratic and more stable than ab so thery are prefered.
+            * filter_mode: "sos or "ba"
+                "sos" is bi quadratic and more stable than ab so thery are prefered.
             * ftype: str
-                Filter type for iirdesign ('butter' / 'cheby1' / ... all possible of scipy.signal.iirdesign)
+                Filter type for iirdesign ("butter" / "cheby1" / ... all possible of scipy.signal.iirdesign)
     """
 
 
@@ -30,20 +30,20 @@ class FilterRecording(BasePreprocessor):
     ----------
     recording: Recording
         The recording extractor to be re-referenced
-    band: float or list
-        If float, cutoff frequency in Hz for 'highpass' filter type
-        If list. band (low, high) in Hz for 'bandpass' filter type
-    btype: str
-        Type of the filter ('bandpass', 'highpass')
-    margin_ms: float
+    band: float or list, default: [300.0, 6000.0]
+        If float, cutoff frequency in Hz for "highpass" filter type
+        If list. band (low, high) in Hz for "bandpass" filter type
+    btype: "bandpass" | "highpass", default: "bandpass"
+        Type of the filter
+    margin_ms: float, default: 5.0
         Margin in ms on border to avoid border effect
-    filter_mode: str 'sos' or 'ba'
+    filter_mode: "sos" | "ba", default: "sos"
         Filter form of the filter coefficients:
-        - second-order sections (default): 'sos'
-        - numerator/denominator: 'ba'
-    coef: ndarray or None
+        - second-order sections ("sos")
+        - numerator/denominator: ("ba")
+    coef: array or None, default: None
         Filter coefficients in the filter_mode form.
-    dtype: dtype or None
+    dtype: dtype or None, default: None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     {}
 

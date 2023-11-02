@@ -19,8 +19,8 @@ def get_template_amplitudes(
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
     mode: "extremum" | "at_index", default: "extremum"
-        'extremum':  max or min
-        'at_index': take value at spike index
+        "extremum":  max or min
+        "at_index": take value at spike index
 
     Returns
     -------
@@ -75,16 +75,16 @@ def get_template_extremum_channel(
     peak_sign: "neg" | "pos" | "both", default: "neg"
         Sign of the template to compute best channels
     mode: "extremum" | "at_index", default: "extremum"
-        'extremum':  max or min
-        'at_index': take value at spike index
+        "extremum":  max or min
+        "at_index": take value at spike index
     outputs: "id" | "index", default: "id"
-        * 'id': channel id
-        * 'index': channel index
+        * "id": channel id
+        * "index": channel index
 
     Returns
     -------
     extremum_channels: dict
-        Dictionary with unit ids as keys and extremum channels (id or index based on 'outputs')
+        Dictionary with unit ids as keys and extremum channels (id or index based on "outputs")
         as values
     """
     assert peak_sign in ("both", "neg", "pos")
@@ -127,13 +127,13 @@ def get_template_channel_sparsity(
             The waveform extractor
     {}
         outputs: str
-            * 'id': channel id
-            * 'index': channel index
+            * "id": channel id
+            * "index": channel index
 
         Returns
         -------
         sparsity: dict
-            Dictionary with unit ids as keys and sparse channel ids or indices (id or index based on 'outputs')
+            Dictionary with unit ids as keys and sparse channel ids or indices (id or index based on "outputs")
             as values
     """
     from spikeinterface.core.sparsity import compute_sparsity
@@ -223,8 +223,8 @@ def get_template_extremum_amplitude(
         Sign of the template to compute best channels
     mode: "extremum" | "at_index", default: "at_index"
         Where the amplitude is computed
-        'extremum':  max or min
-        'at_index': take value at spike index
+        "extremum":  max or min
+        "at_index": take value at spike index
 
     Returns
     -------
