@@ -1392,6 +1392,7 @@ def compute_SD_test(
     """
 
     from ..curation.curation_tools import _find_duplicated_spikes_keep_first_iterative
+
     censored_period = int(round(censored_period_ms * 1e-3 * wvf_extractor.sampling_frequency))
 
     spikes_amplitude = compute_spike_amplitudes(wvf_extractor, outputs="by_unit", return_scaled=True, **kwargs)
@@ -1403,7 +1404,9 @@ def compute_SD_test(
         SD_test.append({})
 
         for unit_id, spk_amp in spikes_amplitude[segment_index].items():
-            spike_train = wvf_extractor.sorting.get_unit_spike_train(unit_id, segment_index=segment_index).astype(np.int64)
+            spike_train = wvf_extractor.sorting.get_unit_spike_train(unit_id, segment_index=segment_index).astype(
+                np.int64
+            )
             censored_indices = _find_duplicated_spikes_keep_first_iterative(spike_train, censored_period)
             spk_amp = np.delete(spk_amp, censored_indices)
 
