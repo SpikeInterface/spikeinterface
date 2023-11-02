@@ -135,7 +135,7 @@ class PrincipalComponentsExtensionTest(WaveformExtensionCommonTestSuite, unittes
         from sklearn.decomposition import IncrementalPCA
 
         we = self.we1
-        if we.is_extension("principal_components"):
+        if we.has_extension("principal_components"):
             we.delete_extension("principal_components")
         we_cp = we.select_units(we.unit_ids, self.cache_folder / "toy_waveforms_1seg_cp")
 
