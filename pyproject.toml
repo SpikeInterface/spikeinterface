@@ -25,7 +25,7 @@ dependencies = [
     "joblib",
     "threadpoolctl",
     "tqdm",
-    "probeinterface>=0.2.18",
+    "probeinterface>=0.2.19",
 ]
 
 [build-system]
