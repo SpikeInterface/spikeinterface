@@ -518,9 +518,9 @@ These are a set of keyword arguments which are common to all functions that supp
     A float like 0.5 means half of the availables core.
 * progress_bar: bool
     If True, a progress bar is printed
-* mp_context: str or None
-    Context for multiprocessing. It can be None (default), "fork" or "spawn".
-    Note that "fork" is only available on UNIX systems (not Windows)
+* mp_context: "fork" | "spawn" | None, default: None
+        "fork" or "spawn". If None, the context is taken by the recording.get_preferred_mp_context().
+        "fork" is only safely available on LINUX systems.
 
 The default **job_kwargs** are :code:`n_jobs=1, chunk_duration="1s", progress_bar=True`.
 
