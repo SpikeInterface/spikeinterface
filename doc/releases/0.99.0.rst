@@ -3,7 +3,7 @@
 SpikeInterface 0.99.0 release notes
 -----------------------------------
 
-31th October 2023
+3rd November 2023
 
 Main changes:
 
