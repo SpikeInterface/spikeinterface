@@ -329,18 +329,18 @@ class BaseExtractor:
 
         Parameters
         ----------
-        include_annotations : bool, optional
+        include_annotations : bool, default: False
             Whether to include all annotations in the dictionary, by default False.
-        include_properties : bool, optional
+        include_properties : bool, default: False
             Whether to include all properties in the dictionary, by default False.
-        relative_to : Union[str, Path, None], optional
+        relative_to : Union[str, Path, None], default: None
             If provided, file and folder paths will be made relative to this path,
             enabling portability in folder formats such as the waveform extractor,
             by default None.
-        folder_metadata : Union[str, Path, None], optional
+        folder_metadata : Union[str, Path, None], default: None
             Path to a folder containing additional metadata files (e.g., probe information in BaseRecording)
             in numpy `npy` format, by default None.
-        recursive : bool, optional
+        recursive : bool, default: False
             If True, recursively apply `to_dict` to dictionaries within the kwargs, by default False.
 
         Raises
