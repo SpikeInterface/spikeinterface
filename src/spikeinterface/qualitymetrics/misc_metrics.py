@@ -1446,6 +1446,9 @@ def compute_sd_ratio(
         else:
             unit_std = np.std(spk_amp)
 
-        sd_ratio[unit_id] = unit_std / noise_levels[best_channels[unit_id]]
+        best_channel = best_channels[unit_id]
+        std_noise = noise_levels[best_channel]
+
+        sd_ratio[unit_id] = unit_std / std_noise
 
     return sd_ratio
