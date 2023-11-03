@@ -371,6 +371,8 @@ class BaseExtractor:
           from which the extractor class originates.
         - The full class attribute above is the full import of the class, e.g.
         'spikeinterface.extractors.neoextractors.spikeglx.SpikeGLXRecordingExtractor'
+        - The module is usually 'spikeinterface', but can be different for custom extractors such as those of
+        SpikeForest or any other project that inherits the Extractor class from spikeinterface.
         """
 
         if relative_to and not recursive:
