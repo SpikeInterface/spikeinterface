@@ -430,14 +430,14 @@ class BaseExtractor:
             The loaded extractor object
         """
         # for pickle dump relative_path was not in the dict, this ensure compatibility
-        if dictionary.get("relative_paths", False):
+        if base_folder is not None:
             assert base_folder is not None, "When  relative_paths=True, need to provide base_folder"
             dictionary = _make_paths_absolute(dictionary, base_folder)
         extractor = _load_extractor_from_dict(dictionary)
         folder_metadata = dictionary.get("folder_metadata", None)
         if folder_metadata is not None:
             folder_metadata = Path(folder_metadata)
-            if dictionary.get("relative_paths", False):
+            if base_folder is not None:
                 folder_metadata = base_folder / folder_metadata
             extractor.load_metadata_from_folder(folder_metadata)
         return extractor
@@ -642,21 +642,41 @@ class BaseExtractor:
         if relative_to:
             relative_to = Path(file_path).parent if relative_to is True else Path(relative_to)
             relative_to = relative_to.resolve().absolute()
-            # if relative_to is used, the dictionaru needs recursive expansion
-            recursive = True
-        else:
-            recursive = False
+            self._kwargs = self._make_paths_in_object_relative(
+                self._kwargs,
+                relative_to,
+            )
 
         dump_dict = self.to_dict(
             include_annotations=True,
             include_properties=include_properties,
             folder_metadata=folder_metadata,
-            relative_to=relative_to,
-            recursive=recursive,
         )
         file_path = self._get_file_path(file_path, [".pkl", ".pickle"])
 
         file_path.write_bytes(pickle.dumps(dump_dict))
+
+    def _make_paths_in_object_relative(self, obj: Any, relative_to: Path) -> Any:
+        """
+        Recursively traverse through the object to find and modify file paths to be relative.
+        """
+        if isinstance(obj, BaseExtractor):
+            # If obj is an instance of the current class, check its _kwargs
+            new_kwargs = {k: self._make_paths_in_object_relative(v, relative_to) for k, v in obj._kwargs.items()}
+            obj._kwargs = new_kwargs
+        elif isinstance(obj, list):
+            # If obj is a list, check each element
+            return [self._make_paths_in_object_relative(item, relative_to) for item in obj]
+        elif isinstance(obj, dict):
+            # If obj is a dict, check each value
+            return {k: self._make_paths_in_object_relative(v, relative_to) for k, v in obj.items()}
+        elif isinstance(obj, (str, Path)):
+            # If obj is a file path, make it relative
+            path = Path(obj)
+            if path.is_absolute():
+                relative_path = os.path.relpath(path, start=relative_to)
+                return relative_path
+        return obj
 
     @staticmethod
     def load(file_path: Union[str, Path], base_folder: Optional[Union[Path, str, bool]] = None) -> "BaseExtractor":
