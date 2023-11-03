@@ -706,7 +706,6 @@ class BaseExtractor:
                 # Load the file path with pickle
                 BaseExtractor.base_folder = base_folder
                 d = pickle.load(file_path.open("rb"))
-
                 BaseExtractor.base_folder = None
             else:
                 raise ValueError(f"Impossible to load {file_path}")
