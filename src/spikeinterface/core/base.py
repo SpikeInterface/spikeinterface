@@ -412,6 +412,8 @@ class BaseExtractor:
 
         return dump_dict
 
+    base_folder = None
+
     @staticmethod
     def from_dict(dictionary: dict, base_folder: Optional[Union[Path, str]] = None) -> "BaseExtractor":
         """
@@ -429,6 +431,9 @@ class BaseExtractor:
         extractor: RecordingExtractor or SortingExtractor
             The loaded extractor object
         """
+        if base_folder is None and hasattr(BaseExtractor, "base_folder"):
+            base_folder = BaseExtractor.base_folder
+
         # for pickle dump relative_path was not in the dict, this ensure compatibility
         if base_folder is not None:
             assert base_folder is not None, "When  relative_paths=True, need to provide base_folder"
@@ -639,20 +644,24 @@ class BaseExtractor:
         assert self.check_if_pickle_serializable(), "The extractor is not serializable to file with pickle"
 
         # Writing paths as relative_to requires recursively expanding the dict
+        recording_to_dump = self
         if relative_to:
             relative_to = Path(file_path).parent if relative_to is True else Path(relative_to)
             relative_to = relative_to.resolve().absolute()
-            self._kwargs = self._make_paths_in_object_relative(
-                self._kwargs,
+            cloned_recorder = self.clone()
+
+            cloned_recorder._kwargs = cloned_recorder._make_paths_in_object_relative(
+                cloned_recorder._kwargs,
                 relative_to,
             )
+            recording_to_dump = cloned_recorder
 
-        dump_dict = self.to_dict(
+        dump_dict = recording_to_dump.to_dict(
             include_annotations=True,
             include_properties=include_properties,
             folder_metadata=folder_metadata,
         )
-        file_path = self._get_file_path(file_path, [".pkl", ".pickle"])
+        file_path = recording_to_dump._get_file_path(file_path, [".pkl", ".pickle"])
 
         file_path.write_bytes(pickle.dumps(dump_dict))
 
@@ -700,7 +709,9 @@ class BaseExtractor:
                     d = json.load(f)
             elif str(file_path).endswith(".pkl") or str(file_path).endswith(".pickle"):
                 with open(file_path, "rb") as f:
+                    BaseExtractor.base_folder = base_folder
                     d = pickle.load(f)
+                    BaseExtractor.base_folder = None
             else:
                 raise ValueError(f"Impossible to load {file_path}")
             if "warning" in d:
