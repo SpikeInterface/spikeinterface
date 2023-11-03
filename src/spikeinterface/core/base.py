@@ -330,7 +330,7 @@ class BaseExtractor:
         Parameters
         ----------
         include_annotations : bool, default: False
-            Whether to include all annotations in the dictionary, by default False.
+            Whether to include all annotations in the dictionary
         include_properties : bool, default: False
             Whether to include all properties in the dictionary, by default False.
         relative_to : Union[str, Path, None], default: None
