@@ -815,8 +815,8 @@ class BaseExtractor:
         self.copy_metadata(cached)
         return cached
 
-    # TODO rename to saveto_binary_folder
-    def save_to_folder(self, name=None, overwrite=False, folder=None, verbose=True, **save_kwargs):
+    # TODO rename to save_to_binary_folder
+    def save_to_folder(self, name=None, folder=None, overwrite=False, verbose=True, **save_kwargs):
         """
         Save extractor to folder.
 
@@ -847,6 +847,8 @@ class BaseExtractor:
         folder: None str or Path
             Name of the folder.
             If "folder" is given, "name" must be None.
+        overwrite: bool, default: False
+            If True, the folder is removed if it already exists
 
         Returns
         -------
@@ -867,7 +869,12 @@ class BaseExtractor:
                         print(f"Use cache_folder={folder}")
         else:
             folder = Path(folder)
-        assert not folder.exists(), f"folder {folder} already exists, choose another name"
+        if overwrite and folder.is_dir():
+            import shutil
+
+            shutil.rmtree(folder)
+
+        assert not folder.exists(), f"folder {folder} already exists, choose another name or use overwrite=True"
         folder.mkdir(parents=True, exist_ok=False)
 
         # dump provenance
@@ -889,8 +896,7 @@ class BaseExtractor:
 
         # dump
         # cached.dump(folder / f'cached.json', relative_to=folder, folder_metadata=folder)
-        file_path = folder / f"si_folder.json"
-        cached.dump(file_path=file_path, relative_to=folder)
+        cached.dump(folder / f"si_folder.json", relative_to=folder)
 
         return cached
 
