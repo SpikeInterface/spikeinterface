@@ -1,0 +1,143 @@
+.. _release0.99.0:
+
+SpikeInterface 0.99.0 release notes
+-----------------------------------
+
+3rd November 2023
+
+Main changes:
+
+* Refactored :code:`core.generate` module to create high-quality lazy ground-truth data
+* Added DeepInterpolation training, transfer, and inference to preprocessing
+* Added new quality_metrics (synchrony, firing_range, amplitude_cv)
+* Added new template metrics (num positive/negative peaks + multi-channel metrics: velocities, spread, exp. decay)
+* Important improvements to internal sorters (especially Spyking Circus 2)
+* Ported all widgets to "new" API and dismantled legacy widgets
+* Extensive clean-up of docstrings, code style, and documentation
+
+
+core:
+
+* Handle edge frames in concatenated recordings (#1883)
+* Use spike_vector in count_num_spikes_per_unit (#1895)
+* Fix waveform extarctor crash with unfiltered wvf_extractor and sparsity (#1902)
+* Restore npzfolder.py file to load previously saved sorting objects (#1903)
+* Convert from samples<->times directly on BaseRecordings (#1921)
+* Move peak_pipeline into core and rename it as node_pipeline (#1941)
+* Implement SpikeRetriever pipeline source (#1944)
+* Refactor and improve generate.py (#1948, #1970, #2098)
+* Relax check_borders in InjectTemplatesRecording (#1988)
+* Speed up searchsorted calls across code-base (#2000)
+* Improve serialization concept : memory/json/pickle (#2027)
+* Check that main_ids are str or int (#2061)
+* Change some default parameters for better user experience (#2071)
+* Fix NoiseGeneratorRecording : "noise_level" in kwargs (#2084)
+* Add sparsity_temp_folder option to extract_waveforms (#2133)
+* Re-add relative_to to dump_to_pickle (#2129)
+
+
+extractors:
+
+* Fix NWB streaming: do not convert to Path if ros3 or fsspec (#1875)
+* Add stream_name option to read_cbin_ibl (#1928)
+* Add RecordingExtractor for NeuroExplorer (#1965)
+* Fix Kilosort Phy reader docstrings (#2022)
+* Add ignore_timestamps_errors to OpenEphysLegacyRecordingExtractor (#2043)
+* CellExplorer: fix tests and deprecation (#2048)
+* Patch with scipy for remove_artefacts when mode is linear/cubic (#2072)
+* Fix grouping of OpenEphys NPIX  extractors (#2102)
+* Fix open ephys probe loading and unify probeinterface import syntax (#2136)
+
+
+preprocessing:
+
+* Deepinterpolation revived: training, transfer, and inference with more flexibility (#1804)
+* Patch silence_periods for mono-segment recordings (#1946)
+* Fix zero_channel_pad case when selected frames are outside of original data region (#1979)
+* Improve detect_bad_channels defaults and fixes (#2003)
+* Add an option to flip the order by depth (#2005)
+* Update a test expression to remove two logical short circuits in remove_artifacts (#2025)
+* Adjust eps for whitening in case of very small magnitude data (#2070)
+
+
+sorters:
+
+* Add missing tic in ks*_master when skipping preprocessing (#1887)
+* Change the signature on kilosort's delete intermediate files parameters (#1908)
+* Check if recording is JSON-serializable in run_sorter (#1932)
+* Spyking Circus 2 updates (#1943, #2074, #2080, #2086)
+* Tridesclous 2 updates (#2076, #2087, #2104)
+* Refactor sorter launcher. Deprecated run_sorters() and add run_sorter_jobs() (#1968)
+* Fixes Apptainer bug (#2053)
+* Use versioned kilosort options as default in skip_preprocessed_data (#2108)
+* Mountainsort5 version check fix (#2150)
+
+postprocessing:
+
+* Amplitude scaling: add collisions handling (#1940)
+* Spike location with true spike channel (#1950)
+* Allow to postprocess on read-only waveform folders (#1957)
+* Refactor ISI calculation numpy and numba (#1958)
+* Extend and refactor waveform metrics, including multi-channel metrics (#1993)
+* Use default cutouts for peak-sign test (#2121)
+* Remove postprocessing template_tools (#2145)
+
+qualitymetrics:
+
+* Fix bug in pca metrics warnings (#1874)
+* Implement syncrhrony metrics (#1951)
+* Additional amplitude CV and firing range metrics (#1981, #2054)
+
+comparison:
+
+* Fix missing import pandas in comparison (#1872)
+* Refactoring of GroundTruthStudy (#1983)
+* Save/load comparison objects with pickle (#2013)
+* Improved GTStudy and related widgets (#2128)
+* Optimize make_match_count_matrix with numba (#2114)
+
+curation:
+
+* Allow MergeUnitsSorting to handle tuple inputs (#1995)
+* Fix: Correct unit ID matching in sortingview curation (#2037)
+
+exporters:
+
+* Fix bug in export_to_phy with sparsity (#1904)
+* Allow relative path for export_to_phy (#2041)
+* Change phy exporter to not save template_ind in the case of dense waveform_extractor (#2148)
+
+widgets:
+
+* Port legacy widgets to new API (#2016, #2068, #2115, #2124)
+* For connoisseur only: add a simple "ephyviewer" backend plot_traces() (#2024)
+* Improve ipywidgets backend (#2035, #2079, #2091)
+* Improved GTStudy and related widgets (#2128)
+* Add assert error in the case of unichannel data for sortingview backend + minor clarifications (#2149)
+
+sortingcomponents:
+
+* Implement proof of concept merge_clusters/split_clusters (#1996)
+* Add SVD convolutions to template matching (#2045)
+
+docs:
+
+* Several typo and display fixes, mainly thanks to @zm711 (#1866, #1898, #1990, #1992, #1936, #1953, #2015, #2019, #2036, #2057, #2100, #2103, #2130)
+* Update installation Tips (#1962)
+* Add "how to" section on how to load matlab data (#2018, #2047)
+* Add link to latest pypi version docs in readme (#2060)
+* Improve assert messages (#2078, #2109, #2119)
+* Unify 'defaults' and use of quotations across docstrings (#2134)
+* Add Docstring section to development docs (#2138)
+
+
+ci / packaging / tests:
+
+* Fix the [full] install for Macs (#1955)
+* Change np.in1d to np.isin as the former will be deprecated (#2002)
+* Fix folder for installation test build (#2004)
+* Extend common postprocessing tests to spikes at borders (#2014)
+* Add SPIKEINTERFACE_DEV_PATH to aws gpu tests (#2088)
+* Fix git-annex installation (#2097)
+* Add actual test for check_your_install (#2112)
+* Add quality_metrics specific module requirements to pyproject.toml (#2135)

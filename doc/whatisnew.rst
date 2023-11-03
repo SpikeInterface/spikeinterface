@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.99.0.rst
   releases/0.98.2.rst
   releases/0.98.1.rst
   releases/0.98.0.rst
@@ -29,6 +30,18 @@ Release notes
   releases/0.10.0.rst
   releases/0.9.9.rst
   releases/0.9.1.rst
+
+
+Version 0.99.0
+==============
+
+* Refactored :code:`core.generate` module to create high-quality lazy ground-truth data
+* Added DeepInterpolation training, transfer, and inference to preprocessing
+* Added new quality_metrics (synchrony, firing_range, amplitude_cv)
+* Added new template metrics (num positive/negative peaks + multi-channel metrics: velocities, spread, exp. decay)
+* Important improvements to internal sorters (especially Spyking Circus 2)
+* Ported all widgets to "new" API and dismantled legacy widgets
+* Extensive clean-up of docstrings, code style, and documentation
 
 
 Version 0.98.2
