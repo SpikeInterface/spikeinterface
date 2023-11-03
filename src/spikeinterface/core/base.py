@@ -349,7 +349,7 @@ class BaseExtractor:
             to_dict_kwargs = dict(
                 include_annotations=include_annotations,
                 include_properties=include_properties,
-                relative_to=relative_to,
+                relative_to=None,  # '_make_paths_relative' is already recursive!
                 folder_metadata=folder_metadata,
                 recursive=recursive,
             )
@@ -436,7 +436,7 @@ class BaseExtractor:
 
         if base_folder is not None:
             assert base_folder is not None, "When  relative_paths=True, need to provide base_folder"
-            dictionary = _make_paths_absolute(dictionary, base_folder, copy=False)
+            dictionary = _make_paths_absolute(dictionary, base_folder)
         extractor = _load_extractor_from_dict(dictionary)
         folder_metadata = dictionary.get("folder_metadata", None)
         if folder_metadata is not None:
@@ -642,7 +642,7 @@ class BaseExtractor:
         """
         assert self.check_if_pickle_serializable(), "The extractor is not serializable to file with pickle"
 
-        # Writing paths as relative_to requires recursively expanding the dict
+        # Modify file paths in _kwargs and create a copy to avoid modifying the original object
         recording_to_dump = self
         if relative_to:
             relative_to = Path(file_path).parent if relative_to is True else Path(relative_to)
@@ -651,13 +651,15 @@ class BaseExtractor:
             recording_to_dump._kwargs = recording_to_dump._make_paths_in_object_relative(
                 recording_to_dump._kwargs,
                 relative_to,
-            )  # Modify file paths in _kwargs
+            )
+
+        extractor_dict = recording_to_dump.to_dict(
+            include_annotations=True,
+            include_properties=include_properties,
+            folder_metadata=folder_metadata,
+        )
 
         file_path = recording_to_dump._get_file_path(file_path, [".pkl", ".pickle"])
-        # recording_to_dump._kwargs["sorting_list"][0]._kwargs["file_path"]
-        extractor_dict = recording_to_dump.to_dict(
-            include_annotations=True, include_properties=include_properties, folder_metadata=folder_metadata
-        )
         file_path.write_bytes(pickle.dumps(extractor_dict))
 
     def _make_paths_in_object_relative(self, obj: Any, relative_to: Path) -> Any:
@@ -814,7 +816,7 @@ class BaseExtractor:
         return cached
 
     # TODO rename to saveto_binary_folder
-    def save_to_folder(self, name=None, folder=None, verbose=True, **save_kwargs):
+    def save_to_folder(self, name=None, overwrite=False, folder=None, verbose=True, **save_kwargs):
         """
         Save extractor to folder.
 
