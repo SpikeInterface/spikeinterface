@@ -186,10 +186,9 @@ def get_optimized_compute_matching_matrix():
         previous_frame1_match = -np.ones_like(matching_matrix, dtype=np.int64)
         previous_frame2_match = -np.ones_like(matching_matrix, dtype=np.int64)
 
-
         num_frames_spike_train1 = len(frames_spike_train1)
         num_frames_spike_train2 = len(frames_spike_train2)
-        
+
         lower_search_limit_in_second_train = 0
         for index1 in range(num_frames_spike_train1):
             # Keeps track of which frame in the second spike train should be used as a search start for matches
@@ -204,7 +203,7 @@ def get_optimized_compute_matching_matrix():
                 if is_a_match:
                     lower_search_limit_in_second_train = index2
                     break
-            
+
             # Get as many matches as possible from the first match onwards
             for index2 in range(lower_search_limit_in_second_train, num_frames_spike_train2):
                 frame2 = frames_spike_train2[index2]
@@ -212,7 +211,7 @@ def get_optimized_compute_matching_matrix():
                 if not_a_match:
                     # Go to the next frame in the first train
                     break
-        
+
                 # Map the match to a matrix
                 row, column = unit_indices1[index1], unit_indices2[index2]
 
