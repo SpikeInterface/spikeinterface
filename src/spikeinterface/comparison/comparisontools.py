@@ -208,7 +208,7 @@ def get_optimized_compute_matching_matrix():
             # Get as many matches as possible from the first match onwards
             for index2 in range(lower_search_limit_in_second_train, num_frames_spike_train2):
                 frame2 = frames_spike_train2[index2]
-                not_a_match = abs(frame1 - frames_spike_train2[index2]) > delta_frames
+                not_a_match = abs(frame1 - frame2) > delta_frames
                 if not_a_match:
                     # Go to the next frame in the first train
                     break
