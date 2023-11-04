@@ -201,8 +201,11 @@ def get_optimized_compute_matching_matrix():
             while index2 < len(frames_spike_train2):
                 frame2 = frames_spike_train2[index2]
                 not_a_match = abs(frame1 - frame2) > delta_frames
+
                 if not_a_match:
                     # Go to the next frame in the first train
+                    while frames_spike_train2[lower_search_limit_in_second_train] + delta_frames < frame1:
+                        lower_search_limit_in_second_train += 1
                     break
 
                 # Map the match to a matrix
@@ -212,7 +215,6 @@ def get_optimized_compute_matching_matrix():
                 if frame1 != previous_frame1_match[row, column] and frame2 != previous_frame2_match[row, column]:
                     previous_frame1_match[row, column] = frame1
                     previous_frame2_match[row, column] = frame2
-
                     matching_matrix[row, column] += 1
 
                 index2 += 1
