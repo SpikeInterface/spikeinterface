@@ -277,7 +277,7 @@ def make_match_count_matrix(sorting1, sorting2, delta_frames):
     return match_event_counts_df
 
 
-def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
+def make_agreement_scores(sorting1, sorting2, delta_frames):
     """
     Make the agreement matrix.
     No threshold (min_score) is applied at this step.
@@ -293,8 +293,6 @@ def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
         The second sorting extractor
     delta_frames: int
         Number of frames to consider spikes coincident
-    n_jobs: int
-        Number of jobs to run in parallel
 
     Returns
     -------
@@ -311,7 +309,7 @@ def make_agreement_scores(sorting1, sorting2, delta_frames, n_jobs=1):
     event_counts1 = pd.Series(ev_counts1, index=unit1_ids)
     event_counts2 = pd.Series(ev_counts2, index=unit2_ids)
 
-    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=n_jobs)
+    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames)
 
     agreement_scores = make_agreement_scores_from_count(match_event_count, event_counts1, event_counts2)
 
