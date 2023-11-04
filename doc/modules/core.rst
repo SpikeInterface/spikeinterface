@@ -22,37 +22,6 @@ All classes support:
   * multiple segments, where each segment is a contiguous piece of data (recording, sorting, events).
 
 
-Import rules
-------------
-
-Importing the SpikeInterface module
-
-.. code-block:: python
-
-    import spikeinterface as si
-
-will only import the :code:`core` module. Other submodules must be imported separately:
-
-.. code-block:: python
-
-    import spikeinterface.extractors as se
-    import spikeinterface.sorters as ss
-    import spikeinterface.widgets as sw
-
-
-A second option is to import the SpikeInterface package in :code:`full` mode:
-
-.. code-block:: python
-
-    import spikeinterface.full as si
-
-This import statement will import all of SpikeInterface modules as a flattened module.
-Note that importing :code:`spikeinterface.full` will take a few extra seconds, because some modules use
-just-in-time :code:`numba` compilation performed at the time of import.
-We recommend this approach to advanced users, since it requires a deeper knowledge of the API.
-
-
-
 Recording
 ---------
 

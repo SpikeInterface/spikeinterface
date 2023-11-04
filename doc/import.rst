@@ -1,0 +1,81 @@
+Importing SpikeInterface
+========================
+
+SpikeInterface allows for the generation of powerful and reproducible spike sorting pipelines.
+Flexibility is built into the package starting from import to maximize the productivity of
+the developer and the scientist. Thus there are three ways that SpikeInterface and its components
+can be imported:
+
+
+Importing by Module
+-------------------
+
+Since each spike sorting pipeline involves a series of often repeated steps, many of the developers
+working on SpikeInterface recommend importing in a module by module fashion. This will allow you to
+keep track of your processing steps (preprocessing, postprocessing, quality metrics, etc.). This can
+be accomplished by:
+
+.. code-block:: python
+
+    import spikeinterface as si
+
+to import the :code:`core` module followed by:
+
+.. code-block:: python
+
+    import spikeinterface.extractors as se
+    import spikeinterface.preprocessing as spre
+    import spikeinterface.sorters as ss
+    import spikinterface.postprocessing as spost
+    import spikeinterface.qualitymetrics as sqm
+    import spikeinterface.exporters as sexp
+    import spikeinterface.comparsion as scmp
+    import spikeinterface.curation as scur
+    import spikeinterface.sortingcomponents as sc
+    import spikeinterface.widgets as sw
+
+to import any of the other modules you wish to use.
+
+The benefit of this approach is that it is lighter and faster than importing the whole package and allows
+you to choose which of the modules you actually want to use. If you don't plan to export the results out of
+SpikeInterface than you don't have to :code:`import spikeinterface.exporters`. Additionally the documentation
+of the package is set-up in a modular fashion, so if you have a problem with :code:`spikeinterface.curation`,
+you will know to go to the :code:`curation` section of this documention. The disadvantage of this approach is
+that you have more aliases to keep track of.
+
+
+Flat Import
+-----------
+
+A second option is to import the SpikeInterface package in :code:`full` mode. This would be similar to
+what is seen with packages like NumPy (:code:`np`) or Pandas (:code:`pd`). To accomplish this one does:
+
+
+.. code-block:: python
+
+    import spikeinterface.full as si
+
+
+This import statement will import all of SpikeInterface modules as one flattened module.
+Note that importing :code:`spikeinterface.full` will take a few extra seconds, because some modules use
+just-in-time :code:`numba` compilation performed at the time of import.
+We recommend this approach for advanced users, since it requires a deeper knowledge of the API. The advantage
+being that users with advanced API knowledge can access all functions using one alias.
+
+
+Importing Individual Functions
+------------------------------
+
+Finally, some users may find it useful to have extremely light imports and only import the exact functions
+they plan to use. This can easily be accomplished by importing functions directly into the name space.
+
+For example:
+
+.. code-block:: python
+
+    from spikeinterface.preprocessing import bandpass_filter, common_reference
+    from spikeinterface.core import extract_waveforms
+    from spikeinterface.extractors import read_binary
+
+As mentioned this approach only imports exactly what you plan on using so is the most minimalist. It does require
+knowledge of the API to know which module to pull a function from.
