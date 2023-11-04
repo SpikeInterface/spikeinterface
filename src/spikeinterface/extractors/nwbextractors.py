@@ -145,6 +145,7 @@ def read_nwbfile(
     elif stream_mode == "remfile":
         import remfile
         import h5py
+
         assert file_path is not None, "file_path must be specified when using stream_mode='remfile'"
         rfile = remfile.File(file_path)
         h5_file = h5py.File(rfile, "r")
@@ -156,6 +157,7 @@ def read_nwbfile(
 
     else:
         import h5py
+
         assert file is not None, "Unexpected, file is None"
         h5_file = h5py.File(file, "r")
         io = NWBHDF5IO(file=h5_file, mode="r", load_namespaces=True)
