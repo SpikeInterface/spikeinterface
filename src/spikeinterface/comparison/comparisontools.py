@@ -189,10 +189,9 @@ def get_optimized_compute_matching_matrix():
         num_frames_spike_train1 = len(frames_spike_train1)
         num_frames_spike_train2 = len(frames_spike_train2)
 
+        # Keeps track of which frame in the second spike train should be used as a search start for matches
         lower_search_limit_in_second_train = 0
         for index1 in range(num_frames_spike_train1):
-            # Keeps track of which frame in the second spike train should be used as a search start for matches
-            index2 = lower_search_limit_in_second_train
             frame1 = frames_spike_train1[index1]
 
             # Look for the index of the first match
@@ -203,7 +202,10 @@ def get_optimized_compute_matching_matrix():
                 if is_a_match:
                     lower_search_limit_in_second_train = index2
                     break
-
+            else:
+                # No matches found, finish the outer loop (coudl be break but this is more explicit)
+                lower_search_limit_in_second_train = num_frames_spike_train2
+                
             # Get as many matches as possible from the first match onwards
             for index2 in range(lower_search_limit_in_second_train, num_frames_spike_train2):
                 frame2 = frames_spike_train2[index2]
