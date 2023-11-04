@@ -68,7 +68,8 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
     return electrical_series
 
 
-def read_nwbfile(*,
+def read_nwbfile(
+    *,
     file_path: str | Path | None,
     file,
     stream_mode: Literal["ffspec", "ros3"] | None = None,
@@ -152,7 +153,7 @@ def read_nwbfile(*,
     elif file_path is not None:
         file_path = str(Path(file_path).absolute())
         io = NWBHDF5IO(path=file_path, mode="r", load_namespaces=True)
-    
+
     else:
         assert file is not None, "Unexpected, file is None"
         io = NWBHDF5IO(file=file, mode="r", load_namespaces=True)
@@ -217,7 +218,7 @@ class NwbRecordingExtractor(BaseRecording):
         self,
         file_path: str | Path | None,
         electrical_series_name: str = None,
-        file=None, # file-like - provide either this or file_path
+        file=None,  # file-like - provide either this or file_path
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 100000,
         stream_mode: Optional[Literal["fsspec", "ros3"]] = None,
@@ -228,7 +229,7 @@ class NwbRecordingExtractor(BaseRecording):
             from pynwb.ecephys import ElectrodeGroup
         except ImportError:
             raise ImportError(self.installation_mesg)
-        
+
         if file_path is not None and file is not None:
             raise ValueError("Provide either file_path or file, not both")
         if file_path is None and file is None:
@@ -239,7 +240,9 @@ class NwbRecordingExtractor(BaseRecording):
         self._electrical_series_name = electrical_series_name
 
         self.file_path = file_path
-        self._nwbfile = read_nwbfile(file_path=file_path, file=file, stream_mode=stream_mode, stream_cache_path=stream_cache_path)
+        self._nwbfile = read_nwbfile(
+            file_path=file_path, file=file, stream_mode=stream_mode, stream_cache_path=stream_cache_path
+        )
         electrical_series = retrieve_electrical_series(self._nwbfile, electrical_series_name)
         # The indices in the electrode table corresponding to this electrical series
         electrodes_indices = electrical_series.electrodes.data[:]
