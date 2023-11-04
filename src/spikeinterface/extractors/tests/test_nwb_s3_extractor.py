@@ -73,7 +73,7 @@ def test_recording_s3_nwb_remfile():
     file_path = (
         "https://dandi-api-staging-dandisets.s3.amazonaws.com/blobs/5f4/b7a/5f4b7a1f-7b95-4ad8-9579-4df6025371cc"
     )
-    rec = NwbRecordingExtractor(file_path, stream_mode="remfile", stream_cache_path=cache_folder)
+    rec = NwbRecordingExtractor(file_path, stream_mode="remfile")
 
     start_frame = 0
     end_frame = 300
@@ -103,7 +103,7 @@ def test_recording_s3_nwb_remfile_file_like():
         "https://dandi-api-staging-dandisets.s3.amazonaws.com/blobs/5f4/b7a/5f4b7a1f-7b95-4ad8-9579-4df6025371cc"
     )
     file = remfile.File(file_path)
-    rec = NwbRecordingExtractor(file=file, stream_mode="remfile", stream_cache_path=cache_folder)
+    rec = NwbRecordingExtractor(file=file)
 
     start_frame = 0
     end_frame = 300
