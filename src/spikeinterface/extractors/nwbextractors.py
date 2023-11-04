@@ -68,8 +68,9 @@ def retrieve_electrical_series(nwbfile: NWBFile, electrical_series_name: Optiona
     return electrical_series
 
 
-def read_nwbfile(
-    file_path: str | Path,
+def read_nwbfile(*,
+    file_path: str | Path | None,
+    file,
     stream_mode: Literal["ffspec", "ros3"] | None = None,
     stream_cache_path: str | Path | None = None,
 ) -> NWBFile:
@@ -78,8 +79,10 @@ def read_nwbfile(
 
     Parameters
     ----------
-    file_path : Path, str
-        The path to the NWB file.
+    file_path : Path, str or None
+        The path to the NWB file. Either provide this or file.
+    file : file-like object or None
+        The file-like object to read from. Either provide this or file_path.
     stream_mode : "fsspec" or "ros3" or None, default: None
         The streaming mode to use. If None it assumes the file is on the local disk.
     stream_cache_path : str or None, default: None
@@ -106,11 +109,18 @@ def read_nwbfile(
     """
     from pynwb import NWBHDF5IO, NWBFile
 
+    if file_path is not None and file is not None:
+        raise ValueError("Provide either file_path or file, not both")
+    if file_path is None and file is None:
+        raise ValueError("Provide either file_path or file")
+
     if stream_mode == "fsspec":
         import fsspec
         import h5py
 
         from fsspec.implementations.cached import CachingFileSystem
+
+        assert file_path is not None, "file_path must be specified when using stream_mode='fsspec'"
 
         stream_cache_path = stream_cache_path if stream_cache_path is not None else str(get_global_tmp_folder())
         caching_file_system = CachingFileSystem(
@@ -124,14 +134,28 @@ def read_nwbfile(
     elif stream_mode == "ros3":
         import h5py
 
+        assert file_path is not None, "file_path must be specified when using stream_mode='ros3'"
+
         drivers = h5py.registered_drivers()
         assertion_msg = "ROS3 support not enbabled, use: install -c conda-forge h5py>=3.2 to enable streaming"
         assert "ros3" in drivers, assertion_msg
         io = NWBHDF5IO(path=file_path, mode="r", load_namespaces=True, driver="ros3")
 
-    else:
+    elif stream_mode == "remfile":
+        import remfile
+
+        assert file_path is not None, "file_path must be specified when using stream_mode='remfile'"
+
+        file = remfile.File(file_path)
+        io = NWBHDF5IO(file=file, mode="r", load_namespaces=True)
+
+    elif file_path is not None:
         file_path = str(Path(file_path).absolute())
         io = NWBHDF5IO(path=file_path, mode="r", load_namespaces=True)
+    
+    else:
+        assert file is not None, "Unexpected, file is None"
+        io = NWBHDF5IO(file=file, mode="r", load_namespaces=True)
 
     nwbfile = io.read()
     return nwbfile
@@ -142,17 +166,19 @@ class NwbRecordingExtractor(BaseRecording):
 
     Parameters
     ----------
-    file_path: str or Path
-        Path to NWB file or s3 url.
+    file_path: str, Path, or None
+        Path to NWB file or s3 url (or None if using file instead)
     electrical_series_name: str or None, default: None
         The name of the ElectricalSeries. Used if multiple ElectricalSeries are present.
+    file: file-like object or None, default: None
+        File-like object to read from (if None, file_path must be specified)
     load_time_vector: bool, default: False
         If True, the time vector is loaded to the recording object.
     samples_for_rate_estimation: int, default: 100000
         The number of timestamp samples to use to estimate the rate.
         Used if "rate" is not specified in the ElectricalSeries.
     stream_mode: str or None, default: None
-        Specify the stream mode: "fsspec" or "ros3".
+        Specify the stream mode: "fsspec", "ros3", or "remfile"
     stream_cache_path: str or Path or None, default: None
         Local path for caching. If None it uses cwd
 
@@ -189,8 +215,9 @@ class NwbRecordingExtractor(BaseRecording):
 
     def __init__(
         self,
-        file_path: str | Path,
+        file_path: str | Path | None,
         electrical_series_name: str = None,
+        file=None, # file-like - provide either this or file_path
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 100000,
         stream_mode: Optional[Literal["fsspec", "ros3"]] = None,
@@ -201,13 +228,18 @@ class NwbRecordingExtractor(BaseRecording):
             from pynwb.ecephys import ElectrodeGroup
         except ImportError:
             raise ImportError(self.installation_mesg)
+        
+        if file_path is not None and file is not None:
+            raise ValueError("Provide either file_path or file, not both")
+        if file_path is None and file is None:
+            raise ValueError("Provide either file_path or file")
 
         self.stream_mode = stream_mode
         self.stream_cache_path = stream_cache_path
         self._electrical_series_name = electrical_series_name
 
         self.file_path = file_path
-        self._nwbfile = read_nwbfile(file_path=file_path, stream_mode=stream_mode, stream_cache_path=stream_cache_path)
+        self._nwbfile = read_nwbfile(file_path=file_path, file=file, stream_mode=stream_mode, stream_cache_path=stream_cache_path)
         electrical_series = retrieve_electrical_series(self._nwbfile, electrical_series_name)
         # The indices in the electrode table corresponding to this electrical series
         electrodes_indices = electrical_series.electrodes.data[:]
@@ -358,8 +390,9 @@ class NwbRecordingExtractor(BaseRecording):
             else:
                 self.set_property(property_name, values)
 
-        if stream_mode not in ["fsspec", "ros3"]:
-            file_path = str(Path(file_path).absolute())
+        if stream_mode not in ["fsspec", "ros3", "remfile"]:
+            if file_path is not None:
+                file_path = str(Path(file_path).absolute())
         if stream_mode == "fsspec":
             # only add stream_cache_path to kwargs if it was passed as an argument
             if stream_cache_path is not None:
