@@ -173,11 +173,11 @@ def get_optimized_compute_matching_matrix():
         in the first train. This means that the start of the search moves forward in the second train as the
         matches between the two trains are found decreasing the number of comparisons needed.
 
-        An important condition here is thatthe same spike is not matched twice. This is managed by keeping track
+        An important condition here is that the same spike is not matched twice. This is managed by keeping track
         of the last matched frame for each unit pair in `previous_frame1_match` and `previous_frame2_match`
 
         For more details on the rationale behind this approach, refer to the documentation of this module and/or
-        the  metrics section in SpikeForest documentation.
+        the metrics section in SpikeForest documentation.
         """
 
         matching_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.uint16)
@@ -230,7 +230,7 @@ def get_optimized_compute_matching_matrix():
     return compute_matching_matrix
 
 
-def make_match_count_matrix(sorting1, sorting2, delta_frames, n_jobs=None):
+def make_match_count_matrix(sorting1, sorting2, delta_frames):
     num_units_sorting1 = sorting1.get_num_units()
     num_units_sorting2 = sorting2.get_num_units()
     matching_matrix = np.zeros((num_units_sorting1, num_units_sorting2), dtype=np.uint16)
