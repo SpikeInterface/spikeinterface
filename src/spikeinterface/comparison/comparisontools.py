@@ -203,7 +203,7 @@ def get_optimized_compute_matching_matrix():
                     lower_search_limit_in_second_train = index2
                     break
             else:
-                # No matches found, finish the outer loop (coudl be break but this is more explicit)
+                # No matches found, finish the outer loop (could be done with a `break` but this is more explicit)
                 lower_search_limit_in_second_train = num_frames_spike_train2
 
             # Get as many matches as possible from the first match onwards
