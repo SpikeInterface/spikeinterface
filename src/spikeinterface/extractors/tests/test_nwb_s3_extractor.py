@@ -98,6 +98,7 @@ def test_recording_s3_nwb_remfile():
 @pytest.mark.streaming_extractors
 def test_recording_s3_nwb_remfile_file_like():
     import remfile
+
     file_path = (
         "https://dandi-api-staging-dandisets.s3.amazonaws.com/blobs/5f4/b7a/5f4b7a1f-7b95-4ad8-9579-4df6025371cc"
     )
