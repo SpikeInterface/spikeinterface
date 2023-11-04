@@ -215,12 +215,12 @@ class NwbRecordingExtractor(BaseRecording):
 
     def __init__(
         self,
-        file_path: str | Path | None,
+        file_path: str | Path | None = None,
         electrical_series_name: str = None,
         file=None, # file-like - provide either this or file_path
         load_time_vector: bool = False,
         samples_for_rate_estimation: int = 100000,
-        stream_mode: Optional[Literal["fsspec", "ros3"]] = None,
+        stream_mode: Optional[Literal["fsspec", "ros3", "remfile"]] = None,
         stream_cache_path: str | Path | None = None,
     ):
         try:
