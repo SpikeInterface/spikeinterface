@@ -186,25 +186,33 @@ def get_optimized_compute_matching_matrix():
         previous_frame1_match = -np.ones_like(matching_matrix, dtype=np.int64)
         previous_frame2_match = -np.ones_like(matching_matrix, dtype=np.int64)
 
-        lower_search_limit_in_second_train = 0
 
-        for index1 in range(len(frames_spike_train1)):
+        num_frames_spike_train1 = len(frames_spike_train1)
+        num_frames_spike_train2 = len(frames_spike_train2)
+        
+        lower_search_limit_in_second_train = 0
+        for index1 in range(num_frames_spike_train1):
             # Keeps track of which frame in the second spike train should be used as a search start for matches
             index2 = lower_search_limit_in_second_train
             frame1 = frames_spike_train1[index1]
 
-            # Determine next_frame1 if current frame is not the last frame
-            not_in_the_last_loop = index1 < len(frames_spike_train1) - 1
-            if not_in_the_last_loop:
-                next_frame1 = frames_spike_train1[index1 + 1]
-
-            while index2 < len(frames_spike_train2):
+            # Look for the index of the first match
+            for index2 in range(lower_search_limit_in_second_train, num_frames_spike_train2):
                 frame2 = frames_spike_train2[index2]
-                not_a_match = abs(frame1 - frame2) > delta_frames
+                # Look for first match
+                is_a_match = abs(frame1 - frames_spike_train2[index2]) <= delta_frames
+                if is_a_match:
+                    lower_search_limit_in_second_train = index2
+                    break
+            
+            # Get as many matches as possible from the first match onwards
+            for index2 in range(lower_search_limit_in_second_train, num_frames_spike_train2):
+                frame2 = frames_spike_train2[index2]
+                not_a_match = abs(frame1 - frames_spike_train2[index2]) > delta_frames
                 if not_a_match:
                     # Go to the next frame in the first train
                     break
-
+        
                 # Map the match to a matrix
                 row, column = unit_indices1[index1], unit_indices2[index2]
 
@@ -214,13 +222,6 @@ def get_optimized_compute_matching_matrix():
                     previous_frame2_match[row, column] = frame2
 
                     matching_matrix[row, column] += 1
-
-                index2 += 1
-
-                # Advance the lower_search_limit_in_second_train if the next frame in the first train does not match
-                not_a_match_with_next = abs(next_frame1 - frame2) > delta_frames
-                if not_a_match_with_next:
-                    lower_search_limit_in_second_train = index2
 
         return matching_matrix
 
