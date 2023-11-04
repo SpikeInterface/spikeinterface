@@ -137,7 +137,7 @@ def test_make_match_count_matrix_repeated_matching_but_no_double_counting():
 
 def test_make_match_count_matrix_test_proper_search_in_the_second_train():
     "Search exhaustively in the second train, but only within the delta_frames window"
-    frames_spike_train1 = [500, 600, 650]
+    frames_spike_train1 = [500, 600, 800]
     frames_spike_train2 = [0, 100, 200, 300, 500, 800]
     unit_indices1 = [0, 0, 0]
     unit_indices2 = [0, 0, 0, 0, 0, 0]
@@ -147,7 +147,7 @@ def test_make_match_count_matrix_test_proper_search_in_the_second_train():
 
     result = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames)
 
-    expected_result = np.array([[1]])
+    expected_result = np.array([[2]])
 
     assert_array_equal(result.to_numpy(), expected_result)
 
